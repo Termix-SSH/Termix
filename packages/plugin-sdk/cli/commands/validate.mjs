@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifest } from "../lib/plugin-dir.mjs";
 import { LEGACY_TABLE_OWNERS as LEGACY_TABLES } from "../../dist/db.js";
+import { findUnownedTableWrites } from "../../dist/ddl.js";
 
 /**
  * The manifest rules live in src/manifest.ts, which the server uses too, so
@@ -76,9 +77,6 @@ function validateNativeDependencies(cwd, raw) {
 
 const DIALECTS = ["sqlite", "postgres", "mysql"];
 
-const CREATE_OR_ALTER =
-  /(?:CREATE\s+(?:TEMP\s+|TEMPORARY\s+)?TABLE(?:\s+IF\s+NOT\s+EXISTS)?|ALTER\s+TABLE|DROP\s+TABLE(?:\s+IF\s+EXISTS)?|TRUNCATE\s+TABLE)\s+([`"']?)([a-zA-Z0-9_]+)\1/gi;
-
 /**
  * Checks that a plugin's migrations only touch tables it owns.
  *
@@ -88,7 +86,11 @@ const CREATE_OR_ALTER =
  */
 function validateMigrations(cwd, pluginId) {
   const problems = [];
-  const prefix = `p_${String(pluginId).replace(/-/g, "_")}_`;
+  const legacy = new Set(
+    Object.entries(LEGACY_TABLES)
+      .filter(([, owner]) => owner === pluginId)
+      .map(([table]) => table),
+  );
   const root = path.join(cwd, "migrations");
   if (!fs.existsSync(root)) return problems;
 
@@ -113,15 +115,8 @@ function validateMigrations(cwd, pluginId) {
       }
 
       const sql = fs.readFileSync(path.join(dir, file), "utf8");
-      CREATE_OR_ALTER.lastIndex = 0;
-      let match;
-      while ((match = CREATE_OR_ALTER.exec(sql)) !== null) {
-        const table = match[2];
-        if (table.startsWith(prefix)) continue;
-        if (LEGACY_TABLES[table] === pluginId) continue;
-        problems.push(
-          `migrations/${dialect}/${file} touches "${table}", which is not prefixed "${prefix}"`,
-        );
+      for (const problem of findUnownedTableWrites(pluginId, sql, legacy)) {
+        problems.push(`migrations/${dialect}/${file} ${problem}`);
       }
     }
   }

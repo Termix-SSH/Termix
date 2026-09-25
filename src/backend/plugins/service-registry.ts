@@ -309,6 +309,8 @@ function recordUnsatisfied(
 export interface ServiceCallContext {
   /** Resolves the user this call acts as. */
   resolveUserId: () => string | undefined;
+  /** Called when a handle is bound to a named user with asUser(). */
+  nameUser?: (userId: string) => void;
   /** Checks a role permission for a user. */
   hasPermission: (userId: string, permission: string) => Promise<boolean>;
   /**
@@ -359,7 +361,13 @@ export function createServiceHandle<T extends object>(
           createServiceHandle<T>(
             service,
             consumerPluginId,
-            { ...context, resolveUserId: () => userId },
+            {
+              ...context,
+              resolveUserId: () => {
+                context.nameUser?.(userId);
+                return userId;
+              },
+            },
             name,
           );
       }

@@ -699,8 +699,11 @@ export interface PluginHostStatusEntry {
  * turns "reachable" into "online".
  */
 export interface PluginHostStatusApi {
-  /** The last known status, or null when core has not checked the host yet. */
-  get: (hostId: number) => PluginHostStatusEntry | null;
+  /**
+   * The last known status, or null when core has not checked the host yet or
+   * the acting user cannot reach it.
+   */
+  get: (hostId: number) => Promise<PluginHostStatusEntry | null>;
   /** Checks the host now unless core checked it recently. */
   check: (hostId: number) => Promise<PluginHostStatusEntry | null>;
   /** Reports a login attempt. Not audited: pollers call it every sample. */
@@ -1588,7 +1591,7 @@ export interface PluginCapabilities {
 }
 
 export interface PluginProcessOptions {
-  /** Added to the server's environment. */
+  /** Added to a small base environment (PATH, HOME, temp, locale, proxy), never the whole server one. */
   env?: Record<string, string>;
   cwd?: string;
   /** Kills the program with SIGKILL after this long. */

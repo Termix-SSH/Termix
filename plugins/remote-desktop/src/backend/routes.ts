@@ -3,7 +3,10 @@ import net from "net";
 import path from "path";
 import type { Request, Response, Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
-import type { GuacamoleTokenService } from "./token-service.js";
+import {
+  isServerOwnedSetting,
+  type GuacamoleTokenService,
+} from "./token-service.js";
 import type { GuacdOptions } from "./guacd-config.js";
 import type { RemoteSessions } from "./sessions.js";
 import type { RecordingsWriter } from "./guacamole-server.js";
@@ -188,6 +191,9 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
       }
       const options: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(raw)) {
+        // A quick connect names a host, never where guacd is or what paths
+        // it writes to: those would let any user aim guacd anywhere.
+        if (isServerOwnedSetting(key)) continue;
         if (value !== "auto") options[key] = value;
       }
       const host = String(hostname);
@@ -199,6 +205,7 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
         for (const [key, value] of Object.entries(
           await readUserDefaults(ctx, userId),
         )) {
+          if (isServerOwnedSetting(key)) continue;
           if (options[key] === undefined) options[key] = value;
         }
       }

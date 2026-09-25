@@ -33,6 +33,8 @@ import {
 } from "./ctx.js";
 import { resolveRequirements } from "./service-registry.js";
 import { resolveSecretRequirements } from "./secret-registry.js";
+import { recordConflict } from "./conflicts.js";
+import { tablePrefix } from "@termix/plugin-sdk/db";
 
 export type PluginState =
   | "loaded"
@@ -119,6 +121,27 @@ export class PluginLoader {
         `Plugin ${manifest.id} backend entry ${entry} is missing`,
       );
     }
+    // A symlink can point anywhere, so the real path has to stay inside too.
+    if (!isRealPathInside(dir, entry)) {
+      throw new Error(
+        `Plugin ${manifest.id} backend entry resolves outside the plugin directory`,
+      );
+    }
+
+    const overlap = [...this.plugins.values()].find((other) =>
+      prefixesOverlap(other.id, manifest.id),
+    );
+    if (overlap) {
+      recordConflict({
+        kind: "id",
+        pluginId: manifest.id,
+        heldBy: overlap.id,
+        name: tablePrefix(manifest.id),
+      });
+      throw new Error(
+        `Plugin id "${manifest.id}" overlaps "${overlap.id}": their table names would share the prefix ${tablePrefix(overlap.id)}`,
+      );
+    }
 
     const plugin: LoadedPlugin = {
       id: manifest.id,
@@ -144,12 +167,15 @@ export class PluginLoader {
    * dropping a folder with a bundled plugin's id into the data directory is visibly
    * refused instead of quietly ignored.
    *
-   * The check is on the parsed manifest id, not the directory name, because a
-   * directory can be named anything.
+   * The check is on the directory name, which load() then requires to equal
+   * the manifest id, and it covers bundled folders that failed to load too.
    */
   async loadAll(): Promise<LoadedPlugin[]> {
     this.plugins.clear();
     const loaded: LoadedPlugin[] = [];
+    // Every bundled folder name, loaded or not: a bundled plugin that fails
+    // to load must not leave its id free for a user plugin to take.
+    const bundledIds = new Set<string>();
 
     const roots: Array<{ root: string; source: PluginSource }> = [
       { root: getBundledPluginsDir(), source: "bundled" },
@@ -160,14 +186,18 @@ export class PluginLoader {
       if (!fs.existsSync(root)) continue;
 
       const entries = await fs.promises.readdir(root, { withFileTypes: true });
+      if (source === "bundled") {
+        for (const entry of entries) {
+          if (entry.isDirectory()) bundledIds.add(entry.name);
+        }
+      }
 
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
 
         const dir = path.join(root, entry.name);
         try {
-          const existing = this.plugins.get(entry.name);
-          if (existing && source === "user") {
+          if (source === "user" && bundledIds.has(entry.name)) {
             throw new Error(
               `a bundled plugin already uses the id "${entry.name}"; a plugin in the data directory cannot replace it`,
             );
@@ -343,7 +373,9 @@ export class PluginLoader {
       // than leave it half-running against a schema that is not there. A
       // throw here lands in the catch below, which fails this plugin only.
       const { migratePlugin } = await import("./data.js");
-      const applied = await migratePlugin(plugin.id, plugin.dir);
+      const applied = await migratePlugin(plugin.id, plugin.dir, {
+        bundled: plugin.source === "bundled",
+      });
       // A new table may be where core data is waiting to move.
       if (applied.length > 0) {
         const { runPluginDataMoves } =
@@ -576,4 +608,29 @@ function withTimeout<T>(
 function pathToFileUrlString(filePath: string): string {
   const resolved = path.resolve(filePath).replace(/\\/g, "/");
   return `file://${resolved.startsWith("/") ? "" : "/"}${resolved}`;
+}
+
+/**
+ * True when one id's table prefix starts with the other's: "foo" owns
+ * p_foo_*, which already covers every table "foo-bar" (p_foo_bar_*) creates.
+ */
+export function prefixesOverlap(a: string, b: string): boolean {
+  if (a === b) return false;
+  const left = tablePrefix(a);
+  const right = tablePrefix(b);
+  return left.startsWith(right) || right.startsWith(left);
+}
+
+/** Whether `target` really lives under `root`, following symlinks. */
+export function isRealPathInside(root: string, target: string): boolean {
+  try {
+    const realRoot = fs.realpathSync(root);
+    const relative = path.relative(realRoot, fs.realpathSync(target));
+    return (
+      relative === "" ||
+      (!relative.startsWith("..") && !path.isAbsolute(relative))
+    );
+  } catch {
+    return false;
+  }
 }

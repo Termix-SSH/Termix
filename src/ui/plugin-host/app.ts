@@ -47,7 +47,7 @@ import { pluginHostBridge, resolvePluginPermission } from "./bridge";
 import { shell, tabsApi } from "./shell-bridge";
 import { onRemoteServerChange, remoteServerUrl } from "./desktop";
 import { isElectron } from "@/lib/electron";
-import { withPluginScope } from "./scope";
+import { withPluginScope, withIconBoundary, guardCallback } from "./scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { hasPermission } from "@/hooks/use-permissions";
@@ -114,7 +114,10 @@ export function createPluginApp(
       return track(
         registerRailItem({
           id: item.id,
-          icon: item.icon as unknown as LucideIcon,
+          icon: withIconBoundary(
+            pluginId,
+            item.icon as unknown as LucideIcon,
+          ) as unknown as LucideIcon,
           labelKey: key(item.titleKey),
           kind: item.kind === "tab" ? "tab" : undefined,
           hideable: item.hideable,
@@ -158,7 +161,7 @@ export function createPluginApp(
           component: scoped(
             component as unknown as ComponentType<TabRenderProps>,
           ),
-          icon: options.icon,
+          icon: withIconBoundary(pluginId, options.icon as never) as never,
           titleKey: options.titleKey ? key(options.titleKey) : undefined,
           requiresHost: options.requiresHost,
           noHostMessageKey: options.noHostMessageKey
@@ -191,7 +194,7 @@ export function createPluginApp(
           pluginId,
           group: section.group,
           labelKey: key(section.titleKey),
-          icon: section.icon,
+          icon: withIconBoundary(pluginId, section.icon as never) as never,
           order: section.order,
           visible: section.visible,
           component: scoped(
@@ -207,10 +210,20 @@ export function createPluginApp(
           ...action,
           titleKey: key(action.titleKey),
           pluginId,
+          icon: withIconBoundary(pluginId, action.icon as never) as never,
           when: action.when as never,
           run: action.run as never,
-          label: action.label as never,
-          items: action.items as never,
+          // Called while the host list renders, so a throw must not escape.
+          label: guardCallback(
+            pluginId,
+            action.label as ((...args: unknown[]) => unknown) | undefined,
+            undefined,
+          ) as never,
+          items: guardCallback(
+            pluginId,
+            action.items as ((...args: unknown[]) => unknown) | undefined,
+            undefined,
+          ) as never,
         }),
       );
     },

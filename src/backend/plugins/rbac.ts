@@ -41,6 +41,15 @@ export function resolvePermission(
   if (!head) return permission;
 
   if (head === manifest.id) return permission;
+  // A name this plugin declares is its own, even if another plugin's id
+  // happens to match its first segment.
+  if (
+    (manifest.contributes?.permissions ?? []).some(
+      (declared) => declared.name === permission,
+    )
+  ) {
+    return `${manifest.id}.${permission}`;
+  }
   if (coreGroups().has(head)) return permission;
 
   // Another plugin's registered group, which is the cross-plugin check.

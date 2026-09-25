@@ -21,8 +21,7 @@ import type {
   PluginShareableRole,
 } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
-import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
-import { assertCapability } from "./permissions.js";
+import { assertCapability, capabilityRefused } from "./permissions.js";
 import { hostSessionStatus } from "../hosts/host-session-status.js";
 import { getActor } from "./actor.js";
 import { hostStatusService } from "../hosts/status/host-status-service.js";
@@ -65,8 +64,56 @@ function toSummary(host: {
   };
 }
 
+/**
+ * Host fields that carry secret material. Stripped from anything ctx.hosts or
+ * ctx.ssh hands a plugin, unless the plugin holds credentials:read.
+ */
+export const HOST_SECRET_FIELDS = [
+  "password",
+  "key",
+  "keyPassword",
+  "privateKey",
+  "passphrase",
+  "sudoPassword",
+  "socks5Password",
+  "rdpPassword",
+  "vncPassword",
+  "telnetPassword",
+  "autostartPassword",
+  "autostartKey",
+  "autostartKeyPassword",
+  "vaultToken",
+] as const;
+
+/** A copy of a host with every secret field removed, nested ones included. */
+export function redactHostSecrets<T extends Record<string, unknown>>(
+  host: T,
+): T {
+  const copy: Record<string, unknown> = { ...host };
+  for (const field of HOST_SECRET_FIELDS) delete copy[field];
+  const terminalConfig = copy.terminalConfig;
+  if (terminalConfig && typeof terminalConfig === "object") {
+    const { sudoPassword: _sudo, ...rest } = terminalConfig as Record<
+      string,
+      unknown
+    >;
+    copy.terminalConfig = rest;
+  }
+  if (Array.isArray(copy.socks5ProxyChain)) {
+    copy.socks5ProxyChain = copy.socks5ProxyChain.map((hop) =>
+      hop && typeof hop === "object"
+        ? redactHostSecrets(hop as Record<string, unknown>)
+        : hop,
+    );
+  }
+  return copy as T;
+}
+
+/** Columns that say who a host belongs to. ctx.hosts.update never moves them. */
+const PROTECTED_HOST_FIELDS = new Set(["id", "userId", "syncId"]);
+
 function toRecord(host: Record<string, unknown>): PluginHostRecord {
-  return {
+  return redactHostSecrets({
     id: host.id as number,
     userId: host.userId as string,
     name: (host.name as string | null) ?? null,
@@ -85,7 +132,7 @@ function toRecord(host: Record<string, unknown>): PluginHostRecord {
     createdAt: (host.createdAt as string | null) ?? null,
     updatedAt: (host.updatedAt as string | null) ?? null,
     ...host,
-  };
+  });
 }
 
 function actingUser(): string {
@@ -105,11 +152,26 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
   const requireRead = () => assertCapability(pluginId, "hosts:read", declared);
   const requireReadSync = () => {
     if (!declared.includes("hosts:read")) {
-      throw new PluginCapabilityError(pluginId, "hosts:read");
+      throw capabilityRefused(pluginId, "hosts:read");
     }
   };
   const requireWrite = () =>
     assertCapability(pluginId, "hosts:write", declared);
+
+  // With an actor, a host the actor cannot reach is out of bounds. With none,
+  // it is the plugin's own background work (a poller, a guacd session).
+  const actorMayReach = async (hostId: number): Promise<boolean> => {
+    const actor = getActor();
+    if (!actor) return true;
+    const { PermissionManager } =
+      await import("../utils/permission-manager.js");
+    const access = await PermissionManager.getInstance().canAccessHost(
+      actor,
+      hostId,
+      "connect",
+    );
+    return access.hasAccess;
+  };
 
   return {
     list: async () => {
@@ -235,13 +297,18 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         throw error;
       }
       const userId = actingUser();
+      const allowed = Object.fromEntries(
+        Object.entries(patch as Record<string, unknown>).filter(
+          ([field]) => !PROTECTED_HOST_FIELDS.has(field),
+        ),
+      ) as PluginHostUpdateInput;
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
       const updated =
         await createCurrentHostRepository().updateEncryptedForUser(
           userId,
           hostId,
-          patch,
+          allowed,
         );
       await audit("hosts_update", `host ${hostId}`, {
         success: updated !== null,
@@ -287,6 +354,9 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         await import("../database/repositories/factory.js");
       const rows =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
+      await audit("hosts_list_owned", `${rows.length} host(s)`, {
+        success: true,
+      });
       return rows.map((row) =>
         toRecord(row as unknown as Record<string, unknown>),
       );
@@ -437,36 +507,55 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     },
 
     // Synchronous so a transport can call it from an ssh2 "ready" handler, so
-    // only the declaration is checked here, like ctx.http.router.
+    // only the declaration is checked up front, like ctx.http.router. The
+    // session only counts once the actor's access to the host is confirmed.
     trackSession: (hostId: number) => {
       if (!declared.includes("hosts:read")) {
-        throw new PluginCapabilityError(pluginId, "hosts:read");
+        throw capabilityRefused(pluginId, "hosts:read");
       }
-      return hostSessionStatus.register(hostId);
+      let release: (() => void) | null = null;
+      let stopped = false;
+      void actorMayReach(hostId)
+        .then((allowed) => {
+          if (allowed && !stopped) release = hostSessionStatus.register(hostId);
+        })
+        .catch(() => {});
+      return () => {
+        stopped = true;
+        release?.();
+        release = null;
+      };
     },
 
     recordActivity: async (hostId, type, hostName) => {
       await requireRead();
       const userId = actingUser();
+      if (!(await actorMayReach(hostId))) return;
       const { recordRecentActivity } =
         await import("../services/recent-activity.js");
       await recordRecentActivity(userId, { type, hostId, hostName });
     },
 
-    // Synchronous and not audited, like trackSession: pollers call these on
-    // every sample.
+    // Not audited: pollers call these on every sample.
     status: {
-      get: (hostId) => {
-        requireReadSync();
+      get: async (hostId) => {
+        await requireRead();
+        if (!(await actorMayReach(hostId))) return null;
         return hostStatusService.get(hostId);
       },
       check: async (hostId) => {
         await requireRead();
+        if (!(await actorMayReach(hostId))) return null;
         return hostStatusService.check(hostId);
       },
+      // Synchronous for the same reason as trackSession.
       reportLogin: (hostId, outcome) => {
         requireReadSync();
-        hostStatusService.reportLogin(hostId, outcome);
+        void actorMayReach(hostId)
+          .then((allowed) => {
+            if (allowed) hostStatusService.reportLogin(hostId, outcome);
+          })
+          .catch(() => {});
       },
       registerPort: (connectionType, resolve) => {
         requireReadSync();

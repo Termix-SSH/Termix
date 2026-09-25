@@ -30,6 +30,7 @@ import { pluginLogger } from "../utils/logger.js";
 import { recordConflict } from "./conflicts.js";
 import { extractWebSocketToken } from "../utils/ws-auth.js";
 import { runAsActor } from "./actor.js";
+import { isPluginInstalled } from "./http.js";
 
 const PLUGIN_WS_PREFIX = "/plugin-ws/";
 
@@ -138,8 +139,13 @@ async function handlePluginUpgrade(
   const route = routes.get(key(parsed.pluginId, parsed.path));
   if (!route) {
     // Claimed by the prefix but nothing is listening: answering here is more
-    // honest than leaving the socket hanging for a plugin that is disabled.
-    reject(socket, 404, "Not Found");
+    // honest than leaving the socket hanging. A disabled plugin has no routes
+    // left, so an installed id means "off", not "missing".
+    if (isPluginInstalled(parsed.pluginId)) {
+      reject(socket, 503, "Service Unavailable");
+    } else {
+      reject(socket, 404, "Not Found");
+    }
     return true;
   }
 
@@ -164,11 +170,14 @@ async function handlePluginUpgrade(
     userId = (await verifyToken(request)) ?? "";
   }
 
+  // A guest on a public socket has no actor at all, the same as a public
+  // HTTP route, so nothing downstream mistakes a placeholder for a user.
+  const asCaller = (fn: () => void) =>
+    userId ? runAsActor(userId, "request", fn) : fn();
+
   if (route.rawHandler) {
     const rawHandler = route.rawHandler;
-    runAsActor(userId || "anonymous", "request", () =>
-      rawHandler(request, socket, head, userId),
-    );
+    asCaller(() => rawHandler(request, socket, head, userId));
     return true;
   }
 
@@ -195,7 +204,7 @@ async function handlePluginUpgrade(
       ws.close(1011, "No handler");
       return;
     }
-    runAsActor(userId || "anonymous", "request", () => {
+    asCaller(() => {
       void Promise.resolve(handler({ ...connection, socket: ws })).catch(
         (error) => {
           pluginLogger.error(
@@ -260,6 +269,7 @@ export function registerPluginWsRoute(
     declared,
     handler,
   });
+  if (options.public) auditPublicSocket(pluginId, normalized);
   servers.set(routeKey, new WebSocketServer({ noServer: true }));
 
   pluginLogger.info(`Mounted /plugin-ws/${pluginId}${normalized}`, {
@@ -292,6 +302,7 @@ export function registerPluginWsUpgrade(
     declared,
     rawHandler: handler,
   });
+  if (options.public) auditPublicSocket(pluginId, normalized);
 
   pluginLogger.info(`Mounted raw upgrade /plugin-ws/${pluginId}${normalized}`, {
     operation: "plugin_ws_mount",
@@ -329,6 +340,35 @@ function disposeRoute(routeKey: string, pluginId: string, path: string): void {
 
 export function getRegisteredWsRoutes(): string[] {
   return [...routes.keys()];
+}
+
+/** The socket paths a plugin serves without core's login check. */
+export function getPluginPublicWsRoutes(pluginId: string): string[] {
+  return [...routes.values()]
+    .filter((route) => route.pluginId === pluginId && route.options.public)
+    .map((route) => route.path);
+}
+
+/** Same record the HTTP side writes for its public routes. */
+function auditPublicSocket(pluginId: string, path: string): void {
+  pluginLogger.warn(
+    `Plugin ${pluginId} serves /plugin-ws/${pluginId}${path} without core authentication`,
+    { operation: "plugin_ws_public" },
+  );
+  void import("../utils/audit-logger.js")
+    .then(({ logAudit }) =>
+      logAudit({
+        userId: "system",
+        username: `plugin:${pluginId}`,
+        action: "plugin_ws_public_route",
+        resourceType: "plugin",
+        resourceId: pluginId,
+        resourceName: pluginId,
+        details: `unauthenticated socket: ${path}`,
+        success: true,
+      }),
+    )
+    .catch(() => {});
 }
 
 /** Test seam. */

@@ -300,9 +300,8 @@ export class MetricsPoller {
     this.initialRequested.add(host.id);
     void this.state.initialLimiter
       .run(async () => {
-        let status: PluginHostStatusEntry | null = this.ctx.hosts.status.get(
-          host.id,
-        );
+        let status: PluginHostStatusEntry | null =
+          await this.ctx.hosts.status.get(host.id);
         if (!status) status = await this.ctx.hosts.status.check(host.id);
         if (!canStartInitialMetrics(status?.status, this.hasViewers(host.id))) {
           return;

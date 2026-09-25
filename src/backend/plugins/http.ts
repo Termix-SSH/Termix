@@ -38,11 +38,19 @@ const DEFAULT_BODY_LIMIT = "2mb";
 /** Routers by plugin id, read by the dispatcher in plugin-api-routes.ts. */
 const routers = new Map<string, Router>();
 
+/** Declared public paths by plugin id, for the admin plugin details. */
+const publicRoutes = new Map<string, string[]>();
+
+export function getPluginPublicHttpRoutes(pluginId: string): string[] {
+  return [...(publicRoutes.get(pluginId) ?? [])];
+}
+
 export function getPluginRouter(pluginId: string): Router | undefined {
   return routers.get(pluginId);
 }
 
 export function unregisterPluginHttp(pluginId: string): void {
+  publicRoutes.delete(pluginId);
   if (!routers.delete(pluginId)) return;
   pluginLogger.info(`Unmounted /plugin-api/${pluginId}`, {
     operation: "plugin_http_unmount",
@@ -63,10 +71,27 @@ export function setPluginEnabledCheck(check: IsEnabled): void {
   isPluginEnabled = check;
 }
 
+/**
+ * Whether a plugin with this id is installed at all, running or not. A
+ * disabled plugin has no router or socket routes left, so this is what tells
+ * "disabled" (503) apart from "no such plugin" (404).
+ */
+let isInstalled: IsEnabled = () => false;
+
+export function setPluginInstalledCheck(check: IsEnabled): void {
+  isInstalled = check;
+}
+
+export function isPluginInstalled(pluginId: string): boolean {
+  return isInstalled(pluginId);
+}
+
 /** Test seam, so one test's stub does not leak into the next. */
 export function resetPluginHttp(): void {
   routers.clear();
+  publicRoutes.clear();
   isPluginEnabled = () => true;
+  isInstalled = () => false;
 }
 
 function normalizePublicPath(path: string): string {
@@ -130,6 +155,7 @@ export function createPluginRouter({
     normalizePublicPath(path),
   );
   const publicPaths = declaredPublic.map((path) => compilePublicPath(path));
+  publicRoutes.set(pluginId, declaredPublic);
 
   if (declaredPublic.length > 0) {
     // Audited once at registration: the set of unauthenticated routes a plugin
@@ -225,7 +251,20 @@ export function createPluginRouter({
       _next: NextFunction,
     ): void => {
       void _next;
-      reportError(error);
+      const status = clientErrorStatus(error);
+      const authenticated = !!(req as Request & { userId?: string }).userId;
+      // A bad body or a 4xx is the caller's fault, and an anonymous caller
+      // must never be able to spend the plugin's error budget: five junk
+      // requests to a public route would otherwise switch the plugin off.
+      if (status === null && authenticated) reportError(error);
+      if (status !== null) {
+        if (!res.headersSent) {
+          res.status(status).json({ error: "Invalid request" });
+        } else {
+          res.end();
+        }
+        return;
+      }
       pluginLogger.error(
         `Plugin ${pluginId} route ${req.method} ${req.path} failed`,
         error instanceof Error ? error : new Error(String(error)),
@@ -246,6 +285,16 @@ export function createPluginRouter({
   });
 
   return inner;
+}
+
+/** The status of an error that is the caller's fault, or null. */
+function clientErrorStatus(error: unknown): number | null {
+  const status =
+    (error as { status?: unknown; statusCode?: unknown } | null)?.status ??
+    (error as { statusCode?: unknown } | null)?.statusCode;
+  return typeof status === "number" && status >= 400 && status < 500
+    ? status
+    : null;
 }
 
 async function writePublicRouteAudit(

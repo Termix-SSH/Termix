@@ -37,6 +37,27 @@ export type ActionContributionKind = (typeof ACTION_CONTRIBUTION_KINDS)[number];
 const OPEN_FROM_VALUES = ["rail", "host-context-menu", "palette"] as const;
 
 const ID_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
+
+/**
+ * Ids no plugin may take. A permission is registered as <id>.<name>, so a
+ * plugin called "admin" would mint admin.* permissions and could default them
+ * onto the user role; the rest are names core or the runtime already uses.
+ */
+export const RESERVED_PLUGIN_IDS: readonly string[] = [
+  "admin",
+  "hosts",
+  "credentials",
+  "core",
+  "termix",
+  "plugin",
+  "plugins",
+  "users",
+  "system",
+  "sdk",
+];
+
+/** A preset key is a plain property name, never a prototype one. */
+const PRESET_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
 const API_VERSION_PATTERN = /^[0-9]+$/;
 /** Service names are dotted, e.g. "ssh.transport". */
@@ -476,6 +497,30 @@ function rejectUnknown(
   }
 }
 
+/**
+ * A path inside the plugin folder. Absolute paths, ".." and backslashes are
+ * refused so an entry point or asset folder cannot point outside the plugin.
+ */
+function requireRelativePath(
+  value: string,
+  where: string,
+  errors: string[],
+): void {
+  const segments = value.split("/");
+  if (
+    value.startsWith("/") ||
+    /^[A-Za-z]:/.test(value) ||
+    value.includes("\\") ||
+    value.includes("\0") ||
+    segments.includes("..") ||
+    segments.every((segment) => segment === "" || segment === ".")
+  ) {
+    errors.push(
+      `Field "${where}" must be a relative path inside the plugin, got: ${JSON.stringify(value)}`,
+    );
+  }
+}
+
 function requireString(
   value: unknown,
   where: string,
@@ -507,6 +552,8 @@ export function validateManifest(manifest: unknown): string[] {
       errors.push(
         `Field "id" must match ${ID_PATTERN} (lowercase, starts with a letter, 2-40 chars), got: ${JSON.stringify(m.id)}`,
       );
+    } else if (RESERVED_PLUGIN_IDS.includes(m.id)) {
+      errors.push(`Field "id" may not be "${m.id}": that name is reserved`);
     }
   }
 
@@ -524,9 +571,11 @@ export function validateManifest(manifest: unknown): string[] {
 
   if ("repository" in m) requireString(m.repository, "repository", errors);
   if ("icon" in m) requireString(m.icon, "icon", errors);
-  if ("backend" in m) requireString(m.backend, "backend", errors);
-  if ("frontend" in m) requireString(m.frontend, "frontend", errors);
-  if ("locales" in m) requireString(m.locales, "locales", errors);
+  for (const field of ["backend", "frontend", "locales"] as const) {
+    if (field in m && requireString(m[field], field, errors)) {
+      requireRelativePath(m[field] as string, field, errors);
+    }
+  }
 
   validateAuthor(m.author, errors);
   validateEngine(m.engine, errors);
@@ -870,6 +919,11 @@ function validateUiPresets(value: unknown, errors: string[]): void {
       continue;
     }
     for (const [key, entry] of Object.entries(preset)) {
+      if (!PRESET_KEY_PATTERN.test(key)) {
+        errors.push(
+          `${where}.${level} has an invalid key ${JSON.stringify(key)}`,
+        );
+      }
       if (!isPresetValue(entry)) {
         errors.push(
           `${where}.${level}.${key} must be a boolean, number, string or string array`,

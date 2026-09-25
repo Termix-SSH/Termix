@@ -1842,6 +1842,8 @@
     "pluginDisabled": "{{name}} disabled",
     "pluginPermissions": "Permissions",
     "pluginPermissionsNone": "This plugin does not declare any capabilities that need to be granted.",
+    "pluginPublicRoutes": "Public routes",
+    "pluginPublicRoutesDescription": "Anyone can reach these without signing in. The plugin checks access on its own.",
     "pluginPermissionGranted": "Granted",
     "pluginPermissionNotGranted": "Not granted",
     "pluginGrantFailed": "Failed to grant the capability",

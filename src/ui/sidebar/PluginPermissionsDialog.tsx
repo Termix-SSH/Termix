@@ -49,6 +49,14 @@ export function PluginPermissionsDialog({
     declared.includes(row.capability),
   );
   const granted = new Set(plugin.grantedCapabilities ?? []);
+  const publicRoutes = [
+    ...(plugin.publicRoutes?.http ?? []).map(
+      (path) => `/plugin-api/${plugin.id}${path}`,
+    ),
+    ...(plugin.publicRoutes?.ws ?? []).map(
+      (path) => `/plugin-ws/${plugin.id}${path}`,
+    ),
+  ];
 
   const toggle = async (capability: string, isGranted: boolean) => {
     setBusy(capability);
@@ -123,6 +131,27 @@ export function PluginPermissionsDialog({
             </div>
           )}
         </div>
+
+        {publicRoutes.length > 0 && (
+          <div className="pb-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+              {t("admin.pluginPublicRoutes")}
+            </p>
+            <p className="text-[11px] text-muted-foreground leading-snug mb-2">
+              {t("admin.pluginPublicRoutesDescription")}
+            </p>
+            <div className="border border-border">
+              {publicRoutes.map((route) => (
+                <div
+                  key={route}
+                  className="px-3 py-1.5 text-[11px] font-mono break-all border-b border-border last:border-b-0"
+                >
+                  {route}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

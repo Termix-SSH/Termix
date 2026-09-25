@@ -29,9 +29,31 @@ vi.mock("../../plugins/permissions.js", async () => {
         throw new PluginCapabilityError(pluginId, capability);
       }
     },
+    hasCapability: async (
+      _pluginId: string,
+      capability: string,
+      declared: readonly string[],
+    ) => declared.includes(capability) && h.granted.has(capability),
+    hasCachedCapability: (
+      _pluginId: string,
+      capability: string,
+      declared: readonly string[],
+    ) => declared.includes(capability) && h.granted.has(capability),
+    warmPluginGrants: () => {},
+    capabilityRefused: (pluginId: string, capability: string) =>
+      new PluginCapabilityError(pluginId, capability),
   };
 });
 vi.mock("../../plugins/actor.js", () => ({ getActor: () => h.actor }));
+vi.mock("../../utils/permission-manager.js", () => ({
+  PermissionManager: {
+    getInstance: () => ({
+      canAccessHost: async (_userId: string, hostId: number) => ({
+        hasAccess: hostId !== 7,
+      }),
+    }),
+  },
+}));
 vi.mock("../../hosts/connect/core-providers.js", () => ({
   ensureCoreSshAuthProviders: () => {},
 }));
@@ -90,7 +112,7 @@ const { registerSshAuthProvider, resetSshAuthRegistryForTests } =
 const { PluginCapabilityError, PluginSshInteractionError } =
   await import("@termix/plugin-sdk/backend");
 
-const ALL = ["ssh:connect", "credentials:use"];
+const ALL = ["ssh:connect", "credentials:use", "credentials:read"];
 
 function sshWith(capabilities = ALL) {
   const audit = vi.fn(async () => {});
@@ -131,6 +153,14 @@ describe("ctx.ssh.resolveHost", () => {
     });
   });
 
+  it("hides the secrets from a plugin without credentials:read", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const { ssh } = sshWith(["ssh:connect", "credentials:use"]);
+    const host = await ssh.resolveHost(3);
+    expect(host).toMatchObject({ id: 3, ip: "10.0.0.1" });
+    expect(host).not.toHaveProperty("password");
+  });
+
   it("answers null for a host this user cannot reach", async () => {
     const { ssh } = sshWith();
     expect(await ssh.resolveHost(404)).toBeNull();
@@ -147,6 +177,18 @@ describe("ctx.ssh.resolveHost", () => {
 });
 
 describe("ctx.ssh.prepare", () => {
+  it("needs credentials:read, because its config carries the secrets", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const { ssh } = sshWith(["ssh:connect", "credentials:use"]);
+    await expect(
+      ssh.prepare(
+        { id: 1, ip: "10.0.0.1", port: 22, username: "root" },
+        { client: {} },
+      ),
+    ).rejects.toBeInstanceOf(PluginCapabilityError);
+    expect(h.built).toEqual([]);
+  });
+
   it("passes the terminal purpose, interactivity and host key socket through", async () => {
     const { ssh } = sshWith();
     const socket = { send: vi.fn() };
@@ -216,6 +258,27 @@ describe("ctx.ssh browser sign-in", () => {
         host: { name: "box", ip: "10.0.0.1", username: "root" },
       }),
     );
+  });
+
+  it("will not start one for a host the actor cannot reach", async () => {
+    const started = vi.fn(async () => {});
+    registerSshAuthProvider({
+      type: "fixture-auth",
+      pluginId: "core",
+      labelKey: "k",
+      interaction: "fixture",
+      startInteraction: started,
+      prepare: async () => ({ status: "ready" }),
+    });
+    const { ssh } = sshWith();
+    await expect(
+      ssh.startInteraction("fixture", {
+        hostId: 7,
+        socket: null,
+        requestOrigin: "",
+      }),
+    ).rejects.toBeInstanceOf(PluginSshInteractionError);
+    expect(started).not.toHaveBeenCalled();
   });
 
   it("says why when nothing can start it", async () => {

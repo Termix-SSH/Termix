@@ -16,7 +16,7 @@
 
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
-import { getPluginRouter } from "../../plugins/http.js";
+import { getPluginRouter, isPluginInstalled } from "../../plugins/http.js";
 import { getRequestBasePath } from "../../utils/request-origin.js";
 import type { PluginLegacyRedirect } from "@termix/plugin-sdk/manifest";
 
@@ -51,7 +51,7 @@ const router = express.Router();
  *       401:
  *         description: Authentication required.
  *       404:
- *         description: Plugin not installed or serves no routes.
+ *         description: No plugin with this id is installed.
  *       503:
  *         description: Plugin is installed but not running.
  */
@@ -60,16 +60,25 @@ router.use("/:pluginId", (req: Request, res: Response, next) => {
   const pluginRouter = getPluginRouter(pluginId);
 
   if (!pluginRouter) {
-    databaseLogger.warn("Plugin API request for unregistered plugin", {
-      operation: "plugin_api_dispatch",
-      pluginId,
-    });
-    res.status(404).json({ error: "Plugin not installed or not running" });
+    notServing(res, pluginId);
     return;
   }
 
   pluginRouter(req, res, next);
 });
+
+/** 503 for an installed plugin that is off, 404 for an unknown id. */
+function notServing(res: Response, pluginId: string): void {
+  if (isPluginInstalled(pluginId)) {
+    res.status(503).json({ error: "Plugin is not running", pluginId });
+    return;
+  }
+  databaseLogger.warn("Plugin API request for unregistered plugin", {
+    operation: "plugin_api_dispatch",
+    pluginId,
+  });
+  res.status(404).json({ error: "Plugin not installed" });
+}
 
 /**
  * Mounts the dispatcher. No auth in front of it: each plugin router runs
@@ -120,7 +129,7 @@ export function mountPluginLegacyPaths(
       if (!plugin.legacyPaths.some((path) => under(req.path, path))) continue;
       const pluginRouter = getPluginRouter(plugin.id);
       if (!pluginRouter) {
-        res.status(404).json({ error: "Plugin not installed or not running" });
+        notServing(res, plugin.id);
         return;
       }
       req.url = req.url.slice(plugin.id.length + 1) || "/";

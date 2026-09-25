@@ -26,9 +26,8 @@ import type {
   PluginSshKeyCredential,
 } from "@termix/plugin-sdk/backend";
 import ssh2 from "ssh2";
-import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
-import { assertCapability } from "./permissions.js";
+import { assertCapability, capabilityRefused } from "./permissions.js";
 import { getActor } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { registerSecretResolver } from "../hosts/connect/secret-resolver-registry.js";
@@ -293,7 +292,7 @@ export function createPluginCredentials({
 
     registerSecretResolver: (scheme, resolve) => {
       if (!declared.includes("auth:provide")) {
-        throw new PluginCapabilityError(pluginId, "auth:provide");
+        throw capabilityRefused(pluginId, "auth:provide");
       }
       if (!manifest.contributes?.auth?.secretSchemes?.includes(scheme)) {
         throw new Error(

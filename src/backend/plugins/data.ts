@@ -12,8 +12,8 @@ import { pluginLogger } from "../utils/logger.js";
 import { resolveDatabaseDialect } from "../database/db/dialect.js";
 import type { DatabaseDialect } from "../database/db/dialect.js";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
-import { prefixedTableName } from "@termix/plugin-sdk/db";
-import { buildTable, dropTableSql } from "./table-builder.js";
+import { prefixedTableName, tablePrefix } from "@termix/plugin-sdk/db";
+import { buildTable } from "./table-builder.js";
 import {
   applyPluginMigrations,
   readMigrations,
@@ -88,10 +88,9 @@ async function execute(statements: string[]): Promise<void> {
 /**
  * Builds the runner that applies migrations against the live database.
  *
- * SQLite gets a transaction; the client-server engines do not, because MySQL
- * commits implicitly on DDL so a "transaction" there would only be a promise
- * the engine does not keep. A half-applied migration is recorded statement by
- * statement either way, so a retry resumes rather than repeating.
+ * No transaction on any engine: MySQL commits implicitly on DDL, and each
+ * migration is recorded once it has run, so a retry after a failure starts
+ * at the migration that failed.
  */
 async function createMigrationRunner(
   dialect: DatabaseDialect = resolveDatabaseDialect(),
@@ -126,37 +125,59 @@ async function createMigrationRunner(
 export async function migratePlugin(
   pluginId: string,
   pluginDir: string,
-  dialect: DatabaseDialect = resolveDatabaseDialect(),
+  options: { bundled?: boolean; dialect?: DatabaseDialect } = {},
 ): Promise<string[]> {
+  const dialect = options.dialect ?? resolveDatabaseDialect();
   if (readMigrations(pluginDir, dialect).length === 0) return [];
 
   const runner = await createMigrationRunner(dialect);
-  return applyPluginMigrations(pluginId, pluginDir, runner);
+  return applyPluginMigrations(pluginId, pluginDir, runner, {
+    bundled: options.bundled,
+  });
 }
 
 /**
  * Removes everything a plugin owns.
  *
- * Tables go in reverse registration order so a table referenced by a later one
- * is dropped last. Disabling a plugin never calls this: data outlives being
- * turned off, and only an explicit uninstall throws it away.
+ * Tables are found in the database's own catalog by the plugin's prefix, not
+ * from what it registered this boot, so a plugin that never activated since
+ * the restart still loses its tables. A longer prefix that belongs to another
+ * known plugin is left alone. Disabling a plugin never calls this: data
+ * outlives being turned off, and only an explicit uninstall throws it away.
+ * Role permissions stay, so a role keeps them if the plugin comes back.
  */
 export async function removePluginData(
   pluginId: string,
-  dialect: DatabaseDialect = resolveDatabaseDialect(),
+  options: { knownPluginIds?: string[]; dialect?: DatabaseDialect } = {},
 ): Promise<{ tables: string[]; kvKeys: number; migrations: number }> {
-  const definitions = listTables(pluginId);
-  const dropped: string[] = [];
+  const dialect = options.dialect ?? resolveDatabaseDialect();
+  const tables = ownedTableNames(
+    pluginId,
+    await listDatabaseTables(dialect),
+    options.knownPluginIds ?? [],
+  );
 
-  for (const definition of [...definitions].reverse()) {
-    await execute([dropTableSql(dialect, pluginId, definition)]);
-    dropped.push(prefixedTableName(pluginId, definition.name));
+  // Registered order reversed first, so a referencing table goes before the
+  // one it points at; anything else after.
+  const registeredOrder = listTables(pluginId)
+    .map((definition) => prefixedTableName(pluginId, definition.name))
+    .reverse();
+  const ordered = [
+    ...registeredOrder.filter((table) => tables.includes(table)),
+    ...tables.filter((table) => !registeredOrder.includes(table)),
+  ];
+
+  const dropped: string[] = [];
+  for (const table of ordered) {
+    await execute([dropTableByName(dialect, table)]);
+    dropped.push(table);
   }
 
   const {
     createCurrentPluginStorageRepository,
     createCurrentPluginMigrationRepository,
     createCurrentPluginPermissionGrantRepository,
+    createCurrentPluginSettingsRepository,
   } = await import("../database/repositories/factory.js");
 
   const kvKeys =
@@ -164,6 +185,8 @@ export async function removePluginData(
   const migrations =
     await createCurrentPluginMigrationRepository().deleteByPlugin(pluginId);
   await createCurrentPluginPermissionGrantRepository().deleteByPlugin(pluginId);
+  // Settings and the plugin's encrypted secrets go with it.
+  await createCurrentPluginSettingsRepository().deleteByPlugin(pluginId);
 
   forgetTables(pluginId);
 
@@ -173,4 +196,54 @@ export async function removePluginData(
   );
 
   return { tables: dropped, kvKeys, migrations };
+}
+
+/**
+ * The tables in `all` that belong to this plugin: its prefix, minus any that
+ * sit under a longer prefix another plugin owns.
+ */
+export function ownedTableNames(
+  pluginId: string,
+  all: string[],
+  knownPluginIds: string[],
+): string[] {
+  const prefix = tablePrefix(pluginId);
+  const longer = knownPluginIds
+    .filter((id) => id !== pluginId)
+    .map((id) => tablePrefix(id))
+    .filter((other) => other.startsWith(prefix));
+  return all.filter(
+    (table) =>
+      table.startsWith(prefix) &&
+      !longer.some((other) => table.startsWith(other)),
+  );
+}
+
+function dropTableByName(dialect: DatabaseDialect, table: string): string {
+  const quoted = dialect === "mysql" ? "`" + table + "`" : `"${table}"`;
+  return `DROP TABLE IF EXISTS ${quoted};`;
+}
+
+async function listDatabaseTables(dialect: DatabaseDialect): Promise<string[]> {
+  const { getDb } = await import("../database/db/index.js");
+  const db = getDb() as unknown as {
+    all?: (query: unknown) => Promise<Array<Record<string, unknown>>>;
+    execute?: (query: unknown) => Promise<unknown>;
+  };
+  if (dialect === "sqlite") {
+    const rows = await db.all!(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table'`,
+    );
+    return rows.map((row) => String(row.name));
+  }
+  const query =
+    dialect === "postgres"
+      ? sql`SELECT table_name AS name FROM information_schema.tables WHERE table_schema = current_schema()`
+      : sql`SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE()`;
+  const result = await db.execute!(query);
+  // node-postgres answers { rows }, mysql2 answers [rows, fields].
+  const rows = (
+    Array.isArray(result) ? result[0] : (result as { rows?: unknown[] }).rows
+  ) as Array<Record<string, unknown>>;
+  return rows.map((row) => String(row.name ?? row.NAME));
 }

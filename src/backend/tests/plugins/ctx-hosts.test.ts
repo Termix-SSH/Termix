@@ -47,8 +47,13 @@ vi.mock("../../plugins/permissions.js", async () => {
         throw new PluginCapabilityError(pluginId, capability);
       }
     },
+    capabilityRefused: (pluginId: string, capability: string) =>
+      new PluginCapabilityError(pluginId, capability),
   };
 });
+
+/** The access check behind trackSession and reportLogin is async. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 vi.mock("../../plugins/actor.js", () => ({ getActor: () => h.actor }));
 vi.mock("../../utils/permission-manager.js", () => ({
   PermissionManager: {
@@ -455,7 +460,7 @@ describe("ctx.hosts.delete", () => {
 });
 
 describe("ctx.hosts session tracking and activity", () => {
-  it("counts a live session through core and releases it", () => {
+  it("counts a live session through core and releases it", async () => {
     h.sessions = [];
     h.released = [];
     const hosts = createPluginHosts({
@@ -463,6 +468,7 @@ describe("ctx.hosts session tracking and activity", () => {
       audit: vi.fn(async () => {}),
     });
     const release = hosts.trackSession(4);
+    await settle();
     expect(h.sessions).toEqual([4]);
     release();
     expect(h.released).toEqual([4]);
@@ -498,11 +504,11 @@ describe("ctx.hosts.status", () => {
       manifest: manifest(["hosts:read"]),
       audit: vi.fn(async () => {}),
     });
-    expect(hosts.status.get(4)).toEqual({
+    await expect(hosts.status.get(4)).resolves.toEqual({
       status: "reachable",
       lastChecked: "t",
     });
-    expect(hosts.status.get(5)).toBeNull();
+    await expect(hosts.status.get(5)).resolves.toBeNull();
     await expect(hosts.status.check(5)).resolves.toEqual({
       status: "offline",
       lastChecked: "5",
@@ -514,7 +520,9 @@ describe("ctx.hosts.status", () => {
       manifest: manifest([]),
       audit: vi.fn(async () => {}),
     });
-    expect(() => hosts.status.get(4)).toThrow(PluginCapabilityError);
+    await expect(hosts.status.get(4)).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
     expect(() => hosts.status.reportLogin(4, { ok: true })).toThrow(
       PluginCapabilityError,
     );
@@ -526,7 +534,7 @@ describe("ctx.hosts.status", () => {
     );
   });
 
-  it("passes login reports on to core", () => {
+  it("passes login reports on to core", async () => {
     h.statusReports = [];
     h.granted = new Set(["hosts:read"]);
     const hosts = createPluginHosts({
@@ -534,6 +542,7 @@ describe("ctx.hosts.status", () => {
       audit: vi.fn(async () => {}),
     });
     hosts.status.reportLogin(4, { ok: false, hostKeyChanged: true });
+    await settle();
     expect(h.statusReports).toEqual([
       { hostId: 4, ok: false, hostKeyChanged: true },
     ]);

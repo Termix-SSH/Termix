@@ -17,6 +17,7 @@
   "capabilities": [
     "hosts:read",
     "credentials:use",
+    "credentials:read",
     "ssh:connect",
     "network:serve",
     "db:own",

@@ -14,13 +14,17 @@ import type {
   PluginSshHost,
 } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import { PluginSshInteractionError } from "@termix/plugin-sdk/backend";
 import {
-  PluginCapabilityError,
-  PluginSshInteractionError,
-} from "@termix/plugin-sdk/backend";
-import { assertCapability } from "./permissions.js";
+  assertCapability,
+  capabilityRefused,
+  hasCachedCapability,
+  hasCapability,
+  warmPluginGrants,
+} from "./permissions.js";
 import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
+import { redactHostSecrets } from "./ctx-hosts.js";
 import {
   getSshAuthProvider,
   listSshAuthProviders,
@@ -74,16 +78,16 @@ function profileOf(options?: { profile?: string }): SshConnectProfile {
 }
 
 /**
- * The user a connection runs as: the request's actor, or for background work
- * on a resolved host, that host's owner. A bare host id with no actor has
- * nobody to resolve it for.
+ * The user a connection runs as: the actor, or for a host core resolved
+ * earlier, the user it was resolved for. A host object's own userId is plugin
+ * data and is never believed, or a plugin could borrow another user's jump
+ * hosts and stored credentials by naming them.
  */
-function actingUser(host: number | PluginSshHost): string {
-  const actor = getActor();
+function actingUser(resolvedFor?: string): string {
+  const actor = getActor() ?? resolvedFor;
   if (actor) return actor;
-  if (typeof host === "object" && host.userId) return host.userId;
   throw new Error(
-    "ctx.ssh needs an acting user: call it inside a request, ctx.asUser, or pass a resolved host",
+    "ctx.ssh needs an acting user: call it inside a request or ctx.asUser",
   );
 }
 
@@ -119,6 +123,47 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     }
   };
 
+  // Hosts core resolved, keyed by the redacted copy the plugin was given, so
+  // handing that copy back to connect still connects with the real secrets.
+  const resolvedHosts = new WeakMap<
+    object,
+    { host: SshConnectHost; userId: string }
+  >();
+
+  const remember = (key: object, host: SshConnectHost, userId: string) =>
+    resolvedHosts.set(key, { host, userId });
+
+  const handOut = (host: SshConnectHost, userId: string): PluginSshHost => {
+    const redacted = redactHostSecrets(
+      host as unknown as Record<string, unknown>,
+    ) as unknown as PluginSshHost;
+    remember(redacted, host, userId);
+    return redacted;
+  };
+
+  /** The acting user for a call about this host. */
+  const userFor = (host: number | PluginSshHost | undefined): string =>
+    actingUser(
+      host && typeof host === "object"
+        ? resolvedHosts.get(host)?.userId
+        : undefined,
+    );
+
+  /**
+   * A host for core's pipeline. An id stays an id (core resolves it with an
+   * access check). An object core handed out maps back to what core resolved;
+   * any other object is the plugin's own, so it runs as the actor.
+   */
+  const toConnectHost = (
+    host: number | PluginSshHost,
+    userId: string,
+  ): number | SshConnectHost => {
+    if (typeof host === "number") return host;
+    const known = resolvedHosts.get(host);
+    if (known) return known.host;
+    return { ...(host as unknown as SshConnectHost), userId };
+  };
+
   /** Checks, connects and audits one new connection. */
   const connectOnce = async (
     host: number | PluginSshHost,
@@ -134,10 +179,19 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       throw error;
     }
 
-    const userId = actingUser(host);
+    let userId: string;
+    try {
+      userId = userFor(host);
+    } catch (error) {
+      await audit("ssh_connect", describeHost(host), {
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
     const { connectHost } = await import("../hosts/connect/connect-host.js");
     try {
-      const connection = await connectHost(host as number | SshConnectHost, {
+      const connection = await connectHost(toConnectHost(host, userId), {
         userId,
         purpose: purposeOf(options),
         profile: profileOf(options),
@@ -156,7 +210,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       connection.client.once("close", () => open.delete(dispose));
       return {
         ...connection,
-        host: connection.host as unknown as PluginSshHost,
+        host: handOut(connection.host as SshConnectHost, userId),
         dispose,
       };
     } catch (error) {
@@ -188,10 +242,12 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       await checkSsh(true);
       const { resolveConnectHost } =
         await import("../hosts/connect/connect-host.js");
+      const userId = userFor(host);
       const resolved = await resolveConnectHost(
-        host as number | SshConnectHost,
-        actingUser(host),
+        toConnectHost(host, userId),
+        userId,
       );
+      remember(resolved, resolved, userId);
       const key = poolKey(options.pool, resolved as PluginSshHost);
       poolKeys.set(key, resolved.id);
       const { withConnection } =
@@ -206,7 +262,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
 
     jumpChain: async (jumpHosts, chainOptions) => {
       await checkSsh(true);
-      const userId = actingUser(chainOptions?.forHost ?? 0);
+      const userId = userFor(chainOptions?.forHost);
       const { createJumpHostChain } =
         await import("../hosts/jump-host-chain.js");
       const client = await createJumpHostChain(jumpHosts, userId);
@@ -227,12 +283,16 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       client.once("close", () => open.delete(dispose));
       // A jump chain ends at a forwarding client, not a single resolved SSH
       // host: report the caller's own host if it gave one, else the last hop.
-      const host: PluginSshHost = chainOptions?.forHost ?? {
-        id: jumpHosts[jumpHosts.length - 1]?.hostId ?? 0,
-        ip: "",
-        port: 22,
-        username: "",
-      };
+      const host: PluginSshHost = chainOptions?.forHost
+        ? (redactHostSecrets(
+            chainOptions.forHost as unknown as Record<string, unknown>,
+          ) as unknown as PluginSshHost)
+        : {
+            id: jumpHosts[jumpHosts.length - 1]?.hostId ?? 0,
+            ip: "",
+            port: 22,
+            username: "",
+          };
       return { client: client as never, jumpClient: null, host, dispose };
     },
 
@@ -253,7 +313,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
 
     resolveHost: async (hostId, options) => {
       await checkSsh(true);
-      const userId = actingUser(hostId);
+      const userId = actingUser();
       const { resolveHostById, resolveHostBySyncId } =
         await import("../hosts/host-resolver.js");
       const resolved = options?.syncId
@@ -263,15 +323,30 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         success: !!resolved,
         errorMessage: resolved ? undefined : "Host not found",
       });
-      return (resolved as unknown as PluginSshHost | null) ?? null;
+      if (!resolved) return null;
+      // The secrets only go to a plugin that declared it reads them.
+      if (await hasCapability(pluginId, "credentials:read", declared)) {
+        await audit("credentials_read", describeHost(hostId), {
+          success: true,
+        });
+        const full = resolved as unknown as SshConnectHost;
+        remember(full, full, userId);
+        return full as unknown as PluginSshHost;
+      }
+      return handOut(resolved as unknown as SshConnectHost, userId);
     },
 
+    // The config it returns carries the password and private key, so it
+    // needs credentials:read on top of the connect pair.
     prepare: async (host, options) => {
       await checkSsh(true);
+      await assertCapability(pluginId, "credentials:read", declared);
+      const userId = userFor(host);
+      const target = toConnectHost(host, userId) as SshConnectHost;
       const { buildConnectConfig } =
         await import("../hosts/connect/build-connect-config.js");
-      const built = await buildConnectConfig(host as SshConnectHost, {
-        userId: actingUser(host),
+      const built = await buildConnectConfig(target, {
+        userId,
         purpose: purposeOf(options),
         profile: profileOf(options),
         client: options.client as never,
@@ -286,7 +361,6 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
           built.outcome.status === "ready" ? undefined : built.outcome.message,
       });
       const provider = built.provider;
-      const target = host as SshConnectHost;
       return {
         config: built.config,
         outcome: built.outcome,
@@ -302,14 +376,25 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     },
 
     openTransport: async (host, config, transportOptions) => {
-      await checkSsh(false);
+      await checkSsh(true);
+      const target = toConnectHost(host, userFor(host)) as SshConnectHost;
       const { openSshTransport } =
         await import("../hosts/connect/transport.js");
-      const opened = await openSshTransport(
-        host as SshConnectHost,
-        config as MutableConnectConfig,
-        transportOptions,
-      );
+      let opened: Awaited<ReturnType<typeof openSshTransport>>;
+      try {
+        opened = await openSshTransport(
+          target,
+          config as MutableConnectConfig,
+          transportOptions,
+        );
+      } catch (error) {
+        await audit("ssh_open_transport", describeHost(host), {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+      await audit("ssh_open_transport", describeHost(host), { success: true });
       if (opened.jumpClient) {
         const jumpClient = opened.jumpClient;
         const dispose = () => {
@@ -324,8 +409,22 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
 
     startInteraction: async (interaction, request) => {
       await checkSsh(true);
-      const userId = actingUser(request.hostId);
+      const userId = actingUser();
       ensureCoreSshAuthProviders();
+      const { PermissionManager } =
+        await import("../utils/permission-manager.js");
+      const access = await PermissionManager.getInstance().canAccessHost(
+        userId,
+        request.hostId,
+        "connect",
+      );
+      if (!access.hasAccess) {
+        await audit("ssh_start_interaction", describeHost(request.hostId), {
+          success: false,
+          errorMessage: "Host not found",
+        });
+        throw new PluginSshInteractionError("Host not found");
+      }
       const { createCurrentHostResolutionRepository } =
         await import("../database/repositories/factory.js");
       const host = await createCurrentHostResolutionRepository().findHostById(
@@ -367,7 +466,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
 
     cancelInteraction: async (interaction, request) => {
       await checkSsh(false);
-      const userId = actingUser(request.hostId ?? 0);
+      const userId = actingUser();
       ensureCoreSshAuthProviders();
       for (const provider of listSshAuthProviders()) {
         if (provider.interaction !== interaction) continue;
@@ -467,7 +566,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
     field: string,
   ) => {
     if (!declared.includes("auth:provide")) {
-      throw new PluginCapabilityError(pluginId, "auth:provide");
+      throw capabilityRefused(pluginId, "auth:provide");
     }
     if (!list?.includes(id)) {
       throw new Error(
@@ -477,6 +576,10 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
   };
 
   const granted = () => assertCapability(pluginId, "auth:provide", declared);
+  // ssh2 calls some hooks synchronously, so those answer from the grant
+  // cache and do nothing until the grant is confirmed.
+  const grantedNow = () =>
+    hasCachedCapability(pluginId, "auth:provide", declared);
 
   const record = (action: string, id: string) =>
     void audit(action, `${pluginId} registered ${id}`, { success: true });
@@ -499,8 +602,22 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       if (provider.onBanner) {
         const onBanner = provider.onBanner;
         wrapped.onBanner = (banner, host, env) =>
-          onBanner(banner, host as PluginSshHost, env as never) as never;
+          grantedNow()
+            ? (onBanner(banner, host as PluginSshHost, env as never) as never)
+            : (undefined as never);
       }
+      if (provider.onAuthFailed) {
+        const onAuthFailed = provider.onAuthFailed;
+        wrapped.onAuthFailed = (host, env, context) =>
+          grantedNow()
+            ? (onAuthFailed(
+                host as PluginSshHost,
+                env as never,
+                context as never,
+              ) as never)
+            : undefined;
+      }
+      warmPluginGrants(pluginId);
       ensureCoreSshAuthProviders();
       const disposers = [registerSshAuthProvider(wrapped)];
       if (provider.onKeyboardInteractive) {
@@ -510,7 +627,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
             id: `${pluginId}:${provider.type}`,
             pluginId,
             detect: (round, host) =>
-              host.authType === provider.type
+              host.authType === provider.type && grantedNow()
                 ? (detect(round, host as PluginSshHost) as never)
                 : null,
           }),
@@ -529,8 +646,9 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         handler.id,
         "keyboardInteractive",
       );
-      // Synchronous hooks inside ssh2's callback, so only the declaration is
-      // checked, like ctx.http.router. Deactivate removes the handler.
+      // Synchronous hooks inside ssh2's callback, so they answer from the
+      // grant cache. Deactivate removes the handler.
+      warmPluginGrants(pluginId);
       const settingsFor = (host: SshConnectHost): Record<string, unknown> =>
         host.pluginSettings?.[pluginId] ?? {};
       ensureCoreSshAuthProviders();
@@ -538,6 +656,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         id: handler.id,
         pluginId,
         detect: (round, host) => {
+          if (!grantedNow()) return null;
           const detected = handler.detect(
             round,
             host as PluginSshHost,
@@ -551,6 +670,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
         },
         autoAnswerPasswords: handler.autoAnswerPasswords
           ? (host) =>
+              grantedNow() &&
               handler.autoAnswerPasswords!(
                 host as PluginSshHost,
                 settingsFor(host),

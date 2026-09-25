@@ -238,6 +238,8 @@ export interface PluginSummary {
   grantedCapabilities?: string[];
   /** Why the plugin is blocked or failed. Admins only. */
   lastError?: string | null;
+  /** Paths a running plugin serves without login. Admins only. */
+  publicRoutes?: { http: string[]; ws: string[] };
 }
 
 export async function getPlugins(): Promise<PluginSummary[]> {

@@ -418,7 +418,12 @@ export function createSsoLogin(ctx: PluginContext, store: ProviderStore) {
       kind: "external",
       provider: providerKey(provider),
       subject: String(identifier),
-      email: (userInfo.email as string | undefined) ?? null,
+      // An address the provider says it has not verified does not count
+      // toward the allowed list.
+      email:
+        userInfo.email_verified === false || userInfo.email_verified === "false"
+          ? null
+          : ((userInfo.email as string | undefined) ?? null),
       name,
       groups,
       isAdmin,

@@ -67,6 +67,8 @@ export function fakeFactory(state: AuthState) {
       delete: async (id: string) => state.users.delete(id),
     }),
     createCurrentUserAuthRepository: () => ({
+      listIdentitiesForUser: async (userId: string) =>
+        state.identities.filter((row) => row.userId === userId),
       findIdentity: async (providerId: string, subject: string) =>
         state.identities.find(
           (row) => row.providerId === providerId && row.subject === subject,

@@ -214,7 +214,10 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
       const participant = liveSession
         ? sessionManager.getParticipantForWs(liveSession, ws)
         : null;
-      if (!isMessageAllowedForParticipant(participant, type)) {
+      // A guest is only ever a participant. Once it has left (or was never
+      // added) it may send nothing, or a read-only guest could "disconnect"
+      // and then type into the owner's shell as nobody in particular.
+      if (!participant || !isMessageAllowedForParticipant(participant, type)) {
         return;
       }
 
@@ -238,6 +241,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
           break;
         case "disconnect":
           sessionManager.removeParticipant(currentSessionId, ws);
+          ws.close(1000, "Left the session");
           break;
         default:
           break;

@@ -184,6 +184,20 @@ async function deactivate(pluginId: string): Promise<void> {
   setFrontendState(pluginId, "inactive");
 }
 
+const ACTIVATE_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function activate(summary: PluginSummary): Promise<void> {
   const loader = currentDeps();
   setFrontendState(summary.id, "loading");
@@ -202,7 +216,13 @@ async function activate(summary: PluginSummary): Promise<void> {
       summary.contributes,
       { guest: guestMode },
     );
-    await module.activate(handle.app);
+    // A plugin whose activate never settles would hold up every plugin
+    // queued after it, so it fails instead.
+    await withTimeout(
+      Promise.resolve(module.activate(handle.app)),
+      ACTIVATE_TIMEOUT_MS,
+      `activate() did not finish within ${ACTIVATE_TIMEOUT_MS / 1000}s`,
+    );
     active.set(summary.id, {
       id: summary.id,
       assetVersion: summary.assetVersion ?? null,

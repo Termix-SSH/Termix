@@ -146,39 +146,51 @@ describe("splitStatements", () => {
 describe("assertOwnedTables", () => {
   it("allows a table in the plugin's own namespace", () => {
     expect(() =>
-      assertOwnedTables("my-plugin", [
+      assertOwnedTables(
+        "my-plugin",
         "CREATE TABLE IF NOT EXISTS p_my_plugin_thing (id integer)",
-      ]),
+      ),
     ).not.toThrow();
   });
 
   it("rejects a table outside the plugin's namespace", () => {
     expect(() =>
-      assertOwnedTables("my-plugin", ["CREATE TABLE users (id integer)"]),
-    ).toThrow(/may only create or alter tables prefixed "p_my_plugin_"/);
+      assertOwnedTables("my-plugin", "CREATE TABLE users (id integer)"),
+    ).toThrow(/"users", which is not prefixed "p_my_plugin_"/);
   });
 
   it("rejects altering a core table", () => {
     expect(() =>
-      assertOwnedTables("my-plugin", [
-        "ALTER TABLE ssh_data ADD COLUMN x text",
-      ]),
+      assertOwnedTables("my-plugin", "ALTER TABLE ssh_data ADD COLUMN x text"),
     ).toThrow(/p_my_plugin_/);
   });
 
-  it("allows the one plugin that may adopt a legacy table", () => {
+  it("allows the bundled plugin that adopts a legacy table", () => {
     expect(() =>
-      assertOwnedTables("fleets", [
+      assertOwnedTables(
+        "fleets",
         'ALTER TABLE "fleets" RENAME TO "p_fleets_fleets"',
-      ]),
+        { bundled: true },
+      ),
     ).not.toThrow();
+  });
+
+  it("gives a user plugin with that id no legacy exemption", () => {
+    expect(() =>
+      assertOwnedTables(
+        "fleets",
+        'ALTER TABLE "fleets" RENAME TO "p_fleets_fleets"',
+      ),
+    ).toThrow(/"fleets", which is not prefixed/);
   });
 
   it("names the owner when another plugin tries to adopt its table", () => {
     expect(() =>
-      assertOwnedTables("workspaces", [
+      assertOwnedTables(
+        "workspaces",
         'ALTER TABLE "fleets" RENAME TO "p_workspaces_fleets"',
-      ]),
+        { bundled: true },
+      ),
     ).toThrow(/belongs to the "fleets" plugin/);
   });
 

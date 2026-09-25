@@ -10,7 +10,7 @@
  * core's schema, kept deliberately in step with it.
  */
 
-import { KEY_LENGTH, prefixedTableName } from "./db.js";
+import { KEY_LENGTH, prefixedTableName, tablePrefix } from "./db.js";
 import type {
   PluginColumn,
   PluginTableDefinition,
@@ -345,4 +345,254 @@ export function addColumnSql(
   line += defaultClause(dialect, column);
 
   return `ALTER TABLE ${quote(dialect, physical)} ADD COLUMN ${line};`;
+}
+
+interface SqlToken {
+  /** As written: a bare word keeps its case, a quoted name loses its quotes. */
+  value: string;
+  kind: "word" | "quoted" | "punct";
+}
+
+/**
+ * Words and identifiers in one statement, with comments and string literals
+ * dropped. `"x"`, `` `x` `` and `[x]` all come out as the identifier x, so no
+ * quoting style hides a table name from the ownership check.
+ */
+function tokenize(source: string): SqlToken[] {
+  const tokens: SqlToken[] = [];
+  let i = 0;
+  while (i < source.length) {
+    const char = source[i];
+    const next = source[i + 1];
+    if (/\s/.test(char)) {
+      i++;
+    } else if (char === "-" && next === "-") {
+      while (i < source.length && source[i] !== "\n") i++;
+    } else if (char === "/" && next === "*") {
+      const end = source.indexOf("*/", i + 2);
+      i = end < 0 ? source.length : end + 2;
+    } else if (char === "'") {
+      i++;
+      while (i < source.length) {
+        if (source[i] === "'" && source[i + 1] === "'") i += 2;
+        else if (source[i] === "'") break;
+        else i++;
+      }
+      i++;
+      tokens.push({ value: "'", kind: "punct" });
+    } else if (char === '"' || char === "`" || char === "[") {
+      const close = char === "[" ? "]" : char;
+      let value = "";
+      i++;
+      while (i < source.length) {
+        if (source[i] === close && source[i + 1] === close && close !== "]") {
+          value += close;
+          i += 2;
+        } else if (source[i] === close) {
+          break;
+        } else {
+          value += source[i++];
+        }
+      }
+      i++;
+      tokens.push({ value, kind: "quoted" });
+    } else if (/[A-Za-z0-9_$]/.test(char)) {
+      let value = "";
+      while (i < source.length && /[A-Za-z0-9_$]/.test(source[i])) {
+        value += source[i++];
+      }
+      tokens.push({ value, kind: "word" });
+    } else {
+      tokens.push({ value: char, kind: "punct" });
+      i++;
+    }
+  }
+  return tokens;
+}
+
+/** Statements a plugin migration may never contain. */
+const REFUSED_STATEMENTS = new Set([
+  "ATTACH",
+  "DETACH",
+  "PRAGMA",
+  "GRANT",
+  "REVOKE",
+  "COPY",
+  "LOAD",
+  "DO",
+  "CALL",
+  "HANDLER",
+  "WITH",
+  "SET",
+  "VACUUM",
+]);
+
+/** What a migration may CREATE, ALTER or DROP. Anything else is refused. */
+const TABLE_OBJECTS = new Set(["TABLE", "VIEW"]);
+const HARMLESS_OBJECTS = new Set(["SEQUENCE", "TYPE"]);
+
+const CREATE_MODIFIERS = [
+  "OR",
+  "REPLACE",
+  "TEMP",
+  "TEMPORARY",
+  "UNLOGGED",
+  "GLOBAL",
+  "LOCAL",
+  "VIRTUAL",
+  "UNIQUE",
+  "CONCURRENTLY",
+];
+
+/**
+ * Every problem with the tables a migration writes to.
+ *
+ * The check has to hold against a plugin that is trying, not only one that
+ * made a typo, so it reads each statement the way the engine does rather
+ * than matching one pattern: a comment between a keyword and a name, bracket
+ * quoting, a second name in a DROP list, a schema-qualified name and
+ * `ALTER ... RENAME TO users` are all seen. Reads (FROM, JOIN, REFERENCES)
+ * are allowed; writes outside the plugin's prefix are not.
+ *
+ * `ownedLegacy` lists the legacy core tables this plugin adopts.
+ */
+export function findUnownedTableWrites(
+  pluginId: string,
+  sql: string,
+  ownedLegacy: ReadonlySet<string> = new Set(),
+): string[] {
+  const prefix = tablePrefix(pluginId);
+  const problems: string[] = [];
+
+  for (const statement of splitStatements(sql)) {
+    const tokens = tokenize(statement);
+    if (tokens.length === 0) continue;
+    const upper = (at: number) =>
+      tokens[at]?.kind === "word" ? tokens[at].value.toUpperCase() : "";
+
+    /** Checks the table name at `at`, returns the index after it. */
+    const table = (at: number): number => {
+      const name = tokens[at];
+      if (!name || name.kind === "punct") {
+        problems.push("a statement writes to a table with no name");
+        return at + 1;
+      }
+      if (tokens[at + 1]?.value === ".") {
+        problems.push(
+          `"${name.value}.${tokens[at + 2]?.value ?? ""}" names a schema; a plugin may only write its own tables`,
+        );
+        return at + 3;
+      }
+      if (!name.value.startsWith(prefix) && !ownedLegacy.has(name.value)) {
+        problems.push(
+          `writes to "${name.value}", which is not prefixed "${prefix}"`,
+        );
+      }
+      return at + 1;
+    };
+    const skip = (at: number, words: string[]) => {
+      while (words.includes(upper(at))) at++;
+      return at;
+    };
+    const find = (word: string, from = 0) => {
+      for (let at = from; at < tokens.length; at++) {
+        if (upper(at) === word) return at;
+      }
+      return -1;
+    };
+
+    const first = upper(0);
+    if (REFUSED_STATEMENTS.has(first)) {
+      problems.push(`${first} is not allowed in a plugin migration`);
+      continue;
+    }
+
+    if (first === "CREATE" || first === "ALTER" || first === "DROP") {
+      let at = skip(1, CREATE_MODIFIERS);
+      const object = upper(at);
+      if (object === "INDEX") {
+        // The index name is free; the table after ON is what it writes to.
+        const on = find("ON", at);
+        if (on > 0) table(skip(on + 1, ["ONLY"]));
+        continue;
+      }
+      if (HARMLESS_OBJECTS.has(object)) continue;
+      if (!TABLE_OBJECTS.has(object)) {
+        problems.push(
+          `${first} ${object || tokens[at]?.value || ""} is not allowed in a plugin migration`.trim(),
+        );
+        continue;
+      }
+      at = table(skip(at + 1, ["IF", "NOT", "EXISTS", "ONLY"]));
+      // DROP TABLE a, b drops both.
+      while (first === "DROP" && tokens[at]?.value === ",") {
+        at = table(at + 1);
+      }
+      // ALTER TABLE p_x RENAME TO users moves a table out of the namespace.
+      // RENAME [COLUMN] a TO b renames a column and is fine.
+      for (let rename = find("RENAME", at); rename > 0;) {
+        const next = upper(rename + 1);
+        if (next === "TO" || next === "AS") table(rename + 2);
+        rename = find("RENAME", rename + 1);
+      }
+      continue;
+    }
+
+    if (first === "RENAME") {
+      // RENAME TABLE a TO b, c TO d
+      let at = skip(1, ["TABLE"]);
+      while (at < tokens.length) {
+        at = table(at);
+        if (upper(at) !== "TO") break;
+        at = table(at + 1);
+        if (tokens[at]?.value !== ",") break;
+        at++;
+      }
+      continue;
+    }
+
+    if (first === "TRUNCATE") {
+      let at = table(skip(1, ["TABLE", "ONLY"]));
+      while (tokens[at]?.value === ",") at = table(at + 1);
+      continue;
+    }
+
+    if (first === "INSERT" || first === "REPLACE") {
+      const into = find("INTO");
+      if (into > 0) table(into + 1);
+      else problems.push(`${first} without INTO is not allowed`);
+      continue;
+    }
+
+    if (first === "UPDATE") {
+      table(
+        skip(1, [
+          "OR",
+          "ROLLBACK",
+          "ABORT",
+          "REPLACE",
+          "FAIL",
+          "IGNORE",
+          "ONLY",
+          "LOW_PRIORITY",
+        ]),
+      );
+      continue;
+    }
+
+    if (first === "DELETE") {
+      const from = find("FROM");
+      if (from > 0) table(skip(from + 1, ["ONLY"]));
+      else problems.push("DELETE without FROM is not allowed");
+      continue;
+    }
+
+    if (first !== "SELECT" && first !== "COMMENT") {
+      problems.push(
+        `"${tokens[0].value}" statements are not allowed in a plugin migration`,
+      );
+    }
+  }
+
+  return problems;
 }

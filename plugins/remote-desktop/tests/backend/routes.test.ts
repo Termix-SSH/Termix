@@ -261,6 +261,26 @@ describe("the rest of the routes", () => {
     ).toMatchObject({ hostname: "10.0.0.9", port: 3389, "color-depth": 24 });
   });
 
+  it("ignores guacd and path settings a quick connect tries to set", async () => {
+    server = await start();
+    const response = await server.request("POST", "/token", {
+      type: "rdp",
+      hostname: "10.0.0.9",
+      guacdHost: "attacker.example",
+      guacdPort: 4822,
+      "drive-path": "/etc",
+      "recording-path": "/tmp/x",
+      width: 800,
+    });
+    expect(response.status).toBe(200);
+    const token = tokens.decryptToken(response.body.token);
+    expect(token?.connection.guacdHost).toBeUndefined();
+    expect(token?.connection.guacdPort).toBeUndefined();
+    expect(token?.connection.settings["drive-path"]).toBeUndefined();
+    expect(token?.connection.settings["recording-path"]).toBeUndefined();
+    expect(token?.connection.settings.width).toBe(800);
+  });
+
   it("offers native RDP only in the desktop app", async () => {
     server = await start();
     expect((await server.request("GET", "/native-rdp")).body).toEqual({

@@ -105,6 +105,9 @@ export async function evaluateSecondFactors(
     try {
       if (await factor.isEnrolled(userId)) required.set(key, factor);
     } catch (error) {
+      // Unknown is not "not enrolled": the login stops instead of skipping
+      // a factor the user may well have.
+      blocked.push({ pluginId: factor.pluginId, factorId: factor.id });
       authLogger.warn("Second factor enrolment check failed", {
         operation: "second_factor_enrolment_check",
         factorId: factor.id,

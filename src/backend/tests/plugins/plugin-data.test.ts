@@ -285,7 +285,9 @@ describe("adopting a legacy core table", () => {
       "0001_adopt.sql",
       adoptLegacyTableSql("sqlite", "fleets", "p_fleets_fleets"),
     );
-    await applyPluginMigrations("fleets", root, createRunner());
+    await applyPluginMigrations("fleets", root, createRunner(), {
+      bundled: true,
+    });
 
     expect(tableExists("fleets")).toBe(false);
     const rows = sqlite
@@ -319,7 +321,9 @@ describe("adopting a legacy core table", () => {
     );
 
     await expect(
-      applyPluginMigrations("workspaces", root, createRunner()),
+      applyPluginMigrations("workspaces", root, createRunner(), {
+        bundled: true,
+      }),
     ).rejects.toThrow(/belongs to the "fleets" plugin/);
 
     // Refused before execution, so the legacy table is still there.

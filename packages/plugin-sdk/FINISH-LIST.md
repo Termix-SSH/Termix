@@ -167,6 +167,18 @@ with a real install, a real device or a repo outside this one.
   import that carries file manager bookmarks; the Simple preset hiding plugin
   rail items except Snippets.
 
+- Termix-Mobile: after a redirect login (SSO) with the admin setting
+  "second factor after external login" on, the server answers with the
+  second-factor step (pending cookie and `temp_token`) instead of a session.
+  The mobile app has to handle that step; that change is in the mobile repo.
+- D2 changes to check by hand: a remote desktop session still opens, and a
+  touch mode switch within five minutes reuses its token (after that the app
+  mints a new one); the terminal, file manager and host metrics still connect
+  and sudo still works (they now declare `credentials:read`); Docker and
+  automations connect with a redacted host handed back to core; Admin >
+  Plugins > Permissions lists a plugin's public routes; a disabled plugin's
+  `/plugin-api` URL answers 503; a share-link guest who leaves cannot type.
+
 ## Left for later
 
 - 3.0.0: drop the migrated 2.8 settings rows (`guac_url`, `step_ca_url`,
@@ -183,3 +195,13 @@ with a real install, a real device or a repo outside this one.
   rule: `src/backend/hosts/host-session-status.test.ts`,
   `jump-host-proxy.test.ts` and `ssh-keepalive.test.ts`. Move them under
   `src/backend/tests/hosts/`.
+- D2 low findings, not fixed: plugin sockets have no Origin check (a
+  SameSite=lax cookie is not sent on a cross-site WebSocket, so only a
+  sibling subdomain could try); a public `:param` path matches every HTTP
+  method and would also match a sibling literal route; `/plugins/public-manifest`
+  shows plugin versions before login; `ctx.process.ensureBinary` hashes any
+  `prebuilt` path on disk; `credentials.resolveHostProtocol` falls back to the
+  SSH password for an RDP login (2.8 behaviour, behind `credentials:read`);
+  a remote desktop display token can be replayed within its five minute TTL
+  (strict single use would break the touch mode switch and reconnect, which
+  reuse it). Revisit with signing and the install UI in 3.0.0.

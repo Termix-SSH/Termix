@@ -110,3 +110,61 @@ export function withPluginScope<P extends object>(
   Scoped.displayName = `Plugin(${pluginId}:${Inner.displayName ?? Inner.name ?? "Component"})`;
   return Scoped;
 }
+
+/** Renders nothing when a plugin's icon throws, instead of a crash notice. */
+class IconBoundary extends Component<BoundaryProps, { error: boolean }> {
+  state = { error: false };
+
+  static getDerivedStateFromError() {
+    return { error: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error(`[plugins] ${this.props.pluginId} icon failed`, error);
+  }
+
+  render() {
+    return this.state.error ? null : this.props.children;
+  }
+}
+
+/**
+ * A plugin icon the shell renders inline (rail, tab strip, host row). Small
+ * enough that a broken one should just disappear, not take the row with it.
+ */
+export function withIconBoundary<P extends object>(
+  pluginId: string,
+  Icon: ComponentType<P> | undefined,
+): ComponentType<P> | undefined {
+  if (!Icon) return undefined;
+  function SafeIcon(props: P) {
+    return (
+      <IconBoundary pluginId={pluginId}>
+        <Icon {...props} />
+      </IconBoundary>
+    );
+  }
+  SafeIcon.displayName = `PluginIcon(${pluginId})`;
+  return SafeIcon;
+}
+
+/**
+ * A plugin callback core calls while rendering, such as a host action's
+ * label. A throw is logged and answered with `fallback`, so one plugin
+ * cannot break the host list.
+ */
+export function guardCallback<A extends unknown[], R>(
+  pluginId: string,
+  fn: ((...args: A) => R) | undefined,
+  fallback: R,
+): ((...args: A) => R) | undefined {
+  if (!fn) return undefined;
+  return (...args: A) => {
+    try {
+      return fn(...args);
+    } catch (error) {
+      console.error(`[plugins] ${pluginId} callback failed`, error);
+      return fallback;
+    }
+  };
+}

@@ -16,6 +16,8 @@ import { getPluginRuntime } from "../../plugins/index.js";
 import { describePluginFrontend } from "../../plugins/assets.js";
 import { getSetting } from "../../plugins/settings.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
+import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
+import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
 import {
   findField,
   getAllSettings,
@@ -191,8 +193,10 @@ export async function listPreLoginPlugins(): Promise<
  *
  *       Non-admins get only what the shell needs. What a plugin is allowed to
  *       do, what has been granted to it and why it failed are operational
- *       details, so capabilities, grants and lastError are included only for
- *       holders of admin.plugins.manage.
+ *       details, so capabilities, grants, lastError and publicRoutes are
+ *       included only for holders of admin.plugins.manage. publicRoutes lists
+ *       the HTTP paths and socket paths a running plugin serves without
+ *       core's login check.
  *
  *       The frontend fields drive the browser's plugin loader: `frontend`
  *       says there is a bundle at /plugin-assets/<id>/frontend.js,
@@ -283,6 +287,10 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
           capabilities,
           grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
           lastError: loaded?.lastError ?? record.lastError ?? null,
+          publicRoutes: {
+            http: getPluginPublicHttpRoutes(record.id),
+            ws: getPluginPublicWsRoutes(record.id),
+          },
         };
       }),
     );
@@ -640,7 +648,7 @@ router.delete(
  * /plugins/{id}/data:
  *   delete:
  *     summary: Delete everything a plugin stores
- *     description: Drops the plugin's own tables and clears its key/value state, capability grants and migration ledger. Disabling a plugin never touches its data; this is the explicit uninstall path, and it cannot be undone. The plugin is deactivated first so nothing is writing while its tables go.
+ *     description: Drops every table under the plugin's prefix and clears its key/value state, settings and secrets, capability grants and migration ledger. Role permissions stay. Disabling a plugin never touches its data; this is the explicit uninstall path, and it cannot be undone. The plugin is deactivated first so nothing is writing while its tables go.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -680,7 +688,11 @@ router.delete(
       }
 
       const { removePluginData } = await import("../../plugins/data.js");
-      const removed = await removePluginData(pluginId);
+      const removed = await removePluginData(pluginId, {
+        knownPluginIds: getPluginRuntime()
+          .loader.list()
+          .map((plugin) => plugin.id),
+      });
 
       databaseLogger.warn(`Removed all data for plugin ${pluginId}`, {
         operation: "plugin_remove_data",

@@ -31,6 +31,19 @@ vi.mock("../../plugins/permissions.js", async () => {
         throw new PluginCapabilityError(pluginId, capability);
       }
     },
+    hasCapability: async (
+      _pluginId: string,
+      capability: string,
+      declared: readonly string[],
+    ) => declared.includes(capability) && h.granted.has(capability),
+    hasCachedCapability: (
+      _pluginId: string,
+      capability: string,
+      declared: readonly string[],
+    ) => declared.includes(capability) && h.granted.has(capability),
+    warmPluginGrants: () => {},
+    capabilityRefused: (pluginId: string, capability: string) =>
+      new PluginCapabilityError(pluginId, capability),
   };
 });
 vi.mock("../../plugins/actor.js", () => ({
@@ -171,7 +184,7 @@ describe("ctx.ssh", () => {
     });
   });
 
-  it("runs background work on a resolved host as its owner", async () => {
+  it("never believes a host object's own userId", async () => {
     h.actor = undefined;
     h.granted = new Set(["ssh:connect", "credentials:use"]);
     const ssh = createPluginSsh({
@@ -179,15 +192,21 @@ describe("ctx.ssh", () => {
       bag: new DisposableBag("fixture"),
       audit: vi.fn(async () => {}),
     });
-    await ssh.connect({
+    const forged = {
       id: 3,
       ip: "h",
       port: 22,
       username: "u",
       userId: "owner",
-    });
-    expect(h.connects[0].options).toMatchObject({ userId: "owner" });
+    };
+    await expect(ssh.connect(forged)).rejects.toThrow(/acting user/);
     await expect(ssh.connect(3)).rejects.toThrow(/acting user/);
+    expect(h.connects).toEqual([]);
+
+    h.actor = "caller";
+    await ssh.connect(forged);
+    expect(h.connects[0].options).toMatchObject({ userId: "caller" });
+    expect(h.connects[0].target).toMatchObject({ userId: "caller" });
   });
 
   it("passes a given stream through to the pipeline, gated like any connect", async () => {
@@ -343,7 +362,37 @@ describe("ctx.auth", () => {
     expect(getSshAuthProvider("corp")).toBeUndefined();
   });
 
+  it("never calls a keyboard-interactive handler whose grant is missing", async () => {
+    h.granted = new Set();
+    const bag = new DisposableBag("fixture");
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:provide"], { keyboardInteractive: ["gate"] }),
+      bag,
+      audit: vi.fn(async () => {}),
+    });
+    const detect = vi.fn(() => null);
+    const autoAnswerPasswords = vi.fn(() => true);
+    auth.registerKeyboardInteractiveHandler({
+      id: "gate",
+      label: "Gate",
+      detect,
+      autoAnswerPasswords,
+    });
+    classifyKeyboardInteractive(
+      {
+        name: "Gate sign-in",
+        instructions: "",
+        prompts: [{ prompt: "Password:", echo: false }],
+      },
+      { id: 1, ip: "10.0.0.1", port: 22, username: "root", password: "pw" },
+    );
+    expect(detect).not.toHaveBeenCalled();
+    expect(autoAnswerPasswords).not.toHaveBeenCalled();
+    await bag.disposeAll();
+  });
+
   it("registers a keyboard-interactive handler that sees only its own host settings", async () => {
+    h.granted = new Set(["auth:provide"]);
     const bag = new DisposableBag("fixture");
     const auth = createPluginAuth({
       manifest: manifest(["auth:provide"], { keyboardInteractive: ["gate"] }),

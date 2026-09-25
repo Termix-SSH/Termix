@@ -163,10 +163,12 @@ async function findLinkedUser(
   }
 
   // Accounts from before user_external_identities matched on the raw
-  // identifier column; link them the first time they sign in.
+  // identifier column; link them the first time they sign in. The column is
+  // not scoped to a provider, so only an SSO account that has no link yet,
+  // from the same provider when both say which, can be claimed this way.
   if (identity.legacyIdentifier) {
     const legacy = await users.findByOidcIdentifier(identity.legacyIdentifier);
-    if (legacy) {
+    if (legacy && (await mayClaimLegacyAccount(legacy, identity))) {
       await identities.linkIdentity({
         userId: legacy.id,
         providerId: identity.provider,
@@ -179,6 +181,42 @@ async function findLinkedUser(
   return null;
 }
 
+async function mayClaimLegacyAccount(
+  legacy: UserRecord,
+  identity: ExternalIdentity,
+): Promise<boolean> {
+  if (!legacy.isOidc) return false;
+  if (
+    legacy.ssoProviderId != null &&
+    identity.ssoProviderId != null &&
+    legacy.ssoProviderId !== identity.ssoProviderId
+  ) {
+    return false;
+  }
+  const links = await createCurrentUserAuthRepository().listIdentitiesForUser(
+    legacy.id,
+  );
+  return links.length === 0;
+}
+
+/**
+ * A username nobody else has. An identity provider's display name must never
+ * give an SSO account the same username as a local one, such as "admin".
+ */
+async function freeUsername(
+  wanted: string,
+  selfId: string | null,
+): Promise<string> {
+  const users = createCurrentUserRepository();
+  let candidate = wanted;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const holder = await users.findByUsername(candidate);
+    if (!holder || holder.id === selfId) return candidate;
+    candidate = `${wanted}-${nanoid(4)}`;
+  }
+  return `${wanted}-${nanoid(10)}`;
+}
+
 async function createUser(
   identity: ExternalIdentity,
   deviceType: string,
@@ -187,7 +225,7 @@ async function createUser(
   const id = nanoid();
   const created = await users.createFirstSsoUser({
     id,
-    username: identity.name || identity.subject,
+    username: await freeUsername(identity.name || identity.subject, null),
     passwordHash: "",
     isAdmin: !!identity.isAdmin,
     isOidc: true,
@@ -303,10 +341,16 @@ export async function findOrProvisionExternalUser(
     // A user who also has a password picked their own username; leave it.
     const isDualAuth = !!user.passwordHash && user.passwordHash.trim() !== "";
     if (!isDualAuth && identity.name && user.username !== identity.name) {
-      user =
-        (await createCurrentUserRepository().update(user.id, {
-          username: identity.name,
-        })) ?? user;
+      // Taken by someone else: keep the name the account already has.
+      const holder = await createCurrentUserRepository().findByUsername(
+        identity.name,
+      );
+      if (!holder || holder.id === user.id) {
+        user =
+          (await createCurrentUserRepository().update(user.id, {
+            username: identity.name,
+          })) ?? user;
+      }
     }
 
     if (identity.isAdmin !== undefined) {

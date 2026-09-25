@@ -6,7 +6,7 @@
  */
 
 export interface RegistrationConflict {
-  kind: "service" | "registry" | "permission" | "ws";
+  kind: "service" | "registry" | "permission" | "ws" | "id";
   pluginId: string;
   /** Who already held it, when known. */
   heldBy?: string;

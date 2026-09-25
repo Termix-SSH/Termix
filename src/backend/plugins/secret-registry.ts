@@ -106,7 +106,7 @@ export class PluginSecretActorError extends Error {
   constructor(pluginId: string, key: string) {
     super(
       `A read of "${pluginId}:${key}" has no acting user. Pass one with ` +
-        `ctx.secrets.forUser(userId).getShared(...).`,
+        `ctx.secrets.getShared(pluginId, key, { userId }) or ctx.asUser.`,
     );
     this.name = "PluginSecretActorError";
   }

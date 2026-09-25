@@ -271,20 +271,25 @@ describe("withHostPluginSettings", () => {
 });
 
 describe("writeHostPluginSettings", () => {
-  it("JSON-stringifies each value under the plugin's own namespace", async () => {
-    await writeHostPluginSettings("docker", 7, {
+  it("writes each value through the settings service, under the plugin's own namespace", async () => {
+    await writeHostPluginSettings(DOCKER, 7, {
       enableDocker: true,
-      socketPath: null,
+      socketPath: "/var/run/docker.sock",
     });
 
     expect(setCalls).toEqual([
       ["docker", "host", "7", "enableDocker", "true"],
-      ["docker", "host", "7", "socketPath", "null"],
+      ["docker", "host", "7", "socketPath", '"/var/run/docker.sock"'],
     ]);
   });
 
+  it("refuses a key the manifest does not declare", async () => {
+    await writeHostPluginSettings(DOCKER, 7, { injected: "x" });
+    expect(setCalls).toEqual([]);
+  });
+
   it("skips a field whose value is undefined", async () => {
-    await writeHostPluginSettings("docker", 7, {
+    await writeHostPluginSettings(DOCKER, 7, {
       enableDocker: true,
       socketPath: undefined,
     });

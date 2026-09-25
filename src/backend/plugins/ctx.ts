@@ -27,7 +27,11 @@ import * as serviceRegistry from "./service-registry.js";
 import type { ServiceRegistration } from "./service-registry.js";
 import * as secretRegistry from "./secret-registry.js";
 import type { SecretRegistration } from "./secret-registry.js";
-import { assertCapability, hasCapability } from "./permissions.js";
+import {
+  assertCapability,
+  capabilityRefused,
+  hasCapability,
+} from "./permissions.js";
 import { getActor, runAsActor } from "./actor.js";
 import { DisposableBag } from "./disposables.js";
 import {
@@ -40,7 +44,6 @@ import { resolvePermission } from "./rbac.js";
 import * as pluginSettings from "./settings.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import {
-  PluginCapabilityError,
   type PluginContext,
   type PluginModule,
   type PluginOpenIsolatedWindowRequest,
@@ -110,8 +113,9 @@ interface AuditOptions {
 /**
  * Wraps a privileged function in the capability check and the audit line.
  *
- * The check runs before the call and the audit after, so a denied call is
- * still recorded: "tried and was refused" is exactly the thing worth seeing.
+ * The check runs before the call and the audit after. A denied call is still
+ * recorded, by assertCapability: "tried and was refused" is exactly the thing
+ * worth seeing.
  */
 function guarded<Args extends unknown[], Result>(
   manifest: PluginManifest,
@@ -120,17 +124,13 @@ function guarded<Args extends unknown[], Result>(
   options: AuditOptions,
 ): (...args: Args) => Promise<Result> {
   return async (...args: Args): Promise<Result> => {
-    const pluginId = manifest.id;
-
-    try {
-      await assertCapability(pluginId, capability, manifest.capabilities);
-    } catch (error) {
-      await writeAudit(manifest, options, {
-        success: false,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+    // A refusal is audited inside assertCapability, under this action.
+    await assertCapability(
+      manifest.id,
+      capability,
+      manifest.capabilities,
+      options.action,
+    );
 
     try {
       const result = await fn(...args);
@@ -191,6 +191,26 @@ export function createPluginContext(
       await import("../database/repositories/factory.js");
     return createCurrentPluginSettingsRepository();
   };
+  // A user named by the plugin instead of the ambient actor. Honoured, like
+  // ctx.asUser, and audited the same way.
+  const namedUser = (
+    userId: string | undefined,
+    via: string,
+  ): string | undefined => {
+    if (!userId) return getActor();
+    if (userId !== getActor()) {
+      void writeAudit(
+        manifest,
+        {
+          action: "as_user",
+          details: () => `${pluginId} acted as ${userId} through ${via}`,
+        },
+        { success: true },
+      );
+    }
+    return userId;
+  };
+
   const secretOwner = (): string => {
     const actor = getActor();
     if (!actor) {
@@ -384,19 +404,12 @@ export function createPluginContext(
   );
 
   const capabilitiesRequire = async (capability: string) => {
-    try {
-      await assertCapability(pluginId, capability, declared);
-    } catch (error) {
-      await writeAudit(
-        manifest,
-        { action: "capability_require", details: () => capability },
-        {
-          success: false,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        },
-      );
-      throw error;
-    }
+    await assertCapability(
+      pluginId,
+      capability,
+      declared,
+      "capability_require",
+    );
     await writeAudit(
       manifest,
       { action: "capability_require", details: () => capability },
@@ -551,10 +564,11 @@ export function createPluginContext(
           service,
           pluginId,
           {
-            // A caller-supplied userId is only honoured when it matches the
-            // actor; otherwise the ambient actor wins. A plugin cannot widen
-            // its reach by naming someone else here.
-            resolveUserId: () => options?.userId ?? getActor(),
+            // Naming a user other than the actor is the same thing as
+            // ctx.asUser, so it gets the same audit line.
+            resolveUserId: () =>
+              namedUser(options?.userId, `service ${service}`),
+            nameUser: (userId) => namedUser(userId, `service ${service}`),
             hasPermission: checkPermission,
             audit: (entry) => writeServiceAudit(entry),
           },
@@ -667,7 +681,8 @@ export function createPluginContext(
 
       getShared: (providerPluginId, key, options) =>
         secretRegistry.readSharedSecret(manifest, providerPluginId, key, {
-          resolveUserId: () => options?.userId ?? getActor(),
+          resolveUserId: () =>
+            namedUser(options?.userId, `shared secret ${providerPluginId}`),
           hasPermission: checkPermission,
           audit: (entry) => writeSecretAudit(entry),
         }),
@@ -679,7 +694,7 @@ export function createPluginContext(
         // and router() has to be synchronous so a plugin can register routes
         // inline in activate. http.ts re-checks on every request.
         if (!declared.includes("network:serve")) {
-          throw new PluginCapabilityError(pluginId, "network:serve");
+          throw capabilityRefused(pluginId, "network:serve");
         }
 
         const router = createPluginRouter({
@@ -703,7 +718,7 @@ export function createPluginContext(
     ws: {
       route: (path, wsHandler, options) => {
         if (!declared.includes("network:serve")) {
-          throw new PluginCapabilityError(pluginId, "network:serve");
+          throw capabilityRefused(pluginId, "network:serve");
         }
         const dispose = registerPluginWsRoute(
           pluginId,
@@ -717,7 +732,7 @@ export function createPluginContext(
 
       upgrade: (path, upgradeHandler, options) => {
         if (!declared.includes("network:serve")) {
-          throw new PluginCapabilityError(pluginId, "network:serve");
+          throw capabilityRefused(pluginId, "network:serve");
         }
         const dispose = registerPluginWsUpgrade(
           pluginId,

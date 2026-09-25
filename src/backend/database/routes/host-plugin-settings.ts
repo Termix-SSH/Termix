@@ -225,21 +225,27 @@ export async function withHostPluginSettings(
 }
 
 /**
- * Writes a set of host-scope plugin settings in one call, for a core route
- * that still accepts a plugin's fields inline on the host create/update body
- * (the fields haven't grown their own editor UI flow yet). Values are
- * JSON-stringified the same way ctx.settings.setHost stores them.
+ * Writes a set of host-scope plugin settings in one call, through the same
+ * path as every other settings write: an undeclared key is refused, a value
+ * is validated, and a secret field is encrypted.
  */
 export async function writeHostPluginSettings(
-  pluginId: string,
+  manifest: PluginManifest,
   hostId: number,
   values: Record<string, unknown>,
 ): Promise<void> {
-  const repository = createCurrentPluginSettingsRepository();
-  const scopeId = String(hostId);
   for (const [key, value] of Object.entries(values)) {
     if (value === undefined) continue;
-    await repository.set(pluginId, "host", scopeId, key, JSON.stringify(value));
+    const error = await setSetting(manifest, "host", hostId, key, value);
+    if (error) {
+      sshLogger.warn("Refused a plugin host setting on import", {
+        operation: "host_import_plugin_settings",
+        pluginId: manifest.id,
+        hostId,
+        key,
+        error,
+      });
+    }
   }
 }
 
@@ -296,7 +302,7 @@ export async function applyPluginHostImportSettings(
         `${manifest.id}.hostImportNormalizer`,
       );
       const values = normalizer?.(raw);
-      if (values) await writeHostPluginSettings(manifest.id, hostId, values);
+      if (values) await writeHostPluginSettings(manifest, hostId, values);
     } catch (error) {
       sshLogger.warn("Plugin host import normalizer failed", {
         operation: "host_import_plugin_settings",

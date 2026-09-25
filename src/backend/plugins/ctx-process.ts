@@ -88,10 +88,10 @@ export function createPluginProcess(deps: Deps): PluginProcess {
   };
 
   const run: PluginProcess["run"] = (file, args, options = {}) =>
-    audited("process_run", `ran ${path.basename(file)}`, async () => {
+    audited("process_run", `ran ${path.basename(String(file))}`, async () => {
       const child = spawn(file, [...args], {
         cwd: options.cwd,
-        env: { ...process.env, ...(options.env ?? {}) },
+        env: { ...baseEnvironment(), ...(options.env ?? {}) },
         stdio: ["ignore", "pipe", "pipe"],
         shell: false,
       });
@@ -209,4 +209,47 @@ export function createPluginProcess(deps: Deps): PluginProcess {
     );
 
   return { run, ensureBinary };
+}
+
+/**
+ * What a plugin's program inherits from the server: enough to find binaries,
+ * a home and temp folder, the locale and the outbound proxy. Never the rest,
+ * which holds the JWT secret, database keys and OIDC client secrets.
+ */
+const INHERITED_ENV = [
+  "PATH",
+  "PATHEXT",
+  "HOME",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "XDG_CONFIG_HOME",
+  "XDG_CACHE_HOME",
+  "TMP",
+  "TEMP",
+  "TMPDIR",
+  "SystemRoot",
+  "windir",
+  "ComSpec",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+];
+
+export function baseEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  const inherited: NodeJS.ProcessEnv = {};
+  for (const name of INHERITED_ENV) {
+    if (env[name] !== undefined) inherited[name] = env[name];
+  }
+  return inherited;
 }

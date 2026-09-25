@@ -10,7 +10,11 @@
  */
 
 import { pluginLogger } from "../utils/logger.js";
-import { setPluginEnabledCheck, unregisterPluginHttp } from "./http.js";
+import {
+  setPluginEnabledCheck,
+  setPluginInstalledCheck,
+  unregisterPluginHttp,
+} from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
@@ -29,6 +33,7 @@ export function getPluginRuntime(): { loader: PluginLoader } {
     setPluginEnabledCheck(
       (pluginId) => loader?.get(pluginId)?.state === "active",
     );
+    setPluginInstalledCheck((pluginId) => !!loader?.get(pluginId));
     // Lets a host whose auth type belongs to a disabled plugin name it.
     setSshAuthTypeOwnerSource(() =>
       (loader?.list() ?? []).flatMap((plugin) =>
@@ -256,6 +261,24 @@ async function registerPluginPermissions(plugin: LoadedPlugin): Promise<void> {
       ].filter((id) => id !== plugin.id),
     );
 
+    // The group is the plugin id, so a plugin named after a core group would
+    // register that group's permissions. The manifest validator refuses the
+    // id too; this holds for a manifest that skipped it.
+    if (coreGroups.has(plugin.id)) {
+      recordConflict({
+        kind: "permission",
+        pluginId: plugin.id,
+        heldBy: "core",
+        name: plugin.id,
+      });
+      pluginLogger.error(
+        `Ignoring every ${plugin.id} permission: its id is a core permission group`,
+        undefined,
+        { operation: "plugin_permissions" },
+      );
+      return;
+    }
+
     const accepted = declared.filter((permission) => {
       const head = permission.name.split(".")[0];
       if (coreGroups.has(head) || otherPluginIds.has(head)) {
@@ -379,15 +402,17 @@ async function applyRoleDefaults(
         return !coveredBy(current as string[], permission);
       });
 
+      if (missing.length > 0) {
+        await roleRepository.updateRole(role.id, {
+          permissions: JSON.stringify([...(current as string[]), ...missing]),
+        });
+      }
+      // Only once the role really has them, so a failed update is retried
+      // on the next boot instead of being marked done.
       for (const permission of permissions) {
         recorded.push({ roleName, permission });
       }
-
       if (missing.length === 0) continue;
-
-      await roleRepository.updateRole(role.id, {
-        permissions: JSON.stringify([...(current as string[]), ...missing]),
-      });
 
       for (const memberId of await roleRepository.listRoleUserIds(role.id)) {
         PermissionManager.getInstance().invalidateUserPermissionCache(memberId);

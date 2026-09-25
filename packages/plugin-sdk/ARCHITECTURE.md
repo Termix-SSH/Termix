@@ -252,7 +252,10 @@ handler)` for a socket. Core runs the same middleware in front of every plugin:
 
 1. **Auth**, unless the path is listed in `options.public`. A public path is
    audited when the router is registered and logged on every request, because
-   "this plugin opened a hole in auth" should be findable later. It matches the
+   "this plugin opened a hole in auth" should be findable later. **D2** lists
+   a running plugin's public HTTP paths and public socket paths in the admin
+   plugin dialog (`publicRoutes` on `GET /plugins`), and audits a public
+   socket when it is registered. It matches the
    full path, with `:param` segments allowed, so declaring `/webhook/:token`
    public cannot open `/webhook/:token/anything`. A trailing `/*` is the one
    deliberate prefix (**C3**): `/chooser/:id/*` opens that path and everything
@@ -260,12 +263,19 @@ handler)` for a socket. Core runs the same middleware in front of every plugin:
 2. **The actor**, from the user core authenticated, never from the request body.
 3. **An enabled check** returning 503 while the plugin is disabled. That is a
    different fact from 404 ("no such plugin") and a caller can act on it.
+   A disabled plugin has no router left, so the dispatcher answers 503 for any
+   installed id and 404 only for an unknown one; sockets do the same on the
+   upgrade (**D2**).
 4. **Body limits**, defaulting to the 2mb core itself accepts. `database.ts`
    skips its own global parser for `/plugin-api` so a plugin's `bodyLimit`
    actually applies; `rawBody` turns the parsers off for a router that parses
    its own (multer, a raw body for signature checks).
 5. **An error wrapper** that logs against the plugin, never leaks a stack, and
-   feeds the error budget.
+   feeds the error budget. A 4xx (a body that does not parse, one over the
+   limit) answers its own status and does not count, and nothing an
+   unauthenticated request causes counts either, so five junk requests to a
+   public route cannot switch a plugin off (**D2**). A public socket's guest
+   runs with no actor at all, the same as a public HTTP route.
 
 `ctx.rbac.require(permission)` adds a per-route RBAC gate, and a plugin may only
 require a permission it declares itself.
@@ -1111,6 +1121,11 @@ is disposed automatically on deactivate. See [Lifecycle rules](#lifecycle-rules)
 
 ### 11. Tests
 
+The security regressions for the runtime live in
+`src/backend/tests/plugins/security/` (one file per area of the D2 review) and
+`src/ui/tests/plugin-host/security/`. A fix to plugin code gets its test in
+that plugin's own `tests/`, like everything else.
+
 Each plugin has `plugins/<id>/tests/backend` (node) and
 `plugins/<id>/tests/frontend` (jsdom), run by its own vitest config:
 
@@ -1725,6 +1740,22 @@ fields are rejected at every level: a typo'd `contribute` used to validate
 clean and be silently dropped, which made a manifest describe something it did
 not do.
 
+**D2** added the discovery rules:
+
+- `RESERVED_PLUGIN_IDS` (`admin`, `hosts`, `credentials`, `core`, `termix`,
+  `plugin`, `plugins`, `users`, `system`, `sdk`) are refused. A plugin's
+  permissions are registered as `<id>.<name>`, so a plugin called `admin`
+  would otherwise mint `admin.*` permissions.
+- `backend`, `frontend` and `locales` must be relative paths inside the
+  plugin: no absolute path, no `..`, no backslash. The loader also realpaths
+  the backend entry and every migration file and refuses one that resolves
+  outside the plugin, so a symlink cannot point elsewhere.
+- A plugin whose table prefix overlaps a loaded plugin's (`foo` and
+  `foo-bar` both own `p_foo_bar_*`) is refused, bundled first.
+- A user plugin can never take the id of a bundled plugin folder, even when
+  the bundled one failed to load.
+- A `uiPresets` key must be a plain property name.
+
 ```jsonc
 {
   "id": "example", // ^[a-z][a-z0-9-]{1,39}$, equals the directory name
@@ -1979,48 +2010,49 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 Every member is listed; the types in `@termix/plugin-sdk/backend` are the
 authority for signatures.
 
-| Member                                                                                                               | Capability                                         | What it does                                                                                            |
-| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `pluginId`, `manifest`                                                                                               | none                                               | The plugin's id and parsed manifest                                                                     |
-| `log.debug/info/warn/error`                                                                                          | none                                               | Lines in core's log, tagged with the plugin                                                             |
-| `events.emit/on`                                                                                                     | `events:core` for core topics                      | Topics under `plugin.<id>.*`, or core's (`user.deleted`, `user.data_wiped`, host events)                |
-| `kv.get/set/delete/list`                                                                                             | `kv:own`                                           | Small key/value state                                                                                   |
-| `files.dataDir()`                                                                                                    | `files:own`                                        | A per-plugin folder under `DATA_DIR`                                                                    |
-| `db.define/client/refs/persist/dialect`                                                                              | `db:own` (not `dialect`)                           | The plugin's own tables through Drizzle; `persist` flushes SQLite to disk                               |
-| `sync.registerEntity/recordTombstone`                                                                                | none                                               | Adds a table to remote sync, and records a delete for it                                                |
-| `registry.provide/consume/revoke`                                                                                    | none                                               | The low-level named registry services sit on                                                            |
-| `services.provide/get/providers`                                                                                     | per-service RBAC                                   | Typed, versioned cross-plugin services, checked per call                                                |
-| `secrets.get/set/delete/seal/unseal`                                                                                 | `secrets:own`                                      | The plugin's own encrypted values                                                                       |
-| `secrets.offer/withdraw/getShared`                                                                                   | per-secret RBAC                                    | Secrets one plugin lends another                                                                        |
-| `http.router(options)`, `http.baseUrl(req)`                                                                          | `network:serve` (router)                           | The router mounted at `/plugin-api/<id>/`, and the public origin for callback URLs                      |
-| `ws.route/upgrade`                                                                                                   | `network:serve`                                    | Sockets at `/plugin-ws/<id>/<path>`                                                                     |
-| `rbac.has/hasFor/require`                                                                                            | own permissions (require)                          | The acting user's role permissions; `require` is route middleware                                       |
-| `settings.get/set/getUser/setUser/getHost/setHost/listHostValues/getAll/onChange/onValidate`                         | `hosts:read` (listHostValues)                      | The plugin's admin, user and host settings from its manifest                                            |
-| `settings.readCore(key)`                                                                                             | `settings:read-core`                               | One of the core keys in `CORE_SETTINGS_ALLOWLIST`                                                       |
-| `disposables.add`                                                                                                    | none                                               | Extra cleanup on deactivate                                                                             |
-| `capabilities.has/require`                                                                                           | the named capability                               | A generic check for privileged code no ctx member wraps                                                 |
-| `hosts.list/get/checkAccess`                                                                                         | `hosts:read`                                       | Hosts the acting user can see, without secrets                                                          |
-| `hosts.create/update/delete/listOwned/share/listUsers/listRoles`                                                     | `hosts:write`                                      | Host changes and sharing on the user's behalf                                                           |
-| `hosts.trackSession/recordActivity`                                                                                  | `hosts:read`                                       | The online indicator and a recent activity entry                                                        |
-| `hosts.status.get/check/reportLogin/registerPort`                                                                    | `hosts:read`                                       | Core's reachability status                                                                              |
-| `ssh.connect/withConnection/jumpChain`                                                                               | `ssh:connect`, `credentials:use`                   | Connections through core's one connect pipeline                                                         |
-| `ssh.resolveHost/prepare/openTransport/classifyKeyboardInteractive/autoResponses/startInteraction/cancelInteraction` | `ssh:connect`, `credentials:use`                   | The lower level, for a transport with its own prompt flow                                               |
-| `ssh.poolKey/dropPooled/requiresSecret/supportsBackground`                                                           | `ssh:connect`                                      | Pool housekeeping and questions for an auth type's provider                                             |
-| `auth.registerLoginMethod/registerSecondFactor/recordEnrollment/removeEnrollment`                                    | `auth:provide`                                     | Login methods and second factors                                                                        |
-| `auth.completeRedirectLogin/revokeSessions/loginRateLimit/countLinkedUsers`                                          | `auth:provide`                                     | What a login method needs from core's session and provisioning code                                     |
-| `auth.registerSshAuthProvider/registerKeyboardInteractiveHandler`                                                    | `auth:provide`                                     | SSH auth types and keyboard-interactive handlers                                                        |
-| `credentials.listSshKeys` / `.createSshKey`                                                                          | `credentials:use` / `credentials:write`            | The user's saved SSH keys                                                                               |
-| `credentials.resolveHostProtocol`                                                                                    | `credentials:read`                                 | A host's RDP, VNC or Telnet login                                                                       |
-| `credentials.registerSecretResolver`                                                                                 | `auth:provide`                                     | Resolves external secret references in host and credential fields                                       |
-| `desktop.openIsolatedWindow/launchNativeRdp/available`                                                               | `desktop:window` (not `available`)                 | Electron windows and the native RDP client                                                              |
-| `audit.record`                                                                                                       | none                                               | An audit line under the plugin's own action name                                                        |
-| `schedule.every/after`                                                                                               | none                                               | Timers that stop on deactivate and never overlap                                                        |
-| `notify.channels/send`                                                                                               | `notify:send`                                      | Core's notification channels, as the acting user                                                        |
-| `fetch(url, init)`                                                                                                   | `network:outbound`                                 | Outbound HTTP through core's SSRF guard; `allowPrivateHosts` hosts also go through the configured proxy |
-| `process.run/ensureBinary`                                                                                           | `process:spawn` (+ `network:outbound` to download) | Programs on the server                                                                                  |
-| `system.tlsStatus/writeTlsCertificate/reloadTls/publishHttpChallenge/registerTlsRenewer`                             | `system:tls`                                       | The server certificate                                                                                  |
-| `asUser(userId, fn)`                                                                                                 | none, always audited                               | Background work as a user                                                                               |
-| `currentActor()`                                                                                                     | none                                               | The acting user for the current call                                                                    |
+| Member                                                                                                       | Capability                                           | What it does                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `pluginId`, `manifest`                                                                                       | none                                                 | The plugin's id and parsed manifest                                                                                 |
+| `log.debug/info/warn/error`                                                                                  | none                                                 | Lines in core's log, tagged with the plugin                                                                         |
+| `events.emit/on`                                                                                             | `events:core` for core topics                        | Topics under `plugin.<id>.*`, or core's (`user.deleted`, `user.data_wiped`, host events)                            |
+| `kv.get/set/delete/list`                                                                                     | `kv:own`                                             | Small key/value state                                                                                               |
+| `files.dataDir()`                                                                                            | `files:own`                                          | A per-plugin folder under `DATA_DIR`                                                                                |
+| `db.define/client/refs/persist/dialect`                                                                      | `db:own` (not `dialect`)                             | The plugin's own tables through Drizzle; `persist` flushes SQLite to disk                                           |
+| `sync.registerEntity/recordTombstone`                                                                        | none                                                 | Adds a table to remote sync, and records a delete for it                                                            |
+| `registry.provide/consume/revoke`                                                                            | none                                                 | The low-level named registry services sit on                                                                        |
+| `services.provide/get/providers`                                                                             | per-service RBAC                                     | Typed, versioned cross-plugin services, checked per call                                                            |
+| `secrets.get/set/delete/seal/unseal`                                                                         | `secrets:own`                                        | The plugin's own encrypted values                                                                                   |
+| `secrets.offer/withdraw/getShared`                                                                           | per-secret RBAC                                      | Secrets one plugin lends another                                                                                    |
+| `http.router(options)`, `http.baseUrl(req)`                                                                  | `network:serve` (router)                             | The router mounted at `/plugin-api/<id>/`, and the public origin for callback URLs                                  |
+| `ws.route/upgrade`                                                                                           | `network:serve`                                      | Sockets at `/plugin-ws/<id>/<path>`                                                                                 |
+| `rbac.has/hasFor/require`                                                                                    | own permissions (require)                            | The acting user's role permissions; `require` is route middleware                                                   |
+| `settings.get/set/getUser/setUser/getHost/setHost/listHostValues/getAll/onChange/onValidate`                 | `hosts:read` (listHostValues)                        | The plugin's admin, user and host settings from its manifest                                                        |
+| `settings.readCore(key)`                                                                                     | `settings:read-core`                                 | One of the core keys in `CORE_SETTINGS_ALLOWLIST`                                                                   |
+| `disposables.add`                                                                                            | none                                                 | Extra cleanup on deactivate                                                                                         |
+| `capabilities.has/require`                                                                                   | the named capability                                 | A generic check for privileged code no ctx member wraps                                                             |
+| `hosts.list/get/checkAccess`                                                                                 | `hosts:read`                                         | Hosts the acting user can see, without secrets                                                                      |
+| `hosts.create/update/delete/listOwned/share/listUsers/listRoles`                                             | `hosts:write`                                        | Host changes and sharing on the user's behalf                                                                       |
+| `hosts.trackSession/recordActivity`                                                                          | `hosts:read`                                         | The online indicator and a recent activity entry                                                                    |
+| `hosts.status.get/check/reportLogin/registerPort`                                                            | `hosts:read`                                         | Core's reachability status (`get` is async since **D2**)                                                            |
+| `ssh.connect/withConnection/jumpChain`                                                                       | `ssh:connect`, `credentials:use`                     | Connections through core's one connect pipeline                                                                     |
+| `ssh.resolveHost/openTransport/classifyKeyboardInteractive/autoResponses/startInteraction/cancelInteraction` | `ssh:connect`, `credentials:use`                     | The lower level, for a transport with its own prompt flow; `resolveHost` redacts secrets without `credentials:read` |
+| `ssh.prepare`                                                                                                | `ssh:connect`, `credentials:use`, `credentials:read` | The ssh2 config for a transport that connects its own client; it carries the password and key                       |
+| `ssh.poolKey/dropPooled/requiresSecret/supportsBackground`                                                   | `ssh:connect`                                        | Pool housekeeping and questions for an auth type's provider                                                         |
+| `auth.registerLoginMethod/registerSecondFactor/recordEnrollment/removeEnrollment`                            | `auth:provide`                                       | Login methods and second factors                                                                                    |
+| `auth.completeRedirectLogin/revokeSessions/loginRateLimit/countLinkedUsers`                                  | `auth:provide`                                       | What a login method needs from core's session and provisioning code                                                 |
+| `auth.registerSshAuthProvider/registerKeyboardInteractiveHandler`                                            | `auth:provide`                                       | SSH auth types and keyboard-interactive handlers                                                                    |
+| `credentials.listSshKeys` / `.createSshKey`                                                                  | `credentials:use` / `credentials:write`              | The user's saved SSH keys                                                                                           |
+| `credentials.resolveHostProtocol`                                                                            | `credentials:read`                                   | A host's RDP, VNC or Telnet login                                                                                   |
+| `credentials.registerSecretResolver`                                                                         | `auth:provide`                                       | Resolves external secret references in host and credential fields                                                   |
+| `desktop.openIsolatedWindow/launchNativeRdp/available`                                                       | `desktop:window` (not `available`)                   | Electron windows and the native RDP client                                                                          |
+| `audit.record`                                                                                               | none                                                 | An audit line under the plugin's own action name                                                                    |
+| `schedule.every/after`                                                                                       | none                                                 | Timers that stop on deactivate and never overlap                                                                    |
+| `notify.channels/send`                                                                                       | `notify:send`                                        | Core's notification channels, as the acting user                                                                    |
+| `fetch(url, init)`                                                                                           | `network:outbound`                                   | Outbound HTTP through core's SSRF guard; `allowPrivateHosts` hosts also go through the configured proxy             |
+| `process.run/ensureBinary`                                                                                   | `process:spawn` (+ `network:outbound` to download)   | Programs on the server                                                                                              |
+| `system.tlsStatus/writeTlsCertificate/reloadTls/publishHttpChallenge/registerTlsRenewer`                     | `system:tls`                                         | The server certificate                                                                                              |
+| `asUser(userId, fn)`                                                                                         | none, always audited                                 | Background work as a user                                                                                           |
+| `currentActor()`                                                                                             | none                                                 | The acting user for the current call                                                                                |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -2341,7 +2373,7 @@ Windows guest as RDP) without core naming either.
 ### The actor
 
 Never comes from plugin code. It is held in `AsyncLocalStorage` and set two
-ways, with no third:
+ways, with no third (a public socket's guest has none):
 
 - **A request.** A4's HTTP and WebSocket middleware runs the handler as the
   user core already authenticated.
@@ -2351,6 +2383,68 @@ ways, with no third:
 A plugin cannot pass a user id to a guarded method and have it believed. This
 is what closes the forged-caller bug the old worker broker had, where a worker
 could set `callerUserId` on its own messages.
+
+Two calls do take a user id, for background work that reaches another
+plugin: `ctx.services.get(name, { userId })` (and a handle's
+`asUser(userId)`) and `ctx.secrets.getShared(..., { userId })`. Naming anyone
+but the current actor there is the same act as `ctx.asUser`, so since **D2**
+it writes the same `plugin_as_user` audit line.
+
+`ctx.ssh` never believes a host object's own `userId` either. Before **D2**
+a call with no actor ran as whatever `userId` the plugin put on the host it
+passed, which reached that user's jump hosts with that user's credentials.
+Now every `ctx.ssh` call needs an actor, except for a host core itself
+resolved earlier (from `resolveHost`, `connect` or `withConnection`), which
+keeps the user it was resolved for. Any other object host runs as the actor.
+
+**D2** also put the per-user access check on `hosts.status.*`,
+`hosts.trackSession`, `hosts.recordActivity` and `ssh.startInteraction`: with
+an actor, a host the actor cannot connect to answers nothing. With no actor
+they are the plugin's own background work (a poller, a guacd session opening)
+and only the capability applies.
+
+### Credentials
+
+Only a plugin holding `credentials:read` sees plaintext credential material
+(`HOST_SECRET_FIELDS` in `ctx-hosts.ts`: passwords, keys, passphrases, sudo
+and SOCKS passwords, the autostart ones and `terminalConfig.sudoPassword`).
+Since **D2**:
+
+- `ctx.hosts` always returns hosts with those removed, `listOwned` included,
+  and `listOwned` is audited. `update` never moves `id`, `userId` or
+  `syncId`.
+- `ctx.ssh.connect().host` is always redacted.
+- `ctx.ssh.resolveHost` returns the full host, audited as
+  `plugin_credentials_read`, only to a plugin with `credentials:read`. Any
+  other plugin gets the redacted host, and core remembers the real one, so
+  handing that object back to `connect`, `withConnection` or `prepare`
+  connects with the real secrets.
+- `ctx.ssh.prepare` needs `credentials:read`, because the ssh2 config it
+  returns carries them.
+
+ssh-terminal, file-manager, host-metrics and tailscale declare
+`credentials:read`: they run `prepare` or read a sudo password.
+`credentials.resolveHostProtocol` was already behind it.
+
+### Refusals
+
+`assertCapability` writes the refusal's audit line itself, named after the
+call (`plugin_kv_set`), so no guard can forget to. A synchronous declaration
+check writes it in the background through `capabilityRefused`. Successes are
+audited for every privileged call except the hot-path reads a plugin makes on
+every request or sample: `kv.get`, `secrets.get/seal/unseal`, `db.persist`,
+`hosts.list/get/checkAccess`, `hosts.status.*` and `hosts.trackSession`.
+`src/backend/tests/plugins/security/ctx-guards.test.ts` walks the whole ctx
+object and fails for any member that runs without a capability and is not on
+its `UNGATED` list with a reason.
+
+Hooks ssh2 calls synchronously (a provider's `onBanner` and `onAuthFailed`,
+keyboard-interactive `detect` and `autoAnswerPasswords`) answer from the
+grant cache and do nothing until the grant is confirmed.
+
+`ctx.process.run` gives the program a small base environment (path, home,
+temp, locale, proxy) plus the plugin's own `env`, never the server's, which
+holds the JWT secret and database keys.
 
 ---
 
@@ -2421,7 +2515,17 @@ architecture did.
 
 `ctx.db` is a clear example. It hands back a handle scoped to the plugin's own
 tables, and the `p_<id>_` prefix, the CLI check and the runner's check all say
-a plugin may only touch its own. None of that is enforced by the engine: a
+a plugin may only touch its own. Since **D2** both checks are one function,
+`findUnownedTableWrites` in `@termix/plugin-sdk/ddl`, which reads each
+statement the way the engine does: comments and every quoting style are
+seen through, every name in a `DROP TABLE a, b` list is checked, a rename
+target counts as a write, reads (`FROM`, `JOIN`, `REFERENCES`) are allowed,
+and `ATTACH`, `PRAGMA`, `GRANT`, triggers, functions and other statement kinds
+are refused outright. The legacy-table exemption applies only to the bundled
+plugin that adopts the table. `removePluginData` finds a plugin's tables in
+the database's own catalog by prefix, leaves a longer prefix another plugin
+owns, and takes the plugin's settings and secrets with it; role permissions
+stay. None of that is enforced by the engine: a
 plugin holding that handle can write any table in the database, and `ctx.db.refs`
 hands it `users`, `ssh_data`, `roles` and `user_roles` outright (the last two
 added in **B2**, for a plugin that shares its own rows with a role and needs
@@ -2439,6 +2543,90 @@ The old worker tier claimed more than this, and the claim was not true either:
 anything core could. The honest options for real containment are a child
 process with `--permission`, or a WASM isolate. Neither is on the roadmap, and
 until one is, this document does not pretend otherwise.
+
+---
+
+## Threat model
+
+Written in **D2**, after a security review of the whole plugin system. The
+short version: a plugin is code you run on your server, with the same reach
+as Termix itself. Everything below follows from that.
+
+### What a malicious plugin can do
+
+A plugin runs in the Termix server process and in the browser tab of anyone
+who uses Termix. In the server it can do everything the server's OS user can:
+
+- read `DATA_DIR`, which holds the database, the system key, the JWT secret
+  and every user's encrypted data, and import core modules to decrypt it;
+- read and write any table, whatever `ctx.db` says it owns;
+- open sockets, listen on ports, spawn programs and read the environment;
+- replace or patch core modules in memory, including the auth middleware and
+  the capability check itself;
+- log in as any user, because `ctx.auth` identities and `ctx.asUser` are
+  trusted by design.
+
+In the browser it runs in the shell's own JavaScript context, so it can read
+anything the page can, including the session cookie's effects and every
+other plugin's UI.
+
+None of the checks in this document stop that. They are not a sandbox.
+
+### What the system does about it
+
+- **Signing and review.** Official plugins live in this repo and ship in the
+  Termix image; they are reviewed like core. Signed community plugins and
+  their review process arrive with the install UI in 3.0.0.
+- **The kill list (3.0.0).** A signed list of plugin versions known to be bad,
+  which the server refuses to load, so a bad plugin can be switched off on
+  every install without waiting for each admin.
+- **Capability consent.** A manifest names every privileged thing its code
+  does through `ctx`, with a risk level. In 3.0.0 an admin grants each one
+  when installing; in 2.9.0 bundled plugins get what they declare.
+- **Audit.** Every privileged `ctx` call, allowed or refused, writes a line
+  with the plugin id and the acting user, and so does every switch of the
+  actor (`ctx.asUser`, or a service handle or shared secret named for another
+  user). "What did this plugin do, as whom" has an answer.
+- **Honest plugins stay honest.** The checks D2 added or confirmed stop the
+  accidental and the confused-deputy cases, which are the ones that actually
+  happen:
+  - every privileged member is guarded, and a test walks `ctx` so a new
+    member without a guard fails CI;
+  - plaintext credentials only reach a plugin holding `credentials:read`;
+  - a host object's `userId` is never believed, so a plugin cannot borrow
+    another user's jump hosts or credentials by naming them;
+  - `ctx.hosts` and `ctx.ssh` apply the actor's RBAC to every host;
+  - routes need login unless declared public, public routes are listed in
+    the admin plugin dialog, a disabled plugin answers 503, errors hide their
+    stack, and an anonymous caller cannot spend a plugin's error budget;
+  - `/plugin-assets` serves only a running plugin's browser files, with no
+    way out of the plugin folder, symlinks included;
+  - a user plugin cannot take a bundled plugin's id, a reserved id (`admin`,
+    `hosts`, `credentials` and a few more) or an id whose table prefix
+    overlaps another plugin's;
+  - migrations are parsed, not pattern-matched, and may only write the
+    plugin's own tables;
+  - a plugin's programs get a small environment without the server's
+    secrets.
+
+### Before installing a community plugin
+
+- **Know where it came from.** Install from a source you would trust with
+  root on the server, and check the signature once 3.0.0 has them.
+- **Read the capabilities.** Anything critical or high (`credentials:read`,
+  `system:tls`, `ssh:connect`, `process:spawn`, `users:write`,
+  `auth:provide`, `device:serial`) means the plugin can reach your hosts,
+  your users or the server itself. Ask why it needs each one.
+- **Read the public routes.** Admin > Plugins > Permissions lists every path
+  it serves without login. Each one is attack surface on your server.
+- **Check its dependencies.** A plugin's npm dependencies run with the same
+  reach as the plugin.
+- **Watch the audit log after installing.** Filter on `plugin:<id>` and look
+  for calls you did not expect, especially `plugin_as_user` and
+  `plugin_credentials_read`.
+- **Run Termix as an unprivileged user**, in its container or under its own
+  OS account, so "everything the server user can do" is as little as
+  possible.
 
 ---
 

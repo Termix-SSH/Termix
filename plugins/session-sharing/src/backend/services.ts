@@ -128,6 +128,10 @@ export function createSessionGuests(deps: SharingDeps): SessionGuestsV1 {
   return {
     async resolve({ shareToken, roomGuestToken, clientIp }) {
       if (shareToken) {
+        // Guessing link tokens is limited the same way room tokens are.
+        if (guestLimiter.isLimited(clientIp)) {
+          return { ok: false, reason: "Too many requests" };
+        }
         const share = await shares.findByLinkToken(shareToken);
         if (!share || share.shareType !== "link") {
           return { ok: false, reason: "Invalid or expired share link" };

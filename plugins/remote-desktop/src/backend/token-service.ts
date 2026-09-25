@@ -47,6 +47,8 @@ export interface GuacamoleToken {
   connection: GuacamoleConnectionSettings;
   recording?: GuacamoleRecordingMetadata;
   termixMeta?: TermixGuacMeta;
+  /** When the token stops opening displays, in ms since the epoch. */
+  exp?: number;
 }
 
 export interface GuacamoleRecordingMetadata {
@@ -63,6 +65,26 @@ export interface GuacamoleRecordingMetadata {
 const CIPHER = "aes-256-cbc";
 const KEY_LENGTH = 32;
 
+/**
+ * How long a token opens a display for. Short, because a token for a saved
+ * host carries its password and ends up in the display URL.
+ */
+export const TOKEN_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Settings the server decides, never the caller: where guacd is, and every
+ * path guacd writes or reads on its own filesystem.
+ */
+export function isServerOwnedSetting(key: string): boolean {
+  return (
+    key.startsWith("guacd") ||
+    key.endsWith("-path") ||
+    key.startsWith("create-") ||
+    key.startsWith("recording-") ||
+    key.startsWith("typescript-")
+  );
+}
+
 const silentLogger: TokenLogger = { warn: () => {}, error: () => {} };
 
 /**
@@ -71,9 +93,17 @@ const silentLogger: TokenLogger = { warn: () => {}, error: () => {} };
  */
 export class GuacamoleTokenService {
   private encryptionKey: Buffer;
+  private macKey: Buffer;
 
-  constructor(private readonly log: TokenLogger = silentLogger) {
+  constructor(
+    private readonly log: TokenLogger = silentLogger,
+    private readonly now: () => number = Date.now,
+  ) {
     this.encryptionKey = this.initializeKey();
+    this.macKey = crypto
+      .createHmac("sha256", this.encryptionKey)
+      .update("termix-guacamole-token-mac")
+      .digest();
   }
 
   private initializeKey(): Buffer {
@@ -105,12 +135,17 @@ export class GuacamoleTokenService {
     return this.encryptionKey;
   }
 
+  /**
+   * guacamole-lite only knows AES-CBC, which does not notice tampering, so
+   * the ciphertext also carries an HMAC that verifyToken checks before
+   * guacamole-lite ever sees the token.
+   */
   encryptToken(tokenObject: GuacamoleToken): string {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(CIPHER, this.encryptionKey, iv);
 
     let encrypted = cipher.update(
-      JSON.stringify(tokenObject),
+      JSON.stringify({ ...tokenObject, exp: this.now() + TOKEN_TTL_MS }),
       "utf8",
       "base64",
     );
@@ -119,9 +154,48 @@ export class GuacamoleTokenService {
     const data = {
       iv: iv.toString("base64"),
       value: encrypted,
+      mac: this.mac(iv.toString("base64"), encrypted),
     };
 
     return Buffer.from(JSON.stringify(data)).toString("base64");
+  }
+
+  private mac(iv: string, value: string): string {
+    return crypto
+      .createHmac("sha256", this.macKey)
+      .update(`${iv}.${value}`)
+      .digest("base64");
+  }
+
+  /**
+   * The token if it is one this server minted, untouched and not expired,
+   * else null. The gate in front of guacamole-lite.
+   */
+  verifyToken(token: string): GuacamoleToken | null {
+    let data: { iv?: unknown; value?: unknown; mac?: unknown };
+    try {
+      data = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+    } catch {
+      return null;
+    }
+    if (
+      typeof data?.iv !== "string" ||
+      typeof data.value !== "string" ||
+      typeof data.mac !== "string"
+    ) {
+      return null;
+    }
+    const expected = Buffer.from(this.mac(data.iv, data.value), "base64");
+    const given = Buffer.from(data.mac, "base64");
+    if (
+      expected.length !== given.length ||
+      !crypto.timingSafeEqual(expected, given)
+    ) {
+      return null;
+    }
+    const decoded = this.decryptToken(token);
+    if (!decoded || typeof decoded.exp !== "number") return null;
+    return decoded.exp > this.now() ? decoded : null;
   }
 
   decryptToken(token: string): GuacamoleToken | null {

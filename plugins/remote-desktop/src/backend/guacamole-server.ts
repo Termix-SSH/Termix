@@ -264,6 +264,23 @@ export function createGuacamoleServer(
 
   return {
     handleUpgrade(request, socket, head) {
+      // The route is public, so the token is the only credential: refuse
+      // anything forged, edited or expired before guacamole-lite reads it.
+      const token = new URL(
+        request.url ?? "/",
+        "http://localhost",
+      ).searchParams.get("token");
+      if (!token || !deps.tokens.verifyToken(token)) {
+        try {
+          socket.write(
+            "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n",
+          );
+        } catch {
+          // The peer may already be gone.
+        }
+        socket.destroy();
+        return;
+      }
       const wss = (
         server as unknown as {
           webSocketServer?: {

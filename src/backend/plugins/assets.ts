@@ -3,20 +3,23 @@
 // Unauthenticated on purpose, the same as /assets: import() cannot carry the
 // bearer header, and nothing here is secret. It only ever serves files from
 // the two directories a plugin ships for the browser, so a request can never
-// reach the plugin's backend bundle, migrations or anything outside it.
+// reach the plugin's backend bundle, migrations or anything outside it, and
+// only for a plugin that is running.
 
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import express, { type Request, type Response } from "express";
 import {
+  DEFAULT_BACKEND_ENTRY,
   DEFAULT_FRONTEND_ENTRY,
   DEFAULT_LOCALES_DIR,
   type PluginManifest,
 } from "@termix/plugin-sdk/manifest";
 import type { LoadedPlugin } from "./loader.js";
 
-type AssetPlugin = Pick<LoadedPlugin, "id" | "dir" | "manifest">;
+type AssetPlugin = Pick<LoadedPlugin, "id" | "dir" | "manifest"> &
+  Partial<Pick<LoadedPlugin, "state">>;
 
 export interface PluginFrontendInfo {
   frontend: boolean;
@@ -135,7 +138,39 @@ export function resolvePluginAsset(
 
   const file = path.resolve(root, rest);
   if (!isInside(root, file) || !fileExists(file)) return null;
+
+  // The text check above cannot see a symlink, so the real paths have to
+  // agree too: a link inside dist/ must not reach a file outside the plugin.
+  let real: string;
+  try {
+    real = fs.realpathSync(file);
+    if (!isInside(fs.realpathSync(plugin.dir), real)) return null;
+  } catch {
+    return null;
+  }
+  if (isServerOnly(plugin, real)) return null;
   return file;
+}
+
+/** The backend entry and the migrations, wherever the manifest put them. */
+function isServerOnly(plugin: AssetPlugin, real: string): boolean {
+  const manifest = plugin.manifest as PluginManifest;
+  const backend = path.resolve(
+    plugin.dir,
+    manifest.backend ?? DEFAULT_BACKEND_ENTRY,
+  );
+  const candidates = [backend, `${backend}.map`];
+  for (const candidate of candidates) {
+    try {
+      if (fs.realpathSync(candidate) === real) return true;
+    } catch {
+      // Not there.
+    }
+  }
+  const segments = path
+    .relative(fs.realpathSync(plugin.dir), real)
+    .split(path.sep);
+  return segments.includes("migrations");
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -182,7 +217,7 @@ export function createPluginAssetsRouter(
    *       200:
    *         description: The file.
    *       404:
-   *         description: Unknown plugin or file.
+   *         description: Unknown or stopped plugin, or no such file.
    */
   router.get(
     /^\/([a-z][a-z0-9-]{1,39})\/(.+)$/,
@@ -190,7 +225,11 @@ export function createPluginAssetsRouter(
       const params = req.params as unknown as Record<string, string>;
       const pluginId = params[0];
       const plugin = getPlugin(pluginId);
-      const file = plugin ? resolvePluginAsset(plugin, params[1]) : null;
+      // A disabled or failed plugin serves nothing, so its bundle cannot be
+      // loaded around the shell's own enabled check.
+      const running = !!plugin && (!plugin.state || plugin.state === "active");
+      const file =
+        plugin && running ? resolvePluginAsset(plugin, params[1]) : null;
 
       // Loaded as a module from Electron's file:// page and the Vite dev
       // server, so any origin may read it. No credentials are involved.

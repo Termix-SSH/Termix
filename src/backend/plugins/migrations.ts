@@ -18,8 +18,11 @@ import path from "node:path";
 import { sql } from "drizzle-orm";
 import { pluginLogger } from "../utils/logger.js";
 import type { DatabaseDialect } from "../database/db/dialect.js";
-import { tablePrefix, LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
-import { splitStatements } from "@termix/plugin-sdk/ddl";
+import { LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
+import {
+  findUnownedTableWrites,
+  splitStatements,
+} from "@termix/plugin-sdk/ddl";
 
 // The splitter is shared with createTestDb in the SDK, so tests apply a
 // migration exactly the way this runner does.
@@ -68,6 +71,15 @@ export function readMigrations(
 ): PluginMigration[] {
   const dir = migrationsDir(pluginDir, dialect);
   if (!fs.existsSync(dir)) return [];
+  // A symlinked folder or file could feed in SQL from anywhere on disk.
+  const realRoot = fs.realpathSync(pluginDir);
+  const inside = (target: string) => {
+    const relative = path.relative(realRoot, fs.realpathSync(target));
+    return !relative.startsWith("..") && !path.isAbsolute(relative);
+  };
+  if (!inside(dir)) {
+    throw new Error("The migrations folder resolves outside the plugin");
+  }
 
   const migrations: PluginMigration[] = [];
   for (const file of fs.readdirSync(dir).sort()) {
@@ -79,6 +91,9 @@ export function readMigrations(
         );
       }
       continue;
+    }
+    if (!inside(path.join(dir, file))) {
+      throw new Error(`Migration "${file}" resolves outside the plugin`);
     }
     const contents = fs.readFileSync(path.join(dir, file), "utf8");
     migrations.push({
@@ -95,41 +110,39 @@ export function readMigrations(
 }
 
 /**
- * Tables a migration may create or alter.
+ * Checks that every table a migration writes to belongs to this plugin.
  *
  * A plugin owns the p_<id>_ namespace and nothing else. Enforced here as well
  * as in the CLI, because a plugin installed from a tarball never ran the CLI.
- */
-const CREATE_OR_ALTER =
-  /\b(?:CREATE\s+(?:TEMP\s+|TEMPORARY\s+)?TABLE(?:\s+IF\s+NOT\s+EXISTS)?|ALTER\s+TABLE|DROP\s+TABLE(?:\s+IF\s+EXISTS)?|TRUNCATE\s+TABLE)\s+([`"']?)([a-zA-Z0-9_]+)\1/gi;
-
-/**
- * Checks that every table a migration touches belongs to this plugin.
- *
- * A legacy table it is allowed to adopt is permitted too, because adoption
- * renames it into the plugin's namespace in the same migration.
+ * A legacy core table is allowed only for the bundled plugin that adopts it:
+ * a user plugin with the same id gets no exemption.
  */
 export function assertOwnedTables(
   pluginId: string,
-  statements: string[],
+  sql: string,
+  options: { bundled?: boolean } = {},
 ): void {
-  const prefix = tablePrefix(pluginId);
-
-  for (const statement of statements) {
-    CREATE_OR_ALTER.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = CREATE_OR_ALTER.exec(statement)) !== null) {
-      const table = match[2];
-      if (table.startsWith(prefix)) continue;
-      if (LEGACY_TABLE_OWNERS[table] === pluginId) continue;
-
-      const owner = LEGACY_TABLE_OWNERS[table];
-      throw new Error(
-        owner
-          ? `Plugin "${pluginId}" may not touch "${table}": it belongs to the "${owner}" plugin.`
-          : `Plugin "${pluginId}" may only create or alter tables prefixed "${prefix}", not "${table}".`,
-      );
-    }
+  const legacy = new Set(
+    options.bundled
+      ? Object.entries(LEGACY_TABLE_OWNERS)
+          .filter(([, owner]) => owner === pluginId)
+          .map(([table]) => table)
+      : [],
+  );
+  const problems = findUnownedTableWrites(pluginId, sql, legacy).map(
+    (problem) => {
+      // Name the owner when the table is another plugin's legacy table.
+      const table = /writes to "([^"]+)"/.exec(problem)?.[1];
+      const owner = table ? LEGACY_TABLE_OWNERS[table] : undefined;
+      return owner && owner !== pluginId
+        ? `may not touch "${table}": it belongs to the "${owner}" plugin`
+        : problem;
+    },
+  );
+  if (problems.length > 0) {
+    throw new Error(
+      `Plugin "${pluginId}" migration refused: ${problems.join("; ")}`,
+    );
   }
 }
 
@@ -158,6 +171,7 @@ export async function applyPluginMigrations(
   pluginId: string,
   pluginDir: string,
   runner: MigrationRunner,
+  options: { bundled?: boolean } = {},
 ): Promise<string[]> {
   const migrations = readMigrations(pluginDir, runner.dialect);
   if (migrations.length === 0) return [];
@@ -185,8 +199,8 @@ export async function applyPluginMigrations(
 
   const run = async () => {
     for (const migration of pending) {
+      assertOwnedTables(pluginId, migration.sql, options);
       const statements = splitStatements(migration.sql);
-      assertOwnedTables(pluginId, statements);
       await runner.execute(statements);
       await runner.record(pluginId, migration);
     }

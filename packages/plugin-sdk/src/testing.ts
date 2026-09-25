@@ -885,7 +885,7 @@ export function createFakeContext(
         activities.push({ hostId, type, hostName });
       },
       status: {
-        get: (hostId) => hostStatuses.get(hostId) ?? null,
+        get: async (hostId) => hostStatuses.get(hostId) ?? null,
         check: async (hostId) => hostStatuses.get(hostId) ?? null,
         reportLogin: (hostId, outcome) => {
           statusReports.push({ hostId, ...outcome });
@@ -1546,7 +1546,7 @@ export function createMockCtx(
         return ctx.hosts.recordActivity(hostId, type, hostName);
       },
       status: {
-        get: (hostId) => {
+        get: async (hostId) => {
           require("hosts:read");
           return ctx.hosts.status.get(hostId);
         },

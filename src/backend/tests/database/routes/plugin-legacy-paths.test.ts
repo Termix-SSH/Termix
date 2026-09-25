@@ -10,9 +10,11 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 
 const routers = vi.hoisted(() => new Map<string, express.Router>());
+const installed = vi.hoisted(() => new Set<string>());
 
 vi.mock("../../../plugins/http.js", () => ({
   getPluginRouter: (id: string) => routers.get(id),
+  isPluginInstalled: (id: string) => installed.has(id),
 }));
 
 const { mountPluginLegacyPaths } =
@@ -64,10 +66,17 @@ describe("mountPluginLegacyPaths", () => {
     });
   });
 
-  it("answers 404 while the plugin serves no router", async () => {
+  it("answers 404 for a plugin that is not installed", async () => {
     const app = appWith([{ id: "gone", legacyPaths: ["/gone/hook"] }]);
     const response = await request(app).post("/gone/hook/x");
     expect(response.status).toBe(404);
+  });
+
+  it("answers 503 for an installed plugin that serves no router", async () => {
+    installed.add("paused");
+    const app = appWith([{ id: "paused", legacyPaths: ["/paused/hook"] }]);
+    const response = await request(app).post("/paused/hook/x");
+    expect(response.status).toBe(503);
   });
 });
 
