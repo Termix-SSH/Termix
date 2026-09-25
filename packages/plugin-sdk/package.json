@@ -3,7 +3,16 @@
   "version": "1.0.0",
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Termix-SSH/Termix.git",
+    "directory": "packages/plugin-sdk"
+  },
+  "homepage": "https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ARCHITECTURE.md",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "bin": {
     "termix-plugin": "./cli/index.mjs"
   },
@@ -68,10 +77,12 @@
     "cli",
     "schema",
     "tsconfig.plugin.json",
-    "ARCHITECTURE.md"
+    "ARCHITECTURE.md",
+    "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "esbuild": "^0.28.1",
@@ -80,7 +91,10 @@
   },
   "peerDependencies": {
     "drizzle-orm": "*",
-    "ssh2": "*"
+    "ssh2": "*",
+    "better-sqlite3": "*",
+    "react": "*",
+    "vitest": "*"
   },
   "peerDependenciesMeta": {
     "drizzle-orm": {
@@ -88,6 +102,18 @@
     },
     "ssh2": {
       "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

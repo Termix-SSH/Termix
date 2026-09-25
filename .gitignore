@@ -16,6 +16,9 @@ coverage
 # Plugin build output. termix-plugin build writes it, the packaged server
 # gets its copy under dist/plugins.
 /plugins/*/dist/
+*.tmxplug
+*.tmxplug.sig
+termix-plugin-signing.key
 /src/**/*.js
 
 .vscode/*

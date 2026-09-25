@@ -1,0 +1,132 @@
+{
+  "plugins": [
+    {
+      "id": "acme-ssl",
+      "source": "workspace"
+    },
+    {
+      "id": "ai",
+      "source": "workspace"
+    },
+    {
+      "id": "automations",
+      "source": "workspace"
+    },
+    {
+      "id": "docker",
+      "source": "workspace"
+    },
+    {
+      "id": "file-manager",
+      "source": "workspace"
+    },
+    {
+      "id": "fleets",
+      "source": "workspace"
+    },
+    {
+      "id": "homepage",
+      "source": "workspace"
+    },
+    {
+      "id": "host-metrics",
+      "source": "workspace"
+    },
+    {
+      "id": "ldap",
+      "source": "workspace"
+    },
+    {
+      "id": "network-topology",
+      "source": "workspace"
+    },
+    {
+      "id": "opkssh",
+      "source": "workspace"
+    },
+    {
+      "id": "proxmox",
+      "source": "workspace"
+    },
+    {
+      "id": "remote-desktop",
+      "source": "workspace"
+    },
+    {
+      "id": "secret-sources",
+      "source": "workspace"
+    },
+    {
+      "id": "serial",
+      "source": "workspace"
+    },
+    {
+      "id": "session-recording",
+      "source": "workspace"
+    },
+    {
+      "id": "session-sharing",
+      "source": "workspace"
+    },
+    {
+      "id": "snippets",
+      "source": "workspace"
+    },
+    {
+      "id": "ssh-terminal",
+      "source": "workspace"
+    },
+    {
+      "id": "sso",
+      "source": "workspace"
+    },
+    {
+      "id": "step-ca",
+      "source": "workspace"
+    },
+    {
+      "id": "tailscale",
+      "source": "workspace"
+    },
+    {
+      "id": "termix-identity",
+      "source": "workspace"
+    },
+    {
+      "id": "tmux-monitor",
+      "source": "workspace"
+    },
+    {
+      "id": "totp",
+      "source": "workspace"
+    },
+    {
+      "id": "tunnels",
+      "source": "workspace"
+    },
+    {
+      "id": "vault",
+      "source": "workspace"
+    },
+    {
+      "id": "wake-on-lan",
+      "source": "workspace"
+    },
+    {
+      "id": "warpgate",
+      "source": "workspace"
+    },
+    {
+      "id": "web-endpoint",
+      "source": "workspace"
+    },
+    {
+      "id": "webauthn",
+      "source": "workspace"
+    },
+    {
+      "id": "workspaces",
+      "source": "workspace"
+    }
+  ]
+}

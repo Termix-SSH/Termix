@@ -42,7 +42,11 @@ export function pluginVitestConfig(
   options: PluginVitestOptions = {},
 ) {
   const pluginDir = path.dirname(fileURLToPath(configUrl));
-  const pluginId = path.basename(pluginDir);
+  const manifestPath = path.join(pluginDir, "manifest.json");
+  const pluginId: string =
+    (fs.existsSync(manifestPath) &&
+      JSON.parse(fs.readFileSync(manifestPath, "utf8")).id) ||
+    path.basename(pluginDir);
   const setupFile = fileURLToPath(
     new URL("./testing/setup.js", import.meta.url),
   );

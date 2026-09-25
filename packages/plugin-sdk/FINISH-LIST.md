@@ -179,6 +179,29 @@ with a real install, a real device or a repo outside this one.
   Plugins > Permissions lists a plugin's public routes; a disabled plugin's
   `/plugin-api` URL answers 503; a share-link guest who leaves cannot type.
 
+## After D3 (needs the repos and keys)
+
+- Run `termix-plugin keygen`, then pin the public key in
+  `TRUSTED_PLUGIN_KEYS` (`src/backend/plugins/trust.ts`) and save it as
+  `keys/official.pub` in Termix-Registry. Until then the list is empty and
+  `TERMIX_REQUIRE_SIGNED_PLUGINS=true` blocks every user plugin. Steps are in
+  the Termix-Registry README.
+- Create the Termix-Registry and Termix-Plugin-Template repos from the local
+  folders next to this repo, and set `TERMIX_PLUGIN_SIGNING_KEY` and
+  `REGISTRY_TOKEN` secrets.
+- Publish the SDK (`npm run build:sdk && npm publish --workspace
+@termix/plugin-sdk`), then run `npm install` in Termix-Plugin-Template and
+  commit its `package-lock.json`; its release workflow uses `npm ci`.
+- Plugins outside this repo cannot use `renderWithApp` or
+  `@termix/plugin-sdk/ui` (types and the test host come from core's source).
+  Ship them in the SDK package before community plugins need UI components.
+- `npm run test:plugins` on Windows sometimes fails with "Worker exited
+  unexpectedly" in a random plugin (file-manager once, workspaces once); the
+  same suite passes alone and a rerun of the full run passed. Find out why
+  the vitest fork dies (D0).
+- Check by hand: drop a signed `.tmxplug` into `<DATA_DIR>/plugins/` on a
+  real install, with and without `TERMIX_REQUIRE_SIGNED_PLUGINS=true`.
+
 ## Left for later
 
 - 3.0.0: drop the migrated 2.8 settings rows (`guac_url`, `step_ca_url`,

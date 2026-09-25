@@ -12,9 +12,11 @@
  * impossible. See ARCHITECTURE.md.
  */
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import semver from "semver";
+import * as tar from "tar";
 import { pluginLogger } from "../utils/logger.js";
 import { parseManifest } from "./manifest.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
@@ -23,7 +25,9 @@ import {
   getPluginBackendEntry,
   getPluginManifestPath,
   getPluginsDir,
+  getUnpackedPluginsDir,
 } from "./paths.js";
+import { requireSignedPlugins, verifyPluginArtifact } from "./trust.js";
 import {
   createPluginContext,
   createPluginHandle,
@@ -193,13 +197,32 @@ export class PluginLoader {
       }
 
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        const isArtifact =
+          source === "user" &&
+          entry.isFile() &&
+          entry.name.endsWith(".tmxplug");
+        if (!entry.isDirectory() && !isArtifact) continue;
+        if (entry.isDirectory() && entry.name.startsWith(".")) continue;
 
         const dir = path.join(root, entry.name);
         try {
+          if (isArtifact) {
+            loaded.push(await this.loadArtifact(dir, bundledIds));
+            continue;
+          }
+
           if (source === "user" && bundledIds.has(entry.name)) {
             throw new Error(
               `a bundled plugin already uses the id "${entry.name}"; a plugin in the data directory cannot replace it`,
+            );
+          }
+
+          // A folder carries no signature, so with signing required only a
+          // signed .tmxplug can install a plugin. Bundled plugins are trusted
+          // by shipping in the image.
+          if (source === "user" && requireSignedPlugins()) {
+            throw new Error(
+              "TERMIX_REQUIRE_SIGNED_PLUGINS is on and a plugin folder carries no signature; install it as a signed .tmxplug",
             );
           }
 
@@ -216,6 +239,78 @@ export class PluginLoader {
     }
 
     return loaded;
+  }
+
+  /**
+   * Loads a user-installed <name>.tmxplug. A .sig next to it must verify
+   * against a pinned key; with TERMIX_REQUIRE_SIGNED_PLUGINS=true it must
+   * also exist. The archive is unpacked fresh on every load, so the file
+   * stays the only source of truth.
+   */
+  async loadArtifact(
+    file: string,
+    bundledIds: ReadonlySet<string> = new Set(),
+  ): Promise<LoadedPlugin> {
+    const buffer = await fs.promises.readFile(file);
+    const sigFile = `${file}.sig`;
+
+    if (fs.existsSync(sigFile)) {
+      const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
+      const result = verifyPluginArtifact(
+        buffer,
+        sha256,
+        await fs.promises.readFile(sigFile, "utf8"),
+      );
+      if (result.ok === false) {
+        throw new Error(`signature check failed: ${result.reason}`);
+      }
+    } else if (requireSignedPlugins()) {
+      throw new Error(
+        `TERMIX_REQUIRE_SIGNED_PLUGINS is on and ${path.basename(file)} has no .sig next to it`,
+      );
+    }
+
+    const unpackedRoot = getUnpackedPluginsDir();
+    const staging = path.join(
+      unpackedRoot,
+      `.staging-${crypto.randomBytes(6).toString("hex")}`,
+    );
+    await fs.promises.mkdir(staging, { recursive: true });
+    try {
+      await tar.x({
+        file,
+        cwd: staging,
+        strict: true,
+        // Plain files and folders only. tar already refuses absolute and
+        // ".." paths unless preservePaths is set.
+        filter: (_entryPath, entry) =>
+          "type" in entry &&
+          (entry.type === "File" || entry.type === "Directory"),
+      });
+
+      const raw = JSON.parse(
+        await fs.promises.readFile(getPluginManifestPath(staging), "utf8"),
+      );
+      const id = typeof raw?.id === "string" ? raw.id : "";
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
+        throw new Error(`${path.basename(file)} has no valid manifest id`);
+      }
+      if (bundledIds.has(id)) {
+        throw new Error(
+          `a bundled plugin already uses the id "${id}"; a plugin in the data directory cannot replace it`,
+        );
+      }
+      if (this.plugins.has(id)) {
+        throw new Error(`another plugin already uses the id "${id}"`);
+      }
+
+      const target = path.join(unpackedRoot, id);
+      await fs.promises.rm(target, { recursive: true, force: true });
+      await fs.promises.rename(staging, target);
+      return await this.load(target, "user");
+    } finally {
+      await fs.promises.rm(staging, { recursive: true, force: true });
+    }
   }
 
   /**

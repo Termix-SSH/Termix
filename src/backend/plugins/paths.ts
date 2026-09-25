@@ -16,6 +16,14 @@ export function getPluginsDir(): string {
 }
 
 /**
+ * Where user .tmxplug files are unpacked. A dot directory inside the user
+ * plugins dir, which the loader's directory scan skips.
+ */
+export function getUnpackedPluginsDir(): string {
+  return path.join(getPluginsDir(), ".unpacked");
+}
+
+/**
  * Where the plugins that ship with Termix live.
  *
  * Separate from getPluginsDir() because that one is user data: a bundled

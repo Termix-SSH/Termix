@@ -1846,7 +1846,13 @@ export async function createTestDb(
   );
 
   const handle = drizzle(sqlite);
-  const pluginId = path.basename(pluginDir);
+  // The manifest id, not the folder name: a plugin's own repo is rarely
+  // named after its id.
+  const manifestPath = path.join(pluginDir, "manifest.json");
+  const pluginId: string =
+    (fs.existsSync(manifestPath) &&
+      JSON.parse(fs.readFileSync(manifestPath, "utf8")).id) ||
+    path.basename(pluginDir);
   const applied: string[] = [];
   let persisted = 0;
 

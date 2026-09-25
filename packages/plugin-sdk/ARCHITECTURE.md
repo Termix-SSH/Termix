@@ -1639,9 +1639,43 @@ plugins/<id>/
   src/backend/tables.ts           defineTable() definitions
   tests/backend/           vitest, node
   tests/frontend/          vitest, jsdom
-  README.md  CHANGELOG.md
+  README.md  CHANGELOG.md  icon.svg
   dist/                    build output, gitignored
 ```
+
+#### Which plugins ship, and from where
+
+`docker/bundled-plugins.json` lists every plugin the image ships and where
+each comes from. `npm run build:plugins` (`scripts/build-plugins.cjs`) reads
+it and stages each one in `dist/plugins/<id>/`:
+
+```json
+{ "id": "tunnels", "source": "workspace" }
+{ "id": "tunnels", "source": "tmxplug",
+  "url": "https://github.com/Termix-SSH/termix-plugin-tunnels/releases/download/v1.0.0/tunnels-1.0.0.tmxplug",
+  "sha256": "<64 hex>" }
+```
+
+A `workspace` entry is built from `plugins/<id>/`. A `tmxplug` entry is
+downloaded (cached under `node_modules/.cache/termix-bundled-plugins/`) or
+read from a local `path`, refused unless its sha256 matches the one pinned in
+the file, and unpacked. The build fails on a `plugins/` folder nobody listed,
+a workspace entry with no folder, or a tmxplug entry whose folder still
+exists, so the two can never both ship.
+
+Switching a plugin over once its own repo exists:
+
+1. Tag a release in the plugin's repo. Its release workflow publishes
+   `<id>-<version>.tmxplug` and the `.sig`.
+2. Replace the plugin's entry with `source: "tmxplug"`, the release `url` and
+   the `sha256` the workflow printed (or `sha256sum` of the download).
+3. Delete `plugins/<id>/` and run `npm install` so the workspace goes away.
+4. Run `npm run build:plugins` and check `dist/plugins/<id>/` holds the
+   plugin.
+
+A tmxplug plugin is not in the Vite dev server's plugin glob, so `npm run dev`
+does not hot-reload it; its built frontend still loads from
+`/plugin-assets/<id>/`.
 
 ### 14. Upgrades must be lossless
 
@@ -2575,8 +2609,11 @@ None of the checks in this document stop that. They are not a sandbox.
 ### What the system does about it
 
 - **Signing and review.** Official plugins live in this repo and ship in the
-  Termix image; they are reviewed like core. Signed community plugins and
-  their review process arrive with the install UI in 3.0.0.
+  Termix image; they are reviewed like core and trusted by shipping inside
+  it. A plugin outside the image is a `.tmxplug` signed by a key compiled
+  into Termix (see [Packaging and signing](#packaging-and-signing)), and
+  `TERMIX_REQUIRE_SIGNED_PLUGINS=true` refuses anything else. Community
+  review and the install UI arrive in 3.0.0.
 - **The kill list (3.0.0).** A signed list of plugin versions known to be bad,
   which the server refuses to load, so a bad plugin can be switched off on
   every install without waiting for each admin.
@@ -2612,7 +2649,8 @@ None of the checks in this document stop that. They are not a sandbox.
 ### Before installing a community plugin
 
 - **Know where it came from.** Install from a source you would trust with
-  root on the server, and check the signature once 3.0.0 has them.
+  root on the server. Prefer a signed `.tmxplug` and run with
+  `TERMIX_REQUIRE_SIGNED_PLUGINS=true`.
 - **Read the capabilities.** Anything critical or high (`credentials:read`,
   `system:tls`, `ssh:connect`, `process:spawn`, `users:write`,
   `auth:provide`, `device:serial`) means the plugin can reach your hosts,
@@ -2642,16 +2680,65 @@ keeps working unchanged.
 | `termix-plugin validate`   | Runs the SDK's `parseManifest`, checks the files the manifest names exist, and checks that migrations only touch this plugin's tables and exist for every dialect.                                                                                               |
 | `termix-plugin migrations` | Diffs `src/backend/tables.ts` against `migrations/snapshot.json` and writes one `.sql` per dialect. `--check` fails when a definition changed without a migration. A rename or a type change is refused rather than guessed at, because that is a data decision. |
 | `termix-plugin test`       | Runs the plugin's vitest suite.                                                                                                                                                                                                                                  |
-| `termix-plugin pack`       | Writes a `.tgz` of the manifest, `dist/`, locales, migrations and README. **D3** adds signing.                                                                                                                                                                   |
+| `termix-plugin pack`       | Validates, then writes `<id>-<version>.tmxplug` (see [Packaging and signing](#packaging-and-signing)). `--out <dir>` picks the folder.                                                                                                                           |
+| `termix-plugin sign`       | Signs a `.tmxplug` with the key in `TERMIX_PLUGIN_SIGNING_KEY` and writes `<file>.tmxplug.sig`.                                                                                                                                                                  |
+| `termix-plugin verify`     | Checks a `.tmxplug` against its `.sig` and `--key <base64>[,<base64>]`.                                                                                                                                                                                          |
+| `termix-plugin keygen`     | Writes a new Ed25519 private key to `termix-plugin-signing.key` and prints the public key and key id. Never prints the private key.                                                                                                                              |
 
-`npm run build:plugins` builds every plugin and stages the result in
-`dist/plugins/<id>/`, which is what `getBundledPluginsDir()` resolves to and
+`npm run build:plugins` stages every plugin listed in
+`docker/bundled-plugins.json` in `dist/plugins/<id>/`, which is what `getBundledPluginsDir()` resolves to and
 what Docker and electron-builder package. `npm run build`, `build:backend` and
 `dev:backend` all call it.
 
 TypeScript only type-checks (`tsconfig.plugins.backend.json` and
 `tsconfig.plugins.frontend.json`, `noEmit`); esbuild does
 every emit. Nothing is written next to a source file.
+
+### Packaging and signing
+
+**The `.tmxplug` file.** A gzipped tar of `manifest.json`, `dist/`,
+`locales/`, `migrations/`, `README.md`, `CHANGELOG.md` and `icon.svg`
+(whichever exist). `pack` refuses when `validate` finds an error. The archive
+is reproducible: entries sorted by path, files only, mode 0644, owner 0,
+mtime 0, and a gzip header with no timestamp and a fixed OS byte. The same
+tag rebuilt on any machine gives the same sha256, as long as the build output
+is the same (check out with the same line endings).
+
+**Signatures.** `termix-plugin sign` makes an Ed25519 signature over the raw
+32-byte sha256 of the `.tmxplug` and writes it, base64, to
+`<file>.tmxplug.sig`. The private key comes from `TERMIX_PLUGIN_SIGNING_KEY`
+(base64 PKCS8 as `keygen` writes it, or PEM); in CI it is a GitHub Actions
+secret and it is never committed. A registry index carries the same base64
+string in each version's `signature`.
+
+**Pinned trust.** `src/backend/plugins/trust.ts` holds the registry public
+keys as compile-time constants (`TRUSTED_PLUGIN_KEYS`) and
+`verifyPluginArtifact(buffer, sha256, signature)`, which checks the hash and
+then the signature against each pinned key. A key read from a registry index,
+a download or the data directory is never trusted: whoever serves the index
+could sign anything with it. Rotation needs a Termix release: add the new
+key, ship, sign with it, and keep the old key for one release cycle so late
+upgraders still accept plugins signed before the switch. The steps are in the
+Termix-Registry README.
+
+**What the server loads.** Bundled plugins (`dist/plugins/`) are trusted by
+shipping in the image and are not checked. In the data directory,
+`<DATA_DIR>/plugins/` holds either a plugin folder (as before) or a
+`<name>.tmxplug` with an optional `<name>.tmxplug.sig` next to it. A
+`.tmxplug` is unpacked fresh on every load into
+`<DATA_DIR>/plugins/.unpacked/<id>/` (plain files only, no path outside it).
+A `.sig` that does not verify always blocks the plugin. With
+`TERMIX_REQUIRE_SIGNED_PLUGINS=true`, a plugin folder is blocked (it carries
+no signature) and so is a `.tmxplug` without a valid `.sig`. A blocked
+plugin is logged and skipped like any other plugin that fails to load.
+
+**Publishing the SDK.** Plugins outside this repo depend on
+`@termix/plugin-sdk` from npm. It is published from this repo with
+`npm run build:sdk && npm publish --workspace @termix/plugin-sdk`; the
+package's `files` list ships `dist/` with its `.d.ts` files, the CLI, the
+manifest schema and `tsconfig.plugin.json`. Outside a Termix checkout the
+vitest preset does not alias the shell's modules, so `renderWithApp` and
+`@termix/plugin-sdk/ui` are only available to plugins in this repo for now.
 
 ### Host-provided packages
 
