@@ -173,6 +173,8 @@
         }
       ],
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 90,
         "fields": [
           {
             "key": "enableAiAssistant",

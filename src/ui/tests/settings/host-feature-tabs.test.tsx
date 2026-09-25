@@ -1,21 +1,18 @@
 /**
- * The host editor's Plugins group.
- *
- * No bundled plugin declares host settings yet, so a fixture stands in for one.
- * The rule worth protecting is the empty case: with nothing to show, the tab
- * must not be registered at all rather than appearing blank.
+ * Generated host editor tabs, one per feature with manifest host settings.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PluginSummary } from "@/api/plugins-api";
 import {
-  HOST_PLUGINS_TAB_ID,
-  syncHostPluginsTab,
-} from "@/settings/host-plugins-tab";
+  hostFeatureTabId,
+  syncHostFeatureTabs,
+} from "@/settings/host-feature-tabs";
 import {
   getHostEditorSection,
-  unregisterHostEditorSection,
+  registerHostEditorSection,
+  resetHostEditorSections,
 } from "@/sidebar/HostManagerTabs";
 import { HostPluginSections } from "@/settings/HostPluginSections";
 
@@ -47,18 +44,62 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
 }
 
 beforeEach(() => {
-  unregisterHostEditorSection(HOST_PLUGINS_TAB_ID);
+  resetHostEditorSections();
 });
 
 afterEach(() => {
   cleanup();
-  unregisterHostEditorSection(HOST_PLUGINS_TAB_ID);
+  resetHostEditorSections();
 });
 
-describe("syncHostPluginsTab", () => {
-  it("registers the tab when a plugin contributes host settings", () => {
-    expect(syncHostPluginsTab([plugin()])).toBe(true);
-    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeDefined();
+describe("syncHostFeatureTabs", () => {
+  it("registers one tab per feature, labelled with its name", () => {
+    const other = plugin({ id: "warpgate", name: "Warpgate" });
+    expect(syncHostFeatureTabs([plugin(), other])).toEqual([
+      "feature:docker",
+      "feature:warpgate",
+    ]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))?.label).toBe(
+      "Docker",
+    );
+    expect(getHostEditorSection(hostFeatureTabId("warpgate"))).toBeDefined();
+  });
+
+  it("uses the manifest's editor group and order", () => {
+    const placed = plugin({
+      contributes: {
+        settings: {
+          host: {
+            editorGroup: "ssh",
+            editorOrder: 30,
+            enableKey: "enableDocker",
+            enableLabelKey: "k",
+            fields: [],
+          },
+        },
+      },
+    });
+    syncHostFeatureTabs([placed]);
+    const section = getHostEditorSection(hostFeatureTabId("docker"));
+    expect(section?.group).toBe("ssh");
+    expect(section?.order).toBe(30);
+  });
+
+  it("defaults to the main strip", () => {
+    syncHostFeatureTabs([plugin()]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))?.group).toBe("top");
+  });
+
+  it("skips a plugin that registered its own host editor section", () => {
+    registerHostEditorSection({
+      id: "docker-own",
+      pluginId: "docker",
+      group: "top",
+      labelKey: "k",
+      component: () => null,
+    });
+    expect(syncHostFeatureTabs([plugin()])).toEqual([]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))).toBeUndefined();
   });
 
   it("registers nothing for a plugin whose host fields are all hidden", () => {
@@ -73,12 +114,7 @@ describe("syncHostPluginsTab", () => {
         },
       },
     } as Partial<PluginSummary>);
-    expect(syncHostPluginsTab([own])).toBe(false);
-  });
-
-  it("registers nothing when no plugin contributes", () => {
-    expect(syncHostPluginsTab([])).toBe(false);
-    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeUndefined();
+    expect(syncHostFeatureTabs([own])).toEqual([]);
   });
 
   it("ignores a plugin with no host settings", () => {
@@ -86,21 +122,20 @@ describe("syncHostPluginsTab", () => {
       id: "ai",
       contributes: { settings: { admin: [] } },
     });
-
-    expect(syncHostPluginsTab([other])).toBe(false);
+    expect(syncHostFeatureTabs([other])).toEqual([]);
   });
 
   it("ignores a disabled plugin", () => {
-    expect(syncHostPluginsTab([plugin({ enabled: false })])).toBe(false);
+    expect(syncHostFeatureTabs([plugin({ enabled: false })])).toEqual([]);
   });
 
-  it("removes the tab once the last contributor goes", () => {
-    syncHostPluginsTab([plugin()]);
-    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeDefined();
+  it("removes a tab once its feature goes", () => {
+    syncHostFeatureTabs([plugin()]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))).toBeDefined();
 
-    syncHostPluginsTab([plugin({ enabled: false })]);
+    syncHostFeatureTabs([plugin({ enabled: false })]);
 
-    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeUndefined();
+    expect(getHostEditorSection(hostFeatureTabId("docker"))).toBeUndefined();
   });
 
   it("registers for a plugin declaring only an enable switch", () => {
@@ -111,8 +146,7 @@ describe("syncHostPluginsTab", () => {
         },
       },
     });
-
-    expect(syncHostPluginsTab([bare])).toBe(true);
+    expect(syncHostFeatureTabs([bare])).toEqual(["feature:docker"]);
   });
 });
 
@@ -184,7 +218,7 @@ describe("HostPluginSections", () => {
     expect(setValue).toHaveBeenCalledWith("docker", "enableDocker", true);
   });
 
-  it("warns when the plugin is installed but not running", () => {
+  it("warns when the feature is unavailable", () => {
     render(
       <HostPluginSections
         plugins={[plugin({ state: "failed" })]}
@@ -193,7 +227,7 @@ describe("HostPluginSections", () => {
       />,
     );
 
-    expect(screen.getByText("settings.hostPluginNotRunning")).toBeTruthy();
+    expect(screen.getByText("settings.featureUnavailable")).toBeTruthy();
   });
 
   it("renders nothing at all with no contributing plugins", () => {

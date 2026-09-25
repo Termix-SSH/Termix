@@ -76,9 +76,21 @@ import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { Select2 } from "@/components/select2";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
 import { ConnectionDefaultsSettings } from "./ConnectionDefaultsSettings";
+import {
+  FeatureSettingsSection,
+  featureSectionId,
+  useFeatureSettings,
+  type FeatureSectionId,
+} from "@/settings/FeatureSettingsSections";
 
 type UserProfileSection =
-  "account" | "interface" | "appearance" | "security" | "api-keys" | "data";
+  | "account"
+  | "interface"
+  | "appearance"
+  | "security"
+  | "api-keys"
+  | "data"
+  | FeatureSectionId;
 
 const THEMES: { id: ThemeId; preview: string }[] = [
   { id: "system", preview: "auto" },
@@ -557,6 +569,7 @@ export function UserProfilePanel({
   const [openSections, setOpenSections] = useState<Set<UserProfileSection>>(
     () => new Set(["account"]),
   );
+  const featureSettings = useFeatureSettings("user");
 
   // User info
   const [userId, setUserId] = useState("");
@@ -2200,6 +2213,16 @@ export function UserProfilePanel({
           </div>
         </div>
       </AccordionSection>
+
+      {featureSettings.map((plugin) => (
+        <FeatureSettingsSection
+          key={plugin.id}
+          plugin={plugin}
+          scope="user"
+          open={openSections.has(featureSectionId(plugin.id))}
+          onToggle={() => toggle(featureSectionId(plugin.id))}
+        />
+      ))}
 
       {/* Delete account dialog */}
       <Dialog

@@ -21,6 +21,8 @@
     },
     "settings": {
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 95,
         "fields": [
           {
             "key": "useWarpgate",

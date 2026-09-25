@@ -44,7 +44,7 @@ describe("AdminSecondFactorsSection", () => {
       />,
     );
     expect(
-      await screen.findByText("admin.secondFactorUnavailable:yubi"),
+      await screen.findByText("admin.secondFactorUnavailable"),
     ).toBeTruthy();
     // A plugin's label resolves in its own namespace.
     expect(screen.getByText("totp:factor")).toBeTruthy();

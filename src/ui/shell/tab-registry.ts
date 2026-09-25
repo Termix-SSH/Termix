@@ -1,4 +1,5 @@
 import type { ComponentType, Ref } from "react";
+import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import type { Host, Tab } from "@/types/ui-types";
 import { createRegistry } from "@/lib/registry";
 import { viewOwner } from "@/plugin-host/view-ownership";
@@ -27,6 +28,8 @@ export interface TabShellCallbacks {
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown, e.g. when its feature goes away. */
   closeRailView: (id: string) => void;
+  /** Opens the host editor for a new host with these fields filled in. */
+  openHostEditor?: (draft?: HostDraft) => void;
   /** Saves a quick-connect tab's host. Core terminal only. */
   saveQuickConnect?: (tab: Tab, host: Host) => Promise<void>;
 }

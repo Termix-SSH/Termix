@@ -60,6 +60,7 @@ import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import { updatePluginHostSettings } from "@/api/plugins-api";
 import {
+  applyHostDraft,
   buildHostEditorPayload,
   createHostEditorForm,
   mapSnippetResponse,
@@ -89,6 +90,7 @@ import { useSshAuthEditors } from "@/plugin-host/auth-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { SshAuthProviderFields } from "./SshAuthProviderFields";
 import type { PluginSettingsField } from "@termix/plugin-sdk/manifest";
+import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import { PluginComponent } from "@/plugin-host/component-registry";
 import {
   toCredentialOption,
@@ -99,6 +101,7 @@ const CUSTOM_FONT_OPTION = "__custom__";
 
 export function HostEditor({
   host,
+  draft,
   activeTab,
   onBack,
   onSave,
@@ -113,6 +116,8 @@ export function HostEditor({
   onEditCredential,
 }: {
   host: Host | null;
+  /** Fields a plugin filled in for a new host. */
+  draft?: HostDraft;
   activeTab: string;
   /** Collapses the General tab to the fields needed to reach a host. */
   simpleMode?: boolean;
@@ -136,7 +141,10 @@ export function HostEditor({
   const { setPreviewTerminalTheme } = useTabsSafe();
   const connectionDefaults = useConnectionDefaults();
   const [form, setForm] = useState(() =>
-    createHostEditorForm(host, undefined, connectionDefaults),
+    applyHostDraft(
+      createHostEditorForm(host, undefined, connectionDefaults),
+      host ? undefined : draft,
+    ),
   );
   const [isCustomFont, setIsCustomFont] = useState(
     () => !TERMINAL_FONTS.some((f) => f.value === form.fontFamily),

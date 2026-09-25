@@ -80,6 +80,7 @@ function recordingShell(calls: ShellCall[]): TabShellCallbacks {
     renameTab: record("renameTab"),
     openRailView: record("openRailView"),
     closeRailView: record("closeRailView"),
+    openHostEditor: record("openHostEditor"),
     saveQuickConnect: async (...args) => {
       calls.push({ method: "saveQuickConnect", args });
     },

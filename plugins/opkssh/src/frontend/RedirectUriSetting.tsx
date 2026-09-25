@@ -32,7 +32,7 @@ export function RedirectUriSetting({ values }: SettingsComponentProps) {
         <Input
           value={uri}
           readOnly
-          className="rounded-none font-mono text-xs"
+          className="min-w-0 flex-1 rounded-none font-mono text-xs"
         />
         <Button
           type="button"

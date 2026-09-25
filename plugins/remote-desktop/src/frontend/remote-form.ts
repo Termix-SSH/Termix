@@ -16,6 +16,7 @@ export interface RemoteDesktopForm {
   vncPort: number;
   telnetPort: number;
   guacamoleConfig: Record<string, any>;
+  enableToolbar: boolean;
   rdpAuthType: "direct" | "credential" | "none";
   rdpCredentialId: string;
   rdpUser: string;
@@ -42,6 +43,7 @@ const SETTING_FOR_FIELD: Partial<Record<keyof RemoteDesktopForm, string>> = {
   telnetPort: "telnetPort",
   security: "rdpSecurity",
   ignoreCert: "rdpIgnoreCert",
+  enableToolbar: "enableToolbar",
 };
 
 type PluginSettingsBag = Record<string, Record<string, unknown>>;
@@ -72,6 +74,7 @@ export function remoteDesktopForm(props: HostEditorSectionProps): {
     security: options.rdpSecurity,
     ignoreCert: options.rdpIgnoreCert,
     guacamoleConfig: options.guacamoleConfig as Record<string, any>,
+    enableToolbar: options.enableToolbar,
   };
 
   const setField: RemoteFormSetField = (key, value) => {

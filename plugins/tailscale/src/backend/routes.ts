@@ -76,7 +76,7 @@ export function startTailscaleService(
         if (!context) {
           return res
             .status(503)
-            .json({ error: "Plugin is not running", devices: [] });
+            .json({ error: "Tailscale is not available", devices: [] });
         }
         const apiKey = (await context.settings.get<string>("apiKey")) ?? "";
         if (!apiKey) {

@@ -43,6 +43,8 @@ export interface HostEditorSectionDef {
   pluginId?: string;
   group: "top" | "ssh";
   labelKey: string;
+  /** Already-translated label, used instead of labelKey when set. */
+  label?: string;
   icon?: ComponentType<{ className?: string }>;
   /** Position among the group's tabs, core ones included. */
   order?: number;
@@ -96,7 +98,7 @@ function mergeByOrder(
       const Icon = section.icon;
       return {
         id: section.id,
-        label: t(section.labelKey),
+        label: section.label ?? t(section.labelKey),
         icon: Icon ? <Icon className="size-3" /> : null,
         order: section.order ?? 1000,
       };

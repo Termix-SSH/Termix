@@ -1,4 +1,4 @@
-import { Puzzle } from "lucide-react";
+import { CircleSlash } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePluginStore } from "./plugin-store";
 import { unregisteredViewStatus, type ViewKind } from "./view-ownership";
@@ -55,7 +55,7 @@ export function PluginViewPlaceholder({
       data-status={status}
       className={`flex h-full w-full flex-col items-center justify-center gap-2 text-center ${compact ? "p-3" : "p-6"}`}
     >
-      <Puzzle className="size-6 text-muted-foreground/40" />
+      <CircleSlash className="size-6 text-muted-foreground/40" />
       <span className="text-sm font-semibold text-muted-foreground">
         {title}
       </span>

@@ -105,7 +105,7 @@
     "clearAll": "Clear All",
     "noHistoryEntries": "No history entries",
     "trackingDisabled": "History tracking is disabled",
-    "trackingDisabledHint": "Turn on Command History for this host in its SSH Terminal plugin settings.",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
     "commandCount_one": "{{count}} command",
     "commandCount_other": "{{count}} commands"
   },

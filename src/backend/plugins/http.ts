@@ -175,7 +175,7 @@ export function createPluginRouter({
       next();
       return;
     }
-    res.status(503).json({ error: "Plugin is not running", pluginId });
+    res.status(503).json({ error: "This feature is not available", pluginId });
   });
 
   // The grant lives in the database, so it cannot be checked in the

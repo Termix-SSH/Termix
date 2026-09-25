@@ -38,6 +38,8 @@ export type Host = {
   keyType?: string;
   notes?: string;
   pin?: boolean;
+  /** Quick connect only: core can save this host as-is. */
+  quickConnectSavable?: boolean;
   sortOrder?: number | null;
 
   /** Stable identity across a desktop/server sync pair. */
@@ -217,14 +219,11 @@ export type AdminSection =
   | "sessions"
   | "roles"
   | "host-defaults"
-  | "image-storage"
   | "branding"
   | "database"
   | "api-keys"
   | "audit-log"
-  | "ssl"
-  | "plugins"
-  | "touch-input";
+  | "ssl";
 export type ThemeId =
   | "dark"
   | "light"

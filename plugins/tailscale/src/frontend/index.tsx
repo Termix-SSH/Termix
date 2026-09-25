@@ -18,6 +18,11 @@ function Panel({ shell }: PanelProps) {
           type,
         )
       }
+      onAddHost={
+        shell.openHostEditor
+          ? (draft) => shell.openHostEditor!(draft)
+          : undefined
+      }
     />
   );
 }

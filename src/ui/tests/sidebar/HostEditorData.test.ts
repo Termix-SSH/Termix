@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { registerHostProtocol } from "../../sidebar/host-protocols";
 import {
+  applyHostDraft,
   createHostEditorForm,
   buildHostEditorPayload,
   omitOwnerSshAuthFromSharedEdit,
@@ -557,5 +558,29 @@ describe("plugin protocols", () => {
     expect(payload.connectionType).toBe("demo-desktop");
     expect(payload.port).toBe(3390);
     expect(payload.enableSsh).toBe(false);
+  });
+});
+
+describe("applyHostDraft", () => {
+  it("fills a new host's form from a plugin draft", () => {
+    const form = applyHostDraft(createHostEditorForm(null), {
+      name: "box",
+      ip: "100.64.0.1",
+      port: 2222,
+      username: "luke",
+      authType: "tailscale",
+    });
+    expect(form).toMatchObject({
+      name: "box",
+      ip: "100.64.0.1",
+      sshPort: 2222,
+      username: "luke",
+      authType: "tailscale",
+    });
+  });
+
+  it("leaves the form alone without a draft", () => {
+    const form = createHostEditorForm(null);
+    expect(applyHostDraft(form, undefined)).toBe(form);
   });
 });

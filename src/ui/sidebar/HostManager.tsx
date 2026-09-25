@@ -11,6 +11,7 @@ import React, {
   type MutableRefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
+import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import { CredentialShareModal } from "./CredentialShareModal";
 
 import { Button } from "@/components/button";
@@ -82,6 +83,12 @@ export function HostManager({
   useHostEditorSections();
   const { t } = useTranslation();
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
+  // Fields a plugin filled in for a new host, keyed so a second draft remounts
+  // the editor.
+  const [hostDraft, setHostDraft] = useState<{
+    key: number;
+    draft: HostDraft;
+  } | null>(null);
   const [shareCredential, setShareCredential] = useState<Credential | null>(
     null,
   );
@@ -189,6 +196,7 @@ export function HostManager({
       pendingAction.current = null;
       if (action === "add-host") {
         setEditingHost("new");
+        setHostDraft(null);
         setEditingCredential(null);
         setEditingProtocols(hostProtocolFlags(null));
         setActiveHostTab("general");
@@ -202,8 +210,10 @@ export function HostManager({
 
   useEffect(() => {
     if (!active) return;
-    const handleAddHost = () => {
+    const handleAddHost = (e: Event) => {
+      const draft = (e as CustomEvent<HostDraft | undefined>).detail;
       setEditingHost("new");
+      setHostDraft(draft ? { key: Date.now(), draft } : null);
       setEditingCredential(null);
       setEditingProtocols(hostProtocolFlags(null));
       setActiveHostTab("general");
@@ -518,9 +528,12 @@ export function HostManager({
           {isHost ? (
             <HostEditor
               key={
-                editingHost === "new" ? "new-host" : (editingHost as Host).id
+                editingHost === "new"
+                  ? `new-host-${hostDraft?.key ?? ""}`
+                  : (editingHost as Host).id
               }
               host={editingHost === "new" ? null : (editingHost as Host)}
+              draft={editingHost === "new" ? hostDraft?.draft : undefined}
               activeTab={effectiveHostTab}
               simpleMode={collapseAdvanced}
               onBack={requestCloseHostEditor}

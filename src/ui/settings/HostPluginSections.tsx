@@ -139,7 +139,7 @@ function HostPluginSection({
     >
       {!running && (
         <div className="my-3 border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500">
-          {t("settings.hostPluginNotRunning", { name: plugin.name })}
+          {t("settings.featureUnavailable", { name: plugin.name })}
         </div>
       )}
 

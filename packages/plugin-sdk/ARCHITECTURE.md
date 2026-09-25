@@ -254,8 +254,8 @@ handler)` for a socket. Core runs the same middleware in front of every plugin:
 1. **Auth**, unless the path is listed in `options.public`. A public path is
    audited when the router is registered and logged on every request, because
    "this plugin opened a hole in auth" should be findable later. **D2** lists
-   a running plugin's public HTTP paths and public socket paths in the admin
-   plugin dialog (`publicRoutes` on `GET /plugins`), and audits a public
+   a running plugin's public HTTP paths and public socket paths as
+   `publicRoutes` on `GET /plugins` (admins only), and audits a public
    socket when it is registered. It matches the
    full path, with `:param` segments allowed, so declaring `/webhook/:token`
    public cannot open `/webhook/:token/anything`. A trailing `/*` is the one
@@ -360,8 +360,22 @@ the plugin's own permissions exactly as `ctx.rbac` does.
 `hidden: true` (**B14**) keeps a field out of the generic form: it is stored,
 validated and encrypted like any other, but the plugin edits it in its own
 UI. Remote desktop's host options are hidden fields, edited in its RDP, VNC
-and Telnet host editor tabs, so they do not appear a second time in the
-Plugins tab.
+and Telnet host editor tabs.
+
+**Where fields render.** In 2.9.0 the plugin system is invisible to users:
+there is no plugin list, enable switch or capability dialog, and nothing in
+the UI says "plugin". That UI arrives with the store in 3.0.0. Settings show
+up as features instead:
+
+- `user` fields render as an accordion section named after the plugin in the
+  User Profile panel, and `admin` fields do the same in the Admin Settings
+  panel (`src/ui/settings/FeatureSettingsSections.tsx`). `group` becomes a
+  card inside that section.
+- `host` fields get a host editor tab of their own, named after the plugin
+  (`src/ui/settings/host-feature-tabs.tsx`). `editorGroup` (`"top"` or
+  `"ssh"`, default `"top"`) and `editorOrder` place it among the other tabs.
+  A plugin that registers its own section with `registerHostEditorSection`
+  gets no generated tab, so it must draw any non-hidden host field itself.
 
 `type: "custom"` names a component the frontend registered, for the few things
 a schema cannot express (a device browser, a provider list). It is deliberately
@@ -419,8 +433,8 @@ allowlist (`CORE_SETTINGS_ALLOWLIST`) rather than the whole settings table.
 
 **D0** added three pieces:
 
-- `onValidate(scope, validator)` checks a save from the settings screen or the
-  host editor before anything is written. The validator gets every value in
+- `onValidate(scope, validator)` checks a save from the profile or admin
+  panel or the host editor before anything is written. The validator gets every value in
   the save (and the host id for host scope) and returns field key to message
   for what is wrong. ssh-terminal checks that its image paths are absolute,
   step-ca that its CA URL is https and its fingerprint a SHA-256 digest.
@@ -645,6 +659,13 @@ answers undefined while its plugin is off.
 shared session") and replaces `ShellApi.openTerminalTab`, which the shell no
 longer has.
 
+`ShellApi.openHostEditor(draft?)` opens the host editor for a new host with
+a `HostDraft` (name, ip, port, username, authType) filled in, which the user
+reviews and saves (tailscale's "Add host" on a device). `saveQuickConnect`
+saves only what core's own quick connect payload carries, so the terminal
+offers it only on a host with `quickConnectSavable`, which core sets for the
+password, key, credential, none and agent auth types.
+
 **Components by id.** `app.registerComponent(id, component)` offers a
 component to other plugins and core, which render it with `PluginComponent`
 from `@termix/plugin-sdk/ui` (a fallback while the owner is off) or
@@ -766,7 +787,7 @@ mode are still preset-seeded localStorage keys core writes, as in 2.8.
   origin, as `app.apiFor` but usable in a component. The terminal toolbar's
   metrics bars use it for a host on the desktop app's remote server, and
   tunnels merges the remote server's statuses through `app.apiFor("remote")`.
-- `app.onSettingsChanged(listener)`: fires after the settings screen or host
+- `app.onSettingsChanged(listener)`: fires after the profile panel, admin panel or host
   editor saved one of the plugin's settings, instead of polling on focus.
 - A `tab.menu` slot: entries in a tab's right-click menu, invoked with the
   tab's surface handle; `when` sees `{ tab, handle }`. Session sharing adds its
@@ -1258,8 +1279,8 @@ base types and branches on no plugin type name.
   in it. Its public routes are `/plugin-api/sso/start` (sends the browser to
   the provider), `/callback` (GET and POST), `/backchannel-logout` and
   `/config`; provider management is `/plugin-api/sso/providers`, gated on
-  `sso.manage`, and renders as the custom `providers` field on the plugin's
-  admin settings page. Login state (nonce, PKCE verifier, return address)
+  `sso.manage`, and renders as the custom `providers` field in the plugin's
+  Admin Settings section. Login state (nonce, PKCE verifier, return address)
   lives in `ctx.kv` for ten minutes.
 - The redirect URI is `<base>/plugin-api/sso/callback`. Providers that
   existed before 2.9 keep sending `<base>/users/oidc/callback`, the URI their
@@ -1937,6 +1958,8 @@ not do.
         },
       ],
       "host": {
+        "editorGroup": "ssh", // host editor strip for the generated tab, default "top"
+        "editorOrder": 30, // position among that strip's tabs
         "enableKey": "enableExample", // boolean rendered first, gating the rest
         "enableLabelKey": "k",
         "fields": [
@@ -2696,8 +2719,8 @@ None of the checks in this document stop that. They are not a sandbox.
   `system:tls`, `ssh:connect`, `process:spawn`, `users:write`,
   `auth:provide`, `device:serial`) means the plugin can reach your hosts,
   your users or the server itself. Ask why it needs each one.
-- **Read the public routes.** Admin > Plugins > Permissions lists every path
-  it serves without login. Each one is attack surface on your server.
+- **Read the public routes.** `publicRoutes` on `GET /plugins` lists every
+  path it serves without login. Each one is attack surface on your server.
 - **Check its dependencies.** A plugin's npm dependencies run with the same
   reach as the plugin.
 - **Watch the audit log after installing.** Filter on `plugin:<id>` and look

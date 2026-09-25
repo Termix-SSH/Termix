@@ -80,20 +80,49 @@ export function SettingsFieldRow({
     <span className="text-destructive">{error}</span>
   ) : undefined;
 
+  const control = (
+    <FieldControl
+      pluginId={pluginId}
+      field={field}
+      value={value}
+      setValue={setValue}
+      readOnly={readOnly}
+    />
+  );
+
+  // A switch fits beside its label. Anything wider goes underneath, since
+  // these rows also render in a narrow sidebar.
+  if (field.type === "boolean") {
+    return (
+      <SettingRow
+        label={label(field.labelKey)}
+        description={description}
+        badge={error ? t("common.error") : undefined}
+      >
+        {control}
+      </SettingRow>
+    );
+  }
+
   return (
-    <SettingRow
-      label={label(field.labelKey)}
-      description={description}
-      badge={error ? t("common.error") : undefined}
-    >
-      <FieldControl
-        pluginId={pluginId}
-        field={field}
-        value={value}
-        setValue={setValue}
-        readOnly={readOnly}
-      />
-    </SettingRow>
+    <div className="flex flex-col gap-1.5 py-3 border-b border-border last:border-0 min-w-0">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-sm font-medium leading-snug">
+          {label(field.labelKey)}
+        </span>
+        {error && (
+          <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
+            {t("common.error")}
+          </span>
+        )}
+      </div>
+      {description && (
+        <span className="text-xs text-muted-foreground leading-snug">
+          {description}
+        </span>
+      )}
+      <div className="min-w-0">{control}</div>
+    </div>
   );
 }
 
@@ -130,7 +159,7 @@ function FieldControl({
       return (
         <Input
           type="number"
-          className="h-7 w-40 text-sm"
+          className="h-8 w-full max-w-40 text-sm"
           disabled={readOnly}
           min={field.min}
           max={field.max}
@@ -152,7 +181,7 @@ function FieldControl({
           value={typeof value === "string" ? value : ""}
           onValueChange={(next) => setValue(field.key, next)}
         >
-          <SelectTrigger className="h-7 w-52 text-sm">
+          <SelectTrigger className="h-8 w-full min-w-0 text-sm">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
@@ -168,13 +197,12 @@ function FieldControl({
     case "multiselect": {
       const selected = Array.isArray(value) ? (value as string[]) : [];
       return (
-        <div className="flex flex-col gap-1.5 items-end">
+        <div className="flex flex-col gap-1.5">
           {(field.options ?? []).map((option) => (
             <label
               key={option.value}
               className="flex items-center gap-2 text-xs text-muted-foreground"
             >
-              <span>{label(option.labelKey)}</span>
               <Checkbox
                 disabled={readOnly}
                 checked={selected.includes(option.value)}
@@ -187,6 +215,7 @@ function FieldControl({
                   )
                 }
               />
+              <span>{label(option.labelKey)}</span>
             </label>
           ))}
         </div>
@@ -208,7 +237,7 @@ function FieldControl({
     case "json":
       return (
         <Textarea
-          className="w-64 text-sm font-mono min-h-16"
+          className="w-full text-sm font-mono min-h-16"
           disabled={readOnly}
           placeholder={placeholder}
           value={
@@ -225,7 +254,7 @@ function FieldControl({
     default:
       return (
         <Input
-          className="h-7 w-52 text-sm"
+          className="h-8 w-full text-sm"
           disabled={readOnly}
           placeholder={placeholder}
           value={typeof value === "string" ? value : ""}
@@ -259,7 +288,7 @@ function SecretControl({
 
   if (redacted) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">
           {stored ? t("settings.secretSet") : t("settings.secretNotSet")}
         </span>
@@ -277,14 +306,16 @@ function SecretControl({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <PasswordInput
-        className="h-7 w-52 text-sm"
-        disabled={readOnly}
-        placeholder={placeholder}
-        value={typeof value === "string" ? value : ""}
-        onChange={(event) => setValue(field.key, event.target.value)}
-      />
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="min-w-0 flex-1">
+        <PasswordInput
+          className="h-8 w-full text-sm"
+          disabled={readOnly}
+          placeholder={placeholder}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => setValue(field.key, event.target.value)}
+        />
+      </div>
       <Button
         variant="ghost"
         size="sm"

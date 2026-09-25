@@ -1,6 +1,7 @@
 import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import type { Host } from "@/types/ui-types";
 import type { SSHHostData } from "@/types";
+import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import type { HostDefaults } from "@/api/settings-api";
 import type { TerminalDefaults } from "@/lib/connection-defaults";
 import {
@@ -87,6 +88,24 @@ export function mapSnippetResponse(
     id: s.id,
     name: s.name ?? s.title ?? `Snippet ${s.id}`,
   }));
+}
+
+/** Overlays a plugin's draft on a new host's form. */
+export function applyHostDraft(
+  form: HostEditorForm,
+  draft: HostDraft | undefined,
+): HostEditorForm {
+  if (!draft) return form;
+  return {
+    ...form,
+    ...(draft.name !== undefined ? { name: draft.name } : {}),
+    ...(draft.ip !== undefined ? { ip: draft.ip } : {}),
+    ...(draft.port !== undefined ? { sshPort: draft.port } : {}),
+    ...(draft.username !== undefined ? { username: draft.username } : {}),
+    ...(draft.authType !== undefined
+      ? { authType: draft.authType as HostAuthType }
+      : {}),
+  };
 }
 
 export function createHostEditorForm(

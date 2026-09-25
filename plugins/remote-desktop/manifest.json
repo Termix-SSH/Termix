@@ -427,7 +427,8 @@
             "type": "boolean",
             "labelKey": "settings.host.enableToolbar.label",
             "descriptionKey": "settings.host.enableToolbar.description",
-            "default": true
+            "default": true,
+            "hidden": true
           }
         ]
       }

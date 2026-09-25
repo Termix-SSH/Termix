@@ -159,7 +159,7 @@
           "continue": "Carry on"
         },
         "needsPlugin": "Needs {{plugin}}",
-        "needsPluginHint": "This automation is skipped until the plugin it needs is turned on again.",
+        "needsPluginHint": "This automation is skipped until the feature it needs is available again.",
         "offBadge": "Off",
         "docsLink": "View docs",
         "ago": {

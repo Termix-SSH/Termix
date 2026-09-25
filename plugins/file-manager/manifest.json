@@ -71,6 +71,8 @@
     ],
     "settings": {
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 60,
         "enableKey": "enableFileManager",
         "enableLabelKey": "settings.host.enable.label",
         "enableDefault": true,

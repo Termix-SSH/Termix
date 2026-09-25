@@ -13,12 +13,12 @@
       "description": "Let the assistant carry out the changes it suggests."
     },
     "services.use": {
-      "title": "Use AI from other plugins",
-      "description": "Other plugins may call the assistant on your behalf."
+      "title": "Use AI from other features",
+      "description": "Other features may call the assistant on your behalf."
     },
     "secrets.share": {
       "title": "Share the API key",
-      "description": "Other plugins may use the stored AI API key without seeing it."
+      "description": "Other features may use the stored AI API key without seeing it."
     }
   },
   "settings": {
@@ -98,7 +98,7 @@
     "runInTerminal": "Run",
     "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other plugins use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
     }
   },
   "nav": {

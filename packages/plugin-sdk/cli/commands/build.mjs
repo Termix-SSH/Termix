@@ -54,6 +54,13 @@ export async function build({ cwd }) {
     },
   });
 
+  // Without this Node finds the host's typeless package.json, tries backend.js
+  // as CommonJS first and warns before reparsing it as ESM.
+  fs.writeFileSync(
+    path.join(outDir, "package.json"),
+    `${JSON.stringify({ type: "module" }, null, 2)}\n`,
+  );
+
   const frontendEntry = resolveEntry(cwd, FRONTEND_ENTRIES);
   if (frontendEntry) {
     await esbuild.build({

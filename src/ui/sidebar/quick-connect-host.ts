@@ -15,6 +15,16 @@ type QuickConnectInput = Pick<
 
 const QUICK_CONNECT_ID_PREFIX = "quick-connect-";
 
+// The auth types quickConnectHostToPayload carries over. A plugin auth type
+// keeps its fields elsewhere, so saving it here would lose them.
+const SAVABLE_AUTH_TYPES = new Set([
+  "password",
+  "key",
+  "credential",
+  "none",
+  "agent",
+]);
+
 export function isQuickConnectHost(host: Pick<Host, "id">): boolean {
   return host.id.startsWith(QUICK_CONNECT_ID_PREFIX);
 }
@@ -33,6 +43,7 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
       ...login,
       port: input.port,
       enableSsh: false,
+      quickConnectSavable: false,
       domain: input.domain,
       pluginSettings: {
         [protocol.pluginId]: {
@@ -62,6 +73,8 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
     quickActions: [],
     enableSsh: true,
     sshPort: input.port,
+    quickConnectSavable:
+      !input.authFields && SAVABLE_AUTH_TYPES.has(input.authType),
     ...input.authFields,
   };
 }

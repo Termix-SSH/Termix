@@ -60,7 +60,12 @@ import {
   type UserRole,
 } from "@/main-axios";
 import { type AdminSection, type Host } from "@/types/ui-types";
-import { AdminPluginsSection } from "./AdminPluginsSection";
+import {
+  FeatureSettingsSection,
+  featureSectionId,
+  useFeatureSettings,
+  type FeatureSectionId,
+} from "@/settings/FeatureSettingsSections";
 import {
   AdminRolesSection,
   AdminSessionsSection,
@@ -109,9 +114,10 @@ export function AdminSettingsPanel({
   onOpenHostTab?: (host: Host) => void;
 } = {}) {
   const { t } = useTranslation();
-  const [openSections, setOpenSections] = useState<Set<AdminSection>>(
-    () => new Set(["general"]),
-  );
+  const [openSections, setOpenSections] = useState<
+    Set<AdminSection | FeatureSectionId>
+  >(() => new Set(["general"]));
+  const featureSettings = useFeatureSettings("admin");
   const [manageUser, setManageUser] = useState<AdminUser | null>(null);
   const [allowRegistration, setAllowRegistration] = useState(true);
   const [allowPasswordLogin, setAllowPasswordLogin] = useState(true);
@@ -358,7 +364,7 @@ export function AdminSettingsPanel({
       .catch(() => {});
   }
 
-  function toggle(id: AdminSection) {
+  function toggle(id: AdminSection | FeatureSectionId) {
     setOpenSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -970,10 +976,15 @@ export function AdminSettingsPanel({
         users={users}
       />
 
-      <AdminPluginsSection
-        open={openSections.has("plugins")}
-        onToggle={() => toggle("plugins")}
-      />
+      {featureSettings.map((plugin) => (
+        <FeatureSettingsSection
+          key={plugin.id}
+          plugin={plugin}
+          scope="admin"
+          open={openSections.has(featureSectionId(plugin.id))}
+          onToggle={() => toggle(featureSectionId(plugin.id))}
+        />
+      ))}
 
       <AdminCreateUserDialog
         open={createUserOpen}

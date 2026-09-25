@@ -793,6 +793,14 @@
                 "enableDefault": {
                   "type": "boolean",
                   "description": "What the enable switch reads before a host saves it. Off by default."
+                },
+                "editorGroup": {
+                  "enum": ["top", "ssh"],
+                  "description": "Host editor strip the generated tab sits in. Defaults to top."
+                },
+                "editorOrder": {
+                  "type": "number",
+                  "description": "Position among that strip's tabs, core ones included."
                 }
               }
             }

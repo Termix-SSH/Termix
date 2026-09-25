@@ -42,6 +42,8 @@ export interface PluginHostSettingsContribution {
   enableKey?: string;
   enableLabelKey?: string;
   enableDefault?: boolean;
+  editorGroup?: "top" | "ssh";
+  editorOrder?: number;
   fields: PluginSettingsField[];
 }
 
@@ -245,31 +247,4 @@ export interface PluginSummary {
 export async function getPlugins(): Promise<PluginSummary[]> {
   const response = await rbacApi.get("/plugins");
   return Array.isArray(response.data) ? response.data : [];
-}
-
-export async function setPluginEnabled(
-  pluginId: string,
-  enabled: boolean,
-): Promise<void> {
-  await rbacApi.patch(`/plugins/${encodeURIComponent(pluginId)}/state`, {
-    enabled,
-  });
-}
-
-export async function grantPluginCapability(
-  pluginId: string,
-  capability: string,
-): Promise<void> {
-  await rbacApi.post(`/plugins/${encodeURIComponent(pluginId)}/grants`, {
-    capability,
-  });
-}
-
-export async function revokePluginCapability(
-  pluginId: string,
-  capability: string,
-): Promise<void> {
-  await rbacApi.delete(
-    `/plugins/${encodeURIComponent(pluginId)}/grants/${encodeURIComponent(capability)}`,
-  );
 }

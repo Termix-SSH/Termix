@@ -66,6 +66,9 @@ export default defineConfig({
           name: "frontend",
           environment: "jsdom",
           include: ["src/ui/**/*.test.{ts,tsx}"],
+          // The CLI bundle test builds under node_modules; inline it so its
+          // SDK imports hit the aliases instead of a second copy of the SDK.
+          server: { deps: { inline: [/cli-bundle-test/] } },
         },
       },
       {

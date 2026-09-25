@@ -38,6 +38,8 @@
     ],
     "settings": {
       "host": {
+        "editorGroup": "top",
+        "editorOrder": 90,
         "fields": [
           {
             "key": "macAddress",

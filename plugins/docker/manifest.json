@@ -53,6 +53,8 @@
     ],
     "settings": {
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 30,
         "enableKey": "enableDocker",
         "enableLabelKey": "settings.host.enable.label",
         "fields": [

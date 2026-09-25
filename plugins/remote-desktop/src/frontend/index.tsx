@@ -14,7 +14,12 @@ import {
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { SectionCard, isElectron } from "@termix/plugin-sdk/ui";
+import {
+  FakeSwitch,
+  SectionCard,
+  SettingRow,
+  isElectron,
+} from "@termix/plugin-sdk/ui";
 import { toast } from "sonner";
 import GuacamoleApp, { type GuacamoleAppHandle } from "./GuacamoleApp";
 import { GuacamoleDisplay } from "./GuacamoleDisplay";
@@ -146,6 +151,29 @@ function SectionNotes({ protocol }: { protocol: Protocol }) {
   );
 }
 
+function ToolbarCard({
+  form,
+  setField,
+}: Pick<ReturnType<typeof remoteDesktopForm>, "form" | "setField">) {
+  const { t } = useTranslation();
+  return (
+    <SectionCard
+      title={t("hosts.guac.toolbar")}
+      icon={<MonitorUp className="size-3.5" />}
+    >
+      <SettingRow
+        label={t("settings.host.enableToolbar.label")}
+        description={t("settings.host.enableToolbar.description")}
+      >
+        <FakeSwitch
+          checked={form.enableToolbar}
+          onChange={(value) => setField("enableToolbar", value)}
+        />
+      </SettingRow>
+    </SectionCard>
+  );
+}
+
 function RdpSection(props: HostEditorSectionProps) {
   const { form, setField, setGuacField } = remoteDesktopForm(props);
   return (
@@ -157,6 +185,7 @@ function RdpSection(props: HostEditorSectionProps) {
         host={props.host as { macAddress?: string | null } | undefined}
         credentials={props.credentials as never}
       />
+      <ToolbarCard form={form} setField={setField} />
       <SectionNotes protocol="rdp" />
     </>
   );
@@ -173,6 +202,7 @@ function VncSection(props: HostEditorSectionProps) {
         host={props.host as { macAddress?: string | null } | undefined}
         credentials={props.credentials as never}
       />
+      <ToolbarCard form={form} setField={setField} />
       <SectionNotes protocol="vnc" />
     </>
   );
@@ -188,6 +218,7 @@ function TelnetSection(props: HostEditorSectionProps) {
         setGuacField={setGuacField}
         credentials={props.credentials as never}
       />
+      <ToolbarCard form={form} setField={setField} />
       <SectionNotes protocol="telnet" />
     </>
   );

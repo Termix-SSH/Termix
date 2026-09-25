@@ -74,6 +74,15 @@ export interface ShellLayout {
 }
 
 /** What a plugin may ask of the shell. */
+/** Fields a plugin can fill in when it opens the host editor. */
+export interface HostDraft {
+  name?: string;
+  ip?: string;
+  port?: number;
+  username?: string;
+  authType?: string;
+}
+
 export interface ShellApi {
   openTab: (
     host: PluginHostRecord | null,
@@ -88,6 +97,11 @@ export interface ShellApi {
     tab: PluginTabRecord,
     host: PluginHostRecord,
   ) => Promise<void>;
+  /**
+   * Opens the host editor for a new host with these fields filled in. The
+   * user reviews and saves it. Absent in some shells.
+   */
+  openHostEditor?: (draft?: HostDraft) => void;
   /** Opens a rail view in the left sidebar. */
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown. */

@@ -271,6 +271,10 @@ export interface PluginHostSettingsContribution {
   enableLabelKey?: string;
   /** What the enable switch reads before a host saves it. Off by default. */
   enableDefault?: boolean;
+  /** Host editor strip the generated tab sits in. Defaults to "top". */
+  editorGroup?: "top" | "ssh";
+  /** Position among that strip's tabs, core ones included. */
+  editorOrder?: number;
   fields: PluginSettingsField[];
 }
 
@@ -1086,7 +1090,14 @@ function validateSettings(settings: unknown, errors: string[]): void {
     }
     rejectUnknown(
       host,
-      ["enableKey", "enableLabelKey", "enableDefault", "fields"],
+      [
+        "enableKey",
+        "enableLabelKey",
+        "enableDefault",
+        "editorGroup",
+        "editorOrder",
+        "fields",
+      ],
       `"${at}"`,
       errors,
     );
@@ -1103,6 +1114,20 @@ function validateSettings(settings: unknown, errors: string[]): void {
     }
     if ("enableDefault" in host && typeof host.enableDefault !== "boolean") {
       errors.push(`${at}.enableDefault must be a boolean`);
+    }
+    if (
+      "editorGroup" in host &&
+      host.editorGroup !== "top" &&
+      host.editorGroup !== "ssh"
+    ) {
+      errors.push(`${at}.editorGroup must be "top" or "ssh"`);
+    }
+    if (
+      "editorOrder" in host &&
+      (typeof host.editorOrder !== "number" ||
+        !Number.isFinite(host.editorOrder))
+    ) {
+      errors.push(`${at}.editorOrder must be a number`);
     }
 
     if (!Array.isArray(host.fields)) {

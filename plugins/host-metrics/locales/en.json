@@ -183,7 +183,7 @@
       "wgHandshakeNever": "Never",
       "wgTransfer": "Transfer"
     },
-    "snippetsUnavailable": "The Snippets plugin is off, so quick actions cannot run."
+    "snippetsUnavailable": "Snippets are turned off, so quick actions cannot run."
   },
   "metricsHistory": {
     "title": "Metrics History",

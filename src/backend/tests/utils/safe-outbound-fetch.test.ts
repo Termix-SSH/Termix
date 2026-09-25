@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { createServer } from "http";
+import type { AddressInfo } from "net";
 import type { LookupAddress, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
   readResponseTextLimited,
+  safeOutboundFetch,
 } from "../../utils/safe-outbound-fetch.js";
 
 describe("isBlockedAddress", () => {
@@ -256,4 +259,25 @@ describe("createDnsLookupHook", () => {
       expect.any(Function),
     );
   });
+});
+
+describe("safeOutboundFetch", () => {
+  it("returns a large body the caller reads after the call", async () => {
+    const body = "x".repeat(1_000_000);
+    const server = createServer((_req, res) => res.end(body));
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const { port } = server.address() as AddressInfo;
+    try {
+      const response = await safeOutboundFetch(
+        `http://127.0.0.1:${port}/`,
+        {},
+        ["127.0.0.1"],
+      );
+      expect((await response.text()).length).toBe(body.length);
+    } finally {
+      server.close();
+    }
+  }, 10_000);
 });

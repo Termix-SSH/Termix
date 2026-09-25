@@ -109,7 +109,7 @@ export function TouchInputSettings({
         {t("touchInput.advanced")}
       </button>
       {advancedOpen && (
-        <div className="grid grid-cols-1 gap-3 pb-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 pb-3">
           {fields.map(({ key, label, unit }) => {
             const bounds = TOUCH_INPUT_NUMERIC_BOUNDS[key];
             return (

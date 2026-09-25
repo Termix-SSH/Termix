@@ -87,6 +87,7 @@ export const shell: TabShellCallbacks = {
   renameTab: (...args) => callbacks?.renameTab(...args),
   openRailView: (...args) => callbacks?.openRailView(...args),
   closeRailView: (...args) => callbacks?.closeRailView(...args),
+  openHostEditor: (...args) => callbacks?.openHostEditor?.(...args),
   saveQuickConnect: (...args) =>
     callbacks?.saveQuickConnect?.(...args) ?? Promise.resolve(),
 };

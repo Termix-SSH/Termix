@@ -81,6 +81,7 @@
     "nativeRdpFailed": "Failed to open Windows Remote Desktop",
     "openNativeRdp": "Open in Windows Remote Desktop",
     "guac": {
+      "toolbar": "Toolbar",
       "connection": "Connection",
       "authentication": "Authentication",
       "storedCredential": "Stored Credential",

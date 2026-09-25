@@ -16,7 +16,7 @@ import {
   setPluginSummaries,
 } from "./plugin-store";
 import { workspaceFrontends, workspaceLocales } from "./workspace-plugins";
-import { syncHostPluginsTab } from "@/settings/host-plugins-tab";
+import { syncHostFeatureTabs } from "@/settings/host-feature-tabs";
 
 /**
  * Loads plugin frontends into the running shell.
@@ -273,8 +273,6 @@ async function loadNamespaces(summaries: PluginSummary[]): Promise<void> {
 
 async function reconcile(summaries: PluginSummary[]): Promise<void> {
   setPluginSummaries(summaries);
-  // The host editor's Plugins tab exists only while something fills it.
-  syncHostPluginsTab(summaries);
   await loadNamespaces(summaries);
 
   const { order, blocked } = orderForActivation(summaries);
@@ -301,6 +299,9 @@ async function reconcile(summaries: PluginSummary[]): Promise<void> {
   }
 
   await activateConcurrently(order);
+  // After activation, so a plugin that registered its own host editor
+  // section is not given a second, generated one.
+  syncHostFeatureTabs(summaries);
 }
 
 /**

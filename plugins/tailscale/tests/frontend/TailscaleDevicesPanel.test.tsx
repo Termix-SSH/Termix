@@ -74,4 +74,75 @@ describe("TailscaleDevicesPanel", () => {
     expect(host.authType).toBe("tailscale");
     expect(host.username).toBe("root");
   });
+
+  const device = {
+    id: "d1",
+    name: "box.tailnet.ts.net",
+    hostname: "box",
+    addresses: ["100.64.0.1", "fd7a::1"],
+    os: "linux",
+    lastSeen: "2026-01-01T00:00:00Z",
+  };
+
+  it("opens the host editor with the device filled in", async () => {
+    const user = userEvent.setup();
+    getTailscaleDevicesMock.mockResolvedValue({
+      hasApiKey: true,
+      devices: [device],
+    });
+
+    const onAddHost = vi.fn();
+    render(<TailscaleDevicesPanel onConnect={vi.fn()} onAddHost={onAddHost} />);
+
+    await waitFor(() => expect(screen.getByText("box")).toBeTruthy());
+    await user.clear(
+      screen.getByPlaceholderText("newUi.sidebar.quickConnect.usernameLabel"),
+    );
+    await user.type(
+      screen.getByPlaceholderText("newUi.sidebar.quickConnect.usernameLabel"),
+      "luke",
+    );
+    await user.click(screen.getByText("hosts.tailscaleAddHost"));
+
+    expect(onAddHost).toHaveBeenCalledWith({
+      name: "box",
+      ip: "100.64.0.1",
+      port: 22,
+      username: "luke",
+      authType: "tailscale",
+    });
+  });
+
+  it("hides Add host when the shell cannot open the editor", async () => {
+    getTailscaleDevicesMock.mockResolvedValue({
+      hasApiKey: true,
+      devices: [device],
+    });
+
+    render(<TailscaleDevicesPanel onConnect={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText("box")).toBeTruthy());
+    expect(screen.queryByText("hosts.tailscaleAddHost")).toBeNull();
+  });
+
+  it("copies the tailnet IP", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    getTailscaleDevicesMock.mockResolvedValue({
+      hasApiKey: true,
+      devices: [device],
+    });
+
+    render(<TailscaleDevicesPanel onConnect={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText("box")).toBeTruthy());
+    expect(screen.getByText("linux")).toBeTruthy();
+    await user.click(screen.getByLabelText("hosts.tailscaleCopyIp"));
+
+    expect(writeText).toHaveBeenCalledWith("100.64.0.1");
+  });
 });

@@ -70,14 +70,14 @@ router.use("/:pluginId", (req: Request, res: Response, next) => {
 /** 503 for an installed plugin that is off, 404 for an unknown id. */
 function notServing(res: Response, pluginId: string): void {
   if (isPluginInstalled(pluginId)) {
-    res.status(503).json({ error: "Plugin is not running", pluginId });
+    res.status(503).json({ error: "This feature is not available", pluginId });
     return;
   }
   databaseLogger.warn("Plugin API request for unregistered plugin", {
     operation: "plugin_api_dispatch",
     pluginId,
   });
-  res.status(404).json({ error: "Plugin not installed" });
+  res.status(404).json({ error: "This feature is not available" });
 }
 
 /**

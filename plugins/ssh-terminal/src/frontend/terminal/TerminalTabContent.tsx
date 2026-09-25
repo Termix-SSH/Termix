@@ -114,7 +114,7 @@ export function TerminalTabContent({
               }
               isQuickConnect={String(host.id).startsWith("quick-connect-")}
               onSaveQuickConnect={
-                shell.saveQuickConnect
+                shell.saveQuickConnect && hostRecord?.quickConnectSavable
                   ? () => shell.saveQuickConnect!(tabRecord, hostRecord!)
                   : undefined
               }

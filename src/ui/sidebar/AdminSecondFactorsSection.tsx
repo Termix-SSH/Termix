@@ -81,9 +81,7 @@ export function AdminSecondFactorsSection({
               </span>
               {!factor.available && (
                 <span className="text-[10px] text-destructive">
-                  {t("admin.secondFactorUnavailable", {
-                    plugin: factor.pluginId,
-                  })}
+                  {t("admin.secondFactorUnavailable")}
                 </span>
               )}
             </div>

@@ -216,6 +216,8 @@
         }
       ],
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 12,
         "enableKey": "enableTerminal",
         "enableLabelKey": "settings.host.enableTerminal.label",
         "enableDefault": true,

@@ -112,4 +112,23 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
       pluginSettings: { demo: { profileId: 3 } },
     });
   });
+
+  it("marks only hosts core can save", () => {
+    const base = { ip: "10.0.0.2", port: 22, username: "root" };
+    expect(
+      createQuickConnectHost({ ...base, authType: "password" })
+        .quickConnectSavable,
+    ).toBe(true);
+    expect(
+      createQuickConnectHost({ ...base, authType: "tailscale" })
+        .quickConnectSavable,
+    ).toBe(false);
+    expect(
+      createQuickConnectHost({
+        ...base,
+        authType: "password",
+        authFields: { extra: true },
+      }).quickConnectSavable,
+    ).toBe(false);
+  });
 });

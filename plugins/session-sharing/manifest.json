@@ -84,6 +84,8 @@
         }
       ],
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 80,
         "fields": [
           {
             "key": "allowSessionSharing",

@@ -59,6 +59,8 @@
         }
       ],
       "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 85,
         "enableKey": "enableSessionRecording",
         "enableLabelKey": "settings.host.enable.label",
         "fields": []

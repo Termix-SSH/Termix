@@ -42,7 +42,11 @@
     "tailscaleLoadingDevices": "Loading devices...",
     "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
     "tailscaleNoDevices": "No devices found in your tailnet.",
-    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address."
+    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
+    "tailscaleAddHost": "Add host",
+    "tailscaleCopyIp": "Copy Tailscale IP",
+    "tailscaleIpCopied": "IP copied",
+    "tailscaleIpCopyFailed": "Could not copy the IP"
   },
   "terminal": {
     "tailscaleCheckRequired": "Tailscale Authentication Required",

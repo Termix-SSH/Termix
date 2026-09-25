@@ -237,12 +237,16 @@ export async function safeOutboundFetch(
   });
 
   try {
-    return await undiciFetch(url.toString(), {
+    const response = await undiciFetch(url.toString(), {
       ...options,
       dispatcher,
       redirect: "error",
     });
-  } finally {
-    await dispatcher.close();
+    // close() waits for the body, which the caller reads after we return.
+    dispatcher.close().catch(() => {});
+    return response;
+  } catch (error) {
+    await dispatcher.destroy().catch(() => {});
+    throw error;
   }
 }
