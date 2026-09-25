@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "域名",
+      "placeholder": "termix.example.com",
+      "description": "证书的公共域名。"
+    },
+    "email": {
+      "label": "邮箱",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "验证类型",
+      "cloudflare": "DNS (Cloudflare) - 需要 Cloudflare API 令牌"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API 令牌",
+      "description": "具有您域名的 Zone:DNS:Edit 权限的限定作用域令牌。"
+    }
+  },
+  "status": {
+    "title": "证书状态",
+    "none": "无证书",
+    "expires": "过期于 {{date}}",
+    "lastIssued": "上次签发于 {{date}}",
+    "request": "签发 / 续期证书",
+    "requesting": "正在请求证书..."
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "id": "acme-ssl",
+  "name": "ACME Certificates",
+  "version": "1.0.0",
+  "description": "Gets and renews the Termix HTTPS certificate from Let's Encrypt or another ACME CA, with the http-01 or Cloudflare dns-01 challenge. Termix keeps serving the current certificate when this plugin is off, but it is no longer renewed.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "Lock",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "system:tls",
+    "kv:own",
+    "secrets:own",
+    "network:outbound",
+    "network:serve",
+    "ui:surface"
+  ],
+  "contributes": {
+    "permissions": [
+      {
+        "name": "manage",
+        "titleKey": "permissions.manage.title",
+        "descriptionKey": "permissions.manage.description",
+        "defaultRoles": ["admin"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "status",
+          "type": "custom",
+          "component": "status"
+        },
+        {
+          "key": "autoRenew",
+          "type": "boolean",
+          "labelKey": "settings.autoRenew.label",
+          "descriptionKey": "settings.autoRenew.description",
+          "default": false
+        },
+        {
+          "key": "domain",
+          "type": "string",
+          "labelKey": "settings.domain.label",
+          "descriptionKey": "settings.domain.description",
+          "placeholderKey": "settings.domain.placeholder",
+          "default": ""
+        },
+        {
+          "key": "email",
+          "type": "string",
+          "labelKey": "settings.email.label",
+          "descriptionKey": "settings.email.description",
+          "placeholderKey": "settings.email.placeholder",
+          "default": ""
+        },
+        {
+          "key": "provider",
+          "type": "select",
+          "labelKey": "settings.provider.label",
+          "descriptionKey": "settings.provider.description",
+          "default": "letsencrypt",
+          "options": [
+            {
+              "value": "letsencrypt",
+              "labelKey": "settings.provider.letsencrypt"
+            },
+            {
+              "value": "letsencrypt-staging",
+              "labelKey": "settings.provider.letsencryptStaging"
+            },
+            {
+              "value": "custom",
+              "labelKey": "settings.provider.custom"
+            }
+          ]
+        },
+        {
+          "key": "directoryUrl",
+          "type": "string",
+          "labelKey": "settings.directoryUrl.label",
+          "descriptionKey": "settings.directoryUrl.description",
+          "default": ""
+        },
+        {
+          "key": "challengeType",
+          "type": "select",
+          "labelKey": "settings.challengeType.label",
+          "descriptionKey": "settings.challengeType.description",
+          "default": "http-01",
+          "options": [
+            {
+              "value": "http-01",
+              "labelKey": "settings.challengeType.http"
+            },
+            {
+              "value": "dns-cloudflare",
+              "labelKey": "settings.challengeType.cloudflare"
+            }
+          ]
+        },
+        {
+          "key": "cloudflareToken",
+          "type": "secret",
+          "labelKey": "settings.cloudflareToken.label",
+          "descriptionKey": "settings.cloudflareToken.description"
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

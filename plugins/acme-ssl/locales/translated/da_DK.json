@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domæne",
+      "placeholder": "termix.example.com",
+      "description": "Det offentlige domænenavn for certifikatet."
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "admin@eksempel.com"
+    },
+    "challengeType": {
+      "label": "Udfordringstype",
+      "cloudflare": "DNS (Cloudflare) - kræver et Cloudflare API-token"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API-token",
+      "description": "Scoped-token med Zone:DNS:Rediger-tilladelse for dit domæne."
+    }
+  },
+  "status": {
+    "title": "Certifikatstatus",
+    "none": "Intet certifikat",
+    "expires": "Udløber {{date}}",
+    "lastIssued": "Sidst udstedt {{date}}",
+    "request": "Udstede/forny certifikat",
+    "requesting": "Anmoder om certifikat..."
+  }
+}

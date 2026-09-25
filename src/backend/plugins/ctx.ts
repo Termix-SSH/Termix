@@ -57,6 +57,7 @@ import { createPluginHosts } from "./ctx-hosts.js";
 import { createPluginSchedule } from "./schedule.js";
 import { createPluginFetch, createPluginNotify } from "./ctx-notify.js";
 import { createPluginProcess } from "./ctx-process.js";
+import { createPluginSystem } from "./ctx-system.js";
 import { createPluginCredentials } from "./ctx-credentials.js";
 import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
 
@@ -828,6 +829,7 @@ export function createPluginContext(
       audit: auditCall,
     }),
     auth: createPluginAuth({ manifest, bag: handle.bag, audit: auditCall }),
+    system: createPluginSystem({ manifest, bag: handle.bag, audit: auditCall }),
 
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),

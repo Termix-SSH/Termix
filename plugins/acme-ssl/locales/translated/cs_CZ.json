@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Doména",
+      "placeholder": "termix.example.com",
+      "description": "Název veřejné domény pro certifikát."
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Typ výzvy",
+      "cloudflare": "DNS (Cloudflare) – vyžaduje token Cloudflare API"
+    },
+    "cloudflareToken": {
+      "label": "Token API Cloudflare",
+      "description": "Token s vymezeným rozsahem a oprávněním Zóna:DNS:Úpravy pro vaši doménu."
+    }
+  },
+  "status": {
+    "title": "Stav certifikátu",
+    "none": "Žádný certifikát",
+    "expires": "Platnost vyprší {{date}}",
+    "lastIssued": "Naposledy vydáno {{date}}",
+    "request": "Vydání / Obnova certifikátu",
+    "requesting": "Žádost o certifikát..."
+  }
+}

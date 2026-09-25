@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "ドメイン",
+      "placeholder": "termix.example.com",
+      "description": "証明書の公開ドメイン名。"
+    },
+    "email": {
+      "label": "メールアドレス",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "チャレンジタイプ",
+      "cloudflare": "DNS（Cloudflare）- Cloudflare APIトークンが必要です"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare APIトークン",
+      "description": "ドメインに対するZone:DNS:Edit権限を持つスコープ付きトークン。"
+    }
+  },
+  "status": {
+    "title": "証明書ステータス",
+    "none": "証明書なし",
+    "expires": "有効期限 {{date}}",
+    "lastIssued": "最終発行日 {{date}}",
+    "request": "証明書を発行/更新",
+    "requesting": "証明書をリクエスト中..."
+  }
+}

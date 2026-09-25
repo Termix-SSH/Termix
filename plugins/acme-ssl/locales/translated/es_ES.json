@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Dominio",
+      "placeholder": "termix.example.com",
+      "description": "El nombre de dominio público para el certificado."
+    },
+    "email": {
+      "label": "Correo electrónico",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Tipo de desafío",
+      "cloudflare": "DNS (Cloudflare) - requiere un token de API de Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Token de API de Cloudflare",
+      "description": "Token con permiso Zone:DNS:Edit limitado para tu dominio."
+    }
+  },
+  "status": {
+    "title": "Estado del certificado",
+    "none": "Sin certificado",
+    "expires": "Caduca {{date}}",
+    "lastIssued": "Última emisión {{date}}",
+    "request": "Emitir / Renovar certificado",
+    "requesting": "Solicitando certificado..."
+  }
+}

@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
+import { AutoSSLSetup } from "./tls/self-signed.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
 import { ensureDatabaseLayerPreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
@@ -380,6 +380,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runStepCaSettingsMigration } =
         await import("./utils/crypto-migration/step-ca-settings-migration.js");
       await runStepCaSettingsMigration();
+
+      const { runAcmeSslSettingsMigration } =
+        await import("./utils/crypto-migration/acme-ssl-settings-migration.js");
+      await runAcmeSslSettingsMigration();
 
       const { runVaultSettingsMigration } =
         await import("./utils/crypto-migration/vault-settings-migration.js");

@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "תְחוּם",
+      "placeholder": "termix.example.com",
+      "description": "שם התחום הציבורי עבור התעודה."
+    },
+    "email": {
+      "label": "אֶלֶקטרוֹנִי",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "סוג האתגר",
+      "cloudflare": "DNS (Cloudflare) - דורש אסימון API של Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "אסימון API של Cloudflare",
+      "description": "אסימון בטווח עם הרשאת עריכה של אזור:DNS: עבור הדומיין שלך."
+    }
+  },
+  "status": {
+    "title": "סטטוס התעודה",
+    "none": "אין תעודה",
+    "expires": "פג תוקף {{date}}",
+    "lastIssued": "הוצאה אחרונה {{date}}",
+    "request": "הנפקה / חידוש תעודה",
+    "requesting": "מבקש תעודה..."
+  }
+}

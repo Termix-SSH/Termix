@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domän",
+      "placeholder": "termix.example.com",
+      "description": "Det offentliga domännamnet för certifikatet."
+    },
+    "email": {
+      "label": "E-post",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Utmaningstyp",
+      "cloudflare": "DNS (Cloudflare) – kräver en Cloudflare API-token"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API-token",
+      "description": "Scoped-token med Zone:DNS:Edit-behörighet för din domän."
+    }
+  },
+  "status": {
+    "title": "Certifikatstatus",
+    "none": "Inget certifikat",
+    "expires": "Utgångsdatum {{date}}",
+    "lastIssued": "Senast utfärdad {{date}}",
+    "request": "Utfärda/förnya certifikat",
+    "requesting": "Begär certifikat..."
+  }
+}

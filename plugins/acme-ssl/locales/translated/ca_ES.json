@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domini",
+      "placeholder": "termix.example.com",
+      "description": "El nom de domini públic del certificat."
+    },
+    "email": {
+      "label": "Correu electrònic",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Tipus de repte",
+      "cloudflare": "DNS (Cloudflare): requereix un token d'API de Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Token de l'API de Cloudflare",
+      "description": "Token amb àmbit i permís Zone:DNS:Edit per al vostre domini."
+    }
+  },
+  "status": {
+    "title": "Estat del certificat",
+    "none": "Sense certificat",
+    "expires": "Caduca {{date}}",
+    "lastIssued": "Última emissió {{date}}",
+    "request": "Emetre / Renovar el certificat",
+    "requesting": "Sol·licitant certificat..."
+  }
+}

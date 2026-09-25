@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "โดเมน",
+      "placeholder": "เทอร์มิกซ์.ตัวอย่าง.com",
+      "description": "ชื่อโดเมนสาธารณะสำหรับใบรับรอง"
+    },
+    "email": {
+      "label": "อีเมล",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "ประเภทความท้าทาย",
+      "cloudflare": "DNS (Cloudflare) - ต้องใช้โทเค็น API ของ Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "โทเค็น API ของ Cloudflare",
+      "description": "โทเค็นแบบจำกัดขอบเขตพร้อมสิทธิ์ Zone:DNS:Edit สำหรับโดเมนของคุณ"
+    }
+  },
+  "status": {
+    "title": "สถานะใบรับรอง",
+    "none": "ไม่มีใบรับรอง",
+    "expires": "หมดอายุ {{date}}",
+    "lastIssued": "ออกครั้งล่าสุด {{date}}",
+    "request": "ออก/ต่ออายุใบรับรอง",
+    "requesting": "ขอใบรับรอง..."
+  }
+}

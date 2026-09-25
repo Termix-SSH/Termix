@@ -1,8 +1,11 @@
-import { getErrorMessage } from "./error-message.js";
+import { getErrorMessage } from "../utils/error-message.js";
 import { execSync } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
-import { systemLogger } from "./logger.js";
+import { systemLogger } from "../utils/logger.js";
+import { readCertificateInfo } from "./certificate.js";
+
+const RENEW_WINDOW_MS = 30 * 86_400_000;
 
 export class AutoSSLSetup {
   private static readonly DATA_DIR = process.env.DATA_DIR || "./db/data";
@@ -28,29 +31,12 @@ export class AutoSSLSetup {
     }
 
     try {
-      if (await this.isSSLConfigured()) {
-        await this.logCertificateInfo();
-        await this.setupEnvironmentVariables();
-        return;
-      }
-
-      try {
-        await fs.access(this.CERT_FILE);
-        await fs.access(this.KEY_FILE);
-
-        systemLogger.info("SSL certificates found from entrypoint script", {
-          operation: "ssl_cert_found_entrypoint",
-          cert_path: this.CERT_FILE,
-          key_path: this.KEY_FILE,
-        });
-
-        await this.logCertificateInfo();
-        await this.setupEnvironmentVariables();
-        return;
-      } catch {
+      if (await this.needsSelfSigned()) {
         await this.generateSSLCertificates();
-        await this.setupEnvironmentVariables();
+      } else {
+        await this.logCertificateInfo();
       }
+      await this.setupEnvironmentVariables();
     } catch (error) {
       systemLogger.error("Failed to initialize SSL configuration", error, {
         operation: "ssl_auto_init_failed",
@@ -62,40 +48,44 @@ export class AutoSSLSetup {
     }
   }
 
-  private static async isSSLConfigured(): Promise<boolean> {
+  /**
+   * Only core's own certificate is ever replaced here. One a CA issued keeps
+   * being served until it expires, even when nothing renews it.
+   */
+  private static async needsSelfSigned(): Promise<boolean> {
+    let pem: string;
     try {
-      await fs.access(this.CERT_FILE);
       await fs.access(this.KEY_FILE);
-
-      execSync(
-        `openssl x509 -in "${this.CERT_FILE}" -checkend 2592000 -noout`,
-        {
-          stdio: "pipe",
-        },
-      );
-
+      pem = await fs.readFile(this.CERT_FILE, "utf8");
+    } catch {
+      systemLogger.info("SSL certificate not found, will generate one", {
+        operation: "ssl_cert_missing",
+        cert_path: this.CERT_FILE,
+      });
       return true;
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("checkend")) {
-        systemLogger.warn(
-          "SSL certificate is expired or expiring soon, will regenerate",
-          {
-            operation: "ssl_cert_expired",
-            cert_path: this.CERT_FILE,
-            error: error.message,
-          },
-        );
-      } else {
-        systemLogger.info(
-          "SSL certificate not found or invalid, will generate new one",
-          {
-            operation: "ssl_cert_missing",
-            cert_path: this.CERT_FILE,
-          },
-        );
-      }
-      return false;
     }
+
+    const info = readCertificateInfo(pem);
+    if (!info) {
+      systemLogger.warn("SSL certificate is unreadable, will generate one", {
+        operation: "ssl_cert_invalid",
+        cert_path: this.CERT_FILE,
+      });
+      return true;
+    }
+
+    if (
+      info.selfSigned &&
+      new Date(info.notAfter).getTime() - Date.now() < RENEW_WINDOW_MS
+    ) {
+      systemLogger.warn(
+        "Self-signed SSL certificate is expiring, will regenerate",
+        { operation: "ssl_cert_expired", cert_path: this.CERT_FILE },
+      );
+      return true;
+    }
+
+    return false;
   }
 
   private static async generateSSLCertificates(): Promise<void> {
@@ -210,7 +200,6 @@ IP.3 = 0.0.0.0
         issuer: issuer.replace("issuer=", ""),
         valid_from: notBefore.replace("notBefore=", ""),
         valid_until: notAfter.replace("notAfter=", ""),
-        note: "Certificate will auto-renew 30 days before expiration",
       });
     } catch (error) {
       systemLogger.warn("Could not retrieve certificate information", {
@@ -269,15 +258,5 @@ IP.3 = 0.0.0.0
     for (const [key, value] of Object.entries(sslEnvVars)) {
       process.env[key] = value;
     }
-  }
-
-  static getSSLConfig() {
-    return {
-      enabled: process.env.ENABLE_SSL === "true",
-      port: parseInt(process.env.SSL_PORT || "8443"),
-      certPath: process.env.SSL_CERT_PATH || this.CERT_FILE,
-      keyPath: process.env.SSL_KEY_PATH || this.KEY_FILE,
-      domain: process.env.SSL_DOMAIN || "localhost",
-    };
   }
 }

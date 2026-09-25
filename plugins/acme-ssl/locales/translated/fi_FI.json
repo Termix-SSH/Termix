@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Verkkotunnus",
+      "placeholder": "termix.esimerkki.com",
+      "description": "Varmenteen julkinen verkkotunnus."
+    },
+    "email": {
+      "label": "Sähköposti",
+      "placeholder": "admin@esimerkki.com"
+    },
+    "challengeType": {
+      "label": "Haasteen tyyppi",
+      "cloudflare": "DNS (Cloudflare) – vaatii Cloudflare API -tunnuksen"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API-tunnus",
+      "description": "Laajuusaluetunnus, jolla on Zone:DNS:Edit-käyttöoikeus verkkotunnuksellesi."
+    }
+  },
+  "status": {
+    "title": "Sertifikaatin tila",
+    "none": "Ei todistusta",
+    "expires": "Vanhenee {{date}}",
+    "lastIssued": "Viimeksi myönnetty {{date}}",
+    "request": "Myönnä / Uudista sertifikaatti",
+    "requesting": "Pyydetään varmennetta..."
+  }
+}

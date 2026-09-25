@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domeniu",
+      "placeholder": "termix.example.com",
+      "description": "Numele de domeniu public pentru certificat."
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Tipul provocării",
+      "cloudflare": "DNS (Cloudflare) - necesită un token API Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Tokenul API Cloudflare",
+      "description": "Token cu scop specific și permisiune Zone:DNS:Edit pentru domeniul dvs."
+    }
+  },
+  "status": {
+    "title": "Starea certificatului",
+    "none": "Fără certificat",
+    "expires": "Expiră la {{date}}",
+    "lastIssued": "Ultima emisiune {{date}}",
+    "request": "Emitere / Reînnoire certificat",
+    "requesting": "Se solicită certificatul..."
+  }
+}

@@ -1715,11 +1715,11 @@ deciding, not the mechanism.
 | Capability           | Risk     | Meaning                                                        |
 | -------------------- | -------- | -------------------------------------------------------------- |
 | `credentials:read`   | critical | See plaintext secrets for any reachable host                   |
+| `system:tls`         | critical | Replace the server certificate and answer ACME challenges      |
 | `ssh:connect`        | high     | Run commands on hosts it is connected to                       |
 | `process:spawn`      | high     | Run programs on the Termix server                              |
 | `users:write`        | high     | Create and change user accounts                                |
 | `auth:provide`       | high     | Add a login method, second factor or SSH auth type             |
-| `system:tls`         | high     | Request and replace the server certificate                     |
 | `device:serial`      | high     | Open a physical serial or USB device on the Termix server      |
 | `hosts:write`        | medium   | Create and change hosts                                        |
 | `credentials:use`    | medium   | Connect using a host's stored credentials, without seeing them |
@@ -1801,6 +1801,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18**, tls **C4** |
 | `ctx.process.run` / `.ensureBinary`              | `process:spawn` (+ `network:outbound` to download) | **C3**                              |
 | `ctx.auth.registerKeyboardInteractiveHandler`    | `auth:provide`                                     | **C3**                              |
+| `ctx.system.*`                                   | `system:tls`                                       | **C7**                              |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -1971,6 +1972,33 @@ keyType })` saves a key pair as a new encrypted credential and returns its
   delete: a plugin that has to undo a save orders its own writes so it never
   needs one (termix-identity publishes the key first and removes that row if
   the save fails).
+
+**C7** added `ctx.system`, the server certificate, all behind `system:tls`
+(critical: whoever holds it decides what certificate every browser is shown)
+and all audited. Core keeps serving HTTPS: at boot it makes a self-signed
+certificate only when none exists or its own self-signed one is expiring, and
+it never replaces a certificate a CA issued, so a certificate keeps being
+served, unrenewed, with its plugin disabled. The code is in `src/backend/tls/`.
+
+- `tlsStatus()` is `{ enabled, certificate, renewal }`: the served leaf (names,
+  issuer, dates, `selfSigned`, fingerprint) and the plugin that renews it.
+- `writeTlsCertificate(cert, key)` validates the pair with node's X509 parser
+  (it parses, the leaf has not expired, the key matches) and swaps both files
+  in by rename. It does not reload.
+- `reloadTls()` serves what is on disk now: `setSecureContext` on the direct
+  HTTPS server (starting it if HTTPS was off), or an nginx reload in Docker.
+- `publishHttpChallenge(token, content)` answers
+  `GET /.well-known/acme-challenge/<token>`, which core serves publicly
+  because no `/plugin-api/` path can be on it. nginx proxies that location
+  to the backend on both the HTTPS server and the port 80 redirect server.
+- `registerTlsRenewer()` tells core the plugin renews the certificate. Admin
+  settings warn with the expiry date when a CA-issued certificate has no
+  renewer. Both registrations are dropped on deactivate.
+
+Uploading a certificate by hand stays core (`POST /users/tls-certificate`),
+since it is not ACME. The acme-ssl plugin is the first caller: it runs
+acme-client with every request sent through `ctx.fetch` (an axios adapter),
+keeps its account key sealed in `ctx.kv`, and checks every 12 hours.
 
 **C3** added `ctx.process`, for a plugin that ships a program (opkssh):
 
@@ -2619,6 +2647,7 @@ The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
 (B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
 opkssh and warpgate (C3), step-ca (C4), vault (C5), termix-identity (C6),
+acme-ssl (C7),
 which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle

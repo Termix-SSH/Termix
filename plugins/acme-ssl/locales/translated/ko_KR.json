@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "도메인",
+      "placeholder": "termix.example.com",
+      "description": "인증서에 사용할 공개 도메인 이름입니다."
+    },
+    "email": {
+      "label": "이메일",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "인증 방식",
+      "cloudflare": "DNS(Cloudflare) - Cloudflare API 토큰 필요"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API 토큰",
+      "description": "도메인에 대한 Zone:DNS:Edit 권한이 있는 범위 지정 토큰입니다."
+    }
+  },
+  "status": {
+    "title": "인증서 상태",
+    "none": "인증서 없음",
+    "expires": "만료일: {{date}}",
+    "lastIssued": "마지막 발급일: {{date}}",
+    "request": "인증서 발급 / 갱신",
+    "requesting": "인증서 요청 중..."
+  }
+}

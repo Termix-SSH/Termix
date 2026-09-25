@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Πεδίο ορισμού",
+      "placeholder": "termix.example.com",
+      "description": "Το όνομα δημόσιου τομέα για το πιστοποιητικό."
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Τύπος πρόκλησης",
+      "cloudflare": "DNS (Cloudflare) - απαιτεί διακριτικό API Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Διακριτικό API Cloudflare",
+      "description": "Διακριτικό πεδίου εφαρμογής με δικαίωμα Zone:DNS:Edit για τον τομέα σας."
+    }
+  },
+  "status": {
+    "title": "Κατάσταση πιστοποιητικού",
+    "none": "Δεν υπάρχει πιστοποιητικό",
+    "expires": "Λήγει {{date}}",
+    "lastIssued": "Τελευταία έκδοση {{date}}",
+    "request": "Έκδοση / Ανανέωση Πιστοποιητικού",
+    "requesting": "Αίτημα πιστοποιητικού..."
+  }
+}

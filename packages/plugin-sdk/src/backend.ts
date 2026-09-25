@@ -1631,6 +1631,65 @@ export interface PluginSchedule {
   after: (delayMs: number, fn: () => void | Promise<void>) => () => void;
 }
 
+/** The certificate core serves, read from its configured paths. */
+export interface PluginTlsCertificateInfo {
+  subject: string;
+  issuer: string;
+  /** DNS names and IPs from the subject alternative names. */
+  names: string[];
+  notBefore: string;
+  notAfter: string;
+  /** True for core's own first-boot certificate. */
+  selfSigned: boolean;
+  /** SHA-256 fingerprint, colon separated. */
+  fingerprint: string;
+}
+
+export interface PluginTlsStatus {
+  /** Whether Termix is set up to serve HTTPS at all. */
+  enabled: boolean;
+  /** Null when there is no readable certificate. */
+  certificate: PluginTlsCertificateInfo | null;
+  /** The plugin that renews the certificate, when one is registered. */
+  renewal: { pluginId: string; pluginName: string } | null;
+}
+
+export interface PluginTlsReloadResult {
+  /** Whether the new certificate is being served now. */
+  applied: boolean;
+  message: string;
+}
+
+/**
+ * The server certificate. Needs system:tls, and every call is audited. Core
+ * owns serving it; a plugin can only replace it, reload it and answer ACME
+ * http-01 challenges.
+ */
+export interface PluginSystem {
+  tlsStatus: () => Promise<PluginTlsStatus>;
+  /**
+   * Replaces the served certificate and key. Throws when either does not
+   * parse, the certificate has expired, or the key does not match it. Does
+   * not reload: call reloadTls() after.
+   */
+  writeTlsCertificate: (
+    certificatePem: string,
+    privateKeyPem: string,
+  ) => Promise<PluginTlsCertificateInfo>;
+  /** Serves the certificate on disk without a restart. */
+  reloadTls: () => Promise<PluginTlsReloadResult>;
+  /**
+   * Answers GET /.well-known/acme-challenge/<token> with `content` until the
+   * returned function is called or the plugin is disabled.
+   */
+  publishHttpChallenge: (token: string, content: string) => Promise<() => void>;
+  /**
+   * Tells core this plugin renews the certificate, so admin settings stop
+   * warning that nothing does. Dropped on deactivate.
+   */
+  registerTlsRenewer: () => Promise<() => void>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -1670,6 +1729,8 @@ export interface PluginContext {
   readonly fetch: PluginFetch;
   /** Programs on the Termix server. Needs process:spawn. */
   readonly process: PluginProcess;
+  /** The server certificate. Needs system:tls. */
+  readonly system: PluginSystem;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

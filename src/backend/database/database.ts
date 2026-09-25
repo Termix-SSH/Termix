@@ -41,7 +41,8 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
-import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
+import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
+import { acmeChallengeHandler } from "../tls/acme-challenges.js";
 import {
   createCurrentCredentialRepository,
   createCurrentDismissedAlertRepository,
@@ -301,6 +302,28 @@ app.use((_req, res, next) => {
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
+
+/**
+ * @openapi
+ * /.well-known/acme-challenge/{token}:
+ *   get:
+ *     summary: Answer an ACME http-01 challenge
+ *     description: Public. Serves the key authorization a plugin published through ctx.system.publishHttpChallenge while it proves control of the domain.
+ *     tags:
+ *       - General
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The key authorization, as text/plain.
+ *       404:
+ *         description: No challenge is published for this token.
+ */
+app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
 
 /**
  * @openapi
@@ -2089,7 +2112,7 @@ export const serverReady = new Promise<void>((resolve) => {
   });
 });
 
-const sslConfig = AutoSSLSetup.getSSLConfig();
+const sslConfig = getTlsConfig();
 if (sslConfig.enabled) {
   databaseLogger.info(`SSL is enabled`, {
     operation: "ssl_info",
@@ -2098,59 +2121,39 @@ if (sslConfig.enabled) {
   });
 }
 
-if (
-  sslConfig.enabled &&
-  process.env.TERMIX_SSL_TERMINATED_BY_NGINX !== "true"
-) {
-  try {
-    const httpsServer = https.createServer(
-      {
-        cert: fs.readFileSync(sslConfig.certPath),
-        key: fs.readFileSync(sslConfig.keyPath),
-      },
-      app,
-    );
+// Built through the TLS service so a new certificate can be swapped in, or
+// HTTPS started, without a restart.
+void configureDirectHttps((options) => {
+  const port = getTlsConfig().port;
+  const httpsServer = https.createServer(options, app);
 
-    attachPluginWebSockets(httpsServer);
+  attachPluginWebSockets(httpsServer);
 
-    httpsServer.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        databaseLogger.error(
-          `SSL port ${sslConfig.port} is already in use. Kill the existing process and retry.`,
-          err,
-          {
-            operation: "https_server_port_conflict",
-            port: sslConfig.port,
-          },
-        );
-        return;
-      }
-      databaseLogger.error("HTTPS server error", err, {
-        operation: "https_server_error",
-      });
-    });
-
-    httpsServer.listen(sslConfig.port, "127.0.0.1", () => {
-      databaseLogger.success(
-        `Backend is now also listening for HTTPS directly`,
+  httpsServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      databaseLogger.error(
+        `SSL port ${port} is already in use. Kill the existing process and retry.`,
+        err,
         {
-          operation: "https_server_started",
-          port: sslConfig.port,
+          operation: "https_server_port_conflict",
+          port,
         },
       );
+      return;
+    }
+    databaseLogger.error("HTTPS server error", err, {
+      operation: "https_server_error",
     });
-  } catch (error) {
-    databaseLogger.error(
-      "Failed to start HTTPS server with configured SSL certificate",
-      error,
-      {
-        operation: "https_server_start_failed",
-        cert_path: sslConfig.certPath,
-        key_path: sslConfig.keyPath,
-      },
-    );
-  }
-}
+  });
+
+  httpsServer.listen(port, "127.0.0.1", () => {
+    databaseLogger.success(`Backend is now also listening for HTTPS directly`, {
+      operation: "https_server_started",
+      port,
+    });
+  });
+  return httpsServer;
+});
 
 /**
  * Status check columns from an export row. Exports from before 2.9.0 only

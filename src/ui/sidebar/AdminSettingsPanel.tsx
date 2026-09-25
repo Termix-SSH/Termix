@@ -49,12 +49,10 @@ import {
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
-  getAcmeSslSettings,
-  updateAcmeSslSettings,
-  requestAcmeCertificate,
-  uploadManualSslCertificate,
-  type AcmeSettings,
-} from "@/api/acme-ssl-api";
+  getTlsStatus,
+  uploadTlsCertificate,
+  type TlsStatus,
+} from "@/api/tls-api";
 import {
   type ApiKey,
   type CreatedApiKey,
@@ -193,21 +191,7 @@ export function AdminSettingsPanel({
   const [exportLoading, setExportLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
 
-  // ACME SSL state
-  const defaultAcmeSettings: AcmeSettings = {
-    enabled: false,
-    domain: "",
-    email: "",
-    challengeType: "http-webroot",
-    cloudflareToken: "",
-    lastIssuedAt: null,
-    certStatus: "none",
-    certExpiresAt: null,
-  };
-  const [acmeSettings, setAcmeSettings] =
-    useState<AcmeSettings>(defaultAcmeSettings);
-  const [cloudflareTokenDraft, setCloudflareTokenDraft] = useState("");
-  const [acmeRequesting, setAcmeRequesting] = useState(false);
+  const [tlsStatus, setTlsStatus] = useState<TlsStatus | null>(null);
   const [manualCertDraft, setManualCertDraft] = useState("");
   const [manualKeyDraft, setManualKeyDraft] = useState("");
   const [manualUploading, setManualUploading] = useState(false);
@@ -369,8 +353,8 @@ export function AdminSettingsPanel({
       .then((d) => setHostDefaults(d))
       .catch(() => {});
 
-    getAcmeSslSettings()
-      .then((s) => setAcmeSettings(s))
+    getTlsStatus()
+      .then((s) => setTlsStatus(s))
       .catch(() => {});
   }
 
@@ -556,53 +540,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleSaveAcmeSettings() {
-    try {
-      const payload: Parameters<typeof updateAcmeSslSettings>[0] = {
-        enabled: acmeSettings.enabled,
-        domain: acmeSettings.domain,
-        email: acmeSettings.email,
-        challengeType: acmeSettings.challengeType,
-        ...(cloudflareTokenDraft && { cloudflareToken: cloudflareTokenDraft }),
-      };
-      const updated = await updateAcmeSslSettings(payload);
-      setAcmeSettings(updated);
-      setCloudflareTokenDraft("");
-      toast.success(t("admin.sslSaved"));
-    } catch {
-      toast.error(t("admin.sslSaveFailed"));
-    }
-  }
-
-  async function handleRequestAcmeCertificate() {
-    if (!acmeSettings.domain || !acmeSettings.email) {
-      toast.error(t("admin.sslRequiresDomain"));
-      return;
-    }
-    setAcmeRequesting(true);
-    try {
-      if (cloudflareTokenDraft) {
-        await updateAcmeSslSettings({
-          domain: acmeSettings.domain,
-          email: acmeSettings.email,
-          challengeType: acmeSettings.challengeType,
-          cloudflareToken: cloudflareTokenDraft,
-        });
-        setCloudflareTokenDraft("");
-      }
-      const result = await requestAcmeCertificate();
-      setAcmeSettings(result);
-      toast.success(t("admin.sslRequestCertSuccess"));
-      if (result.reloadMessage) {
-        toast.info(result.reloadMessage);
-      }
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.sslRequestCertFailed")));
-    } finally {
-      setAcmeRequesting(false);
-    }
-  }
-
   async function handleManualSslUpload() {
     if (!manualCertDraft.trim() || !manualKeyDraft.trim()) {
       toast.error(t("admin.sslManualRequiresFields"));
@@ -610,11 +547,11 @@ export function AdminSettingsPanel({
     }
     setManualUploading(true);
     try {
-      const result = await uploadManualSslCertificate({
+      const result = await uploadTlsCertificate({
         certificate: manualCertDraft,
         privateKey: manualKeyDraft,
       });
-      setAcmeSettings(result);
+      setTlsStatus(result);
       setManualCertDraft("");
       setManualKeyDraft("");
       toast.success(t("admin.sslManualUploadSuccess"));
@@ -997,13 +934,7 @@ export function AdminSettingsPanel({
       <AdminSSLSection
         open={openSections.has("ssl")}
         onToggle={() => toggle("ssl")}
-        settings={acmeSettings}
-        setSettings={setAcmeSettings}
-        cloudflareTokenDraft={cloudflareTokenDraft}
-        setCloudflareTokenDraft={setCloudflareTokenDraft}
-        requesting={acmeRequesting}
-        handleSave={handleSaveAcmeSettings}
-        handleRequest={handleRequestAcmeCertificate}
+        status={tlsStatus}
         manualCertDraft={manualCertDraft}
         setManualCertDraft={setManualCertDraft}
         manualKeyDraft={manualKeyDraft}

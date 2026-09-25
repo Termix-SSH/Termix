@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "النطاق",
+      "placeholder": "termix.example.com",
+      "description": "اسم النطاق العام للشهادة."
+    },
+    "email": {
+      "label": "البريد الإلكتروني",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "نوع التحدي",
+      "cloudflare": "DNS (Cloudflare) - يتطلب رمز Cloudflare API"
+    },
+    "cloudflareToken": {
+      "label": "رمز Cloudflare API",
+      "description": "رمز مقيد بصلاحية Zone:DNS:Edit للنطاق الخاص بك."
+    }
+  },
+  "status": {
+    "title": "حالة الشهادة",
+    "none": "لا توجد شهادة",
+    "expires": "تنتهي في {{date}}",
+    "lastIssued": "آخر إصدار {{date}}",
+    "request": "إصدار / تجديد الشهادة",
+    "requesting": "جارٍ طلب الشهادة..."
+  }
+}

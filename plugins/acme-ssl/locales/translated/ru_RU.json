@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Домен",
+      "placeholder": "termix.example.com",
+      "description": "Общедоступное доменное имя для сертификата."
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Тип проверки",
+      "cloudflare": "DNS (Cloudflare) — требуется API-токен Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "API-токен Cloudflare",
+      "description": "Токен с ограниченной областью действия и разрешением Zone:DNS:Edit для вашего домена."
+    }
+  },
+  "status": {
+    "title": "Статус сертификата",
+    "none": "Сертификат отсутствует",
+    "expires": "Истекает {{date}}",
+    "lastIssued": "Последний выпуск {{date}}",
+    "request": "Выпустить / Обновить сертификат",
+    "requesting": "Запрос сертификата..."
+  }
+}

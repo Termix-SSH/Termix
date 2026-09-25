@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "ডোমেইন",
+      "placeholder": "termix.example.com",
+      "description": "সার্টিফিকেটটির পাবলিক ডোমেইন নাম।"
+    },
+    "email": {
+      "label": "ইমেল",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "চ্যালেঞ্জের ধরণ",
+      "cloudflare": "ডিএনএস (ক্লাউডফ্লেয়ার) - এর জন্য একটি ক্লাউডফ্লেয়ার এপিআই টোকেন প্রয়োজন।"
+    },
+    "cloudflareToken": {
+      "label": "ক্লাউডফ্লেয়ার এপিআই টোকেন",
+      "description": "আপনার ডোমেনের জন্য Zone:DNS:Edit অনুমতিসহ স্কোপড টোকেন।"
+    }
+  },
+  "status": {
+    "title": "সার্টিফিকেটের অবস্থা",
+    "none": "কোন সার্টিফিকেট নেই",
+    "expires": "মেয়াদ শেষ হবে {{date}}",
+    "lastIssued": "সর্বশেষ প্রকাশিত {{date}}",
+    "request": "সার্টিফিকেট ইস্যু / নবায়ন করুন",
+    "requesting": "সার্টিফিকেটের জন্য অনুরোধ..."
+  }
+}

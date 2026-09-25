@@ -18,7 +18,7 @@ import { PermissionManager } from "../../utils/permission-manager.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
-import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
+import { registerTlsRoutes } from "./tls-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
 import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
@@ -1648,7 +1648,7 @@ registerUserOidcAccountRoutes(router, {
 });
 
 registerUserSettingsRoutes(router, authenticateJWT);
-registerAcmeSSLRoutes(router, authenticateJWT);
+registerTlsRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);
 registerBrandingRoutes(router, requireAdmin);

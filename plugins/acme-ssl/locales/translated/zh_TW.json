@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "網域",
+      "placeholder": "termix.example.com",
+      "description": "憑證使用的公開網域名稱。"
+    },
+    "email": {
+      "label": "電子郵件",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "驗證類型",
+      "cloudflare": "DNS (Cloudflare) - 需要 Cloudflare API 權杖"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API 權杖",
+      "description": "具有您網域 Zone:DNS:Edit 權限的限定範圍權杖。"
+    }
+  },
+  "status": {
+    "title": "憑證狀態",
+    "none": "無憑證",
+    "expires": "到期日 {{date}}",
+    "lastIssued": "上次簽發日期 {{date}}",
+    "request": "簽發 / 續期憑證",
+    "requesting": "請求憑證中..."
+  }
+}

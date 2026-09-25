@@ -4,11 +4,10 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { SettingRow } from "@/components/section-card";
-import { Select2 } from "@/components/select2";
 import { Database, Lock, RefreshCw, Server, Settings } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import type { HostDefaults } from "@/api/settings-api";
-import type { AcmeSettings, AcmeChallengeType } from "@/api/acme-ssl-api";
+import type { TlsStatus } from "@/api/tls-api";
 
 type GeneralSettingsSectionProps = {
   open: boolean;
@@ -541,7 +540,18 @@ export function AdminHostDefaultsSection({
   );
 }
 
-const CERT_STATUS_STYLES: Record<AcmeSettings["certStatus"], string> = {
+function certState(
+  status: TlsStatus | null,
+): "none" | "valid" | "expiring" | "expired" {
+  const cert = status?.certificate;
+  if (!cert) return "none";
+  const left = new Date(cert.notAfter).getTime() - Date.now();
+  if (left <= 0) return "expired";
+  if (left < 30 * 86_400_000) return "expiring";
+  return "valid";
+}
+
+const CERT_STATUS_STYLES: Record<ReturnType<typeof certState>, string> = {
   none: "text-muted-foreground",
   valid: "text-green-500",
   expiring: "text-yellow-500",
@@ -551,13 +561,7 @@ const CERT_STATUS_STYLES: Record<AcmeSettings["certStatus"], string> = {
 type AdminSSLSectionProps = {
   open: boolean;
   onToggle: () => void;
-  settings: AcmeSettings;
-  setSettings: Dispatch<SetStateAction<AcmeSettings>>;
-  cloudflareTokenDraft: string;
-  setCloudflareTokenDraft: Dispatch<SetStateAction<string>>;
-  requesting: boolean;
-  handleSave: () => void;
-  handleRequest: () => void;
+  status: TlsStatus | null;
   manualCertDraft: string;
   setManualCertDraft: Dispatch<SetStateAction<string>>;
   manualKeyDraft: string;
@@ -569,13 +573,7 @@ type AdminSSLSectionProps = {
 export function AdminSSLSection({
   open,
   onToggle,
-  settings,
-  setSettings,
-  cloudflareTokenDraft,
-  setCloudflareTokenDraft,
-  requesting,
-  handleSave,
-  handleRequest,
+  status,
   manualCertDraft,
   setManualCertDraft,
   manualKeyDraft,
@@ -584,8 +582,11 @@ export function AdminSSLSection({
   handleManualUpload,
 }: AdminSSLSectionProps) {
   const { t } = useTranslation();
+  const cert = status?.certificate ?? null;
+  const state = certState(status);
+  const expiry = cert ? new Date(cert.notAfter).toLocaleDateString() : "";
 
-  const certStatusLabel: Record<AcmeSettings["certStatus"], string> = {
+  const certStatusLabel: Record<ReturnType<typeof certState>, string> = {
     none: t("admin.sslCertStatusNone"),
     valid: t("admin.sslCertStatusValid"),
     expiring: t("admin.sslCertStatusExpiring"),
@@ -618,182 +619,97 @@ export function AdminSSLSection({
               {t("admin.sslCertStatus")}
             </span>
             <span
-              className={`text-xs font-medium ${CERT_STATUS_STYLES[settings.certStatus]}`}
+              className={`text-xs font-medium ${CERT_STATUS_STYLES[state]}`}
             >
-              {certStatusLabel[settings.certStatus]}
+              {certStatusLabel[state]}
             </span>
           </div>
-          {settings.certExpiresAt && (
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.sslCertExpiresAt", {
-                date: new Date(settings.certExpiresAt).toLocaleDateString(),
-              })}
-            </span>
+          {cert && (
+            <>
+              <span className="text-[10px] text-muted-foreground">
+                {t("admin.sslNames", { names: cert.names.join(", ") || "-" })}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {t("admin.sslIssuer", { issuer: cert.issuer })}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {t("admin.sslCertExpiresAt", { date: expiry })}
+              </span>
+              {cert.selfSigned && (
+                <span className="text-[10px] text-muted-foreground">
+                  {t("admin.sslSelfSigned")}
+                </span>
+              )}
+              {status?.renewal && (
+                <span className="text-[10px] text-muted-foreground">
+                  {t("admin.sslRenewedBy", {
+                    plugin: status.renewal.pluginName,
+                  })}
+                </span>
+              )}
+            </>
           )}
-          {settings.lastIssuedAt && (
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.sslLastIssued", {
-                date: new Date(settings.lastIssuedAt).toLocaleString(),
-              })}
-            </span>
-          )}
+        </div>
+
+        {cert && !cert.selfSigned && !status?.renewal && (
+          <div className="p-2 border border-yellow-500/40 bg-yellow-500/10 text-[10px] text-yellow-600 dark:text-yellow-400">
+            {t("admin.sslNotRenewed", { date: expiry })}
+          </div>
+        )}
+
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest border-t border-border pt-2">
+          {t("admin.sslManualTitle")}
+        </span>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {t("admin.sslManualCert")}
+          </label>
+          <textarea
+            rows={5}
+            value={manualCertDraft}
+            onChange={(e) => setManualCertDraft(e.target.value)}
+            placeholder={t("admin.sslManualCertPlaceholder")}
+            spellCheck={false}
+            className="w-full px-2 py-1.5 text-[10px] font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
+          />
         </div>
 
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-            {t("admin.sslChallengeType")}
+            {t("admin.sslManualKey")}
           </label>
-          <Select2
-            value={settings.challengeType}
-            onChange={(event) =>
-              setSettings((p) => ({
-                ...p,
-                challengeType: event.target.value as AcmeChallengeType,
-              }))
-            }
-            className="w-full text-xs h-8"
-          >
-            <option value="http-webroot">HTTP (webroot)</option>
-            <option value="dns-cloudflare">DNS (Cloudflare)</option>
-            <option value="manual">{t("admin.sslManualOption")}</option>
-          </Select2>
+          <textarea
+            rows={5}
+            value={manualKeyDraft}
+            onChange={(e) => setManualKeyDraft(e.target.value)}
+            placeholder={t("admin.sslManualKeyPlaceholder")}
+            spellCheck={false}
+            className="w-full px-2 py-1.5 text-[10px] font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
+          />
           <span className="text-[10px] text-muted-foreground">
-            {t("admin.sslChallengeTypeDesc")}
+            {t("admin.sslManualDesc")}
           </span>
         </div>
 
-        {settings.challengeType !== "manual" && (
-          <>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                {t("admin.sslDomain")}
-              </label>
-              <Input
-                value={settings.domain}
-                onChange={(e) =>
-                  setSettings((p) => ({ ...p, domain: e.target.value }))
-                }
-                placeholder={t("admin.sslDomainPlaceholder")}
-                className="text-xs"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                {t("admin.sslEmail")}
-              </label>
-              <Input
-                value={settings.email}
-                onChange={(e) =>
-                  setSettings((p) => ({ ...p, email: e.target.value }))
-                }
-                placeholder={t("admin.sslEmailPlaceholder")}
-                className="text-xs"
-              />
-            </div>
-          </>
-        )}
-
-        {settings.challengeType === "dns-cloudflare" && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              {t("admin.sslCloudflareToken")}
-            </label>
-            <PasswordInput
-              value={cloudflareTokenDraft}
-              onChange={(e) => setCloudflareTokenDraft(e.target.value)}
-              placeholder={
-                settings.cloudflareToken ||
-                t("admin.sslCloudflareTokenPlaceholder")
-              }
-              className="text-xs h-8 pr-8"
-            />
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.sslCloudflareTokenDesc")}
-            </span>
-          </div>
-        )}
-
-        {settings.challengeType === "manual" && (
-          <>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                {t("admin.sslManualCert")}
-              </label>
-              <textarea
-                rows={5}
-                value={manualCertDraft}
-                onChange={(e) => setManualCertDraft(e.target.value)}
-                placeholder={t("admin.sslManualCertPlaceholder")}
-                spellCheck={false}
-                className="w-full px-2 py-1.5 text-[10px] font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                {t("admin.sslManualKey")}
-              </label>
-              <textarea
-                rows={5}
-                value={manualKeyDraft}
-                onChange={(e) => setManualKeyDraft(e.target.value)}
-                placeholder={t("admin.sslManualKeyPlaceholder")}
-                spellCheck={false}
-                className="w-full px-2 py-1.5 text-[10px] font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
-              />
-              <span className="text-[10px] text-muted-foreground">
-                {t("admin.sslManualDesc")}
-              </span>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-              onClick={handleManualUpload}
-              disabled={manualUploading}
-            >
-              <RefreshCw
-                className={`size-3 ${manualUploading ? "animate-spin" : ""}`}
-              />
-              {manualUploading
-                ? t("admin.sslManualUploadLoading")
-                : t("admin.sslManualUpload")}
-            </Button>
-          </>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+          onClick={handleManualUpload}
+          disabled={manualUploading}
+        >
+          <RefreshCw
+            className={`size-3 ${manualUploading ? "animate-spin" : ""}`}
+          />
+          {manualUploading
+            ? t("admin.sslManualUploadLoading")
+            : t("admin.sslManualUpload")}
+        </Button>
 
         <span className="text-[10px] text-muted-foreground border-t border-border pt-2">
           {t("admin.sslInfoNote")}
         </span>
-
-        {settings.challengeType !== "manual" && (
-          <div className="flex flex-col gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-              onClick={handleSave}
-            >
-              {t("admin.sslSave")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-              onClick={handleRequest}
-              disabled={requesting}
-            >
-              <RefreshCw
-                className={`size-3 ${requesting ? "animate-spin" : ""}`}
-              />
-              {requesting
-                ? t("admin.sslRequestCertLoading")
-                : t("admin.sslRequestCert")}
-            </Button>
-          </div>
-        )}
       </div>
     </AccordionSection>
   );

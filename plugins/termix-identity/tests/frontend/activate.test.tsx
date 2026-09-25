@@ -14,12 +14,12 @@ const manifest = manifestJson as unknown as PluginManifest;
 
 let rendered: RenderedPluginApp | null = null;
 
-type ElectronWindow = Window & { electronAPI?: unknown };
+type ElectronWindow = { electronAPI?: unknown };
 
 afterEach(async () => {
   await rendered?.deactivate();
   rendered = null;
-  delete (window as ElectronWindow).electronAPI;
+  delete (window as unknown as ElectronWindow).electronAPI;
 });
 
 const IDENTITY = {
@@ -95,7 +95,7 @@ describe(`${manifest.id} activate`, () => {
   });
 
   it("hides the rail item in a standalone desktop app", async () => {
-    (window as ElectronWindow).electronAPI = {
+    (window as unknown as ElectronWindow).electronAPI = {
       isElectron: true,
       invoke: vi.fn(async () => null),
       onRemoteSyncStatusChanged: () => () => {},
@@ -111,7 +111,7 @@ describe(`${manifest.id} activate`, () => {
   it("shows the rail item once the desktop app has a remote server", async () => {
     let notify = () => {};
     let serverUrl: string | null = null;
-    (window as ElectronWindow).electronAPI = {
+    (window as unknown as ElectronWindow).electronAPI = {
       isElectron: true,
       invoke: vi.fn(async () => (serverUrl ? { serverUrl } : null)),
       onRemoteSyncStatusChanged: (callback: () => void) => {

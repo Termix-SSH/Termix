@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domain",
+      "placeholder": "termix.example.com",
+      "description": "A tanúsítvány nyilvános domainneve."
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Kihívás típusa",
+      "cloudflare": "DNS (Cloudflare) – Cloudflare API tokent igényel"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API token",
+      "description": "Hatókörbe tartozó token Zóna:DNS:Szerkesztés engedéllyel a domainhez."
+    }
+  },
+  "status": {
+    "title": "Tanúsítvány állapota",
+    "none": "Nincs tanúsítvány",
+    "expires": "Lejár {{date}}",
+    "lastIssued": "Utolsó kiadás {{date}}",
+    "request": "Tanúsítvány kiállítása / megújítása",
+    "requesting": "Tanúsítvány kérése..."
+  }
+}

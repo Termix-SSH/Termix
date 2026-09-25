@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Домен",
+      "placeholder": "termix.example.com",
+      "description": "Ім'я публічного домену для сертифіката."
+    },
+    "email": {
+      "label": "Електронна пошта",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Тип виклику",
+      "cloudflare": "DNS (Cloudflare) – потрібен токен API Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Токен API Cloudflare",
+      "description": "Токен з обмеженою областю дії та дозволом Zone:DNS:Edit для вашого домену."
+    }
+  },
+  "status": {
+    "title": "Статус сертифіката",
+    "none": "Без сертифіката",
+    "expires": "Термін дії закінчується {{date}}",
+    "lastIssued": "Останній виданий {{date}}",
+    "request": "Видача / поновлення сертифіката",
+    "requesting": "Запит сертифіката..."
+  }
+}

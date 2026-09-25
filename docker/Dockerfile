@@ -93,7 +93,7 @@ ENV DATA_DIR=/app/data \
     NODE_ENV=production \
     POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data /app/uploads /app/nginx /tmp/nginx && \

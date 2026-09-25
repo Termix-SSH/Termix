@@ -39,12 +39,12 @@ function entry(id: string, risk: CapabilityRisk): CapabilityInfo {
  */
 export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("credentials:read", "critical"),
+  entry("system:tls", "critical"),
 
   entry("ssh:connect", "high"),
   entry("process:spawn", "high"),
   entry("users:write", "high"),
   entry("auth:provide", "high"),
-  entry("system:tls", "high"),
   entry("device:serial", "high"),
 
   entry("hosts:write", "medium"),

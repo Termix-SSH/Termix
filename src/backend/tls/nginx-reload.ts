@@ -1,7 +1,7 @@
 import { execFileSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
-import { authLogger } from "./logger.js";
+import { authLogger } from "../utils/logger.js";
 
 const NGINX_TEMPLATE = "/app/nginx/nginx-https.conf.template";
 const NGINX_CONF = "/tmp/nginx/nginx.conf";
@@ -11,7 +11,11 @@ const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const SSL_DIR = path.join(DATA_DIR, "ssl");
 const ENV_FILE = path.join(DATA_DIR, ".env");
 
-function persistSSLEnv(sslPort: string, certPath: string, keyPath: string) {
+export function persistSSLEnv(
+  sslPort: string,
+  certPath: string,
+  keyPath: string,
+) {
   const vars: Record<string, string> = {
     ENABLE_SSL: "true",
     SSL_PORT: sslPort,

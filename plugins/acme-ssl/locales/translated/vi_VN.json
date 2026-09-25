@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Tên miền",
+      "placeholder": "termix.example.com",
+      "description": "Tên miền công khai để cấp chứng chỉ."
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Loại thử thách",
+      "cloudflare": "DNS (Cloudflare) - yêu cầu Token API Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Token API Cloudflare",
+      "description": "Token có phạm vi với quyền Zone:DNS:Edit cho tên miền của bạn."
+    }
+  },
+  "status": {
+    "title": "Trạng thái chứng chỉ",
+    "none": "Không có chứng chỉ",
+    "expires": "Hết hạn {{date}}",
+    "lastIssued": "Cấp lần cuối {{date}}",
+    "request": "Cấp / Gia hạn chứng chỉ",
+    "requesting": "Đang yêu cầu chứng chỉ..."
+  }
+}

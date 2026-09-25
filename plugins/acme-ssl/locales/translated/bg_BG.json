@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Домейн",
+      "placeholder": "termix.example.com",
+      "description": "Публичното име на домейна за сертификата."
+    },
+    "email": {
+      "label": "Имейл",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Тип предизвикателство",
+      "cloudflare": "DNS (Cloudflare) - изисква Cloudflare API токен"
+    },
+    "cloudflareToken": {
+      "label": "API токен на Cloudflare",
+      "description": "Ограничен токен с разрешение Zone:DNS:Edit за вашия домейн."
+    }
+  },
+  "status": {
+    "title": "Статус на сертификата",
+    "none": "Няма сертификат",
+    "expires": "Изтича {{date}}",
+    "lastIssued": "Последно издадено {{date}}",
+    "request": "Издаване / Подновяване на сертификат",
+    "requesting": "Заявка за сертификат..."
+  }
+}

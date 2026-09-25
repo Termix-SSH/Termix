@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domein",
+      "placeholder": "termix.voorbeeld.com",
+      "description": "Die publieke domeinnaam vir die sertifikaat."
+    },
+    "email": {
+      "label": "E-pos",
+      "placeholder": "admin@voorbeeld.com"
+    },
+    "challengeType": {
+      "label": "Uitdagingsoort",
+      "cloudflare": "DNS (Cloudflare) - vereis 'n Cloudflare API-token"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API-token",
+      "description": "Omvangryke token met Zone:DNS:Wysig toestemming vir jou domein."
+    }
+  },
+  "status": {
+    "title": "Sertifikaatstatus",
+    "none": "Geen sertifikaat nie",
+    "expires": "Vervaldatum {{date}}",
+    "lastIssued": "Laas uitgereik {{date}}",
+    "request": "Uitreik / Hernu Sertifikaat",
+    "requesting": "Versoek sertifikaat..."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domaine",
+      "placeholder": "termix.example.com",
+      "description": "Le nom de domaine public pour le certificat."
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Type de challenge",
+      "cloudflare": "DNS (Cloudflare) - nécessite un jeton API Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Jeton API Cloudflare",
+      "description": "Jeton limité avec l'autorisation Zone:DNS:Edit pour votre domaine."
+    }
+  },
+  "status": {
+    "title": "Statut du certificat",
+    "none": "Aucun certificat",
+    "expires": "Expire le {{date}}",
+    "lastIssued": "Dernière émission le {{date}}",
+    "request": "Émettre / Renouveler le certificat",
+    "requesting": "Demande de certificat en cours..."
+  }
+}

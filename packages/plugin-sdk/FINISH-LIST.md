@@ -671,3 +671,19 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `/termix-id/u/<handle>` resolver URL. It keeps working through the 308,
   but the docs should show `/plugin-api/termix-identity/u/<handle>`. Owner:
   D0.
+- **C7 (acme-ssl):** the 2.8 leftovers stay on disk and in the database for
+  one release: the `acme_ssl_settings` settings row (the Cloudflare token is
+  already stripped from it), `DATA_DIR/certbot` and `DATA_DIR/acme-webroot`.
+  Delete them in the release after 2.9.0. Owner: after D4.
+- **C7 (acme-ssl):** the docs page linked from Admin Settings > HTTPS
+  certificate (`docs.termix.site/features/networking/ssl`) still describes
+  certbot and the webroot challenge. Point it at the plugin. Owner: D0.
+- **C7, pre-existing:** `AutoSSLSetup.setupEnvironmentVariables` in
+  `src/backend/tls/self-signed.ts` rewrites `SSL_CERT_PATH`, `SSL_KEY_PATH`
+  and `SSL_DOMAIN` to the defaults in `DATA_DIR/.env` on every boot, so custom
+  certificate paths set in the environment are lost after the first start.
+  Owner: D0.
+- **C7, pre-existing:** `src/backend/scripts/setup-ssl.sh` and
+  `enable-ssl.sh` are not called by anything and write a `JWT_SECRET` and
+  `DATABASE_KEY` to `.env`, which SystemCrypto now owns. Delete or rewrite
+  them. Owner: D0.

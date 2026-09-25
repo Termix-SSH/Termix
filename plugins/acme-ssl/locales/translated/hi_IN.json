@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "डोमेन",
+      "placeholder": "termix.example.com",
+      "description": "प्रमाणपत्र के लिए सार्वजनिक डोमेन नाम।"
+    },
+    "email": {
+      "label": "ईमेल",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "चुनौती प्रकार",
+      "cloudflare": "DNS (Cloudflare) - Cloudflare API टोकन आवश्यक है"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API टोकन",
+      "description": "आपके डोमेन के लिए Zone:DNS:Edit अनुमति वाला स्कोप्ड टोकन।"
+    }
+  },
+  "status": {
+    "title": "प्रमाणपत्र स्थिति",
+    "none": "कोई प्रमाणपत्र नहीं",
+    "expires": "{{date}} को समाप्त होगा",
+    "lastIssued": "अंतिम जारी: {{date}}",
+    "request": "प्रमाणपत्र जारी करें / नवीनीकरण करें",
+    "requesting": "प्रमाणपत्र अनुरोध किया जा रहा है..."
+  }
+}

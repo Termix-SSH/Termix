@@ -73,7 +73,7 @@ if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
     sed -i '/# BEGIN HTTP_REDIRECT_SERVER/,/# END HTTP_REDIRECT_SERVER/d' /tmp/nginx/nginx.conf
 fi
 
-mkdir -p /app/data /app/uploads /app/data/acme-webroot/.well-known/acme-challenge
+mkdir -p /app/data /app/uploads
 chmod 755 /app/data /app/uploads 2>/dev/null || true
 
 if [ -w /app/data ]; then
@@ -96,8 +96,16 @@ if [ "$ENABLE_SSL" = "true" ]; then
         if openssl x509 -in /app/data/ssl/termix.crt -checkend 2592000 -noout >/dev/null 2>&1; then
             echo "SSL certificates are valid and will be reused for domain: $DOMAIN"
         else
-            echo "SSL certificate is expired or expiring soon, regenerating..."
-            rm -f /app/data/ssl/termix.crt /app/data/ssl/termix.key
+            SUBJECT=$(openssl x509 -in /app/data/ssl/termix.crt -noout -subject 2>/dev/null | sed 's/^subject=//')
+            ISSUER=$(openssl x509 -in /app/data/ssl/termix.crt -noout -issuer 2>/dev/null | sed 's/^issuer=//')
+            # Only replace our own self-signed certificate. A CA-issued one is
+            # kept until it expires, even when nothing renews it.
+            if [ -n "$SUBJECT" ] && [ "$SUBJECT" = "$ISSUER" ]; then
+                echo "Self-signed SSL certificate is expired or expiring soon, regenerating..."
+                rm -f /app/data/ssl/termix.crt /app/data/ssl/termix.key
+            else
+                echo "WARNING: SSL certificate expires within 30 days and was not issued by Termix. Renew it."
+            fi
         fi
     else
         echo "SSL certificates not found, will generate new ones..."

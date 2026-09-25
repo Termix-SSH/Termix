@@ -71,6 +71,8 @@ import type {
   PluginNotificationChannel,
   PluginFetchInit,
   PluginBinarySpec,
+  PluginTlsCertificateInfo,
+  PluginTlsStatus,
   PluginKeyboardInteractiveHandler,
   PluginProcessHandle,
   PluginProcessOptions,
@@ -140,6 +142,19 @@ export interface FakeContextOptions {
    * ensureBinary it answers "/tmp/<pluginId>/bin/<name>".
    */
   process?: FakeProcessOptions;
+  /**
+   * What ctx.system.tlsStatus answers before any write. renewal is filled in
+   * from registerTlsRenewer calls.
+   */
+  tlsStatus?: Omit<PluginTlsStatus, "renewal">;
+  /**
+   * Checks a ctx.system.writeTlsCertificate call. Throw to reject the pair.
+   * Without it every pair is accepted and described with placeholder info.
+   */
+  validateTls?: (
+    certificatePem: string,
+    privateKeyPem: string,
+  ) => PluginTlsCertificateInfo;
   /**
    * Makes ctx.auth.recordEnrollment refuse the way core's policy does (trusted
    * proxy login on, password login off), with this message and a 409.
@@ -297,6 +312,15 @@ export interface FakePluginContext {
   }>;
   /** Every ctx.process.ensureBinary call, in order. */
   binaries: PluginBinarySpec[];
+  /** What ctx.system did: accepted writes, reloads, live challenges and renewers. */
+  tls: {
+    writes: Array<{ certificatePem: string; privateKeyPem: string }>;
+    reloads: number;
+    /** ctx.system calls by name, in order. */
+    calls: string[];
+    challenges: Map<string, string>;
+    renewers: number;
+  };
   /** Every ctx.audit.record entry, in order. */
   audits: Array<{ action: string; success: boolean; [key: string]: unknown }>;
   /** Every ctx.hosts.recordActivity call, in order. */
@@ -403,6 +427,17 @@ export function createFakeContext(
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
+  const tls: FakePluginContext["tls"] = {
+    writes: [],
+    reloads: 0,
+    calls: [],
+    challenges: new Map(),
+    renewers: 0,
+  };
+  let tlsState: Omit<PluginTlsStatus, "renewal"> = options.tlsStatus ?? {
+    enabled: true,
+    certificate: null,
+  };
   const secretStore = new Map<string, string>();
   const audits: FakePluginContext["audits"] = [];
   const activities: FakePluginContext["activities"] = [];
@@ -1044,6 +1079,62 @@ export function createFakeContext(
       },
     },
 
+    system: {
+      tlsStatus: async () => {
+        tls.calls.push("tlsStatus");
+        return {
+          ...tlsState,
+          renewal: tls.renewers > 0 ? { pluginId, pluginName: pluginId } : null,
+        };
+      },
+      writeTlsCertificate: async (certificatePem, privateKeyPem) => {
+        tls.calls.push("writeTlsCertificate");
+        const info = options.validateTls
+          ? options.validateTls(certificatePem, privateKeyPem)
+          : {
+              subject: "CN=fake",
+              issuer: "CN=fake-ca",
+              names: [],
+              notBefore: new Date().toISOString(),
+              notAfter: new Date(Date.now() + 90 * 86_400_000).toISOString(),
+              selfSigned: false,
+              fingerprint: "00",
+            };
+        tls.writes.push({ certificatePem, privateKeyPem });
+        tlsState = { ...tlsState, certificate: info };
+        return info;
+      },
+      reloadTls: async () => {
+        tls.calls.push("reloadTls");
+        tls.reloads++;
+        return { applied: true, message: "reloaded" };
+      },
+      publishHttpChallenge: async (token, content) => {
+        tls.calls.push("publishHttpChallenge");
+        tls.challenges.set(token, content);
+        let live = true;
+        const remove = () => {
+          if (!live) return;
+          live = false;
+          tls.challenges.delete(token);
+        };
+        disposals.push(remove);
+        return remove;
+      },
+      registerTlsRenewer: async () => {
+        tls.calls.push("registerTlsRenewer");
+        tls.renewers++;
+        let live = true;
+        const remove = () => {
+          if (!live) return;
+          live = false;
+          tls.renewers--;
+        };
+        disposals.push(remove);
+        return remove;
+      },
+    },
+
     asUser: async (userId, fn) => {
       const previous = actor;
       actor = userId;
@@ -1080,6 +1171,7 @@ export function createFakeContext(
     fetches,
     processRuns,
     binaries,
+    tls,
     secretStore,
     audits,
     activities,
@@ -1148,6 +1240,10 @@ export interface MockContextOptions {
   /** See FakeContextOptions. */
   process?: FakeProcessOptions;
   /** See FakeContextOptions. */
+  tlsStatus?: FakeContextOptions["tlsStatus"];
+  /** See FakeContextOptions. */
+  validateTls?: FakeContextOptions["validateTls"];
+  /** See FakeContextOptions. */
   refuseEnrollment?: string;
   /** See FakeContextOptions. */
   baseUrl?: string;
@@ -1171,7 +1267,7 @@ export interface MockPluginContext extends FakePluginContext {
  * topic outside the plugin's own namespace, settings:read-core on
  * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh,
  * notify:send on ctx.notify, network:outbound on ctx.fetch, process:spawn on
- * ctx.process, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
+ * ctx.process, system:tls on ctx.system, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
 export function createMockCtx(
@@ -1199,6 +1295,8 @@ export function createMockCtx(
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
     process: options.process,
+    tlsStatus: options.tlsStatus,
+    validateTls: options.validateTls,
     refuseEnrollment: options.refuseEnrollment,
     baseUrl: options.baseUrl,
     linkedUsers: options.linkedUsers,
@@ -1534,6 +1632,29 @@ export function createMockCtx(
       ensureBinary: async (spec) => {
         require("process:spawn");
         return ctx.process.ensureBinary(spec);
+      },
+    },
+
+    system: {
+      tlsStatus: async () => {
+        require("system:tls");
+        return ctx.system.tlsStatus();
+      },
+      writeTlsCertificate: async (certificatePem, privateKeyPem) => {
+        require("system:tls");
+        return ctx.system.writeTlsCertificate(certificatePem, privateKeyPem);
+      },
+      reloadTls: async () => {
+        require("system:tls");
+        return ctx.system.reloadTls();
+      },
+      publishHttpChallenge: async (token, content) => {
+        require("system:tls");
+        return ctx.system.publishHttpChallenge(token, content);
+      },
+      registerTlsRenewer: async () => {
+        require("system:tls");
+        return ctx.system.registerTlsRenewer();
       },
     },
 

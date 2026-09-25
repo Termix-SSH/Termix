@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Domain",
+      "placeholder": "termix.example.com",
+      "description": "Nama domain publik untuk sertifikat tersebut."
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Jenis Tantangan",
+      "cloudflare": "DNS (Cloudflare) - memerlukan token API Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "Token API Cloudflare",
+      "description": "Token terlingkup dengan izin Zone:DNS:Edit untuk domain Anda."
+    }
+  },
+  "status": {
+    "title": "Status Sertifikat",
+    "none": "Tidak ada sertifikat",
+    "expires": "Berakhir {{date}}",
+    "lastIssued": "Terakhir diterbitkan {{date}}",
+    "request": "Menerbitkan/Memperpanjang Sertifikat",
+    "requesting": "Meminta sertifikat..."
+  }
+}

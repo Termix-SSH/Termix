@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "domain": {
+      "label": "Alan Adı",
+      "placeholder": "termix.example.com",
+      "description": "Sertifika için genel alan adı."
+    },
+    "email": {
+      "label": "E-posta",
+      "placeholder": "admin@example.com"
+    },
+    "challengeType": {
+      "label": "Doğrulama Türü",
+      "cloudflare": "DNS (Cloudflare) - bir Cloudflare API belirteci gerektirir"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API Belirteci",
+      "description": "Alan adınız için Zone:DNS:Edit iznine sahip kapsamlı belirteç."
+    }
+  },
+  "status": {
+    "title": "Sertifika Durumu",
+    "none": "Sertifika yok",
+    "expires": "Son kullanma: {{date}}",
+    "lastIssued": "Son veriliş: {{date}}",
+    "request": "Sertifika Ver / Yenile",
+    "requesting": "Sertifika isteniyor..."
+  }
+}
