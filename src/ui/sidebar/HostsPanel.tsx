@@ -30,6 +30,7 @@ import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
 import { ComponentSlot } from "@/shell/ActionSlot";
+import { usePluginHostSections } from "@/settings/HostPluginSections";
 import { Button } from "@/components/button";
 import {
   DropdownMenu,
@@ -124,7 +125,14 @@ function groupHosts(
   return { name: "root", children };
 }
 
-function hostPassesFilters(host: Host, filters: FilterState): boolean {
+/** Plugin id to the host setting that switches it on. */
+type HostSwitches = Record<string, string>;
+
+function hostPassesFilters(
+  host: Host,
+  filters: FilterState,
+  switches: HostSwitches,
+): boolean {
   if (filters.status.length > 0) {
     const ok =
       (filters.status.includes("online") && host.online) ||
@@ -150,9 +158,12 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
       );
     if (!ok) return false;
   }
-  if (filters.features.length > 0) {
-    const ok =
-      filters.features.includes("fileManager") && host.enableFileManager;
+  // A saved filter for a plugin that is gone or off is ignored.
+  const features = filters.features.filter((id) => switches[id]);
+  if (features.length > 0) {
+    const ok = features.some(
+      (id) => host.pluginSettings?.[id]?.[switches[id]] === true,
+    );
     if (!ok) return false;
   }
   if (filters.tags.length > 0) {
@@ -162,14 +173,18 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
   return true;
 }
 
-function applyFilters(folder: HostFolder, filters: FilterState): HostFolder {
+function applyFilters(
+  folder: HostFolder,
+  filters: FilterState,
+  switches: HostSwitches,
+): HostFolder {
   const active = Object.values(filters).some((arr) => arr.length > 0);
   if (!active) return folder;
 
   const filteredChildren = folder.children
     .map((child) => {
-      if (isFolder(child)) return applyFilters(child, filters);
-      return hostPassesFilters(child, filters) ? child : null;
+      if (isFolder(child)) return applyFilters(child, filters, switches);
+      return hostPassesFilters(child, filters, switches) ? child : null;
     })
     .filter((child): child is Host | HostFolder => {
       if (child === null) return false;
@@ -203,6 +218,15 @@ export function HostsPanel({
   active?: boolean;
 }) {
   const { t } = useTranslation();
+  const hostSwitchPlugins = usePluginHostSections().filter(
+    (plugin) => !!plugin.contributes?.settings?.host?.enableKey,
+  );
+  const hostSwitches: Record<string, string> = Object.fromEntries(
+    hostSwitchPlugins.map((plugin) => [
+      plugin.id,
+      plugin.contributes!.settings!.host!.enableKey!,
+    ]),
+  );
   const hostProtocols = useHostProtocols();
   const sshAuthProviders = useSshAuthProviders();
   const [hostSearch, setHostSearch] = useState("");
@@ -777,20 +801,18 @@ export function HostsPanel({
                   <DropdownMenuLabel>
                     {t("hosts.filterFeaturesGroup")}
                   </DropdownMenuLabel>
-                  {([["fileManager", "FileManager"]] as const).map(
-                    ([val, key]) => (
-                      <DropdownMenuCheckboxItem
-                        key={val}
-                        checked={filterState.features.includes(val)}
-                        onCheckedChange={() =>
-                          handleFilterToggle("features", val)
-                        }
-                        onSelect={(e) => e.preventDefault()}
-                      >
-                        {t(`hosts.filterFeature${key}`)}
-                      </DropdownMenuCheckboxItem>
-                    ),
-                  )}
+                  {hostSwitchPlugins.map((plugin) => (
+                    <DropdownMenuCheckboxItem
+                      key={plugin.id}
+                      checked={filterState.features.includes(plugin.id)}
+                      onCheckedChange={() =>
+                        handleFilterToggle("features", plugin.id)
+                      }
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      {plugin.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
                   {allTags.length > 0 && (
                     <>
                       <DropdownMenuSeparator />
@@ -999,6 +1021,7 @@ export function HostsPanel({
                     applyFilters(
                       sortHostTree(hostTree, sortKey, pinnedFirst),
                       filterState,
+                      hostSwitches,
                     ),
                     groupKey,
                     groupLabel,

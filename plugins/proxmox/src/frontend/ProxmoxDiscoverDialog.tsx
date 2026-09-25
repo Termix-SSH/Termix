@@ -158,9 +158,6 @@ export function ProxmoxDiscoverDialog({
         // imported guests are reachable the same way; user can override.
         jumpHosts: discoveredJumpHosts ?? undefined,
         ...importAuth,
-        enableTerminal: g.connectionType !== "rdp",
-        enableFileManager: g.connectionType !== "rdp",
-        enableTunnel: g.connectionType !== "rdp",
         enableSsh: g.connectionType !== "rdp",
         enableRdp: g.connectionType === "rdp",
         enableDocker: g.enableDocker,
@@ -172,16 +169,21 @@ export function ProxmoxDiscoverDialog({
           g.type === "lxc" ? `ct-${g.vmid}` : `vm-${g.vmid}`,
           ...(g.enableDocker ? ["docker"] : []),
         ],
-        proxmoxConfig: {
-          source: {
-            source: "proxmox",
-            sourceHostId: Number(effectiveHostId),
-            node: g.node,
-            vmid: g.vmid,
-            type: g.type,
-            lastSeenAt: new Date().toISOString(),
-            lastStatus: g.status,
-            missingSince: null,
+        // This plugin's host settings travel with the import like an export's.
+        pluginSettings: {
+          proxmox: {
+            proxmoxConfig: {
+              source: {
+                source: "proxmox",
+                sourceHostId: Number(effectiveHostId),
+                node: g.node,
+                vmid: g.vmid,
+                type: g.type,
+                lastSeenAt: new Date().toISOString(),
+                lastStatus: g.status,
+                missingSince: null,
+              },
+            },
           },
         },
       }));

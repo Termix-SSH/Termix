@@ -434,7 +434,15 @@ export function createPluginContext(
         pluginEvents.emit(topic, payload);
       },
 
+      // Core topics (host.*, user.*) carry other users' data, so listening
+      // needs events:core too. Any plugin may listen to plugin.* topics.
       on: (topic, listener) => {
+        if (!topic.startsWith("plugin.") && !declared.includes("events:core")) {
+          throw new Error(
+            `Plugin ${pluginId} may only listen to "plugin.*" topics. ` +
+              `Declare the events:core capability to listen to core topics.`,
+          );
+        }
         const unsubscribe = pluginEvents.on(topic, listener);
         handle.bag.add(unsubscribe, `event listener for "${topic}"`);
         return unsubscribe;
@@ -766,6 +774,11 @@ export function createPluginContext(
         if (error) throw new Error(error);
       },
 
+      listHostValues: async (key) => {
+        await assertCapability(pluginId, "hosts:read", manifest.capabilities);
+        return pluginSettings.listHostValues(manifest, key) as never;
+      },
+
       getAll: (scope, scopeId) =>
         pluginSettings.getAllSettings(manifest, scope, scopeId ?? null),
 
@@ -776,6 +789,16 @@ export function createPluginContext(
           listener,
         );
         handle.bag.add(unsubscribe, `settings listener for "${key}"`);
+        return unsubscribe;
+      },
+
+      onValidate: (scope, validator) => {
+        const unsubscribe = pluginSettings.onSettingsValidate(
+          pluginId,
+          scope,
+          validator,
+        );
+        handle.bag.add(unsubscribe, `settings validator for ${scope}`);
         return unsubscribe;
       },
 
@@ -849,7 +872,9 @@ export function createPluginContext(
         try {
           const { logAudit } = await import("../utils/audit-logger.js");
           const actor = getActor() ?? "system";
+          const meta = requestMeta(entry.request);
           await logAudit({
+            ...meta,
             userId: actor,
             username: actor,
             action: entry.action,
@@ -1011,4 +1036,24 @@ export async function disposePluginHandle(
       );
     }
   }
+}
+
+/** IP address and user agent off an express request or upgrade request. */
+function requestMeta(request: unknown): {
+  ipAddress?: string;
+  userAgent?: string;
+} {
+  const req = request as
+    | {
+        ip?: string;
+        headers?: Record<string, unknown>;
+        socket?: { remoteAddress?: string };
+      }
+    | undefined;
+  if (!req || typeof req !== "object" || !req.headers) return {};
+  const userAgent = req.headers["user-agent"];
+  return {
+    ipAddress: req.ip || req.socket?.remoteAddress || undefined,
+    userAgent: typeof userAgent === "string" ? userAgent : undefined,
+  };
 }

@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 interface HostRow {
   id: number;
-  enable_session_logging: boolean | null;
+  enable_session_logging: boolean | number | null;
 }
 
 interface SettingsRow {
@@ -110,6 +110,16 @@ describe("runSessionRecordingSettingsMigration", () => {
 
     expect(result.moved).toBe(1);
     expect(storedValue(3, "enableSessionRecording")).toBe(false);
+  });
+
+  it("reads SQLite 0 and 1 as off and on", async () => {
+    hostRows.push({ id: 6, enable_session_logging: 0 });
+    hostRows.push({ id: 7, enable_session_logging: 1 });
+
+    await runSessionRecordingSettingsMigration();
+
+    expect(storedValue(6, "enableSessionRecording")).toBe(false);
+    expect(storedValue(7, "enableSessionRecording")).toBe(true);
   });
 
   it("treats a null legacy value as on, matching the old column default", async () => {

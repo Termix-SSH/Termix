@@ -7,8 +7,7 @@
  * shape the hardcoded feature tabs already have.
  *
  * Nothing is rendered when no enabled plugin declares host settings, so the
- * group does not appear as an empty tab. Phase B fills it as each feature
- * moves its columns out of ssh_data.
+ * group does not appear as an empty tab.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -51,6 +50,41 @@ export function usePluginHostSections(): PluginSummary[] {
   );
 }
 
+/** What each field reads before the host saves it. */
+function hostFieldDefaults(plugin: PluginSummary): Record<string, unknown> {
+  const host = plugin.contributes?.settings?.host;
+  if (!host) return {};
+  const defaults: Record<string, unknown> = {};
+  if (host.enableKey) defaults[host.enableKey] = host.enableDefault ?? false;
+  for (const field of host.fields) {
+    if (field.default !== undefined) defaults[field.key] = field.default;
+  }
+  return defaults;
+}
+
+/**
+ * A new host saves the fields whose default comes from an admin setting,
+ * since the server only knows the manifest default for a host with no value.
+ */
+export function withNewHostDefaults(
+  values: HostPluginSettings,
+  plugins: PluginSummary[],
+): HostPluginSettings {
+  const next: HostPluginSettings = { ...values };
+  for (const plugin of plugins) {
+    const fields = plugin.contributes?.settings?.host?.fields ?? [];
+    for (const field of fields) {
+      if (!field.defaultFrom || field.default === undefined) continue;
+      if (next[plugin.id] && field.key in next[plugin.id]) continue;
+      next[plugin.id] = {
+        ...(next[plugin.id] ?? {}),
+        [field.key]: field.default,
+      };
+    }
+  }
+  return next;
+}
+
 export interface HostPluginSectionsProps {
   plugins: PluginSummary[];
   values: HostPluginSettings;
@@ -90,12 +124,13 @@ function HostPluginSection({
   const { t } = useTranslation();
   const host = plugin.contributes?.settings?.host;
   if (!host) return null;
+  const shown = { ...hostFieldDefaults(plugin), ...values };
 
   const running = plugin.enabled && plugin.state !== "failed";
   const enableKey = host.enableKey;
   // With no enable switch the section is always on, which is what a plugin
   // declaring only plain fields means.
-  const enabled = enableKey ? values[enableKey] === true : true;
+  const enabled = enableKey ? shown[enableKey] === true : true;
 
   return (
     <SectionCard
@@ -116,7 +151,7 @@ function HostPluginSection({
             type: "boolean",
             labelKey: host.enableLabelKey,
           }}
-          values={values}
+          values={shown}
           setValue={setValue}
           running={running}
         />
@@ -124,13 +159,13 @@ function HostPluginSection({
 
       {enabled &&
         host.fields
-          .filter((field) => isFieldActive(field, values))
+          .filter((field) => isFieldActive(field, shown))
           .map((field) => (
             <SettingsFieldRow
               key={field.key}
               pluginId={plugin.id}
               field={field}
-              values={values}
+              values={shown}
               setValue={setValue}
               running={running}
             />

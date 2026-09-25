@@ -20,7 +20,9 @@
     "ssh:connect",
     "db:own",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "events:core",
+    "kv:own"
   ],
   "provides": [
     {
@@ -70,6 +72,7 @@
       "host": {
         "enableKey": "enableFileManager",
         "enableLabelKey": "settings.host.enable.label",
+        "enableDefault": true,
         "fields": [
           {
             "key": "defaultPath",
@@ -89,7 +92,7 @@
     "hostCapability": {
       "key": "enableFileManager",
       "labelKey": "hostCapability.label",
-      "editorTab": "files"
+      "editorTab": "plugins"
     }
   },
   "locales": "locales",

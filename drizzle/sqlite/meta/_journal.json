@@ -372,6 +372,13 @@
       "when": 1790300571504,
       "tag": "0052_public_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "6",
+      "when": 1790304468233,
+      "tag": "0053_bent_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

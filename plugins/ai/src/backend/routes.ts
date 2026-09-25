@@ -56,6 +56,7 @@ export function registerAiRoutes(
     notify: ctx.notify,
     rbac: ctx.rbac,
     ssh: ctx.ssh,
+    audit: ctx.audit,
   };
 
   const logError = (message: string, error: unknown) =>
@@ -728,8 +729,9 @@ export function registerAiRoutes(
         ).aiAccess ?? { allowReadOnlyCommands: false };
         const hosts = await ctx.hosts.list();
         const config = await providerConfig(provider);
-        const tools = availableTools((service) =>
-          serviceAvailable(ctx.services, service),
+        const tools = availableTools(
+          (service) => serviceAvailable(ctx.services, service),
+          { allowReadOnlyCommands: access.allowReadOnlyCommands },
         );
 
         // no-transform keeps core's compression from buffering the stream,

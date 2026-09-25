@@ -1,6 +1,8 @@
 import { lookup, type LookupAddress, type LookupOptions } from "dns";
 import { BlockList, isIP } from "net";
 import { Agent, fetch as undiciFetch } from "undici";
+import type { Dispatcher } from "undici-types";
+import { getProxyAgent } from "./proxy-agent.js";
 
 type DnsLookupFn = (
   hostname: string,
@@ -207,6 +209,21 @@ export async function safeOutboundFetch(
   );
   if (!allowPrivate && isIP(hostname) && isBlockedAddress(hostname)) {
     throw new Error("Private destinations are not allowed");
+  }
+
+  // An admin-allowlisted private host goes through the configured proxy,
+  // when there is one, the same way core's own outbound calls do. A public
+  // host never does: the proxy would resolve it, skipping the check above.
+  const proxy =
+    allowPrivate && !tls.ca && tls.rejectUnauthorized !== false
+      ? getProxyAgent(url.toString())
+      : undefined;
+  if (proxy) {
+    return (await undiciFetch(url.toString(), {
+      ...options,
+      dispatcher: proxy as unknown as Dispatcher,
+      redirect: "error",
+    } as never)) as unknown as Response;
   }
 
   const dispatcher = new Agent({

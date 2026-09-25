@@ -20,11 +20,6 @@ const CORE_BACKEND = /^(?:\.\.\/)+src\/backend\//;
 // value (AUTOMATION_DEFINITION_VERSION), so this has to resolve at runtime.
 const CORE_TYPES = /^(?:\.\.\/)+src\/types\//;
 const CORE_UI = /^(?:\.\.\/)+src\/ui\//;
-// "../../../<other-plugin>/backend/" -- only plugins/ai/.../executor.ts today.
-// esbuild filters are Go RE2, which has no lookahead, so "src" is excluded in
-// the callback rather than the pattern.
-const CROSS_PLUGIN = /^(?:\.\.\/)+([a-z0-9-]+)\/(?:src\/)?backend\//;
-
 /** dist/plugins/<id>/dist/backend.js -> dist/backend/... */
 const COMPILED_CORE = "../../../backend/backend/";
 const COMPILED_TYPES = "../../../backend/types/";
@@ -68,12 +63,6 @@ export function legacyCoreImports({ pluginId, platform, insideTermix = true }) {
         path: args.path.replace(CORE_TYPES, COMPILED_TYPES),
         external: true,
       }));
-
-      build.onResolve({ filter: CROSS_PLUGIN }, (args) => {
-        const [, other] = CROSS_PLUGIN.exec(args.path);
-        if (other === "src" || other === pluginId) return null;
-        return { path: `../../${other}/dist/backend.js`, external: true };
-      });
     },
   };
 }

@@ -10,7 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { legacyFlag, selectLegacyRows } from "./raw-rows.js";
 import { createCurrentPluginSettingsRepository } from "../../database/repositories/factory.js";
 
 export interface FileManagerSettingsMigrationResult {
@@ -29,11 +29,10 @@ export async function runFileManagerSettingsMigration(): Promise<FileManagerSett
   const result: FileManagerSettingsMigrationResult = { moved: 0, skipped: 0 };
 
   try {
-    const drizzleDb = getDb();
     // Raw SQL, not the typed schema: this runs once schema.ts has already
     // dropped these columns, so the query is the only thing left that still
     // knows they used to exist.
-    const rows = await drizzleDb.all<LegacyFileManagerRow>(sql`
+    const rows = await selectLegacyRows<LegacyFileManagerRow>(sql`
       SELECT id, enable_file_manager, default_path, scp_legacy
       FROM ssh_data
       WHERE enable_file_manager = false OR default_path IS NOT NULL
@@ -62,7 +61,7 @@ export async function runFileManagerSettingsMigration(): Promise<FileManagerSett
         "host",
         scopeId,
         "enableFileManager",
-        JSON.stringify(row.enable_file_manager !== false),
+        JSON.stringify(legacyFlag(row.enable_file_manager, true)),
       );
       await pluginSettingsRepository.set(
         "file-manager",

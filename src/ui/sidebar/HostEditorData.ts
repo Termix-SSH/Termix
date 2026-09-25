@@ -99,10 +99,6 @@ export function createHostEditorForm(
     ...(connectionDefaults?.terminal ?? {}),
     ...(host?.terminalConfig ?? {}),
   };
-  const proxmoxSettings = (host?.pluginSettings?.proxmox ?? {}) as Record<
-    string,
-    unknown
-  >;
   const rawTheme = terminalConfig.theme ?? d?.theme;
   const normalizedTheme =
     !rawTheme ||
@@ -152,27 +148,6 @@ export function createHostEditorForm(
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
     connectionOrigin: (host?.connectionOrigin ?? null) as
       "local" | "remote" | null,
-    enableTerminal: host?.enableTerminal ?? true,
-    enableSessionLogging:
-      host?.enableSessionLogging ?? d?.enableSessionLogging ?? true,
-    enableCommandHistory:
-      host?.enableCommandHistory ?? d?.enableCommandHistory ?? true,
-    enableFileManager: host?.enableFileManager ?? false,
-    scpLegacy: host?.scpLegacy ?? false,
-    enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
-    enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
-    enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
-    // The proxmox tab fills in its own defaults when this is unset.
-    proxmoxConfig:
-      (proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
-    enableProxmoxStats:
-      (proxmoxSettings.enableProxmoxStats as boolean) ?? false,
-    proxmoxStatsConfig:
-      ((proxmoxSettings.proxmoxStatsConfig as Host["proxmoxStatsConfig"]) ?? {
-        pollInterval: 60,
-        nodeName: null,
-      }) as Host["proxmoxStatsConfig"],
-    defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
     inheritTerminalAppearance:
       !host ||
@@ -409,23 +384,6 @@ export function buildHostEditorPayload(
       usesCredential && form.credentialId ? Number(form.credentialId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
-    enableTerminal: form.enableTerminal,
-    enableSessionLogging: form.enableSessionLogging,
-    enableCommandHistory: form.enableCommandHistory,
-    enableFileManager: form.enableFileManager,
-    scpLegacy: form.scpLegacy,
-    enableTmuxMonitor: form.enableTmuxMonitor,
-    enableTerminalToolbar: form.enableTerminalToolbar,
-    enableProxmox: form.enableProxmox,
-    proxmoxConfig:
-      form.enableProxmox || form.proxmoxConfig?.source
-        ? form.proxmoxConfig
-        : null,
-    enableProxmoxStats: form.enableProxmoxStats,
-    proxmoxStatsConfig: form.enableProxmoxStats
-      ? form.proxmoxStatsConfig
-      : null,
-    defaultPath: form.defaultPath || "/",
     useSocks5: form.useSocks5,
     socks5Host:
       form.socks5ProxyMode === "single" ? form.socks5Host || null : null,

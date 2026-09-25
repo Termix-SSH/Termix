@@ -497,34 +497,6 @@ export function AdminHostDefaultsSection({
               }
             />
           </SettingRow>
-          <SettingRow
-            label={t("admin.hostDefaultsSessionLogging")}
-            description={t("admin.hostDefaultsSessionLoggingDesc")}
-          >
-            <AdminToggle
-              on={defaults.enableSessionLogging ?? true}
-              onToggle={() =>
-                setDefaults((p) => ({
-                  ...p,
-                  enableSessionLogging: !(p.enableSessionLogging ?? true),
-                }))
-              }
-            />
-          </SettingRow>
-          <SettingRow
-            label={t("admin.hostDefaultsCommandHistory")}
-            description={t("admin.hostDefaultsCommandHistoryDesc")}
-          >
-            <AdminToggle
-              on={defaults.enableCommandHistory ?? true}
-              onToggle={() =>
-                setDefaults((p) => ({
-                  ...p,
-                  enableCommandHistory: !(p.enableCommandHistory ?? true),
-                }))
-              }
-            />
-          </SettingRow>
         </div>
 
         <Button

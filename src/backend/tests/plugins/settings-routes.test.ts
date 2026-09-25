@@ -17,6 +17,11 @@ const state = vi.hoisted(() => ({
   userId: "user-1",
   permissions: new Set<string>(),
   hostEditAccess: true,
+  hostOwner: true,
+}));
+
+vi.mock("../../utils/crypto-migration/raw-rows.js", () => ({
+  runStatement: vi.fn(async () => {}),
 }));
 
 vi.mock("../../utils/logger.js", () => {
@@ -67,7 +72,7 @@ vi.mock("../../utils/permission-manager.js", () => ({
         },
       canAccessHost: async () => ({
         hasAccess: state.hostEditAccess,
-        isOwner: state.hostEditAccess,
+        isOwner: state.hostEditAccess && state.hostOwner,
         isShared: false,
       }),
     }),
@@ -115,7 +120,10 @@ const MANIFEST: PluginManifest = {
       host: {
         enableKey: "enableThing",
         enableLabelKey: "k",
-        fields: [{ key: "port", type: "number", labelKey: "k" }],
+        fields: [
+          { key: "port", type: "number", labelKey: "k" },
+          { key: "profile", type: "string", labelKey: "k", ownerOnly: true },
+        ],
       },
     },
   },
@@ -214,6 +222,7 @@ beforeEach(async () => {
   state.userId = "user-1";
   state.permissions = new Set<string>();
   state.hostEditAccess = true;
+  state.hostOwner = true;
 
   const app = express();
   app.use(express.json());
@@ -440,6 +449,40 @@ describe("user scope", () => {
 });
 
 describe("host scope", () => {
+  it("keeps an owner-only field from a shared editor", async () => {
+    state.hostOwner = false;
+    const write = await call("/plugins/sample/settings/host/7", {
+      method: "PUT",
+      body: JSON.stringify({ profile: "other", port: 22 }),
+    });
+    expect(write.status).toBe(400);
+    expect((await write.json()).errors.profile).toMatch(/owner/);
+    expect(rows).toHaveLength(0);
+
+    state.hostOwner = true;
+    const owner = await call("/plugins/sample/settings/host/7", {
+      method: "PUT",
+      body: JSON.stringify({ profile: "mine" }),
+    });
+    expect(owner.status).toBe(200);
+  });
+
+  it("runs the plugin's validators before writing anything", async () => {
+    const { onSettingsValidate, clearSettingsListeners } =
+      await import("../../plugins/settings.js");
+    onSettingsValidate("sample", "host", (values) =>
+      Number(values.port) > 1000 ? { port: "Too high" } : undefined,
+    );
+    const write = await call("/plugins/sample/settings/host/7", {
+      method: "PUT",
+      body: JSON.stringify({ enableThing: true, port: 5000 }),
+    });
+    expect(write.status).toBe(400);
+    expect((await write.json()).errors).toEqual({ port: "Too high" });
+    expect(rows).toHaveLength(0);
+    clearSettingsListeners("sample");
+  });
+
   it("lets a user with edit access read and write", async () => {
     const write = await call("/plugins/sample/settings/host/7", {
       method: "PUT",

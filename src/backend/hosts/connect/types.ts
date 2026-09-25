@@ -152,7 +152,7 @@ export interface SshAuthField {
 export interface SshAuthProvider {
   /** Stored in ssh_data.auth_type. */
   type: string;
-  /** "core" for built-ins and the legacy providers A8 keeps in core. */
+  /** "core" for the built-ins, otherwise the registering plugin's id. */
   pluginId: string;
   labelKey: string;
   descriptionKey?: string;

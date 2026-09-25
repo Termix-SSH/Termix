@@ -243,6 +243,12 @@ export interface FakeAuthRegistrations {
 
 export interface FakePluginContext {
   ctx: PluginContext;
+  /** Runs what ctx.settings.onValidate registered, as a settings save would. */
+  validateSettings: (
+    scope: "admin" | "user" | "host",
+    values: Record<string, unknown>,
+    context?: { hostId?: number },
+  ) => Promise<Record<string, string>>;
   /** Everything the plugin registered through ctx.disposables. */
   disposals: Array<() => void | Promise<void>>;
   /** Topics emitted through ctx.events.emit, in order. */
@@ -417,6 +423,10 @@ export function createFakeContext(
     Object.entries(options.coreSettings ?? {}),
   );
   const settingsListeners = new Map<string, Set<(value: unknown) => void>>();
+  const settingsValidators = new Set<{
+    scope: "admin" | "user" | "host";
+    validator: Parameters<PluginContext["settings"]["onValidate"]>[1];
+  }>();
   const sshConnections: FakePluginContext["sshConnections"] = [];
   const hostShares: FakePluginContext["hostShares"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
@@ -499,6 +509,15 @@ export function createFakeContext(
     : null;
   const holds = (permission: string) =>
     held === null || held.has(qualifyPermission(pluginId, permission));
+  // Like the runtime, a route can only require a permission the manifest
+  // declares. Checked when the test hands in a manifest.
+  const declaredPermissions = options.manifest?.contributes?.permissions
+    ? new Set(
+        options.manifest.contributes.permissions.map((entry) =>
+          qualifyPermission(pluginId, entry.name),
+        ),
+      )
+    : null;
 
   for (const [key, value] of Object.entries(options.settings ?? {})) {
     settings.set(settingsKey("admin", undefined, key), value);
@@ -694,8 +713,16 @@ export function createFakeContext(
       // other plugins' namespaces is covered by core's tests, not here.
       has: async (permission) => holds(permission),
       hasFor: async (_userId, permission) => holds(permission),
-      require: (permission) =>
-        ((_req, res, next) => {
+      require: (permission) => {
+        if (
+          declaredPermissions &&
+          !declaredPermissions.has(qualifyPermission(pluginId, permission))
+        ) {
+          throw new Error(
+            `Plugin ${pluginId} cannot require permission "${permission}": it is not declared in contributes.permissions`,
+          );
+        }
+        return ((_req, res, next) => {
           if (holds(permission)) {
             next();
             return;
@@ -704,7 +731,8 @@ export function createFakeContext(
             error: "Insufficient permissions",
             required: qualifyPermission(pluginId, permission),
           });
-        }) as PluginMiddleware,
+        }) as PluginMiddleware;
+      },
     },
 
     // Nothing here is capability-checked, per the module doc; createMockCtx
@@ -729,6 +757,22 @@ export function createFakeContext(
       setHost: async (hostId, key, value) =>
         writeSetting("host", String(hostId), key, value),
 
+      listHostValues: async (key) => {
+        const found: Array<{ hostId: number; userId: string; value: never }> =
+          [];
+        for (const [storedKey, value] of settings) {
+          const [scope, scopeId, name] = storedKey.split(":");
+          if (scope !== "host" || name !== key || value === undefined) continue;
+          const hostId = Number(scopeId);
+          found.push({
+            hostId,
+            userId: hostRecordsById.get(hostId)?.userId ?? actor ?? "",
+            value: value as never,
+          });
+        }
+        return found;
+      },
+
       getAll: async (scope, scopeId) => {
         const prefix = `${scope}:${scopeId ?? ""}:`;
         const all: Record<string, unknown> = {};
@@ -749,6 +793,16 @@ export function createFakeContext(
         set.add(listener);
         const unsubscribe = () => {
           set!.delete(listener);
+        };
+        disposals.push(unsubscribe);
+        return unsubscribe;
+      },
+
+      onValidate: (scope, validator) => {
+        const entry = { scope, validator };
+        settingsValidators.add(entry);
+        const unsubscribe = () => {
+          settingsValidators.delete(entry);
         };
         disposals.push(unsubscribe);
         return unsubscribe;
@@ -919,12 +973,17 @@ export function createFakeContext(
         ),
       requiresSecret: (authType) =>
         ["password", "key", "credential", "agent"].includes(authType),
-      supportsBackground: (authType) =>
-        authType !== "none" &&
-        !auth.sshAuthProviders.some(
-          (provider) =>
-            provider.type === authType && provider.supportsBackground === false,
-        ),
+      // Matches core: the built-in types, plus any registered provider that
+      // does not opt out. An unknown type cannot connect unattended.
+      supportsBackground: (authType) => {
+        if (["password", "key", "credential", "agent"].includes(authType)) {
+          return true;
+        }
+        const provider = auth.sshAuthProviders.find(
+          (candidate) => candidate.type === authType,
+        );
+        return !!provider && provider.supportsBackground !== false;
+      },
     },
 
     auth: {
@@ -1150,6 +1209,14 @@ export function createFakeContext(
 
   return {
     ctx,
+    validateSettings: async (scope, values, context = {}) => {
+      const errors: Record<string, string> = {};
+      for (const entry of settingsValidators) {
+        if (entry.scope !== scope) continue;
+        Object.assign(errors, (await entry.validator(values, context)) ?? {});
+      }
+      return errors;
+    },
     disposals,
     emitted,
     kv,
@@ -1385,7 +1452,15 @@ export function createMockCtx(
         }
         ctx.events.emit(topic, payload);
       },
-      on: (topic, listener) => ctx.events.on(topic, listener),
+      on: (topic, listener) => {
+        if (!topic.startsWith("plugin.") && !granted.has("events:core")) {
+          throw new Error(
+            `Plugin ${pluginId} may only listen to "plugin.*" topics. ` +
+              `Declare the events:core capability to listen to core topics.`,
+          );
+        }
+        return ctx.events.on(topic, listener);
+      },
     },
 
     http: {
@@ -1411,6 +1486,10 @@ export function createMockCtx(
       // Reading and writing a plugin's OWN settings is ungated, exactly as in
       // the real runtime. Only readCore reaches outside the plugin.
       ...ctx.settings,
+      listHostValues: async (key) => {
+        require("hosts:read");
+        return ctx.settings.listHostValues(key);
+      },
       readCore: async (key) => {
         require("settings:read-core");
         return ctx.settings.readCore(key);

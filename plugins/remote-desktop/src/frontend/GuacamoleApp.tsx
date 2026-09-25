@@ -20,6 +20,7 @@ import {
   useHost,
   useTranslation,
   useConnectionRetry,
+  logActivity,
 } from "@termix/plugin-sdk/frontend";
 import {
   Button,
@@ -33,7 +34,6 @@ import {
   Input,
   PasswordInput,
   isElectron,
-  logActivity,
   resolveConnectionOrigin,
   useConnectionLog,
   type ConnectionOrigin,

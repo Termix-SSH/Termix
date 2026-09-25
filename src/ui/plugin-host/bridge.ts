@@ -19,7 +19,7 @@ import {
 } from "@termix/plugin-sdk/frontend";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTheme } from "@/components/theme-provider";
-import { createPluginApi } from "@/lib/plugin-transport";
+import { createPluginApi, pluginApiFor } from "@/lib/plugin-transport";
 import {
   getPluginAdminSettings,
   getPluginHostSettings,
@@ -28,9 +28,19 @@ import {
   updatePluginHostSettings,
   updatePluginUserSettings,
 } from "@/api/plugins-api";
-import { getUserInfo } from "@/main-axios";
+import { getCookie, getUserInfo } from "@/main-axios";
+import { logActivity } from "@/api/dashboard-api";
+import { getHostPassword } from "@/api/credentials-api";
+import {
+  getUserPreferences,
+  parseCustomKeybindings,
+  patchOpenTab,
+} from "@/api/open-tabs-api";
+import { setHostAutoTmux } from "@/api/host-terminal-config-api";
 import { usePluginScope } from "./scope";
-import { knownPluginIds } from "./plugin-store";
+import { knownPluginIds, usePluginStore } from "./plugin-store";
+import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
+import type { UiPluginPresets } from "@/types/ui-preferences";
 import { tabsApi, useShellHosts } from "./shell-bridge";
 import { invokeAction } from "@/shell/action-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
@@ -262,6 +272,12 @@ export const pluginHostBridge: PluginHostBridge = {
   },
 
   getApi: (pluginId) => getApi(pluginId),
+  getApiFor: (pluginId, origin) =>
+    pluginApiFor(
+      pluginId,
+      origin as "local" | "remote" | undefined,
+      getApi(pluginId) as never,
+    ) as never,
 
   useTabs: () => tabsApi,
 
@@ -307,7 +323,7 @@ export const pluginHostBridge: PluginHostBridge = {
 
   useActivityTypes: () => {
     const defs = useTabTypes();
-    const types = new Set(["file_manager"]);
+    const types = new Set<string>();
     for (const def of defs) {
       for (const type of def.activityTypes ?? []) types.add(type);
     }
@@ -325,6 +341,33 @@ export const pluginHostBridge: PluginHostBridge = {
   homepageWidgetType: (id) =>
     getHomepageWidgetType(id) as unknown as
       HomepageWidgetContribution | undefined,
+
+  usePluginUiPreferences: (pluginId) => {
+    const ctx = useUiPreferencesContext();
+    const store = usePluginStore();
+    const presets = store.records.get(pluginId)?.summary.contributes
+      ?.uiPresets as UiPluginPresets | undefined;
+    const values = ctx
+      ? ctx.resolvePlugin(pluginId, presets)
+      : { ...(presets?.balanced ?? {}) };
+    return {
+      values,
+      set: (key, value) => ctx?.setPluginOverride(pluginId, key, value),
+    };
+  },
+
+  core: {
+    logActivity: async (type, hostId, hostName) => {
+      await logActivity(type, hostId, hostName);
+    },
+    getHostPassword: async (hostId, field) =>
+      (await getHostPassword(hostId, field)) ?? null,
+    patchOpenTab: (instanceId, updates) => patchOpenTab(instanceId, updates),
+    getCustomKeybindings: async () =>
+      parseCustomKeybindings((await getUserPreferences()).customKeybindings),
+    setHostAutoTmux: (hostId, autoTmux) => setHostAutoTmux(hostId, autoTmux),
+    getClientPreference: (name) => getCookie(name),
+  },
 };
 
 /** Installs the bridge. Idempotent. */

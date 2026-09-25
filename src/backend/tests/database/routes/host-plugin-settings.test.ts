@@ -62,6 +62,10 @@ vi.mock("../../../utils/system-secret-crypto.js", () => ({
   decryptSystemSecret: async (stored: string) => stored,
 }));
 
+vi.mock("../../../utils/crypto-migration/raw-rows.js", () => ({
+  runStatement: vi.fn(async () => {}),
+}));
+
 const registryProviders = new Map<string, unknown>();
 vi.mock("../../../plugins/registry.js", () => ({
   consume: (key: string) => registryProviders.get(key),
@@ -73,6 +77,7 @@ const {
   withHostPluginSettings,
   writeHostPluginSettings,
   applyPluginHostImportSettings,
+  setHostPluginEnabled,
 } = await import("../../../database/routes/host-plugin-settings.js");
 
 function manifest(id: string, host: unknown): PluginManifest {
@@ -340,5 +345,90 @@ describe("applyPluginHostImportSettings", () => {
     expect(setCalls).toEqual([
       ["web-endpoint", "host", "7", "enableWebUi", "true"],
     ]);
+  });
+});
+
+describe("share levels, legacy fields and generic writes", () => {
+  const DESKTOP = manifest("remote-desktop", {
+    fields: [
+      { key: "enableRdp", type: "boolean", labelKey: "k" },
+      {
+        key: "guacamoleConfig",
+        type: "json",
+        labelKey: "k",
+        shareRead: "edit",
+      },
+      { key: "gatewayToken", type: "secret", labelKey: "k" },
+    ],
+  });
+
+  it("hides a field above a recipient's share level", () => {
+    loaded.push({ id: "remote-desktop", manifest: DESKTOP, state: "active" });
+    const values = new Map([
+      [
+        1,
+        {
+          "remote-desktop": { enableRdp: true, guacamoleConfig: { a: 1 } },
+        },
+      ],
+    ]);
+    const connect = { id: 1, isShared: true, permissionLevel: "connect" };
+    const edit = { id: 1, isShared: true, permissionLevel: "edit" };
+    const owner = { id: 1 };
+    attachHostPluginSettings([connect, edit, owner], values);
+
+    expect(connect).toMatchObject({
+      pluginSettings: { "remote-desktop": { enableRdp: true } },
+    });
+    expect(
+      (connect as { pluginSettings: Record<string, Record<string, unknown>> })
+        .pluginSettings["remote-desktop"],
+    ).not.toHaveProperty("guacamoleConfig");
+    expect(edit).toMatchObject({
+      pluginSettings: { "remote-desktop": { guacamoleConfig: { a: 1 } } },
+    });
+    expect(owner).toMatchObject({
+      pluginSettings: { "remote-desktop": { guacamoleConfig: { a: 1 } } },
+    });
+  });
+
+  it("adds a plugin's legacy payload fields without overwriting core's", () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    registryProviders.set(
+      "docker.hostPayloadLegacy",
+      (own: Record<string, unknown>) => ({
+        enableDocker: own.enableDocker,
+        name: "overwritten?",
+      }),
+    );
+    const host: Record<string, unknown> = { id: 2, name: "web" };
+    attachHostPluginSettings(
+      [host],
+      new Map([[2, { docker: { enableDocker: true } }]]),
+    );
+    expect(host.enableDocker).toBe(true);
+    expect(host.name).toBe("web");
+  });
+
+  it("imports an export's plugin values, leaving secrets out", async () => {
+    loaded.push({ id: "remote-desktop", manifest: DESKTOP, state: "active" });
+    await applyPluginHostImportSettings(9, {
+      pluginSettings: {
+        "remote-desktop": { enableRdp: true, gatewayToken: { set: true } },
+      },
+    });
+    expect(setCalls).toEqual([
+      ["remote-desktop", "host", "9", "enableRdp", "true"],
+    ]);
+  });
+
+  it("flips a plugin's host switch for many hosts", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    expect(await setHostPluginEnabled("docker", [3, 4], true)).toBe(true);
+    expect(setCalls.map((call) => [call[2], call[3], call[4]])).toEqual([
+      ["3", "enableDocker", "true"],
+      ["4", "enableDocker", "true"],
+    ]);
+    expect(await setHostPluginEnabled("missing", [3], true)).toBe(false);
   });
 });

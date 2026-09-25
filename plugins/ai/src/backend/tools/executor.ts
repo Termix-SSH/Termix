@@ -247,7 +247,7 @@ export async function applyProposal(
  * Runs one approved command over this plugin's SSH pool, mirroring how an
  * automation run_command step executes.
  */
-async function runCommandOnHost(
+export async function runCommandOnHost(
   deps: ToolDeps,
   hostId: number,
   command: string,

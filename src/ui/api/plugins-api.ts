@@ -33,13 +33,23 @@ export interface PluginSettingsField {
   group?: string;
   component?: string;
   hidden?: boolean;
+  defaultFrom?: string;
+  shareRead?: "connect" | "view" | "edit" | "manage";
+  ownerOnly?: boolean;
 }
 
 export interface PluginHostSettingsContribution {
   enableKey?: string;
   enableLabelKey?: string;
+  enableDefault?: boolean;
   fields: PluginSettingsField[];
 }
+
+/** A plugin's Appearance defaults for each interface preset. */
+export type PluginUiPresets = Record<
+  "simple" | "balanced" | "advanced",
+  Record<string, unknown>
+>;
 
 export interface PluginSettingsContribution {
   admin?: PluginSettingsField[];
@@ -62,6 +72,7 @@ export interface PluginContributions {
   guest?: boolean;
   settings?: PluginSettingsContribution;
   permissions?: { name: string; titleKey: string; descriptionKey: string }[];
+  uiPresets?: PluginUiPresets;
 }
 
 /** A secret as it arrives from the server. The value never leaves the server. */
@@ -127,11 +138,29 @@ export async function getPluginAdminSettings(
   return response.data?.values ?? {};
 }
 
+/** Tells the plugin's own frontend, through app.onSettingsChanged. */
+export const PLUGIN_SETTINGS_CHANGED_EVENT = "termix:plugin-settings-changed";
+
+function announceSettingsChange(
+  pluginId: string,
+  scope: "admin" | "user" | "host",
+  hostId?: number,
+): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(PLUGIN_SETTINGS_CHANGED_EVENT, {
+      detail: { pluginId, scope, hostId },
+    }),
+  );
+}
+
 export async function updatePluginAdminSettings(
   pluginId: string,
   values: PluginSettingsValues,
 ): Promise<PluginSettingsValues> {
-  return putSettings(settingsPath(pluginId, "admin"), values);
+  const saved = await putSettings(settingsPath(pluginId, "admin"), values);
+  announceSettingsChange(pluginId, "admin");
+  return saved;
 }
 
 export async function getPluginUserSettings(
@@ -145,7 +174,9 @@ export async function updatePluginUserSettings(
   pluginId: string,
   values: PluginSettingsValues,
 ): Promise<PluginSettingsValues> {
-  return putSettings(settingsPath(pluginId, "user"), values);
+  const saved = await putSettings(settingsPath(pluginId, "user"), values);
+  announceSettingsChange(pluginId, "user");
+  return saved;
 }
 
 export async function getPluginHostSettings(
@@ -163,10 +194,12 @@ export async function updatePluginHostSettings(
   hostId: number,
   values: PluginSettingsValues,
 ): Promise<PluginSettingsValues> {
-  return putSettings(
+  const saved = await putSettings(
     settingsPath(pluginId, `host/${encodeURIComponent(String(hostId))}`),
     values,
   );
+  announceSettingsChange(pluginId, "host", hostId);
+  return saved;
 }
 
 /**

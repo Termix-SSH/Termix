@@ -4,9 +4,6 @@
  * Confirms the saved key actually works, which is the question anyone has just
  * after entering one. Connecting to a device stays in the Tailscale rail panel;
  * a settings page is for configuring, not for operating.
- *
- * Registered by legacy-settings-components.ts until A7 lets the plugin's own
- * bundle register it.
  */
 
 import { useCallback, useEffect, useState } from "react";

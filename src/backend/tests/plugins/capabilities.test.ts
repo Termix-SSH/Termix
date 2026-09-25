@@ -212,6 +212,20 @@ describe("ctx.events namespacing", () => {
 
     expect(() => ctx.events.emit("host.status", {})).not.toThrow();
   });
+
+  it("gates listening to core topics the same way", () => {
+    const ctx = context(["kv:own"]);
+
+    expect(() => ctx.events.on("user.deleted", () => {})).toThrow(
+      /may only listen to/,
+    );
+    expect(() =>
+      ctx.events.on("plugin.other-plugin.thing", () => {}),
+    ).not.toThrow();
+    expect(() =>
+      context(["events:core"]).events.on("user.deleted", () => {}),
+    ).not.toThrow();
+  });
 });
 
 describe("ctx.kv limits", () => {

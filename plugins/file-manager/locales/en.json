@@ -401,13 +401,6 @@
   },
   "hosts": {
     "fileManager": "File Manager",
-    "tabFiles": "Files",
-    "enableFileManagerMonitor": "Enable File Manager",
-    "enableFileManagerMonitorDesc": "Browse and manage files on this host over SFTP",
-    "scpLegacyLabel": "SCP Legacy Mode",
-    "scpLegacyDesc": "Use legacy file transfer for servers that do not support the SFTP subsystem (e.g. embedded or minimal SSH servers).",
-    "defaultPathLabel": "Default Path",
-    "fileManagerPathHint": "The directory to open when the file manager launches for this host.",
     "fileManagerUrlCopied": "File Manager URL copied",
     "copyFileManagerUrlAction": "Copy File Manager URL"
   }

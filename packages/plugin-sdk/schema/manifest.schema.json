@@ -170,7 +170,10 @@
             "type": "array",
             "minItems": 1,
             "uniqueItems": true,
-            "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
           }
         }
       }
@@ -273,12 +276,17 @@
             }
           }
         },
-        "guest": { "type": "boolean" },
+        "guest": {
+          "type": "boolean"
+        },
         "guestViews": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
         },
         "auth": {
           "type": "object",
@@ -286,23 +294,38 @@
           "properties": {
             "sshAuthTypes": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,63}$"
+              }
             },
             "loginMethods": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,63}$"
+              }
             },
             "secondFactors": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,63}$"
+              }
             },
             "secretSchemes": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,63}$"
+              }
             },
             "keyboardInteractive": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,63}$"
+              }
             }
           }
         },
@@ -313,9 +336,18 @@
             "additionalProperties": false,
             "required": ["id", "titleKey"],
             "properties": {
-              "id": { "type": "string", "minLength": 1 },
-              "titleKey": { "type": "string", "minLength": 1 },
-              "icon": { "type": "string", "minLength": 1 }
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "titleKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "icon": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },
@@ -326,9 +358,18 @@
             "additionalProperties": false,
             "required": ["id", "titleKey"],
             "properties": {
-              "id": { "type": "string", "minLength": 1 },
-              "titleKey": { "type": "string", "minLength": 1 },
-              "icon": { "type": "string", "minLength": 1 }
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "titleKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "icon": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },
@@ -727,9 +768,31 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Registered component id. Required when type is \"custom\"."
+                      },
+                      "hidden": {
+                        "type": "boolean",
+                        "description": "Stored and validated, but not drawn by the generic settings form."
+                      },
+                      "defaultFrom": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "A non-secret admin field whose value a new host starts with."
+                      },
+                      "shareRead": {
+                        "type": "string",
+                        "enum": ["connect", "view", "edit", "manage"],
+                        "description": "Lowest share level whose recipients see the value in the host payload."
+                      },
+                      "ownerOnly": {
+                        "type": "boolean",
+                        "description": "Only the host's owner may change it."
                       }
                     }
                   }
+                },
+                "enableDefault": {
+                  "type": "boolean",
+                  "description": "What the enable switch reads before a host saves it. Off by default."
                 }
               }
             }
@@ -749,6 +812,95 @@
               }
             }
           ]
+        },
+        "http": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "HTTP options for the plugin's /plugin-api/<id>/ router.",
+          "properties": {
+            "legacyPaths": {
+              "type": "array",
+              "description": "Old URLs under /<plugin id>/ served by the plugin's router with that prefix removed.",
+              "items": {
+                "type": "string",
+                "pattern": "^/[a-z][a-z0-9-]*(/[A-Za-z0-9_.-]+)+$"
+              }
+            }
+          }
+        },
+        "uiPresets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["simple", "balanced", "advanced"],
+          "description": "The plugin's Appearance defaults for each interface preset, read with usePluginUiPreferences.",
+          "properties": {
+            "simple": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "balanced": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "advanced": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          }
         }
       }
     },

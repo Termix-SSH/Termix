@@ -201,11 +201,13 @@ export function registerRoomRoutes(
   const requireUse = ctx.rbac.require("use") as never;
 
   const audit = (
+    req: Request,
     action: string,
     room: { id: string; name: string },
     details?: Record<string, unknown>,
   ) =>
     ctx.audit.record({
+      request: req,
       action,
       resourceType: "collab_room",
       resourceId: room.id,
@@ -270,7 +272,7 @@ export function registerRoomRoutes(
         roomRole: "host",
         addedBy: userId,
       });
-      await audit("collab_room_create", room);
+      await audit(req, "collab_room_create", room);
       res.json({ room: publicRoom(room) });
     } catch (error) {
       fail(res, "collab_room_create_error", "Failed to create room")(error);
@@ -449,7 +451,7 @@ export function registerRoomRoutes(
           });
         }
 
-        await audit("collab_room_invite", access.room, {
+        await audit(req, "collab_room_invite", access.room, {
           memberCount: expanded.size,
         });
         hub.broadcast(roomId, { type: "collab_members_changed", roomId });
@@ -545,6 +547,7 @@ export function registerRoomRoutes(
         }
 
         await audit(
+          req,
           targetId === userId
             ? "collab_room_leave"
             : "collab_room_remove_member",
@@ -681,7 +684,7 @@ export function registerRoomRoutes(
           shareId: share.id,
         };
         hub.broadcast(roomId, { type: "collab_stage_changed", roomId, stage });
-        await audit("collab_room_present", access.room, {
+        await audit(req, "collab_room_present", access.room, {
           protocol,
           hostId: numericHostId,
         });
@@ -741,7 +744,7 @@ export function registerRoomRoutes(
           roomId,
           stage: null,
         });
-        await audit("collab_room_stop_presenting", access.room);
+        await audit(req, "collab_room_stop_presenting", access.room);
         res.json({ success: true });
       } catch (error) {
         fail(res, "collab_room_stop_error", "Failed to stop presenting")(error);
@@ -893,6 +896,7 @@ export function registerRoomRoutes(
           });
         }
         await audit(
+          req,
           targetId ? "collab_control_grant" : "collab_control_revoke",
           access.room,
           { targetUserId: targetId },
@@ -969,7 +973,7 @@ export function registerRoomRoutes(
           roomId,
           ...request,
         });
-        await audit("collab_control_request", access.room);
+        await audit(req, "collab_control_request", access.room);
         res.json({ request });
       } catch (error) {
         fail(
@@ -1076,6 +1080,7 @@ export function registerRoomRoutes(
           roomId,
         });
         await audit(
+          req,
           targetId === userId
             ? "collab_control_request_cancel"
             : "collab_control_request_dismiss",
@@ -1171,6 +1176,7 @@ export function registerRoomRoutes(
         }
 
         await audit(
+          req,
           enabled ? "collab_guest_link_enable" : "collab_guest_link_disable",
           access.room,
         );
@@ -1308,7 +1314,7 @@ export function registerRoomRoutes(
           await rooms.endRoom(roomId);
           hub.broadcast(roomId, { type: "collab_room_ended", roomId });
         }
-        await audit("collab_room_end", access.room);
+        await audit(req, "collab_room_end", access.room);
         res.json({ success: true });
       } catch (error) {
         fail(res, "collab_room_end_error", "Failed to end room")(error);
@@ -1358,7 +1364,7 @@ export function registerRoomRoutes(
         await store.clearRequests(roomId);
         hub.broadcast(roomId, { type: "collab_room_ended", roomId });
         await rooms.deleteRoom(roomId);
-        await audit("collab_room_delete", access.room);
+        await audit(req, "collab_room_delete", access.room);
         res.json({ success: true });
       } catch (error) {
         fail(res, "collab_room_delete_error", "Failed to delete room")(error);

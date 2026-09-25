@@ -109,13 +109,6 @@ export async function resolveHostById(
       host.jumpHosts = [];
     }
   }
-  if (typeof host.tunnelConnections === "string") {
-    try {
-      host.tunnelConnections = JSON.parse(host.tunnelConnections as string);
-    } catch {
-      host.tunnelConnections = [];
-    }
-  }
   if (typeof host.terminalConfig === "string" && host.terminalConfig) {
     try {
       host.terminalConfig = JSON.parse(host.terminalConfig as string);

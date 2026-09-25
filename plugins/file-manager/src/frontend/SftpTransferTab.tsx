@@ -1,3 +1,4 @@
+import { fileManagerHostSetting } from "./host-settings";
 import {
   useCallback,
   useEffect,
@@ -372,11 +373,11 @@ function RemotePane({
         ...current,
         connectionState: "ready",
         sessionId: result.sessionId || String(host.id),
-        path: host.defaultPath || "/",
+        path: fileManagerHostSetting(host, "defaultPath", "") || "/",
       }));
       await loadRemotePath(
         result.sessionId || String(host.id),
-        host.defaultPath || "/",
+        fileManagerHostSetting(host, "defaultPath", "") || "/",
       );
     },
     [loadRemotePath, setPane],
@@ -585,7 +586,7 @@ export function SftpTransferTab() {
         setHosts(
           data.filter(
             (host) =>
-              host.enableFileManager !== false &&
+              fileManagerHostSetting(host, "enableFileManager", true) &&
               host.connectionType !== "rdp" &&
               host.connectionType !== "vnc",
           ),

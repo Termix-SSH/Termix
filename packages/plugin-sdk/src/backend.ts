@@ -456,6 +456,16 @@ export interface PluginSettings {
     value: unknown,
   ) => Promise<void>;
 
+  /**
+   * Every host that saved a value for one of this plugin's host fields, across
+   * all users, with the host's owner. For a background job that must know
+   * which hosts to act on, and as whom, before any request is in flight.
+   * Requires hosts:read. Secret fields cannot be listed.
+   */
+  listHostValues: <T = unknown>(
+    key: string,
+  ) => Promise<Array<{ hostId: number; userId: string; value: T }>>;
+
   /** Every value in one scope, with declared defaults merged in. */
   getAll: (
     scope: "admin" | "user" | "host",
@@ -467,6 +477,19 @@ export interface PluginSettings {
    * API or the HTTP routes. Disposed automatically on deactivate.
    */
   onChange: (key: string, listener: (value: unknown) => void) => () => void;
+
+  /**
+   * Checks a save from the settings screen or host editor before anything is
+   * written. Return field key to message for what is wrong; nothing means the
+   * save goes ahead. Disposed automatically on deactivate.
+   */
+  onValidate: (
+    scope: "admin" | "user" | "host",
+    validator: (
+      values: Record<string, unknown>,
+      context: { hostId?: number },
+    ) => Record<string, string> | void | Promise<Record<string, string> | void>,
+  ) => () => void;
 
   /**
    * Reads a core server setting from a small documented allowlist.
@@ -513,9 +536,6 @@ export interface PluginHostRecord {
   folder: string | null;
   jumpHosts?: unknown;
   enableSsh?: boolean | null;
-  enableTerminal?: boolean | null;
-  enableFileManager?: boolean | null;
-  enableTunnel?: boolean | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   [key: string]: unknown;
@@ -1454,6 +1474,11 @@ export interface PluginAudit {
     details?: string;
     success: boolean;
     errorMessage?: string;
+    /**
+     * The HTTP request or WebSocket upgrade this happened on, for the line's
+     * IP address and user agent.
+     */
+    request?: unknown;
   }) => Promise<void>;
 }
 

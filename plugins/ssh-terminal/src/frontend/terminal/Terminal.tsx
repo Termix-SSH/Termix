@@ -107,24 +107,23 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
   hydrateLocalSharedHostAuth,
-  getUserPreferences,
-  parseCustomKeybindings,
   findMatchingKeybinding,
   SnippetVariablesDialog,
   type CustomKeybinding,
   useConnectionDefaults,
-  getCookie,
   isElectron,
-  logActivity,
-  getHostPassword,
-  patchOpenTab,
-  setHostAutoTmux,
 } from "@termix/plugin-sdk/ui";
 import {
   useTranslation,
   invokeAction,
   usePluginApi,
   useSlotContributions,
+  getCustomKeybindings,
+  getClientPreference,
+  logActivity,
+  getHostPassword,
+  patchOpenTab,
+  setHostAutoTmux,
 } from "@termix/plugin-sdk/frontend";
 
 type HostKeyVerificationData = Omit<
@@ -412,8 +411,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const commandHistoryTrackingEnabled =
-      hostConfig.enableCommandHistory !== false;
+    const commandHistoryTrackingEnabled = hostSetting(
+      hostConfig,
+      "enableCommandHistory",
+      true,
+    );
 
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({
@@ -758,6 +760,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       [clearAutosuggestion, terminal, trackInput],
     );
 
+    const slotApiRef = useRef<TerminalSlotApi | null>(null);
     const slotApi = useMemo<TerminalSlotApi>(
       () => ({
         host,
@@ -791,6 +794,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         hostConfig.instanceId,
       ],
     );
+    slotApiRef.current = slotApi;
 
     const overlayProps = useMemo<TerminalOverlayProps>(
       () => ({
@@ -1426,6 +1430,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         refresh: () => hardRefresh(),
         getApplicationCursorKeysMode: () =>
           terminal?.modes?.applicationCursorKeysMode ?? false,
+        // What the tab menu's share entry needs, read at call time.
+        getShareTarget: () => slotApiRef.current?.getShareTarget() ?? null,
         openFileManager: () => {
           if (webSocketRef.current?.readyState === WebSocket.OPEN) {
             webSocketRef.current.send(JSON.stringify({ type: "get_cwd" }));
@@ -1438,7 +1444,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     );
 
     function getCopyOnSelect() {
-      return getCookie("copyOnSelect") === "true";
+      return getClientPreference("copyOnSelect") === "true";
     }
 
     function attemptReconnection() {
@@ -2945,12 +2951,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       let cancelled = false;
       const loadKeybindings = () => {
-        getUserPreferences()
-          .then((prefs) => {
+        getCustomKeybindings()
+          .then((bindings) => {
             if (!cancelled) {
-              customKeybindingsRef.current = parseCustomKeybindings(
-                prefs.customKeybindings,
-              ).filter((kb) => kb.enabled);
+              customKeybindingsRef.current = bindings.filter(
+                (kb) => kb.enabled,
+              );
             }
           })
           .catch(() => {

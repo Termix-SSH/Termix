@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -301,17 +301,6 @@ export class HostResolutionRepository {
 
   async listAllHosts(): Promise<HostResolutionHostRecord[]> {
     const rows = await this.context.drizzle.select().from(hosts);
-
-    return this.decryptManyByOwner("ssh_data", rows);
-  }
-
-  async listHostsWithTunnelConnections(): Promise<HostResolutionHostRecord[]> {
-    const rows = await this.context.drizzle
-      .select()
-      .from(hosts)
-      .where(
-        and(eq(hosts.enableTunnel, true), isNotNull(hosts.tunnelConnections)),
-      );
 
     return this.decryptManyByOwner("ssh_data", rows);
   }

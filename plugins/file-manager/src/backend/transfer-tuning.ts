@@ -1,7 +1,4 @@
-// TODO(file-manager): move this to ctx.kv, see FINISH-LIST.md
 import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 
 export interface TransferPerformanceProfile {
   throughputBps: number;
@@ -32,15 +29,32 @@ const MB = 1024 * 1024;
 const PROFILE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_PROFILES = 128;
 const STORE_VERSION = 1;
-const STORE_FILENAME = "adaptive-transfer-profiles.json";
 const profiles = new Map<string, TransferPerformanceProfile>();
 const directRoutes = new Map<string, DirectRouteProfile>();
-let loadedPath: string | undefined;
+
+/** Where the learned profiles live: ctx.kv, set on activate. */
+export interface TransferProfileStore {
+  read: () => Promise<unknown>;
+  write: (value: PersistedProfiles) => Promise<void>;
+}
+
+let store: TransferProfileStore | null = null;
+let loadedStore: TransferProfileStore | null = null;
 let loadPromise: Promise<void> | undefined;
+
+export function setTransferProfileStore(
+  next: TransferProfileStore | null,
+): void {
+  store = next;
+  loadedStore = null;
+  loadPromise = undefined;
+  profiles.clear();
+  directRoutes.clear();
+}
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
 let persistPromise = Promise.resolve();
 
-interface PersistedProfiles {
+export interface PersistedProfiles {
   version: typeof STORE_VERSION;
   profiles: Record<string, TransferPerformanceProfile>;
   directRoutes: Record<string, DirectRouteProfile>;
@@ -66,12 +80,6 @@ function validDirectRoute(value: unknown): value is DirectRouteProfile {
       Number.isFinite(profile.cooldownUntil)) &&
     Number.isFinite(profile.updatedAt)
   );
-}
-
-function storePath(): string {
-  const dataDir =
-    process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
-  return path.join(dataDir, STORE_FILENAME);
 }
 
 function profileId(key: string): string {
@@ -117,22 +125,15 @@ function trimProfiles(now = Date.now()): void {
 
 async function persistProfiles(): Promise<void> {
   trimProfiles();
-  const target = storePath();
-  const temporary = `${target}.${process.pid}.tmp`;
-  const payload: PersistedProfiles = {
-    version: STORE_VERSION,
-    profiles: Object.fromEntries(profiles),
-    directRoutes: Object.fromEntries(directRoutes),
-  };
+  if (!store) return;
   try {
-    await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.writeFile(temporary, JSON.stringify(payload), {
-      encoding: "utf8",
-      mode: 0o600,
+    await store.write({
+      version: STORE_VERSION,
+      profiles: Object.fromEntries(profiles),
+      directRoutes: Object.fromEntries(directRoutes),
     });
-    await fs.rename(temporary, target);
   } catch {
-    await fs.rm(temporary, { force: true }).catch(() => {});
+    // Learning data is a nicety; a failed write must not affect transfers.
   }
 }
 
@@ -146,16 +147,16 @@ function queuePersist(): void {
 }
 
 export async function initializeTransferProfiles(): Promise<void> {
-  const target = storePath();
-  if (loadedPath === target) return loadPromise;
-  loadedPath = target;
+  if (loadPromise && loadedStore === store) return loadPromise;
+  loadedStore = store;
+  const current = store;
   loadPromise = (async () => {
     profiles.clear();
     directRoutes.clear();
+    if (!current) return;
     try {
-      const parsed = JSON.parse(
-        await fs.readFile(target, "utf8"),
-      ) as Partial<PersistedProfiles>;
+      const parsed = ((await current.read()) ??
+        {}) as Partial<PersistedProfiles>;
       if (parsed.version !== STORE_VERSION || !parsed.profiles) return;
       for (const [key, profile] of Object.entries(parsed.profiles)) {
         if (/^[a-f0-9]{64}$/.test(key) && validProfile(profile)) {
@@ -381,7 +382,7 @@ export function getRecentDirectRouteDecision(
 export function clearTransferProfiles(): void {
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = undefined;
-  loadedPath = undefined;
+  loadedStore = null;
   loadPromise = undefined;
   profiles.clear();
   directRoutes.clear();

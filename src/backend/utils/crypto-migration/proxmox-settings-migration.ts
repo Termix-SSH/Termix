@@ -10,7 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { selectLegacyRows } from "./raw-rows.js";
 import { createCurrentPluginSettingsRepository } from "../../database/repositories/factory.js";
 
 export interface ProxmoxSettingsMigrationResult {
@@ -30,11 +30,10 @@ export async function runProxmoxSettingsMigration(): Promise<ProxmoxSettingsMigr
   const result: ProxmoxSettingsMigrationResult = { moved: 0, skipped: 0 };
 
   try {
-    const drizzleDb = getDb();
     // Raw SQL, not the typed schema: this runs once schema.ts has already
     // dropped these columns, so the query is the only thing left that still
     // knows they used to exist.
-    const rows = await drizzleDb.all<LegacyProxmoxRow>(sql`
+    const rows = await selectLegacyRows<LegacyProxmoxRow>(sql`
       SELECT id, enable_proxmox, proxmox_config, enable_proxmox_stats, proxmox_stats_config
       FROM ssh_data
       WHERE enable_proxmox = true OR proxmox_config IS NOT NULL

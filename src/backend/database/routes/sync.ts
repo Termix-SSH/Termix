@@ -32,6 +32,10 @@ import {
   updateReturning,
 } from "../repositories/returning.js";
 import { validateParentHostId } from "./host-parent-validation.js";
+import {
+  exportHostPluginSettings,
+  importHostPluginSettings,
+} from "./sync-host-plugin-settings.js";
 
 // Primed at import so every consumer of this module - the routes below, the
 // reference resolvers, the Electron entity-types endpoint - sees the same
@@ -302,6 +306,11 @@ router.get(
             (referenceType, id) =>
               findReferenceSyncId(context, referenceType, id, userId),
           );
+          if (entityType === "hosts") {
+            result.pluginSettings = await exportHostPluginSettings(
+              row.id as number,
+            );
+          }
           return singleton
             ? { ...result, syncId: `${entityType}:singleton` }
             : result;
@@ -461,6 +470,8 @@ router.post(
         );
         if (parentError) return res.status(400).json({ error: parentError });
       }
+      const carriedPluginSettings = resolvedPayload.pluginSettings;
+      delete resolvedPayload.pluginSettings;
       const writePayload = stripWritePayload(entityType, resolvedPayload);
       const encryptedPayload = encryptIfNeeded(
         entityType,
@@ -493,6 +504,10 @@ router.post(
           locateRow,
         );
         resultRow = insertedRows[0] as Record<string, unknown>;
+      }
+
+      if (entityType === "hosts" && typeof resultRow?.id === "number") {
+        await importHostPluginSettings(resultRow.id, carriedPluginSettings);
       }
 
       await DatabaseSaveTrigger.forceSave("sync_upsert");

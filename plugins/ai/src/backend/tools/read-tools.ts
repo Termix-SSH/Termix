@@ -1,6 +1,11 @@
 import type { PluginHostSummary } from "@termix/plugin-sdk/backend";
-import { num, objectSchema, type AiTool } from "./types.js";
+import { num, objectSchema, str, type AiTool } from "./types.js";
 import { readService, SERVICE } from "../services.js";
+import { isReadOnlyCommand } from "./command-allowlist.js";
+import { runCommandOnHost } from "./executor.js";
+
+/** Output handed back to the model is capped; a log can be huge. */
+const MAX_COMMAND_OUTPUT = 8000;
 
 /**
  * Read tools project explicit fields rather than spreading rows. Redaction runs
@@ -30,6 +35,47 @@ function toHostSummary(host: PluginHostSummary) {
 }
 
 export const readTools: AiTool[] = [
+  {
+    name: "run_readonly_command",
+    description:
+      "Run a read-only diagnostic command on a host and get its output, for example df -h, uptime, free -m or systemctl status nginx. Only commands on a fixed read-only allowlist run; anything else must be proposed with propose_run_command.",
+    category: "read",
+    requiresReadOnlyCommands: true,
+    parameters: objectSchema(
+      {
+        hostId: num("The host id, as returned by list_hosts"),
+        command: str("The command to run"),
+      },
+      ["hostId", "command"],
+    ),
+    handler: async (args, context) => {
+      if (!context.allowReadOnlyCommands) {
+        return { error: "The user has not allowed read-only commands" };
+      }
+      const hostId = Number(args.hostId);
+      const command = typeof args.command === "string" ? args.command : "";
+      const check = isReadOnlyCommand(command);
+      if (!check.allowed) {
+        return { error: check.reason ?? "Command is not read-only" };
+      }
+      const access = await context.deps.hosts.checkAccess(hostId, "connect");
+      if (!access.hasAccess) return { error: "Host not found" };
+
+      const result = await runCommandOnHost(context.deps, hostId, command);
+      await context.deps.audit
+        .record({
+          action: "ai_readonly_command",
+          resourceType: "host",
+          resourceId: String(hostId),
+          details: JSON.stringify({ command }),
+          success: !result.error,
+          errorMessage: result.error,
+        })
+        .catch(() => undefined);
+      if (result.error) return { error: result.error };
+      return { output: (result.output ?? "").slice(0, MAX_COMMAND_OUTPUT) };
+    },
+  },
   {
     name: "list_hosts",
     description:

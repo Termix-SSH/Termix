@@ -400,6 +400,20 @@
       "when": 1790300572231,
       "tag": "0056_chilly_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1790304002011,
+      "tag": "0057_married_dragon_lord",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1790304465181,
+      "tag": "0058_goofy_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

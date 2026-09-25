@@ -1,3 +1,4 @@
+import { fileManagerHostSetting } from "./host-settings";
 import type { ComponentType } from "react";
 import { FolderSearch, ArrowLeftRight } from "lucide-react";
 import {
@@ -11,7 +12,6 @@ import { GRID_SIZE } from "./homepage/homepage.js";
 import { FileManager } from "./FileManager.tsx";
 import FileManagerApp from "./FileManagerApp.tsx";
 import { SftpTransferTab } from "./SftpTransferTab.tsx";
-import { HostFilesTab } from "./HostFilesTab.tsx";
 import { FileManagerWidget } from "./homepage/FileManagerWidget.tsx";
 import { FileManagerWidgetEditForm } from "./homepage/FileManagerWidgetEditForm.tsx";
 import { startTransferMonitor } from "./TransferMonitor.tsx";
@@ -104,16 +104,9 @@ export function activate(app: TermixApp): void {
     order: 20,
     tabType: "files",
     copyUrlView: "file-manager",
-    when: (host) => !!host.enableSsh && host.enableFileManager !== false,
-  });
-
-  app.registerHostEditorSection({
-    id: "files",
-    group: "ssh",
-    titleKey: "hosts.tabFiles",
-    icon: FolderSearch,
-    order: 60,
-    component: HostFilesTab as never,
+    when: (host) =>
+      !!host.enableSsh &&
+      fileManagerHostSetting(host, "enableFileManager", true),
   });
 
   app.registerHomepageWidget({

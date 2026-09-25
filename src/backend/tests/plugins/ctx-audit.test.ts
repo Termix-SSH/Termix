@@ -81,3 +81,31 @@ describe("ctx.audit.record", () => {
     });
   });
 });
+
+describe("ctx.audit.record with a request", () => {
+  it("records the request's IP address and user agent", async () => {
+    const ctx = contextFor("audit-fixture");
+    await ctx.audit.record({
+      action: "collab_room_end",
+      success: true,
+      request: {
+        ip: "203.0.113.4",
+        headers: { "user-agent": "TestAgent/1.0" },
+      },
+    });
+    expect(auditEntries[0]).toMatchObject({
+      ipAddress: "203.0.113.4",
+      userAgent: "TestAgent/1.0",
+    });
+  });
+
+  it("falls back to the socket address on an upgrade request", async () => {
+    const ctx = contextFor("audit-fixture");
+    await ctx.audit.record({
+      action: "collab_join",
+      success: true,
+      request: { headers: {}, socket: { remoteAddress: "198.51.100.9" } },
+    });
+    expect(auditEntries[0]).toMatchObject({ ipAddress: "198.51.100.9" });
+  });
+});

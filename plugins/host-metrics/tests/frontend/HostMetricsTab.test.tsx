@@ -54,7 +54,6 @@ vi.mock("../../src/frontend/host-metrics-api", async (importOriginal) => {
 
 vi.mock("@termix/plugin-sdk/ui", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useAreaPreferences: () => ({ columns: 3 }),
   useConfirmation: () => ({ confirmWithToast: vi.fn() }),
   logActivity: vi.fn(async () => undefined),
 }));

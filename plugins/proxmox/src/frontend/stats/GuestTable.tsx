@@ -3,7 +3,7 @@ import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Box, Search, Server as ServerIcon } from "lucide-react";
 import { Input } from "@termix/plugin-sdk/ui";
 import type { ProxmoxGuestSummary } from "../types";
-import { cn } from "./utils";
+import { cn } from "@termix/plugin-sdk/ui";
 
 type StatusFilter = "all" | "running" | "stopped";
 type TypeFilter = "all" | "qemu" | "lxc";

@@ -9,10 +9,24 @@ import type {
 export type TunnelStatusMap = Record<string, TunnelStatus>;
 
 let client: PluginApiClient | null = null;
+let remoteClient: PluginApiClient | null = null;
+let openStream: ((init: RequestInit) => Promise<Response>) | null = null;
+
+export interface TunnelsTransport {
+  /** app.fetch for the status stream, which carries core's auth. */
+  stream?: (init: RequestInit) => Promise<Response>;
+  /** The connected remote server's client, on the desktop app. */
+  remote?: PluginApiClient | null;
+}
 
 /** Set from activate with app.api, cleared on deactivate. */
-export function setTunnelsApi(api: PluginApiClient | null): void {
+export function setTunnelsApi(
+  api: PluginApiClient | null,
+  transport: TunnelsTransport = {},
+): void {
   client = api;
+  remoteClient = api ? (transport.remote ?? null) : null;
+  openStream = api ? (transport.stream ?? null) : null;
 }
 
 function api(): PluginApiClient {
@@ -121,11 +135,23 @@ export function subscribeTunnelStatuses(
       timers.add(timer);
     });
 
-  const url = streamUrl();
+  // A test hands in fetchImpl and a base URL; the app hands in app.fetch.
+  const url = options.fetchImpl ? streamUrl() : null;
+  const connect: ((init: RequestInit) => Promise<Response>) | null = url
+    ? (init) => fetchImpl(url, { credentials: "include", ...init })
+    : openStream;
+  const fetchRemote =
+    options.fetchRemote ??
+    (remoteClient
+      ? async () => {
+          const response = await remoteClient!.get<TunnelStatusMap>("/status");
+          return response.data || {};
+        }
+      : undefined);
 
   void (async () => {
     while (!controller.signal.aborted) {
-      if (!url) {
+      if (!connect) {
         try {
           latestLocal = await getTunnelStatuses();
           emit();
@@ -136,19 +162,9 @@ export function subscribeTunnelStatuses(
         continue;
       }
 
-      const headers: Record<string, string> = {
-        Accept: "text/event-stream",
-      };
-      if (typeof window !== "undefined" && window.electronAPI?.isElectron) {
-        headers["X-Electron-App"] = "true";
-        const jwt = localStorage.getItem("jwt");
-        if (jwt) headers.Authorization = `Bearer ${jwt}`;
-      }
-
       try {
-        const response = await fetchImpl(url, {
-          credentials: "include",
-          headers,
+        const response = await connect({
+          headers: { Accept: "text/event-stream" },
           signal: controller.signal,
         });
         if (!response.ok || !response.body) throw new Error("stream failed");
@@ -179,8 +195,7 @@ export function subscribeTunnelStatuses(
     }
   })();
 
-  if (options.fetchRemote) {
-    const fetchRemote = options.fetchRemote;
+  if (fetchRemote) {
     void (async () => {
       while (!controller.signal.aborted) {
         try {

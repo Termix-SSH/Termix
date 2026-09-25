@@ -38,7 +38,8 @@ export interface HostSidebarFilterState {
   authType: string[];
   /** "ssh" or a plugin protocol id. */
   protocol: string[];
-  features: ("terminal" | "fileManager" | "tunnel" | "docker")[];
+  /** Plugin ids whose host switch must be on. */
+  features: string[];
   tags: string[];
 }
 
@@ -94,14 +95,8 @@ const FILTER_STATUS: HostSidebarFilterState["status"] = [
   "offline",
   "pinned",
 ];
-/** Same shape as a manifest's auth type and protocol ids. */
+/** Same shape as a manifest's auth type, protocol and plugin ids. */
 const AUTH_TYPE_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
-const FILTER_FEATURES: HostSidebarFilterState["features"] = [
-  "terminal",
-  "fileManager",
-  "tunnel",
-  "docker",
-];
 
 export function defaultHostSidebarPreferences(): HostSidebarPreferences {
   return {
@@ -172,7 +167,9 @@ export function sanitizeHostSidebarPreferences(
     protocol: sanitizeStringArray(filtersObj.protocol).filter((value) =>
       AUTH_TYPE_PATTERN.test(value),
     ),
-    features: sanitizeEnumArray(filtersObj.features, FILTER_FEATURES),
+    features: sanitizeStringArray(filtersObj.features).filter((value) =>
+      AUTH_TYPE_PATTERN.test(value),
+    ),
     tags: sanitizeStringArray(filtersObj.tags),
   };
 

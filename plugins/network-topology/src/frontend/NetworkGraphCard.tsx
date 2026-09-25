@@ -31,6 +31,7 @@ import {
   useTranslation,
   usePluginApi,
   useHosts,
+  useHostActions,
   type PluginHostRecord,
 } from "@termix/plugin-sdk/frontend";
 import {
@@ -48,13 +49,8 @@ import {
   Edit,
   FolderInput,
   FolderMinus,
-  Terminal,
   ArrowUp,
   Network,
-  FolderOpen,
-  Container,
-  Server,
-  ArrowDownUp,
   Loader2,
 } from "lucide-react";
 import {
@@ -79,11 +75,6 @@ type HostStatus = "online" | "reachable" | "offline" | "unknown";
 
 interface HostWithStatus extends PluginHostRecord {
   status?: HostStatus;
-  enableTerminal?: boolean;
-  enableFileManager?: boolean;
-  enableTunnel?: boolean;
-  enableDocker?: boolean;
-  tunnelConnections?: unknown;
 }
 
 interface HostMap {
@@ -232,6 +223,7 @@ export function NetworkGraphCard({
   isVisible = true,
 }: NetworkGraphCardProps): React.ReactElement {
   const { t } = useTranslation();
+  const hostActions = useHostActions();
   const { addTab } = useTabsSafe();
   const pluginApi = usePluginApi();
   const api = useMemo(() => createNetworkTopologyApi(pluginApi), [pluginApi]);
@@ -638,18 +630,6 @@ export function NetworkGraphCard({
     fireOpen(contextMenu.targetId, appType);
   };
 
-  const hasTunnelConnections = (h: HostWithStatus | undefined) => {
-    if (!h?.tunnelConnections) return false;
-    try {
-      const arr = Array.isArray(h.tunnelConnections)
-        ? h.tunnelConnections
-        : JSON.parse(h.tunnelConnections as string);
-      return Array.isArray(arr) && arr.length > 0;
-    } catch {
-      return false;
-    }
-  };
-
   const handleConfirmAddNode = async () => {
     if (!cyRef.current || !selectedHostForAddNode) return;
     try {
@@ -813,50 +793,25 @@ export function NetworkGraphCard({
     >
       {contextMenu.type === "node" && (
         <>
-          {hostMap[contextMenu.targetId]?.enableTerminal && (
-            <button
-              onClick={() => handleConnectAction("terminal")}
-              className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
-            >
-              <Terminal className="size-3 shrink-0" />
-              {t("networkGraph.terminal")}
-            </button>
-          )}
-          {hostMap[contextMenu.targetId]?.enableFileManager && (
-            <button
-              onClick={() => handleConnectAction("files")}
-              className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
-            >
-              <FolderOpen className="size-3 shrink-0" />
-              {t("networkGraph.fileManager")}
-            </button>
-          )}
-          {hostMap[contextMenu.targetId]?.enableTunnel &&
-            hasTunnelConnections(hostMap[contextMenu.targetId]) && (
-              <button
-                onClick={() => handleConnectAction("tunnel")}
-                className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
-              >
-                <ArrowDownUp className="size-3 shrink-0" />
-                {t("networkGraph.tunnel")}
-              </button>
-            )}
-          {hostMap[contextMenu.targetId]?.enableDocker && (
-            <button
-              onClick={() => handleConnectAction("docker")}
-              className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
-            >
-              <Container className="size-3 shrink-0" />
-              {t("networkGraph.docker")}
-            </button>
-          )}
-          <button
-            onClick={() => handleConnectAction("host-metrics")}
-            className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
-          >
-            <Server className="size-3 shrink-0" />
-            {t("networkGraph.hostMetrics")}
-          </button>
+          {hostActions
+            .filter((action) => !!action.tabType && !action.items)
+            .filter((action) => {
+              const host = hostMap[contextMenu.targetId];
+              return !!host && action.when(host);
+            })
+            .map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.id}
+                  onClick={() => handleConnectAction(action.tabType!)}
+                  className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
+                >
+                  <Icon className="size-3 shrink-0" />
+                  {t(action.titleKey)}
+                </button>
+              );
+            })}
           {!embedded && (
             <>
               <div className="h-px bg-border mx-2 my-0.5" />

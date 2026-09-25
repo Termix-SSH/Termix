@@ -4,6 +4,7 @@ import {
   hasUiOverrides,
   PRESETS,
   resolveArea,
+  resolvePluginArea,
   sanitizeUiOverrides,
   sanitizeUiPreferences,
   UI_PREFERENCES_VERSION,
@@ -100,14 +101,6 @@ describe("sanitizeUiOverrides", () => {
     expect(result.rail?.hiddenTabs).toEqual(["serial", "history"]);
   });
 
-  it("clamps and rounds integer knobs, dropping out-of-range values", () => {
-    expect(sanitizeUiOverrides({ hostMetrics: { columns: 2.4 } })).toEqual({
-      hostMetrics: { columns: 2 },
-    });
-    expect(sanitizeUiOverrides({ hostMetrics: { columns: 9 } })).toEqual({});
-    expect(sanitizeUiOverrides({ hostMetrics: { columns: 0 } })).toEqual({});
-  });
-
   it("keeps an explicit null for nullable array knobs", () => {
     expect(sanitizeUiOverrides({ homepage: { enabledWidgets: null } })).toEqual(
       {
@@ -161,7 +154,6 @@ describe("PRESETS.balanced", () => {
     expect(PRESETS.balanced.rail.hiddenTabs).toEqual([]);
     expect(PRESETS.balanced.terminal.toolbarDensity).toBe("labeled");
     expect(PRESETS.balanced.fileManager.viewMode).toBe("grid");
-    expect(PRESETS.balanced.docker.viewMode).toBe("list");
     expect(PRESETS.balanced.hostEditor.mode).toBe("full");
     expect(PRESETS.balanced.homepage.enabledWidgets).toBeNull();
   });
@@ -182,5 +174,50 @@ describe("PRESETS.balanced", () => {
         "homepage_preview",
       );
     }
+  });
+});
+
+describe("plugin areas", () => {
+  it("moves version 1 docker and host metrics overrides to their plugins", () => {
+    const upgraded = sanitizeUiPreferences({
+      version: 1,
+      preset: "balanced",
+      overrides: {
+        docker: { containerLayout: "table" },
+        hostMetrics: { columns: 2 },
+      },
+    });
+    expect(upgraded.overrides).toEqual({
+      "plugin:docker": { containerLayout: "table" },
+      "plugin:host-metrics": { columns: 2 },
+    });
+  });
+
+  it("resolves a plugin area from its presets and the user's overrides", () => {
+    const presets = {
+      simple: { columns: 1 },
+      balanced: { columns: 3 },
+      advanced: { columns: 4 },
+    };
+    const preferences = sanitizeUiPreferences({
+      preset: "advanced",
+      overrides: { "plugin:host-metrics": { columns: 2 } },
+    });
+    expect(resolvePluginArea(preferences, "host-metrics", presets)).toEqual({
+      columns: 2,
+    });
+    expect(resolvePluginArea(preferences, "docker", presets)).toEqual({
+      columns: 4,
+    });
+  });
+
+  it("keeps only plain values in a plugin area", () => {
+    const { overrides } = sanitizeUiPreferences({
+      overrides: {
+        "plugin:docker": { ok: "card", nested: { no: 1 }, list: ["a", 2] },
+        "plugin:Bad_Id": { x: 1 },
+      },
+    });
+    expect(overrides).toEqual({ "plugin:docker": { ok: "card" } });
   });
 });

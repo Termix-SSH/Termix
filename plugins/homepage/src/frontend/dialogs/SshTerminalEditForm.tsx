@@ -12,7 +12,7 @@ export function SshTerminalEditForm({
       <SingleHostEditForm
         hostId={config.hostId}
         onChange={(hostId) => onChange({ ...config, hostId })}
-        filter={(h) => !!(h.enableSsh && h.enableTerminal)}
+        filter={(h) => !!h.enableSsh}
       />
       <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
         <input

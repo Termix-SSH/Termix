@@ -13,6 +13,8 @@ import {
   useConnectionRetry,
   useHost,
   useTranslation,
+  logActivity,
+  usePluginUiPreferences,
 } from "@termix/plugin-sdk/frontend";
 import {
   Alert,
@@ -27,12 +29,9 @@ import {
   Separator,
   TOTPDialog,
   BrowserSignInDialog,
-  logActivity,
   useAdaptivePolling,
-  useAreaPreferences,
   useConnectionLog,
   useTabsSafe,
-  useUiPreferencesContext,
 } from "@termix/plugin-sdk/ui";
 import { DockerApiError, useDockerApi, type ConnectResult } from "./docker-api";
 import {
@@ -82,8 +81,10 @@ function DockerManagerInner({
   const docker = useDockerApi();
   const { addLog, setLogs, clearLogs } = useConnectionLog();
   const { currentTab, removeTab } = useTabsSafe();
-  const dockerPrefs = useAreaPreferences("docker");
-  const uiPrefsCtx = useUiPreferencesContext();
+  const { values: dockerPrefs, set: setDockerPref } = usePluginUiPreferences<{
+    viewMode: "list" | "detail";
+    containerLayout: "card" | "table";
+  }>();
 
   // The shell's host list keeps the host current after an edit; a
   // standalone window has no shell, so it keeps the host it was given.
@@ -113,9 +114,9 @@ function DockerManagerInner({
   const handleSetContainerLayout = React.useCallback(
     (layout: "card" | "table") => {
       setContainerLayout(layout);
-      uiPrefsCtx?.setOverride("docker", "containerLayout", layout);
+      setDockerPref("containerLayout", layout);
     },
-    [uiPrefsCtx],
+    [setDockerPref],
   );
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [dockerValidation, setDockerValidation] =

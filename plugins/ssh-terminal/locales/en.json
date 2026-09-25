@@ -157,6 +157,10 @@
         "label": "Command History",
         "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
       },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
+      },
       "imageStorageMode": {
         "label": "Storage Mode",
         "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",

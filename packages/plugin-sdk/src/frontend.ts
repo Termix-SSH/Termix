@@ -644,6 +644,16 @@ export interface TermixApp extends TermixAppInfo {
   tabs: TabsApi;
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
+  /**
+   * Fires after this plugin's settings are saved from the settings screen or
+   * the host editor. Disposed automatically.
+   */
+  onSettingsChanged: (
+    listener: (change: {
+      scope: "admin" | "user" | "host";
+      hostId?: number;
+    }) => void,
+  ) => Disposer;
   /** Registered cleanup, run when the plugin is disabled. */
   onDispose: (dispose: Disposer) => void;
 }
@@ -722,6 +732,7 @@ export interface PluginHostBridge {
   useTheme: () => { theme: "light" | "dark" };
   toast: ToastApi;
   getApi: (pluginId: string) => PluginApiClient;
+  getApiFor: (pluginId: string, origin: unknown) => PluginApiClient;
   useTabs: () => TabsApi;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
   useSshAuthTypes: () => { types: SshAuthTypeInfo[]; loaded: boolean };
@@ -739,6 +750,81 @@ export interface PluginHostBridge {
   activityTarget: (type: string) => ActivityTargetInfo | undefined;
   useHomepageWidgetTypes: () => HomepageWidgetContribution[];
   homepageWidgetType: (id: string) => HomepageWidgetContribution | undefined;
+  core: PluginCoreApi;
+  usePluginUiPreferences: (pluginId: string) => {
+    values: Record<string, unknown>;
+    set: (key: string, value: unknown) => void;
+  };
+}
+
+/** A key combination a user bound in Appearance > Keybindings. */
+export interface KeyCombo {
+  key: string;
+  isCode: boolean;
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+}
+
+export type KeybindingActionType =
+  | "copy"
+  | "paste"
+  | "sendControlCode"
+  | "sendText"
+  | "runSnippet"
+  | "nextTab"
+  | "previousTab"
+  | "openCommandPalette"
+  | "reconnectSession";
+
+export interface KeybindingAction {
+  type: KeybindingActionType;
+  text?: string;
+  controlCode?: string;
+  snippetId?: string;
+  appendEnter?: boolean;
+}
+
+export interface CustomKeybinding {
+  id: string;
+  combo: KeyCombo;
+  action: KeybindingAction;
+  enabled: boolean;
+  overridesDefaultId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Core calls a plugin frontend makes for the signed-in user. */
+export interface PluginCoreApi {
+  /** Adds a recent-activity entry. `type` is one of the plugin's activityTypes. */
+  logActivity: (
+    type: string,
+    hostId: number,
+    hostName: string,
+  ) => Promise<void>;
+  /** A host's stored password or sudo password, for autofill. Null when unset. */
+  getHostPassword: (
+    hostId: number,
+    field: "password" | "sudoPassword",
+  ) => Promise<string | null>;
+  /** Updates the saved open-tab record a page reload reattaches from. */
+  patchOpenTab: (
+    instanceId: string,
+    updates: {
+      hostId?: number;
+      label?: string;
+      tabOrder?: number;
+      backendSessionId?: string | null;
+    },
+  ) => Promise<void>;
+  /** The user's custom keybindings, enabled or not. */
+  getCustomKeybindings: () => Promise<CustomKeybinding[]>;
+  /** Turns auto tmux on or off in a host's terminal options. */
+  setHostAutoTmux: (hostId: number, autoTmux: boolean) => Promise<void>;
+  /** A browser-side UI preference (a cookie, or the desktop app's store). */
+  getClientPreference: (name: string) => string | undefined;
 }
 
 /** What a recent-activity entry opens and how it is labelled. */
@@ -849,9 +935,70 @@ export function useToast(): ToastApi {
   return requireHost().toast;
 }
 
+export function logActivity(
+  type: string,
+  hostId: number,
+  hostName: string,
+): Promise<void> {
+  return requireHost().core.logActivity(type, hostId, hostName);
+}
+
+export function getHostPassword(
+  hostId: number,
+  field: "password" | "sudoPassword",
+): Promise<string | null> {
+  return requireHost().core.getHostPassword(hostId, field);
+}
+
+export function patchOpenTab(
+  instanceId: string,
+  updates: Parameters<PluginCoreApi["patchOpenTab"]>[1],
+): Promise<void> {
+  return requireHost().core.patchOpenTab(instanceId, updates);
+}
+
+export function getCustomKeybindings(): Promise<CustomKeybinding[]> {
+  return requireHost().core.getCustomKeybindings();
+}
+
+export function setHostAutoTmux(
+  hostId: number,
+  autoTmux: boolean,
+): Promise<void> {
+  return requireHost().core.setHostAutoTmux(hostId, autoTmux);
+}
+
+export function getClientPreference(name: string): string | undefined {
+  return requireHost().core.getClientPreference(name);
+}
+
 export function usePluginApi(): PluginApiClient {
   const bridge = requireHost();
   return bridge.getApi(bridge.usePluginId());
+}
+
+/**
+ * This plugin's client for a resolved connection origin: "remote" reaches the
+ * desktop app's connected remote server, anything else is usePluginApi's.
+ */
+export function usePluginApiFor(origin: unknown): PluginApiClient {
+  const bridge = requireHost();
+  return bridge.getApiFor(bridge.usePluginId(), origin);
+}
+
+/**
+ * This plugin's Appearance area: the preset it declared in
+ * contributes.uiPresets for the user's level, with the user's changes on top.
+ * `set` saves one change; null clears it back to the preset.
+ */
+export function usePluginUiPreferences<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(): {
+  values: T;
+  set: <K extends keyof T & string>(key: K, value: T[K] | null) => void;
+} {
+  const bridge = requireHost();
+  return bridge.usePluginUiPreferences(bridge.usePluginId()) as never;
 }
 
 export function useTabs(): TabsApi {

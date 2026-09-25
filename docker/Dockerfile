@@ -87,8 +87,17 @@ RUN npm ci --omit=dev --ignore-scripts && \
 FROM node:26-slim
 WORKDIR /app
 
+# The release the opkssh-downloader stage baked in, so the plugin trusts that
+# binary when the build picks a version other than its pinned one.
+ARG OPKSSH_VERSION=v0.16.0
+ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
+ARG OPKSSH_SHA256_ARM64=9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44
+
 ENV DATA_DIR=/app/data \
     OPKSSH_BUNDLED_DIR=/app/opkssh-bundled \
+    OPKSSH_VERSION=$OPKSSH_VERSION \
+    OPKSSH_SHA256_AMD64=$OPKSSH_SHA256_AMD64 \
+    OPKSSH_SHA256_ARM64=$OPKSSH_SHA256_ARM64 \
     PORT=8080 \
     NODE_ENV=production \
     POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
@@ -107,8 +116,8 @@ COPY --chown=node:node --from=frontend-builder /app/dist /app/html
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
-# Bundled first-party plugins (ssh-terminal). Resolved as dist/plugins by
-# getBundledPluginsDir(); without this the terminal never starts.
+# Bundled first-party plugins, resolved as dist/plugins by
+# getBundledPluginsDir().
 COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
 # Target of node_modules/@termix/plugin-sdk, which core and the plugins import.
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json

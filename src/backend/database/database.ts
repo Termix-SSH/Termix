@@ -24,7 +24,10 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
 import syncRoutes from "./routes/sync.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
-import { mountPluginApi } from "./routes/plugin-api-routes.js";
+import {
+  mountPluginApi,
+  mountPluginLegacyPaths,
+} from "./routes/plugin-api-routes.js";
 import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
@@ -47,11 +50,13 @@ import {
   createCurrentCredentialRepository,
   createCurrentDismissedAlertRepository,
   createCurrentHostRepository,
+  createCurrentPluginSettingsRepository,
   createCurrentSettingsRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentUserRepository,
 } from "./repositories/factory.js";
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
+import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
 import type {
@@ -815,21 +820,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           autostart_key_password TEXT,
           credential_id INTEGER,
           override_credential_username INTEGER,
-          enable_terminal INTEGER NOT NULL DEFAULT 1,
-          enable_tunnel INTEGER NOT NULL DEFAULT 1,
-          tunnel_connections TEXT,
           jump_hosts TEXT,
-          enable_file_manager INTEGER NOT NULL DEFAULT 1,
-          enable_web_ui INTEGER NOT NULL DEFAULT 0,
-          show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1,
-          show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          show_tunnel_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          show_docker_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          default_path TEXT,
           status_check_enabled INTEGER NOT NULL DEFAULT 1,
           status_check_interval INTEGER,
-          web_ui_config TEXT,
           terminal_config TEXT,
           quick_actions TEXT,
           notes TEXT,
@@ -843,6 +836,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           port_knock_sequence TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE plugin_settings (
+          plugin_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          key TEXT NOT NULL,
+          value TEXT
         );
 
         CREATE TABLE ssh_credentials (
@@ -945,8 +945,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_web_ui, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, status_check_enabled, status_check_interval, web_ui_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -973,21 +973,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.autostartKeyPassword || null,
           decrypted.credentialId || null,
           decrypted.overrideCredentialUsername ? 1 : 0,
-          decrypted.enableTerminal ? 1 : 0,
-          decrypted.enableTunnel ? 1 : 0,
-          decrypted.tunnelConnections || null,
           decrypted.jumpHosts || null,
-          decrypted.enableFileManager ? 1 : 0,
-          decrypted.enableWebUi ? 1 : 0,
-          decrypted.showTerminalInSidebar ? 1 : 0,
-          decrypted.showFileManagerInSidebar ? 1 : 0,
-          decrypted.showTunnelInSidebar ? 1 : 0,
-          decrypted.showDockerInSidebar ? 1 : 0,
-          decrypted.showServerStatsInSidebar ? 1 : 0,
-          decrypted.defaultPath || null,
           decrypted.statusCheckEnabled === false ? 0 : 1,
           decrypted.statusCheckInterval ?? null,
-          decrypted.webUiConfig || null,
           decrypted.terminalConfig || null,
           decrypted.quickActions || null,
           decrypted.notes || null,
@@ -1001,6 +989,26 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.portKnockSequence || null,
           decrypted.createdAt,
           decrypted.updatedAt,
+        );
+      }
+
+      // Host-scope plugin settings travel with their hosts. Secrets are sealed
+      // with this server's key, which the importing server does not have.
+      const insertPluginSetting = exportDb.prepare(
+        "INSERT INTO plugin_settings (plugin_id, host_id, key, value) VALUES (?, ?, ?, ?)",
+      );
+      const hostPluginRows =
+        await createCurrentPluginSettingsRepository().getAllForScopeIds(
+          "host",
+          sshHosts.map((host) => String(host.id)),
+        );
+      for (const row of hostPluginRows) {
+        if (row.encrypted) continue;
+        insertPluginSetting.run(
+          row.pluginId,
+          Number(row.scopeId),
+          row.key,
+          row.value,
         );
       }
 
@@ -1377,21 +1385,7 @@ app.post(
                   overrideCredentialUsername: Boolean(
                     host.override_credential_username,
                   ),
-                  enableTerminal: Boolean(host.enable_terminal),
-                  enableTunnel: Boolean(host.enable_tunnel),
-                  tunnelConnections: host.tunnel_connections,
                   jumpHosts: host.jump_hosts,
-                  enableFileManager: Boolean(host.enable_file_manager),
-                  showTerminalInSidebar: Boolean(host.show_terminal_in_sidebar),
-                  showFileManagerInSidebar: Boolean(
-                    host.show_file_manager_in_sidebar,
-                  ),
-                  showTunnelInSidebar: Boolean(host.show_tunnel_in_sidebar),
-                  showDockerInSidebar: Boolean(host.show_docker_in_sidebar),
-                  showServerStatsInSidebar: Boolean(
-                    host.show_server_stats_in_sidebar,
-                  ),
-                  defaultPath: host.default_path,
                   ...legacyStatusCheck(host),
                   terminalConfig: host.terminal_config,
                   quickActions: host.quick_actions,
@@ -1406,7 +1400,14 @@ app.post(
                   updatedAt: new Date().toISOString(),
                 };
 
-                await hostRepository.createEncryptedForUser(userId, hostData);
+                const created = await hostRepository.createEncryptedForUser(
+                  userId,
+                  hostData,
+                );
+                await applyPluginHostImportSettings(
+                  Number(created.id),
+                  importedHostPluginSettings(importDb, host),
+                );
                 result.summary.sshHostsImported++;
               } catch (hostError) {
                 result.summary.errors.push(
@@ -1834,6 +1835,16 @@ app.use(
   createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id)),
 );
 mountPluginApi(app);
+mountPluginLegacyPaths(app, () =>
+  getPluginRuntime()
+    .loader.list()
+    .filter((plugin) => plugin.state === "active")
+    .map((plugin) => ({
+      id: plugin.id,
+      legacyPaths: plugin.manifest.contributes?.http?.legacyPaths ?? [],
+    }))
+    .filter((plugin) => plugin.legacyPaths.length > 0),
+);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),
@@ -2192,4 +2203,45 @@ function legacyStatusCheck(row: Record<string, unknown>): {
         ? seconds
         : null,
   };
+}
+
+/**
+ * What an exported host carries for plugins: the plugin_settings rows a 2.9
+ * export writes, plus the whole row in camelCase so a plugin's import
+ * normalizer can read the columns a 2.8 export still had.
+ */
+function importedHostPluginSettings(
+  importDb: Database.Database,
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+  for (const [column, value] of Object.entries(host)) {
+    raw[column.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())] = value;
+  }
+
+  const pluginSettings: Record<string, Record<string, unknown>> = {};
+  try {
+    const rows = importDb
+      .prepare(
+        "SELECT plugin_id, key, value FROM plugin_settings WHERE host_id = ?",
+      )
+      .all(host.id) as Array<{
+      plugin_id: string;
+      key: string;
+      value: string | null;
+    }>;
+    for (const row of rows) {
+      let value: unknown = null;
+      try {
+        value = row.value === null ? null : JSON.parse(row.value);
+      } catch {
+        continue;
+      }
+      (pluginSettings[row.plugin_id] ??= {})[row.key] = value;
+    }
+  } catch {
+    // A 2.8 export has no plugin_settings table.
+  }
+  raw.pluginSettings = pluginSettings;
+  return raw;
 }

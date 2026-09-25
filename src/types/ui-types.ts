@@ -49,9 +49,6 @@ export type Host = {
   pin?: boolean;
   sortOrder?: number | null;
 
-  enableTerminal: boolean;
-  enableCommandHistory: boolean;
-  enableSessionLogging?: boolean;
   /** Stable identity across a desktop/server sync pair. */
   syncId?: string | null;
   terminalConfig?: Partial<TerminalConfig>;
@@ -76,66 +73,6 @@ export type Host = {
     protocol: "tcp" | "udp";
     delay: number;
   }[];
-
-  enableTunnel: boolean;
-  serverTunnels: {
-    mode: "local" | "remote" | "dynamic";
-    localAddress?: string;
-    remoteAddress?: string;
-    bindHost?: string;
-    targetHost?: string;
-    sourcePort: number;
-    endpointHost: string;
-    endpointPort: number;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-  }[];
-
-  enableFileManager: boolean;
-  scpLegacy?: boolean;
-  defaultPath?: string;
-
-  enableWebUi?: boolean;
-  enableProxmox: boolean;
-  enableTmuxMonitor: boolean;
-  enableTerminalToolbar: boolean;
-  proxmoxConfig?: {
-    source?: {
-      source: "proxmox";
-      sourceHostId: number;
-      node: string;
-      vmid: number;
-      type: "qemu" | "lxc";
-      lastSeenAt?: string;
-      lastStatus?: string;
-      missingSince?: string | null;
-    };
-    defaultCredentialId: number | null;
-    defaultAuthType?: string;
-    windowsPatterns: string;
-    dockerPatterns: string;
-    preferredPrefixes: string;
-    autoSyncEnabled?: boolean;
-    syncIntervalMinutes?: number;
-    markMissingGuests?: boolean;
-    lastSyncAt?: string;
-    lastSyncStatus?: "success" | "error";
-    lastSyncError?: string | null;
-    lastSyncResult?: {
-      created: number;
-      updated: number;
-      markedMissing: number;
-      skipped: number;
-      errors: string[];
-    };
-  } | null;
-  enableProxmoxStats: boolean;
-  proxmoxStatsConfig?: {
-    nodeName?: string | null;
-    pollInterval?: number;
-    enabledCards?: string[];
-  } | null;
 
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */

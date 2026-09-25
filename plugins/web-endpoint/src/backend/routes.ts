@@ -82,10 +82,14 @@ async function openTunnel(
   endpoint: WebEndpoint,
 ): Promise<{ bindHost: string; bindPort: number }> {
   const userId = ctx.currentActor();
-  let tunnels: TunnelsAccess;
+  let tunnels: TunnelsAccess | undefined;
   try {
     tunnels = ctx.services.get<TunnelsAccess>("tunnels.access", { userId });
   } catch {
+    tunnels = undefined;
+  }
+  // A missing provider hands back an empty handle rather than throwing.
+  if (typeof tunnels?.forward !== "function") {
     throw Object.assign(new Error("The tunnels plugin is not available"), {
       status: 503,
     });

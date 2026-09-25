@@ -18,7 +18,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { legacyFlag, selectLegacyRows } from "./raw-rows.js";
 import {
   createCurrentPluginRepository,
   createCurrentPluginSettingsRepository,
@@ -71,6 +71,16 @@ const ADMIN_MOVES: {
     field: "commandHistoryEnabled",
     parse: asBoolean,
   },
+  {
+    // The admin host defaults carried the new-host command history switch.
+    legacyKey: "host_defaults",
+    field: "commandHistoryForNewHosts",
+    parse: (raw) => {
+      const value = (asJson(raw) as { enableCommandHistory?: unknown } | null)
+        ?.enableCommandHistory;
+      return typeof value === "boolean" ? value : undefined;
+    },
+  },
   { legacyKey: "touch_input_settings", field: "touchInput", parse: asJson },
   {
     legacyKey: "terminal_image_storage_mode",
@@ -110,7 +120,7 @@ interface LegacyTerminalHostRow {
 
 /** A column that was never set keeps the old default, on. */
 function isOn(value: number | boolean | null): boolean {
-  return value === null || value === undefined ? true : !!value;
+  return legacyFlag(value, true);
 }
 
 export interface SshTerminalSettingsMigrationResult {
@@ -174,7 +184,7 @@ export async function runSshTerminalSettingsMigration(): Promise<SshTerminalSett
 
     // Raw SQL, not the typed schema, so this keeps working once schema.ts
     // stops declaring these columns.
-    const rows = await getDb().all<LegacyTerminalHostRow>(sql`
+    const rows = await selectLegacyRows<LegacyTerminalHostRow>(sql`
       SELECT id, enable_terminal, enable_terminal_toolbar, enable_command_history
       FROM ssh_data
       WHERE enable_terminal = false

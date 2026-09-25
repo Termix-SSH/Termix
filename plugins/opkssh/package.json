@@ -6,7 +6,7 @@
   "scripts": {
     "build": "termix-plugin build",
     "test": "termix-plugin test",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -b ../../tsconfig.plugins.json ../../tsconfig.plugins.frontend.json",
     "validate": "termix-plugin validate"
   },
   "dependencies": {

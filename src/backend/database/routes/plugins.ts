@@ -14,11 +14,13 @@ import {
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { describePluginFrontend } from "../../plugins/assets.js";
+import { getSetting } from "../../plugins/settings.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import {
   findField,
   getAllSettings,
   setSetting,
+  validateSettingsSave,
   type PluginSettingsScope,
 } from "../../plugins/settings.js";
 import {
@@ -231,57 +233,59 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       );
     }
 
-    const plugins = records.map((record) => {
-      const loaded = live.get(record.id);
+    const plugins = await Promise.all(
+      records.map(async (record) => {
+        const loaded = live.get(record.id);
 
-      let contributes: unknown = null;
-      let capabilities: string[] = [];
-      let icon: string | undefined;
-      let dependencies: Record<string, string> = {};
-      let optionalDependencies: Record<string, string> = {};
-      try {
-        const manifest = JSON.parse(record.manifestJson) as {
-          contributes?: unknown;
-          capabilities?: unknown;
-          icon?: unknown;
-          dependencies?: Record<string, string>;
-          optionalDependencies?: Record<string, string>;
+        let contributes: unknown = null;
+        let capabilities: string[] = [];
+        let icon: string | undefined;
+        let dependencies: Record<string, string> = {};
+        let optionalDependencies: Record<string, string> = {};
+        try {
+          const manifest = JSON.parse(record.manifestJson) as {
+            contributes?: unknown;
+            capabilities?: unknown;
+            icon?: unknown;
+            dependencies?: Record<string, string>;
+            optionalDependencies?: Record<string, string>;
+          };
+          contributes = await withHostFieldDefaults(manifest as PluginManifest);
+          capabilities = Array.isArray(manifest?.capabilities)
+            ? (manifest.capabilities as string[])
+            : [];
+          icon = typeof manifest?.icon === "string" ? manifest.icon : undefined;
+          dependencies = manifest?.dependencies ?? {};
+          optionalDependencies = manifest?.optionalDependencies ?? {};
+        } catch {
+          contributes = null;
+        }
+
+        const summary = {
+          id: record.id,
+          name: record.name,
+          version: record.version,
+          enabled: record.state === "enabled",
+          state: loaded?.state ?? record.state,
+          contributes,
+          icon,
+          dependencies,
+          optionalDependencies,
+          ...describePluginFrontend(loaded),
         };
-        contributes = manifest?.contributes ?? null;
-        capabilities = Array.isArray(manifest?.capabilities)
-          ? (manifest.capabilities as string[])
-          : [];
-        icon = typeof manifest?.icon === "string" ? manifest.icon : undefined;
-        dependencies = manifest?.dependencies ?? {};
-        optionalDependencies = manifest?.optionalDependencies ?? {};
-      } catch {
-        contributes = null;
-      }
 
-      const summary = {
-        id: record.id,
-        name: record.name,
-        version: record.version,
-        enabled: record.state === "enabled",
-        state: loaded?.state ?? record.state,
-        contributes,
-        icon,
-        dependencies,
-        optionalDependencies,
-        ...describePluginFrontend(loaded),
-      };
+        if (!canManage) return summary;
 
-      if (!canManage) return summary;
-
-      return {
-        ...summary,
-        tier: record.tier,
-        source: record.source,
-        capabilities,
-        grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
-        lastError: loaded?.lastError ?? record.lastError ?? null,
-      };
-    });
+        return {
+          ...summary,
+          tier: record.tier,
+          source: record.source,
+          capabilities,
+          grantedCapabilities: grantsByPlugin.get(record.id) ?? [],
+          lastError: loaded?.lastError ?? record.lastError ?? null,
+        };
+      }),
+    );
 
     res.json(plugins);
   } catch (error) {
@@ -762,10 +766,11 @@ async function applySettings(
   scope: PluginSettingsScope,
   scopeId: string | null,
   body: Record<string, unknown>,
+  options: { isHostOwner?: boolean } = {},
 ): Promise<Record<string, string>> {
   const errors: Record<string, string> = {};
 
-  for (const [key, value] of Object.entries(body)) {
+  for (const [key] of Object.entries(body)) {
     const field = findField(manifest, scope, key);
     if (!field) {
       errors[key] = "Not a settings field this plugin declares";
@@ -775,7 +780,22 @@ async function applySettings(
       errors[key] = "You do not have permission to change this setting";
       continue;
     }
+    if (scope === "host" && field.ownerOnly && !options.isHostOwner) {
+      errors[key] = "Only the host's owner can change this setting";
+    }
+  }
+  if (Object.keys(errors).length > 0) return errors;
 
+  // The plugin's own checks see the whole save before anything is written.
+  const rejected = await validateSettingsSave(
+    manifest.id,
+    scope,
+    scopeId,
+    body,
+  );
+  if (Object.keys(rejected).length > 0) return rejected;
+
+  for (const [key, value] of Object.entries(body)) {
     const error = await setSetting(manifest, scope, scopeId, key, value);
     if (error) errors[key] = error;
   }
@@ -1208,11 +1228,14 @@ router.put(
         "host",
         String(hostId),
         req.body,
+        { isHostOwner: access.isOwner === true },
       );
       if (Object.keys(errors).length > 0) {
         res.status(400).json({ error: "Some settings were rejected", errors });
         return;
       }
+      const { touchHost } = await import("./host-plugin-settings.js");
+      await touchHost(hostId);
 
       const values = await getAllSettings(manifest, "host", hostId, {
         redactSecrets: true,
@@ -1230,3 +1253,37 @@ router.put(
 );
 
 export default router;
+
+/**
+ * A host field with defaultFrom starts new hosts at an admin setting's value,
+ * so the host editor gets that value as the field's default.
+ */
+async function withHostFieldDefaults(
+  manifest: PluginManifest,
+): Promise<unknown> {
+  const contributes = manifest?.contributes;
+  const host = contributes?.settings?.host;
+  if (!host?.fields.some((field) => field.defaultFrom)) {
+    return contributes ?? null;
+  }
+  const fields: PluginSettingsField[] = await Promise.all(
+    host.fields.map(async (field) => {
+      if (!field.defaultFrom) return field;
+      try {
+        const value = await getSetting(
+          manifest,
+          "admin",
+          null,
+          field.defaultFrom,
+        );
+        return value === undefined ? field : { ...field, default: value };
+      } catch {
+        return field;
+      }
+    }),
+  );
+  return {
+    ...contributes,
+    settings: { ...contributes.settings, host: { ...host, fields } },
+  };
+}

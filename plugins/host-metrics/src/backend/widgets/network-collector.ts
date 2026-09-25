@@ -49,24 +49,16 @@ export function counterRate(
  * double-sample, so a poll no longer has to block for a fixed settle window.
  * Keyed by host, since counters from one host are meaningless against another.
  */
-const previousSamples = new Map<
-  number,
-  { counters: Map<string, NetworkCounters>; timestamp: number }
->();
+export interface NetworkSamples {
+  counters: Map<
+    number,
+    { counters: Map<string, NetworkCounters>; timestamp: number }
+  >;
+  windows: Map<number, { rows: WindowsAdapterRow[]; timestamp: number }>;
+}
 
-const previousWindowsSamples = new Map<
-  number,
-  { rows: WindowsAdapterRow[]; timestamp: number }
->();
-
-export function clearNetworkSampleCache(hostId?: number): void {
-  if (hostId === undefined) {
-    previousSamples.clear();
-    previousWindowsSamples.clear();
-    return;
-  }
-  previousSamples.delete(hostId);
-  previousWindowsSamples.delete(hostId);
+export function createNetworkSamples(): NetworkSamples {
+  return { counters: new Map(), windows: new Map() };
 }
 
 export function parseDarwinIfconfig(
@@ -112,7 +104,8 @@ export function parseDarwinNetstat(
 
 async function collectDarwinNetworkMetrics(
   client: Client,
-  hostId?: number,
+  hostId: number | undefined,
+  samples: NetworkSamples,
 ): Promise<{
   interfaces: Array<{
     name: string;
@@ -143,7 +136,7 @@ async function collectDarwinNetworkMetrics(
       const netstatOut = await execCommand(client, "netstat -ib 2>/dev/null");
       const current = parseDarwinNetstat(netstatOut.stdout);
       const previous =
-        hostId !== undefined ? previousSamples.get(hostId) : undefined;
+        hostId !== undefined ? samples.counters.get(hostId) : undefined;
       const elapsedSeconds = previous
         ? (readAt - previous.timestamp) / 1000
         : 0;
@@ -166,7 +159,7 @@ async function collectDarwinNetworkMetrics(
         });
       }
       if (hostId !== undefined) {
-        previousSamples.set(hostId, { counters: current, timestamp: readAt });
+        samples.counters.set(hostId, { counters: current, timestamp: readAt });
       }
     } catch {
       for (const [name, data] of ifMap.entries()) {
@@ -225,7 +218,8 @@ export function parseWindowsAdapterJson(output: string): WindowsAdapterRow[] {
 
 async function collectWindowsNetworkMetrics(
   client: Client,
-  hostId?: number,
+  hostId: number | undefined,
+  samples: NetworkSamples,
 ): Promise<{
   interfaces: Array<{
     name: string;
@@ -252,7 +246,7 @@ async function collectWindowsNetworkMetrics(
     const result = await execPowerShell(client, WINDOWS_ADAPTER_SCRIPT);
     const currentRows = parseWindowsAdapterJson(result.stdout);
     const previous =
-      hostId !== undefined ? previousWindowsSamples.get(hostId) : undefined;
+      hostId !== undefined ? samples.windows.get(hostId) : undefined;
     const elapsedSeconds = previous ? (readAt - previous.timestamp) / 1000 : 0;
     const previousMap = new Map(
       (previous?.rows ?? []).map((row) => [row.name, row]),
@@ -276,7 +270,7 @@ async function collectWindowsNetworkMetrics(
     }
 
     if (hostId !== undefined) {
-      previousWindowsSamples.set(hostId, {
+      samples.windows.set(hostId, {
         rows: currentRows,
         timestamp: readAt,
       });
@@ -292,6 +286,7 @@ export async function collectNetworkMetrics(
   client: Client,
   platform?: HostPlatform,
   hostId?: number,
+  samples: NetworkSamples = createNetworkSamples(),
 ): Promise<{
   interfaces: Array<{
     name: string;
@@ -304,10 +299,10 @@ export async function collectNetworkMetrics(
   }>;
 }> {
   if (platform === "darwin") {
-    return collectDarwinNetworkMetrics(client, hostId);
+    return collectDarwinNetworkMetrics(client, hostId, samples);
   }
   if (platform === "windows") {
-    return collectWindowsNetworkMetrics(client, hostId);
+    return collectWindowsNetworkMetrics(client, hostId, samples);
   }
 
   const interfaces: Array<{
@@ -368,7 +363,7 @@ export async function collectNetworkMetrics(
       const procNet = await execCommand(client, "cat /proc/net/dev");
       const rxTxMap = parseNetworkCounters(procNet.stdout);
       const previous =
-        hostId !== undefined ? previousSamples.get(hostId) : undefined;
+        hostId !== undefined ? samples.counters.get(hostId) : undefined;
       const elapsedSeconds = previous
         ? (readAt - previous.timestamp) / 1000
         : 0;
@@ -395,7 +390,7 @@ export async function collectNetworkMetrics(
         });
       }
       if (hostId !== undefined) {
-        previousSamples.set(hostId, {
+        samples.counters.set(hostId, {
           counters: rxTxMap,
           timestamp: readAt,
         });

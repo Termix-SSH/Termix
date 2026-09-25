@@ -22,6 +22,7 @@ import {
 import { ADMIN_KEYS } from "./settings.js";
 import { commandHistory } from "./tables.js";
 import { createTerminalSocket } from "./terminal-socket.js";
+import { validateAdminSettings } from "./settings-validation.js";
 
 function toInfo(session: TerminalSession): LiveSessionInfo {
   return {
@@ -55,6 +56,7 @@ function optionalService<T extends object>(
 
 export async function activate(ctx: PluginContext) {
   const log = createTerminalLogger(ctx.log);
+  ctx.settings.onValidate("admin", validateAdminSettings);
 
   const table = await ctx.db.define(commandHistory);
   const history = createHistoryRepository(ctx.db, table);

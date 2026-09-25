@@ -4,19 +4,21 @@ import { Server } from "lucide-react";
 import { Input } from "@/components/input";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import { getCredentials } from "@/main-axios";
-import type { HostEditorForm } from "@/sidebar/HostEditorData";
 import { Select2 } from "@/components/select2";
+import type { ProxmoxHostConfig } from "./types";
 
-type SetHostField = <K extends keyof HostEditorForm>(
-  key: K,
-  value: HostEditorForm[K],
-) => void;
+interface HostProxmoxForm {
+  enableProxmox: boolean;
+  proxmoxConfig: ProxmoxHostConfig | null;
+}
+
+type SetHostField = (key: string, value: unknown) => void;
 
 export function HostProxmoxTab({
   form,
   setField,
 }: {
-  form: HostEditorForm;
+  form: HostProxmoxForm;
   setField: SetHostField;
 }) {
   const { t } = useTranslation();

@@ -116,7 +116,10 @@
         "descriptionKey": "permissions.run.description",
         "defaultRoles": ["user"]
       }
-    ]
+    ],
+    "http": {
+      "legacyPaths": ["/automations/webhook"]
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"],

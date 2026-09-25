@@ -13,12 +13,33 @@
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import { createCurrentPluginSettingsRepository } from "../repositories/factory.js";
 import type { PluginSettingsRecord } from "../repositories/plugin-settings-repository.js";
-import { declaredFields, resolveFieldValue } from "../../plugins/settings.js";
+import {
+  declaredFields,
+  resolveFieldValue,
+  setSetting,
+} from "../../plugins/settings.js";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { consume } from "../../plugins/registry.js";
 import { sshLogger } from "../../utils/logger.js";
 
 export type HostPluginSettings = Record<string, Record<string, unknown>>;
+
+/**
+ * Marks a host changed after one of its plugin settings did, so remote sync,
+ * which pulls by updated_at, carries the new value across.
+ */
+export async function touchHost(hostId: number): Promise<void> {
+  try {
+    const { sql } = await import("drizzle-orm");
+    const { runStatement } =
+      await import("../../utils/crypto-migration/raw-rows.js");
+    await runStatement(
+      sql`UPDATE ssh_data SET updated_at = ${new Date().toISOString()} WHERE id = ${hostId}`,
+    );
+  } catch {
+    // Only a sync hint; the setting itself is already saved.
+  }
+}
 
 /** Enabled plugins that declare host-scope settings, with their manifests. */
 export function hostSettingsPlugins(): PluginManifest[] {
@@ -105,6 +126,71 @@ export async function loadHostPluginSettings(
   return result;
 }
 
+const SHARE_LEVELS = ["connect", "view", "edit", "manage"];
+
+/**
+ * Drops the fields a shared host's recipient may not read: a field declares
+ * the lowest share level that sees it with shareRead. The owner sees all.
+ */
+export function visibleHostPluginSettings(
+  values: HostPluginSettings,
+  host: Record<string, unknown>,
+): HostPluginSettings {
+  if (!host.isShared) return values;
+  const level = SHARE_LEVELS.indexOf(
+    typeof host.permissionLevel === "string" ? host.permissionLevel : "connect",
+  );
+  const result: HostPluginSettings = {};
+  for (const manifest of hostSettingsPlugins()) {
+    const own = values[manifest.id];
+    if (!own) continue;
+    const copy = { ...own };
+    for (const field of declaredFields(manifest, "host")) {
+      if (
+        field.shareRead &&
+        SHARE_LEVELS.indexOf(field.shareRead) > Math.max(level, 0)
+      ) {
+        delete copy[field.key];
+      }
+    }
+    result[manifest.id] = copy;
+  }
+  return result;
+}
+
+/**
+ * Fields a plugin still puts on the host payload in their pre-2.9 shape, for
+ * clients outside Termix (Termix-Mobile) that have not moved to
+ * pluginSettings yet. Registered as ctx.registry.provide(
+ * "<id>.hostPayloadLegacy", fn); the function gets the plugin's own host
+ * values and the host, and never overwrites a field core already set.
+ */
+export type PluginHostPayloadLegacy = (
+  values: Record<string, unknown>,
+  host: Record<string, unknown>,
+) => Record<string, unknown> | null;
+
+function applyLegacyFields(
+  host: Record<string, unknown>,
+  values: HostPluginSettings,
+): void {
+  for (const manifest of hostSettingsPlugins()) {
+    const own = values[manifest.id];
+    if (!own) continue;
+    const legacy = consume<PluginHostPayloadLegacy>(
+      `${manifest.id}.hostPayloadLegacy`,
+    );
+    if (!legacy) continue;
+    try {
+      for (const [key, value] of Object.entries(legacy(own, host) ?? {})) {
+        if (!(key in host)) host[key] = value;
+      }
+    } catch {
+      // A plugin's compat shape must never break a host read.
+    }
+  }
+}
+
 /** Attaches the map to already-transformed host objects, in place. */
 export function attachHostPluginSettings(
   hosts: Record<string, unknown>[],
@@ -114,7 +200,9 @@ export function attachHostPluginSettings(
   for (const host of hosts) {
     const hostId = Number(host.id);
     const values = settings.get(hostId);
-    if (values) host.pluginSettings = values;
+    if (!values) continue;
+    host.pluginSettings = visibleHostPluginSettings(values, host);
+    applyLegacyFields(host, host.pluginSettings as HostPluginSettings);
   }
 }
 
@@ -127,7 +215,13 @@ export async function withHostPluginSettings(
 
   const settings = await loadHostPluginSettings([hostId]);
   const values = settings.get(hostId);
-  return values ? { ...host, pluginSettings: values } : host;
+  if (!values) return host;
+  const result: Record<string, unknown> = {
+    ...host,
+    pluginSettings: visibleHostPluginSettings(values, host),
+  };
+  applyLegacyFields(result, result.pluginSettings as HostPluginSettings);
+  return result;
 }
 
 /**
@@ -175,13 +269,33 @@ export async function applyPluginHostImportSettings(
   hostId: number,
   raw: Record<string, unknown>,
 ): Promise<void> {
+  const exported =
+    raw.pluginSettings && typeof raw.pluginSettings === "object"
+      ? (raw.pluginSettings as HostPluginSettings)
+      : {};
+
   for (const manifest of hostSettingsPlugins()) {
-    const normalizer = consume<PluginHostImportNormalizer>(
-      `${manifest.id}.hostImportNormalizer`,
-    );
-    if (!normalizer) continue;
     try {
-      const values = normalizer(raw);
+      // What an export carried for this plugin, validated like any other
+      // write. Secrets never leave the server, so there are none to restore.
+      const carried = exported[manifest.id];
+      if (carried && typeof carried === "object") {
+        for (const field of declaredFields(manifest, "host")) {
+          if (field.type === "secret" || !(field.key in carried)) continue;
+          await setSetting(
+            manifest,
+            "host",
+            hostId,
+            field.key,
+            carried[field.key],
+          );
+        }
+      }
+
+      const normalizer = consume<PluginHostImportNormalizer>(
+        `${manifest.id}.hostImportNormalizer`,
+      );
+      const values = normalizer?.(raw);
       if (values) await writeHostPluginSettings(manifest.id, hostId, values);
     } catch (error) {
       sshLogger.warn("Plugin host import normalizer failed", {
@@ -192,4 +306,23 @@ export async function applyPluginHostImportSettings(
       });
     }
   }
+}
+
+/**
+ * Turns one plugin's host switch on or off for a set of hosts. Returns false
+ * when the plugin is not running or declares no enableKey.
+ */
+export async function setHostPluginEnabled(
+  pluginId: string,
+  hostIds: number[],
+  enabled: boolean,
+): Promise<boolean> {
+  const manifest = hostSettingsPlugins().find((m) => m.id === pluginId);
+  const enableKey = manifest?.contributes?.settings?.host?.enableKey;
+  if (!manifest || !enableKey) return false;
+  for (const hostId of hostIds) {
+    await setSetting(manifest, "host", hostId, enableKey, enabled);
+    await touchHost(hostId);
+  }
+  return true;
 }

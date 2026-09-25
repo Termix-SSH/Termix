@@ -46,10 +46,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
   const isSshHost = h.connectionType === "ssh" || !h.connectionType;
   const parsedTerminalConfig = parseJson(h.terminalConfig) as
     (Host["terminalConfig"] & { sudoPassword?: string }) | undefined;
-  const proxmoxSettings = (h.pluginSettings?.proxmox ?? {}) as Record<
-    string,
-    unknown
-  >;
   return {
     id: String(h.id),
     name: h.name,
@@ -83,23 +79,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     sortOrder: h.sortOrder ?? null,
     connectionOrigin: h.connectionOrigin ?? null,
     enableSsh: h.enableSsh != null ? h.enableSsh : isSshHost,
-    enableTerminal:
-      h.enableTerminal ?? (h.enableSsh != null ? h.enableSsh : isSshHost),
-    enableSessionLogging: h.enableSessionLogging ?? true,
-    enableCommandHistory: h.enableCommandHistory ?? true,
-    enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? true,
-    enableWebUi: h.enableWebUi ?? false,
-    enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
-    enableProxmoxStats:
-      (proxmoxSettings.enableProxmoxStats as boolean) ?? false,
-    enableTmuxMonitor: h.enableTmuxMonitor ?? false,
-    enableTerminalToolbar: h.enableTerminalToolbar ?? true,
-    proxmoxConfig:
-      (proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
-    proxmoxStatsConfig:
-      (proxmoxSettings.proxmoxStatsConfig as Host["proxmoxStatsConfig"]) ??
-      null,
     sshPort:
       h.sshPort ??
       (h.connectionType === "ssh" || !h.connectionType ? h.port : 22),
@@ -132,12 +111,10 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       name: a.name,
       snippetId: String(a.snippetId),
     })),
-    serverTunnels: parseJson(h.tunnelConnections) ?? [],
     jumpHosts: (parseJson<HostJumpHost[]>(h.jumpHosts) ?? []).map((j) => ({
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),
     portKnockSequence: parseJson(h.portKnockSequence) ?? [],
-    defaultPath: h.defaultPath,
     terminalConfig: parsedTerminalConfig as Host["terminalConfig"],
     hasSudoPassword:
       !!host.hasSudoPassword || !!parsedTerminalConfig?.sudoPassword,

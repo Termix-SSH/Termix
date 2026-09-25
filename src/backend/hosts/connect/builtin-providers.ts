@@ -1,6 +1,6 @@
 /**
  * The SSH auth types core always provides: password, key, credential, agent
- * and none. Everything else is a plugin (or, in 2.9.0, a legacy provider).
+ * and none. Everything else is a plugin, through ctx.auth.
  */
 
 import ssh2 from "ssh2";

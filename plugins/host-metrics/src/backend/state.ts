@@ -1,3 +1,6 @@
+import type { CpuSamples } from "./widgets/cpu-collector.js";
+import { createNetworkSamples } from "./widgets/network-collector.js";
+
 export type HostStatus = "online" | "reachable" | "offline";
 
 export class RequestQueue {
@@ -422,8 +425,30 @@ export function canStartInitialMetrics(
 }
 
 /** Everything one activation of the plugin polls with. */
+/** The last CPU and network sample per host, for rates between polls. */
+export function createRateSamples() {
+  const cpu: CpuSamples = new Map();
+  const network = createNetworkSamples();
+  return {
+    cpu,
+    network,
+    clear(hostId?: number) {
+      if (hostId === undefined) {
+        cpu.clear();
+        network.counters.clear();
+        network.windows.clear();
+        return;
+      }
+      cpu.delete(hostId);
+      network.counters.delete(hostId);
+      network.windows.delete(hostId);
+    },
+  };
+}
+
 export function createMetricsState() {
   return {
+    rateSamples: createRateSamples(),
     /** SSH metrics execs are expensive; resized with the fleet. */
     metricsLimiter: new ConcurrentLimiter(5),
     /** Viewer registration is bursty; admit only two first samples at a time. */

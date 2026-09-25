@@ -10,7 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { selectLegacyRows } from "./raw-rows.js";
 import { createCurrentPluginSettingsRepository } from "../../database/repositories/factory.js";
 
 export interface TmuxMonitorSettingsMigrationResult {
@@ -27,12 +27,11 @@ export async function runTmuxMonitorSettingsMigration(): Promise<TmuxMonitorSett
   const result: TmuxMonitorSettingsMigrationResult = { moved: 0, skipped: 0 };
 
   try {
-    const drizzleDb = getDb();
     // Raw SQL, not the typed schema, so this keeps working once schema.ts
     // stops declaring this column. The plugin's enable switch defaults to
     // off, matching the old column's default, so only hosts that turned it
     // on need a row.
-    const rows = await drizzleDb.all<LegacyTmuxMonitorRow>(sql`
+    const rows = await selectLegacyRows<LegacyTmuxMonitorRow>(sql`
       SELECT id, enable_tmux_monitor
       FROM ssh_data
       WHERE enable_tmux_monitor = true

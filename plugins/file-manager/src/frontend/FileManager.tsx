@@ -1,3 +1,4 @@
+import { fileManagerHostSetting } from "./host-settings";
 import { getErrorMessage } from "@/lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {
@@ -44,7 +45,11 @@ import {
   ConnectionScreen,
 } from "@termix/plugin-sdk/ui";
 import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
-import { invokeAction, useConnectionRetry } from "@termix/plugin-sdk/frontend";
+import {
+  invokeAction,
+  useConnectionRetry,
+  logActivity,
+} from "@termix/plugin-sdk/frontend";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import {
   listSSHFiles,
@@ -77,7 +82,6 @@ import {
   getPinnedFiles,
 } from "./api/file-manager-data-api";
 import {
-  logActivity,
   transferToHost,
   addTransferRecent,
   type TransferMethodPreference,
@@ -145,15 +149,21 @@ function FileManagerContent({
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
-    initialPath || initialHost?.defaultPath || "/",
+    initialPath ||
+      fileManagerHostSetting(initialHost, "defaultPath", "") ||
+      "/",
   );
   const currentPathRef = useRef(currentPath);
   currentPathRef.current = currentPath;
   const lastSuccessfulPathRef = useRef(
-    initialPath || initialHost?.defaultPath || "/",
+    initialPath ||
+      fileManagerHostSetting(initialHost, "defaultPath", "") ||
+      "/",
   );
   const [navHistory, setNavHistory] = useState<string[]>([
-    initialPath || initialHost?.defaultPath || "/",
+    initialPath ||
+      fileManagerHostSetting(initialHost, "defaultPath", "") ||
+      "/",
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);

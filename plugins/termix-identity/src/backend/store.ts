@@ -173,15 +173,11 @@ export function createStore(ctx: PluginContext, tables: Tables) {
     },
 
     async createKey(input: NewKey): Promise<KeyRow> {
-      await (
-        await client()
-      )
-        .insert(keys)
-        .values({
-          ...input,
-          enabled: true,
-          createdAt: new Date().toISOString(),
-        });
+      await (await client()).insert(keys).values({
+        ...input,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+      });
       await ctx.db.persist();
       // A public key appears once per identity, so it finds the new row.
       const row = await first<Record<string, unknown>>(

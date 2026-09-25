@@ -340,3 +340,12 @@ describe("parsePluginWsUrl", () => {
     expect(ws.parsePluginWsUrl(undefined)).toBeNull();
   });
 });
+
+describe("ctx.ws clashes", () => {
+  it("refuses the same path twice", () => {
+    ws.registerPluginWsRoute("sample-plugin", "/twice", () => {}, DECLARED);
+    expect(() =>
+      ws.registerPluginWsRoute("sample-plugin", "/twice", () => {}, DECLARED),
+    ).toThrow(/already registered/);
+  });
+});

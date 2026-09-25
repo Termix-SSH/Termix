@@ -68,6 +68,8 @@ export interface HostStatusDeps {
     userId?: string;
     hostIds?: number[];
   }) => Promise<StatusTarget[]>;
+  /** Hosts other users shared with this one, directly or through a role. */
+  loadSharedHostIds?: (userId: string) => Promise<number[]>;
   ping: (host: string, port: number) => Promise<boolean>;
   pingThroughJumpHosts: (
     target: StatusTarget,
@@ -110,6 +112,17 @@ const defaultDeps: HostStatusDeps = {
     (
       await createCurrentHostResolutionRepository().listStatusTargets(filter)
     ).map(toStatusTarget),
+  loadSharedHostIds: async (userId) => {
+    const { createCurrentRbacAccessRepository, createCurrentRoleRepository } =
+      await import("../../database/repositories/factory.js");
+    const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+    const entries =
+      await createCurrentRbacAccessRepository().listVisibleHostAccessEntries(
+        userId,
+        roleIds,
+      );
+    return [...new Set(entries.map((entry) => entry.hostId))];
+  },
   ping: (host, port) => tcpPing(host, port, 5000),
   pingThroughJumpHosts: async (target, port) => {
     const { createJumpHostChain } = await import("../jump-host-chain.js");
@@ -266,6 +279,35 @@ export class HostStatusService {
     for (const target of targets) {
       if (!this.polled.has(target.id)) this.startPolling(target);
     }
+    await this.startShared(userId, null);
+  }
+
+  /**
+   * Hosts shared with the user are checked as their owners, even when no
+   * owner has asked for statuses since the server started.
+   */
+  private async startShared(
+    userId: string,
+    allowed: Set<number> | null,
+  ): Promise<void> {
+    if (!this.deps.loadSharedHostIds) return;
+    try {
+      const shared = (await this.deps.loadSharedHostIds(userId)).filter(
+        (hostId) =>
+          !this.polled.has(hostId) && (allowed === null || allowed.has(hostId)),
+      );
+      if (shared.length === 0) return;
+      const targets = await this.deps.loadTargets({ hostIds: shared });
+      for (const target of targets) {
+        if (!this.polled.has(target.id)) this.startPolling(target);
+      }
+    } catch (error) {
+      sshLogger.warn("Could not start status checks for shared hosts", {
+        operation: "host_status_shared",
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private async reconcile(userId: string, allowed: Set<number>): Promise<void> {
@@ -278,6 +320,7 @@ export class HostStatusService {
       }
       if (!this.polled.has(target.id)) this.startPolling(target);
     }
+    await this.startShared(userId, allowed);
   }
 
   private async reload(hostId: number): Promise<void> {

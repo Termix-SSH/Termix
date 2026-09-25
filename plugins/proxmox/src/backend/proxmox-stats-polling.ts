@@ -130,9 +130,8 @@ export class ProxmoxPollingManager<
     return intervalMs + jitter;
   }
 
-  // Host Metrics' own retention setting is not on the core settings
-  // allowlist, so this plugin uses a fixed default rather than reaching for
-  // it. See FINISH-LIST.md.
+  // Host Metrics' retention setting belongs to that plugin, so node history
+  // keeps a fixed week.
   private readonly retentionDays = 7;
 
   private async pollHostStats(

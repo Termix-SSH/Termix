@@ -6,16 +6,7 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
 import type { Host } from "@/types/ui-types";
-import {
-  Activity,
-  Globe,
-  LayoutGrid,
-  Plus,
-  Tag,
-  Terminal,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Activity, Globe, Plus, Tag, Terminal, Trash2, X } from "lucide-react";
 import { FolderPathPicker } from "./FolderPathPicker";
 import { HostParentPicker } from "./HostParentPicker";
 import { getSSHFolders, isElectron } from "@/main-axios";
@@ -849,23 +840,6 @@ export function HostEditorGeneralTab({
               />
             </SettingRow>
           )}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        title={t("hosts.connectionToolbar")}
-        icon={<LayoutGrid className="size-3.5" />}
-      >
-        <div className="flex flex-col gap-4 py-3">
-          <SettingRow
-            label={t("hosts.showConnectionToolbar")}
-            description={t("hosts.showConnectionToolbarDesc")}
-          >
-            <FakeSwitch
-              checked={form.enableTerminalToolbar}
-              onChange={(value) => setField("enableTerminalToolbar", value)}
-            />
-          </SettingRow>
         </div>
       </SectionCard>
     </>

@@ -16,7 +16,8 @@
  * users who land on it see no change at all.
  */
 
-export const UI_PREFERENCES_VERSION = 1;
+/** 2: the docker and host metrics areas moved to their plugins. */
+export const UI_PREFERENCES_VERSION = 2;
 
 /** Bump when onboarding gains steps existing users should be shown again. */
 export const UI_ONBOARDING_VERSION = 2;
@@ -31,8 +32,6 @@ export type UiAreaKey =
   | "dashboard"
   | "terminal"
   | "fileManager"
-  | "docker"
-  | "hostMetrics"
   | "hostEditor"
   | "homepage";
 
@@ -51,8 +50,6 @@ export type UiRowActions = "essential" | "full";
 export type UiEmptyStateVerbosity = "minimal" | "guided";
 export type UiToolbarDensity = "icon" | "labeled" | "expanded";
 export type UiFileViewMode = "grid" | "list";
-export type UiDockerViewMode = "list" | "detail";
-export type UiDockerContainerLayout = "card" | "table";
 export type UiHostEditorMode = "simple" | "full";
 
 export interface UiChromePreferences {
@@ -92,16 +89,6 @@ export interface UiFileManagerPreferences {
   showHiddenFiles: boolean;
 }
 
-export interface UiDockerPreferences {
-  viewMode: UiDockerViewMode;
-  containerLayout: UiDockerContainerLayout;
-}
-
-export interface UiHostMetricsPreferences {
-  enabledCards: string[];
-  columns: number;
-}
-
 export interface UiHostEditorPreferences {
   mode: UiHostEditorMode;
 }
@@ -119,15 +106,16 @@ export interface UiAreaPreferences {
   dashboard: UiDashboardPreferences;
   terminal: UiTerminalPreferences;
   fileManager: UiFileManagerPreferences;
-  docker: UiDockerPreferences;
-  hostMetrics: UiHostMetricsPreferences;
   hostEditor: UiHostEditorPreferences;
   homepage: UiHomepagePreferences;
 }
 
+/** A plugin's own area, keyed "plugin:<id>", holding what it declared in contributes.uiPresets. */
+export type UiPluginAreaKey = `plugin:${string}`;
+
 export type UiOverrides = {
   [A in UiAreaKey]?: Partial<UiAreaPreferences[A]>;
-};
+} & { [key: UiPluginAreaKey]: Record<string, unknown> };
 
 export interface UiOnboardingState {
   /** 0 means "never completed". Compared against UI_ONBOARDING_VERSION. */
@@ -190,25 +178,6 @@ const BALANCED_DASHBOARD_CARDS = [
 // the edge of the screen. They stay available in the Add card tray.
 const ADVANCED_DASHBOARD_CARDS = [...BALANCED_DASHBOARD_CARDS, "service_links"];
 
-/** Host metrics card ids, mirroring CARD_DEFINITIONS in plugins/host-metrics/src/frontend/cards. */
-const SIMPLE_HOST_METRICS_CARDS = ["cpu", "memory", "disk"];
-const BALANCED_HOST_METRICS_CARDS = [
-  "cpu",
-  "memory",
-  "disk",
-  "network",
-  "uptime",
-  "system",
-];
-const ADVANCED_HOST_METRICS_CARDS = [
-  ...BALANCED_HOST_METRICS_CARDS,
-  "login_stats",
-  "ports",
-  "processes",
-  "firewall",
-  "temperature",
-];
-
 export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
   simple: {
     chrome: {
@@ -238,8 +207,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     },
     terminal: { toolbarDensity: "icon" },
     fileManager: { viewMode: "grid", showHiddenFiles: false },
-    docker: { viewMode: "list", containerLayout: "card" },
-    hostMetrics: { enabledCards: SIMPLE_HOST_METRICS_CARDS, columns: 1 },
     hostEditor: { mode: "simple" },
     homepage: { enabledWidgets: null },
   },
@@ -263,9 +230,7 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     terminal: { toolbarDensity: "labeled" },
     // FileManager.tsx has always defaulted to grid when nothing is stored.
     fileManager: { viewMode: "grid", showHiddenFiles: false },
-    docker: { viewMode: "list", containerLayout: "card" },
     // 3 is defaultLayoutFromWidgets's own default, i.e. today's behavior.
-    hostMetrics: { enabledCards: BALANCED_HOST_METRICS_CARDS, columns: 3 },
     hostEditor: { mode: "full" },
     homepage: { enabledWidgets: null },
   },
@@ -289,8 +254,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     terminal: { toolbarDensity: "expanded" },
     // List packs more files and metadata per screen than the grid.
     fileManager: { viewMode: "list", showHiddenFiles: true },
-    docker: { viewMode: "detail", containerLayout: "table" },
-    hostMetrics: { enabledCards: ADVANCED_HOST_METRICS_CARDS, columns: 4 },
     hostEditor: { mode: "full" },
     homepage: { enabledWidgets: null },
   },
@@ -347,14 +310,6 @@ const AREA_SPECS: {
     viewMode: { kind: "enum", values: ["grid", "list"] },
     showHiddenFiles: { kind: "bool" },
   },
-  docker: {
-    viewMode: { kind: "enum", values: ["list", "detail"] },
-    containerLayout: { kind: "enum", values: ["card", "table"] },
-  },
-  hostMetrics: {
-    enabledCards: { kind: "stringArray" },
-    columns: { kind: "int", min: 1, max: 4 },
-  },
   hostEditor: {
     mode: { kind: "enum", values: ["simple", "full"] },
   },
@@ -399,9 +354,59 @@ function coerce(spec: FieldSpec, value: unknown): unknown | undefined {
  * Object.keys(overrides).length > 0 an honest "has customizations" check for
  * the settings UI rather than something that accumulates {hostList:{}} noise.
  */
-export function sanitizeUiOverrides(input: unknown): UiOverrides {
+const PLUGIN_AREA_PATTERN = /^plugin:[a-z][a-z0-9-]{0,63}$/;
+const PLUGIN_AREA_MAX_KEYS = 32;
+
+/**
+ * A plugin area's values are only checked for shape: core does not know the
+ * plugin's fields, and the plugin reads them against its own presets.
+ */
+function sanitizePluginArea(input: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!input || typeof input !== "object") return out;
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (Object.keys(out).length >= PLUGIN_AREA_MAX_KEYS) break;
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(key)) continue;
+    if (
+      typeof value === "boolean" ||
+      (typeof value === "number" && Number.isFinite(value)) ||
+      (typeof value === "string" && value.length <= 200)
+    ) {
+      out[key] = value;
+    } else if (
+      Array.isArray(value) &&
+      value.length <= 100 &&
+      value.every((item) => typeof item === "string" && item.length <= 200)
+    ) {
+      out[key] = [...value];
+    }
+  }
+  return out;
+}
+
+/** Version 1 stored the docker and host metrics areas under core names. */
+const LEGACY_PLUGIN_AREAS: Record<string, UiPluginAreaKey> = {
+  docker: "plugin:docker",
+  hostMetrics: "plugin:host-metrics",
+};
+
+export function sanitizeUiOverrides(
+  input: unknown,
+  version = UI_PREFERENCES_VERSION,
+): UiOverrides {
   const out: Record<string, Record<string, unknown>> = {};
   if (!input || typeof input !== "object") return out as UiOverrides;
+
+  if (version < 2) {
+    const upgraded = { ...(input as Record<string, unknown>) };
+    for (const [legacy, area] of Object.entries(LEGACY_PLUGIN_AREAS)) {
+      if (legacy in upgraded) {
+        upgraded[area] = upgraded[legacy];
+        delete upgraded[legacy];
+      }
+    }
+    input = upgraded;
+  }
 
   const specsByArea = AREA_SPECS as unknown as Record<
     string,
@@ -411,6 +416,11 @@ export function sanitizeUiOverrides(input: unknown): UiOverrides {
   for (const [area, areaValue] of Object.entries(
     input as Record<string, unknown>,
   )) {
+    if (PLUGIN_AREA_PATTERN.test(area)) {
+      const bucket = sanitizePluginArea(areaValue);
+      if (Object.keys(bucket).length > 0) out[area] = bucket;
+      continue;
+    }
     const specs = specsByArea[area];
     if (!specs || !areaValue || typeof areaValue !== "object") continue;
 
@@ -473,7 +483,10 @@ export function sanitizeUiPreferences(input: unknown): UiPreferences {
     preset: PRESET_VALUES.includes(obj.preset as UiPreset)
       ? (obj.preset as UiPreset)
       : defaults.preset,
-    overrides: sanitizeUiOverrides(obj.overrides),
+    overrides: sanitizeUiOverrides(
+      obj.overrides,
+      typeof obj.version === "number" ? obj.version : 1,
+    ),
     onboarding: sanitizeOnboarding(obj.onboarding),
   };
 }
@@ -493,6 +506,27 @@ export function resolveArea<A extends UiAreaKey>(
     ];
   const override = preferences.overrides[area];
   return override ? { ...base, ...override } : base;
+}
+
+/** The presets a plugin declares in contributes.uiPresets. */
+export type UiPluginPresets = Record<
+  Exclude<UiPreset, "custom">,
+  Record<string, unknown>
+>;
+
+/** A plugin area's values: its preset for the user's level, then overrides. */
+export function resolvePluginArea(
+  preferences: UiPreferences,
+  pluginId: string,
+  presets: UiPluginPresets | undefined,
+): Record<string, unknown> {
+  const level =
+    preferences.preset === "custom" ? "balanced" : preferences.preset;
+  const base = presets?.[level] ?? {};
+  const override = (
+    preferences.overrides as Record<string, Record<string, unknown>>
+  )[`plugin:${pluginId}`];
+  return override ? { ...base, ...override } : { ...base };
 }
 
 export function hasUiOverrides(preferences: UiPreferences): boolean {

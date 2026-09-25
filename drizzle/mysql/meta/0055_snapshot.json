@@ -44,7 +44,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -318,7 +318,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -432,7 +432,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -596,7 +596,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -733,7 +733,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -869,7 +869,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1491,7 +1491,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1499,7 +1499,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1675,7 +1675,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1751,7 +1751,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2083,7 +2083,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2169,7 +2169,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2284,7 +2284,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2580,7 +2580,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2588,7 +2588,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2676,7 +2676,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2861,7 +2861,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2869,7 +2869,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2987,7 +2987,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2995,7 +2995,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3163,7 +3163,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3171,7 +3171,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3503,7 +3503,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3511,7 +3511,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3621,7 +3621,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3629,7 +3629,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3798,7 +3798,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3874,7 +3874,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3948,7 +3948,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4031,7 +4031,7 @@
         },
         "label": {
           "name": "label",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4053,7 +4053,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4061,7 +4061,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4297,7 +4297,7 @@
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,

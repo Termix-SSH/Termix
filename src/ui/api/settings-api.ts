@@ -130,8 +130,6 @@ export type HostDefaults = {
   theme?: string;
   cursorStyle?: string;
   cursorBlink?: boolean;
-  enableSessionLogging?: boolean;
-  enableCommandHistory?: boolean;
   autoTmux?: boolean;
 };
 

@@ -2,7 +2,7 @@ import { Network } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { MetricCard } from "@termix/plugin-sdk/ui";
 import type { ProxmoxStatsSnapshot } from "../../types";
-import { cn } from "../utils";
+import { cn } from "@termix/plugin-sdk/ui";
 
 export function ClusterHealthCard({
   snapshot,

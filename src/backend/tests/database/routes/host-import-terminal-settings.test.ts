@@ -5,6 +5,11 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   list: vi.fn(),
+  applyPluginSettings: vi.fn(),
+}));
+vi.mock("../../../database/routes/host-plugin-settings.js", () => ({
+  applyPluginHostImportSettings: mocks.applyPluginSettings,
+  setHostPluginEnabled: vi.fn(),
 }));
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentCredentialRepository: () => ({
@@ -37,8 +42,12 @@ const host = {
   port: 22,
   username: "alice",
   authType: "none",
-  enableCommandHistory: false,
-  enableTerminalToolbar: false,
+  pluginSettings: {
+    "ssh-terminal": {
+      enableCommandHistory: false,
+      enableTerminalToolbar: false,
+    },
+  },
   terminalConfig: { macOptionIsMeta: false },
 };
 beforeEach(() => {
@@ -49,7 +58,7 @@ beforeEach(() => {
 });
 
 it.each([false, true])(
-  "preserves disabled terminal settings through export selection and import (overwrite=%s)",
+  "carries plugin host settings through export selection and import (overwrite=%s)",
   async (overwrite) => {
     const payload = buildExportPayload(
       { hosts: [host] },
@@ -71,10 +80,10 @@ it.each([false, true])(
     const write = overwrite ? mocks.update : mocks.create;
     expect(write).toHaveBeenCalledTimes(1);
     const saved = write.mock.calls[0].at(-1);
-    expect(saved).toMatchObject({
-      enableCommandHistory: false,
-      enableTerminalToolbar: false,
-    });
+    expect(mocks.applyPluginSettings).toHaveBeenCalledWith(
+      overwrite ? 19 : 71,
+      expect.objectContaining({ pluginSettings: host.pluginSettings }),
+    );
     expect(JSON.parse(saved.terminalConfig)).toEqual({
       macOptionIsMeta: false,
     });

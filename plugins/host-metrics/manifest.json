@@ -20,7 +20,8 @@
     "ssh:connect",
     "db:own",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "events:core"
   ],
   "provides": [
     {
@@ -136,7 +137,18 @@
         "id": "host-metrics.managers",
         "accepts": ["component"]
       }
-    ]
+    ],
+    "uiPresets": {
+      "simple": {
+        "columns": 1
+      },
+      "balanced": {
+        "columns": 3
+      },
+      "advanced": {
+        "columns": 4
+      }
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

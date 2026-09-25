@@ -18,6 +18,8 @@ const mobileApi = vi.hoisted(() => ({
 const slots = vi.hoisted(() => ({
   toolbar: [] as Array<{ actionId: string; titleKey: string }>,
   invoked: [] as unknown[][],
+  hostActions: [] as Array<Record<string, unknown>>,
+  tabs: { openTab: vi.fn(), openSingletonTab: vi.fn() },
 }));
 
 const labels: Record<string, string> = {
@@ -52,6 +54,8 @@ vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
   }),
   useSlotContributions: (slotId: string) =>
     slotId === "terminal.toolbar" ? slots.toolbar : [],
+  useHostActions: () => slots.hostActions,
+  useTabs: () => slots.tabs,
 }));
 
 vi.mock("@termix/plugin-sdk/ui", async (importOriginal) => ({
@@ -120,6 +124,7 @@ beforeEach(() => {
   localStorage.clear();
   slots.toolbar = [];
   slots.invoked = [];
+  slots.hostActions = [];
 });
 
 afterEach(() => {
@@ -873,6 +878,59 @@ describe("TerminalToolbar Phase 1", () => {
     reject(new Error("old instance"));
     await Promise.resolve();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  describe("host quick links", () => {
+    const Icon = () => null;
+
+    it("offers other plugins' open actions for this host", async () => {
+      const run = vi.fn();
+      slots.hostActions = [
+        {
+          id: "docker",
+          titleKey: "Docker",
+          icon: Icon,
+          kind: "open",
+          when: () => true,
+          run,
+        },
+        {
+          id: "gone",
+          titleKey: "Hidden",
+          icon: Icon,
+          kind: "open",
+          when: () => false,
+          run,
+        },
+        {
+          id: "terminal",
+          titleKey: "Terminal",
+          icon: Icon,
+          kind: "connect",
+          when: () => true,
+          tabType: "terminal",
+        },
+        {
+          id: "tunnel",
+          titleKey: "Tunnels",
+          icon: Icon,
+          kind: "open",
+          when: () => true,
+          tabType: "tunnel",
+        },
+      ];
+      renderToolbar();
+
+      expect(screen.queryByRole("button", { name: "Hidden" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Terminal" })).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "Docker" }));
+      expect(run).toHaveBeenCalledTimes(1);
+      await userEvent.click(screen.getByRole("button", { name: "Tunnels" }));
+      expect(slots.tabs.openTab).toHaveBeenCalledWith(
+        expect.anything(),
+        "tunnel",
+      );
+    });
   });
 
   describe("contributed toolbar actions", () => {

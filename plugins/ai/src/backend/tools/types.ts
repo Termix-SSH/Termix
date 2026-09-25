@@ -5,7 +5,7 @@ export type ToolCategory = "read" | "propose";
 /** What tools and the proposal executor reach core and other plugins through. */
 export type ToolDeps = Pick<
   PluginContext,
-  "hosts" | "services" | "notify" | "rbac" | "ssh"
+  "hosts" | "services" | "notify" | "rbac" | "ssh" | "audit"
 >;
 
 export interface ToolContext {
@@ -26,6 +26,8 @@ export interface AiTool {
    * not offered to the model at all.
    */
   service?: string;
+  /** Offered only to a user who turned on read-only commands. */
+  requiresReadOnlyCommands?: boolean;
   /** JSON Schema for the arguments, sent to the provider verbatim. */
   parameters: Record<string, unknown>;
   /**

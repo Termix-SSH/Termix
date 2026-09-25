@@ -55,63 +55,117 @@ const TARGETS = {
 const KEY_LENGTH = 255;
 
 /**
- * Columns that must be varchar rather than text on MySQL. A column qualifies if
- * it is a primary key, is unique, or is either end of a foreign key.
+ * Columns that must be varchar rather than text on MySQL, per table. A column
+ * qualifies if it is a primary key, is unique, is either end of a foreign key
+ * or is part of an index in its own table. Keyed per table: a column name that
+ * happens to be indexed in one table says nothing about another.
  */
-function collectKeyColumns(source) {
-  const keyed = new Set();
-
-  // `name: text("col")....primaryKey()` / `.unique()` / `.references(...)`
-  const declaration =
-    /(\w+):\s*text\("([a-z0-9_]+)"\)((?:\s*\.\w+\([^)]*\))*)/g;
+function splitTables(source) {
+  const starts = [];
+  const header = /export const (\w+) = sqliteTable\(\s*"([a-z0-9_]+)"/g;
   let match;
-  while ((match = declaration.exec(source)) !== null) {
-    const [, prop, column, modifiers] = match;
-    if (/\.(primaryKey|unique|references)\(/.test(modifiers)) {
-      keyed.add(column);
+  while ((match = header.exec(source)) !== null) {
+    starts.push({ variable: match[1], table: match[2], index: match.index });
+  }
+  return starts.map((entry, i) => ({
+    ...entry,
+    end: i + 1 < starts.length ? starts[i + 1].index : source.length,
+  }));
+}
+
+function collectKeyColumns(source) {
+  const tables = splitTables(source);
+  const byVariable = new Map(tables.map((t) => [t.variable, t.table]));
+  const keyed = new Map(tables.map((t) => [t.table, new Set()]));
+  const add = (table, column) => keyed.get(table)?.add(column);
+
+  for (const { table, index, end } of tables) {
+    const block = source.slice(index, end);
+    let match;
+
+    // `name: text("col")....primaryKey()` / `.unique()` / `.references(...)`
+    const declaration =
+      /(\w+):\s*text\("([a-z0-9_]+)"\)((?:\s*\.\w+\([^)]*\))*)/g;
+    while ((match = declaration.exec(block)) !== null) {
+      if (/\.(primaryKey|unique|references)\(/.test(match[3])) {
+        add(table, match[2]);
+      }
     }
-    void prop;
-  }
 
-  // Multi-line form: the modifiers land on following lines.
-  const multiline =
-    /(\w+):\s*text\("([a-z0-9_]+)"\)\s*\n(\s*\.\w+\([\s\S]*?\),)/g;
-  while ((match = multiline.exec(source)) !== null) {
-    if (/\.(primaryKey|unique|references)\(/.test(match[3])) {
-      keyed.add(match[2]);
+    // Multi-line form: the modifiers land on following lines.
+    const multiline =
+      /(\w+):\s*text\("([a-z0-9_]+)"\)\s*\n(\s*\.\w+\([\s\S]*?\),)/g;
+    while ((match = multiline.exec(block)) !== null) {
+      if (/\.(primaryKey|unique|references)\(/.test(match[3])) {
+        add(table, match[2]);
+      }
+    }
+
+    // A referenced column implies the target side too; both must match.
+    const reference = /\.references\(\(\)\s*=>\s*(\w+)\.(\w+)/g;
+    while ((match = reference.exec(block)) !== null) {
+      const target = byVariable.get(match[1]);
+      if (target) add(target, camelToSnake(match[2]));
+    }
+
+    // foreignKey({ columns: [table.a], foreignColumns: [other.b] })
+    const foreign =
+      /columns:\s*\[([^\]]*)\],\s*foreignColumns:\s*\[([^\]]*)\]/g;
+    while ((match = foreign.exec(block)) !== null) {
+      for (const column of match[1].split(",")) {
+        const name = column.trim().replace(/^\w+\./, "");
+        if (name) add(table, camelToSnake(name));
+      }
+      for (const column of match[2].split(",")) {
+        const [variable, name] = column.trim().split(".");
+        const target = byVariable.get(variable);
+        if (target && name) add(target, camelToSnake(name));
+      }
+    }
+
+    // Table-level indexes: `(table) => [uniqueIndex("x").on(table.a, table.b)]`,
+    // and the same for the plain `index("x")` used by the performance indexes.
+    // MySQL 8 rejects a TEXT column in a key without a length; MariaDB takes it.
+    const tableIndex = /\b(?:unique)?[iI]ndex\("[a-z0-9_]+"\)\.on\(([^)]*)\)/g;
+    while ((match = tableIndex.exec(block)) !== null) {
+      for (const column of match[1].split(",")) {
+        const name = column.trim().replace(/^\w+\./, "");
+        if (name) add(table, camelToSnake(name));
+      }
     }
   }
 
-  // A referenced column implies the referencing side too; both must match.
-  const reference = /\.references\(\(\)\s*=>\s*\w+\.(\w+)/g;
-  while ((match = reference.exec(source)) !== null) {
-    keyed.add(camelToSnake(match[1]));
-  }
-
-  // Table-level indexes: `(table) => [uniqueIndex("x").on(table.a, table.b)]`,
-  // and the same for the plain `index("x")` used by the performance indexes.
-  // These were invisible here at first, and MySQL rejected the migration with
-  // "BLOB/TEXT column used in key specification without a key length" — but
-  // only on MySQL 8; MariaDB took it.
-  const tableIndex = /\b(?:unique)?[iI]ndex\("[a-z0-9_]+"\)\.on\(([^)]*)\)/g;
-  while ((match = tableIndex.exec(source)) !== null) {
-    for (const column of match[1].split(",")) {
-      const name = column.trim().replace(/^\w+\./, "");
-      if (name) keyed.add(camelToSnake(name));
-    }
-  }
-
-  return keyed;
+  return { tables, keyed };
 }
 
 function camelToSnake(value) {
   return value.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 }
 
+function keyTables(source, tables, keyed) {
+  let out = "";
+  let cursor = 0;
+  for (const { table, index, end } of tables) {
+    out += source.slice(cursor, index);
+    const columns = keyed.get(table);
+    out += source
+      .slice(index, end)
+      .replace(/\btext\("([a-z0-9_]+)"\)/g, (whole, col) =>
+        columns.has(col)
+          ? `varchar("${col}", { length: ${KEY_LENGTH} })`
+          : whole,
+      );
+    cursor = end;
+  }
+  return out + source.slice(cursor);
+}
+
 function transform(source, dialect) {
-  const keyed = collectKeyColumns(source);
+  const { tables, keyed } = collectKeyColumns(source);
   const isPg = dialect === "postgres";
-  let out = source;
+  // Key-bearing strings must be indexable. First, while the table offsets
+  // still match the source.
+  let out = keyTables(source, tables, keyed);
 
   // Autoincrement primary keys, before the plain integer rule below.
   out = out.replace(
@@ -150,11 +204,6 @@ function transform(source, dialect) {
     isPg ? `doublePrecision("${col}")` : `double("${col}")`,
   );
 
-  // Key-bearing strings must be indexable.
-  out = out.replace(/\btext\("([a-z0-9_]+)"\)/g, (whole, col) =>
-    keyed.has(col) ? `varchar("${col}", { length: ${KEY_LENGTH} })` : whole,
-  );
-
   // text("x", { length: n }) is sqlite-only sugar; drop the length.
   out = out.replace(
     /\btext\("([a-z0-9_]+)",\s*\{\s*length:\s*\d+\s*\}\)/g,
@@ -170,9 +219,41 @@ function transform(source, dialect) {
     isPg ? "AnyPgColumn" : "AnyMySqlColumn",
   );
 
-  const imports = isPg
-    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n  index,\n  uniqueIndex,\n  foreignKey,\n  type AnyPgColumn,\n} from "drizzle-orm/pg-core";`
-    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n  index,\n  uniqueIndex,\n  foreignKey,\n  type AnyMySqlColumn,\n} from "drizzle-orm/mysql-core";`;
+  // Only the helpers the output uses, so an unused one never fails lint.
+  const helpers = isPg
+    ? [
+        "pgTable",
+        "text",
+        "varchar",
+        "integer",
+        "serial",
+        "boolean",
+        "doublePrecision",
+        "index",
+        "uniqueIndex",
+        "foreignKey",
+      ]
+    : [
+        "mysqlTable",
+        "text",
+        "varchar",
+        "int",
+        "boolean",
+        "double",
+        "index",
+        "uniqueIndex",
+        "foreignKey",
+      ];
+  const body = out.replace(
+    /import\s*\{[^}]*\}\s*from\s*"drizzle-orm\/sqlite-core";/,
+    "",
+  );
+  const used = helpers.filter((name) =>
+    new RegExp("\\b" + name + "\\(").test(body),
+  );
+  const anyColumn = isPg ? "AnyPgColumn" : "AnyMySqlColumn";
+  if (body.includes(anyColumn)) used.push(`type ${anyColumn}`);
+  const imports = `import {\n${used.map((name) => `  ${name},`).join("\n")}\n} from "drizzle-orm/${isPg ? "pg-core" : "mysql-core"}";`;
 
   out = out.replace(
     /import\s*\{[^}]*\}\s*from\s*"drizzle-orm\/sqlite-core";/,

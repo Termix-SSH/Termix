@@ -43,7 +43,8 @@ export function binaryName(
  * What ctx.process.ensureBinary needs for OPKSSH.
  *
  * The pinned version is trusted by its built-in checksums. OPKSSH_VERSION
- * picks another release, and then OPKSSH_SHA256 must give its checksum.
+ * picks another release, and then OPKSSH_SHA256 (or OPKSSH_SHA256_AMD64 /
+ * OPKSSH_SHA256_ARM64, which the Docker image passes on) gives its checksum.
  *
  * The Docker image bakes the binary into /app/opkssh-bundled (the
  * opkssh-downloader stage), which is checked first so an offline install
@@ -60,7 +61,12 @@ export function binarySpec(
   const sha256 =
     version === DEFAULT_VERSION
       ? DEFAULT_CHECKSUMS[name]
-      : env.OPKSSH_SHA256?.trim().toLowerCase();
+      : (
+          env.OPKSSH_SHA256 ||
+          env[`OPKSSH_SHA256_${arch === "arm64" ? "ARM64" : "AMD64"}`]
+        )
+          ?.trim()
+          .toLowerCase();
   if (!sha256 || !/^[0-9a-f]{64}$/.test(sha256)) {
     throw new Error(
       `OPKSSH ${version} has no trusted SHA-256 checksum for ${name}`,

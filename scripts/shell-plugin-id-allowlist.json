@@ -1,5 +1,5 @@
 {
-  "$comment": "Literals src/ui may still spell that name a plugin id or a plugin-owned view. Each is data, not knowledge of a plugin. Checked by scripts/check-shell-plugin-ids.cjs; D1 and Phase B empty it.",
+  "$comment": "Literals src/ui may still spell that name a plugin id or a plugin-owned view. Each is data, not knowledge of a plugin. Checked by scripts/check-shell-plugin-ids.cjs, which also fails when an entry stops being needed.",
   "files": {
     "src/ui/sidebar/QuickConnectPanel.tsx": {
       "literals": ["files"],

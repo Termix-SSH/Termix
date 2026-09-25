@@ -81,11 +81,15 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      # Before the tests: the plugin boot tests load the built bundles.
+      - name: Build
+        run: npm run build
+
       - name: Run unit tests
         run: npm run test
 
-      - name: Build
-        run: npm run build
+      - name: Run plugin tests
+        run: npm run test:plugins
 
   create-release:
     needs: [prep, verify]

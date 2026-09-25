@@ -1,7 +1,6 @@
 import {
   Separator,
   Button,
-  useAreaPreferences,
   useConfirmation,
   TOTPDialog,
   useTabsSafe,
@@ -12,7 +11,6 @@ import {
   CardGridCanvas,
   ColumnCountStepper,
   type GridCardCatalogEntry,
-  logActivity,
   SnippetVariablesDialog,
 } from "@termix/plugin-sdk/ui";
 import { readHostMetricsSettings } from "../shared/stats-widgets.js";
@@ -52,6 +50,8 @@ import {
   useHost,
   useHostStatus,
   invokeAction,
+  logActivity,
+  usePluginUiPreferences,
 } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { RefreshCw, Server, LayoutDashboard } from "lucide-react";
@@ -161,7 +161,9 @@ function HostMetricsInner({
   const hostId = currentHostConfig?.id ?? null;
   const { layout, setLayout } = useHostMetricsPreferences(hostId);
 
-  const metricsPrefs = useAreaPreferences("hostMetrics");
+  const { values: metricsPrefs } = usePluginUiPreferences<{
+    columns: number;
+  }>();
 
   const effectiveLayout: HostMetricsLayout = React.useMemo(() => {
     // A saved layout is user-authored, so the preset never rewrites it -- it

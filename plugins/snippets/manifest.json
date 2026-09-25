@@ -19,7 +19,8 @@
     "network:serve",
     "ssh:connect",
     "credentials:use",
-    "ui:surface"
+    "ui:surface",
+    "events:core"
   ],
   "provides": [
     {

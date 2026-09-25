@@ -4,7 +4,10 @@ import type {
   PluginManifest,
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import type { PluginContributions } from "@/api/plugins-api";
+import {
+  PLUGIN_SETTINGS_CHANGED_EVENT,
+  type PluginContributions,
+} from "@/api/plugins-api";
 import { registerRailItem } from "@/sidebar/rail-items";
 import { registerTabType, type TabRenderProps } from "@/shell/tab-registry";
 import { registerPanel, type PanelRenderProps } from "@/shell/panel-registry";
@@ -413,6 +416,22 @@ export function createPluginApp(
       available: isElectron(),
       remoteServerUrl,
       onRemoteServerChange: (listener) => track(onRemoteServerChange(listener)),
+    },
+
+    onSettingsChanged: (listener) => {
+      const handler = (event: Event) => {
+        const detail = (event as CustomEvent).detail as {
+          pluginId?: string;
+          scope: "admin" | "user" | "host";
+          hostId?: number;
+        };
+        if (detail?.pluginId !== pluginId) return;
+        listener({ scope: detail.scope, hostId: detail.hostId });
+      };
+      window.addEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, handler);
+      return track(() =>
+        window.removeEventListener(PLUGIN_SETTINGS_CHANGED_EVENT, handler),
+      );
     },
 
     onDispose(dispose) {

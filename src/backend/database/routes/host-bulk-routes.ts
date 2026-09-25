@@ -10,10 +10,16 @@ import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
-  createCurrentPluginSettingsRepository,
 } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
-import { applyPluginHostImportSettings } from "./host-plugin-settings.js";
+import {
+  listSshAuthProviders,
+  listSshAuthTypeOwners,
+} from "../../hosts/connect/auth-provider-registry.js";
+import {
+  applyPluginHostImportSettings,
+  setHostPluginEnabled,
+} from "./host-plugin-settings.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -182,6 +188,15 @@ export function registerHostBulkRoutes(
    *                   parentHostId:
    *                     type: integer
    *                     nullable: true
+   *                   statusCheckEnabled:
+   *                     type: boolean
+   *                   pin:
+   *                     type: boolean
+   *                   pluginEnable:
+   *                     type: object
+   *                     description: Plugin id to on or off, for each plugin that declares a host enable switch.
+   *                     additionalProperties:
+   *                       type: boolean
    *     responses:
    *       200:
    *         description: Bulk update completed.
@@ -278,16 +293,6 @@ export function registerHostBulkRoutes(
             simpleUpdates.folder = null;
           }
         }
-        if (typeof updates.enableTerminal === "boolean")
-          simpleUpdates.enableTerminal = updates.enableTerminal;
-        if (typeof updates.enableTunnel === "boolean")
-          simpleUpdates.enableTunnel = updates.enableTunnel;
-        if (typeof updates.enableFileManager === "boolean")
-          simpleUpdates.enableFileManager = updates.enableFileManager;
-        if (typeof updates.enableTmuxMonitor === "boolean")
-          simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
-        if (typeof updates.enableTerminalToolbar === "boolean")
-          simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
         if (typeof updates.statusCheckEnabled === "boolean")
           simpleUpdates.statusCheckEnabled = updates.statusCheckEnabled;
 
@@ -299,91 +304,15 @@ export function registerHostBulkRoutes(
           );
         }
 
-        // Proxmox enable/disable now lives in the proxmox plugin's own
-        // host-scope settings, not a hosts column. Disabling is a plain flag
-        // flip; enabling also defaults the Proxmox credential to the one
-        // already stored on the host, so discovery works without picking one
-        // by hand. Existing proxmoxConfig values are preserved.
-        if (typeof updates.enableProxmox === "boolean") {
-          const pluginSettingsRepository =
-            createCurrentPluginSettingsRepository();
-          for (const host of ownedHosts) {
-            try {
-              const scopeId = String(host.id);
-              await pluginSettingsRepository.set(
-                "proxmox",
-                "host",
-                scopeId,
-                "enableProxmox",
-                JSON.stringify(updates.enableProxmox),
-              );
-
-              if (updates.enableProxmox) {
-                const existingRow = await pluginSettingsRepository.get(
-                  "proxmox",
-                  "host",
-                  scopeId,
-                  "proxmoxConfig",
-                );
-                const existing = existingRow?.value
-                  ? JSON.parse(existingRow.value)
-                  : {};
-                const merged = {
-                  defaultCredentialId:
-                    existing.defaultCredentialId ?? host.credentialId ?? null,
-                  windowsPatterns: existing.windowsPatterns ?? "win, windows",
-                  dockerPatterns: existing.dockerPatterns ?? "docker",
-                  preferredPrefixes:
-                    existing.preferredPrefixes ?? "10., 192.168.",
-                  autoSyncEnabled: existing.autoSyncEnabled ?? false,
-                  syncIntervalMinutes: existing.syncIntervalMinutes ?? 15,
-                  markMissingGuests: existing.markMissingGuests ?? true,
-                };
-                await pluginSettingsRepository.set(
-                  "proxmox",
-                  "host",
-                  scopeId,
-                  "proxmoxConfig",
-                  JSON.stringify(merged),
-                );
-              }
-            } catch {
-              errors.push(
-                `Failed to ${updates.enableProxmox ? "enable" : "disable"} Proxmox for host ${host.id}`,
-              );
-            }
-          }
-        }
-
-        // Web endpoint enable/disable lives in the plugin's own host-scope
-        // settings. Disabling clears webUiConfig, matching the old column
-        // write it replaces.
-        if (typeof updates.enableWebUi === "boolean") {
-          const pluginSettingsRepository =
-            createCurrentPluginSettingsRepository();
-          for (const host of ownedHosts) {
-            try {
-              const scopeId = String(host.id);
-              await pluginSettingsRepository.set(
-                "web-endpoint",
-                "host",
-                scopeId,
-                "enableWebUi",
-                JSON.stringify(updates.enableWebUi),
-              );
-              if (!updates.enableWebUi) {
-                await pluginSettingsRepository.set(
-                  "web-endpoint",
-                  "host",
-                  scopeId,
-                  "webUiConfig",
-                  JSON.stringify(null),
-                );
-              }
-            } catch {
-              errors.push(
-                `Failed to ${updates.enableWebUi ? "enable" : "disable"} web endpoints for host ${host.id}`,
-              );
+        // Each plugin's own host switch, by plugin id: the field its manifest
+        // names in contributes.settings.host.enableKey.
+        if (updates.pluginEnable && typeof updates.pluginEnable === "object") {
+          for (const [pluginId, enabled] of Object.entries(
+            updates.pluginEnable as Record<string, unknown>,
+          )) {
+            if (typeof enabled !== "boolean") continue;
+            if (!(await setHostPluginEnabled(pluginId, ownedIds, enabled))) {
+              errors.push(`Plugin ${pluginId} has no host switch`);
             }
           }
         }
@@ -605,6 +534,7 @@ export function registerHostBulkRoutes(
         }
       }
 
+      const knownAuthTypes = listKnownAuthTypes();
       for (const { host: hostData, index: i, exportId } of orderedHosts) {
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
@@ -644,20 +574,11 @@ export function registerHostBulkRoutes(
           if (
             effectiveConnectionType === "ssh" &&
             hostData.authType &&
-            ![
-              "password",
-              "key",
-              "credential",
-              "none",
-              "opkssh",
-              "stepca",
-              "tailscale",
-              "vault",
-            ].includes(hostData.authType)
+            !knownAuthTypes.has(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'stepca', 'tailscale', or 'vault'`,
+              `Host ${i + 1}: Invalid authType. Must be one of ${[...knownAuthTypes].join(", ")}`,
             );
             continue;
           }
@@ -744,22 +665,7 @@ export function registerHostBulkRoutes(
             port: hostData.port,
             username,
             pin: hostData.pin || false,
-            enableTerminal: hostData.enableTerminal !== false,
-            enableTunnel: hostData.enableTunnel !== false,
-            enableFileManager: hostData.enableFileManager !== false,
-            enableTmuxMonitor: hostData.enableTmuxMonitor || false,
-            enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
-            enableCommandHistory: hostData.enableCommandHistory !== false,
-            showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
-            showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
-            showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
-            showDockerInSidebar: hostData.showDockerInSidebar ? 1 : 0,
-            showServerStatsInSidebar: hostData.showServerStatsInSidebar ? 1 : 0,
-            defaultPath: hostData.defaultPath || "/",
             sudoPassword: hostData.sudoPassword || null,
-            tunnelConnections: hostData.tunnelConnections
-              ? JSON.stringify(hostData.tunnelConnections)
-              : "[]",
             jumpHosts: jumpHosts ? JSON.stringify(jumpHosts) : null,
             quickActions: hostData.quickActions
               ? JSON.stringify(hostData.quickActions)
@@ -1004,19 +910,7 @@ export function registerHostBulkRoutes(
             keyType: null,
             credentialId: null,
             pin: false,
-            enableTerminal: true,
-            enableTunnel: true,
-            enableFileManager: true,
-            enableTmuxMonitor: false,
-            enableTerminalToolbar: true,
-            showTerminalInSidebar: 0,
-            showFileManagerInSidebar: 0,
-            showTunnelInSidebar: 0,
-            showDockerInSidebar: 0,
-            showServerStatsInSidebar: 0,
-            defaultPath: "/",
             sudoPassword: null,
-            tunnelConnections: "[]",
             jumpHosts: hostData.jumpHosts
               ? JSON.stringify(hostData.jumpHosts)
               : null,
@@ -1097,4 +991,21 @@ function importedStatusCheck(raw: Record<string, unknown>): {
         ? seconds
         : null,
   };
+}
+
+const BUILTIN_SSH_AUTH_TYPES = [
+  "password",
+  "key",
+  "credential",
+  "agent",
+  "none",
+];
+
+/** Core's own types plus every type a plugin registers or declares. */
+function listKnownAuthTypes(): Set<string> {
+  return new Set([
+    ...BUILTIN_SSH_AUTH_TYPES,
+    ...listSshAuthProviders().map((provider) => provider.type),
+    ...listSshAuthTypeOwners().map((owner) => owner.type),
+  ]);
 }

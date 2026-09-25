@@ -9,6 +9,12 @@ import type { PluginContext, PluginSshHost } from "@termix/plugin-sdk/backend";
 import { getErrorMessage } from "./error-message.js";
 import { setPluginSsh, pluginSsh } from "./ssh.js";
 import { setPluginCtx } from "./plugin-ctx.js";
+import {
+  flushTransferProfiles,
+  setTransferProfileStore,
+} from "./transfer-tuning.js";
+
+const TRANSFER_PROFILES_KEY = "transfer-profiles";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { logger } from "../../../../src/backend/utils/logger.js";
 import {
@@ -113,6 +119,14 @@ export async function activate(ctx: PluginContext) {
   setPluginCtx(ctx);
   ctx.disposables.add(() => setPluginSsh(null));
   ctx.disposables.add(() => setPluginCtx(null));
+  setTransferProfileStore({
+    read: () => ctx.kv.get(TRANSFER_PROFILES_KEY),
+    write: (value) => ctx.kv.set(TRANSFER_PROFILES_KEY, value),
+  });
+  ctx.disposables.add(async () => {
+    await flushTransferProfiles();
+    setTransferProfileStore(null);
+  });
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   // ctx.db.define hands back an untyped table object; typed at this module's
@@ -605,7 +619,11 @@ export async function activate(ctx: PluginContext) {
       };
       resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
         Record<string, unknown> | undefined;
-      resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+      resolvedScpLegacy =
+        (await ctx.settings.getHost<boolean>(
+          Number(resolvedHost.id),
+          "scpLegacy",
+        )) === true;
       if (resolvedHost.useSocks5) {
         resolvedUseSocks5 = resolvedHost.useSocks5;
         resolvedSocks5Host = resolvedHost.socks5Host;

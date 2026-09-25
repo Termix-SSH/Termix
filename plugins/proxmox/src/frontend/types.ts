@@ -101,3 +101,35 @@ export interface ProxmoxStatsConfig {
   pollInterval?: number;
   enabledCards?: string[];
 }
+
+/** The proxmoxConfig host setting. */
+export interface ProxmoxHostConfig {
+  source?: {
+    source: "proxmox";
+    sourceHostId: number;
+    node: string;
+    vmid: number;
+    type: "qemu" | "lxc";
+    lastSeenAt?: string;
+    lastStatus?: string;
+    missingSince?: string | null;
+  };
+  defaultCredentialId: number | null;
+  defaultAuthType?: string;
+  windowsPatterns: string;
+  dockerPatterns: string;
+  preferredPrefixes: string;
+  autoSyncEnabled?: boolean;
+  syncIntervalMinutes?: number;
+  markMissingGuests?: boolean;
+  lastSyncAt?: string;
+  lastSyncStatus?: "success" | "error";
+  lastSyncError?: string | null;
+  lastSyncResult?: {
+    created: number;
+    updated: number;
+    markedMissing: number;
+    skipped: number;
+    errors: string[];
+  };
+}

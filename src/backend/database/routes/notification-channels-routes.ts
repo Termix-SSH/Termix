@@ -3,8 +3,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import { createCurrentNotificationChannelRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { databaseLogger } from "../../utils/logger.js";
-import { sendWebhook, sendNtfy } from "../../utils/notification-sender.js";
-import { sendDiscord } from "../../utils/discord-sender.js";
+import { deliverNotification } from "../../utils/notification-sender.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -224,43 +223,15 @@ router.post(
       );
     if (!row) return res.status(404).json({ error: "Channel not found" });
 
-    const testPayload = {
-      hostName: "Test Host",
-      hostId: 0,
-      triggerType: "test",
-      message: "This is a test notification from Termix",
-      severity: "info" as const,
-      timestamp: new Date().toISOString(),
-      ruleId: 0,
-      ruleName: "Test",
-    };
-
     try {
-      let config: Record<string, unknown>;
-      try {
-        config = JSON.parse(row.config) as Record<string, unknown>;
-      } catch {
-        return res
-          .status(400)
-          .json({ success: false, error: "Invalid channel config" });
-      }
-
-      if (row.type === "webhook") {
-        await sendWebhook(
-          config as unknown as Parameters<typeof sendWebhook>[0],
-          testPayload,
-        );
-      } else if (row.type === "ntfy") {
-        await sendNtfy(
-          config as unknown as Parameters<typeof sendNtfy>[0],
-          testPayload,
-        );
-      } else if (row.type === "discord") {
-        await sendDiscord(
-          config as unknown as Parameters<typeof sendDiscord>[0],
-          testPayload,
-        );
-      }
+      // The same path an automation's notify step takes, so a test proves
+      // the channel works for real, private-network opt-in included.
+      await deliverNotification(row, {
+        title: "Termix",
+        body: "This is a test notification from Termix",
+        severity: "info",
+        context: { sourceName: "Test", triggerType: "test" },
+      });
       res.json({ success: true });
     } catch (err) {
       res.json({

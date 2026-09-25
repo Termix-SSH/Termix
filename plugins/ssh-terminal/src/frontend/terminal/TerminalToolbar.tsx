@@ -43,8 +43,12 @@ import {
   useIsMobile,
 } from "@termix/plugin-sdk/ui";
 import {
+  useHostActions,
+  useTabs,
   useTranslation,
   useSlotContributions,
+  type PluginHostRecord,
+  type ShellApi,
 } from "@termix/plugin-sdk/frontend";
 type SelectedToolbarDensity = ToolbarDensity;
 
@@ -120,6 +124,25 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
       ),
     [allSlotContributions],
   );
+  // Quick links to the other tools a plugin offers for this host (tmux
+  // monitor, docker, tunnels, host metrics), from their host actions.
+  const hostActions = useHostActions();
+  const tabs = useTabs();
+  const hostLinks = useMemo(() => {
+    const record = host as unknown as PluginHostRecord;
+    return hostActions.filter(
+      (action) =>
+        action.kind === "open" &&
+        !action.items &&
+        (action.run || action.tabType) &&
+        action.when(record),
+    );
+  }, [hostActions, host]);
+  const openHostLink = (action: (typeof hostLinks)[number]) => {
+    const record = host as unknown as PluginHostRecord;
+    if (action.run) action.run(record, tabs as unknown as ShellApi);
+    else if (action.tabType) tabs.openTab(record, action.tabType);
+  };
   const [density, setDensity] =
     useState<SelectedToolbarDensity>(readStoredDensity);
   const [responsiveDensity, setResponsiveDensity] =
@@ -233,6 +256,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     isTmuxAttached,
     actionsEnabled,
     slotContributions,
+    hostLinks,
     t,
   ]);
 
@@ -603,6 +627,13 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                 {density !== "icon" && t(contribution.titleKey)}
               </span>
             ))}
+          {actionsEnabled &&
+            hostLinks.map((action) => (
+              <span key={action.id} className={CONTROL}>
+                <action.icon className="size-4" />
+                {density !== "icon" && t(action.titleKey)}
+              </span>
+            ))}
           <span className={cn(CONTROL, "h-8 px-2")}>
             <LayoutGrid className="size-4" />
             <ChevronDown className="size-4" />
@@ -681,6 +712,24 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                       when={{ host }}
                       context={() => [slotApi]}
                     />
+                  </>
+                )}
+                {actionsEnabled && hostLinks.length > 0 && (
+                  <>
+                    <div className={SEPARATOR} />
+                    {hostLinks.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        className={CONTROL}
+                        aria-label={t(action.titleKey)}
+                        title={t(action.titleKey)}
+                        onClick={() => openHostLink(action)}
+                      >
+                        <action.icon className="size-4" />
+                        {effectiveDensity !== "icon" && t(action.titleKey)}
+                      </button>
+                    ))}
                   </>
                 )}
                 <div className={SEPARATOR} />

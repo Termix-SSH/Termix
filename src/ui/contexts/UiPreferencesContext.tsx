@@ -18,6 +18,8 @@ import {
   defaultUiPreferences,
   PRESETS,
   resolveArea,
+  resolvePluginArea,
+  type UiPluginPresets,
   sanitizeUiPreferences,
   UI_ONBOARDING_VERSION,
   type UiAreaKey,
@@ -62,6 +64,12 @@ interface UiPreferencesContextValue {
   clearArea: (area: UiAreaKey) => void;
   clearAllOverrides: () => void;
   completeOnboarding: (skipped: boolean) => void;
+  /** A plugin's own area, from the presets it declared. */
+  resolvePlugin: (
+    pluginId: string,
+    presets: UiPluginPresets | undefined,
+  ) => Record<string, unknown>;
+  setPluginOverride: (pluginId: string, key: string, value: unknown) => void;
 }
 
 const UiPreferencesContext = createContext<UiPreferencesContextValue | null>(
@@ -247,6 +255,14 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
       clearArea,
       clearAllOverrides,
       completeOnboarding,
+      resolvePlugin: (pluginId, presets) =>
+        resolvePluginArea(preferences, pluginId, presets),
+      setPluginOverride: (pluginId, key, value) =>
+        setOverride(
+          `plugin:${pluginId}` as never,
+          key as never,
+          value as never,
+        ),
     }),
     [
       preferences,

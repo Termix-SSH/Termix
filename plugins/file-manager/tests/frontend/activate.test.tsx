@@ -52,9 +52,9 @@ describe(`${manifest.id} activate`, () => {
     );
   });
 
-  it("registers the files host editor section", async () => {
+  it("leaves its host fields to the schema-driven Plugins tab", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
-    expect(rendered.registered.hostEditorSections()).toContain("files");
+    expect(rendered.registered.hostEditorSections()).toEqual([]);
   });
 
   it("registers files.openHost and files.openEditor actions", async () => {

@@ -72,12 +72,24 @@ const settingsRepository = {
       rows.push({ pluginId, scope, scopeId, key, value, encrypted });
     },
   ),
+  listByKey: vi.fn(async (pluginId: string, scope: string, key: string) =>
+    rows.filter(
+      (row) =>
+        row.pluginId === pluginId && row.scope === scope && row.key === key,
+    ),
+  ),
 };
+
+const hostOwners = new Map<number, string>();
 
 const coreSettings = new Map<string, string>();
 
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentPluginSettingsRepository: () => settingsRepository,
+  createCurrentHostRepository: () => ({
+    findById: async (id: number) =>
+      hostOwners.has(id) ? { id, userId: hostOwners.get(id) } : null,
+  }),
   createCurrentSettingsRepository: () => ({
     get: async (key: string) => coreSettings.get(key) ?? null,
   }),
@@ -106,9 +118,12 @@ const {
   findField,
   getAllSettings,
   getSetting,
+  listHostValues,
   onSettingsChange,
+  onSettingsValidate,
   readCoreSetting,
   setSetting,
+  validateSettingsSave,
 } = await import("../../plugins/settings.js");
 
 function manifest(settings: unknown): PluginManifest {
@@ -438,5 +453,88 @@ describe("readCoreSetting", () => {
     for (const key of CORE_SETTINGS_ALLOWLIST) {
       expect(key).not.toMatch(/secret|password|token|key$/i);
     }
+  });
+});
+
+describe("settings validators", () => {
+  it("collects every validator's errors for its scope only", async () => {
+    const stop = onSettingsValidate("validated", "admin", (values) =>
+      values.url === "bad" ? { url: "Nope" } : undefined,
+    );
+    onSettingsValidate("validated", "user", () => ({ other: "Wrong scope" }));
+
+    expect(
+      await validateSettingsSave("validated", "admin", null, { url: "bad" }),
+    ).toEqual({ url: "Nope" });
+    expect(
+      await validateSettingsSave("validated", "admin", null, { url: "ok" }),
+    ).toEqual({});
+
+    stop();
+    clearSettingsListeners("validated");
+    expect(await validateSettingsSave("validated", "user", null, {})).toEqual(
+      {},
+    );
+  });
+
+  it("passes the host id to a host validator", async () => {
+    let seen: number | undefined;
+    onSettingsValidate("validated-host", "host", (_values, context) => {
+      seen = context.hostId;
+    });
+    await validateSettingsSave("validated-host", "host", "12", {});
+    expect(seen).toBe(12);
+    clearSettingsListeners("validated-host");
+  });
+});
+
+describe("listHostValues", () => {
+  const withHostField = manifest({
+    host: {
+      enableKey: "on",
+      enableLabelKey: "x",
+      fields: [{ key: "token", type: "secret", labelKey: "x" }],
+    },
+  });
+
+  it("lists stored values with each host's owner", async () => {
+    hostOwners.set(7, "alice");
+    hostOwners.set(8, "bob");
+    await setSetting(withHostField, "host", 7, "on", true);
+    await setSetting(withHostField, "host", 8, "on", false);
+    await setSetting(withHostField, "host", 99, "on", true);
+
+    const listed = await listHostValues(withHostField, "on");
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        { hostId: 7, userId: "alice", value: true },
+        { hostId: 8, userId: "bob", value: false },
+      ]),
+    );
+    // A row for a host that no longer exists is skipped.
+    expect(listed.find((entry) => entry.hostId === 99)).toBeUndefined();
+  });
+
+  it("refuses a secret field", async () => {
+    await expect(listHostValues(withHostField, "token")).rejects.toThrow(
+      /secret/,
+    );
+  });
+});
+
+describe("enableDefault", () => {
+  it("is what the host switch reads before a host saves it", () => {
+    const fields = declaredFields(
+      manifest({
+        host: {
+          enableKey: "on",
+          enableLabelKey: "x",
+          enableDefault: true,
+          fields: [],
+        },
+      }),
+      "host",
+    );
+    expect(fields[0]).toMatchObject({ key: "on", default: true });
   });
 });

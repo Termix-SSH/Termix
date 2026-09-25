@@ -21,9 +21,6 @@ export interface PluginHostView {
   folder: string | null;
   tags: string[];
   authType: string | null;
-  enableTerminal: boolean;
-  enableTunnel: boolean;
-  enableFileManager: boolean;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -38,11 +35,6 @@ const STRING_FIELDS = [
   "createdAt",
   "updatedAt",
 ] as const;
-const BOOLEAN_FIELDS = [
-  "enableTerminal",
-  "enableTunnel",
-  "enableFileManager",
-] as const;
 
 export function toPluginHostView(
   host: Record<string, unknown>,
@@ -56,10 +48,6 @@ export function toPluginHostView(
     const value = host[field];
     view[field] = typeof value === "string" ? value : null;
   }
-  for (const field of BOOLEAN_FIELDS) {
-    view[field] = Boolean(host[field]);
-  }
-
   view.tags = Array.isArray(host.tags)
     ? host.tags.filter((tag): tag is string => typeof tag === "string")
     : [];

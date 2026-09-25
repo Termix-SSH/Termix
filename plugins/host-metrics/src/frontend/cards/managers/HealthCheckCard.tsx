@@ -13,7 +13,7 @@ import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { useHostMetricsApi } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
-import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerCardShell } from "@termix/plugin-sdk/ui";
 
 interface HealthCheck {
   id: string;

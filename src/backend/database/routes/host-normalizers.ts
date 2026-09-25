@@ -170,30 +170,11 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   credentialId?: number;
   credentialAlias?: string;
   pin?: unknown;
-  enableTerminal?: unknown;
-  enableTunnel?: unknown;
-  enableFileManager?: unknown;
-  enableWebUi?: unknown;
-  enableProxmox?: unknown;
-  enableTmuxMonitor?: unknown;
-  enableTerminalToolbar?: unknown;
-  enableCommandHistory?: unknown;
-  showTerminalInSidebar?: unknown;
-  showFileManagerInSidebar?: unknown;
-  showTunnelInSidebar?: unknown;
-  showDockerInSidebar?: unknown;
-  showServerStatsInSidebar?: unknown;
-  defaultPath?: unknown;
   sudoPassword?: unknown;
-  tunnelConnections?: unknown;
   jumpHosts?: unknown;
   quickActions?: unknown;
   statusCheckEnabled?: unknown;
   statusCheckInterval?: unknown;
-  webUiConfig?: unknown;
-  proxmoxConfig?: unknown;
-  enableProxmoxStats?: unknown;
-  proxmoxStatsConfig?: unknown;
   terminalConfig?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
@@ -333,24 +314,11 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "shareSshAuth",
   "authOverrides",
   "connectionType",
-  "enableTerminal",
-  "enableTunnel",
-  "enableFileManager",
-  "enableTmuxMonitor",
-  "enableTerminalToolbar",
-  "showTerminalInSidebar",
-  "showFileManagerInSidebar",
-  "showTunnelInSidebar",
-  "showDockerInSidebar",
-  "showServerStatsInSidebar",
   "statusCheckEnabled",
   "statusCheckInterval",
   "enableSsh",
   "sshPort",
   "rdpAuthType",
-  "defaultPath",
-  "scpLegacy",
-  "tunnelConnections",
   "jumpHosts",
   "createdAt",
   "updatedAt",
@@ -428,25 +396,12 @@ export function transformHostResponse(
         : [],
     pin: !!host.pin,
     shareSshAuth: !!host.shareSshAuth,
-    enableTerminal: !!host.enableTerminal,
-    enableTunnel: !!host.enableTunnel,
-    enableFileManager: host.enableFileManager !== false,
-    enableTmuxMonitor: !!host.enableTmuxMonitor,
-    enableTerminalToolbar: host.enableTerminalToolbar !== false,
-    showTerminalInSidebar: !!host.showTerminalInSidebar,
-    showFileManagerInSidebar: !!host.showFileManagerInSidebar,
-    showTunnelInSidebar: !!host.showTunnelInSidebar,
-    showDockerInSidebar: !!host.showDockerInSidebar,
-    showServerStatsInSidebar: !!host.showServerStatsInSidebar,
     enableSsh: !!host.enableSsh,
     sshPort: host.sshPort ?? host.port ?? 22,
     rdpUser: host.rdpUser || undefined,
     rdpDomain: host.rdpDomain || undefined,
     vncUser: host.vncUser || undefined,
     telnetUser: host.telnetUser || undefined,
-    tunnelConnections: host.tunnelConnections
-      ? JSON.parse(host.tunnelConnections as string)
-      : [],
     jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
     quickActions: host.quickActions
       ? JSON.parse(host.quickActions as string)

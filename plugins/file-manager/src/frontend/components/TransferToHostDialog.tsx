@@ -1,3 +1,4 @@
+import { fileManagerHostSetting } from "../host-settings";
 import React, {
   useCallback,
   useEffect,
@@ -236,7 +237,7 @@ export function TransferToHostDialog({
       const candidates = hosts.filter(
         (h) =>
           h.id !== sourceHost.id &&
-          h.enableFileManager !== false &&
+          fileManagerHostSetting(h, "enableFileManager", true) &&
           h.connectionType !== "rdp" &&
           h.connectionType !== "vnc",
       );

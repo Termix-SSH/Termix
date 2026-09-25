@@ -6,6 +6,9 @@
  */
 
 import { afterEach, vi } from "vitest";
+import { installSafePorts } from "./safe-ports.js";
+
+installSafePorts();
 
 if (typeof window !== "undefined" && !window.matchMedia) {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -114,6 +117,28 @@ const offline = () =>
   }),
   useSlotContributions: () => [],
   usePluginComponent: () => undefined,
+  getApiFor: () => ({
+    get: offline,
+    delete: offline,
+    post: offline,
+    put: offline,
+    patch: offline,
+  }),
+  hostProtocols: () => ["ssh"],
+  useHostActions: () => [],
+  useActivityTypes: () => [],
+  activityTarget: () => undefined,
+  useHomepageWidgetTypes: () => [],
+  homepageWidgetType: () => undefined,
+  usePluginUiPreferences: () => ({ values: {}, set: noop }),
+  core: {
+    logActivity: async () => {},
+    getHostPassword: async () => null,
+    patchOpenTab: async () => {},
+    getCustomKeybindings: async () => [],
+    setHostAutoTmux: async () => {},
+    getClientPreference: () => undefined,
+  },
 };
 
 afterEach(() => {

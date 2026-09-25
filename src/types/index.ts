@@ -102,15 +102,6 @@ export const MAX_WEB_ENDPOINTS = 16;
 /** Endpoint labels are truncated to this length. */
 export const MAX_WEB_ENDPOINT_LABEL_LENGTH = 64;
 
-export interface HostFeatureFlags {
-  enableTerminal: boolean; // SSH, Telnet only
-  enableTunnel: boolean; // SSH only
-  enableFileManager: boolean; // SSH only
-  enableTmuxMonitor: boolean; // SSH only
-  enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
-  enableRemoteDesktop: boolean; // RDP, VNC only
-}
-
 export interface JumpHost {
   hostId: number;
 }
@@ -154,21 +145,6 @@ export type Host = {
   credentialId?: number;
   overrideCredentialUsername?: boolean;
   userId?: string;
-  enableTerminal: boolean;
-  enableSessionLogging: boolean;
-  enableCommandHistory: boolean;
-  enableTunnel: boolean;
-  enableFileManager: boolean;
-  scpLegacy?: boolean;
-  enableTmuxMonitor: boolean;
-  enableTerminalToolbar: boolean;
-  showTerminalInSidebar: boolean;
-  showFileManagerInSidebar: boolean;
-  showTunnelInSidebar: boolean;
-  showDockerInSidebar: boolean;
-  showServerStatsInSidebar: boolean;
-  defaultPath: string;
-  tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
   statusCheckEnabled?: boolean;
@@ -193,8 +169,6 @@ export type Host = {
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
   domain?: string;
-  enableWebUi?: boolean;
-  webUiConfig?: WebUiConfig | null;
 
   enableSsh?: boolean;
   sshPort?: number;
@@ -299,26 +273,7 @@ export interface HostData {
   credentialId?: number | null;
   connectionOrigin?: "local" | "remote" | null;
   overrideCredentialUsername?: boolean;
-  enableTerminal?: boolean;
-  enableSessionLogging?: boolean;
-  enableCommandHistory?: boolean;
-  enableTunnel?: boolean;
-  enableFileManager?: boolean;
-  scpLegacy?: boolean;
-  enableProxmox?: boolean;
-  enableTmuxMonitor?: boolean;
-  enableTerminalToolbar?: boolean;
-  proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
-  enableProxmoxStats?: boolean;
-  proxmoxStatsConfig?: ProxmoxStatsConfig | Record<string, unknown> | null;
-  showTerminalInSidebar?: boolean;
-  showFileManagerInSidebar?: boolean;
-  showTunnelInSidebar?: boolean;
-  showDockerInSidebar?: boolean;
-  showServerStatsInSidebar?: boolean;
-  defaultPath?: string;
   forceKeyboardInteractive?: boolean;
-  tunnelConnections?: TunnelConnection[];
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
   statusCheckEnabled?: boolean;
@@ -343,8 +298,6 @@ export interface HostData {
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
   domain?: string;
-  enableWebUi?: boolean;
-  webUiConfig?: WebUiConfig | null;
 
   enableSsh?: boolean;
   sshPort?: number;

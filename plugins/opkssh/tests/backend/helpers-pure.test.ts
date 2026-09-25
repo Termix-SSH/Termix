@@ -107,4 +107,16 @@ describe("binary", () => {
       binarySpec({ OPKSSH_VERSION: "v9", OPKSSH_SHA256: sha }, "linux", "x64"),
     ).toMatchObject({ version: "v9", sha256: sha });
   });
+
+  it("reads the per-architecture checksum the Docker image passes on", () => {
+    const amd = "b".repeat(64);
+    const arm = "c".repeat(64);
+    const env = {
+      OPKSSH_VERSION: "v9",
+      OPKSSH_SHA256_AMD64: amd,
+      OPKSSH_SHA256_ARM64: arm,
+    };
+    expect(binarySpec(env, "linux", "x64").sha256).toBe(amd);
+    expect(binarySpec(env, "linux", "arm64").sha256).toBe(arm);
+  });
 });

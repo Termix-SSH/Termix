@@ -1,14 +1,11 @@
 import React, { useState } from "react";
-import { Document, Page } from "react-pdf";
+import { Document, Page, pdfjs } from "react-pdf";
 import { AlertCircle, Download } from "lucide-react";
 import { Button } from "@termix/plugin-sdk/ui";
 import { useTranslation } from "react-i18next";
+import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// No workerSrc: the termix-plugin CLI's esbuild step has no asset-copy
-// pipeline for a worker file the way core's Vite build does with `?url`, so
-// pdfjs falls back to parsing on the main thread instead. Fine for the
-// config/log-sized files this preview usually opens; a real worker needs the
-// CLI to gain static-asset output first (see FINISH-LIST.md).
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 interface PdfPreviewProps {
   content: string;

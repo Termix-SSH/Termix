@@ -29,9 +29,6 @@ vi.mock("@/sidebar/UserProfilePanel", () => ({
 vi.mock("@/sidebar/AdminSettingsPanel", () => ({
   AdminSettingsPanel: () => <div>admin-panel</div>,
 }));
-vi.mock("@/settings/legacy-settings-components", () => ({
-  registerLegacySettingsComponents: vi.fn(),
-}));
 
 const { SettingsScreen } = await import("@/settings/SettingsScreen");
 

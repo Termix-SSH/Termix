@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useManagerData, useManagerAction } from "./useManagerData";
-import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerCardShell } from "@termix/plugin-sdk/ui";
 
 interface WireGuardPeer {
   publicKey: string;

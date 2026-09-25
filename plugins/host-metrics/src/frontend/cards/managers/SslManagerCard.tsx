@@ -8,7 +8,7 @@ import {
   useManagerAction,
   extractError,
 } from "./useManagerData";
-import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerCardShell } from "@termix/plugin-sdk/ui";
 
 interface CertInfo {
   client: string;

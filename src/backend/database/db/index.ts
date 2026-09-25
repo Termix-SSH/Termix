@@ -304,19 +304,12 @@ async function initializeCompleteDatabase(): Promise<void> {
         key TEXT,
         key_password TEXT,
         key_type TEXT,
-        enable_terminal INTEGER NOT NULL DEFAULT 1,
-        enable_tunnel INTEGER NOT NULL DEFAULT 1,
-        tunnel_connections TEXT,
-        enable_file_manager INTEGER NOT NULL DEFAULT 1,
-        enable_web_ui INTEGER NOT NULL DEFAULT 0,
-        default_path TEXT,
         autostart_password TEXT,
         autostart_key TEXT,
         autostart_key_password TEXT,
         force_keyboard_interactive TEXT,
         status_check_enabled INTEGER NOT NULL DEFAULT 1,
         status_check_interval INTEGER,
-        web_ui_config TEXT,
         terminal_config TEXT,
         notes TEXT,
         use_socks5 INTEGER,
@@ -921,39 +914,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "key", "TEXT");
   addColumnIfNotExists("ssh_data", "key_password", "TEXT");
   addColumnIfNotExists("ssh_data", "key_type", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_terminal",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_session_logging",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_command_history",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_tunnel",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
-  addColumnIfNotExists("ssh_data", "tunnel_connections", "TEXT");
   addColumnIfNotExists("ssh_data", "jump_hosts", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_file_manager",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "scp_legacy",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists("ssh_data", "default_path", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "created_at",
@@ -990,22 +951,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "status_check_interval", "INTEGER");
   addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
   addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_web_ui",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists("ssh_data", "web_ui_config", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_tmux_monitor",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_terminal_toolbar",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
   addColumnIfNotExists("ssh_data", "domain", "TEXT");
@@ -1025,31 +970,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "host_key_last_verified", "TEXT");
   addColumnIfNotExists("ssh_data", "host_key_changed_count", "INTEGER DEFAULT 0");
 
-  addColumnIfNotExists(
-    "ssh_data",
-    "show_terminal_in_sidebar",
-    "INTEGER NOT NULL DEFAULT 1",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "show_file_manager_in_sidebar",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "show_tunnel_in_sidebar",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "show_docker_in_sidebar",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists(
-    "ssh_data",
-    "show_server_stats_in_sidebar",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
@@ -1284,11 +1204,6 @@ const migrateSchema = () => {
     { column: "override_credential_username", sql: "ALTER TABLE ssh_data ADD COLUMN override_credential_username INTEGER" },
     { column: "share_ssh_auth", sql: "ALTER TABLE ssh_data ADD COLUMN share_ssh_auth INTEGER NOT NULL DEFAULT 0" },
     { column: "jump_hosts", sql: "ALTER TABLE ssh_data ADD COLUMN jump_hosts TEXT" },
-    { column: "show_terminal_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1" },
-    { column: "show_file_manager_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0" },
-    { column: "show_tunnel_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_tunnel_in_sidebar INTEGER NOT NULL DEFAULT 0" },
-    { column: "show_docker_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_docker_in_sidebar INTEGER NOT NULL DEFAULT 0" },
-    { column: "show_server_stats_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0" },
     { column: "quick_actions", sql: "ALTER TABLE ssh_data ADD COLUMN quick_actions TEXT" },
     { column: "domain", sql: "ALTER TABLE ssh_data ADD COLUMN domain TEXT" },
     { column: "socks5_proxy_chain", sql: "ALTER TABLE ssh_data ADD COLUMN socks5_proxy_chain TEXT" },
@@ -1314,7 +1229,6 @@ const migrateSchema = () => {
     { column: "rdp_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_auth_type TEXT" },
     { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
     { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
-    { column: "allow_session_sharing", sql: "ALTER TABLE ssh_data ADD COLUMN allow_session_sharing INTEGER NOT NULL DEFAULT 1" },
     { column: "connection_origin", sql: "ALTER TABLE ssh_data ADD COLUMN connection_origin TEXT" },
     { column: "parent_host_id", sql: "ALTER TABLE ssh_data ADD COLUMN parent_host_id INTEGER REFERENCES ssh_data(id) ON DELETE SET NULL" },
   ];

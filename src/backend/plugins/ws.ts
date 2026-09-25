@@ -27,6 +27,7 @@ import type {
   PluginWebSocketOptions,
 } from "@termix/plugin-sdk/backend";
 import { pluginLogger } from "../utils/logger.js";
+import { recordConflict } from "./conflicts.js";
 import { extractWebSocketToken } from "../utils/ws-auth.js";
 import { runAsActor } from "./actor.js";
 
@@ -245,6 +246,12 @@ export function registerPluginWsRoute(
 ): () => void {
   const routeKey = key(pluginId, path);
   const normalized = normalizePath(path);
+  if (routes.has(routeKey)) {
+    recordConflict({ kind: "ws", pluginId, name: normalized });
+    throw new Error(
+      `/plugin-ws/${pluginId}${normalized} is already registered`,
+    );
+  }
 
   routes.set(routeKey, {
     pluginId,
@@ -271,6 +278,12 @@ export function registerPluginWsUpgrade(
 ): () => void {
   const routeKey = key(pluginId, path);
   const normalized = normalizePath(path);
+  if (routes.has(routeKey)) {
+    recordConflict({ kind: "ws", pluginId, name: normalized });
+    throw new Error(
+      `/plugin-ws/${pluginId}${normalized} is already registered`,
+    );
+  }
 
   routes.set(routeKey, {
     pluginId,

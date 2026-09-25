@@ -34,6 +34,21 @@ export function registerSecretSourceRoutes(
   tokenStore: TokenStore,
 ): void {
   const isAdmin = () => ctx.rbac.has("admin.plugins.manage");
+  // Secret sources are credentials, so they follow core's credential
+  // permissions. ctx.rbac.require only takes this plugin's own names.
+  const requireCredentials =
+    (action: "view" | "create" | "edit" | "delete") =>
+    (req: Request, res: Response, next: () => void) => {
+      void ctx.rbac.has(`credentials.${action}`).then((allowed) => {
+        if (allowed) next();
+        else {
+          res.status(403).json({
+            error: "Insufficient permissions",
+            required: `credentials.${action}`,
+          });
+        }
+      });
+    };
   const allowedPrivateHosts = async () =>
     parseAllowlist(await ctx.settings.get<string>("privateEndpoints"));
 
@@ -47,7 +62,7 @@ export function registerSecretSourceRoutes(
    */
   router.get(
     "/",
-    ctx.rbac.require("credentials.view") as never,
+    requireCredentials("view") as never,
     async (req: Request, res: Response) => {
       const userId = ctx.currentActor()!;
       try {
@@ -76,7 +91,7 @@ export function registerSecretSourceRoutes(
    */
   router.post(
     "/",
-    ctx.rbac.require("credentials.create") as never,
+    requireCredentials("create") as never,
     async (req: Request, res: Response) => {
       const userId = ctx.currentActor()!;
       const {
@@ -138,7 +153,7 @@ export function registerSecretSourceRoutes(
    */
   router.put(
     "/:id",
-    ctx.rbac.require("credentials.edit") as never,
+    requireCredentials("edit") as never,
     async (req: Request, res: Response) => {
       const userId = ctx.currentActor()!;
       const { name, baseUrl, token, shared } = req.body ?? {};
@@ -187,7 +202,7 @@ export function registerSecretSourceRoutes(
    */
   router.delete(
     "/:id",
-    ctx.rbac.require("credentials.delete") as never,
+    requireCredentials("delete") as never,
     async (req: Request, res: Response) => {
       const userId = ctx.currentActor()!;
       try {
@@ -227,7 +242,7 @@ export function registerSecretSourceRoutes(
    */
   router.post(
     "/:id/test",
-    ctx.rbac.require("credentials.view") as never,
+    requireCredentials("view") as never,
     async (req: Request, res: Response) => {
       const userId = ctx.currentActor()!;
       try {

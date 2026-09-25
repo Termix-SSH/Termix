@@ -2,10 +2,7 @@ import { useState } from "react";
 import { Power } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useTailscaleData, useTailscaleAction } from "./useTailscaleManager";
-import {
-  TailscaleManagerShell,
-  TailscaleManagerSearch,
-} from "./TailscaleManagerShell";
+import { ManagerCardShell, ManagerSearch } from "@termix/plugin-sdk/ui";
 
 interface TailscalePeer {
   hostname: string;
@@ -54,7 +51,7 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
   const isNotInstalled = data && !data.installed;
 
   return (
-    <TailscaleManagerShell
+    <ManagerCardShell
       title={t("manager.title")}
       icon={<Power className="size-3.5" />}
       loading={loading}
@@ -121,7 +118,7 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
 
           {/* Peers */}
           {(data.peers?.length ?? 0) > 5 && (
-            <TailscaleManagerSearch
+            <ManagerSearch
               value={query}
               onChange={setQuery}
               count={filteredPeers.length}
@@ -159,6 +156,6 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
           ))}
         </div>
       )}
-    </TailscaleManagerShell>
+    </ManagerCardShell>
   );
 }

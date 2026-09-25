@@ -37,6 +37,7 @@
 
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
+import { recordConflict } from "./conflicts.js";
 import { runAsActor } from "./actor.js";
 import type { PluginManifest, PluginServiceRequire } from "./manifest.js";
 
@@ -135,6 +136,19 @@ export function provideService(
 ): ServiceRegistration {
   const name = registration.name ?? "";
   const existing = lookup(registration.service, name);
+  // Two plugins cannot answer to the same service and provider name. The
+  // same plugin replacing its own registration (a restart) is fine.
+  if (existing && existing.pluginId !== registration.pluginId) {
+    recordConflict({
+      kind: "service",
+      pluginId: registration.pluginId,
+      heldBy: existing.pluginId,
+      name: `${registration.service}${name ? `:${name}` : ""}`,
+    });
+    throw new Error(
+      `Service "${registration.service}"${name ? ` (${name})` : ""} is already provided by ${existing.pluginId}`,
+    );
+  }
   if (existing) {
     pluginLogger.warn(
       `Service "${registration.service}"${name ? ` (${name})` : ""} is already provided by ${existing.pluginId} and is being replaced by ${registration.pluginId}`,

@@ -136,6 +136,13 @@
           "default": true
         },
         {
+          "key": "commandHistoryForNewHosts",
+          "type": "boolean",
+          "labelKey": "settings.admin.commandHistoryForNewHosts.label",
+          "descriptionKey": "settings.admin.commandHistoryForNewHosts.description",
+          "default": true
+        },
+        {
           "key": "touchInput",
           "type": "custom",
           "component": "touchInput",
@@ -208,20 +215,15 @@
         }
       ],
       "host": {
+        "enableKey": "enableTerminal",
+        "enableLabelKey": "settings.host.enableTerminal.label",
+        "enableDefault": true,
         "fields": [
-          {
-            "key": "enableTerminal",
-            "type": "boolean",
-            "labelKey": "settings.host.enableTerminal.label",
-            "descriptionKey": "settings.host.enableTerminal.description",
-            "default": true
-          },
           {
             "key": "enableTerminalToolbar",
             "type": "boolean",
             "labelKey": "settings.host.enableTerminalToolbar.label",
             "descriptionKey": "settings.host.enableTerminalToolbar.description",
-            "requires": "enableTerminal",
             "default": true
           },
           {
@@ -229,8 +231,8 @@
             "type": "boolean",
             "labelKey": "settings.host.enableCommandHistory.label",
             "descriptionKey": "settings.host.enableCommandHistory.description",
-            "requires": "enableTerminal",
-            "default": true
+            "default": true,
+            "defaultFrom": "commandHistoryForNewHosts"
           }
         ]
       }

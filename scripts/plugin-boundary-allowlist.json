@@ -7,7 +7,6 @@
     "plugins/file-manager/src/frontend/FileManagerGrid.tsx",
     "plugins/file-manager/src/frontend/FileManagerSidebar.tsx",
     "plugins/file-manager/src/frontend/FileManagerToolbar.tsx",
-    "plugins/file-manager/src/frontend/HostFilesTab.tsx",
     "plugins/file-manager/src/frontend/LocalFileContextMenu.tsx",
     "plugins/file-manager/src/frontend/LocalFilePane.tsx",
     "plugins/file-manager/src/frontend/SftpTransferTab.tsx",
@@ -47,7 +46,6 @@
     "plugins/tailscale/src/frontend/TailscaleCheckDialog.tsx",
     "plugins/tailscale/src/frontend/TailscaleDevicesPanel.tsx",
     "plugins/tailscale/src/frontend/TailscaleDevicesStatus.tsx",
-    "plugins/tailscale/src/frontend/TailscaleManagerShell.tsx",
     "plugins/tailscale/src/frontend/index.tsx",
     "plugins/tailscale/src/frontend/tailscale-api.ts",
     "plugins/web-endpoint/src/frontend/HostEditorWebUiSection.tsx",
@@ -58,7 +56,6 @@
   "plugin-to-core": [
     "plugins/file-manager/src/backend/index.ts",
     "plugins/file-manager/src/backend/operation-routes.ts",
-    "plugins/proxmox/src/backend/routes.ts",
     "plugins/tailscale/src/backend/routes.ts"
   ],
   "plugin-to-plugin": []

@@ -9,20 +9,13 @@ import type { Client } from "ssh2";
 /**
  * CPU percent is derived from the delta against the previous poll's
  * /proc/stat sample rather than a same-poll double-read, so a poll no longer
- * has to block for a fixed settle window. Keyed by host.
+ * has to block for a fixed settle window. Keyed by host, and owned by the
+ * poller so it goes away with the plugin.
  */
-const previousStat = new Map<
+export type CpuSamples = Map<
   number,
   { total: number; idle: number; timestamp: number }
->();
-
-export function clearCpuSampleCache(hostId?: number): void {
-  if (hostId === undefined) {
-    previousStat.clear();
-    return;
-  }
-  previousStat.delete(hostId);
-}
+>;
 
 export function parseCpuLine(
   cpuLine: string,
@@ -149,6 +142,7 @@ export async function collectCpuMetrics(
   client: Client,
   platform?: HostPlatform,
   hostId?: number,
+  previousStat: CpuSamples = new Map(),
 ): Promise<{
   percent: number | null;
   cores: number | null;

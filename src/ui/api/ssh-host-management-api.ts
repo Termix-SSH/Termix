@@ -347,54 +347,6 @@ export async function exportAllSSHHosts(options?: {
 }
 
 // ============================================================================
-// SSH AUTOSTART MANAGEMENT
-// ============================================================================
-
-export async function enableAutoStart(
-  sshConfigId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post("/autostart/enable", {
-      sshConfigId,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "enable autostart");
-  }
-}
-
-export async function disableAutoStart(
-  sshConfigId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.delete("/autostart/disable", {
-      data: { sshConfigId },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "disable autostart");
-  }
-}
-
-export async function getAutoStartStatus(): Promise<{
-  autostart_configs: Array<{
-    sshConfigId: number;
-    host: string;
-    port: number;
-    username: string;
-    authType: string;
-  }>;
-  total_count: number;
-}> {
-  try {
-    const response = await sshHostApi.get("/autostart/status");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch autostart status");
-  }
-}
-
-// ============================================================================
 // PROXY CONNECTIVITY TEST
 // ============================================================================
 

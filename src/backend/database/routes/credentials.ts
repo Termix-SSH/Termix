@@ -1160,13 +1160,6 @@ function formatSSHHostOutput(
         : [],
     pin: !!host.pin,
     authType: host.authType,
-    enableTerminal: !!host.enableTerminal,
-    enableTunnel: !!host.enableTunnel,
-    tunnelConnections: host.tunnelConnections
-      ? JSON.parse(host.tunnelConnections as string)
-      : [],
-    enableFileManager: host.enableFileManager !== false,
-    defaultPath: host.defaultPath,
     createdAt: host.createdAt,
     updatedAt: host.updatedAt,
   };

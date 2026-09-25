@@ -28,6 +28,19 @@ export async function activate(ctx: PluginContext) {
     order: 20,
   });
 
+  // A host's profileId is a local row id; remote sync carries the profile's
+  // syncId instead, which is the same on both sides.
+  ctx.registry.provide("vault.hostSettingsSync", {
+    exportValue: async (key: string, value: unknown) =>
+      key === "profileId" && typeof value === "number"
+        ? ((await profiles.findById(value))?.syncId ?? null)
+        : value,
+    importValue: async (key: string, value: unknown) =>
+      key === "profileId" && typeof value === "string"
+        ? ((await profiles.findBySyncId(value))?.id ?? null)
+        : value,
+  });
+
   registerRoutes(
     ctx,
     ctx.http.router<Router>({ public: PUBLIC_PATHS }),

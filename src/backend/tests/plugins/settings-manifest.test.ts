@@ -372,3 +372,83 @@ describe("settings field permissions", () => {
     expect(errors).toEqual([]);
   });
 });
+
+describe("host field options", () => {
+  const host = (fields: unknown[], extra: Record<string, unknown> = {}) =>
+    withSettings({
+      admin: [
+        { key: "defaultOn", type: "boolean", labelKey: "k" },
+        { key: "token", type: "secret", labelKey: "k" },
+      ],
+      host: { enableKey: "on", enableLabelKey: "k", fields, ...extra },
+    });
+
+  it("accepts enableDefault, defaultFrom, shareRead and ownerOnly", () => {
+    expect(
+      validateManifest(
+        host(
+          [
+            {
+              key: "mode",
+              type: "boolean",
+              labelKey: "k",
+              defaultFrom: "defaultOn",
+              shareRead: "edit",
+              ownerOnly: true,
+            },
+          ],
+          { enableDefault: true },
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects a defaultFrom that names a secret or unknown admin field", () => {
+    for (const defaultFrom of ["token", "missing"]) {
+      expect(
+        validateManifest(
+          host([{ key: "mode", type: "boolean", labelKey: "k", defaultFrom }]),
+        ).join(),
+      ).toMatch(/defaultFrom/);
+    }
+  });
+
+  it("rejects an unknown shareRead level and host options on admin fields", () => {
+    expect(
+      validateManifest(
+        host([
+          { key: "mode", type: "boolean", labelKey: "k", shareRead: "all" },
+        ]),
+      ).join(),
+    ).toMatch(/shareRead/);
+    expect(
+      validateManifest(
+        withSettings({
+          admin: [
+            { key: "a", type: "boolean", labelKey: "k", ownerOnly: true },
+          ],
+        }),
+      ).join(),
+    ).toMatch(/only valid on host fields/);
+  });
+});
+
+describe("contributes.http.legacyPaths", () => {
+  it("accepts a path under the plugin's own id", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: { http: { legacyPaths: ["/sample-plugin/hook"] } },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects a path outside the plugin's id", () => {
+    expect(
+      validateManifest(
+        base({ contributes: { http: { legacyPaths: ["/users/login"] } } }),
+      ).join(),
+    ).toMatch(/must start with "\/sample-plugin\/"/);
+  });
+});

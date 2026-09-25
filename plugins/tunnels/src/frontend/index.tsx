@@ -24,7 +24,12 @@ function TunnelTabView({ host }: TabProps) {
 }
 
 export function activate(app: TermixApp): void {
-  setTunnelsApi(app.api);
+  // apiFor("remote") hands back app.api itself outside the desktop app.
+  const remote = app.apiFor("remote");
+  setTunnelsApi(app.api, {
+    stream: (init) => app.fetch("/status/stream", init),
+    remote: remote === app.api ? null : remote,
+  });
   app.onDispose(() => setTunnelsApi(null));
 
   // Keeps the "tunnel" tab type and ?view=tunnel links from before the

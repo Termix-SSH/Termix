@@ -44,7 +44,7 @@ const DIRECTIONS = {
     only: (rel) => /^plugins\/[a-z0-9-]+\/src\//.test(rel),
     pattern: /["'](?:\.\.\/)+src\/(backend|types)\//,
   },
-  // One plugin importing another's source. B18 empties this.
+  // One plugin importing another's source. Empty, and stays that way.
   "plugin-to-plugin": {
     roots: ["plugins"],
     only: (rel) => /^plugins\/[a-z0-9-]+\/src\//.test(rel),

@@ -16,6 +16,7 @@ import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
+import { recordConflict } from "./conflicts.js";
 
 let loader: PluginLoader | null = null;
 
@@ -258,8 +259,15 @@ async function registerPluginPermissions(plugin: LoadedPlugin): Promise<void> {
     const accepted = declared.filter((permission) => {
       const head = permission.name.split(".")[0];
       if (coreGroups.has(head) || otherPluginIds.has(head)) {
-        pluginLogger.warn(
+        recordConflict({
+          kind: "permission",
+          pluginId: plugin.id,
+          heldBy: coreGroups.has(head) ? "core" : head,
+          name: permission.name,
+        });
+        pluginLogger.error(
           `Ignoring ${plugin.id} permission "${permission.name}": it starts with "${head}", which belongs to someone else`,
+          undefined,
           { operation: "plugin_permissions" },
         );
         return false;
@@ -421,6 +429,10 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   if (plugin) await registerPluginPermissions(plugin);
 
   await pluginLoader.activate(pluginId);
+
+  // A plugin enabled without a restart still needs its 2.8 data copied.
+  const { runPluginDataMigrations } = await import("./boot-migrations.js");
+  await runPluginDataMigrations();
 }
 
 export async function deactivatePlugin(pluginId: string): Promise<void> {

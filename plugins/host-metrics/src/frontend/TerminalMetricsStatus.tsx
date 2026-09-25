@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
-import { usePluginApi, useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  usePluginApi,
+  usePluginApiFor,
+  useTranslation,
+} from "@termix/plugin-sdk/frontend";
 import {
   cn,
   getPollingEnvironmentMultiplier,
+  resolveConnectionOrigin,
+  resolveRemoteHostId,
   runAdaptivePolling,
 } from "@termix/plugin-sdk/ui";
 
 /** What the ssh-terminal plugin hands a "terminal.toolbarStatus" component. */
 interface TerminalToolbarStatusProps {
-  host: { id: number | string };
+  host: {
+    id: number | string;
+    connectionOrigin?: "local" | "remote" | null;
+    syncId?: string | null;
+  };
   isConnected: boolean;
   /** Visible on a desktop viewport and connected: poll only while true. */
   active: boolean;
@@ -59,7 +69,8 @@ function StatBar({
 export function TerminalMetricsStatus(props: Record<string, unknown>) {
   const { host, active } = props as unknown as TerminalToolbarStatusProps;
   const { t } = useTranslation();
-  const api = usePluginApi();
+  const localApi = usePluginApi();
+  const remoteApi = usePluginApiFor("remote");
   const [metrics, setMetrics] = useState<Sample | null>(null);
   const [available, setAvailable] = useState(true);
   const hostId = host?.id ? Number(host.id) : null;
@@ -73,6 +84,9 @@ export function TerminalMetricsStatus(props: Record<string, unknown>) {
     let stopPolling: (() => void) | undefined;
     let viewerSessionId: string | undefined;
     let previous: Sample | null = null;
+    // A host on the desktop app's remote server has its own id there.
+    let api = localApi;
+    let targetId: number = hostId;
     setAvailable(true);
 
     const poll = async () => {
@@ -81,7 +95,7 @@ export function TerminalMetricsStatus(props: Record<string, unknown>) {
           cpu?: { percent?: number };
           memory?: { percent?: number };
           disk?: { percent?: number };
-        } | null>(`/metrics/${hostId}`, {
+        } | null>(`/metrics/${targetId}`, {
           validateStatus: (status: number) => status === 200 || status === 404,
         });
         const data = response.data;
@@ -109,14 +123,24 @@ export function TerminalMetricsStatus(props: Record<string, unknown>) {
 
     const start = async () => {
       try {
+        if ((await resolveConnectionOrigin(host)) === "remote") {
+          const remoteId = await resolveRemoteHostId(host.syncId);
+          if (cancelled) return;
+          if (remoteId === null) {
+            setAvailable(false);
+            return;
+          }
+          api = remoteApi;
+          targetId = remoteId;
+        }
         const { data } = await api.post<{
           requires_totp?: boolean;
           viewerSessionId?: string;
-        }>(`/metrics/start/${hostId}`);
+        }>(`/metrics/start/${targetId}`);
         if (cancelled) {
           if (data.viewerSessionId) {
             void api
-              .post(`/metrics/stop/${hostId}`, {
+              .post(`/metrics/stop/${targetId}`, {
                 viewerSessionId: data.viewerSessionId,
               })
               .catch(() => {});
@@ -148,10 +172,10 @@ export function TerminalMetricsStatus(props: Record<string, unknown>) {
       cancelled = true;
       stopPolling?.();
       void api
-        .post(`/metrics/stop/${hostId}`, { viewerSessionId })
+        .post(`/metrics/stop/${targetId}`, { viewerSessionId })
         .catch(() => {});
     };
-  }, [active, hostId, api]);
+  }, [active, hostId, localApi, remoteApi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!available) {
     return (

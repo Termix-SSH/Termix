@@ -13,7 +13,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { legacyFlag, selectLegacyRows } from "./raw-rows.js";
 import { createCurrentPluginSettingsRepository } from "../../database/repositories/factory.js";
 
 export interface SessionRecordingSettingsMigrationResult {
@@ -33,10 +33,9 @@ export async function runSessionRecordingSettingsMigration(): Promise<SessionRec
   };
 
   try {
-    const drizzleDb = getDb();
     // Raw SQL, not the typed schema, so this keeps working once schema.ts
     // stops declaring this column.
-    const rows = await drizzleDb.all<LegacySessionLoggingRow>(sql`
+    const rows = await selectLegacyRows<LegacySessionLoggingRow>(sql`
       SELECT id, enable_session_logging FROM ssh_data
     `);
 
@@ -62,7 +61,7 @@ export async function runSessionRecordingSettingsMigration(): Promise<SessionRec
         "host",
         scopeId,
         "enableSessionRecording",
-        JSON.stringify(row.enable_session_logging !== false),
+        JSON.stringify(legacyFlag(row.enable_session_logging, true)),
       );
       result.moved++;
     }

@@ -45,20 +45,6 @@ function sshHost(
     pin: false,
     authType: "password",
     connectionType: "ssh",
-    enableTerminal: true,
-    enableSessionLogging: false,
-    enableCommandHistory: false,
-    enableTunnel: false,
-    enableFileManager: false,
-    enableTmuxMonitor: false,
-    enableTerminalToolbar: true,
-    showTerminalInSidebar: true,
-    showFileManagerInSidebar: false,
-    showTunnelInSidebar: false,
-    showDockerInSidebar: false,
-    showServerStatsInSidebar: false,
-    defaultPath: "",
-    tunnelConnections: [],
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     status: "online",
@@ -76,9 +62,13 @@ function rawPayload() {
         port: 22,
         username: "deploy",
         password: "hunter2",
-        guacamoleConfig: {
-          "gateway-hostname": "gw.example.com",
-          "gateway-password": "gw-secret",
+        pluginSettings: {
+          "remote-desktop": {
+            guacamoleConfig: {
+              "gateway-hostname": "gw.example.com",
+              "gateway-password": "gw-secret",
+            },
+          },
         },
       },
     ],
@@ -207,6 +197,10 @@ describe("HostExportDialog - credential handling", () => {
     expect(text).toContain("gw.example.com");
 
     const parsed = JSON.parse(text);
-    expect(parsed.hosts[0].guacamoleConfig["gateway-password"]).toBeNull();
+    expect(
+      parsed.hosts[0].pluginSettings["remote-desktop"].guacamoleConfig[
+        "gateway-password"
+      ],
+    ).toBeNull();
   });
 });

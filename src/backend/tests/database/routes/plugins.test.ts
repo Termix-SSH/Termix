@@ -35,6 +35,14 @@ const state = vi.hoisted(() => ({
   active: new Set<string>(),
 }));
 
+vi.mock("../../../plugins/boot-migrations.js", () => ({
+  runPluginDataMigrations: async () => {},
+}));
+
+vi.mock("../../../utils/crypto-migration/raw-rows.js", () => ({
+  runStatement: vi.fn(async () => {}),
+}));
+
 vi.mock("../../../utils/logger.js", () => ({
   databaseLogger: {
     debug: vi.fn(),

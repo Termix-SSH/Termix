@@ -395,3 +395,22 @@ describe("service registry", () => {
     expect(error.message).toContain("provider");
   });
 });
+
+describe("provider clashes", () => {
+  it("refuses a second plugin answering to the same service and name", async () => {
+    register();
+    expect(() => register({ pluginId: "other-plugin" })).toThrow(
+      /already provided by provider-plugin/,
+    );
+    const { listRegistrationConflicts } =
+      await import("../../plugins/conflicts.js");
+    expect(listRegistrationConflicts()).toContainEqual(
+      expect.objectContaining({ kind: "service", pluginId: "other-plugin" }),
+    );
+  });
+
+  it("lets a plugin replace its own registration", () => {
+    register();
+    expect(() => register()).not.toThrow();
+  });
+});

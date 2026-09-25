@@ -207,6 +207,21 @@ export function activate(app: TermixApp): void {
     });
   }
 
+  // The tab bar's right-click menu, for a terminal whose toolbar is hidden.
+  app.registerSlotContribution("tab.menu", {
+    actionId: SHARE_ACTION,
+    titleKey: "sessionSharing.shareButton",
+    icon: Share2,
+    kind: "button",
+    when: (context) => {
+      const handle = context.handle as
+        { getShareTarget?: () => unknown } | null | undefined;
+      return typeof handle?.getShareTarget === "function"
+        ? handle.getShareTarget() !== null
+        : false;
+    },
+  });
+
   app.registerSlotContribution("shell.overlay", {
     actionId: "session-sharing.shareDialog",
     titleKey: "sessionSharing.shareButton",

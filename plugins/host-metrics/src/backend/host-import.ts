@@ -30,3 +30,32 @@ export function hostImportNormalizer(
   });
   return { ...settings };
 }
+
+/**
+ * Registered as "host-metrics.hostPayloadLegacy": the 2.8 statsConfig shape
+ * Termix-Mobile still reads. Remove once the mobile app reads
+ * pluginSettings["host-metrics"] and GET /host/status.
+ */
+export function hostPayloadLegacy(
+  values: Record<string, unknown>,
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  const settings = readHostMetricsSettings(values);
+  const statusInterval =
+    typeof host.statusCheckInterval === "number"
+      ? host.statusCheckInterval
+      : null;
+  return {
+    statsConfig: {
+      enabledWidgets: settings.enabledWidgets,
+      statusCheckEnabled: host.statusCheckEnabled !== false,
+      statusCheckInterval: statusInterval ?? 30,
+      useGlobalStatusInterval: statusInterval === null,
+      metricsEnabled: settings.metricsEnabled,
+      metricsInterval: settings.metricsInterval ?? 30,
+      useGlobalMetricsInterval: settings.metricsInterval == null,
+      excludedMounts: settings.excludedMounts,
+      monitoredMounts: settings.monitoredMounts,
+    },
+  };
+}

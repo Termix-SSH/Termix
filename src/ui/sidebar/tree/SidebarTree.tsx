@@ -7,15 +7,15 @@ import {
   useState,
 } from "react";
 import { updatePluginHostSettings } from "@/api/plugins-api";
+import { PluginIcon } from "@/lib/plugin-icon";
+import { usePluginHostSections } from "@/settings/HostPluginSections";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import {
-  Boxes,
   ChevronDown,
   Download,
   FolderOpen,
-  FolderSearch,
   Loader2,
   Plus,
   Server,
@@ -117,6 +117,9 @@ export function SidebarTree({
   focusExistingTab?: boolean;
 }) {
   const { t } = useTranslation();
+  const hostSwitchPlugins = usePluginHostSections().filter(
+    (plugin) => !!plugin.contributes?.settings?.host?.enableKey,
+  );
   // Knobs with no other owner come straight from the interface preset; the
   // ones above still come from the host sidebar preferences blob.
   const { showResourceBars, showStatusStripes, rowActions } =
@@ -607,9 +610,6 @@ export function SidebarTree({
         credentialId: host.credentialId ? Number(host.credentialId) : null,
         overrideCredentialUsername: host.overrideCredentialUsername ?? false,
         enableSsh: host.enableSsh,
-        enableTerminal: host.enableTerminal,
-        enableTunnel: host.enableTunnel,
-        enableFileManager: host.enableFileManager,
         sshPort: host.sshPort,
         rdpUser: host.rdpUser ?? null,
         rdpPassword: host.rdpPassword ?? null,
@@ -622,7 +622,6 @@ export function SidebarTree({
         vncUser: host.vncUser ?? null,
         telnetUser: host.telnetUser ?? null,
         telnetPassword: host.telnetPassword ?? null,
-        defaultPath: host.defaultPath ?? "/",
         forceKeyboardInteractive: host.forceKeyboardInteractive ?? false,
         useSocks5: host.useSocks5,
         socks5Host: host.socks5Host ?? null,
@@ -634,7 +633,6 @@ export function SidebarTree({
           hostId: Number(j.hostId),
         })),
         portKnockSequence: host.portKnockSequence ?? [],
-        tunnelConnections: host.serverTunnels ?? [],
         quickActions: (host.quickActions ?? []).map((a) => ({
           name: a.name,
           snippetId: Number(a.snippetId),
@@ -1145,65 +1143,40 @@ export function SidebarTree({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="text-xs">
-                {[
-                  {
-                    labelKey: "hosts.enableTerminalFeature",
-                    field: "enableTerminal",
-                    value: true,
-                    icon: Terminal,
-                  },
-                  {
-                    labelKey: "hosts.disableTerminalFeature",
-                    field: "enableTerminal",
-                    value: false,
-                    icon: Terminal,
-                  },
-                  {
-                    labelKey: "hosts.enableFilesFeature",
-                    field: "enableFileManager",
-                    value: true,
-                    icon: FolderSearch,
-                  },
-                  {
-                    labelKey: "hosts.disableFilesFeature",
-                    field: "enableFileManager",
-                    value: false,
-                    icon: FolderSearch,
-                  },
-                  {
-                    labelKey: "hosts.enableProxmoxFeature",
-                    field: "enableProxmox",
-                    value: true,
-                    icon: Boxes,
-                  },
-                  {
-                    labelKey: "hosts.disableProxmoxFeature",
-                    field: "enableProxmox",
-                    value: false,
-                    icon: Boxes,
-                  },
-                ].map(({ labelKey, field, value, icon: Icon }) => (
-                  <DropdownMenuItem
-                    key={labelKey}
-                    onClick={async () => {
-                      const ids = Array.from(selectedHostIds).map(Number);
-                      try {
-                        await bulkUpdateSSHHosts(ids, { [field]: value });
-                        window.dispatchEvent(
-                          new CustomEvent("termix:hosts-changed"),
-                        );
-                        toast.success(
-                          t("hosts.updatedCount", { count: ids.length }),
-                        );
-                      } catch {
-                        toast.error(t("hosts.bulkUpdateFailed"));
-                      }
-                    }}
-                  >
-                    <Icon className="size-3.5 mr-2" />
-                    {t(labelKey)}
-                  </DropdownMenuItem>
-                ))}
+                {hostSwitchPlugins.flatMap((plugin) =>
+                  [true, false].map((value) => (
+                    <DropdownMenuItem
+                      key={`${plugin.id}:${value}`}
+                      onClick={async () => {
+                        const ids = Array.from(selectedHostIds).map(Number);
+                        try {
+                          await bulkUpdateSSHHosts(ids, {
+                            pluginEnable: { [plugin.id]: value },
+                          });
+                          window.dispatchEvent(
+                            new CustomEvent("termix:hosts-changed"),
+                          );
+                          toast.success(
+                            t("hosts.updatedCount", { count: ids.length }),
+                          );
+                        } catch {
+                          toast.error(t("hosts.bulkUpdateFailed"));
+                        }
+                      }}
+                    >
+                      <PluginIcon
+                        name={plugin.icon}
+                        className="size-3.5 mr-2"
+                      />
+                      {t(
+                        value
+                          ? "hosts.enablePluginFeature"
+                          : "hosts.disablePluginFeature",
+                        { name: plugin.name },
+                      )}
+                    </DropdownMenuItem>
+                  )),
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>

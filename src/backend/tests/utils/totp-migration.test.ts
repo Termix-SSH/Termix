@@ -167,6 +167,18 @@ describe("runTotpMigration", () => {
     expect(await runTotpMigration()).toEqual({ factors: 0, secrets: 1 });
   });
 
+  it("moves only the named user when a login opens their key", async () => {
+    setup({ pluginTable: true });
+    addTotpUser("alice", "JBSWY3DPEHPK3PXP", []);
+    addTotpUser("bob", "KRSXG5CTMVRXEZLU", []);
+
+    expect(await runTotpMigration("alice")).toEqual({ factors: 1, secrets: 1 });
+    const moved = sqlite
+      .prepare("SELECT user_id FROM p_totp_enrollments")
+      .all();
+    expect(moved).toEqual([{ user_id: "alice" }]);
+  });
+
   it("drops a duplicate core row when the plugin row already exists", async () => {
     setup({ pluginTable: true });
     sqlite.exec(`

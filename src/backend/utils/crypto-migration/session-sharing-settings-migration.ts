@@ -10,7 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { selectLegacyRows } from "./raw-rows.js";
 import {
   createCurrentPluginSettingsRepository,
   createCurrentSettingsRepository,
@@ -63,8 +63,8 @@ export async function runSessionSharingSettingsMigration(): Promise<SessionShari
     }
 
     // Raw SQL, so this keeps working once schema.ts stops declaring the column.
-    const rows = await getDb().all<LegacyHostRow>(sql`
-      SELECT id FROM ssh_data WHERE allow_session_sharing = 0
+    const rows = await selectLegacyRows<LegacyHostRow>(sql`
+      SELECT id FROM ssh_data WHERE allow_session_sharing = false
     `);
     for (const row of rows) {
       const scopeId = String(row.id);

@@ -83,13 +83,14 @@ export {
   getPollingEnvironmentMultiplier,
 } from "@/lib/adaptive-polling";
 export * from "@/components/sheet";
+// The frame and filter box every host manager card uses.
+export {
+  ManagerCardShell,
+  ManagerSearch,
+  type ManagerCardError,
+} from "@/components/manager-card";
 export { useConfirmation } from "@/hooks/use-confirmation";
 export { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
-// Per-area display density and chart options the user picked in Appearance.
-export {
-  useAreaPreferences,
-  useUiPreferencesContext,
-} from "@/contexts/UiPreferencesContext";
 // Homepage widget pieces, for plugins that register a widget.
 export { WidgetTitle } from "@/lib/widget-title";
 export { runVisibleInterval } from "@/lib/visible-interval";
@@ -134,12 +135,10 @@ export {
 } from "@/lib/remote-server-api";
 export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 
-// Core APIs a terminal-like surface calls: recent activity, the host's stored
-// password for sudo autofill, the open tab record, the user's keybindings and
-// host terminal options.
-export { getCookie } from "@/main-axios";
+// Dashboard reads. The calls a plugin makes on the user's behalf (recent
+// activity, sudo autofill, open tabs, keybindings, auto tmux) are typed in
+// @termix/plugin-sdk/frontend instead.
 export {
-  logActivity,
   getRecentActivity,
   getUptime,
   type RecentActivityItem,
@@ -150,13 +149,6 @@ export {
   getDatabaseHealth,
   type VersionInfo,
 } from "@/api/system-status-api";
-export { getHostPassword } from "@/api/credentials-api";
-export {
-  patchOpenTab,
-  getUserPreferences,
-  parseCustomKeybindings,
-} from "@/api/open-tabs-api";
-export { setHostAutoTmux } from "@/api/host-terminal-config-api";
 
 // Notification channels are core (ctx.notify on the backend). A plugin that
 // lets users pick or manage them shows core's own dialog.

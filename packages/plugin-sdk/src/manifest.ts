@@ -225,6 +225,19 @@ export interface PluginSettingsField {
   /** Registered component id. Required when type is "custom". */
   component?: string;
   /**
+   * Host scope only: the admin field whose value a new host starts with,
+   * instead of `default`. Hosts that never saved the field still read
+   * `default`.
+   */
+  defaultFrom?: string;
+  /**
+   * Host scope only: the lowest share level whose recipients see this value
+   * in the host payload. Defaults to "connect", everyone who sees the host.
+   */
+  shareRead?: "connect" | "view" | "edit" | "manage";
+  /** Host scope only: only the host's owner may change it. */
+  ownerOnly?: boolean;
+  /**
    * Stored and validated like any field, but not drawn by the generic
    * settings form, because the plugin edits it in its own UI (a host editor
    * section).
@@ -236,6 +249,8 @@ export interface PluginHostSettingsContribution {
   /** Boolean field rendered first, gating the rest of the section. */
   enableKey?: string;
   enableLabelKey?: string;
+  /** What the enable switch reads before a host saves it. Off by default. */
+  enableDefault?: boolean;
   fields: PluginSettingsField[];
 }
 
@@ -288,6 +303,27 @@ export interface PluginContributions {
    */
   hostCapability?: HostCapabilityContribution | HostCapabilityContribution[];
   auth?: PluginAuthContribution;
+  http?: PluginHttpContribution;
+  /**
+   * This plugin's Appearance defaults for each interface preset, read in the
+   * frontend with usePluginUiPreferences. Every preset names the same keys;
+   * values are booleans, numbers, strings or string arrays.
+   */
+  uiPresets?: Record<
+    "simple" | "balanced" | "advanced",
+    Record<string, unknown>
+  >;
+}
+
+export interface PluginHttpContribution {
+  /**
+   * Old URLs something outside Termix still calls (a webhook a third party
+   * posts to). Each must start with "/<plugin id>/"; a request under it is
+   * served by this plugin's router with that prefix removed, so
+   * "/automations/webhook/x" reaches the route "/webhook/x". Core routes win
+   * a clash.
+   */
+  legacyPaths?: string[];
 }
 
 export interface PluginManifest {
@@ -375,6 +411,8 @@ const ALLOWED_CONTRIBUTES = new Set([
   "permissions",
   "settings",
   "hostCapability",
+  "http",
+  "uiPresets",
   "auth",
 ]);
 
@@ -393,7 +431,12 @@ const ALLOWED_SETTINGS_FIELD = [
   "group",
   "component",
   "hidden",
+  "defaultFrom",
+  "shareRead",
+  "ownerOnly",
 ];
+
+const SHARE_LEVELS = ["connect", "view", "edit", "manage"];
 
 /** Settings keys are stored as-is, so they stay short and index-safe. */
 const SETTINGS_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
@@ -782,6 +825,78 @@ function validateContributes(
   validateSettings(contributes.settings, errors);
   validateHostCapability(contributes.hostCapability, errors);
   validateAuthContribution(contributes.auth, errors);
+  validateHttpContribution(contributes.http, pluginId, errors);
+  validateUiPresets(contributes.uiPresets, errors);
+}
+
+function isPresetValue(value: unknown): boolean {
+  return (
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value)) ||
+    typeof value === "string" ||
+    (Array.isArray(value) && value.every((item) => typeof item === "string"))
+  );
+}
+
+function validateUiPresets(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  const where = "contributes.uiPresets";
+  if (!isPlainObject(value)) {
+    errors.push(`Field "${where}" must be an object`);
+    return;
+  }
+  rejectUnknown(value, ["simple", "balanced", "advanced"], where, errors);
+  let keys: string | undefined;
+  for (const level of ["simple", "balanced", "advanced"]) {
+    const preset = value[level];
+    if (!isPlainObject(preset)) {
+      errors.push(`${where}.${level} must be an object`);
+      continue;
+    }
+    for (const [key, entry] of Object.entries(preset)) {
+      if (!isPresetValue(entry)) {
+        errors.push(
+          `${where}.${level}.${key} must be a boolean, number, string or string array`,
+        );
+      }
+    }
+    const names = Object.keys(preset).sort().join(",");
+    if (keys === undefined) keys = names;
+    else if (keys !== names) {
+      errors.push(`${where} presets must all name the same keys`);
+    }
+  }
+}
+
+const LEGACY_PATH_PATTERN = /^\/[a-z][a-z0-9-]*(\/[A-Za-z0-9_.-]+)+$/;
+
+function validateHttpContribution(
+  value: unknown,
+  pluginId: string | undefined,
+  errors: string[],
+): void {
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    errors.push('Field "contributes.http" must be an object');
+    return;
+  }
+  rejectUnknown(value, ["legacyPaths"], "contributes.http", errors);
+  const paths = value.legacyPaths;
+  if (paths === undefined) return;
+  if (!Array.isArray(paths)) {
+    errors.push('Field "contributes.http.legacyPaths" must be an array');
+    return;
+  }
+  paths.forEach((path, index) => {
+    const at = `contributes.http.legacyPaths[${index}]`;
+    if (typeof path !== "string" || !LEGACY_PATH_PATTERN.test(path)) {
+      errors.push(`${at} must be an absolute path like "/<plugin id>/name"`);
+      return;
+    }
+    if (pluginId && !path.startsWith(`/${pluginId}/`)) {
+      errors.push(`${at} must start with "/${pluginId}/"`);
+    }
+  });
 }
 
 const AUTH_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
@@ -861,7 +976,7 @@ function validateSettings(settings: unknown, errors: string[]): void {
     }
     rejectUnknown(
       host,
-      ["enableKey", "enableLabelKey", "fields"],
+      ["enableKey", "enableLabelKey", "enableDefault", "fields"],
       `"${at}"`,
       errors,
     );
@@ -876,6 +991,9 @@ function validateSettings(settings: unknown, errors: string[]): void {
       // An enable switch with no label is a blank row in the host editor.
       requireString(host.enableLabelKey, `${at}.enableLabelKey`, errors);
     }
+    if ("enableDefault" in host && typeof host.enableDefault !== "boolean") {
+      errors.push(`${at}.enableDefault must be a boolean`);
+    }
 
     if (!Array.isArray(host.fields)) {
       errors.push(`${at}.fields must be an array`);
@@ -887,6 +1005,48 @@ function validateSettings(settings: unknown, errors: string[]): void {
       errors,
       typeof host.enableKey === "string" ? host.enableKey : undefined,
     );
+
+    const adminKeys = new Set(
+      (Array.isArray(settings.admin) ? settings.admin : [])
+        .filter(isPlainObject)
+        // A secret never becomes a default the host editor can read.
+        .filter((field) => field.type !== "secret")
+        .map((field) => field.key),
+    );
+    host.fields.forEach((raw, index) => {
+      if (!isPlainObject(raw)) return;
+      const fieldAt = `${at}.fields[${index}]`;
+      if ("defaultFrom" in raw && !adminKeys.has(raw.defaultFrom as string)) {
+        errors.push(
+          `${fieldAt}.defaultFrom must name one of this plugin's non-secret admin fields`,
+        );
+      }
+      if (
+        "shareRead" in raw &&
+        !SHARE_LEVELS.includes(raw.shareRead as string)
+      ) {
+        errors.push(
+          `${fieldAt}.shareRead must be one of: ${SHARE_LEVELS.join(", ")}`,
+        );
+      }
+      if ("ownerOnly" in raw && typeof raw.ownerOnly !== "boolean") {
+        errors.push(`${fieldAt}.ownerOnly must be a boolean`);
+      }
+    });
+  }
+  for (const scope of ["admin", "user"] as const) {
+    const fields = settings[scope];
+    if (!Array.isArray(fields)) continue;
+    fields.forEach((raw, index) => {
+      if (!isPlainObject(raw)) return;
+      for (const key of ["defaultFrom", "shareRead", "ownerOnly"]) {
+        if (key in raw) {
+          errors.push(
+            `${where}.${scope}[${index}].${key} is only valid on host fields`,
+          );
+        }
+      }
+    });
   }
 }
 

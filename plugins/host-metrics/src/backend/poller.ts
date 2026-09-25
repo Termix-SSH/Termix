@@ -18,8 +18,6 @@ import {
   metricsConcurrencyFor,
   type MetricsState,
 } from "./state.js";
-import { clearCpuSampleCache } from "./widgets/cpu-collector.js";
-import { clearNetworkSampleCache } from "./widgets/network-collector.js";
 
 export const DEFAULT_METRICS_INTERVAL = 30;
 export const DEFAULT_RETENTION_DAYS = 7;
@@ -201,8 +199,7 @@ export class MetricsPoller {
     for (const hostId of [...this.polled.keys()]) this.stop(hostId, true);
     this.viewers.clear();
     this.viewerDetails.clear();
-    clearCpuSampleCache();
-    clearNetworkSampleCache();
+    this.state.rateSamples.clear();
   }
 
   /** The host as `userId` may reach it, cached for a few minutes. */
@@ -274,8 +271,7 @@ export class MetricsPoller {
     if (clearData) {
       this.metrics.delete(hostId);
       this.state.hostCache.invalidate(hostId);
-      clearCpuSampleCache(hostId);
-      clearNetworkSampleCache(hostId);
+      this.state.rateSamples.clear(hostId);
     }
   }
 

@@ -187,57 +187,11 @@ export const hosts = sqliteTable(
     overrideCredentialUsername: integer("override_credential_username", {
       mode: "boolean",
     }),
-    enableTerminal: integer("enable_terminal", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    allowSessionSharing: integer("allow_session_sharing", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableTunnel: integer("enable_tunnel", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    tunnelConnections: text("tunnel_connections"),
     jumpHosts: text("jump_hosts"),
-    enableFileManager: integer("enable_file_manager", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    scpLegacy: integer("scp_legacy", { mode: "boolean" }).notNull().default(false),
-    enableWebUi: integer("enable_web_ui", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    enableTerminalToolbar: integer("enable_terminal_toolbar", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    showFileManagerInSidebar: integer("show_file_manager_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showTunnelInSidebar: integer("show_tunnel_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showDockerInSidebar: integer("show_docker_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showServerStatsInSidebar: integer("show_server_stats_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    defaultPath: text("default_path"),
     statusCheckEnabled: integer("status_check_enabled", { mode: "boolean" })
       .notNull()
       .default(true),
     statusCheckInterval: integer("status_check_interval"),
-    webUiConfig: text("web_ui_config"),
     terminalConfig: text("terminal_config"),
     quickActions: text("quick_actions"),
     notes: text("notes"),

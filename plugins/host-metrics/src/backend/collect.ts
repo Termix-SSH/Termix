@@ -98,7 +98,12 @@ export async function collectMetrics(
         onAuthenticated?.();
         const platform = await detectHostPlatform(client);
         const result: CollectedMetrics = {
-          cpu: await collectCpuMetrics(client, platform, host.id),
+          cpu: await collectCpuMetrics(
+            client,
+            platform,
+            host.id,
+            state.rateSamples.cpu,
+          ),
           memory: await collectMemoryMetrics(client, platform),
           disk: await collectDiskMetrics(
             client,
@@ -106,7 +111,12 @@ export async function collectMetrics(
             mounts.monitoredMounts,
             platform,
           ),
-          network: await collectNetworkMetrics(client, platform, host.id),
+          network: await collectNetworkMetrics(
+            client,
+            platform,
+            host.id,
+            state.rateSamples.network,
+          ),
           uptime: await collectUptimeMetrics(client, platform),
           processes: await collectProcessesMetrics(client),
           system: await collectSystemMetrics(client, platform),

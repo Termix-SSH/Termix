@@ -1,3 +1,4 @@
+import { fileManagerHostSetting } from "../host-settings";
 import { useHosts, useTranslation } from "@termix/plugin-sdk/frontend";
 import { Select2 } from "@termix/plugin-sdk/ui";
 import type {
@@ -12,7 +13,9 @@ export function FileManagerWidgetEditForm({
   const { t } = useTranslation();
   const { hosts } = useHosts();
   const options = hosts.filter(
-    (host) => host.enableSsh !== false && host.enableFileManager !== false,
+    (host) =>
+      host.enableSsh !== false &&
+      fileManagerHostSetting(host, "enableFileManager", true),
   );
 
   return (

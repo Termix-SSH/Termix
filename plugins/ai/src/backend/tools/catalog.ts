@@ -64,8 +64,14 @@ export const FORBIDDEN_DOMAINS = [
  */
 export function availableTools(
   isAvailable: (service: string) => boolean,
+  options: { allowReadOnlyCommands?: boolean } = {},
 ): AiTool[] {
-  return AI_TOOLS.filter((tool) => !tool.service || isAvailable(tool.service));
+  return AI_TOOLS.filter(
+    (tool) =>
+      (!tool.service || isAvailable(tool.service)) &&
+      (!tool.requiresReadOnlyCommands ||
+        options.allowReadOnlyCommands === true),
+  );
 }
 
 /** Tool definitions in the shape the provider adapters expect. */

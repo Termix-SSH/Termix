@@ -1,9 +1,9 @@
+import { getClientPreference } from "@termix/plugin-sdk/frontend";
 import type { Terminal } from "@xterm/xterm";
-import { getCookie } from "@termix/plugin-sdk/ui";
 import { isPhysicalShortcutKey } from "./terminal-key-event";
 
 export function getUseRightClickCopyPaste(): boolean {
-  return getCookie("rightClickCopyPaste") !== "false";
+  return getClientPreference("rightClickCopyPaste") !== "false";
 }
 
 export interface TerminalClipboardActions {

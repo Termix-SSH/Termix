@@ -31,7 +31,14 @@ export class AutoSSLSetup {
     }
 
     try {
-      if (await this.needsSelfSigned()) {
+      // Certificate paths the operator set point at their own certificate,
+      // which is never replaced with a self-signed one.
+      if (this.hasCustomPaths()) {
+        systemLogger.info("Using the SSL certificate from the environment", {
+          operation: "ssl_custom_certificate",
+          cert_path: process.env.SSL_CERT_PATH,
+        });
+      } else if (await this.needsSelfSigned()) {
         await this.generateSSLCertificates();
       } else {
         await this.logCertificateInfo();
@@ -46,6 +53,17 @@ export class AutoSSLSetup {
         operation: "ssl_fallback_http",
       });
     }
+  }
+
+  private static hasCustomPaths(): boolean {
+    const cert = process.env.SSL_CERT_PATH;
+    const key = process.env.SSL_KEY_PATH;
+    return (
+      !!cert &&
+      !!key &&
+      (path.resolve(cert) !== path.resolve(this.CERT_FILE) ||
+        path.resolve(key) !== path.resolve(this.KEY_FILE))
+    );
   }
 
   /**
@@ -213,12 +231,14 @@ IP.3 = 0.0.0.0
     const certPath = this.CERT_FILE;
     const keyPath = this.KEY_FILE;
 
+    // Values already in the environment win, so custom paths and a real
+    // domain survive a restart instead of being reset to the defaults.
     const sslEnvVars = {
       ENABLE_SSL: "true",
       SSL_PORT: process.env.SSL_PORT || "8443",
-      SSL_CERT_PATH: certPath,
-      SSL_KEY_PATH: keyPath,
-      SSL_DOMAIN: "localhost",
+      SSL_CERT_PATH: process.env.SSL_CERT_PATH || certPath,
+      SSL_KEY_PATH: process.env.SSL_KEY_PATH || keyPath,
+      SSL_DOMAIN: process.env.SSL_DOMAIN || "localhost",
     };
 
     let envContent = "";

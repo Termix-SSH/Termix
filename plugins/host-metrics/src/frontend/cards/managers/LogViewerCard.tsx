@@ -4,7 +4,7 @@ import { ScrollText } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useHostMetricsApi } from "../../host-metrics-api";
 import { extractError } from "./useManagerData";
-import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerCardShell } from "@termix/plugin-sdk/ui";
 
 interface LogFiles {
   common: string[];

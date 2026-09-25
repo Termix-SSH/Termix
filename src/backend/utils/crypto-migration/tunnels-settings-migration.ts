@@ -10,7 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { selectLegacyRows } from "./raw-rows.js";
 import { createCurrentPluginSettingsRepository } from "../../database/repositories/factory.js";
 
 export interface TunnelsSettingsMigrationResult {
@@ -38,12 +38,11 @@ export async function runTunnelsSettingsMigration(): Promise<TunnelsSettingsMigr
   const result: TunnelsSettingsMigrationResult = { moved: 0, skipped: 0 };
 
   try {
-    const drizzleDb = getDb();
     // Raw SQL, not the typed schema, so this keeps working once schema.ts
     // stops declaring these columns. The plugin's enable switch defaults to
     // off, so every host that had tunnels on (the old column default) or
     // any saved tunnel has to be copied, not just the non-default ones.
-    const rows = await drizzleDb.all<LegacyTunnelRow>(sql`
+    const rows = await selectLegacyRows<LegacyTunnelRow>(sql`
       SELECT id, enable_tunnel, tunnel_connections
       FROM ssh_data
       WHERE enable_tunnel = true OR tunnel_connections IS NOT NULL

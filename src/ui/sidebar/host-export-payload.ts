@@ -38,30 +38,9 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   ],
   jumpHosts: ["jumpHosts"],
   quickActions: ["quickActions"],
-  featureFlags: [
-    "enableTerminal",
-    "enableCommandHistory",
-    "enableTerminalToolbar",
-    "enableFileManager",
-    "enableWebUi",
-    "enableProxmox",
-    "enableTmuxMonitor",
-    "showTerminalInSidebar",
-    "showFileManagerInSidebar",
-    "showTunnelInSidebar",
-    "showDockerInSidebar",
-    "showServerStatsInSidebar",
-    "defaultPath",
-    "forceKeyboardInteractive",
-  ],
-  advanced: [
-    "statusCheckEnabled",
-    "statusCheckInterval",
-    "webUiConfig",
-    "proxmoxConfig",
-    "terminalConfig",
-    "guacamoleConfig",
-  ],
+  // Every plugin's host settings, enable switches included.
+  featureFlags: ["pluginSettings", "forceKeyboardInteractive"],
+  advanced: ["statusCheckEnabled", "statusCheckInterval", "terminalConfig"],
 };
 
 export const SECRET_KEYS = [
@@ -102,6 +81,25 @@ function nestedSecret(
   return field in record ? record : null;
 }
 
+/** Plugin host settings can carry the same nested secrets as the host. */
+function mapPluginSettings(
+  pluginSettings: unknown,
+  apply: (values: Record<string, unknown>) => void,
+): unknown {
+  if (!pluginSettings || typeof pluginSettings !== "object") {
+    return pluginSettings;
+  }
+  const perPlugin: Record<string, unknown> = {};
+  for (const [pluginId, values] of Object.entries(
+    pluginSettings as Record<string, unknown>,
+  )) {
+    const copy = { ...(values as Record<string, unknown>) };
+    apply(copy);
+    perPlugin[pluginId] = copy;
+  }
+  return perPlugin;
+}
+
 export function hostKey(host: Record<string, unknown>): string {
   return JSON.stringify(TUPLE_KEYS.map((k) => String(host[k] ?? "")));
 }
@@ -129,10 +127,17 @@ export function buildExportPayload(
         if (allowed.has(key)) shaped[key] = value;
       }
       if (!withCredentials) {
-        for (const { container, field } of NESTED_SECRETS) {
-          const record = nestedSecret(shaped, container, field);
-          if (record) shaped[container] = { ...record, [field]: null };
-        }
+        const clearNested = (target: Record<string, unknown>) => {
+          for (const { container, field } of NESTED_SECRETS) {
+            const record = nestedSecret(target, container, field);
+            if (record) target[container] = { ...record, [field]: null };
+          }
+        };
+        clearNested(shaped);
+        shaped.pluginSettings = mapPluginSettings(
+          shaped.pluginSettings,
+          clearNested,
+        );
         for (const { container, field } of NESTED_SECRET_ARRAYS) {
           const arr = shaped[container];
           if (Array.isArray(arr)) {
@@ -175,12 +180,19 @@ export function maskSecrets(payload: ExportPayload): ExportPayload {
           masked[key] = "<included>";
         }
       }
-      for (const { container, field } of NESTED_SECRETS) {
-        const record = nestedSecret(masked, container, field);
-        if (record && record[field]) {
-          masked[container] = { ...record, [field]: "<included>" };
+      const maskNested = (target: Record<string, unknown>) => {
+        for (const { container, field } of NESTED_SECRETS) {
+          const record = nestedSecret(target, container, field);
+          if (record && record[field]) {
+            target[container] = { ...record, [field]: "<included>" };
+          }
         }
-      }
+      };
+      maskNested(masked);
+      masked.pluginSettings = mapPluginSettings(
+        masked.pluginSettings,
+        maskNested,
+      );
       for (const { container, field } of NESTED_SECRET_ARRAYS) {
         const arr = masked[container];
         if (Array.isArray(arr)) {

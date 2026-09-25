@@ -9,22 +9,15 @@ import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { TriangleAlert } from "lucide-react";
 import { useTranslation, useTheme } from "@termix/plugin-sdk/frontend";
+import {
+  DEFAULT_TERMINAL_CONFIG,
+  TERMINAL_FONTS,
+  ensureTerminalFontsLoaded,
+  resolveTermixThemeColors,
+} from "@termix/plugin-sdk/ui";
 import type { SerialConfig, SerialHandle } from "./types.js";
 import { isElectron } from "./electron.js";
 import { resolveSerialWsUrl } from "./transport.js";
-
-const XTERM_THEME: Record<"light" | "dark", Record<string, string>> = {
-  dark: {
-    background: "#0b0e14",
-    foreground: "#d4d7de",
-    cursor: "#d4d7de",
-  },
-  light: {
-    background: "#ffffff",
-    foreground: "#1a1a1a",
-    cursor: "#1a1a1a",
-  },
-};
 
 type WebSerialPort = {
   open(options: {
@@ -70,10 +63,17 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
 
   useEffect(() => {
     if (!terminal) return;
-    terminal.options.theme = XTERM_THEME[appTheme];
-    terminal.options.fontFamily =
-      '"SF Mono", Consolas, "Liberation Mono", monospace';
-    terminal.options.fontSize = 14;
+    // The same look as every other terminal in the app.
+    const font =
+      TERMINAL_FONTS.find(
+        (candidate) => candidate.value === DEFAULT_TERMINAL_CONFIG.fontFamily,
+      ) ?? TERMINAL_FONTS[0];
+    ensureTerminalFontsLoaded(font.value);
+    terminal.options.theme = {
+      ...resolveTermixThemeColors(DEFAULT_TERMINAL_CONFIG.theme, appTheme),
+    };
+    terminal.options.fontFamily = font.fallback;
+    terminal.options.fontSize = DEFAULT_TERMINAL_CONFIG.fontSize;
   }, [terminal, appTheme]);
 
   // ── WebSocket (Electron) path ──────────────────────────────────────────

@@ -3,8 +3,8 @@ import type { Terminal } from "@xterm/xterm";
 
 const getCookieMock = vi.fn<(name: string) => string | undefined>();
 
-vi.mock("@termix/plugin-sdk/ui", () => ({
-  getCookie: (name: string) => getCookieMock(name),
+vi.mock("@termix/plugin-sdk/frontend", () => ({
+  getClientPreference: (name: string) => getCookieMock(name),
 }));
 
 import {

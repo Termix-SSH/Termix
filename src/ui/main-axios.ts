@@ -764,12 +764,6 @@ function initializeApiInstances() {
 
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
-
-  // Tmux Monitor API (port 30010) --- tmux-monitor ---
-  tmuxMonitorApi = createApiInstance(
-    getApiUrl("/tmux_monitor", 30010),
-    "TMUX_MONITOR",
-  );
 }
 
 // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
@@ -785,9 +779,6 @@ export let authApi: AxiosInstance;
 
 // RBAC API (port 30001)
 export let rbacApi: AxiosInstance;
-
-// Tmux Monitor API (port 30010) --- tmux-monitor ---
-export let tmuxMonitorApi: AxiosInstance;
 
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();
@@ -1349,9 +1340,6 @@ export {
   getSSHHostById,
   exportSSHHostWithCredentials,
   exportAllSSHHosts,
-  enableAutoStart,
-  disableAutoStart,
-  getAutoStartStatus,
   testProxyConnection,
 } from "@/api/ssh-host-management-api";
 

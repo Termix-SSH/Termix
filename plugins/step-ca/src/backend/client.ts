@@ -396,3 +396,22 @@ export function parseSshCertificate(line: string): SshCertificateInfo {
     validBefore: toDate(validBefore),
   };
 }
+
+/** Save-time checks for the admin page: a bad URL or fingerprint says so there. */
+export function validateCaSettings(
+  values: Record<string, unknown>,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const check = (key: string, normalize: (raw: string) => string) => {
+    const value = values[key];
+    if (typeof value !== "string" || value.trim() === "") return;
+    try {
+      normalize(value);
+    } catch (error) {
+      errors[key] = error instanceof Error ? error.message : String(error);
+    }
+  };
+  check("caUrl", normalizeCaUrl);
+  check("fingerprint", normalizeFingerprint);
+  return errors;
+}

@@ -90,7 +90,7 @@ export const trustedDevices = mysqlTable(
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
+    expiresAt: text("expires_at").notNull(),
     lastUsedAt: text("last_used_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
@@ -160,11 +160,11 @@ export const hosts = mysqlTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     connectionType: text("connection_type").notNull().default("ssh"),
-    name: varchar("name", { length: 255 }),
+    name: text("name"),
     ip: text("ip").notNull(),
     port: int("port").notNull(),
     username: text("username").notNull(),
-    folder: varchar("folder", { length: 255 }),
+    folder: text("folder"),
     // Sub-host nesting: a host acting as an organizational parent for other
     // hosts, mutually exclusive with folder (see host route validation).
     parentHostId: int("parent_host_id").references(
@@ -194,57 +194,11 @@ export const hosts = mysqlTable(
 
     credentialId: int("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     overrideCredentialUsername: boolean("override_credential_username"),
-    enableTerminal: boolean("enable_terminal")
-      .notNull()
-      .default(true),
-    enableSessionLogging: boolean("enable_session_logging")
-      .notNull()
-      .default(true),
-    allowSessionSharing: boolean("allow_session_sharing")
-      .notNull()
-      .default(true),
-    enableCommandHistory: boolean("enable_command_history")
-      .notNull()
-      .default(true),
-    enableTunnel: boolean("enable_tunnel")
-      .notNull()
-      .default(true),
-    tunnelConnections: text("tunnel_connections"),
     jumpHosts: text("jump_hosts"),
-    enableFileManager: boolean("enable_file_manager")
-      .notNull()
-      .default(true),
-    scpLegacy: boolean("scp_legacy").notNull().default(false),
-    enableWebUi: boolean("enable_web_ui")
-      .notNull()
-      .default(false),
-    enableTmuxMonitor: boolean("enable_tmux_monitor")
-      .notNull()
-      .default(false),
-    enableTerminalToolbar: boolean("enable_terminal_toolbar")
-      .notNull()
-      .default(true),
-    showTerminalInSidebar: boolean("show_terminal_in_sidebar")
-      .notNull()
-      .default(true),
-    showFileManagerInSidebar: boolean("show_file_manager_in_sidebar")
-      .notNull()
-      .default(false),
-    showTunnelInSidebar: boolean("show_tunnel_in_sidebar")
-      .notNull()
-      .default(false),
-    showDockerInSidebar: boolean("show_docker_in_sidebar")
-      .notNull()
-      .default(false),
-    showServerStatsInSidebar: boolean("show_server_stats_in_sidebar")
-      .notNull()
-      .default(false),
-    defaultPath: text("default_path"),
     statusCheckEnabled: boolean("status_check_enabled")
       .notNull()
       .default(true),
     statusCheckInterval: int("status_check_interval"),
-    webUiConfig: text("web_ui_config"),
     terminalConfig: text("terminal_config"),
     quickActions: text("quick_actions"),
     notes: text("notes"),
@@ -342,9 +296,9 @@ export const sshCredentials = mysqlTable(
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: text("name").notNull(),
   description: text("description"),
-  folder: varchar("folder", { length: 255 }),
+  folder: text("folder"),
   tags: text("tags"),
   pin: boolean("pin").notNull().default(false),
   // Manual drag-to-reorder position within a folder. Null means the
@@ -407,7 +361,7 @@ export const sshFolders = mysqlTable(
     userId: varchar("user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }).notNull(),
+    name: text("name").notNull(),
     color: text("color"),
     icon: text("icon"),
     credentialId: int("credential_id").references(() => sshCredentials.id, {
@@ -660,11 +614,11 @@ export const apiKeys = mysqlTable(
     userId: varchar("user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }).notNull(),
+    name: text("name").notNull(),
     tokenHash: text("token_hash").notNull(),
     tokenPrefix: text("token_prefix").notNull(),
     createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-    expiresAt: varchar("expires_at", { length: 255 }),
+    expiresAt: text("expires_at"),
     lastUsedAt: text("last_used_at"),
     isActive: boolean("is_active").notNull().default(true),
   },
@@ -781,7 +735,7 @@ export const notificationChannels = mysqlTable("notification_channels", {
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: text("name").notNull(),
   type: text("type").notNull(),
   config: text("config").notNull(),
   enabled: boolean("enabled").notNull().default(true),
@@ -807,7 +761,7 @@ export const syncTombstones = mysqlTable("sync_tombstones", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   entityType: text("entity_type").notNull(),
-  syncId: varchar("sync_id", { length: 255 }).notNull(),
+  syncId: text("sync_id").notNull(),
   deletedAt: text("deleted_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
@@ -842,7 +796,7 @@ export const credentialAccess = mysqlTable(
 
     permissionLevel: text("permission_level").notNull().default("use"),
 
-    expiresAt: varchar("expires_at", { length: 255 }),
+    expiresAt: text("expires_at"),
 
     createdAt: text("created_at")
       .notNull()
@@ -932,7 +886,7 @@ export const folderAccess = mysqlTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     permissionLevel: text("permission_level").notNull().default("connect"),
-    expiresAt: varchar("expires_at", { length: 255 }),
+    expiresAt: text("expires_at"),
 
     createdAt: text("created_at")
       .notNull()
@@ -955,7 +909,7 @@ export const plugins = mysqlTable(
   "plugins",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
+    name: text("name").notNull(),
     version: text("version").notNull(),
     tier: text("tier").notNull().default("available"),
     source: text("source").notNull().default("community"),
@@ -1012,7 +966,7 @@ export const pluginPermissionGrants = mysqlTable(
 
 export const pluginRegistries = mysqlTable("plugin_registries", {
   id: varchar("id", { length: 255 }).primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: text("name").notNull(),
   url: text("url").notNull(),
   kind: text("kind").notNull().default("community"),
   enabled: boolean("enabled").notNull().default(true),
@@ -1160,7 +1114,7 @@ export const rbacKnownPermissions = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     permission: varchar("permission", { length: 255 }).notNull(),
     /** Which plugin contributed it, or null for a core permission. */
-    pluginId: varchar("plugin_id", { length: 255 }),
+    pluginId: text("plugin_id"),
     firstSeenAt: text("first_seen_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),

@@ -7,8 +7,8 @@
  * dashboard card id from a manifest) as a string literal. What the shell
  * needs from a plugin comes through the registries instead.
  *
- * A few literals are data rather than knowledge of a plugin: host protocol
- * names that are columns on the host until Phase B moves them.
+ * A few literals are data rather than knowledge of a plugin, such as a fixed
+ * button next to Quick Connect.
  * Those are listed with a reason in scripts/shell-plugin-id-allowlist.json,
  * which fails too when an entry stops being needed, so it only shrinks.
  */

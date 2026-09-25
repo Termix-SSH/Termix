@@ -81,7 +81,6 @@ interface ConnectToHostData {
       keepaliveCountMax?: number;
       [key: string]: unknown;
     };
-    enableSessionLogging?: boolean;
     /** When true, ignore key material and force password auth (fallback path). */
     passwordFallbackOnly?: boolean;
   };
@@ -1432,7 +1431,6 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
             socks5ProxyChain?: unknown;
             portKnockSequence?: ConnectToHostData["hostConfig"]["portKnockSequence"];
             terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
-            enableSessionLogging?: boolean;
           })
         | null = null;
 
@@ -1776,10 +1774,8 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
 
           const hostDisplayName = `${username}@${ip}:${port}`;
           const tabInstanceId = hostConfig.instanceId;
-          const sessionLoggingEnabled =
-            resolvedHostData?.enableSessionLogging ??
-            hostConfig.enableSessionLogging ??
-            true;
+          // The recordings.writer provider decides per host and user.
+          const sessionLoggingEnabled = true;
           currentSessionId = sessionManager.createSession(
             userId,
             id,

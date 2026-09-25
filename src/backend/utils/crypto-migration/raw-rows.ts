@@ -32,3 +32,26 @@ export async function runStatement(query: SQL): Promise<void> {
   }
   await db.execute!(query);
 }
+
+/**
+ * A legacy boolean column read raw: SQLite and MySQL hand back 0/1, Postgres
+ * true/false. A column that was never set keeps its old default.
+ */
+export function legacyFlag(value: unknown, defaultOn: boolean): boolean {
+  if (value === null || value === undefined) return defaultOn;
+  if (typeof value === "string") return value === "1" || value === "true";
+  return !!value;
+}
+
+/**
+ * selectRows for a boot copy out of a column schema.ts no longer declares. A
+ * database created after the column left never had it, so a failed read
+ * means there is nothing to copy rather than an error.
+ */
+export async function selectLegacyRows<T>(query: SQL): Promise<T[]> {
+  try {
+    return await selectRows<T>(query);
+  } catch {
+    return [];
+  }
+}

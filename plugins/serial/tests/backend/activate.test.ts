@@ -20,7 +20,7 @@ describe("serial activate", () => {
 
     await activate(mock.ctx);
 
-    expect(mock.wsRoutes).toEqual([{ path: "/console", raw: false }]);
+    expect(mock.wsRoutes).toMatchObject([{ path: "/console", raw: false }]);
   });
 
   it("refuses to mount without network:serve", async () => {

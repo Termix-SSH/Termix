@@ -7,7 +7,7 @@ import { MetricsSessions } from "./sessions.js";
 import { CollectorRegistry } from "./collectors.js";
 import { MetricsPoller, TOPIC_HEALTH_CHECK } from "./poller.js";
 import { registerRoutes } from "./routes.js";
-import { hostImportNormalizer } from "./host-import.js";
+import { hostImportNormalizer, hostPayloadLegacy } from "./host-import.js";
 import { newSessionId, supportsMetrics } from "./helpers.js";
 
 export type { MetricsCollectorV1 } from "./collectors.js";
@@ -101,6 +101,7 @@ export async function activate(ctx: PluginContext) {
     "host-metrics.hostImportNormalizer",
     hostImportNormalizer,
   );
+  ctx.registry.provide("host-metrics.hostPayloadLegacy", hostPayloadLegacy);
 
   ctx.log.info("Host Metrics mounted at /plugin-api/host-metrics");
 }

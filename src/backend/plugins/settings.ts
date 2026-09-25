@@ -20,7 +20,10 @@ import {
   isRedactedSecret,
   validateSettingValue,
 } from "@termix/plugin-sdk/settings";
-import { createCurrentPluginSettingsRepository } from "../database/repositories/factory.js";
+import {
+  createCurrentHostRepository,
+  createCurrentPluginSettingsRepository,
+} from "../database/repositories/factory.js";
 import type { PluginSettingsScope } from "../database/repositories/plugin-settings-repository.js";
 import {
   decryptSystemSecret,
@@ -87,9 +90,67 @@ function notify(pluginId: string, key: string, value: unknown): void {
   }
 }
 
+export type SettingsValidator = (
+  values: Record<string, unknown>,
+  context: { hostId?: number },
+) =>
+  | Record<string, string>
+  | void
+  | undefined
+  | Promise<Record<string, string> | void | undefined>;
+
+const validators = new Map<
+  string,
+  Set<{ scope: PluginSettingsScope; run: SettingsValidator }>
+>();
+
+/** A plugin's own check on a settings save, before anything is written. */
+export function onSettingsValidate(
+  pluginId: string,
+  scope: PluginSettingsScope,
+  run: SettingsValidator,
+): () => void {
+  let set = validators.get(pluginId);
+  if (!set) {
+    set = new Set();
+    validators.set(pluginId, set);
+  }
+  const entry = { scope, run };
+  set.add(entry);
+  return () => {
+    set!.delete(entry);
+  };
+}
+
+/**
+ * Runs the plugin's validators over a save. Returns field key to message;
+ * a validator that throws rejects the whole save under "_".
+ */
+export async function validateSettingsSave(
+  pluginId: string,
+  scope: PluginSettingsScope,
+  scopeId: string | null,
+  values: Record<string, unknown>,
+): Promise<Record<string, string>> {
+  const errors: Record<string, string> = {};
+  for (const entry of validators.get(pluginId) ?? []) {
+    if (entry.scope !== scope) continue;
+    try {
+      const result = await entry.run(values, {
+        hostId: scope === "host" && scopeId ? Number(scopeId) : undefined,
+      });
+      Object.assign(errors, result ?? {});
+    } catch (error) {
+      errors._ = error instanceof Error ? error.message : String(error);
+    }
+  }
+  return errors;
+}
+
 /** Drops every listener a plugin registered. Called when it deactivates. */
 export function clearSettingsListeners(pluginId: string): void {
   listeners.delete(pluginId);
+  validators.delete(pluginId);
 }
 
 /** The fields a manifest declares for one scope. */
@@ -114,7 +175,7 @@ export function declaredFields(
           key: host.enableKey,
           type: "boolean",
           labelKey: host.enableLabelKey,
-          default: false,
+          default: host.enableDefault ?? false,
         },
       ]
     : [];
@@ -239,6 +300,40 @@ export async function setSetting(
 
   notify(manifest.id, key, coerced);
   return null;
+}
+
+/** Every stored value of one host field, with each host's owner. */
+export async function listHostValues(
+  manifest: PluginManifest,
+  key: string,
+): Promise<Array<{ hostId: number; userId: string; value: unknown }>> {
+  const field = findField(manifest, "host", key);
+  if (!field) {
+    throw new Error(
+      `"${key}" is not a host settings field this plugin declares`,
+    );
+  }
+  if (field.type === "secret") {
+    throw new Error(`"${key}" is a secret and cannot be listed`);
+  }
+
+  const rows = await createCurrentPluginSettingsRepository().listByKey(
+    manifest.id,
+    "host",
+    key,
+  );
+  const hosts = createCurrentHostRepository();
+  const result: Array<{ hostId: number; userId: string; value: unknown }> = [];
+  for (const row of rows) {
+    const hostId = Number(row.scopeId);
+    if (!Number.isInteger(hostId) || row.value === null) continue;
+    const host = await hosts.findById(hostId);
+    if (!host?.userId) continue;
+    const value = decode(row.value);
+    if (value === undefined) continue;
+    result.push({ hostId, userId: host.userId as string, value });
+  }
+  return result;
 }
 
 export interface GetAllOptions {

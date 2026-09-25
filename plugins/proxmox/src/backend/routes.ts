@@ -1,4 +1,3 @@
-import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
 import express, { type Router } from "express";
 import type { Client as SSHClient } from "ssh2";
 import { execElevated } from "@termix/plugin-sdk/host-commands";
@@ -15,6 +14,11 @@ import {
   serializeProxmoxJumpHosts,
 } from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "./proxmox-shared.js";
+
+/** A thrown value's message, or the fallback when it is not an Error. */
+function getErrorMessage(error: unknown, fallback = "Unknown error"): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 const router = express.Router();
 const runningSyncs = new Set<string>();
@@ -630,9 +634,6 @@ async function syncProxmoxHost(
       }
 
       Object.assign(update, {
-        enableTerminal: connectionType !== "rdp",
-        enableFileManager: connectionType !== "rdp",
-        enableTunnel: connectionType !== "rdp",
         enableDocker: guest.enableDocker,
         enableSsh: connectionType === "ssh",
         enableRdp: connectionType === "rdp",
@@ -657,8 +658,6 @@ async function syncProxmoxHost(
         vncPassword: null,
         telnetUser: null,
         telnetPassword: null,
-        defaultPath: "/",
-        tunnelConnections: "[]",
         jumpHosts: serializeProxmoxJumpHosts(discovery.jumpHosts),
         quickActions: null,
         statsConfig: null,
@@ -672,11 +671,6 @@ async function syncProxmoxHost(
         socks5Password: null,
         socks5ProxyChain: null,
         portKnockSequence: null,
-        showTerminalInSidebar: 0,
-        showFileManagerInSidebar: 0,
-        showTunnelInSidebar: 0,
-        showDockerInSidebar: 0,
-        showServerStatsInSidebar: 0,
       } as unknown as PluginHostCreateInput);
       result.created++;
     }
@@ -793,34 +787,17 @@ router.post("/sync", async (req, res) => {
 async function runDueProxmoxAutoSyncs(): Promise<void> {
   const ctx = pluginCtx();
   try {
-    const {
-      createCurrentPluginSettingsRepository,
-      createCurrentHostRepository,
-    } =
-      await import("../../../../src/backend/database/repositories/factory.js");
-    const enabledRows = await createCurrentPluginSettingsRepository().listByKey(
-      "proxmox",
-      "host",
-      "enableProxmox",
-    );
-    const hostRepository = createCurrentHostRepository();
+    const enabled = await ctx.settings.listHostValues<boolean>("enableProxmox");
 
     const now = Date.now();
-    for (const row of enabledRows) {
-      if (row.value !== "true") continue;
-      const hostId = Number(row.scopeId);
-      if (!Number.isInteger(hostId)) continue;
+    for (const { hostId, userId, value } of enabled) {
+      if (value !== true) continue;
 
-      const host = await hostRepository.findById(hostId);
-      if (!host) continue;
-
-      const configRow = await createCurrentPluginSettingsRepository().get(
-        "proxmox",
-        "host",
-        String(hostId),
-        "proxmoxConfig",
-      );
-      const configRaw = configRow?.value ? JSON.parse(configRow.value) : {};
+      const configRaw =
+        (await ctx.settings.getHost<Record<string, unknown>>(
+          hostId,
+          "proxmoxConfig",
+        )) ?? {};
       const config = parseProxmoxConfig(configRaw);
       if (!config.autoSyncEnabled) continue;
 
@@ -832,7 +809,7 @@ async function runDueProxmoxAutoSyncs(): Promise<void> {
       if (lastSyncAt && now - lastSyncAt < intervalMs) continue;
 
       ctx
-        .asUser(host.userId, () => syncProxmoxHost(host.userId, hostId))
+        .asUser(userId, () => syncProxmoxHost(userId, hostId))
         .catch((error) => {
           ctx.log.error(
             `Scheduled Proxmox sync failed for host ${hostId}`,

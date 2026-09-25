@@ -10,7 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import { databaseLogger } from "../logger.js";
-import { getDb } from "../../database/db/index.js";
+import { selectLegacyRows } from "./raw-rows.js";
 import { createCurrentPluginSettingsRepository } from "../../database/repositories/factory.js";
 
 export interface WebEndpointSettingsMigrationResult {
@@ -37,10 +37,9 @@ export async function runWebEndpointSettingsMigration(): Promise<WebEndpointSett
   const result: WebEndpointSettingsMigrationResult = { moved: 0, skipped: 0 };
 
   try {
-    const drizzleDb = getDb();
     // Raw SQL, not the typed schema, so this keeps working once schema.ts
     // stops declaring these columns.
-    const rows = await drizzleDb.all<LegacyWebEndpointRow>(sql`
+    const rows = await selectLegacyRows<LegacyWebEndpointRow>(sql`
       SELECT id, enable_web_ui, web_ui_config
       FROM ssh_data
       WHERE enable_web_ui = true OR web_ui_config IS NOT NULL

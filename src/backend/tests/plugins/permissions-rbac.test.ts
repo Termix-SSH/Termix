@@ -22,6 +22,10 @@ const state = vi.hoisted(() => ({
   warnings: [] as string[],
 }));
 
+vi.mock("../../plugins/boot-migrations.js", () => ({
+  runPluginDataMigrations: async () => {},
+}));
+
 vi.mock("../../utils/logger.js", () => ({
   pluginLogger: {
     debug: vi.fn(),
@@ -29,7 +33,9 @@ vi.mock("../../utils/logger.js", () => ({
     warn: vi.fn((message: string) => {
       state.warnings.push(message);
     }),
-    error: vi.fn(),
+    error: vi.fn((message: string) => {
+      state.warnings.push(message);
+    }),
     success: vi.fn(),
   },
   databaseLogger: {
@@ -265,6 +271,11 @@ describe("namespace escalation is refused", () => {
       expect(isValidPermission("docker.ps")).toBe(true);
       expect(isValidPermission("docker.automations.run")).toBe(false);
       expect(state.warnings.join()).toMatch(/belongs to someone else/);
+      const { listRegistrationConflicts } =
+        await import("../../plugins/conflicts.js");
+      expect(listRegistrationConflicts()).toContainEqual(
+        expect.objectContaining({ kind: "permission", heldBy: "automations" }),
+      );
     } finally {
       await loader.shutdown();
       fixture.cleanup();

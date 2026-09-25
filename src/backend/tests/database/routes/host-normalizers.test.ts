@@ -291,28 +291,24 @@ describe("stripSensitiveFields", () => {
 });
 
 describe("transformHostResponse", () => {
-  it("parses tags and coerces enable flags to booleans", () => {
+  it("parses tags and coerces flags to booleans", () => {
     const result = transformHostResponse({
       tags: "a,b,c",
-      enableTerminal: 1,
-      enableTunnel: 0,
       shareSshAuth: 1,
       pin: 1,
     });
     expect(result.tags).toEqual(["a", "b", "c"]);
-    expect(result.enableTerminal).toBe(true);
-    expect(result.enableTunnel).toBe(false);
     expect(result.shareSshAuth).toBe(true);
     expect(result.pin).toBe(true);
   });
 
   it("parses JSON array fields and defaults them to []", () => {
     const result = transformHostResponse({
-      tunnelConnections: '[{"sourcePort":8080}]',
-      jumpHosts: null,
+      jumpHosts: '[{"hostId":8}]',
+      quickActions: null,
     });
-    expect(result.tunnelConnections).toEqual([{ sourcePort: 8080 }]);
-    expect(result.jumpHosts).toEqual([]);
+    expect(result.jumpHosts).toEqual([{ hostId: 8 }]);
+    expect(result.quickActions).toEqual([]);
   });
 
   it("passes the stored SSH switch through", () => {

@@ -419,7 +419,8 @@
             "type": "json",
             "labelKey": "settings.host.guacamoleConfig.label",
             "default": {},
-            "hidden": true
+            "hidden": true,
+            "shareRead": "edit"
           },
           {
             "key": "enableToolbar",

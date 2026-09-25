@@ -33,6 +33,7 @@ import { isSessionTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
+import { ActionSlot } from "@/shell/ActionSlot";
 
 /**
  * Tabs holding a live connection that can be refreshed: the registered
@@ -686,6 +687,26 @@ export function TabBar({
                     {t("nav.openFileManager")}
                   </button>
                 )}
+              {/* Plugins add entries here, invoked with the tab's surface handle. */}
+              <ActionSlot
+                slotId="tab.menu"
+                when={{ tab: ctxTab, handle: ctxTab.terminalRef?.current }}
+                context={() => [ctxTab.terminalRef?.current]}
+                renderItem={(contribution, invoke) => (
+                  <button
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => {
+                      invoke();
+                      setContextTabId(null);
+                    }}
+                  >
+                    {contribution.icon && (
+                      <contribution.icon className="size-3" />
+                    )}
+                    {t(contribution.titleKey)}
+                  </button>
+                )}
+              />
               <button
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {

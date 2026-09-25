@@ -232,6 +232,13 @@ export async function runLogin(
   const user = await resolveUser(identity, deviceType);
 
   await unlockUser(user, identity, deviceType);
+  if ("password" in identity && identity.password) {
+    // A 2.8 key still wrapped by the password only opens here, so this is the
+    // first chance to move that user's TOTP secret into the plugin.
+    const { runTotpMigration } =
+      await import("../utils/crypto-migration/totp-migration.js");
+    await runTotpMigration(user.id);
+  }
   await syncSharedCredentialsForUserRoles(
     user.id,
     `${context.methodId}_role_shared_credentials`,

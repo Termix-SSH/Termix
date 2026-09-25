@@ -84,6 +84,7 @@ export function createProfileStore(
 
   return {
     findById,
+    findBySyncId,
 
     /** The user's own profiles plus every shared one. */
     async listVisible(userId: string): Promise<ProfileRow[]> {

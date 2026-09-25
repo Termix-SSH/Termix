@@ -76,6 +76,10 @@ import {
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import { withProtocolSettings } from "./host-protocols";
+import {
+  usePluginHostSections,
+  withNewHostDefaults,
+} from "@/settings/HostPluginSections";
 import { canEditHost } from "./host-permissions";
 import {
   getHostEditorSection,
@@ -129,6 +133,7 @@ export function HostEditor({
   onEditCredential?: (credentialId: string) => void;
 }) {
   const { t } = useTranslation();
+  const hostSettingPlugins = usePluginHostSections();
   const { setPreviewTerminalTheme } = useTabsSafe();
   const connectionDefaults = useConnectionDefaults();
   const [form, setForm] = useState(() =>
@@ -315,9 +320,12 @@ export function HostEditor({
       }
       // After the host: a new one has no id to scope settings to until it
       // exists. A failure here must not claim the host itself failed to save.
+      const pluginValues = withProtocolSettings(form.pluginSettings, protocols);
       await savePluginHostSettings(
         Number(saved.id),
-        withProtocolSettings(form.pluginSettings, protocols),
+        host
+          ? pluginValues
+          : withNewHostDefaults(pluginValues ?? {}, hostSettingPlugins),
       );
 
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));

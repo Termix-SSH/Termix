@@ -6,8 +6,10 @@ import { createRuntime } from "./runtime.js";
 import { createAuthSessions } from "./auth-session.js";
 import { createStepCaProvider } from "./provider.js";
 import { PUBLIC_PATHS, registerRoutes } from "./routes.js";
+import { validateCaSettings } from "./client.js";
 
 export async function activate(ctx: PluginContext) {
+  ctx.settings.onValidate("admin", validateCaSettings);
   const table = await ctx.db.define(certsTable);
   const certs = createCertStore(ctx, table);
 

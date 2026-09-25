@@ -111,8 +111,8 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const computeUniqueTitle = useCallback(
     (tabType: Tab["type"], desiredTitle: string | undefined): string => {
-      const defaultTitle =
-        tabType === "file_manager" ? t("nav.fileManager") : t("nav.terminal");
+      const titleKey = getTabType(tabType)?.titleKey;
+      const defaultTitle = titleKey ? t(titleKey) : t("nav.terminal");
       const baseTitle = (desiredTitle || defaultTitle).trim();
       const match = baseTitle.match(/^(.*) \((\d+)\)$/);
       const root = match ? match[1] : baseTitle;
@@ -181,7 +181,7 @@ export function TabProvider({ children }: TabProviderProps) {
       const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const isCommandTarget = !!getTabType(tabData.type)?.commandTarget;
       const needsUniqueTitle =
-        isCommandTarget || tabData.type === "file_manager";
+        isCommandTarget || !!getTabType(tabData.type)?.multiInstance;
       const singletonTitleKey = getTabType(tabData.type)?.singleton
         ? getTabType(tabData.type)?.titleKey
         : undefined;

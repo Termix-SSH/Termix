@@ -8,7 +8,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("@/main-axios.ts", () => ({}));
-vi.mock("../../../features/file-manager/transferNotificationStore.ts", () => ({
+vi.mock("../../src/frontend/transferNotificationStore.ts", () => ({
   markTransferNotified: vi.fn(),
 }));
 

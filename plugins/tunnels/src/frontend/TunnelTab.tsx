@@ -12,6 +12,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import {
+  logActivity,
   useHost,
   useToast,
   useTranslation,
@@ -252,6 +253,14 @@ export function TunnelTab({ host: given }: { host?: PluginHostRecord }) {
   const [acting, setActing] = useState<Record<string, boolean>>({});
 
   useEffect(() => subscribeTunnelStatuses(setStatuses), []);
+
+  // One recent-activity entry per host opened here.
+  const hostId = host?.id;
+  const hostLabel = host ? tunnelHostLabel(host) : "";
+  useEffect(() => {
+    if (typeof hostId !== "number") return;
+    logActivity("tunnel", hostId, hostLabel).catch(() => {});
+  }, [hostId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!host) {
     return (

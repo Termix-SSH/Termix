@@ -4,8 +4,6 @@ import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./tls/self-signed.js";
-import { AuthManager } from "./utils/auth-manager.js";
-import { DataCrypto } from "./utils/data-crypto.js";
 import { ensureDatabaseLayerPreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
 import { DatabaseSaveTrigger } from "./utils/database-save-trigger.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
@@ -221,44 +219,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       });
     }
 
-    const { UserKeyManager } = await import("./utils/user-keys.js");
-    await UserKeyManager.getInstance().initialize();
-
-    const { runBootDekMigration } =
-      await import("./utils/crypto-migration/dek-migration.js");
-    await runBootDekMigration({ cleanupLegacy: true });
-
-    const { runLegacySharedCredentialCleanup } =
-      await import("./utils/crypto-migration/legacy-share-cleanup.js");
-    await runLegacySharedCredentialCleanup();
-
-    const authManager = AuthManager.getInstance();
-    await authManager.initialize();
-    DataCrypto.initialize();
-
-    const { runLegacySharedSshAuthOptInMigration } =
-      await import("./utils/crypto-migration/legacy-shared-ssh-auth-opt-in-migration.js");
-    await runLegacySharedSshAuthOptInMigration();
-
-    const { runSharedHostSecretsMigration } =
-      await import("./utils/crypto-migration/shared-host-secrets-migration.js");
-    await runSharedHostSecretsMigration();
-
-    const { runPrivateSharedSshAuthMigration } =
-      await import("./utils/crypto-migration/private-shared-ssh-auth-migration.js");
-    await runPrivateSharedSshAuthMigration();
-
-    const { runChannelConfigEncryptionMigration } =
-      await import("./utils/crypto-migration/channel-config-encryption.js");
-    await runChannelConfigEncryptionMigration();
-
-    const { runExternalIdentityMigration } =
-      await import("./utils/crypto-migration/external-identity-migration.js");
-    await runExternalIdentityMigration();
-
-    const { runHostStatusConfigMigration } =
-      await import("./utils/crypto-migration/host-status-config-migration.js");
-    await runHostStatusConfigMigration();
+    const { runCoreBootMigrations } = await import("./boot.js");
+    await runCoreBootMigrations();
 
     const { hostStatusService } =
       await import("./hosts/status/host-status-service.js");
@@ -315,93 +277,9 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         });
       }
 
-      // After seeding: plugin_settings has a foreign key to plugins, so there
-      // is nothing to migrate into until the plugin row exists.
-      const { runTailscaleSettingsMigration } =
-        await import("./utils/crypto-migration/tailscale-settings-migration.js");
-      await runTailscaleSettingsMigration();
-
-      const { runProxmoxSettingsMigration } =
-        await import("./utils/crypto-migration/proxmox-settings-migration.js");
-      await runProxmoxSettingsMigration();
-
-      const { runFileManagerSettingsMigration } =
-        await import("./utils/crypto-migration/file-manager-settings-migration.js");
-      await runFileManagerSettingsMigration();
-
-      const { runTunnelsSettingsMigration } =
-        await import("./utils/crypto-migration/tunnels-settings-migration.js");
-      await runTunnelsSettingsMigration();
-
-      const { runWebEndpointSettingsMigration } =
-        await import("./utils/crypto-migration/web-endpoint-settings-migration.js");
-      await runWebEndpointSettingsMigration();
-
-      const { runSshTerminalSettingsMigration } =
-        await import("./utils/crypto-migration/ssh-terminal-settings-migration.js");
-      await runSshTerminalSettingsMigration();
-
-      const { runTmuxMonitorSettingsMigration } =
-        await import("./utils/crypto-migration/tmux-monitor-settings-migration.js");
-      await runTmuxMonitorSettingsMigration();
-
-      const { runSessionSharingSettingsMigration } =
-        await import("./utils/crypto-migration/session-sharing-settings-migration.js");
-      await runSessionSharingSettingsMigration();
-
-      const { runSessionRecordingSettingsMigration } =
-        await import("./utils/crypto-migration/session-recording-settings-migration.js");
-      await runSessionRecordingSettingsMigration();
-
-      const { runRemoteDesktopSettingsMigration } =
-        await import("./utils/crypto-migration/remote-desktop-settings-migration.js");
-      await runRemoteDesktopSettingsMigration();
-
-      const { runHostMetricsSettingsMigration } =
-        await import("./utils/crypto-migration/host-metrics-settings-migration.js");
-      await runHostMetricsSettingsMigration();
-
-      const { runDockerSettingsMigration } =
-        await import("./utils/crypto-migration/docker-settings-migration.js");
-      await runDockerSettingsMigration();
-
-      const { runAiSettingsMigration } =
-        await import("./utils/crypto-migration/ai-settings-migration.js");
-      await runAiSettingsMigration();
-
-      const { runWakeOnLanSettingsMigration } =
-        await import("./utils/crypto-migration/wake-on-lan-settings-migration.js");
-      await runWakeOnLanSettingsMigration();
-
-      const { runWarpgateSettingsMigration } =
-        await import("./utils/crypto-migration/warpgate-settings-migration.js");
-      await runWarpgateSettingsMigration();
-
-      const { runStepCaSettingsMigration } =
-        await import("./utils/crypto-migration/step-ca-settings-migration.js");
-      await runStepCaSettingsMigration();
-
-      const { runAcmeSslSettingsMigration } =
-        await import("./utils/crypto-migration/acme-ssl-settings-migration.js");
-      await runAcmeSslSettingsMigration();
-
-      const { runVaultSettingsMigration } =
-        await import("./utils/crypto-migration/vault-settings-migration.js");
-      await runVaultSettingsMigration();
-
-      const { runSecretSourcesTokenMigration } =
-        await import("./utils/crypto-migration/secret-sources-token-migration.js");
-      await runSecretSourcesTokenMigration();
-
-      const { runTotpMigration } =
-        await import("./utils/crypto-migration/totp-migration.js");
-      await runTotpMigration();
-
-      // Also after the plugin moves, for a CA whose owner key was not open
-      // when the table was adopted.
-      const { runTermixIdentityCaMigration } =
-        await import("./utils/crypto-migration/termix-identity-ca-migration.js");
-      await runTermixIdentityCaMigration();
+      const { runPluginDataMigrations } =
+        await import("./plugins/boot-migrations.js");
+      await runPluginDataMigrations();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

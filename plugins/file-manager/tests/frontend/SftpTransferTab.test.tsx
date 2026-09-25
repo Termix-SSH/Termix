@@ -59,17 +59,19 @@ beforeEach(() => {
       id: 1,
       name: "prod",
       ip: "10.0.0.1",
-      enableFileManager: true,
       connectionType: "ssh",
-      defaultPath: "/srv",
+      pluginSettings: {
+        "file-manager": { enableFileManager: true, defaultPath: "/srv" },
+      },
     },
     {
       id: 2,
       name: "backup",
       ip: "10.0.0.2",
-      enableFileManager: true,
       connectionType: "ssh",
-      defaultPath: "/srv",
+      pluginSettings: {
+        "file-manager": { enableFileManager: true, defaultPath: "/srv" },
+      },
     },
   ]);
   api.ensureSSHSessionForHost.mockImplementation(async (host) => ({

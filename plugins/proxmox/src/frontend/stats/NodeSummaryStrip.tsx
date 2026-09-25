@@ -1,7 +1,7 @@
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Cpu, MemoryStick, HardDrive, Clock, Server } from "lucide-react";
 import type { ProxmoxNodeStats } from "../types";
-import { cn } from "./utils";
+import { cn } from "@termix/plugin-sdk/ui";
 
 function Tile({
   icon,

@@ -78,4 +78,32 @@ export function mountPluginApi(app: express.Express): void {
   app.use("/plugin-api", router);
 }
 
+/**
+ * Serves the old URLs plugins declare in contributes.http.legacyPaths, each
+ * under "/<plugin id>/", through that plugin's router with the prefix
+ * removed. Mounted after every core route, so core wins a clash.
+ */
+export function mountPluginLegacyPaths(
+  app: express.Express,
+  listActive: () => Array<{ id: string; legacyPaths: string[] }>,
+): void {
+  app.use((req: Request, res: Response, next) => {
+    for (const plugin of listActive()) {
+      const matched = plugin.legacyPaths.some(
+        (path) => req.path === path || req.path.startsWith(`${path}/`),
+      );
+      if (!matched) continue;
+      const pluginRouter = getPluginRouter(plugin.id);
+      if (!pluginRouter) {
+        res.status(404).json({ error: "Plugin not installed or not running" });
+        return;
+      }
+      req.url = req.url.slice(plugin.id.length + 1) || "/";
+      pluginRouter(req, res, next);
+      return;
+    }
+    next();
+  });
+}
+
 export default router;

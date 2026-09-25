@@ -105,6 +105,10 @@ jobs:
           npm run lint:fix || true
           npm run format
 
+      # The plugin boot tests load the built bundles.
+      - name: Build plugins
+        run: npm run build:sdk && npm run build:plugins
+
       - name: Run unit tests
         run: npm run test
 

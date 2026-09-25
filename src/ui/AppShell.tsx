@@ -2476,17 +2476,8 @@ export function AppShell({
                   ram: null,
                   lastAccess: new Date().toISOString(),
                   authType: "none",
-                  enableTerminal: false,
-                  enableCommandHistory: false,
-                  enableTunnel: false,
-                  enableFileManager: false,
-                  enableProxmox: false,
-                  enableProxmoxStats: false,
-                  enableTmuxMonitor: false,
-                  enableTerminalToolbar: false,
                   enableSsh: false,
                   sshPort: 22,
-                  serverTunnels: [],
                   quickActions: [],
                 };
                 void invokeAction("terminal.open", host, {

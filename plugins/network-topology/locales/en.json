@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Source and target must be different",
     "exportJSON": "Export JSON",
     "importJSON": "Import JSON",
-    "terminal": "Terminal",
-    "fileManager": "File Manager",
-    "tunnel": "Tunnel",
-    "docker": "Docker",
     "serverStats": "Host Metrics",
-    "hostMetrics": "Host Metrics",
     "noNodes": "No nodes yet"
   },
   "nav": {

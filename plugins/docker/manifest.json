@@ -19,7 +19,8 @@
     "credentials:use",
     "ssh:connect",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "events:core"
   ],
   "provides": [
     {
@@ -74,6 +75,20 @@
             ]
           }
         ]
+      }
+    },
+    "uiPresets": {
+      "simple": {
+        "viewMode": "list",
+        "containerLayout": "card"
+      },
+      "balanced": {
+        "viewMode": "list",
+        "containerLayout": "card"
+      },
+      "advanced": {
+        "viewMode": "detail",
+        "containerLayout": "table"
       }
     }
   },

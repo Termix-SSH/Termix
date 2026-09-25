@@ -41,14 +41,11 @@ import {
 import {
   attachHostPluginSettings,
   loadHostPluginSettings,
-  writeHostPluginSettings,
   withHostPluginSettings,
 } from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostAuthCompatRoutes } from "./host-compat-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
-import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
-import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
 import { registerHostStatusRoutes } from "./host-status-routes.js";
@@ -103,8 +100,6 @@ const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
-
-registerHostInternalRoutes(router);
 
 registerHostStatusRoutes(router, {
   authenticateJWT,
@@ -188,28 +183,10 @@ router.post(
       keyType,
       sudoPassword,
       pin,
-      enableTerminal,
-      enableCommandHistory,
-      enableTunnel,
-      enableFileManager,
-      scpLegacy,
-      enableProxmox,
-      enableTmuxMonitor,
-      enableTerminalToolbar,
-      showTerminalInSidebar,
-      showFileManagerInSidebar,
-      showTunnelInSidebar,
-      showDockerInSidebar,
-      showServerStatsInSidebar,
-      defaultPath,
-      tunnelConnections,
       jumpHosts,
       quickActions,
       statusCheckEnabled,
       statusCheckInterval,
-      proxmoxConfig,
-      enableProxmoxStats,
-      proxmoxStatsConfig,
       terminalConfig,
       forceKeyboardInteractive,
       domain,
@@ -306,26 +283,10 @@ router.post(
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
-      enableTerminal: enableTerminal ? 1 : 0,
-      enableCommandHistory: enableCommandHistory ? 1 : 0,
-      enableTunnel: enableTunnel ? 1 : 0,
-      tunnelConnections: Array.isArray(tunnelConnections)
-        ? JSON.stringify(tunnelConnections)
-        : null,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
       quickActions: Array.isArray(quickActions)
         ? JSON.stringify(quickActions)
         : null,
-      enableFileManager: enableFileManager ? 1 : 0,
-      scpLegacy: scpLegacy ? 1 : 0,
-      enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
-      enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
-      showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
-      showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
-      showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
-      showDockerInSidebar: showDockerInSidebar ? 1 : 0,
-      showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
-      defaultPath: defaultPath || null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       terminalConfig: terminalConfig
@@ -451,36 +412,6 @@ router.post(
 
       const createdHost = result;
 
-      if (
-        enableProxmox !== undefined ||
-        proxmoxConfig !== undefined ||
-        enableProxmoxStats !== undefined ||
-        proxmoxStatsConfig !== undefined
-      ) {
-        try {
-          await writeHostPluginSettings("proxmox", createdHost.id as number, {
-            enableProxmox: !!enableProxmox,
-            proxmoxConfig: proxmoxConfig
-              ? typeof proxmoxConfig === "string"
-                ? safeParseJson(proxmoxConfig)
-                : proxmoxConfig
-              : null,
-            enableProxmoxStats: !!enableProxmoxStats,
-            proxmoxStatsConfig: proxmoxStatsConfig
-              ? typeof proxmoxStatsConfig === "string"
-                ? safeParseJson(proxmoxStatsConfig)
-                : proxmoxStatsConfig
-              : null,
-          });
-        } catch (proxmoxSettingsError) {
-          sshLogger.warn("Failed to save Proxmox host settings", {
-            operation: "host_create_proxmox_settings",
-            hostId: createdHost.id,
-            error: getErrorMessage(proxmoxSettingsError),
-          });
-        }
-      }
-
       // Standing folder shares apply to the newcomer.
       try {
         await applyFolderAccessRules(
@@ -582,12 +513,6 @@ router.post(
  *                   - type: array
  *                     items:
  *                       type: string
- *               enableTerminal:
- *                 type: boolean
- *               enableFileManager:
- *                 type: boolean
- *               enableTunnel:
- *                 type: boolean
  *     responses:
  *       200:
  *         description: Host enrolled successfully.
@@ -735,19 +660,6 @@ router.post(
         key: resolvedKey,
         keyPassword: resolvedKeyPassword,
         keyType: resolvedKeyType,
-        enableTerminal: true,
-        enableTunnel: false,
-        enableFileManager: true,
-        enableWebUi: false,
-        enableTmuxMonitor: false,
-        enableTerminalToolbar: true,
-        showTerminalInSidebar: true,
-        showFileManagerInSidebar: false,
-        showTunnelInSidebar: false,
-        showDockerInSidebar: false,
-        showServerStatsInSidebar: false,
-        defaultPath: "/",
-        tunnelConnections: [],
         jumpHosts: [],
         quickActions: [],
         statusCheckEnabled: true,
@@ -860,28 +772,10 @@ router.put(
       keyType,
       sudoPassword,
       pin,
-      enableTerminal,
-      enableCommandHistory,
-      enableTunnel,
-      enableFileManager,
-      scpLegacy,
-      enableProxmox,
-      enableTmuxMonitor,
-      enableTerminalToolbar,
-      showTerminalInSidebar,
-      showFileManagerInSidebar,
-      showTunnelInSidebar,
-      showDockerInSidebar,
-      showServerStatsInSidebar,
-      defaultPath,
-      tunnelConnections,
       jumpHosts,
       quickActions,
       statusCheckEnabled,
       statusCheckInterval,
-      proxmoxConfig,
-      enableProxmoxStats,
-      proxmoxStatsConfig,
       terminalConfig,
       forceKeyboardInteractive,
       domain,
@@ -979,26 +873,10 @@ router.put(
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
-      enableTerminal: enableTerminal ? 1 : 0,
-      enableCommandHistory: enableCommandHistory ? 1 : 0,
-      enableTunnel: enableTunnel ? 1 : 0,
-      tunnelConnections: Array.isArray(tunnelConnections)
-        ? JSON.stringify(tunnelConnections)
-        : null,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
       quickActions: Array.isArray(quickActions)
         ? JSON.stringify(quickActions)
         : null,
-      enableFileManager: enableFileManager ? 1 : 0,
-      scpLegacy: scpLegacy ? 1 : 0,
-      enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
-      enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
-      showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
-      showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
-      showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
-      showDockerInSidebar: showDockerInSidebar ? 1 : 0,
-      showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
-      defaultPath: defaultPath || null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       terminalConfig: terminalConfig
@@ -1299,36 +1177,6 @@ router.put(
         Number(hostId),
         sshDataObj,
       );
-
-      if (
-        enableProxmox !== undefined ||
-        proxmoxConfig !== undefined ||
-        enableProxmoxStats !== undefined ||
-        proxmoxStatsConfig !== undefined
-      ) {
-        try {
-          await writeHostPluginSettings("proxmox", Number(hostId), {
-            enableProxmox: !!enableProxmox,
-            proxmoxConfig: proxmoxConfig
-              ? typeof proxmoxConfig === "string"
-                ? safeParseJson(proxmoxConfig)
-                : proxmoxConfig
-              : null,
-            enableProxmoxStats: !!enableProxmoxStats,
-            proxmoxStatsConfig: proxmoxStatsConfig
-              ? typeof proxmoxStatsConfig === "string"
-                ? safeParseJson(proxmoxStatsConfig)
-                : proxmoxStatsConfig
-              : null,
-          });
-        } catch (proxmoxSettingsError) {
-          sshLogger.warn("Failed to save Proxmox host settings", {
-            operation: "host_update_proxmox_settings",
-            hostId: parseInt(hostId),
-            error: getErrorMessage(proxmoxSettingsError),
-          });
-        }
-      }
 
       // A host that moved into a folder inherits that folder's standing shares.
       try {
@@ -1987,16 +1835,6 @@ router.get(
       const hostPluginSettings = (
         await loadHostPluginSettings([Number(hostId)])
       ).get(Number(hostId));
-      const proxmoxSettings = hostPluginSettings?.proxmox as
-        | {
-            enableProxmox?: boolean;
-            proxmoxConfig?: unknown;
-            enableProxmoxStats?: boolean;
-            proxmoxStatsConfig?: unknown;
-          }
-        | undefined;
-      const webEndpointSettings = hostPluginSettings?.["web-endpoint"] as
-        { enableWebUi?: boolean; webUiConfig?: unknown } | undefined;
 
       const exportedConnectionType =
         (resolvedHost.connectionType as string) || "ssh";
@@ -2047,35 +1885,13 @@ router.get(
             credentialId: resolvedHost.credentialId || null,
             overrideCredentialUsername:
               !!resolvedHost.overrideCredentialUsername,
-            enableTerminal: !!resolvedHost.enableTerminal,
-            enableCommandHistory: resolvedHost.enableCommandHistory !== false,
-            enableTunnel: !!resolvedHost.enableTunnel,
-            enableFileManager: resolvedHost.enableFileManager !== false,
-            scpLegacy: !!resolvedHost.scpLegacy,
-            enableWebUi: !!webEndpointSettings?.enableWebUi,
-            enableProxmox: !!proxmoxSettings?.enableProxmox,
-            enableProxmoxStats: !!proxmoxSettings?.enableProxmoxStats,
-            enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
-            enableTerminalToolbar: resolvedHost.enableTerminalToolbar !== false,
-            showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
-            showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
-            showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
-            showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
-            showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
-            defaultPath: resolvedHost.defaultPath,
             sudoPassword: resolvedHost.sudoPassword || null,
-            tunnelConnections: resolvedHost.tunnelConnections
-              ? JSON.parse(resolvedHost.tunnelConnections as string)
-              : [],
             jumpHosts: resolvedHost.jumpHosts
               ? JSON.parse(resolvedHost.jumpHosts as string)
               : null,
             quickActions: resolvedHost.quickActions
               ? JSON.parse(resolvedHost.quickActions as string)
               : null,
-            webUiConfig: webEndpointSettings?.webUiConfig ?? { endpoints: [] },
-            proxmoxConfig: proxmoxSettings?.proxmoxConfig ?? null,
-            proxmoxStatsConfig: proxmoxSettings?.proxmoxStatsConfig ?? null,
             terminalConfig: resolvedHost.terminalConfig
               ? JSON.parse(resolvedHost.terminalConfig as string)
               : null,
@@ -2162,10 +1978,6 @@ router.get(
           ? host
           : (await resolveHostCredentials(host, userId)) || host;
         const hostPluginSettings = pluginSettingsByHost.get(host.id as number);
-        const proxmoxSettings = hostPluginSettings?.proxmox as
-          { enableProxmox?: boolean; proxmoxConfig?: unknown } | undefined;
-        const webEndpointSettings = hostPluginSettings?.["web-endpoint"] as
-          { enableWebUi?: boolean; webUiConfig?: unknown } | undefined;
 
         const exportedConnectionType =
           (resolvedHost.connectionType as string) || "ssh";
@@ -2204,37 +2016,15 @@ router.get(
               credentialId: resolvedHost.credentialId || null,
               overrideCredentialUsername:
                 !!resolvedHost.overrideCredentialUsername,
-              enableTerminal: !!resolvedHost.enableTerminal,
-              enableCommandHistory: resolvedHost.enableCommandHistory !== false,
-              enableTunnel: !!resolvedHost.enableTunnel,
-              enableFileManager: resolvedHost.enableFileManager !== false,
-              enableWebUi: !!webEndpointSettings?.enableWebUi,
-              enableProxmox: !!proxmoxSettings?.enableProxmox,
-              enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
-              enableTerminalToolbar:
-                resolvedHost.enableTerminalToolbar !== false,
-              showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
-              showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
-              showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
-              showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
-              showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
-              defaultPath: resolvedHost.defaultPath,
               sudoPassword: shareMode
                 ? null
                 : resolvedHost.sudoPassword || null,
-              tunnelConnections: resolvedHost.tunnelConnections
-                ? JSON.parse(resolvedHost.tunnelConnections as string)
-                : [],
               jumpHosts: resolvedHost.jumpHosts
                 ? JSON.parse(resolvedHost.jumpHosts as string)
                 : null,
               quickActions: resolvedHost.quickActions
                 ? JSON.parse(resolvedHost.quickActions as string)
                 : null,
-              webUiConfig: webEndpointSettings?.webUiConfig ?? {
-                endpoints: [],
-              },
-              proxmoxConfig: proxmoxSettings?.proxmoxConfig ?? null,
               terminalConfig: resolvedHost.terminalConfig
                 ? JSON.parse(resolvedHost.terminalConfig as string)
                 : null,
@@ -2645,13 +2435,6 @@ registerHostBulkRoutes(
   permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
 );
-
-registerHostAutostartRoutes(router, {
-  authenticateJWT,
-  requireViewPermission: permissionManager.requirePermission("hosts.view"),
-  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
-});
 
 registerHostAuthCompatRoutes(router);
 

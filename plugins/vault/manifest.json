@@ -61,7 +61,8 @@
             "key": "profileId",
             "type": "number",
             "labelKey": "settings.host.profileId.label",
-            "hidden": true
+            "hidden": true,
+            "ownerOnly": true
           }
         ]
       }

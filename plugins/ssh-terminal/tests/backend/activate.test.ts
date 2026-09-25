@@ -27,7 +27,9 @@ afterEach(async () => {
 describe("ssh-terminal activate", () => {
   it("serves the terminal socket", async () => {
     server = await startServer();
-    expect(server.mock.wsRoutes).toEqual([{ path: "/terminal", raw: false }]);
+    expect(server.mock.wsRoutes).toMatchObject([
+      { path: "/terminal", raw: false },
+    ]);
   });
 
   it("provides sessions.live as ssh and terminal.history", async () => {

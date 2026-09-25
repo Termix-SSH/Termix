@@ -53,7 +53,9 @@ describe("tunnels activate", () => {
     for (const method of ["forward", "start", "stop", "status", "list"]) {
       expect(typeof service[method]).toBe("function");
     }
-    expect(server.mock.wsRoutes).toEqual([{ path: "/c2s/stream", raw: false }]);
+    expect(server.mock.wsRoutes).toMatchObject([
+      { path: "/c2s/stream", raw: false },
+    ]);
   });
 
   for (const capability of ["db:own", "network:serve"]) {

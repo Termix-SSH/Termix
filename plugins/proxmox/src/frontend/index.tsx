@@ -25,19 +25,53 @@ interface DiscoverRequest {
 
 type Opener = (request: DiscoverRequest) => void;
 
-function ProxmoxHostSection({ form, setField }: HostEditorSectionProps) {
+// The Proxmox fields are this plugin's host settings, saved with the host
+// through form.pluginSettings.proxmox.
+function ProxmoxHostSection({ form, updateForm }: HostEditorSectionProps) {
+  const values = (form.pluginSettings?.proxmox ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const setField = (key: string, value: unknown) =>
+    updateForm((current) => {
+      const all = (current.pluginSettings ?? {}) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      return {
+        ...current,
+        pluginSettings: {
+          ...all,
+          proxmox: { ...(all.proxmox ?? {}), [key]: value },
+        },
+      };
+    });
+  const sectionForm = {
+    enableProxmox: values.enableProxmox === true,
+    proxmoxConfig: values.proxmoxConfig ?? null,
+    enableProxmoxStats: values.enableProxmoxStats === true,
+    proxmoxStatsConfig: values.proxmoxStatsConfig ?? {
+      pollInterval: 60,
+      nodeName: null,
+    },
+  };
   return (
     <>
       <HostProxmoxTab
-        form={form}
+        form={sectionForm as Parameters<typeof HostProxmoxTab>[0]["form"]}
         setField={setField as Parameters<typeof HostProxmoxTab>[0]["setField"]}
       />
       <HostProxmoxStatsTab
-        form={form}
-        setField={setField as Parameters<typeof HostProxmoxTab>[0]["setField"]}
+        form={sectionForm as Parameters<typeof HostProxmoxStatsTab>[0]["form"]}
+        setField={
+          setField as Parameters<typeof HostProxmoxStatsTab>[0]["setField"]
+        }
       />
       {/* Other plugins add Proxmox-related settings here. */}
-      <ComponentSlot slotId="proxmox.hostEditor" props={{ form, setField }} />
+      <ComponentSlot
+        slotId="proxmox.hostEditor"
+        props={{ form: sectionForm, setField }}
+      />
     </>
   );
 }

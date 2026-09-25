@@ -19,6 +19,7 @@ import {
 } from "@/components/dialog";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { applyPresetSideEffects } from "@/lib/apply-ui-preset";
+import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
   HOMEPAGE_AREA_KEY,
   UI_AREA_KEYS,
@@ -58,14 +59,37 @@ export function InterfacePresetSettings({
   // the customizations are listed separately below.
   const activeLabel = ctx?.preferences.preset ?? "balanced";
 
+  const pluginStore = usePluginStore();
   const customizedAreas = useMemo(() => {
-    if (!ctx) return [] as UiAreaKey[];
-    return UI_AREA_KEYS.filter(
+    if (!ctx) return [] as Array<{ key: string; label: string }>;
+    const overrides = ctx.preferences.overrides as Record<
+      string,
+      Record<string, unknown> | undefined
+    >;
+    const core = UI_AREA_KEYS.filter(
       (area) =>
         !HIDDEN_OVERRIDE_AREAS.has(area) &&
-        Object.keys(ctx.preferences.overrides[area] ?? {}).length > 0,
-    );
-  }, [ctx]);
+        Object.keys(overrides[area] ?? {}).length > 0,
+    ).map((area) => ({
+      key: area as string,
+      label: t(`newUi.sidebar.userProfile.uiArea_${area}`),
+    }));
+    // A plugin's own area is labelled with the plugin's name.
+    const plugins = Object.keys(overrides)
+      .filter(
+        (area) =>
+          area.startsWith("plugin:") &&
+          Object.keys(overrides[area] ?? {}).length > 0,
+      )
+      .map((area) => {
+        const pluginId = area.slice("plugin:".length);
+        return {
+          key: area,
+          label: pluginStore.records.get(pluginId)?.summary.name ?? pluginId,
+        };
+      });
+    return [...core, ...plugins];
+  }, [ctx, pluginStore, t]);
 
   if (!ctx) return null;
 
@@ -143,15 +167,15 @@ export function InterfacePresetSettings({
           </span>
           {customizedAreas.map((area) => (
             <div
-              key={area}
+              key={area.key}
               className="flex items-center justify-between gap-2 py-0.5"
             >
               <span className="min-w-0 flex-1 truncate text-xs">
-                {t(`newUi.sidebar.userProfile.uiArea_${area}`)}
+                {area.label}
               </span>
               <button
                 type="button"
-                onClick={() => ctx.clearArea(area)}
+                onClick={() => ctx.clearArea(area.key as UiAreaKey)}
                 className="shrink-0 text-[10px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
               >
                 {t("newUi.sidebar.userProfile.presetRevertArea")}

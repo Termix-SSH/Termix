@@ -38,6 +38,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Run plugin tests
+        run: npm run test:plugins
+
   database-dialects:
     name: Postgres and MySQL
     runs-on: blacksmith-2vcpu-ubuntu-2404

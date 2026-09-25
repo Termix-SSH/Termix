@@ -19,7 +19,8 @@
     "db:own",
     "files:own",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "events:core"
   ],
   "provides": [
     {

@@ -6,16 +6,24 @@ const api = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
 }));
+const remote = vi.hoisted(() => ({
+  api: { get: vi.fn(), post: vi.fn() },
+  origin: "local" as "local" | "remote",
+  remoteId: 70 as number | null,
+}));
 
 vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   usePluginApi: () => api,
+  usePluginApiFor: () => remote.api,
   useTranslation: () => ({ t: (key: string) => key, language: "en" }),
 }));
 
 vi.mock("@termix/plugin-sdk/ui", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
   getPollingEnvironmentMultiplier: () => 1,
+  resolveConnectionOrigin: async () => remote.origin,
+  resolveRemoteHostId: async () => remote.remoteId,
   runAdaptivePolling: (poll: () => Promise<unknown>) => {
     void poll();
     return () => {};
@@ -27,6 +35,8 @@ import { TerminalMetricsStatus } from "../../src/frontend/TerminalMetricsStatus"
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  remote.origin = "local";
+  remote.remoteId = 70;
 });
 
 describe("TerminalMetricsStatus", () => {
@@ -76,5 +86,23 @@ describe("TerminalMetricsStatus", () => {
     expect(api.post).toHaveBeenLastCalledWith("/metrics/stop/7", {
       viewerSessionId: "viewer-2",
     });
+  });
+
+  it("polls a remote server's host by its id there", async () => {
+    remote.origin = "remote";
+    remote.api.post.mockResolvedValue({ data: { viewerSessionId: "v" } });
+    remote.api.get.mockResolvedValue({ data: { cpu: { percent: 33 } } });
+
+    render(
+      <TerminalMetricsStatus
+        host={{ id: 7, connectionOrigin: "remote", syncId: "s-1" }}
+        isConnected
+        active
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("33%")).toBeInTheDocument());
+    expect(remote.api.post).toHaveBeenCalledWith("/metrics/start/70");
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

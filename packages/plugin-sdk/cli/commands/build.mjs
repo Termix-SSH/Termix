@@ -3,6 +3,7 @@ import path from "node:path";
 import * as esbuild from "esbuild";
 import { BACKEND_EXTERNALS, FRONTEND_EXTERNALS } from "../lib/externals.mjs";
 import { legacyCoreImports } from "../lib/legacy-core-imports.mjs";
+import { staticUrlImports } from "../lib/static-url-imports.mjs";
 import { readManifest, resolveEntry, copyDir } from "../lib/plugin-dir.mjs";
 
 const BACKEND_ENTRIES = [
@@ -75,6 +76,7 @@ export async function build({ cwd }) {
       logLevel: "warning",
       external: FRONTEND_EXTERNALS,
       plugins: [
+        staticUrlImports({ outDir }),
         legacyCoreImports({
           pluginId,
           platform: "browser",

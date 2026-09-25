@@ -342,12 +342,29 @@ attached after the sanitizers, because the connect-level projection of a shared
 host reduces it to an allowlist.
 
 `ctx.settings` is `get/set`, `getUser/setUser`, `getHost/setHost`, `getAll`,
-`onChange` (disposed with the plugin) and `readCore`. **Reading and writing a
+`onChange` (disposed with the plugin), `onValidate`, `listHostValues` and
+`readCore`. **Reading and writing a
 plugin's own settings needs no capability**: the manifest already declares
 every field, and a plugin that had to ask permission to read its own
 configuration would be useless. Only `readCore`, which reaches outside the
 plugin's namespace, is gated on `settings:read-core`, and it serves a short
 allowlist (`CORE_SETTINGS_ALLOWLIST`) rather than the whole settings table.
+
+**D0** added three pieces:
+
+- `onValidate(scope, validator)` checks a save from the settings screen or the
+  host editor before anything is written. The validator gets every value in
+  the save (and the host id for host scope) and returns field key to message
+  for what is wrong. ssh-terminal checks that its image paths are absolute,
+  step-ca that its CA URL is https and its fingerprint a SHA-256 digest.
+- `listHostValues(key)` lists every host that saved a value for one of the
+  plugin's host fields, across all users, with the host's owner, for a
+  background job that must know which hosts to act on and as whom before any
+  request exists (proxmox's auto-sync). It needs `hosts:read` and refuses a
+  secret field.
+- Host fields take `enableDefault` (on the host section), `defaultFrom`,
+  `shareRead` and `ownerOnly`; see the manifest reference. A host settings
+  save also bumps the host's `updated_at`, so remote sync carries it.
 
 ### 8. UI
 
@@ -606,32 +623,56 @@ dark), shared by the SSH and local terminals, the docker console and serial
 from `src/ui/lib/terminal-look/`; keyboard handling shared with the shell
 (`findMatchingKeybinding`, `globalShortcutHandler`, `isTabJumpHotkey`); the
 connection helpers (`isElectron`, `resolveConnectionOrigin`, `pluginWsUrl`,
-`hydrateLocalSharedHostAuth`, `useConnectionDefaults`); and a few core APIs
-(`logActivity`, `getHostPassword`, `patchOpenTab`, `getUserPreferences`,
-`parseCustomKeybindings`, `setHostAutoTmux`, `getCookie`). The APIs are a
-stopgap in the right place: D1 turns them into typed bridge members.
+`hydrateLocalSharedHostAuth`, `useConnectionDefaults`). **D0** moved the core
+calls a plugin makes for the signed-in user onto the typed host bridge, as
+`@termix/plugin-sdk/frontend` functions: `logActivity`, `getHostPassword`,
+`patchOpenTab`, `getCustomKeybindings`, `setHostAutoTmux` and
+`getClientPreference`.
 **B16** added `LineChart`, `useAdaptivePolling`, `useAreaPreferences` (the
 Appearance density and chart options), and the homepage widget pieces
 `WidgetTitle` and `runVisibleInterval` (moved to `src/ui/lib/` in **B19**,
 once a plugin rather than a core feature became their biggest caller), for
-host-metrics's cards and its metrics chart widget. **B15** added `useUiPreferencesContext`, whose `setOverride` the
-Docker manager uses to remember the card or table layout the user picked.
-The `docker` and `hostMetrics` areas are still declared in core's
-`types/ui-preferences.ts`; a plugin cannot contribute its own area yet. The frontend SDK gained `useHostStatus(hostId)`: core's
-status for a host, from the shell's own polling, or null outside the shell.
-**B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
-`ConnectionStage` type, for remote desktop's display socket and its remote
-host lookup. **B17** added `NotificationChannelDialog` and the channel API
-(`getNotificationChannels`, `deleteNotificationChannel`,
-`testNotificationChannel`, the `NotificationChannel` type): channels are core,
-so a plugin that manages them shows core's dialog. `useConnectionDefaults` now carries terminal defaults only; the
-RDP half became remote desktop's user settings. Publishing its
-`.d.ts` for plugins outside this repo is a follow-up for the repo split.
-**B19** added `PluginViewPlaceholder`, for the homepage plugin's widget
-shell to render in place of a widget type whose owning plugin (docker,
-tunnels, host-metrics, file-manager) is off, and moved `WidgetTitle` and
-`runVisibleInterval` here from the deleted homepage feature directory
-(above), unchanged for their existing callers.
+host-metrics's cards and its metrics chart widget.
+
+**D0** gave plugins their own Appearance area. A manifest's
+`contributes.uiPresets` names a value per interface preset (simple, balanced,
+advanced), and `usePluginUiPreferences()` returns the one for the user's
+level with their changes on top, plus a `set` that saves a change. Changes
+are stored in the UI preferences under `plugin:<id>` and listed, with the
+plugin's name, where Appearance lets a user revert them. Docker (list or
+detail view, card or table layout) and host-metrics (column count) use it;
+version 2 of the UI preferences moved their 2.8 `docker` and `hostMetrics`
+overrides across. The terminal toolbar density and the file manager's view
+mode are still preset-seeded localStorage keys core writes, as in 2.8.
+
+**D0** also added:
+
+- `usePluginApiFor(origin)`: the plugin's client for a resolved connection
+  origin, as `app.apiFor` but usable in a component. The terminal toolbar's
+  metrics bars use it for a host on the desktop app's remote server, and
+  tunnels merges the remote server's statuses through `app.apiFor("remote")`.
+- `app.onSettingsChanged(listener)`: fires after the settings screen or host
+  editor saved one of the plugin's settings, instead of polling on focus.
+- A `tab.menu` slot: entries in a tab's right-click menu, invoked with the
+  tab's surface handle; `when` sees `{ tab, handle }`. Session sharing adds its
+  share entry there, for a terminal whose toolbar is hidden.
+- The terminal toolbar lists every plugin's `open` host actions for its host
+  (tmux monitor, docker, tunnels, host metrics) as quick links, so no plugin
+  has to contribute a toolbar button to be reachable from a terminal. The frontend SDK gained `useHostStatus(hostId)`: core's
+  status for a host, from the shell's own polling, or null outside the shell.
+  **B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
+  `ConnectionStage` type, for remote desktop's display socket and its remote
+  host lookup. **B17** added `NotificationChannelDialog` and the channel API
+  (`getNotificationChannels`, `deleteNotificationChannel`,
+  `testNotificationChannel`, the `NotificationChannel` type): channels are core,
+  so a plugin that manages them shows core's dialog. `useConnectionDefaults` now carries terminal defaults only; the
+  RDP half became remote desktop's user settings. Publishing its
+  `.d.ts` for plugins outside this repo is a follow-up for the repo split.
+  **B19** added `PluginViewPlaceholder`, for the homepage plugin's widget
+  shell to render in place of a widget type whose owning plugin (docker,
+  tunnels, host-metrics, file-manager) is off, and moved `WidgetTitle` and
+  `runVisibleInterval` here from the deleted homepage feature directory
+  (above), unchanged for their existing callers.
 
 #### Strings
 
@@ -685,6 +726,30 @@ register one; remote desktop's (**B14**) also reads a Termix export's
 `pluginSettings` and the flat fields hosts had before 2.9.0. Host exports
 carry every plugin's host settings (secrets redacted) under `pluginSettings`,
 which is what makes the round trip work without core naming a plugin.
+
+**D0** finished the generic host settings paths, all keyed off manifests:
+
+- Import writes an export's `pluginSettings` (non-secret declared fields,
+  validated like any save) before the plugin's normalizer runs. The raw
+  SQLite export carries host-scope `plugin_settings` rows in its own table,
+  and its import reads them back, plus the 2.8 columns through the
+  normalizers.
+- The Hosts panel's feature filter and the bulk enable and disable menu list
+  every plugin whose host section has an `enableKey`; the bulk route takes
+  `pluginEnable: { [pluginId]: boolean }`.
+- Remote sync carries a host's non-secret plugin values. A value that is a
+  local row id (vault's `profileId`) is translated with
+  `ctx.registry.provide("<id>.hostSettingsSync", { exportValue, importValue })`.
+- `ctx.registry.provide("<id>.hostPayloadLegacy", fn)` puts fields back on
+  the host payload in their 2.8 shape for clients outside Termix.
+  host-metrics uses it for the `statsConfig` Termix-Mobile reads; remove it
+  once the mobile app reads `pluginSettings` and `GET /host/status`.
+- A host field's `shareRead` hides it from shared recipients below that
+  level, and `ownerOnly` keeps a shared editor from changing it. Remote
+  desktop's `guacamoleConfig` (which can hold a gateway password) is
+  `shareRead: "edit"`, vault's `profileId` is `ownerOnly`.
+- The bulk import accepts any auth type core or a plugin registers or
+  declares in `contributes.auth.sshAuthTypes`.
 
 **B9**'s terminal provides `sessions.live` (live SSH sessions: look up, end,
 remove a share's participants, hand a room share's control over, subscribe to
@@ -758,9 +823,9 @@ adopts `session_shares`, `session_share_participants`, `collab_rooms` and
 `collab_room_members`, and reaches sessions only through `sessions.live`. Its
 two public routes, `/resolve/:linkToken` and `/guest/:token`, check the token
 themselves and are rate limited per IP. The share button is a contribution to
-`terminal.toolbar` and `remote-desktop.toolbar`; the tab bar's share entry and
-the `shareable`, `canShare`, `openShareModal` and `getShareTarget` members of
-`TabOptions`/`TabHandle` are gone. Core's active connections list gets the
+`terminal.toolbar` and `remote-desktop.toolbar`, and (**D0**) to the tab
+bar's `tab.menu` slot, which reads the terminal handle's `getShareTarget`. The
+`shareable`, `canShare` and `openShareModal` members of `TabOptions` are gone. Core's active connections list gets the
 sessions shared with a user from the `sessions.sharedWithMe` action.
 
 **Automations (B17)** imports nothing from core. It reaches snippets
@@ -949,7 +1014,9 @@ export default pluginVitestConfig(import.meta.url);
 
 The preset supplies both projects, the shared setup file
 (`@termix/plugin-sdk/testing/setup`, which core's `vitest.setup.ts` re-exports
-so there is one copy) and the `@/` alias the frontends still use.
+so there is one copy) and the `@/` alias the frontends still use. The setup
+also keeps a test server started on port 0 off the ports `fetch` refuses,
+which Windows can hand out.
 
 `npm run test` runs core only, `npm run test:plugins` runs every plugin and
 `npm run test:all` runs both. Core tests (`src/backend/tests`, `src/ui/tests`)
@@ -1500,6 +1567,46 @@ dropping one in the same drizzle-kit run makes it ask whether that is a
 rename, which it cannot do without a terminal, so B16 generated two
 migrations: the added columns first, then the no-op drop.
 
+**D0** dropped the rest this way (the file manager, tunnels, web endpoint,
+terminal, tmux monitor, session sharing and session recording columns and the
+dead `show_*_in_sidebar` ones), rewrote the two proxmox drops that really ran
+`DROP COLUMN` on Postgres and MySQL, and moved every copy onto
+`selectLegacyRows`, which reads a column schema.ts no longer declares on all
+three engines and answers nothing on a database that never had it. A 2.8
+boolean read raw goes through `legacyFlag`, since SQLite and MySQL hand back
+0 and 1. The copies live in `src/backend/plugins/boot-migrations.ts`
+(`runPluginDataMigrations`), which the starter runs after the plugins
+activate and which runs again when an admin enables a plugin without a
+restart. The core half of boot (keys, auth, core data migrations) is
+`runCoreBootMigrations` in `src/backend/boot.ts`; the boot integration tests
+share both with the starter.
+
+A host switch whose 2.8 column defaulted to on declares `enableDefault: true`
+(file manager, terminal), because a copy only writes the hosts that changed
+it, and every other host has to keep reading on.
+
+**Left for 3.0.0.** These stay in 2.9.0 so a downgrade still works, and go
+once every install has booted it:
+
+- The moved `ssh_data` columns (every plugin host column above, the proxmox,
+  remote desktop, docker, warpgate, vault and stats columns) and
+  `user_preferences.rdp_defaults`.
+- `users.totp_secret`, `totp_enabled` and `totp_backup_codes`; `users.is_oidc`,
+  `oidc_identifier`, `sso_provider_id` and the 2.8 per-user OIDC columns, and
+  `sessions.sso_provider_id`, `oidc_sub` and `oidc_sid`, once nothing needs the
+  2.8 shape.
+- The legacy settings rows the plugins copied: the terminal's
+  (`terminal_session_*`, `command_history_enabled`, `touch_input_settings`,
+  `terminal_image_*`), `session_sharing_globally_enabled`, `guac_enabled`,
+  `guac_url`, the `step_ca_*` rows and `acme_ssl_settings`.
+- `DATA_DIR/.opk`, `DATA_DIR/certbot` and `DATA_DIR/acme-webroot`.
+- The 2.8 URLs kept for identity providers and Termix-Mobile:
+  `auth-compat-routes.ts` (`/users/oidc/*`, `/users/ldap/login` and the rest),
+  `host-compat-routes.ts` (`/host/opkssh-callback`, `/host/step-ca-callback`)
+  and the `/termix-id/u/` and `/vault` redirects.
+- The `@termix/plugin-sdk/ui` typings for plugins built outside this repo,
+  which arrive with the split into separate repositories.
+
 ---
 
 ## Manifest v2 reference
@@ -1796,7 +1903,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.credentials.registerSecretResolver`         | `auth:provide`                                     | **B20**                             |
 | `ctx.credentials.listSshKeys`                    | `credentials:use`                                  | **C6**                              |
 | `ctx.credentials.createSshKey`                   | `credentials:write`                                | **C6**                              |
-| `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**                              |
+| `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**, request **D0**              |
 | `ctx.schedule.every` / `.after`                  | none                                               | **B16**                             |
 | `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18**, tls **C4** |
 | `ctx.process.run` / `.ensureBinary`              | `process:spawn` (+ `network:outbound` to download) | **C3**                              |
@@ -2322,7 +2429,7 @@ free. A **community plugin installed from a tarball has none of this**: there
 is no repo-root `npm install` to hoist its dependency into, no shared
 `node_modules` its bundle can walk up to. Shipping a native dependency in a
 plugin nobody's build system already vendors is an open problem this step
-does not solve - see `packages/plugin-sdk/FINISH-LIST.md`. A community plugin
+does not solve, and it waits for the split into separate repositories. A community plugin
 author who hits this today has three honest options, worst to best: ask the
 person installing it to `npm install` the native package into the server's
 own `node_modules` by hand (fragile, easy to get wrong on upgrade); avoid a
@@ -2675,8 +2782,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 53 files  | D1         |
-| A plugin importing core by relative path         | Warning   | 4 files   | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 51 files  | D1         |
+| A plugin importing core by relative path         | Warning   | 3 files   | D1         |
 | A plugin importing another plugin's source       | Warning   | 0 files   | -          |
 
 A warning does not fail a build, so the counts are held by

@@ -62,6 +62,14 @@ function shareRaw(): ExportPayload {
   };
 }
 
+function gatewayConfig(host: Record<string, unknown>): Record<string, unknown> {
+  const plugins = host.pluginSettings as Record<
+    string,
+    Record<string, unknown>
+  >;
+  return plugins["remote-desktop"].guacamoleConfig as Record<string, unknown>;
+}
+
 function rdpRaw(): ExportPayload {
   return {
     hosts: [
@@ -72,9 +80,13 @@ function rdpRaw(): ExportPayload {
         port: 3389,
         username: "admin",
         password: null,
-        guacamoleConfig: {
-          "gateway-hostname": "gw.example.com",
-          "gateway-password": "gw-secret",
+        pluginSettings: {
+          "remote-desktop": {
+            guacamoleConfig: {
+              "gateway-hostname": "gw.example.com",
+              "gateway-password": "gw-secret",
+            },
+          },
         },
       },
     ],
@@ -198,21 +210,21 @@ describe("buildExportPayload", () => {
 
   it("nulls the guacamole gateway password when credentials are excluded", () => {
     const out = buildExportPayload(rdpRaw(), null, ALL_GROUPS, false);
-    const config = out.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBeNull();
     expect(config["gateway-hostname"]).toBe("gw.example.com");
   });
 
   it("keeps the guacamole gateway password when credentials are included", () => {
     const out = buildExportPayload(rdpRaw(), null, ALL_GROUPS, true);
-    const config = out.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBe("gw-secret");
   });
 
   it("does not mutate the source payload when nulling nested secrets", () => {
     const raw = rdpRaw();
     buildExportPayload(raw, null, ALL_GROUPS, false);
-    const config = raw.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const config = gatewayConfig(raw.hosts[0]);
     expect(config["gateway-password"]).toBe("gw-secret");
   });
 
@@ -260,7 +272,7 @@ describe("maskSecrets", () => {
 
   it("masks the guacamole gateway password", () => {
     const out = maskSecrets(rdpRaw());
-    const config = out.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBe("<included>");
     expect(config["gateway-hostname"]).toBe("gw.example.com");
     expect(JSON.stringify(out)).not.toContain("gw-secret");

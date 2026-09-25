@@ -184,18 +184,11 @@ export function activate(app: TermixApp): void {
   applyStatus();
   refresh();
   // The admin switch and the user's own choice are settings, saved from
-  // the settings screen, so re-read when plugin state or focus changes too.
-  let lastFocusRefresh = Date.now();
-  const onFocus = () => {
-    if (Date.now() - lastFocusRefresh < 30_000) return;
-    lastFocusRefresh = Date.now();
-    refresh();
-  };
+  // the settings screen.
+  app.onSettingsChanged(() => refresh());
   const events = [AI_STATUS_CHANGED_EVENT, "termix:plugins-changed"];
   for (const event of events) window.addEventListener(event, refresh);
-  window.addEventListener("focus", onFocus);
   app.onDispose(() => {
     for (const event of events) window.removeEventListener(event, refresh);
-    window.removeEventListener("focus", onFocus);
   });
 }

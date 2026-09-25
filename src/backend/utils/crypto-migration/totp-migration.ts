@@ -83,7 +83,13 @@ async function factorUsers(pluginId: string): Promise<Set<string>> {
   return new Set(rows.map((row) => row.user_id));
 }
 
-export async function runTotpMigration(): Promise<TotpMigrationResult> {
+/**
+ * Pass a user id to move only that user, as a password login does once it
+ * has opened a data key the boot run could not.
+ */
+export async function runTotpMigration(
+  onlyUserId?: string,
+): Promise<TotpMigrationResult> {
   const result: TotpMigrationResult = { factors: 0, secrets: 0 };
 
   try {
@@ -105,7 +111,9 @@ export async function runTotpMigration(): Promise<TotpMigrationResult> {
 
     const users = (
       (await tryRows<LegacyTotpUser>(
-        sql`SELECT id, totp_enabled, totp_secret, totp_backup_codes FROM users`,
+        onlyUserId
+          ? sql`SELECT id, totp_enabled, totp_secret, totp_backup_codes FROM users WHERE id = ${onlyUserId}`
+          : sql`SELECT id, totp_enabled, totp_secret, totp_backup_codes FROM users`,
       )) ?? []
     ).filter((user) => isOn(user.totp_enabled));
 
