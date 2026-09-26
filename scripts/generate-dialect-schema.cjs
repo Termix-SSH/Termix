@@ -142,7 +142,7 @@ function camelToSnake(value) {
   return value.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 }
 
-function keyTables(source, tables, keyed) {
+function keyTables(source, tables, keyed, dialect) {
   let out = "";
   let cursor = 0;
   for (const { table, index, end } of tables) {
@@ -150,10 +150,17 @@ function keyTables(source, tables, keyed) {
     const columns = keyed.get(table);
     out += source
       .slice(index, end)
-      .replace(/\btext\("([a-z0-9_]+)"\)/g, (whole, col) =>
-        columns.has(col)
-          ? `varchar("${col}", { length: ${KEY_LENGTH} })`
-          : whole,
+      .replace(
+        /\btext\("([a-z0-9_]+)"(?:,\s*\{\s*enum:\s*(\[[^\]]*\]),?\s*\})?\)/g,
+        (whole, col, values) => {
+          // Closed sets stay compact without shortening identifiers or keys.
+          if (values && dialect === "mysql")
+            return `mysqlEnum("${col}", ${values})`;
+          const options = values ? `, enum: ${values}` : "";
+          return columns.has(col)
+            ? `varchar("${col}", { length: ${KEY_LENGTH}${options} })`
+            : whole;
+        },
       );
     cursor = end;
   }
@@ -165,7 +172,7 @@ function transform(source, dialect) {
   const isPg = dialect === "postgres";
   // Key-bearing strings must be indexable. First, while the table offsets
   // still match the source.
-  let out = keyTables(source, tables, keyed);
+  let out = keyTables(source, tables, keyed, dialect);
 
   // Autoincrement primary keys, before the plain integer rule below.
   out = out.replace(
@@ -235,6 +242,7 @@ function transform(source, dialect) {
       ]
     : [
         "mysqlTable",
+        "mysqlEnum",
         "text",
         "varchar",
         "int",

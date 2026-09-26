@@ -232,6 +232,43 @@ export function FileManagerToolbar({
   sidebarOpen = true,
   onToggleSidebar,
 }: FileManagerToolbarProps) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== "f"
+      )
+        return;
+
+      const input = searchInputRef.current;
+      if (!input) return;
+      const visible =
+        typeof input.checkVisibility === "function"
+          ? input.checkVisibility({ visibilityProperty: true })
+          : input.offsetParent !== null;
+      if (!visible) return;
+      const active = document.activeElement;
+      if (
+        active !== input &&
+        active?.closest(
+          'input, textarea, [contenteditable="true"], [role="dialog"]',
+        )
+      )
+        return;
+
+      event.preventDefault();
+      input.focus();
+      input.select();
+    };
+    document.addEventListener("keydown", handleSearchShortcut);
+    return () => document.removeEventListener("keydown", handleSearchShortcut);
+  }, []);
+
   return (
     <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
       <div className="flex flex-row items-center justify-between px-3 py-2 gap-2">
@@ -325,6 +362,7 @@ export function FileManagerToolbar({
           <div className="relative w-28 md:w-48">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder={t("fileManager.searchFiles")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
