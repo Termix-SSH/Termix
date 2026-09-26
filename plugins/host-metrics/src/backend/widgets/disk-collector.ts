@@ -6,7 +6,8 @@ import {
 import { toFixedNum } from "../util.js";
 import type { Client } from "ssh2";
 
-const PSEUDO_FS_RE = /^(tmpfs|devtmpfs|overlay|udev|none|shm)$/;
+const PSEUDO_FS_RE =
+  /^(tmpfs|devtmpfs|overlay|udev|none|shm|squashfs|efivarfs)$/;
 
 export interface DfRow {
   filesystem: string;

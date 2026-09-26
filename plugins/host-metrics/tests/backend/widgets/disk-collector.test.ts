@@ -41,6 +41,35 @@ describe("parseDfLines", () => {
     expect(rows[0].type).toBe("nfs4");
     expect(rows[1].type).toBe("cifs");
   });
+
+  it("keeps full image and firmware mounts out of disk usage", () => {
+    const rows = parseDfLines(
+      "/dev/loop0 squashfs 100 100 0 100% /snap/core/1\n" +
+        "efivarfs efivarfs 100 89 11 89% /sys/firmware/efi/efivars\n" +
+        "/dev/sda1 ext4 1000 400 600 40% /\n",
+    );
+    expect(rows.map((row) => row.mount)).toEqual(["/"]);
+    expect(findWorstMountIndex(rows)).toEqual({
+      index: 0,
+      usedBytes: 400,
+      totalBytes: 1000,
+    });
+  });
+
+  it("retains real storage without requiring a /dev source", () => {
+    const rows = parseDfLines(
+      "/dev/sda1 btrfs 1000 400 600 40% /\n" +
+        "tank/data zfs 2000 1000 1000 50% /data\n" +
+        "nas:/export nfs4 2000 1900 100 95% /mnt/nas\n" +
+        "//server/share cifs 2000 1000 1000 50% /mnt/smb\n",
+    );
+    expect(rows.map((row) => row.type)).toEqual([
+      "btrfs",
+      "zfs",
+      "nfs4",
+      "cifs",
+    ]);
+  });
 });
 
 describe("findWorstMountIndex", () => {
