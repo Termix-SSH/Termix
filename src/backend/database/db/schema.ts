@@ -1082,8 +1082,7 @@ export const pluginSettings = sqliteTable(
     pluginId: text("plugin_id")
       .notNull()
       .references(() => plugins.id, { onDelete: "cascade" }),
-    /** admin | user | host */
-    scope: text("scope").notNull(),
+    scope: text("scope", { enum: ["admin", "user", "host", "secret"] }).notNull(),
     scopeId: text("scope_id"),
     key: text("key").notNull(),
     /** JSON-encoded, so a field keeps its declared type across a round trip. */

@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build plugin SDK
+        run: npm run build:sdk
+
       - name: Lint
         # npm run lint, not npx eslint — the script also checks that the
         # generated dialect schemas match schema.ts, which eslint cannot see.
@@ -93,6 +96,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build plugin SDK
+        run: npm run build:sdk
 
       # Each run applies the migrations to an empty database first, so a
       # migration that does not apply cleanly fails the build.
