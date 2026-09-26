@@ -378,7 +378,7 @@ export function FileManagerContextMenu({
         icon: <Edit3 className="size-3.5" />,
         label: t("fileManager.rename"),
         action: () => onRename(files[0]),
-        shortcut: "F6",
+        shortcut: "F2",
       });
     }
 

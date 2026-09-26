@@ -1032,6 +1032,7 @@ export function FileManagerGrid({
             onDelete(selectedFiles);
           }
           break;
+        case "F2":
         case "F6":
           if (selectedFiles.length === 1 && onStartEdit) {
             event.preventDefault();
@@ -1418,6 +1419,7 @@ export function FileManagerGrid({
                   const isSelected = selectedFiles.some(
                     (f) => f.path === file.path,
                   );
+                  const isEditing = editingFile?.path === file.path;
                   return (
                     <div
                       key={vItem.key}
@@ -1432,7 +1434,9 @@ export function FileManagerGrid({
                         data-file-path={file.path}
                         draggable={true}
                         style={{
-                          gridTemplateColumns: listColumns.gridTemplateColumns,
+                          gridTemplateColumns: isEditing
+                            ? "minmax(0, 1fr)"
+                            : listColumns.gridTemplateColumns,
                         }}
                         className={cn(
                           "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
@@ -1461,12 +1465,13 @@ export function FileManagerGrid({
                           className={cn(
                             "flex items-center overflow-hidden pointer-events-none",
                             compact ? "gap-2" : "gap-3",
+                            isEditing && "col-span-full",
                           )}
                         >
                           <div className="shrink-0">
                             {getFileIcon(file, viewMode, compact)}
                           </div>
-                          {editingFile?.path === file.path ? (
+                          {isEditing ? (
                             <input
                               ref={editInputRef}
                               type="text"
@@ -1474,7 +1479,10 @@ export function FileManagerGrid({
                               onChange={(e) => setEditingName(e.target.value)}
                               onKeyDown={handleEditKeyDown}
                               onBlur={handleEditConfirm}
-                              className="flex-1 min-w-0 max-w-[200px] border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto"
+                              className={cn(
+                                "flex-1 min-w-0 border border-accent-brand/60 bg-card px-2 py-0 rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto",
+                                compact ? "h-5 text-[11px]" : "h-6 text-xs",
+                              )}
                               onClick={(e) => e.stopPropagation()}
                               onMouseDown={(e) => e.stopPropagation()}
                             />
@@ -1493,13 +1501,13 @@ export function FileManagerGrid({
                           )}
                         </div>
 
-                        {listColumns.isVisible("modified") && (
+                        {!isEditing && listColumns.isVisible("modified") && (
                           <span className="text-[10px] text-muted-foreground pointer-events-none truncate">
                             {file.modified || "—"}
                           </span>
                         )}
 
-                        {listColumns.isVisible("owner") && (
+                        {!isEditing && listColumns.isVisible("owner") && (
                           <span className="text-[10px] text-muted-foreground truncate hidden md:block pointer-events-none">
                             {file.owner
                               ? `${file.owner}${file.group ? `:${file.group}` : ""}`
@@ -1507,7 +1515,7 @@ export function FileManagerGrid({
                           </span>
                         )}
 
-                        {listColumns.isVisible("size") && (
+                        {!isEditing && listColumns.isVisible("size") && (
                           <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none">
                             {file.type === "file" &&
                             file.size !== undefined &&
@@ -1517,7 +1525,7 @@ export function FileManagerGrid({
                           </span>
                         )}
 
-                        {listColumns.isVisible("permissions") && (
+                        {!isEditing && listColumns.isVisible("permissions") && (
                           <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none truncate">
                             {file.permissions || "—"}
                           </span>
