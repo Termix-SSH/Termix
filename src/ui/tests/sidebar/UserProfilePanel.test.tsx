@@ -39,7 +39,11 @@ import {
   NewApiKeyDialog,
 } from "../../sidebar/UserProfilePanel";
 
-afterEach(cleanup);
+afterEach(async () => {
+  cleanup();
+  // Radix restores focus on a timer; let it finish before jsdom is torn down.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+});
 
 function renderSection(hidden: boolean, open = false, onToggle = vi.fn()) {
   render(
