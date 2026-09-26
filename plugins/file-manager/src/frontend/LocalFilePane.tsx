@@ -1001,7 +1001,8 @@ export function LocalFilePane({
                     style={rowStyle}
                     className={cn(
                       "grid gap-2 px-3 items-center text-xs cursor-default border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors h-[34px]",
-                      isSelected && "bg-accent-brand/10",
+                      isSelected &&
+                        "bg-accent-brand/10 hover:bg-accent-brand/10",
                       isFolderTarget &&
                         "bg-accent-brand/20 outline outline-1 outline-dashed outline-accent-brand",
                       entry.hidden && "opacity-60",
