@@ -195,7 +195,7 @@ regenerated `schema.pg.ts`/`schema.mysql.ts` plus drizzle migrations.
 
 **What stays in core.** After 2.9.0, `schema.ts`, the SQLite DDL in
 `db/index.ts`, `performance-indexes.ts`, the repository factory and the
-drizzle migrations hold only these 36 tables. Anything else is a plugin's,
+drizzle migrations hold only these 38 tables. Anything else is a plugin's,
 under `p_<id>_`.
 
 | Area             | Tables                                                                                                                                                                                                          |
@@ -206,7 +206,7 @@ under `p_<id>_`.
 | Credentials      | `ssh_credentials`, `ssh_credential_usage`                                                                                                                                                                       |
 | Sharing and RBAC | `roles`, `user_roles`, `host_access`, `folder_access`, `credential_access`, `shared_host_secrets`, `shared_host_auth_overrides`, `shared_credential_secrets`, `rbac_known_permissions`, `rbac_applied_defaults` |
 | Audit            | `audit_logs`                                                                                                                                                                                                    |
-| Sync             | `sync_tombstones`                                                                                                                                                                                               |
+| Sync             | `sync_records`, `sync_conflicts`, `sync_link`                                                                                                                                                                   |
 | Plugin runtime   | `plugins`, `plugin_permission_grants`, `plugin_registries`, `plugin_install_counts`, `plugin_storage`, `plugin_settings`, `plugin_migrations`                                                                   |
 
 A few core tables still carry columns a plugin reads through its own host or
@@ -222,24 +222,72 @@ they are sealed with this server's keys. An import reads each table by its
 `p_` name, or by the legacy name it adopted for a file written before 2.9.
 
 **Sync entities are registered, not hardcoded.** `ctx.sync.registerEntity`
-adds an entity to remote sync; core registers its own the same way in
-`database/routes/sync-entities.ts`. The wire names are unchanged, because
-existing tombstones and rows on the far side match on those strings. The
-Electron client asks the server for the ordered list and falls back to its
-frozen array for a server that predates the endpoint.
+adds an entity to sync between a linked desktop and its server; core
+registers its own the same way in `src/backend/sync/entities.ts`. The wire
+names are part of the protocol: records on both sides match on them, so never
+rename one.
 
-`shouldSync(row)` leaves rows out in both directions: they are not pulled, and
-a push, update or tombstone aimed at one is refused with 400. It exists for
-state that belongs to one install, such as the workspaces plugin's "Last
-Session" row, which would otherwise leave a user with one from each side.
+**How sync works.** A desktop links to one server account (Sync in the rail)
+and keeps an offline copy of that account's data. Nothing records a change as
+it happens. On both sides a reconciler hashes every registered row the user
+owns and compares it with `sync_records`:
 
-**Deletes need a tombstone.** Registering an entity does not make a delete
-propagate on its own: a pull reads `sync_tombstones` for the entity's wire
-name, so a plugin route that deletes a synced row calls
-`ctx.sync.recordTombstone(userId, entityType, syncId)` right after, the way
-core's own delete routes call `SyncTombstoneRepository.record`. **B2** added
-this method to the SDK; the snippets plugin's folder and snippet deletes are
-its first callers.
+- On a server, a new, changed or missing row bumps the record's `revision`
+  and gives it the next `seq`. `GET /sync/v2/changes?cursor=` pages through
+  records after a cursor, so a desktop never compares timestamps from two
+  clocks.
+- On a desktop, a row whose hash differs from the one recorded at the last
+  sync is a local edit to push. `POST /sync/v2/push` carries the revision the
+  desktop last saw; if the server moved on, the op is a conflict, the
+  server's version wins and the local one is kept in `sync_conflicts` for the
+  user to restore.
+- Every op gets its own result, so one refused row never holds up the rest.
+  A refused row is not sent again until it changes.
+- `GET /sync/v2/events` is a server-sent event stream that tells a linked
+  desktop to pull now.
+
+Because deletes are found by reconciliation, a plugin needs nothing beyond
+the registration: a registered row that is gone is a delete. There is no
+tombstone table any more.
+
+**What a registration says.**
+
+- `references` translate local ids to syncIds on the way out and back. A
+  `field` is a column (`credentialId` with `syncField: "credentialSyncId"`)
+  or a path into a JSON column (`jumpHosts[].hostId`,
+  `layout.panes[].hostId`); `idType: "string"` keeps an id stored as a
+  string. A syncId with no row on the receiving side keeps the value the
+  column already has, and a row written before its target is written again
+  once the target exists.
+- `encryptedFields` are decrypted with the owner's data key for the wire and
+  encrypted again on arrival. A field that cannot be decrypted keeps the row
+  out of the feed; it is never sent empty.
+- `readOnlyFields` stay on their device: never sent, never overwritten, not
+  part of the hash.
+- `shouldSync(row)` leaves rows out in both directions, for state that
+  belongs to one install, such as the workspaces plugin's "Last Session" row.
+- `permissions` (`create`, `update`, `delete`) are checked on the server
+  before a pushed change is written.
+- `serialize` and `deserialize` run after `references`, for anything they
+  cannot express. `afterWrite` runs after a synced row is written and
+  `remove` replaces the plain delete, for rows with side effects of their
+  own.
+- `answersTo` names a plugin entity by a name core uses without knowing the
+  plugin: core's host quick actions point at `commandSnippet`, which the
+  snippets plugin's `snippets` entity answers to.
+
+The manifest lists the wire names under `contributes.syncEntities`, so a
+server can name them while the plugin is off and a desktop can list them in
+its sync settings.
+
+**Plugins on a linked desktop.** The manifest's `desktop` field says how a
+linked desktop treats a plugin. `mirror` (the default) follows the server: a
+plugin installed there is downloaded from `/sync/v2/plugins/<id>/package`,
+verified like any `.tmxplug`, installed, and switched on or off with the
+server, with the capabilities an admin granted it there. `local` is decided
+on each desktop (serial ports), and `server` never runs on a linked desktop
+(ACME, sign-in methods, automations). While linked, the admin toggle for a
+mirrored plugin answers 409.
 
 ### 6. HTTP and WebSockets
 
@@ -445,7 +493,7 @@ allowlist (`CORE_SETTINGS_ALLOWLIST`) rather than the whole settings table.
   secret field.
 - Host fields take `enableDefault` (on the host section), `defaultFrom`,
   `shareRead` and `ownerOnly`; see the manifest reference. A host settings
-  save also bumps the host's `updated_at`, so remote sync carries it.
+  save also changes the host's sync hash, so sync carries it.
 
 ### 8. UI
 
@@ -573,7 +621,7 @@ boundary and Suspense.
 | `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                                                                                                                                    |
 | `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                                                                                                                                       |
 | `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                                                                                                                                            |
-| `desktop`                                           | `available`, `remoteServerUrl()` and `onRemoteServerChange`: whether the frontend runs in the desktop app and which remote server it syncs with (**C6**)                                                                                                               |
+| `desktop`                                           | `available`, `remoteServerUrl()` and `onRemoteServerChange`: whether the frontend runs in the desktop app and which server it is linked to (**C6**)                                                                                                                    |
 | `registerComponent`                                 | A component other plugins and core render by id with `PluginComponent`                                                                                                                                                                                                 |
 | `onSettingsChanged`                                 | Called when one of the plugin's settings changes                                                                                                                                                                                                                       |
 
@@ -2166,7 +2214,7 @@ authority for signatures.
 | `kv.get/set/delete/list`                                                                                     | `kv:own`                                             | Small key/value state                                                                                               |
 | `files.dataDir()`                                                                                            | `files:own`                                          | A per-plugin folder, `<DATA_DIR>/plugin-data/<id>`                                                                  |
 | `db.define/client/refs/persist/dialect`                                                                      | `db:own` (not `dialect`)                             | The plugin's own tables through Drizzle; `persist` flushes SQLite to disk                                           |
-| `sync.registerEntity/recordTombstone`                                                                        | none                                                 | Adds a table to remote sync, and records a delete for it                                                            |
+| `sync.registerEntity`                                                                                        | none                                                 | Adds a table to sync between a linked desktop and its server                                                        |
 | `registry.provide/consume/revoke`                                                                            | none                                                 | The low-level named registry services sit on                                                                        |
 | `services.provide/get/providers`                                                                             | per-service RBAC                                     | Typed, versioned cross-plugin services, checked per call                                                            |
 | `secrets.get/set/delete/seal/unseal`                                                                         | `secrets:own`                                        | The plugin's own encrypted values                                                                                   |
@@ -3058,7 +3106,7 @@ upgrade on all three engines, and the checks in step 15 are green.
      (`TOPICS.userDeleted` in `src/backend/plugins/events.ts`), emitted from
      `deleteUserAndRelatedData` right where the old direct repository call
      used to sit. `host.deleted` already existed (B7).
-   - `sync-entities.ts`, if core synced it (step 9).
+   - `src/backend/sync/entities.ts`, if core synced it (step 9).
    - Anything else `grep -rn "<table_name>\|<tableConst>" src` finds, including
      core tests and `src/types`.
 4. `npm run schema:generate` (the pg and mysql schema variants), then
@@ -3131,13 +3179,13 @@ is not ready to drop.
 ### 9. Sync entities
 
 If core synced the data, or it is personal configuration that should follow a
-user between the desktop app and a server, register it in `activate`:
-`ctx.sync.registerEntity({ type, table, order, ... })`. Keep an existing wire
-name exactly and remove core's registration from `sync-entities.ts`. Leave
-`electron/remote-sync-entities.cjs` alone: it is the fallback for servers
-older than the entity-types endpoint, which still sync the core entity. Give
-an entity that references others a higher `order` than they have. Use `shouldSync` for rows that belong to one
-install (workspaces leaves out its `last_session` row).
+user between a linked desktop and its server, register it in `activate`:
+`ctx.sync.registerEntity({ type, table, order, ... })` and list the wire name
+under `contributes.syncEntities`. Keep an existing wire name exactly and
+remove core's registration from `src/backend/sync/entities.ts`. Give an
+entity that references others a higher `order` than they have. Use
+`shouldSync` for rows that belong to one install (workspaces leaves out its
+`last_session` row). Deletes need no extra call.
 
 ### 10. Cross-plugin and core callers
 

@@ -9,8 +9,7 @@ import {
   resetSyncRegistry,
   unregisterByOwner,
 } from "../../plugins/sync-registry.js";
-import { registerCoreSyncEntities } from "../../database/routes/sync-entities.js";
-import { SYNCED_ENTITY_TYPES } from "../../../../electron/remote-sync-entities.cjs";
+import { registerCoreSyncEntities } from "../../sync/entities.js";
 
 beforeEach(() => {
   resetSyncRegistry();
@@ -91,35 +90,47 @@ describe("sync registry", () => {
   });
 });
 
+describe("entity aliases", () => {
+  it("finds an entity by a name core uses for it", () => {
+    registerEntity("demo", {
+      type: "snippets",
+      table: {},
+      answersTo: ["commandSnippet"],
+    });
+
+    expect(getEntity("commandSnippet")?.type).toBe("snippets");
+    expect(getEntity("snippets")?.type).toBe("snippets");
+    expect(getEntity("nothing")).toBeUndefined();
+  });
+
+  it("keeps core-only options away from plugins", () => {
+    registerEntity(
+      "demo",
+      { type: "thing", table: {} },
+      { readOnly: true, load: async () => [] },
+    );
+
+    expect(getEntity("thing")?.readOnly).toBeUndefined();
+    expect(getEntity("thing")?.load).toBeUndefined();
+  });
+});
+
 describe("core sync entities", () => {
   beforeEach(() => {
     registerCoreSyncEntities();
   });
 
-  // The frozen array also lists networkTopology, snippets/snippetFolders,
-  // dashboardServiceLinks/homepageItems and vaultProfiles, now registered by
-  // the network-topology, snippets, homepage and vault plugins rather than core.
-  const PLUGIN_OWNED_TYPES = new Set([
-    "networkTopology",
-    "snippets",
-    "snippetFolders",
-    "dashboardServiceLinks",
-    "homepageItems",
-    "vaultProfiles",
-  ]);
-
-  it("registers every core-owned entity the Electron client knows about", () => {
-    const coreTypes = new Set(listEntityTypes());
-    for (const type of SYNCED_ENTITY_TYPES) {
-      if (PLUGIN_OWNED_TYPES.has(type)) continue;
-      expect(coreTypes.has(type), type).toBe(true);
-    }
-  });
-
-  it("keeps the dependency order the frozen Electron array encodes", () => {
-    expect(listEntityTypes()).toEqual(
-      [...SYNCED_ENTITY_TYPES].filter((type) => !PLUGIN_OWNED_TYPES.has(type)),
-    );
+  it("registers what core syncs, under the wire names 2.8 used", () => {
+    expect(listEntityTypes()).toEqual([
+      "accountProfile",
+      "sshCredentials",
+      "sharedCredentials",
+      "sshFolders",
+      "hosts",
+      "sharedHosts",
+      "userPreferences",
+      "pluginUserSettings",
+    ]);
   });
 
   it("owns all of them as core", () => {
@@ -128,15 +139,18 @@ describe("core sync entities", () => {
     }
   });
 
-  it("sorts every reference target before the entity that points at it", () => {
+  it("sorts every column reference target before the entity that points at it", () => {
     const order = new Map(
       listEntities().map((entity) => [entity.type, entity.order]),
     );
 
     for (const entity of listEntities()) {
       for (const reference of entity.references ?? []) {
-        // A self-reference is ordered within the entity by orderSyncRows.
+        // Rows pointing at themselves are ordered within the entity, and a
+        // JSON reference that arrives first is written again once the
+        // target exists.
         if (reference.entityType === entity.type) continue;
+        if (reference.field.includes(".")) continue;
         expect(
           order.get(reference.entityType),
           `${entity.type} -> ${reference.entityType}`,
@@ -145,19 +159,49 @@ describe("core sync entities", () => {
     }
   });
 
-  it("marks the one singleton and nothing else", () => {
+  it("marks the singletons and nothing else", () => {
     const singletons = listEntities()
       .filter((entity) => entity.singleton)
       .map((entity) => entity.type);
 
-    expect(singletons.sort()).toEqual(["userPreferences"]);
+    expect(singletons.sort()).toEqual(["accountProfile", "userPreferences"]);
   });
 
-  it("keeps the read-only fields that must survive a sync payload", () => {
-    expect(getEntity("hosts")?.readOnlyFields).toEqual(["connectionOrigin"]);
+  it("only sends shared copies and the account one way", () => {
+    const readOnly = listEntities()
+      .filter((entity) => entity.readOnly)
+      .map((entity) => entity.type);
+
+    expect(readOnly.sort()).toEqual([
+      "accountProfile",
+      "sharedCredentials",
+      "sharedHosts",
+    ]);
+  });
+
+  it("keeps device-only host fields off the wire", () => {
+    expect(getEntity("hosts")?.readOnlyFields).toEqual(
+      expect.arrayContaining(["connectionOrigin", "localOnly", "sharedSource"]),
+    );
     expect(getEntity("userPreferences")?.readOnlyFields).toEqual([
       "storageMode",
     ]);
+  });
+
+  it("leaves local-only and shared rows out of what a device sends", () => {
+    const hosts = getEntity("hosts")!;
+    expect(hosts.shouldSync?.({ localOnly: true })).toBe(false);
+    expect(hosts.shouldSync?.({ sharedSource: "{}" })).toBe(false);
+    expect(hosts.shouldSync?.({ localOnly: false, sharedSource: null })).toBe(
+      true,
+    );
+  });
+
+  it("encrypts host and credential secrets", () => {
+    expect(getEntity("hosts")?.encryptedFields).toContain("password");
+    expect(getEntity("sshCredentials")?.encryptedFields).toContain(
+      "privateKey",
+    );
   });
 
   it("is idempotent, because several modules prime it", () => {

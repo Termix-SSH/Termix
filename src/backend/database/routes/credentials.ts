@@ -2,6 +2,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { listCredentialTypes } from "../../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
+import { deleteOwnedCredential } from "../../hosts/delete-credential.js";
 import express, { type Request, type Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -22,8 +23,9 @@ import {
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
-  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
+import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
+import { parseSharedSource } from "./host-normalizers.js";
 
 /** Built-in password and key, plus any type a plugin offers for credentials. */
 function getCredentialTypes(): string[] {
@@ -32,6 +34,7 @@ function getCredentialTypes(): string[] {
 }
 
 const router = express.Router();
+router.use(rejectSharedCopyWrites("credential", /^\/(\d+)$/));
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
@@ -816,57 +819,9 @@ router.delete(
 
     try {
       const credentialId = parseInt(id);
-      const credentialToDelete =
-        await createCurrentCredentialRepository().findDecryptedByIdForUser(
-          userId,
-          credentialId,
-        );
-
-      if (!credentialToDelete) {
+      const deleted = await deleteOwnedCredential(userId, credentialId);
+      if (!deleted) {
         return res.status(404).json({ error: "Credential not found" });
-      }
-
-      const hostsUsingCredential =
-        await createCurrentHostResolutionRepository().listHostsUsingCredentialForUser(
-          userId,
-          credentialId,
-        );
-
-      if (hostsUsingCredential.length > 0) {
-        await createCurrentHostRepository().updateManyForUser(
-          userId,
-          hostsUsingCredential.map((host) => host.id),
-          {
-            credentialId: null,
-            password: null,
-            key: null,
-            keyPassword: null,
-            authType: "password",
-          },
-        );
-      }
-
-      const { SharedHostSecretsManager } =
-        await import("../../utils/shared-host-secrets-manager.js");
-      const sharedSecretsManager = SharedHostSecretsManager.getInstance();
-      await sharedSecretsManager.deleteForCredential(credentialId);
-
-      await createCurrentCredentialRepository().deleteForUser(
-        userId,
-        credentialId,
-      );
-      if (credentialToDelete.syncId) {
-        await createCurrentSyncTombstoneRepository().record(
-          userId,
-          "sshCredentials",
-          credentialToDelete.syncId,
-        );
-      }
-
-      // Shares stay in place; re-snapshot so recipients fall back to whatever
-      // auth the host still has (or lose the stale credential copy).
-      for (const host of hostsUsingCredential) {
-        await sharedSecretsManager.resyncHost(host.id);
       }
 
       authLogger.success("SSH credential deleted", {
@@ -882,7 +837,7 @@ router.delete(
         action: "delete_credential",
         resourceType: "credential",
         resourceId: id,
-        resourceName: String(credentialToDelete.name ?? id),
+        resourceName: String(deleted.name ?? id),
         ipAddress: cdIp,
         userAgent: cdUa,
         success: true,
@@ -1138,6 +1093,19 @@ function formatCredentialOutput(
     lastUsed: credential.lastUsed,
     createdAt: credential.createdAt,
     updatedAt: credential.updatedAt,
+    ...sharedCopyFields(credential.sharedSource),
+  };
+}
+
+/** A read-only copy of a credential shared with a linked desktop's account. */
+function sharedCopyFields(value: unknown): Record<string, unknown> {
+  const shared = parseSharedSource(value);
+  if (!shared) return {};
+  return {
+    isShared: true,
+    sharedCopy: true,
+    ownerUsername: shared.owner || null,
+    permissionLevel: shared.permissionLevel === "manage" ? "manage" : "use",
   };
 }
 

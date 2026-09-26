@@ -478,6 +478,50 @@ export async function deactivatePlugin(pluginId: string): Promise<void> {
   }
 }
 
+/** Switches a plugin on or off and records it, the same as the admin route. */
+export async function setPluginEnabled(
+  pluginId: string,
+  enabled: boolean,
+): Promise<void> {
+  const { createCurrentPluginRepository } =
+    await import("../database/repositories/factory.js");
+  await createCurrentPluginRepository().update(pluginId, {
+    state: enabled ? "enabled" : "disabled",
+    lastError: null,
+  });
+  if (enabled) await activatePlugin(pluginId);
+  else await deactivatePlugin(pluginId);
+}
+
+/**
+ * Loads a user plugin from a .tmxplug in the plugins directory and gives it
+ * a row. It starts disabled, like any plugin that arrives on disk. A copy
+ * already loaded under the same id is stopped and replaced.
+ */
+export async function installPluginArtifact(
+  file: string,
+): Promise<LoadedPlugin> {
+  const { loader: pluginLoader } = getPluginRuntime();
+  const bundledIds = new Set(
+    pluginLoader
+      .list()
+      .filter((plugin) => plugin.source === "bundled")
+      .map((plugin) => plugin.id),
+  );
+  const plugin = await pluginLoader.loadArtifact(file, bundledIds);
+  await seedPlugins([plugin]);
+  await syncCapabilityGrants([plugin]);
+  return plugin;
+}
+
+/** Stops a plugin and forgets it, before a new version is installed. */
+export async function unloadPlugin(pluginId: string): Promise<void> {
+  const { loader: pluginLoader } = getPluginRuntime();
+  if (!pluginLoader.get(pluginId)) return;
+  await deactivatePlugin(pluginId);
+  pluginLoader.forget(pluginId);
+}
+
 export async function shutdownPlugins(): Promise<void> {
   if (!loader) return;
   for (const plugin of loader.list()) unregisterPluginHttp(plugin.id);

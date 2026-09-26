@@ -17,6 +17,37 @@ const FRONTEND_ENTRIES = [
   "src/frontend/index.js",
 ];
 
+/**
+ * A bundled CommonJS package that calls require("react/jsx-runtime") (or any
+ * other host-provided package) cannot reach it: the package is external, and
+ * esbuild's ESM output has no require, so the plugin throws "Dynamic require
+ * is not supported" as soon as it loads. Each such require is pointed at a
+ * small ES module that imports the external and re-exports it, which esbuild
+ * can hand to CommonJS code.
+ */
+export function externalRequireInterop(externals) {
+  const names = new Set(externals.filter((name) => !name.includes("*")));
+  return {
+    name: "termix-external-require",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, (args) => {
+        if (args.kind !== "require-call" || !names.has(args.path)) return;
+        return { path: args.path, namespace: "termix-external-require" };
+      });
+      build.onLoad(
+        { filter: /.*/, namespace: "termix-external-require" },
+        (args) => {
+          const id = JSON.stringify(args.path);
+          return {
+            contents: `import * as mod from ${id};\nexport * from ${id};\nexport default mod.default ?? mod;\n`,
+            loader: "js",
+          };
+        },
+      );
+    },
+  };
+}
+
 export async function build({ cwd }) {
   const manifest = readManifest(cwd);
   const pluginId = manifest.id ?? path.basename(cwd);
@@ -74,7 +105,21 @@ export async function build({ cwd }) {
       sourcemap: true,
       logLevel: "warning",
       external: FRONTEND_EXTERNALS,
-      plugins: [staticUrlImports({ outDir })],
+      // Vite replaces these in the dev server; a plugin bundle has to have
+      // them too, or code that reads them throws when the plugin loads.
+      define: {
+        "process.env.NODE_ENV": '"production"',
+        "import.meta.env.DEV": "false",
+        "import.meta.env.PROD": "true",
+        "import.meta.env.MODE": '"production"',
+        "import.meta.env.SSR": "false",
+        "import.meta.env":
+          '{"DEV":false,"PROD":true,"MODE":"production","SSR":false,"BASE_URL":"/"}',
+      },
+      plugins: [
+        externalRequireInterop(FRONTEND_EXTERNALS),
+        staticUrlImports({ outDir }),
+      ],
     });
   }
 

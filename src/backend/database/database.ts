@@ -16,7 +16,9 @@ import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
-import syncRoutes from "./routes/sync.js";
+import syncRoutes from "../sync/server/routes.js";
+import syncLinkRoutes from "../sync/client/routes.js";
+import { syncChangeWatcher } from "../sync/server/change-watcher.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
 import {
   mountPluginApi,
@@ -33,6 +35,13 @@ import path from "path";
 import os from "os";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
+import { getLocalVersion } from "../utils/app-version.js";
+import {
+  compareSemver,
+  fetchGitHubAPI,
+  REPO_NAME,
+  REPO_OWNER,
+} from "../utils/latest-release.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
@@ -55,13 +64,7 @@ import {
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
-import { getProxyAgent } from "../utils/proxy-agent.js";
-import type {
-  CacheEntry,
-  GitHubRelease,
-  GitHubAPIResponse,
-  AuthenticatedRequest,
-} from "../../types/index.js";
+import type { GitHubRelease, AuthenticatedRequest } from "../../types/index.js";
 import { DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
@@ -147,116 +150,6 @@ const upload = multer({
   },
 });
 
-class GitHubCache {
-  private cache: Map<string, CacheEntry> = new Map();
-  private readonly CACHE_DURATION = 30 * 60 * 1000;
-
-  set<T>(key: string, data: T): void {
-    const now = Date.now();
-    this.cache.set(key, {
-      data,
-      timestamp: now,
-      expiresAt: now + this.CACHE_DURATION,
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) {
-      return null;
-    }
-
-    if (Date.now() > entry.expiresAt) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
-  }
-}
-
-const githubCache = new GitHubCache();
-
-function parseSemver(
-  version: string | undefined,
-): [number, number, number] | null {
-  const match = String(version || "").match(/(\d+)\.(\d+)(?:\.(\d+))?/);
-  if (!match) return null;
-
-  return [Number(match[1]), Number(match[2]), Number(match[3] || 0)];
-}
-
-function compareSemver(
-  a: string | undefined,
-  b: string | undefined,
-): number | null {
-  const parsedA = parseSemver(a);
-  const parsedB = parseSemver(b);
-  if (!parsedA || !parsedB) return null;
-
-  for (let i = 0; i < 3; i += 1) {
-    if (parsedA[i] > parsedB[i]) return 1;
-    if (parsedA[i] < parsedB[i]) return -1;
-  }
-
-  return 0;
-}
-
-const GITHUB_API_BASE = "https://api.github.com";
-const REPO_OWNER = "Termix-SSH";
-const REPO_NAME = "Termix";
-
-async function fetchGitHubAPI<T>(
-  endpoint: string,
-  cacheKey: string,
-): Promise<GitHubAPIResponse<T>> {
-  const cachedEntry = githubCache.get<CacheEntry<T>>(cacheKey);
-  if (cachedEntry) {
-    return {
-      data: cachedEntry.data,
-      cached: true,
-      cache_age: Date.now() - cachedEntry.timestamp,
-    };
-  }
-
-  try {
-    const url = `${GITHUB_API_BASE}${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "TermixUpdateChecker/1.0",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      dispatcher: getProxyAgent(url),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `GitHub API error: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const data = (await response.json()) as T;
-    const cacheData: CacheEntry<T> = {
-      data,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + 30 * 60 * 1000,
-    };
-    githubCache.set(cacheKey, cacheData);
-
-    return {
-      data: data,
-      cached: false,
-    };
-  } catch (error) {
-    databaseLogger.error(`Failed to fetch from GitHub API`, error, {
-      operation: "github_api",
-      endpoint,
-    });
-    throw error;
-  }
-}
-
 // Skipped for /plugin-api: a plugin router brings its own parsers with its own
 // limit (see plugins/http.ts), and parsing here first would consume the body
 // and silently cap every plugin at this limit instead.
@@ -279,6 +172,7 @@ app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
+app.use(syncChangeWatcher);
 
 /**
  * @openapi
@@ -343,51 +237,7 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  *         description: Fetch error.
  */
 app.get("/version", authenticateJWT, async (req, res) => {
-  let localVersion = process.env.VERSION;
-
-  if (!localVersion) {
-    const versionSources = [
-      () => {
-        try {
-          const packagePath = path.resolve(process.cwd(), "package.json");
-          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-      () => {
-        try {
-          const packagePath = path.resolve("/app", "package.json");
-          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-      () => {
-        try {
-          const packagePath = path.resolve(__dirname, "../../../package.json");
-          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-    ];
-
-    for (const getVersion of versionSources) {
-      try {
-        const foundVersion = getVersion();
-        if (foundVersion && foundVersion !== "unknown") {
-          localVersion = foundVersion;
-          break;
-        }
-      } catch {
-        continue;
-      }
-    }
-  }
+  const localVersion = getLocalVersion();
 
   if (!localVersion) {
     databaseLogger.error("No version information available", undefined, {
@@ -1567,6 +1417,7 @@ app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 app.use("/sync", syncRoutes);
+app.use("/sync", syncLinkRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(

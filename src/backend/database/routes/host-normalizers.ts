@@ -383,11 +383,35 @@ export function sanitizeHostForRecipient(
   return reduced;
 }
 
+/** Who shared a host that a linked desktop holds a read-only copy of. */
+export function parseSharedSource(
+  value: unknown,
+): { owner?: string; permissionLevel?: string } | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
+  const shared = parseSharedSource(host.sharedSource);
   return {
     ...host,
+    sharedSource: undefined,
+    localOnly: !!host.localOnly,
+    sharedCopy: !!shared,
+    ...(shared
+      ? {
+          isShared: true,
+          ownerUsername: shared.owner || undefined,
+          permissionLevel: shared.permissionLevel || "connect",
+        }
+      : {}),
     tags:
       typeof host.tags === "string"
         ? host.tags

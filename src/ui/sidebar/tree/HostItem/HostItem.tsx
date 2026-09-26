@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { rem } from "@/lib/rem";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
@@ -368,7 +369,7 @@ export function HostItem({
   if (query && !hostMatchesQuery(host, query)) return null;
 
   const depthStyle =
-    depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
+    depth > 0 ? ({ paddingLeft: rem(depth * 12) } as const) : undefined;
 
   const trayButtonClass =
     "flex items-center justify-center size-[22.75px] text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";

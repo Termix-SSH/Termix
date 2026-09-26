@@ -1,6 +1,6 @@
 import type { SSHHost, SSHFolder } from "@/types/index";
 import type { ServerStatus } from "@/main-axios";
-import { isElectron } from "./electron";
+import { SYNC_CHANGED_EVENT } from "./sync-events";
 import { createTtlRequestCache } from "./ttl-request-cache";
 
 /** Host list changes less often than status; keep a short shared window. */
@@ -16,7 +16,6 @@ const statusCache =
 const foldersCache = createTtlRequestCache<SSHFolder[]>(FOLDERS_TTL_MS);
 
 let listenersBound = false;
-let lastRemoteSyncCompleteAt: string | null = null;
 
 function bindInvalidationListeners(): void {
   if (listenersBound || typeof window === "undefined") return;
@@ -29,32 +28,10 @@ function bindInvalidationListeners(): void {
   window.addEventListener("ssh-hosts:changed", invalidateHosts);
   window.addEventListener("hosts:refresh", invalidateHosts);
 
-  if (isElectron()) {
-    window.electronAPI
-      ?.invoke?.("get-remote-sync-status")
-      .then((status) => {
-        const syncedAt =
-          status && typeof status === "object"
-            ? (status as { lastSyncedAt?: unknown }).lastSyncedAt
-            : null;
-        lastRemoteSyncCompleteAt =
-          typeof syncedAt === "string" ? syncedAt : null;
-      })
-      .catch(() => {});
-
-    window.electronAPI?.onRemoteSyncStatusChanged?.((status) => {
-      if (!status || status.syncing || status.lastError) return;
-      const syncedAt =
-        typeof status.lastSyncedAt === "string" ? status.lastSyncedAt : null;
-      if (!syncedAt || syncedAt === lastRemoteSyncCompleteAt) return;
-
-      lastRemoteSyncCompleteAt = syncedAt;
-      invalidateHostsAndStatusCaches();
-      window.dispatchEvent(new CustomEvent("hosts:refresh"));
-      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-      window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
-    });
-  }
+  // A finished sync pass may have changed hosts and their statuses.
+  window.addEventListener(SYNC_CHANGED_EVENT, () => {
+    invalidateHostsAndStatusCaches();
+  });
 }
 
 export function getCachedSSHHosts(

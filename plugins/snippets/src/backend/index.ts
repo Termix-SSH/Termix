@@ -74,6 +74,8 @@ export async function activate(ctx: PluginContext) {
     type: "snippets",
     table: snippetsTable,
     order: 60,
+    // Host quick actions and keybindings in core point at snippets by this.
+    answersTo: ["commandSnippet"],
   });
 
   // The user row survives a password-reset data wipe, so it never triggers
@@ -152,9 +154,6 @@ export async function activate(ctx: PluginContext) {
       if (!userId) throw new Error("snippets.access.remove needs an actor");
       await requirePermission("delete");
       const existing = await repo.deleteSnippet(userId, id);
-      if (existing?.syncId) {
-        await ctx.sync.recordTombstone(userId, "snippets", existing.syncId);
-      }
       return !!existing;
     },
   };

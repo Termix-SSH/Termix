@@ -34,5 +34,6 @@
         "icon": "Usb"
       }
     ]
-  }
+  },
+  "desktop": "local"
 }

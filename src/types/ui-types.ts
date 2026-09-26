@@ -104,6 +104,13 @@ export type Host = {
   permissionLevel?: SharePermissionLevel;
   sharedExpiresAt?: string;
   ownerUsername?: string;
+  /**
+   * A read-only copy of a host shared with the account this desktop is
+   * linked to. It arrives through sync and is managed on the server.
+   */
+  sharedCopy?: boolean;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly?: boolean;
 };
 
 export type SharePermissionLevel = "connect" | "view" | "edit" | "manage";
@@ -137,6 +144,7 @@ export type HostFolder = {
   icon?: string;
   credentialId?: number | null;
   sortOrder?: number | null;
+  localOnly?: boolean;
 };
 
 /** Core's own tab types. Plugins register theirs at runtime. */

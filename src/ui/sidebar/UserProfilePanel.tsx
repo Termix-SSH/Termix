@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   getUserInfo,
-  getRemoteSyncUserInfo,
   getApiKeys,
   createApiKey,
   deleteApiKey,
@@ -20,11 +19,10 @@ import {
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { useHostSidebarPreferences } from "./tree/hooks/useHostSidebarPreferences";
-import type { UserRole } from "@/main-axios";
+import type { LinkedAccountInfo, UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
-import { RemoteSyncPanel } from "@/settings/RemoteSyncPanel.tsx";
-import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state";
+import { shell } from "@/plugin-host/shell-bridge";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { VersionBadge } from "@/components/version-badge";
@@ -522,15 +520,9 @@ export function UserProfilePanel({
   onLogout,
   userPrefs,
   onPrefsChange,
-  remoteSyncInitialServerUrl,
-  remoteSyncReconnectRequested,
-  onRemoteSyncReconnectHandled,
 }: {
   username?: string;
   onLogout?: () => void;
-  remoteSyncInitialServerUrl?: string;
-  remoteSyncReconnectRequested?: boolean;
-  onRemoteSyncReconnectHandled?: () => void;
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
@@ -629,51 +621,19 @@ export function UserProfilePanel({
     }
   }, [userPrefs?.storageMode]);
 
-  // Remote sync is not connected by default on the desktop app (it's an
-  // opt-in feature configured from this same panel). "cloud" storage mode
-  // and Termix ID both assume a real multi-device server account, so they
-  // stay hidden/forced-off until the user actually connects one.
-  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState<
-    boolean | null
-  >(() => (isElectron() ? null : true));
+  // On the desktop app, the account it is linked to on a server, if any.
+  // "Cloud" storage only has somewhere to go once it is linked.
+  const [linkedAccount, setLinkedAccount] = useState<
+    LinkedAccountInfo | null | undefined
+  >(() => (isElectron() ? undefined : null));
+  const isLinked = !!linkedAccount;
 
   useEffect(() => {
-    if (!isElectron()) return;
-    let cancelled = false;
-    const refreshSyncStatus = () => {
-      window.electronAPI
-        ?.invoke?.("get-remote-sync-config")
-        .then((config) => {
-          if (!cancelled) {
-            setIsRemoteSyncConnected(
-              !!(config as { serverUrl?: string } | null)?.serverUrl,
-            );
-          }
-        })
-        .catch(() => {});
-    };
-    refreshSyncStatus();
-    const unsubscribe = window.electronAPI?.onRemoteSyncStatusChanged?.(() =>
-      refreshSyncStatus(),
-    );
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (
-      shouldForceLocalPreferenceStorage(
-        isElectron(),
-        isRemoteSyncConnected,
-        storageMode,
-      )
-    ) {
+    if (isElectron() && linkedAccount === null && storageMode === "cloud") {
       setStorageMode("local");
       onPrefsChange?.({ storageMode: "local" });
     }
-  }, [isRemoteSyncConnected, storageMode, onPrefsChange]);
+  }, [linkedAccount, storageMode, onPrefsChange]);
 
   // Settings toggles — all backed by localStorage
   const [commandAutocomplete, setCommandAutocomplete] = useState(
@@ -738,16 +698,17 @@ export function UserProfilePanel({
 
   useEffect(() => {
     getUserInfo()
-      .then(async (localInfo) => {
-        setUserId(localInfo.userId);
-        setIsOidc(localInfo.is_oidc ?? false);
-        setIsDualAuth(localInfo.is_dual_auth ?? false);
-        const remoteInfo = await getRemoteSyncUserInfo();
-        const info = remoteInfo ?? localInfo;
-        setAccountUsername(info.username);
+      .then((info) => {
+        setUserId(info.userId);
+        setIsOidc(info.is_oidc ?? false);
+        setIsDualAuth(info.is_dual_auth ?? false);
+        const linked = info.linked ?? null;
+        setLinkedAccount(linked);
+        // A linked desktop is the account it is signed in to on the server.
+        setAccountUsername(linked?.username || info.username);
         setAccountTotpEnabled(info.totp_enabled ?? false);
         setUserRole(
-          info.is_admin
+          (linked ? linked.isAdmin : info.is_admin)
             ? t("newUi.sidebar.userProfile.roleAdministrator")
             : t("newUi.sidebar.userProfile.roleUser"),
         );
@@ -758,10 +719,17 @@ export function UserProfilePanel({
         } else {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
         }
-        if (remoteInfo) {
-          setUserRoles(remoteInfo.roles ?? []);
+        if (linked) {
+          setUserRoles(
+            linked.roles.map((name, index) => ({
+              id: index,
+              roleId: index,
+              roleName: name,
+              roleDisplayName: name,
+            })) as unknown as UserRole[],
+          );
         } else {
-          getUserRoles(localInfo.userId)
+          getUserRoles(info.userId)
             .then(({ roles }) => setUserRoles(roles ?? []))
             .catch(() => {});
         }
@@ -1340,7 +1308,7 @@ export function UserProfilePanel({
       {/* Storage mode toggle — only meaningful once a remote server is
           connected; with no sync there's nowhere for "cloud" to sync to,
           so this stays forced to local storage and hidden. */}
-      {(!isElectron() || isRemoteSyncConnected === true) && (
+      {(!isElectron() || isLinked) && (
         <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("newUi.sidebar.userProfile.storageModeSwitch")}
@@ -1389,17 +1357,35 @@ export function UserProfilePanel({
         onToggle={() => toggle("account")}
       >
         <div className="flex flex-col gap-0 pt-2">
-          {isElectron() ? (
+          {isElectron() && (
             <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 mb-2">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-accent-brand">
                 <ShieldCheck className="size-3.5" />
-                {t("newUi.sidebar.userProfile.desktopProfileTitle")}
+                {isLinked
+                  ? t("newUi.sidebar.userProfile.linkedProfileTitle", {
+                      server:
+                        linkedAccount?.serverName || linkedAccount?.serverUrl,
+                    })
+                  : t("newUi.sidebar.userProfile.desktopProfileTitle")}
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
-                {t("newUi.sidebar.userProfile.desktopProfileDescription")}
+                {isLinked
+                  ? t("newUi.sidebar.userProfile.linkedProfileDescription")
+                  : t("newUi.sidebar.userProfile.desktopProfileDescription")}
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 h-7 text-[10px] rounded-none"
+                onClick={() => shell.openRailView("sync")}
+              >
+                {isLinked
+                  ? t("newUi.sidebar.userProfile.manageSync")
+                  : t("newUi.sidebar.userProfile.setUpSync")}
+              </Button>
             </div>
-          ) : (
+          )}
+          {(!isElectron() || isLinked) && (
             <div className="grid grid-cols-2 gap-x-4 gap-y-0">
               <div className="flex flex-col py-2">
                 <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
@@ -1427,33 +1413,37 @@ export function UserProfilePanel({
                   ))}
                 </div>
               </div>
-              <div className="flex flex-col py-2">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                  {t("newUi.sidebar.userProfile.authMethodLabel")}
-                </span>
-                <span className="text-sm font-semibold mt-0.5">
-                  {authMethod || "—"}
-                </span>
-              </div>
-              <div className="flex flex-col py-2">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                  {t("newUi.sidebar.userProfile.twoFaLabel")}
-                </span>
-                <span className="flex items-center gap-1 mt-0.5">
-                  {accountTotpEnabled ? (
-                    <>
-                      <ShieldCheck className="size-3.5 text-accent-brand" />
-                      <span className="text-sm font-semibold text-accent-brand">
-                        {t("newUi.sidebar.userProfile.twoFaOn")}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      {t("newUi.sidebar.userProfile.twoFaOff")}
+              {!isElectron() && (
+                <>
+                  <div className="flex flex-col py-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                      {t("newUi.sidebar.userProfile.authMethodLabel")}
                     </span>
-                  )}
-                </span>
-              </div>
+                    <span className="text-sm font-semibold mt-0.5">
+                      {authMethod || "—"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col py-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                      {t("newUi.sidebar.userProfile.twoFaLabel")}
+                    </span>
+                    <span className="flex items-center gap-1 mt-0.5">
+                      {accountTotpEnabled ? (
+                        <>
+                          <ShieldCheck className="size-3.5 text-accent-brand" />
+                          <span className="text-sm font-semibold text-accent-brand">
+                            {t("newUi.sidebar.userProfile.twoFaOn")}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          {t("newUi.sidebar.userProfile.twoFaOff")}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1518,16 +1508,6 @@ export function UserProfilePanel({
               </a>
             </div>
           </div>
-
-          {isElectron() && (
-            <div className="border-t border-border pt-3 mt-3">
-              <RemoteSyncPanel
-                initialServerUrl={remoteSyncInitialServerUrl}
-                reconnectRequested={remoteSyncReconnectRequested}
-                onReconnectRequestHandled={onRemoteSyncReconnectHandled}
-              />
-            </div>
-          )}
 
           {!isElectron() && (
             <div className="border-t border-border pt-3 mt-3">
@@ -2011,7 +1991,7 @@ export function UserProfilePanel({
 
       {/* The embedded desktop backend auto-authenticates its machine-local
           profile, so server login controls would imply protection they do
-          not provide. Remote Sync owns its separate account UI above. */}
+          not provide. A linked account's sign-in is managed on its server. */}
       <AccordionSection
         hidden={isElectron()}
         id="security"

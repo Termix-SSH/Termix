@@ -8,22 +8,11 @@ interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: (token: string | null) => void | Promise<void>;
   onChangeServer: () => void;
-  // "local" (default): the app's own login, JWT goes to localStorage like
-  // every other client. "remoteSync": this iframe is authenticating a
-  // Settings-triggered connection to a remote Termix server for the sync
-  // engine -- the JWT is handed to the Electron main process's encrypted
-  // store instead, never exposed to the renderer's localStorage.
-  targetPurpose?: "local" | "remoteSync";
-}
-
-interface SaveRemoteSyncJwtResult {
-  success: boolean;
-  reason?: string;
-  error?: string;
-  status?: {
-    needsReauth?: boolean;
-    lastError?: string | null;
-  } | null;
+  // "local" (default): the app's own login, the token goes to localStorage
+  // like every other client. "link": signing in to a server to link this
+  // desktop to it; the token is only handed to onAuthSuccess, which trades
+  // it for the desktop's own session.
+  targetPurpose?: "local" | "link";
 }
 
 const AUTH_MESSAGE_SOURCES = new Set([
@@ -61,30 +50,9 @@ export function ElectronLoginForm({
       setIsAuthenticating(true);
 
       try {
-        if (targetPurpose === "remoteSync") {
+        if (targetPurpose === "link") {
           if (!token) {
             throw new Error(t("errors.authTokenMissing"));
-          }
-          // The main process refuses to persist the JWT when it has no OS
-          // keyring to encrypt it with, and reports that by resolving with
-          // success: false. Dropping the result signs the user in against a
-          // store that kept nothing, so the next sync tick calls a session
-          // that was never saved expired.
-          const result = (await window.electronAPI?.invoke?.(
-            "save-remote-sync-jwt",
-            token,
-          )) as SaveRemoteSyncJwtResult | undefined;
-          if (!result?.success) {
-            throw new Error(
-              result?.reason === "encryption_unavailable"
-                ? t("errors.keyringUnavailable")
-                : result?.error || t("errors.authTokenSaveFailed"),
-            );
-          }
-          if (result.status?.needsReauth || result.status?.lastError) {
-            throw new Error(
-              result.status.lastError || t("errors.authTokenRejected"),
-            );
           }
         } else if (token) {
           localStorage.setItem("jwt", token);
@@ -264,7 +232,6 @@ export function ElectronLoginForm({
   };
 
   const displayUrl = currentUrl.replace(/^https?:\/\//, "");
-  const isEmbeddedServer = serverUrl.includes("localhost:30001");
 
   return (
     <div className="relative w-full h-full bg-background flex flex-col">
@@ -282,12 +249,12 @@ export function ElectronLoginForm({
           >
             <ArrowLeft className="h-5 w-5" />
             <span className="text-base font-medium">
-              {t("serverConfig.changeServer")}
+              {t("sync.wizard.back")}
             </span>
           </button>
           <div className="flex-1 mx-4 text-center">
             <span className="text-muted-foreground text-sm truncate block">
-              {isEmbeddedServer ? t("serverConfig.localServer") : displayUrl}
+              {displayUrl}
             </span>
           </div>
           <button

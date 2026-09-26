@@ -9,7 +9,6 @@ import {
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
-  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
@@ -178,6 +177,9 @@ export function registerHostFolderRoutes(
    *               credentialId:
    *                 type: integer
    *                 nullable: true
+   *               localOnly:
+   *                 type: boolean
+   *                 description: Desktop only. Keeps the folder and its hosts on this device instead of syncing them.
    *     responses:
    *       200:
    *         description: Folder metadata updated successfully.
@@ -193,7 +195,7 @@ export function registerHostFolderRoutes(
     requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
-      const { name, color, icon, credentialId } = req.body;
+      const { name, color, icon, credentialId, localOnly } = req.body;
 
       if (!isNonEmptyString(userId) || !name) {
         return res.status(400).json({ error: "Folder name is required" });
@@ -234,6 +236,13 @@ export function registerHostFolderRoutes(
             icon,
             normalizedCredentialId,
           );
+        if (typeof localOnly === "boolean") {
+          await createCurrentHostFolderRepository().setLocalOnly(
+            userId,
+            name,
+            localOnly,
+          );
+        }
 
         if (!created) {
           databaseLogger.info("Updating SSH folder", {
@@ -411,17 +420,9 @@ export function registerHostFolderRoutes(
           );
         }
 
-        const { hostSyncIds, folderSyncIds } =
-          await hostFolderRepository.deleteHostsAndFolderRecords(
-            userId,
-            folderName,
-          );
-        const tombstoneRepository = createCurrentSyncTombstoneRepository();
-        await tombstoneRepository.recordMany(userId, "hosts", hostSyncIds);
-        await tombstoneRepository.recordMany(
+        await hostFolderRepository.deleteHostsAndFolderRecords(
           userId,
-          "sshFolders",
-          folderSyncIds,
+          folderName,
         );
 
         try {

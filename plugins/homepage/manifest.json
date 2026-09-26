@@ -47,6 +47,7 @@
     ],
     "actionSlots": [
       { "id": "dashboard.secondaryView", "accepts": ["component"] }
-    ]
+    ],
+    "syncEntities": ["dashboardServiceLinks", "homepageItems"]
   }
 }

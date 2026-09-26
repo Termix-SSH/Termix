@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Request } from "express";
 import type { UserRecord } from "../../../database/repositories/user-repository.js";
 import {
+  allowsDesktopAutoSession,
   isLoopbackRequest,
   extractBearerOrCookieToken,
   isNativeTokenExportRequest,
@@ -182,5 +183,22 @@ describe("resolveDesktopAutoSessionUser", () => {
       makeUser({ id: "user-3", registeredAt: "2026-02-01T00:00:00.000Z" }),
     ]);
     expect(result).toBe(earliest);
+  });
+});
+
+describe("allowsDesktopAutoSession", () => {
+  it("allows the embedded desktop backend and a development backend", () => {
+    expect(
+      allowsDesktopAutoSession({
+        ELECTRON_EMBEDDED: "true",
+        NODE_ENV: "production",
+      }),
+    ).toBe(true);
+    expect(allowsDesktopAutoSession({ NODE_ENV: "development" })).toBe(true);
+    expect(allowsDesktopAutoSession({})).toBe(true);
+  });
+
+  it("never allows it on a production server", () => {
+    expect(allowsDesktopAutoSession({ NODE_ENV: "production" })).toBe(false);
   });
 });

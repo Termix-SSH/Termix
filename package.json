@@ -171,6 +171,7 @@
     "jsdom": "^30.0.1",
     "lint-staged": "^17.2.0",
     "lucide-react": "^1.33.0",
+    "postcss-pxtorem": "^6.1.0",
     "prettier": "3.9.8",
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",

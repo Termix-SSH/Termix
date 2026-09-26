@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { rem } from "@/lib/rem";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Check, GripVertical } from "lucide-react";
@@ -177,7 +178,7 @@ export function FolderItem({
   return (
     <div
       className="relative"
-      style={depth > 0 ? { paddingLeft: depth * 12 } : undefined}
+      style={depth > 0 ? { paddingLeft: rem(depth * 12) } : undefined}
     >
       <div className="relative">
         <button

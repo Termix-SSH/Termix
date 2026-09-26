@@ -98,10 +98,18 @@ export interface UserInfo {
   password_hash?: string;
   data_unlocked?: boolean;
   show_donation_modal?: boolean;
+  /** On a desktop linked to a server, the account it is signed in to there. */
+  linked?: LinkedAccountInfo | null;
 }
 
-export interface RemoteSyncUserInfo extends UserInfo {
-  roles: UserRole[];
+export interface LinkedAccountInfo {
+  serverUrl: string;
+  serverName: string | null;
+  username: string | null;
+  isAdmin: boolean;
+  roles: string[];
+  permissions: string[];
+  status: string;
 }
 
 interface UserCount {
@@ -577,43 +585,6 @@ interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
 
-export interface ElectronUpdateCheckResult {
-  success: boolean;
-  status?: "up_to_date" | "requires_update" | "beta";
-  localVersion?: string;
-  remoteVersion?: string;
-  latest_release?: {
-    tag_name: string;
-    name: string;
-    published_at: string;
-    html_url: string;
-    body: string;
-  };
-  cached?: boolean;
-  cache_age?: number;
-  error?: string;
-}
-
-export async function checkElectronUpdate(): Promise<ElectronUpdateCheckResult> {
-  if (!isElectron())
-    return { success: false, error: "Not in Electron environment" };
-
-  try {
-    const result = (await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: { invoke?: (channel: string) => Promise<unknown> };
-        }
-    ).electronAPI?.invoke?.("check-electron-update")) as
-      ElectronUpdateCheckResult | undefined;
-    return result ?? { success: false, error: "Update check failed" };
-  } catch (error) {
-    console.error("Failed to check Electron update:", error);
-    return { success: false, error: "Update check failed" };
-  }
-}
-
 /** A URL on the main backend, resolved for web, dev proxy and Electron. */
 export function getBackendUrl(path: string): string {
   return getApiUrl(path, 30001);
@@ -624,10 +595,8 @@ function getApiUrl(path: string, defaultPort: number): string {
   const electronMode = isElectron();
 
   if (electronMode) {
-    // The desktop app always runs its embedded local backend as the
-    // source of truth. A configured remote sync server is a separate,
-    // narrow connection used only by the sync engine (see
-    // remote-sync-axios.ts), not by these shared instances.
+    // The desktop app always talks to its embedded backend. The server it
+    // may be linked to is reached through createRemoteOriginApiInstance.
     return `http://localhost:${defaultPort}${path}`;
   } else if (devMode) {
     if (!import.meta.env.VITE_API_HOST) {
@@ -651,9 +620,8 @@ function getApiUrl(path: string, defaultPort: number): string {
 // the backend that holds that host's live session is the connected remote
 // server instead, so calls for that host must follow it there.
 //
-// These dynamically-baseURL'd instances resolve the remote server's URL and
-// JWT fresh on every request (cheap, and correct even if the user
-// connects/disconnects remote sync without an app reload).
+// These instances look up the linked server and its session on every
+// request, so linking or unlinking needs no reload.
 
 export function createRemoteOriginApiInstance(path: string): AxiosInstance {
   const instance = axios.create({
@@ -663,27 +631,19 @@ export function createRemoteOriginApiInstance(path: string): AxiosInstance {
 
   instance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      const [remoteConfig, remoteJwt] = await Promise.all([
-        window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
-          serverUrl?: string;
-        } | null>,
-        window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
-          string | null
-        >,
-      ]);
-
-      const baseUrl = (remoteConfig?.serverUrl || "").replace(/\/$/, "");
-      config.baseURL = baseUrl
-        ? `${baseUrl}${path}`
+      const { getLinkedSession } = await import("@/lib/linked-server");
+      const linked = await getLinkedSession();
+      config.baseURL = linked
+        ? `${linked.serverUrl}${path}`
         : "http://no-server-configured";
 
       if (config.headers.set) {
         config.headers.set("X-Electron-App", "true");
-        if (remoteJwt)
-          config.headers.set("Authorization", `Bearer ${remoteJwt}`);
+        if (linked)
+          config.headers.set("Authorization", `Bearer ${linked.token}`);
       } else {
         config.headers["X-Electron-App"] = "true";
-        if (remoteJwt) config.headers["Authorization"] = `Bearer ${remoteJwt}`;
+        if (linked) config.headers["Authorization"] = `Bearer ${linked.token}`;
       }
 
       return config;
@@ -695,11 +655,7 @@ export function createRemoteOriginApiInstance(path: string): AxiosInstance {
 
 let remoteCoreApi: AxiosInstance | null = null;
 
-/**
- * The remote server's core routes, unprefixed.
- *
- * For core routes such as /sync/hosts and /host/status.
- */
+/** The linked server's core routes, unprefixed. */
 export function getRemoteCoreApi(): AxiosInstance {
   if (!remoteCoreApi) {
     remoteCoreApi = createRemoteOriginApiInstance("");
@@ -1050,18 +1006,6 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
-  }
-}
-
-export async function getRemoteSyncUserInfo(): Promise<RemoteSyncUserInfo | null> {
-  if (!isElectron()) return null;
-  try {
-    // ?? null so a missing preload bridge matches the declared return type
-    // rather than resolving to undefined.
-    return ((await window.electronAPI?.invoke?.("get-remote-sync-user-info")) ??
-      null) as RemoteSyncUserInfo | null;
-  } catch {
-    return null;
   }
 }
 

@@ -219,7 +219,6 @@ export function registerHomepageRoutes(
     try {
       const deleted = await repo.deleteItem(userId, id);
       if (!deleted) return res.status(404).json({ error: "Not found" });
-      await ctx.sync.recordTombstone(userId, "homepageItems", deleted.syncId);
       res.json({ message: "Homepage item deleted" });
     } catch (err) {
       logError(
@@ -506,11 +505,6 @@ export function registerHomepageRoutes(
     try {
       const deleted = await repo.deleteServiceLink(userId, id);
       if (!deleted) return res.status(404).json({ error: "Not found" });
-      await ctx.sync.recordTombstone(
-        userId,
-        "dashboardServiceLinks",
-        deleted.syncId,
-      );
       res.json({ message: "Service link deleted" });
     } catch (err) {
       logError(

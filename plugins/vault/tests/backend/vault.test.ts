@@ -124,7 +124,7 @@ describe("profiles", () => {
     expect((await server.request("GET", "/profiles")).body).toEqual([]);
   });
 
-  it("records a tombstone and drops cached certificates on delete", async () => {
+  it("drops cached certificates on delete", async () => {
     server = await startServer();
     const { id } = await profileOnHost();
     server.db.sqlite
@@ -132,17 +132,9 @@ describe("profiles", () => {
         "INSERT INTO p_vault_tokens (user_id, profile_id, ssh_cert, private_key, expires_at) VALUES (?, ?, ?, ?, ?)",
       )
       .run("user-1", id, "c", "k", "2999-01-01T00:00:00.000Z");
-    const syncId = (
-      server.db.sqlite
-        .prepare("SELECT sync_id FROM p_vault_profiles WHERE id = ?")
-        .get(id) as { sync_id: string }
-    ).sync_id;
 
     await server.request("DELETE", `/profiles/${id}`);
 
-    expect(server.mock.tombstones).toEqual([
-      { userId: "user-1", entityType: "vaultProfiles", syncId },
-    ]);
     expect(
       server.db.sqlite
         .prepare("SELECT COUNT(*) AS n FROM p_vault_tokens")

@@ -1598,28 +1598,80 @@ const migrateSchema = () => {
     }
   }
 
+  addColumnIfNotExists(
+    "ssh_data",
+    "local_only",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "shared_source", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "shared_source", "TEXT");
+  addColumnIfNotExists(
+    "ssh_folders",
+    "local_only",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+
   try {
-    sqlite.prepare("SELECT id FROM sync_tombstones LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS sync_tombstones (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          entity_type TEXT NOT NULL,
-          sync_id TEXT NOT NULL,
-          deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      sqlite.exec(
-        "CREATE INDEX IF NOT EXISTS idx_sync_tombstones_user_entity ON sync_tombstones(user_id, entity_type)",
+    sqlite.exec(`
+      DROP TABLE IF EXISTS sync_tombstones;
+
+      CREATE TABLE IF NOT EXISTS sync_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        entity_type TEXT NOT NULL,
+        sync_id TEXT NOT NULL,
+        revision INTEGER NOT NULL DEFAULT 0,
+        seq INTEGER NOT NULL DEFAULT 0,
+        hash TEXT,
+        deleted INTEGER NOT NULL DEFAULT 0,
+        error TEXT,
+        error_hash TEXT,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-    } catch (createError) {
-      databaseLogger.warn("Failed to create sync_tombstones table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_records_user_entity_sync
+        ON sync_records(user_id, entity_type, sync_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_records_user_seq
+        ON sync_records(user_id, seq);
+
+      CREATE TABLE IF NOT EXISTS sync_conflicts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        entity_type TEXT NOT NULL,
+        sync_id TEXT NOT NULL,
+        local_row TEXT NOT NULL,
+        server_revision INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_sync_conflicts_user
+        ON sync_conflicts(user_id);
+
+      CREATE TABLE IF NOT EXISTS sync_link (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        server_url TEXT NOT NULL,
+        server_name TEXT,
+        server_version TEXT,
+        session_token TEXT,
+        custom_headers TEXT,
+        basic_auth TEXT,
+        allow_invalid_certificate INTEGER NOT NULL DEFAULT 0,
+        remote_user_id TEXT,
+        remote_username TEXT,
+        account TEXT,
+        scope TEXT,
+        known_types TEXT,
+        cursor INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'idle',
+        last_error TEXT,
+        linked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_sync_at TEXT
+      );
+    `);
+  } catch (createError) {
+    databaseLogger.warn("Failed to create sync tables", {
+      operation: "schema_migration",
+      error: createError,
+    });
   }
   // --- sync end ---
 

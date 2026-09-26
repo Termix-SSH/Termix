@@ -132,64 +132,104 @@ export interface PluginDatabase {
 export type SyncRow = Record<string, unknown>;
 
 export interface SyncEntityReference {
-  /** Stored column holding a local numeric id, e.g. "credentialId". */
+  /**
+   * Where a local numeric id lives. A plain column ("credentialId"), or a
+   * path into a JSON column: "jumpHosts[].hostId" walks every item of the
+   * jumpHosts array, "layout.panes[].hostId" walks nested objects. A JSON
+   * column may be stored as a string or as parsed JSON.
+   */
   field: string;
-  /** Wire field holding the portable id, e.g. "credentialSyncId". */
-  syncField: string;
+  /**
+   * Wire field holding the portable id, e.g. "credentialSyncId". Only for a
+   * plain column; a JSON path is rewritten in place.
+   */
+  syncField?: string;
   /** The entity the id points at. */
   entityType: string;
+  /** How a JSON path stores the local id. Defaults to "number". */
+  idType?: "number" | "string";
+}
+
+export interface SyncEntityPermissions {
+  /** Checked before a pushed row that does not exist yet is written. */
+  create?: string;
+  /** Checked before a pushed change to an existing row is written. */
+  update?: string;
+  /** Checked before a pushed delete runs. */
+  delete?: string;
+}
+
+export interface SyncWriteEvent {
+  /** The local id of the row that was written. */
+  id: number | null;
+  userId: string;
+  /** The row as it arrived, before references were resolved. */
+  wire: SyncRow;
+  created: boolean;
 }
 
 export interface SyncEntityRegistration {
-  /** Stable wire name. Never change it: tombstones and remote rows match on it. */
+  /** Stable wire name. Never change it: records on both sides match on it. */
   type: string;
   /** The table, as returned by ctx.db.define. */
   table: unknown;
   /** Column holding the owning user id. Defaults to "userId". */
   userColumn?: string;
-  /** Fields DataCrypto translates between plaintext wire and encrypted row. */
+  /** Fields stored encrypted with the owner's data key. Plaintext on the wire. */
   encryptedFields?: readonly string[];
   /** Local-id to sync-id translations applied on the way out and back. */
   references?: readonly SyncEntityReference[];
   /** Lower sorts first. Reference targets must sort before their referrers. */
   order?: number;
-  /** Fields that must never be overwritten by an inbound payload. */
+  /**
+   * Fields that stay on this side: never sent, never overwritten by an
+   * inbound row, and ignored when deciding whether a row changed.
+   */
   readOnlyFields?: readonly string[];
   /** One row per user rather than many, keyed on the owner. */
   singleton?: boolean;
+  /**
+   * Names core uses when its own rows point at this entity without knowing
+   * which plugin provides it, e.g. "commandSnippet" for a host quick action.
+   */
+  answersTo?: readonly string[];
   /**
    * Rows this returns false for are left out of sync in both directions, for
    * state that belongs to one install (a per-device "last session").
    */
   shouldSync?: (row: SyncRow) => boolean;
+  /** RBAC permissions a pushed change needs on the server. */
+  permissions?: SyncEntityPermissions;
   /**
-   * Escape hatch for a row whose references are not plain columns, such as ids
-   * embedded in a JSON blob. Runs instead of `references`, not alongside it.
+   * Runs after `references` on the way out, for anything they cannot
+   * express. Gets the row with references already translated.
    */
   serialize?: (
     row: SyncRow,
     resolveSyncId: (entityType: string, id: number) => Promise<string | null>,
   ) => Promise<SyncRow>;
+  /** Runs after `references` on the way in. */
   deserialize?: (
     row: SyncRow,
     resolveId: (entityType: string, syncId: string) => Promise<number | null>,
   ) => Promise<SyncRow>;
+  /** Runs after a synced row was written on this side. */
+  afterWrite?: (event: SyncWriteEvent) => Promise<void>;
+  /**
+   * Replaces the plain delete of a synced row, for rows with cleanup of their
+   * own. Gets the stored row.
+   */
+  remove?: (row: SyncRow, userId: string) => Promise<void>;
 }
 
-/** Adds an entity to remote sync between a desktop backend and a server. */
+/**
+ * Adds an entity to sync between a linked desktop and its server.
+ *
+ * Deletes need nothing extra: core notices a registered row is gone and
+ * sends the delete itself.
+ */
 export interface PluginSync {
   registerEntity: (entity: SyncEntityRegistration) => void;
-  /**
-   * Records that a row was deleted, so a pull on the other side of remote
-   * sync removes it too. Call it with the row's syncId right after deleting
-   * it, for a registered entity whose rows can be deleted (a no-op silently
-   * loses deletes across devices otherwise). A falsy syncId is ignored.
-   */
-  recordTombstone: (
-    userId: string,
-    entityType: string,
-    syncId: string | null | undefined,
-  ) => Promise<void>;
 }
 
 export interface PluginRegistry {

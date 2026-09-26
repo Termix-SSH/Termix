@@ -125,5 +125,6 @@
   "platforms": ["linux", "win32", "darwin"],
   "dependencies": {
     "snippets": "^1.0.0"
-  }
+  },
+  "desktop": "server"
 }

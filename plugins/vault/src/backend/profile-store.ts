@@ -134,7 +134,6 @@ export function createProfileStore(
       await db.delete(tokensTable).where(eq(tokensTable.profileId, row.id));
       await db.delete(table).where(eq(table.id, row.id));
       await ctx.db.persist();
-      await ctx.sync.recordTombstone(row.userId, SYNC_ENTITY, row.syncId);
     },
   };
 }

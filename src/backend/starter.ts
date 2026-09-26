@@ -277,6 +277,22 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
     startAnalyticsHeartbeat();
 
+    // After plugins, so their sync entities are registered before a pass.
+    if (process.env.ELECTRON_EMBEDDED === "true") {
+      try {
+        const { startDesktopSync } = await import("./sync/client/engine.js");
+        startDesktopSync();
+        const { startDesktopUpdateCheck } =
+          await import("./updates/desktop-update-check.js");
+        startDesktopUpdateCheck();
+      } catch (error) {
+        systemLogger.warn("Desktop sync failed to start", {
+          operation: "sync_start",
+          error: getErrorMessage(error),
+        });
+      }
+    }
+
     systemLogger.success("Termix backend started successfully", {
       operation: "backend_init_complete",
       port: process.env.PORT || 4090,

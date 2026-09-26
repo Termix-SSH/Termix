@@ -161,7 +161,9 @@ export function ProcessInspectorCard({ hostId }: { hostId: number | null }) {
             <span
               className="truncate"
               title={`${p.user} · ${p.args}`}
-              style={depth ? { paddingLeft: depth * 12 } : undefined}
+              style={
+                depth ? { paddingLeft: `${(depth * 12) / 14}rem` } : undefined
+              }
             >
               {depth > 0 && (
                 <span className="text-muted-foreground/40">└ </span>

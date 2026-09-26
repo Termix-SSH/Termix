@@ -592,8 +592,7 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
 
   it("syncs every entity type 2.8 synced, under the same name", async () => {
     const { listEntityTypes } = await import("../../plugins/sync-registry.js");
-    const { registerCoreSyncEntities } =
-      await import("../../database/routes/sync-entities.js");
+    const { registerCoreSyncEntities } = await import("../../sync/entities.js");
     registerCoreSyncEntities();
     const known = new Set(listEntityTypes());
     for (const type of SYNCED_ENTITY_TYPES_28) {

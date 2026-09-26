@@ -40,12 +40,6 @@ const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
 );
 
-const ElectronVersionCheck = lazy(() =>
-  import("@/user/ElectronVersionCheck").then((module) => ({
-    default: module.ElectronVersionCheck,
-  })),
-);
-
 type Phase =
   | "verifying"
   | "idle-auth"
@@ -176,18 +170,7 @@ function App() {
         if (isElectron()) {
           try {
             const token = await getCurrentToken();
-            if (token) {
-              localStorage.setItem("jwt", token);
-              // Remote Sync's engine (main process) needs this local JWT to
-              // authenticate against the embedded backend during sync, same
-              // as a fresh login provides via handleLogin below -- a session
-              // restore (the common case on every normal launch) must hand
-              // it over too, or sync silently never runs after the first
-              // app restart.
-              window.electronAPI
-                ?.invoke?.("notify-local-login", token)
-                .catch(() => {});
-            }
+            if (token) localStorage.setItem("jwt", token);
           } catch {
             // Non-fatal: WebSocket connections will fall back to cookie auth
           }
@@ -273,12 +256,6 @@ function App() {
     })();
     if (isElectron()) {
       window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
-      const localJwt = localStorage.getItem("jwt");
-      if (localJwt) {
-        window.electronAPI
-          ?.invoke?.("notify-local-login", localJwt)
-          .catch(() => {});
-      }
     }
   }
 
@@ -438,8 +415,6 @@ function ViewRouter({ view }: { view: string }) {
 }
 
 function RootApp() {
-  const [showVersionCheck, setShowVersionCheck] = useState(true);
-
   useServiceWorker();
 
   const searchParams = new URLSearchParams(window.location.search);
@@ -449,14 +424,6 @@ function RootApp() {
     return (
       <Suspense fallback={null}>
         <ViewRouter view={view} />
-      </Suspense>
-    );
-  }
-
-  if (isElectron() && showVersionCheck) {
-    return (
-      <Suspense fallback={null}>
-        <ElectronVersionCheck onContinue={() => setShowVersionCheck(false)} />
       </Suspense>
     );
   }

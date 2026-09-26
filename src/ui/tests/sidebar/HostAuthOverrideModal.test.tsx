@@ -103,8 +103,8 @@ describe("HostAuthOverrideModal", () => {
     fireEvent.click(screen.getByText("common.save"));
 
     await waitFor(() => {
-      expect(api.getHostAuthOverride).toHaveBeenCalledWith(42, "ssh");
-      expect(api.setHostAuthOverride).toHaveBeenCalledWith(42, "ssh", 8);
+      expect(api.getHostAuthOverride).toHaveBeenCalledWith(42, "ssh", null);
+      expect(api.setHostAuthOverride).toHaveBeenCalledWith(42, "ssh", 8, null);
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
   });
@@ -128,7 +128,12 @@ describe("HostAuthOverrideModal", () => {
     fireEvent.click(screen.getByText("common.save"));
 
     await waitFor(() => {
-      expect(api.setHostAuthOverride).toHaveBeenCalledWith(42, "ssh", null);
+      expect(api.setHostAuthOverride).toHaveBeenCalledWith(
+        42,
+        "ssh",
+        null,
+        null,
+      );
     });
   });
 
@@ -160,7 +165,7 @@ describe("HostAuthOverrideModal", () => {
     ).toBeTruthy();
   });
 
-  it("loads credentials and overrides from the remote server for remote-only shared hosts", async () => {
+  it("loads credentials and overrides from the server for a synced shared copy", async () => {
     remote.get.mockResolvedValue({
       data: [
         {
@@ -177,7 +182,7 @@ describe("HostAuthOverrideModal", () => {
       <HostAuthOverrideModal
         open
         onOpenChange={() => {}}
-        host={{ ...host, id: "-42" }}
+        host={{ ...host, sharedCopy: true, syncId: "host-sync-42" } as Host}
         protocol="ssh"
       />,
     );
@@ -188,7 +193,11 @@ describe("HostAuthOverrideModal", () => {
     expect((select as HTMLSelectElement).value).toBe("19");
     expect(remote.get).toHaveBeenCalledWith("/credentials");
     expect(api.getCredentials).not.toHaveBeenCalled();
-    expect(api.getHostAuthOverride).toHaveBeenCalledWith(-42, "ssh", true);
+    expect(api.getHostAuthOverride).toHaveBeenCalledWith(
+      42,
+      "ssh",
+      "host-sync-42",
+    );
   });
 
   it("renders empty and load-error states", async () => {

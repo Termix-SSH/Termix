@@ -86,6 +86,11 @@ const UserProfilePanel = lazy(() =>
     default: m.UserProfilePanel,
   })),
 );
+const SyncPanel = lazy(() =>
+  import("@/settings/sync/SyncPanel").then((m) => ({
+    default: m.SyncPanel,
+  })),
+);
 const AdminSettingsPanel = lazy(() =>
   import("@/sidebar/AdminSettingsPanel").then((m) => ({
     default: m.AdminSettingsPanel,
@@ -136,7 +141,6 @@ import {
   getUserPreferences,
   saveUserPreferences,
   dismissDonationModal,
-  isElectron,
   type UserPreferences,
   type OpenTabRecord,
 } from "@/main-axios";
@@ -147,8 +151,8 @@ import {
   snapshotData,
 } from "@/shell/shell-layout";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
-import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
-import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";
+import { useSyncStatus } from "@/hooks/use-sync-status";
+import { rem, remScale } from "@/lib/rem";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
@@ -298,11 +302,6 @@ export function AppShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
-  const [remoteSyncInitialServerUrl, setRemoteSyncInitialServerUrl] = useState<
-    string | undefined
-  >(undefined);
-  const [remoteSyncReconnectRequested, setRemoteSyncReconnectRequested] =
-    useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -1094,6 +1093,7 @@ export function AppShell({
           icon?: string;
           credentialId?: number | null;
           sortOrder?: number | null;
+          localOnly?: boolean;
         }
       >();
       for (const f of folders) {
@@ -1102,6 +1102,7 @@ export function AppShell({
           icon: f.icon ?? undefined,
           credentialId: f.credentialId ?? null,
           sortOrder: f.sortOrder ?? null,
+          localOnly: !!f.localOnly,
         });
       }
       setRealHostTree(buildHostTree(raw, folderMeta));
@@ -1131,27 +1132,9 @@ export function AppShell({
     };
   }, [loadHosts]);
 
-  // The Electron main process runs remote sync (pull/push hosts and
-  // credentials with a connected Termix server) on its own timer, entirely
-  // outside any renderer-initiated action, so nothing normally dispatches
-  // the termix:hosts-changed / termix:credentials-changed events that
-  // panels rely on to refetch. Without this, newly-synced hosts/credentials
-  // only show up after a manual refresh or app restart.
-  useEffect(() => {
-    if (!isElectron()) return;
-    let wasSyncing = false;
-    const unsubscribe = window.electronAPI?.onRemoteSyncStatusChanged?.(
-      (status: { syncing: boolean; lastError: string | null }) => {
-        const justFinished = wasSyncing && !status.syncing && !status.lastError;
-        wasSyncing = status.syncing;
-        if (justFinished) {
-          window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-          window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
-        }
-      },
-    );
-    return () => unsubscribe?.();
-  }, []);
+  // Keeps the desktop's sync status polled while the app is open; a pass
+  // that changed data tells the panels to reload.
+  useSyncStatus();
 
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)
   useEffect(() => {
@@ -2067,9 +2050,11 @@ export function AppShell({
       setSidebarDragging(true);
       const startX = e.clientX;
       const startW = sidebarWidth;
+      // Widths are kept in Normal-size pixels, so a drag is scaled back.
+      const scale = remScale();
       function onMove(ev: MouseEvent) {
         setSidebarWidth(
-          Math.max(160, Math.min(480, startW + ev.clientX - startX)),
+          Math.max(160, Math.min(480, startW + (ev.clientX - startX) / scale)),
         );
       }
       function onUp() {
@@ -2090,9 +2075,10 @@ export function AppShell({
       setRightSidebarDragging(true);
       const startX = e.clientX;
       const startW = rightSidebarWidth;
+      const scale = remScale();
       function onMove(ev: MouseEvent) {
         setRightSidebarWidth(
-          Math.max(160, Math.min(480, startW - (ev.clientX - startX))),
+          Math.max(160, Math.min(480, startW - (ev.clientX - startX) / scale)),
         );
       }
       function onUp() {
@@ -2496,12 +2482,13 @@ export function AppShell({
               onPrefsChange={(updates) =>
                 setUserPrefs((current) => ({ ...current, ...updates }))
               }
-              remoteSyncInitialServerUrl={remoteSyncInitialServerUrl}
-              remoteSyncReconnectRequested={remoteSyncReconnectRequested}
-              onRemoteSyncReconnectHandled={() =>
-                setRemoteSyncReconnectRequested(false)
-              }
             />
+          </div>
+        )}
+
+        {railView === "sync" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SyncPanel />
           </div>
         )}
 
@@ -2630,24 +2617,6 @@ export function AppShell({
         className="flex flex-col w-screen bg-background"
         style={{ height: "100dvh" }}
       >
-        {isElectron() && (
-          <>
-            <RemoteSyncBanner
-              onReconnect={() => {
-                setRailView("user-profile");
-                if (!sidebarOpen) setSidebarOpen(true);
-                setRemoteSyncReconnectRequested(true);
-              }}
-            />
-            <MigrationNoticeDialog
-              onOpenRemoteSync={(url) => {
-                setRemoteSyncInitialServerUrl(url);
-                setRailView("user-profile");
-                if (!sidebarOpen) setSidebarOpen(true);
-              }}
-            />
-          </>
-        )}
         <div className="flex flex-1 min-h-0">
           {/* Skinny icon rail — desktop only, hidden on mobile */}
           {!settingsFullscreen && (
@@ -2673,9 +2642,7 @@ export function AppShell({
                 width: settingsFullscreen
                   ? "100vw"
                   : sidebarOpen
-                    ? sidebarEditing
-                      ? 560
-                      : sidebarWidth
+                    ? rem(sidebarEditing ? 560 : sidebarWidth)
                     : 0,
                 transition: sidebarDragging ? "none" : "width 0.2s",
               }}
@@ -2836,7 +2803,7 @@ export function AppShell({
             <div
               className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden border-l transition-colors ${rightSidebarDragging ? "border-accent-brand/60" : "border-border"}`}
               style={{
-                width: rightSidebarWidth,
+                width: rem(rightSidebarWidth),
                 transition: rightSidebarDragging ? "none" : "width 0.2s",
               }}
             >

@@ -1,5 +1,6 @@
 import {
   Braces,
+  Cloud,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useSyncAttentionCount } from "@/hooks/use-sync-status";
 import { isElectron } from "@/lib/electron";
 import { createRegistry } from "@/lib/registry";
 
@@ -115,6 +117,14 @@ export const RAIL_ITEMS: RailItemDef[] = [
     icon: LayoutPanelLeft,
     labelKey: "nav.splitScreen",
     separatorAfter: true,
+  },
+  {
+    id: "sync",
+    icon: Cloud,
+    labelKey: "nav.sync",
+    electronOnly: true,
+    placement: "footer",
+    useBadge: useSyncAttentionCount,
   },
 ];
 

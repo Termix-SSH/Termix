@@ -31,7 +31,6 @@ import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
-import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
 import { TrustedDeviceRepository } from "./trusted-device-repository.js";
 import { UserDataExportRepository } from "./user-data-export-repository.js";
 import { UserPreferenceRepository } from "./user-preference-repository.js";
@@ -135,13 +134,6 @@ export function createCurrentCredentialRepository(): CredentialRepository {
   return new CredentialRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("credential_repository_write"),
-  );
-}
-
-export function createCurrentSyncTombstoneRepository(): SyncTombstoneRepository {
-  return new SyncTombstoneRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("sync_tombstone_repository_write"),
   );
 }
 

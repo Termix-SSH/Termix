@@ -244,6 +244,11 @@ export const hosts = sqliteTable(
     // databases (the embedded backend and a connected remote server) during
     // sync -- local autoincrement ids collide across instances.
     syncId: text("sync_id").unique(),
+    // Desktop only: a host kept on this device that never goes to the server.
+    localOnly: integer("local_only", { mode: "boolean" }).notNull().default(false),
+    // Desktop only: set on the read-only copy of a host someone shared with
+    // the linked account. JSON with the share's owner and permission level.
+    sharedSource: text("shared_source"),
 
     createdAt: text("created_at")
       .notNull()
@@ -296,6 +301,7 @@ export const sshCredentials = sqliteTable(
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   syncId: text("sync_id").unique(),
+  sharedSource: text("shared_source"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -346,6 +352,7 @@ export const sshFolders = sqliteTable(
     // to name sort, same convention as hosts.sortOrder.
     sortOrder: integer("sort_order"),
     syncId: text("sync_id").unique(),
+    localOnly: integer("local_only", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -704,19 +711,102 @@ export const uiPreferences = sqliteTable("ui_preferences", {
 });
 
 // --- sync begin ---
-// Records a delete for a synced entity type so the other side of a sync
-// pair (embedded desktop backend <-> connected remote server) learns about
-// the deletion instead of re-creating the row on its next pull.
-export const syncTombstones = sqliteTable("sync_tombstones", {
+/**
+ * One row per synced record a user owns, on both ends of a sync link.
+ *
+ * On a server, revision counts the record's changes and seq is the position
+ * in the user's change feed, which is what a desktop's cursor points at. On a
+ * linked desktop, revision is the last server revision this device saw and
+ * hash is what the record looked like then, so a different hash now means a
+ * local edit waiting to be pushed.
+ */
+export const syncRecords = sqliteTable(
+  "sync_records",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    entityType: text("entity_type").notNull(),
+    syncId: text("sync_id").notNull(),
+    revision: integer("revision").notNull().default(0),
+    seq: integer("seq").notNull().default(0),
+    hash: text("hash"),
+    deleted: integer("deleted", { mode: "boolean" }).notNull().default(false),
+    // Desktop only: why the server refused the last push of this record, and
+    // the hash that was refused, so the same content is not re-sent forever.
+    error: text("error"),
+    errorHash: text("error_hash"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_sync_records_user_entity_sync").on(
+      table.userId,
+      table.entityType,
+      table.syncId,
+    ),
+    index("idx_sync_records_user_seq").on(table.userId, table.seq),
+  ],
+);
+
+/**
+ * Desktop only: a local edit that lost to a newer server edit. The server
+ * version was applied; this keeps the local one so the user can pick it.
+ */
+export const syncConflicts = sqliteTable(
+  "sync_conflicts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    entityType: text("entity_type").notNull(),
+    syncId: text("sync_id").notNull(),
+    localRow: text("local_row").notNull(),
+    serverRevision: integer("server_revision").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_sync_conflicts_user").on(table.userId)],
+);
+
+/**
+ * Desktop only: the server this install is linked to. One row at most.
+ * Secrets (session token, proxy headers, basic auth) are encrypted with the
+ * system key.
+ */
+export const syncLink = sqliteTable("sync_link", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  entityType: text("entity_type").notNull(),
-  syncId: text("sync_id").notNull(),
-  deletedAt: text("deleted_at")
+  serverUrl: text("server_url").notNull(),
+  serverName: text("server_name"),
+  serverVersion: text("server_version"),
+  sessionToken: text("session_token"),
+  customHeaders: text("custom_headers"),
+  basicAuth: text("basic_auth"),
+  allowInvalidCertificate: integer("allow_invalid_certificate", {
+    mode: "boolean",
+  })
+    .notNull()
+    .default(false),
+  remoteUserId: text("remote_user_id"),
+  remoteUsername: text("remote_username"),
+  // The linked account as the server describes it: roles, admin, permissions.
+  account: text("account"),
+  scope: text("scope"),
+  knownTypes: text("known_types"),
+  cursor: integer("cursor").notNull().default(0),
+  status: text("status").notNull().default("idle"),
+  lastError: text("last_error"),
+  linkedAt: text("linked_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+  lastSyncAt: text("last_sync_at"),
 });
 // --- sync end ---
 

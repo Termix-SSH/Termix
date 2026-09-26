@@ -1,3 +1,4 @@
+import { rem } from "@/lib/rem";
 import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
@@ -114,7 +115,7 @@ export function CredentialItem({
   const canDrag = arrangeMode && !isTouchOnly;
 
   const depthStyle =
-    depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
+    depth > 0 ? ({ paddingLeft: rem(depth * 12) } as const) : undefined;
 
   const trayButtonClass =
     "flex items-center justify-center size-6.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";

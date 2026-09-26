@@ -11,6 +11,7 @@ import { FolderPathPicker } from "./FolderPathPicker";
 import { HostParentPicker } from "./HostParentPicker";
 import { getSSHFolders, isElectron } from "@/main-axios";
 import { connectionOriginAppliesTo } from "./HostEditorData";
+import { useSyncStatus } from "@/hooks/use-sync-status";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
 import { Select2 } from "@/components/select2";
 import { useHostProtocols } from "./host-protocols";
@@ -39,6 +40,7 @@ export function HostEditorGeneralTab({
   simpleMode?: boolean;
 }) {
   const { t } = useTranslation();
+  const syncLinked = !!useSyncStatus()?.linked;
   const pluginProtocols = useHostProtocols();
 
   // Tracks which picker is shown, independent of whether a value is set yet
@@ -311,6 +313,17 @@ export function HostEditorGeneralTab({
               onChange={(v) => setField("pin", v)}
             />
           </SettingRow>
+          {syncLinked && (
+            <SettingRow
+              label={t("hosts.localOnly")}
+              description={t("hosts.localOnlyDesc")}
+            >
+              <FakeSwitch
+                checked={form.localOnly}
+                onChange={(v) => setField("localOnly", v)}
+              />
+            </SettingRow>
+          )}
         </div>
         <div className="flex flex-col gap-3 border-t border-border pt-4 pb-0">
           <div className="flex items-center justify-between">

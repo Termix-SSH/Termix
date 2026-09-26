@@ -4,7 +4,6 @@ import {
   createCurrentRbacAccessRepository,
   createCurrentRecentActivityRepository,
   createCurrentSshCredentialUsageRepository,
-  createCurrentSyncTombstoneRepository,
 } from "../database/repositories/factory.js";
 import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { sshLogger } from "../utils/logger.js";
@@ -37,14 +36,6 @@ export async function deleteOwnedHost(
   await createCurrentRecentActivityRepository().deleteByHostId(hostId);
   await createCurrentRbacAccessRepository().deleteHostAccessForHost(hostId);
   await createCurrentHostRepository().deleteForUser(userId, hostId);
-
-  if (host.syncId) {
-    await createCurrentSyncTombstoneRepository().record(
-      userId,
-      "hosts",
-      host.syncId,
-    );
-  }
 
   const name = host.name ?? host.ip;
   emitInternalEvent("host_deleted", userId, hostId, { name });

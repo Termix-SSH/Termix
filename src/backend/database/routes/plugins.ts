@@ -306,6 +306,14 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   }
 });
 
+async function isManagedByLinkedServer(pluginId: string): Promise<boolean> {
+  if (process.env.ELECTRON_EMBEDDED !== "true") return false;
+  const { getLink } = await import("../../sync/client/link-store.js");
+  if (!(await getLink())) return false;
+  const { isServerManaged } = await import("../../sync/client/plugins.js");
+  return isServerManaged(pluginId);
+}
+
 /**
  * @openapi
  * /plugins/{id}/state:
@@ -338,6 +346,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *         description: The caller lacks admin.plugins.manage.
  *       404:
  *         description: No such plugin.
+ *       409:
+ *         description: This desktop is linked to a server, which decides whether the plugin runs.
  */
 router.patch(
   "/:id/state",
@@ -357,6 +367,15 @@ router.patch(
       const record = await repository.findById(pluginId);
       if (!record) {
         res.status(404).json({ error: "Plugin not found" });
+        return;
+      }
+
+      // A linked desktop runs what its server runs.
+      if (await isManagedByLinkedServer(pluginId)) {
+        res.status(409).json({
+          error: "Managed by the linked server",
+          code: "MANAGED_BY_SERVER",
+        });
         return;
       }
 

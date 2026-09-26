@@ -421,6 +421,20 @@
       "when": 1790370151997,
       "tag": "0059_square_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1790393784687,
+      "tag": "0060_conscious_juggernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1790393788357,
+      "tag": "0061_red_lila_cheney",
+      "breakpoints": true
     }
   ]
 }

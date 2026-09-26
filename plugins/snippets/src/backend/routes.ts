@@ -319,12 +319,7 @@ export function registerSnippetRoutes(
 
       try {
         const folderName = decodeURIComponent(name);
-        const deleted = await repo.deleteFolder(userId, folderName);
-        await ctx.sync.recordTombstone(
-          userId,
-          "snippetFolders",
-          deleted?.syncId,
-        );
+        await repo.deleteFolder(userId, folderName);
         res.json({ success: true });
       } catch (err) {
         logError(
@@ -921,7 +916,6 @@ export function registerSnippetRoutes(
         const existing = await repo.deleteSnippet(userId, parseInt(id, 10));
         if (!existing)
           return res.status(404).json({ error: "Snippet not found" });
-        await ctx.sync.recordTombstone(userId, "snippets", existing.syncId);
         res.json({ success: true });
       } catch (err) {
         logError(ctx, "Failed to delete snippet", err, "snippet_delete_failed");

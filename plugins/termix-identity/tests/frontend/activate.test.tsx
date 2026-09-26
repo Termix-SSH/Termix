@@ -12,6 +12,12 @@ import locales from "../../locales/en.json";
 
 const manifest = manifestJson as unknown as PluginManifest;
 
+const linked = vi.hoisted(() => ({ serverUrl: null as string | null }));
+vi.mock("@/lib/linked-server", () => ({
+  getLinkedSession: async () =>
+    linked.serverUrl ? { serverUrl: linked.serverUrl, token: "t" } : null,
+}));
+
 let rendered: RenderedPluginApp | null = null;
 
 type ElectronWindow = { electronAPI?: unknown };
@@ -95,10 +101,10 @@ describe(`${manifest.id} activate`, () => {
   });
 
   it("hides the rail item in a standalone desktop app", async () => {
+    linked.serverUrl = null;
     (window as unknown as ElectronWindow).electronAPI = {
       isElectron: true,
       invoke: vi.fn(async () => null),
-      onRemoteSyncStatusChanged: () => () => {},
     };
     rendered = await renderWithApp(plugin, { manifest, locales });
     await waitFor(() =>
@@ -108,24 +114,19 @@ describe(`${manifest.id} activate`, () => {
     );
   });
 
-  it("shows the rail item once the desktop app has a remote server", async () => {
-    let notify = () => {};
-    let serverUrl: string | null = null;
+  it("shows the rail item once the desktop app is linked to a server", async () => {
+    linked.serverUrl = null;
     (window as unknown as ElectronWindow).electronAPI = {
       isElectron: true,
-      invoke: vi.fn(async () => (serverUrl ? { serverUrl } : null)),
-      onRemoteSyncStatusChanged: (callback: () => void) => {
-        notify = callback;
-        return () => {};
-      },
+      invoke: vi.fn(async () => null),
     };
     rendered = await renderWithApp(plugin, { manifest, locales });
     await waitFor(() =>
       expect(rendered!.registered.railItems()[0]?.hidden).toBe(true),
     );
 
-    serverUrl = "https://termix.example";
-    notify();
+    linked.serverUrl = "https://termix.example";
+    window.dispatchEvent(new CustomEvent("termix:sync-changed"));
     await waitFor(() =>
       expect(rendered!.registered.railItems()).toEqual([
         expect.objectContaining({ id: "termix-id", hidden: false }),

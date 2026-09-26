@@ -39,6 +39,7 @@
         "descriptionKey": "permissions.use.description",
         "defaultRoles": ["admin", "user"]
       }
-    ]
+    ],
+    "syncEntities": ["workspaces"]
   }
 }

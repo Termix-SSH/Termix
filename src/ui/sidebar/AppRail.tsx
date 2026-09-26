@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/skeleton";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { useRailItems, type RailItemDef } from "./rail-items";
 import { RailBadge } from "./RailBadge";
+import { rem } from "@/lib/rem";
 
 /** Core rail views; plugins add their own ids at runtime. */
 export type CoreRailView =
@@ -102,7 +103,7 @@ function buildRailButtons(
 
 const btnBase =
   "relative flex items-center h-7 rounded shrink-0 transition-colors gap-2.5";
-const btnStyle = { margin: "0 4px", padding: "0 8px" };
+const btnStyle = { margin: `0 ${rem(4)}`, padding: `0 ${rem(8)}` };
 
 export function AppRail({
   railView,
@@ -240,7 +241,7 @@ export function AppRail({
   return (
     <div
       className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0"
-      style={{ width: railExpanded ? 160 : 40 }}
+      style={{ width: rem(railExpanded ? 160 : 40) }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onContextMenu={(e) => {
@@ -273,7 +274,9 @@ export function AppRail({
                 <div
                   key={`sep-${i}`}
                   className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
-                  style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
+                  style={{
+                    width: railExpanded ? `calc(100% - ${rem(16)})` : rem(20),
+                  }}
                 />
               ) : "tabType" in item ? (
                 <button
@@ -284,7 +287,7 @@ export function AppRail({
                 >
                   <span
                     className="relative shrink-0 flex items-center justify-center"
-                    style={{ width: 16, height: 16 }}
+                    style={{ width: rem(16), height: rem(16) }}
                   >
                     {item.icon}
                     {item.useBadge && (
@@ -343,7 +346,7 @@ export function AppRail({
                 >
                   <span
                     className="relative shrink-0 flex items-center justify-center"
-                    style={{ width: 16, height: 16 }}
+                    style={{ width: rem(16), height: rem(16) }}
                   >
                     {item.icon}
                     {item.useBadge && (
@@ -384,7 +387,7 @@ export function AppRail({
           >
             <span
               className="shrink-0 flex items-center justify-center"
-              style={{ width: 16, height: 16 }}
+              style={{ width: rem(16), height: rem(16) }}
             >
               <Pin size={16} />
             </span>
@@ -400,7 +403,9 @@ export function AppRail({
         {showPinButton && (
           <div
             className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
-            style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
+            style={{
+              width: railExpanded ? `calc(100% - ${rem(16)})` : rem(20),
+            }}
           />
         )}
         {footerItems.map((item) => {
@@ -449,7 +454,7 @@ export function AppRail({
             >
               <span
                 className="relative shrink-0 flex items-center justify-center"
-                style={{ width: 16, height: 16 }}
+                style={{ width: rem(16), height: rem(16) }}
               >
                 <Icon size={16} />
                 {item.useBadge && (
@@ -528,7 +533,7 @@ export function AppRail({
           >
             <span
               className="relative shrink-0 flex items-center justify-center"
-              style={{ width: 16, height: 16 }}
+              style={{ width: rem(16), height: rem(16) }}
             >
               {item.icon}
             </span>
@@ -549,7 +554,7 @@ export function AppRail({
         >
           <span
             className="shrink-0 flex items-center justify-center"
-            style={{ width: 16, height: 16 }}
+            style={{ width: rem(16), height: rem(16) }}
           >
             <LogOut size={16} />
           </span>
@@ -571,7 +576,7 @@ export function AppRail({
         >
           <div
             className="rounded-full bg-accent-brand/20 border border-accent-brand/30 flex items-center justify-center font-bold text-accent-brand shrink-0"
-            style={{ width: 24, height: 24, fontSize: 11 }}
+            style={{ width: rem(24), height: rem(24), fontSize: rem(11) }}
           >
             {username.charAt(0).toUpperCase() || "U"}
           </div>

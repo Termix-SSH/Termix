@@ -1,0 +1,1 @@
+DROP TABLE `sync_tombstones`;

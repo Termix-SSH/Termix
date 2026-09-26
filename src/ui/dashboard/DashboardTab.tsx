@@ -1129,11 +1129,9 @@ export function DashboardTab({
 
     getUserInfo()
       .then((info) => {
-        // Remote sync is not yet configurable (added in a later phase), so
-        // a standalone desktop install never shows admin/user-management
-        // UI -- it has exactly one implicit user and nothing to administer.
-        const isRemoteSyncConnected = false;
-        setIsAdmin(!!info.is_admin && (!isElectron() || isRemoteSyncConnected));
+        // A desktop on its own has one implicit user and nothing to
+        // administer; linked, it is an admin when the server account is.
+        setIsAdmin(isElectron() ? !!info.linked?.isAdmin : !!info.is_admin);
       })
       .catch(() => {});
     getUptime()

@@ -161,6 +161,10 @@ export type Host = {
   permissionLevel?: "connect" | "view" | "edit" | "manage";
   sharedExpiresAt?: string;
   ownerUsername?: string;
+  /** A read-only copy of a host shared with the linked account. */
+  sharedCopy?: boolean;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly?: boolean;
 
   /** Enabled plugins' host-scope settings, keyed by plugin id. Secrets redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
@@ -250,6 +254,8 @@ export interface HostData {
   rdpAuthType?: "direct" | "credential" | "none" | null;
   vncAuthType?: "direct" | "credential" | null;
   telnetAuthType?: "direct" | "credential" | null;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly?: boolean;
 }
 
 export type SSHHost = Host;
@@ -263,6 +269,8 @@ export interface SSHFolder {
   icon?: string;
   credentialId?: number | null;
   sortOrder?: number | null;
+  /** Desktop only: the folder and its hosts stay on this device. */
+  localOnly?: boolean;
   createdAt: string;
   updatedAt: string;
 }

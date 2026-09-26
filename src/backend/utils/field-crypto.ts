@@ -130,6 +130,13 @@ class FieldCrypto {
     return decrypted;
   }
 
+  /** The encrypted fields of a table, as property names. */
+  static fieldsFor(tableName: string): string[] {
+    const fields =
+      this.ENCRYPTED_FIELDS[tableName as keyof typeof this.ENCRYPTED_FIELDS];
+    return fields ? [...fields] : [];
+  }
+
   static shouldEncryptField(tableName: string, fieldName: string): boolean {
     const fields =
       this.ENCRYPTED_FIELDS[tableName as keyof typeof this.ENCRYPTED_FIELDS];

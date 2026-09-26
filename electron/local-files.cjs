@@ -10,8 +10,8 @@
 // Trust boundary: the renderer never supplies a URL or headers. It names an
 // origin ("local" | "remote") and a route from a fixed allowlist; the main
 // process resolves the actual Termix backend URL and attaches credentials
-// itself (session cookies for the embedded backend, the stored Remote Sync JWT
-// for the remote server). Nothing here can be pointed at another host.
+// itself (session cookies for the embedded backend, the linked server's
+// session). Nothing here can be pointed at another host.
 
 const fs = require("fs");
 const fsp = require("fs/promises");
@@ -344,12 +344,11 @@ function normalizeHttpBase(candidate, what) {
 }
 
 // Resolves where a transfer may go. Only the two file-manager streaming
-// routes are reachable, and only on the embedded backend or the configured
-// Remote Sync server; credentials come from the main process, not the caller.
+// routes are reachable, and only on the embedded backend or the linked
+// server; credentials come from the main process, not the caller.
 function createTargetResolver({
   localBaseUrl = DEFAULT_LOCAL_FILE_MANAGER_BASE,
-  getRemoteSyncConfig,
-  getRemoteSyncJwt,
+  getLinkedServer,
 }) {
   return function resolveTransferTarget({
     origin,
@@ -396,20 +395,13 @@ function createTargetResolver({
     }
 
     if (origin === "remote") {
-      const config =
-        typeof getRemoteSyncConfig === "function"
-          ? getRemoteSyncConfig()
-          : null;
-      if (!config || !config.serverUrl) {
-        throw new Error("Remote sync server is not configured");
+      const linked =
+        typeof getLinkedServer === "function" ? getLinkedServer() : null;
+      if (!linked || !linked.serverUrl) {
+        throw new Error("This device is not linked to a server");
       }
-      const base = normalizeHttpBase(
-        config.serverUrl,
-        "Remote sync server URL",
-      );
-      const jwt =
-        typeof getRemoteSyncJwt === "function" ? getRemoteSyncJwt() : null;
-      if (jwt) headers.Authorization = `Bearer ${jwt}`;
+      const base = normalizeHttpBase(linked.serverUrl, "Linked server URL");
+      if (linked.token) headers.Authorization = `Bearer ${linked.token}`;
       return { url: `${base}${FILE_MANAGER_API}${routePath}`, headers };
     }
 
@@ -880,8 +872,7 @@ function wrap(handler) {
 function createLocalFileHandlers({
   net,
   shell,
-  getRemoteSyncConfig,
-  getRemoteSyncJwt,
+  getLinkedServer,
   localBaseUrl,
   publishFs,
 }) {
@@ -890,8 +881,7 @@ function createLocalFileHandlers({
   }
   const resolveTransferTarget = createTargetResolver({
     localBaseUrl,
-    getRemoteSyncConfig,
-    getRemoteSyncJwt,
+    getLinkedServer,
   });
   const deps = {
     net,
@@ -1020,12 +1010,11 @@ function createLocalFileHandlers({
 function registerLocalFileHandlers({ ipcMain, shell }) {
   // Real Electron wiring; tests build the handlers directly instead.
   const { net } = require("electron");
-  const remoteSync = require("./remote-sync.cjs");
+  const { getLinkedServer } = require("./linked-server.cjs");
   const handlers = createLocalFileHandlers({
     net,
     shell,
-    getRemoteSyncConfig: remoteSync.getRemoteSyncConfig,
-    getRemoteSyncJwt: remoteSync.getRemoteSyncJwt,
+    getLinkedServer,
   });
   for (const [channel, handler] of Object.entries(handlers)) {
     ipcMain.handle(channel, handler);

@@ -6,6 +6,8 @@ import { FeaturesStep } from "./steps/FeaturesStep";
 import { WorkflowStep } from "./steps/WorkflowStep";
 import { SecurityStep } from "./steps/SecurityStep";
 import { DoneStep } from "./steps/DoneStep";
+import { DesktopSyncStep } from "./steps/DesktopSyncStep";
+import { isElectron } from "@/lib/electron";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OnboardingContext {}
@@ -34,6 +36,12 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     Component: WelcomeStep,
   },
   { id: "preset", titleKey: "onboarding.presetTitle", Component: PresetStep },
+  {
+    id: "desktop-sync",
+    titleKey: "onboarding.desktopTitle",
+    Component: DesktopSyncStep,
+    isRelevant: () => isElectron(),
+  },
   {
     id: "appearance",
     titleKey: "onboarding.appearanceTitle",

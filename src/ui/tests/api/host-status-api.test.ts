@@ -23,6 +23,13 @@ vi.mock("@/lib/connection-origin", () => ({
   resolveConnectionOrigin: resolveConnectionOriginMock,
 }));
 
+vi.mock("@/lib/linked-server", () => ({
+  getLinkedSession: async () => ({
+    serverUrl: "https://termix.example.test",
+    token: "t",
+  }),
+}));
+
 import {
   getAllServerStatuses,
   refreshServerPolling,
@@ -40,23 +47,17 @@ function hostsAndStatuses(hosts: unknown[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.electronAPI = {
-    invoke: vi.fn(async (channel: string) =>
-      channel === "get-remote-sync-config"
-        ? { serverUrl: "https://termix.example.test" }
-        : null,
-    ),
-  } as unknown as NonNullable<typeof window.electronAPI>;
+  // The server keys statuses by sync id; its own ids mean nothing here.
   remoteCoreApiMock.get.mockResolvedValue({
-    data: { 2: { status: "reachable" } },
+    data: { "sync-2": { status: "reachable" }, "sync-9": { status: "x" } },
   });
 });
 
 describe("status check origin routing", () => {
   it("only asks the embedded backend to poll local-origin hosts", async () => {
     hostsAndStatuses([
-      { id: 1, connectionOrigin: "local" },
-      { id: 2, connectionOrigin: "remote" },
+      { id: 1, connectionOrigin: "local", syncId: "sync-1" },
+      { id: 2, connectionOrigin: "remote", syncId: "sync-2" },
     ]);
     resolveConnectionOriginMock.mockImplementation(async (host) =>
       host.connectionOrigin === "local" ? "local" : "remote",
@@ -73,7 +74,7 @@ describe("status check origin routing", () => {
       __silentRetry: true,
     });
     expect(remoteCoreApiMock.get).toHaveBeenCalledWith(
-      "/host/status",
+      "/sync/v2/host-status",
       expect.objectContaining({ __silentRetry: true }),
     );
   });

@@ -61,6 +61,7 @@ describe("RAIL_ITEMS", () => {
       "ssh-tools",
       "macros",
       "split-screen",
+      "sync",
     ]);
   });
 

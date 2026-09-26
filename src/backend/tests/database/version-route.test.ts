@@ -27,7 +27,7 @@ async function invoke(fetchGitHubAPI: ReturnType<typeof vi.fn>) {
       compilerOptions: { target: ts.ScriptTarget.ES2022 },
     }).outputText,
     {
-      process: { env: { VERSION: "2.7.1" } },
+      getLocalVersion: () => "2.7.1",
       databaseLogger: { warn: vi.fn(), error: vi.fn() },
       fetchGitHubAPI,
       REPO_OWNER: "Termix-SSH",

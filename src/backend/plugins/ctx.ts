@@ -488,16 +488,6 @@ export function createPluginContext(
         const dispose = syncRegistry.registerEntity(pluginId, entity);
         handle.bag.add(dispose, `sync entity ${entity.type}`);
       },
-      recordTombstone: async (userId, entityType, syncId) => {
-        if (!syncId) return;
-        const { createCurrentSyncTombstoneRepository } =
-          await import("../database/repositories/factory.js");
-        await createCurrentSyncTombstoneRepository().record(
-          userId,
-          entityType,
-          syncId,
-        );
-      },
     },
 
     kv: {

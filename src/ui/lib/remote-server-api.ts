@@ -1,97 +1,34 @@
 import type { AxiosInstance } from "axios";
 import { getRemoteCoreApi } from "@/main-axios";
-import { isElectron } from "@/lib/electron";
-import type { SSHHost } from "@/types/index";
+import { getLinkedSession } from "@/lib/linked-server";
 
-export function markRemoteSharedHosts(hosts: SSHHost[]): SSHHost[] {
-  return hosts
-    .filter((host) => host.isShared)
-    .map((host) => ({
-      ...host,
-      // Local SQLite ids are positive. Negative ids keep remote-only shared
-      // rows distinct while syncId remains the delegated backend identity.
-      id: -Math.abs(host.id),
-    }));
+/**
+ * Hosts shared with a linked account arrive through sync as read-only local
+ * copies that already carry the auth the owner shared, so a connection needs
+ * nothing extra. Kept for plugins that still call it.
+ */
+export async function hydrateLocalSharedHostAuth<T>(host: T): Promise<T> {
+  return host;
 }
 
-export interface SharedHostConnectionAuth {
-  username?: string | null;
-  authType?: string | null;
-  password?: string | null;
-  key?: string | null;
-  keyPassword?: string | null;
-  keyType?: string | null;
-}
-
-async function getRemoteSharedHostConnectionAuth(
-  localHostId: number,
-): Promise<SharedHostConnectionAuth> {
-  if (localHostId >= 0) {
-    throw new Error("Expected a remote shared host id");
-  }
-  const api = await getConnectedRemoteApi();
-  if (!api) throw new Error("Remote server is not connected");
-  const response = await api.get(
-    `/host/db/host/${Math.abs(localHostId)}/local-connection-auth`,
-  );
-  return response.data;
-}
-
-export async function hydrateLocalSharedHostAuth<
-  T extends {
-    id?: number;
-    isShared?: unknown;
-    syncId?: string | null;
-    credentialId?: number;
-    username: string;
-    authType?: string;
-    password?: string;
-    key?: string;
-    keyPassword?: string;
-    keyType?: string;
-  },
->(host: T): Promise<T> {
-  if (!host.isShared || typeof host.id !== "number" || host.id >= 0) {
-    return host;
-  }
-
-  const auth = await getRemoteSharedHostConnectionAuth(host.id);
-  return {
-    ...host,
-    // This row deliberately does not exist in the embedded database. Avoid
-    // asking the local backend to resolve its remote sync identity again.
-    syncId: null,
-    credentialId: undefined,
-    username: auth.username || host.username,
-    authType: auth.authType || host.authType,
-    password: auth.password || undefined,
-    key: auth.key || undefined,
-    keyPassword: auth.keyPassword || undefined,
-    keyType: auth.keyType || undefined,
-  };
-}
-
+/** The linked server's core API, or null when this desktop is not linked. */
 export async function getConnectedRemoteApi(): Promise<AxiosInstance | null> {
-  if (!isElectron()) return null;
-  try {
-    const config = (await window.electronAPI?.invoke?.(
-      "get-remote-sync-config",
-    )) as { serverUrl?: string } | null;
-    return config?.serverUrl ? getRemoteCoreApi() : null;
-  } catch {
-    return null;
-  }
+  return (await getLinkedSession()) ? getRemoteCoreApi() : null;
 }
 
+/** The linked server's own id for a host, found by its sync id. */
 export async function resolveRemoteHostId(
   syncId: string | null | undefined,
 ): Promise<number | null> {
   if (!syncId) return null;
   const api = await getConnectedRemoteApi();
   if (!api) return null;
-  const response = await api.get("/sync/hosts");
-  const host = (response.data?.rows ?? []).find(
-    (row: { syncId?: string }) => row.syncId === syncId,
-  );
-  return typeof host?.id === "number" ? host.id : null;
+  try {
+    const response = await api.get(
+      `/sync/v2/hosts/${encodeURIComponent(syncId)}`,
+    );
+    return typeof response.data?.id === "number" ? response.data.id : null;
+  } catch {
+    return null;
+  }
 }

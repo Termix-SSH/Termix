@@ -22,8 +22,8 @@ vi.mock("react-i18next", () => ({
 
 // Panel-level dependencies that are irrelevant to AccordionSection but would
 // otherwise be pulled in by importing the module.
-vi.mock("@/settings/RemoteSyncPanel.tsx", () => ({
-  RemoteSyncPanel: () => null,
+vi.mock("@/plugin-host/shell-bridge", () => ({
+  shell: { openRailView: vi.fn() },
 }));
 vi.mock("@/i18n/i18n", () => ({
   changeAppLanguage: vi.fn(),

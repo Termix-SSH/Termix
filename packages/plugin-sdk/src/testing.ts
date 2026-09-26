@@ -260,8 +260,6 @@ export interface FakePluginContext {
   tables: PluginTableDefinition[];
   /** Sync entities registered through ctx.sync.registerEntity, in order. */
   syncEntities: SyncEntityRegistration[];
-  /** Tombstones recorded through ctx.sync.recordTombstone, in order. */
-  tombstones: Array<{ userId: string; entityType: string; syncId: string }>;
   /**
    * WebSocket routes registered through ctx.ws, in order, with the handler
    * and options, so a test can hand a route a fake socket.
@@ -412,11 +410,6 @@ export function createFakeContext(
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
-  const tombstones: Array<{
-    userId: string;
-    entityType: string;
-    syncId: string;
-  }> = [];
   const wsRoutes: FakeWsRoute[] = [];
   const httpRouters: Array<PluginRouterOptions | undefined> = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
@@ -625,10 +618,6 @@ export function createFakeContext(
     sync: {
       registerEntity: (entity) => {
         syncEntities.push(entity);
-      },
-      recordTombstone: async (userId, entityType, syncId) => {
-        if (!syncId) return;
-        tombstones.push({ userId, entityType, syncId });
       },
     },
 
@@ -1241,7 +1230,6 @@ export function createFakeContext(
     kv,
     tables,
     syncEntities,
-    tombstones,
     wsRoutes,
     httpRouters,
     settings,

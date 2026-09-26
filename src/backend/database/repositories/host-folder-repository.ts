@@ -85,6 +85,28 @@ export class HostFolderRepository {
       .where(eq(sshFolders.userId, userId));
   }
 
+  /**
+   * Keeps a folder, its subfolders and every host in them on this device
+   * only, or lets them sync again.
+   */
+  async setLocalOnly(
+    userId: string,
+    folderName: string,
+    localOnly: boolean,
+  ): Promise<void> {
+    const inFolder = (col: SQLiteColumn) =>
+      or(eq(col, folderName), like(col, `${folderName} / %`));
+    await this.context.drizzle
+      .update(sshFolders)
+      .set({ localOnly })
+      .where(and(eq(sshFolders.userId, userId), inFolder(sshFolders.name)));
+    await this.context.drizzle
+      .update(hosts)
+      .set({ localOnly, updatedAt: new Date().toISOString() })
+      .where(and(eq(hosts.userId, userId), inFolder(hosts.folder)));
+    await this.afterWrite();
+  }
+
   async upsertMetadata(
     userId: string,
     name: string,

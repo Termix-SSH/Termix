@@ -1,5 +1,6 @@
 import { isElectron } from "@/lib/electron";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
+import { getLinkedSession } from "@/lib/linked-server";
 
 export type ConnectionOrigin = "local" | "remote";
 
@@ -10,7 +11,7 @@ interface OriginResolvableHost {
 /**
  * Resolves which backend a given host's interactive connection (SSH, Docker
  * console, RDP/VNC/Telnet) should dial: the desktop app's embedded local
- * backend, or a connected remote sync server. A plugin whose connection is
+ * backend, or the server it is linked to. A plugin whose connection is
  * always local regardless of this setting (serial: the hardware is
  * physically attached to this desktop machine) skips this helper entirely
  * and calls app.wsUrl() without an origin option, which defaults to "local".
@@ -55,26 +56,14 @@ export interface RemoteConnectionTarget {
 }
 
 async function getRemoteConnectionTarget(): Promise<RemoteConnectionTarget | null> {
-  try {
-    const [config, jwt] = await Promise.all([
-      window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
-        serverUrl?: string;
-      } | null>,
-      window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
-        string | null
-      >,
-    ]);
-    if (!config?.serverUrl) return null;
-    return { serverUrl: config.serverUrl, jwt: jwt ?? null };
-  } catch {
-    return null;
-  }
+  const linked = await getLinkedSession();
+  return linked ? { serverUrl: linked.serverUrl, jwt: linked.token } : null;
 }
 
 /**
  * Builds the base WebSocket URL for an interactive connection protocol,
- * given a resolved origin. Returns null when origin is "remote" but no
- * remote server is connected -- callers must show a blocking message
+ * given a resolved origin. Returns null when origin is "remote" but this
+ * desktop is not linked to a server -- callers must show a blocking message
  * rather than attempting to connect.
  */
 export interface WebSocketConnectionTarget {

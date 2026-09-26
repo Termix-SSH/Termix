@@ -1,4 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+
+const getLinkedSession = vi.hoisted(() => vi.fn(async () => null));
+vi.mock("@/lib/linked-server", () => ({ getLinkedSession }));
 import {
   buildOriginWsUrl,
   resolveConnectionOrigin,
@@ -166,15 +169,10 @@ describe("buildOriginWsUrl", () => {
   });
 
   it("does not duplicate the Guacamole token on remote connections", async () => {
-    win.electronAPI = {
-      invoke: async (channel: string) => {
-        if (channel === "get-remote-sync-config") {
-          return { serverUrl: "https://termix.example" };
-        }
-        if (channel === "get-remote-sync-jwt") return "remote-jwt";
-        return null;
-      },
-    };
+    getLinkedSession.mockResolvedValueOnce({
+      serverUrl: "https://termix.example",
+      token: "remote-jwt",
+    } as never);
 
     const target = await buildOriginWsUrl({
       origin: "remote",

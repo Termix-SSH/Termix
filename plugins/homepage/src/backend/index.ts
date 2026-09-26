@@ -26,7 +26,19 @@ export async function activate(ctx: PluginContext) {
   registerHomepageRoutes(router, repo, ctx);
   registerOutboundRoutes(router, ctx);
 
-  ctx.sync.registerEntity({ type: "homepageItems", table: items, order: 80 });
+  ctx.sync.registerEntity({
+    type: "homepageItems",
+    table: items,
+    order: 80,
+    // A tile inside a folder points at the folder's row.
+    references: [
+      {
+        field: "folderId",
+        syncField: "folderSyncId",
+        entityType: "homepageItems",
+      },
+    ],
+  });
   ctx.sync.registerEntity({
     type: "dashboardServiceLinks",
     table: serviceLinks,

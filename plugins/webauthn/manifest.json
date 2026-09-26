@@ -27,5 +27,6 @@
     }
   },
   "locales": "locales",
-  "platforms": ["linux", "win32", "darwin"]
+  "platforms": ["linux", "win32", "darwin"],
+  "desktop": "server"
 }

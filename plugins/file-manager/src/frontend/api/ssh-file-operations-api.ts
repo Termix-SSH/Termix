@@ -44,7 +44,7 @@ type ConnectErrorResponse = {
 };
 
 /**
- * The interactive-auth branches /ssh/connect can take before a session exists.
+ * The interactive-auth branches /connect can take before a session exists.
  * Callers switch on these, so they cannot stay behind Record<string, unknown>.
  */
 export interface SSHConnectResult {
@@ -106,7 +106,7 @@ export async function connectSSH(
 ): Promise<SSHConnectResult> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/connect",
+      "/connect",
       { sessionId, ...config },
       { timeout: 120000 },
     );
@@ -156,7 +156,7 @@ export async function disconnectSSH(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/disconnect",
+      "/disconnect",
       { sessionId },
     );
     return response.data;
@@ -173,7 +173,7 @@ export async function verifySSHTOTP(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/connect-totp",
+      "/connect-totp",
       { sessionId, totpCode },
     );
     return response.data;
@@ -187,7 +187,7 @@ export async function verifySSHBrowserSignIn(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/connect-browser-sign-in",
+      "/connect-browser-sign-in",
       { sessionId },
     );
     return response.data;
@@ -201,7 +201,7 @@ export async function getSSHStatus(
 ): Promise<{ connected: boolean }> {
   try {
     const response = await getFileManagerApiForSession(sessionId).get(
-      "/ssh/status",
+      "/status",
       { params: { sessionId } },
     );
     return response.data;
@@ -215,7 +215,7 @@ export async function keepSSHAlive(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/keepalive",
+      "/keepalive",
       { sessionId },
     );
     return response.data;
@@ -235,7 +235,7 @@ export async function listSSHFiles(
     async () => {
       try {
         const response = await getFileManagerApiForSession(sessionId).get(
-          "/ssh/listFiles",
+          "/listFiles",
           { params: { sessionId, path } },
         );
         return response.data || { files: [], path };
@@ -253,7 +253,7 @@ export async function identifySSHSymlink(
 ): Promise<{ path: string; target: string; type: "directory" | "file" }> {
   try {
     const response = await getFileManagerApiForSession(sessionId).get(
-      "/ssh/identifySymlink",
+      "/identifySymlink",
       { params: { sessionId, path } },
     );
     return response.data;
@@ -268,7 +268,7 @@ export async function resolveSSHPath(
 ): Promise<string> {
   try {
     const response = await getFileManagerApiForSession(sessionId).get(
-      "/ssh/resolvePath",
+      "/resolvePath",
       { params: { sessionId, path } },
     );
     return response.data?.resolvedPath || path;
@@ -288,7 +288,7 @@ export async function readSSHFile(
     async () => {
       try {
         const response = await getFileManagerApiForSession(sessionId).get(
-          "/ssh/readFile",
+          "/readFile",
           { params: { sessionId, path } },
         );
         return response.data;
@@ -326,7 +326,7 @@ export async function writeSSHFile(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/writeFile",
+      "/writeFile",
       { sessionId, path, content, hostId, userId },
     );
 
@@ -385,7 +385,7 @@ export async function uploadSSHFile(
         const chunkBlob = file.slice(start, end);
 
         const response = await getFileManagerApiForSession(sessionId).post(
-          "/ssh/uploadFileChunk",
+          "/uploadFileChunk",
           chunkBlob,
           {
             params: {
@@ -429,7 +429,7 @@ export async function uploadSSHFile(
     form.append("file", file, fileName);
 
     const response = await getFileManagerApiForSession(sessionId).postForm(
-      "/ssh/uploadFileStream",
+      "/uploadFileStream",
       form,
       {
         timeout: 0,
@@ -470,7 +470,7 @@ export async function downloadSSHFile(
 ): Promise<DownloadedSSHFile> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/downloadFile",
+      "/downloadFile",
       {
         sessionId,
         path: filePath,
@@ -496,7 +496,7 @@ export async function downloadSSHFileStream(
   onProgress?: (event: DownloadProgressEvent) => void,
 ): Promise<void> {
   const response = await getFileManagerApiForSession(sessionId).post(
-    "/ssh/downloadFileStream",
+    "/downloadFileStream",
     { sessionId, path: filePath },
     {
       responseType: "blob",
@@ -521,7 +521,7 @@ export async function createSSHFile(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/createFile",
+      "/createFile",
       { sessionId, path, fileName, content, hostId, userId },
     );
     return response.data;
@@ -539,7 +539,7 @@ export async function createSSHFolder(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/createFolder",
+      "/createFolder",
       { sessionId, path, folderName, hostId, userId },
     );
     return response.data;
@@ -558,7 +558,7 @@ export async function deleteSSHItem(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).delete(
-      "/ssh/deleteItem",
+      "/deleteItem",
       {
         data: {
           sessionId,
@@ -599,7 +599,7 @@ export async function getSSHTrash(sessionId: string): Promise<{
 }> {
   try {
     const response = await getFileManagerApiForSession(sessionId).get(
-      "/ssh/trash",
+      "/trash",
       { params: { sessionId } },
     );
     return response.data;
@@ -611,7 +611,7 @@ export async function getSSHTrash(sessionId: string): Promise<{
 export async function restoreSSHTrashItem(sessionId: string, id: string) {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      `/ssh/trash/${encodeURIComponent(id)}/restore`,
+      `/trash/${encodeURIComponent(id)}/restore`,
       { sessionId },
     );
     return response.data;
@@ -626,7 +626,7 @@ export async function permanentlyDeleteSSHTrashItem(
 ) {
   try {
     await getFileManagerApiForSession(sessionId).delete(
-      `/ssh/trash/${encodeURIComponent(id)}`,
+      `/trash/${encodeURIComponent(id)}`,
       { data: { sessionId } },
     );
   } catch (error) {
@@ -636,7 +636,7 @@ export async function permanentlyDeleteSSHTrashItem(
 
 export async function emptySSHTrash(sessionId: string) {
   try {
-    await getFileManagerApiForSession(sessionId).delete("/ssh/trash", {
+    await getFileManagerApiForSession(sessionId).delete("/trash", {
       data: { sessionId },
     });
   } catch (error) {
@@ -649,7 +649,7 @@ export async function updateSSHTrashRetention(
   retentionDays: number,
 ) {
   try {
-    await getFileManagerApiForSession(sessionId).put("/ssh/trash-retention", {
+    await getFileManagerApiForSession(sessionId).put("/trash-retention", {
       retentionDays,
     });
   } catch (error) {
@@ -687,7 +687,7 @@ export async function copySSHItem(
 ): Promise<CopySSHItemResult> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/copyItem",
+      "/copyItem",
       {
         sessionId,
         sourcePath,
@@ -715,7 +715,7 @@ export async function renameSSHItem(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).put(
-      "/ssh/renameItem",
+      "/renameItem",
       { sessionId, oldPath, newName, hostId, userId },
     );
     invalidateCachedFileContent(sessionId, oldPath);
@@ -738,7 +738,7 @@ export async function moveSSHItem(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).put(
-      "/ssh/moveItem",
+      "/moveItem",
       {
         sessionId,
         oldPath,
@@ -777,7 +777,7 @@ export async function changeSSHPermissions(
     });
 
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/changePermissions",
+      "/changePermissions",
       { sessionId, path, permissions, hostId, userId },
     );
 
@@ -819,7 +819,7 @@ export async function extractSSHArchive(
     });
 
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/extractArchive",
+      "/extractArchive",
       { sessionId, archivePath, extractPath, hostId, userId },
     );
 
@@ -863,7 +863,7 @@ export async function compressSSHFiles(
     });
 
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/compressFiles",
+      "/compressFiles",
       {
         sessionId,
         paths,

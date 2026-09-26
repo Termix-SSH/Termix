@@ -133,6 +133,7 @@ export {
   hydrateLocalSharedHostAuth,
   resolveRemoteHostId,
 } from "@/lib/remote-server-api";
+export { remoteServerUrl as linkedServerUrl } from "@/plugin-host/desktop";
 export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 
 // Dashboard reads. The calls a plugin makes on the user's behalf (recent

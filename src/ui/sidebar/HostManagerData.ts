@@ -78,6 +78,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     pin: h.pin ?? false,
     sortOrder: h.sortOrder ?? null,
     connectionOrigin: h.connectionOrigin ?? null,
+    localOnly: !!h.localOnly,
+    sharedCopy: !!h.sharedCopy,
     enableSsh: h.enableSsh != null ? h.enableSsh : isSshHost,
     sshPort:
       h.sshPort ??

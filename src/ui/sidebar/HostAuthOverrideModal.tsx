@@ -45,7 +45,9 @@ export function HostAuthOverrideModal({
   const ownerAuthShared =
     overrideState?.ownerAuthShared ??
     (protocol === "ssh" ? !!host.shareSshAuth : false);
-  const remoteShared = !!host.isShared && Number(host.id) < 0;
+  // A shared host's copy on a linked desktop: its override lives on the
+  // server, against the server's own credentials.
+  const sharedCopySyncId = host.sharedCopy ? (host.syncId ?? null) : null;
 
   useEffect(() => {
     if (!open) return;
@@ -53,18 +55,16 @@ export function HostAuthOverrideModal({
     setLoading(true);
     setLoadError(false);
 
-    const credentialsRequest = remoteShared
+    const credentialsRequest = sharedCopySyncId
       ? getConnectedRemoteApi().then((api) => {
-          if (!api) throw new Error("Remote server is not connected");
+          if (!api) throw new Error("The linked server is not reachable");
           return api.get("/credentials").then((response) => response.data);
         })
       : getCredentials();
 
     Promise.all([
       credentialsRequest,
-      remoteShared
-        ? getHostAuthOverride(Number(host.id), protocol, true)
-        : getHostAuthOverride(Number(host.id), protocol),
+      getHostAuthOverride(Number(host.id), protocol, sharedCopySyncId),
     ])
       .then(([credentialResult, overrideResult]) => {
         if (cancelled) return;
@@ -87,22 +87,18 @@ export function HostAuthOverrideModal({
     return () => {
       cancelled = true;
     };
-  }, [host.id, open, protocol, remoteShared]);
+  }, [host.id, open, protocol, sharedCopySyncId]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const credentialId = selectedId ? Number(selectedId) : null;
-      if (remoteShared) {
-        await setHostAuthOverride(
-          Number(host.id),
-          protocol,
-          credentialId,
-          true,
-        );
-      } else {
-        await setHostAuthOverride(Number(host.id), protocol, credentialId);
-      }
+      await setHostAuthOverride(
+        Number(host.id),
+        protocol,
+        credentialId,
+        sharedCopySyncId,
+      );
       toast.success(
         credentialId === null
           ? t(

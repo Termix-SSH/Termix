@@ -91,6 +91,15 @@ export class PluginLoader {
     return this.plugins.get(pluginId);
   }
 
+  /** Drops a stopped plugin from the list, so a new copy can load in its place. */
+  forget(pluginId: string): void {
+    const plugin = this.plugins.get(pluginId);
+    if (plugin?.state === "active" || plugin?.state === "activating") {
+      throw new Error(`Plugin ${pluginId} is still running`);
+    }
+    this.plugins.delete(pluginId);
+  }
+
   /** Reads and validates one plugin directory. Starts nothing. */
   async load(dir: string, source: PluginSource): Promise<LoadedPlugin> {
     const manifestPath = getPluginManifestPath(dir);

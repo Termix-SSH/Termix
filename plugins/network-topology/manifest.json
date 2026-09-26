@@ -45,7 +45,8 @@
         "descriptionKey": "permissions.use.description",
         "defaultRoles": ["admin", "user"]
       }
-    ]
+    ],
+    "syncEntities": ["networkTopology"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

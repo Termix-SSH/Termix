@@ -44,7 +44,6 @@ const UNGATED: Record<string, string> = {
   "events.emit": "namespace check: plugin.<id>.* only without events:core",
   "events.on": "namespace check: plugin.* only without events:core",
   "sync.registerEntity": "adds the plugin's own table to remote sync",
-  "sync.recordTombstone": "records a delete of the plugin's own row",
   "registry.provide": "the plugin's own registry key",
   "registry.consume": "reads what another plugin chose to publish",
   "registry.revoke": "removes the plugin's own registry key",

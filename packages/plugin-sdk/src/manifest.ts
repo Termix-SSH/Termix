@@ -337,7 +337,26 @@ export interface PluginContributions {
     "simple" | "balanced" | "advanced",
     Record<string, unknown>
   >;
+  /**
+   * Wire names of the sync entities this plugin registers with
+   * ctx.sync.registerEntity, so a server can name them while the plugin is
+   * off and a desktop can list them in its sync settings.
+   */
+  syncEntities?: string[];
 }
+
+/**
+ * How a desktop linked to a server treats this plugin.
+ * - "mirror": follows the server, installed and switched on or off with it.
+ * - "local": each desktop decides for itself (a serial port is local).
+ * - "server": only makes sense on a server, never runs on a linked desktop.
+ */
+export type PluginDesktopMode = "mirror" | "local" | "server";
+export const PLUGIN_DESKTOP_MODES: readonly PluginDesktopMode[] = [
+  "mirror",
+  "local",
+  "server",
+];
 
 export interface PluginHttpContribution {
   /**
@@ -405,6 +424,8 @@ export interface PluginManifest {
    * dependencies".
    */
   nativeDependencies?: string[];
+  /** How a linked desktop treats this plugin. Defaults to "mirror". */
+  desktop?: PluginDesktopMode;
 }
 
 export const DEFAULT_BACKEND_ENTRY = "dist/backend.js";
@@ -439,6 +460,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   "locales",
   "platforms",
   "nativeDependencies",
+  "desktop",
 ]);
 
 const ALLOWED_CONTRIBUTES = new Set([
@@ -455,6 +477,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "http",
   "uiPresets",
   "auth",
+  "syncEntities",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -587,6 +610,14 @@ export function validateManifest(manifest: unknown): string[] {
   validateCapabilities(m.capabilities, errors);
   validatePlatforms(m.platforms, errors);
   validateNativeDependencies(m.nativeDependencies, errors);
+  if (
+    m.desktop !== undefined &&
+    !PLUGIN_DESKTOP_MODES.includes(m.desktop as PluginDesktopMode)
+  ) {
+    errors.push(
+      `Field "desktop" must be one of: ${PLUGIN_DESKTOP_MODES.join(", ")}`,
+    );
+  }
   validateDependencyMap(m.dependencies, "dependencies", errors);
   validateDependencyMap(m.optionalDependencies, "optionalDependencies", errors);
   validateProvides(m.provides, errors);
@@ -761,6 +792,23 @@ function validateProvides(provides: unknown, errors: string[]): void {
 
 const PROVIDER_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
 
+function validateSyncEntities(value: unknown, errors: string[]) {
+  const where = "contributes.syncEntities";
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${where} must be a non-empty array`);
+    return;
+  }
+  const seen = new Set<string>();
+  for (const name of value) {
+    if (typeof name !== "string" || !/^[a-zA-Z][a-zA-Z0-9]*$/.test(name)) {
+      errors.push(`${where} entries must be letters and digits`);
+      continue;
+    }
+    if (seen.has(name)) errors.push(`${where} duplicates "${name}"`);
+    seen.add(name);
+  }
+}
+
 function validateNameList(value: unknown, where: string, errors: string[]) {
   if (!Array.isArray(value) || value.length === 0) {
     errors.push(`${where} must be a non-empty array`);
@@ -887,6 +935,9 @@ function validateContributes(
     if (contributes.guest !== true) {
       errors.push('Field "contributes.guestViews" needs "contributes.guest"');
     }
+  }
+  if (contributes.syncEntities !== undefined) {
+    validateSyncEntities(contributes.syncEntities, errors);
   }
   validatePermissions(contributes.permissions, pluginId, errors);
   validateActions(contributes.actions, errors);

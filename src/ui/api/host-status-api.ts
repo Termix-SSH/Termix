@@ -8,21 +8,11 @@ import {
 import type { ServerStatus } from "@/main-axios";
 import { getCachedServerStatuses } from "@/lib/hosts-request-cache";
 import { resolveConnectionOrigin } from "@/lib/connection-origin";
+import { getLinkedSession } from "@/lib/linked-server";
 import type { SSHHost } from "@/types/index";
 
-// Core's host status checks (/host/status). On the desktop app the aggregate
-// read is merged across the local backend and the connected remote server.
-async function isRemoteSyncConnected(): Promise<boolean> {
-  if (!isElectron()) return false;
-  try {
-    const config = (await window.electronAPI?.invoke?.(
-      "get-remote-sync-config",
-    )) as { serverUrl?: string } | null;
-    return !!config?.serverUrl;
-  } catch {
-    return false;
-  }
-}
+// Core's host status checks (/host/status). On a linked desktop, hosts that
+// connect through the server take their status from it, matched by sync id.
 
 // HOST STATUS
 // ============================================================================
@@ -78,6 +68,7 @@ export async function getAllServerStatuses(): Promise<
     let lastError: unknown = null;
     let localStatuses: Record<number, ServerStatus> = {};
     let localHostIds: number[] | null = null;
+    let remoteHostsBySyncId: Map<string, number> | null = null;
 
     if (isElectron()) {
       try {
@@ -85,11 +76,21 @@ export async function getAllServerStatuses(): Promise<
         const defaultOrigin = await resolveConnectionOrigin({
           connectionOrigin: null,
         });
-        localHostIds = (response.data || [])
+        const hosts = response.data || [];
+        localHostIds = hosts
           .filter(
             (host) => (host.connectionOrigin ?? defaultOrigin) === "local",
           )
           .map((host) => host.id);
+        remoteHostsBySyncId = new Map(
+          hosts
+            .filter(
+              (host) =>
+                (host.connectionOrigin ?? defaultOrigin) === "remote" &&
+                !!host.syncId,
+            )
+            .map((host) => [host.syncId as string, host.id]),
+        );
       } catch {
         // A host-list failure must not start local probes for hosts whose
         // configured origin may be remote.
@@ -132,15 +133,25 @@ export async function getAllServerStatuses(): Promise<
       return {};
     }
 
-    if (await isRemoteSyncConnected()) {
+    if (remoteHostsBySyncId?.size && (await getLinkedSession())) {
       try {
-        const remoteResult = await getRemoteCoreApi().get("/host/status", {
-          timeout: 8000,
-          __silentRetry: true,
-        } as AxiosRequestConfig & { __silentRetry?: boolean });
-        return { ...localStatuses, ...(remoteResult.data || {}) };
+        const remoteResult = await getRemoteCoreApi().get(
+          "/sync/v2/host-status",
+          {
+            timeout: 8000,
+            __silentRetry: true,
+          } as AxiosRequestConfig & { __silentRetry?: boolean },
+        );
+        const merged = { ...localStatuses };
+        for (const [syncId, status] of Object.entries(
+          (remoteResult.data || {}) as Record<string, ServerStatus>,
+        )) {
+          const localId = remoteHostsBySyncId.get(syncId);
+          if (localId !== undefined) merged[localId] = status;
+        }
+        return merged;
       } catch {
-        // remote unreachable this tick -- fall back to local-only statuses
+        // The server is unreachable this tick; local statuses still stand.
       }
     }
 

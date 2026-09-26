@@ -44,8 +44,10 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
   TRANSFER_ROUTES: Record<string, string>;
   createTargetResolver: (deps: {
     localBaseUrl?: string;
-    getRemoteSyncConfig?: () => { serverUrl?: string } | null;
-    getRemoteSyncJwt?: () => string | null;
+    getLinkedServer?: () => {
+      serverUrl?: string;
+      token?: string | null;
+    } | null;
   }) => (req: { origin?: unknown; route?: unknown; deviceId?: unknown }) => {
     url: string;
     headers: Record<string, string>;
@@ -53,8 +55,10 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
   createLocalFileHandlers: (deps: {
     net: unknown;
     shell: unknown;
-    getRemoteSyncConfig?: () => { serverUrl?: string } | null;
-    getRemoteSyncJwt?: () => string | null;
+    getLinkedServer?: () => {
+      serverUrl?: string;
+      token?: string | null;
+    } | null;
     localBaseUrl?: string;
     publishFs?: PublishFs;
   }) => Record<
@@ -161,8 +165,10 @@ function startBackend(
 describe("local-files transfer target resolution", () => {
   const resolve = localFiles.createTargetResolver({
     localBaseUrl: "http://127.0.0.1:30001/plugin-api/file-manager",
-    getRemoteSyncConfig: () => ({ serverUrl: "https://termix.example.com/" }),
-    getRemoteSyncJwt: () => "remote-jwt",
+    getLinkedServer: () => ({
+      serverUrl: "https://termix.example.com/",
+      token: "remote-jwt",
+    }),
   });
 
   it("only reaches the two file-manager streaming routes on the local backend", () => {
@@ -175,7 +181,7 @@ describe("local-files transfer target resolution", () => {
     );
   });
 
-  it("derives the remote target from the configured sync server and attaches its JWT itself", () => {
+  it("derives the remote target from the linked server and attaches its session itself", () => {
     const target = resolve({ origin: "remote", route: "downloadFileStream" });
     expect(target.url).toBe(
       "https://termix.example.com/plugin-api/file-manager/downloadFileStream",
@@ -196,15 +202,15 @@ describe("local-files transfer target resolution", () => {
     expect(() => resolve({})).toThrow(/Unknown transfer route/);
   });
 
-  it("refuses a remote origin when no sync server is configured or it is not http(s)", () => {
+  it("refuses a remote origin when the device is not linked or the server is not http(s)", () => {
     const unconfigured = localFiles.createTargetResolver({
-      getRemoteSyncConfig: () => null,
+      getLinkedServer: () => null,
     });
     expect(() =>
       unconfigured({ origin: "remote", route: "uploadFileStream" }),
-    ).toThrow(/not configured/);
+    ).toThrow(/not linked/);
     const bogus = localFiles.createTargetResolver({
-      getRemoteSyncConfig: () => ({ serverUrl: "file:///etc/passwd" }),
+      getLinkedServer: () => ({ serverUrl: "file:///etc/passwd" }),
     });
     expect(() =>
       bogus({ origin: "remote", route: "uploadFileStream" }),
@@ -290,8 +296,7 @@ describe("local-files download boundary", () => {
       net: fakeNet,
       shell: {},
       localBaseUrl: backend.url,
-      getRemoteSyncConfig: () => null,
-      getRemoteSyncJwt: () => null,
+      getLinkedServer: () => null,
     });
   });
   afterAll(() => backend.close());

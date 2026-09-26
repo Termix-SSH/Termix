@@ -414,6 +414,20 @@
       "when": 1790370152568,
       "tag": "0058_boring_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "5",
+      "when": 1790393785782,
+      "tag": "0059_military_purple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "5",
+      "when": 1790393789429,
+      "tag": "0060_mean_gorgon",
+      "breakpoints": true
     }
   ]
 }

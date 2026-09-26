@@ -50,7 +50,7 @@ describe("chunked SSH file uploads", () => {
     expect(fileManagerApiMock.post).toHaveBeenCalledTimes(193);
     expect(fileManagerApiMock.post).toHaveBeenNthCalledWith(
       1,
-      "/ssh/uploadFileChunk",
+      "/uploadFileChunk",
       expect.any(Blob),
       {
         params: {
@@ -65,7 +65,7 @@ describe("chunked SSH file uploads", () => {
       },
     );
     expect(fileManagerApiMock.post).toHaveBeenLastCalledWith(
-      "/ssh/uploadFileChunk",
+      "/uploadFileChunk",
       expect.any(Blob),
       expect.objectContaining({
         params: expect.objectContaining({ offset: 1.5 * 1024 * 1024 * 1024 }),

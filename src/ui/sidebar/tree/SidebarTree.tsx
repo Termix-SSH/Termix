@@ -459,6 +459,7 @@ export function SidebarTree({
     color: string;
     icon: string;
     credentialId: number | null;
+    localOnly: boolean;
   }) {
     const existing = folderDialog?.folder;
     try {
@@ -476,6 +477,7 @@ export function SidebarTree({
           value.color,
           value.icon,
           value.credentialId,
+          value.localOnly,
         );
       } else {
         await updateFolderMetadata(
@@ -483,6 +485,7 @@ export function SidebarTree({
           value.color,
           value.icon,
           value.credentialId,
+          value.localOnly,
         );
       }
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
@@ -1346,6 +1349,7 @@ export function SidebarTree({
                 color: folderDialog.folder.color,
                 icon: folderDialog.folder.icon,
                 credentialId: folderDialog.folder.credentialId,
+                localOnly: folderDialog.folder.localOnly,
               }
             : undefined
         }

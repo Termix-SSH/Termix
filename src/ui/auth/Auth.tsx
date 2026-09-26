@@ -59,6 +59,7 @@ import {
   shouldTriggerSilentSignin,
 } from "./silent-signin";
 import { Select2 } from "@/components/select2";
+import { cn } from "@/lib/utils";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -97,6 +98,38 @@ const LANGUAGES = [
   { code: "uk", label: "Українська" },
   { code: "vi", label: "Tiếng Việt" },
 ];
+
+function LanguageRow({
+  label,
+  value,
+  onChange,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (code: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-center justify-between gap-4", className)}>
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+      <Select2
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        align="end"
+        contentClassName="w-56"
+        className="h-8 w-40 shrink-0 px-2.5 text-xs"
+      >
+        {LANGUAGES.map((lang) => (
+          <option key={lang.code} value={lang.code}>
+            {lang.label}
+          </option>
+        ))}
+      </Select2>
+    </div>
+  );
+}
 
 const STORAGE_KEY = "termix_auth";
 
@@ -1118,22 +1151,12 @@ export function Auth({ onLogin }: AuthProps) {
             </p>
             <p className="text-sm text-muted-foreground">{detail}</p>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {t("common.language")}
-            </span>
-            <select
-              value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <LanguageRow
+            label={t("common.language")}
+            value={language}
+            onChange={handleLanguageChange}
+            className="pt-2 border-t border-border"
+          />
         </div>
       </div>
     );
@@ -1176,22 +1199,12 @@ export function Auth({ onLogin }: AuthProps) {
           <Button onClick={() => window.location.reload()}>
             {t("common.refresh")}
           </Button>
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {t("common.language")}
-            </span>
-            <Select2
-              value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </Select2>
-          </div>
+          <LanguageRow
+            label={t("common.language")}
+            value={language}
+            onChange={handleLanguageChange}
+            className="pt-2 border-t border-border"
+          />
         </div>
       </div>
     );
@@ -1253,22 +1266,12 @@ export function Auth({ onLogin }: AuthProps) {
                     : "Retry local desktop session"}
                 </Button>
                 <Separator />
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.language")}
-                  </span>
-                  <Select2
-                    value={language}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </Select2>
-                </div>
+                <LanguageRow
+                  label={t("common.language")}
+                  value={language}
+                  onChange={handleLanguageChange}
+                  className="pt-1"
+                />
               </div>
             </div>
           </div>
@@ -1746,22 +1749,12 @@ export function Auth({ onLogin }: AuthProps) {
                     </>
                   ) : null}
                 </p>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.language")}
-                  </span>
-                  <Select2
-                    value={language}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </Select2>
-                </div>
+                <LanguageRow
+                  label={t("common.language")}
+                  value={language}
+                  onChange={handleLanguageChange}
+                  className="pt-1"
+                />
               </div>
             )}
           </div>

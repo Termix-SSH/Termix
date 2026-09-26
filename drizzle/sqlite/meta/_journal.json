@@ -386,6 +386,20 @@
       "when": 1790370151385,
       "tag": "0054_superb_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "6",
+      "when": 1790393783561,
+      "tag": "0055_shiny_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "6",
+      "when": 1790393787230,
+      "tag": "0056_rare_luckman",
+      "breakpoints": true
     }
   ]
 }

@@ -67,8 +67,10 @@ import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
 } from "../../utils/shared-host-auth-resolver.js";
+import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
 
 const router = express.Router();
+router.use(rejectSharedCopyWrites("host", /^\/db\/host\/(\d+)$/));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -199,6 +201,7 @@ router.post(
       socks5Password,
       socks5ProxyChain,
       connectionOrigin,
+      localOnly,
       portKnockSequence,
       overrideCredentialUsername,
       enableSsh,
@@ -311,6 +314,7 @@ router.post(
         connectionOrigin === "local" || connectionOrigin === "remote"
           ? connectionOrigin
           : null,
+      ...(typeof localOnly === "boolean" ? { localOnly } : {}),
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -795,6 +799,7 @@ router.put(
       socks5Password,
       socks5ProxyChain,
       connectionOrigin,
+      localOnly,
       portKnockSequence,
       overrideCredentialUsername,
       enableSsh,
@@ -908,6 +913,7 @@ router.put(
         connectionOrigin === "local" || connectionOrigin === "remote"
           ? connectionOrigin
           : null,
+      ...(typeof localOnly === "boolean" ? { localOnly } : {}),
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -1454,14 +1460,16 @@ router.get(
 
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
+          const transformed = transformHostResponse(row);
           const baseHost = {
-            ...transformHostResponse(row),
-            isShared: !!row.isShared,
-            permissionLevel: row.permissionLevel || undefined,
+            ...transformed,
+            isShared: !!row.isShared || !!transformed.sharedCopy,
+            permissionLevel:
+              row.permissionLevel || transformed.permissionLevel || undefined,
             sharedExpiresAt: row.expiresAt || undefined,
             ownerUsername: row.isShared
               ? ownerUsernames.get(row.userId as string) || undefined
-              : undefined,
+              : transformed.ownerUsername,
           };
 
           const resolved =

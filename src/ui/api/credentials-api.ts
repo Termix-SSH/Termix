@@ -232,6 +232,7 @@ export async function updateFolderMetadata(
   color?: string,
   icon?: string,
   credentialId?: number | null,
+  localOnly?: boolean,
 ): Promise<void> {
   try {
     sshLogger.info("Updating folder metadata", {
@@ -247,6 +248,7 @@ export async function updateFolderMetadata(
       color,
       icon,
       credentialId,
+      localOnly,
     });
 
     invalidateSSHFoldersCache();

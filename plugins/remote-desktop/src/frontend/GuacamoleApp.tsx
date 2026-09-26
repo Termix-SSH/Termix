@@ -34,6 +34,7 @@ import {
   Input,
   PasswordInput,
   isElectron,
+  linkedServerUrl,
   resolveConnectionOrigin,
   useConnectionLog,
   type ConnectionOrigin,
@@ -309,10 +310,7 @@ const GuacamoleAppInner = React.forwardRef<
         { defaultRemote: true },
       );
       if (resolvedOrigin === "remote") {
-        const remoteConfig = (await window.electronAPI?.invoke?.(
-          "get-remote-sync-config",
-        )) as { serverUrl?: string } | null;
-        if (!remoteConfig?.serverUrl) {
+        if (!(await linkedServerUrl())) {
           throw new Error(t("errors.remoteServerRequired"));
         }
       }

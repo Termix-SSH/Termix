@@ -167,6 +167,7 @@ export function createHostEditorForm(
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
     connectionOrigin: (host?.connectionOrigin ?? null) as
       "local" | "remote" | null,
+    localOnly: host?.localOnly ?? false,
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
     inheritTerminalAppearance:
       !host ||
@@ -415,6 +416,7 @@ export function buildHostEditorPayload(
     socks5ProxyChain:
       form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
     connectionOrigin: form.connectionOrigin,
+    localOnly: form.localOnly,
     enableSsh: protocols.enableSsh,
     sshPort: Number(form.sshPort),
     forceKeyboardInteractive: form.forceKeyboardInteractive,

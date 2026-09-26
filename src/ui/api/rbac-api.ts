@@ -21,6 +21,17 @@ async function getSharingTarget(hostId: number, syncId?: string | null) {
   return { api, hostId: remoteHostId };
 }
 
+/** A shared host's copy on a linked desktop is managed on the server. */
+async function getSharedCopyTarget(hostId: number, syncId?: string | null) {
+  if (!syncId) return { api: rbacApi, hostId };
+  const api = await getConnectedRemoteApi();
+  const remoteHostId = api ? await resolveRemoteHostId(syncId) : null;
+  if (!api || remoteHostId === null) {
+    throw new Error("The linked server is not reachable");
+  }
+  return { api, hostId: remoteHostId };
+}
+
 export async function getRoles(): Promise<{ roles: Role[] }> {
   try {
     const api = (await getConnectedRemoteApi()) ?? rbacApi;
@@ -358,14 +369,12 @@ export async function revokeHostAccess(
 export async function getHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
-  remoteShared = false,
+  sharedCopySyncId?: string | null,
 ): Promise<{ protocol: AuthOverrideProtocol; credentialId: number | null }> {
   try {
-    const api = remoteShared ? await getConnectedRemoteApi() : rbacApi;
-    if (!api) throw new Error("Remote server is not connected");
-    const targetHostId = remoteShared ? Math.abs(hostId) : hostId;
-    const response = await api.get(
-      `/rbac/host-access/${targetHostId}/auth/${protocol}`,
+    const target = await getSharedCopyTarget(hostId, sharedCopySyncId);
+    const response = await target.api.get(
+      `/rbac/host-access/${target.hostId}/auth/${protocol}`,
     );
     return response.data;
   } catch (error) {
@@ -377,18 +386,16 @@ export async function setHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
   credentialId: number | null,
-  remoteShared = false,
+  sharedCopySyncId?: string | null,
 ): Promise<{
   success: boolean;
   protocol: AuthOverrideProtocol;
   credentialId: number | null;
 }> {
   try {
-    const api = remoteShared ? await getConnectedRemoteApi() : rbacApi;
-    if (!api) throw new Error("Remote server is not connected");
-    const targetHostId = remoteShared ? Math.abs(hostId) : hostId;
-    const response = await api.put(
-      `/rbac/host-access/${targetHostId}/auth/${protocol}`,
+    const target = await getSharedCopyTarget(hostId, sharedCopySyncId);
+    const response = await target.api.put(
+      `/rbac/host-access/${target.hostId}/auth/${protocol}`,
       { credentialId },
     );
     return response.data;
