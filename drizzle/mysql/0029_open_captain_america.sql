@@ -1,7 +1,7 @@
 CREATE TABLE `plugin_settings` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`plugin_id` varchar(255) NOT NULL,
-	`scope` varchar(255) NOT NULL,
+	`scope` enum('admin','user','host','secret') NOT NULL,
 	`scope_id` varchar(255),
 	`key` varchar(255) NOT NULL,
 	`value` text,

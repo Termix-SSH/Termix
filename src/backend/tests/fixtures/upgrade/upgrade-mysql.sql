@@ -59,7 +59,7 @@ CREATE TABLE `rbac_known_permissions` (
 CREATE TABLE `plugin_settings` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`plugin_id` varchar(255) NOT NULL,
-	`scope` varchar(255) NOT NULL,
+	`scope` enum('admin','user','host','secret') NOT NULL,
 	`scope_id` varchar(255),
 	`key` varchar(255) NOT NULL,
 	`value` text,
@@ -408,6 +408,9 @@ CREATE INDEX `idx_sync_records_user_seq` ON `sync_records` (`user_id`,`seq`);
 
 -- ==== core 0060_mean_gorgon ====
 DROP TABLE `sync_tombstones`;
+
+-- ==== core 0061_plugin_settings_scope_enum ====
+ALTER TABLE `plugin_settings` MODIFY COLUMN `scope` enum('admin','user','host','secret') NOT NULL;
 
 -- ==== plugin workspaces 0001_adopt_user_workspaces.sql ====
 -- workspaces 0001: adopt_user_workspaces

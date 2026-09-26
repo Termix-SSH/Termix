@@ -141,6 +141,27 @@ describe("mysql output", () => {
     expect(out).toContain('varchar("user_id", { length: 255 })');
     expect(out).toContain('text("name")');
   });
+
+  it("keeps closed scopes compact in four-column setting indexes", () => {
+    const source = `import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+export const pluginSettings = sqliteTable("plugin_settings", {
+  pluginId: text("plugin_id").notNull(),
+  scope: text("scope", { enum: ["admin", "user", "host", "secret"] }).notNull(),
+  scopeId: text("scope_id"),
+  key: text("key").notNull(),
+}, (table) => [uniqueIndex("scope_key").on(table.pluginId, table.scope, table.scopeId, table.key)]);
+`;
+    const mysql = transform(source, "mysql");
+    expect(mysql).toContain(
+      'mysqlEnum("scope", ["admin", "user", "host", "secret"])',
+    );
+    for (const name of ["plugin_id", "scope_id", "key"]) {
+      expect(mysql).toContain(`varchar("${name}", { length: 255 })`);
+    }
+    expect(transform(source, "postgres")).toContain(
+      'varchar("scope", { length: 255, enum: ["admin", "user", "host", "secret"] })',
+    );
+  });
 });
 
 describe("determinism", () => {
