@@ -5,6 +5,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
+# The plugin SDK is a workspace package core imports at build and run time, so
+# npm ci has to see it here to link it into node_modules/@termix/plugin-sdk.
+COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY .npmrc ./
 COPY vendor ./vendor
 
