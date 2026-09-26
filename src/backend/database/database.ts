@@ -225,16 +225,68 @@ app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
  * /version:
  *   get:
  *     summary: Get version information
- *     description: Returns the local and remote version of the application.
+ *     description: Returns the running instance's version in localVersion. When the update check succeeds, remoteVersion is the latest GitHub release and version is its legacy alias, not the instance's version. Remote fields are omitted when the check is disabled, fails, or returns an unparseable release tag.
  *     tags:
  *       - General
+ *     parameters:
+ *       - in: query
+ *         name: checkRemote
+ *         description: Set to false to return only localVersion and status without contacting GitHub.
+ *         schema:
+ *           type: boolean
+ *           default: true
  *     responses:
  *       200:
  *         description: Version information.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required:
+ *                 - localVersion
+ *                 - status
+ *               properties:
+ *                 localVersion:
+ *                   type: string
+ *                   description: Version of the running instance. Use this field for client compatibility checks.
+ *                   example: 2.7.1
+ *                 status:
+ *                   type: string
+ *                   description: Update comparison result, update_check_disabled when explicitly disabled, or unknown when the remote lookup fails or the release tag cannot be parsed.
+ *                   enum: [up_to_date, beta, requires_update, update_check_disabled, unknown]
+ *                 remoteVersion:
+ *                   type: string
+ *                   description: Latest GitHub release version. Present only when the update check succeeds.
+ *                   example: 2.8.0
+ *                 version:
+ *                   type: string
+ *                   deprecated: true
+ *                   description: Legacy alias of remoteVersion, not the running instance's version. Present only when the update check succeeds. Use localVersion for the instance or remoteVersion for the latest release.
+ *                   example: 2.8.0
+ *                 latest_release:
+ *                   type: object
+ *                   description: GitHub release metadata. Present only when the update check succeeds.
+ *                   properties:
+ *                     tag_name:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                       nullable: true
+ *                     published_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     html_url:
+ *                       type: string
+ *                       format: uri
+ *                 cached:
+ *                   type: boolean
+ *                   description: Whether the release lookup used a cached response. Present only when the update check succeeds.
+ *                 cache_age:
+ *                   type: number
+ *                   description: Age of the cached response in milliseconds, when available.
  *       404:
  *         description: Local version not set.
- *       500:
- *         description: Fetch error.
  */
 app.get("/version", authenticateJWT, async (req, res) => {
   const localVersion = getLocalVersion();

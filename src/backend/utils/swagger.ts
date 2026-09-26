@@ -198,6 +198,7 @@ const swaggerOptions: SwaggerJSDocOptions = {
     ],
   },
   apis: [
+    path.join(__dirname, "..", "database", "database.js").replace(/\\/g, "/"),
     path
       .join(__dirname, "..", "database", "routes", "*.js")
       .replace(/\\/g, "/"),
