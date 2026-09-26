@@ -428,6 +428,13 @@
       "when": 1790393789429,
       "tag": "0060_mean_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "5",
+      "when": 1790447309827,
+      "tag": "0061_plugin_settings_scope_enum",
+      "breakpoints": true
     }
   ]
 }
