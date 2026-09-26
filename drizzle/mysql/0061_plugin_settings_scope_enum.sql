@@ -1,0 +1,1 @@
+ALTER TABLE `plugin_settings` MODIFY COLUMN `scope` enum('admin','user','host','secret') NOT NULL;
