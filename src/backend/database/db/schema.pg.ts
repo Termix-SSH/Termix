@@ -1084,8 +1084,7 @@ export const pluginSettings = pgTable(
     pluginId: varchar("plugin_id", { length: 255 })
       .notNull()
       .references(() => plugins.id, { onDelete: "cascade" }),
-    /** admin | user | host */
-    scope: varchar("scope", { length: 255 }).notNull(),
+    scope: varchar("scope", { length: 255, enum: ["admin", "user", "host", "secret"] }).notNull(),
     scopeId: varchar("scope_id", { length: 255 }),
     key: varchar("key", { length: 255 }).notNull(),
     /** JSON-encoded, so a field keeps its declared type across a round trip. */
