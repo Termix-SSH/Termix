@@ -1231,7 +1231,7 @@ export function FileManagerGrid({
                                 "group flex flex-col items-center rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
                                 compact ? "p-1.5" : "p-3",
                                 isSelected &&
-                                  "bg-accent-brand/10 border-accent-brand/40",
+                                  "bg-accent-brand/10 hover:bg-accent-brand/10 border-accent-brand/40",
                                 dragState.target?.path === file.path &&
                                   "bg-accent-brand/20 border-accent-brand border-dashed",
                                 dragState.files.some(
@@ -1439,7 +1439,8 @@ export function FileManagerGrid({
                           compact
                             ? "px-2 py-1 text-[11px]"
                             : "px-4 py-2 text-xs",
-                          isSelected && "bg-accent-brand/10",
+                          isSelected &&
+                            "bg-accent-brand/10 hover:bg-accent-brand/10",
                           dragState.target?.path === file.path &&
                             "bg-accent-brand/20 border-accent-brand border-dashed",
                           dragState.files.some((f) => f.path === file.path) &&
