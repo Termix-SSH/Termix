@@ -432,8 +432,7 @@ export function HostStatusCard({
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length}{" "}
-          {t("dashboardTab.availableLower", { defaultValue: "Available" })}
+          {online}/{hosts.length} {t("hosts.status.available")}
         </span>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
@@ -499,14 +498,10 @@ export function HostStatusCard({
                   {statusLoading
                     ? t("dashboardTab.checking")
                     : availability === "online"
-                      ? t("dashboardTab.available", {
-                          defaultValue: "AVAILABLE",
-                        })
+                      ? t("hosts.status.available")
                       : availability === "reachable"
-                        ? t("dashboardTab.reachable", {
-                            defaultValue: "REACHABLE",
-                          })
-                        : t("dashboardTab.offline")}
+                        ? t("hosts.status.reachable")
+                        : t("hosts.status.offline")}
                 </span>
               </div>
             </div>
