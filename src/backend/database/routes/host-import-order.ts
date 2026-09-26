@@ -1,5 +1,11 @@
 import { normalizeImportedHost } from "./host-normalizers.js";
 
+function jumpHostId(value: unknown): unknown {
+  return typeof value === "string" && /^\d+$/.test(value)
+    ? Number(value)
+    : value;
+}
+
 export function prepareHostImports(input: Record<string, unknown>[]) {
   const hosts = input.map((value, index) => ({
     host: normalizeImportedHost(value),
@@ -27,7 +33,7 @@ export function prepareHostImports(input: Record<string, unknown>[]) {
     if (!Array.isArray(jumps))
       throw new Error(`Host ${entry.index + 1}: jumpHosts must be an array`);
     for (const jump of jumps) {
-      const dependency = byId.get(jump?.hostId);
+      const dependency = byId.get(jumpHostId(jump?.hostId));
       if (!dependency)
         throw new Error(
           `Host ${entry.index + 1}: jump host ${jump?.hostId} is missing from the export. Re-export and include all jump hosts.`,
@@ -48,7 +54,7 @@ export function remapImportedJumpHosts(
 ) {
   if (!Array.isArray(jumps)) return null;
   return jumps.map((jump) => {
-    const hostId = importedIds.get(jump.hostId);
+    const hostId = importedIds.get(jumpHostId(jump.hostId));
     if (hostId === undefined)
       throw new Error(`Jump host ${jump.hostId} failed to import`);
     return { hostId };
