@@ -1926,7 +1926,10 @@ export function AppShell({
     }
     const splitNumber =
       tabs.filter((tab) => tab.type === "split-screen").length + 1;
-    const instanceId = crypto.randomUUID();
+    const instanceId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
     const id = `split-${instanceId}`;
     const sizes = defaultSizes(mode);
     const splitTab: Tab = {
