@@ -7,6 +7,8 @@ import {
   isPluginFrontendActive,
   orderForActivation,
   resetPluginLoader,
+  startPluginRuntime,
+  startPreLoginPlugins,
   syncPlugins,
 } from "@/plugin-host/loader";
 import {
@@ -206,6 +208,42 @@ describe("plugin loader", () => {
     await syncPlugins();
     expect(railIds()).not.toContain("down-panel");
     expect(railIds()).not.toContain("headless-panel");
+  });
+
+  it("keeps every plugin when the pre-login list lands after sign-in", async () => {
+    modules.login = railPlugin("login");
+    modules.alpha = railPlugin("alpha");
+    plugins = [summary("login"), summary("alpha")];
+
+    let releasePreLogin: (value: Response) => void = () => {};
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          releasePreLogin = resolve;
+        }),
+    );
+
+    const preLogin = startPreLoginPlugins();
+    await startPluginRuntime();
+    releasePreLogin(new Response(JSON.stringify([summary("login")])));
+    await preLogin;
+
+    expect(isPluginFrontendActive("login")).toBe(true);
+    expect(isPluginFrontendActive("alpha")).toBe(true);
+  });
+
+  it("ignores a pre-login load started after sign-in", async () => {
+    modules.login = railPlugin("login");
+    modules.alpha = railPlugin("alpha");
+    plugins = [summary("login"), summary("alpha")];
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify([summary("login")])),
+    );
+
+    await startPluginRuntime();
+    await startPreLoginPlugins();
+
+    expect(isPluginFrontendActive("alpha")).toBe(true);
   });
 
   it("settles even when the plugin list cannot be fetched", async () => {

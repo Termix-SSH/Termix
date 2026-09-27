@@ -134,10 +134,6 @@ function App() {
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const [verifyRetryCount, setVerifyRetryCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track whether fading-in came from a fresh login (vs. session verification on page load).
-  // When session-verified, Auth must not mount during the transition — it would trigger
-  // silent OIDC redirect and cause an infinite refresh loop.
-  const fadingInFromLoginRef = useRef(false);
   // Dedupes concurrent handleLogout() calls within the same tick -- see
   // handleLogout for why phase state alone isn't sufficient for this.
   const loggingOutRef = useRef(false);
@@ -175,7 +171,6 @@ function App() {
             // Non-fatal: WebSocket connections will fall back to cookie auth
           }
         }
-        fadingInFromLoginRef.current = false;
         setPhase("loading-app");
         await Promise.all([
           startPluginRuntime()
@@ -241,7 +236,6 @@ function App() {
     loggingOutRef.current = false;
     clearDesktopManualLogout();
     setAuthUsername(u);
-    fadingInFromLoginRef.current = true;
     setPhase("loading-app");
     void (async () => {
       await Promise.all([
@@ -299,10 +293,7 @@ function App() {
 
   const showApp =
     phase === "idle-app" || phase === "fading-in" || phase === "fading-out";
-  const showAuth =
-    phase === "idle-auth" ||
-    (phase === "fading-in" && fadingInFromLoginRef.current) ||
-    phase === "fading-out";
+  const showAuth = phase === "idle-auth" || phase === "fading-out";
   const appOpacity = phase === "idle-app" ? 1 : 0;
   const authOpacity = phase === "idle-auth" ? 1 : 0;
 

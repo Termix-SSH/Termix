@@ -442,13 +442,20 @@ export async function startPreLoginPlugins(): Promise<void> {
   } catch {
     return;
   }
-  if (list.length === 0) return;
+  if (list.length === 0 || started) return;
   setPluginLocaleResolver((namespace, _language, file) => {
     const summary = getPluginRecord(namespace)?.summary;
     if (!summary) return Promise.resolve(null);
     return currentDeps().loadLocale(summary, file);
   });
-  await syncPlugins(list);
+  await enqueue(async () => {
+    // Once signed in the full sync owns the list, and reconciling this
+    // subset would unload everything else. Auth remounts during the
+    // post-login fade, so this runs after sign-in every time.
+    if (started) return;
+    await reconcile(list);
+    markPluginsSettled();
+  });
 }
 
 /**
