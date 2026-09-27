@@ -328,7 +328,7 @@ describe("ctx.credentials.registerSecretResolver", () => {
 });
 
 describe("ctx.credentials.listSshKeys", () => {
-  const pair = ssh2.utils.generateKeyPairSync("ed25519");
+  const pair = ssh2.utils.generateKeyPairSync("rsa", { bits: 2048 });
   const derived = (() => {
     const parsed = ssh2.utils.parseKey(pair.private);
     const key = Array.isArray(parsed) ? parsed[0] : parsed;
