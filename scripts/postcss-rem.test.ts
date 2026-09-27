@@ -1,21 +1,24 @@
 import { createRequire } from "node:module";
-import postcss from "postcss";
+import postcss, { type AcceptedPlugin } from "postcss";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
 const config = require("../postcss.config.cjs") as {
-  plugins: Record<string, unknown>;
+  plugins: AcceptedPlugin[];
 };
-const pxtorem = require("postcss-pxtorem");
 
 async function convert(css: string, from = "src/ui/index.css") {
-  const result = await postcss([
-    pxtorem(config.plugins["postcss-pxtorem"]),
-  ]).process(css, { from });
+  const result = await postcss(config.plugins).process(css, { from });
   return result.css;
 }
 
 describe("interface size conversion", () => {
+  it("preserves circular radii emitted in exponent notation", async () => {
+    expect(await convert(".a{border-radius:3.40282e38px}")).toBe(
+      ".a{border-radius:calc(infinity * 1px)}",
+    );
+  });
+
   it("turns px into rem against the 14px Normal root", async () => {
     expect(await convert(".a{font-size:10px;width:280px}")).toBe(
       ".a{font-size:0.71429rem;width:20rem}",
