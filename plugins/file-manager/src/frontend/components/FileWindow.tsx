@@ -4,13 +4,14 @@ import { DraggableWindow } from "./DraggableWindow.tsx";
 import { FileViewer } from "./FileViewer.tsx";
 import { useWindowManager } from "./WindowManager.tsx";
 import {
-  downloadSSHFile,
+  downloadSSHFileStream,
   readSSHFile,
   writeSSHFile,
   getSSHStatus,
   connectSSH,
 } from "../api/ssh-file-operations-api";
 import { toast } from "sonner";
+import { DownloadProgressToast } from "./DownloadProgressToast";
 import type { SSHHost } from "../host-types";
 import { useTranslation } from "react-i18next";
 
@@ -452,37 +453,31 @@ export function FileWindow({
   }, []);
 
   const handleDownload = async () => {
+    const toastId = toast.loading(
+      <DownloadProgressToast fileName={file.name} loaded={0} />,
+      { duration: Infinity },
+    );
     try {
       await ensureSSHConnection();
 
-      const response = await downloadSSHFile(sshSessionId, file.path);
-
-      if (response?.content) {
-        const byteCharacters = atob(response.content);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {
-          type: response.mimeType || "application/octet-stream",
-        });
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = response.fileName || file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        toast.success(
-          t("fileManager.fileDownloadedSuccessfully", {
-            name: response.fileName || file.name,
-          }),
-        );
-      }
+      await downloadSSHFileStream(
+        sshSessionId,
+        file.path,
+        ({ loaded, total }) => {
+          toast.loading(
+            <DownloadProgressToast
+              fileName={file.name}
+              loaded={loaded}
+              total={total}
+            />,
+            { id: toastId, duration: Infinity },
+          );
+        },
+      );
+      toast.success(
+        t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+        { id: toastId, duration: undefined },
+      );
     } catch (error: unknown) {
       console.error("Failed to download file:", error);
 
@@ -493,10 +488,12 @@ export function FileWindow({
       ) {
         toast.error(
           `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
+          { id: toastId, duration: undefined },
         );
       } else {
         toast.error(
           `Failed to download file: ${err.message || "Unknown error"}`,
+          { id: toastId, duration: undefined },
         );
       }
     }
