@@ -175,6 +175,7 @@ export function declaredFields(
           key: host.enableKey,
           type: "boolean",
           labelKey: host.enableLabelKey,
+          descriptionKey: host.enableDescriptionKey,
           default: host.enableDefault ?? false,
         },
       ]

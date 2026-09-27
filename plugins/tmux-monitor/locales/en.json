@@ -20,7 +20,8 @@
   "settings": {
     "host": {
       "enable": {
-        "label": "Enable Tmux Monitor"
+        "label": "Enable Tmux Monitor",
+        "description": "Watch and attach to tmux sessions running on this host."
       }
     }
   },

@@ -220,6 +220,7 @@
         "editorOrder": 12,
         "enableKey": "enableTerminal",
         "enableLabelKey": "settings.host.enableTerminal.label",
+        "enableDescriptionKey": "settings.host.enableTerminal.description",
         "enableDefault": true,
         "fields": [
           {

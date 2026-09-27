@@ -50,6 +50,7 @@
       "host": {
         "enableKey": "enableTmuxMonitor",
         "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
         "fields": []
       }
     },

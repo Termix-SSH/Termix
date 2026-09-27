@@ -21,7 +21,8 @@
     },
     "host": {
       "enable": {
-        "label": "Enable session recording"
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
       }
     }
   },

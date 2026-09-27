@@ -57,6 +57,7 @@
         "editorOrder": 30,
         "enableKey": "enableDocker",
         "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
         "fields": [
           {
             "key": "containerRuntime",

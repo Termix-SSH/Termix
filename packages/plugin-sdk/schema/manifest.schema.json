@@ -690,6 +690,10 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "enableDescriptionKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "fields": {
                   "type": "array",
                   "items": {

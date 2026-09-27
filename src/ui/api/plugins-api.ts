@@ -41,6 +41,7 @@ export interface PluginSettingsField {
 export interface PluginHostSettingsContribution {
   enableKey?: string;
   enableLabelKey?: string;
+  enableDescriptionKey?: string;
   enableDefault?: boolean;
   editorGroup?: "top" | "ssh";
   editorOrder?: number;

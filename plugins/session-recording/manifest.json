@@ -63,6 +63,7 @@
         "editorOrder": 85,
         "enableKey": "enableSessionRecording",
         "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
         "fields": []
       }
     },

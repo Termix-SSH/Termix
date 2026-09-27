@@ -123,7 +123,8 @@
   "settings": {
     "host": {
       "enable": {
-        "label": "Enable Docker"
+        "label": "Enable Docker",
+        "description": "Manage containers on this host."
       },
       "containerRuntime": {
         "label": "Container Runtime",

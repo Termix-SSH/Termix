@@ -269,6 +269,7 @@ export interface PluginHostSettingsContribution {
   /** Boolean field rendered first, gating the rest of the section. */
   enableKey?: string;
   enableLabelKey?: string;
+  enableDescriptionKey?: string;
   /** What the enable switch reads before a host saves it. Off by default. */
   enableDefault?: boolean;
   /** Host editor strip the generated tab sits in. Defaults to "top". */
@@ -1143,6 +1144,7 @@ function validateSettings(settings: unknown, errors: string[]): void {
       [
         "enableKey",
         "enableLabelKey",
+        "enableDescriptionKey",
         "enableDefault",
         "editorGroup",
         "editorOrder",
@@ -1161,6 +1163,13 @@ function validateSettings(settings: unknown, errors: string[]): void {
       }
       // An enable switch with no label is a blank row in the host editor.
       requireString(host.enableLabelKey, `${at}.enableLabelKey`, errors);
+    }
+    if ("enableDescriptionKey" in host) {
+      requireString(
+        host.enableDescriptionKey,
+        `${at}.enableDescriptionKey`,
+        errors,
+      );
     }
     if ("enableDefault" in host && typeof host.enableDefault !== "boolean") {
       errors.push(`${at}.enableDefault must be a boolean`);

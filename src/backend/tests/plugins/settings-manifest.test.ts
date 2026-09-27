@@ -301,6 +301,21 @@ describe("contributes.settings", () => {
     expect(errors.join(" ")).toContain("enableLabelKey");
   });
 
+  it("accepts an enableDescriptionKey and rejects an empty one", () => {
+    const host = { enableKey: "enableThing", enableLabelKey: "k", fields: [] };
+
+    expect(
+      validateManifest(
+        withSettings({ host: { ...host, enableDescriptionKey: "d" } }),
+      ),
+    ).toEqual([]);
+    expect(
+      validateManifest(
+        withSettings({ host: { ...host, enableDescriptionKey: "" } }),
+      ).join(" "),
+    ).toContain("enableDescriptionKey");
+  });
+
   it("rejects a key that would not be index-safe", () => {
     const errors = validateManifest(
       withSettings({

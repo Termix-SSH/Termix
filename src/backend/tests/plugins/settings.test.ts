@@ -183,13 +183,18 @@ describe("declaredFields", () => {
       host: {
         enableKey: "enableThing",
         enableLabelKey: "k",
+        enableDescriptionKey: "d",
         fields: [{ key: "port", type: "number", labelKey: "k" }],
       },
     });
 
     const fields = declaredFields(withHost, "host");
     expect(fields.map((f) => f.key)).toEqual(["enableThing", "port"]);
-    expect(fields[0]).toMatchObject({ type: "boolean", default: false });
+    expect(fields[0]).toMatchObject({
+      type: "boolean",
+      default: false,
+      descriptionKey: "d",
+    });
   });
 
   it("finds a field by key", () => {

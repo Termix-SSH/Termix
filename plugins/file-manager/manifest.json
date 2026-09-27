@@ -75,6 +75,7 @@
         "editorOrder": 60,
         "enableKey": "enableFileManager",
         "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
         "enableDefault": true,
         "fields": [
           {

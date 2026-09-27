@@ -192,6 +192,7 @@ function HostPluginSection({
             key: enableKey,
             type: "boolean",
             labelKey: host.enableLabelKey,
+            descriptionKey: host.enableDescriptionKey,
           }}
           values={shown}
           setValue={setValue}

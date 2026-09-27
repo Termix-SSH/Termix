@@ -71,6 +71,7 @@
       "host": {
         "enableKey": "enableTunnel",
         "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
         "fields": [
           {
             "key": "tunnelConnections",

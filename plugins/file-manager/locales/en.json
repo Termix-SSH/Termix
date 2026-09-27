@@ -12,7 +12,8 @@
   "settings": {
     "host": {
       "enable": {
-        "label": "Enable File Manager"
+        "label": "Enable File Manager",
+        "description": "Browse and edit files on this host over SFTP."
       },
       "defaultPath": {
         "label": "Default Path"
