@@ -300,6 +300,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       duration: Date.now() - initStartTime,
     });
 
+    // Log output can be filtered by the configured level or split across chunks.
+    if (process.env.ELECTRON_EMBEDDED === "true") {
+      process.send?.({ type: "backend-ready" });
+    }
+
     const gracefulShutdown = async (signal: string) => {
       systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
         operation: "shutdown",

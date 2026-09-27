@@ -1181,6 +1181,12 @@ function startBackendServer() {
     });
 
     backendProcess.on("message", (msg) => {
+      if (!resolved && msg?.type === "backend-ready") {
+        resolved = true;
+        clearTimeout(readyTimeout);
+        logToFile("Backend ready signal received via IPC");
+        resolve(true);
+      }
       void handleBackendRequest(msg);
     });
 
