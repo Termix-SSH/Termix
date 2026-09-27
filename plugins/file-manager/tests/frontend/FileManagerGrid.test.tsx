@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { FileManagerGrid } from "../../src/frontend/FileManagerGrid";
@@ -44,6 +44,7 @@ const props = {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("remote file rename", () => {
@@ -87,5 +88,54 @@ describe("remote file rename", () => {
     expect(onRename).toHaveBeenCalledWith(file, "renamed.txt");
     rerender(<FileManagerGrid {...props} />);
     expect(screen.getByText(file.modified!)).toBeInTheDocument();
+  });
+});
+
+describe("external file drops", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+  });
+  it.each(["list", "grid"] as const)(
+    "uploads dropped folders over a file in %s view",
+    (viewMode) => {
+      const onUploadItems = vi.fn();
+      render(
+        <FileManagerGrid
+          {...props}
+          viewMode={viewMode}
+          onUploadItems={onUploadItems}
+        />,
+      );
+      const folder = {
+        name: "logs",
+        isDirectory: true,
+        isFile: false,
+      } as FileSystemEntry;
+      fireEvent.drop(screen.getByTitle(file.name), {
+        dataTransfer: {
+          types: ["Files"],
+          files: [],
+          getData: () => "",
+          items: [{ webkitGetAsEntry: () => folder }],
+        },
+      });
+      expect(onUploadItems).toHaveBeenCalledExactlyOnceWith([folder]);
+    },
+  );
+
+  it("uploads a plain OS file dropped over a row", () => {
+    const onUpload = vi.fn();
+    render(<FileManagerGrid {...props} onUpload={onUpload} />);
+    const files = [new File(["log"], "app.log")];
+    fireEvent.drop(screen.getByTitle(file.name), {
+      dataTransfer: { types: ["Files"], files, items: [], getData: () => "" },
+    });
+    expect(onUpload).toHaveBeenCalledExactlyOnceWith(files);
   });
 });

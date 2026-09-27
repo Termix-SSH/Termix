@@ -458,6 +458,9 @@ export function FileManagerGrid({
   };
 
   const handleFileDrop = (e: React.DragEvent, targetFile: FileItem) => {
+    // OS drops belong to the pane's upload handler, even over an existing row.
+    if (dragState.type !== "internal" && !isLocalFilesDrag(e.dataTransfer))
+      return;
     e.preventDefault();
     e.stopPropagation();
 
