@@ -1244,7 +1244,7 @@ export function registerFileContentRoutes(
     let destroyUpload: (() => void) | undefined;
 
     const abortUpload = () => {
-      if (req.complete || cleanupStarted) return;
+      if (resolved || cleanupStarted) return;
       requestAborted = true;
       cleanupStarted = true;
       destroyUpload?.();
@@ -1252,7 +1252,12 @@ export function registerFileContentRoutes(
 
     req.once("aborted", abortUpload);
     req.once("error", abortUpload);
-    req.once("close", abortUpload);
+    req.once("close", () => {
+      if (!req.complete) abortUpload();
+    });
+    res.once("close", () => {
+      if (!res.writableFinished) abortUpload();
+    });
 
     const bb = Busboy({ headers: req.headers });
 
@@ -1311,6 +1316,10 @@ export function registerFileContentRoutes(
 
         getSessionSftp(sshConn)
           .then((sftp) => {
+            if (requestAborted) {
+              fileStream.resume();
+              return;
+            }
             const writeStream = sftp.createWriteStream(fullPath);
             const removePartialFile = () => {
               writeStream.destroy();
@@ -1324,11 +1333,6 @@ export function registerFileContentRoutes(
               });
             };
             destroyUpload = removePartialFile;
-
-            if (requestAborted) {
-              removePartialFile();
-              return;
-            }
 
             writeStream.on("error", (err) => {
               ctx.log.error("SFTP write stream error during upload:", err);
@@ -1460,12 +1464,24 @@ export function registerFileContentRoutes(
     let bytesWritten = 0;
     const uploadStartTime = Date.now();
 
+    let destroyUpload: (() => void) | undefined;
+    res.once("close", () => {
+      if (resolved || res.writableFinished) return;
+      resolved = true;
+      destroyUpload?.();
+    });
+
     getSessionSftp(sshConn)
       .then((sftp) => {
+        if (resolved) return;
         const writeStream = sftp.createWriteStream(fullPath, {
           flags: offset === 0 ? "w" : "r+",
           start: offset,
         });
+        destroyUpload = () => {
+          req.unpipe(writeStream as unknown as NodeJS.WritableStream);
+          writeStream.destroy();
+        };
 
         const fail = (status: number, error: string) => {
           if (resolved) return;

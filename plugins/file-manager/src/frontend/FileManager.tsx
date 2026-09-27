@@ -1185,9 +1185,14 @@ function FileManagerContent({
 
     if (files.length === 0 && emptyDirs.length === 0) return;
 
+    const controller = new AbortController();
+    const cancel = {
+      label: t("fileManager.cancel"),
+      onClick: () => controller.abort(),
+    };
     const progressToast = toast.loading(
       t("fileManager.uploadingFolderFiles", { count: files.length }),
-      { duration: Infinity },
+      { duration: Infinity, cancel },
     );
 
     const failed: string[] = [];
@@ -1214,6 +1219,7 @@ function FileManagerContent({
           a.split("/").length - b.split("/").length || a.localeCompare(b),
       );
       for (const dir of sortedDirs) {
+        controller.signal.throwIfAborted();
         const parentDir = dir.split("/").slice(0, -1).join("/");
         const targetPath = parentDir ? `${base}${parentDir}/` : base;
         const folderName = dir.split("/").pop()!;
@@ -1226,6 +1232,7 @@ function FileManagerContent({
       }
 
       for (const { file, relativePath } of files) {
+        controller.signal.throwIfAborted();
         const dirPart = relativePath.includes("/")
           ? relativePath.substring(0, relativePath.lastIndexOf("/"))
           : "";
@@ -1238,13 +1245,18 @@ function FileManagerContent({
             file.name,
             file,
             currentHost?.id,
+            undefined,
+            undefined,
+            controller.signal,
           );
         } catch (error) {
+          controller.signal.throwIfAborted();
           failed.push(relativePath);
           console.error(`Failed to upload ${relativePath}:`, error);
         }
       }
 
+      controller.signal.throwIfAborted();
       toast.dismiss(progressToast);
       if (failed.length === 0) {
         toast.success(
@@ -1263,6 +1275,11 @@ function FileManagerContent({
       handleRefreshDirectory();
     } catch (error) {
       toast.dismiss(progressToast);
+      if (controller.signal.aborted) {
+        toast.info(t("fileManager.localTransferCancelled"));
+        handleRefreshDirectory();
+        return;
+      }
       toast.error(t("fileManager.failedToUploadFile"));
       console.error("Folder upload failed:", error);
     }
@@ -1280,12 +1297,17 @@ function FileManagerContent({
   async function handleUploadFile(file: File) {
     if (!sshSessionId) return;
 
+    const controller = new AbortController();
+    const cancel = {
+      label: t("fileManager.cancel"),
+      onClick: () => controller.abort(),
+    };
     const progressToast = toast.loading(
       t("fileManager.uploadingFile", {
         name: file.name,
         size: formatFileSize(file.size),
       }),
-      { duration: Infinity },
+      { duration: Infinity, cancel },
     );
 
     const updateProgress = (p: {
@@ -1294,13 +1316,14 @@ function FileManagerContent({
       bytesSent: number;
       totalBytes: number;
     }) => {
+      if (controller.signal.aborted) return;
       const percent = Math.min(
         100,
         Math.round((p.bytesSent / p.totalBytes) * 100),
       );
       toast.loading(
         `Uploading ${file.name} — ${percent}% (chunk ${p.chunkIndex + 1}/${p.totalChunks})`,
-        { id: progressToast, duration: Infinity },
+        { id: progressToast, duration: Infinity, cancel },
       );
     };
 
@@ -1315,7 +1338,9 @@ function FileManagerContent({
         currentHost?.id,
         undefined,
         updateProgress,
+        controller.signal,
       );
+      controller.signal.throwIfAborted();
 
       toast.dismiss(progressToast);
 
@@ -1325,6 +1350,11 @@ function FileManagerContent({
       handleRefreshDirectory();
     } catch (error: unknown) {
       toast.dismiss(progressToast);
+      if (controller.signal.aborted) {
+        toast.info(t("fileManager.localTransferCancelled"));
+        handleRefreshDirectory();
+        return;
+      }
       const uploadErr = error instanceof Error ? error : null;
       if (
         uploadErr?.message?.includes("connection") ||

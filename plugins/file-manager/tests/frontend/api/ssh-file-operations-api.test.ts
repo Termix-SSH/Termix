@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fileManagerApiMock = vi.hoisted(() => ({
   post: vi.fn(async () => ({ data: { complete: false } })),
+  postForm: vi.fn(async () => ({ data: {} })),
 }));
 
 vi.mock("../../../src/frontend/api/client", () => ({
@@ -36,6 +37,7 @@ import { uploadSSHFile } from "../../../src/frontend/api/ssh-file-operations-api
 describe("chunked SSH file uploads", () => {
   beforeEach(() => {
     fileManagerApiMock.post.mockClear();
+    fileManagerApiMock.postForm.mockClear();
   });
 
   it("sends raw chunks with the byte offset expected by the server", async () => {
@@ -62,6 +64,7 @@ describe("chunked SSH file uploads", () => {
         },
         headers: { "Content-Type": "application/octet-stream" },
         timeout: 0,
+        signal: undefined,
       },
     );
     expect(fileManagerApiMock.post).toHaveBeenLastCalledWith(
@@ -71,5 +74,73 @@ describe("chunked SSH file uploads", () => {
         params: expect.objectContaining({ offset: 1.5 * 1024 * 1024 * 1024 }),
       }),
     );
+  });
+});
+
+describe("upload cancellation", () => {
+  it("passes the signal to multipart uploads", async () => {
+    const controller = new AbortController();
+    await uploadSSHFile(
+      "s",
+      "/",
+      "a.txt",
+      new File(["data"], "a.txt"),
+      undefined,
+      undefined,
+      undefined,
+      controller.signal,
+    );
+    expect(fileManagerApiMock.postForm).toHaveBeenLastCalledWith(
+      "/uploadFileStream",
+      expect.any(FormData),
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
+
+  it("does not start an already cancelled upload", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    fileManagerApiMock.postForm.mockClear();
+    await expect(
+      uploadSSHFile(
+        "s",
+        "/",
+        "a.txt",
+        new File(["data"], "a.txt"),
+        undefined,
+        undefined,
+        undefined,
+        controller.signal,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(fileManagerApiMock.postForm).not.toHaveBeenCalled();
+  });
+
+  it("stops scheduling chunks after cancellation", async () => {
+    const controller = new AbortController();
+    fileManagerApiMock.post.mockClear();
+    const file = {
+      size: 2 * 1024 ** 3,
+      slice: vi.fn(() => new Blob(["chunk"])),
+    } as unknown as File;
+    await expect(
+      uploadSSHFile(
+        "s",
+        "/",
+        "large.bin",
+        file,
+        undefined,
+        undefined,
+        () => controller.abort(),
+        controller.signal,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(fileManagerApiMock.post).toHaveBeenCalledOnce();
+    expect(fileManagerApiMock.post).toHaveBeenCalledWith(
+      "/uploadFileChunk",
+      expect.any(Blob),
+      expect.objectContaining({ signal: controller.signal }),
+    );
+    expect(file.slice).toHaveBeenCalledOnce();
   });
 });

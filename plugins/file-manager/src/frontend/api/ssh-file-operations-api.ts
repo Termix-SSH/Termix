@@ -358,6 +358,7 @@ export async function uploadSSHFile(
     bytesSent: number;
     totalBytes: number;
   }) => void,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   // Browser-side safety: any single multipart body approaching 2^31 bytes (~2.14GB)
   // crashes the XHR/ArrayBuffer pipeline in both Chromium (Electron) and Firefox,
@@ -368,6 +369,7 @@ export async function uploadSSHFile(
   const CHUNK_SIZE_BYTES = 8 * 1024 * 1024; // 8 MiB
 
   try {
+    signal?.throwIfAborted();
     if (file.size > CHUNK_THRESHOLD_BYTES) {
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE_BYTES);
       fileLogger.info("Starting chunked upload", {
@@ -380,6 +382,7 @@ export async function uploadSSHFile(
 
       let bytesSent = 0;
       for (let i = 0; i < totalChunks; i++) {
+        signal?.throwIfAborted();
         const start = i * CHUNK_SIZE_BYTES;
         const end = Math.min(start + CHUNK_SIZE_BYTES, file.size);
         const chunkBlob = file.slice(start, end);
@@ -397,6 +400,7 @@ export async function uploadSSHFile(
             },
             headers: { "Content-Type": "application/octet-stream" },
             timeout: 0,
+            signal,
           },
         );
 
@@ -433,6 +437,7 @@ export async function uploadSSHFile(
       form,
       {
         timeout: 0,
+        signal,
         onUploadProgress: (event) => {
           const totalBytes =
             typeof event.total === "number" && event.total > 0
@@ -449,6 +454,7 @@ export async function uploadSSHFile(
     );
     return response.data;
   } catch (error) {
+    if (signal?.aborted) throw error;
     handleApiError(error, "upload SSH file");
   }
 }
