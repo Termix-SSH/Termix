@@ -2,7 +2,7 @@
   "id": "web-endpoint",
   "name": "Web Endpoint",
   "version": "1.0.0",
-  "description": "Open a host's web UI in a tab or an isolated desktop window, directly or over an SSH tunnel.",
+  "description": "Open a host's web UI in a tab or a separate desktop window, directly or over an SSH tunnel.",
   "author": {
     "name": "Termix"
   },

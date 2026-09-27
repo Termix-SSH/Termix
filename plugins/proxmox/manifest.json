@@ -2,7 +2,7 @@
   "id": "proxmox",
   "name": "Proxmox",
   "version": "1.0.0",
-  "description": "Discover Proxmox VE guests over an existing SSH host, import them as Termix hosts, and keep them in sync.",
+  "description": "Find Proxmox VE guests through an SSH host, import them as hosts and keep them in sync.",
   "author": {
     "name": "Termix"
   },

@@ -1,31 +1,45 @@
 # Session Sharing
 
-Share a live terminal or remote desktop session by link or with another user,
-and present sessions to a group in collaboration rooms.
+Share a live terminal or remote desktop session by link or with another user, and present sessions in collaboration rooms.
 
-Bundled with Termix and enabled by default. It imports only
-`@termix/plugin-sdk`.
+## Features
 
-## What it does
+- Share a live terminal or remote desktop session by link or with one user.
+- Pick read-only or read and write, and set when the share expires.
+- Collaboration rooms where a presenter shows a session to a group and can hand control to a member.
+- Guest links for people without a Termix account.
+- The share button is in the terminal and remote desktop toolbars.
 
-- **Shares**: a link for anonymous guests, or a grant for one user, read-only
-  or read-write, with an expiry. The share button sits in the terminal and
-  remote desktop toolbars.
-- **Rooms**: members watch one stage, the live session the presenter shows.
-  The presenter or host can hand input control to a member, and a room can
-  have an anonymous guest link.
-- **`sessions.sharing`**: member joins and room events for the terminal
-  socket. Guest joins go through `sessions.sharing.guests` on `ctx.registry`,
-  because a guest has no user for a service's permission check.
+## Settings
 
-It reaches live sessions only through the `sessions.live` service, keyed by
-session type: ssh-terminal provides `ssh`, remote desktop provides `rdp`,
-`vnc` and `telnet`.
+### Admin
 
-## Layout
+- Allow Session Sharing: turn sharing on or off for everyone.
 
-    manifest.json         id, capabilities and what this plugin contributes
-    src/backend/          activate(ctx), routes, the room hub, the services
-    src/frontend/         share dialog, guest views, rooms panel and tab
-    migrations/           one .sql per dialect, generated from src/backend/tables.ts
-    tests/                backend (node) and frontend (jsdom)
+### Host
+
+- Allow Session Sharing: allow sharing sessions on this host.
+
+## Permissions
+
+- `session-sharing.use`: Share sessions and join rooms. Admins and users have it by default.
+
+## Services
+
+Provides to other plugins:
+
+- `sessions.sharing`: join a shared session or room from the terminal.
+
+Uses from other plugins:
+
+- `sessions.live` to reach live SSH, RDP, VNC and Telnet sessions.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

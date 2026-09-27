@@ -2,7 +2,7 @@
   "id": "totp",
   "name": "TOTP",
   "version": "1.0.0",
-  "description": "Ask for a code from an authenticator app after signing in, with backup codes for when the phone is not at hand.",
+  "description": "Ask for a code from an authenticator app after signing in, with backup codes in case you lose your phone.",
   "author": {
     "name": "Termix"
   },

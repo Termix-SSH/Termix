@@ -2,7 +2,7 @@
   "id": "tunnels",
   "name": "Tunnels",
   "version": "1.0.0",
-  "description": "SSH port forwarding between servers, and client tunnels from the desktop app.",
+  "description": "SSH port forwarding between servers, plus local tunnels from the desktop app.",
   "author": {
     "name": "Termix"
   },

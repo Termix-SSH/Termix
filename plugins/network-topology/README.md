@@ -1,22 +1,31 @@
 # Network Topology
 
-Visualize hosts and their connections as an interactive graph, saved per user.
+Show your hosts and how they connect as an interactive graph.
 
-Bundled with Termix and enabled by default.
+## Features
 
-## Layout
+- Show your hosts and the links between them as an interactive graph.
+- Put hosts into groups, and groups inside other groups.
+- Import and export the graph as JSON.
+- Add the graph to the dashboard as a card.
+- Each user's graph is saved and syncs between the desktop app and a server.
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/         activate(ctx) / deactivate(), plus the routes
-    src/frontend/        the UI it registers
-    locales/en.json      its strings (English only; the rest are translated)
-    tests/backend/       vitest, node
-    tests/frontend/      vitest, jsdom
+## Permissions
 
-## Commands
+- `network-topology.use`: Use the network graph. Admins and users have it by default.
 
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
+## Services
 
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+Provides to other plugins:
+
+- `network-topology.graph`: read a user's graph.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

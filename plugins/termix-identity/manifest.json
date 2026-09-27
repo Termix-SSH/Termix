@@ -2,7 +2,7 @@
   "id": "termix-identity",
   "name": "Termix Identity",
   "version": "1.0.0",
-  "description": "Publish your SSH public keys under a public handle that servers can fetch into authorized_keys, and run your own SSH certificate authority to issue short-lived user certificates.",
+  "description": "Publish your SSH public keys under a public handle and run your own SSH certificate authority.",
   "author": {
     "name": "Termix"
   },

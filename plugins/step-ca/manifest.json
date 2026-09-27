@@ -2,7 +2,7 @@
   "id": "step-ca",
   "name": "Step CA",
   "version": "1.0.0",
-  "description": "Sign in to hosts with short-lived SSH certificates from a smallstep step-ca server, using its OIDC provisioner in the browser. Termix calls the CA's HTTPS API directly and never runs the step binary.",
+  "description": "Connect to hosts with short-lived SSH certificates from a smallstep step-ca server, after signing in through its OIDC provisioner.",
   "author": {
     "name": "Termix"
   },

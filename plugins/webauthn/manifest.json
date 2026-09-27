@@ -2,7 +2,7 @@
   "id": "webauthn",
   "name": "Passkeys",
   "version": "1.0.0",
-  "description": "Sign in with a passkey or security key instead of a password. A passkey that checks your PIN or fingerprint also counts as the second factor.",
+  "description": "Sign in with a passkey or security key instead of a password. A passkey that checks your PIN or fingerprint also counts as a second factor.",
   "author": {
     "name": "Termix"
   },

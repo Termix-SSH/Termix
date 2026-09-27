@@ -1,31 +1,33 @@
 # Step CA
 
-Adds the `stepca` SSH auth type: Termix signs you in with the identity
-provider behind a [smallstep step-ca](https://smallstep.com/docs/step-ca/)
-OIDC provisioner, has the CA sign a fresh key, and keeps the short-lived SSH
-certificate until it expires.
+Connect to hosts with short-lived SSH certificates from a smallstep step-ca server, after signing in through its OIDC provisioner.
 
-Termix never runs the `step` binary. It talks to the CA's HTTPS API
-(`/root/<fingerprint>`, `/provisioners`, `/1.0/ssh/sign`) and to the identity
-provider directly, through core's outbound request guard.
+## Features
+
+- Adds the Step CA login type to the host editor.
+- Signs you in through the identity provider behind a [smallstep step-ca](https://smallstep.com/docs/step-ca/) OIDC provisioner.
+- Has the CA sign a fresh key and keeps the certificate until it expires.
+- Talks to the CA's HTTPS API directly, so the `step` binary is never needed.
+
+## Setup
+
+When `REDIS_URL` is set and you run more than one Termix instance, a callback that reaches the wrong instance is handed to the one that started the sign-in. `TERMIX_STEP_CA_REDIS_PREFIX` changes the key prefix, which defaults to `termix:step-ca`.
 
 ## Settings
 
-Admin settings, under Settings > Plugins > Step CA:
+### Admin
 
-- **CA URL**, **Root fingerprint** and **OIDC provisioner name**. Leave all
-  three empty to turn Step CA off.
-- **Allowed private Step CA hosts**: the CA and, if it is internal, the
-  identity provider. Anything private that is not listed is refused.
-- **Redirect URI**: register it with the identity provider:
-  `<base URL>/plugin-api/step-ca/callback`, or
-  `<base URL>/host/step-ca-callback` while "Use the old redirect URI" is on.
+- CA URL, Root fingerprint and OIDC provisioner name: leave all three empty to turn Step CA off.
+- Allowed private Step CA hosts: the CA and, if it is internal, the identity provider. Private hosts not on this list are refused.
+- Redirect URI: register `<base URL>/plugin-api/step-ca/callback` with your identity provider.
+- Use the old redirect URI: keep sending the 2.8 URI `<base URL>/host/step-ca-callback`. Upgraded installs keep this on until you turn it off.
 
-An install upgraded from 2.8 has its Step CA settings copied in and keeps
-the old redirect URI turned on.
+## Development
 
-## Several instances
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
 
-With `REDIS_URL` set, a callback that reaches another Termix instance is
-handed to the one that started the sign-in. `TERMIX_STEP_CA_REDIS_PREFIX`
-changes the key prefix (default `termix:step-ca`).
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

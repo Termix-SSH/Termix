@@ -1,22 +1,34 @@
 # Fleets
 
-Group hosts into fleets by static membership or tag rules, and run commands, package actions, and file transfers across every member at once.
+Group hosts into fleets and run commands, package actions and file transfers on all of them at once.
 
-Bundled with Termix and enabled by default.
+## Features
 
-## Layout
+- Group hosts into fleets by hand or by tag. Hosts with a matching tag join on their own.
+- Run a command on every host in a fleet at once and see each result.
+- Run package actions, like updates, across a fleet.
+- Transfer files to and from every host in a fleet.
+- See an inventory of the hosts in a fleet.
+- Share fleets with other users or roles.
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/         activate(ctx) / deactivate(), plus the routes
-    src/frontend/        the UI it registers
-    locales/en.json      its strings (English only; the rest are translated)
-    tests/backend/       vitest, node
-    tests/frontend/      vitest, jsdom
+## Permissions
 
-## Commands
+- `fleets.view`: See fleets, their hosts and inventory. Admins and users have it by default.
+- `fleets.manage`: Create, edit, delete and share fleets. Admins and users have it by default.
+- `fleets.execute`: Run commands, package actions and file transfers on a fleet. Admins and users have it by default.
 
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
+## Services
 
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+Provides to other plugins:
+
+- `fleets.access`: list fleets and run actions on them.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

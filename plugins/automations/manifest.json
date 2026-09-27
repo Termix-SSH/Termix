@@ -2,7 +2,7 @@
   "id": "automations",
   "name": "Automations",
   "version": "1.0.0",
-  "description": "Trigger-and-action automation engine: schedules, metric/status/docker-event triggers, and multi-step actions across managed hosts.",
+  "description": "Run actions on your hosts on a schedule or when something happens, like a host going down or a metric crossing a limit.",
   "author": {
     "name": "Termix"
   },

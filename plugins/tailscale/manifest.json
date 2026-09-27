@@ -2,7 +2,7 @@
   "id": "tailscale",
   "name": "Tailscale",
   "version": "1.0.0",
-  "description": "Browse and connect to tailnet devices, manage the Tailscale API key, and show the Tailscale SSH re-authentication dialog.",
+  "description": "Browse and connect to devices on your tailnet, and handle Tailscale SSH sign-in checks.",
   "author": {
     "name": "Termix"
   },

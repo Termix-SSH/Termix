@@ -1,36 +1,43 @@
 # ACME Certificates
 
-Gets the certificate Termix serves over HTTPS from Let's Encrypt, or any other
-ACME certificate authority, and renews it before it expires.
+Gets and renews the Termix HTTPS certificate from Let's Encrypt or another ACME provider.
 
-Termix itself serves HTTPS. This plugin only gets certificates: it hands each
-one to core, which checks that the key matches and swaps it in without a
-restart. Turn the plugin off and the current certificate keeps being served,
-but nothing renews it. Admin Settings > HTTPS certificate then warns with the
-expiry date.
+## Features
+
+- Gets a certificate from Let's Encrypt, Let's Encrypt staging or any ACME directory URL.
+- Checks twice a day and renews when there is no certificate, the current one is self-signed, it does not cover the domain or it expires within 30 days.
+- Swaps in the new certificate without a restart.
+- Shows the current certificate and the last attempt, with a button to request one now.
+
+## Setup
+
+Pick a challenge type:
+
+- HTTP: the provider fetches `http://<domain>/.well-known/acme-challenge/...`, so port 80 must reach Termix.
+- DNS (Cloudflare): needs a Cloudflare API token with Zone:DNS:Edit. Works when port 80 is closed.
+
+If you turn this plugin off, Termix keeps serving the current certificate but nothing renews it. Admin Settings > HTTPS certificate warns you before it expires. Uploading your own certificate is still done there.
 
 ## Settings
 
-Admin settings, under Settings > Plugins > ACME Certificates:
+### Admin
 
-- **Renew automatically**: check twice a day and get a new certificate when
-  there is none, it is the self-signed one, it does not cover the domain, or
-  it expires within 30 days.
-- **Domain** and **Email**.
-- **Certificate authority**: Let's Encrypt, Let's Encrypt staging (for
-  testing without rate limits) or a custom ACME directory URL.
-- **Challenge type**:
-  - **HTTP**: the CA fetches `http://<domain>/.well-known/acme-challenge/...`,
-    so port 80 must reach Termix. Core answers it.
-  - **DNS (Cloudflare)**: needs an API token with Zone:DNS:Edit. Works when
-    port 80 is closed.
+- Renew automatically: turn automatic renewal on or off.
+- Domain and Email: the domain to cover and the contact email for the provider.
+- Certificate authority: Let's Encrypt, Let's Encrypt staging or a custom ACME directory URL.
+- Challenge type: HTTP or DNS (Cloudflare).
+- Cloudflare API token: used by the DNS challenge. Stored encrypted.
 
-The status box shows the served certificate and the last attempt, and has a
-button to request a certificate now.
+## Permissions
 
-## How it works
+- `acme-ssl.manage`: Manage ACME certificates. Only admins have it by default.
 
-It runs [acme-client](https://github.com/publishlab/node-acme-client) with
-every request sent through `ctx.fetch`. The ACME account key is sealed with
-`ctx.secrets.seal` and kept in `ctx.kv`. Certificates are written and loaded
-through `ctx.system` (`system:tls`).
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

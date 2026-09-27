@@ -2,7 +2,7 @@
   "id": "file-manager",
   "name": "File Manager",
   "version": "1.0.0",
-  "description": "Browse, edit and transfer files over SFTP, including host-to-host transfers.",
+  "description": "Browse, edit and transfer files over SFTP, including between two hosts.",
   "author": {
     "name": "Termix"
   },

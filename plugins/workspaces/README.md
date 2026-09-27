@@ -1,26 +1,30 @@
 # Workspaces
 
-Save and restore named tab/split layouts per user.
+Save and restore named tab and split layouts.
 
-Bundled with Termix and enabled by default. This is the reference
-conversion: it imports only `@termix/plugin-sdk`, and "Converting a feature
-into a plugin" in packages/plugin-sdk/ARCHITECTURE.md points here for each step.
+## Features
 
-## Layout
+- Save your open tabs and split layouts as a named workspace.
+- Open a workspace later to bring every tab back.
+- Tabs from a feature that is turned off are kept as placeholders.
+- Saved workspaces sync between the desktop app and a server.
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/         activate(ctx), the table, repository and routes
-    migrations/          one .sql per dialect, generated from src/backend/tables.ts
-    src/frontend/        the UI it registers
-    locales/en.json      its strings (English only; the rest are translated)
-    tests/backend/       vitest, node
-    tests/frontend/      vitest, jsdom
+## Permissions
 
-## Commands
+- `workspaces.use`: Use workspaces. Admins and users have it by default.
 
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
-    npx termix-plugin migrations <name>   after changing src/backend/tables.ts
+## Services
 
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+Provides to other plugins:
+
+- `workspaces.saved`: list a user's saved workspaces.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

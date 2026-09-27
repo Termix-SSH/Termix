@@ -2,7 +2,7 @@
   "id": "opkssh",
   "name": "OPKSSH",
   "version": "1.0.0",
-  "description": "Sign in to hosts with short-lived SSH certificates from OpenPubkey SSH, using your identity provider in the browser.",
+  "description": "Connect to hosts with short-lived SSH certificates from OpenPubkey SSH, after signing in with your identity provider.",
   "author": {
     "name": "Termix"
   },

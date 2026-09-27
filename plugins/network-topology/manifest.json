@@ -2,7 +2,7 @@
   "id": "network-topology",
   "name": "Network Topology",
   "version": "1.0.0",
-  "description": "Visualize hosts and their connections as an interactive graph, saved per user.",
+  "description": "Show your hosts and how they connect as an interactive graph.",
   "author": {
     "name": "Termix"
   },

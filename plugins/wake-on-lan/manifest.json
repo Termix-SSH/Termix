@@ -2,7 +2,7 @@
   "id": "wake-on-lan",
   "name": "Wake-on-LAN",
   "version": "1.0.0",
-  "description": "Wake a sleeping host by sending a Wake-on-LAN magic packet to its MAC address.",
+  "description": "Wake a sleeping host by sending a Wake-on-LAN packet to its MAC address.",
   "author": {
     "name": "Termix"
   },

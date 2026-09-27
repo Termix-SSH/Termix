@@ -2,7 +2,7 @@
   "id": "acme-ssl",
   "name": "ACME Certificates",
   "version": "1.0.0",
-  "description": "Gets and renews the Termix HTTPS certificate from Let's Encrypt or another ACME CA, with the http-01 or Cloudflare dns-01 challenge. Termix keeps serving the current certificate when this plugin is off, but it is no longer renewed.",
+  "description": "Gets and renews the Termix HTTPS certificate from Let's Encrypt or another ACME provider.",
   "author": {
     "name": "Termix"
   },

@@ -1,29 +1,40 @@
 # HashiCorp Vault
 
-Adds the `vault` SSH auth type: Termix signs you in to Vault with OIDC in the
-browser, has Vault's SSH secrets engine sign a fresh key, and keeps the
-short-lived certificate until it expires.
+Connect to hosts with short-lived SSH certificates from HashiCorp Vault, after signing in to Vault with OIDC.
 
-Termix talks to Vault's HTTP API directly (`auth/<mount>/oidc/auth_url`,
-`auth/<mount>/oidc/callback`, `<ssh mount>/sign/<role>`). No Vault token,
-AppRole secret or long-lived key is ever stored.
+## Features
 
-## Profiles
+- Adds the Vault login type to the host editor.
+- Signs you in to Vault with OIDC in the browser.
+- Has Vault's SSH secrets engine sign a fresh key and keeps the certificate until it expires.
+- Never stores a Vault token, AppRole secret or long-lived key.
 
-A profile holds the connection settings only: the Vault address and
-namespace, the OIDC mount and role, the SSH secrets mount and signer role,
-the valid principals and the key type. Pick one in the host editor after
-choosing "Vault" as the authentication type, and manage profiles from the
-same place. Users with the "Share Vault profiles" permission can share a
-profile with everyone.
+## Setup
+
+A profile holds the Vault address and namespace, the OIDC mount and role, the SSH secrets mount and signer role, the valid principals and the key type. Pick Vault as the login type in the host editor, then choose or create a profile there. Profiles sync between the desktop app and a server.
 
 ## Settings
 
-Admin settings, under Settings > Plugins > HashiCorp Vault:
+### Admin
 
-- **Redirect URI**: add it to `allowed_redirect_uris` in each Vault OIDC
-  role: `<base URL>/plugin-api/vault/oidc/callback`, or
-  `<base URL>/vault/oidc/callback` while "Use the old redirect URI" is on.
+- Redirect URI: add `<base URL>/plugin-api/vault/oidc/callback` to `allowed_redirect_uris` in each Vault OIDC role.
+- Use the old redirect URI: keep sending the 2.8 URI `<base URL>/vault/oidc/callback`. Upgraded installs keep this on until you turn it off.
 
-An install upgraded from 2.8 that used Vault keeps the old redirect URI
-turned on.
+### Host
+
+- Vault signer profile: the profile this host uses.
+
+## Permissions
+
+- `vault.use`: Sign in to hosts with Vault. Admins and users have it by default.
+- `vault.share`: Share Vault profiles with everyone. Only admins have it by default.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

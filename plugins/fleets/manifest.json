@@ -2,7 +2,7 @@
   "id": "fleets",
   "name": "Fleets",
   "version": "1.0.0",
-  "description": "Group hosts into fleets by static membership or tag rules, and run commands, package actions, and file transfers across every member at once.",
+  "description": "Group hosts into fleets and run commands, package actions and file transfers on all of them at once.",
   "author": {
     "name": "Termix"
   },

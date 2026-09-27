@@ -2,7 +2,7 @@
   "id": "docker",
   "name": "Docker",
   "version": "1.0.0",
-  "description": "Container management over SSH: list, inspect, start, stop and view logs for Docker or Podman containers, plus an interactive container console.",
+  "description": "Manage Docker and Podman containers over SSH, with logs and a container console.",
   "author": {
     "name": "Termix"
   },

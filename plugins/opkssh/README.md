@@ -1,34 +1,42 @@
 # OPKSSH
 
-Adds the `opkssh` SSH auth type: Termix signs you in with your identity
-provider in the browser, gets a short-lived SSH certificate from
-[OpenPubkey SSH](https://github.com/openpubkey/opkssh), and caches it for 24
-hours.
+Connect to hosts with short-lived SSH certificates from OpenPubkey SSH, after signing in with your identity provider.
 
-## Config
+## Features
 
-`<DATA_DIR>/plugins/opkssh/config.yml`, OPKSSH's own config format. A
-template is written there the first time someone signs in without one. An
-install upgraded from 2.8 has its old `<DATA_DIR>/.opk/config.yml` copied
-here.
+- Adds the OPKSSH login type to the host editor.
+- Signs you in with your identity provider in the browser and gets a short-lived SSH certificate from [OpenPubkey SSH](https://github.com/openpubkey/opkssh).
+- Keeps the certificate for 24 hours.
 
-`redirect_uris` in that file are OPKSSH's local listener on the Termix
-server and must be localhost (or left out). The public callback is passed
-to OPKSSH as `--remote-redirect-uri`; register it with your identity
-provider. The plugin's admin settings page shows it:
-`<base URL>/plugin-api/opkssh/callback`, or `<base URL>/host/opkssh-callback`
-while "Use the old redirect URI" is on.
+## Setup
 
-## Binary
+The config file lives at `<DATA_DIR>/plugins/opkssh/config.yml` and uses the OPKSSH config format. A template is written there the first time someone signs in without one. Installs upgraded from 2.8 have their old `<DATA_DIR>/.opk/config.yml` copied here.
 
-The plugin runs `opkssh` pinned to one release and its SHA-256. It looks, in
-order, at:
+`redirect_uris` in that file is the local listener OPKSSH opens on the Termix server. It must be localhost or left out. Register the public callback shown in the admin settings with your identity provider instead.
 
-1. `OPKSSH_BUNDLED_DIR/<asset>` (default `<cwd>/opkssh-bundled`). The Docker
-   image bakes the binary into `/app/opkssh-bundled`, so offline installs
-   never download it.
+### Binary
+
+The plugin runs one pinned release of `opkssh` and checks its SHA-256. It looks for the binary in this order:
+
+1. `OPKSSH_BUNDLED_DIR/<asset>`, which defaults to `<cwd>/opkssh-bundled`. The Docker image ships it at `/app/opkssh-bundled`, so offline installs never download it.
 2. `<DATA_DIR>/plugins/opkssh/bin/<asset>`, a copy downloaded earlier.
 3. A download from the GitHub release.
 
-Any copy whose checksum does not match is ignored. `OPKSSH_VERSION` picks
-another release; `OPKSSH_SHA256` must then give its checksum.
+A copy with the wrong checksum is ignored. Set `OPKSSH_VERSION` to use another release, and `OPKSSH_SHA256` to its checksum.
+
+## Settings
+
+### Admin
+
+- Redirect URI: register `<base URL>/plugin-api/opkssh/callback` with your identity provider.
+- Use the old redirect URI: keep sending the 2.8 URI `<base URL>/host/opkssh-callback`. Upgraded installs keep this on until you turn it off.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

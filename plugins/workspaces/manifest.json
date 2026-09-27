@@ -2,7 +2,7 @@
   "id": "workspaces",
   "name": "Workspaces",
   "version": "1.0.0",
-  "description": "Save and restore named tab/split layouts per user.",
+  "description": "Save and restore named tab and split layouts.",
   "author": {
     "name": "Termix"
   },

@@ -2,7 +2,7 @@
   "id": "session-recording",
   "name": "Session Recording",
   "version": "1.0.0",
-  "description": "Records terminal sessions and lets you play them back or download them.",
+  "description": "Record terminal sessions and play them back or download them later.",
   "author": {
     "name": "Termix"
   },

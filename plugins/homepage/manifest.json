@@ -2,7 +2,7 @@
   "id": "homepage",
   "name": "Homepage",
   "version": "1.0.0",
-  "description": "A customizable widget canvas and dashboard service links for your servers and services.",
+  "description": "A custom widget page and service links for your servers and services.",
   "author": {
     "name": "Termix"
   },

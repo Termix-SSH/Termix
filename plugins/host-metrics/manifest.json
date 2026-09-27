@@ -2,7 +2,7 @@
   "id": "host-metrics",
   "name": "Host Metrics",
   "version": "1.0.0",
-  "description": "Live CPU, memory, disk, network and process metrics, plus host management (services, packages, firewall, cron, users, SSL, logs, WireGuard).",
+  "description": "Live CPU, memory, disk, network and process stats, plus tools to manage services, packages, firewall rules, cron jobs, users and more.",
   "author": {
     "name": "Termix"
   },

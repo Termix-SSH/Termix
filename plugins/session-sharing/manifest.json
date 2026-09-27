@@ -2,7 +2,7 @@
   "id": "session-sharing",
   "name": "Session Sharing",
   "version": "1.0.0",
-  "description": "Share a live terminal or remote desktop session by link or with another user, and present sessions to a group in collaboration rooms.",
+  "description": "Share a live terminal or remote desktop session by link or with another user, and present sessions in collaboration rooms.",
   "author": {
     "name": "Termix"
   },

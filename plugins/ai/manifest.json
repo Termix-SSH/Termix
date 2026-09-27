@@ -2,7 +2,7 @@
   "id": "ai",
   "name": "AI Assistant",
   "version": "1.0.0",
-  "description": "An AI assistant that can read your hosts, snippets, fleets, alerts and automations, and propose changes for you to approve.",
+  "description": "An AI assistant that can read your hosts, snippets, fleets, alerts and automations, and suggest changes for you to approve.",
   "author": {
     "name": "Termix"
   },

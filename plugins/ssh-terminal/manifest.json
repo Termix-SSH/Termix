@@ -2,7 +2,7 @@
   "id": "ssh-terminal",
   "name": "SSH Terminal",
   "version": "1.0.0",
-  "description": "Interactive SSH terminal sessions, with jump hosts, host key verification, command history and the desktop app's local terminal.",
+  "description": "SSH terminal sessions with jump hosts, host key checks, command history and a local terminal in the desktop app.",
   "author": {
     "name": "Termix"
   },

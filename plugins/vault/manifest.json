@@ -2,7 +2,7 @@
   "id": "vault",
   "name": "HashiCorp Vault",
   "version": "1.0.0",
-  "description": "Sign in to hosts with short-lived SSH certificates from a HashiCorp Vault SSH secrets engine, after an OIDC sign-in to Vault in the browser.",
+  "description": "Connect to hosts with short-lived SSH certificates from HashiCorp Vault, after signing in to Vault with OIDC.",
   "author": {
     "name": "Termix"
   },

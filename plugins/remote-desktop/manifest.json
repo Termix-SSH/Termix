@@ -2,7 +2,7 @@
   "id": "remote-desktop",
   "name": "Remote Desktop",
   "version": "1.0.0",
-  "description": "RDP, VNC and Telnet remote desktop sessions, with clipboard, drive redirection, session recording and session sharing.",
+  "description": "RDP, VNC and Telnet sessions in the browser, with clipboard, file transfer, recording and sharing.",
   "author": {
     "name": "Termix"
   },

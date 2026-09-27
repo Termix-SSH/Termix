@@ -1,22 +1,32 @@
 # Tailscale
 
-Browse and connect to tailnet devices, manage the Tailscale API key, and show the Tailscale SSH re-authentication dialog.
+Browse and connect to devices on your tailnet, and handle Tailscale SSH sign-in checks.
 
-Bundled with Termix and enabled by default.
+## Features
 
-## Layout
+- Browse the devices on your Tailscale or Headscale tailnet.
+- Pick a device when adding a host to fill in its address.
+- Shows the Tailscale SSH sign-in check when a host asks for it.
+- Adds a Tailscale tool to Host Metrics.
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/         activate(ctx) / deactivate(), plus the routes
-    src/frontend/        the UI it registers
-    locales/en.json      its strings (English only; the rest are translated)
-    tests/backend/       vitest, node
-    tests/frontend/      vitest, jsdom
+## Settings
 
-## Commands
+### Admin
 
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
+- API key: a Tailscale or Headscale API key for your tailnet.
+- API base URL: leave empty for Tailscale, or point it at a Headscale instance.
+- Device list: check that the key works and see how many devices are reachable.
 
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+## Permissions
+
+- `tailscale.devices.view`: See the devices on the tailnet. Only admins have it by default.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

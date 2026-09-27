@@ -2,7 +2,7 @@
   "id": "sso",
   "name": "Single sign-on",
   "version": "1.0.0",
-  "description": "Sign in with an OpenID Connect provider, GitHub or Google. Each provider you add gets its own button on the login screen.",
+  "description": "Sign in with an OpenID Connect provider, GitHub or Google. Each provider gets its own button on the login screen.",
   "author": {
     "name": "Termix"
   },

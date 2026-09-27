@@ -1,32 +1,23 @@
 # Serial
 
-Serial console access over a device attached to the machine running Termix:
-the desktop app talks to it through the backend's `serialport` binding, and a
-browser without the desktop app falls back to the Web Serial API.
+Open a serial console to a device plugged into your computer.
 
-Bundled with Termix and enabled by default.
+## Features
 
-## Layout
+- Open a serial console to a device plugged into your computer.
+- The desktop app talks to the device directly.
+- In a browser, the plugin uses Web Serial.
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/          activate(ctx) / deactivate(), the /console WS route
-    src/frontend/          the rail panel, the tab and their shared transport
-    locales/en.json       its strings (English only; the rest are translated)
-    tests/backend/         vitest, node
-    tests/frontend/        vitest, jsdom
+## Setup
 
-## Native dependency
+The desktop app uses the `serialport` npm package, which has a native binary. The build does not bundle it. See "native dependencies" in `packages/plugin-sdk/ARCHITECTURE.md` for how Docker, Electron and dev each get a working copy.
 
-`serialport` (and its native `@serialport/bindings-cpp` binding) is this
-plugin's own npm dependency rather than a host-provided one, but the build
-never bundles it: see "native dependencies" in
-packages/plugin-sdk/ARCHITECTURE.md for why, and how Docker, Electron and dev
-each end up with a working binary anyway.
+## Development
 
-## Commands
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
 
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
-
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

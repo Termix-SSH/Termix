@@ -1,34 +1,39 @@
 # Docker
 
-Container management over SSH: list, inspect, start, stop and view logs for Docker or Podman containers, plus an interactive container console.
+Manage Docker and Podman containers over SSH, with logs and a container console.
 
-Bundled with Termix and enabled by default.
+## Features
+
+- List, inspect, start, stop, restart, pause and remove containers.
+- Read and download container logs.
+- Open an interactive console inside a container.
+- Works with Docker or Podman.
+- Adds a Docker widget to the homepage.
+
+## Settings
+
+### Host
+
+- Enable Docker: show the Docker tab for this host.
+- Container Runtime: Docker or Podman.
+
+## Permissions
+
+- `docker.use`: Use Docker. Admins and users have it by default.
 
 ## Services
 
-- `docker.containers` 1.0.0: `listContainers(hostId, { all? })` and
-  `action(hostId, container, "start" | "stop" | "restart" | "pause" |
-"unpause" | "remove")`, run over a pooled SSH connection as the caller.
-- `docker.events` 1.0.0: `subscribe(hostId, listener)` calls the listener
-  with `{ hostId, container, event }` when a container exits, starts,
-  restarts or turns unhealthy, polled about once a minute as the caller.
-  Subscribing the same listener again is a no-op.
+Provides to other plugins:
 
-Both need `docker.use`.
+- `docker.containers`: list containers and start, stop, restart, pause, unpause or remove them.
+- `docker.events`: get notified when a container starts, exits, restarts or turns unhealthy.
 
-## Layout
+## Development
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/         activate(ctx) / deactivate(), plus the routes
-    src/frontend/        the UI it registers
-    locales/en.json      its strings (English only; the rest are translated)
-    tests/backend/       vitest, node
-    tests/frontend/      vitest, jsdom
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
 
-## Commands
-
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
-
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

@@ -2,6 +2,6 @@
 
 ## 1.0.0
 
-Bundled with Termix 2.9.0. The terminal, its session manager, the desktop
-app's local terminal and command history live in this plugin now, with their
-settings under the plugin's own admin and host settings.
+First release, bundled with Termix 2.9.0.
+
+Adds SSH terminal sessions with jump hosts, host key checks, command history and a terminal toolbar. Sessions can stay alive after a disconnect, and the desktop app gets a local terminal.

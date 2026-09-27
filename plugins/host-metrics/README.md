@@ -1,26 +1,54 @@
 # Host Metrics
 
-Live CPU, memory, disk, network and process metrics, plus host management (services, packages, firewall, cron, users, SSL, logs, WireGuard). Other plugins add manager cards through the `host-metrics.managers` slot (Tailscale does).
+Live CPU, memory, disk, network and process stats, plus tools to manage services, packages, firewall rules, cron jobs, users and more.
 
-The host list's online and offline dot is core's own status check, not this plugin. A working metrics login is what turns a reachable host online.
+## Features
 
-Bundled with Termix and enabled by default.
+- Live CPU, memory, disk, network, temperature and process stats.
+- History charts for each host.
+- Tools to manage services, packages, firewall rules, cron jobs, users, SSL certificates, logs and WireGuard.
+- A drag and drop layout you can change per host.
+- Other features can add their own tools. Tailscale does.
 
-## Layout
+## Setup
 
-    manifest.json        id, capabilities and what this plugin contributes
-    src/backend/         activate(ctx) / deactivate(), the poller and the routes
-    src/frontend/        the UI it registers
-    src/shared/          types both sides use
-    migrations/          adopts core's four metrics tables (sqlite, postgres, mysql)
-    locales/en.json      its strings (English only; the rest are translated)
-    tests/backend/       vitest, node
-    tests/frontend/      vitest, jsdom
+The online dot in the host list comes from Termix itself, not this plugin. A working metrics login is what marks a reachable host as online.
 
-## Commands
+## Settings
 
-    npm run build     bundle into dist/
-    npm run test      run this plugin's tests
-    npm run typecheck
+### Admin
 
-See packages/plugin-sdk/ARCHITECTURE.md for the contract this follows.
+- Metrics interval (seconds): how often a host is checked while someone views it.
+- History retention (days): how long history is kept.
+- Metrics on for new hosts: whether new hosts start with metrics turned on.
+
+### User
+
+- Temperature unit: Celsius or Fahrenheit.
+
+### Host
+
+- Collect metrics: turn metrics on for this host.
+- Metrics interval (seconds): override the admin interval.
+- Enabled widgets: which widgets to show.
+- Excluded mounts and Monitored paths: which disks to hide or watch.
+
+## Permissions
+
+- `host-metrics.use`: View metrics and use the host tools. Admins and users have it by default.
+
+## Services
+
+Provides to other plugins:
+
+- `host-metrics.viewers`: read a host's current metrics.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

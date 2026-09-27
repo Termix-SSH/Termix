@@ -1,60 +1,70 @@
 # Remote Desktop
 
-RDP, VNC and Telnet sessions over guacd, with clipboard, file transfer through
-RDP drive redirection, session recording and session sharing.
+RDP, VNC and Telnet sessions in the browser, with clipboard, file transfer, recording and sharing.
 
-## guacd
+## Features
 
-guacd (the Apache Guacamole proxy daemon that speaks RDP, VNC and Telnet) is an
-external service this plugin talks to over TCP. The stock Docker compose runs
-it as its own `guacamole/guacd` container. This plugin never starts it.
+- Connect to hosts over RDP, VNC or Telnet from any browser.
+- Clipboard sync and file transfer through RDP drive redirection.
+- Session recording and session sharing, when those plugins are on.
+- Jump host support.
+- Opens the Windows Remote Desktop client from the desktop app.
 
-Where to find it is the admin setting **guacd URL** (`host:port`). The
-`GUACD_URL`, or `GUACD_HOST` and `GUACD_PORT`, environment variables override
-the setting, so a compose file stays the source of truth where it sets them.
-Changing the setting rebuilds the connection server without a restart.
+## Setup
 
-Other environment variables the plugin reads:
+This plugin needs guacd, the Apache Guacamole proxy that speaks RDP, VNC and Telnet. The Docker compose file runs it as its own `guacamole/guacd` container. This plugin never starts guacd itself.
 
-| Variable                       | What it sets                                                                |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `GUACD_TUNNEL_HOST`            | The name guacd uses to reach Termix for a jump host tunnel (default termix) |
-| `GUACD_RECORDING_PATH`         | Where guacd writes recordings, as guacd sees it                             |
-| `GUACD_RECORDING_BACKEND_PATH` | The same folder as Termix sees it                                           |
-| `GUACD_DRIVE_PATH`             | The root of each user's RDP drive folder on the guacd host                  |
-| `GUACAMOLE_ENCRYPTION_KEY`     | The connection token key; derived from `JWT_SECRET` when unset              |
+Set where guacd runs with the guacd URL admin setting. The `GUACD_URL`, or `GUACD_HOST` and `GUACD_PORT`, environment variables override that setting.
+
+Other environment variables:
+
+| Variable                       | What it sets                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------------- |
+| `GUACD_TUNNEL_HOST`            | The name guacd uses to reach Termix for a jump host tunnel. Defaults to `termix`. |
+| `GUACD_RECORDING_PATH`         | Where guacd writes recordings, as guacd sees it.                                  |
+| `GUACD_RECORDING_BACKEND_PATH` | The same folder, as Termix sees it.                                               |
+| `GUACD_DRIVE_PATH`             | The root of each user's RDP drive folder on the guacd host.                       |
+| `GUACAMOLE_ENCRYPTION_KEY`     | The connection token key. Made from `JWT_SECRET` when not set.                    |
 
 ## Settings
 
-- **Admin**: turn Remote Desktop on or off, and the guacd URL.
-- **User**: RDP defaults (colour depth, resize method, wallpaper, clipboard
-  and the rest). A host's own values win; anything a host leaves on its
-  default takes the user's.
-- **Host**: the RDP, VNC and Telnet switches, ports, security mode,
-  certificate handling and every guacd parameter, edited in the host
-  editor's RDP, VNC and Telnet tabs. The toolbar switch is in the Plugins tab.
+### Admin
 
-The logins (users, passwords, stored credentials, domain) stay on the host in
-core, because sharing decides which of them a recipient may use.
+- Enable Remote Desktop: turn remote desktop on or off.
+- guacd URL: where guacd runs, as `host:port`. Changes apply without a restart.
 
-## Capabilities
+### User
 
-- `credentials:read`: guacd needs the host's RDP, VNC or Telnet password in
-  plain text, so the plugin reads it through `ctx.credentials`. A shared
-  recipient only ever gets the owner's shared snapshot or their own override.
-- `ssh:connect`, `credentials:use`: jump host tunnels, through
-  `ctx.ssh.jumpChain`, or the tunnels plugin's `tunnels.access` for a single
-  hop when it is running.
-- `network:serve`: the routes and the `/display` socket.
-- `desktop:window`: opening the Windows Remote Desktop client from the desktop
-  app.
-- `hosts:read`: the online indicator while a session is open.
-- `ui:surface`: everything the frontend registers.
+- RDP defaults: color depth, resize method, wallpaper, font smoothing, audio, printing, drive redirection and clipboard. A host's own values win over these.
+
+### Host
+
+- RDP, VNC and Telnet: turn each protocol on and set its port.
+- RDP security mode and Ignore certificate errors.
+- guacd settings: every other guacd option.
+- Remote desktop toolbar: show the toolbar in the session.
+
+## Permissions
+
+- `remote-desktop.sessions`: Let session sharing and recording reach your remote desktop sessions. Admins and users have it by default.
 
 ## Services
 
-Provides `sessions.live` under the names `rdp`, `vnc` and `telnet`, which is
-how session sharing and collab rooms find a live session and mint a viewer
-token for it. Uses `recordings.writer` (session-recording) to decide whether
-to record and to list finished recordings, and `tunnels.access` (tunnels)
-for single-hop jump tunnels. Both are optional.
+Provides to other plugins:
+
+- `sessions.live` as `rdp`, `vnc` and `telnet`: find a live session so it can be shared.
+
+Uses from other plugins:
+
+- `recordings.writer` to record sessions. Optional.
+- `tunnels.access` for single-hop jump host tunnels. Optional.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.

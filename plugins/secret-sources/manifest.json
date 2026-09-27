@@ -2,7 +2,7 @@
   "id": "secret-sources",
   "name": "Secret Sources",
   "version": "1.0.0",
-  "description": "Pull host secrets from an external password manager at connect time instead of storing them, using op:// references.",
+  "description": "Fetch host secrets from 1Password when you connect instead of storing them in Termix.",
   "author": {
     "name": "Termix"
   },

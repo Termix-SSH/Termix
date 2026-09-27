@@ -2,7 +2,7 @@
   "id": "snippets",
   "name": "Snippets",
   "version": "1.0.0",
-  "description": "Saved commands and notes you can run or paste into a terminal, with variables and sharing.",
+  "description": "Save commands and notes, then run or paste them into a terminal. Supports variables and sharing.",
   "author": {
     "name": "Termix"
   },

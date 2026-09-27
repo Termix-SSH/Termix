@@ -1,24 +1,41 @@
 # Session Recording
 
-Records terminal sessions and lets you play them back or download them.
+Record terminal sessions and play them back or download them later.
 
-Bundled with Termix and enabled by default. It imports only
-`@termix/plugin-sdk`.
+## Features
 
-## What it does
+- Records SSH terminal sessions as they happen.
+- Play a recording back, skip through it and copy its text.
+- Download a recording as a file or as plain text.
+- Removes recordings older than a set number of days.
+- Keeps recordings when a user is deleted, with the user's name removed.
 
-- **Recording**: an SSH terminal session is recorded as an asciicast, written
-  incrementally in 300ms batches as it happens (issue #1049).
-- **Playback**: view a recording inline, scrub through it, copy its plain
-  text, or download it as a recording file or plain text.
-- **Retention**: an admin setting prunes recordings older than a configured
-  number of days, checked at startup and every 24 hours.
-- **Per-host switch**: recording can be turned off for a host.
-- **`recordings.writer`**: a service other plugins consume. `open(meta)`
-  starts an incremental recording (ssh-terminal); `createFinished(input)`
-  inserts a row for a recording the caller already wrote to disk itself
-  (remote desktop's guacd recordings).
+## Settings
 
-Recordings outlive the account they were made under: deleting a user
-anonymizes their recordings rather than deleting them, since a recording is
-evidence about the host as much as about the person.
+### Admin
+
+- Retention (days): remove recordings older than this. Checked at startup and once a day.
+
+### Host
+
+- Enable session recording: record sessions on this host.
+
+## Permissions
+
+- `session-recording.view`: View and download session recordings. Admins and users have it by default.
+
+## Services
+
+Provides to other plugins:
+
+- `recordings.writer`: start a recording and add to it as a session runs, or save a recording that is already finished.
+
+## Development
+
+```bash
+npm run build      # build into dist/
+npm run test       # run this plugin's tests
+npm run typecheck  # type-check this plugin
+```
+
+See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.
