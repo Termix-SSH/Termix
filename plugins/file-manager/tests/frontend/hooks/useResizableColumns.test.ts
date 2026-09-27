@@ -20,7 +20,7 @@ describe("useResizableColumns", () => {
       useResizableColumns({ storageKey: STORAGE_KEY, columns }),
     );
     expect(result.current.gridTemplateColumns).toBe(
-      "minmax(140px, 1fr) 120px 80px",
+      "minmax(min(240px, 50%), 1fr) minmax(0, 120px) minmax(0, 80px)",
     );
   });
 
@@ -64,7 +64,9 @@ describe("useResizableColumns", () => {
     );
     act(() => result.current.toggleColumn("size"));
     expect(result.current.isVisible("size")).toBe(false);
-    expect(result.current.gridTemplateColumns).toBe("minmax(140px, 1fr) 120px");
+    expect(result.current.gridTemplateColumns).toBe(
+      "minmax(min(240px, 50%), 1fr) minmax(0, 120px)",
+    );
     expect(result.current.visibleColumns.map((c) => c.key)).toEqual([
       "modified",
     ]);
@@ -79,7 +81,7 @@ describe("useResizableColumns", () => {
     expect(remount.result.current.isVisible("size")).toBe(false);
     act(() => remount.result.current.toggleColumn("size"));
     expect(remount.result.current.gridTemplateColumns).toBe(
-      "minmax(140px, 1fr) 120px 80px",
+      "minmax(min(240px, 50%), 1fr) minmax(0, 120px) minmax(0, 80px)",
     );
   });
 

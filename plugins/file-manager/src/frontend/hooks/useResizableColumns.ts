@@ -15,8 +15,8 @@ interface UseResizableColumnsOptions {
   /** localStorage key; widths are remembered per pane. */
   storageKey: string;
   /**
-   * Fixed-width columns, in visual order, that follow a leading flexible
-   * column (the file name). The flexible column absorbs whatever is left.
+   * Columns, in visual order, that follow the file name. Saved widths are
+   * preferred maxima; metadata shrinks first when the pane is narrow.
    */
   columns: ResizableColumnSpec[];
 }
@@ -72,7 +72,7 @@ function clamp(value: number, column: ResizableColumnSpec): number {
 
 /**
  * Column widths for a list view whose first column is flexible and whose
- * remaining columns are fixed and user-resizable by dragging the boundary at
+ * remaining columns are user-resizable by dragging the boundary at
  * the left edge of each header cell. Double-clicking a handle resets that
  * column to its default. Widths persist in localStorage.
  */
@@ -141,8 +141,8 @@ export function useResizableColumns({
   const gridTemplateColumns = useMemo(
     () =>
       [
-        "minmax(140px, 1fr)",
-        ...visibleColumns.map((c) => `${widths[c.key]}px`),
+        "minmax(min(240px, 50%), 1fr)",
+        ...visibleColumns.map((c) => `minmax(0, ${widths[c.key]}px)`),
       ].join(" "),
     [visibleColumns, widths],
   );

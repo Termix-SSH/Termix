@@ -1358,7 +1358,7 @@ export function FileManagerGrid({
                   </div>
                 )}
                 {listColumns.isVisible("owner") && (
-                  <div className="relative hidden md:flex items-center min-w-0">
+                  <div className="relative flex items-center min-w-0">
                     <ColumnResizeHandle
                       {...listColumns.getHandleProps("owner")}
                     />
@@ -1509,7 +1509,7 @@ export function FileManagerGrid({
                         )}
 
                         {!isEditing && listColumns.isVisible("owner") && (
-                          <span className="text-[10px] text-muted-foreground truncate hidden md:block pointer-events-none">
+                          <span className="text-[10px] text-muted-foreground truncate pointer-events-none">
                             {file.owner
                               ? `${file.owner}${file.group ? `:${file.group}` : ""}`
                               : "—"}
@@ -1517,7 +1517,7 @@ export function FileManagerGrid({
                         )}
 
                         {!isEditing && listColumns.isVisible("size") && (
-                          <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none">
+                          <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none truncate">
                             {file.type === "file" &&
                             file.size !== undefined &&
                             file.size !== null

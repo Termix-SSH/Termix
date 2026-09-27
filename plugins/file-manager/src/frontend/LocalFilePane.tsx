@@ -1058,7 +1058,7 @@ export function LocalFilePane({
                       </span>
                     )}
                     {columns.isVisible("size") && (
-                      <span className="text-muted-foreground text-right pointer-events-none tabular-nums">
+                      <span className="text-muted-foreground text-right pointer-events-none tabular-nums truncate">
                         {entry.type === "directory"
                           ? "--"
                           : formatFileSize(entry.size)}
