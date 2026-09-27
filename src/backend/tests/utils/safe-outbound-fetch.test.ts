@@ -281,3 +281,38 @@ describe("safeOutboundFetch", () => {
     }
   }, 10_000);
 });
+
+describe("redirect handling", () => {
+  it.each([undefined, "error", "follow", "manual"] as const)(
+    "never follows redirects with mode %s",
+    async (redirect) => {
+      const paths: string[] = [];
+      const server = createServer((req, res) => {
+        paths.push(req.url!);
+        res.writeHead(302, { Location: "/private-target" });
+        res.end();
+      });
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      const { port } = server.address() as AddressInfo;
+      try {
+        const response = safeOutboundFetch(
+          `http://127.0.0.1:${port}/`,
+          { redirect },
+          ["127.0.0.1"],
+        );
+        if (redirect === "manual") {
+          const result = await response;
+          expect(result.status).toBe(302);
+          await result.body?.cancel();
+        } else {
+          await expect(response).rejects.toThrow();
+        }
+        expect(paths).toEqual(["/"]);
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    },
+  );
+});

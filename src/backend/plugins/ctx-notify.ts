@@ -173,6 +173,7 @@ export function createPluginFetch(deps: Deps): PluginFetch {
           url,
           {
             method: init.method ?? "GET",
+            redirect: init.redirect,
             headers: init.headers,
             body: init.body,
             signal: controller.signal,

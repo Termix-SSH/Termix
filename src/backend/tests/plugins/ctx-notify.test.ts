@@ -26,6 +26,7 @@ const state = vi.hoisted(() => ({
   fetchCalls: [] as Array<{ url: string; allowlist: readonly string[] }>,
   lastTls: null as Record<string, unknown> | null,
   lastSignal: null as AbortSignal | null,
+  lastRedirect: undefined as RequestRedirect | undefined,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -66,6 +67,7 @@ vi.mock("../../utils/safe-outbound-fetch.js", () => ({
     tls: Record<string, unknown> = {},
   ) => {
     state.lastTls = tls;
+    state.lastRedirect = init.redirect;
     state.lastSignal = init.signal ?? null;
     state.fetchCalls.push({ url, allowlist });
     return new Response("ok", { status: 200 });
@@ -256,6 +258,14 @@ describe("ctx.notify", () => {
 });
 
 describe("ctx.fetch", () => {
+  it("forwards manual redirect handling without enabling redirect following", async () => {
+    const ctx = contextFor(["network:outbound"]);
+    await ctx.fetch("https://example.com", { redirect: "manual" });
+    expect(state.lastRedirect).toBe("manual");
+    await ctx.fetch("https://example.com");
+    expect(state.lastRedirect).toBeUndefined();
+  });
+
   it("refuses without network:outbound", async () => {
     const ctx = contextFor([]);
     await expect(ctx.fetch("https://example.com")).rejects.toThrow(

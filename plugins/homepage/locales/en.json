@@ -167,5 +167,15 @@
       "title": "Use the homepage",
       "description": "View and edit the homepage canvas and dashboard service links."
     }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Allowed private hosts",
+      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+    },
+    "privateCertificateAuthority": {
+      "label": "Private certificate authority (PEM)",
+      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+    }
   }
 }

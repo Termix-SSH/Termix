@@ -1631,6 +1631,8 @@ export interface PluginNotify {
 }
 
 export interface PluginFetchInit {
+  /** Return redirect responses without following them, or reject them (default). */
+  redirect?: "error" | "manual";
   method?: string;
   headers?: Record<string, string>;
   body?: string;
