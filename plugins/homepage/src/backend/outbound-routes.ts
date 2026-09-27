@@ -127,6 +127,35 @@ export function registerOutboundRoutes(
     expires: number;
   }
   const pingCache = new Map<string, PingCacheEntry>();
+
+  const privateRequestOptions = async (url: string) => {
+    const settings = await ctx.settings.getAll("admin");
+    const raw = settings.privateEndpoints;
+    const allowPrivateHosts =
+      typeof raw === "string"
+        ? [
+            ...new Set(
+              raw
+                .split(/[\r\n,]+/)
+                .map((host) => host.trim().toLowerCase())
+                .filter((host) => /^[a-z0-9._:-]+$/.test(host)),
+            ),
+          ]
+        : [];
+    const hostname = new URL(url).hostname
+      .replace(/^\[|\]$/g, "")
+      .toLowerCase();
+    const ca = settings.privateCertificateAuthority;
+    return {
+      allowPrivateHosts,
+      ...(allowPrivateHosts.includes(hostname) &&
+      typeof ca === "string" &&
+      ca.trim()
+        ? { tls: { ca: ca.trim() } }
+        : {}),
+    };
+  };
+
   const PING_CACHE_SIZE = 200;
 
   const proxyCache = new Map<string, { data: unknown; expires: number }>();
@@ -304,7 +333,9 @@ export function registerOutboundRoutes(
       return res.status(400).json({ error: "Invalid URL" });
     }
 
-    const cached = pingCache.get(targetUrl);
+    const requestOptions = await privateRequestOptions(targetUrl);
+    const cacheKey = JSON.stringify([targetUrl, requestOptions]);
+    const cached = pingCache.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
       return res.json({
         ok: cached.ok,
@@ -318,7 +349,9 @@ export function registerOutboundRoutes(
       method: "HEAD" | "GET",
     ): Promise<number | null> => {
       const response = await ctx.fetch(url, {
+        ...requestOptions,
         method,
+        redirect: "manual",
         timeoutMs: FETCH_TIMEOUT_MS,
       });
       await response.body?.cancel().catch(() => {});
@@ -332,7 +365,7 @@ export function registerOutboundRoutes(
         code = await requestStatus(targetUrl, "GET");
       }
       const result = {
-        ok: code !== null && code < 400,
+        ok: code !== null && (code < 400 || code === 401 || code === 403),
         statusCode: code,
         latencyMs: Math.round(performance.now() - start),
       };
@@ -340,7 +373,7 @@ export function registerOutboundRoutes(
         const oldest = pingCache.keys().next().value;
         if (oldest) pingCache.delete(oldest);
       }
-      pingCache.set(targetUrl, { ...result, expires: Date.now() + ttl });
+      pingCache.set(cacheKey, { ...result, expires: Date.now() + ttl });
       res.json(result);
     } catch (err) {
       ctx.log.warn(`Ping failed for ${targetUrl}: ${String(err)}`);
@@ -389,13 +422,16 @@ export function registerOutboundRoutes(
       return res.status(400).json({ error: "Invalid URL" });
     }
 
-    const cached = proxyCache.get(targetUrl);
+    const requestOptions = await privateRequestOptions(targetUrl);
+    const cacheKey = JSON.stringify([targetUrl, requestOptions]);
+    const cached = proxyCache.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
       return res.json(cached.data);
     }
 
     try {
       const response = await ctx.fetch(targetUrl, {
+        ...requestOptions,
         timeoutMs: FETCH_TIMEOUT_MS,
       });
       if (!response.ok)
@@ -412,7 +448,7 @@ export function registerOutboundRoutes(
         const oldest = proxyCache.keys().next().value;
         if (oldest) proxyCache.delete(oldest);
       }
-      proxyCache.set(targetUrl, { data, expires: Date.now() + ttl });
+      proxyCache.set(cacheKey, { data, expires: Date.now() + ttl });
       res.json(data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

@@ -222,7 +222,7 @@ export async function safeOutboundFetch(
     return (await undiciFetch(url.toString(), {
       ...options,
       dispatcher: proxy as unknown as Dispatcher,
-      redirect: "error",
+      redirect: options.redirect === "manual" ? "manual" : "error",
     } as never)) as unknown as Response;
   }
 
@@ -240,7 +240,7 @@ export async function safeOutboundFetch(
     const response = await undiciFetch(url.toString(), {
       ...options,
       dispatcher,
-      redirect: "error",
+      redirect: options.redirect === "manual" ? "manual" : "error",
     });
     // close() waits for the body, which the caller reads after we return.
     dispatcher.close().catch(() => {});

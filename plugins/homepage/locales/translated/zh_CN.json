@@ -158,5 +158,15 @@
     "selectHosts": "选择主机",
     "listLayout": "列表",
     "gridLayout": "网格"
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "允许访问的私网主机",
+      "description": "允许 Ping 状态和自定义 API 组件访问的私网或回环主机名/IP。用逗号或换行分隔，不包含协议、端口或路径。留空则禁止访问私网。"
+    },
+    "privateCertificateAuthority": {
+      "label": "私网证书颁发机构（PEM）",
+      "description": "可选的可信 CA 证书，仅用于白名单中的主机。仍会验证证书；留空使用系统信任库。"
+    }
   }
 }

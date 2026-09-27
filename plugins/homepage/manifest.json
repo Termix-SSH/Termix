@@ -48,6 +48,24 @@
     "actionSlots": [
       { "id": "dashboard.secondaryView", "accepts": ["component"] }
     ],
-    "syncEntities": ["dashboardServiceLinks", "homepageItems"]
+    "syncEntities": ["dashboardServiceLinks", "homepageItems"],
+    "settings": {
+      "admin": [
+        {
+          "key": "privateEndpoints",
+          "type": "textarea",
+          "labelKey": "settings.privateEndpoints.label",
+          "descriptionKey": "settings.privateEndpoints.description",
+          "default": ""
+        },
+        {
+          "key": "privateCertificateAuthority",
+          "type": "textarea",
+          "labelKey": "settings.privateCertificateAuthority.label",
+          "descriptionKey": "settings.privateCertificateAuthority.description",
+          "default": ""
+        }
+      ]
+    }
   }
 }

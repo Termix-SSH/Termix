@@ -1,4 +1,5 @@
 import http from "node:http";
+import type { PluginFetchInit } from "@termix/plugin-sdk/backend";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import express, { type Router } from "express";
@@ -36,7 +37,7 @@ export async function startServer(
   options: {
     permissions?: string[];
     users?: string[];
-    fetch?: (url: string, init?: { method?: string }) => Promise<Response>;
+    fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
   } = {},
 ): Promise<TestServer> {
   const db = await createTestDb(pluginDir);
