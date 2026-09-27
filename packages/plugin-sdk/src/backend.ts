@@ -96,9 +96,8 @@ export interface PluginFiles {
  * Scoped by name: every table carries the p_<id>_ prefix, and `refs` exposes
  * users, ssh_data, roles and user_roles read-only so a plugin can join against
  * them without being able to write them. In-process code could reach around
- * all of this - see "What this protects, and what it does not" in
- * ARCHITECTURE.md. The capability, the prefix, lint and review are the
- * contract, not a sandbox.
+ * all of this. The capability, the prefix, lint and review are the contract,
+ * not a sandbox.
  */
 export interface PluginDatabase {
   /** Registers a definition and returns its queryable table object. */

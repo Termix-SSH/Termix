@@ -9,7 +9,7 @@
  *
  * What that means honestly: a plugin has the same reach as core. The
  * capability gate on ctx makes privileged calls declared and auditable, not
- * impossible. See ARCHITECTURE.md.
+ * impossible.
  */
 
 import crypto from "node:crypto";

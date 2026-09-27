@@ -46,5 +46,3 @@ electron/build-info.cjs
 /scripts/auto-fix-blocklist.json
 /scripts/auto-fix-state.json
 /scripts/auto-fix-report-*.json
-
-/packages/plugin-sdk/ARCHITECTURE.md

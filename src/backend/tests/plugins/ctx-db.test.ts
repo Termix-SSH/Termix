@@ -1,9 +1,8 @@
 /**
  * ctx.db and the kv caps.
  *
- * db:own was in the catalog from A1 but nothing checked it, which ARCHITECTURE
- * calls the anti-pattern outright. These assert that it is checked where the
- * privileged thing happens, and audited either way.
+ * db:own was in the catalog from A1 but nothing checked it. These assert that
+ * it is checked where the privileged thing happens, and audited either way.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";

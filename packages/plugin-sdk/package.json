@@ -8,7 +8,7 @@
     "url": "git+https://github.com/Termix-SSH/Termix.git",
     "directory": "packages/plugin-sdk"
   },
-  "homepage": "https://github.com/Termix-SSH/Termix/blob/main/packages/plugin-sdk/ARCHITECTURE.md",
+  "homepage": "https://github.com/Termix-SSH/Termix/tree/main/packages/plugin-sdk#readme",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -77,7 +77,6 @@
     "cli",
     "schema",
     "tsconfig.plugin.json",
-    "ARCHITECTURE.md",
     "README.md"
   ],
   "scripts": {

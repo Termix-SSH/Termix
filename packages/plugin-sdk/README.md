@@ -16,4 +16,3 @@ npx termix-plugin sign <file.tmxplug>   # needs TERMIX_PLUGIN_SIGNING_KEY
 
 Start from
 [Termix-Plugin-Template](https://github.com/Termix-SSH/Termix-Plugin-Template).
-The full contract is in [ARCHITECTURE.md](./ARCHITECTURE.md).

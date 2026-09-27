@@ -8,8 +8,7 @@
  * The list is deliberate. It covers what the bundled plugins use today: the
  * shadcn primitives, the composites for metrics, connection screens and
  * settings rows, and the contexts a connection surface needs. Adding to it is
- * a contract change; update ARCHITECTURE.md with it. Removing from it breaks
- * plugins.
+ * a contract change. Removing from it breaks plugins.
  */
 
 // Primitives

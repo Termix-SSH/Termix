@@ -12,7 +12,7 @@
  *   - It does NOT contain malicious code. A plugin runs in the server process
  *     and can import any module core can. Guarding ctx does not change that,
  *     and this file does not pretend otherwise. Trust comes from signing,
- *     review and the kill list. See ARCHITECTURE.md.
+ *     review and the kill list.
  *
  * The actor never comes from plugin code. It comes from AsyncLocalStorage,
  * set by a request or by ctx.asUser, so a plugin cannot name a user and be

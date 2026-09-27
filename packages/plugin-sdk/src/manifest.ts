@@ -420,8 +420,7 @@ export interface PluginManifest {
    * never bundles them: they stay a real dependency in the plugin's own
    * package.json and are resolved from node_modules at runtime instead,
    * because esbuild bundling a native addon breaks the relative path it uses
-   * to locate its compiled binary. See ARCHITECTURE.md under "native
-   * dependencies".
+   * to locate its compiled binary.
    */
   nativeDependencies?: string[];
   /** How a linked desktop treats this plugin. Defaults to "mirror". */

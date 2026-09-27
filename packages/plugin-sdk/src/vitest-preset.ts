@@ -6,8 +6,7 @@
  *   import { pluginVitestConfig } from "@termix/plugin-sdk/vitest-preset";
  *   export default pluginVitestConfig(import.meta.url);
  *
- * Two projects, matching the layout in ARCHITECTURE.md: tests/backend runs in
- * node, tests/frontend in jsdom.
+ * Two projects: tests/backend runs in node, tests/frontend in jsdom.
  */
 
 import fs from "node:fs";

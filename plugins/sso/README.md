@@ -26,5 +26,3 @@ npm run build      # build into dist/
 npm run test       # run this plugin's tests
 npm run typecheck  # type-check this plugin
 ```
-
-See `packages/plugin-sdk/ARCHITECTURE.md` for the plugin contract.
