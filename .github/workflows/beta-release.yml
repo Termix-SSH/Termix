@@ -75,6 +75,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build plugin SDK
+        run: npm run build:sdk
+
       - name: Run ESLint
         run: npx eslint .
 
