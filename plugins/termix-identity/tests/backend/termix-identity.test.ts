@@ -13,11 +13,14 @@ afterEach(async () => {
 });
 
 function ed25519Line(comment = "") {
-  const pair = ssh2.utils.generateKeyPairSync("ed25519");
-  const parsed = ssh2.utils.parseKey(pair.public);
-  const key = Array.isArray(parsed) ? parsed[0] : parsed;
-  if (key instanceof Error) throw key;
-  const line = `${key.type} ${key.getPublicSSH().toString("base64")}`;
+  // ssh2's generator can truncate leading zero bytes in Ed25519 keys.
+  const { publicKey } = crypto.generateKeyPairSync("ed25519");
+  const raw = Buffer.from(publicKey.export({ format: "jwk" }).x!, "base64url");
+  const blob = Buffer.concat([
+    Buffer.from("0000000b7373682d6564323535313900000020", "hex"),
+    raw,
+  ]);
+  const line = `ssh-ed25519 ${blob.toString("base64")}`;
   return comment ? `${line} ${comment}` : line;
 }
 
