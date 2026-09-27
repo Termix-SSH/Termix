@@ -63,6 +63,11 @@ describe(`${manifest.id} activate`, () => {
     );
   });
 
+  it("owns the host editor's Terminal tab in the SSH group", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.hostEditorSections()).toEqual(["terminal"]);
+  });
+
   it("registers the command history panel and its rail item", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.panels()).toContain("history");

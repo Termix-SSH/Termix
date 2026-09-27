@@ -3,7 +3,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { PluginSummary } from "@/api/plugins-api";
 import {
   hostFeatureTabId,
@@ -14,7 +20,16 @@ import {
   registerHostEditorSection,
   resetHostEditorSections,
 } from "@/sidebar/HostManagerTabs";
-import { HostPluginSections } from "@/settings/HostPluginSections";
+import {
+  HostFeatureFields,
+  HostPluginSections,
+} from "@/settings/HostPluginSections";
+import { withPluginScope } from "@/plugin-host/scope";
+
+const getPlugins = vi.fn();
+vi.mock("@/api/plugins-api", () => ({
+  getPlugins: () => getPlugins(),
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -264,5 +279,45 @@ describe("HostPluginSections", () => {
 
     expect(screen.getByDisplayValue("/var/run/docker.sock")).toBeTruthy();
     expect(screen.getByDisplayValue("web")).toBeTruthy();
+  });
+});
+
+describe("HostFeatureFields", () => {
+  it("draws the calling plugin's fields and writes into its pluginSettings", async () => {
+    getPlugins.mockResolvedValue([
+      plugin(),
+      plugin({ id: "warpgate", name: "Warpgate" }),
+    ]);
+    const form = {
+      pluginSettings: {
+        docker: { enableDocker: false },
+        warpgate: { enableDocker: true },
+      },
+    };
+    const updateForm = vi.fn();
+    const Scoped = withPluginScope("docker", HostFeatureFields);
+    render(<Scoped form={form} updateForm={updateForm} />);
+
+    await waitFor(() =>
+      expect(screen.getByText("docker:enableDocker.label")).toBeTruthy(),
+    );
+    expect(screen.getAllByText("Docker")).toHaveLength(1);
+    expect(screen.queryByText("Warpgate")).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button")[0]);
+    const patch = updateForm.mock.calls[0][0];
+    expect(patch(form).pluginSettings).toEqual({
+      docker: { enableDocker: true },
+      warpgate: { enableDocker: true },
+    });
+  });
+
+  it("renders nothing outside a plugin", async () => {
+    getPlugins.mockResolvedValue([plugin()]);
+    const { container } = render(
+      <HostFeatureFields form={{}} updateForm={vi.fn()} />,
+    );
+    await waitFor(() => expect(getPlugins).toHaveBeenCalled());
+    expect(container.innerHTML).toBe("");
   });
 });

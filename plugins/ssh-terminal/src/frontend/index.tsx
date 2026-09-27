@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from "react";
-import { History, Laptop, Terminal } from "lucide-react";
+import { History, Laptop, SquareTerminal, Terminal } from "lucide-react";
 import type {
   PanelProps,
   StandaloneViewProps,
@@ -21,6 +21,7 @@ import { TerminalView } from "./TerminalView";
 import { HistoryPanel } from "./history/HistoryPanel";
 import { TouchInputSettings } from "./settings/TouchInputSettings";
 import { ImageStorageTest } from "./settings/ImageStorageTest";
+import { HostTerminalSection } from "./settings/HostTerminalSection";
 import { resetTouchInputSettingsCache } from "./terminal/touch-input-settings-store";
 import { hostSetting } from "./terminal-api";
 
@@ -92,6 +93,15 @@ export function activate(app: TermixApp): void {
     copyUrlView: "terminal",
     when: (host) =>
       !!host.enableSsh && hostSetting(host, "enableTerminal", true),
+  });
+
+  app.registerHostEditorSection({
+    id: "terminal",
+    group: "ssh",
+    titleKey: "hosts.tabTerminal",
+    icon: SquareTerminal,
+    order: 10,
+    component: HostTerminalSection,
   });
 
   if (isElectron()) {

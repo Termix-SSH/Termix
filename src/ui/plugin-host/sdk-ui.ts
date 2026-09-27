@@ -70,6 +70,12 @@ export { useTabs, useTabsSafe } from "@/shell/TabContext";
 // Slots: a plugin can offer places for other plugins to fill.
 export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
 
+// A plugin's manifest host settings, drawn inside its own host editor section.
+export {
+  HostFeatureFields,
+  type HostFeatureFieldsProps,
+} from "@/settings/HostPluginSections";
+
 // Components other plugins offer by id (app.registerComponent), rendered with
 // a fallback while their plugin is off.
 export { PluginComponent } from "@/plugin-host/component-registry";
@@ -103,6 +109,11 @@ export * from "@/lib/terminal-themes";
 export { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
 export { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
 export * from "@/lib/terminal-look/terminal-font-zoom";
+export { TerminalPreview } from "@/components/terminal-preview/TerminalPreview";
+export {
+  HostTerminalSettings,
+  type HostTerminalSettingsProps,
+} from "@/sidebar/HostTerminalSettings";
 export { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 export { RobustClipboardProvider } from "@/lib/clipboard-provider";
 export { useTheme as useAppTheme } from "@/components/theme-provider";

@@ -220,5 +220,8 @@
       "title": "Read command history",
       "description": "Lets other features, such as the AI assistant, read your command history."
     }
+  },
+  "hosts": {
+    "tabTerminal": "Terminal"
   }
 }

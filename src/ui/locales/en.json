@@ -344,7 +344,6 @@
     "uploadFile": "Upload File",
     "tabGeneral": "General",
     "tabSsh": "SSH",
-    "tabTerminal": "Terminal",
     "tabStats": "Host Metrics",
     "tabSharing": "Sharing",
     "tabAuthentication": "Authentication",

@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { SectionCard } from "@/components/section-card";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
+import { usePluginScope } from "@/plugin-host/scope";
 import { SettingsFieldRow } from "./SettingsFields";
 import { hasVisibleFields, isFieldActive } from "./settings-fields-util";
 
@@ -109,6 +110,47 @@ export function HostPluginSections({
         />
       ))}
     </div>
+  );
+}
+
+export interface HostFeatureFieldsProps {
+  // The host editor form, as handed to a host editor section.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: any;
+  updateForm: (
+    patch: (form: Record<string, unknown>) => Record<string, unknown>,
+  ) => void;
+}
+
+/**
+ * The calling plugin's manifest host settings, for a plugin that registered
+ * its own host editor section and so gets no generated tab.
+ */
+export function HostFeatureFields({
+  form,
+  updateForm,
+}: HostFeatureFieldsProps) {
+  const pluginId = usePluginScope();
+  const plugin = usePluginHostSections().find((p) => p.id === pluginId);
+  if (!plugin) return null;
+  const values = (form?.pluginSettings as HostPluginSettings | undefined) ?? {};
+  return (
+    <HostPluginSection
+      plugin={plugin}
+      values={values[plugin.id] ?? {}}
+      setValue={(key, value) =>
+        updateForm((current) => {
+          const all = (current.pluginSettings ?? {}) as HostPluginSettings;
+          return {
+            ...current,
+            pluginSettings: {
+              ...all,
+              [plugin.id]: { ...(all[plugin.id] ?? {}), [key]: value },
+            },
+          };
+        })
+      }
+    />
   );
 }
 
