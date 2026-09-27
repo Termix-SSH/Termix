@@ -41,8 +41,12 @@ describe("verifyToken", () => {
     expect(
       tokens.verifyToken(encode({ ...data, iv: iv.toString("base64") })),
     ).toBeNull();
+    const ciphertext = Buffer.from(data.value, "base64");
+    ciphertext[0] ^= 0xff;
     expect(
-      tokens.verifyToken(encode({ ...data, value: `A${data.value.slice(1)}` })),
+      tokens.verifyToken(
+        encode({ ...data, value: ciphertext.toString("base64") }),
+      ),
     ).toBeNull();
   });
 
