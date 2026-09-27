@@ -244,10 +244,29 @@ export interface RemoteDesktopStatus {
 /** `probe: false` skips dialing guacd, for a caller that only needs `enabled`. */
 export async function getGuacdStatus(
   origin: ConnectionOrigin,
-  options: { probe?: boolean } = {},
+  options: {
+    probe?: boolean;
+    hostId?: number;
+    protocol?: "rdp" | "vnc" | "telnet";
+    syncId?: string | null;
+  } = {},
 ): Promise<RemoteDesktopStatus> {
+  const params = new URLSearchParams();
+  if (options.probe === false) params.set("probe", "0");
+  if (options.hostId) {
+    const useRemote = isElectron() && origin === "remote";
+    const remoteHostId = useRemote
+      ? await resolveRemoteHostId(options.syncId)
+      : null;
+    if (useRemote && options.syncId && remoteHostId === null) {
+      throw new Error("The synced host does not exist on the remote server");
+    }
+    params.set("hostId", String(remoteHostId ?? options.hostId));
+    if (options.protocol) params.set("protocol", options.protocol);
+  }
+  const query = params.toString();
   const response = await guacamoleApi(origin).get<RemoteDesktopStatus>(
-    options.probe === false ? "/status?probe=0" : "/status",
+    query ? `/status?${query}` : "/status",
   );
   return response.data;
 }

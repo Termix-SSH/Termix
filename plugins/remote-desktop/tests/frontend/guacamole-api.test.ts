@@ -172,3 +172,46 @@ it("looks up the session on the backend that issued its token", async () => {
   });
   expect(authApiMock.get).not.toHaveBeenCalled();
 });
+
+describe("saved host status routing", () => {
+  it("maps the local host ID before probing the remote backend", async () => {
+    isElectronMock.mockReturnValue(true);
+    resolveRemoteHostIdMock.mockResolvedValue(41);
+    await getGuacdStatus("remote", {
+      hostId: 9,
+      protocol: "rdp",
+      syncId: "sync-9",
+    });
+    expect(resolveRemoteHostIdMock).toHaveBeenCalledWith("sync-9");
+    expect(remoteApiMock.get).toHaveBeenCalledWith(
+      "/status?hostId=41&protocol=rdp",
+    );
+    expect(authApiMock.get).not.toHaveBeenCalled();
+  });
+
+  it("keeps local IDs for local connections", async () => {
+    isElectronMock.mockReturnValue(true);
+    await getGuacdStatus("local", {
+      hostId: 9,
+      protocol: "vnc",
+      syncId: "sync-9",
+    });
+    expect(authApiMock.get).toHaveBeenCalledWith(
+      "/status?hostId=9&protocol=vnc",
+    );
+    expect(resolveRemoteHostIdMock).not.toHaveBeenCalled();
+  });
+
+  it("does not probe an unrelated remote ID when a synced host is missing", async () => {
+    isElectronMock.mockReturnValue(true);
+    resolveRemoteHostIdMock.mockResolvedValue(null);
+    await expect(
+      getGuacdStatus("remote", {
+        hostId: 9,
+        protocol: "rdp",
+        syncId: "missing",
+      }),
+    ).rejects.toThrow("does not exist");
+    expect(remoteApiMock.get).not.toHaveBeenCalled();
+  });
+});

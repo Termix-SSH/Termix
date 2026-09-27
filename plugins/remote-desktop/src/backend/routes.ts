@@ -501,6 +501,16 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
    *         schema:
    *           type: string
    *         description: "0" skips dialing guacd.
+   *       - in: query
+   *         name: hostId
+   *         schema:
+   *           type: integer
+   *         description: Saved host whose guacd settings should be checked; requires protocol and access to that host.
+   *       - in: query
+   *         name: protocol
+   *         schema:
+   *           type: string
+   *           enum: [rdp, vnc, telnet]
    *     responses:
    *       200:
    *         description: The status.
@@ -510,7 +520,39 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
   router.get("/status", async (req: Request, res: Response) => {
     try {
       const enabled = await deps.enabled();
-      const guacd = deps.guacd();
+      let guacd = deps.guacd();
+      if (req.query.hostId !== undefined) {
+        const userId = actor(ctx, res);
+        if (!userId) return;
+        const hostId = Number(req.query.hostId);
+        const protocol = req.query.protocol;
+        if (
+          !Number.isSafeInteger(hostId) ||
+          hostId <= 0 ||
+          !isRemoteProtocol(protocol)
+        ) {
+          return res.status(400).json({ error: "Invalid host ID or protocol" });
+        }
+        const target = await ctx.credentials.resolveHostProtocol(
+          hostId,
+          protocol,
+        );
+        if (!target) return res.status(404).json({ error: "Host not found" });
+        const settings = await readHostSettings(ctx, hostId);
+        if (!settings[ENABLE_KEY[protocol]]) {
+          return res
+            .status(400)
+            .json({ error: "Protocol is not enabled for this host" });
+        }
+        const { guacdOverrides } = cleanGuacConfig({
+          ...(protocol === "rdp" ? await readUserDefaults(ctx, userId) : {}),
+          ...settings.guacamoleConfig,
+        });
+        guacd = {
+          host: guacdOverrides.guacdHost || guacd.host,
+          port: guacdOverrides.guacdPort || guacd.port,
+        };
+      }
       const probe = enabled && req.query.probe !== "0";
       const reachable = probe ? await probeGuacd(guacd) : false;
       res.json({

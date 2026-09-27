@@ -321,7 +321,11 @@ const GuacamoleAppInner = React.forwardRef<
       stage: "guac_guacd",
       message: t("remoteDesktop.checkingGuacd"),
     });
-    const status = await getGuacdStatus(resolvedOrigin);
+    const status = await getGuacdStatus(resolvedOrigin, {
+      hostId,
+      protocol: resolvedProtocolForConnect,
+      syncId: hostConfig.syncId,
+    });
     if (status.enabled === false) {
       throw new Error(t("remoteDesktop.disabled"));
     }
