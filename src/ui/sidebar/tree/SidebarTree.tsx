@@ -861,6 +861,12 @@ export function SidebarTree({
   // and made the list visibly jump apart on every pointer move.
   useLayoutEffect(() => {
     virtualizer.measure();
+    // Rebuild the cleared size cache before measuring the mounted rows again.
+    virtualizer.getTotalSize();
+    // Unchanged rows will not trigger ResizeObserver after their cache is cleared.
+    parentRef.current
+      ?.querySelectorAll<HTMLElement>("[data-index]")
+      .forEach((element) => virtualizer.measureElement(element));
   }, [virtualizer, density, trayTrigger, showTags, showResourceBars]);
 
   if (loading) {
