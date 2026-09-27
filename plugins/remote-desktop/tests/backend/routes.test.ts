@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { AddressInfo } from "node:net";
+import net, { type AddressInfo } from "node:net";
 import express, { type Router } from "express";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -334,5 +334,86 @@ describe("activate", () => {
         "sessions.live#vnc",
       ]),
     );
+  });
+});
+
+describe("saved host guacd status", () => {
+  it("probes the same override used by the connection token", async () => {
+    const guacd = net.createServer((socket) => socket.end());
+    await new Promise<void>((resolve) => guacd.listen(0, "127.0.0.1", resolve));
+    try {
+      const port = (guacd.address() as AddressInfo).port;
+      server = await start({ protocolTargets: { "7:rdp": target() } });
+      await server.mock.ctx.settings.setHost(7, "enableRdp", true);
+      await server.mock.ctx.settings.setHost(7, "guacamoleConfig", {
+        "guacd-hostname": "127.0.0.1",
+        "guacd-port": String(port),
+      });
+      const status = await server.request(
+        "GET",
+        "/status?hostId=7&protocol=rdp",
+      );
+      expect(status.status).toBe(200);
+      expect(status.body.guacd).toEqual({
+        host: "127.0.0.1",
+        port,
+        status: "connected",
+      });
+      const result = await server.request("POST", "/connect-host/7", {
+        protocol: "rdp",
+      });
+      expect(tokens.decryptToken(result.body.token)?.connection).toMatchObject({
+        guacdHost: status.body.guacd.host,
+        guacdPort: status.body.guacd.port,
+      });
+    } finally {
+      await new Promise<void>((resolve) => guacd.close(() => resolve()));
+    }
+  });
+
+  it("keeps the global port for a host-only override and global config when absent", async () => {
+    server = await start({ protocolTargets: { "7:rdp": target() } });
+    await server.mock.ctx.settings.setHost(7, "enableRdp", true);
+    const global = await server.request("GET", "/status?probe=0");
+    const inherited = await server.request(
+      "GET",
+      "/status?probe=0&hostId=7&protocol=rdp",
+    );
+    expect(inherited.body.guacd).toEqual(global.body.guacd);
+    await server.mock.ctx.settings.setHost(7, "guacamoleConfig", {
+      "guacd-hostname": "custom.example",
+    });
+    const overridden = await server.request(
+      "GET",
+      "/status?probe=0&hostId=7&protocol=rdp",
+    );
+    expect(overridden.body.guacd).toEqual({
+      ...global.body.guacd,
+      host: "custom.example",
+    });
+  });
+
+  it("refuses a host the caller cannot resolve", async () => {
+    server = await start();
+    await server.mock.ctx.settings.setHost(7, "enableRdp", true);
+    const result = await server.request("GET", "/status?hostId=7&protocol=rdp");
+    expect(result.status).toBe(404);
+    expect(result.body.guacd).toBeUndefined();
+  });
+
+  it("refuses disabled protocols", async () => {
+    server = await start({ protocolTargets: { "7:rdp": target() } });
+    const result = await server.request("GET", "/status?hostId=7&protocol=rdp");
+    expect(result.status).toBe(400);
+  });
+
+  it.each([
+    "hostId=bad&protocol=rdp",
+    "hostId=0&protocol=rdp",
+    "hostId=7&protocol=ssh",
+    "hostId=7",
+  ])("rejects invalid queries: %s", async (query) => {
+    server = await start();
+    expect((await server.request("GET", `/status?${query}`)).status).toBe(400);
   });
 });
