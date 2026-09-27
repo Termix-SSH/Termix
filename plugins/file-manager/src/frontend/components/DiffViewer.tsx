@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { DiffEditor } from "@monaco-editor/react";
 import { Button } from "@termix/plugin-sdk/ui";
 import { toast } from "sonner";
+import { DownloadProgressToast } from "./DownloadProgressToast";
 import { useTranslation } from "react-i18next";
 import {
   Download,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import {
   readSSHFile,
-  downloadSSHFile,
+  downloadSSHFileStream,
   getSSHStatus,
   connectSSH,
 } from "../api/ssh-file-operations-api";
@@ -132,34 +133,30 @@ export function DiffViewer({
   };
 
   const handleDownloadFile = async (file: FileItem) => {
+    const toastId = toast.loading(
+      <DownloadProgressToast fileName={file.name} loaded={0} />,
+      { duration: Infinity },
+    );
     try {
       await ensureSSHConnection();
-      const response = await downloadSSHFile(sshSessionId, file.path);
-
-      if (response?.content) {
-        const byteCharacters = atob(response.content);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {
-          type: response.mimeType || "application/octet-stream",
-        });
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = response.fileName || file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        toast.success(
-          t("fileManager.downloadFileSuccess", { name: file.name }),
-        );
-      }
+      await downloadSSHFileStream(
+        sshSessionId,
+        file.path,
+        ({ loaded, total }) => {
+          toast.loading(
+            <DownloadProgressToast
+              fileName={file.name}
+              loaded={loaded}
+              total={total}
+            />,
+            { id: toastId, duration: Infinity },
+          );
+        },
+      );
+      toast.success(t("fileManager.downloadFileSuccess", { name: file.name }), {
+        id: toastId,
+        duration: undefined,
+      });
     } catch (error: unknown) {
       console.error("Failed to download file:", error);
       const err = error as { message?: string };
@@ -167,6 +164,7 @@ export function DiffViewer({
         t("fileManager.downloadFileFailed") +
           ": " +
           (err.message || t("fileManager.unknownError")),
+        { id: toastId, duration: undefined },
       );
     }
   };
