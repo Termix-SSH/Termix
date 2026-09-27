@@ -1103,8 +1103,8 @@ export function FileManagerGrid({
         title={t("fileManager.goToParentFolder")}
         style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
         className={cn(
-          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
-          compact ? "px-2 py-1 text-[11px]" : "px-4 py-2 text-xs",
+          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors text-xs",
+          compact ? "px-2 py-1" : "px-4 py-2",
           isParentTarget &&
             "bg-accent-brand/20 border-accent-brand border-dashed",
         )}
@@ -1127,10 +1127,8 @@ export function FileManagerGrid({
         data-parent-entry
         title={t("fileManager.goToParentFolder")}
         className={cn(
-          "flex items-center gap-2 rounded-none border border-transparent transition-colors cursor-pointer hover:bg-muted/50 select-none",
-          compact
-            ? "-mx-2 -mt-2 px-2 py-1 text-[11px]"
-            : "-mx-4 -mt-4 px-4 py-1.5 text-xs",
+          "flex items-center gap-2 rounded-none border border-transparent transition-colors cursor-pointer hover:bg-muted/50 select-none text-xs",
+          compact ? "-mx-2 -mt-2 px-2 py-1" : "-mx-4 -mt-4 px-4 py-1.5",
           isParentTarget &&
             "bg-accent-brand/20 border-accent-brand border-dashed",
         )}
@@ -1277,10 +1275,7 @@ export function FileManagerGrid({
                                   />
                                 ) : (
                                   <p
-                                    className={cn(
-                                      "font-bold tracking-tight text-center truncate w-full px-1",
-                                      compact ? "text-[10px]" : "text-[11px]",
-                                    )}
+                                    className="font-bold tracking-tight text-center truncate w-full px-1 text-[11px]"
                                     title={file.name}
                                   >
                                     {file.name}
@@ -1439,10 +1434,8 @@ export function FileManagerGrid({
                             : listColumns.gridTemplateColumns,
                         }}
                         className={cn(
-                          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
-                          compact
-                            ? "px-2 py-1 text-[11px]"
-                            : "px-4 py-2 text-xs",
+                          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors text-xs",
+                          compact ? "px-2 py-1" : "px-4 py-2",
                           isSelected &&
                             "bg-accent-brand/10 hover:bg-accent-brand/10",
                           dragState.target?.path === file.path &&
@@ -1481,8 +1474,8 @@ export function FileManagerGrid({
                               onKeyDown={handleEditKeyDown}
                               onBlur={handleEditConfirm}
                               className={cn(
-                                "flex-1 min-w-0 border border-accent-brand/60 bg-card px-2 py-0 rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto",
-                                compact ? "h-5 text-[11px]" : "h-6 text-xs",
+                                "flex-1 min-w-0 border border-accent-brand/60 bg-card px-2 py-0 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto",
+                                compact ? "h-5" : "h-6",
                               )}
                               onClick={(e) => e.stopPropagation()}
                               onMouseDown={(e) => e.stopPropagation()}
