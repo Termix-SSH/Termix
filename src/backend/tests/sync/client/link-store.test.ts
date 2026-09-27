@@ -44,7 +44,7 @@ describe("the desktop's link", () => {
       userId: "local",
       serverUrl: "https://termix.example",
       sessionToken: "session-token",
-      customHeaders: [{ name: "CF-Access-Client-Secret", value: "shh" }],
+      customHeaders: [{ name: "CF-Access-Client-Secret", value: "shh-secret" }],
       basicAuth: { username: "gate", password: "pw" },
     });
 
@@ -53,13 +53,13 @@ describe("the desktop's link", () => {
     );
     for (const value of Object.values(raw)) {
       expect(value).toMatch(/^sysenc:v1:/);
-      expect(value).not.toContain("shh");
+      expect(value).not.toContain("shh-secret");
     }
 
     const link = await getLink();
     expect(link).toMatchObject({
       sessionToken: "session-token",
-      customHeaders: [{ name: "CF-Access-Client-Secret", value: "shh" }],
+      customHeaders: [{ name: "CF-Access-Client-Secret", value: "shh-secret" }],
       basicAuth: { username: "gate", password: "pw" },
       cursor: 0,
       knownTypes: [],
