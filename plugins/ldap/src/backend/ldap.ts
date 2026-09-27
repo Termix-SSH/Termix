@@ -141,12 +141,15 @@ export function createLdapLogin(ctx: PluginContext, store: ProviderStore) {
           config.displayNameAttribute || "cn",
           "mail",
           "email",
+          "distinguishedName",
         ],
       );
       if (entries.length === 0) throw await refuse("user not found");
 
       const userEntry = entries[0];
-      const userDN = userEntry.dn.toString();
+      // AD supplies its DN as an attribute; avoid re-serializing it through ldapjs.
+      const userDN =
+        firstValue(userEntry, "distinguishedName") || userEntry.dn.toString();
       const uid =
         firstValue(userEntry, config.usernameAttribute || "uid") || username;
       const displayName =

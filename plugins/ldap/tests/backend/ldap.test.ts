@@ -11,7 +11,9 @@ const directory = vi.hoisted(() => ({
   binds: [] as string[],
 }));
 
-vi.mock("ldapjs", () => {
+vi.mock("ldapjs", async () => {
+  const { default: ldap } =
+    await vi.importActual<typeof import("ldapjs")>("ldapjs");
   function createClient() {
     return {
       bind: (dn: string, password: string, cb: (err?: Error) => void) => {
@@ -25,7 +27,7 @@ vi.mock("ldapjs", () => {
       },
       search: (
         base: string,
-        options: { filter: string },
+        options: { filter: string; attributes: string[] },
         cb: (err: Error | null, res: unknown) => void,
       ) => {
         const listeners: Record<string, (value?: unknown) => void> = {};
@@ -49,11 +51,13 @@ vi.mock("ldapjs", () => {
             const user = match ? directory.users[match[1]] : undefined;
             if (user) {
               listeners.searchEntry?.({
-                dn: { toString: () => user.dn },
-                attributes: Object.entries(user.attrs).map(([type, value]) => ({
-                  type,
-                  values: [value],
-                })),
+                dn: ldap.parseDN(user.dn),
+                attributes: Object.entries(user.attrs)
+                  .filter(([type]) => options.attributes.includes(type))
+                  .map(([type, value]) => ({
+                    type,
+                    values: [value],
+                  })),
               });
             }
           }
@@ -121,6 +125,28 @@ function verify(
 }
 
 describe("LDAP sign-in", () => {
+  it.each([
+    "CN=Bob,OU=Первый Департамент,DC=example,DC=com",
+    String.raw`CN=Bob\, Builder,OU=Первый Департамент,DC=example,DC=com`,
+    String.raw`CN=Bob\5cBuilder,OU=People,DC=example,DC=com`,
+  ])(
+    "binds with the directory's original distinguishedName: %s",
+    async (dn) => {
+      const { s, id } = await withDirectory();
+      directory.users.bob.dn = dn;
+      directory.users.bob.attrs.distinguishedName = dn;
+      const identity = await verify(s, String(id), {
+        username: "bob",
+        password: "hunter2",
+      });
+      expect(identity).toMatchObject({ subject: "bob" });
+      expect(directory.binds).toEqual(["cn=service", dn]);
+      await expect(
+        verify(s, String(id), { username: "bob", password: "wrong" }),
+      ).rejects.toMatchObject({ status: 401 });
+    },
+  );
+
   it("binds as the service, then as the user, and returns the identity", async () => {
     const { s, id } = await withDirectory();
     directory.adminDns = ["uid=bob,ou=people"];
