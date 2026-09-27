@@ -117,7 +117,7 @@ describe("external file drops", () => {
         isDirectory: true,
         isFile: false,
       } as FileSystemEntry;
-      fireEvent.drop(screen.getByTitle(file.name), {
+      fireEvent.drop(screen.getByText(file.name), {
         dataTransfer: {
           types: ["Files"],
           files: [],
@@ -133,7 +133,7 @@ describe("external file drops", () => {
     const onUpload = vi.fn();
     render(<FileManagerGrid {...props} onUpload={onUpload} />);
     const files = [new File(["log"], "app.log")];
-    fireEvent.drop(screen.getByTitle(file.name), {
+    fireEvent.drop(screen.getByText(file.name), {
       dataTransfer: { types: ["Files"], files, items: [], getData: () => "" },
     });
     expect(onUpload).toHaveBeenCalledExactlyOnceWith(files);
