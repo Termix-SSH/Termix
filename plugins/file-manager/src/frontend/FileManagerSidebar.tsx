@@ -79,6 +79,7 @@ export interface SidebarItem {
 }
 
 interface FileManagerSidebarProps {
+  density?: "comfortable" | "compact";
   currentHost: SSHHost;
   currentPath: string;
   onPathChange: (path: string) => void;
@@ -179,6 +180,7 @@ function StorageMeter({
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function FileManagerSidebar({
+  density = "comfortable",
   currentHost,
   currentPath,
   onPathChange,
@@ -638,7 +640,12 @@ export function FileManagerSidebar({
    * the async fetch fills it in.
    */
   const renderFolderTreeItem = (item: SidebarItem): React.ReactNode => (
-    <FolderTree.Item key={item.id} id={item.id} label={item.name}>
+    <FolderTree.Item
+      key={item.id}
+      id={item.id}
+      label={item.name}
+      className={density === "compact" ? "py-0.5" : undefined}
+    >
       <FolderTree.Content>
         {item.children?.map((child) => renderFolderTreeItem(child))}
       </FolderTree.Content>
