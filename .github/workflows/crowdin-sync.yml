@@ -39,7 +39,7 @@ jobs:
           node-version-file: ".nvmrc"
 
       - name: Upload sources to Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: true
           upload_translations: false
@@ -57,7 +57,7 @@ jobs:
         run: node scripts/crowdin-pretranslate.cjs
 
       - name: Download translations from Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: false
           upload_translations: false
