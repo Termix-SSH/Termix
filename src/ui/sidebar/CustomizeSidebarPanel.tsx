@@ -9,6 +9,7 @@ import {
 } from "@/components/dialog";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import type {
+  HostClickBehavior,
   HostDensity,
   HostSidebarPreferences,
   HostTrayTrigger,
@@ -139,30 +140,51 @@ export function CustomizeSidebarPanel({
                 <option value="click">{t("hosts.actionsClick")}</option>
               </select>
             </div>
+            <div className="flex flex-col gap-1.5 py-3 border-b border-border last:border-0">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium leading-snug">
+                  {t("hosts.hostClickBehavior")}
+                </span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  {t("hosts.hostClickBehaviorDesc")}
+                </span>
+              </div>
+              <select
+                value={preferences.display.hostClickBehavior}
+                onChange={(e) =>
+                  update((prev) => ({
+                    ...prev,
+                    display: {
+                      ...prev.display,
+                      hostClickBehavior: e.target.value as HostClickBehavior,
+                    },
+                  }))
+                }
+                className="h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="newTab">{t("hosts.hostClickNewTab")}</option>
+                <option value="focusExisting">
+                  {t("hosts.hostClickFocusExisting")}
+                </option>
+                <option value="focusExistingDoubleClickNew">
+                  {t("hosts.hostClickFocusExistingDoubleNew")}
+                </option>
+              </select>
+            </div>
             <SettingRow
               label={t("hosts.openOnDoubleClick")}
               description={t("hosts.openOnDoubleClickDesc")}
             >
               <FakeSwitch
                 checked={preferences.display.openOnDoubleClick}
+                disabled={
+                  preferences.display.hostClickBehavior ===
+                  "focusExistingDoubleClickNew"
+                }
                 onChange={(v) =>
                   update((prev) => ({
                     ...prev,
                     display: { ...prev.display, openOnDoubleClick: v },
-                  }))
-                }
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("hosts.focusExistingTab")}
-              description={t("hosts.focusExistingTabDesc")}
-            >
-              <FakeSwitch
-                checked={preferences.display.focusExistingTab}
-                onChange={(v) =>
-                  update((prev) => ({
-                    ...prev,
-                    display: { ...prev.display, focusExistingTab: v },
                   }))
                 }
               />

@@ -32,6 +32,10 @@ export type HostDensity = "comfortable" | "compact";
 
 export type HostTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 
+/** What clicking a host does when it already has an open tab. */
+export type HostClickBehavior =
+  "newTab" | "focusExisting" | "focusExistingDoubleClickNew";
+
 export interface HostSidebarFilterState {
   status: ("online" | "offline" | "pinned")[];
   /** SSH auth type ids; plugins add their own. */
@@ -52,8 +56,7 @@ export interface HostSidebarDisplayPreferences {
   openOnDoubleClick: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths: boolean;
-  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
-  focusExistingTab: boolean;
+  hostClickBehavior: HostClickBehavior;
 }
 
 export interface HostSidebarPreferences {
@@ -89,6 +92,11 @@ const TRAY_TRIGGERS: HostTrayTrigger[] = [
   "click",
   "actionsOnly",
 ];
+const HOST_CLICK_BEHAVIORS: HostClickBehavior[] = [
+  "newTab",
+  "focusExisting",
+  "focusExistingDoubleClickNew",
+];
 const STATUS_COLOR_SCHEMES: StatusColorScheme[] = ["accent", "status"];
 const FILTER_STATUS: HostSidebarFilterState["status"] = [
   "online",
@@ -118,7 +126,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       statusColorScheme: "accent",
       openOnDoubleClick: false,
       showFolderPaths: true,
-      focusExistingTab: true,
+      hostClickBehavior: "newTab",
     },
   };
 }
@@ -202,10 +210,11 @@ export function sanitizeHostSidebarPreferences(
       typeof displayObj.showFolderPaths === "boolean"
         ? displayObj.showFolderPaths
         : defaults.display.showFolderPaths,
-    focusExistingTab:
-      typeof displayObj.focusExistingTab === "boolean"
-        ? displayObj.focusExistingTab
-        : defaults.display.focusExistingTab,
+    hostClickBehavior: HOST_CLICK_BEHAVIORS.includes(
+      displayObj.hostClickBehavior as HostClickBehavior,
+    )
+      ? (displayObj.hostClickBehavior as HostClickBehavior)
+      : defaults.display.hostClickBehavior,
   };
 
   return {

@@ -6,6 +6,7 @@ import { ChevronRight, Check, GripVertical } from "lucide-react";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type {
   HostDensity,
+  HostClickBehavior,
   HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { FolderIconEl } from "@/components/folder-style";
@@ -69,7 +70,7 @@ export function FolderItem({
   showTags = true,
   openOnDoubleClick = false,
   showFolderPaths = true,
-  focusExistingTab = true,
+  hostClickBehavior = "newTab",
   arrangeMode = false,
   isDragging = false,
   onReorderDrop,
@@ -122,8 +123,7 @@ export function FolderItem({
   openOnDoubleClick?: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths?: boolean;
-  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
-  focusExistingTab?: boolean;
+  hostClickBehavior?: HostClickBehavior;
   /** When true (rearranging unlocked), the header can be dragged and its
    * top/bottom edges become reorder drop zones. The middle still accepts
    * hosts dropped into the folder. */
@@ -347,7 +347,7 @@ export function FolderItem({
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
                 showFolderPaths={showFolderPaths}
-                focusExistingTab={focusExistingTab}
+                hostClickBehavior={hostClickBehavior}
                 arrangeMode={arrangeMode}
                 onReorderDrop={onReorderDrop}
                 onFolderDragStart={onFolderDragStart}
@@ -381,7 +381,7 @@ export function FolderItem({
                 trayTrigger={trayTrigger}
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
-                focusExistingTab={focusExistingTab}
+                hostClickBehavior={hostClickBehavior}
                 arrangeMode={arrangeMode}
                 onReorderDrop={
                   onReorderDrop

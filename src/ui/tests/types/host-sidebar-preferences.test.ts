@@ -27,7 +27,7 @@ describe("defaultHostSidebarPreferences", () => {
         statusColorScheme: "accent",
         openOnDoubleClick: false,
         showFolderPaths: true,
-        focusExistingTab: true,
+        hostClickBehavior: "newTab",
       },
     });
   });
@@ -66,7 +66,7 @@ describe("sanitizeHostSidebarPreferences", () => {
         statusColorScheme: "status",
         openOnDoubleClick: true,
         showFolderPaths: false,
-        focusExistingTab: false,
+        hostClickBehavior: "focusExistingDoubleClickNew",
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
@@ -92,14 +92,19 @@ describe("sanitizeHostSidebarPreferences", () => {
     ).toBe(true);
   });
 
-  it("defaults focusExistingTab to true when missing or not a boolean", () => {
+  it("defaults hostClickBehavior to newTab when missing or invalid", () => {
     expect(
-      sanitizeHostSidebarPreferences({ display: {} }).display.focusExistingTab,
-    ).toBe(true);
+      sanitizeHostSidebarPreferences({ display: {} }).display.hostClickBehavior,
+    ).toBe("newTab");
     expect(
-      sanitizeHostSidebarPreferences({ display: { focusExistingTab: "no" } })
-        .display.focusExistingTab,
-    ).toBe(true);
+      sanitizeHostSidebarPreferences({ display: { hostClickBehavior: "nope" } })
+        .display.hostClickBehavior,
+    ).toBe("newTab");
+    expect(
+      sanitizeHostSidebarPreferences({
+        display: { hostClickBehavior: "focusExisting" },
+      }).display.hostClickBehavior,
+    ).toBe("focusExisting");
   });
 
   it("falls back to defaults for invalid enum values", () => {

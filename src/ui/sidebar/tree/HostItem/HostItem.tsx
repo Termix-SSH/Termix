@@ -41,6 +41,7 @@ import { getHostPassword } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
 import type {
   HostDensity,
+  HostClickBehavior,
   HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -153,6 +154,8 @@ function canCopyHostSudoPassword(host: Host): boolean {
  * differ. Keeping this as one lookup (rather than two parallel JSX trees)
  * means a future style tweak only has to be made once.
  */
+const DOUBLE_CLICK_WINDOW_MS = 250;
+
 const HOST_ITEM_DENSITY_TOKENS = {
   comfortable: {
     rowPadding: "pl-[8.75px] pr-[7px] py-[7px]",
@@ -195,7 +198,7 @@ export function HostItem({
   trayTrigger = "hover",
   showTags = true,
   openOnDoubleClick = false,
-  focusExistingTab = true,
+  hostClickBehavior = "newTab",
   showResourceBars = true,
   showStatusStripes = true,
   rowActions = "full",
@@ -243,8 +246,8 @@ export function HostItem({
   showTags?: boolean;
   /** Requires a double click to launch instead of a single click. */
   openOnDoubleClick?: boolean;
-  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
-  focusExistingTab?: boolean;
+  /** What a click does when the host already has an open tab. */
+  hostClickBehavior?: HostClickBehavior;
   /** Preset-driven: hides the CPU/RAM bars without changing density. */
   showResourceBars?: boolean;
   /** Preset-driven: hides the per-row status color stripe. */
@@ -344,6 +347,18 @@ export function HostItem({
     showResourceRow: densityTokens.showResourceRow && showResourceBars,
   };
   const isCompact = density === "compact";
+  const focusExistingTab = hostClickBehavior !== "newTab";
+  const doubleClickOpensNew =
+    hostClickBehavior === "focusExistingDoubleClickNew";
+  // In double click mode a single click waits out the double click window,
+  // so a double click doesn't also switch to (or open) a tab first.
+  const singleClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (singleClickTimer.current) clearTimeout(singleClickTimer.current);
+    },
+    [],
+  );
   const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
   const canDrag =
     arrangeMode && !selectionMode && !isTouchOnly && canEditHost(host);
@@ -1033,12 +1048,35 @@ export function HostItem({
           }
           return;
         }
-        if (openOnDoubleClick) return;
         const forceNewTab = e.ctrlKey || e.metaKey;
+        if (doubleClickOpensNew) {
+          if (singleClickTimer.current) clearTimeout(singleClickTimer.current);
+          singleClickTimer.current = null;
+          if (e.detail > 1) return;
+          if (forceNewTab) {
+            openHostTab(defaultAction, { forceNewTab });
+          } else {
+            singleClickTimer.current = setTimeout(() => {
+              singleClickTimer.current = null;
+              openHostTab(defaultAction);
+            }, DOUBLE_CLICK_WINDOW_MS);
+          }
+          return;
+        }
+        if (openOnDoubleClick) return;
         openHostTab(defaultAction, forceNewTab ? { forceNewTab } : undefined);
       }}
       onDoubleClick={(e) => {
-        if (selectionMode || isTouchOnly || !openOnDoubleClick) return;
+        if (selectionMode || isTouchOnly) return;
+        if (doubleClickOpensNew) {
+          e.stopPropagation();
+          if (singleClickTimer.current) clearTimeout(singleClickTimer.current);
+          singleClickTimer.current = null;
+          if (e.ctrlKey || e.metaKey) return;
+          openHostTab(defaultAction, { forceNewTab: true });
+          return;
+        }
+        if (!openOnDoubleClick) return;
         e.stopPropagation();
         const forceNewTab = e.ctrlKey || e.metaKey;
         openHostTab(defaultAction, forceNewTab ? { forceNewTab } : undefined);

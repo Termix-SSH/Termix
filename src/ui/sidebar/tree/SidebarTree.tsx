@@ -45,6 +45,7 @@ import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
 import type {
   HostDensity,
+  HostClickBehavior,
   HostTrayTrigger,
 } from "@/types/host-sidebar-preferences";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
@@ -86,7 +87,7 @@ export function SidebarTree({
   showTags = true,
   openOnDoubleClick = false,
   showFolderPaths = true,
-  focusExistingTab = true,
+  hostClickBehavior = "newTab",
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (
@@ -113,8 +114,7 @@ export function SidebarTree({
   openOnDoubleClick?: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths?: boolean;
-  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
-  focusExistingTab?: boolean;
+  hostClickBehavior?: HostClickBehavior;
 }) {
   const { t } = useTranslation();
   const hostSwitchPlugins = usePluginHostSections().filter(
@@ -1016,7 +1016,7 @@ export function SidebarTree({
                       showTags={showTags}
                       openOnDoubleClick={openOnDoubleClick}
                       showFolderPaths={showFolderPaths}
-                      focusExistingTab={focusExistingTab}
+                      hostClickBehavior={hostClickBehavior}
                       arrangeMode={arrangeMode}
                       isDragging={
                         draggedReorderKey === `folder:${item.path ?? item.name}`
@@ -1088,7 +1088,7 @@ export function SidebarTree({
                       trayTrigger={trayTrigger}
                       showTags={showTags}
                       openOnDoubleClick={openOnDoubleClick}
-                      focusExistingTab={focusExistingTab}
+                      hostClickBehavior={hostClickBehavior}
                       showResourceBars={showResourceBars}
                       showStatusStripes={showStatusStripes}
                       rowActions={rowActions}

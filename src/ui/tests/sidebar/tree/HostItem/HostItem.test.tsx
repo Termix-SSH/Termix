@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Host } from "@/types/ui-types";
@@ -229,6 +235,93 @@ describe("HostItem density parity", () => {
       // No plugin registered a connect action, so only the learned tool preloads.
       expect(preloadTabSurfaceMock).not.toHaveBeenCalledWith("");
       expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tmux_monitor");
+    } finally {
+      dispose();
+    }
+  });
+});
+
+describe("HostItem click behavior", () => {
+  function setup(
+    hostClickBehavior:
+      "newTab" | "focusExisting" | "focusExistingDoubleClickNew",
+  ) {
+    const Icon = (() => null) as never;
+    const dispose = registerHostAction({
+      id: "terminal_test",
+      titleKey: "Terminal",
+      icon: Icon,
+      kind: "connect",
+      tabType: "terminal",
+      when: () => true,
+    });
+    const onOpenTab = vi.fn();
+    render(
+      <HostItem
+        host={baseHost}
+        onOpenTab={onOpenTab}
+        onDelete={noop}
+        onDuplicate={noop}
+        hostClickBehavior={hostClickBehavior}
+      />,
+    );
+    const row = screen.getByText("web-01").closest(".cursor-pointer")!;
+    return { onOpenTab, row, dispose };
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("always opens a new tab by default", () => {
+    const { onOpenTab, row, dispose } = setup("newTab");
+    try {
+      fireEvent.click(row);
+      expect(onOpenTab).toHaveBeenCalledWith("terminal", { forceNewTab: true });
+    } finally {
+      dispose();
+    }
+  });
+
+  it("switches to the open tab when set to focus existing", () => {
+    const { onOpenTab, row, dispose } = setup("focusExisting");
+    try {
+      fireEvent.click(row);
+      expect(onOpenTab).toHaveBeenCalledWith("terminal", {
+        forceNewTab: false,
+      });
+      fireEvent.click(row, { ctrlKey: true });
+      expect(onOpenTab).toHaveBeenLastCalledWith("terminal", {
+        forceNewTab: true,
+      });
+    } finally {
+      dispose();
+    }
+  });
+
+  it("switches on a single click and opens a new tab on a double click", () => {
+    vi.useFakeTimers();
+    const { onOpenTab, row, dispose } = setup("focusExistingDoubleClickNew");
+    try {
+      fireEvent.click(row, { detail: 1 });
+      expect(onOpenTab).not.toHaveBeenCalled();
+      act(() => {
+        vi.runAllTimers();
+      });
+      expect(onOpenTab).toHaveBeenCalledTimes(1);
+      expect(onOpenTab).toHaveBeenCalledWith("terminal", {
+        forceNewTab: false,
+      });
+
+      onOpenTab.mockClear();
+      fireEvent.click(row, { detail: 1 });
+      fireEvent.click(row, { detail: 2 });
+      fireEvent.doubleClick(row);
+      act(() => {
+        vi.runAllTimers();
+      });
+      expect(onOpenTab).toHaveBeenCalledTimes(1);
+      expect(onOpenTab).toHaveBeenCalledWith("terminal", { forceNewTab: true });
     } finally {
       dispose();
     }
