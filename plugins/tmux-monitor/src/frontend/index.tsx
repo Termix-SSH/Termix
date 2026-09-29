@@ -14,7 +14,13 @@ const VIEW_ID = "tmux_monitor";
 
 function TmuxMonitorTab({ tab, isVisible }: TabProps) {
   const hostId = (tab.data?.hostId as number | undefined) ?? undefined;
-  return <TmuxMonitor initialHostId={hostId} isVisible={isVisible} />;
+  return (
+    <TmuxMonitor
+      initialHostId={hostId}
+      initialHostRequest={tab.data?.hostRequest as number | undefined}
+      isVisible={isVisible}
+    />
+  );
 }
 
 function TmuxMonitorStandalone(props: StandaloneViewProps) {
@@ -46,7 +52,9 @@ export function activate(app: TermixApp): void {
     copyUrlView: VIEW_ID,
     when: (host) => !!host.enableSsh && tmuxMonitorEnabled(host),
     run: (host, shell) =>
-      shell.openSingletonTab(VIEW_ID, { data: { hostId: Number(host.id) } }),
+      shell.openSingletonTab(VIEW_ID, {
+        data: { hostId: Number(host.id), hostRequest: Date.now() },
+      }),
   });
 
   app.registerHostEditorSection({
