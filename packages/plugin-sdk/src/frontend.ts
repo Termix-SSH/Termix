@@ -63,7 +63,10 @@ export interface PluginHostRecord {
   statusCheckInterval?: number | null;
   /** Keepalive, legacy algorithms, agent and environment options. */
   sshOptions?: HostSshOptions | null;
-  /** Each enabled plugin's host settings, secrets redacted. */
+  /**
+   * This plugin's own host settings, under its id, secrets redacted. Another
+   * plugin's settings never appear here; ask that plugin through an action.
+   */
   pluginSettings?: Record<string, Record<string, unknown>>;
   /** Each declared protocol's login, secrets left out. */
   protocolAuth?: Record<string, HostProtocolAuthSummary>;
@@ -819,6 +822,13 @@ export interface TermixApp extends TermixAppInfo {
     pointId: string,
     extension: ExtensionContribution,
   ) => Disposer;
+  /**
+   * Every host the user can see, fetched now. Like every host record a plugin
+   * gets, `pluginSettings` holds only this plugin's own settings.
+   */
+  listHosts: () => Promise<PluginHostRecord[]>;
+  /** A saved host from the shell's list, or undefined. No request is made. */
+  getHost: (hostId: string | number) => PluginHostRecord | undefined;
   registerSettingsComponent: (
     componentId: string,
     component: ComponentType<SettingsComponentProps>,
@@ -1068,8 +1078,11 @@ export interface PluginCoreApi {
   getClientPreference: (name: string) => string | undefined;
   /** Saves a browser-side UI preference where getClientPreference reads it. */
   setClientPreference: (name: string, value: string) => void;
-  /** Every host the user can see, fetched now rather than from the shell's cache. */
-  listHosts: () => Promise<PluginHostRecord[]>;
+  /**
+   * Every host the user can see, fetched now rather than from the shell's
+   * cache, carrying only `pluginId`'s host settings.
+   */
+  listHosts: (pluginId: string) => Promise<PluginHostRecord[]>;
   /** The user's stored credentials, without their secrets. */
   listCredentials: () => Promise<PluginCredentialSummary[]>;
 }
@@ -1229,10 +1242,6 @@ export function getClientPreference(name: string): string | undefined {
 
 export function setClientPreference(name: string, value: string): void {
   requireHost().core.setClientPreference(name, value);
-}
-
-export function listHosts(): Promise<PluginHostRecord[]> {
-  return requireHost().core.listHosts();
 }
 
 export function listCredentials(): Promise<PluginCredentialSummary[]> {

@@ -48,6 +48,10 @@ function app(): TermixApp {
   return current;
 }
 
+export function listHosts(): ReturnType<TermixApp["listHosts"]> {
+  return app().listHosts();
+}
+
 export function fileManagerApi(): FileManagerClient {
   return app().api as unknown as FileManagerClient;
 }

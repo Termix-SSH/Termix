@@ -191,6 +191,17 @@ export function toHostRecord(host: ShellHost): PluginHostRecord {
   };
 }
 
+/** The host as one plugin sees it: only that plugin's settings. */
+export function toPluginHostRecord(
+  host: ShellHost,
+  pluginId: string | null,
+): PluginHostRecord {
+  const record = toHostRecord(host);
+  const own = pluginId ? host.pluginSettings?.[pluginId] : undefined;
+  record.pluginSettings = own && pluginId ? { [pluginId]: own } : {};
+  return record;
+}
+
 export const pluginHostBridge: PluginHostBridge = {
   usePluginId() {
     const pluginId = usePluginScope();
@@ -257,19 +268,24 @@ export const pluginHostBridge: PluginHostBridge = {
   },
 
   useHost(hostId) {
+    const pluginId = usePluginScope();
     const { hosts } = useShellHosts();
     return useMemo(() => {
       if (hostId === undefined || hostId === null) return null;
       const found = hosts.find((host) => host.id === String(hostId));
-      return found ? toHostRecord(found) : null;
-    }, [hosts, hostId]);
+      return found ? toPluginHostRecord(found, pluginId) : null;
+    }, [hosts, hostId, pluginId]);
   },
 
   useHosts() {
+    const pluginId = usePluginScope();
     const { hosts, loaded } = useShellHosts();
     return useMemo(
-      () => ({ hosts: hosts.map(toHostRecord), loaded }),
-      [hosts, loaded],
+      () => ({
+        hosts: hosts.map((host) => toPluginHostRecord(host, pluginId)),
+        loaded,
+      }),
+      [hosts, loaded, pluginId],
     );
   },
 
@@ -410,8 +426,10 @@ export const pluginHostBridge: PluginHostBridge = {
     setClientPreference: (name, value) => {
       void setCookie(name, value, 365);
     },
-    listHosts: async () =>
-      (await getSSHHosts({ includeStatus: false })).map(toHostRecord),
+    listHosts: async (pluginId) =>
+      (await getSSHHosts({ includeStatus: false })).map((host) =>
+        toPluginHostRecord(host, pluginId ?? null),
+      ),
     listCredentials: async () => {
       const raw = await getCredentials();
       const list = Array.isArray(raw)

@@ -7,7 +7,6 @@ import {
   SquareTerminal,
   Terminal,
 } from "lucide-react";
-import { listHosts } from "@termix/plugin-sdk/frontend";
 import type {
   PanelProps,
   PluginHostRecord,
@@ -309,9 +308,11 @@ export function activate(app: TermixApp): void {
     );
     let host: PluginHostRecord | null | undefined = request.host;
     if (!host && request.hostId !== undefined) {
-      host = (await listHosts().catch(() => [])).find(
-        (entry) => String(entry.id) === String(request.hostId),
-      );
+      host =
+        app.getHost(request.hostId) ??
+        (await app.listHosts().catch(() => [])).find(
+          (entry) => String(entry.id) === String(request.hostId),
+        );
     }
     return resolveTerminalLook({ ...request, host }, settings?.user);
   }) as never);

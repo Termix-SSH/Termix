@@ -13,6 +13,10 @@ function app(): TermixApp {
   return current;
 }
 
+export function listHosts(): ReturnType<TermixApp["listHosts"]> {
+  return app().listHosts();
+}
+
 /**
  * Runs a guest discovery over the server-sent event stream and reports
  * progress. Returns a function that stops listening.

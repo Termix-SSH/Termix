@@ -8,6 +8,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
+import { scopeHostFields } from "./host-scope";
 import { useTranslation } from "react-i18next";
 import { getPluginRecord } from "./plugin-store";
 
@@ -103,7 +104,7 @@ export function withPluginScope<P extends object>(
   function Scoped(props: P) {
     return (
       <PluginScope pluginId={pluginId}>
-        <Inner {...props} />
+        <Inner {...scopeHostFields(props, pluginId)} />
       </PluginScope>
     );
   }

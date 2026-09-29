@@ -1,4 +1,4 @@
-import { listHosts } from "@termix/plugin-sdk/frontend";
+import { listHosts } from "./client";
 import type { SSHHost } from "../host-types";
 
 export async function getSSHHosts(): Promise<SSHHost[]> {

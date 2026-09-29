@@ -11,8 +11,12 @@ import {
   DialogFooter,
 } from "@termix/plugin-sdk/ui";
 import { Select2 } from "@termix/plugin-sdk/ui";
-import { discoverProxmoxGuestsStream, importProxmoxHosts } from "./proxmox-api";
-import { listHosts, type PluginHostRecord } from "@termix/plugin-sdk/frontend";
+import {
+  discoverProxmoxGuestsStream,
+  importProxmoxHosts,
+  listHosts,
+} from "./proxmox-api";
+import type { PluginHostRecord } from "@termix/plugin-sdk/frontend";
 import type { ProxmoxGuest } from "./types";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth";
 

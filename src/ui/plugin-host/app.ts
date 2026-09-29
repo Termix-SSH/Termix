@@ -51,11 +51,20 @@ import {
   registerSecondFactor,
   registerSshAuthEditor,
 } from "./auth-registry";
-import { pluginHostBridge, resolvePluginPermission } from "./bridge";
-import { shell, tabsApi } from "./shell-bridge";
+import {
+  pluginHostBridge,
+  resolvePluginPermission,
+  toPluginHostRecord,
+} from "./bridge";
+import { shell, shellHost, tabsApi } from "./shell-bridge";
 import { onRemoteServerChange, remoteServerUrl } from "./desktop";
 import { isElectron } from "@/lib/electron";
 import { withPluginScope, withIconBoundary, guardCallback } from "./scope";
+import {
+  scopeHostArgs,
+  scopeHostCallback,
+  scopeHostFields,
+} from "./host-scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { hasPermission } from "@/hooks/use-permissions";
@@ -97,6 +106,11 @@ export function createPluginApp(
     withPluginScope(pluginId, component);
 
   const key = (value: string) => pluginKey(pluginId, value);
+
+  // Every host a plugin callback receives carries only this plugin's settings.
+  const hostCallback = <F extends (...args: never[]) => unknown>(
+    fn: F | undefined,
+  ): F | undefined => scopeHostCallback(fn, pluginId);
 
   const requireDeclared = (kind: ViewKind, id: string, what: string) => {
     if (!manifestDeclares(contributes, kind, id)) {
@@ -221,17 +235,29 @@ export function createPluginApp(
           titleKey: key(action.titleKey),
           pluginId,
           icon: withIconBoundary(pluginId, action.icon as never) as never,
-          when: action.when as never,
-          run: action.run as never,
+          when: hostCallback(action.when) as never,
+          run: hostCallback(action.run) as never,
           // Called while the host list renders, so a throw must not escape.
           label: guardCallback(
             pluginId,
-            action.label as ((...args: unknown[]) => unknown) | undefined,
+            hostCallback(
+              action.label as ((...args: unknown[]) => unknown) | undefined,
+            ),
             undefined,
           ) as never,
           items: guardCallback(
             pluginId,
-            action.items as ((...args: unknown[]) => unknown) | undefined,
+            action.items
+              ? (...args: unknown[]) =>
+                  (
+                    action.items as (
+                      ...a: unknown[]
+                    ) => { run: (...a: never[]) => unknown }[]
+                  )(...scopeHostArgs(args, pluginId))?.map((item) => ({
+                    ...item,
+                    run: hostCallback(item.run),
+                  }))
+              : undefined,
             undefined,
           ) as never,
         }),
@@ -256,7 +282,7 @@ export function createPluginApp(
         registerHostBadge({
           id: badge.id,
           pluginId,
-          when: badge.when as never,
+          when: hostCallback(badge.when) as never,
           component: scoped(badge.component) as never,
         }),
       );
@@ -268,8 +294,8 @@ export function createPluginApp(
           ...item,
           titleKey: key(item.titleKey),
           pluginId,
-          when: item.when as never,
-          run: item.run as never,
+          when: hostCallback(item.when) as never,
+          run: hostCallback(item.run) as never,
         }),
       );
     },
@@ -280,8 +306,8 @@ export function createPluginApp(
           ...entry,
           titleKey: key(entry.titleKey),
           pluginId,
-          when: entry.when as never,
-          run: entry.run as never,
+          when: hostCallback(entry.when) as never,
+          run: hostCallback(entry.run) as never,
         }),
       );
     },
@@ -373,6 +399,13 @@ export function createPluginApp(
       );
     },
 
+    listHosts: () => pluginHostBridge.core.listHosts(pluginId),
+
+    getHost(hostId) {
+      const host = shellHost(hostId);
+      return host ? toPluginHostRecord(host, pluginId) : undefined;
+    },
+
     registerSettingsComponent(componentId, component) {
       return track(
         registerSettingsComponent(pluginId, componentId, scoped(component)),
@@ -381,7 +414,7 @@ export function createPluginApp(
 
     registerAction(id, handler, options = {}) {
       return track(
-        registerAction(id, handler, {
+        registerAction(id, hostCallback(handler), {
           permission: options.permission
             ? resolvePluginPermission(pluginId, options.permission)
             : undefined,
@@ -404,6 +437,10 @@ export function createPluginApp(
             : undefined,
           component: contribution.component
             ? scoped(contribution.component)
+            : undefined,
+          when: contribution.when
+            ? (context: Record<string, unknown>) =>
+                contribution.when!(scopeHostFields(context, pluginId))
             : undefined,
           pluginId,
         }),

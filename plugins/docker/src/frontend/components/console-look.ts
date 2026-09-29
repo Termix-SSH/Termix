@@ -42,13 +42,12 @@ export function useConsoleLook(
   appTheme: string,
 ): ConsoleLook {
   const [look, setLook] = useState<ConsoleLook>(FALLBACK_CONSOLE_LOOK);
-  const hostKey = host
-    ? `${host.id}:${JSON.stringify(host.pluginSettings ?? {})}`
-    : "";
-
+  // The terminal's settings live with the terminal, so it resolves them from
+  // the host id.
+  const hostId = host?.id;
   useEffect(() => {
     let active = true;
-    invokeAction("terminal.resolveTheme", { host, appTheme })
+    invokeAction("terminal.resolveTheme", { hostId, appTheme })
       .then((resolved) => {
         if (active) setLook((resolved as ConsoleLook) ?? FALLBACK_CONSOLE_LOOK);
       })
@@ -58,8 +57,7 @@ export function useConsoleLook(
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hostKey, appTheme]);
+  }, [hostId, appTheme]);
 
   return look;
 }

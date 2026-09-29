@@ -1,4 +1,4 @@
-import type { ComponentType, Ref } from "react";
+import { useEffect, useState, type ComponentType, type Ref } from "react";
 import {
   Info,
   MessagesSquare,
@@ -7,6 +7,7 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import {
+  invokeAction,
   useTranslation,
   type HostEditorSectionProps,
   type PluginHostRecord,
@@ -175,21 +176,42 @@ function ToolbarCard({
   );
 }
 
-/** The Wake-on-LAN address a host keeps, the default for a session's wake packet. */
-function wakeOnLanMac(host: PluginHostRecord | undefined): string | null {
-  const value = host?.pluginSettings?.["wake-on-lan"]?.macAddress;
-  return typeof value === "string" && value ? value : null;
+/**
+ * The Wake-on-LAN address a host keeps, the default for a session's wake
+ * packet. Null while that plugin is off.
+ */
+function useWakeOnLanMac(hostId: string | undefined): string | null {
+  const [mac, setMac] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!hostId) {
+      setMac(null);
+      return;
+    }
+    invokeAction("wakeOnLan.macAddress", hostId)
+      .then((value) => {
+        if (active) setMac(typeof value === "string" && value ? value : null);
+      })
+      .catch(() => {
+        if (active) setMac(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hostId]);
+  return mac;
 }
 
 function RdpSection(props: HostEditorSectionProps) {
   const { form, setField, setGuacField } = remoteDesktopForm(props);
+  const macAddress = useWakeOnLanMac(props.host?.id);
   return (
     <>
       <HostEditorRdpTab
         form={form}
         setField={setField}
         setGuacField={setGuacField}
-        host={{ macAddress: wakeOnLanMac(props.host) }}
+        host={{ macAddress }}
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
@@ -200,13 +222,14 @@ function RdpSection(props: HostEditorSectionProps) {
 
 function VncSection(props: HostEditorSectionProps) {
   const { form, setField, setGuacField } = remoteDesktopForm(props);
+  const macAddress = useWakeOnLanMac(props.host?.id);
   return (
     <>
       <HostEditorVncTab
         form={form}
         setField={setField}
         setGuacField={setGuacField}
-        host={{ macAddress: wakeOnLanMac(props.host) }}
+        host={{ macAddress }}
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />

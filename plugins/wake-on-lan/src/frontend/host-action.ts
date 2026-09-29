@@ -5,11 +5,19 @@ import type {
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
 
+export function macAddressOf(
+  host: Pick<PluginHostRecord, "pluginSettings"> | null | undefined,
+): string | null {
+  const macAddress = host?.pluginSettings?.["wake-on-lan"]?.macAddress;
+  return typeof macAddress === "string" && macAddress.trim()
+    ? macAddress.trim()
+    : null;
+}
+
 export function hasMacAddress(
   host: Pick<PluginHostRecord, "pluginSettings">,
 ): boolean {
-  const macAddress = host.pluginSettings?.["wake-on-lan"]?.macAddress;
-  return typeof macAddress === "string" && macAddress.trim().length > 0;
+  return macAddressOf(host) !== null;
 }
 
 function errorMessage(error: unknown, fallback: string): string {
