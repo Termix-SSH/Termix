@@ -115,6 +115,35 @@ async function selectHosts() {
 }
 
 describe("SftpTransferTab", () => {
+  it("opens the server login directory when no default path is configured", async () => {
+    const hosts = await api.getSSHHosts();
+    api.getSSHHosts.mockResolvedValue(
+      hosts.map((host: object) => ({ ...host, pluginSettings: {} })),
+    );
+    api.browseSSHDirectory.mockImplementation(
+      async (sessionId: string, path: string) => ({
+        status: "ok",
+        path: path === "." ? `/srv/home-${sessionId}` : path,
+        files: [
+          {
+            name: `remote-${sessionId}.txt`,
+            type: "file",
+            path: `/srv/home-${sessionId}/remote-${sessionId}.txt`,
+            size: 1,
+          },
+        ],
+      }),
+    );
+    render(<SftpTransferTab />);
+    await selectHosts();
+    await waitFor(() => {
+      expect(api.browseSSHDirectory).toHaveBeenCalledWith("1", ".");
+      expect(api.browseSSHDirectory).toHaveBeenCalledWith("2", ".");
+    });
+    expect(await screen.findByDisplayValue("/srv/home-1")).toBeTruthy();
+    expect(await screen.findByDisplayValue("/srv/home-2")).toBeTruthy();
+  });
+
   it("loads file manager-enabled hosts into both host pickers", async () => {
     render(<SftpTransferTab />);
     const selects = await screen.findAllByRole("combobox");

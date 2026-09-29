@@ -373,11 +373,11 @@ function RemotePane({
         ...current,
         connectionState: "ready",
         sessionId: result.sessionId || String(host.id),
-        path: fileManagerHostSetting(host, "defaultPath", "") || "/",
+        path: fileManagerHostSetting(host, "defaultPath", "") || ".",
       }));
       await loadRemotePath(
         result.sessionId || String(host.id),
-        fileManagerHostSetting(host, "defaultPath", "") || "/",
+        fileManagerHostSetting(host, "defaultPath", "") || ".",
       );
     },
     [loadRemotePath, setPane],
