@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Виконати \"{{name}}\"",
+  "variablesDialogDescription": "Заповніть значення, необхідні цьому фрагменту, перш ніж запускати його.",
+  "variablesPreviewLabel": "Попередній перегляд",
+  "variablesConfirmButton": "Бігти",
+  "keybindings": {
+    "runSnippet": "Запустити існуючий фрагмент коду",
+    "snippetLabel": "Фрагмент",
+    "selectSnippet": "Виберіть фрагмент",
+    "snippetMissing": "фрагмент не знайдено",
+    "snippetRequired": "Виберіть фрагмент"
+  },
+  "paletteHintRun": "Запустити в активній вкладці терміналу",
+  "host": {
+    "startupTitle": "Фрагмент запуску",
+    "quickActionsTitle": "Швидкі дії",
+    "quickActionsDescription": "Швидкі дії відображаються як кнопки на панелі інструментів «Метрики хоста» для виконання команд одним клацанням миші.",
+    "noQuickActions": "Поки що жодних швидких дій.",
+    "buttonLabel": "Мітка кнопки",
+    "selectSnippet": "Вибрати фрагмент...",
+    "addQuickAction": "Додати дію"
+  },
+  "quickActions": {
+    "running": "Виконання {{name}}...",
+    "succeeded": "{{name}} успішно завершено",
+    "failed": "{{name}} не вдалося",
+    "error": "Не вдалося виконати {{name}}"
+  }
+}

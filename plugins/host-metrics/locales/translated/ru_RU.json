@@ -51,10 +51,6 @@
     "processesRunning": "выполняется",
     "loginStats": "Статистика входов SSH",
     "noRecentLoginData": "Нет данных о недавних входах",
-    "executingQuickAction": "Выполняется {{name}}...",
-    "quickActionSuccess": "{{name}} успешно завершено",
-    "quickActionFailed": "{{name}} не удалось",
-    "quickActionError": "Не удалось выполнить {{name}}",
     "ports": {
       "title": "Прослушиваемые порты",
       "protocol": "Протокол",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Добавлять",
     "visibleWidgets": "Видимые виджеты",
     "widgetsMovedToHostMetrics": "Карточки теперь добавляются, упорядочиваются и изменяются в размере непосредственно на вкладке «Метрики хоста». Откройте метрики для этого хоста и используйте «Настроить», чтобы выбрать отображаемые карточки.",
-    "quickActionsLabel": "Быстрые действия",
-    "quickActionsToolbar": "Быстрые действия отображаются в виде кнопок на панели инструментов метрик хоста для выполнения команд в один клик.",
-    "noQuickActions": "Пока нет быстрых действий.",
-    "buttonLabel": "Надпись кнопки",
-    "selectSnippetPlaceholder": "Выбрать сниппет...",
-    "addActionBtn": "Добавить действие",
     "hostNotFound": "Хост не найден",
     "loadingHost": "Загрузка хоста..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Диск"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Отмена",
-        "confirmRunButton": "Запустить",
-        "confirmRunMessage": "Запустить \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Подключено"

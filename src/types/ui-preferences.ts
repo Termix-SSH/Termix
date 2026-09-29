@@ -135,7 +135,6 @@ const CORE_HIDEABLE_RAIL_VIEWS = [
   "credentials",
   "connections",
   "quick-connect",
-  "macros",
 ];
 
 const SIMPLE_HIDDEN_RAIL_TABS = CORE_HIDEABLE_RAIL_VIEWS.filter(

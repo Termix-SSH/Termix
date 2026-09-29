@@ -307,7 +307,6 @@
     "savedThemesLabel": "Gespeicherte Designs",
     "scrollbackBufferLabel": "Rückrollpuffer",
     "scrollbackMaxLines": "Maximale Anzahl der im Verlauf gespeicherten Zeilen",
-    "startupSnippetLabel": "Startup-Snippet",
     "sudoPasswordAutoFill": "Sudo-Passwort automatisch ausfüllen",
     "sudoPasswordAutoFillDesc": "Sudo-Passwort speichern, damit Hostmetriken, Terminal-Eingabeaufforderungen und andere privilegierte Befehle automatisch ausgeführt werden können.",
     "sudoPasswordAutoFillLabel": "Sudo-Passwort automatisch ausfüllen",
@@ -335,7 +334,8 @@
     "history": "Verlauf",
     "localTerminal": "Lokales Terminal",
     "sshTools": "SSH-Tools",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makros"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Hier tippen, um Tastenanschläge zu senden...",
@@ -363,5 +363,112 @@
     "off": "Aus",
     "on": "An",
     "title": "Standardeinstellungen für die Verbindung"
+  },
+  "keybindings": {
+    "copy": "Auswahl kopieren",
+    "paste": "Paste",
+    "sendControlCode": "Sende das Signal Strg+Buchstabe",
+    "sendText": "SMS senden",
+    "controlCodeLabel": "Brief",
+    "textLabel": "Text zum Senden",
+    "appendEnterLabel": "Nach dem Absenden die Eingabetaste drücken",
+    "clipboardPermissionNote": "Bei einigen Browsern kann es bei der ersten Verwendung zu einer Anfrage nach der Berechtigung zum Ablegen der Zwischenablage kommen.",
+    "textRequired": "Geben Sie den zu sendenden Text ein.",
+    "controlCodeRequired": "Geben Sie einen einzelnen Buchstaben als Kontrollcode ein."
+  },
+  "macros": {
+    "title": "Makros",
+    "description": "Führe eine gespeicherte Befehlsfolge in einem Terminal aus und reagiere auf die Antwort des Servers.",
+    "target": "Ziel",
+    "noTerminal": "Kein Terminal geöffnet",
+    "empty": "Noch keine Makros",
+    "emptyHint": "Erstellen Sie ein Makro, um einen Terminal-Workflow zu automatisieren, z. B. das Anmelden, das Neustarten eines Dienstes oder das Beantworten von Eingabeaufforderungen.",
+    "create": "Neues Makro",
+    "back": "Zurück zu den Makros",
+    "name": "Name",
+    "namePlaceholder": "Webserver neu starten",
+    "nameRequired": "Gib dem Makro vor dem Speichern einen Namen.",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Was dieses Makro bewirkt (optional)",
+    "unsaved": "Nicht gespeicherte Änderungen",
+    "save": "Speichern",
+    "saved": "Makro gespeichert",
+    "saveFailed": "Makro konnte nicht gespeichert werden",
+    "delete": "Löschen",
+    "deleteTitle": "Dieses Makro löschen?",
+    "deleteBody": "\"{{name}}\" wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "deleted": "Makro gelöscht",
+    "cancel": "Stornieren",
+    "run": "Laufen",
+    "stop": "Stoppen",
+    "running": "Läuft...",
+    "completed": "Makro beendet",
+    "failed": "Makro fehlgeschlagen",
+    "loadFailed": "Makros konnten nicht geladen werden.",
+    "needTerminal": "Öffnen und verbinden Sie zuerst ein Terminal.",
+    "noSteps": "Dieses Makro hat noch keine Schritte. Füge unten einen hinzu.",
+    "addStep": "Schritt hinzufügen",
+    "stepNumber": "Schritt {{number}}",
+    "removeStep": "Schritt entfernen",
+    "confirmRunTitle": "Dieses Makro ausführen?",
+    "confirmRunBody": "\"{{name}}\" sendet Befehle an {{host}}.",
+    "confirmRunAction": "Makro ausführen",
+    "stepTypes": {
+      "send": {
+        "label": "Befehl senden",
+        "help": "Gibt den Text im Terminal ein, genau so, als ob Sie ihn eingetippt hätten."
+      },
+      "wait": {
+        "label": "Auf Ausgabe warten",
+        "help": "Die Ausgabe wird so lange unterbrochen, bis der Server den von Ihnen angegebenen Text ausgibt, beispielsweise eine Passwortabfrage."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Wartet eine festgelegte Zeitspanne, bevor der nächste Schritt ausgeführt wird."
+      },
+      "if": {
+        "label": "Wenn die Ausgabe enthält",
+        "help": "Prüft alles, was der Server bisher ausgegeben hat, und führt dann einen von zwei Zweigen aus."
+      },
+      "repeat": {
+        "label": "Wiederholen",
+        "help": "Führt die darin enthaltenen Schritte eine festgelegte Anzahl von Malen aus."
+      }
+    },
+    "send": {
+      "text": "Befehl oder Text",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Nach dem Absenden die Eingabetaste drücken",
+      "pressEnterHelp": "Deaktivieren Sie diese Option, um Text einzugeben, ohne ihn abzusenden."
+    },
+    "wait": {
+      "pattern": "Warten Sie, bis die Ausgabe Folgendes enthält",
+      "patternPlaceholder": "Passwort:",
+      "timeout": "Aufgeben nach",
+      "onTimeout": "Wenn es nie erscheint",
+      "stop": "Stoppe das Makro",
+      "continue": "Mach trotzdem weiter."
+    },
+    "delay": {
+      "duration": "Warten Sie auf"
+    },
+    "ifStep": {
+      "pattern": "Wenn die Ausgabe enthält",
+      "patternPlaceholder": "Aktiv: aktiv (läuft)",
+      "then": "Dann tu Folgendes:",
+      "else": "Andernfalls tun Sie Folgendes:",
+      "emptyBranch": "Keine Stufen"
+    },
+    "repeat": {
+      "count": "Anzahl der Male",
+      "times": "mal"
+    },
+    "match": {
+      "useRegex": "Übereinstimmung mit einem regulären Ausdruck",
+      "useRegexHelp": "Lassen Sie dies weg, damit der Text genau so bleibt, wie er geschrieben steht.",
+      "invalidRegex": "Kein gültiger regulärer Ausdruck, wird als Klartext erkannt."
+    },
+    "seconds": "Sekunden",
+    "secondsShort": "{{count}}s"
   }
 }

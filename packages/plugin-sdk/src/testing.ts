@@ -2000,7 +2000,14 @@ export interface RenderedPluginApp {
     actions: () => string[];
     loginMethods: () => string[];
     secondFactors: () => string[];
+    paletteGroups: () => string[];
+    keybindingActions: () => string[];
+    keybindingDefaults: () => string[];
   };
+  /** A registered palette group's items, as the palette loads them on open. */
+  loadPaletteGroup: (
+    id: string,
+  ) => Promise<import("./frontend.js").PaletteItem[]>;
   /** Shell calls made by the plugin's code, applyLayout included. */
   shellCalls: ShellCall[];
   /**

@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
-  Braces,
   LayoutDashboard,
   LayoutPanelLeft,
   Server,
@@ -27,10 +26,6 @@ const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
   })),
-);
-// Rail panels promoted to full tabs.
-const MacrosPanel = lazy(() =>
-  import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 
 /** Download a likely next tab without starting a connection or mounting UI. */
@@ -100,9 +95,6 @@ export function tabIcon(type: TabType) {
       return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
-    case "macros":
-      return <Braces className="size-3.5" />;
-
     case "split-screen":
       return <LayoutPanelLeft className="size-3.5" />;
     default: {
@@ -163,23 +155,11 @@ function RegisteredTab({
   );
 }
 
-/**
- * Everything the promoted rail panels need from AppShell. Passed as one bag
- * rather than more positional params, which renderTabContent already has too
- * many of.
- */
-export type PromotedPanelProps = {
-  terminalTabs?: Tab[];
-  targetTerminalTabId?: string;
-  storageMode?: "local" | "cloud";
-};
-
 export interface TabRenderContext {
   shell: TabShellCallbacks;
   isVisible?: boolean;
   isFocusedPane?: boolean;
   inSplit?: boolean;
-  panelProps?: PromotedPanelProps;
 }
 
 export function renderTabContent(tab: Tab, context: TabRenderContext) {
@@ -188,7 +168,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
     isVisible = true,
     isFocusedPane = true,
     inSplit = false,
-    panelProps,
   } = context;
 
   switch (tab.type) {
@@ -203,17 +182,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
 
     case "split-screen":
       return null;
-
-    case "macros":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <MacrosPanel
-            terminalTabs={panelProps?.terminalTabs ?? []}
-            activeTabId={panelProps?.targetTerminalTabId ?? ""}
-            storageMode={panelProps?.storageMode ?? "local"}
-          />
-        </PanelTabFrame>,
-      );
 
     case "host-manager":
     case "user-profile":

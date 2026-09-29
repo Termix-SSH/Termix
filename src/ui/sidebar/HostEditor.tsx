@@ -6,7 +6,6 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { Globe, Pencil, Plus, Shield, Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import { listSnippets } from "@/lib/snippet-provider";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import {
   createSSHHost,
@@ -28,7 +27,6 @@ import {
   applyHostDraft,
   buildHostEditorPayload,
   createHostEditorForm,
-  mapSnippetResponse,
   omitOwnerSshAuthFromSharedEdit,
   type HostAuthType,
   type HostProtocols,
@@ -116,7 +114,6 @@ export function HostEditor({
   };
 
   const [saving, setSaving] = useState(false);
-  const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [showSecretSources, setShowSecretSources] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
@@ -130,14 +127,6 @@ export function HostEditor({
       .then((info) => setIsOidcUser(info.is_oidc))
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    listSnippets(
-      adminTargetUserId ? { targetUserId: adminTargetUserId } : undefined,
-    )
-      .then((res) => setSnippets(mapSnippetResponse(res)))
-      .catch(() => {});
-  }, [adminTargetUserId]);
 
   useEffect(() => {
     if (host) {
@@ -1122,7 +1111,7 @@ export function HostEditor({
                 updateForm={updateForm}
                 host={host}
                 credentials={availableCredentials}
-                snippets={snippets}
+                adminTargetUserId={adminTargetUserId}
                 protocols={protocols as unknown as Record<string, boolean>}
               />
             );

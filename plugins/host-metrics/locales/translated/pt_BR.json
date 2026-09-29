@@ -51,10 +51,6 @@
     "processesRunning": "correndo",
     "loginStats": "Estatísticas de login SSH",
     "noRecentLoginData": "Nenhum dado de login recente",
-    "executingQuickAction": "Executando {{name}}...",
-    "quickActionSuccess": "{{name}} concluído com sucesso",
-    "quickActionFailed": "{{name}} falhou",
-    "quickActionError": "Falha ao executar {{name}}",
     "ports": {
       "title": "Portas de escuta",
       "protocol": "Protocolo",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Adicionar",
     "visibleWidgets": "Widgets Visíveis",
     "widgetsMovedToHostMetrics": "Agora, os cartões podem ser adicionados, organizados e redimensionados diretamente na guia Métricas do Host. Abra as Métricas do Host para este host e use a opção Personalizar para escolher quais cartões serão exibidos.",
-    "quickActionsLabel": "Ações rápidas",
-    "quickActionsToolbar": "As ações rápidas aparecem como botões na barra de ferramentas do Host Metrics para execução de comandos com um único clique.",
-    "noQuickActions": "Nenhuma ação imediata ainda.",
-    "buttonLabel": "Rótulo do botão",
-    "selectSnippetPlaceholder": "Selecione o trecho...",
-    "addActionBtn": "Adicionar ação",
     "hostNotFound": "Host não encontrado",
     "loadingHost": "Carregando host..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disco"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Cancelar",
-        "confirmRunButton": "Correr",
-        "confirmRunMessage": "Executar \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Conectado"

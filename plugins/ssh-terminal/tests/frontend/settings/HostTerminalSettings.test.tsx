@@ -30,7 +30,6 @@ function renderSettings(form: Form = { pluginSettings: {} }) {
       setField={setField}
       updateForm={updateForm}
       host={{ id: "1", name: "box", ip: "10.0.0.1", port: 22 }}
-      snippets={[{ id: 7, name: "deploy" }]}
     />,
   );
   return { setField, updateForm, current: () => current };
@@ -56,13 +55,9 @@ describe("HostTerminalSettings", () => {
     expect(screen.getByText("hosts.sudoPasswordAutoFillLabel")).toBeTruthy();
   });
 
-  it("sets the startup snippet, a core host field, from the offered snippets", () => {
-    const { setField } = renderSettings();
-    const select = screen
-      .getByRole("option", { name: "deploy" })
-      .closest("select")!;
-    fireEvent.change(select, { target: { value: "7" } });
-    expect(setField).toHaveBeenCalledWith("startupSnippetId", 7);
+  it("no longer draws the startup snippet, which is the snippets plugin's", () => {
+    renderSettings();
+    expect(screen.queryByText("hosts.startupSnippetLabel")).toBeNull();
   });
 
   it("writes its values into the host's ssh-terminal settings", () => {

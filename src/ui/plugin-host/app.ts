@@ -20,7 +20,16 @@ import {
   registerHostBadge,
   registerHostContextMenuItem,
 } from "@/sidebar/host-contributions";
-import { registerPaletteEntry } from "@/shell/palette-registry";
+import {
+  registerPaletteEntry,
+  registerPaletteGroup,
+  type PaletteItemDef,
+} from "@/shell/palette-registry";
+import {
+  registerKeybindingAction,
+  registerKeybindingDefault,
+  type KeybindingEditorProps,
+} from "@/shell/keybinding-registry";
 import { registerHostProtocol } from "@/sidebar/host-protocols";
 import {
   registerDashboardCard,
@@ -274,6 +283,63 @@ export function createPluginApp(
           pluginId,
           when: entry.when as never,
           run: entry.run as never,
+        }),
+      );
+    },
+
+    registerPaletteGroup(group) {
+      return track(
+        registerPaletteGroup({
+          id: group.id,
+          pluginId,
+          titleKey: key(group.titleKey),
+          order: group.order,
+          showWhenEmpty: group.showWhenEmpty,
+          load: group.load as unknown as () => Promise<PaletteItemDef[]>,
+        }),
+      );
+    },
+
+    registerKeybindingAction(action) {
+      const declared = (manifest.contributes?.keybindingActions ?? []).some(
+        (entry) => entry.id === action.id,
+      );
+      if (!declared) {
+        throw new Error(
+          `${pluginId}: keybinding action "${action.id}" is not declared in manifest contributes.keybindingActions`,
+        );
+      }
+      const validate = action.validate;
+      return track(
+        registerKeybindingAction({
+          id: action.id,
+          pluginId,
+          labelKey: key(action.titleKey),
+          scope: action.scope ?? "session",
+          editor: action.editor
+            ? (scoped(action.editor) as ComponentType<KeybindingEditorProps>)
+            : undefined,
+          summary: action.summary
+            ? (scoped(action.summary) as ComponentType<KeybindingEditorProps>)
+            : undefined,
+          validate: validate
+            ? (value) => {
+                const problem = validate(value);
+                return problem ? key(problem) : null;
+              }
+            : undefined,
+          run: action.run,
+        }),
+      );
+    },
+
+    registerKeybindingDefault(binding) {
+      return track(
+        registerKeybindingDefault({
+          id: binding.id,
+          pluginId,
+          combo: binding.combo,
+          descriptionKey: key(binding.descriptionKey),
         }),
       );
     },

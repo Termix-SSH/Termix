@@ -71,7 +71,6 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
     ram: null,
     lastAccess: new Date().toISOString(),
     pin: false,
-    quickActions: [],
     enableSsh: true,
     sshPort: input.port,
     quickConnectSavable:

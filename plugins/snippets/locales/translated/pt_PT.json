@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Executar \"{{name}}\"",
+  "variablesDialogDescription": "Preencha os valores necessários para este excerto de código antes de o executar.",
+  "variablesPreviewLabel": "Pré-visualização",
+  "variablesConfirmButton": "Correr",
+  "keybindings": {
+    "runSnippet": "Executar excerto de código existente",
+    "snippetLabel": "Trecho",
+    "selectSnippet": "Selecione um excerto",
+    "snippetMissing": "trecho não encontrado",
+    "snippetRequired": "Selecione um excerto"
+  },
+  "paletteHintRun": "Execute no separador do terminal ativo",
+  "host": {
+    "startupTitle": "Fragmento de inicialização",
+    "quickActionsTitle": "Ações Rápidas",
+    "quickActionsDescription": "As ações rápidas aparecem como botões na barra de ferramentas de Métricas do Host para execução de comandos com um clique.",
+    "noQuickActions": "Ainda não existem ações rápidas.",
+    "buttonLabel": "Texto do botão",
+    "selectSnippet": "Selecionar snippet...",
+    "addQuickAction": "Adicionar Ação"
+  },
+  "quickActions": {
+    "running": "A executar {{name}}...",
+    "succeeded": "{{name}} concluído com sucesso",
+    "failed": "{{name}} falhou",
+    "error": "Falha ao executar {{name}}"
+  }
+}

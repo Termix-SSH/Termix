@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Kør \"{{name}}\"",
+  "variablesDialogDescription": "Udfyld de værdier, som dette kodestykke skal bruge, før det køres.",
+  "variablesPreviewLabel": "Forhåndsvisning",
+  "variablesConfirmButton": "Løbe",
+  "keybindings": {
+    "runSnippet": "Kør eksisterende kodestykke",
+    "snippetLabel": "Uddrag",
+    "selectSnippet": "Vælg et uddrag",
+    "snippetMissing": "uddrag ikke fundet",
+    "snippetRequired": "Vælg et uddrag"
+  },
+  "paletteHintRun": "Kør i den aktive terminalfane",
+  "host": {
+    "startupTitle": "Opstartskodestykke",
+    "quickActionsTitle": "Hurtige handlinger",
+    "quickActionsDescription": "Hurtige handlinger vises som knapper i værktøjslinjen Host Metrics til udførelse af kommandoer med et enkelt klik.",
+    "noQuickActions": "Ingen hurtige handlinger endnu.",
+    "buttonLabel": "Knapmærke",
+    "selectSnippet": "Vælg uddrag...",
+    "addQuickAction": "Tilføj handling"
+  },
+  "quickActions": {
+    "running": "Udfører {{name}}...",
+    "succeeded": "{{name}} gennemført",
+    "failed": "{{name}} mislykkedes",
+    "error": "Kunne ikke udføre {{name}}"
+  }
+}

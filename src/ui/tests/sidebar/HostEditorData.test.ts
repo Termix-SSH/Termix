@@ -428,17 +428,16 @@ describe("connectionOriginAppliesTo", () => {
 });
 
 describe("terminal fields", () => {
-  it("sends only the startup snippet in terminalConfig, and the SSH options on their own", () => {
+  it("sends no terminalConfig, and the SSH options on their own", () => {
     const form = {
       ...createHostEditorForm(null),
-      startupSnippetId: 4,
       keepaliveInterval: 30,
       agentForwarding: true,
       environmentVariables: [{ key: "LANG", value: "C" }],
     };
     const payload = buildHostEditorPayload(form, sshOnly);
 
-    expect(payload.terminalConfig).toEqual({ startupSnippetId: 4 });
+    expect(payload).not.toHaveProperty("terminalConfig");
     expect(payload.sshOptions).toMatchObject({
       keepaliveInterval: 30,
       keepaliveCountMax: 5,
@@ -457,7 +456,7 @@ describe("terminal fields", () => {
 
     expect(form.keepaliveInterval).toBe(15);
     expect(form.allowLegacyAlgorithms).toBe(false);
-    expect(form.startupSnippetId).toBe(2);
+    expect(form).not.toHaveProperty("startupSnippetId");
   });
 
   it("leaves the terminal fields out with SSH off", () => {

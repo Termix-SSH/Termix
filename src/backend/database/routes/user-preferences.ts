@@ -27,8 +27,6 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   pinAppRail: row?.pinAppRail ?? null,
   expandAppRailOnHover: row?.expandAppRailOnHover ?? null,
   showPinAppRailButton: row?.showPinAppRailButton ?? null,
-  foldersCollapsed: row?.foldersCollapsed ?? null,
-  confirmSnippetExecution: row?.confirmSnippetExecution ?? null,
   disableUpdateCheck: row?.disableUpdateCheck ?? null,
   confirmTabClose: row?.confirmTabClose ?? null,
   hiddenRailTabs: row?.hiddenRailTabs ?? null,
@@ -37,7 +35,6 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   customThemes: row?.customThemes ?? null,
   customKeybindings: row?.customKeybindings ?? null,
   terminalDefaults: row?.terminalDefaults ?? null,
-  terminalMacros: row?.terminalMacros ?? null,
 });
 
 const connectionDefaultFields = ["terminalDefaults"] as const;
@@ -57,7 +54,7 @@ export function validateDefaultsJson(value: string): boolean {
  * /user-preferences:
  *   get:
  *     summary: Get preferences for the current user
- *     description: showHostTags, hostTrayOnClick, compactHostView and statusColorScheme are legacy fields, kept here read-only for backward compatibility; the authoritative copy is GET /host-sidebar/preferences. foldersCollapsed is likewise legacy and read-only; its authoritative copy is the snippets plugin's own user settings.
+ *     description: showHostTags, hostTrayOnClick, compactHostView and statusColorScheme are legacy fields, kept here read-only for backward compatibility; the authoritative copy is GET /host-sidebar/preferences.
  *     tags:
  *       - User Preferences
  *     responses:
@@ -106,12 +103,6 @@ export function validateDefaultsJson(value: string): boolean {
  *                 showPinAppRailButton:
  *                   type: boolean
  *                   nullable: true
- *                 foldersCollapsed:
- *                   type: boolean
- *                   nullable: true
- *                 confirmSnippetExecution:
- *                   type: boolean
- *                   nullable: true
  *                 disableUpdateCheck:
  *                   type: boolean
  *                   nullable: true
@@ -134,7 +125,7 @@ export function validateDefaultsJson(value: string): boolean {
  *                 customKeybindings:
  *                   type: string
  *                   nullable: true
- *                   description: JSON-encoded array of the user's custom terminal keybindings.
+ *                   description: JSON-encoded array of the user's custom keybindings. An action's type is one of the shell's own or one a plugin declares in contributes.keybindingActions.
  */
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -157,7 +148,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  * /user-preferences:
  *   put:
  *     summary: Update preferences for the current user
- *     description: showHostTags, hostTrayOnClick, compactHostView and statusColorScheme are no longer accepted here -- they moved to PUT /host-sidebar/preferences as part of the sidebar redesign. foldersCollapsed is no longer accepted either, now that it is a snippets plugin user setting.
+ *     description: showHostTags, hostTrayOnClick, compactHostView and statusColorScheme are no longer accepted here -- they moved to PUT /host-sidebar/preferences as part of the sidebar redesign. Values that moved into a feature's own user settings are ignored too.
  *     tags:
  *       - User Preferences
  *     requestBody:
@@ -189,8 +180,6 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: boolean
  *               showPinAppRailButton:
  *                 type: boolean
- *               confirmSnippetExecution:
- *                 type: boolean
  *               disableUpdateCheck:
  *                 type: boolean
  *               confirmTabClose:
@@ -202,7 +191,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 description: JSON-encoded array of the user's saved global custom terminal themes.
  *               customKeybindings:
  *                 type: string
- *                 description: JSON-encoded array of the user's custom terminal keybindings.
+ *                 description: JSON-encoded array of the user's custom keybindings. Each action is checked against the shell's own types and the parameters a plugin declares for its type.
  *     responses:
  *       200:
  *         description: Preferences updated successfully.
@@ -221,14 +210,12 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     pinAppRail,
     expandAppRailOnHover,
     showPinAppRailButton,
-    confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
     hiddenRailTabs,
     customThemes,
     customKeybindings,
     terminalDefaults,
-    terminalMacros,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -241,21 +228,19 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
     showPinAppRailButton?: boolean | null;
-    confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
     customThemes?: string | null;
     customKeybindings?: string | null;
     terminalDefaults?: string | null;
-    terminalMacros?: string | null;
   };
   // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme are no
   // longer writable here -- they moved to /host-sidebar/preferences as of the
   // sidebar redesign. The columns stay in the table (read once as a
   // migration seed by that route) but this endpoint silently ignores them if
-  // a stale client still sends them. foldersCollapsed similarly moved out,
-  // to the snippets plugin's own user settings.
+  // a stale client still sends them. The same goes for the preferences that
+  // moved into a plugin's own user settings.
 
   const updates: UserPreferenceUpdate = {
     updatedAt: new Date().toISOString(),
@@ -280,7 +265,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customThemes,
     customKeybindings,
     terminalDefaults,
-    terminalMacros,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
@@ -349,41 +333,12 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     }
   }
 
-  if (terminalMacros !== undefined && terminalMacros !== null) {
-    let parsedMacros: unknown;
-    try {
-      parsedMacros = JSON.parse(terminalMacros);
-    } catch {
-      return res
-        .status(400)
-        .json({ error: "terminalMacros must be a JSON-encoded array" });
-    }
-    if (
-      terminalMacros.length > 512 * 1024 ||
-      !Array.isArray(parsedMacros) ||
-      parsedMacros.length > 100 ||
-      !parsedMacros.every(
-        (macro) =>
-          !!macro &&
-          typeof macro === "object" &&
-          typeof (macro as { id?: unknown }).id === "string" &&
-          typeof (macro as { name?: unknown }).name === "string" &&
-          Array.isArray((macro as { steps?: unknown }).steps),
-      )
-    ) {
-      return res.status(400).json({
-        error: "terminalMacros must contain at most 100 valid macros",
-      });
-    }
-  }
-
   const boolFields: Record<string, boolean | null | undefined> = {
     commandAutocomplete,
     commandPaletteEnabled,
     pinAppRail,
     expandAppRailOnHover,
     showPinAppRailButton,
-    confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
   };
@@ -408,8 +363,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     updates.expandAppRailOnHover = expandAppRailOnHover;
   if (showPinAppRailButton !== undefined)
     updates.showPinAppRailButton = showPinAppRailButton;
-  if (confirmSnippetExecution !== undefined)
-    updates.confirmSnippetExecution = confirmSnippetExecution;
   if (disableUpdateCheck !== undefined)
     updates.disableUpdateCheck = disableUpdateCheck;
   if (confirmTabClose !== undefined) updates.confirmTabClose = confirmTabClose;
@@ -418,7 +371,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     updates.customKeybindings = customKeybindings;
   if (terminalDefaults !== undefined)
     updates.terminalDefaults = terminalDefaults;
-  if (terminalMacros !== undefined) updates.terminalMacros = terminalMacros;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

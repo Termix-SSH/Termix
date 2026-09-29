@@ -16,7 +16,6 @@ import {
   ElevationError,
 } from "@termix/plugin-sdk/host-commands";
 import type { FleetRepository } from "./repository.js";
-import { resolveCommandVariables } from "./command-variables.js";
 
 const FLEET_TRANSFER_MAX_BYTES = 200 * 1024 * 1024;
 const upload = multer({
@@ -72,6 +71,35 @@ function parseShareTargets(
     }
   }
   return targets;
+}
+
+interface CommandVariables {
+  resolve: (
+    content: string,
+    host: {
+      ip?: string;
+      username?: string;
+      port?: number | string;
+      name?: string;
+    } | null,
+    inputValues?: Record<string, string>,
+  ) => string;
+}
+
+/**
+ * $HOST, $USER, $PORT, $NAME and $INPUT_n in an ad hoc fleet command, through
+ * the snippets plugin, which owns the syntax. Without it the command runs as
+ * typed.
+ */
+export function resolveCommandVariables(
+  ctx: Pick<PluginContext, "registry">,
+  command: string,
+  host: Parameters<CommandVariables["resolve"]>[1],
+  inputValues: Record<string, string> = {},
+): string {
+  const variables =
+    ctx.registry.consume<CommandVariables>("snippets.variables");
+  return variables ? variables.resolve(command, host, inputValues) : command;
 }
 
 function actor(ctx: PluginContext): string {
@@ -884,6 +912,7 @@ export function registerFleetRoutes(
             }
 
             const resolvedCommand = resolveCommandVariables(
+              ctx,
               command,
               {
                 ip: fullHost.ip,

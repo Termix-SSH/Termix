@@ -307,7 +307,6 @@
     "savedThemesLabel": "Gemte temaer",
     "scrollbackBufferLabel": "Scrollback-buffer",
     "scrollbackMaxLines": "Maksimalt antal linjer gemt i historikken",
-    "startupSnippetLabel": "Opstartskodestykke",
     "sudoPasswordAutoFill": "Sudo-adgangskode automatisk udfyldning",
     "sudoPasswordAutoFillDesc": "Gem en sudo-adgangskode, så værtsmålinger, terminalprompter og andre kan køre privilegerede kommandoer automatisk.",
     "sudoPasswordAutoFillLabel": "Sudo-adgangskode automatisk udfyldning",
@@ -335,7 +334,8 @@
     "history": "Historie",
     "localTerminal": "Lokal terminal",
     "sshTools": "SSH-værktøjer",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makroer"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Skriv her for at udsende tastetryk...",
@@ -363,5 +363,112 @@
     "off": "Slukket",
     "on": "På",
     "title": "Standardindstillinger for forbindelse"
+  },
+  "keybindings": {
+    "copy": "Kopiér valg",
+    "paste": "Indsæt",
+    "sendControlCode": "Send Ctrl+bogstavsignal",
+    "sendText": "Send sms",
+    "controlCodeLabel": "Bogstav",
+    "textLabel": "Tekst der skal sendes",
+    "appendEnterLabel": "Tryk Enter efter afsendelse",
+    "clipboardPermissionNote": "Kan bede om tilladelse til udklipsholder ved første brug i nogle browsere.",
+    "textRequired": "Indtast den tekst, der skal sendes",
+    "controlCodeRequired": "Indtast et enkelt bogstav for kontrolkoden"
+  },
+  "macros": {
+    "title": "Makroer",
+    "description": "Kør en gemt række kommandoer i en terminal, og reager på, hvad serveren sender tilbage.",
+    "target": "Mål",
+    "noTerminal": "Ingen terminal åben",
+    "empty": "Ingen makroer endnu",
+    "emptyHint": "Opret en makro for at automatisere et terminalflow, f.eks. at logge ind, genstarte en tjeneste eller besvare prompts.",
+    "create": "Ny makro",
+    "back": "Tilbage til makroer",
+    "name": "Navn",
+    "namePlaceholder": "Genstart webserveren",
+    "nameRequired": "Giv makroen et navn, før du gemmer den",
+    "descriptionLabel": "Beskrivelse",
+    "descriptionPlaceholder": "Hvad denne makro gør (valgfrit)",
+    "unsaved": "Ikke-gemte ændringer",
+    "save": "Spare",
+    "saved": "Makro gemt",
+    "saveFailed": "Makroen kunne ikke gemmes",
+    "delete": "Slet",
+    "deleteTitle": "Slette denne makro?",
+    "deleteBody": "\"{{name}}\" vil blive slettet permanent. Dette kan ikke fortrydes.",
+    "deleted": "Makro slettet",
+    "cancel": "Ophæve",
+    "run": "Løbe",
+    "stop": "Stop",
+    "running": "Løber...",
+    "completed": "Makro færdig",
+    "failed": "Makro mislykkedes",
+    "loadFailed": "Makroer kunne ikke indlæses",
+    "needTerminal": "Åbn og tilslut først en terminal",
+    "noSteps": "Denne makro har endnu ingen trin. Tilføj et nedenfor.",
+    "addStep": "Tilføj trin",
+    "stepNumber": "Trin {{number}}",
+    "removeStep": "Fjern trin",
+    "confirmRunTitle": "Køre denne makro?",
+    "confirmRunBody": "\"{{name}}\" sender kommandoer til {{host}}.",
+    "confirmRunAction": "Kør makro",
+    "stepTypes": {
+      "send": {
+        "label": "Send kommando",
+        "help": "Skriver tekst i terminalen, på samme måde som hvis du havde skrevet den."
+      },
+      "wait": {
+        "label": "Vent på output",
+        "help": "Holder pause, indtil serveren udskriver den tekst, du navngiver, f.eks. en adgangskodeprompt."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Venter et fast tidsrum før næste trin."
+      },
+      "if": {
+        "label": "Hvis outputtet indeholder",
+        "help": "Kontrollerer alt, hvad serveren har udskrevet indtil videre, og kører derefter en af to grene."
+      },
+      "repeat": {
+        "label": "Gentage",
+        "help": "Kører trinnene inde i den et bestemt antal gange."
+      }
+    },
+    "send": {
+      "text": "Kommando eller tekst",
+      "textPlaceholder": "systemctl genstart nginx",
+      "pressEnter": "Tryk Enter efter afsendelse",
+      "pressEnterHelp": "Slå dette fra for at skrive tekst uden at indsende den."
+    },
+    "wait": {
+      "pattern": "Vent indtil outputtet indeholder",
+      "patternPlaceholder": "adgangskode:",
+      "timeout": "Giv op efter",
+      "onTimeout": "Hvis det aldrig dukker op",
+      "stop": "Stop makroen",
+      "continue": "Fortsæt alligevel"
+    },
+    "delay": {
+      "duration": "Vent på"
+    },
+    "ifStep": {
+      "pattern": "Hvis outputtet indeholder",
+      "patternPlaceholder": "Aktiv: aktiv (løber)",
+      "then": "Så gør dette",
+      "else": "Ellers gør dette",
+      "emptyBranch": "Ingen trin"
+    },
+    "repeat": {
+      "count": "Antal gange",
+      "times": "gange"
+    },
+    "match": {
+      "useRegex": "Match med et regulært udtryk",
+      "useRegexHelp": "Slå dette fra for at teksten skal være præcis som den er skrevet.",
+      "invalidRegex": "Ikke et gyldigt regulært udtryk, det vil blive matchet som almindelig tekst"
+    },
+    "seconds": "sekunder",
+    "secondsShort": "{{count}}s"
   }
 }

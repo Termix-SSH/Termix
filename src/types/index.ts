@@ -61,11 +61,6 @@ export interface JumpHost {
   hostId: number;
 }
 
-export interface QuickAction {
-  name: string;
-  snippetId: number;
-}
-
 export type Host = {
   id: number;
   name: string;
@@ -92,7 +87,6 @@ export type Host = {
   overrideCredentialUsername?: boolean;
   userId?: string;
   jumpHosts?: JumpHost[];
-  quickActions?: QuickAction[];
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */
   statusCheckInterval?: number | null;
@@ -176,11 +170,6 @@ export interface JumpHostData {
   hostId: number;
 }
 
-export interface QuickActionData {
-  name: string;
-  snippetId: number;
-}
-
 export interface ProxyNode {
   host: string;
   port: number;
@@ -217,7 +206,6 @@ export interface HostData {
   overrideCredentialUsername?: boolean;
   forceKeyboardInteractive?: boolean;
   jumpHosts?: JumpHostData[];
-  quickActions?: QuickActionData[];
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */
   statusCheckInterval?: number | null;
@@ -357,13 +345,11 @@ export interface Tab {
 // ============================================================================
 
 /**
- * What core still keeps in ssh_data.terminal_config. The terminal's look and
- * behavior are the ssh-terminal plugin's host settings, and the connection
- * options have their own column (sshOptions).
+ * What 2.8 kept in ssh_data.terminal_config. Core reads none of it any more:
+ * the terminal's look and behavior and the startup command are plugins' host
+ * settings, and the connection options have their own column (sshOptions).
  */
-export interface HostTerminalConfig {
-  startupSnippetId?: number | null;
-}
+export type HostTerminalConfig = Record<string, unknown>;
 
 export type { HostSshOptions } from "@termix/plugin-sdk/frontend";
 

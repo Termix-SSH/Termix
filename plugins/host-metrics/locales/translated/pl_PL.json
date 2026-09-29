@@ -51,10 +51,6 @@
     "processesRunning": "działa",
     "loginStats": "Statystyki logowania SSH",
     "noRecentLoginData": "Brak ostatnich danych logowania",
-    "executingQuickAction": "Wykonywanie {{name}}...",
-    "quickActionSuccess": "{{name}} ukończono pomyślnie",
-    "quickActionFailed": "{{name}} nie powiodło się",
-    "quickActionError": "Nie udało się wykonać {{name}}",
     "ports": {
       "title": "Porty nasłuchujące",
       "protocol": "Protokół",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Dodaj",
     "visibleWidgets": "Widoczne widżety",
     "widgetsMovedToHostMetrics": "Karty dodaje się, układa i skaluje bezpośrednio na karcie „Metryki hosta”. Otwórz Metryki hosta dla tego hosta i użyj opcji „Dostosuj”, aby wybrać wyświetlane karty.",
-    "quickActionsLabel": "Szybkie akcje",
-    "quickActionsToolbar": "Szybkie akcje pojawiają się jako przyciski na pasku narzędzi Metryki hosta, umożliwiając wykonanie polecenia jednym kliknięciem.",
-    "noQuickActions": "Brak szybkich akcji.",
-    "buttonLabel": "Etykieta przycisku",
-    "selectSnippetPlaceholder": "Wybierz snippet...",
-    "addActionBtn": "Dodaj akcję",
     "hostNotFound": "Nie znaleziono hosta",
     "loadingHost": "Ładowanie hosta..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Dysk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Anuluj",
-        "confirmRunButton": "Uruchom",
-        "confirmRunMessage": "Uruchomić „{{name}}”?"
-      }
-    }
   },
   "terminal": {
     "connected": "Połączono"

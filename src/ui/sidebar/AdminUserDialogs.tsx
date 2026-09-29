@@ -245,7 +245,7 @@ export function AdminEditUserDialog({
               </span>
               {editUserRolesLoading ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("newUi.sidebar.snippets.loading")}
+                  {t("common.loading")}
                 </span>
               ) : (
                 <>

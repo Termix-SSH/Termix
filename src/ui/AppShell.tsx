@@ -60,6 +60,11 @@ import type {
   CustomKeybinding,
   KeybindingActionType,
 } from "@/types/keybindings";
+import {
+  GLOBAL_KEYBINDING_EVENT,
+  getKeybindingAction,
+  runKeybindingAction,
+} from "@/shell/keybinding-registry";
 
 // Shell surfaces that are not needed for first paint.
 const CommandPalette = lazy(() =>
@@ -74,11 +79,6 @@ const QuickConnectPanel = lazy(() =>
   import("@/sidebar/QuickConnectPanel").then((m) => ({
     default: m.QuickConnectPanel,
   })),
-);
-
-// Secondary rail panels — load on first open, not with the shell critical path.
-const MacrosPanel = lazy(() =>
-  import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 
 const UserProfilePanel = lazy(() =>
@@ -483,16 +483,7 @@ export function AppShell({
           if (cancelled) return;
           globalKeybindingsRef.current = parseCustomKeybindings(
             prefs.customKeybindings,
-          ).filter(
-            (binding) =>
-              binding.enabled &&
-              [
-                "nextTab",
-                "previousTab",
-                "openCommandPalette",
-                "reconnectSession",
-              ].includes(binding.action.type),
-          );
+          ).filter((binding) => binding.enabled);
         })
         .catch(() => {});
     };
@@ -535,14 +526,17 @@ export function AppShell({
         event.target.closest("[data-keybinding-recorder]")
       )
         return;
+      // Only actions that run anywhere; a terminal's own are its to handle.
       const binding = findMatchingKeybinding(
         event,
-        globalKeybindingsRef.current,
+        globalKeybindingsRef.current.filter(
+          (entry) => getKeybindingAction(entry.action.type)?.scope === "global",
+        ),
       );
       if (!binding) return;
       event.preventDefault();
       event.stopPropagation();
-      runAction(binding.action.type);
+      runKeybindingAction(binding.action);
     };
     const handleAction = (event: Event) =>
       runAction(
@@ -550,10 +544,10 @@ export function AppShell({
       );
 
     window.addEventListener("keydown", handleKeyDown, true);
-    window.addEventListener("termix:global-keybinding", handleAction);
+    window.addEventListener(GLOBAL_KEYBINDING_EVENT, handleAction);
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
-      window.removeEventListener("termix:global-keybinding", handleAction);
+      window.removeEventListener(GLOBAL_KEYBINDING_EVENT, handleAction);
     };
   }, []);
   useEffect(() => {
@@ -648,7 +642,7 @@ export function AppShell({
     setActiveTabId(splitTabId);
   };
 
-  // Panels like history and snippets act on "the terminal you're working in".
+  // Panels that type into a terminal act on "the terminal you're working in".
   // Once those panels can themselves be the active tab, activeTabId points at
   // the panel and the lookup misses, so remember the last terminal instead.
   // In a split, the tab being worked in is the focused pane's.
@@ -990,7 +984,6 @@ export function AppShell({
               "hostTrayOnClick",
               "pinAppRail",
               "expandAppRailOnHover",
-              "confirmSnippetExecution",
               "disableUpdateCheck",
               "confirmTabClose",
               "hiddenRailTabs",
@@ -1049,14 +1042,6 @@ export function AppShell({
             );
             window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
           }
-          if (
-            prefs.confirmSnippetExecution !== null &&
-            prefs.confirmSnippetExecution !== undefined
-          )
-            localStorage.setItem(
-              "confirmSnippetExecution",
-              String(prefs.confirmSnippetExecution),
-            );
           if (
             prefs.disableUpdateCheck !== null &&
             prefs.disableUpdateCheck !== undefined
@@ -2518,7 +2503,7 @@ export function AppShell({
     ]);
   }
 
-  // What history, snippets and macros should act on. Falls back to the remembered
+  // What command-target panels act on. Falls back to the remembered
   // terminal when the active tab isn't one, and drops it once it's closed.
   const targetTerminalTabId = terminalTabs.some((t) => t.id === workingTabId)
     ? workingTabId
@@ -2641,18 +2626,6 @@ export function AppShell({
           />
         )}
 
-        {railView === "macros" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <MacrosPanel
-              terminalTabs={terminalTabs}
-              activeTabId={targetTerminalTabId}
-              storageMode={
-                userPrefs.storageMode === "cloud" ? "cloud" : "local"
-              }
-            />
-          </div>
-        )}
-
         {registeredPanels.map((panel) => {
           const shown = railView === panel.id;
           // A kept-mounted panel lives in the owning dock only, so two live
@@ -2743,7 +2716,6 @@ export function AppShell({
                   authType: "none",
                   enableSsh: false,
                   sshPort: 22,
-                  quickActions: [],
                 };
                 void invokeAction("terminal.open", host, {
                   joinSharedSessionId: session.sessionId,
@@ -3123,14 +3095,6 @@ export function AppShell({
                         isVisible: inPane || activeInline,
                         isFocusedPane,
                         inSplit: inPane,
-                        panelProps: {
-                          terminalTabs,
-                          targetTerminalTabId,
-                          storageMode:
-                            userPrefs.storageMode === "cloud"
-                              ? "cloud"
-                              : "local",
-                        },
                       }),
                       tabNode,
                       tab.id,

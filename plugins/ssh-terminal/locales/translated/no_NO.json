@@ -307,7 +307,6 @@
     "savedThemesLabel": "Lagrede temaer",
     "scrollbackBufferLabel": "Tilbakespolingsbuffer",
     "scrollbackMaxLines": "Maksimalt antall linjer lagret i historikken",
-    "startupSnippetLabel": "Oppstartsutdrag",
     "sudoPasswordAutoFill": "Sudo-passord automatisk utfylling",
     "sudoPasswordAutoFillDesc": "Lagre et sudo-passord slik at vertsmålinger, terminalledetekster og andre kan kjøre privilegerte kommandoer automatisk.",
     "sudoPasswordAutoFillLabel": "Sudo-passord automatisk utfylling",
@@ -335,7 +334,8 @@
     "history": "Historie",
     "localTerminal": "Lokal terminal",
     "sshTools": "SSH-verktøy",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makroer"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Skriv her for å kringkaste tastetrykk...",
@@ -363,5 +363,112 @@
     "off": "Av",
     "on": "På",
     "title": "Standardinnstillinger for tilkobling"
+  },
+  "keybindings": {
+    "copy": "Kopier valg",
+    "paste": "Lim inn",
+    "sendControlCode": "Send Ctrl+bokstavsignal",
+    "sendText": "Send tekstmelding",
+    "controlCodeLabel": "Brev",
+    "textLabel": "Tekst som skal sendes",
+    "appendEnterLabel": "Trykk Enter etter sending",
+    "clipboardPermissionNote": "Kan be om tillatelse til utklippstavlen ved første gangs bruk i noen nettlesere.",
+    "textRequired": "Skriv inn teksten som skal sendes",
+    "controlCodeRequired": "Skriv inn én bokstav for kontrollkoden"
+  },
+  "macros": {
+    "title": "Makroer",
+    "description": "Kjør en lagret serie med kommandoer i en terminal, og reager på det serveren sender tilbake.",
+    "target": "Mål",
+    "noTerminal": "Ingen terminal åpen",
+    "empty": "Ingen makroer ennå",
+    "emptyHint": "Opprett en makro for å automatisere en terminalflyt, som å logge inn, starte en tjeneste på nytt eller svare på forespørsler.",
+    "create": "Ny makro",
+    "back": "Tilbake til makroer",
+    "name": "Navn",
+    "namePlaceholder": "Start nettserveren på nytt",
+    "nameRequired": "Gi makroen et navn før du lagrer",
+    "descriptionLabel": "Beskrivelse",
+    "descriptionPlaceholder": "Hva denne makroen gjør (valgfritt)",
+    "unsaved": "Ulagrede endringer",
+    "save": "Spare",
+    "saved": "Makro lagret",
+    "saveFailed": "Kunne ikke lagre makroen",
+    "delete": "Slett",
+    "deleteTitle": "Slette denne makroen?",
+    "deleteBody": "«{{name}}» vil bli slettet permanent. Dette kan ikke angres.",
+    "deleted": "Makro slettet",
+    "cancel": "Kansellere",
+    "run": "Løp",
+    "stop": "Stoppe",
+    "running": "Løping...",
+    "completed": "Makro ferdig",
+    "failed": "Makroen mislyktes",
+    "loadFailed": "Kunne ikke laste inn makroer",
+    "needTerminal": "Åpne og koble til en terminal først",
+    "noSteps": "Denne makroen har ingen trinn ennå. Legg til et nedenfor.",
+    "addStep": "Legg til trinn",
+    "stepNumber": "Trinn {{number}}",
+    "removeStep": "Fjern trinn",
+    "confirmRunTitle": "Kjøre denne makroen?",
+    "confirmRunBody": "\"{{name}}\" vil sende kommandoer til {{host}}.",
+    "confirmRunAction": "Kjør makro",
+    "stepTypes": {
+      "send": {
+        "label": "Send kommando",
+        "help": "Skriver tekst inn i terminalen, på samme måte som om du hadde skrevet den."
+      },
+      "wait": {
+        "label": "Vent på utdata",
+        "help": "Pauserer til serveren skriver ut teksten du oppgir, som en passordforespørsel."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Venter en fast tid før neste trinn."
+      },
+      "if": {
+        "label": "Hvis utdataene inneholder",
+        "help": "Sjekker alt serveren har skrevet ut så langt, og kjører deretter en av to grener."
+      },
+      "repeat": {
+        "label": "Gjenta",
+        "help": "Kjører trinnene inni den et angitt antall ganger."
+      }
+    },
+    "send": {
+      "text": "Kommando eller tekst",
+      "textPlaceholder": "systemctl omstart nginx",
+      "pressEnter": "Trykk Enter etter sending",
+      "pressEnterHelp": "Slå av dette for å skrive tekst uten å sende den inn."
+    },
+    "wait": {
+      "pattern": "Vent til utdataene inneholder",
+      "patternPlaceholder": "passord:",
+      "timeout": "Gi opp etterpå",
+      "onTimeout": "Hvis den aldri dukker opp",
+      "stop": "Stopp makroen",
+      "continue": "Fortsett uansett"
+    },
+    "delay": {
+      "duration": "Vent på"
+    },
+    "ifStep": {
+      "pattern": "Hvis utdataene inneholder",
+      "patternPlaceholder": "Aktiv: aktiv (løper)",
+      "then": "Gjør så dette",
+      "else": "Ellers gjør dette",
+      "emptyBranch": "Ingen trinn"
+    },
+    "repeat": {
+      "count": "Antall ganger",
+      "times": "ganger"
+    },
+    "match": {
+      "useRegex": "Samsvar med et regulært uttrykk",
+      "useRegexHelp": "La dette være av for å få teksten til å se nøyaktig slik den er skrevet.",
+      "invalidRegex": "Ikke et gyldig regulært uttrykk, det vil bli matchet som ren tekst"
+    },
+    "seconds": "sekunder",
+    "secondsShort": "{{count}}s"
   }
 }

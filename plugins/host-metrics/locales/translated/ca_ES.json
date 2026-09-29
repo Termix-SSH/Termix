@@ -51,10 +51,6 @@
     "processesRunning": "corrent",
     "loginStats": "Estadístiques d'inici de sessió SSH",
     "noRecentLoginData": "Sense dades d'inici de sessió recents",
-    "executingQuickAction": "Executant {{name}}...",
-    "quickActionSuccess": "{{name}} s'ha completat correctament",
-    "quickActionFailed": "{{name}} ha fallat",
-    "quickActionError": "No s'ha pogut executar {{name}}",
     "ports": {
       "title": "Ports d'escolta",
       "protocol": "Protocol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Afegeix",
     "visibleWidgets": "Widgets visibles",
     "widgetsMovedToHostMetrics": "Ara les targetes s'afegeixen, s'organitzen i es canvien de mida directament a la pestanya Mètriques de l'amfitrió. Obriu Mètriques de l'amfitrió per a aquest amfitrió i utilitzeu Personalitza per triar quines targetes es mostren.",
-    "quickActionsLabel": "Accions ràpides",
-    "quickActionsToolbar": "Les accions ràpides apareixen com a botons a la barra d'eines de mètriques de l'amfitrió per executar ordres amb un sol clic.",
-    "noQuickActions": "Encara no hi ha accions ràpides.",
-    "buttonLabel": "Etiqueta del botó",
-    "selectSnippetPlaceholder": "Selecciona un fragment...",
-    "addActionBtn": "Afegeix una acció",
     "hostNotFound": "No s'ha trobat l'amfitrió",
     "loadingHost": "S'està carregant l'amfitrió..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disc"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Cancel·la",
-        "confirmRunButton": "Corre",
-        "confirmRunMessage": "Executar \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Connectat"

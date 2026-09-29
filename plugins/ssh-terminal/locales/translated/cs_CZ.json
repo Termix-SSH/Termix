@@ -307,7 +307,6 @@
     "savedThemesLabel": "Uložená témata",
     "scrollbackBufferLabel": "Vyrovnávací paměť pro rolování zpět",
     "scrollbackMaxLines": "Maximální počet řádků uchovávaných v historii",
-    "startupSnippetLabel": "Úryvek pro spuštění",
     "sudoPasswordAutoFill": "Automatické vyplňování hesla Sudo",
     "sudoPasswordAutoFillDesc": "Uložte heslo sudo, aby metriky hostitele, výzvy terminálu a další mohly automaticky spouštět privilegované příkazy.",
     "sudoPasswordAutoFillLabel": "Automatické vyplňování hesla Sudo",
@@ -335,7 +334,8 @@
     "history": "Dějiny",
     "localTerminal": "Místní terminál",
     "sshTools": "SSH nástroje",
-    "terminal": "Terminál"
+    "terminal": "Terminál",
+    "macros": "Makra"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Zde napište pro vysílání stisknutí kláves...",
@@ -363,5 +363,112 @@
     "off": "Vypnuto",
     "on": "Na",
     "title": "Výchozí nastavení připojení"
+  },
+  "keybindings": {
+    "copy": "Kopírovat výběr",
+    "paste": "Pasta",
+    "sendControlCode": "Odeslat signál Ctrl+písmeno",
+    "sendText": "Odeslat text",
+    "controlCodeLabel": "Dopis",
+    "textLabel": "Text k odeslání",
+    "appendEnterLabel": "Po odeslání stiskněte Enter",
+    "clipboardPermissionNote": "V některých prohlížečích se může při prvním použití zobrazit výzva k zadání povolení ke schránce.",
+    "textRequired": "Zadejte text k odeslání",
+    "controlCodeRequired": "Zadejte jedno písmeno pro kontrolní kód"
+  },
+  "macros": {
+    "title": "Makra",
+    "description": "Spusťte v terminálu uloženou sérii příkazů a reagujte na to, co server odešle zpět.",
+    "target": "Cíl",
+    "noTerminal": "Žádný otevřený terminál",
+    "empty": "Zatím žádná makra",
+    "emptyHint": "Vytvořte makro pro automatizaci procesů v terminálu, jako je přihlašování, restartování služby nebo odpovídání na výzvy.",
+    "create": "Nové makro",
+    "back": "Zpět k makrům",
+    "name": "Jméno",
+    "namePlaceholder": "Restartujte webový server",
+    "nameRequired": "Před uložením zadejte makro název",
+    "descriptionLabel": "Popis",
+    "descriptionPlaceholder": "Co toto makro dělá (volitelné)",
+    "unsaved": "Neuložené změny",
+    "save": "Uložit",
+    "saved": "Makro uloženo",
+    "saveFailed": "Makro se nepodařilo uložit.",
+    "delete": "Vymazat",
+    "deleteTitle": "Smazat toto makro?",
+    "deleteBody": "Soubor „{{name}}“ bude trvale smazán. Tuto akci nelze vrátit zpět.",
+    "deleted": "Makro smazáno",
+    "cancel": "Zrušit",
+    "run": "Běh",
+    "stop": "Zastávka",
+    "running": "Běh...",
+    "completed": "Makro dokončeno",
+    "failed": "Makro selhalo",
+    "loadFailed": "Nepodařilo se načíst makra",
+    "needTerminal": "Nejprve otevřete a připojte terminál",
+    "noSteps": "Toto makro zatím nemá žádné kroky. Přidejte jeden níže.",
+    "addStep": "Přidat krok",
+    "stepNumber": "Krok {{number}}",
+    "removeStep": "Odebrat krok",
+    "confirmRunTitle": "Spustit toto makro?",
+    "confirmRunBody": "„{{name}}“ odešle příkazy pro {{host}}.",
+    "confirmRunAction": "Spustit makro",
+    "stepTypes": {
+      "send": {
+        "label": "Odeslat příkaz",
+        "help": "Zadá text do terminálu, stejně jako byste ho napsali."
+      },
+      "wait": {
+        "label": "Počkejte na výstup",
+        "help": "Pozastaví se, dokud server nevypíše text, který pojmenujete, například výzvu k zadání hesla."
+      },
+      "delay": {
+        "label": "Pauza",
+        "help": "Čeká pevně stanovenou dobu před dalším krokem."
+      },
+      "if": {
+        "label": "Pokud výstup obsahuje",
+        "help": "Zkontroluje vše, co server dosud vytiskl, a poté spustí jednu ze dvou větví."
+      },
+      "repeat": {
+        "label": "Opakovat",
+        "help": "Spustí kroky uvnitř něj tolikrát, kolikrát je nastaveno."
+      }
+    },
+    "send": {
+      "text": "Příkaz nebo text",
+      "textPlaceholder": "restartování systemctl v Nginxu",
+      "pressEnter": "Po odeslání stiskněte Enter",
+      "pressEnterHelp": "Vypněte tuto funkci, chcete-li psát text bez jeho odesílání."
+    },
+    "wait": {
+      "pattern": "Počkejte, dokud výstup neobsahuje",
+      "patternPlaceholder": "heslo:",
+      "timeout": "Vzdej se po",
+      "onTimeout": "Pokud se to nikdy neobjeví",
+      "stop": "Zastavit makro",
+      "continue": "Stejně pokračuj"
+    },
+    "delay": {
+      "duration": "Čekat na"
+    },
+    "ifStep": {
+      "pattern": "Pokud výstup obsahuje",
+      "patternPlaceholder": "Aktivní: aktivní (běží)",
+      "then": "Pak udělej tohle",
+      "else": "Jinak to udělej",
+      "emptyBranch": "Žádné schody"
+    },
+    "repeat": {
+      "count": "Počet opakování",
+      "times": "krát"
+    },
+    "match": {
+      "useRegex": "Porovnání s regulárním výrazem",
+      "useRegexHelp": "Nechte toto vypnuté, aby text přesně odpovídal napsanému textu.",
+      "invalidRegex": "Není to platný regulární výraz, bude nalezen jako prostý text."
+    },
+    "seconds": "sekundy",
+    "secondsShort": "{{count}}s"
   }
 }

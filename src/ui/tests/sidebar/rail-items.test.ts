@@ -52,13 +52,12 @@ describe("RAIL_ITEMS", () => {
     // "port-forwarding" to the tunnels plugin's, "serial" to the serial
     // plugin's, "collab" to the session-sharing plugin's, and "session-logs"
     // to the session-recording plugin's, "termix-id" to the termix-identity
-    // plugin's, "ssh-tools" to the ssh-terminal plugin's.
+    // plugin's, "ssh-tools" and "macros" to the ssh-terminal plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
       "connections",
       "quick-connect",
-      "macros",
       "sync",
     ]);
   });
@@ -80,7 +79,7 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual(["macros"]);
+    ).toEqual([]);
   });
 
   it("derives promotableIds from the promotable flag", () => {
@@ -117,7 +116,7 @@ describe("RAIL_ITEMS", () => {
   });
 
   it("only offers reference panels in the right dock", () => {
-    expect(rightDockableIds()).toEqual(["connections", "macros"]);
+    expect(rightDockableIds()).toEqual(["connections"]);
   });
 });
 
@@ -131,10 +130,10 @@ describe("registered rail items", () => {
   });
 
   it("places items after their anchor, keeping their own order", () => {
-    registerRailItem(item("second", { after: "macros", order: 2 }));
-    registerRailItem(item("first", { after: "macros", order: 1 }));
+    registerRailItem(item("second", { after: "connections", order: 2 }));
+    registerRailItem(item("first", { after: "connections", order: 1 }));
     const ids = visibleRailItems().map((entry) => entry.id);
-    const at = ids.indexOf("macros");
+    const at = ids.indexOf("connections");
     expect(ids.slice(at + 1, at + 3)).toEqual(["first", "second"]);
   });
 

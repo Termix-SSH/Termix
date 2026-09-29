@@ -51,10 +51,6 @@
     "processesRunning": "funcţionare",
     "loginStats": "Statistici de conectare SSH",
     "noRecentLoginData": "Nu există date de conectare recente",
-    "executingQuickAction": "Se execută {{name}}...",
-    "quickActionSuccess": "{{name}} finalizat cu succes",
-    "quickActionFailed": "{{name}} a eșuat",
-    "quickActionError": "Executarea {{name}} a eșuat",
     "ports": {
       "title": "Porturi de ascultare",
       "protocol": "Protocol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Adăuga",
     "visibleWidgets": "Widgeturi vizibile",
     "widgetsMovedToHostMetrics": "Cardurile sunt acum adăugate, aranjate și redimensionate direct în fila Indicatori gazdă. Deschideți Indicatori gazdă pentru această gazdă și utilizați Personalizare pentru a alege ce carduri sunt afișate.",
-    "quickActionsLabel": "Acțiuni rapide",
-    "quickActionsToolbar": "Acțiunile rapide apar sub formă de butoane în bara de instrumente Host Metrics pentru executarea comenzilor cu un singur clic.",
-    "noQuickActions": "Nicio acțiune rapidă încă.",
-    "buttonLabel": "Etichetă buton",
-    "selectSnippetPlaceholder": "Selectați fragmentul...",
-    "addActionBtn": "Adăugați o acțiune",
     "hostNotFound": "Gazdă negăsită",
     "loadingHost": "Se încarcă gazda..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disc"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Anula",
-        "confirmRunButton": "Aleargă",
-        "confirmRunMessage": "Executați „{{name}}”?"
-      }
-    }
   },
   "terminal": {
     "connected": "Conectat"

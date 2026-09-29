@@ -143,13 +143,6 @@ export async function resolveHostById(
       host.socks5ProxyChain = [];
     }
   }
-  if (typeof host.quickActions === "string" && host.quickActions) {
-    try {
-      host.quickActions = JSON.parse(host.quickActions as string);
-    } catch {
-      host.quickActions = [];
-    }
-  }
   if (typeof host.portKnockSequence === "string" && host.portKnockSequence) {
     try {
       host.portKnockSequence = JSON.parse(host.portKnockSequence as string);

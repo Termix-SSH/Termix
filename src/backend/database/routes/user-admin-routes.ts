@@ -647,7 +647,7 @@ export function registerUserAdminRoutes(
       if (outcome.status === "wipe_confirmation_required") {
         return res.status(409).json({
           error:
-            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and snippets.",
+            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and other saved data.",
           code: "DATA_WIPE_REQUIRED",
         });
       }

@@ -51,10 +51,6 @@
     "processesRunning": "çalışan",
     "loginStats": "SSH Giriş İstatistikleri",
     "noRecentLoginData": "Son giriş verisi yok",
-    "executingQuickAction": "{{name}} çalıştırılıyor...",
-    "quickActionSuccess": "{{name}} başarıyla tamamlandı",
-    "quickActionFailed": "{{name}} başarısız oldu",
-    "quickActionError": "{{name}} çalıştırılamadı",
     "ports": {
       "title": "Dinlenen Portlar",
       "protocol": "Protokol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Eklemek",
     "visibleWidgets": "Görünür Widget'lar",
     "widgetsMovedToHostMetrics": "Kartlar artık doğrudan Sunucu Metrikleri sekmesinde eklenir, düzenlenir ve yeniden boyutlandırılır. Bu sunucu için Sunucu Metrikleri'ni açın ve hangi kartların gösterileceğini seçmek için Özelleştir'i kullanın.",
-    "quickActionsLabel": "Hızlı Eylemler",
-    "quickActionsToolbar": "Hızlı eylemler, tek tıklamayla komut çalıştırmak için Ana Bilgisayar Metrikleri araç çubuğunda düğme olarak görünür.",
-    "noQuickActions": "Henüz hızlı eylem yok.",
-    "buttonLabel": "Düğme etiketi",
-    "selectSnippetPlaceholder": "Parçacık seç...",
-    "addActionBtn": "Eylem Ekle",
     "hostNotFound": "Host bulunamadı",
     "loadingHost": "Host yükleniyor..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "İptal",
-        "confirmRunButton": "Çalıştır",
-        "confirmRunMessage": "\"{{name}}\" çalıştırılsın mı?"
-      }
-    }
   },
   "terminal": {
     "connected": "Bağlandı"

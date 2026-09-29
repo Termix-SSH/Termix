@@ -81,10 +81,10 @@ describe("presetHiddenRailTabs", () => {
   it("hides plugin items that do not opt in when the preset asks", () => {
     expect(
       presetHiddenRailTabs(
-        { hiddenTabs: ["macros"], hidePluginItems: true },
+        { hiddenTabs: ["quick-connect"], hidePluginItems: true },
         items,
       ),
-    ).toEqual(["macros", "docker-like"]);
+    ).toEqual(["quick-connect", "docker-like"]);
   });
 
   it("leaves plugin items alone otherwise", () => {

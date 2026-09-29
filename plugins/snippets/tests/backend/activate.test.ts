@@ -98,6 +98,28 @@ describe("snippets activate", () => {
     expect(after).toHaveLength(0);
   });
 
+  it("registers its host settings hooks and the variables helper", async () => {
+    server = await startServer();
+    const registry = server.mock.ctx.registry;
+    for (const key of [
+      "snippets.hostImportNormalizer",
+      "snippets.hostPayloadLegacy",
+      "snippets.hostSettingsSync",
+    ]) {
+      expect(registry.consume(key), key).toBeDefined();
+    }
+    const variables = registry.consume<{
+      resolve: (c: string, h: { ip?: string } | null) => string;
+      extractInputs: (c: string) => Array<{ key: string }>;
+    }>("snippets.variables");
+    expect(variables?.resolve("ping $HOST", { ip: "10.0.0.1" })).toBe(
+      "ping 10.0.0.1",
+    );
+    expect(variables?.extractInputs("echo $INPUT_1")).toEqual([
+      { key: "INPUT_1", label: "Input 1" },
+    ]);
+  });
+
   it("fails closed without db:own", async () => {
     db = await createTestDb(pluginDir);
     const mock = createMockCtx({

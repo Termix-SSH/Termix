@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Executați „{{name}}”",
+  "variablesDialogDescription": "Completați valorile necesare acestui fragment de cod înainte de a-l rula.",
+  "variablesPreviewLabel": "Previzualizare",
+  "variablesConfirmButton": "Aleargă",
+  "keybindings": {
+    "runSnippet": "Execută fragmentul existent",
+    "snippetLabel": "Fragment",
+    "selectSnippet": "Selectați un fragment",
+    "snippetMissing": "fragmentul nu a fost găsit",
+    "snippetRequired": "Selectați un fragment"
+  },
+  "paletteHintRun": "Execută în fila activă a terminalului",
+  "host": {
+    "startupTitle": "Fragment de pornire",
+    "quickActionsTitle": "Acțiuni rapide",
+    "quickActionsDescription": "Acțiunile rapide apar sub formă de butoane în bara de instrumente Host Metrics pentru executarea comenzilor cu un singur clic.",
+    "noQuickActions": "Nicio acțiune rapidă încă.",
+    "buttonLabel": "Etichetă buton",
+    "selectSnippet": "Selectați fragmentul...",
+    "addQuickAction": "Adăugați o acțiune"
+  },
+  "quickActions": {
+    "running": "Se execută {{name}}...",
+    "succeeded": "{{name}} finalizat cu succes",
+    "failed": "{{name}} a eșuat",
+    "error": "Executarea {{name}} a eșuat"
+  }
+}

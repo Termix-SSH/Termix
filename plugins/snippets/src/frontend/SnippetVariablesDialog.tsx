@@ -1,25 +1,30 @@
 import { useState, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import {
+  Button,
+  Input,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/dialog";
+} from "@termix/plugin-sdk/ui";
 import {
   extractSnippetInputs,
   resolveSnippetContent,
   type SnippetHostContext,
-} from "@/lib/snippet-variables";
-import type { Snippet } from "@/types/ui-types";
+} from "../shared/variables.js";
+
+/** Enough of a snippet to fill in its inputs. */
+export interface VariablesDialogSnippet {
+  name: string;
+  content: string;
+}
 
 /**
- * Shown before running a snippet that contains $INPUT_n placeholders --
+ * Shown before running a snippet that contains $INPUT_n placeholders:
  * collects a value per placeholder and previews the fully resolved command
- * (host vars + inputs) before handing the result back to the caller.
+ * (host vars and inputs) before handing the result back to the caller.
  */
 export function SnippetVariablesDialog({
   snippet,
@@ -27,7 +32,7 @@ export function SnippetVariablesDialog({
   onCancel,
   onConfirm,
 }: {
-  snippet: Snippet;
+  snippet: VariablesDialogSnippet;
   host: SnippetHostContext | null;
   onCancel: () => void;
   onConfirm: (
@@ -53,12 +58,10 @@ export function SnippetVariablesDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
-            {t("newUi.sidebar.snippets.variablesDialogTitle", {
-              name: snippet.name,
-            })}
+            {t("variablesDialogTitle", { name: snippet.name })}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            {t("newUi.sidebar.snippets.variablesDialogDescription")}
+            {t("variablesDialogDescription")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 mt-1">
@@ -79,7 +82,7 @@ export function SnippetVariablesDialog({
           ))}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted-foreground">
-              {t("newUi.sidebar.snippets.variablesPreviewLabel")}
+              {t("variablesPreviewLabel")}
             </label>
             <span className="text-xs text-muted-foreground font-mono px-2.5 py-2 border border-border bg-muted/20 min-w-0 break-all whitespace-pre-wrap">
               {preview}
@@ -88,14 +91,14 @@ export function SnippetVariablesDialog({
         </div>
         <div className="flex items-center justify-end gap-2 mt-2">
           <Button variant="ghost" onClick={onCancel}>
-            {t("newUi.sidebar.snippets.cancel")}
+            {t("cancel")}
           </Button>
           <Button
             variant="outline"
             className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
             onClick={() => onConfirm(preview, values)}
           >
-            {t("newUi.sidebar.snippets.variablesConfirmButton")}
+            {t("variablesConfirmButton")}
           </Button>
         </div>
       </DialogContent>

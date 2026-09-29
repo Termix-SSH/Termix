@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "הפעל \"{{name}}\"",
+  "variablesDialogDescription": "מלא את הערכים הדרושים לקטע זה לפני הפעלתו.",
+  "variablesPreviewLabel": "תצוגה מקדימה",
+  "variablesConfirmButton": "לָרוּץ",
+  "keybindings": {
+    "runSnippet": "הפעלת קטע קוד קיים",
+    "snippetLabel": "קטע",
+    "selectSnippet": "בחר קטע",
+    "snippetMissing": "קטע לא נמצא",
+    "snippetRequired": "בחר קטע"
+  },
+  "paletteHintRun": "הפעל בלשונית הטרמינל הפעילה",
+  "host": {
+    "startupTitle": "קטע הפעלה",
+    "quickActionsTitle": "פעולות מהירות",
+    "quickActionsDescription": "פעולות מהירות מופיעות ככפתורים בסרגל הכלים של Host Metrics לביצוע פקודה בלחיצה אחת.",
+    "noQuickActions": "אין עדיין פעולות מהירות.",
+    "buttonLabel": "תווית כפתור",
+    "selectSnippet": "בחר קטע...",
+    "addQuickAction": "הוסף פעולה"
+  },
+  "quickActions": {
+    "running": "מבצע {{name}}...",
+    "succeeded": "{{name}} הושלם בהצלחה",
+    "failed": "{{name}} נכשל",
+    "error": "נכשל בביצוע {{name}}"
+  }
+}

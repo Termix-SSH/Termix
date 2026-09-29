@@ -51,10 +51,6 @@
     "processesRunning": "løb",
     "loginStats": "SSH-loginstatistik",
     "noRecentLoginData": "Ingen nylige logindata",
-    "executingQuickAction": "Udfører {{name}}...",
-    "quickActionSuccess": "{{name}} gennemført",
-    "quickActionFailed": "{{name}} mislykkedes",
-    "quickActionError": "Kunne ikke udføre {{name}}",
     "ports": {
       "title": "Lytteporte",
       "protocol": "Protokol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Tilføje",
     "visibleWidgets": "Synlige widgets",
     "widgetsMovedToHostMetrics": "Kort tilføjes, arrangeres og skaleres nu direkte i fanen Værtsmål. Åbn Værtsmål for denne vært, og brug Tilpas til at vælge, hvilke kort der vises.",
-    "quickActionsLabel": "Hurtige handlinger",
-    "quickActionsToolbar": "Hurtige handlinger vises som knapper i værktøjslinjen Host Metrics til udførelse af kommandoer med et enkelt klik.",
-    "noQuickActions": "Ingen hurtige handlinger endnu.",
-    "buttonLabel": "Knapmærke",
-    "selectSnippetPlaceholder": "Vælg uddrag...",
-    "addActionBtn": "Tilføj handling",
     "hostNotFound": "Værten blev ikke fundet",
     "loadingHost": "Indlæser vært..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Ophæve",
-        "confirmRunButton": "Løbe",
-        "confirmRunMessage": "Kør \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Forbundet"

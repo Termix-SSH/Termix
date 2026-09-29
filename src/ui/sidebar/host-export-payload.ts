@@ -4,7 +4,6 @@ export type FieldGroup =
   | "tags"
   | "proxy"
   | "jumpHosts"
-  | "quickActions"
   | "featureFlags"
   | "advanced";
 
@@ -37,7 +36,6 @@ const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "socks5ProxyChain",
   ],
   jumpHosts: ["jumpHosts"],
-  quickActions: ["quickActions"],
   // Every plugin's host settings, enable switches included.
   featureFlags: ["pluginSettings", "forceKeyboardInteractive"],
   advanced: [

@@ -71,7 +71,7 @@ export async function resetUserPassword(
   await createCurrentRecentActivityRepository().deleteByUserId(userId);
   await createCurrentHostRepository().deleteByUserId(userId);
   await createCurrentCredentialRepository().deleteByUserId(userId);
-  // A plugin holding this user's data (snippets and anything else keyed by
+  // A plugin holding this user's data (anything keyed by
   // refUser()) wipes it on this topic, since the user row itself survives.
   pluginEvents.emit(TOPICS.userDataWiped, { userId });
 
@@ -416,7 +416,7 @@ export function registerUserPasswordResetRoutes(
       if (outcome.status === "wipe_confirmation_required") {
         return res.status(409).json({
           error:
-            "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets.",
+            "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and other saved data.",
           code: "DATA_WIPE_REQUIRED",
         });
       }

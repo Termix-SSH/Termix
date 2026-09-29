@@ -73,7 +73,7 @@ export interface TabTypeDef {
   panelFrame?: boolean;
   /** False keeps this tab out of saved layouts and workspaces. */
   inLayouts?: boolean;
-  /** History, macros and SSH tools act on the last one of these focused. */
+  /** Panels that type into a terminal act on the last one of these focused. */
   commandTarget?: boolean;
   /** Paints its own background; its frame stays transparent. */
   ownBackground?: boolean;

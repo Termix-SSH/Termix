@@ -10,7 +10,6 @@ type RawSSHHost = SSHHostWithStatus & {
   hasVncPassword?: boolean;
   hasTelnetPassword?: boolean;
 };
-type HostQuickAction = Host["quickActions"][number];
 type HostJumpHost = NonNullable<Host["jumpHosts"]>[number];
 type RawCredential = {
   isShared?: boolean;
@@ -107,10 +106,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     telnetUser: h.telnetUser,
     telnetPassword: h.telnetPassword ?? "",
     hasTelnetPassword: !!host.hasTelnetPassword || !!h.telnetPassword,
-    quickActions: (h.quickActions ?? []).map((a) => ({
-      name: a.name,
-      snippetId: String(a.snippetId),
-    })),
     jumpHosts: (parseJson<HostJumpHost[]>(h.jumpHosts) ?? []).map((j) => ({
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),

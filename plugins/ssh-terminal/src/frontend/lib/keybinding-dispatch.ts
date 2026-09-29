@@ -1,27 +1,26 @@
 import type { Terminal } from "@xterm/xterm";
-import { type KeybindingAction } from "@termix/plugin-sdk/ui";
-import { invokeAction } from "@termix/plugin-sdk/frontend";
-
-export interface SnippetHostContext {
-  ip?: string;
-  username?: string;
-  port?: number | string;
-  name?: string;
-}
+import type {
+  KeybindingAction,
+  KeybindingDefaultContribution,
+} from "@termix/plugin-sdk/frontend";
 
 export interface KeybindingDispatchContext {
   terminal: Terminal;
   webSocketRef: React.MutableRefObject<WebSocket | null>;
   writeTextToClipboard: (text: string) => Promise<boolean>;
   readTextFromClipboard: () => Promise<string>;
-  /** Host context used to resolve $HOST/$USER/$PORT/$NAME in runSnippet actions. */
-  hostContext?: SnippetHostContext | null;
-  /**
-   * Called instead of sending the snippet directly when its content still has
-   * unresolved $INPUT_n placeholders after host-variable substitution -- the
-   * caller is expected to collect values (e.g. via a dialog) and send itself.
-   */
-  onSnippetNeedsInputs?: (snippet: { id: string; content: string }) => void;
+}
+
+/** The keybinding actions the terminal runs itself. */
+export const TERMINAL_KEYBINDING_ACTIONS = [
+  "copy",
+  "paste",
+  "sendControlCode",
+  "sendText",
+] as const;
+
+export function isTerminalKeybindingAction(type: string): boolean {
+  return (TERMINAL_KEYBINDING_ACTIONS as readonly string[]).includes(type);
 }
 
 export function sendRawToSocket(
@@ -33,10 +32,19 @@ export function sendRawToSocket(
   }
 }
 
+function text(action: KeybindingAction, key: string): string {
+  const value = action[key];
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Runs one of the terminal's own bound actions. False for any other type,
+ * which the terminal hands on to whoever registered it.
+ */
 export function dispatchKeybindingAction(
   action: KeybindingAction,
   ctx: KeybindingDispatchContext,
-): void {
+): boolean {
   const sendRaw = (data: string) => sendRawToSocket(ctx.webSocketRef, data);
 
   switch (action.type) {
@@ -46,58 +54,96 @@ export function dispatchKeybindingAction(
         ctx.writeTextToClipboard(selection);
         ctx.terminal.clearSelection();
       }
-      return;
+      return true;
     }
     case "paste": {
-      ctx.readTextFromClipboard().then((text) => {
-        if (text) ctx.terminal.paste(text);
+      ctx.readTextFromClipboard().then((value) => {
+        if (value) ctx.terminal.paste(value);
       });
-      return;
+      return true;
     }
     case "sendControlCode": {
-      if (!action.controlCode) return;
-      const code = action.controlCode.toLowerCase().charCodeAt(0) - 96;
+      const letter = text(action, "controlCode");
+      if (!letter) return true;
+      const code = letter.toLowerCase().charCodeAt(0) - 96;
       if (code >= 1 && code <= 26) sendRaw(String.fromCharCode(code));
-      return;
+      return true;
     }
     case "sendText": {
-      sendRaw((action.text ?? "") + (action.appendEnter ? "\r" : ""));
-      return;
+      sendRaw(text(action, "text") + (action.appendEnter === true ? "\r" : ""));
+      return true;
     }
-    case "runSnippet": {
-      if (!action.snippetId) return;
-      const snippetId = Number(action.snippetId);
-      if (!Number.isFinite(snippetId)) return;
-      // Resolving with no inputValues first tells us whether the snippet
-      // still needs them; the plugin decides and reports back.
-      void invokeAction(
-        "snippets.resolveForTerminal",
-        snippetId,
-        ctx.hostContext ?? null,
-      ).then((result) => {
-        const resolved = result as
-          { needsInputs: boolean; content: string } | null | undefined;
-        if (!resolved) return;
-        if (resolved.needsInputs) {
-          ctx.onSnippetNeedsInputs?.({
-            id: action.snippetId!,
-            content: resolved.content,
-          });
-          return;
-        }
-        sendRaw(resolved.content + (action.appendEnter !== false ? "\r" : ""));
-      });
-      return;
-    }
-    case "nextTab":
-    case "previousTab":
-    case "openCommandPalette": {
-      window.dispatchEvent(
-        new CustomEvent("termix:global-keybinding", {
-          detail: { type: action.type },
-        }),
-      );
-      return;
-    }
+    default:
+      return false;
   }
 }
+
+export function validateSendText(action: KeybindingAction): string | null {
+  return text(action, "text").trim() ? null : "keybindings.textRequired";
+}
+
+export function validateSendControlCode(
+  action: KeybindingAction,
+): string | null {
+  return /^[a-zA-Z]$/.test(text(action, "controlCode"))
+    ? null
+    : "keybindings.controlCodeRequired";
+}
+
+function combo(
+  key: string,
+  modifiers: { ctrl?: boolean; alt?: boolean; shift?: boolean; meta?: boolean },
+) {
+  return {
+    key,
+    isCode: false,
+    ctrl: !!modifiers.ctrl,
+    alt: !!modifiers.alt,
+    shift: !!modifiers.shift,
+    meta: !!modifiers.meta,
+  };
+}
+
+/** The terminal's built-in keys, listed so a user can rebind them. */
+export const TERMINAL_KEYBINDING_DEFAULTS: KeybindingDefaultContribution[] = [
+  {
+    id: "default-copy-ctrlc",
+    combo: combo("c", { ctrl: true }),
+    descriptionKey: "keybindings.builtIn.copyCtrlC",
+  },
+  {
+    id: "default-copy-ctrlshiftc",
+    combo: combo("c", { ctrl: true, shift: true }),
+    descriptionKey: "keybindings.builtIn.copyCtrlShiftC",
+  },
+  {
+    id: "default-copy-cmdc",
+    combo: combo("c", { meta: true }),
+    descriptionKey: "keybindings.builtIn.copyCmdC",
+  },
+  {
+    id: "default-paste-ctrlshiftv",
+    combo: combo("v", { ctrl: true, shift: true }),
+    descriptionKey: "keybindings.builtIn.pasteCtrlShiftV",
+  },
+  {
+    id: "default-ctrlaltw",
+    combo: combo("w", { ctrl: true, alt: true }),
+    descriptionKey: "keybindings.builtIn.ctrlW",
+  },
+  {
+    id: "default-ctrlaltt",
+    combo: combo("t", { ctrl: true, alt: true }),
+    descriptionKey: "keybindings.builtIn.ctrlT",
+  },
+  {
+    id: "default-ctrlaltn",
+    combo: combo("n", { ctrl: true, alt: true }),
+    descriptionKey: "keybindings.builtIn.ctrlN",
+  },
+  {
+    id: "default-ctrlaltq",
+    combo: combo("q", { ctrl: true, alt: true }),
+    descriptionKey: "keybindings.builtIn.ctrlQ",
+  },
+];

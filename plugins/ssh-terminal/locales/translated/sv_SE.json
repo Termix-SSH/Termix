@@ -307,7 +307,6 @@
     "savedThemesLabel": "Sparade teman",
     "scrollbackBufferLabel": "Scrollback-buffert",
     "scrollbackMaxLines": "Maximalt antal rader som sparas i historiken",
-    "startupSnippetLabel": "Startkodavsnitt",
     "sudoPasswordAutoFill": "Sudo-lösenordsautomatik",
     "sudoPasswordAutoFillDesc": "Lagra ett sudo-lösenord så att värdmätvärden, terminalprompter och annat kan köra privilegierade kommandon automatiskt.",
     "sudoPasswordAutoFillLabel": "Sudo-lösenordsautomatik",
@@ -335,7 +334,8 @@
     "history": "Historia",
     "localTerminal": "Lokal terminal",
     "sshTools": "SSH-verktyg",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makron"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Skriv här för att sända tangenttryckningar...",
@@ -363,5 +363,112 @@
     "off": "Av",
     "on": "På",
     "title": "Standardinställningar för anslutning"
+  },
+  "keybindings": {
+    "copy": "Kopiera val",
+    "paste": "Klistra",
+    "sendControlCode": "Skicka Ctrl+bokstavssignal",
+    "sendText": "Skicka sms",
+    "controlCodeLabel": "Brev",
+    "textLabel": "SMS att skicka",
+    "appendEnterLabel": "Tryck Enter efter att du skickat",
+    "clipboardPermissionNote": "Kan be om behörighet för urklipp vid första användningen i vissa webbläsare.",
+    "textRequired": "Ange texten som ska skickas",
+    "controlCodeRequired": "Ange en enda bokstav för kontrollkoden"
+  },
+  "macros": {
+    "title": "Makron",
+    "description": "Kör en sparad serie kommandon i en terminal och reagera på vad servern skickar tillbaka.",
+    "target": "Mål",
+    "noTerminal": "Ingen terminal öppen",
+    "empty": "Inga makron ännu",
+    "emptyHint": "Skapa ett makro för att automatisera ett terminalflöde, som att logga in, starta om en tjänst eller svara på frågor.",
+    "create": "Nytt makro",
+    "back": "Tillbaka till makron",
+    "name": "Namn",
+    "namePlaceholder": "Starta om webbservern",
+    "nameRequired": "Ge makrot ett namn innan du sparar",
+    "descriptionLabel": "Beskrivning",
+    "descriptionPlaceholder": "Vad detta makro gör (valfritt)",
+    "unsaved": "Osparade ändringar",
+    "save": "Spara",
+    "saved": "Makrot sparat",
+    "saveFailed": "Kunde inte spara makrot",
+    "delete": "Radera",
+    "deleteTitle": "Ta bort det här makrot?",
+    "deleteBody": "\"{{name}}\" kommer att raderas permanent. Detta kan inte ångras.",
+    "deleted": "Makro borttaget",
+    "cancel": "Avboka",
+    "run": "Sikt",
+    "stop": "Stopp",
+    "running": "Spring...",
+    "completed": "Makro klart",
+    "failed": "Makrot misslyckades",
+    "loadFailed": "Kunde inte läsa in makron",
+    "needTerminal": "Öppna och anslut en terminal först",
+    "noSteps": "Det här makrot har inga steg ännu. Lägg till ett nedan.",
+    "addStep": "Lägg till steg",
+    "stepNumber": "Steg {{number}}",
+    "removeStep": "Ta bort steg",
+    "confirmRunTitle": "Köra det här makrot?",
+    "confirmRunBody": "\"{{name}}\" skickar kommandon till {{host}}.",
+    "confirmRunAction": "Kör makro",
+    "stepTypes": {
+      "send": {
+        "label": "Skicka kommando",
+        "help": "Skriver text i terminalen, på samma sätt som om du hade skrivit den."
+      },
+      "wait": {
+        "label": "Vänta på utdata",
+        "help": "Pausar tills servern skriver ut texten du anger, som en lösenordsfråga."
+      },
+      "delay": {
+        "label": "Paus",
+        "help": "Väntar en fastställd tid innan nästa steg."
+      },
+      "if": {
+        "label": "Om utdata innehåller",
+        "help": "Kontrollerar allt som servern har skrivit ut hittills och kör sedan en av två grenar."
+      },
+      "repeat": {
+        "label": "Upprepa",
+        "help": "Kör stegen inuti ett visst antal gånger."
+      }
+    },
+    "send": {
+      "text": "Kommando eller text",
+      "textPlaceholder": "systemctl starta om nginx",
+      "pressEnter": "Tryck Enter efter att du skickat",
+      "pressEnterHelp": "Stäng av detta för att skriva text utan att skicka in den."
+    },
+    "wait": {
+      "pattern": "Vänta tills utdata innehåller",
+      "patternPlaceholder": "lösenord:",
+      "timeout": "Ge upp efteråt",
+      "onTimeout": "Om det aldrig dyker upp",
+      "stop": "Stoppa makrot",
+      "continue": "Fortsätt ändå"
+    },
+    "delay": {
+      "duration": "Vänta på"
+    },
+    "ifStep": {
+      "pattern": "Om utdata innehåller",
+      "patternPlaceholder": "Aktiv: aktiv (löper)",
+      "then": "Gör sedan detta",
+      "else": "Annars gör så här",
+      "emptyBranch": "Inga steg"
+    },
+    "repeat": {
+      "count": "Antal gånger",
+      "times": "gånger"
+    },
+    "match": {
+      "useRegex": "Matcha med ett reguljärt uttryck",
+      "useRegexHelp": "Lämna detta av för att texten ska se exakt ut som den är skriven.",
+      "invalidRegex": "Inte ett giltigt reguljärt uttryck, det kommer att matchas som vanlig text"
+    },
+    "seconds": "sekunder",
+    "secondsShort": "{{count}}s"
   }
 }

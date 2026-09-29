@@ -51,10 +51,6 @@
     "processesRunning": "spring",
     "loginStats": "SSH-inloggningsstatistik",
     "noRecentLoginData": "Inga aktuella inloggningsuppgifter",
-    "executingQuickAction": "Kör {{name}}...",
-    "quickActionSuccess": "{{name}} slutfört",
-    "quickActionFailed": "{{name}} misslyckades",
-    "quickActionError": "Misslyckades med att köra {{name}}",
     "ports": {
       "title": "Lyssningsportar",
       "protocol": "Protokoll",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Tillägga",
     "visibleWidgets": "Synliga widgetar",
     "widgetsMovedToHostMetrics": "Kort läggs nu till, ordnas och ändras i storlek direkt på fliken Värdstatistik. Öppna Värdstatistik för den här värden och använd Anpassa för att välja vilka kort som visas.",
-    "quickActionsLabel": "Snabbåtgärder",
-    "quickActionsToolbar": "Snabbåtgärder visas som knappar i verktygsfältet Host Metrics för att köra kommandon med ett klick.",
-    "noQuickActions": "Inga snabba åtgärder ännu.",
-    "buttonLabel": "Knappetikett",
-    "selectSnippetPlaceholder": "Välj utdrag...",
-    "addActionBtn": "Lägg till åtgärd",
     "hostNotFound": "Värden hittades inte",
     "loadingHost": "Laddar värd..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Avboka",
-        "confirmRunButton": "Sikt",
-        "confirmRunMessage": "Kör \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Ansluten"

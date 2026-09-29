@@ -199,7 +199,9 @@ const HOST_ROWS: Row[] = [
       allowLegacyAlgorithms: false,
       agentForwarding: true,
       environmentVariables: [{ key: "D4", value: "yes" }],
+      startupSnippetId: 1,
     }),
+    quick_actions: JSON.stringify([{ name: "d4-uptime", snippetId: 1 }]),
     mac_address: "AA:BB:CC:DD:EE:04",
     wol_broadcast_address: "10.4.0.255",
     stats_config: JSON.stringify({
@@ -387,6 +389,32 @@ export const ROWS: Record<string, Row[]> = {
         },
       ]),
       command_autocomplete: 1,
+      confirm_snippet_execution: 1,
+      folders_collapsed: 0,
+      terminal_macros: JSON.stringify([
+        {
+          id: "d4-macro",
+          name: "d4 macro",
+          steps: [{ id: "s1", type: "send", text: "uptime", pressEnter: true }],
+        },
+      ]),
+      custom_keybindings: JSON.stringify([
+        {
+          id: "d4-kb",
+          combo: {
+            key: "u",
+            isCode: false,
+            ctrl: true,
+            alt: true,
+            shift: false,
+            meta: false,
+          },
+          action: { type: "runSnippet", snippetId: "1", appendEnter: true },
+          enabled: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ]),
     },
   ],
   sso_providers: [

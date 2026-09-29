@@ -51,10 +51,6 @@
     "processesRunning": "実行中",
     "loginStats": "SSHログイン統計",
     "noRecentLoginData": "最近のログインデータがありません",
-    "executingQuickAction": "{{name}} を実行中...",
-    "quickActionSuccess": "{{name}} が正常に完了しました",
-    "quickActionFailed": "{{name}} が失敗しました",
-    "quickActionError": "{{name}} の実行に失敗しました",
     "ports": {
       "title": "リスニングポート",
       "protocol": "プロトコル",
@@ -235,12 +231,6 @@
     "addExcludedMount": "追加",
     "visibleWidgets": "表示するウィジェット",
     "widgetsMovedToHostMetrics": "カードは、ホストメトリクスタブで直接追加、配置、サイズ変更できるようになりました。このホストのホストメトリクスを開き、カスタマイズを使用して表示するカードを選択してください。",
-    "quickActionsLabel": "クイックアクション",
-    "quickActionsToolbar": "クイックアクションはホストメトリクスツールバーにボタンとして表示され、ワンクリックでコマンドを実行できます。",
-    "noQuickActions": "クイックアクションはまだありません",
-    "buttonLabel": "ボタンラベル",
-    "selectSnippetPlaceholder": "スニペットを選択...",
-    "addActionBtn": "アクションを追加",
     "hostNotFound": "ホストが見つかりません",
     "loadingHost": "ホストを読み込み中..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "ディスク"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "キャンセル",
-        "confirmRunButton": "実行",
-        "confirmRunMessage": "「{{name}}」を実行しますか？"
-      }
-    }
   },
   "terminal": {
     "connected": "接続中"

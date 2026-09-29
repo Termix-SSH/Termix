@@ -14,13 +14,6 @@ export type { HostProtocols };
 
 export type HostAuthType = Host["authType"];
 
-type SnippetListItem = {
-  id: number;
-  name?: string;
-  title?: string;
-};
-type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
-
 /**
  * Whether the Connection Origin control is meaningful for a host.
  *
@@ -31,18 +24,6 @@ type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
  */
 export function connectionOriginAppliesTo(protocols: HostProtocols): boolean {
   return Object.values(protocols).some(Boolean);
-}
-
-export function mapSnippetResponse(
-  res: unknown,
-): { id: number; name: string }[] {
-  const snippetRes = res as SnippetResponse;
-  return (
-    Array.isArray(snippetRes) ? snippetRes : (snippetRes.snippets ?? [])
-  ).map((s) => ({
-    id: s.id,
-    name: s.name ?? s.title ?? `Snippet ${s.id}`,
-  }));
 }
 
 /** Overlays a plugin's draft on a new host's form. */
@@ -110,7 +91,6 @@ export function createHostEditorForm(
       "local" | "remote" | null,
     localOnly: host?.localOnly ?? false,
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
-    startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
     sudoPassword: host?.hasSudoPassword
       ? "existing_sudo_password"
       : (host?.sudoPassword ?? ""),
@@ -127,8 +107,6 @@ export function createHostEditorForm(
     portKnockSequence:
       host?.portKnockSequence ??
       ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
-    quickActions:
-      host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
     rdpCredentialId: host?.rdpCredentialId ?? "",
     rdpUser: host?.rdpUser ?? "",
     rdpPassword: host?.hasRdpPassword
@@ -320,10 +298,6 @@ export function buildHostEditorPayload(
     // a number, and a string id does not compare equal on Postgres/MySQL.
     jumpHosts: form.jumpHosts.map((j) => ({ hostId: Number(j.hostId) })),
     portKnockSequence: form.portKnockSequence,
-    quickActions: form.quickActions.map((a) => ({
-      name: a.name,
-      snippetId: Number(a.snippetId),
-    })),
     statusCheckEnabled: form.statusCheckEnabled,
     statusCheckInterval: form.statusCheckInterval,
     // Left out with SSH off, so the stored values stay as they are.
@@ -342,7 +316,6 @@ export function buildHostEditorPayload(
             agentIdentity: usesAgent ? form.agentIdentity || null : null,
             environmentVariables: form.environmentVariables,
           },
-          terminalConfig: { startupSnippetId: form.startupSnippetId ?? null },
         }
       : {}),
   };

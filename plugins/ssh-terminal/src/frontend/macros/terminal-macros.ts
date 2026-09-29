@@ -179,10 +179,11 @@ export async function runTerminalMacro(
   }
 }
 
-export function parseTerminalMacros(value?: string | null): TerminalMacro[] {
-  if (!value) return [];
+/** Stored macros, bounded and cleaned; accepts the array or its JSON. */
+export function sanitizeTerminalMacros(value: unknown): TerminalMacro[] {
+  if (value === null || value === undefined || value === "") return [];
   try {
-    const parsed = JSON.parse(value);
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
     let remainingSteps = 500;
     const sanitizeSteps = (input: unknown, depth: number): MacroStep[] => {
@@ -287,5 +288,54 @@ export function parseTerminalMacros(value?: string | null): TerminalMacro[] {
     });
   } catch {
     return [];
+  }
+}
+
+export function parseTerminalMacros(value?: string | null): TerminalMacro[] {
+  return sanitizeTerminalMacros(value);
+}
+
+/** Where 2.8 kept macros for a user whose storage mode was local. */
+export const LOCAL_MACROS_KEY = "terminalMacros";
+
+/**
+ * The saved macros plus any this browser kept on its own before 2.9.0 that
+ * the saved list does not already have, or null when there is nothing to
+ * move. `clear` removes the browser copy once the merged list is saved.
+ */
+export function mergeLocalMacros(
+  saved: TerminalMacro[],
+  storage: Pick<Storage, "getItem" | "removeItem"> | null = safeStorage(),
+): { macros: TerminalMacro[]; clear: () => void } | null {
+  let raw: string | null = null;
+  try {
+    raw = storage?.getItem(LOCAL_MACROS_KEY) ?? null;
+  } catch {
+    return null;
+  }
+  if (raw === null) return null;
+  const clear = () => {
+    try {
+      storage?.removeItem(LOCAL_MACROS_KEY);
+    } catch {
+      // storage unavailable
+    }
+  };
+  const known = new Set(saved.map((macro) => macro.id));
+  const extra = sanitizeTerminalMacros(raw).filter(
+    (macro) => !known.has(macro.id),
+  );
+  if (extra.length === 0) {
+    clear();
+    return null;
+  }
+  return { macros: [...saved, ...extra].slice(0, 100), clear };
+}
+
+function safeStorage(): Storage | null {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage;
+  } catch {
+    return null;
   }
 }

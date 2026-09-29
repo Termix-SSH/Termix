@@ -668,9 +668,6 @@ export function registerHostBulkRoutes(
             pin: hostData.pin || false,
             sudoPassword: hostData.sudoPassword || null,
             jumpHosts: jumpHosts ? JSON.stringify(jumpHosts) : null,
-            quickActions: hostData.quickActions
-              ? JSON.stringify(hostData.quickActions)
-              : null,
             ...importedStatusCheck(hostData as Record<string, unknown>),
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)
@@ -921,7 +918,6 @@ export function registerHostBulkRoutes(
             jumpHosts: hostData.jumpHosts
               ? JSON.stringify(hostData.jumpHosts)
               : null,
-            quickActions: null,
             statusCheckEnabled: true,
             statusCheckInterval: null,
             terminalConfig: null,

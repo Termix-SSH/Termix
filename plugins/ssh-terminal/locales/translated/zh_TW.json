@@ -307,7 +307,6 @@
     "savedThemesLabel": "已儲存的主題",
     "scrollbackBufferLabel": "回滾緩衝區",
     "scrollbackMaxLines": "歷史記錄保留的最大行數",
-    "startupSnippetLabel": "啟動程式碼片段",
     "sudoPasswordAutoFill": "Sudo 密碼自動填寫",
     "sudoPasswordAutoFillDesc": "儲存 sudo 密碼，以便主機指標、終端機提示及其他功能能自動執行特權命令。",
     "sudoPasswordAutoFillLabel": "Sudo 密碼自動填入",
@@ -335,7 +334,8 @@
     "history": "歷史記錄",
     "localTerminal": "本地端",
     "sshTools": "SSH 工具",
-    "terminal": "終端機"
+    "terminal": "終端機",
+    "macros": "宏"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "在此輸入以廣播按鍵輸入...",
@@ -363,5 +363,112 @@
     "off": "離開",
     "on": "在",
     "title": "連接預設值"
+  },
+  "keybindings": {
+    "copy": "複製選擇",
+    "paste": "貼上",
+    "sendControlCode": "發送 Ctrl+字母訊號",
+    "sendText": "傳簡訊",
+    "controlCodeLabel": "信",
+    "textLabel": "發送的文字",
+    "appendEnterLabel": "發送後按回車鍵",
+    "clipboardPermissionNote": "某些瀏覽器在首次使用時可能會提示授予剪貼簿權限。",
+    "textRequired": "請輸入要發送的文字",
+    "controlCodeRequired": "請輸入一個字母作為控制碼"
+  },
+  "macros": {
+    "title": "宏",
+    "description": "在終端機中執行已儲存的一系列命令，並對伺服器傳回的內容做出反應。",
+    "target": "目標",
+    "noTerminal": "沒有終端機打開",
+    "empty": "暫無宏",
+    "emptyHint": "建立一個巨集來自動化終端流程，例如登入、重新啟動服務或回答提示。",
+    "create": "新宏",
+    "back": "回傳宏",
+    "name": "姓名",
+    "namePlaceholder": "重啟Web伺服器",
+    "nameRequired": "儲存之前，請先為巨集命名。",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "此巨集的功能（選用）",
+    "unsaved": "未儲存的更改",
+    "save": "節省",
+    "saved": "巨集已儲存",
+    "saveFailed": "無法保存巨集",
+    "delete": "刪除",
+    "deleteTitle": "刪除這個巨集？",
+    "deleteBody": "“{{name}}”將永久刪除。此操作無法撤銷。",
+    "deleted": "巨集已刪除",
+    "cancel": "取消",
+    "run": "跑步",
+    "stop": "停止",
+    "running": "跑步...",
+    "completed": "巨集已完成",
+    "failed": "巨集失敗",
+    "loadFailed": "無法載入巨集。",
+    "needTerminal": "首先打開並連接終端。",
+    "noSteps": "此巨集目前尚無步驟。請在下方新增步驟。",
+    "addStep": "新增步驟",
+    "stepNumber": "步驟 {{number}}",
+    "removeStep": "移除步驟",
+    "confirmRunTitle": "運行這個巨集？",
+    "confirmRunBody": "\"{{name}}\" 將向 {{host}} 傳送指令。",
+    "confirmRunAction": "運行巨集",
+    "stepTypes": {
+      "send": {
+        "label": "發送命令",
+        "help": "在終端機中輸入文本，就像你手動輸入一樣。"
+      },
+      "wait": {
+        "label": "等待輸出",
+        "help": "暫停，直到伺服器列印您指定的文本，例如密碼提示。"
+      },
+      "delay": {
+        "label": "暫停",
+        "help": "等待一段固定時間後再執行下一步操作。"
+      },
+      "if": {
+        "label": "如果輸出包含",
+        "help": "檢查伺服器目前為止列印的所有內容，然後執行兩個分支中的一個。"
+      },
+      "repeat": {
+        "label": "重複",
+        "help": "將其中的步驟執行設定的次數。"
+      }
+    },
+    "send": {
+      "text": "命令或文字",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "發送後按回車鍵",
+      "pressEnterHelp": "關閉此功能即可輸入文字而不提交。"
+    },
+    "wait": {
+      "pattern": "等待輸出包含",
+      "patternPlaceholder": "密碼：",
+      "timeout": "放棄",
+      "onTimeout": "如果它從未出現",
+      "stop": "停止宏",
+      "continue": "無論如何，繼續前進。"
+    },
+    "delay": {
+      "duration": "等待"
+    },
+    "ifStep": {
+      "pattern": "如果輸出包含",
+      "patternPlaceholder": "活躍：正在運行",
+      "then": "然後這樣做",
+      "else": "否則就這樣做",
+      "emptyBranch": "沒有步驟"
+    },
+    "repeat": {
+      "count": "次數",
+      "times": "時代"
+    },
+    "match": {
+      "useRegex": "使用正規表示式進行匹配",
+      "useRegexHelp": "請刪除此行以完全按照原文填寫。",
+      "invalidRegex": "這不是有效的正規表示式，它將被匹配為純文字。"
+    },
+    "seconds": "秒",
+    "secondsShort": "{{count}}s"
   }
 }

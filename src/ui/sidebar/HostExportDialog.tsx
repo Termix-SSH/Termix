@@ -29,7 +29,6 @@ const GROUPS: { key: FieldGroup; label: string }[] = [
   { key: "tags", label: "groupTags" },
   { key: "proxy", label: "groupProxy" },
   { key: "jumpHosts", label: "groupJumpHosts" },
-  { key: "quickActions", label: "groupQuickActions" },
   { key: "featureFlags", label: "groupFeatureFlags" },
   { key: "advanced", label: "groupAdvanced" },
 ];
@@ -40,7 +39,6 @@ const DEFAULT_GROUPS: FieldGroup[] = [
   "tags",
   "proxy",
   "jumpHosts",
-  "quickActions",
   "featureFlags",
   "advanced",
 ];

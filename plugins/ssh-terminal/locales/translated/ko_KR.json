@@ -307,7 +307,6 @@
     "savedThemesLabel": "저장된 테마",
     "scrollbackBufferLabel": "스크롤백 버퍼",
     "scrollbackMaxLines": "기록에 유지할 최대 라인 수",
-    "startupSnippetLabel": "시작 스니펫",
     "sudoPasswordAutoFill": "Sudo 비밀번호 자동 완성",
     "sudoPasswordAutoFillDesc": "sudo 비밀번호를 저장하여 호스트 메트릭, 터미널 프롬프트 등이 자동으로 권한 있는 명령을 실행할 수 있도록 합니다",
     "sudoPasswordAutoFillLabel": "Sudo 비밀번호 자동 입력",
@@ -335,7 +334,8 @@
     "history": "기록",
     "localTerminal": "로컬 터미널",
     "sshTools": "SSH 도구",
-    "terminal": "터미널"
+    "terminal": "터미널",
+    "macros": "매크로"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "키 입력을 브로드캐스트하려면 여기에 입력...",
@@ -363,5 +363,112 @@
     "off": "끄다",
     "on": "~에",
     "title": "연결 기본 설정"
+  },
+  "keybindings": {
+    "copy": "선택 복사",
+    "paste": "반죽",
+    "sendControlCode": "Ctrl+문자 신호를 보내세요",
+    "sendText": "문자 보내기",
+    "controlCodeLabel": "편지",
+    "textLabel": "보낼 텍스트",
+    "appendEnterLabel": "전송 후 Enter 키를 누르세요.",
+    "clipboardPermissionNote": "일부 브라우저에서는 처음 사용 시 클립보드 권한을 요청할 수 있습니다.",
+    "textRequired": "보낼 텍스트를 입력하세요",
+    "controlCodeRequired": "제어 코드에 한 글자를 입력하세요."
+  },
+  "macros": {
+    "title": "매크로",
+    "description": "터미널에서 저장된 일련의 명령어를 실행하고, 서버가 보내는 응답에 반응합니다.",
+    "target": "목표",
+    "noTerminal": "터미널이 열려 있지 않습니다",
+    "empty": "아직 매크로가 없습니다.",
+    "emptyHint": "터미널 로그인, 서비스 재시작 또는 프롬프트 응답과 같은 터미널 작업 흐름을 자동화하는 매크로를 만드세요.",
+    "create": "새로운 매크로",
+    "back": "매크로로 돌아가기",
+    "name": "이름",
+    "namePlaceholder": "웹 서버를 재시작하세요",
+    "nameRequired": "매크로를 저장하기 전에 이름을 지정하세요.",
+    "descriptionLabel": "설명",
+    "descriptionPlaceholder": "이 매크로의 기능 (선택 사항)",
+    "unsaved": "저장되지 않은 변경 사항",
+    "save": "구하다",
+    "saved": "매크로 저장됨",
+    "saveFailed": "매크로를 저장할 수 없습니다.",
+    "delete": "삭제",
+    "deleteTitle": "이 매크로를 삭제하시겠습니까?",
+    "deleteBody": "\"{{name}}\"는 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+    "deleted": "매크로 삭제됨",
+    "cancel": "취소",
+    "run": "달리다",
+    "stop": "멈추다",
+    "running": "달리기...",
+    "completed": "매크로 완료",
+    "failed": "매크로 실패",
+    "loadFailed": "매크로를 불러올 수 없습니다.",
+    "needTerminal": "먼저 터미널을 열고 연결하세요.",
+    "noSteps": "이 매크로는 아직 단계가 없습니다. 아래에 단계를 추가하세요.",
+    "addStep": "단계 추가",
+    "stepNumber": "단계 {{number}}",
+    "removeStep": "제거 단계",
+    "confirmRunTitle": "이 매크로를 실행하시겠습니까?",
+    "confirmRunBody": "\"{{name}}\"는 {{host}}로 명령을 보냅니다.",
+    "confirmRunAction": "매크로 실행",
+    "stepTypes": {
+      "send": {
+        "label": "명령을 보내세요",
+        "help": "터미널에 텍스트를 입력합니다. 마치 직접 타이핑하는 것과 같습니다."
+      },
+      "wait": {
+        "label": "출력이 나올 때까지 기다리세요",
+        "help": "서버가 사용자가 입력한 텍스트(예: 비밀번호 입력창)를 출력할 때까지 일시 중지됩니다."
+      },
+      "delay": {
+        "label": "정지시키다",
+        "help": "다음 단계로 넘어가기 전에 일정 시간 동안 기다립니다."
+      },
+      "if": {
+        "label": "출력에 다음 내용이 포함되어 있는 경우",
+        "help": "서버에서 지금까지 출력한 모든 내용을 확인한 후 두 가지 분기 중 하나를 실행합니다."
+      },
+      "repeat": {
+        "label": "반복하다",
+        "help": "그 안에 있는 단계들을 정해진 횟수만큼 실행합니다."
+      }
+    },
+    "send": {
+      "text": "명령 또는 텍스트",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "전송 후 Enter 키를 누르세요.",
+      "pressEnterHelp": "텍스트를 입력하되 제출하지 않으려면 이 기능을 끄세요."
+    },
+    "wait": {
+      "pattern": "출력 내용이 포함될 때까지 기다리세요",
+      "patternPlaceholder": "비밀번호:",
+      "timeout": "포기한 후에",
+      "onTimeout": "만약 전혀 나타나지 않는다면",
+      "stop": "매크로를 중지하세요",
+      "continue": "어쨌든 계속 가세요"
+    },
+    "delay": {
+      "duration": "기다리세요"
+    },
+    "ifStep": {
+      "pattern": "출력에 다음 내용이 포함되어 있는 경우",
+      "patternPlaceholder": "활성: 활성(실행 중)",
+      "then": "그럼 이렇게 하세요",
+      "else": "그렇지 않으면 이렇게 하세요.",
+      "emptyBranch": "단계 없음"
+    },
+    "repeat": {
+      "count": "횟수",
+      "times": "타임스"
+    },
+    "match": {
+      "useRegex": "정규 표현식과 일치",
+      "useRegexHelp": "원문과 정확히 일치하려면 이 부분을 삭제하세요.",
+      "invalidRegex": "유효한 정규 표현식이 아니므로 일반 텍스트로 처리됩니다."
+    },
+    "seconds": "초",
+    "secondsShort": "{{count}}s"
   }
 }

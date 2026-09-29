@@ -51,10 +51,6 @@
     "processesRunning": "en cours",
     "loginStats": "Statistiques de connexion SSH",
     "noRecentLoginData": "Aucune donnée de connexion récente",
-    "executingQuickAction": "Exécution de {{name}}...",
-    "quickActionSuccess": "{{name}} terminé avec succès",
-    "quickActionFailed": "Échec de {{name}}",
-    "quickActionError": "Échec de l'exécution de {{name}}",
     "ports": {
       "title": "Ports en écoute",
       "protocol": "Protocole",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Ajouter",
     "visibleWidgets": "Widgets visibles",
     "widgetsMovedToHostMetrics": "Les cartes sont désormais ajoutées, organisées et redimensionnées directement dans l'onglet Métriques de l'hôte. Ouvrez les métriques de cet hôte et utilisez Personnaliser pour choisir les cartes à afficher.",
-    "quickActionsLabel": "Actions rapides",
-    "quickActionsToolbar": "Les actions rapides apparaissent sous forme de boutons dans la barre d'outils Métriques de l'hôte pour une exécution en un clic.",
-    "noQuickActions": "Aucune action rapide pour le moment.",
-    "buttonLabel": "Étiquette du bouton",
-    "selectSnippetPlaceholder": "Sélectionner un snippet...",
-    "addActionBtn": "Ajouter une action",
     "hostNotFound": "Hôte introuvable",
     "loadingHost": "Chargement de l'hôte..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disque"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Annuler",
-        "confirmRunButton": "Exécuter",
-        "confirmRunMessage": "Exécuter « {{name}} » ?"
-      }
-    }
   },
   "terminal": {
     "connected": "Connecté"

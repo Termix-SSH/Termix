@@ -42,7 +42,6 @@ function makeHost(overrides: Partial<Host>): Host {
     ram: null,
     lastAccess: "",
     authType: "credential",
-    quickActions: [],
     enableSsh: true,
     sshPort: 22,
     ...overrides,

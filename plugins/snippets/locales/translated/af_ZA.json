@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Begin \"{{name}}\"",
+  "variablesDialogDescription": "Vul die waardes in wat hierdie brokkie benodig voordat dit uitgevoer word.",
+  "variablesPreviewLabel": "Voorskou",
+  "variablesConfirmButton": "Hardloop",
+  "keybindings": {
+    "runSnippet": "Voer bestaande brokkie uit",
+    "snippetLabel": "Brokkie",
+    "selectSnippet": "Kies 'n uittreksel",
+    "snippetMissing": "brokkie nie gevind nie",
+    "snippetRequired": "Kies 'n uittreksel"
+  },
+  "paletteHintRun": "Begin in die aktiewe terminaal-oortjie",
+  "host": {
+    "startupTitle": "Opstart-brokkie",
+    "quickActionsTitle": "Vinnige Aksies",
+    "quickActionsDescription": "Vinnige aksies verskyn as knoppies in die Host Metrics-nutsbalk vir die uitvoering van opdragte met een klik.",
+    "noQuickActions": "Geen vinnige aksies nog nie.",
+    "buttonLabel": "Knoppie-etiket",
+    "selectSnippet": "Kies uittreksel...",
+    "addQuickAction": "Voeg Aksie by"
+  },
+  "quickActions": {
+    "running": "Voer tans {{name}} uit ...",
+    "succeeded": "{{name}} suksesvol voltooi",
+    "failed": "{{name}} het misluk",
+    "error": "Kon nie {{name}} uitvoer nie"
+  }
+}

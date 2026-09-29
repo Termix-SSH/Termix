@@ -57,8 +57,6 @@ const HOST_REFERENCES = [
     entityType: "hosts",
   },
   { field: "jumpHosts[].hostId", entityType: "hosts" },
-  { field: "quickActions[].snippetId", entityType: "commandSnippet" },
-  { field: "terminalConfig.startupSnippetId", entityType: "commandSnippet" },
 ] as const;
 
 /** Columns that only mean something on the device that holds them. */
@@ -68,6 +66,13 @@ const HOST_LOCAL_FIELDS = [
   "sharedSource",
   "hostKeyLastVerified",
 ];
+
+/**
+ * Columns kept until 3.0.0 that nothing reads any more: their values moved
+ * into plugin host settings, which sync with the host's pluginSettings. They
+ * stay off the wire so a stale local id never reaches the other side.
+ */
+const HOST_RETIRED_FIELDS = ["quickActions"];
 
 let registered = false;
 
@@ -148,7 +153,7 @@ export function registerCoreSyncEntities(): void {
       table: hosts,
       order: 50,
       encryptedFields: FieldCrypto.fieldsFor("ssh_data"),
-      readOnlyFields: HOST_LOCAL_FIELDS,
+      readOnlyFields: [...HOST_LOCAL_FIELDS, ...HOST_RETIRED_FIELDS],
       references: HOST_REFERENCES,
       shouldSync: (row) => !row.localOnly && !row.sharedSource,
       permissions: {
@@ -198,13 +203,18 @@ export function registerCoreSyncEntities(): void {
     order: 90,
     singleton: true,
     readOnlyFields: ["storageMode"],
-    references: [
-      {
-        field: "customKeybindings[].action.snippetId",
-        entityType: "commandSnippet",
-        idType: "string",
-      },
-    ],
+    // A keybinding parameter a plugin declares with a syncEntity holds a
+    // local row id of that entity; the wire carries its syncId.
+    serialize: (row, resolveSyncId) =>
+      mapKeybindingReferences(row, async (entityType, value) => {
+        const id = Number(value);
+        return Number.isInteger(id) ? resolveSyncId(entityType, id) : null;
+      }),
+    deserialize: (row, resolveId) =>
+      mapKeybindingReferences(row, async (entityType, value) => {
+        const id = await resolveId(entityType, value);
+        return id === null ? null : String(id);
+      }),
   });
 
   registerEntity(
@@ -251,6 +261,43 @@ export function registerCoreSyncEntities(): void {
       erase: (userId, syncId) => eraseSharedCopy("hosts", userId, syncId),
     },
   );
+}
+
+/**
+ * Rewrites every keybinding parameter whose declaration names a sync entity,
+ * keeping the column's storage form. A value that does not map becomes null.
+ */
+export async function mapKeybindingReferences(
+  row: SyncRow,
+  map: (entityType: string, value: string) => Promise<string | null>,
+): Promise<SyncRow> {
+  const stored = row.customKeybindings;
+  if (typeof stored !== "string" || !stored) return row;
+  let bindings: unknown;
+  try {
+    bindings = JSON.parse(stored);
+  } catch {
+    return row;
+  }
+  if (!Array.isArray(bindings)) return row;
+  const { findKeybindingAction } =
+    await import("../database/routes/keybinding-validation.js");
+  let changed = false;
+  for (const binding of bindings) {
+    const action = (binding as { action?: Record<string, unknown> } | null)
+      ?.action;
+    if (!action || typeof action.type !== "string") continue;
+    const params = findKeybindingAction(action.type)?.params ?? {};
+    for (const [name, param] of Object.entries(params)) {
+      const value = action[name];
+      if (!param.syncEntity || typeof value !== "string" || !value) continue;
+      action[name] = await map(param.syncEntity, value);
+      changed = true;
+    }
+  }
+  return changed
+    ? { ...row, customKeybindings: JSON.stringify(bindings) }
+    : row;
 }
 
 /** A synced parent link that would make a cycle here is dropped. */

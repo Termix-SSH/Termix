@@ -307,7 +307,6 @@
     "savedThemesLabel": "已保存的主题",
     "scrollbackBufferLabel": "回滚缓冲区",
     "scrollbackMaxLines": "保留在历史记录中的最大行数",
-    "startupSnippetLabel": "启动代码片段",
     "sudoPasswordAutoFill": "Sudo 密码自动填充",
     "sudoPasswordAutoFillDesc": "存储 sudo 密码，以便主机指标、终端提示和其他操作可以自动运行特权命令。",
     "sudoPasswordAutoFillLabel": "Sudo 密码自动填充",
@@ -335,7 +334,8 @@
     "history": "历史记录",
     "localTerminal": "本地终端",
     "sshTools": "SSH 工具",
-    "terminal": "终端"
+    "terminal": "终端",
+    "macros": "宏"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "在此输入以广播按键...",
@@ -363,5 +363,112 @@
     "off": "关闭",
     "on": "开启",
     "title": "连接默认值"
+  },
+  "keybindings": {
+    "copy": "复制选择",
+    "paste": "粘贴",
+    "sendControlCode": "发送 Ctrl+字母信号",
+    "sendText": "发送文本",
+    "controlCodeLabel": "字母",
+    "textLabel": "发送的文本",
+    "appendEnterLabel": "发送后按回车键",
+    "clipboardPermissionNote": "某些浏览器在首次使用时可能会提示授予剪贴板权限。",
+    "textRequired": "请输入要发送的文本",
+    "controlCodeRequired": "请输入单个字母作为控制码"
+  },
+  "macros": {
+    "title": "宏",
+    "description": "在终端中运行已保存的一系列命令，并对服务器返回的内容做出反应。",
+    "target": "目标",
+    "noTerminal": "没有终端打开",
+    "empty": "暂无宏",
+    "emptyHint": "创建一个宏来自动化终端流程，例如登录、重启服务或回答提示。",
+    "create": "新宏",
+    "back": "返回宏",
+    "name": "名称",
+    "namePlaceholder": "重启 Web 服务器",
+    "nameRequired": "保存之前，请给宏命名。",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "此宏的功能（可选）",
+    "unsaved": "未保存的更改",
+    "save": "保存",
+    "saved": "宏已保存",
+    "saveFailed": "无法保存宏",
+    "delete": "删除",
+    "deleteTitle": "删除这个宏？",
+    "deleteBody": "“{{name}}”将被永久删除。此操作无法撤销。",
+    "deleted": "宏已删除",
+    "cancel": "取消",
+    "run": "运行",
+    "stop": "停止",
+    "running": "运行中...",
+    "completed": "宏已完成",
+    "failed": "宏失败",
+    "loadFailed": "无法加载宏。",
+    "needTerminal": "首先打开并连接终端",
+    "noSteps": "此宏目前尚无步骤。请在下方添加步骤。",
+    "addStep": "添加步骤",
+    "stepNumber": "步骤 {{number}}",
+    "removeStep": "移除步骤",
+    "confirmRunTitle": "运行这个宏？",
+    "confirmRunBody": "\"{{name}}\" 将向 {{host}} 发送命令。",
+    "confirmRunAction": "运行宏",
+    "stepTypes": {
+      "send": {
+        "label": "发送命令",
+        "help": "在终端中输入文本，就像你手动输入一样。"
+      },
+      "wait": {
+        "label": "等待输出",
+        "help": "暂停，直到服务器打印出您指定的文本，例如密码提示。"
+      },
+      "delay": {
+        "label": "暂停",
+        "help": "等待一段固定时间后再执行下一步操作。"
+      },
+      "if": {
+        "label": "如果输出包含",
+        "help": "检查服务器目前为止打印的所有内容，然后运行两个分支中的一个。"
+      },
+      "repeat": {
+        "label": "重复",
+        "help": "将其中的步骤执行设定的次数。"
+      }
+    },
+    "send": {
+      "text": "命令或文本",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "发送后按回车键",
+      "pressEnterHelp": "关闭此功能即可输入文本而不提交。"
+    },
+    "wait": {
+      "pattern": "等待输出包含",
+      "patternPlaceholder": "密码：",
+      "timeout": "放弃",
+      "onTimeout": "如果它从未出现",
+      "stop": "停止宏",
+      "continue": "无论如何都继续"
+    },
+    "delay": {
+      "duration": "等待"
+    },
+    "ifStep": {
+      "pattern": "如果输出包含",
+      "patternPlaceholder": "活跃：正在运行",
+      "then": "然后这样做",
+      "else": "否则就这样做",
+      "emptyBranch": "没有步骤"
+    },
+    "repeat": {
+      "count": "次数",
+      "times": "次"
+    },
+    "match": {
+      "useRegex": "使用正则表达式进行匹配",
+      "useRegexHelp": "关闭此选项以完全按原文匹配文本。",
+      "invalidRegex": "这不是有效的正则表达式，它将被匹配为纯文本。"
+    },
+    "seconds": "秒",
+    "secondsShort": "{{count}}s"
   }
 }

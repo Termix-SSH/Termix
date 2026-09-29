@@ -69,7 +69,6 @@ const baseHost: Host = {
   enableRdp: true,
   enableVnc: true,
   enableTelnet: true,
-  quickActions: [],
 } as unknown as Host;
 
 const noop = () => {};

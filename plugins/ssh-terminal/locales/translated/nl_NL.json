@@ -307,7 +307,6 @@
     "savedThemesLabel": "Opgeslagen thema's",
     "scrollbackBufferLabel": "Terugscrollbuffer",
     "scrollbackMaxLines": "Maximaal aantal regels dat in de geschiedenis wordt bewaard",
-    "startupSnippetLabel": "Opstartfragment",
     "sudoPasswordAutoFill": "Sudo-wachtwoord automatisch invullen",
     "sudoPasswordAutoFillDesc": "Sla een sudo-wachtwoord op, zodat hoststatistieken, terminalprompts en andere programma's automatisch geprivilegieerde opdrachten kunnen uitvoeren.",
     "sudoPasswordAutoFillLabel": "Sudo-wachtwoord automatisch invullen",
@@ -335,7 +334,8 @@
     "history": "Geschiedenis",
     "localTerminal": "Lokale terminal",
     "sshTools": "SSH-tools",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Macro's"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Typ hier om toetsaanslagen te verzenden...",
@@ -363,5 +363,112 @@
     "off": "Uit",
     "on": "Op",
     "title": "Verbindingsstandaarden"
+  },
+  "keybindings": {
+    "copy": "Selectie kopiëren",
+    "paste": "Plakken",
+    "sendControlCode": "Verzend het Ctrl+letter-signaal",
+    "sendText": "Sms verzenden",
+    "controlCodeLabel": "Brief",
+    "textLabel": "Tekst om te verzenden",
+    "appendEnterLabel": "Druk op Enter na het verzenden.",
+    "clipboardPermissionNote": "In sommige browsers kan bij het eerste gebruik om toestemming voor het gebruik van het klembord worden gevraagd.",
+    "textRequired": "Voer de tekst in die u wilt verzenden",
+    "controlCodeRequired": "Voer één letter in als besturingscode."
+  },
+  "macros": {
+    "title": "Macro's",
+    "description": "Voer een opgeslagen reeks commando's uit in een terminal en reageer op wat de server terugstuurt.",
+    "target": "Doel",
+    "noTerminal": "Geen terminal geopend",
+    "empty": "Nog geen macro's",
+    "emptyHint": "Maak een macro om een terminalproces te automatiseren, zoals inloggen, een service herstarten of prompts beantwoorden.",
+    "create": "Nieuwe macro",
+    "back": "Terug naar macro's",
+    "name": "Naam",
+    "namePlaceholder": "Webserver opnieuw opstarten",
+    "nameRequired": "Geef de macro een naam voordat je hem opslaat.",
+    "descriptionLabel": "Beschrijving",
+    "descriptionPlaceholder": "Wat deze macro doet (optioneel)",
+    "unsaved": "Niet-opgeslagen wijzigingen",
+    "save": "Redden",
+    "saved": "Macro opgeslagen",
+    "saveFailed": "Het lukte niet om de macro op te slaan.",
+    "delete": "Verwijderen",
+    "deleteTitle": "Deze macro verwijderen?",
+    "deleteBody": "\"{{name}}\" wordt permanent verwijderd. Dit kan niet ongedaan gemaakt worden.",
+    "deleted": "Macro verwijderd",
+    "cancel": "Annuleren",
+    "run": "Loop",
+    "stop": "Stop",
+    "running": "Rennen...",
+    "completed": "Macro voltooid",
+    "failed": "Macro mislukt",
+    "loadFailed": "Macro's konden niet worden geladen.",
+    "needTerminal": "Open en verbind eerst een terminal.",
+    "noSteps": "Deze macro bevat nog geen stappen. Voeg er hieronder een toe.",
+    "addStep": "Voeg stap toe",
+    "stepNumber": "Stap {{number}}",
+    "removeStep": "Verwijder stap",
+    "confirmRunTitle": "Voer deze macro uit?",
+    "confirmRunBody": "\"{{name}}\" zal commando's naar {{host}} sturen.",
+    "confirmRunAction": "Macro uitvoeren",
+    "stepTypes": {
+      "send": {
+        "label": "Verzend commando",
+        "help": "Typt tekst in de terminal, net alsof je die zelf hebt ingetypt."
+      },
+      "wait": {
+        "label": "Wacht op uitvoer",
+        "help": "Het programma pauzeert totdat de server de door u opgegeven tekst afdrukt, zoals bij een wachtwoordprompt."
+      },
+      "delay": {
+        "label": "Pauze",
+        "help": "Wacht een vaste tijdsduur voordat de volgende stap wordt uitgevoerd."
+      },
+      "if": {
+        "label": "Als de uitvoer het volgende bevat:",
+        "help": "Controleert alles wat de server tot nu toe heeft afgedrukt en voert vervolgens een van de twee vertakkingen uit."
+      },
+      "repeat": {
+        "label": "Herhalen",
+        "help": "Voert de stappen binnenin een vast aantal keren uit."
+      }
+    },
+    "send": {
+      "text": "Opdracht of tekst",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Druk op Enter na het verzenden.",
+      "pressEnterHelp": "Schakel deze optie uit om tekst te typen zonder deze te verzenden."
+    },
+    "wait": {
+      "pattern": "Wacht tot de uitvoer het volgende bevat:",
+      "patternPlaceholder": "wachtwoord:",
+      "timeout": "Geef het op na",
+      "onTimeout": "Als het nooit verschijnt",
+      "stop": "Stop de macro",
+      "continue": "Ga toch door."
+    },
+    "delay": {
+      "duration": "Wachten op"
+    },
+    "ifStep": {
+      "pattern": "Als de uitvoer het volgende bevat:",
+      "patternPlaceholder": "Actief: actief (lopend)",
+      "then": "Doe dan dit",
+      "else": "Doe anders dit",
+      "emptyBranch": "Geen treden"
+    },
+    "repeat": {
+      "count": "Aantal keren",
+      "times": "tijden"
+    },
+    "match": {
+      "useRegex": "Overeenkomst met een reguliere expressie",
+      "useRegexHelp": "Laat dit weg zodat de tekst exact overeenkomt met de geschreven tekst.",
+      "invalidRegex": "Dit is geen geldige reguliere expressie; het wordt als platte tekst herkend."
+    },
+    "seconds": "seconden",
+    "secondsShort": "{{count}}s"
   }
 }

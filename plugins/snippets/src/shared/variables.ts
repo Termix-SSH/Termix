@@ -1,3 +1,9 @@
+/**
+ * $HOST, $USER, $PORT, $NAME and $INPUT_n in a command. The one copy: the
+ * frontend, the backend and other plugins (fleets, through the
+ * "snippets.variables" registry entry and action) all use this.
+ */
+
 export interface SnippetInput {
   key: string;
   label: string;
@@ -25,6 +31,11 @@ export function extractSnippetInputs(content: string): SnippetInput[] {
     }
   }
   return Array.from(seen.values());
+}
+
+export function hasSnippetInputs(content: string): boolean {
+  INPUT_PATTERN.lastIndex = 0;
+  return INPUT_PATTERN.test(content);
 }
 
 function replaceVar(

@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "দৌড়াও \"{{name}}\"",
+  "variablesDialogDescription": "এই কোড স্নিপেটটি চালানোর আগে প্রয়োজনীয় মানগুলি পূরণ করুন।",
+  "variablesPreviewLabel": "প্রিভিউ",
+  "variablesConfirmButton": "দৌড়",
+  "keybindings": {
+    "runSnippet": "বিদ্যমান কোড চালান",
+    "snippetLabel": "স্নিপেট",
+    "selectSnippet": "একটি স্নিপেট নির্বাচন করুন",
+    "snippetMissing": "স্নিপেটটি খুঁজে পাওয়া যায়নি",
+    "snippetRequired": "একটি স্নিপেট নির্বাচন করুন"
+  },
+  "paletteHintRun": "সক্রিয় টার্মিনাল ট্যাবে চালান",
+  "host": {
+    "startupTitle": "স্টার্টআপ স্নিপেট",
+    "quickActionsTitle": "দ্রুত পদক্ষেপ",
+    "quickActionsDescription": "এক ক্লিকে কমান্ড কার্যকর করার জন্য কুইক অ্যাকশনগুলো হোস্ট মেট্রিক্স টুলবারে বাটন হিসেবে প্রদর্শিত হয়।",
+    "noQuickActions": "এখনো কোনো দ্রুত পদক্ষেপ নেওয়া হয়নি।",
+    "buttonLabel": "বোতাম লেবেল",
+    "selectSnippet": "স্নিপেট নির্বাচন করুন...",
+    "addQuickAction": "অ্যাকশন যোগ করুন"
+  },
+  "quickActions": {
+    "running": "{{name}} কার্যকর করা হচ্ছে ...",
+    "succeeded": "{{name}} সফলভাবে সম্পন্ন হয়েছে",
+    "failed": "{{name}} ব্যর্থ হয়েছে",
+    "error": "{{name}} কার্যকর করতে ব্যর্থ হয়েছে"
+  }
+}

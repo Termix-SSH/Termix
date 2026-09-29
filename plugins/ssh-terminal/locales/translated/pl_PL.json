@@ -307,7 +307,6 @@
     "savedThemesLabel": "Zapisane motywy",
     "scrollbackBufferLabel": "Bufor przewijania",
     "scrollbackMaxLines": "Maksymalna liczba wierszy przechowywanych w historii",
-    "startupSnippetLabel": "Snippet startowy",
     "sudoPasswordAutoFill": "Automatyczne uzupełnianie hasła sudo",
     "sudoPasswordAutoFillDesc": "Przechowuj hasło sudo, aby metryki hosta, monity terminala i inne narzędzia mogły automatycznie uruchamiać polecenia uprzywilejowane.",
     "sudoPasswordAutoFillLabel": "Automatyczne uzupełnianie hasła sudo",
@@ -335,7 +334,8 @@
     "history": "Historia",
     "localTerminal": "Terminal lokalny",
     "sshTools": "Narzędzia SSH",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makra"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Wpisz tutaj, aby rozesłać naciśnięcia klawiszy...",
@@ -363,5 +363,112 @@
     "off": "Wył.",
     "on": "Wł.",
     "title": "Domyślne ustawienia połączenia"
+  },
+  "keybindings": {
+    "copy": "Kopiuj zaznaczenie",
+    "paste": "Wklej",
+    "sendControlCode": "Wyślij sygnał Ctrl+litera",
+    "sendText": "Wyślij tekst",
+    "controlCodeLabel": "Litera",
+    "textLabel": "Tekst do wysłania",
+    "appendEnterLabel": "Naciśnij Enter po wysłaniu",
+    "clipboardPermissionNote": "Przy pierwszym użyciu w niektórych przeglądarkach może zostać wyświetlony monit o zezwolenie na dostęp do schowka.",
+    "textRequired": "Wprowadź tekst do wysłania",
+    "controlCodeRequired": "Wprowadź pojedynczą literę kodu kontrolnego"
+  },
+  "macros": {
+    "title": "Makra",
+    "description": "Uruchom zapisaną serię poleceń w terminalu i zareaguj na to, co odeśle serwer.",
+    "target": "Cel",
+    "noTerminal": "Brak otwartego terminala",
+    "empty": "Brak makr",
+    "emptyHint": "Utwórz makro, aby zautomatyzować pracę w terminalu: logowanie, restart usługi czy odpowiadanie na monity.",
+    "create": "Nowe makro",
+    "back": "Powrót do makr",
+    "name": "Nazwa",
+    "namePlaceholder": "Uruchom ponownie serwer WWW",
+    "nameRequired": "Przed zapisaniem nadaj makrze nazwę",
+    "descriptionLabel": "Opis",
+    "descriptionPlaceholder": "Co robi to makro (opcjonalnie)",
+    "unsaved": "Niezapisane zmiany",
+    "save": "Zapisz",
+    "saved": "Zapisano makro",
+    "saveFailed": "Nie udało się zapisać makra",
+    "delete": "Usuń",
+    "deleteTitle": "Usunąć to makro?",
+    "deleteBody": "„{{name}}” zostanie trwale usunięte. Nie można tego cofnąć.",
+    "deleted": "Usunięto makro",
+    "cancel": "Anuluj",
+    "run": "Uruchom",
+    "stop": "Zatrzymaj",
+    "running": "Działa...",
+    "completed": "Makro zakończone",
+    "failed": "Makro nie powiodło się",
+    "loadFailed": "Nie można załadować makr",
+    "needTerminal": "Najpierw otwórz i podłącz terminal",
+    "noSteps": "To makro nie ma jeszcze żadnych kroków. Dodaj krok poniżej.",
+    "addStep": "Dodaj krok",
+    "stepNumber": "Krok {{number}}",
+    "removeStep": "Usuń krok",
+    "confirmRunTitle": "Uruchomić to makro?",
+    "confirmRunBody": "„{{name}}” wyśle polecenia do {{host}}.",
+    "confirmRunAction": "Uruchom makro",
+    "stepTypes": {
+      "send": {
+        "label": "Wyślij polecenie",
+        "help": "Wpisuje tekst do terminala, tak samo, jakby wpisano go ręcznie."
+      },
+      "wait": {
+        "label": "Czekaj na wyjście",
+        "help": "Wstrzymuje wykonanie, aż serwer wypisze podany tekst, np. monit o hasło."
+      },
+      "delay": {
+        "label": "Pauza",
+        "help": "Czeka przez ustalony czas przed kolejnym krokiem."
+      },
+      "if": {
+        "label": "Jeśli wyjście zawiera",
+        "help": "Sprawdza wszystko, co serwer wypisał do tej pory, a potem uruchamia jedną z dwóch gałęzi."
+      },
+      "repeat": {
+        "label": "Powtórz",
+        "help": "Uruchamia zawarte w nim kroki ustaloną liczbę razy."
+      }
+    },
+    "send": {
+      "text": "Polecenie lub tekst",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Naciśnij Enter po wysłaniu",
+      "pressEnterHelp": "Wyłącz tę opcję, aby wpisać tekst bez przesyłania go."
+    },
+    "wait": {
+      "pattern": "Czekaj, aż wyjście będzie zawierać",
+      "patternPlaceholder": "password:",
+      "timeout": "Przerwij po",
+      "onTimeout": "Jeśli nigdy się nie pojawi",
+      "stop": "Zatrzymaj makro",
+      "continue": "Kontynuuj mimo wszystko"
+    },
+    "delay": {
+      "duration": "Czekaj"
+    },
+    "ifStep": {
+      "pattern": "Jeśli wyjście zawiera",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Następnie zrób to",
+      "else": "W przeciwnym razie zrób to",
+      "emptyBranch": "Brak kroków"
+    },
+    "repeat": {
+      "count": "Liczba razy",
+      "times": "razy"
+    },
+    "match": {
+      "useRegex": "Dopasuj do wyrażenia regularnego",
+      "useRegexHelp": "Zostaw wyłączone, aby dopasować tekst dokładnie tak, jak został wpisany.",
+      "invalidRegex": "Nie jest to prawidłowe wyrażenie regularne, zostanie dopasowane jako zwykły tekst"
+    },
+    "seconds": "sekundy",
+    "secondsShort": "{{count}}s"
   }
 }

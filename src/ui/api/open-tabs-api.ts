@@ -127,14 +127,12 @@ export interface UserPreferences {
   pinAppRail?: boolean | null;
   expandAppRailOnHover?: boolean | null;
   showPinAppRailButton?: boolean | null;
-  confirmSnippetExecution?: boolean | null;
   disableUpdateCheck?: boolean | null;
   confirmTabClose?: boolean | null;
   hiddenRailTabs?: string | null;
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
   customKeybindings?: string | null;
-  terminalMacros?: string | null;
 }
 
 export function parseCustomKeybindings(

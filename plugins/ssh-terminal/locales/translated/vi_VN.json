@@ -307,7 +307,6 @@
     "savedThemesLabel": "Chủ đề đã lưu",
     "scrollbackBufferLabel": "Bộ đệm cuộn ngược",
     "scrollbackMaxLines": "Số dòng tối đa được giữ trong lịch sử",
-    "startupSnippetLabel": "Đoạn mã khởi động",
     "sudoPasswordAutoFill": "Tự động điền mật khẩu Sudo",
     "sudoPasswordAutoFillDesc": "Lưu trữ mật khẩu sudo để các số liệu máy chủ, lời nhắc terminal và các thành phần khác có thể chạy lệnh đặc quyền tự động.",
     "sudoPasswordAutoFillLabel": "Tự động điền mật khẩu sudo",
@@ -335,7 +334,8 @@
     "history": "Lịch sử",
     "localTerminal": "Ga địa phương",
     "sshTools": "Công cụ SSH",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Macro"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Nhập vào đây để phát tán thao tác phím...",
@@ -363,5 +363,112 @@
     "off": "Tắt",
     "on": "TRÊN",
     "title": "Cài đặt mặc định kết nối"
+  },
+  "keybindings": {
+    "copy": "Sao chép lựa chọn",
+    "paste": "Dán",
+    "sendControlCode": "Gửi tín hiệu Ctrl+chữ cái",
+    "sendText": "Gửi tin nhắn",
+    "controlCodeLabel": "Thư",
+    "textLabel": "Văn bản để gửi",
+    "appendEnterLabel": "Nhấn Enter sau khi gửi",
+    "clipboardPermissionNote": "Một số trình duyệt có thể yêu cầu quyền truy cập clipboard khi sử dụng lần đầu.",
+    "textRequired": "Nhập văn bản cần gửi",
+    "controlCodeRequired": "Nhập một chữ cái duy nhất cho mã điều khiển."
+  },
+  "macros": {
+    "title": "Macro",
+    "description": "Chạy một chuỗi lệnh đã lưu trong cửa sổ dòng lệnh và phản hồi lại những gì máy chủ gửi về.",
+    "target": "Mục tiêu",
+    "noTerminal": "Không có thiết bị đầu cuối nào đang mở",
+    "empty": "Chưa có macro nào.",
+    "emptyHint": "Tạo macro để tự động hóa quy trình trên thiết bị đầu cuối, chẳng hạn như đăng nhập, khởi động lại dịch vụ hoặc trả lời các lời nhắc.",
+    "create": "Macro mới",
+    "back": "Quay lại phần macro",
+    "name": "Tên",
+    "namePlaceholder": "Khởi động lại máy chủ web",
+    "nameRequired": "Đặt tên cho macro trước khi lưu.",
+    "descriptionLabel": "Sự miêu tả",
+    "descriptionPlaceholder": "Chức năng của macro này (tùy chọn)",
+    "unsaved": "Thay đổi chưa được lưu",
+    "save": "Cứu",
+    "saved": "Macro đã được lưu",
+    "saveFailed": "Không thể lưu macro",
+    "delete": "Xóa bỏ",
+    "deleteTitle": "Xóa macro này?",
+    "deleteBody": "\"{{name}}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác.",
+    "deleted": "Macro đã bị xóa",
+    "cancel": "Hủy bỏ",
+    "run": "Chạy",
+    "stop": "Dừng lại",
+    "running": "Đang chạy...",
+    "completed": "Macro đã hoàn thành",
+    "failed": "Macro bị lỗi",
+    "loadFailed": "Không thể tải macro",
+    "needTerminal": "Trước tiên hãy mở và kết nối thiết bị đầu cuối.",
+    "noSteps": "Macro này chưa có bước nào. Hãy thêm một bước bên dưới.",
+    "addStep": "Thêm bước",
+    "stepNumber": "Bước {{number}}",
+    "removeStep": "Xóa bước",
+    "confirmRunTitle": "Chạy macro này?",
+    "confirmRunBody": "\"{{name}}\" sẽ gửi lệnh đến {{host}}.",
+    "confirmRunAction": "Chạy macro",
+    "stepTypes": {
+      "send": {
+        "label": "Gửi lệnh",
+        "help": "Nhập văn bản vào cửa sổ dòng lệnh, giống như khi bạn tự nhập văn bản."
+      },
+      "wait": {
+        "label": "Chờ kết quả đầu ra",
+        "help": "Tạm dừng cho đến khi máy chủ in ra đoạn văn bản bạn đã đặt tên, ví dụ như lời nhắc nhập mật khẩu."
+      },
+      "delay": {
+        "label": "Tạm dừng",
+        "help": "Chờ một khoảng thời gian cố định trước khi thực hiện bước tiếp theo."
+      },
+      "if": {
+        "label": "Nếu đầu ra chứa",
+        "help": "Kiểm tra tất cả những gì máy chủ đã in ra cho đến nay, sau đó chạy một trong hai nhánh."
+      },
+      "repeat": {
+        "label": "Lặp lại",
+        "help": "Thực thi các bước bên trong nó một số lần nhất định."
+      }
+    },
+    "send": {
+      "text": "Lệnh hoặc văn bản",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Nhấn Enter sau khi gửi",
+      "pressEnterHelp": "Tắt tùy chọn này để nhập văn bản mà không cần gửi đi."
+    },
+    "wait": {
+      "pattern": "Chờ cho đến khi đầu ra chứa",
+      "patternPlaceholder": "mật khẩu:",
+      "timeout": "Bỏ cuộc sau",
+      "onTimeout": "Nếu nó không bao giờ xuất hiện",
+      "stop": "Dừng macro",
+      "continue": "Cứ tiếp tục đi"
+    },
+    "delay": {
+      "duration": "Chờ đợi"
+    },
+    "ifStep": {
+      "pattern": "Nếu đầu ra chứa",
+      "patternPlaceholder": "Đang hoạt động: đang hoạt động (đang chạy)",
+      "then": "Sau đó hãy làm như thế này",
+      "else": "Nếu không thì hãy làm như thế này",
+      "emptyBranch": "Không có bước nào"
+    },
+    "repeat": {
+      "count": "Số lần",
+      "times": "lần"
+    },
+    "match": {
+      "useRegex": "So khớp với biểu thức chính quy",
+      "useRegexHelp": "Bỏ phần này đi để văn bản khớp chính xác với nội dung đã viết.",
+      "invalidRegex": "Đây không phải là biểu thức chính quy hợp lệ, nó sẽ được so khớp như văn bản thuần túy."
+    },
+    "seconds": "giây",
+    "secondsShort": "{{count}}s"
   }
 }

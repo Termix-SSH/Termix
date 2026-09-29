@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  mergeLocalMacros,
   parseTerminalMacros,
+  sanitizeTerminalMacros,
   runTerminalMacro,
   type MacroStep,
   type TerminalMacro,
-} from "@/lib/terminal-macros";
+} from "../../../src/frontend/macros/terminal-macros";
 
 function macro(steps: MacroStep[]): TerminalMacro {
   return {
@@ -181,5 +183,50 @@ describe("terminal macro runner", () => {
     );
     // "a.b" as a literal must not match "axb"
     expect(sent).toEqual(["no"]);
+  });
+});
+
+describe("mergeLocalMacros", () => {
+  function storage(value: string | null) {
+    const store = new Map<string, string>();
+    if (value !== null) store.set("terminalMacros", value);
+    return {
+      store,
+      getItem: (key: string) => store.get(key) ?? null,
+      removeItem: (key: string) => void store.delete(key),
+    };
+  }
+  const saved = (id: string): TerminalMacro => ({ ...macro([]), id });
+
+  it("returns null when the browser kept nothing", () => {
+    expect(mergeLocalMacros([saved("a")], storage(null))).toBeNull();
+  });
+
+  it("adds the browser's macros the saved list does not have", () => {
+    const local = storage(
+      JSON.stringify([
+        { id: "a", name: "Dupe", steps: [] },
+        { id: "b", name: "Local", steps: [] },
+      ]),
+    );
+    const merged = mergeLocalMacros([saved("a")], local);
+    expect(merged?.macros.map((m) => m.id)).toEqual(["a", "b"]);
+    expect(local.store.has("terminalMacros")).toBe(true);
+    merged?.clear();
+    expect(local.store.has("terminalMacros")).toBe(false);
+  });
+
+  it("clears the key when everything is already saved", () => {
+    const local = storage(JSON.stringify([{ id: "a", name: "A", steps: [] }]));
+    expect(mergeLocalMacros([saved("a")], local)).toBeNull();
+    expect(local.store.has("terminalMacros")).toBe(false);
+  });
+
+  it("reads a stored array as well as its JSON", () => {
+    expect(
+      sanitizeTerminalMacros([{ id: "x", name: "X", steps: [] }]).map(
+        (m) => m.id,
+      ),
+    ).toEqual(["x"]);
   });
 });

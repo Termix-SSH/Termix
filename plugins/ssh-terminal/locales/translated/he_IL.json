@@ -307,7 +307,6 @@
     "savedThemesLabel": "ערכות נושא שמורות",
     "scrollbackBufferLabel": "מאגר גלילה לאחור",
     "scrollbackMaxLines": "מספר השורות המרבי שנשמר בהיסטוריה",
-    "startupSnippetLabel": "קטע הפעלה",
     "sudoPasswordAutoFill": "מילוי אוטומטי של סיסמאות Sudo",
     "sudoPasswordAutoFillDesc": "אחסן סיסמת sudo כדי שמדדי מארח, הנחיות מסוף ואחרים יוכלו להריץ פקודות בעלות הרשאות באופן אוטומטי.",
     "sudoPasswordAutoFillLabel": "מילוי אוטומטי של סיסמת סודו",
@@ -335,7 +334,8 @@
     "history": "הִיסטוֹרִיָה",
     "localTerminal": "מסוף מקומי",
     "sshTools": "כלי SSH",
-    "terminal": "מָסוֹף"
+    "terminal": "מָסוֹף",
+    "macros": "פקודות מאקרו"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "הקלד כאן כדי לשדר הקשות מקלדת...",
@@ -363,5 +363,112 @@
     "off": "כבוי",
     "on": "עַל",
     "title": "ברירות מחדל של חיבור"
+  },
+  "keybindings": {
+    "copy": "העתקת הבחירה",
+    "paste": "לְהַדבִּיק",
+    "sendControlCode": "שלח אות Ctrl+אות",
+    "sendText": "שלח טקסט",
+    "controlCodeLabel": "מִכְתָב",
+    "textLabel": "טקסט לשליחה",
+    "appendEnterLabel": "לחץ על Enter לאחר השליחה",
+    "clipboardPermissionNote": "ייתכן שתבקש הרשאה ללוח בעת השימוש הראשון בדפדפנים מסוימים.",
+    "textRequired": "הזן את הטקסט לשליחה",
+    "controlCodeRequired": "הזן אות אחת עבור קוד הבקרה"
+  },
+  "macros": {
+    "title": "פקודות מאקרו",
+    "description": "הפעל סדרה שמורה של פקודות בטרמינל, והגב למה שהשרת שולח בחזרה.",
+    "target": "יַעַד",
+    "noTerminal": "אין טרמינל פתוח",
+    "empty": "עדיין אין פקודות מאקרו",
+    "emptyHint": "צור מאקרו כדי להפוך זרימת מסוף לאוטומטית, כמו כניסה, הפעלה מחדש של שירות או מענה לבקשות.",
+    "create": "מאקרו חדש",
+    "back": "חזרה למאקרו",
+    "name": "שֵׁם",
+    "namePlaceholder": "הפעל מחדש את שרת האינטרנט",
+    "nameRequired": "תן שם למאקרו לפני השמירה",
+    "descriptionLabel": "תֵאוּר",
+    "descriptionPlaceholder": "מה המאקרו הזה עושה (אופציונלי)",
+    "unsaved": "שינויים שלא נשמרו",
+    "save": "לְהַצִיל",
+    "saved": "מאקרו נשמר",
+    "saveFailed": "לא ניתן היה לשמור את המאקרו",
+    "delete": "לִמְחוֹק",
+    "deleteTitle": "למחוק את המאקרו הזה?",
+    "deleteBody": "\"{{name}}\" יימחק לצמיתות. לא ניתן לבטל פעולה זו.",
+    "deleted": "מאקרו נמחק",
+    "cancel": "לְבַטֵל",
+    "run": "לָרוּץ",
+    "stop": "לְהַפְסִיק",
+    "running": "רִיצָה...",
+    "completed": "מאקרו הסתיים",
+    "failed": "מאקרו נכשל",
+    "loadFailed": "לא ניתן היה לטעון פקודות מאקרו",
+    "needTerminal": "פתח וחבר תחילה טרמינל",
+    "noSteps": "למאקרו הזה עדיין אין שלבים. הוסף אחד למטה.",
+    "addStep": "הוסף שלב",
+    "stepNumber": "שלב {{number}}",
+    "removeStep": "הסר שלב",
+    "confirmRunTitle": "להפעיל את המאקרו הזה?",
+    "confirmRunBody": "\"{{name}}\" ישלח פקודות אל {{host}}.",
+    "confirmRunAction": "הפעל מאקרו",
+    "stepTypes": {
+      "send": {
+        "label": "שלח פקודה",
+        "help": "מקליד טקסט לתוך הטרמינל, אותו הדבר כאילו הקלדת אותו."
+      },
+      "wait": {
+        "label": "המתן לפלט",
+        "help": "מושהה עד שהשרת ידפיס את הטקסט שציינת, כמו בקשת סיסמה."
+      },
+      "delay": {
+        "label": "הַפסָקָה",
+        "help": "ממתין פרק זמן קבוע לפני השלב הבא."
+      },
+      "if": {
+        "label": "אם הפלט מכיל",
+        "help": "בודק את כל מה שהשרת הדפיס עד כה, ולאחר מכן מפעיל אחד משני ענפים."
+      },
+      "repeat": {
+        "label": "לַחֲזוֹר עַל",
+        "help": "מריץ את השלבים בתוכו מספר קבוע של פעמים."
+      }
+    },
+    "send": {
+      "text": "פקודה או טקסט",
+      "textPlaceholder": "הפעל מחדש את nginx של systemctl",
+      "pressEnter": "לחץ על Enter לאחר השליחה",
+      "pressEnterHelp": "כבה אפשרות זו כדי להקליד טקסט מבלי לשלוח אותו."
+    },
+    "wait": {
+      "pattern": "המתן עד שהפלט יכיל",
+      "patternPlaceholder": "סִיסמָה:",
+      "timeout": "לוותר אחרי",
+      "onTimeout": "אם זה אף פעם לא מופיע",
+      "stop": "עצור את המאקרו",
+      "continue": "המשיכו בכל מקרה"
+    },
+    "delay": {
+      "duration": "חכה ל"
+    },
+    "ifStep": {
+      "pattern": "אם הפלט מכיל",
+      "patternPlaceholder": "פעיל: פעיל (רץ)",
+      "then": "אז תעשה את זה",
+      "else": "אחרת תעשו את זה",
+      "emptyBranch": "אין מדרגות"
+    },
+    "repeat": {
+      "count": "מספר פעמים",
+      "times": "פִּי"
+    },
+    "match": {
+      "useRegex": "התאמה עם ביטוי רגולרי",
+      "useRegexHelp": "השאר את זה כבוי כדי שהטקסט יתאים בדיוק כפי שנכתב.",
+      "invalidRegex": "ביטוי רגולרי לא תקין, הוא יתאים כטקסט רגיל"
+    },
+    "seconds": "שניות",
+    "secondsShort": "{{count}}ים"
   }
 }

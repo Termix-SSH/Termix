@@ -51,10 +51,6 @@
     "processesRunning": "רִיצָה",
     "loginStats": "סטטיסטיקות כניסה ל-SSH",
     "noRecentLoginData": "אין נתוני התחברות אחרונים",
-    "executingQuickAction": "מבצע {{name}}...",
-    "quickActionSuccess": "{{name}} הושלם בהצלחה",
-    "quickActionFailed": "{{name}} נכשל",
-    "quickActionError": "נכשל בביצוע {{name}}",
     "ports": {
       "title": "יציאות האזנה",
       "protocol": "פּרוֹטוֹקוֹל",
@@ -235,12 +231,6 @@
     "addExcludedMount": "לְהוֹסִיף",
     "visibleWidgets": "ווידג'טים גלויים",
     "widgetsMovedToHostMetrics": "כעת ניתן להוסיף, לסידור ולשנות את גודל הכרטיסים ישירות בכרטיסייה 'מדדי מארח'. פתחו את 'מדדי מארח' עבור מארח זה והשתמשו באפשרות 'התאמה אישית' כדי לבחור אילו כרטיסים יוצגו.",
-    "quickActionsLabel": "פעולות מהירות",
-    "quickActionsToolbar": "פעולות מהירות מופיעות ככפתורים בסרגל הכלים של Host Metrics לביצוע פקודה בלחיצה אחת.",
-    "noQuickActions": "אין עדיין פעולות מהירות.",
-    "buttonLabel": "תווית כפתור",
-    "selectSnippetPlaceholder": "בחר קטע...",
-    "addActionBtn": "הוסף פעולה",
     "hostNotFound": "המארח לא נמצא",
     "loadingHost": "טוען מארח..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "דִיסק"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "לְבַטֵל",
-        "confirmRunButton": "לָרוּץ",
-        "confirmRunMessage": "להפעיל את \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "מְחוּבָּר"

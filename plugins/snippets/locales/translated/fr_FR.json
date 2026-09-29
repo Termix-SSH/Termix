@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Exécutez \"{{name}}\"",
+  "variablesDialogDescription": "Renseignez les valeurs nécessaires à cet extrait de code avant de l'exécuter.",
+  "variablesPreviewLabel": "Aperçu",
+  "variablesConfirmButton": "Courir",
+  "keybindings": {
+    "runSnippet": "Exécuter l'extrait de code existant",
+    "snippetLabel": "Fragment",
+    "selectSnippet": "Sélectionnez un extrait",
+    "snippetMissing": "extrait introuvable",
+    "snippetRequired": "Sélectionnez un extrait"
+  },
+  "paletteHintRun": "Exécuter dans l'onglet du terminal actif",
+  "host": {
+    "startupTitle": "Extrait de démarrage",
+    "quickActionsTitle": "Actions rapides",
+    "quickActionsDescription": "Les actions rapides apparaissent sous forme de boutons dans la barre d'outils Métriques de l'hôte pour une exécution en un clic.",
+    "noQuickActions": "Aucune action rapide pour le moment.",
+    "buttonLabel": "Étiquette du bouton",
+    "selectSnippet": "Sélectionner un snippet...",
+    "addQuickAction": "Ajouter une action"
+  },
+  "quickActions": {
+    "running": "Exécution de {{name}}...",
+    "succeeded": "{{name}} terminé avec succès",
+    "failed": "Échec de {{name}}",
+    "error": "Échec de l'exécution de {{name}}"
+  }
+}

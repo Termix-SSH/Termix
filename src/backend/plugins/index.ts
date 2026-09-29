@@ -21,6 +21,8 @@ import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
+import { setKeybindingActionSource } from "../database/routes/keybinding-validation.js";
 
 let loader: PluginLoader | null = null;
 
@@ -34,6 +36,23 @@ export function getPluginRuntime(): { loader: PluginLoader } {
       (pluginId) => loader?.get(pluginId)?.state === "active",
     );
     setPluginInstalledCheck((pluginId) => !!loader?.get(pluginId));
+    // An admin acting for another user reaches only the plugins that opted in.
+    setPluginImpersonationCheck((pluginId) => {
+      const plugin = loader?.get(pluginId);
+      return (
+        plugin?.state === "active" &&
+        plugin.manifest.contributes?.http?.adminImpersonation === true
+      );
+    });
+    // Saved keybindings are checked against every installed plugin's
+    // declarations, so a binding keeps validating while its plugin is off.
+    setKeybindingActionSource(() =>
+      (loader?.list() ?? []).flatMap((plugin) =>
+        (plugin.manifest.contributes?.keybindingActions ?? []).map(
+          (action) => ({ ...action, pluginId: plugin.id }),
+        ),
+      ),
+    );
     // Lets a host whose auth type belongs to a disabled plugin name it.
     setSshAuthTypeOwnerSource(() =>
       (loader?.list() ?? []).flatMap((plugin) =>

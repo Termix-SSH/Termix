@@ -30,3 +30,38 @@ export function validateAdminSettings(
   }
   return errors;
 }
+
+const MAX_MACROS = 100;
+const MAX_MACROS_BYTES = 512 * 1024;
+
+/** Save-time checks for the user settings: macros stay bounded. */
+export function validateUserSettings(
+  values: Record<string, unknown>,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (values.macros === undefined || values.macros === null) return errors;
+  let macros = values.macros;
+  if (typeof macros === "string") {
+    try {
+      macros = JSON.parse(macros);
+    } catch {
+      macros = null;
+    }
+  }
+  const valid =
+    Array.isArray(macros) &&
+    macros.length <= MAX_MACROS &&
+    JSON.stringify(macros).length <= MAX_MACROS_BYTES &&
+    macros.every(
+      (macro) =>
+        !!macro &&
+        typeof macro === "object" &&
+        typeof (macro as { id?: unknown }).id === "string" &&
+        typeof (macro as { name?: unknown }).name === "string" &&
+        Array.isArray((macro as { steps?: unknown }).steps),
+    );
+  if (!valid) {
+    errors.macros = `Macros must be a list of at most ${MAX_MACROS} valid macros`;
+  }
+  return errors;
+}

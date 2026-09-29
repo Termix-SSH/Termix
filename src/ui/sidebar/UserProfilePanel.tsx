@@ -498,7 +498,6 @@ export function UserProfilePanel({
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
     showPinAppRailButton?: boolean | null;
-    confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
@@ -619,13 +618,6 @@ export function UserProfilePanel({
   );
   const [showPinAppRailButton, setShowPinAppRailButton] = useState(() =>
     readRailPreference("showPinAppRailButton"),
-  );
-  // Read value is unused; the setter still backs the cloud-sync/reset/
-  // snapshot machinery for this localStorage-backed pref below. The
-  // folder-collapse setting itself now lives in the snippets plugin's own
-  // user settings.
-  const [_confirmSnippetExecution, setConfirmSnippetExecution] = useState(
-    () => localStorage.getItem("confirmSnippetExecution") === "true",
   );
   const [disableUpdateCheck, setDisableUpdateCheck] = useState(
     () => localStorage.getItem("disableUpdateCheck") === "true",
@@ -763,8 +755,6 @@ export function UserProfilePanel({
         "pinAppRail",
         "expandAppRailOnHover",
         "showPinAppRailButton",
-        "snippetShowCommands",
-        "confirmSnippetExecution",
         "disableUpdateCheck",
         "confirmTabClose",
         "hiddenRailTabs",
@@ -829,13 +819,6 @@ export function UserProfilePanel({
             String(prefs.showPinAppRailButton),
           );
           window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
-        }
-        if (prefs.confirmSnippetExecution != null) {
-          setConfirmSnippetExecution(prefs.confirmSnippetExecution);
-          localStorage.setItem(
-            "confirmSnippetExecution",
-            String(prefs.confirmSnippetExecution),
-          );
         }
         if (prefs.disableUpdateCheck != null) {
           setDisableUpdateCheck(prefs.disableUpdateCheck);
@@ -902,8 +885,6 @@ export function UserProfilePanel({
     setShowPinAppRailButton(false);
     localStorage.setItem("showPinAppRailButton", "false");
     window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
-    setConfirmSnippetExecution(false);
-    localStorage.setItem("confirmSnippetExecution", "false");
     setDisableUpdateCheck(false);
     localStorage.setItem("disableUpdateCheck", "false");
     setConfirmTabClose(false);
@@ -924,7 +905,6 @@ export function UserProfilePanel({
         pinAppRail: false,
         expandAppRailOnHover: true,
         showPinAppRailButton: false,
-        confirmSnippetExecution: false,
         disableUpdateCheck: false,
         confirmTabClose: false,
         hiddenRailTabs: "[]",
@@ -1006,14 +986,6 @@ export function UserProfilePanel({
     setShowPinAppRailButton(restoredShowPinButton);
     localStorage.setItem("showPinAppRailButton", String(restoredShowPinButton));
     window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
-
-    const restoredConfirmSnippet =
-      restore("confirmSnippetExecution", "false") === "true";
-    setConfirmSnippetExecution(restoredConfirmSnippet);
-    localStorage.setItem(
-      "confirmSnippetExecution",
-      String(restoredConfirmSnippet),
-    );
 
     const restoredUpdateCheck =
       restore("disableUpdateCheck", "false") === "true";

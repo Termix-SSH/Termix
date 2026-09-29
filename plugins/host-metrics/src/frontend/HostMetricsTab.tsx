@@ -1,7 +1,6 @@
 import {
-  Separator,
   Button,
-  useConfirmation,
+  ComponentSlot,
   TOTPDialog,
   useTabsSafe,
   ConnectionLogProvider,
@@ -11,7 +10,6 @@ import {
   CardGridCanvas,
   ColumnCountStepper,
   type GridCardCatalogEntry,
-  SnippetVariablesDialog,
 } from "@termix/plugin-sdk/ui";
 import { readHostMetricsSettings } from "../shared/stats-widgets.js";
 import {
@@ -23,33 +21,12 @@ import type { ServerMetrics } from "../shared/metrics.js";
 import React from "react";
 import { useHostMetricsApi } from "./host-metrics-api";
 
-interface Snippet {
-  id: number;
-  name: string;
-  content: string;
-}
-
-function errorText(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return typeof error === "string" ? error : "";
-}
-
-// Mirrors the snippets plugin's own hasSnippetInputs: a pure check for
-// whether a snippet still has $INPUT_n placeholders once host variables are
-// substituted, so the quick-action dialog knows to ask before running.
-const SNIPPET_INPUT_PATTERN =
-  /\$\{INPUT_(\d+)(?::([^}$]+))?\}|\$INPUT_(\d+)(?![a-zA-Z0-9_])/g;
-function hasSnippetInputs(content: string): boolean {
-  SNIPPET_INPUT_PATTERN.lastIndex = 0;
-  return SNIPPET_INPUT_PATTERN.test(content);
-}
 import {
   useTranslation,
   useSlotContributions,
   useConnectionRetry,
   useHost,
   useHostStatus,
-  invokeAction,
   logActivity,
   usePluginUiPreferences,
 } from "@termix/plugin-sdk/frontend";
@@ -70,11 +47,6 @@ import { metricsChangeKey } from "./metrics-change-key";
 
 const HISTORY_LEN = 30;
 
-interface QuickAction {
-  name: string;
-  snippetId: number;
-}
-
 type ConnectionLogPayload = Parameters<
   ReturnType<typeof useConnectionLog>["addLog"]
 >[0];
@@ -87,7 +59,6 @@ interface HostConfig {
   name: string;
   ip: string;
   username: string;
-  quickActions?: QuickAction[];
   statusCheckEnabled?: boolean;
   pluginSettings?: Record<string, Record<string, unknown>>;
   authType?: string;
@@ -127,9 +98,6 @@ function HostMetricsInner({
   });
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [executingActions, setExecutingActions] = React.useState<Set<number>>(
-    new Set(),
-  );
   const [totpRequired, setTotpRequired] = React.useState(false);
   const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = React.useState<string>("");
@@ -139,15 +107,9 @@ function HostMetricsInner({
     null,
   );
   const [editMode, setEditMode] = React.useState(false);
-  const [runningAction, setRunningAction] = React.useState<{
-    action: QuickAction;
-    snippet: Snippet;
-  } | null>(null);
-  const { confirmWithToast } = useConfirmation();
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
-  const snippetsCacheRef = React.useRef(new Map<number, Snippet>());
 
   const statsConfig = React.useMemo(() => {
     const settings = readHostMetricsSettings(
@@ -532,102 +494,6 @@ function HostMetricsInner({
     }
   };
 
-  async function executeQuickAction(
-    action: QuickAction,
-    inputValues: Record<string, string>,
-  ) {
-    if (!currentHostConfig) return;
-    setExecutingActions((prev) => new Set(prev).add(action.snippetId));
-    toast.loading(
-      t("hostMetrics.executingQuickAction", { name: action.name }),
-      {
-        id: `quick-action-${action.snippetId}`,
-      },
-    );
-    try {
-      const result = (await invokeAction(
-        "snippets.execute",
-        action.snippetId,
-        currentHostConfig.id,
-        Object.keys(inputValues).length > 0 ? inputValues : undefined,
-      )) as { success: boolean; output?: string; error?: string } | undefined;
-      if (!result) {
-        toast.error(t("hostMetrics.quickActionError", { name: action.name }), {
-          id: `quick-action-${action.snippetId}`,
-          description: t("hostMetrics.snippetsUnavailable"),
-          duration: 5000,
-        });
-      } else if (result.success) {
-        toast.success(
-          t("hostMetrics.quickActionSuccess", { name: action.name }),
-          {
-            id: `quick-action-${action.snippetId}`,
-            description: result.output?.substring(0, 200),
-            duration: 5000,
-          },
-        );
-      } else {
-        toast.error(t("hostMetrics.quickActionFailed", { name: action.name }), {
-          id: `quick-action-${action.snippetId}`,
-          description: result.error || result.output,
-          duration: 5000,
-        });
-      }
-    } catch (error) {
-      toast.error(t("hostMetrics.quickActionError", { name: action.name }), {
-        id: `quick-action-${action.snippetId}`,
-        description: errorText(error),
-        duration: 5000,
-      });
-    } finally {
-      setExecutingActions((prev) => {
-        const next = new Set(prev);
-        next.delete(action.snippetId);
-        return next;
-      });
-    }
-  }
-
-  function runQuickActionWithConfirm(
-    action: QuickAction,
-    inputValues: Record<string, string>,
-  ) {
-    const shouldConfirm =
-      localStorage.getItem("confirmSnippetExecution") === "true";
-    const run = () => void executeQuickAction(action, inputValues);
-    if (!shouldConfirm) {
-      run();
-      return;
-    }
-    confirmWithToast(
-      t("newUi.sidebar.snippets.confirmRunMessage", { name: action.name }),
-      run,
-      t("newUi.sidebar.snippets.confirmRunButton"),
-      t("newUi.sidebar.snippets.cancel"),
-      { confirmOnEnter: true, duration: 6000 },
-    );
-  }
-
-  async function runQuickAction(action: QuickAction) {
-    if (!currentHostConfig) return;
-    try {
-      let snippet = snippetsCacheRef.current.get(action.snippetId);
-      if (!snippet) {
-        snippet =
-          ((await invokeAction("snippets.get", action.snippetId)) as
-            Snippet | null | undefined) ?? undefined;
-        if (snippet) snippetsCacheRef.current.set(snippet.id, snippet);
-      }
-      if (snippet && hasSnippetInputs(snippet.content)) {
-        setRunningAction({ action, snippet });
-        return;
-      }
-    } catch {
-      // fall through and run with no inputs if the snippet lookup fails
-    }
-    runQuickActionWithConfirm(action, {});
-  }
-
   const showCards =
     metricsEnabled && metricsRetry.status === "connected" && metrics;
   const showOffline =
@@ -653,43 +519,13 @@ function HostMetricsInner({
                   <h1 className="text-lg font-bold md:text-2xl">{title}</h1>
                 </div>
                 <div className="flex items-center gap-0">
-                  {currentHostConfig?.quickActions &&
-                    currentHostConfig.quickActions.length > 0 && (
-                      <>
-                        <div className="mr-3 flex flex-wrap gap-2">
-                          {currentHostConfig.quickActions.map(
-                            (action, index) => {
-                              const isExecuting = executingActions.has(
-                                action.snippetId,
-                              );
-                              return (
-                                <Button
-                                  key={index}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 text-xs font-semibold"
-                                  disabled={isExecuting}
-                                  onClick={() => void runQuickAction(action)}
-                                >
-                                  {isExecuting ? (
-                                    <>
-                                      <RefreshCw className="mr-1 size-3 animate-spin" />
-                                      {action.name}
-                                    </>
-                                  ) : (
-                                    action.name
-                                  )}
-                                </Button>
-                              );
-                            },
-                          )}
-                        </div>
-                        <Separator
-                          orientation="vertical"
-                          className="mx-3 h-8"
-                        />
-                      </>
-                    )}
+                  <ComponentSlot
+                    slotId="host-metrics.toolbar"
+                    props={{
+                      hostId: currentHostConfig?.id,
+                      host: currentHostConfig,
+                    }}
+                  />
                   {editMode && (
                     <>
                       <ColumnCountStepper
@@ -806,32 +642,6 @@ function HostMetricsInner({
         onCancel={handleTOTPCancel}
         backgroundColor="var(--bg-canvas)"
       />
-
-      {runningAction && (
-        <SnippetVariablesDialog
-          snippet={
-            runningAction.snippet as Parameters<
-              typeof SnippetVariablesDialog
-            >[0]["snippet"]
-          }
-          host={
-            currentHostConfig
-              ? {
-                  ip: currentHostConfig.ip,
-                  username: currentHostConfig.username,
-                  port: currentHostConfig.port,
-                  name: currentHostConfig.name,
-                }
-              : null
-          }
-          onCancel={() => setRunningAction(null)}
-          onConfirm={(_resolvedContent, inputValues) => {
-            const action = runningAction.action;
-            setRunningAction(null);
-            runQuickActionWithConfirm(action, inputValues);
-          }}
-        />
-      )}
     </div>
   );
 }

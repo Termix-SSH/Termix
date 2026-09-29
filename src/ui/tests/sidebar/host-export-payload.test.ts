@@ -14,7 +14,6 @@ const ALL_GROUPS = new Set<FieldGroup>([
   "tags",
   "proxy",
   "jumpHosts",
-  "quickActions",
   "featureFlags",
   "advanced",
 ]);

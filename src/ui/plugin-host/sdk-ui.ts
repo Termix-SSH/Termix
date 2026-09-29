@@ -46,7 +46,6 @@ export {
 export type * from "@/components/card-grid/types";
 export { ConnectionScreen } from "@/components/connection/ConnectionScreen";
 export * from "@/components/connection/connection-status";
-export { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
 export {
   FullScreenAppWrapper,
   type FullScreenAppPhase,
@@ -101,6 +100,7 @@ export { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 export { WidgetTitle } from "@/lib/widget-title";
 export { runVisibleInterval } from "@/lib/visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
+export { EmptyState } from "@/components/empty-state";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
 

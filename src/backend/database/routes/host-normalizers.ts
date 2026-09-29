@@ -179,7 +179,6 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   pin?: unknown;
   sudoPassword?: unknown;
   jumpHosts?: unknown;
-  quickActions?: unknown;
   statusCheckEnabled?: unknown;
   statusCheckInterval?: unknown;
   terminalConfig?: unknown;
@@ -418,11 +417,11 @@ function parseJsonObject(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * sshOptions, and terminalConfig in the shape 2.8 clients and exports read: core's own
- * keys only (the SSH options and the startup snippet). The terminal's look
- * and behavior are the ssh-terminal plugin's host settings, which it puts
- * back through its hostPayloadLegacy. A sudo password 2.8 kept in
- * terminal_config comes out as sudoPassword, for the sanitizers to handle.
+ * sshOptions, and terminalConfig in the shape 2.8 clients and exports read:
+ * core's own keys only, the SSH options. Everything else 2.8 kept there now
+ * belongs to plugins' host settings, which they put back through their
+ * hostPayloadLegacy. A sudo password 2.8 kept in terminal_config comes out as
+ * sudoPassword, for the sanitizers to handle.
  */
 export function hostTerminalExport(host: Record<string, unknown>): {
   sshOptions: HostSshOptions;
@@ -434,9 +433,6 @@ export function hostTerminalExport(host: Record<string, unknown>): {
     host.sshOptions != null ? host.sshOptions : raw,
   );
   const terminalConfig: Record<string, unknown> = { ...sshOptions };
-  if (raw && raw.startupSnippetId !== undefined) {
-    terminalConfig.startupSnippetId = raw.startupSnippetId;
-  }
   const legacySudo = !host.sudoPassword ? raw?.sudoPassword : undefined;
   return {
     sshOptions,
@@ -477,9 +473,9 @@ export function transformHostResponse(
     vncUser: host.vncUser || undefined,
     telnetUser: host.telnetUser || undefined,
     jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
-    quickActions: host.quickActions
-      ? JSON.parse(host.quickActions as string)
-      : [],
+    // Moved into a plugin's host settings; its hostPayloadLegacy puts it
+    // back for 2.8 clients.
+    quickActions: undefined,
     statusCheckEnabled:
       host.statusCheckEnabled !== false && host.statusCheckEnabled !== 0,
     statusCheckInterval:

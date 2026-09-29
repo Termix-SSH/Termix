@@ -45,6 +45,11 @@ import {
   listSettingsComponents,
 } from "@/settings/settings-components";
 import { getSlotContributions, listActions } from "@/shell/action-registry";
+import { listPaletteGroups, loadPaletteGroup } from "@/shell/palette-registry";
+import {
+  listKeybindingActions,
+  listKeybindingDefaults,
+} from "@/shell/keybinding-registry";
 import {
   getLoginMethodUI,
   getSecondFactorUI,
@@ -240,6 +245,18 @@ export async function renderPlugin(
       loginMethods: () => mine(listLoginMethodUIs()).map((method) => method.id),
       secondFactors: () =>
         mine(listSecondFactorUIs()).map((factor) => factor.id),
+      paletteGroups: () => mine(listPaletteGroups()).map((group) => group.id),
+      keybindingActions: () =>
+        mine(listKeybindingActions()).map((action) => action.id),
+      keybindingDefaults: () =>
+        mine(listKeybindingDefaults()).map((binding) => binding.id),
+    },
+
+    async loadPaletteGroup(id) {
+      const group =
+        listPaletteGroups().find((entry) => entry.id === id) ??
+        missing("a palette group", id);
+      return (await loadPaletteGroup(group)) as never;
     },
 
     renderTab(type, props = {}) {

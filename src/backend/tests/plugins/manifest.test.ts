@@ -686,3 +686,76 @@ describe("contributes.http.legacyRedirects", () => {
     expect(errors).toMatch(/extra/);
   });
 });
+
+describe("contributes.http.adminImpersonation", () => {
+  it("accepts a boolean and refuses anything else", () => {
+    expect(
+      validateManifest(
+        base({ contributes: { http: { adminImpersonation: true } } }),
+      ),
+    ).toEqual([]);
+    expect(
+      validateManifest(
+        base({ contributes: { http: { adminImpersonation: "yes" } } }),
+      ).join(),
+    ).toMatch(/adminImpersonation" must be a boolean/);
+  });
+});
+
+describe("contributes.keybindingActions", () => {
+  const withActions = (keybindingActions: unknown) =>
+    validateManifest(base({ contributes: { keybindingActions } }));
+
+  it("accepts actions with typed parameters", () => {
+    expect(
+      withActions([
+        { id: "sample.run" },
+        {
+          id: "sample.send",
+          params: {
+            itemId: {
+              type: "string",
+              required: true,
+              pattern: "^[0-9]+$",
+              maxLength: 20,
+              syncEntity: "items",
+            },
+            enter: { type: "boolean" },
+          },
+        },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("refuses the shell's own actions, duplicates and bad ids", () => {
+    const errors = withActions([
+      { id: "nextTab" },
+      { id: "sample.run" },
+      { id: "sample.run" },
+      { id: "bad id" },
+    ]).join();
+    expect(errors).toMatch(/one of the shell's own actions/);
+    expect(errors).toMatch(/duplicates "sample.run"/);
+    expect(errors).toMatch(/letters, digits, dots and dashes/);
+  });
+
+  it("refuses bad parameters", () => {
+    const errors = withActions([
+      {
+        id: "sample.run",
+        params: {
+          type: { type: "string" },
+          a: { type: "number" },
+          b: { type: "string", pattern: "(" },
+          c: { type: "boolean", syncEntity: "items" },
+          d: { type: "string", extra: 1 },
+        },
+      },
+    ]).join();
+    expect(errors).toMatch(/params.type is not a valid parameter name/);
+    expect(errors).toMatch(/a.type must be "string" or "boolean"/);
+    expect(errors).toMatch(/b.pattern must be a regular expression/);
+    expect(errors).toMatch(/c.syncEntity needs a string parameter/);
+    expect(errors).toMatch(/d/);
+  });
+});

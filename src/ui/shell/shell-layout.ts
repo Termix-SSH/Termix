@@ -18,16 +18,6 @@ import { listPanes, mapTabIds } from "./split/split-tree";
  * snapshots, through app.tabs.getLayout and applyLayout.
  */
 
-/**
- * Core tab types worth saving in a layout. "dashboard" is left out on
- * purpose: the shell always keeps one alive as the fallback tab, so it is
- * not a meaningful part of an arrangement.
- */
-const CORE_CAPTURABLE = new Set(["macros"]);
-
-/** Core types reopened as singletons, with an optional preselected host. */
-const CORE_SINGLETON = new Set(["macros"]);
-
 /** Core tab types that are never part of a saved arrangement. */
 const CORE_UNSAVED = new Set([
   "dashboard",
@@ -43,20 +33,16 @@ const CORE_UNSAVED = new Set([
  * it, and a layout keeps it so nothing is lost when the plugin comes back.
  */
 function isUnregisteredPluginTabType(type: string): boolean {
-  return (
-    !CORE_UNSAVED.has(type) && !CORE_CAPTURABLE.has(type) && !getTabType(type)
-  );
+  return !CORE_UNSAVED.has(type) && !getTabType(type);
 }
 
 export function isCapturableTabType(type: string): boolean {
-  if (CORE_CAPTURABLE.has(type)) return true;
   if (isUnregisteredPluginTabType(type)) return true;
   const def = getTabType(type);
   return !!def && def.inLayouts !== false;
 }
 
 function opensAsSingleton(type: string): boolean {
-  if (CORE_SINGLETON.has(type)) return true;
   const def = getTabType(type);
   return !!def && (!!def.singleton || !!def.hostless);
 }

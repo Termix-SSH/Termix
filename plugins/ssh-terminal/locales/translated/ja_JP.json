@@ -307,7 +307,6 @@
     "savedThemesLabel": "保存済みテーマ",
     "scrollbackBufferLabel": "スクロールバッファ",
     "scrollbackMaxLines": "履歴に保持する最大行数",
-    "startupSnippetLabel": "起動時スニペット",
     "sudoPasswordAutoFill": "Sudo パスワードの自動入力",
     "sudoPasswordAutoFillDesc": "sudo パスワードを保存して、ホストメトリクス、ターミナルプロンプトなどが自動的に特権コマンドを実行できるようにします",
     "sudoPasswordAutoFillLabel": "sudo パスワードの自動入力",
@@ -335,7 +334,8 @@
     "history": "履歴",
     "localTerminal": "ローカル端末",
     "sshTools": "SSHツール",
-    "terminal": "ターミナル"
+    "terminal": "ターミナル",
+    "macros": "マクロ"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "ここに入力してキーをブロードキャスト...",
@@ -363,5 +363,112 @@
     "off": "オフ",
     "on": "の上",
     "title": "接続のデフォルト設定"
+  },
+  "keybindings": {
+    "copy": "選択範囲をコピー",
+    "paste": "ペースト",
+    "sendControlCode": "Ctrlキーと文字キーを同時に押して信号を送る",
+    "sendText": "テキストを送信",
+    "controlCodeLabel": "手紙",
+    "textLabel": "送信するテキスト",
+    "appendEnterLabel": "送信後にEnterキーを押してください。",
+    "clipboardPermissionNote": "一部のブラウザでは、初回使用時にクリップボードのアクセス許可を求められる場合があります。",
+    "textRequired": "送信するテキストを入力してください",
+    "controlCodeRequired": "制御コードとして1文字を入力してください"
+  },
+  "macros": {
+    "title": "マクロ",
+    "description": "ターミナルで保存済みのコマンド系列を実行し、サーバーからの応答に応じて処理を行います。",
+    "target": "ターゲット",
+    "noTerminal": "端末が開いていません",
+    "empty": "マクロはまだありません",
+    "emptyHint": "ログイン、サービスの再起動、プロンプトへの応答など、ターミナル操作の流れを自動化するマクロを作成します。",
+    "create": "新しいマクロ",
+    "back": "マクロに戻る",
+    "name": "名前",
+    "namePlaceholder": "ウェブサーバーを再起動します",
+    "nameRequired": "保存する前にマクロに名前を付けてください。",
+    "descriptionLabel": "説明",
+    "descriptionPlaceholder": "このマクロの機能（オプション）",
+    "unsaved": "保存されていない変更",
+    "save": "保存",
+    "saved": "マクロが保存されました",
+    "saveFailed": "マクロを保存できませんでした",
+    "delete": "消去",
+    "deleteTitle": "このマクロを削除しますか？",
+    "deleteBody": "\"{{name}}\" は完全に削除されます。元に戻すことはできません。",
+    "deleted": "マクロが削除されました",
+    "cancel": "キャンセル",
+    "run": "走る",
+    "stop": "停止",
+    "running": "実行中...",
+    "completed": "マクロ撮影終了",
+    "failed": "マクロが失敗しました",
+    "loadFailed": "マクロを読み込めませんでした",
+    "needTerminal": "まずターミナルを開いて接続します。",
+    "noSteps": "このマクロにはまだ手順がありません。以下に手順を追加してください。",
+    "addStep": "ステップを追加する",
+    "stepNumber": "ステップ {{number}}",
+    "removeStep": "削除手順",
+    "confirmRunTitle": "このマクロを実行しますか？",
+    "confirmRunBody": "\"{{name}}\" は {{host}} にコマンドを送信します。",
+    "confirmRunAction": "マクロを実行する",
+    "stepTypes": {
+      "send": {
+        "label": "コマンドを送信",
+        "help": "端末にテキストを入力します。まるで手入力したかのように表示されます。"
+      },
+      "wait": {
+        "label": "出力を待つ",
+        "help": "サーバーが指定したテキスト（パスワード入力画面など）を表示するまで一時停止します。"
+      },
+      "delay": {
+        "label": "一時停止",
+        "help": "次のステップに進む前に、一定時間待機します。"
+      },
+      "if": {
+        "label": "出力に以下が含まれる場合",
+        "help": "サーバーがこれまでに出力したすべての内容を確認し、その後、2つの分岐のうちいずれか1つを実行します。"
+      },
+      "repeat": {
+        "label": "繰り返す",
+        "help": "指定された回数だけ、その中の手順を実行します。"
+      }
+    },
+    "send": {
+      "text": "コマンドまたはテキスト",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "送信後にEnterキーを押してください。",
+      "pressEnterHelp": "テキストを送信せずに入力する場合は、これをオフにしてください。"
+    },
+    "wait": {
+      "pattern": "出力に以下の内容が含まれるまで待機してください",
+      "patternPlaceholder": "パスワード：",
+      "timeout": "諦めた後",
+      "onTimeout": "それが決して現れない場合",
+      "stop": "マクロを停止する",
+      "continue": "とにかく続けて"
+    },
+    "delay": {
+      "duration": "待って"
+    },
+    "ifStep": {
+      "pattern": "出力に以下が含まれる場合",
+      "patternPlaceholder": "アクティブ：アクティブ（実行中）",
+      "then": "次にこれを実行してください",
+      "else": "そうでなければ、これを実行してください。",
+      "emptyBranch": "階段なし"
+    },
+    "repeat": {
+      "count": "回数",
+      "times": "タイムズ"
+    },
+    "match": {
+      "useRegex": "正規表現で一致させる",
+      "useRegexHelp": "原文と完全に一致させるには、この部分を削除してください。",
+      "invalidRegex": "有効な正規表現ではないため、プレーンテキストとしてマッチします。"
+    },
+    "seconds": "秒",
+    "secondsShort": "{{count}}s"
   }
 }

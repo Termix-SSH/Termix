@@ -51,10 +51,6 @@
     "processesRunning": "hardloop",
     "loginStats": "SSH-aanmeldingstatistieke",
     "noRecentLoginData": "Geen onlangse aanmelddata nie",
-    "executingQuickAction": "Voer tans {{name}} uit ...",
-    "quickActionSuccess": "{{name}} suksesvol voltooi",
-    "quickActionFailed": "{{name}} het misluk",
-    "quickActionError": "Kon nie {{name}} uitvoer nie",
     "ports": {
       "title": "Luisterpoorte",
       "protocol": "Protokol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Voeg by",
     "visibleWidgets": "Sigbare Widgets",
     "widgetsMovedToHostMetrics": "Kaarte word nou direk in die Gasheermetrieke-oortjie bygevoeg, gerangskik en herskaal. Maak Gasheermetrieke vir hierdie gasheer oop en gebruik Pasmaak om te kies watter kaarte gewys word.",
-    "quickActionsLabel": "Vinnige Aksies",
-    "quickActionsToolbar": "Vinnige aksies verskyn as knoppies in die Host Metrics-nutsbalk vir die uitvoering van opdragte met een klik.",
-    "noQuickActions": "Geen vinnige aksies nog nie.",
-    "buttonLabel": "Knoppie-etiket",
-    "selectSnippetPlaceholder": "Kies uittreksel...",
-    "addActionBtn": "Voeg Aksie by",
     "hostNotFound": "Gasheer nie gevind nie",
     "loadingHost": "Laai gasheer..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Skyf"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Kanselleer",
-        "confirmRunButton": "Hardloop",
-        "confirmRunMessage": "Begin \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Verbonde"

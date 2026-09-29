@@ -194,7 +194,6 @@ router.post(
       sudoPassword,
       pin,
       jumpHosts,
-      quickActions,
       statusCheckEnabled,
       statusCheckInterval,
       terminalConfig,
@@ -296,9 +295,6 @@ router.post(
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
-      quickActions: Array.isArray(quickActions)
-        ? JSON.stringify(quickActions)
-        : null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       terminalConfig: terminalConfig
@@ -682,7 +678,6 @@ router.post(
         keyPassword: resolvedKeyPassword,
         keyType: resolvedKeyType,
         jumpHosts: [],
-        quickActions: [],
         statusCheckEnabled: true,
         statusCheckInterval: null,
         notes: "",
@@ -794,7 +789,6 @@ router.put(
       sudoPassword,
       pin,
       jumpHosts,
-      quickActions,
       statusCheckEnabled,
       statusCheckInterval,
       terminalConfig,
@@ -897,9 +891,6 @@ router.put(
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
-      quickActions: Array.isArray(quickActions)
-        ? JSON.stringify(quickActions)
-        : null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       terminalConfig: terminalConfig
@@ -1768,9 +1759,6 @@ router.get(
             jumpHosts: resolvedHost.jumpHosts
               ? JSON.parse(resolvedHost.jumpHosts as string)
               : null,
-            quickActions: resolvedHost.quickActions
-              ? JSON.parse(resolvedHost.quickActions as string)
-              : null,
             terminalConfig:
               hostTerminalExport(resolvedHost).terminalConfig ?? null,
             sshOptions: hostTerminalExport(resolvedHost).sshOptions,
@@ -1902,9 +1890,6 @@ router.get(
                   null,
               jumpHosts: resolvedHost.jumpHosts
                 ? JSON.parse(resolvedHost.jumpHosts as string)
-                : null,
-              quickActions: resolvedHost.quickActions
-                ? JSON.parse(resolvedHost.quickActions as string)
                 : null,
               terminalConfig:
                 hostTerminalExport(resolvedHost).terminalConfig ?? null,

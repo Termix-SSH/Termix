@@ -1,5 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  useSettings,
+  useTranslation,
+  type PanelProps,
+} from "@termix/plugin-sdk/frontend";
 import {
   ArrowLeft,
   Braces,
@@ -16,12 +27,12 @@ import {
   Play,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Textarea } from "@/components/textarea";
-import { Checkbox } from "@/components/checkbox";
-import { EmptyState } from "@/components/empty-state";
 import {
+  Button,
+  Input,
+  Textarea,
+  Checkbox,
+  EmptyState,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,22 +41,27 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/alert-dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
-import { getUserPreferences, saveUserPreferences } from "@/api/open-tabs-api";
-import { getErrorMessage } from "../lib/error-message.js";
+} from "@termix/plugin-sdk/ui";
 import {
-  parseTerminalMacros,
+  mergeLocalMacros,
+  sanitizeTerminalMacros,
   runTerminalMacro,
   type MacroStep,
   type TerminalMacro,
-} from "@/lib/terminal-macros";
-import type { Tab } from "@/types/ui-types";
+} from "./terminal-macros";
+import {
+  getSessionHandle,
+  sessionsSnapshot,
+  subscribeSessions,
+} from "../session-registry";
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "";
+}
 
 const STEP_TYPES = ["send", "wait", "delay", "if", "repeat"] as const;
 
@@ -429,17 +445,14 @@ function StepList({
   );
 }
 
-export function MacrosPanel({
-  terminalTabs,
-  activeTabId,
-  storageMode,
-}: {
-  terminalTabs: Tab[];
-  activeTabId: string;
-  storageMode: "local" | "cloud";
-}) {
+/**
+ * Macros: a saved series of steps typed into the terminal the user is
+ * working in, waiting for and branching on what the server sends back.
+ * They are the user's own setting, so they follow them to every browser.
+ */
+export function MacrosPanel({ targetTab }: PanelProps) {
   const { t } = useTranslation();
-  const [macros, setMacros] = useState<TerminalMacro[]>([]);
+  const settings = useSettings("user");
   const [draft, setDraft] = useState<TerminalMacro | null>(null);
   const [dirty, setDirty] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
@@ -449,33 +462,32 @@ export function MacrosPanel({
   const [pendingRun, setPendingRun] = useState<TerminalMacro | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const confirmedRef = useRef<Set<string>>(new Set());
+  const movedLocalRef = useRef(false);
+  const sessions = useSyncExternalStore(subscribeSessions, sessionsSnapshot);
 
+  const macros = useMemo(
+    () => sanitizeTerminalMacros(settings.values.macros),
+    [settings.values.macros],
+  );
+  const { save: saveSettings } = settings;
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Macros a browser kept before 2.9.0 move into the setting once.
   useEffect(() => {
-    let cancelled = false;
-    const load =
-      storageMode === "local"
-        ? Promise.resolve(
-            parseTerminalMacros(localStorage.getItem("terminalMacros")),
-          )
-        : getUserPreferences().then((preferences) =>
-            parseTerminalMacros(preferences.terminalMacros),
-          );
-    load
-      .then((loaded) => {
-        if (!cancelled) setMacros(loaded);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error(t("macros.loadFailed"));
-      });
-    return () => {
-      cancelled = true;
-      abortRef.current?.abort();
-    };
-  }, [storageMode, t]);
+    if (!settings.loaded || movedLocalRef.current) return;
+    movedLocalRef.current = true;
+    const merged = mergeLocalMacros(macros);
+    if (!merged) return;
+    saveSettings({ macros: merged.macros })
+      .then(merged.clear)
+      .catch(() => toast.error(t("macros.saveFailed")));
+  }, [settings.loaded, macros, saveSettings, t]);
 
   const target = useMemo(
-    () => terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0],
-    [activeTabId, terminalTabs],
+    () =>
+      sessions.find((session) => session.id === targetTab?.id) ?? sessions[0],
+    [sessions, targetTab?.id],
   );
 
   const updateDraft = useCallback((next: TerminalMacro) => {
@@ -497,11 +509,7 @@ export function MacrosPanel({
   };
 
   const persist = async (next: TerminalMacro[]) => {
-    const serialized = JSON.stringify(next);
-    if (storageMode === "local")
-      localStorage.setItem("terminalMacros", serialized);
-    else await saveUserPreferences({ terminalMacros: serialized });
-    setMacros(next);
+    await saveSettings({ macros: next });
   };
 
   const save = async () => {
@@ -548,7 +556,7 @@ export function MacrosPanel({
 
   const execute = useCallback(
     async (macro: TerminalMacro) => {
-      const terminal = target?.terminalRef?.current;
+      const terminal = target ? getSessionHandle(target.id) : null;
       if (!terminal?.sendInput || !terminal.subscribeOutput) {
         toast.error(t("macros.needTerminal"));
         return;
@@ -576,7 +584,7 @@ export function MacrosPanel({
   );
 
   const requestRun = (macro: TerminalMacro) => {
-    if (!target?.terminalRef?.current?.sendInput) {
+    if (!target || !getSessionHandle(target.id)?.sendInput) {
       toast.error(t("macros.needTerminal"));
       return;
     }

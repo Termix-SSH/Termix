@@ -305,10 +305,17 @@ describe("transformHostResponse", () => {
   it("parses JSON array fields and defaults them to []", () => {
     const result = transformHostResponse({
       jumpHosts: '[{"hostId":8}]',
-      quickActions: null,
+      portKnockSequence: null,
     });
     expect(result.jumpHosts).toEqual([{ hostId: 8 }]);
-    expect(result.quickActions).toEqual([]);
+    expect(result.portKnockSequence).toEqual([]);
+  });
+
+  it("leaves the 2.8 quick_actions column out, for its plugin to put back", () => {
+    const result = transformHostResponse({
+      quickActions: '[{"name":"x","snippetId":1}]',
+    });
+    expect(result.quickActions).toBeUndefined();
   });
 
   it("passes the stored SSH switch through", () => {
@@ -440,10 +447,7 @@ describe("transformHostResponse terminal fields", () => {
       }),
     });
     expect(host.sshOptions).toEqual({ keepaliveInterval: 20 });
-    expect(host.terminalConfig).toEqual({
-      keepaliveInterval: 20,
-      startupSnippetId: 3,
-    });
+    expect(host.terminalConfig).toEqual({ keepaliveInterval: 20 });
   });
 
   it("reads the options out of terminal_config before the boot copy", () => {

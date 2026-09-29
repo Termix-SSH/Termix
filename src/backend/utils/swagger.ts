@@ -68,10 +68,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "Role-based access control for host sharing",
       },
       {
-        name: "Snippets",
-        description: "Command snippet management",
-      },
-      {
         name: "Terminal",
         description: "Terminal command history",
       },

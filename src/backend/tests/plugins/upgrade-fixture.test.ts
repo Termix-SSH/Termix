@@ -326,6 +326,10 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       containerRuntime: "podman",
     });
     expect(await host("ai")).toMatchObject({ enableAiAssistant: true });
+    expect(await host("snippets")).toMatchObject({
+      startupSnippetId: 1,
+      quickActions: [{ name: "d4-uptime", snippetId: 1 }],
+    });
     expect(await host("wake-on-lan")).toMatchObject({
       macAddress: "AA:BB:CC:DD:EE:04",
       broadcastAddress: "10.4.0.255",
@@ -473,6 +477,11 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       terminalDefaults: { fontSize: 18, cursorBlink: false },
       customThemes: [expect.objectContaining({ id: "d4-theme" })],
       commandAutocomplete: true,
+      macros: [expect.objectContaining({ id: "d4-macro", name: "d4 macro" })],
+    });
+    expect(await settings(booted, "snippets", "user")).toMatchObject({
+      confirmExecution: true,
+      foldersCollapsed: false,
     });
     expect(await settings(booted, "step-ca", "admin")).toMatchObject({
       caUrl: "https://ca.d4.example",

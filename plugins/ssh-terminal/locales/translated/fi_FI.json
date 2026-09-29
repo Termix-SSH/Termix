@@ -307,7 +307,6 @@
     "savedThemesLabel": "Tallennetut teemat",
     "scrollbackBufferLabel": "Vieroituspuskuri",
     "scrollbackMaxLines": "Historiassa säilytettävien rivien enimmäismäärä",
-    "startupSnippetLabel": "Käynnistyskoodinpätkä",
     "sudoPasswordAutoFill": "Sudo-salasanan automaattinen täyttö",
     "sudoPasswordAutoFillDesc": "Tallenna sudo-salasana, jotta isäntämittarit, päätekehotteet ja muut voivat suorittaa etuoikeutettuja komentoja automaattisesti.",
     "sudoPasswordAutoFillLabel": "Sudo-salasanan automaattinen täyttö",
@@ -335,7 +334,8 @@
     "history": "Historia",
     "localTerminal": "Paikallinen terminaali",
     "sshTools": "SSH-työkalut",
-    "terminal": "Terminaali"
+    "terminal": "Terminaali",
+    "macros": "Makrot"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Kirjoita tähän lähettääksesi näppäinpainalluksia...",
@@ -363,5 +363,112 @@
     "off": "Pois",
     "on": "Päällä",
     "title": "Yhteysoletukset"
+  },
+  "keybindings": {
+    "copy": "Kopioi valinta",
+    "paste": "Liitä",
+    "sendControlCode": "Lähetä Ctrl+kirjain-signaali",
+    "sendText": "Lähetä tekstiviesti",
+    "controlCodeLabel": "Kirje",
+    "textLabel": "Lähetettävä tekstiviesti",
+    "appendEnterLabel": "Paina Enter lähetyksen jälkeen",
+    "clipboardPermissionNote": "Saattaa pyytää leikepöydän käyttöoikeutta ensimmäisellä käyttökerralla joissakin selaimissa.",
+    "textRequired": "Kirjoita lähetettävä teksti",
+    "controlCodeRequired": "Syötä yksi kirjain ohjauskoodille"
+  },
+  "macros": {
+    "title": "Makrot",
+    "description": "Suorita tallennettu komentosarja terminaalissa ja reagoi palvelimen lähettämiin komentoihin.",
+    "target": "Kohde",
+    "noTerminal": "Ei auki olevaa terminaalia",
+    "empty": "Ei vielä makroja",
+    "emptyHint": "Luo makro automatisoidaksesi päätetyönkulun, kuten sisäänkirjautumisen, palvelun uudelleenkäynnistyksen tai kehotteisiin vastaamisen.",
+    "create": "Uusi makro",
+    "back": "Takaisin makroihin",
+    "name": "Nimi",
+    "namePlaceholder": "Käynnistä web-palvelin uudelleen",
+    "nameRequired": "Anna makrolle nimi ennen tallentamista",
+    "descriptionLabel": "Kuvaus",
+    "descriptionPlaceholder": "Mitä tämä makro tekee (valinnainen)",
+    "unsaved": "Tallentamattomat muutokset",
+    "save": "Tallentaa",
+    "saved": "Makro tallennettu",
+    "saveFailed": "Makroa ei voitu tallentaa",
+    "delete": "Poistaa",
+    "deleteTitle": "Poistetaanko tämä makro?",
+    "deleteBody": "\"{{name}}\" poistetaan pysyvästi. Tätä ei voi perua.",
+    "deleted": "Makro poistettu",
+    "cancel": "Peruuttaa",
+    "run": "Juokse",
+    "stop": "Stop",
+    "running": "Juoksemassa...",
+    "completed": "Makro valmis",
+    "failed": "Makro epäonnistui",
+    "loadFailed": "Makrojen lataaminen epäonnistui",
+    "needTerminal": "Avaa ja kytke ensin päätelaite",
+    "noSteps": "Tällä makrolla ei ole vielä vaiheita. Lisää yksi alle.",
+    "addStep": "Lisää vaihe",
+    "stepNumber": "Vaihe {{number}}",
+    "removeStep": "Poista vaihe",
+    "confirmRunTitle": "Suoritetaanko tämä makro?",
+    "confirmRunBody": "\"{{name}}\" lähettää komentoja {{host}}:een.",
+    "confirmRunAction": "Suorita makro",
+    "stepTypes": {
+      "send": {
+        "label": "Lähetä komento",
+        "help": "Kirjoittaa tekstiä terminaaliin aivan kuin olisit kirjoittanut sen."
+      },
+      "wait": {
+        "label": "Odota tulostetta",
+        "help": "Pysähtyy, kunnes palvelin tulostaa nimeämäsi tekstin, kuten salasanakehotteen."
+      },
+      "delay": {
+        "label": "Tauko",
+        "help": "Odottaa tietyn ajan ennen seuraavaa vaihetta."
+      },
+      "if": {
+        "label": "Jos tuloste sisältää",
+        "help": "Tarkistaa kaiken, mitä palvelin on tähän mennessä tulostanut, ja suorittaa sitten toisen kahdesta haarasta."
+      },
+      "repeat": {
+        "label": "Toistaa",
+        "help": "Suorittaa sen sisällä olevat vaiheet tietyn määrän kertoja."
+      }
+    },
+    "send": {
+      "text": "Komento tai teksti",
+      "textPlaceholder": "systemctl käynnistä nginx uudelleen",
+      "pressEnter": "Paina Enter lähetyksen jälkeen",
+      "pressEnterHelp": "Poista tämä käytöstä kirjoittaaksesi tekstiä lähettämättä sitä."
+    },
+    "wait": {
+      "pattern": "Odota, kunnes tuloste sisältää",
+      "patternPlaceholder": "salasana:",
+      "timeout": "Luovuta jälkeenpäin",
+      "onTimeout": "Jos se ei koskaan ilmesty",
+      "stop": "Pysäytä makro",
+      "continue": "Jatka joka tapauksessa"
+    },
+    "delay": {
+      "duration": "Odota"
+    },
+    "ifStep": {
+      "pattern": "Jos tuloste sisältää",
+      "patternPlaceholder": "Aktiivinen: aktiivinen (käynnissä)",
+      "then": "Tee sitten tämä",
+      "else": "Muuten tee näin",
+      "emptyBranch": "Ei portaita"
+    },
+    "repeat": {
+      "count": "Kuinka monta kertaa",
+      "times": "kertaa"
+    },
+    "match": {
+      "useRegex": "Säännöllisen lausekkeen mukainen osuma",
+      "useRegexHelp": "Jätä tämä pois, jotta teksti vastaa täysin kirjoitettua tekstiä.",
+      "invalidRegex": "Ei kelvollinen säännöllinen lauseke, se tulkitaan pelkkänä tekstinä"
+    },
+    "seconds": "sekuntia",
+    "secondsShort": "{{count}}s"
   }
 }

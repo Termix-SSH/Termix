@@ -74,7 +74,7 @@ import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { TerminalToolbar } from "./TerminalToolbar.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
-import type { Host, Snippet, TabType } from "../types";
+import type { Host, TabType } from "../types";
 import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
@@ -85,6 +85,7 @@ import {
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
 import {
   dispatchKeybindingAction,
+  isTerminalKeybindingAction,
   sendRawToSocket,
 } from "../lib/keybinding-dispatch";
 import {
@@ -114,7 +115,6 @@ import {
   Button,
   hydrateLocalSharedHostAuth,
   findMatchingKeybinding,
-  SnippetVariablesDialog,
   type CustomKeybinding,
   isElectron,
 } from "@termix/plugin-sdk/ui";
@@ -124,6 +124,7 @@ import {
   usePluginApi,
   useSlotContributions,
   getCustomKeybindings,
+  runKeybindingAction,
   getClientPreference,
   logActivity,
   getHostPassword,
@@ -162,17 +163,6 @@ interface SSHTerminalProps {
   isFocusedPane?: boolean;
   /** Fires when the backend reports the created session id (collab presenting). */
   onSessionReady?: (sessionId: string) => void;
-}
-
-/**
- * The host's startup snippet. Core still keeps it in the host's terminal
- * config until snippets owns it.
- */
-function startupSnippetOf(host: object): number | null {
-  const config = (host as { terminalConfig?: { startupSnippetId?: unknown } })
-    .terminalConfig;
-  const id = Number(config?.startupSnippetId);
-  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -291,11 +281,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
     const localEchoRef = useRef<TerminalLocalEcho | null>(null);
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
-    const [pendingKeybindingSnippet, setPendingKeybindingSnippet] = useState<{
-      id: string;
-      content: string;
-      appendEnter: boolean;
-    } | null>(null);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1966,7 +1951,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                     | null
                     | undefined
                 )?.environmentVariables ?? [];
-              const startupSnippetId = startupSnippetOf(settingsHost);
 
               if (environmentVariables.length > 0) {
                 for (const envVar of environmentVariables) {
@@ -1981,36 +1965,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              if (startupSnippetId) {
-                try {
-                  const resolved = (await invokeAction(
-                    "snippets.resolveForTerminal",
-                    startupSnippetId,
-                    {
-                      ip: hostConfig.ip,
-                      username: hostConfig.username,
-                      port: hostConfig.port,
-                      name: hostConfig.name,
-                    },
-                  )) as
-                    | { needsInputs: boolean; content: string }
-                    | null
-                    | undefined;
-                  if (
-                    resolved &&
-                    !resolved.needsInputs &&
-                    ws.readyState === 1
-                  ) {
-                    ws.send(
-                      JSON.stringify({
-                        type: "input",
-                        data: resolved.content + "\n",
-                      }),
-                    );
-                  }
-                } catch (err) {
-                  console.warn("Failed to execute startup snippet:", err);
+              // The snippets plugin owns a host's startup command; while it
+              // is off nothing runs.
+              try {
+                const startup = await invokeAction(
+                  "snippets.startupCommand",
+                  settingsHost,
+                  {
+                    ip: hostConfig.ip,
+                    username: hostConfig.username,
+                    port: hostConfig.port,
+                    name: hostConfig.name,
+                  },
+                );
+                if (typeof startup === "string" && ws.readyState === 1) {
+                  ws.send(
+                    JSON.stringify({ type: "input", data: startup + "\n" }),
+                  );
                 }
+              } catch (err) {
+                console.warn("Failed to run the startup command:", err);
               }
 
               if (settings.autoMosh && ws.readyState === 1) {
@@ -2988,26 +2962,30 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             e,
             customKeybindingsRef.current,
           );
-          if (matched) {
+          // The terminal's own actions run here; anything else goes to
+          // whoever registered it (the shell, or another plugin), and the key
+          // passes through while nothing does.
+          const handled =
+            !!matched &&
+            (isTerminalKeybindingAction(matched.action.type)
+              ? dispatchKeybindingAction(matched.action, {
+                  terminal,
+                  webSocketRef,
+                  writeTextToClipboard,
+                  readTextFromClipboard,
+                })
+              : runKeybindingAction(matched.action, {
+                  host: {
+                    ip: hostConfig.ip,
+                    username: hostConfig.username,
+                    port: hostConfig.port,
+                    name: hostConfig.name,
+                  },
+                  send: (data) => sendRawToSocket(webSocketRef, data),
+                }));
+          if (handled) {
             e.preventDefault();
             e.stopPropagation();
-            dispatchKeybindingAction(matched.action, {
-              terminal,
-              webSocketRef,
-              writeTextToClipboard,
-              readTextFromClipboard,
-              hostContext: {
-                ip: hostConfig.ip,
-                username: hostConfig.username,
-                port: hostConfig.port,
-                name: hostConfig.name,
-              },
-              onSnippetNeedsInputs: (snippet) =>
-                setPendingKeybindingSnippet({
-                  ...snippet,
-                  appendEnter: matched.action.appendEnter !== false,
-                }),
-            });
             return false;
           }
         }
@@ -3831,51 +3809,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               updateConnectionError(t("terminal.hostKeyRejected"));
             }}
             backgroundColor={backgroundColor}
-          />
-        )}
-
-        {pendingKeybindingSnippet && (
-          <SnippetVariablesDialog
-            snippet={
-              {
-                id: 0,
-                name: t("newUi.sidebar.keybindings.actionRunSnippet"),
-                content: pendingKeybindingSnippet.content,
-                folder: null,
-                order: 0,
-              } as Snippet as never
-            }
-            host={{
-              ip: hostConfig.ip,
-              username: hostConfig.username,
-              port: hostConfig.port,
-              name: hostConfig.name,
-            }}
-            onCancel={() => setPendingKeybindingSnippet(null)}
-            onConfirm={(resolvedContent) => {
-              const appendEnter = pendingKeybindingSnippet.appendEnter;
-              setPendingKeybindingSnippet(null);
-              const send = () =>
-                sendRawToSocket(
-                  webSocketRef,
-                  resolvedContent + (appendEnter ? "\r" : ""),
-                );
-              const shouldConfirm =
-                localStorage.getItem("confirmSnippetExecution") === "true";
-              if (shouldConfirm) {
-                confirmWithToast(
-                  t("newUi.sidebar.snippets.confirmRunMessage", {
-                    name: t("newUi.sidebar.keybindings.actionRunSnippet"),
-                  }),
-                  send,
-                  t("newUi.sidebar.snippets.confirmRunButton"),
-                  t("newUi.sidebar.snippets.cancel"),
-                  { confirmOnEnter: true, duration: 6000 },
-                );
-              } else {
-                send();
-              }
-            }}
           />
         )}
 

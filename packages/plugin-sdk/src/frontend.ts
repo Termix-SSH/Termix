@@ -301,7 +301,8 @@ export interface HostEditorSectionProps {
   ) => void;
   host?: PluginHostRecord;
   credentials?: unknown[];
-  snippets?: unknown[];
+  /** Set while an admin edits another user's host from the admin panel. */
+  adminTargetUserId?: string;
   /** Which connection protocols are switched on for this host. */
   protocols: Record<string, boolean>;
 }
@@ -406,6 +407,97 @@ export interface PaletteEntryContribution {
   scope: "global" | "host";
   when?: (host?: PluginHostRecord) => boolean;
   run: (shell: ShellApi, host?: PluginHostRecord) => void;
+}
+
+/** What a palette item's run gets. */
+export interface PaletteRunContext {
+  /** The command-target tab the user is working in, if any. */
+  targetTab?: PluginTabRecord;
+  shell: ShellApi;
+}
+
+/** One searchable row in a palette group. */
+export interface PaletteItem {
+  id: string;
+  /** Already translated; items are data, not keys. */
+  title: string;
+  description?: string;
+  icon?: IconComponent;
+  /** Extra words the search matches. */
+  keywords?: string[];
+  /** Acts on the command-target tab, so it is greyed out without one. */
+  needsTarget?: boolean;
+  /** Short text at the row's end, e.g. "Run in terminal". */
+  hint?: string;
+  run: (context: PaletteRunContext) => void;
+}
+
+/**
+ * A group of items in the command palette, e.g. the user's snippets. `load`
+ * runs each time the palette opens; the palette filters the items by what
+ * the user types.
+ */
+export interface PaletteGroupContribution {
+  id: string;
+  titleKey: string;
+  /** Lower sorts first. */
+  order?: number;
+  load: () => PaletteItem[] | Promise<PaletteItem[]>;
+  /** Show the items before anything is typed. Default false. */
+  showWhenEmpty?: boolean;
+}
+
+/** A keybinding action's parameter editor in Appearance > Keybindings. */
+export interface KeybindingActionEditorProps {
+  action: KeybindingAction;
+  onChange: (action: KeybindingAction) => void;
+}
+
+/** Where a keybinding action runs when the terminal hands it on. */
+export interface KeybindingRunContext {
+  /** The session the key was pressed in. */
+  sessionId?: string;
+  host?: {
+    ip?: string;
+    username?: string;
+    port?: number | string;
+    name?: string;
+  } | null;
+  /** Writes raw input to that session. */
+  send?: (data: string) => void;
+}
+
+/**
+ * A keybinding action. `id` is stored as the binding's action.type and must
+ * be declared in contributes.keybindingActions, which is what the server
+ * validates saved bindings against.
+ */
+export interface KeybindingActionContribution {
+  id: string;
+  titleKey: string;
+  /**
+   * "session" runs while a session tab such as a terminal has focus (the
+   * default). "global" runs anywhere in the app.
+   */
+  scope?: "session" | "global";
+  /** Draws the action's parameters in the binding form. */
+  editor?: ComponentType<KeybindingActionEditorProps>;
+  /** Drawn after the action's name in the binding list, e.g. a warning. */
+  summary?: ComponentType<KeybindingActionEditorProps>;
+  /** A plugin translation key when the action cannot be saved yet. */
+  validate?: (action: KeybindingAction) => string | null;
+  /**
+   * Runs it. A terminal hands on every bound action it does not handle
+   * itself; a global action runs from anywhere.
+   */
+  run?: (action: KeybindingAction, context: KeybindingRunContext) => void;
+}
+
+/** A built-in key the user can rebind in Appearance > Keybindings. */
+export interface KeybindingDefaultContribution {
+  id: string;
+  combo: KeyCombo;
+  descriptionKey: string;
 }
 
 export interface DashboardCardProps {
@@ -627,6 +719,11 @@ export interface TermixApp extends TermixAppInfo {
     item: HostContextMenuItemContribution,
   ) => Disposer;
   registerPaletteEntry: (entry: PaletteEntryContribution) => Disposer;
+  registerPaletteGroup: (group: PaletteGroupContribution) => Disposer;
+  registerKeybindingAction: (action: KeybindingActionContribution) => Disposer;
+  registerKeybindingDefault: (
+    binding: KeybindingDefaultContribution,
+  ) => Disposer;
   registerDashboardCard: (card: DashboardCardContribution) => Disposer;
   registerHomepageWidget: (widget: HomepageWidgetContribution) => Disposer;
   registerSettingsComponent: (
@@ -815,23 +912,16 @@ export interface KeyCombo {
   meta: boolean;
 }
 
-export type KeybindingActionType =
-  | "copy"
-  | "paste"
-  | "sendControlCode"
-  | "sendText"
-  | "runSnippet"
-  | "nextTab"
-  | "previousTab"
-  | "openCommandPalette"
-  | "reconnectSession";
+/**
+ * The shell's own actions (nextTab, previousTab, openCommandPalette,
+ * reconnectSession) or one a plugin declared in contributes.keybindingActions.
+ */
+export type KeybindingActionType = string;
 
+/** A bound action: its type plus the parameters its declaration lists. */
 export interface KeybindingAction {
   type: KeybindingActionType;
-  text?: string;
-  controlCode?: string;
-  snippetId?: string;
-  appendEnter?: boolean;
+  [param: string]: unknown;
 }
 
 export interface CustomKeybinding {
@@ -869,6 +959,15 @@ export interface PluginCoreApi {
   ) => Promise<void>;
   /** The user's custom keybindings, enabled or not. */
   getCustomKeybindings: () => Promise<CustomKeybinding[]>;
+  /**
+   * Runs a bound action through whoever registered it (a plugin's
+   * registerKeybindingAction, or the shell for its own). False when nothing
+   * running handles that type.
+   */
+  runKeybindingAction: (
+    action: KeybindingAction,
+    context?: KeybindingRunContext,
+  ) => boolean;
   /** A browser-side UI preference (a cookie, or the desktop app's store). */
   getClientPreference: (name: string) => string | undefined;
   /** Saves a browser-side UI preference where getClientPreference reads it. */
@@ -1019,6 +1118,13 @@ export function patchOpenTab(
 
 export function getCustomKeybindings(): Promise<CustomKeybinding[]> {
   return requireHost().core.getCustomKeybindings();
+}
+
+export function runKeybindingAction(
+  action: KeybindingAction,
+  context?: KeybindingRunContext,
+): boolean {
+  return requireHost().core.runKeybindingAction(action, context);
 }
 
 export function getClientPreference(name: string): string | undefined {

@@ -882,6 +882,27 @@ export function createSnippetRepository(
       return rows[0] ?? null;
     },
 
+    /** A snippet's sync id, for a host setting that names it over sync. */
+    async findSyncIdById(snippetId: number): Promise<string | null> {
+      const drizzle = await client();
+      const rows = await drizzle
+        .select({ syncId: snippets.syncId })
+        .from(snippets)
+        .where(eq(snippets.id, snippetId))
+        .limit(1);
+      return (rows[0]?.syncId as string | null | undefined) ?? null;
+    },
+
+    async findIdBySyncId(syncId: string): Promise<number | null> {
+      const drizzle = await client();
+      const rows = await drizzle
+        .select({ id: snippets.id })
+        .from(snippets)
+        .where(eq(snippets.syncId, syncId))
+        .limit(1);
+      return (rows[0]?.id as number | undefined) ?? null;
+    },
+
     /** A user's role ids, for the sharing filters above. */
     async listUserRoleIds(userId: string): Promise<number[]> {
       const drizzle = await client();

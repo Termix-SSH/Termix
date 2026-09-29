@@ -307,7 +307,6 @@
     "savedThemesLabel": "Temes desats",
     "scrollbackBufferLabel": "Buffer de desplaçament enrere",
     "scrollbackMaxLines": "Nombre màxim de línies que es conserven a l'historial",
-    "startupSnippetLabel": "Fragment d'inici",
     "sudoPasswordAutoFill": "Emplenament automàtic de contrasenya de Sudo",
     "sudoPasswordAutoFillDesc": "Emmagatzema una contrasenya sudo perquè les mètriques de l'amfitrió, les indicacions del terminal i altres puguin executar ordres privilegiades automàticament.",
     "sudoPasswordAutoFillLabel": "Autoemplenament de contrasenya de Sudo",
@@ -335,7 +334,8 @@
     "history": "Història",
     "localTerminal": "Terminal local",
     "sshTools": "Eines SSH",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Macros"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Escriu aquí per emetre les pulsacions de tecles...",
@@ -363,5 +363,112 @@
     "off": "Desactivat",
     "on": "Activat",
     "title": "Valors predeterminats de connexió"
+  },
+  "keybindings": {
+    "copy": "Copia la selecció",
+    "paste": "Enganxa",
+    "sendControlCode": "Envia el senyal Ctrl+lletra",
+    "sendText": "Enviar text",
+    "controlCodeLabel": "Carta",
+    "textLabel": "Text per enviar",
+    "appendEnterLabel": "Premeu Intro després d'enviar",
+    "clipboardPermissionNote": "Pot demanar permisos al porta-retalls en el primer ús en alguns navegadors.",
+    "textRequired": "Introduïu el text per enviar",
+    "controlCodeRequired": "Introduïu una sola lletra per al codi de control"
+  },
+  "macros": {
+    "title": "Macros",
+    "description": "Executa una sèrie d'ordres desades en un terminal i reacciona al que el servidor envia de tornada.",
+    "target": "Objectiu",
+    "noTerminal": "Cap terminal obert",
+    "empty": "Encara no hi ha macros",
+    "emptyHint": "Crea una macro per automatitzar un flux de terminal, com ara iniciar la sessió, reiniciar un servei o respondre a les indicacions.",
+    "create": "Nova macro",
+    "back": "Torna a les macros",
+    "name": "Nom",
+    "namePlaceholder": "Reinicia el servidor web",
+    "nameRequired": "Doneu un nom a la macro abans de desar-la",
+    "descriptionLabel": "Descripció",
+    "descriptionPlaceholder": "Què fa aquesta macro (opcional)",
+    "unsaved": "Canvis no desats",
+    "save": "Desa",
+    "saved": "Macro desada",
+    "saveFailed": "No s'ha pogut desar la macro",
+    "delete": "Suprimeix",
+    "deleteTitle": "Voleu suprimir aquesta macro?",
+    "deleteBody": "«{{name}}» s'eliminarà permanentment. Això no es pot desfer.",
+    "deleted": "Macro suprimida",
+    "cancel": "Cancel·la",
+    "run": "Corre",
+    "stop": "Atura",
+    "running": "Corrent...",
+    "completed": "Macro acabada",
+    "failed": "La macro ha fallat",
+    "loadFailed": "No s'han pogut carregar les macros",
+    "needTerminal": "Obriu i connecteu primer un terminal",
+    "noSteps": "Aquesta macro encara no té cap pas. Afegeix-ne un a continuació.",
+    "addStep": "Afegeix un pas",
+    "stepNumber": "Pas {{number}}",
+    "removeStep": "Elimina el pas",
+    "confirmRunTitle": "Voleu executar aquesta macro?",
+    "confirmRunBody": "\"{{name}}\" enviarà ordres a {{host}}.",
+    "confirmRunAction": "Executa macro",
+    "stepTypes": {
+      "send": {
+        "label": "Envia l'ordre",
+        "help": "Escriu text al terminal, igual que si l'haguessis escrit."
+      },
+      "wait": {
+        "label": "Espera la sortida",
+        "help": "Es posa en pausa fins que el servidor imprimeix el text que anomeneu, com si fos una sol·licitud de contrasenya."
+      },
+      "delay": {
+        "label": "Pausa",
+        "help": "Espera un temps fix abans del següent pas."
+      },
+      "if": {
+        "label": "Si la sortida conté",
+        "help": "Comprova tot el que el servidor ha imprès fins ara i després executa una de les dues branques."
+      },
+      "repeat": {
+        "label": "Repetir",
+        "help": "Executa els passos que hi ha dins un nombre determinat de vegades."
+      }
+    },
+    "send": {
+      "text": "Ordre o text",
+      "textPlaceholder": "reinici de systemctl a nginx",
+      "pressEnter": "Premeu Intro després d'enviar",
+      "pressEnterHelp": "Desactiva això per escriure text sense enviar-lo."
+    },
+    "wait": {
+      "pattern": "Espereu fins que la sortida contingui",
+      "patternPlaceholder": "contrasenya:",
+      "timeout": "Renunciar després",
+      "onTimeout": "Si mai apareix",
+      "stop": "Atura la macro",
+      "continue": "Continua igualment"
+    },
+    "delay": {
+      "duration": "Espera"
+    },
+    "ifStep": {
+      "pattern": "Si la sortida conté",
+      "patternPlaceholder": "Actiu: actiu (en funcionament)",
+      "then": "Aleshores fes això",
+      "else": "Si no, fes això",
+      "emptyBranch": "Sense esglaons"
+    },
+    "repeat": {
+      "count": "Nombre de vegades",
+      "times": "vegades"
+    },
+    "match": {
+      "useRegex": "Coincideix amb una expressió regular",
+      "useRegexHelp": "Deixa això desactivat perquè el text coincideixi exactament com està escrit.",
+      "invalidRegex": "No és una expressió regular vàlida, es trobarà com a text sense format."
+    },
+    "seconds": "segons",
+    "secondsShort": "{{count}}s"
   }
 }

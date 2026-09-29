@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Spustit „{{name}}“",
+  "variablesDialogDescription": "Před spuštěním úryvku kódu vyplňte jeho potřebné hodnoty.",
+  "variablesPreviewLabel": "Náhled",
+  "variablesConfirmButton": "Běh",
+  "keybindings": {
+    "runSnippet": "Spustit existující úryvek kódu",
+    "snippetLabel": "Úryvek",
+    "selectSnippet": "Vyberte úryvek",
+    "snippetMissing": "úryvek nenalezen",
+    "snippetRequired": "Vyberte úryvek"
+  },
+  "paletteHintRun": "Spustit v aktivní kartě terminálu",
+  "host": {
+    "startupTitle": "Úryvek pro spuštění",
+    "quickActionsTitle": "Rychlé akce",
+    "quickActionsDescription": "Rychlé akce se zobrazují jako tlačítka v panelu nástrojů Metriky hostitele pro spuštění příkazů jedním kliknutím.",
+    "noQuickActions": "Zatím žádné rychlé akce.",
+    "buttonLabel": "Štítek tlačítka",
+    "selectSnippet": "Vybrat úryvek...",
+    "addQuickAction": "Přidat akci"
+  },
+  "quickActions": {
+    "running": "Spouštění {{name}}...",
+    "succeeded": "{{name}} úspěšně dokončeno",
+    "failed": "{{name}} selhalo",
+    "error": "Nepodařilo se spustit {{name}}"
+  }
+}

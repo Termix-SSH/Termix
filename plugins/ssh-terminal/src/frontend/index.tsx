@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import {
+  Braces,
   Hammer,
   History,
   Laptop,
@@ -33,6 +34,17 @@ import { HostTerminalSection } from "./settings/HostTerminalSection";
 import { resetTouchInputSettingsCache } from "./terminal/touch-input-settings-store";
 import { hostSetting } from "./terminal-api";
 import { SshToolsPanel } from "./ssh-tools/SshToolsPanel";
+import { MacrosPanel } from "./macros/MacrosPanel";
+import {
+  TERMINAL_KEYBINDING_DEFAULTS,
+  validateSendControlCode,
+  validateSendText,
+} from "./lib/keybinding-dispatch";
+import {
+  PasteNote,
+  SendControlCodeEditor,
+  SendTextEditor,
+} from "./lib/keybinding-editors";
 import { TerminalDefaultsSettings } from "./settings/TerminalDefaultsSettings";
 import {
   NewHostFontSetting,
@@ -190,6 +202,45 @@ export function activate(app: TermixApp): void {
     rightDockable: true,
     separatorAfter: true,
   });
+
+  app.registerPanel(
+    "macros",
+    MacrosPanel as unknown as ComponentType<PanelProps>,
+  );
+  app.registerRailItem({
+    id: "macros",
+    icon: Braces,
+    titleKey: "nav.macros",
+    after: "ssh-tools",
+    hideable: true,
+    promotable: true,
+    rightDockable: true,
+    separatorAfter: true,
+  });
+
+  // The keys a user can bind to the terminal's own actions, and its
+  // built-in keys they can rebind. The terminal runs these itself.
+  app.registerKeybindingAction({ id: "copy", titleKey: "keybindings.copy" });
+  app.registerKeybindingAction({
+    id: "paste",
+    titleKey: "keybindings.paste",
+    editor: PasteNote,
+  });
+  app.registerKeybindingAction({
+    id: "sendControlCode",
+    titleKey: "keybindings.sendControlCode",
+    editor: SendControlCodeEditor,
+    validate: validateSendControlCode,
+  });
+  app.registerKeybindingAction({
+    id: "sendText",
+    titleKey: "keybindings.sendText",
+    editor: SendTextEditor,
+    validate: validateSendText,
+  });
+  for (const binding of TERMINAL_KEYBINDING_DEFAULTS) {
+    app.registerKeybindingDefault(binding);
+  }
 
   // Places other plugins can fill: toolbar buttons and readouts, a side
   // panel and overlays that follow the session's connection flow.

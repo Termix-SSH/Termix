@@ -1,15 +1,53 @@
-import { Play } from "lucide-react";
-import type { PanelProps, TermixApp } from "@termix/plugin-sdk/frontend";
+import { Clipboard, Play } from "lucide-react";
+import type {
+  PaletteItem,
+  PanelProps,
+  PluginHostRecord,
+  TermixApp,
+} from "@termix/plugin-sdk/frontend";
+import type { Snippet } from "./types";
 import { SnippetsPanel } from "./SnippetsPanel";
 import { createSnippetsApi } from "./snippets-api";
-import { resolveSnippetContent, hasSnippetInputs } from "./snippet-variables";
 import {
-  AdminUserSnippets,
-  adminOptions,
-  mapSnippets,
-} from "./AdminUserSnippets";
+  extractSnippetInputs,
+  resolveSnippetContent,
+  type SnippetHostContext,
+} from "../shared/variables.js";
+import {
+  readStartupSnippetId,
+  snippetHostSettings,
+} from "../shared/host-settings.js";
+import { AdminUserSnippets } from "./AdminUserSnippets";
+import { SnippetOverlay } from "./SnippetOverlay";
+import { HostSnippetsSection } from "./HostSnippetsSection";
+import { QuickActionButtons } from "./QuickActionButtons";
+import { resetPrompts } from "./prompt-store";
+import { fetchSnippet, runInSession } from "./run-flows";
+import {
+  RUN_SNIPPET_ACTION,
+  RunSnippetEditor,
+  RunSnippetSummary,
+  runSnippetBinding,
+  validateRunSnippet,
+} from "./keybinding";
+
+function hostContext(host: unknown): SnippetHostContext | null {
+  if (!host || typeof host !== "object") return null;
+  const record = host as Record<string, unknown>;
+  return {
+    ip: typeof record.ip === "string" ? record.ip : undefined,
+    username: typeof record.username === "string" ? record.username : undefined,
+    port:
+      typeof record.port === "number" || typeof record.port === "string"
+        ? record.port
+        : undefined,
+    name: typeof record.name === "string" ? record.name : undefined,
+  };
+}
 
 export function activate(app: TermixApp): void {
+  app.onDispose(resetPrompts);
+
   app.registerRailItem({
     id: "snippets",
     icon: Play,
@@ -33,6 +71,73 @@ export function activate(app: TermixApp): void {
     },
   });
 
+  // Every snippet in the command palette, run in the terminal the user is
+  // working in.
+  app.registerPaletteGroup({
+    id: "snippets",
+    titleKey: "nav.snippets",
+    order: 10,
+    load: async (): Promise<PaletteItem[]> => {
+      if (!(await app.hasPermission("view"))) return [];
+      const snippets: Snippet[] = await createSnippetsApi(app.api)
+        .list()
+        .catch(() => []);
+      return snippets.map((snippet) => ({
+        id: String(snippet.id),
+        title: snippet.name,
+        description: snippet.content,
+        icon: snippet.isNote ? Clipboard : Play,
+        keywords: [snippet.description ?? ""],
+        needsTarget: true,
+        hint: app.t(snippet.isNote ? "paletteHintPaste" : "paletteHintRun"),
+        run: ({ targetTab }) => {
+          if (!targetTab) return;
+          void runInSession(
+            app,
+            snippet,
+            { sessionId: targetTab.id },
+            hostContext(targetTab.host),
+            { announce: true },
+          );
+        },
+      }));
+    },
+  });
+
+  // Keeps the input dialog and the confirm setting alive at the shell root.
+  app.registerSlotContribution("shell.overlay", {
+    actionId: "snippets.overlay",
+    titleKey: "nav.snippets",
+    kind: "component",
+    component: SnippetOverlay as never,
+  });
+
+  app.registerKeybindingAction({
+    id: RUN_SNIPPET_ACTION,
+    titleKey: "keybindings.runSnippet",
+    editor: RunSnippetEditor,
+    summary: RunSnippetSummary,
+    validate: validateRunSnippet,
+    run: (action, context) => runSnippetBinding(app, action, context),
+  });
+
+  app.registerHostEditorSection({
+    id: "snippets",
+    group: "ssh",
+    titleKey: "host.tabTitle",
+    icon: Play,
+    order: 15,
+    component: HostSnippetsSection,
+  });
+
+  // Host Metrics shows a host's quick actions as toolbar buttons.
+  app.registerSlotContribution("host-metrics.toolbar", {
+    actionId: "snippets.quickActions",
+    titleKey: "host.quickActionsTitle",
+    kind: "component",
+    component: QuickActionButtons,
+  });
+
   app.registerSlotContribution("onboarding.features", {
     actionId: "snippets.feature",
     titleKey: "onboarding.feature_snippets",
@@ -49,71 +154,17 @@ export function activate(app: TermixApp): void {
     order: 10,
   });
 
-  // Core's snippet pickers (the host editor's startup snippet, keybindings,
-  // the command palette) read the list through this. An admin editing
-  // another user's host passes that user's id.
-  app.registerAction("snippet.list", (async (options?: {
-    targetUserId?: string;
-  }) => {
-    const response = options?.targetUserId
-      ? await app.api.get("/", adminOptions(options.targetUserId))
-      : await app.api.get("/");
-    const raw = response.data as unknown;
-    const list = Array.isArray(raw)
-      ? raw
-      : ((raw as { snippets?: unknown[] })?.snippets ?? []);
-    return (list as Record<string, unknown>[]).map((row) => ({
-      ...mapSnippets([row])[0],
-      isNote: row.isNote === true,
-    }));
-  }) as never);
-
-  // Resolves a snippet by id for a terminal (startup snippet, custom
-  // keybindings, the command palette), so core never imports snippet code.
-  const resolveForTerminal = async (
-    snippetId: number,
-    host: {
-      ip?: string;
-      username?: string;
-      port?: number;
-      name?: string;
-    } | null,
-    inputValues?: Record<string, string>,
+  // The command a terminal types when it connects to a host: the host's
+  // startup snippet with its variables filled in, or null.
+  app.registerAction("snippets.startupCommand", (async (
+    host: PluginHostRecord | null,
+    vars?: SnippetHostContext,
   ) => {
-    const api = createSnippetsApi(app.api);
-    const snippet = await api.get(snippetId).catch(() => null);
+    const id = readStartupSnippetId(snippetHostSettings(host).startupSnippetId);
+    if (id === null) return null;
+    const snippet = await fetchSnippet(app, id);
     if (!snippet) return null;
-    if (
-      hasSnippetInputs(snippet.content) &&
-      (!inputValues || Object.keys(inputValues).length === 0)
-    ) {
-      return {
-        needsInputs: true,
-        content: snippet.content,
-        isNote: snippet.isNote,
-      };
-    }
-    return {
-      needsInputs: false,
-      content: resolveSnippetContent(snippet.content, host, inputValues ?? {}),
-      isNote: snippet.isNote,
-    };
-  };
-  app.registerAction("snippet.resolveForTerminal", resolveForTerminal as never);
-  app.registerAction(
-    "snippets.resolveForTerminal",
-    resolveForTerminal as never,
-  );
-
-  // For other plugins' quick actions (host metrics): the snippet's content,
-  // so the caller can ask for $INPUT_n values, and a run on a host.
-  app.registerAction("snippets.get", (async (snippetId: number) => {
-    const snippet = await createSnippetsApi(app.api)
-      .get(snippetId)
-      .catch(() => null);
-    return snippet
-      ? { id: snippet.id, name: snippet.name, content: snippet.content }
-      : null;
+    return resolveSnippetContent(snippet.content, vars ?? hostContext(host));
   }) as never);
 
   // For pickers in other plugins (the AI assistant's @-mentions): id and name.
@@ -124,14 +175,7 @@ export function activate(app: TermixApp): void {
     return snippets.map((snippet) => ({ id: snippet.id, name: snippet.name }));
   }) as never);
 
-  app.registerAction("snippets.execute", (async (
-    snippetId: number,
-    hostId: number,
-    inputValues?: Record<string, string>,
-  ) =>
-    createSnippetsApi(app.api).execute(
-      snippetId,
-      hostId,
-      inputValues,
-    )) as never);
+  // Variable handling for commands other plugins run (fleets' run box).
+  app.registerAction("snippets.extractInputs", ((content: string) =>
+    extractSnippetInputs(typeof content === "string" ? content : "")) as never);
 }

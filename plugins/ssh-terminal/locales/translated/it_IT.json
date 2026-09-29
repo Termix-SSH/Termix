@@ -307,7 +307,6 @@
     "savedThemesLabel": "Temi salvati",
     "scrollbackBufferLabel": "Buffer di scorrimento",
     "scrollbackMaxLines": "Numero massimo di righe conservate nella cronologia",
-    "startupSnippetLabel": "Frammento di avvio",
     "sudoPasswordAutoFill": "Compilazione automatica password sudo",
     "sudoPasswordAutoFillDesc": "Memorizza una password sudo in modo che le metriche dell'host, i prompt del terminale e altro possano eseguire automaticamente comandi privilegiati.",
     "sudoPasswordAutoFillLabel": "Compilazione automatica password sudo",
@@ -335,7 +334,8 @@
     "history": "Cronologia",
     "localTerminal": "Terminale locale",
     "sshTools": "Strumenti SSH",
-    "terminal": "Terminale"
+    "terminal": "Terminale",
+    "macros": "Macro"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Digita qui per trasmettere le pressioni dei tasti...",
@@ -363,5 +363,112 @@
     "off": "Spento",
     "on": "SU",
     "title": "Impostazioni predefinite di connessione"
+  },
+  "keybindings": {
+    "copy": "Copia selezione",
+    "paste": "Impasto",
+    "sendControlCode": "Invia il segnale Ctrl+lettera",
+    "sendText": "Invia testo",
+    "controlCodeLabel": "Lettera",
+    "textLabel": "Testo da inviare",
+    "appendEnterLabel": "Premi Invio dopo aver inviato",
+    "clipboardPermissionNote": "In alcuni browser potrebbe essere richiesta l'autorizzazione per l'apposizione degli appunti al primo utilizzo.",
+    "textRequired": "Inserisci il testo da inviare",
+    "controlCodeRequired": "Inserisci una sola lettera come codice di controllo"
+  },
+  "macros": {
+    "title": "Macro",
+    "description": "Esegui una serie di comandi salvati in un terminale e reagisci a ciò che il server ti invia in risposta.",
+    "target": "Bersaglio",
+    "noTerminal": "Nessun terminale aperto",
+    "empty": "Ancora nessuna macro",
+    "emptyHint": "Crea una macro per automatizzare un flusso di lavoro da terminale, come l'accesso, il riavvio di un servizio o la risposta a richieste.",
+    "create": "Nuova macro",
+    "back": "Torna alle macro",
+    "name": "Nome",
+    "namePlaceholder": "Riavvia il server web",
+    "nameRequired": "Assegna un nome alla macro prima di salvarla.",
+    "descriptionLabel": "Descrizione",
+    "descriptionPlaceholder": "Cosa fa questa macro (facoltativo)",
+    "unsaved": "Modifiche non salvate",
+    "save": "Salva",
+    "saved": "Macro salvata",
+    "saveFailed": "Impossibile salvare la macro",
+    "delete": "Eliminare",
+    "deleteTitle": "Eliminare questa macro?",
+    "deleteBody": "\"{{name}}\" verrà eliminato definitivamente. Questa operazione non può essere annullata.",
+    "deleted": "Macro eliminato",
+    "cancel": "Cancellare",
+    "run": "Correre",
+    "stop": "Fermare",
+    "running": "Corsa...",
+    "completed": "Macro terminato",
+    "failed": "Il fallimento di Macro",
+    "loadFailed": "Impossibile caricare le macro",
+    "needTerminal": "Aprire e collegare prima un terminale",
+    "noSteps": "Questa macro non ha ancora passaggi. Aggiungine uno qui sotto.",
+    "addStep": "Aggiungi passaggio",
+    "stepNumber": "Passo {{number}}",
+    "removeStep": "Rimuovere il passaggio",
+    "confirmRunTitle": "Eseguire questa macro?",
+    "confirmRunBody": "\"{{name}}\" invierà comandi a {{host}}.",
+    "confirmRunAction": "Esegui macro",
+    "stepTypes": {
+      "send": {
+        "label": "inviare comando",
+        "help": "Digita il testo nel terminale, proprio come se lo avessi digitato tu."
+      },
+      "wait": {
+        "label": "Attendi l'output",
+        "help": "Si mette in pausa finché il server non stampa il testo che hai specificato, ad esempio una richiesta di password."
+      },
+      "delay": {
+        "label": "Pausa",
+        "help": "Attende un intervallo di tempo fisso prima di procedere al passo successivo."
+      },
+      "if": {
+        "label": "Se l'output contiene",
+        "help": "Controlla tutto ciò che il server ha stampato finora, quindi esegue uno dei due rami."
+      },
+      "repeat": {
+        "label": "Ripetere",
+        "help": "Esegue i passaggi al suo interno un numero prestabilito di volte."
+      }
+    },
+    "send": {
+      "text": "Comando o testo",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Premi Invio dopo aver inviato",
+      "pressEnterHelp": "Disattiva questa opzione per digitare del testo senza inviarlo."
+    },
+    "wait": {
+      "pattern": "Attendi che l'output contenga",
+      "patternPlaceholder": "password:",
+      "timeout": "Rinunciare dopo",
+      "onTimeout": "Se non appare mai",
+      "stop": "Interrompi la macro",
+      "continue": "Continua comunque"
+    },
+    "delay": {
+      "duration": "Attendi"
+    },
+    "ifStep": {
+      "pattern": "Se l'output contiene",
+      "patternPlaceholder": "Attivo: attivo (in corsa)",
+      "then": "Poi fai questo",
+      "else": "Altrimenti fai così",
+      "emptyBranch": "Nessun gradino"
+    },
+    "repeat": {
+      "count": "Numero di volte",
+      "times": "volte"
+    },
+    "match": {
+      "useRegex": "Corrispondenza con un'espressione regolare",
+      "useRegexHelp": "Lasciare vuoto questo elemento per far sì che il testo corrisponda esattamente a come è stato scritto.",
+      "invalidRegex": "Non è un'espressione regolare valida, verrà interpretata come testo semplice."
+    },
+    "seconds": "secondi",
+    "secondsShort": "{{count}}s"
   }
 }

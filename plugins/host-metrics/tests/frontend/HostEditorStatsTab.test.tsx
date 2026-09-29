@@ -7,7 +7,6 @@ afterEach(cleanup);
 
 function renderSection(pluginSettings: Record<string, unknown> = {}) {
   let form: Record<string, unknown> = {
-    quickActions: [],
     pluginSettings: { "host-metrics": pluginSettings, other: { keep: 1 } },
   };
   const updateForm = vi.fn(
@@ -21,7 +20,6 @@ function renderSection(pluginSettings: Record<string, unknown> = {}) {
       setField={vi.fn()}
       updateForm={updateForm as never}
       host={{ id: "7", name: "h", ip: "10.0.0.7", port: 22 }}
-      snippets={[]}
       protocols={{ ssh: true }}
     />,
   );

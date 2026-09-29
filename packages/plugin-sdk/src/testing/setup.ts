@@ -137,6 +137,7 @@ const offline = () =>
     getHostPassword: async () => null,
     patchOpenTab: async () => {},
     getCustomKeybindings: async () => [],
+    runKeybindingAction: () => false,
     getClientPreference: () => undefined,
     setClientPreference: () => {},
     listHosts: async () => [],

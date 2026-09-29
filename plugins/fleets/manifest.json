@@ -23,6 +23,9 @@
     "network:serve",
     "ui:surface"
   ],
+  "optionalDependencies": {
+    "snippets": "^1.0.0"
+  },
   "provides": [
     {
       "service": "fleets.access",

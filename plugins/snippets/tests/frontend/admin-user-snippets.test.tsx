@@ -31,22 +31,23 @@ afterEach(async () => {
   rendered = null;
 });
 
-describe("snippet.list", () => {
-  it("lists the user's own snippets", async () => {
+describe("snippet pickers while an admin edits another user's host", () => {
+  it("list the user's own snippets", async () => {
     const api = fakeApi([{ id: 1, name: "a", content: "ls", isNote: true }]);
     rendered = await renderWithApp(plugin, { manifest, locales, api });
-    const rows = await rendered.app.invokeAction("snippet.list");
+    rendered.renderHostEditorSection("snippets", { form: {} });
+    await screen.findAllByRole("option", { name: "a" });
     expect(api.get).toHaveBeenCalledWith("/");
-    expect(rows).toEqual([
-      { id: 1, name: "a", content: "ls", folder: null, isNote: true },
-    ]);
   });
 
-  it("lists another user's snippets for an admin", async () => {
+  it("list the target user's snippets", async () => {
     const api = fakeApi([]);
     rendered = await renderWithApp(plugin, { manifest, locales, api });
-    await rendered.app.invokeAction("snippet.list", { targetUserId: "u2" });
-    expect(api.get).toHaveBeenCalledWith("/", TARGET);
+    rendered.renderHostEditorSection("snippets", {
+      form: {},
+      adminTargetUserId: "u2",
+    });
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith("/", TARGET));
   });
 });
 

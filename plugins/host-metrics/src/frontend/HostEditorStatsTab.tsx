@@ -4,7 +4,6 @@ import {
   SectionCard,
   SettingRow,
   FakeSwitch,
-  Select2,
 } from "@termix/plugin-sdk/ui";
 import { useEffect, useState } from "react";
 import {
@@ -12,33 +11,24 @@ import {
   useTranslation,
   type HostEditorSectionProps,
 } from "@termix/plugin-sdk/frontend";
-import {
-  HardDrive,
-  LayoutDashboard,
-  Plus,
-  Server,
-  Trash2,
-  Zap,
-} from "lucide-react";
+import { HardDrive, LayoutDashboard, Plus, Server, Trash2 } from "lucide-react";
 
 import { readHostMetricsSettings } from "../shared/stats-widgets.js";
 
 const PLUGIN_ID = "host-metrics";
 
 type PluginSettingsBag = Record<string, Record<string, unknown>>;
-type QuickActionRow = { name: string; snippetId: string };
 
 /**
  * The Host Metrics section of the host editor. Its values are this plugin's
  * host settings, carried on form.pluginSettings and saved by the editor after
- * the host itself. Quick actions are a core host field.
+ * the host itself.
  */
 export function HostStatsTab({
   form,
   setField,
   updateForm,
   host,
-  snippets,
 }: HostEditorSectionProps) {
   const { t } = useTranslation();
   const [newMount, setNewMount] = useState("");
@@ -49,8 +39,6 @@ export function HostStatsTab({
   ];
   const settings = readHostMetricsSettings(bag);
   const { excludedMounts, monitoredMounts } = settings;
-  const quickActions = (form.quickActions ?? []) as QuickActionRow[];
-  const snippetOptions = (snippets ?? []) as { id: number; name: string }[];
   const api = usePluginApi();
 
   const patch = (values: Record<string, unknown>) =>
@@ -286,84 +274,6 @@ export function HostStatsTab({
           <p className="text-xs text-muted-foreground">
             {t("hosts.widgetsMovedToHostMetrics")}
           </p>
-        </div>
-      </SectionCard>
-      <SectionCard
-        title={t("hosts.quickActionsLabel")}
-        icon={<Zap className="size-3.5" />}
-        action={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-            onClick={() =>
-              setField("quickActions", [
-                ...quickActions,
-                { name: "", snippetId: "" },
-              ])
-            }
-          >
-            <Plus className="size-3 mr-1" /> {t("hosts.addActionBtn")}
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-3 py-3">
-          <p className="text-xs text-muted-foreground">
-            {t("hosts.quickActionsToolbar")}
-          </p>
-          {quickActions.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
-              <Zap className="size-6" />
-              <span className="text-xs">{t("hosts.noQuickActions")}</span>
-            </div>
-          )}
-          {quickActions.map((a, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-2 p-2 bg-muted/20 border border-border group"
-            >
-              <Input
-                className="h-7 text-xs flex-1"
-                placeholder={t("hosts.buttonLabel")}
-                value={a.name}
-                onChange={(e) => {
-                  const updated = [...quickActions];
-                  updated[i] = { ...updated[i], name: e.target.value };
-                  setField("quickActions", updated);
-                }}
-              />
-              <Select2
-                className="h-7 text-xs flex-1 border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
-                value={a.snippetId}
-                onChange={(e) => {
-                  const updated = [...quickActions];
-                  updated[i] = {
-                    ...updated[i],
-                    snippetId: e.target.value,
-                  };
-                  setField("quickActions", updated);
-                }}
-              >
-                <option value="">{t("hosts.selectSnippetPlaceholder")}</option>
-                {snippetOptions.map((s) => (
-                  <option key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select2>
-              <button
-                className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() =>
-                  setField(
-                    "quickActions",
-                    quickActions.filter((_, idx) => idx !== i),
-                  )
-                }
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </div>
-          ))}
         </div>
       </SectionCard>
     </>

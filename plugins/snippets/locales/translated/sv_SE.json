@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Kör \"{{name}}\"",
+  "variablesDialogDescription": "Fyll i de värden som detta kodavsnitt behöver innan du kör det.",
+  "variablesPreviewLabel": "Förhandsvisning",
+  "variablesConfirmButton": "Sikt",
+  "keybindings": {
+    "runSnippet": "Kör befintligt kodavsnitt",
+    "snippetLabel": "Utdrag",
+    "selectSnippet": "Välj ett utdrag",
+    "snippetMissing": "utdraget hittades inte",
+    "snippetRequired": "Välj ett utdrag"
+  },
+  "paletteHintRun": "Kör i den aktiva terminalfliken",
+  "host": {
+    "startupTitle": "Startkodavsnitt",
+    "quickActionsTitle": "Snabbåtgärder",
+    "quickActionsDescription": "Snabbåtgärder visas som knappar i verktygsfältet Host Metrics för att köra kommandon med ett klick.",
+    "noQuickActions": "Inga snabba åtgärder ännu.",
+    "buttonLabel": "Knappetikett",
+    "selectSnippet": "Välj utdrag...",
+    "addQuickAction": "Lägg till åtgärd"
+  },
+  "quickActions": {
+    "running": "Kör {{name}}...",
+    "succeeded": "{{name}} slutfört",
+    "failed": "{{name}} misslyckades",
+    "error": "Misslyckades med att köra {{name}}"
+  }
+}

@@ -307,7 +307,6 @@
     "savedThemesLabel": "Mentett témák",
     "scrollbackBufferLabel": "Görgetési puffer",
     "scrollbackMaxLines": "A történetben tárolt sorok maximális száma",
-    "startupSnippetLabel": "Indítási kódrészlet",
     "sudoPasswordAutoFill": "Sudo jelszó automatikus kitöltése",
     "sudoPasswordAutoFillDesc": "Tároljon egy sudo jelszót, hogy a gazdagép metrikái, a terminálpromptok és mások automatikusan futtathassanak privilegizált parancsokat.",
     "sudoPasswordAutoFillLabel": "Sudo jelszó automatikus kitöltése",
@@ -335,7 +334,8 @@
     "history": "Történelem",
     "localTerminal": "Helyi terminál",
     "sshTools": "SSH eszközök",
-    "terminal": "Terminál"
+    "terminal": "Terminál",
+    "macros": "Makrók"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Írjon ide a billentyűleütések küldéséhez...",
@@ -363,5 +363,112 @@
     "off": "Le",
     "on": "On",
     "title": "Kapcsolat alapértelmezései"
+  },
+  "keybindings": {
+    "copy": "Kijelölés másolása",
+    "paste": "Paszta",
+    "sendControlCode": "Ctrl+betűjel küldése",
+    "sendText": "SMS küldése",
+    "controlCodeLabel": "Levél",
+    "textLabel": "Küldendő szöveg",
+    "appendEnterLabel": "Küldés után nyomja meg az Enter billentyűt",
+    "clipboardPermissionNote": "Egyes böngészőkben első használatkor vágólap-engedélyt kérhet.",
+    "textRequired": "Írd be a küldendő szöveget",
+    "controlCodeRequired": "Írjon be egyetlen betűt az ellenőrző kódhoz"
+  },
+  "macros": {
+    "title": "Makrók",
+    "description": "Futtass egy mentett parancssorozatot egy terminálban, és reagálj a szerver által küldöttekre.",
+    "target": "Cél",
+    "noTerminal": "Nincs nyitva terminál",
+    "empty": "Még nincsenek makrók",
+    "emptyHint": "Hozz létre egy makrót egy terminálfolyamat automatizálásához, például bejelentkezéshez, szolgáltatás újraindításához vagy a kérdések megválaszolásához.",
+    "create": "Új makró",
+    "back": "Vissza a makrókhoz",
+    "name": "Név",
+    "namePlaceholder": "Indítsa újra a webszervert",
+    "nameRequired": "Mentés előtt adjon nevet a makrónak",
+    "descriptionLabel": "Leírás",
+    "descriptionPlaceholder": "Mit csinál ez a makró (opcionális)",
+    "unsaved": "Nem mentett változtatások",
+    "save": "Megtakarítás",
+    "saved": "Makró mentve",
+    "saveFailed": "Nem sikerült menteni a makrót",
+    "delete": "Töröl",
+    "deleteTitle": "Törli ezt a makrót?",
+    "deleteBody": "A(z) „{{name}}” véglegesen törlésre kerül. Ez a művelet nem vonható vissza.",
+    "deleted": "Makró törölve",
+    "cancel": "Mégsem",
+    "run": "Fut",
+    "stop": "Stop",
+    "running": "Futás...",
+    "completed": "Makró kész",
+    "failed": "Makró sikertelen",
+    "loadFailed": "Nem sikerült betölteni a makrókat",
+    "needTerminal": "Először nyiss meg és csatlakoztass egy terminált",
+    "noSteps": "Ennek a makrónak még nincsenek lépései. Adjon hozzá egyet alább.",
+    "addStep": "Lépés hozzáadása",
+    "stepNumber": "{{number}} lépés",
+    "removeStep": "Lépés eltávolítása",
+    "confirmRunTitle": "Futtassa ezt a makrót?",
+    "confirmRunBody": "A „{{name}}” parancsokat küld a {{host}} címre.",
+    "confirmRunAction": "Makró futtatása",
+    "stepTypes": {
+      "send": {
+        "label": "Parancs küldése",
+        "help": "Beírja a szöveget a terminálba, ugyanúgy, mintha beírta volna."
+      },
+      "wait": {
+        "label": "Várjon a kimenetre",
+        "help": "Szünetet tart, amíg a szerver ki nem írja a megnevezett szöveget, például egy jelszókérést."
+      },
+      "delay": {
+        "label": "Szünet",
+        "help": "Egy meghatározott ideig vár a következő lépés előtt."
+      },
+      "if": {
+        "label": "Ha a kimenet tartalmaz",
+        "help": "Ellenőrzi a szerver által eddig kinyomtatott összes adatot, majd lefuttatja a két ág egyikét."
+      },
+      "repeat": {
+        "label": "Ismétlés",
+        "help": "Meghatározott számú alkalommal futtatja le a benne található lépéseket."
+      }
+    },
+    "send": {
+      "text": "Parancs vagy szöveg",
+      "textPlaceholder": "systemctl újraindítja az nginx-et",
+      "pressEnter": "Küldés után nyomja meg az Enter billentyűt",
+      "pressEnterHelp": "Kapcsold ki ezt, ha beküldés nélkül szeretnél szöveget beírni."
+    },
+    "wait": {
+      "pattern": "Várjon, amíg a kimenet tartalmazza a",
+      "patternPlaceholder": "jelszó:",
+      "timeout": "Add fel utána",
+      "onTimeout": "Ha soha nem jelenik meg",
+      "stop": "A makró leállítása",
+      "continue": "Folytasd mindenképpen"
+    },
+    "delay": {
+      "duration": "Várj"
+    },
+    "ifStep": {
+      "pattern": "Ha a kimenet tartalmaz",
+      "patternPlaceholder": "Aktív: aktív (fut)",
+      "then": "Akkor csináld ezt",
+      "else": "Egyébként tedd ezt",
+      "emptyBranch": "Nincsenek lépcsők"
+    },
+    "repeat": {
+      "count": "Alkalmak száma",
+      "times": "alkalommal"
+    },
+    "match": {
+      "useRegex": "Egyezés reguláris kifejezéssel",
+      "useRegexHelp": "Hagyd ezt ki, hogy a szöveg pontosan úgy illeszkedjen, ahogyan le van írva.",
+      "invalidRegex": "Nem érvényes reguláris kifejezés, sima szövegként lesz egyezve."
+    },
+    "seconds": "másodperc",
+    "secondsShort": "{{count}}s"
   }
 }

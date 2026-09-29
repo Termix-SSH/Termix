@@ -1,10 +1,7 @@
-import {
-  getErrorMessage,
-  extractSnippetInputs,
-  type SnippetInput,
-} from "./helpers.js";
+import { getErrorMessage, type SnippetInput } from "./helpers.js";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
+  invokeAction,
   useTranslation,
   useHosts,
   type PluginHostRecord,
@@ -792,8 +789,16 @@ function RunCommandTab({ api, fleetId }: { api: FleetsApi; fleetId: number }) {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<FleetHostResult[] | null>(null);
 
+  // The snippets plugin owns $INPUT_n parsing; without it the command
+  // runs as typed.
   useEffect(() => {
-    setInputs(extractSnippetInputs(command));
+    let cancelled = false;
+    void invokeAction("snippets.extractInputs", command).then((found) => {
+      if (!cancelled) setInputs(Array.isArray(found) ? found : []);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [command]);
 
   async function handleRun() {

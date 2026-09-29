@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Jalankan \"{{name}}\"",
+  "variablesDialogDescription": "Isi nilai-nilai yang dibutuhkan cuplikan kode ini sebelum menjalankannya.",
+  "variablesPreviewLabel": "Pratinjau",
+  "variablesConfirmButton": "Berlari",
+  "keybindings": {
+    "runSnippet": "Jalankan cuplikan kode yang sudah ada.",
+    "snippetLabel": "Potongan",
+    "selectSnippet": "Pilih cuplikan",
+    "snippetMissing": "cuplikan tidak ditemukan",
+    "snippetRequired": "Pilih cuplikan"
+  },
+  "paletteHintRun": "Jalankan di tab terminal aktif",
+  "host": {
+    "startupTitle": "Cuplikan Startup",
+    "quickActionsTitle": "Tindakan Cepat",
+    "quickActionsDescription": "Tindakan cepat muncul sebagai tombol di bilah alat Metrik Host untuk eksekusi perintah sekali klik.",
+    "noQuickActions": "Belum ada tindakan cepat.",
+    "buttonLabel": "Label tombol",
+    "selectSnippet": "Pilih cuplikan...",
+    "addQuickAction": "Tambahkan Tindakan"
+  },
+  "quickActions": {
+    "running": "Menjalankan {{name}}...",
+    "succeeded": "{{name}} berhasil diselesaikan",
+    "failed": "{{name}} gagal",
+    "error": "Gagal mengeksekusi {{name}}"
+  }
+}

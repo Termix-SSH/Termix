@@ -51,10 +51,6 @@
     "processesRunning": "futás",
     "loginStats": "SSH bejelentkezési statisztikák",
     "noRecentLoginData": "Nincsenek friss bejelentkezési adatok",
-    "executingQuickAction": "{{name}} végrehajtása ...",
-    "quickActionSuccess": "{{name}} sikeresen befejeződött",
-    "quickActionFailed": "{{name}} sikertelen",
-    "quickActionError": "Nem sikerült végrehajtani a {{name}} parancsot.",
     "ports": {
       "title": "Figyelő portok",
       "protocol": "Jegyzőkönyv",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Hozzáadás",
     "visibleWidgets": "Látható widgetek",
     "widgetsMovedToHostMetrics": "A kártyák mostantól közvetlenül a Gazdagép metrikái lapon adhatók hozzá, rendezhetők el és méretezhetők át. Nyissa meg a Gazdagép metrikái oldalt ehhez a gazdagéphez, és a Testreszabás gombbal válassza ki, hogy mely kártyák jelenjenek meg.",
-    "quickActionsLabel": "Gyors műveletek",
-    "quickActionsToolbar": "A gyors műveletek gombokként jelennek meg a Host Metrics eszköztáron, így egyetlen kattintással végrehajthatók a parancsok.",
-    "noQuickActions": "Még nincsenek gyors intézkedések.",
-    "buttonLabel": "Gomb felirata",
-    "selectSnippetPlaceholder": "Válasszon részletet...",
-    "addActionBtn": "Művelet hozzáadása",
     "hostNotFound": "Nem található gazdagép",
     "loadingHost": "Gazdagép betöltése..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Korong"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Mégsem",
-        "confirmRunButton": "Fut",
-        "confirmRunMessage": "Futtassa a \"{{name}} \" programot?"
-      }
-    }
   },
   "terminal": {
     "connected": "Csatlakoztatva"

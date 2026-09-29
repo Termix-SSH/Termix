@@ -191,7 +191,7 @@ export interface SyncEntityRegistration {
   singleton?: boolean;
   /**
    * Names core uses when its own rows point at this entity without knowing
-   * which plugin provides it, e.g. "commandSnippet" for a host quick action.
+   * which plugin provides it. Nothing in core uses one today.
    */
   answersTo?: readonly string[];
   /**

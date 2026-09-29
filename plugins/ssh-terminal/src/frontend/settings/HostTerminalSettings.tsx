@@ -59,22 +59,16 @@ type HostPluginSettings = Record<string, Record<string, unknown>>;
 /**
  * The host editor's terminal appearance and behavior cards. The values are
  * this plugin's host settings, kept on the editor form under pluginSettings
- * and saved with the host; the startup snippet is still a core host field.
+ * and saved with the host.
  */
 export function HostTerminalSettings({
   form: editorForm,
-  setField: setCoreField,
   updateForm,
   host,
-  snippets: rawSnippets,
-}: Pick<
-  HostEditorSectionProps,
-  "form" | "setField" | "updateForm" | "host" | "snippets"
->) {
+}: Pick<HostEditorSectionProps, "form" | "setField" | "updateForm" | "host">) {
   const { t } = useTranslation();
   const client = useTerminalClientSettings();
   const userSettings = useSettings("user");
-  const snippets = (rawSnippets ?? []) as { id: number; name: string }[];
   const { setPreviewTerminalTheme } = useTabsSafe();
 
   const stored = ((editorForm?.pluginSettings as HostPluginSettings)?.[
@@ -91,8 +85,7 @@ export function HostTerminalSettings({
   const form = {
     ...own,
     ...(own.inheritAppearance ? userDefaults : {}),
-    startupSnippetId: (editorForm?.startupSnippetId ?? null) as number | null,
-  } as HostTerminalValues & { startupSnippetId: number | null };
+  } as HostTerminalValues;
 
   const writeValues = (values: Record<string, unknown>) =>
     updateForm((current) => {
@@ -883,30 +876,6 @@ export function HostTerminalSettings({
               />
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.startupSnippetLabel")}
-              </label>
-              <Select2
-                value={form.startupSnippetId ?? ""}
-                onChange={(e) =>
-                  setCoreField(
-                    "startupSnippetId",
-                    e.target.value ? Number(e.target.value) : null,
-                  )
-                }
-                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">{t("hosts.none")}</option>
-                {snippets.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select2>
-            </div>
-          </div>
         </div>
       </SectionCard>
     </>

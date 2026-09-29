@@ -51,10 +51,6 @@
     "processesRunning": "运行中",
     "loginStats": "SSH 登录统计",
     "noRecentLoginData": "无最近登录数据",
-    "executingQuickAction": "正在执行 {{name}}...",
-    "quickActionSuccess": "{{name}} 执行成功",
-    "quickActionFailed": "{{name}} 执行失败",
-    "quickActionError": "执行 {{name}} 失败",
     "ports": {
       "title": "监听端口",
       "protocol": "协议",
@@ -235,12 +231,6 @@
     "addExcludedMount": "添加",
     "visibleWidgets": "可见小部件",
     "widgetsMovedToHostMetrics": "卡片现在可在“主机指标”选项卡中直接添加、排列和调整大小。打开此主机的“主机指标”，使用“自定义”选择要显示的卡片。",
-    "quickActionsLabel": "快速操作",
-    "quickActionsToolbar": "快速操作以按钮形式显示在主机指标工具栏中，以便一键执行命令。",
-    "noQuickActions": "尚无快速操作。",
-    "buttonLabel": "按钮标签",
-    "selectSnippetPlaceholder": "选择代码片段...",
-    "addActionBtn": "添加操作",
     "hostNotFound": "未找到主机",
     "loadingHost": "正在加载主机..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "磁盘"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "取消",
-        "confirmRunButton": "运行",
-        "confirmRunMessage": "运行“{{name}}”？"
-      }
-    }
   },
   "terminal": {
     "connected": "已连接"

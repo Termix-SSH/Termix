@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "「{{name}} を実行」",
+  "variablesDialogDescription": "このコードスニペットを実行する前に、必要な値を入力してください。",
+  "variablesPreviewLabel": "プレビュー",
+  "variablesConfirmButton": "走る",
+  "keybindings": {
+    "runSnippet": "既存のスニペットを実行する",
+    "snippetLabel": "抜粋",
+    "selectSnippet": "抜粋を選択してください",
+    "snippetMissing": "スニペットが見つかりません",
+    "snippetRequired": "抜粋を選択してください"
+  },
+  "paletteHintRun": "アクティブなターミナルタブで実行します",
+  "host": {
+    "startupTitle": "起動時スニペット",
+    "quickActionsTitle": "クイックアクション",
+    "quickActionsDescription": "クイックアクションはホストメトリクスツールバーにボタンとして表示され、ワンクリックでコマンドを実行できます。",
+    "noQuickActions": "クイックアクションはまだありません",
+    "buttonLabel": "ボタンラベル",
+    "selectSnippet": "スニペットを選択...",
+    "addQuickAction": "アクションを追加"
+  },
+  "quickActions": {
+    "running": "{{name}} を実行中...",
+    "succeeded": "{{name}} が正常に完了しました",
+    "failed": "{{name}} が失敗しました",
+    "error": "{{name}} の実行に失敗しました"
+  }
+}

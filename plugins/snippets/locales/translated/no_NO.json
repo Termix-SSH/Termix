@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Kjør «{{name}}»",
+  "variablesDialogDescription": "Fyll inn verdiene dette kodestykket trenger før du kjører det.",
+  "variablesPreviewLabel": "Forhåndsvisning",
+  "variablesConfirmButton": "Løp",
+  "keybindings": {
+    "runSnippet": "Kjør eksisterende kodebit",
+    "snippetLabel": "Utdrag",
+    "selectSnippet": "Velg et utdrag",
+    "snippetMissing": "utdraget ikke funnet",
+    "snippetRequired": "Velg et utdrag"
+  },
+  "paletteHintRun": "Kjør i den aktive terminalfanen",
+  "host": {
+    "startupTitle": "Oppstartsutdrag",
+    "quickActionsTitle": "Hurtighandlinger",
+    "quickActionsDescription": "Hurtighandlinger vises som knapper i verktøylinjen for vertsmålinger for utførelse av kommandoer med ett klikk.",
+    "noQuickActions": "Ingen hurtighandlinger ennå.",
+    "buttonLabel": "Knappetikett",
+    "selectSnippet": "Velg utdrag...",
+    "addQuickAction": "Legg til handling"
+  },
+  "quickActions": {
+    "running": "Utfører {{name}}...",
+    "succeeded": "{{name}} fullført",
+    "failed": "{{name}} mislyktes",
+    "error": "Kunne ikke utføre {{name}}"
+  }
+}

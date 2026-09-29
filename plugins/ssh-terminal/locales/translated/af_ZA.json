@@ -307,7 +307,6 @@
     "savedThemesLabel": "Gestoorde temas",
     "scrollbackBufferLabel": "Terugrolbuffer",
     "scrollbackMaxLines": "Maksimum aantal lyne wat in die geskiedenis gehou word",
-    "startupSnippetLabel": "Opstart-brokkie",
     "sudoPasswordAutoFill": "Sudo Wagwoord Outomatiese Vul",
     "sudoPasswordAutoFillDesc": "Stoor 'n sudo-wagwoord sodat gasheermetrieke, terminaalprompts en ander outomaties bevoorregte opdragte kan uitvoer.",
     "sudoPasswordAutoFillLabel": "Sudo Wagwoord Outomatiese Vul",
@@ -335,7 +334,8 @@
     "history": "Geskiedenis",
     "localTerminal": "Plaaslike Terminaal",
     "sshTools": "SSH-gereedskap",
-    "terminal": "Terminaal"
+    "terminal": "Terminaal",
+    "macros": "Makro's"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Tik hier om toetsaanslagen uit te saai...",
@@ -363,5 +363,112 @@
     "off": "Af",
     "on": "Aan",
     "title": "Verbindingsverstekke"
+  },
+  "keybindings": {
+    "copy": "Kopieer seleksie",
+    "paste": "Plak",
+    "sendControlCode": "Stuur Ctrl+letter sein",
+    "sendText": "Stuur SMS",
+    "controlCodeLabel": "Brief",
+    "textLabel": "SMS om te stuur",
+    "appendEnterLabel": "Druk Enter na stuur",
+    "clipboardPermissionNote": "Kan in sommige blaaiers met die eerste gebruik vir knipbordtoestemming vra.",
+    "textRequired": "Voer die teks in om te stuur",
+    "controlCodeRequired": "Voer 'n enkele letter vir die beheerkode in"
+  },
+  "macros": {
+    "title": "Makro's",
+    "description": "Voer 'n gestoorde reeks opdragte in 'n terminaal uit en reageer op wat die bediener terugstuur.",
+    "target": "Teiken",
+    "noTerminal": "Geen terminaal oop nie",
+    "empty": "Geen makro's nog nie",
+    "emptyHint": "Skep 'n makro om 'n terminaalvloei te outomatiseer, soos om aan te meld, 'n diens te herbegin of aanwysings te beantwoord.",
+    "create": "Nuwe makro",
+    "back": "Terug na makro's",
+    "name": "Naam",
+    "namePlaceholder": "Herbegin die webbediener",
+    "nameRequired": "Gee die makro 'n naam voordat jy dit stoor",
+    "descriptionLabel": "Beskrywing",
+    "descriptionPlaceholder": "Wat hierdie makro doen (opsioneel)",
+    "unsaved": "Ongestoorde veranderinge",
+    "save": "Stoor",
+    "saved": "Makro gestoor",
+    "saveFailed": "Kon nie die makro stoor nie",
+    "delete": "Vee uit",
+    "deleteTitle": "Vee hierdie makro uit?",
+    "deleteBody": "\"{{name}}\" sal permanent verwyder word. Dit kan nie ongedaan gemaak word nie.",
+    "deleted": "Makro uitgevee",
+    "cancel": "Kanselleer",
+    "run": "Hardloop",
+    "stop": "Stop",
+    "running": "Hardloop...",
+    "completed": "Makro klaar",
+    "failed": "Makro het misluk",
+    "loadFailed": "Kon nie makro's laai nie",
+    "needTerminal": "Maak eers 'n terminaal oop en koppel dit",
+    "noSteps": "Hierdie makro het nog geen stappe nie. Voeg een hieronder by.",
+    "addStep": "Voeg stap by",
+    "stepNumber": "Stap {{number}}",
+    "removeStep": "Verwyder stap",
+    "confirmRunTitle": "Voer hierdie makro uit?",
+    "confirmRunBody": "\"{{name}}\" sal bevele stuur na {{host}}.",
+    "confirmRunAction": "Begin makro",
+    "stepTypes": {
+      "send": {
+        "label": "Stuur opdrag",
+        "help": "Tik teks in die terminaal, dieselfde asof jy dit getik het."
+      },
+      "wait": {
+        "label": "Wag vir uitvoer",
+        "help": "Pouseer totdat die bediener die teks wat jy noem, druk, soos 'n wagwoordaanwysing."
+      },
+      "delay": {
+        "label": "Pouseer",
+        "help": "Wag 'n vaste hoeveelheid tyd voor die volgende stap."
+      },
+      "if": {
+        "label": "Indien die uitvoer bevat",
+        "help": "Kontroleer alles wat die bediener tot dusver gedruk het, en voer dan een van twee takke uit."
+      },
+      "repeat": {
+        "label": "Herhaal",
+        "help": "Voer die stappe daarin 'n vasgestelde aantal kere uit."
+      }
+    },
+    "send": {
+      "text": "Opdrag of teks",
+      "textPlaceholder": "systemctl herbegin nginx",
+      "pressEnter": "Druk Enter na stuur",
+      "pressEnterHelp": "Skakel dit af om teks te tik sonder om dit in te dien."
+    },
+    "wait": {
+      "pattern": "Wag totdat die uitvoer bevat",
+      "patternPlaceholder": "wagwoord:",
+      "timeout": "Gee op daarna",
+      "onTimeout": "As dit nooit verskyn nie",
+      "stop": "Stop die makro",
+      "continue": "Gaan in elk geval voort"
+    },
+    "delay": {
+      "duration": "Wag vir"
+    },
+    "ifStep": {
+      "pattern": "Indien die uitvoer bevat",
+      "patternPlaceholder": "Aktief: aktief (hardloop)",
+      "then": "Doen dan hierdie",
+      "else": "Andersins doen dit",
+      "emptyBranch": "Geen stappe nie"
+    },
+    "repeat": {
+      "count": "Aantal kere",
+      "times": "tye"
+    },
+    "match": {
+      "useRegex": "Stem ooreen met 'n gereelde uitdrukking",
+      "useRegexHelp": "Los dit af om die teks presies soos geskryf te laat ooreenstem.",
+      "invalidRegex": "Nie 'n geldige gereelde uitdrukking nie, dit sal as gewone teks ooreenstem"
+    },
+    "seconds": "sekondes",
+    "secondsShort": "{{count}}s"
   }
 }

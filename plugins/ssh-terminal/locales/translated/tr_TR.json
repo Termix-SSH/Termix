@@ -307,7 +307,6 @@
     "savedThemesLabel": "Kaydedilen Temalar",
     "scrollbackBufferLabel": "Kaydırma Arabelleği",
     "scrollbackMaxLines": "Geçmişte saklanan maksimum satır sayısı",
-    "startupSnippetLabel": "Başlangıç Betiği",
     "sudoPasswordAutoFill": "Sudo Parolası Otomatik Doldurma",
     "sudoPasswordAutoFillDesc": "Sudo parolasını saklayın; böylece ana bilgisayar metrikleri, terminal istemleri ve diğer bileşenler ayrıcalıklı komutları otomatik olarak çalıştırabilir.",
     "sudoPasswordAutoFillLabel": "Sudo Parolası Otomatik Doldurma",
@@ -335,7 +334,8 @@
     "history": "Geçmiş",
     "localTerminal": "Yerel Terminal",
     "sshTools": "SSH Araçları",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makrolar"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Tuş vuruşlarını yayınlamak için buraya yazın...",
@@ -363,5 +363,112 @@
     "off": "Kapalı",
     "on": "Açık",
     "title": "Bağlantı Varsayılanları"
+  },
+  "keybindings": {
+    "copy": "Seçimi kopyala",
+    "paste": "Yapıştır",
+    "sendControlCode": "Ctrl+harf sinyali gönder",
+    "sendText": "Mesaj gönder",
+    "controlCodeLabel": "Mektup",
+    "textLabel": "Gönderilecek metin",
+    "appendEnterLabel": "Gönderdikten sonra Enter tuşuna basın.",
+    "clipboardPermissionNote": "Bazı tarayıcılarda ilk kullanımda panoya kopyalama izni isteyebilir.",
+    "textRequired": "Göndermek istediğiniz metni girin.",
+    "controlCodeRequired": "Kontrol kodu için tek bir harf girin."
+  },
+  "macros": {
+    "title": "Makrolar",
+    "description": "Önceden kaydedilmiş bir komut dizisini terminalde çalıştırın ve sunucunun geri gönderdiği yanıtlara göre hareket edin.",
+    "target": "Hedef",
+    "noTerminal": "Açık terminal yok.",
+    "empty": "Henüz makro yok",
+    "emptyHint": "Giriş yapma, bir hizmeti yeniden başlatma veya komut istemlerine yanıt verme gibi terminal işlemlerini otomatikleştirmek için bir makro oluşturun.",
+    "create": "Yeni makro",
+    "back": "Makrolara geri dön",
+    "name": "İsim",
+    "namePlaceholder": "Web sunucusunu yeniden başlatın.",
+    "nameRequired": "Kaydetmeden önce makroya bir ad verin.",
+    "descriptionLabel": "Tanım",
+    "descriptionPlaceholder": "Bu makronun ne yaptığı (isteğe bağlı)",
+    "unsaved": "Kaydedilmemiş değişiklikler",
+    "save": "Kaydetmek",
+    "saved": "Makro kaydedildi.",
+    "saveFailed": "Makro kaydedilemedi.",
+    "delete": "Silmek",
+    "deleteTitle": "Bu makroyu silmek ister misiniz?",
+    "deleteBody": "\"{{name}}\" kalıcı olarak silinecektir. Bu işlem geri alınamaz.",
+    "deleted": "Makro silindi",
+    "cancel": "İptal etmek",
+    "run": "Koşmak",
+    "stop": "Durmak",
+    "running": "Koşma...",
+    "completed": "Makro tamamlandı",
+    "failed": "Makro başarısız oldu",
+    "loadFailed": "Makrolar yüklenemedi.",
+    "needTerminal": "Öncelikle bir terminal açın ve bağlayın.",
+    "noSteps": "Bu makronun henüz hiçbir adımı yok. Aşağıya bir adım ekleyin.",
+    "addStep": "Adım ekle",
+    "stepNumber": "Adım {{number}}",
+    "removeStep": "Adımı kaldır",
+    "confirmRunTitle": "Bu makroyu çalıştırayım mı?",
+    "confirmRunBody": "\"{{name}}\" {{host}} adresine komutlar gönderecektir.",
+    "confirmRunAction": "Makroyu çalıştır",
+    "stepTypes": {
+      "send": {
+        "label": "Komut gönder",
+        "help": "Terminale, sanki siz yazmışsınız gibi metin yazar."
+      },
+      "wait": {
+        "label": "Çıktıyı bekleyin",
+        "help": "Sunucu, belirttiğiniz metni (örneğin parola istemi gibi) yazdırana kadar bekler."
+      },
+      "delay": {
+        "label": "Duraklat",
+        "help": "Bir sonraki adıma geçmeden önce belirli bir süre bekler."
+      },
+      "if": {
+        "label": "Çıktı içeriyorsa",
+        "help": "Sunucunun şu ana kadar yazdırdığı her şeyi kontrol eder, ardından iki daldan birini çalıştırır."
+      },
+      "repeat": {
+        "label": "Tekrarlamak",
+        "help": "İçindeki adımları belirtilen sayıda tekrarlar."
+      }
+    },
+    "send": {
+      "text": "Komut veya metin",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Gönderdikten sonra Enter tuşuna basın.",
+      "pressEnterHelp": "Göndermeden metin yazmak için bunu kapatın."
+    },
+    "wait": {
+      "pattern": "Çıktıyı oluşturana kadar bekleyin.",
+      "patternPlaceholder": "şifre:",
+      "timeout": "Vazgeçtikten sonra",
+      "onTimeout": "Eğer hiç ortaya çıkmazsa",
+      "stop": "Makroyu durdur",
+      "continue": "Yine de devam edin."
+    },
+    "delay": {
+      "duration": "Bekleyin"
+    },
+    "ifStep": {
+      "pattern": "Çıktı şunları içeriyorsa:",
+      "patternPlaceholder": "Aktif: aktif (koşmak)",
+      "then": "O halde şunu yapın",
+      "else": "Aksi takdirde şunu yapın",
+      "emptyBranch": "Hiçbir adım yok"
+    },
+    "repeat": {
+      "count": "Sayısı",
+      "times": "kez"
+    },
+    "match": {
+      "useRegex": "Düzenli ifadeyle eşleştirin",
+      "useRegexHelp": "Metnin aynen yazıldığı gibi kalması için bunu atlayın.",
+      "invalidRegex": "Geçerli bir normal ifade değil, düz metin olarak eşleştirilecektir."
+    },
+    "seconds": "saniyeler",
+    "secondsShort": "{{count}}s"
   }
 }

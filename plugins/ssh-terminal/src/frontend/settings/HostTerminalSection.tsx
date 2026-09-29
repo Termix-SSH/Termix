@@ -8,7 +8,6 @@ export function HostTerminalSection({
   setField,
   updateForm,
   host,
-  snippets,
 }: HostEditorSectionProps) {
   return (
     <>
@@ -18,7 +17,6 @@ export function HostTerminalSection({
         setField={setField}
         updateForm={updateForm}
         host={host}
-        snippets={snippets}
       />
     </>
   );

@@ -344,7 +344,45 @@ export interface PluginContributions {
    * off and a desktop can list them in its sync settings.
    */
   syncEntities?: string[];
+  /**
+   * Keybinding actions this plugin adds to Appearance > Keybindings, with
+   * the parameters a saved binding carries. Core validates saved bindings
+   * against these without running plugin code, and translates a parameter
+   * naming a sync entity over sync.
+   */
+  keybindingActions?: PluginKeybindingActionContribution[];
 }
+
+/** One parameter a saved keybinding action carries next to its type. */
+export interface PluginKeybindingParam {
+  type: "string" | "boolean";
+  required?: boolean;
+  /** A regular expression a string value must match. */
+  pattern?: string;
+  maxLength?: number;
+  /**
+   * The value is a local row id of this sync entity, stored as a string.
+   * Sync sends the row's syncId instead.
+   */
+  syncEntity?: string;
+}
+
+export interface PluginKeybindingActionContribution {
+  /**
+   * Stored as the binding's action.type. New actions use
+   * "<plugin id>.<name>"; the bundled ones keep their 2.8 names.
+   */
+  id: string;
+  params?: Record<string, PluginKeybindingParam>;
+}
+
+/** Keybinding action types the shell runs itself; no plugin may declare them. */
+export const CORE_KEYBINDING_ACTIONS: readonly string[] = [
+  "nextTab",
+  "previousTab",
+  "openCommandPalette",
+  "reconnectSession",
+];
 
 /**
  * How a desktop linked to a server treats this plugin.
@@ -376,6 +414,12 @@ export interface PluginHttpContribution {
    * Core routes win a clash.
    */
   legacyRedirects?: PluginLegacyRedirect[];
+  /**
+   * An admin may call this plugin's routes on behalf of another user with
+   * the X-Admin-Target-User header (the admin "manage user" panel). Without
+   * it core refuses the header on every route under /plugin-api/<id>/.
+   */
+  adminImpersonation?: boolean;
 }
 
 export interface PluginLegacyRedirect {
@@ -478,6 +522,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "uiPresets",
   "auth",
   "syncEntities",
+  "keybindingActions",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -947,6 +992,132 @@ function validateContributes(
   validateAuthContribution(contributes.auth, errors);
   validateHttpContribution(contributes.http, pluginId, errors);
   validateUiPresets(contributes.uiPresets, errors);
+  validateKeybindingActions(contributes.keybindingActions, errors);
+}
+
+const KEYBINDING_ACTION_PATTERN = /^[a-zA-Z][a-zA-Z0-9.-]{0,63}$/;
+const KEYBINDING_PARAM_PATTERN = /^[a-zA-Z][a-zA-Z0-9]{0,31}$/;
+
+function validateKeybindingParam(
+  param: unknown,
+  at: string,
+  errors: string[],
+): void {
+  if (!isPlainObject(param)) {
+    errors.push(`${at} must be an object`);
+    return;
+  }
+  rejectUnknown(
+    param,
+    ["type", "required", "pattern", "maxLength", "syncEntity"],
+    at,
+    errors,
+  );
+  if (param.type !== "string" && param.type !== "boolean") {
+    errors.push(`${at}.type must be "string" or "boolean"`);
+  }
+  if (param.required !== undefined && typeof param.required !== "boolean") {
+    errors.push(`${at}.required must be a boolean`);
+  }
+  if (param.pattern !== undefined) {
+    let valid = typeof param.pattern === "string";
+    if (valid) {
+      try {
+        new RegExp(param.pattern as string);
+      } catch {
+        valid = false;
+      }
+    }
+    if (!valid) errors.push(`${at}.pattern must be a regular expression`);
+  }
+  if (
+    param.maxLength !== undefined &&
+    (typeof param.maxLength !== "number" ||
+      !Number.isInteger(param.maxLength) ||
+      param.maxLength < 1)
+  ) {
+    errors.push(`${at}.maxLength must be a positive integer`);
+  }
+  if (param.syncEntity !== undefined) {
+    if (
+      typeof param.syncEntity !== "string" ||
+      !/^[a-zA-Z][a-zA-Z0-9]*$/.test(param.syncEntity)
+    ) {
+      errors.push(`${at}.syncEntity must be a sync entity wire name`);
+    } else if (param.type !== "string") {
+      errors.push(`${at}.syncEntity needs a string parameter`);
+    }
+  }
+}
+
+function validateKeybindingActions(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  const where = "contributes.keybindingActions";
+  if (!Array.isArray(value)) {
+    errors.push(`Field "${where}" must be an array`);
+    return;
+  }
+  const seen = new Set<string>();
+  value.forEach((raw, index) => {
+    const at = `${where}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(raw, ["id", "params"], at, errors);
+    if (typeof raw.id !== "string" || !KEYBINDING_ACTION_PATTERN.test(raw.id)) {
+      errors.push(`${at}.id must be letters, digits, dots and dashes`);
+    } else if (CORE_KEYBINDING_ACTIONS.includes(raw.id)) {
+      errors.push(`${at}.id "${raw.id}" is one of the shell's own actions`);
+    } else {
+      if (seen.has(raw.id)) errors.push(`${at}.id duplicates "${raw.id}"`);
+      seen.add(raw.id);
+    }
+    if (raw.params === undefined) return;
+    if (!isPlainObject(raw.params)) {
+      errors.push(`${at}.params must be an object`);
+      return;
+    }
+    for (const [name, param] of Object.entries(raw.params)) {
+      if (!KEYBINDING_PARAM_PATTERN.test(name) || name === "type") {
+        errors.push(`${at}.params.${name} is not a valid parameter name`);
+      }
+      validateKeybindingParam(param, `${at}.params.${name}`, errors);
+    }
+  });
+}
+
+/**
+ * Checks one saved keybinding action against the parameters its declaration
+ * lists. A parameter the declaration does not list is refused, so a binding
+ * cannot carry arbitrary data under a declared type.
+ */
+export function validateKeybindingActionParams(
+  action: Record<string, unknown>,
+  declaration: PluginKeybindingActionContribution,
+): boolean {
+  const params = declaration.params ?? {};
+  for (const key of Object.keys(action)) {
+    if (key !== "type" && !(key in params) && action[key] != null) {
+      return false;
+    }
+  }
+  for (const [name, param] of Object.entries(params)) {
+    const value = action[name];
+    if (value === undefined || value === null) {
+      if (param.required) return false;
+      continue;
+    }
+    if (param.type === "boolean") {
+      if (typeof value !== "boolean") return false;
+      continue;
+    }
+    if (typeof value !== "string") return false;
+    if (param.required && value.length === 0) return false;
+    if (value.length > (param.maxLength ?? 65_536)) return false;
+    if (param.pattern && !new RegExp(param.pattern).test(value)) return false;
+  }
+  return true;
 }
 
 function isPresetValue(value: unknown): boolean {
@@ -1041,10 +1212,18 @@ function validateHttpContribution(
   }
   rejectUnknown(
     value,
-    ["legacyPaths", "legacyRedirects"],
+    ["legacyPaths", "legacyRedirects", "adminImpersonation"],
     "contributes.http",
     errors,
   );
+  if (
+    value.adminImpersonation !== undefined &&
+    typeof value.adminImpersonation !== "boolean"
+  ) {
+    errors.push(
+      'Field "contributes.http.adminImpersonation" must be a boolean',
+    );
+  }
   validateLegacyRedirects(value.legacyRedirects, errors);
   const paths = value.legacyPaths;
   if (paths === undefined) return;

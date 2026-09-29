@@ -51,10 +51,6 @@
     "processesRunning": "실행 중",
     "loginStats": "SSH 로그인 통계",
     "noRecentLoginData": "최근 로그인 데이터가 없습니다.",
-    "executingQuickAction": "{{name}} 실행 중...",
-    "quickActionSuccess": "{{name}}이(가) 성공적으로 완료되었습니다.",
-    "quickActionFailed": "{{name}} 실패",
-    "quickActionError": "{{name}} 실행에 실패했습니다.",
     "ports": {
       "title": "수신 대기 포트",
       "protocol": "프로토콜",
@@ -235,12 +231,6 @@
     "addExcludedMount": "추가하다",
     "visibleWidgets": "표시 위젯",
     "widgetsMovedToHostMetrics": "카드는 이제 호스트 메트릭 탭에서 직접 추가, 정렬 및 크기 조정됩니다. 이 호스트의 호스트 메트릭을 열고 사용자 정의를 사용하여 표시할 카드를 선택하세요.",
-    "quickActionsLabel": "빠른 작업",
-    "quickActionsToolbar": "빠른 작업은 한 번의 클릭으로 명령을 실행할 수 있도록 호스트 메트릭 도구 모음에 버튼으로 표시됩니다.",
-    "noQuickActions": "아직 빠른 작업이 없습니다.",
-    "buttonLabel": "버튼 레이블",
-    "selectSnippetPlaceholder": "스니펫 선택...",
-    "addActionBtn": "작업 추가",
     "hostNotFound": "호스트를 찾을 수 없습니다",
     "loadingHost": "호스트 로드 중..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "디스크"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "취소",
-        "confirmRunButton": "실행",
-        "confirmRunMessage": "\"{{name}}\"을(를) 실행하시겠습니까?"
-      }
-    }
   },
   "terminal": {
     "connected": "연결됨"

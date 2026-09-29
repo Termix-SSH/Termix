@@ -3,7 +3,7 @@ import {
   extractSnippetInputs,
   hasSnippetInputs,
   resolveSnippetContent,
-} from "../../src/frontend/snippet-variables";
+} from "../../src/shared/variables.js";
 
 describe("extractSnippetInputs", () => {
   it("extracts a single unlabeled input", () => {

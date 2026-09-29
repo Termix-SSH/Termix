@@ -79,6 +79,11 @@
         "id": "ssh-tools",
         "titleKey": "nav.sshTools",
         "icon": "Hammer"
+      },
+      {
+        "id": "macros",
+        "titleKey": "nav.macros",
+        "icon": "Braces"
       }
     ],
     "actionSlots": [
@@ -752,9 +757,47 @@
               "labelKey": "hosts.linkClickBehaviorDirect"
             }
           ]
+        },
+        {
+          "key": "macros",
+          "type": "json",
+          "labelKey": "macros.title",
+          "hidden": true,
+          "default": []
         }
       ]
-    }
+    },
+    "keybindingActions": [
+      {
+        "id": "copy"
+      },
+      {
+        "id": "paste"
+      },
+      {
+        "id": "sendControlCode",
+        "params": {
+          "controlCode": {
+            "type": "string",
+            "required": true,
+            "pattern": "^[a-zA-Z]$"
+          }
+        }
+      },
+      {
+        "id": "sendText",
+        "params": {
+          "text": {
+            "type": "string",
+            "maxLength": 65536,
+            "required": true
+          },
+          "appendEnter": {
+            "type": "boolean"
+          }
+        }
+      }
+    ]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

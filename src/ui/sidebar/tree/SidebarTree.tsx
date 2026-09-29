@@ -636,15 +636,8 @@ export function SidebarTree({
           hostId: Number(j.hostId),
         })),
         portKnockSequence: host.portKnockSequence ?? [],
-        quickActions: (host.quickActions ?? []).map((a) => ({
-          name: a.name,
-          snippetId: Number(a.snippetId),
-        })),
         statusCheckEnabled: host.statusCheckEnabled,
         statusCheckInterval: host.statusCheckInterval,
-        terminalConfig: host.terminalConfig?.startupSnippetId
-          ? { startupSnippetId: host.terminalConfig.startupSnippetId }
-          : null,
         sshOptions: host.sshOptions ?? null,
       };
       const created = await createSSHHost(duplicateHost);

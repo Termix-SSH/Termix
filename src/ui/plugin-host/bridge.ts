@@ -37,6 +37,7 @@ import {
   parseCustomKeybindings,
   patchOpenTab,
 } from "@/api/open-tabs-api";
+import { runKeybindingAction } from "@/shell/keybinding-registry";
 import { usePluginScope } from "./scope";
 import { knownPluginIds, usePluginStore } from "./plugin-store";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
@@ -361,6 +362,8 @@ export const pluginHostBridge: PluginHostBridge = {
     patchOpenTab: (instanceId, updates) => patchOpenTab(instanceId, updates),
     getCustomKeybindings: async () =>
       parseCustomKeybindings((await getUserPreferences()).customKeybindings),
+    runKeybindingAction: (action, context) =>
+      runKeybindingAction(action, context),
     getClientPreference: (name) => getCookie(name),
     setClientPreference: (name, value) => {
       void setCookie(name, value, 365);

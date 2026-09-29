@@ -307,7 +307,6 @@
     "savedThemesLabel": "Teme salvate",
     "scrollbackBufferLabel": "Buffer de derulare înapoi",
     "scrollbackMaxLines": "Numărul maxim de linii păstrate în istoric",
-    "startupSnippetLabel": "Fragment de pornire",
     "sudoPasswordAutoFill": "Completare automată parolă Sudo",
     "sudoPasswordAutoFillDesc": "Stocați o parolă sudo, astfel încât metricile gazdei, prompturile terminalului și alte funcții să poată executa automat comenzi privilegiate.",
     "sudoPasswordAutoFillLabel": "Completare automată parolă Sudo",
@@ -335,7 +334,8 @@
     "history": "Istorie",
     "localTerminal": "Terminal local",
     "sshTools": "Instrumente SSH",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Macrocomenzi"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Tastați aici pentru a difuza apăsările de taste...",
@@ -363,5 +363,112 @@
     "off": "Dezactivat",
     "on": "Pe",
     "title": "Setări implicite ale conexiunii"
+  },
+  "keybindings": {
+    "copy": "Copiați selecția",
+    "paste": "Pastă",
+    "sendControlCode": "Trimite semnal Ctrl+literă",
+    "sendText": "Trimiteți mesaj text",
+    "controlCodeLabel": "Scrisoare",
+    "textLabel": "Text de trimis",
+    "appendEnterLabel": "Apăsați Enter după trimitere",
+    "clipboardPermissionNote": "În unele browsere, este posibil să solicite permisiunea pentru clipboard la prima utilizare.",
+    "textRequired": "Introduceți textul de trimis",
+    "controlCodeRequired": "Introduceți o singură literă pentru codul de control"
+  },
+  "macros": {
+    "title": "Macrocomenzi",
+    "description": "Executați o serie de comenzi salvate într-un terminal și reacționați la ceea ce serverul trimite înapoi.",
+    "target": "Ţintă",
+    "noTerminal": "Niciun terminal deschis",
+    "empty": "Încă nu există macrocomenzi",
+    "emptyHint": "Creați o macrocomandă pentru a automatiza un flux de lucru în terminal, cum ar fi conectarea, repornirea unui serviciu sau răspunsul la solicitări.",
+    "create": "Macrocomandă nouă",
+    "back": "Înapoi la macrocomenzi",
+    "name": "Nume",
+    "namePlaceholder": "Reporniți serverul web",
+    "nameRequired": "Dați un nume macrocomenzii înainte de salvare",
+    "descriptionLabel": "Descriere",
+    "descriptionPlaceholder": "Ce face această macrocomandă (opțional)",
+    "unsaved": "Modificări nesalvate",
+    "save": "Salva",
+    "saved": "Macrocomandă salvată",
+    "saveFailed": "Nu s-a putut salva macrocomanda",
+    "delete": "Şterge",
+    "deleteTitle": "Ștergeți această macrocomandă?",
+    "deleteBody": "„{{name}}” va fi șters definitiv. Această acțiune nu poate fi anulată.",
+    "deleted": "Macrocomandă ștearsă",
+    "cancel": "Anula",
+    "run": "Aleargă",
+    "stop": "Stop",
+    "running": "Funcţionare...",
+    "completed": "Macrocomandă finalizată",
+    "failed": "Macrocomanda a eșuat",
+    "loadFailed": "Nu s-au putut încărca macrocomenzile",
+    "needTerminal": "Deschideți și conectați mai întâi un terminal",
+    "noSteps": "Această macrocomandă nu are încă pași. Adăugați unul mai jos.",
+    "addStep": "Adăugați un pas",
+    "stepNumber": "Pasul {{number}}",
+    "removeStep": "Eliminați pasul",
+    "confirmRunTitle": "Rulați această macrocomandă?",
+    "confirmRunBody": "„{{name}}” va trimite comenzi către {{host}}.",
+    "confirmRunAction": "Executare macrocomandă",
+    "stepTypes": {
+      "send": {
+        "label": "Trimiteți comanda",
+        "help": "Introduce text în terminal, la fel ca și cum l-ai fi tastat."
+      },
+      "wait": {
+        "label": "Așteptați ieșirea",
+        "help": "Se întrerupe până când serverul afișează textul pe care îl denumiți, ca o solicitare de parolă."
+      },
+      "delay": {
+        "label": "Pauză",
+        "help": "Așteaptă o perioadă fixă de timp înainte de pasul următor."
+      },
+      "if": {
+        "label": "Dacă ieșirea conține",
+        "help": "Verifică tot ce a imprimat serverul până acum, apoi rulează una dintre cele două ramificații."
+      },
+      "repeat": {
+        "label": "Repeta",
+        "help": "Execută pașii din interiorul său de un număr stabilit de ori."
+      }
+    },
+    "send": {
+      "text": "Comandă sau text",
+      "textPlaceholder": "repornirea systemctl a nginx",
+      "pressEnter": "Apăsați Enter după trimitere",
+      "pressEnterHelp": "Dezactivați această opțiune pentru a introduce text fără a-l trimite."
+    },
+    "wait": {
+      "pattern": "Așteptați până când ieșirea conține",
+      "patternPlaceholder": "parolă:",
+      "timeout": "Renunță după",
+      "onTimeout": "Dacă nu apare niciodată",
+      "stop": "Opriți macrocomanda",
+      "continue": "Continuă oricum"
+    },
+    "delay": {
+      "duration": "Așteptați"
+    },
+    "ifStep": {
+      "pattern": "Dacă ieșirea conține",
+      "patternPlaceholder": "Activ: activ (alergând)",
+      "then": "Apoi fă asta",
+      "else": "Altfel, fă asta",
+      "emptyBranch": "Fără trepte"
+    },
+    "repeat": {
+      "count": "Numărul de ori",
+      "times": "ori"
+    },
+    "match": {
+      "useRegex": "Potrivire cu o expresie regulată",
+      "useRegexHelp": "Omiteți această opțiune pentru a corespunde exact textului așa cum este scris.",
+      "invalidRegex": "Nu este o expresie regulată validă, va fi găsită ca text simplu."
+    },
+    "seconds": "secunde",
+    "secondsShort": "{{count}}s"
   }
 }

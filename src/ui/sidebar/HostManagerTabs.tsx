@@ -30,7 +30,7 @@ export interface HostEditorSectionRenderProps {
   ) => void;
   host?: unknown;
   credentials?: unknown[];
-  snippets?: unknown[];
+  adminTargetUserId?: string;
   protocols: Record<string, boolean>;
 }
 

@@ -137,6 +137,10 @@
       {
         "id": "host-metrics.managers",
         "accepts": ["component"]
+      },
+      {
+        "id": "host-metrics.toolbar",
+        "accepts": ["component"]
       }
     ],
     "uiPresets": {

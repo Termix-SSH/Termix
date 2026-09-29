@@ -9,7 +9,11 @@ import {
   resetSyncRegistry,
   unregisterByOwner,
 } from "../../plugins/sync-registry.js";
-import { registerCoreSyncEntities } from "../../sync/entities.js";
+import {
+  mapKeybindingReferences,
+  registerCoreSyncEntities,
+} from "../../sync/entities.js";
+import { setKeybindingActionSource } from "../../database/routes/keybinding-validation.js";
 
 beforeEach(() => {
   resetSyncRegistry();
@@ -197,14 +201,51 @@ describe("core sync entities", () => {
     );
   });
 
-  it("translates every snippet a host points at", () => {
-    const fields = (getEntity("hosts")?.references ?? [])
-      .filter((reference) => reference.entityType === "commandSnippet")
-      .map((reference) => reference.field);
-    expect(fields).toEqual([
-      "quickActions[].snippetId",
-      "terminalConfig.startupSnippetId",
+  it("leaves plugin data out of the host row, which travels in pluginSettings", () => {
+    const hosts = getEntity("hosts");
+    expect(
+      (hosts?.references ?? []).map((reference) => reference.entityType),
+    ).not.toContain("commandSnippet");
+    expect(hosts?.readOnlyFields).toContain("quickActions");
+  });
+
+  it("translates a keybinding parameter that names a sync entity", async () => {
+    setKeybindingActionSource(() => [
+      {
+        pluginId: "fixture",
+        id: "runThing",
+        params: {
+          thingId: { type: "string", syncEntity: "things" },
+          label: { type: "string" },
+        },
+      },
     ]);
+    try {
+      const row = {
+        customKeybindings: JSON.stringify([
+          { id: "a", action: { type: "runThing", thingId: "4", label: "4" } },
+          { id: "b", action: { type: "nextTab" } },
+        ]),
+      };
+      const out = await mapKeybindingReferences(row, async (entity, value) =>
+        entity === "things" && value === "4" ? "sync-4" : null,
+      );
+      const bindings = JSON.parse(out.customKeybindings as string);
+      expect(bindings[0].action).toEqual({
+        type: "runThing",
+        thingId: "sync-4",
+        label: "4",
+      });
+      expect(bindings[1].action).toEqual({ type: "nextTab" });
+      expect(
+        await mapKeybindingReferences(
+          { customKeybindings: null },
+          async () => "x",
+        ),
+      ).toEqual({ customKeybindings: null });
+    } finally {
+      setKeybindingActionSource(() => []);
+    }
   });
 
   it("encrypts host and credential secrets", () => {

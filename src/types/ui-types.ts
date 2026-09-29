@@ -75,7 +75,6 @@ export type Host = {
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */
   statusCheckInterval?: number | null;
-  quickActions: { name: string; snippetId: string }[];
 
   enableSsh: boolean;
 
@@ -158,8 +157,6 @@ type KnownTabType =
   | "host-manager"
   | "user-profile"
   | "admin-settings"
-  // Rail panels that can also open full-width in the main area.
-  | "macros"
   | "split-screen";
 
 /**
@@ -255,8 +252,8 @@ export type UiFontId =
   | "source-code-pro"
   | "caskaydia-cove";
 
-/** A tools panel view: core's own, or a rail panel a plugin registered. */
-export type ToolsTab = "macros" | (string & {});
+/** A tools panel view: a rail panel a plugin registered. */
+export type ToolsTab = string & {};
 
 /** "row" lays children side by side, "column" stacks them. */
 export type SplitDirection = "row" | "column";
@@ -337,17 +334,6 @@ export type WorkspacePayload = {
     left: WorkspaceDockState;
     right: WorkspaceDockState;
   };
-};
-
-export type Snippet = {
-  id: number;
-  name: string;
-  description?: string;
-  content: string;
-  folder: string | null;
-  order: number;
-  hostIds?: number[];
-  isNote?: boolean;
 };
 
 const FOLDER_ICONS = [

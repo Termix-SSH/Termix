@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Chạy \"{{name}}\"",
+  "variablesDialogDescription": "Hãy điền đầy đủ các giá trị cần thiết cho đoạn mã này trước khi chạy.",
+  "variablesPreviewLabel": "Xem trước",
+  "variablesConfirmButton": "Chạy",
+  "keybindings": {
+    "runSnippet": "Chạy đoạn mã hiện có",
+    "snippetLabel": "Đoạn trích",
+    "selectSnippet": "Chọn một đoạn trích",
+    "snippetMissing": "Không tìm thấy đoạn mã.",
+    "snippetRequired": "Chọn một đoạn trích"
+  },
+  "paletteHintRun": "Chạy trong tab cửa sổ terminal đang hoạt động",
+  "host": {
+    "startupTitle": "Đoạn mã khởi động",
+    "quickActionsTitle": "Hành động nhanh",
+    "quickActionsDescription": "Hành động nhanh xuất hiện dưới dạng nút trên thanh công cụ Chỉ số máy để thực thi lệnh một lần nhấp.",
+    "noQuickActions": "Chưa có hành động nhanh nào.",
+    "buttonLabel": "Nhãn nút",
+    "selectSnippet": "Chọn đoạn mã...",
+    "addQuickAction": "Thêm hành động"
+  },
+  "quickActions": {
+    "running": "Đang thực thi {{name}}...",
+    "succeeded": "{{name}} đã hoàn tất thành công",
+    "failed": "{{name}} thất bại",
+    "error": "Thực thi {{name}} thất bại"
+  }
+}

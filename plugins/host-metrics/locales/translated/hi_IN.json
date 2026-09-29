@@ -51,10 +51,6 @@
     "processesRunning": "चल रहे",
     "loginStats": "SSH लॉगिन आँकड़े",
     "noRecentLoginData": "कोई हालिया लॉगिन डेटा नहीं",
-    "executingQuickAction": "{{name}} निष्पादित हो रहा है...",
-    "quickActionSuccess": "{{name}} सफलतापूर्वक पूर्ण हुआ",
-    "quickActionFailed": "{{name}} विफल रहा",
-    "quickActionError": "{{name}} निष्पादित करने में विफल",
     "ports": {
       "title": "लिसनिंग पोर्ट",
       "protocol": "प्रोटोकॉल",
@@ -235,12 +231,6 @@
     "addExcludedMount": "जोड़ना",
     "visibleWidgets": "दृश्यमान विजेट्स",
     "widgetsMovedToHostMetrics": "कार्ड अब सीधे होस्ट मेट्रिक्स टैब में जोड़े, व्यवस्थित और आकार बदले जा सकते हैं। इस होस्ट के लिए होस्ट मेट्रिक्स खोलें और यह चुनने के लिए कस्टमाइज़ का उपयोग करें कि कौन से कार्ड दिखाए जाएँ।",
-    "quickActionsLabel": "त्वरित कार्रवाइयाँ",
-    "quickActionsToolbar": "त्वरित कार्रवाइयाँ एक-क्लिक कमांड निष्पादन के लिए होस्ट मेट्रिक्स टूलबार में बटन के रूप में दिखाई देती हैं।",
-    "noQuickActions": "अभी तक कोई त्वरित कार्रवाई नहीं।",
-    "buttonLabel": "बटन लेबल",
-    "selectSnippetPlaceholder": "स्निपेट चुनें...",
-    "addActionBtn": "कार्रवाई जोड़ें",
     "hostNotFound": "होस्ट नहीं मिला",
     "loadingHost": "होस्ट लोड हो रहा है..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "डिस्क"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "रद्द करें",
-        "confirmRunButton": "चलाएँ",
-        "confirmRunMessage": "\"{{name}}\" चलाएँ?"
-      }
-    }
   },
   "terminal": {
     "connected": "कनेक्टेड"

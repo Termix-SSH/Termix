@@ -307,7 +307,6 @@
     "savedThemesLabel": "Tema Tersimpan",
     "scrollbackBufferLabel": "Buffer Gulir Balik",
     "scrollbackMaxLines": "Jumlah maksimum baris yang disimpan dalam riwayat",
-    "startupSnippetLabel": "Cuplikan Startup",
     "sudoPasswordAutoFill": "Isi Otomatis Kata Sandi Sudo",
     "sudoPasswordAutoFillDesc": "Simpan kata sandi sudo agar metrik host, perintah terminal, dan lainnya dapat menjalankan perintah istimewa secara otomatis.",
     "sudoPasswordAutoFillLabel": "Isi Otomatis Kata Sandi Sudo",
@@ -335,7 +334,8 @@
     "history": "Sejarah",
     "localTerminal": "Terminal Lokal",
     "sshTools": "Alat SSH",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "macros": "Makro"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Ketik di sini untuk menyiarkan ketukan keyboard...",
@@ -363,5 +363,112 @@
     "off": "Mati",
     "on": "Pada",
     "title": "Pengaturan Koneksi Default"
+  },
+  "keybindings": {
+    "copy": "Salin pilihan",
+    "paste": "Pasta",
+    "sendControlCode": "Kirim sinyal Ctrl+huruf",
+    "sendText": "Kirim pesan teks",
+    "controlCodeLabel": "Surat",
+    "textLabel": "Teks untuk dikirim",
+    "appendEnterLabel": "Tekan Enter setelah mengirim",
+    "clipboardPermissionNote": "Pada beberapa browser, mungkin akan meminta izin akses clipboard saat pertama kali digunakan.",
+    "textRequired": "Masukkan teks yang ingin dikirim",
+    "controlCodeRequired": "Masukkan satu huruf untuk kode kontrol."
+  },
+  "macros": {
+    "title": "Makro",
+    "description": "Jalankan serangkaian perintah yang tersimpan di terminal, dan tanggapi apa yang dikirimkan kembali oleh server.",
+    "target": "Target",
+    "noTerminal": "Tidak ada terminal yang terbuka",
+    "empty": "Belum ada makro",
+    "emptyHint": "Buat makro untuk mengotomatiskan alur terminal, seperti masuk, memulai ulang layanan, atau menjawab perintah.",
+    "create": "Makro baru",
+    "back": "Kembali ke makro",
+    "name": "Nama",
+    "namePlaceholder": "Mulai ulang server web",
+    "nameRequired": "Beri nama makro sebelum menyimpannya.",
+    "descriptionLabel": "Keterangan",
+    "descriptionPlaceholder": "Fungsi makro ini (opsional)",
+    "unsaved": "Perubahan yang belum disimpan",
+    "save": "Menyimpan",
+    "saved": "Makro tersimpan",
+    "saveFailed": "Makro tidak dapat disimpan.",
+    "delete": "Menghapus",
+    "deleteTitle": "Hapus makro ini?",
+    "deleteBody": "\"{{name}}\" akan dihapus secara permanen. Ini tidak dapat dibatalkan.",
+    "deleted": "Makro dihapus",
+    "cancel": "Membatalkan",
+    "run": "Berlari",
+    "stop": "Berhenti",
+    "running": "Berlari...",
+    "completed": "Makro selesai",
+    "failed": "Makro gagal",
+    "loadFailed": "Makro tidak dapat dimuat",
+    "needTerminal": "Buka dan sambungkan terminal terlebih dahulu.",
+    "noSteps": "Makro ini belum memiliki langkah. Tambahkan langkah di bawah ini.",
+    "addStep": "Tambahkan langkah",
+    "stepNumber": "Langkah {{number}}",
+    "removeStep": "Hapus langkah",
+    "confirmRunTitle": "Jalankan makro ini?",
+    "confirmRunBody": "\"{{name}}\" akan mengirimkan perintah ke {{host}}.",
+    "confirmRunAction": "Jalankan makro",
+    "stepTypes": {
+      "send": {
+        "label": "Kirim perintah",
+        "help": "Mengetik teks ke terminal, sama seperti jika Anda mengetiknya."
+      },
+      "wait": {
+        "label": "Tunggu hingga muncul output.",
+        "help": "Akan berhenti sejenak hingga server menampilkan teks yang Anda sebutkan, seperti saat meminta kata sandi."
+      },
+      "delay": {
+        "label": "Berhenti sebentar",
+        "help": "Menunggu dalam jangka waktu tertentu sebelum melanjutkan ke langkah berikutnya."
+      },
+      "if": {
+        "label": "Jika output berisi",
+        "help": "Memeriksa semua yang telah dicetak server sejauh ini, lalu menjalankan salah satu dari dua cabang."
+      },
+      "repeat": {
+        "label": "Mengulang",
+        "help": "Menjalankan langkah-langkah di dalamnya sebanyak jumlah kali yang telah ditentukan."
+      }
+    },
+    "send": {
+      "text": "Perintah atau teks",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Tekan Enter setelah mengirim",
+      "pressEnterHelp": "Matikan opsi ini untuk mengetik teks tanpa mengirimkannya."
+    },
+    "wait": {
+      "pattern": "Tunggu hingga output berisi",
+      "patternPlaceholder": "kata sandi:",
+      "timeout": "Menyerah setelah",
+      "onTimeout": "Jika itu tidak pernah muncul",
+      "stop": "Hentikan makro",
+      "continue": "Tetaplah melanjutkan"
+    },
+    "delay": {
+      "duration": "Tunggu"
+    },
+    "ifStep": {
+      "pattern": "Jika outputnya berisi",
+      "patternPlaceholder": "Aktif: aktif (berjalan)",
+      "then": "Kemudian lakukan ini",
+      "else": "Jika tidak, lakukan ini",
+      "emptyBranch": "Tidak ada tangga"
+    },
+    "repeat": {
+      "count": "Jumlah kali",
+      "times": "waktu"
+    },
+    "match": {
+      "useRegex": "Cocokkan dengan ekspresi reguler",
+      "useRegexHelp": "Hilangkan bagian ini agar sesuai persis dengan teks yang tertulis.",
+      "invalidRegex": "Bukan ekspresi reguler yang valid, akan dicocokkan sebagai teks biasa."
+    },
+    "seconds": "detik",
+    "secondsShort": "{{count}}s"
   }
 }
