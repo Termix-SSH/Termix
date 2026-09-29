@@ -179,6 +179,8 @@ export type Tab = {
     subscribeOutput?: (listener: (data: string) => void) => () => void;
     paste?: (text: string) => void;
     reconnect?: () => void;
+    /** Start a manual reconnect only when disconnected and idle; return whether it started. */
+    reconnectIfDisconnected?: () => boolean;
     fit?: () => void;
     notifyResize?: () => void;
     refresh?: () => void;

@@ -53,6 +53,7 @@ import {
 } from "@/shell/split/EmptyPanePicker";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
+import { reconnectDisconnectedTabs } from "@/shell/reconnect-tabs";
 import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
@@ -1780,6 +1781,24 @@ export function AppShell({
     });
   }
 
+  const reconnectAllRef = useRef<() => void>(() => {});
+  function reconnectAllDisconnected() {
+    const { reconnected, failed } = reconnectDisconnectedTabs(tabsRef.current);
+    if (reconnected || !failed)
+      toast(
+        t(
+          reconnected
+            ? "nav.reconnectingTerminals"
+            : "nav.noDisconnectedTerminals",
+          { count: reconnected },
+        ),
+      );
+    if (failed)
+      toast.error(t("nav.reconnectTerminalsFailed", { count: failed }));
+  }
+
+  reconnectAllRef.current = reconnectAllDisconnected;
+
   function refreshTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
     const handle = tab?.terminalRef?.current;
@@ -2142,6 +2161,14 @@ export function AppShell({
         tabsRef.current.find((tab) => tab.id === activeTabIdRef.current),
       );
     const entries = [
+      registerPaletteEntry({
+        id: "core.reconnectDisconnected",
+        titleKey: "nav.reconnectDisconnectedTerminals",
+        icon: RotateCcw,
+        keywords: ["reconnect", "disconnected", "ssh", "all", "network"],
+        scope: "global",
+        run: () => reconnectAllRef.current(),
+      }),
       registerPaletteEntry({
         id: "core.split.right",
         titleKey: "splitScreen.splitRight",
@@ -2979,6 +3006,7 @@ export function AppShell({
                 onSetActiveTab={setActiveTabId}
                 onCloseTab={closeTab}
                 onRefreshTab={refreshTab}
+                onReconnectDisconnected={reconnectAllDisconnected}
                 onReorderTabs={reorderTopLevelTabs}
                 onSplitAction={handleTabSplitAction}
                 onRenameTab={renameTab}
