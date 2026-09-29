@@ -17,9 +17,10 @@ import {
 } from "@/main-axios";
 import type { Credential, Host } from "@/types/ui-types";
 import {
-  AUTH_PROTOCOL_METADATA,
+  SSH_AUTH_PROTOCOL,
   type AuthOverrideProtocol,
 } from "@/types/auth-protocols";
+import { authProtocolLabel } from "./host-permissions";
 import { mapCredentials } from "./HostManagerData";
 import { getConnectedRemoteApi } from "@/lib/remote-server-api";
 
@@ -44,7 +45,7 @@ export function HostAuthOverrideModal({
   const overrideState = host.authOverrides?.[protocol];
   const ownerAuthShared =
     overrideState?.ownerAuthShared ??
-    (protocol === "ssh" ? !!host.shareSshAuth : false);
+    (protocol === SSH_AUTH_PROTOCOL ? !!host.shareSshAuth : false);
   // A shared host's copy on a linked desktop: its override lives on the
   // server, against the server's own credentials.
   const sharedCopySyncId = host.sharedCopy ? (host.syncId ?? null) : null;
@@ -127,7 +128,7 @@ export function HostAuthOverrideModal({
           <DialogHeader>
             <DialogTitle>
               {t("hosts.sharing.authOverrideTitleProtocol", {
-                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+                protocol: authProtocolLabel(protocol, t),
               })}
             </DialogTitle>
             <DialogDescription>

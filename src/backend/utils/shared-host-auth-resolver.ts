@@ -1,7 +1,5 @@
-import {
-  isSupportedAuthOverrideProtocol,
-  type AuthOverrideProtocol,
-} from "../../types/auth-protocols.js";
+import type { AuthOverrideProtocol } from "../../types/auth-protocols.js";
+import { isAuthOverrideProtocol } from "../hosts/protocol-auth/registry.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
@@ -37,8 +35,8 @@ export function requiresPersonalHostAuthentication(
   host: Pick<HostResolutionHostRecord, "credentialId" | "authType">,
   protocol: AuthOverrideProtocol,
 ): boolean {
-  // Owner auth for RDP/VNC/Telnet is snapshotted for every recipient, so only
-  // SSH, which sits behind shareSshAuth, can leave a recipient without auth.
+  // Owner auth for a plugin protocol is snapshotted for every recipient, so
+  // only SSH, which sits behind shareSshAuth, can leave one without auth.
   if (protocol !== "ssh") return false;
   if (host.credentialId) return true;
   ensureCoreSshAuthProviders();
@@ -64,10 +62,8 @@ export async function resolveRecipientSharedHostAuthentication(
   userId: string,
   protocol: AuthOverrideProtocol,
 ): Promise<RecipientSharedHostAuthResolution> {
-  if (!isSupportedAuthOverrideProtocol(protocol)) {
-    throw new Error(
-      `${protocol.toUpperCase()} shared-host authentication is not implemented`,
-    );
+  if (!isAuthOverrideProtocol(protocol)) {
+    throw new Error(`No plugin declares the ${String(protocol)} protocol`);
   }
 
   const repository = createCurrentHostResolutionRepository();

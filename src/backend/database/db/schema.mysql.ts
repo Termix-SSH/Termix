@@ -210,25 +210,6 @@ export const hosts = mysqlTable(
 
     sshPort: int("ssh_port").default(22),
 
-    rdpCredentialId: int("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-    rdpUser: text("rdp_user"),
-    rdpPassword: text("rdp_password"),
-    rdpDomain: text("rdp_domain"),
-
-    vncCredentialId: int("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-    vncPassword: text("vnc_password"),
-    vncUser: text("vnc_user"),
-
-    telnetUser: text("telnet_user"),
-    telnetPassword: text("telnet_password"),
-    telnetCredentialId: int("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-
-    rdpAuthType: text("rdp_auth_type"),
-    vncAuthType: text("vnc_auth_type"),
-    telnetAuthType: text("telnet_auth_type"),
-
-    domain: text("domain"),
-
     useSocks5: boolean("use_socks5"),
     socks5Host: text("socks5_host"),
     socks5Port: int("socks5_port"),
@@ -239,7 +220,7 @@ export const hosts = mysqlTable(
     // null = use the desktop app's global default; "local" | "remote" pins
     // this specific host's SSH/Docker-console/Serial connections to originate
     // from the embedded local backend or a connected remote sync server.
-    // Ignored for rdp/vnc/telnet, which always require the remote server.
+    // Ignored for plugin protocols, which always need the remote server.
     connectionOrigin: text("connection_origin"),
 
     portKnockSequence: text("port_knock_sequence"),
@@ -343,6 +324,45 @@ export const sshCredentialUsage = mysqlTable(
   (table) => [
     index("idx_ssh_credential_usage_credential").on(table.credentialId),
     index("idx_ssh_credential_usage_user").on(table.userId),
+  ],
+);
+
+// A host's login for a protocol a plugin declares (contributes.protocols),
+// owned and encrypted like the host itself. `fields` holds the protocol's
+// non-secret declared fields as JSON, `secret_fields` its secret ones.
+export const hostProtocolAuth = mysqlTable(
+  "host_protocol_auth",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    protocol: varchar("protocol", { length: 255 }).notNull(),
+    authType: text("auth_type").notNull().default("direct"),
+    credentialId: int("credential_id").references(() => sshCredentials.id, {
+      onDelete: "set null",
+    }),
+    username: text("username"),
+    password: text("password"),
+    fields: text("fields"),
+    secretFields: text("secret_fields"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_host_protocol_auth_host_protocol").on(
+      table.hostId,
+      table.protocol,
+    ),
+    index("idx_host_protocol_auth_user").on(table.userId),
+    index("idx_host_protocol_auth_credential").on(table.credentialId),
   ],
 );
 
@@ -493,6 +513,8 @@ export const sharedHostSecrets = mysqlTable(
     encryptedKeyPassword: text("encrypted_key_password"),
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
+    // A plugin protocol's declared credential fields, JSON, encrypted.
+    encryptedFields: text("encrypted_fields"),
 
     createdAt: text("created_at")
       .notNull()

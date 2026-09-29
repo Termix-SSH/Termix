@@ -417,7 +417,7 @@ export function HostManager({
       : makeCredentialTabs(t);
     // Collapsing while on a now-hidden tab would leave nothing selected. The
     // SSH group collapses to its own "ssh" tab, everything else to General.
-    // The top-level strip only lists general/ssh/rdp/vnc/telnet -- the SSH
+    // The top-level strip only lists general, ssh and protocol tabs -- the SSH
     // sub-tabs live in the secondary strip, so they count as visible whenever
     // the SSH group is expanded.
     const sshSubTabs = makeHostSshSubTabs(t, protocols);

@@ -74,6 +74,28 @@
         "accepts": ["button"]
       }
     ],
+    "protocols": [
+      {
+        "id": "rdp",
+        "credentialFields": [
+          {
+            "key": "domain"
+          }
+        ],
+        "defaultPort": 3389,
+        "hostLoginFallback": ["username", "password"]
+      },
+      {
+        "id": "vnc",
+        "defaultPort": 5900,
+        "hostLoginFallback": ["password"]
+      },
+      {
+        "id": "telnet",
+        "defaultPort": 23,
+        "hostLoginFallback": ["password"]
+      }
+    ],
     "guest": true,
     "permissions": [
       {

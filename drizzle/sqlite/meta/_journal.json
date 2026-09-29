@@ -407,6 +407,13 @@
       "when": 1790651053202,
       "tag": "0057_green_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "6",
+      "when": 1790700721290,
+      "tag": "0058_bitter_thunderbolt",
+      "breakpoints": true
     }
   ]
 }

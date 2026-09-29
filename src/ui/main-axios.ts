@@ -664,7 +664,7 @@ export function getRemoteCoreApi(): AxiosInstance {
 }
 
 function initializeApiInstances() {
-  // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
+  // Host Management API (port 30001) - SSH and plugin protocols
   hostApi = createApiInstance(getApiUrl("/host", 30001), "HOST");
   sshHostApi = hostApi;
 
@@ -675,7 +675,7 @@ function initializeApiInstances() {
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
 }
 
-// Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
+// Host Management API (port 30001) - SSH and plugin protocols
 export let hostApi: AxiosInstance;
 // Backward compatibility
 export let sshHostApi: AxiosInstance;

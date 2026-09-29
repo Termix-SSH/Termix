@@ -1,9 +1,11 @@
 import type {
+  HostProtocolAuthSummary,
   HostSshOptions,
   HostTerminalConfig,
   SSHAuthType,
 } from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
+import type { QuickConnectLogin } from "@termix/plugin-sdk/frontend";
 
 export type Host = {
   id: string;
@@ -44,6 +46,8 @@ export type Host = {
   pin?: boolean;
   /** Quick connect only: core can save this host as-is. */
   quickConnectSavable?: boolean;
+  /** A Quick Connect host's plugin protocol login, never saved. */
+  quickConnectLogin?: QuickConnectLogin;
   sortOrder?: number | null;
 
   /** Stable identity across a desktop/server sync pair. */
@@ -80,24 +84,8 @@ export type Host = {
 
   sshPort: number;
 
-  rdpAuthType?: "direct" | "credential" | "none";
-  rdpCredentialId?: string;
-  rdpUser?: string;
-  rdpPassword?: string;
-  hasRdpPassword?: boolean;
-  domain?: string;
-
-  vncAuthType?: "direct" | "credential";
-  vncCredentialId?: string;
-  vncPassword?: string;
-  hasVncPassword?: boolean;
-  vncUser?: string;
-
-  telnetAuthType?: "direct" | "credential";
-  telnetCredentialId?: string;
-  telnetUser?: string;
-  telnetPassword?: string;
-  hasTelnetPassword?: boolean;
+  /** Each plugin protocol's login, secrets left out. */
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
 
   /** Host-scope plugin settings, keyed by plugin id. Secrets are redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;

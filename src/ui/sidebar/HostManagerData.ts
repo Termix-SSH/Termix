@@ -6,9 +6,6 @@ type RawSSHHost = SSHHostWithStatus & {
   hasKey?: boolean;
   hasKeyPassword?: boolean;
   hasSudoPassword?: boolean;
-  hasRdpPassword?: boolean;
-  hasVncPassword?: boolean;
-  hasTelnetPassword?: boolean;
 };
 type HostJumpHost = NonNullable<Host["jumpHosts"]>[number];
 type RawCredential = {
@@ -81,31 +78,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     sshPort:
       h.sshPort ??
       (h.connectionType === "ssh" || !h.connectionType ? h.port : 22),
-    rdpAuthType:
-      (h.rdpAuthType as "direct" | "credential") ??
-      (h.rdpCredentialId ? "credential" : "direct"),
-    rdpCredentialId:
-      h.rdpCredentialId != null ? String(h.rdpCredentialId) : undefined,
-    rdpUser: h.rdpUser,
-    rdpPassword: h.rdpPassword ?? "",
-    hasRdpPassword: !!host.hasRdpPassword || !!h.rdpPassword,
-    domain: h.rdpDomain,
-    vncAuthType:
-      (h.vncAuthType as "direct" | "credential") ??
-      (h.vncCredentialId ? "credential" : "direct"),
-    vncCredentialId:
-      h.vncCredentialId != null ? String(h.vncCredentialId) : undefined,
-    vncPassword: h.vncPassword ?? "",
-    hasVncPassword: !!host.hasVncPassword || !!h.vncPassword,
-    vncUser: h.vncUser,
-    telnetAuthType:
-      (h.telnetAuthType as "direct" | "credential") ??
-      (h.telnetCredentialId ? "credential" : "direct"),
-    telnetCredentialId:
-      h.telnetCredentialId != null ? String(h.telnetCredentialId) : undefined,
-    telnetUser: h.telnetUser,
-    telnetPassword: h.telnetPassword ?? "",
-    hasTelnetPassword: !!host.hasTelnetPassword || !!h.telnetPassword,
+    protocolAuth: h.protocolAuth ?? {},
     jumpHosts: (parseJson<HostJumpHost[]>(h.jumpHosts) ?? []).map((j) => ({
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),
@@ -126,18 +99,22 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     isShared: h.isShared ?? false,
     authOverrides: h.authOverrides
       ? Object.fromEntries(
-          Object.entries(h.authOverrides).map(([protocol, state]) => [
-            protocol,
+          Object.entries(h.authOverrides).flatMap(([protocol, state]) =>
             state
-              ? {
-                  ...state,
-                  credentialId:
-                    state.credentialId != null
-                      ? String(state.credentialId)
-                      : undefined,
-                }
-              : state,
-          ]),
+              ? [
+                  [
+                    protocol,
+                    {
+                      ...state,
+                      credentialId:
+                        state.credentialId != null
+                          ? String(state.credentialId)
+                          : undefined,
+                    },
+                  ],
+                ]
+              : [],
+          ),
         )
       : undefined,
     permissionLevel: h.permissionLevel,

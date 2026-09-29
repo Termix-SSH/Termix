@@ -115,7 +115,9 @@ describe("HostCredentialList credential usage", () => {
           name: "rdp-only",
           authType: "password",
           credentialId: undefined,
-          rdpCredentialId: "1",
+          protocolAuth: {
+            rdp: { authType: "credential", credentialId: 1 },
+          },
           enableSsh: false,
         }),
       ],

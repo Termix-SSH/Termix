@@ -64,6 +64,13 @@ import {
 } from "./repositories/factory.js";
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
+import {
+  keepUsableProtocolCredentials,
+  listProtocolLogins,
+  readProtocolAuthPayload,
+  toPortableLogins,
+  writeProtocolAuth,
+} from "../hosts/protocol-auth/protocol-auth.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import type { GitHubRelease, AuthenticatedRequest } from "../../types/index.js";
 import { DatabaseSaveTrigger } from "./db/index.js";
@@ -732,7 +739,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           socks5_username TEXT,
           socks5_password TEXT,
           socks5_proxy_chain TEXT,
-          domain TEXT,
           port_knock_sequence TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -743,6 +749,16 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           host_id INTEGER NOT NULL,
           key TEXT NOT NULL,
           value TEXT
+        );
+
+        CREATE TABLE host_protocol_auth (
+          host_id INTEGER NOT NULL,
+          protocol TEXT NOT NULL,
+          auth_type TEXT NOT NULL,
+          credential_id INTEGER,
+          username TEXT,
+          password TEXT,
+          fields TEXT
         );
 
         CREATE TABLE ssh_credentials (
@@ -801,8 +817,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -842,7 +858,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.socks5Username || null,
           decrypted.socks5Password || null,
           decrypted.socks5ProxyChain || null,
-          decrypted.domain || null,
           decrypted.portKnockSequence || null,
           decrypted.createdAt,
           decrypted.updatedAt,
@@ -867,6 +882,27 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           row.key,
           row.value,
         );
+      }
+
+      // Plugin protocol logins, decrypted like the host's own secrets.
+      const insertProtocolAuth = exportDb.prepare(
+        "INSERT INTO host_protocol_auth (host_id, protocol, auth_type, credential_id, username, password, fields) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      );
+      for (const host of sshHosts) {
+        const logins = toPortableLogins(
+          await listProtocolLogins(host.id as number, userId),
+        );
+        for (const [protocol, login] of Object.entries(logins)) {
+          insertProtocolAuth.run(
+            host.id,
+            protocol,
+            login.authType,
+            login.credentialId,
+            login.username,
+            login.password,
+            JSON.stringify(login.fields),
+          );
+        }
       }
 
       const credentials =
@@ -1177,6 +1213,12 @@ app.post(
                 await applyPluginHostImportSettings(
                   Number(created.id),
                   importedHostPluginSettings(importDb, host),
+                );
+                await importHostProtocolLogins(
+                  importDb,
+                  host,
+                  Number(created.id),
+                  userId,
                 );
                 result.summary.sshHostsImported++;
               } catch (hostError) {
@@ -1859,6 +1901,52 @@ function legacyStatusCheck(row: Record<string, unknown>): {
         ? seconds
         : null,
   };
+}
+
+/**
+ * A host's plugin protocol logins from an export. The file's credential ids
+ * belong to the server that wrote it, so a login keeps one only when it is
+ * a credential the importing user can use.
+ */
+async function importHostProtocolLogins(
+  importDb: Database.Database,
+  host: Record<string, unknown>,
+  hostId: number,
+  userId: string,
+): Promise<void> {
+  let rows: Array<Record<string, unknown>>;
+  try {
+    rows = importDb
+      .prepare("SELECT * FROM host_protocol_auth WHERE host_id = ?")
+      .all(host.id) as Array<Record<string, unknown>>;
+  } catch {
+    // An export from before 2.9.0 has no protocol logins.
+    return;
+  }
+  const protocolAuth: Record<string, unknown> = {};
+  for (const row of rows) {
+    let fields: unknown = {};
+    try {
+      fields = JSON.parse(String(row.fields ?? "{}"));
+    } catch {
+      fields = {};
+    }
+    protocolAuth[String(row.protocol)] = {
+      authType: row.auth_type,
+      credentialId: row.credential_id,
+      username: row.username,
+      password: row.password,
+      fields,
+    };
+  }
+  const patch = readProtocolAuthPayload({ protocolAuth });
+  if (!patch) return;
+  await writeProtocolAuth(
+    userId,
+    hostId,
+    await keepUsableProtocolCredentials(patch, userId),
+    { isOwner: true },
+  );
 }
 
 /**

@@ -1,4 +1,7 @@
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  HOST_PROTOCOL_SECRET_KEPT,
+  useTranslation,
+} from "@termix/plugin-sdk/frontend";
 import {
   FakeSwitch,
   Input,
@@ -198,17 +201,17 @@ export function HostEditorRdpTab({
                     <PasswordInput
                       className="h-8 text-xs pr-8"
                       placeholder={
-                        form.rdpPassword === "existing_rdp_password"
+                        form.rdpPassword === HOST_PROTOCOL_SECRET_KEPT
                           ? t("hosts.guac.passwordSaved")
                           : "••••••••"
                       }
                       value={
-                        form.rdpPassword === "existing_rdp_password"
+                        form.rdpPassword === HOST_PROTOCOL_SECRET_KEPT
                           ? ""
                           : form.rdpPassword
                       }
                       onFocus={() => {
-                        if (form.rdpPassword === "existing_rdp_password")
+                        if (form.rdpPassword === HOST_PROTOCOL_SECRET_KEPT)
                           setField("rdpPassword", "");
                       }}
                       onChange={(e) => setField("rdpPassword", e.target.value)}
@@ -1053,17 +1056,17 @@ export function HostEditorVncTab({
                 <PasswordInput
                   className="h-8 text-xs pr-8"
                   placeholder={
-                    form.vncPassword === "existing_vnc_password"
+                    form.vncPassword === HOST_PROTOCOL_SECRET_KEPT
                       ? t("hosts.guac.passwordSaved")
                       : "••••••••"
                   }
                   value={
-                    form.vncPassword === "existing_vnc_password"
+                    form.vncPassword === HOST_PROTOCOL_SECRET_KEPT
                       ? ""
                       : form.vncPassword
                   }
                   onFocus={() => {
-                    if (form.vncPassword === "existing_vnc_password")
+                    if (form.vncPassword === HOST_PROTOCOL_SECRET_KEPT)
                       setField("vncPassword", "");
                   }}
                   onChange={(e) => setField("vncPassword", e.target.value)}
@@ -1544,17 +1547,17 @@ export function HostEditorTelnetTab({
                 <PasswordInput
                   className="h-8 text-xs pr-8"
                   placeholder={
-                    form.telnetPassword === "existing_telnet_password"
+                    form.telnetPassword === HOST_PROTOCOL_SECRET_KEPT
                       ? t("hosts.guac.passwordSaved")
                       : "••••••••"
                   }
                   value={
-                    form.telnetPassword === "existing_telnet_password"
+                    form.telnetPassword === HOST_PROTOCOL_SECRET_KEPT
                       ? ""
                       : form.telnetPassword
                   }
                   onFocus={() => {
-                    if (form.telnetPassword === "existing_telnet_password")
+                    if (form.telnetPassword === HOST_PROTOCOL_SECRET_KEPT)
                       setField("telnetPassword", "");
                   }}
                   onChange={(e) => setField("telnetPassword", e.target.value)}

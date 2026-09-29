@@ -1,4 +1,8 @@
-import type { HostSshOptions } from "@termix/plugin-sdk/frontend";
+import type {
+  HostProtocolAuthSummary,
+  HostProtocolAuthType,
+  HostSshOptions,
+} from "@termix/plugin-sdk/frontend";
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
@@ -14,6 +18,19 @@ export type {
  */
 export type SSHAuthType =
   "password" | "key" | "credential" | "none" | "agent" | (string & {});
+
+export type { HostProtocolAuthSummary, HostProtocolAuthType };
+
+/** One plugin protocol's login in a host write. */
+export interface HostProtocolAuthInput {
+  authType?: HostProtocolAuthType;
+  credentialId?: number | null;
+  username?: string | null;
+  /** Left out to keep the saved password. */
+  password?: string | null;
+  /** Declared credential fields; one left out keeps its value. */
+  fields?: Record<string, string | null>;
+}
 
 export type WebEndpointAccess = "direct" | "tunnel";
 export type WebEndpointRender = "external" | "embedded";
@@ -109,23 +126,11 @@ export type Host = {
 
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
-  domain?: string;
 
   enableSsh?: boolean;
   sshPort?: number;
-  rdpCredentialId?: number | null;
-  rdpUser?: string;
-  rdpPassword?: string;
-  rdpDomain?: string;
-  vncCredentialId?: number | null;
-  vncPassword?: string;
-  vncUser?: string;
-  telnetUser?: string;
-  telnetPassword?: string;
-  telnetCredentialId?: number | null;
-  rdpAuthType?: "direct" | "credential" | "none" | null;
-  vncAuthType?: "direct" | "credential" | null;
-  telnetAuthType?: "direct" | "credential" | null;
+  /** Each plugin protocol's login, secrets left out. */
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
   /**
    * Stable identity across a desktop/server sync pair. `id` is an
    * autoincrement local to whichever database produced the row, so it cannot
@@ -148,9 +153,6 @@ export type Host = {
   // tell a stored secret from an empty one without receiving it.
   hasPassword?: boolean;
   hasSudoPassword?: boolean;
-  hasRdpPassword?: boolean;
-  hasVncPassword?: boolean;
-  hasTelnetPassword?: boolean;
 
   isShared?: boolean;
   authOverrides?: HostAuthOverrides;
@@ -228,23 +230,14 @@ export interface HostData {
 
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
-  domain?: string;
 
   enableSsh?: boolean;
   sshPort?: number;
-  rdpCredentialId?: number | null;
-  rdpUser?: string;
-  rdpPassword?: string;
-  rdpDomain?: string;
-  vncCredentialId?: number | null;
-  vncPassword?: string;
-  vncUser?: string;
-  telnetUser?: string;
-  telnetPassword?: string;
-  telnetCredentialId?: number | null;
-  rdpAuthType?: "direct" | "credential" | "none" | null;
-  vncAuthType?: "direct" | "credential" | null;
-  telnetAuthType?: "direct" | "credential" | null;
+  /**
+   * Plugin protocol logins to write, keyed by protocol id. A key left out
+   * keeps its login, null removes it, and a field left out keeps its value.
+   */
+  protocolAuth?: Record<string, HostProtocolAuthInput | null>;
   /** Desktop only: kept on this device, never synced to the server. */
   localOnly?: boolean;
 }

@@ -121,7 +121,7 @@ const swaggerOptions: SwaggerJSDocOptions = {
       },
       {
         name: "Guacamole",
-        description: "RDP, VNC, and Telnet remote desktop sessions",
+        description: "Remote desktop sessions",
       },
       {
         name: "Proxmox",

@@ -8,7 +8,7 @@ import {
   getAuditUsername,
   logAudit,
 } from "../../utils/audit-logger.js";
-import { isAuthOverrideProtocol } from "../../../types/auth-protocols.js";
+import { isAuthOverrideProtocol } from "../../hosts/protocol-auth/registry.js";
 import {
   SharedHostAuthOverrideService,
   SharedHostAuthOverrideServiceError,
@@ -1945,7 +1945,7 @@ router.delete(
  * /rbac/host-access/{hostId}/auth/{protocol}:
  *   put:
  *     summary: Set personal authentication for a shared host protocol
- *     description: Selects one of the authenticated recipient's own credentials, or clears the selection with null. Only SSH is currently supported.
+ *     description: Selects one of the authenticated recipient's own credentials, or clears the selection with null. The protocol is "ssh" or one a plugin declares.
  *     tags: [RBAC]
  *     security:
  *       - bearerAuth: []

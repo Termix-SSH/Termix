@@ -10,7 +10,7 @@ interface OriginResolvableHost {
 
 /**
  * Resolves which backend a given host's interactive connection (SSH, Docker
- * console, RDP/VNC/Telnet) should dial: the desktop app's embedded local
+ * console, remote desktop) should dial: the desktop app's embedded local
  * backend, or the server it is linked to. A plugin whose connection is
  * always local regardless of this setting (serial: the hardware is
  * physically attached to this desktop machine) skips this helper entirely

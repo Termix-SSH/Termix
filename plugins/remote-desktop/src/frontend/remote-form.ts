@@ -1,12 +1,16 @@
-import type { HostEditorSectionProps } from "@termix/plugin-sdk/frontend";
-import { PLUGIN_ID, remoteOptions } from "./host-remote";
+import type {
+  HostEditorSectionProps,
+  HostProtocolAuthForm,
+} from "@termix/plugin-sdk/frontend";
+import { PLUGIN_ID, remoteOptions, type Protocol } from "./host-remote";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * The host editor fields the RDP, VNC and Telnet tabs edit. The logins are
- * core host fields; the options (ports, security, guacd settings) are this
- * plugin's host settings, presented here under the names the tabs use.
+ * core's, under form.protocolAuth (this plugin declares the protocols in its
+ * manifest); the options (ports, security, guacd settings) are this plugin's
+ * host settings. Both are presented here under the names the tabs use.
  */
 export interface RemoteDesktopForm {
   domain: string;
@@ -46,7 +50,45 @@ const SETTING_FOR_FIELD: Partial<Record<keyof RemoteDesktopForm, string>> = {
   enableToolbar: "enableToolbar",
 };
 
+type LoginPart = "authType" | "credentialId" | "username" | "password";
+
+/** Tab field name to the protocol login it edits. */
+const LOGIN_FOR_FIELD: Partial<
+  Record<keyof RemoteDesktopForm, [Protocol, LoginPart | "domain"]>
+> = {
+  rdpAuthType: ["rdp", "authType"],
+  rdpCredentialId: ["rdp", "credentialId"],
+  rdpUser: ["rdp", "username"],
+  rdpPassword: ["rdp", "password"],
+  domain: ["rdp", "domain"],
+  vncAuthType: ["vnc", "authType"],
+  vncCredentialId: ["vnc", "credentialId"],
+  vncUser: ["vnc", "username"],
+  vncPassword: ["vnc", "password"],
+  telnetAuthType: ["telnet", "authType"],
+  telnetCredentialId: ["telnet", "credentialId"],
+  telnetUser: ["telnet", "username"],
+  telnetPassword: ["telnet", "password"],
+};
+
 type PluginSettingsBag = Record<string, Record<string, unknown>>;
+type LoginBag = Record<string, HostProtocolAuthForm>;
+
+const EMPTY_LOGIN: HostProtocolAuthForm = {
+  authType: "direct",
+  credentialId: "",
+  username: "",
+  password: "",
+  fields: {},
+};
+
+export function loginOf(
+  bag: LoginBag | undefined,
+  protocol: Protocol,
+): HostProtocolAuthForm {
+  const login = bag?.[protocol];
+  return login ? { ...EMPTY_LOGIN, ...login } : EMPTY_LOGIN;
+}
 
 function patchSettings(
   current: Record<string, unknown>,
@@ -59,15 +101,34 @@ function patchSettings(
   };
 }
 
+/** The form patch that sets one part of a protocol's login. */
+export function patchLogin(
+  current: Record<string, unknown>,
+  protocol: Protocol,
+  part: LoginPart | "domain",
+  value: unknown,
+): Record<string, unknown> {
+  const bag = (current.protocolAuth as LoginBag | undefined) ?? {};
+  const login = loginOf(bag, protocol);
+  const next: HostProtocolAuthForm =
+    part === "domain"
+      ? { ...login, fields: { ...login.fields, domain: String(value ?? "") } }
+      : ({ ...login, [part]: value } as HostProtocolAuthForm);
+  return { protocolAuth: { ...bag, [protocol]: next } };
+}
+
 export function remoteDesktopForm(props: HostEditorSectionProps): {
   form: RemoteDesktopForm;
   setField: RemoteFormSetField;
   setGuacField: (key: string, value: unknown) => void;
 } {
   const bag = props.form?.pluginSettings as PluginSettingsBag | undefined;
+  const logins = props.form?.protocolAuth as LoginBag | undefined;
   const options = remoteOptions(bag?.[PLUGIN_ID]);
+  const rdp = loginOf(logins, "rdp");
+  const vnc = loginOf(logins, "vnc");
+  const telnet = loginOf(logins, "telnet");
   const form: RemoteDesktopForm = {
-    ...(props.form as RemoteDesktopForm),
     rdpPort: options.rdpPort,
     vncPort: options.vncPort,
     telnetPort: options.telnetPort,
@@ -75,9 +136,29 @@ export function remoteDesktopForm(props: HostEditorSectionProps): {
     ignoreCert: options.rdpIgnoreCert,
     guacamoleConfig: options.guacamoleConfig as Record<string, any>,
     enableToolbar: options.enableToolbar,
+    domain: rdp.fields.domain ?? "",
+    rdpAuthType: rdp.authType,
+    rdpCredentialId: rdp.credentialId,
+    rdpUser: rdp.username,
+    rdpPassword: rdp.password,
+    vncAuthType: vnc.authType === "credential" ? "credential" : "direct",
+    vncCredentialId: vnc.credentialId,
+    vncUser: vnc.username,
+    vncPassword: vnc.password,
+    telnetAuthType: telnet.authType === "credential" ? "credential" : "direct",
+    telnetCredentialId: telnet.credentialId,
+    telnetUser: telnet.username,
+    telnetPassword: telnet.password,
   };
 
   const setField: RemoteFormSetField = (key, value) => {
+    const login = LOGIN_FOR_FIELD[key];
+    if (login) {
+      props.updateForm((current) =>
+        patchLogin(current, login[0], login[1], value),
+      );
+      return;
+    }
     const setting = SETTING_FOR_FIELD[key];
     if (!setting) {
       props.setField(key, value);

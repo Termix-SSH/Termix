@@ -11,9 +11,6 @@ export class LazyFieldEncryption {
     autostart_key: "autostartKey",
     autostart_key_password: "autostartKeyPassword",
     socks5_password: "socks5Password",
-    rdp_password: "rdpPassword",
-    vnc_password: "vncPassword",
-    telnet_password: "telnetPassword",
     private_key: "privateKey",
     public_key: "publicKey",
     password_hash: "passwordHash",
@@ -28,9 +25,6 @@ export class LazyFieldEncryption {
     autostartKey: "autostart_key",
     autostartKeyPassword: "autostart_key_password",
     socks5Password: "socks5_password",
-    rdpPassword: "rdp_password",
-    vncPassword: "vnc_password",
-    telnetPassword: "telnet_password",
     privateKey: "private_key",
     publicKey: "public_key",
     passwordHash: "password_hash",
@@ -97,27 +91,6 @@ export class LazyFieldEncryption {
           }
         }
 
-        // Guac hosts migrated from single-protocol: rdpPassword/vncPassword/telnetPassword
-        // columns were populated by copying the encrypted `password` blob. Try decrypting
-        // under the original field name before giving up.
-        if (
-          fieldName === "rdpPassword" ||
-          fieldName === "vncPassword" ||
-          fieldName === "telnetPassword"
-        ) {
-          try {
-            const decrypted = FieldCrypto.decryptField(
-              fieldValue,
-              userKEK,
-              recordId,
-              "password",
-            );
-            return decrypted;
-          } catch {
-            // not encrypted as "password" either
-          }
-        }
-
         const sensitiveFields = [
           "totpSecret",
           "totpBackupCodes",
@@ -129,9 +102,6 @@ export class LazyFieldEncryption {
           "autostartKey",
           "autostartKeyPassword",
           "socks5Password",
-          "rdpPassword",
-          "vncPassword",
-          "telnetPassword",
           "privateKey",
           "publicKey",
           "clientSecret",
@@ -283,9 +253,6 @@ export class LazyFieldEncryption {
     autostartKey: "autostart_key",
     autostartKeyPassword: "autostart_key_password",
     socks5Password: "socks5_password",
-    rdpPassword: "rdp_password",
-    vncPassword: "vnc_password",
-    telnetPassword: "telnet_password",
     clientSecret: "client_secret",
     oidcIdentifier: "oidc_identifier",
   };
@@ -301,9 +268,6 @@ export class LazyFieldEncryption {
         "autostartKey",
         "autostartKeyPassword",
         "socks5Password",
-        "rdpPassword",
-        "vncPassword",
-        "telnetPassword",
       ],
       ssh_credentials: [
         "password",

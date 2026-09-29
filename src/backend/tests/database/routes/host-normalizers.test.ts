@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
+import { setHostProtocolSource } from "../../../hosts/protocol-auth/registry.js";
 import {
   applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
@@ -47,13 +48,13 @@ describe("containsOwnerPrivateAuthUpdate", () => {
     );
   });
 
-  it("keeps protocol field definitions isolated", () => {
-    expect(containsOwnerPrivateAuthUpdate({ rdpCredentialId: 7 }, "rdp")).toBe(
-      true,
-    );
-    expect(containsOwnerPrivateAuthUpdate({ rdpCredentialId: 7 }, "ssh")).toBe(
-      false,
-    );
+  it("leaves plugin protocol logins to their own guard", () => {
+    expect(
+      containsOwnerPrivateAuthUpdate(
+        { protocolAuth: { spice: { credentialId: 7 } } },
+        "ssh",
+      ),
+    ).toBe(false);
   });
 
   it("allows shared editors to update non-authentication host settings", () => {
@@ -171,11 +172,41 @@ describe("normalizeImportedHost", () => {
     expect(host.enableSsh).toBe(true);
   });
 
-  it("infers rdp from enableRdp and uses default rdp port", () => {
-    const host = normalizeImportedHost({ enableRdp: true, ip: "10.0.0.2" });
-    expect(host.connectionType).toBe("rdp");
-    expect(host.port).toBe(3389);
-    expect(host.enableSsh).toBe(false);
+  describe("with a plugin protocol declared", () => {
+    afterEach(() => setHostProtocolSource(() => []));
+
+    function declareSpice() {
+      setHostProtocolSource(() => [
+        {
+          id: "spice",
+          defaultPort: 5930,
+          pluginId: "spice-plugin",
+          pluginName: "Spice",
+        },
+      ]);
+    }
+
+    it("infers the protocol from its enable flag and uses its default port", () => {
+      declareSpice();
+      const host = normalizeImportedHost({ enableSpice: true, ip: "10.0.0.2" });
+      expect(host.connectionType).toBe("spice");
+      expect(host.port).toBe(5930);
+      expect(host.enableSsh).toBe(false);
+    });
+
+    it("reads the protocol's own port field", () => {
+      declareSpice();
+      const host = normalizeImportedHost({
+        connectionType: "spice",
+        spicePort: 5999,
+      });
+      expect(host.port).toBe(5999);
+    });
+
+    it("ignores the flag of a protocol nobody declares", () => {
+      const host = normalizeImportedHost({ enableSpice: true });
+      expect(host.connectionType).toBe("ssh");
+    });
   });
 
   it("honors an explicit port over protocol defaults", () => {
@@ -267,26 +298,13 @@ describe("stripSensitiveFields", () => {
     ).toBeUndefined();
   });
 
-  it("strips rdp/vnc/telnet passwords and adds their presence flags", () => {
-    const result = stripSensitiveFields({
-      name: "rdp-box",
-      rdpPassword: "rdp-secret",
-      vncPassword: "vnc-secret",
-      telnetPassword: "telnet-secret",
-    });
-    expect(result.rdpPassword).toBeUndefined();
-    expect(result.vncPassword).toBeUndefined();
-    expect(result.telnetPassword).toBeUndefined();
-    expect(result.hasRdpPassword).toBe(true);
-    expect(result.hasVncPassword).toBe(true);
-    expect(result.hasTelnetPassword).toBe(true);
-  });
-
-  it("marks rdp/vnc/telnet presence flags false when absent", () => {
-    const result = stripSensitiveFields({ name: "rdp-box" });
-    expect(result.hasRdpPassword).toBe(false);
-    expect(result.hasVncPassword).toBe(false);
-    expect(result.hasTelnetPassword).toBe(false);
+  it("leaves protocol login summaries alone for the owner", () => {
+    const protocolAuth = {
+      spice: { authType: "direct", hasPassword: true, secretFieldKeys: [] },
+    };
+    expect(stripSensitiveFields({ protocolAuth }).protocolAuth).toEqual(
+      protocolAuth,
+    );
   });
 });
 
@@ -352,8 +370,17 @@ describe("sanitizeHostForRecipient", () => {
     password: "hunter2",
     key: "PRIVATE",
     sudoPassword: "sudo",
-    rdpPassword: "rdp",
     socks5Password: "socks",
+    protocolAuth: {
+      spice: {
+        authType: "direct",
+        credentialId: null,
+        username: "viewer",
+        fields: { display: "0" },
+        hasPassword: true,
+        secretFieldKeys: ["ticket"],
+      },
+    },
     enableSsh: true,
     enableRdp: true,
     sshPort: 22,
@@ -371,8 +398,15 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.password).toBeUndefined();
     expect(result.key).toBeUndefined();
     expect(result.sudoPassword).toBeUndefined();
-    expect(result.rdpPassword).toBeUndefined();
     expect(result.socks5Password).toBeUndefined();
+    expect(result.protocolAuth).toEqual({
+      spice: {
+        authType: "direct",
+        credentialId: null,
+        username: "viewer",
+        fields: { display: "0" },
+      },
+    });
     expect(result.credentialId).toBeUndefined();
     expect(result.overrideCredentialUsername).toBeUndefined();
     expect(result.terminalConfig).toEqual({ theme: "termix" });
@@ -404,7 +438,6 @@ describe("sanitizeHostForRecipient", () => {
       {
         ...sharedHost,
         permissionLevel: "connect",
-        rdpAuthType: "none",
         authOverrides: {
           ssh: {
             credentialId: 9,
@@ -417,7 +450,7 @@ describe("sanitizeHostForRecipient", () => {
     );
     expect(result.name).toBe("prod");
     expect(result.ip).toBe("10.0.0.42");
-    expect(result.rdpAuthType).toBe("none");
+    expect(result.protocolAuth).toEqual({ spice: { authType: "direct" } });
     expect(result.permissionLevel).toBe("connect");
     expect(result.shareSshAuth).toBe(true);
     expect(result.authOverrides).toEqual({

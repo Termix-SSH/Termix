@@ -167,6 +167,8 @@ export interface SyncWriteEvent {
   /** The row as it arrived, before references were resolved. */
   wire: SyncRow;
   created: boolean;
+  /** Another entity's syncId to its local id here, for ids serialize put on the wire. */
+  resolveId?: (entityType: string, syncId: string) => Promise<number | null>;
 }
 
 export interface SyncEntityRegistration {
@@ -586,7 +588,7 @@ export interface PluginHostRecord {
 
 /**
  * Fields a plugin may set when creating a host it will own or manage. Fields
- * that belong to another plugin's host settings (enableRdp, rdpPort) are
+ * that belong to another plugin's host settings (a protocol switch or port) are
  * handed to that plugin's host import normalizer, as on a bulk import.
  */
 export type PluginHostCreateInput = Partial<
@@ -964,7 +966,7 @@ export interface PluginSsh {
   /**
    * A ready client at the end of a jump host chain, each hop resolved and
    * authenticated through the pipeline. For forwarding to something that is
-   * not an SSH server (an RDP port behind a bastion).
+   * not an SSH server (a remote desktop port behind a bastion).
    */
   jumpChain: <Client = unknown>(
     jumpHosts: Array<{ hostId: number }>,
@@ -1426,8 +1428,11 @@ export interface PluginDesktop {
   available: () => boolean;
 }
 
-/** A host protocol whose credentials core keeps next to the host. */
-export type PluginHostProtocol = "rdp" | "vnc" | "telnet";
+/**
+ * A host protocol whose login core keeps next to the host: any id a plugin
+ * declares in contributes.protocols.
+ */
+export type PluginHostProtocol = string;
 
 /**
  * What a plugin needs to hand a host's protocol login to something core
@@ -1452,7 +1457,8 @@ export interface PluginProtocolTarget {
     authType: string;
     username: string;
     password: string;
-    domain: string;
+    /** The protocol's declared credentialFields, secret ones included; "" when unset. */
+    fields: Record<string, string>;
   };
 }
 
@@ -1492,7 +1498,11 @@ export interface PluginCredentials {
    * permission and an unlocked data key. Audited.
    */
   createSshKey: (input: PluginSshKeyCredentialInput) => Promise<{ id: number }>;
-  /** Null when the host does not exist or the acting user cannot connect to it. */
+  /**
+   * The host's login for one of this plugin's own contributes.protocols.
+   * Null when the host does not exist or the acting user cannot connect to
+   * it. Needs credentials:read. Audited.
+   */
   resolveHostProtocol: (
     hostId: number,
     protocol: PluginHostProtocol,

@@ -243,6 +243,9 @@ export async function runLogin(
     const { runNotificationChannelMigration } =
       await import("../upgrade/notification-channel-migration.js");
     await runNotificationChannelMigration(user.id);
+    const { runProtocolAuthMigration } =
+      await import("../upgrade/protocol-auth-migration.js");
+    await runProtocolAuthMigration(user.id);
   }
   await syncSharedCredentialsForUserRoles(
     user.id,

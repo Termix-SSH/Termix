@@ -420,11 +420,45 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       environmentVariables: [{ key: "D4", value: "yes" }],
     });
 
+    // Every 2.8 RDP, VNC and Telnet login reads back through
+    // host_protocol_auth, the only place core reads them from now.
     const ctx = await pluginCtx("remote-desktop");
-    const target = await asUser(USERS.admin, () =>
-      ctx.credentials.resolveHostProtocol(HOSTS.rdpOnly, "rdp"),
+    const resolve = (hostId: number, protocol: string) =>
+      asUser(USERS.admin, () =>
+        ctx.credentials.resolveHostProtocol(hostId, protocol),
+      );
+    expect((await resolve(HOSTS.rdpOnly, "rdp"))?.auth).toMatchObject({
+      authType: "direct",
+      username: "d4-rdp-user",
+      password: "d4-rdp-password",
+    });
+    expect((await resolve(HOSTS.desktop, "rdp"))?.auth).toEqual({
+      authType: "direct",
+      username: "d4-rdp-user",
+      password: "d4-rdp-password",
+      fields: { domain: "D4-DOMAIN" },
+    });
+    expect((await resolve(HOSTS.desktop, "vnc"))?.auth).toMatchObject({
+      authType: "direct",
+      username: "d4-vnc-user",
+      password: "d4-vnc-password",
+    });
+    expect((await resolve(HOSTS.desktop, "telnet"))?.auth).toMatchObject({
+      authType: "credential",
+      username: "deploy",
+    });
+
+    const logins = await selectRows<{ host_id: number; protocol: string }>(
+      sql`SELECT host_id, protocol FROM host_protocol_auth ORDER BY host_id, protocol`,
     );
-    expect(target?.auth.password).toBe("d4-rdp-password");
+    expect(
+      logins.map((row) => `${Number(row.host_id)}:${row.protocol}`),
+    ).toEqual([
+      `${HOSTS.rdpOnly}:rdp`,
+      `${HOSTS.desktop}:rdp`,
+      `${HOSTS.desktop}:telnet`,
+      `${HOSTS.desktop}:vnc`,
+    ]);
   });
 
   it("registers an SSH auth provider for every 2.8 auth type", async () => {

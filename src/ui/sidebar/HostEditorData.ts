@@ -1,6 +1,11 @@
 import type { Host } from "@/types/ui-types";
-import type { SSHHostData } from "@/types";
-import type { HostDraft } from "@termix/plugin-sdk/frontend";
+import type { HostProtocolAuthInput, SSHHostData } from "@/types";
+import {
+  HOST_PROTOCOL_SECRET_KEPT,
+  type HostDraft,
+  type HostProtocolAuthForm,
+  type HostProtocolAuthSummary,
+} from "@termix/plugin-sdk/frontend";
 import type { HostDefaults } from "@/api/settings-api";
 import {
   listHostProtocols,
@@ -42,6 +47,66 @@ export function applyHostDraft(
       ? { authType: draft.authType as HostAuthType }
       : {}),
   };
+}
+
+/** A saved login as the editor form holds it; saved secrets stay behind a placeholder. */
+export function protocolAuthForm(
+  summaries: Record<string, HostProtocolAuthSummary> | undefined,
+): Record<string, HostProtocolAuthForm> {
+  const form: Record<string, HostProtocolAuthForm> = {};
+  for (const [protocol, summary] of Object.entries(summaries ?? {})) {
+    const fields: Record<string, string> = { ...(summary.fields ?? {}) };
+    for (const key of summary.secretFieldKeys ?? []) {
+      fields[key] = HOST_PROTOCOL_SECRET_KEPT;
+    }
+    form[protocol] = {
+      authType:
+        summary.authType ?? (summary.credentialId ? "credential" : "direct"),
+      credentialId:
+        summary.credentialId != null ? String(summary.credentialId) : "",
+      username: summary.username ?? "",
+      password: summary.hasPassword ? HOST_PROTOCOL_SECRET_KEPT : "",
+      fields,
+    };
+  }
+  return form;
+}
+
+/**
+ * The logins a host save sends: one per plugin protocol the editor knows,
+ * removed when its switch is off. A saved secret left alone is not sent.
+ */
+export function protocolAuthPayload(
+  form: Record<string, HostProtocolAuthForm>,
+  protocols: HostProtocols,
+): Record<string, HostProtocolAuthInput | null> {
+  const payload: Record<string, HostProtocolAuthInput | null> = {};
+  for (const protocol of listHostProtocols()) {
+    if (!protocols[protocol.settingKey]) {
+      payload[protocol.id] = null;
+      continue;
+    }
+    const login = form[protocol.id];
+    if (!login) continue;
+    const direct = login.authType === "direct";
+    payload[protocol.id] = {
+      authType: login.authType,
+      credentialId:
+        login.authType === "credential" && login.credentialId
+          ? Number(login.credentialId)
+          : null,
+      username: direct ? login.username || null : null,
+      ...(direct && login.password !== HOST_PROTOCOL_SECRET_KEPT
+        ? { password: login.password || null }
+        : {}),
+      fields: Object.fromEntries(
+        Object.entries(login.fields).filter(
+          ([, value]) => value !== HOST_PROTOCOL_SECRET_KEPT,
+        ),
+      ),
+    };
+  }
+  return payload;
 }
 
 export function createHostEditorForm(
@@ -107,32 +172,8 @@ export function createHostEditorForm(
     portKnockSequence:
       host?.portKnockSequence ??
       ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
-    rdpCredentialId: host?.rdpCredentialId ?? "",
-    rdpUser: host?.rdpUser ?? "",
-    rdpPassword: host?.hasRdpPassword
-      ? "existing_rdp_password"
-      : (host?.rdpPassword ?? ""),
-    domain: host?.domain ?? "",
-    vncCredentialId: host?.vncCredentialId ?? "",
-    vncPassword: host?.hasVncPassword
-      ? "existing_vnc_password"
-      : (host?.vncPassword ?? ""),
-    vncUser: host?.vncUser ?? "",
-    telnetUser: host?.telnetUser ?? "",
-    telnetPassword: host?.hasTelnetPassword
-      ? "existing_telnet_password"
-      : (host?.telnetPassword ?? ""),
-    telnetCredentialId:
-      host?.telnetCredentialId != null ? String(host.telnetCredentialId) : "",
-    rdpAuthType: (host?.rdpAuthType ??
-      (host?.rdpCredentialId ? "credential" : "direct")) as
-      "direct" | "credential" | "none",
-    vncAuthType: (host?.vncAuthType ??
-      (host?.vncCredentialId ? "credential" : "direct")) as
-      "direct" | "credential",
-    telnetAuthType: (host?.telnetAuthType ??
-      (host?.telnetCredentialId ? "credential" : "direct")) as
-      "direct" | "credential",
+    // Each plugin protocol's login, edited by that plugin's host editor tab.
+    protocolAuth: protocolAuthForm(host?.protocolAuth),
     statusCheckEnabled:
       host?.statusCheckEnabled ?? d?.statusCheckEnabled ?? true,
     statusCheckInterval: (host?.statusCheckInterval ?? null) as number | null,
@@ -242,58 +283,7 @@ export function buildHostEditorPayload(
     enableSsh: protocols.enableSsh,
     sshPort: Number(form.sshPort),
     forceKeyboardInteractive: form.forceKeyboardInteractive,
-    rdpAuthType: protocols.enableRdp ? form.rdpAuthType : null,
-    rdpCredentialId:
-      protocols.enableRdp &&
-      form.rdpAuthType === "credential" &&
-      form.rdpCredentialId
-        ? Number(form.rdpCredentialId)
-        : null,
-    rdpUser:
-      protocols.enableRdp && form.rdpAuthType === "direct"
-        ? form.rdpUser || null
-        : null,
-    rdpPassword:
-      protocols.enableRdp &&
-      form.rdpAuthType === "direct" &&
-      form.rdpPassword !== "existing_rdp_password"
-        ? form.rdpPassword || null
-        : null,
-    rdpDomain: form.domain || null,
-    vncAuthType: protocols.enableVnc ? form.vncAuthType : null,
-    vncCredentialId:
-      protocols.enableVnc &&
-      form.vncAuthType === "credential" &&
-      form.vncCredentialId
-        ? Number(form.vncCredentialId)
-        : null,
-    vncPassword:
-      protocols.enableVnc &&
-      form.vncAuthType === "direct" &&
-      form.vncPassword !== "existing_vnc_password"
-        ? form.vncPassword || null
-        : null,
-    vncUser:
-      protocols.enableVnc && form.vncAuthType === "direct"
-        ? form.vncUser || null
-        : null,
-    telnetAuthType: protocols.enableTelnet ? form.telnetAuthType : null,
-    telnetCredentialId:
-      protocols.enableTelnet &&
-      form.telnetAuthType === "credential" &&
-      form.telnetCredentialId
-        ? Number(form.telnetCredentialId)
-        : null,
-    telnetUser:
-      protocols.enableTelnet && form.telnetAuthType === "direct"
-        ? form.telnetUser || null
-        : null,
-    telnetPassword:
-      protocols.enableTelnet &&
-      form.telnetAuthType === "direct" &&
-      form.telnetPassword !== "existing_telnet_password"
-        ? form.telnetPassword || null
-        : null,
+    protocolAuth: protocolAuthPayload(form.protocolAuth, protocols),
     // The editor keeps ids as strings; the API and every backend lookup take
     // a number, and a string id does not compare equal on Postgres/MySQL.
     jumpHosts: form.jumpHosts.map((j) => ({ hostId: Number(j.hostId) })),

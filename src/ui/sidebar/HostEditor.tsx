@@ -145,25 +145,6 @@ export function HostEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [host]);
 
-  useEffect(() => {
-    if (!host?.id || form.vncAuthType !== "direct" || form.vncPassword) return;
-
-    let cancelled = false;
-    const loadVncPassword = adminTargetUserId
-      ? adminGetHostPassword(adminTargetUserId, Number(host.id), "vncPassword")
-      : getHostPassword(Number(host.id), "vncPassword");
-    loadVncPassword.then((password) => {
-      if (cancelled || !password) return;
-      setForm((prev) =>
-        prev.vncPassword ? prev : { ...prev, vncPassword: password },
-      );
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [form.vncAuthType, form.vncPassword, host?.id, adminTargetUserId]);
-
   /**
    * Writes each plugin's host-scope values through its own route.
    *

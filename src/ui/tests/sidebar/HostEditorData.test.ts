@@ -9,6 +9,7 @@ import {
   type HostProtocols,
 } from "../../sidebar/HostEditorData";
 import type { Host } from "@/types/ui-types";
+import { HOST_PROTOCOL_SECRET_KEPT } from "@termix/plugin-sdk/frontend";
 
 const sshOnly: HostProtocols = {
   enableSsh: true,
@@ -22,20 +23,6 @@ const rdpOnly: HostProtocols = {
   enableRdp: true,
   enableVnc: false,
   enableTelnet: false,
-};
-
-const vncOnly: HostProtocols = {
-  enableSsh: false,
-  enableRdp: false,
-  enableVnc: true,
-  enableTelnet: false,
-};
-
-const telnetOnly: HostProtocols = {
-  enableSsh: false,
-  enableRdp: false,
-  enableVnc: false,
-  enableTelnet: true,
 };
 
 describe("omitOwnerSshAuthFromSharedEdit", () => {
@@ -308,75 +295,112 @@ describe("plugin host settings", () => {
   });
 });
 
-describe("RDP/VNC/Telnet password persistence indicator", () => {
-  it("seeds a sentinel value when the host reports a saved rdp password", () => {
-    const host = {
-      hasRdpPassword: true,
-      rdpAuthType: "direct",
-    } as Host;
+describe("plugin protocol logins", () => {
+  const spice = {
+    id: "spice",
+    pluginId: "spice-plugin",
+    settingKey: "enableSpice",
+    defaultPort: 5930,
+    titleKey: "spice",
+    icon: () => null,
+  };
+  const spiceOn: HostProtocols = { enableSsh: false, enableSpice: true };
+  const spiceOff: HostProtocols = { enableSsh: true, enableSpice: false };
+  const saved = {
+    protocolAuth: {
+      spice: {
+        authType: "direct",
+        credentialId: null,
+        username: "viewer",
+        fields: { display: "0" },
+        hasPassword: true,
+        secretFieldKeys: ["ticket"],
+      },
+    },
+  } as unknown as Host;
 
-    const form = createHostEditorForm(host);
+  it("holds a saved password and secret fields behind the placeholder", () => {
+    const form = createHostEditorForm(saved);
 
-    expect(form.rdpPassword).toBe("existing_rdp_password");
+    expect(form.protocolAuth.spice).toEqual({
+      authType: "direct",
+      credentialId: "",
+      username: "viewer",
+      password: HOST_PROTOCOL_SECRET_KEPT,
+      fields: { display: "0", ticket: HOST_PROTOCOL_SECRET_KEPT },
+    });
   });
 
-  it("does not send the rdp sentinel back to the backend unchanged", () => {
-    const host = { hasRdpPassword: true, rdpAuthType: "direct" } as Host;
-    const form = { ...createHostEditorForm(host) };
-
-    const payload = buildHostEditorPayload(form, rdpOnly);
-
-    expect(payload.rdpPassword).toBeNull();
+  it("leaves unchanged secrets out of the payload", () => {
+    const dispose = registerHostProtocol(spice);
+    try {
+      const payload = buildHostEditorPayload(
+        createHostEditorForm(saved),
+        spiceOn,
+      );
+      expect(payload.protocolAuth?.spice).toEqual({
+        authType: "direct",
+        credentialId: null,
+        username: "viewer",
+        fields: { display: "0" },
+      });
+    } finally {
+      dispose();
+    }
   });
 
-  it("sends a newly typed rdp password", () => {
-    const host = { hasRdpPassword: true, rdpAuthType: "direct" } as Host;
-    const form = {
-      ...createHostEditorForm(host),
-      rdpPassword: "new-rdp-pass",
-    };
-
-    const payload = buildHostEditorPayload(form, rdpOnly);
-
-    expect(payload.rdpPassword).toBe("new-rdp-pass");
+  it("sends a newly typed password", () => {
+    const dispose = registerHostProtocol(spice);
+    try {
+      const form = createHostEditorForm(saved);
+      form.protocolAuth.spice.password = "new-pass";
+      const payload = buildHostEditorPayload(form, spiceOn);
+      expect(payload.protocolAuth?.spice?.password).toBe("new-pass");
+    } finally {
+      dispose();
+    }
   });
 
-  it("seeds a sentinel value when the host reports a saved vnc password", () => {
-    const host = { hasVncPassword: true, vncAuthType: "direct" } as Host;
-    const form = createHostEditorForm(host);
-
-    expect(form.vncPassword).toBe("existing_vnc_password");
+  it("sends only the credential for a credential login", () => {
+    const dispose = registerHostProtocol(spice);
+    try {
+      const form = createHostEditorForm(saved);
+      form.protocolAuth.spice = {
+        ...form.protocolAuth.spice,
+        authType: "credential",
+        credentialId: "7",
+      };
+      const login = buildHostEditorPayload(form, spiceOn).protocolAuth?.spice;
+      expect(login).toMatchObject({
+        authType: "credential",
+        credentialId: 7,
+        username: null,
+      });
+      expect(login).not.toHaveProperty("password");
+    } finally {
+      dispose();
+    }
   });
 
-  it("does not send the vnc sentinel back to the backend unchanged", () => {
-    const host = { hasVncPassword: true, vncAuthType: "direct" } as Host;
-    const form = { ...createHostEditorForm(host) };
-
-    const payload = buildHostEditorPayload(form, vncOnly);
-
-    expect(payload.vncPassword).toBeNull();
+  it("removes the login of a protocol switched off", () => {
+    const dispose = registerHostProtocol(spice);
+    try {
+      const payload = buildHostEditorPayload(
+        createHostEditorForm(saved),
+        spiceOff,
+      );
+      expect(payload.protocolAuth).toEqual({ spice: null });
+    } finally {
+      dispose();
+    }
   });
 
-  it("seeds a sentinel value when the host reports a saved telnet password", () => {
-    const host = {
-      hasTelnetPassword: true,
-      telnetAuthType: "direct",
-    } as Host;
-    const form = createHostEditorForm(host);
-
-    expect(form.telnetPassword).toBe("existing_telnet_password");
-  });
-
-  it("does not send the telnet sentinel back to the backend unchanged", () => {
-    const host = {
-      hasTelnetPassword: true,
-      telnetAuthType: "direct",
-    } as Host;
-    const form = { ...createHostEditorForm(host) };
-
-    const payload = buildHostEditorPayload(form, telnetOnly);
-
-    expect(payload.telnetPassword).toBeNull();
+  it("leaves a protocol no running plugin registered alone", () => {
+    const payload = buildHostEditorPayload(
+      createHostEditorForm(saved),
+      spiceOn,
+    );
+    expect(payload.protocolAuth).toEqual({});
   });
 });
 

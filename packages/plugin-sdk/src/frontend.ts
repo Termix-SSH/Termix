@@ -45,8 +45,54 @@ export interface PluginHostRecord {
   sshOptions?: HostSshOptions | null;
   /** Each enabled plugin's host settings, secrets redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Each declared protocol's login, secrets left out. */
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
+  /** Set on a Quick Connect host, which is never saved. */
+  quickConnectLogin?: QuickConnectLogin;
   [key: string]: unknown;
 }
+
+/** The protocol login a Quick Connect host carries, in plain text. */
+export interface QuickConnectLogin {
+  protocol: string;
+  username?: string;
+  password?: string;
+  /** "domain" when the protocol's Quick Connect entry shows that field. */
+  fields?: Record<string, string>;
+}
+
+/** "direct" (a username and password), "credential" (a saved one) or "none". */
+export type HostProtocolAuthType = "direct" | "credential" | "none";
+
+/** A host's login for a protocol a plugin declares, as the host API returns it. */
+export interface HostProtocolAuthSummary {
+  authType: HostProtocolAuthType;
+  /** Left out for a shared recipient at connect level. */
+  credentialId?: number | null;
+  username?: string | null;
+  /** The declared non-secret credential fields. */
+  fields?: Record<string, string>;
+  /** Owner only. */
+  hasPassword?: boolean;
+  /** Owner only: the secret credential fields that hold a value. */
+  secretFieldKeys?: string[];
+}
+
+/**
+ * One protocol's login in the host editor form (`form.protocolAuth[id]`).
+ * Core sends it with the host; `password` and secret fields hold
+ * HOST_PROTOCOL_SECRET_KEPT while the saved value is left alone.
+ */
+export interface HostProtocolAuthForm {
+  authType: HostProtocolAuthType;
+  credentialId: string;
+  username: string;
+  password: string;
+  fields: Record<string, string>;
+}
+
+/** Stands in for a saved protocol secret the editor has not changed. */
+export const HOST_PROTOCOL_SECRET_KEPT = "existing_protocol_secret";
 
 /** An open tab as the shell holds it. `data` is the plugin's own payload. */
 export interface PluginTabRecord {
@@ -328,7 +374,7 @@ export interface HostActionContribution {
   titleKey: string;
   icon: IconComponent;
   /**
-   * "connect" is a way to open a session (terminal, RDP) and is offered as a
+   * "connect" is a way to open a session (terminal, remote desktop) and is offered as a
    * host's default action by priority. "open" opens a tool for the host.
    */
   kind: "connect" | "open";
@@ -1197,7 +1243,7 @@ export function useSshAuthTypes(): {
  */
 /**
  * The connection protocols a host has switched on: "ssh" plus every protocol
- * a running plugin registered with registerHostProtocol (RDP, VNC). Lets a
+ * a running plugin registered with registerHostProtocol. Lets a
  * plugin offer a protocol without knowing which plugin owns its settings.
  */
 export function hostProtocols(record: PluginHostRecord): string[] {

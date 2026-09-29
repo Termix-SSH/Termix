@@ -1692,6 +1692,12 @@ export function createMockCtx(
       },
       resolveHostProtocol: async (hostId, protocol) => {
         require("credentials:read");
+        const declared = ctx.manifest.contributes?.protocols;
+        if (declared && !declared.some((entry) => entry.id === protocol)) {
+          throw new Error(
+            `Plugin ${pluginId} did not declare protocol "${protocol}" in contributes.protocols`,
+          );
+        }
         return ctx.credentials.resolveHostProtocol(hostId, protocol);
       },
       registerSecretResolver: (scheme, resolve) => {

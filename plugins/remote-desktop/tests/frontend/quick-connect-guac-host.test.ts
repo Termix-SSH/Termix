@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { quickConnectGuacHost } from "../../src/frontend/quick-connect-guac-host";
 
 // The shape core's Quick Connect builds for a plugin protocol: the switch and
-// port in this plugin's host settings, the login on the protocol's fields.
+// port in this plugin's host settings, the unsaved login in quickConnectLogin.
 function quickHost(protocol: "rdp" | "vnc", extra: Record<string, unknown>) {
   return {
     id: "quick-connect-1",
@@ -24,9 +24,12 @@ describe("quickConnectGuacHost", () => {
     expect(
       quickConnectGuacHost(
         quickHost("rdp", {
-          rdpUser: "admin",
-          rdpPassword: "pw",
-          domain: "CORP",
+          quickConnectLogin: {
+            protocol: "rdp",
+            username: "admin",
+            password: "pw",
+            fields: { domain: "CORP" },
+          },
         }),
       ),
     ).toMatchObject({
@@ -41,7 +44,11 @@ describe("quickConnectGuacHost", () => {
 
   it("takes a VNC quick connect's login from the VNC fields", () => {
     expect(
-      quickConnectGuacHost(quickHost("vnc", { vncPassword: "vncpw" })),
+      quickConnectGuacHost(
+        quickHost("vnc", {
+          quickConnectLogin: { protocol: "vnc", password: "vncpw" },
+        }),
+      ),
     ).toMatchObject({
       connectionType: "vnc",
       port: 5901,

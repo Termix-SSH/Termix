@@ -72,6 +72,24 @@ import {
 import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
 import {
+  applyProtocolAuthPlan,
+  attachProtocolAuth,
+  firstProtocolUsername,
+  listProtocolLogins,
+  loadProtocolAuthSummaries,
+  planProtocolAuthWrite,
+  ProtocolAuthWriteError,
+  readProtocolAuthPayload,
+  toPortableLogins,
+  withProtocolAuth,
+  writeProtocolAuth,
+  type PlannedProtocolAuth,
+} from "../../hosts/protocol-auth/protocol-auth.js";
+import {
+  findHostProtocol,
+  listHostProtocols,
+} from "../../hosts/protocol-auth/registry.js";
+import {
   mergeStoredTerminalFields,
   parseTerminalConfig,
 } from "./host-terminal-fields.js";
@@ -199,7 +217,6 @@ router.post(
       terminalConfig,
       sshOptions,
       forceKeyboardInteractive,
-      domain,
       notes,
       useSocks5,
       socks5Host,
@@ -213,20 +230,8 @@ router.post(
       overrideCredentialUsername,
       enableSsh,
       sshPort,
-      rdpAuthType,
-      rdpCredentialId,
-      rdpUser,
-      rdpPassword,
-      rdpDomain,
-      vncAuthType,
-      vncCredentialId,
-      vncPassword,
-      vncUser,
-      telnetAuthType,
-      telnetCredentialId,
-      telnetUser,
-      telnetPassword,
     } = hostData;
+    const protocolAuthPatch = readProtocolAuthPayload(hostData);
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
       userId,
@@ -274,7 +279,7 @@ router.post(
       authMethod ||
       (effectiveConnectionType !== "ssh" ? "password" : undefined);
     const effectiveUsername =
-      username || rdpUser || vncUser || telnetUser || "";
+      username || firstProtocolUsername(protocolAuthPatch);
     const effectiveName =
       name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
@@ -304,7 +309,6 @@ router.post(
         : null,
       sshOptions: sshOptionsForWrite({ sshOptions, terminalConfig }) ?? null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
-      domain: domain || null,
       notes: notes || null,
       sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
@@ -325,28 +329,9 @@ router.post(
         : null,
       ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
-      rdpAuthType: rdpAuthType || null,
-      rdpCredentialId:
-        rdpAuthType === "credential" && rdpCredentialId
-          ? rdpCredentialId
-          : null,
-      rdpUser: rdpUser || null,
-      rdpDomain: rdpDomain || null,
-      vncAuthType: vncAuthType || null,
-      vncCredentialId:
-        vncAuthType === "credential" && vncCredentialId
-          ? vncCredentialId
-          : null,
-      vncUser: vncUser || null,
-      telnetAuthType: telnetAuthType || null,
-      telnetCredentialId:
-        telnetAuthType === "credential" && telnetCredentialId
-          ? telnetCredentialId
-          : null,
-      telnetUser: telnetUser || null,
     };
 
-    // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
+    // A host whose main protocol is a plugin's keeps any password it is given.
     if (effectiveConnectionType !== "ssh") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
@@ -399,10 +384,6 @@ router.post(
       sshDataObj.keyType = null;
     }
 
-    sshDataObj.rdpPassword = rdpPassword || null;
-    sshDataObj.vncPassword = vncPassword || null;
-    sshDataObj.telnetPassword = telnetPassword || null;
-
     try {
       const result = await createCurrentHostRepository().createEncryptedForUser(
         userId,
@@ -421,6 +402,14 @@ router.post(
       }
 
       const createdHost = result;
+      if (protocolAuthPatch) {
+        await writeProtocolAuth(
+          userId,
+          createdHost.id as number,
+          protocolAuthPatch,
+          { isOwner: true },
+        );
+      }
 
       // Standing folder shares apply to the newcomer.
       try {
@@ -464,7 +453,7 @@ router.post(
         name: String(name ?? ip),
       });
 
-      res.json(stripSensitiveFields(resolvedHost));
+      res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
       notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
@@ -794,7 +783,6 @@ router.put(
       terminalConfig,
       sshOptions,
       forceKeyboardInteractive,
-      domain,
       notes,
       useSocks5,
       socks5Host,
@@ -808,20 +796,8 @@ router.put(
       overrideCredentialUsername,
       enableSsh,
       sshPort,
-      rdpAuthType,
-      rdpCredentialId,
-      rdpUser,
-      rdpPassword,
-      rdpDomain,
-      vncAuthType,
-      vncCredentialId,
-      vncPassword,
-      vncUser,
-      telnetAuthType,
-      telnetCredentialId,
-      telnetUser,
-      telnetPassword,
     } = hostData;
+    const protocolAuthPatch = readProtocolAuthPayload(hostData);
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
       userId,
@@ -871,7 +847,7 @@ router.put(
 
     const effectiveAuthType = authType || authMethod;
     const effectiveUsername =
-      username || rdpUser || vncUser || telnetUser || "";
+      username || firstProtocolUsername(protocolAuthPatch);
     const effectiveName =
       name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
@@ -899,7 +875,6 @@ router.put(
           : JSON.stringify(terminalConfig)
         : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
-      domain: domain || null,
       notes: notes || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
@@ -919,25 +894,6 @@ router.put(
         : null,
       ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
-      rdpAuthType: rdpAuthType || null,
-      rdpCredentialId:
-        rdpAuthType === "credential" && rdpCredentialId
-          ? rdpCredentialId
-          : null,
-      rdpUser: rdpUser || null,
-      rdpDomain: rdpDomain || null,
-      vncAuthType: vncAuthType || null,
-      vncCredentialId:
-        vncAuthType === "credential" && vncCredentialId
-          ? vncCredentialId
-          : null,
-      vncUser: vncUser || null,
-      telnetAuthType: telnetAuthType || null,
-      telnetCredentialId:
-        telnetAuthType === "credential" && telnetCredentialId
-          ? telnetCredentialId
-          : null,
-      telnetUser: telnetUser || null,
     };
 
     const nextSshOptions = sshOptionsForWrite({ sshOptions, terminalConfig });
@@ -947,7 +903,7 @@ router.put(
       sshDataObj.sudoPassword = sudoPassword || null;
     }
 
-    // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
+    // A host whose main protocol is a plugin's keeps any password it is given.
     if ((connectionType || "ssh") !== "ssh") {
       if (password) {
         sshDataObj.password = password;
@@ -1006,10 +962,6 @@ router.put(
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
-
-    if (rdpPassword) sshDataObj.rdpPassword = rdpPassword;
-    if (vncPassword) sshDataObj.vncPassword = vncPassword;
-    if (telnetPassword) sshDataObj.telnetPassword = telnetPassword;
 
     if (validatedParentHostId !== undefined) {
       sshDataObj.parentHostId = validatedParentHostId;
@@ -1087,34 +1039,25 @@ router.put(
           });
         }
 
-        const referenceViolations: Array<[unknown, number | null, string]> = [
-          [
-            hostData.rdpCredentialId,
-            hostRecord.rdpCredentialId,
-            "RDP credential",
-          ],
-          [
-            hostData.vncCredentialId,
-            hostRecord.vncCredentialId,
-            "VNC credential",
-          ],
-          [
-            hostData.telnetCredentialId,
-            hostRecord.telnetCredentialId,
-            "Telnet credential",
-          ],
-        ];
-
-        for (const [incoming, current, label] of referenceViolations) {
-          if (incoming !== undefined && (incoming ?? null) !== current) {
-            return res.status(403).json({
-              error: `Only the host owner can change the ${label}`,
-            });
-          }
-        }
-
         for (const field of OWNER_PRIVATE_AUTH_FIELDS.ssh) {
           delete sshDataObj[field];
+        }
+      }
+
+      let protocolAuthPlan: PlannedProtocolAuth | null = null;
+      if (protocolAuthPatch) {
+        try {
+          protocolAuthPlan = await planProtocolAuthWrite(
+            ownerId,
+            Number(hostId),
+            protocolAuthPatch,
+            { isOwner: accessInfo.isOwner },
+          );
+        } catch (error) {
+          if (error instanceof ProtocolAuthWriteError) {
+            return res.status(error.status).json({ error: error.message });
+          }
+          throw error;
         }
       }
 
@@ -1134,6 +1077,9 @@ router.put(
         Number(hostId),
         sshDataObj,
       );
+      if (protocolAuthPlan) {
+        await applyProtocolAuthPlan(ownerId, Number(hostId), protocolAuthPlan);
+      }
 
       // A host that moved into a folder inherits that folder's standing shares.
       try {
@@ -1202,7 +1148,7 @@ router.put(
         success: true,
       });
 
-      res.json(stripSensitiveFields(resolvedHost));
+      res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
       notifyStatsHostUpdated(parseInt(hostId), userId, "host_update");
     } catch (err) {
       sshLogger.error("Failed to update SSH host in database", err, {
@@ -1338,6 +1284,7 @@ router.get(
         }),
       );
 
+      attachProtocolAuth(result, await loadProtocolAuthSummaries(result));
       const sanitized = result.map((host) =>
         host.isShared
           ? sanitizeHostForRecipient(
@@ -1425,7 +1372,9 @@ router.get(
           (await resolveHostCredentials(result, userId)) || result;
 
         return res.json(
-          await withHostPluginSettings(stripSensitiveFields(resolved)),
+          await withHostPluginSettings(
+            await withProtocolAuth(stripSensitiveFields(resolved)),
+          ),
         );
       }
 
@@ -1473,8 +1422,9 @@ router.get(
         sharedExpiresAt: accessInfo.expiresAt || undefined,
         ownerUsername,
       };
-      const resolvedSharedResult =
-        (await resolveHostCredentials(sharedResult, userId)) || sharedResult;
+      const resolvedSharedResult = await withProtocolAuth(
+        (await resolveHostCredentials(sharedResult, userId)) || sharedResult,
+      );
 
       res.json(
         await withHostPluginSettings(
@@ -1585,7 +1535,12 @@ router.get(
  *         name: field
  *         schema:
  *           type: string
- *           enum: [password, sudoPassword, rdpPassword, vncPassword, telnetPassword, key, keyPassword]
+ *           enum: [password, sudoPassword, key, keyPassword]
+ *       - in: query
+ *         name: protocol
+ *         schema:
+ *           type: string
+ *         description: A plugin protocol id; returns that protocol's saved password instead of field.
  *     responses:
  *       200:
  *         description: The requested password value.
@@ -1600,18 +1555,22 @@ router.get(
     const hostId = Number(req.params.id);
     const userId = (req as AuthenticatedRequest).userId;
     const field = (req.query.field as string) || "password";
+    const coreField = [
+      "password",
+      "sudoPassword",
+      "key",
+      "keyPassword",
+    ].includes(field);
+    // 2.8 clients ask for "<protocol>Password".
+    const protocol =
+      typeof req.query.protocol === "string"
+        ? req.query.protocol
+        : coreField
+          ? undefined
+          : /^([a-z][a-zA-Z0-9]*)Password$/.exec(field)?.[1];
+    const protocolId = protocol ? findHostProtocol(protocol)?.id : undefined;
 
-    if (
-      ![
-        "password",
-        "sudoPassword",
-        "rdpPassword",
-        "vncPassword",
-        "telnetPassword",
-        "key",
-        "keyPassword",
-      ].includes(field)
-    ) {
+    if (!protocolId && (protocol || !coreField)) {
       return res.status(400).json({ error: "Invalid field" });
     }
 
@@ -1624,6 +1583,16 @@ router.get(
 
       if (!host) {
         return res.status(404).json({ error: "Host not found" });
+      }
+
+      if (protocolId) {
+        const login = (await listProtocolLogins(hostId, userId)).find(
+          (entry) => entry.protocol === protocolId,
+        );
+        if (!login?.password) {
+          return res.status(404).json({ error: "No password set" });
+        }
+        return res.json({ value: login.password });
       }
 
       const resolved = (await resolveHostCredentials(host, userId)) || host;
@@ -1724,25 +1693,14 @@ router.get(
         notes: resolvedHost.notes || null,
         // Every plugin's host settings, secrets redacted, for import to hand back.
         pluginSettings: hostPluginSettings ?? {},
+        // Each plugin protocol's login, secrets included like the SSH ones.
+        protocolAuth: toPortableLogins(
+          await listProtocolLogins(Number(hostId), userId),
+        ),
       };
 
       const exportData = isRemoteDesktop
-        ? {
-            ...baseExportData,
-            rdpAuthType: resolvedHost.rdpAuthType || null,
-            rdpCredentialId: resolvedHost.rdpCredentialId || null,
-            rdpUser: resolvedHost.rdpUser || null,
-            rdpPassword: resolvedHost.rdpPassword || null,
-            rdpDomain: resolvedHost.rdpDomain || null,
-            vncAuthType: resolvedHost.vncAuthType || null,
-            vncCredentialId: resolvedHost.vncCredentialId || null,
-            vncUser: resolvedHost.vncUser || null,
-            vncPassword: resolvedHost.vncPassword || null,
-            telnetAuthType: resolvedHost.telnetAuthType || null,
-            telnetCredentialId: resolvedHost.telnetCredentialId || null,
-            telnetUser: resolvedHost.telnetUser || null,
-            telnetPassword: resolvedHost.telnetPassword || null,
-          }
+        ? baseExportData
         : {
             ...baseExportData,
             authType: resolvedHost.authType,
@@ -1867,13 +1825,16 @@ router.get(
           notes: resolvedHost.notes || null,
           // Every plugin's host settings, secrets redacted, for import to hand back.
           pluginSettings: hostPluginSettings ?? {},
+          protocolAuth: shareableLogins(
+            toPortableLogins(
+              await listProtocolLogins(host.id as number, userId),
+            ),
+            shareMode,
+          ),
         };
 
         const exportData = isRemoteDesktop
-          ? {
-              ...baseExportData,
-              domain: resolvedHost.domain || null,
-            }
+          ? baseExportData
           : {
               ...baseExportData,
               authType: resolvedHost.authType,
@@ -2091,6 +2052,38 @@ router.delete(
 // the file-manager plugin, under /plugin-api/file-manager/, and command
 // history to the ssh-terminal plugin, under /plugin-api/ssh-terminal/.
 
+/**
+ * A share export leaves out every secret and credential link, the same as
+ * it does for SSH.
+ */
+function shareableLogins(
+  logins: ReturnType<typeof toPortableLogins>,
+  shareMode: boolean,
+): ReturnType<typeof toPortableLogins> {
+  if (!shareMode) return logins;
+  const out: ReturnType<typeof toPortableLogins> = {};
+  for (const [protocol, login] of Object.entries(logins)) {
+    const declared = findHostProtocol(protocol);
+    const secret = new Set(
+      (declared?.credentialFields ?? [])
+        .filter((field) => field.secret)
+        .map((field) => field.key),
+    );
+    out[protocol] = {
+      authType: login.authType === "credential" ? "direct" : login.authType,
+      credentialId: null,
+      username: login.username,
+      password: null,
+      fields: Object.fromEntries(
+        Object.entries(login.fields).filter(
+          ([key]) => declared && !secret.has(key),
+        ),
+      ),
+    };
+  }
+  return out;
+}
+
 async function resolveHostCredentials(
   host: Record<string, unknown>,
   requestingUserId?: string,
@@ -2128,9 +2121,9 @@ async function resolveHostCredentials(
           host.id,
           requestingUserId,
         );
-      // Whether a protocol is on is the remote-desktop plugin's host
-      // setting; the client only offers an override for one that is.
-      for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+      // Whether a plugin protocol is on is its plugin's host setting; the
+      // client only offers an override for one that is.
+      for (const { id: protocol } of listHostProtocols()) {
         authOverrides[protocol] = {
           credentialId: overrideCredentialIds[protocol],
           required: false,

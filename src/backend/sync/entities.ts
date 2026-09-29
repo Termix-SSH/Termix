@@ -27,6 +27,10 @@ import {
   exportHostPluginSettings,
   importHostPluginSettings,
 } from "./host-plugin-settings.js";
+import {
+  exportProtocolLogins,
+  importProtocolLogins,
+} from "./host-protocol-auth.js";
 
 const CREDENTIAL_REFERENCE = {
   field: "credentialId",
@@ -36,21 +40,6 @@ const CREDENTIAL_REFERENCE = {
 
 const HOST_REFERENCES = [
   CREDENTIAL_REFERENCE,
-  {
-    field: "rdpCredentialId",
-    syncField: "rdpCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "vncCredentialId",
-    syncField: "vncCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "telnetCredentialId",
-    syncField: "telnetCredentialSyncId",
-    entityType: "sshCredentials",
-  },
   {
     field: "parentHostId",
     syncField: "parentHostSyncId",
@@ -161,16 +150,25 @@ export function registerCoreSyncEntities(): void {
         update: "hosts.edit",
         delete: "hosts.delete",
       },
-      serialize: async (row) => ({
+      serialize: async (row, resolveSyncId) => ({
         ...row,
         pluginSettings:
           typeof row.id === "number"
             ? await exportHostPluginSettings(row.id)
             : {},
+        protocolAuth:
+          typeof row.id === "number"
+            ? await exportProtocolLogins(
+                row.id,
+                String(row.userId),
+                resolveSyncId,
+              )
+            : {},
       }),
-      afterWrite: async ({ id, userId, wire }) => {
+      afterWrite: async ({ id, userId, wire, resolveId }) => {
         if (id === null) return;
         await importHostPluginSettings(id, wire.pluginSettings);
+        await importProtocolLogins(id, userId, wire.protocolAuth, resolveId);
         await dropInvalidParent(userId, id);
         const { SharedHostSecretsManager } =
           await import("../utils/shared-host-secrets-manager.js");
@@ -439,11 +437,9 @@ const SHARED_HOST_DROP = [
   "id",
   "userId",
   "credentialId",
-  "rdpCredentialId",
-  "vncCredentialId",
-  "telnetCredentialId",
   "parentHostId",
   "pluginSettings",
+  "protocolAuth",
   "quickActions",
   "createdAt",
   "updatedAt",

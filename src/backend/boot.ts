@@ -47,6 +47,12 @@ export async function runCoreBootMigrations(): Promise<void> {
   await AuthManager.getInstance().initialize();
   DataCrypto.initialize();
 
+  // Before anything snapshots shared secrets, which would drop a protocol
+  // snapshot whose login has not been copied yet.
+  const { runProtocolAuthMigration } =
+    await import("./upgrade/protocol-auth-migration.js");
+  await runProtocolAuthMigration();
+
   const { runLegacySharedSshAuthOptInMigration } =
     await import("./utils/crypto-migration/legacy-shared-ssh-auth-opt-in-migration.js");
   await runLegacySharedSshAuthOptInMigration();

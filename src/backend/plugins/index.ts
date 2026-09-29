@@ -19,6 +19,7 @@ import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
+import { setHostProtocolSource } from "../hosts/protocol-auth/registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
 import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
@@ -51,6 +52,17 @@ export function getPluginRuntime(): { loader: PluginLoader } {
         (plugin.manifest.contributes?.keybindingActions ?? []).map(
           (action) => ({ ...action, pluginId: plugin.id }),
         ),
+      ),
+    );
+    // Protocol logins stay readable, shareable and syncable while their
+    // plugin is off.
+    setHostProtocolSource(() =>
+      (loader?.list() ?? []).flatMap((plugin) =>
+        (plugin.manifest.contributes?.protocols ?? []).map((protocol) => ({
+          ...protocol,
+          pluginId: plugin.id,
+          pluginName: plugin.manifest.name,
+        })),
       ),
     );
     // Lets a host whose auth type belongs to a disabled plugin name it.

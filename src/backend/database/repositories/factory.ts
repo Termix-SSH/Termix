@@ -28,6 +28,7 @@ import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
 import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
+import { HostProtocolAuthRepository } from "./host-protocol-auth-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
@@ -283,6 +284,13 @@ export function createCurrentSharedHostSecretsRepository(): SharedHostSecretsRep
   return new SharedHostSecretsRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("shared_host_secrets_repository_write"),
+  );
+}
+
+export function createCurrentHostProtocolAuthRepository(): HostProtocolAuthRepository {
+  return new HostProtocolAuthRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("host_protocol_auth_repository_write"),
   );
 }
 

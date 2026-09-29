@@ -1,4 +1,8 @@
-import type { PluginHostRecord } from "@termix/plugin-sdk/frontend";
+import type {
+  HostProtocolAuthSummary,
+  PluginHostRecord,
+  QuickConnectLogin,
+} from "@termix/plugin-sdk/frontend";
 import type { GuacamoleConfig } from "./guacamole-config";
 
 export const PLUGIN_ID = "remote-desktop";
@@ -37,19 +41,18 @@ export const DEFAULT_PORT: Record<Protocol, number> = {
   telnet: 23,
 };
 
-/** The core fields holding a protocol's login, which stay on the host. */
+/**
+ * The host fields a session reads. Each protocol's login is core's, under
+ * protocolAuth, since this plugin declares its protocols in the manifest.
+ */
 export interface RemoteHostLogin {
   id?: number | string;
   name?: string | null;
   ip?: string;
-  domain?: string;
   syncId?: string | null;
   connectionOrigin?: "local" | "remote" | null;
-  rdpAuthType?: string;
-  rdpUser?: string;
-  rdpPassword?: string;
-  vncUser?: string;
-  vncPassword?: string;
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
+  quickConnectLogin?: QuickConnectLogin;
   authOverrides?: Record<
     string,
     {
@@ -59,6 +62,11 @@ export interface RemoteHostLogin {
     }
   >;
   pluginSettings?: Record<string, Record<string, unknown>>;
+}
+
+/** The RDP domain a host's saved login carries. */
+export function rdpDomain(host: RemoteHostLogin): string | undefined {
+  return host.protocolAuth?.rdp?.fields?.domain || undefined;
 }
 
 function port(value: unknown, fallback: number): number {

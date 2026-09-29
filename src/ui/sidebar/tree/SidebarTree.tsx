@@ -614,17 +614,18 @@ export function SidebarTree({
         overrideCredentialUsername: host.overrideCredentialUsername ?? false,
         enableSsh: host.enableSsh,
         sshPort: host.sshPort,
-        rdpUser: host.rdpUser ?? null,
-        rdpPassword: host.rdpPassword ?? null,
-        rdpDomain: host.domain ?? null,
-        vncAuthType: host.vncAuthType ?? null,
-        vncCredentialId: host.vncCredentialId
-          ? Number(host.vncCredentialId)
-          : null,
-        vncPassword: host.vncPassword ?? null,
-        vncUser: host.vncUser ?? null,
-        telnetUser: host.telnetUser ?? null,
-        telnetPassword: host.telnetPassword ?? null,
+        // Saved passwords never reach the browser, so a copy starts without them.
+        protocolAuth: Object.fromEntries(
+          Object.entries(host.protocolAuth ?? {}).map(([protocol, login]) => [
+            protocol,
+            {
+              authType: login.authType,
+              credentialId: login.credentialId ?? null,
+              username: login.username ?? null,
+              fields: login.fields ?? {},
+            },
+          ]),
+        ),
         forceKeyboardInteractive: host.forceKeyboardInteractive ?? false,
         useSocks5: host.useSocks5,
         socks5Host: host.socks5Host ?? null,

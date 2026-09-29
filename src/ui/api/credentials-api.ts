@@ -116,14 +116,7 @@ export async function getSSHHostWithCredentials(
 
 export async function getHostPassword(
   hostId: number,
-  field:
-    | "password"
-    | "sudoPassword"
-    | "rdpPassword"
-    | "vncPassword"
-    | "telnetPassword"
-    | "key"
-    | "keyPassword" = "password",
+  field: "password" | "sudoPassword" | "key" | "keyPassword" = "password",
 ): Promise<string | null> {
   try {
     const response = await sshHostApi.get(

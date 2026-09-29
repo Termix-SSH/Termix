@@ -50,13 +50,11 @@ import {
   canEditHost,
   canOverrideHostAuth,
   canShareHost,
+  authOverrideProtocols as listAuthOverrideProtocols,
+  authProtocolLabel,
 } from "@/sidebar/host-permissions";
 import { HostAuthOverrideModal } from "@/sidebar/HostAuthOverrideModal";
-import {
-  AUTH_OVERRIDE_PROTOCOLS,
-  AUTH_PROTOCOL_METADATA,
-  type AuthOverrideProtocol,
-} from "@/types/auth-protocols";
+import type { AuthOverrideProtocol } from "@/types/auth-protocols";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -323,7 +321,7 @@ export function HostItem({
     !alwaysShowTray && !actionsOnly && (trayTrigger === "click" || isTouchOnly);
   const showPasswordCopy = !host.isShared && canCopyHostPassword(host);
   const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
-  const authOverrideProtocols = AUTH_OVERRIDE_PROTOCOLS.filter((protocol) =>
+  const authOverrideProtocols = listAuthOverrideProtocols().filter((protocol) =>
     canOverrideHostAuth(host, protocol),
   );
   const [authOverrideProtocol, setAuthOverrideProtocol] =
@@ -808,7 +806,7 @@ export function HostItem({
             >
               <KeyRound className="size-3.5 mr-2" />
               {t("hosts.sharing.authOverrideActionProtocol", {
-                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+                protocol: authProtocolLabel(protocol, t),
               })}
             </DropdownMenuItem>
           ))}

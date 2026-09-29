@@ -37,7 +37,7 @@ function target(
       authType: "direct",
       username: "admin",
       password: "secret",
-      domain: "CORP",
+      fields: { domain: "CORP" },
       ...overrides,
     },
   };

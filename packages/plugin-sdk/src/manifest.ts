@@ -351,7 +351,47 @@ export interface PluginContributions {
    * naming a sync entity over sync.
    */
   keybindingActions?: PluginKeybindingActionContribution[];
+  /**
+   * Connection protocols whose per-host login core stores, encrypts,
+   * shares, exports and syncs for this plugin, read back with
+   * ctx.credentials.resolveHostProtocol.
+   */
+  protocols?: PluginProtocolContribution[];
 }
+
+/** A field a protocol login carries besides username and password. */
+export interface PluginProtocolCredentialField {
+  key: string;
+  /** Encrypted with the owner's data key and never sent to a browser. */
+  secret?: boolean;
+}
+
+export interface PluginProtocolContribution {
+  /** Stored with each login. Never change it once hosts use it. */
+  id: string;
+  credentialFields?: PluginProtocolCredentialField[];
+  /**
+   * The port an import row without one gets, for a host whose main
+   * protocol this is.
+   */
+  defaultPort?: number;
+  /**
+   * What the owner's login falls back to from the host's own SSH login
+   * when the protocol login leaves it empty.
+   */
+  hostLoginFallback?: Array<"username" | "password">;
+}
+
+/** Protocol ids core keeps for itself. */
+export const RESERVED_PROTOCOL_IDS: readonly string[] = ["ssh"];
+
+/** Login keys a declared credential field may not reuse. */
+export const RESERVED_PROTOCOL_FIELD_KEYS: readonly string[] = [
+  "username",
+  "password",
+  "authType",
+  "credentialId",
+];
 
 /** One parameter a saved keybinding action carries next to its type. */
 export interface PluginKeybindingParam {
@@ -523,6 +563,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "auth",
   "syncEntities",
   "keybindingActions",
+  "protocols",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -993,6 +1034,94 @@ function validateContributes(
   validateHttpContribution(contributes.http, pluginId, errors);
   validateUiPresets(contributes.uiPresets, errors);
   validateKeybindingActions(contributes.keybindingActions, errors);
+  validateProtocols(contributes.protocols, errors);
+}
+
+export const PROTOCOL_ID_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
+export const PROTOCOL_FIELD_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9]{0,31}$/;
+
+function validateProtocols(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  const where = "contributes.protocols";
+  if (!Array.isArray(value)) {
+    errors.push(`Field "${where}" must be an array`);
+    return;
+  }
+  const seen = new Set<string>();
+  value.forEach((raw, index) => {
+    const at = `${where}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(
+      raw,
+      ["id", "credentialFields", "defaultPort", "hostLoginFallback"],
+      at,
+      errors,
+    );
+    if (typeof raw.id !== "string" || !PROTOCOL_ID_PATTERN.test(raw.id)) {
+      errors.push(
+        `${at}.id must be lowercase letters, digits and dashes, starting with a letter`,
+      );
+    } else if (RESERVED_PROTOCOL_IDS.includes(raw.id)) {
+      errors.push(`${at}.id "${raw.id}" belongs to core`);
+    } else {
+      if (seen.has(raw.id)) errors.push(`${at}.id duplicates "${raw.id}"`);
+      seen.add(raw.id);
+    }
+    if (
+      raw.defaultPort !== undefined &&
+      (typeof raw.defaultPort !== "number" ||
+        !Number.isInteger(raw.defaultPort) ||
+        raw.defaultPort < 1 ||
+        raw.defaultPort > 65535)
+    ) {
+      errors.push(`${at}.defaultPort must be a port number`);
+    }
+    if (raw.hostLoginFallback !== undefined) {
+      if (
+        !Array.isArray(raw.hostLoginFallback) ||
+        raw.hostLoginFallback.some(
+          (entry) => entry !== "username" && entry !== "password",
+        )
+      ) {
+        errors.push(
+          `${at}.hostLoginFallback must list "username" and/or "password"`,
+        );
+      }
+    }
+    if (raw.credentialFields === undefined) return;
+    if (!Array.isArray(raw.credentialFields)) {
+      errors.push(`${at}.credentialFields must be an array`);
+      return;
+    }
+    const keys = new Set<string>();
+    raw.credentialFields.forEach((field, fieldIndex) => {
+      const fieldAt = `${at}.credentialFields[${fieldIndex}]`;
+      if (!isPlainObject(field)) {
+        errors.push(`${fieldAt} must be an object`);
+        return;
+      }
+      rejectUnknown(field, ["key", "secret"], fieldAt, errors);
+      if (
+        typeof field.key !== "string" ||
+        !PROTOCOL_FIELD_KEY_PATTERN.test(field.key)
+      ) {
+        errors.push(`${fieldAt}.key must be letters and digits`);
+      } else if (RESERVED_PROTOCOL_FIELD_KEYS.includes(field.key)) {
+        errors.push(`${fieldAt}.key "${field.key}" is part of every login`);
+      } else {
+        if (keys.has(field.key)) {
+          errors.push(`${fieldAt}.key duplicates "${field.key}"`);
+        }
+        keys.add(field.key);
+      }
+      if (field.secret !== undefined && typeof field.secret !== "boolean") {
+        errors.push(`${fieldAt}.secret must be a boolean`);
+      }
+    });
+  });
 }
 
 const KEYBINDING_ACTION_PATTERN = /^[a-zA-Z][a-zA-Z0-9.-]{0,63}$/;

@@ -45,6 +45,7 @@ import {
   isQuickConnectHost,
   protocolEnabled,
   type Protocol,
+  rdpDomain,
   type RemoteHostLogin,
 } from "./host-remote";
 import { remoteDesktopForm } from "./remote-form";
@@ -249,8 +250,8 @@ function registerNativeRdp(app: TermixApp): void {
         void openNativeRdp({
           host: String(record.ip ?? ""),
           port: hostRemoteOptions(record).rdpPort,
-          username: record.rdpUser,
-          domain: record.domain,
+          username: record.protocolAuth?.rdp?.username ?? undefined,
+          domain: rdpDomain(record),
         })
           .then((result) => {
             if (result.success) toast.success(app.t("hosts.nativeRdpOpened"));

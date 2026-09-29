@@ -91,12 +91,13 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
     expect(host).toMatchObject({
       enableSsh: false,
       pluginSettings: { demo: { enableDemo: true, demoPort: 3390 } },
-      domain: "CORP",
     });
-    // The login sits on the core fields named after the protocol.
-    expect(host).toMatchObject({
-      "demo-desktopUser": "admin",
-      "demo-desktopPassword": "pw",
+    // The unsaved login travels to the protocol's tab as it is.
+    expect(host.quickConnectLogin).toEqual({
+      protocol: "demo-desktop",
+      username: "admin",
+      password: "pw",
+      fields: { domain: "CORP" },
     });
   });
 

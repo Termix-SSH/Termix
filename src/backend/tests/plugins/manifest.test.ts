@@ -759,3 +759,67 @@ describe("contributes.keybindingActions", () => {
     expect(errors).toMatch(/d/);
   });
 });
+
+describe("contributes.protocols", () => {
+  const withProtocols = (protocols: unknown) =>
+    validateManifest(base({ contributes: { protocols } }));
+
+  it("accepts protocols with credential fields", () => {
+    expect(
+      withProtocols([
+        {
+          id: "spice",
+          credentialFields: [
+            { key: "display" },
+            { key: "ticket", secret: true },
+          ],
+          defaultPort: 5930,
+          hostLoginFallback: ["username", "password"],
+        },
+        { id: "x2go" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("refuses core's protocol, duplicates and bad ids", () => {
+    const errors = withProtocols([
+      { id: "ssh" },
+      { id: "spice" },
+      { id: "spice" },
+      { id: "Bad_Id" },
+    ]);
+    expect(errors.join("\n")).toMatch(/"ssh" belongs to core/);
+    expect(errors.join("\n")).toMatch(/duplicates "spice"/);
+    expect(errors.join("\n")).toMatch(/\[3\]\.id must be lowercase/);
+  });
+
+  it("refuses field keys every login already has, and duplicate keys", () => {
+    const errors = withProtocols([
+      {
+        id: "spice",
+        credentialFields: [
+          { key: "password" },
+          { key: "display" },
+          { key: "display", secret: "yes" },
+        ],
+      },
+    ]);
+    expect(errors.join("\n")).toMatch(/"password" is part of every login/);
+    expect(errors.join("\n")).toMatch(/duplicates "display"/);
+    expect(errors.join("\n")).toMatch(/secret must be a boolean/);
+  });
+
+  it("refuses unknown keys, bad ports and bad fallbacks", () => {
+    const errors = withProtocols([
+      {
+        id: "spice",
+        defaultPort: 70000,
+        hostLoginFallback: ["key"],
+        extra: true,
+      },
+    ]);
+    expect(errors.join("\n")).toMatch(/defaultPort must be a port number/);
+    expect(errors.join("\n")).toMatch(/hostLoginFallback/);
+    expect(errors.join("\n")).toMatch(/extra/);
+  });
+});

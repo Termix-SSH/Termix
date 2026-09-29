@@ -3,6 +3,11 @@ import {
   remapImportedJumpHosts,
 } from "./host-import-order.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
+import {
+  keepUsableProtocolCredentials,
+  readProtocolAuthPayload,
+  writeProtocolAuth,
+} from "../../hosts/protocol-auth/protocol-auth.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
@@ -707,13 +712,6 @@ export function registerHostBulkRoutes(
             sshDataObj.key = null;
             sshDataObj.keyPassword = null;
             sshDataObj.keyType = null;
-            sshDataObj.rdpUser = hostData.rdpUser || null;
-            sshDataObj.rdpPassword = hostData.rdpPassword || null;
-            sshDataObj.rdpDomain = hostData.rdpDomain || null;
-            sshDataObj.vncUser = hostData.vncUser || null;
-            sshDataObj.vncPassword = hostData.vncPassword || null;
-            sshDataObj.telnetUser = hostData.telnetUser || null;
-            sshDataObj.telnetPassword = hostData.telnetPassword || null;
           } else {
             sshDataObj.password =
               hostData.authType === "password" ? hostData.password : null;
@@ -725,7 +723,6 @@ export function registerHostBulkRoutes(
               hostData.authType === "key" ? hostData.keyPassword || null : null;
             sshDataObj.keyType =
               hostData.authType === "key" ? hostData.keyType || "auto" : null;
-            sshDataObj.domain = null;
           }
 
           const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
@@ -751,6 +748,18 @@ export function registerHostBulkRoutes(
             if (exportId !== undefined) importedIds.set(exportId, saved.id);
             savedHostId = saved.id;
             results.success++;
+          }
+
+          const protocolAuth = readProtocolAuthPayload(
+            hostData as Record<string, unknown>,
+          );
+          if (protocolAuth) {
+            await writeProtocolAuth(
+              userId,
+              savedHostId,
+              await keepUsableProtocolCredentials(protocolAuth, userId),
+              { isOwner: true },
+            );
           }
 
           // Every enabled plugin that declares host-scope settings and

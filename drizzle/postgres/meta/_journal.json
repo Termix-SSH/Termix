@@ -442,6 +442,13 @@
       "when": 1790651053871,
       "tag": "0062_curvy_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790700738799,
+      "tag": "0063_giant_starfox",
+      "breakpoints": true
     }
   ]
 }

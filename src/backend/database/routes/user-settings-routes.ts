@@ -346,7 +346,7 @@ export function registerUserSettingsRoutes(
    * /users/session-sharing-enabled:
    *   get:
    *     summary: Get session sharing globally enabled setting
-   *     description: Returns whether live session sharing (terminal/RDP/VNC/Telnet share links and in-app joins) is allowed instance-wide. Overrides every per-host toggle when false.
+   *     description: Returns whether live session sharing (terminal and remote desktop share links and in-app joins) is allowed instance-wide. Overrides every per-host toggle when false.
    *     tags:
    *       - Users
    *     responses:

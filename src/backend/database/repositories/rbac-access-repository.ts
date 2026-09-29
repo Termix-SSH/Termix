@@ -44,9 +44,6 @@ export interface RbacSharedHost {
 export interface RbacRoleHostAccessCredentialSource {
   hostAccessId: number;
   credentialId: number | null;
-  rdpCredentialId: number | null;
-  vncCredentialId: number | null;
-  telnetCredentialId: number | null;
   hostId: number;
   hostOwnerId: string;
 }
@@ -328,9 +325,6 @@ export class RbacAccessRepository {
       .select({
         hostAccessId: hostAccess.id,
         credentialId: hosts.credentialId,
-        rdpCredentialId: hosts.rdpCredentialId,
-        vncCredentialId: hosts.vncCredentialId,
-        telnetCredentialId: hosts.telnetCredentialId,
         hostId: hosts.id,
         hostOwnerId: hosts.userId,
       })

@@ -18,6 +18,8 @@ const state = vi.hoisted(() => ({
   savedCredentials: [] as Array<Record<string, unknown>>,
   userCredentials: new Map<string, Array<Record<string, unknown>>>(),
   corePermissions: new Set<string>(["credentials.view", "credentials.create"]),
+  logins: new Map<string, Record<string, unknown>>(),
+  ownerDecrypts: 0,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -40,6 +42,30 @@ vi.mock("../../database/repositories/factory.js", () => ({
       return row;
     },
   }),
+  createCurrentHostProtocolAuthRepository: () => ({
+    find: async (hostId: number, protocol: string) => {
+      state.ownerDecrypts++;
+      return state.logins.get(`${hostId}:${protocol}`) ?? null;
+    },
+    findRow: async (hostId: number, protocol: string) => {
+      const login = state.logins.get(`${hostId}:${protocol}`);
+      return login
+        ? {
+            hostId,
+            protocol,
+            authType: login.authType,
+            credentialId: login.credentialId ?? null,
+            username: login.username ?? null,
+            password: "sealed",
+            fields: JSON.stringify(login.fields ?? {}),
+            secretFields: "sealed",
+          }
+        : null;
+    },
+  }),
+  createCurrentSharedHostAuthOverrideRepository: () => ({
+    listCredentialIds: async () => ({}),
+  }),
   createCurrentHostResolutionRepository: () => ({
     findHostOwnerId: async (hostId: number) =>
       (state.hosts.get(hostId)?.userId as string) ?? null,
@@ -47,6 +73,17 @@ vi.mock("../../database/repositories/factory.js", () => ({
     findCredentialByIdForUser: async (id: number) =>
       state.credentials.get(id) ?? null,
   }),
+}));
+
+vi.mock("../../utils/data-crypto.js", () => ({
+  DataCrypto: {
+    validateUserAccess: () => Buffer.alloc(32),
+    getUserDataKey: () => Buffer.alloc(32),
+  },
+}));
+
+vi.mock("../../hosts/usable-credential.js", () => ({
+  findUsableCredential: async (id: number) => state.credentials.get(id) ?? null,
 }));
 
 vi.mock("../../utils/audit-logger.js", () => ({
@@ -84,6 +121,13 @@ import {
 } from "../../hosts/connect/secret-resolver-registry.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import ssh2 from "ssh2";
+import { setHostProtocolSource } from "../../hosts/protocol-auth/registry.js";
+
+const SPICE = {
+  id: "spice",
+  credentialFields: [{ key: "display" }, { key: "ticket", secret: true }],
+  hostLoginFallback: ["password" as const],
+};
 
 function contextFor(
   capabilities: string[],
@@ -114,12 +158,12 @@ const baseHost = {
   username: "sshuser",
   password: "ssh-secret",
   jumpHosts: JSON.stringify([{ hostId: 3 }]),
-  rdpUser: "admin",
-  rdpPassword: "rdp-secret",
-  rdpDomain: "CORP",
-  rdpAuthType: null,
-  rdpCredentialId: null,
 };
+
+/** The demo plugin declares SPICE; nothing in core knows it. */
+function spiceContext(capabilities: string[]) {
+  return contextFor(capabilities, { protocols: [SPICE] });
+}
 
 beforeEach(() => {
   grants.clear();
@@ -134,17 +178,32 @@ beforeEach(() => {
   state.userCredentials.clear();
   state.corePermissions = new Set(["credentials.view", "credentials.create"]);
   state.hosts.set(7, { ...baseHost });
+  state.logins.clear();
+  state.ownerDecrypts = 0;
+  state.logins.set("7:spice", {
+    protocol: "spice",
+    authType: "direct",
+    credentialId: null,
+    username: "admin",
+    password: "spice-secret",
+    fields: { display: "2" },
+    secretFields: { ticket: "t-123" },
+  });
+  setHostProtocolSource(() => [
+    { ...SPICE, pluginId: "demo", pluginName: "demo" },
+    { id: "rival", pluginId: "other", pluginName: "other" },
+  ]);
   resetSecretResolverRegistryForTests();
 });
 
 describe("ctx.credentials.resolveHostProtocol", () => {
   it("refuses without credentials:read and audits the refusal", async () => {
     grants.set("demo", []);
-    const ctx = contextFor([]);
+    const ctx = spiceContext([]);
 
     await expect(
       runAsActor("owner", "request", () =>
-        ctx.credentials.resolveHostProtocol(7, "rdp"),
+        ctx.credentials.resolveHostProtocol(7, "spice"),
       ),
     ).rejects.toThrow(/credentials:read/);
     expect(auditEntries.at(-1)).toMatchObject({
@@ -153,12 +212,31 @@ describe("ctx.credentials.resolveHostProtocol", () => {
     });
   });
 
+  it("refuses a protocol the plugin does not declare, or another plugin owns", async () => {
+    grants.set("demo", ["credentials:read"]);
+    const ctx = contextFor(["credentials:read"], {
+      protocols: [SPICE, { id: "rival" }],
+    });
+
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.resolveHostProtocol(7, "vnc"),
+      ),
+    ).rejects.toThrow(/does not declare/);
+    await expect(
+      runAsActor("owner", "request", () =>
+        ctx.credentials.resolveHostProtocol(7, "rival"),
+      ),
+    ).rejects.toThrow(/does not declare/);
+    expect(state.ownerDecrypts).toBe(0);
+  });
+
   it("returns the owner's stored login and audits it", async () => {
     grants.set("demo", ["credentials:read"]);
-    const ctx = contextFor(["credentials:read"]);
+    const ctx = spiceContext(["credentials:read"]);
 
     const target = await runAsActor("owner", "request", () =>
-      ctx.credentials.resolveHostProtocol(7, "rdp"),
+      ctx.credentials.resolveHostProtocol(7, "spice"),
     );
     expect(target).toEqual({
       host: {
@@ -173,8 +251,8 @@ describe("ctx.credentials.resolveHostProtocol", () => {
       auth: {
         authType: "direct",
         username: "admin",
-        password: "rdp-secret",
-        domain: "CORP",
+        password: "spice-secret",
+        fields: { display: "2", ticket: "t-123" },
       },
     });
     expect(auditEntries.at(-1)).toMatchObject({
@@ -183,23 +261,52 @@ describe("ctx.credentials.resolveHostProtocol", () => {
     });
   });
 
-  it("uses the stored credential in credential mode", async () => {
+  it("falls back to the host's own password as declared", async () => {
     grants.set("demo", ["credentials:read"]);
-    state.hosts.set(7, {
-      ...baseHost,
-      vncCredentialId: 11,
-      vncAuthType: "credential",
+    state.logins.set("7:spice", {
+      protocol: "spice",
+      authType: "direct",
+      credentialId: null,
+      username: null,
+      password: null,
+      fields: {},
+      secretFields: {},
     });
-    state.credentials.set(11, { username: "viewer", password: "vnc-pass" });
-    const ctx = contextFor(["credentials:read"]);
+    const ctx = spiceContext(["credentials:read"]);
 
     const target = await runAsActor("owner", "request", () =>
-      ctx.credentials.resolveHostProtocol(7, "vnc"),
+      ctx.credentials.resolveHostProtocol(7, "spice"),
+    );
+    expect(target?.auth).toEqual({
+      authType: "direct",
+      username: "",
+      password: "ssh-secret",
+      fields: { display: "", ticket: "" },
+    });
+  });
+
+  it("uses the stored credential in credential mode", async () => {
+    grants.set("demo", ["credentials:read"]);
+    state.logins.set("7:spice", {
+      protocol: "spice",
+      authType: "credential",
+      credentialId: 11,
+      username: null,
+      password: null,
+      fields: { display: "1" },
+      secretFields: {},
+    });
+    state.credentials.set(11, { username: "viewer", password: "cred-pass" });
+    const ctx = spiceContext(["credentials:read"]);
+
+    const target = await runAsActor("owner", "request", () =>
+      ctx.credentials.resolveHostProtocol(7, "spice"),
     );
     expect(target?.auth).toMatchObject({
       authType: "credential",
       username: "viewer",
-      password: "vnc-pass",
+      password: "cred-pass",
+      fields: { display: "1" },
     });
   });
 
@@ -208,50 +315,56 @@ describe("ctx.credentials.resolveHostProtocol", () => {
     state.resolution = {
       source: "owner-shared",
       authType: "direct",
-      secret: { username: "shared", password: "snap", domain: null },
+      secret: {
+        username: "shared",
+        password: "snap",
+        fields: { ticket: "snap-ticket" },
+      },
     };
-    const ctx = contextFor(["credentials:read"]);
+    const ctx = spiceContext(["credentials:read"]);
 
     const target = await runAsActor("guest", "request", () =>
-      ctx.credentials.resolveHostProtocol(7, "rdp"),
+      ctx.credentials.resolveHostProtocol(7, "spice"),
     );
     expect(target?.shared).toBe(true);
-    expect(target?.auth).toMatchObject({
+    expect(target?.auth).toEqual({
+      authType: "direct",
       username: "shared",
       password: "snap",
+      fields: { display: "2", ticket: "snap-ticket" },
     });
-    expect(state.resolverCalls[0]).toMatchObject({
-      password: null,
-      rdpUser: null,
-      rdpPassword: null,
-    });
+    expect(state.resolverCalls[0]).toMatchObject({ password: null });
+    // The owner's login is never decrypted for a recipient.
+    expect(state.ownerDecrypts).toBe(0);
   });
 
   it("gives a recipient with nothing shared an empty login", async () => {
     grants.set("demo", ["credentials:read"]);
     state.resolution = { source: "required" };
-    const ctx = contextFor(["credentials:read"]);
+    const ctx = spiceContext(["credentials:read"]);
 
     const target = await runAsActor("guest", "request", () =>
-      ctx.credentials.resolveHostProtocol(7, "telnet"),
+      ctx.credentials.resolveHostProtocol(7, "spice"),
     );
     expect(target?.auth.username).toBe("");
     expect(target?.auth.password).toBe("");
+    expect(target?.auth.fields.ticket).toBe("");
+    expect(state.ownerDecrypts).toBe(0);
   });
 
   it("returns null without connect access or for a missing host", async () => {
     grants.set("demo", ["credentials:read"]);
     state.canConnect = false;
-    const ctx = contextFor(["credentials:read"]);
+    const ctx = spiceContext(["credentials:read"]);
 
     await expect(
       runAsActor("guest", "request", () =>
-        ctx.credentials.resolveHostProtocol(7, "rdp"),
+        ctx.credentials.resolveHostProtocol(7, "spice"),
       ),
     ).resolves.toBeNull();
     await expect(
       runAsActor("owner", "request", () =>
-        ctx.credentials.resolveHostProtocol(99, "rdp"),
+        ctx.credentials.resolveHostProtocol(99, "spice"),
       ),
     ).resolves.toBeNull();
     expect(auditEntries.at(-1)).toMatchObject({ success: false });

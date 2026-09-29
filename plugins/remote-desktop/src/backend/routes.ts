@@ -337,7 +337,7 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
       const domain = resolveRdpDomain(
         target.auth.authType,
         body.promptedDomain,
-        target.auth.domain,
+        target.auth.fields.domain ?? "",
       );
 
       let hostname = target.host.ip;

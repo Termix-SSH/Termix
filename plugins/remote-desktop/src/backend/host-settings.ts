@@ -141,6 +141,42 @@ export function normalizeImportedHost(
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/**
+ * Registered as "remote-desktop.hostPayloadLegacy": each protocol's login
+ * in the flat 2.8 shape (rdpUser, rdpDomain, vncAuthType and so on), for
+ * Termix-Mobile until it reads protocolAuth. Built from the payload's own
+ * protocolAuth, which core already reduced for a shared recipient.
+ */
+export function hostPayloadLegacy(
+  _values: Record<string, unknown>,
+  host: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const logins = asObject(host.protocolAuth);
+  if (!logins) return null;
+  const out: Record<string, unknown> = {};
+  for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+    const login = asObject(logins[protocol]);
+    if (!login) continue;
+    out[`${protocol}AuthType`] = login.authType;
+    if (login.credentialId !== undefined) {
+      out[`${protocol}CredentialId`] = login.credentialId;
+    }
+    if (typeof login.username === "string" && login.username) {
+      out[`${protocol}User`] = login.username;
+    }
+    if (typeof login.hasPassword === "boolean") {
+      const name = protocol.charAt(0).toUpperCase() + protocol.slice(1);
+      out[`has${name}Password`] = login.hasPassword;
+    }
+    const domain = asObject(login.fields)?.domain;
+    if (protocol === "rdp" && typeof domain === "string" && domain) {
+      out.rdpDomain = domain;
+      out.domain = domain;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 /** User setting key to the guacd parameter it sets. */
 const USER_DEFAULT_PARAMS: Record<string, string> = {
   colorDepth: "color-depth",
