@@ -1262,6 +1262,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function maybeOfferPasswordFill(strippedData: string) {
+      if (hostConfig.terminalConfig?.passwordPromptAutoFill === false) return;
+
       // PTY output can split a short prompt like "[sudo] password for user: "
       // across multiple WebSocket chunks, so match against a rolling buffer
       // of recent output rather than each chunk in isolation.

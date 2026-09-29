@@ -200,6 +200,8 @@ export function createHostEditorForm(
     agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
     autoMosh: host?.terminalConfig?.autoMosh ?? false,
     autoTmux: host?.terminalConfig?.autoTmux ?? d?.autoTmux ?? false,
+    passwordPromptAutoFill:
+      host?.terminalConfig?.passwordPromptAutoFill ?? true,
     sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
     sudoPassword: host?.hasSudoPassword
       ? "existing_sudo_password"
@@ -344,6 +346,7 @@ export function buildHostEditorPayload(
     agentForwarding: form.agentForwarding,
     autoMosh: form.autoMosh,
     autoTmux: form.autoTmux,
+    passwordPromptAutoFill: form.passwordPromptAutoFill,
     sudoPasswordAutoFill: form.sudoPasswordAutoFill,
     sudoPassword:
       form.sudoPassword === "existing_sudo_password"

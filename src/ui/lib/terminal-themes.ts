@@ -856,6 +856,7 @@ export const DEFAULT_TERMINAL_CONFIG = {
   startupSnippetId: null as number | null,
   autoMosh: false,
   moshCommand: "mosh-server new -s -l LANG=en_US.UTF-8",
+  passwordPromptAutoFill: true,
   sudoPasswordAutoFill: false,
   keepaliveInterval: undefined as number | undefined,
   keepaliveCountMax: undefined as number | undefined,

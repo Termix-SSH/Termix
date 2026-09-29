@@ -28,6 +28,7 @@ export interface TerminalConfig {
   startupSnippetId: number | null;
   autoMosh: boolean;
   moshCommand: string;
+  passwordPromptAutoFill?: boolean;
   sudoPasswordAutoFill: boolean;
   sudoPassword?: string | null;
   keepaliveInterval?: number;

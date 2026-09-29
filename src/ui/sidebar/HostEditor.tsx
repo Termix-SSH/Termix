@@ -1006,6 +1006,15 @@ export function HostEditor({
                     />
                   </SettingRow>
                   <SettingRow
+                    label={t("hosts.passwordPromptAutoFillLabel")}
+                    description={t("hosts.passwordPromptAutoFillDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.passwordPromptAutoFill}
+                      onChange={(v) => setField("passwordPromptAutoFill", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
                     label={t("hosts.sudoPasswordAutoFillLabel")}
                     description={t("hosts.sudoPasswordAutoFillDesc")}
                   >

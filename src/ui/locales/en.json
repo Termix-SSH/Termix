@@ -567,6 +567,8 @@
     "linkClickBehaviorDefault": "Default (follow app setting)",
     "linkClickBehaviorConfirm": "Show popup to open or copy",
     "linkClickBehaviorDirect": "Open directly",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
     "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
     "sudoPasswordAutoFillShortDesc": "Automatically provide sudo password when prompted",
     "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",

@@ -278,6 +278,18 @@ describe("buildHostEditorPayload auth field isolation", () => {
     expect(tc?.sudoPasswordAutoFill).toBe(true);
     expect(tc?.sudoPassword).toBe("sudo-secret");
   });
+
+  it("defaults password prompt autofill on and saves it when turned off", () => {
+    expect(createHostEditorForm(null).passwordPromptAutoFill).toBe(true);
+
+    const form = {
+      ...createHostEditorForm(null),
+      passwordPromptAutoFill: false,
+    };
+    const payload = buildHostEditorPayload(form, sshOnly);
+
+    expect(payload.terminalConfig?.passwordPromptAutoFill).toBe(false);
+  });
 });
 
 describe("sudo password persistence indicator", () => {
