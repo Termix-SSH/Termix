@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { ArrowLeft, FileText } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useHosts, useTranslation } from "@termix/plugin-sdk/frontend";
+import { ArrowLeft, Check, FileText, Search, Server, Zap } from "lucide-react";
 import { Button, Input, SectionCard, Select2 } from "@termix/plugin-sdk/ui";
-import type { Snippet, SnippetFolder } from "./types";
+import { parseHostFilter, type Snippet, type SnippetFolder } from "./types";
 
 export interface SnippetFormValues {
   name: string;
@@ -10,6 +10,7 @@ export interface SnippetFormValues {
   description: string;
   folder: string;
   isNote: boolean;
+  hostIds: number[];
 }
 
 const labelClass =
@@ -36,7 +37,10 @@ export function SnippetEditor({
     description: snippet?.description ?? "",
     folder: snippet?.folder ?? defaultFolder ?? "",
     isNote: snippet?.isNote ?? false,
+    hostIds: parseHostFilter(snippet?.hostFilter),
   }));
+  const { hosts } = useHosts();
+  const [hostSearch, setHostSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof SnippetFormValues>(
@@ -52,6 +56,29 @@ export function SnippetEditor({
       ...(values.folder ? [values.folder] : []),
     ]),
   ).sort((a, b) => a.localeCompare(b));
+
+  const hostQuery = hostSearch.trim().toLowerCase();
+  const visibleHosts = useMemo(
+    () =>
+      hosts
+        .filter(
+          (host) =>
+            !hostQuery ||
+            host.name.toLowerCase().includes(hostQuery) ||
+            host.ip.toLowerCase().includes(hostQuery),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [hosts, hostQuery],
+  );
+
+  function toggleHost(id: number) {
+    set(
+      "hostIds",
+      values.hostIds.includes(id)
+        ? values.hostIds.filter((h) => h !== id)
+        : [...values.hostIds, id],
+    );
+  }
 
   async function handleSave() {
     if (!canSave) return;
@@ -167,6 +194,80 @@ export function SnippetEditor({
             </div>
           </div>
         </SectionCard>
+
+        {!values.isNote && (
+          <SectionCard
+            title={t("targetHostsLabel")}
+            icon={<Zap className="size-3.5" />}
+            action={
+              values.hostIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => set("hostIds", [])}
+                  className="text-[10px] text-accent-brand hover:underline"
+                >
+                  {t("clearTargetHosts")}
+                </button>
+              ) : undefined
+            }
+          >
+            <div className="flex flex-col gap-2 py-3">
+              <span className="text-[11px] text-muted-foreground">
+                {t("targetHostsHint")}
+              </span>
+              {hosts.length === 0 ? (
+                <span className="text-[11px] text-muted-foreground/60">
+                  {t("noHostsAvailable")}
+                </span>
+              ) : (
+                <div className="flex flex-col border border-border">
+                  <div className="flex items-center gap-2 px-2.5 h-7 border-b border-border bg-muted/40">
+                    <Search className="size-3 text-muted-foreground/60 shrink-0" />
+                    <input
+                      value={hostSearch}
+                      onChange={(e) => setHostSearch(e.target.value)}
+                      placeholder={t("searchHosts")}
+                      className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 min-w-0"
+                    />
+                  </div>
+                  <div className="flex flex-col max-h-48 overflow-y-auto">
+                    {visibleHosts.map((host) => {
+                      const id = Number(host.id);
+                      const selected = values.hostIds.includes(id);
+                      return (
+                        <button
+                          key={host.id}
+                          type="button"
+                          onClick={() => toggleHost(id)}
+                          className={`flex items-center gap-2 px-2.5 py-1.5 text-left border-b border-border/40 last:border-b-0 transition-colors ${
+                            selected
+                              ? "bg-accent-brand/[0.07]"
+                              : "hover:bg-muted/40"
+                          }`}
+                        >
+                          <span
+                            className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+                          >
+                            {selected && (
+                              <Check className="size-2 text-background" />
+                            )}
+                          </span>
+                          <Server className="size-3 shrink-0 text-muted-foreground/60" />
+                          <span className="text-xs font-medium truncate flex-1">
+                            {host.name || host.ip}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground/60 font-mono truncate shrink-0 max-w-[45%]">
+                            {host.ip}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
 
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={onBack} disabled={saving}>

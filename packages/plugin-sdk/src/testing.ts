@@ -1293,6 +1293,9 @@ export interface MockContextOptions {
   permissions?: string[];
   /** Hosts ctx.hosts.list/get/checkAccess serve. See FakeContextOptions. */
   hosts?: PluginHostSummary[];
+  /** Users and roles ctx.hosts.listUsers/listRoles serve. See FakeContextOptions. */
+  shareableUsers?: PluginShareableUser[];
+  shareableRoles?: PluginShareableRole[];
   /** Other plugins' services. See FakeContextOptions. */
   services?: Record<string, object>;
   /** Hosts ctx.ssh.resolveHost serves. See FakeContextOptions. */
@@ -1361,6 +1364,8 @@ export function createMockCtx(
     router: options.router,
     permissions: options.permissions,
     hosts: options.hosts,
+    shareableUsers: options.shareableUsers,
+    shareableRoles: options.shareableRoles,
     sshHosts: options.sshHosts,
     services: options.services,
     protocolTargets: options.protocolTargets,

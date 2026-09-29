@@ -52,6 +52,19 @@ export interface SnippetAccessEntry {
   createdAt: string;
 }
 
+/** The host ids a command snippet targets, from its stored JSON filter. */
+export function parseHostFilter(raw: string | null | undefined): number[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is number => typeof id === "number")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export function errorMessage(error: unknown, fallback: string): string {
   if (
     error &&

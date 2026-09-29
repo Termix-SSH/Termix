@@ -16,6 +16,11 @@ const PERMISSIONS = [
   "snippets.create",
   "snippets.edit",
   "snippets.delete",
+  "snippets.share",
+];
+
+const HOSTS = [
+  { id: "5", name: "web-1", ip: "10.0.0.5", port: 22, username: "root" },
 ];
 
 function snippet(overrides: Record<string, unknown>) {
@@ -37,10 +42,17 @@ function snippet(overrides: Record<string, unknown>) {
 
 function fakeApi(snippets: unknown[], folders: unknown[] = []) {
   const api = {
-    get: vi.fn(async (path: string) => ({
-      data: path === "/folders" ? folders : snippets,
+    get: vi.fn(async (path: string) => {
+      if (path === "/folders") return { data: folders };
+      if (path === "/share-targets/users")
+        return { data: { users: [{ id: "u2", username: "bob" }] } };
+      if (path === "/share-targets/roles") return { data: { roles: [] } };
+      if (path.endsWith("/access")) return { data: [] };
+      return { data: snippets };
+    }),
+    post: vi.fn(async (path: string) => ({
+      data: path === "/execute" ? { success: true, output: "up 3 days" } : {},
     })),
-    post: vi.fn(async () => ({ data: {} })),
     put: vi.fn(async () => ({ data: {} })),
     patch: vi.fn(async () => ({ data: {} })),
     delete: vi.fn(async () => ({ data: {} })),
@@ -61,6 +73,7 @@ async function renderPanel(api: PluginApiClient) {
     locales,
     api,
     permissions: PERMISSIONS,
+    hosts: HOSTS as never,
   });
   rendered.renderPanel("snippets", { active: true });
 }
@@ -121,6 +134,7 @@ describe("snippets panel", () => {
         description: null,
         folder: null,
         isNote: false,
+        hostFilter: null,
       }),
     );
     expect(await screen.findByPlaceholderText(/search snippets/i)).toBeTruthy();
@@ -135,5 +149,64 @@ describe("snippets panel", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByText(locales.backToSnippets));
     expect(await screen.findByText(locales.emptyTitle)).toBeTruthy();
+  });
+
+  it("shares a snippet with a user", async () => {
+    const api = fakeApi([snippet({})]);
+    await renderPanel(api);
+    await screen.findByText("List files");
+    fireEvent.click(screen.getByTitle(locales.shareSnippet));
+    fireEvent.click(await screen.findByText("bob"));
+    fireEvent.click(screen.getByRole("button", { name: /share with 1/i }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/1/share", {
+        targetType: "user",
+        targetUserId: "u2",
+        expiresAt: null,
+      }),
+    );
+    expect(await screen.findByText(locales.notSharedYet)).toBeTruthy();
+    fireEvent.click(screen.getByText(/share "list files"/i));
+    expect(await screen.findByText("List files")).toBeTruthy();
+  });
+
+  it("runs a snippet with target hosts on those hosts", async () => {
+    const api = fakeApi([snippet({ hostFilter: "[5]" })]);
+    await renderPanel(api);
+    expect(await screen.findByText("web-1")).toBeTruthy();
+    fireEvent.click(screen.getByTitle(locales.runOnTargets));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/execute", {
+        snippetId: 1,
+        hostId: 5,
+        inputValues: undefined,
+      }),
+    );
+    expect(await screen.findByText("up 3 days")).toBeTruthy();
+  });
+
+  it("reorders snippets by dragging", async () => {
+    const api = fakeApi([
+      snippet({ id: 1, name: "First", order: 0 }),
+      snippet({ id: 2, name: "Second", order: 1 }),
+    ]);
+    await renderPanel(api);
+    const row = (name: string) =>
+      screen.getByText(name).closest("[draggable]") as HTMLElement;
+    await screen.findByText("First");
+    // jsdom has no layout, so a drop always lands below the target row.
+    fireEvent.dragStart(row("First"), {
+      dataTransfer: { effectAllowed: "" },
+    });
+    fireEvent.dragOver(row("Second"));
+    fireEvent.drop(row("Second"));
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/reorder", {
+        snippets: [
+          { id: 2, order: 0, folder: "" },
+          { id: 1, order: 1, folder: "" },
+        ],
+      }),
+    );
   });
 });

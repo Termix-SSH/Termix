@@ -19,6 +19,7 @@
     "network:serve",
     "ssh:connect",
     "credentials:use",
+    "hosts:write",
     "ui:surface",
     "events:core"
   ],

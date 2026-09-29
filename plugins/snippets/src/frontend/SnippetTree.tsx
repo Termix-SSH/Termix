@@ -5,14 +5,17 @@ import {
   ClipboardPaste,
   Copy,
   FolderInput,
+  GripVertical,
   MoreHorizontal,
   Pencil,
   Play,
   Plus,
+  Share2,
   StickyNote,
   Terminal,
   Trash2,
   Users,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,42 +33,93 @@ import type { Snippet, SnippetFolder } from "./types";
 const trayButtonClass =
   "flex items-center justify-center size-[22.75px] text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
 
+export type DropPosition = "above" | "below";
+
 export function SnippetRow({
   snippet,
   stripeIndex,
   showCommand,
   folderNames,
+  targetHostNames,
   canEdit,
   canDelete,
+  canShare,
+  draggable,
+  dragActive,
+  isDragging,
+  dropIndicator,
   onRun,
   onCopy,
   onEdit,
+  onShare,
   onMove,
   onDelete,
+  onDragStart,
+  onDragEnd,
+  onDragOverRow,
+  onDropRow,
 }: {
   snippet: Snippet;
   stripeIndex: number;
   showCommand: boolean;
   folderNames: string[];
+  /** Hosts a command snippet runs on directly, instead of the active terminal. */
+  targetHostNames: string[];
   canEdit: boolean;
   canDelete: boolean;
+  canShare: boolean;
+  draggable: boolean;
+  /** True while any snippet is being dragged, so this row is a drop target. */
+  dragActive: boolean;
+  isDragging: boolean;
+  dropIndicator: DropPosition | null;
   onRun: () => void;
   onCopy: () => void;
   onEdit: () => void;
+  onShare: () => void;
   onMove: (folder: string | null) => void;
   onDelete: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOverRow: (position: DropPosition) => void;
+  onDropRow: () => void;
 }) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const owned = !snippet.isShared;
   const editable = canEdit && owned;
   const deletable = canDelete && owned;
+  const shareable = canShare && owned;
+  const hasTargets = !snippet.isNote && targetHostNames.length > 0;
   const TypeIcon = snippet.isNote ? StickyNote : Terminal;
-  const RunIcon = snippet.isNote ? ClipboardPaste : Play;
-  const runLabel = t(snippet.isNote ? "pasteToTerminal" : "run");
+  const RunIcon = hasTargets ? Zap : snippet.isNote ? ClipboardPaste : Play;
+  const runLabel = t(
+    hasTargets ? "runOnTargets" : snippet.isNote ? "pasteToTerminal" : "run",
+  );
 
   return (
     <div
+      draggable={draggable}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        if (!dragActive) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        onDragOverRow(
+          e.clientY < rect.top + rect.height / 2 ? "above" : "below",
+        );
+      }}
+      onDrop={(e) => {
+        if (!dragActive) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onDropRow();
+      }}
       onDoubleClick={onRun}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -73,12 +127,24 @@ export function SnippetRow({
       }}
       title={t("doubleClickToRun")}
       className={`group relative flex items-stretch select-none border-b border-border/40 transition-colors hover:bg-muted/50 ${
+        draggable ? "cursor-grab active:cursor-grabbing" : ""
+      } ${
         menuOpen ? "bg-muted/50" : stripeIndex % 2 === 1 ? "bg-muted/15" : ""
-      }`}
+      } ${isDragging ? "opacity-40" : ""}`}
     >
+      {dropIndicator && (
+        <div
+          className={`absolute left-0 right-0 h-0.5 bg-accent-brand z-10 pointer-events-none ${dropIndicator === "above" ? "-top-px" : "-bottom-px"}`}
+        />
+      )}
       <div
         className={`w-[3px] shrink-0 ${snippet.isNote ? "bg-muted-foreground/30" : "bg-accent-brand/60"}`}
       />
+      {draggable && (
+        <div className="flex items-center justify-center w-3.5 shrink-0 -mr-1.5 text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors">
+          <GripVertical className="size-3" />
+        </div>
+      )}
       <div className="flex flex-col flex-1 min-w-0 pl-[8.75px] pr-[7px] py-[7px] gap-[3.5px]">
         <div className="flex items-center gap-1.5 min-w-0">
           <TypeIcon className="size-3 shrink-0 text-muted-foreground/60" />
@@ -106,6 +172,24 @@ export function SnippetRow({
           <span className="text-[11px] text-muted-foreground/60 truncate leading-tight font-mono">
             {snippet.content.split("\n")[0]}
           </span>
+        )}
+        {hasTargets && (
+          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+            <Zap className="size-2.5 shrink-0 text-accent-brand/70" />
+            {targetHostNames.slice(0, 3).map((name) => (
+              <span
+                key={name}
+                className="text-[9px] px-1.5 py-[1px] bg-accent-brand/10 text-accent-brand shrink-0 leading-[1.4] truncate max-w-28"
+              >
+                {name}
+              </span>
+            ))}
+            {targetHostNames.length > 3 && (
+              <span className="text-[9px] text-muted-foreground/50 shrink-0">
+                +{targetHostNames.length - 3}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -146,6 +230,18 @@ export function SnippetRow({
             <Pencil className="size-3.5" />
           </button>
         )}
+        {shareable && (
+          <button
+            title={t("shareSnippet")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare();
+            }}
+            className={trayButtonClass}
+          >
+            <Share2 className="size-3.5" />
+          </button>
+        )}
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
@@ -166,35 +262,41 @@ export function SnippetRow({
               {t("copyToClipboard")}
             </DropdownMenuItem>
             {editable && (
-              <>
-                <DropdownMenuItem onClick={onEdit}>
-                  <Pencil className="size-3.5 mr-2" />
-                  {t("editSnippetTitle")}
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <FolderInput className="size-3.5 mr-2" />
-                    {t("moveToFolder")}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="text-xs max-w-72">
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="size-3.5 mr-2" />
+                {t("editSnippetTitle")}
+              </DropdownMenuItem>
+            )}
+            {shareable && (
+              <DropdownMenuItem onClick={onShare}>
+                <Share2 className="size-3.5 mr-2" />
+                {t("shareSnippet")}
+              </DropdownMenuItem>
+            )}
+            {editable && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <FolderInput className="size-3.5 mr-2" />
+                  {t("moveToFolder")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="text-xs max-w-72">
+                  <DropdownMenuItem
+                    disabled={!snippet.folder}
+                    onClick={() => onMove(null)}
+                  >
+                    {t("noFolder")}
+                  </DropdownMenuItem>
+                  {folderNames.map((name) => (
                     <DropdownMenuItem
-                      disabled={!snippet.folder}
-                      onClick={() => onMove(null)}
+                      key={name}
+                      disabled={snippet.folder === name}
+                      onClick={() => onMove(name)}
                     >
-                      {t("noFolder")}
+                      <span className="truncate">{name}</span>
                     </DropdownMenuItem>
-                    {folderNames.map((name) => (
-                      <DropdownMenuItem
-                        key={name}
-                        disabled={snippet.folder === name}
-                        onClick={() => onMove(name)}
-                      >
-                        <span className="truncate">{name}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             )}
             {deletable && (
               <>
@@ -224,10 +326,14 @@ export function SnippetFolderRow({
   canCreate,
   canEdit,
   canDelete,
+  canShare,
+  acceptsDrop,
   onToggle,
   onAddSnippet,
   onEdit,
+  onShare,
   onDelete,
+  onDropSnippet,
   children,
 }: {
   name: string;
@@ -239,14 +345,20 @@ export function SnippetFolderRow({
   canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canShare: boolean;
+  /** True while a snippet is being dragged that could move into this folder. */
+  acceptsDrop: boolean;
   onToggle: () => void;
   onAddSnippet: () => void;
   onEdit: () => void;
+  onShare: () => void;
   onDelete: () => void;
+  onDropSnippet: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const hasActions = canCreate || canEdit || canDelete;
+  const [dragOver, setDragOver] = useState(false);
+  const hasActions = canCreate || canEdit || canDelete || canShare;
 
   return (
     <div className="border-b border-border/40">
@@ -260,9 +372,27 @@ export function SnippetFolderRow({
             onToggle();
           }
         }}
+        onDragOver={(e) => {
+          if (!acceptsDrop) return;
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget === e.target) setDragOver(false);
+        }}
+        onDrop={(e) => {
+          if (!acceptsDrop) return;
+          e.preventDefault();
+          setDragOver(false);
+          onDropSnippet();
+        }}
         className={`group/folder flex items-center gap-2 w-full pl-2.5 pr-2 py-1.5 cursor-pointer select-none transition-colors ${
           open ? "bg-muted/40" : "hover:bg-muted/30"
-        } ${stripeIndex % 2 === 1 && !open ? "bg-muted/[0.08]" : ""}`}
+        } ${stripeIndex % 2 === 1 && !open ? "bg-muted/[0.08]" : ""} ${
+          dragOver && acceptsDrop
+            ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10"
+            : ""
+        }`}
       >
         <ChevronRight
           className={`size-3.5 shrink-0 text-muted-foreground/60 transition-transform ${open ? "rotate-90" : ""}`}
@@ -300,6 +430,12 @@ export function SnippetFolderRow({
                 <DropdownMenuItem onClick={onEdit}>
                   <Pencil className="size-3.5 mr-2" />
                   {t("editFolderTitle")}
+                </DropdownMenuItem>
+              )}
+              {canShare && count > 0 && (
+                <DropdownMenuItem onClick={onShare}>
+                  <Share2 className="size-3.5 mr-2" />
+                  {t("shareFolder")}
                 </DropdownMenuItem>
               )}
               {canDelete && (

@@ -33,6 +33,17 @@ export interface SnippetExecutionResult {
   error?: string;
 }
 
+export interface ShareableUser {
+  id: string;
+  username: string;
+}
+
+export interface ShareableRole {
+  id: number;
+  name: string;
+  displayName: string | null;
+}
+
 export interface SnippetShareInput {
   targetType: "user" | "role";
   targetUserId?: string;
@@ -118,6 +129,10 @@ export function createSnippetsApi(api: PluginApiClient) {
       data(
         api.delete<{ success: boolean }>(`/${snippetId}/access/${accessId}`),
       ),
+    shareTargetUsers: () =>
+      data(api.get<{ users: ShareableUser[] }>("/share-targets/users")),
+    shareTargetRoles: () =>
+      data(api.get<{ roles: ShareableRole[] }>("/share-targets/roles")),
     listShared: () => data(api.get<{ sharedSnippets: Snippet[] }>("/shared")),
   };
 }

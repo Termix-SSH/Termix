@@ -928,6 +928,68 @@ export function registerSnippetRoutes(
 
   /**
    * @openapi
+   * /plugin-api/snippets/share-targets/users:
+   *   get:
+   *     summary: Users the caller may share snippets with
+   *     tags:
+   *       - Snippets
+   *     responses:
+   *       200:
+   *         description: Users list.
+   *       500:
+   *         description: Failed to list users.
+   */
+  router.get(
+    "/share-targets/users",
+    ctx.rbac.require("share") as never,
+    async (_req: Request, res: Response) => {
+      try {
+        res.json({ users: await ctx.hosts.listUsers() });
+      } catch (err) {
+        logError(
+          ctx,
+          "Failed to list share target users",
+          err,
+          "snippet_share_targets_users_failed",
+        );
+        res.status(500).json({ error: "Failed to list users" });
+      }
+    },
+  );
+
+  /**
+   * @openapi
+   * /plugin-api/snippets/share-targets/roles:
+   *   get:
+   *     summary: Non-system roles the caller may share snippets with
+   *     tags:
+   *       - Snippets
+   *     responses:
+   *       200:
+   *         description: Roles list.
+   *       500:
+   *         description: Failed to list roles.
+   */
+  router.get(
+    "/share-targets/roles",
+    ctx.rbac.require("share") as never,
+    async (_req: Request, res: Response) => {
+      try {
+        res.json({ roles: await ctx.hosts.listRoles() });
+      } catch (err) {
+        logError(
+          ctx,
+          "Failed to list share target roles",
+          err,
+          "snippet_share_targets_roles_failed",
+        );
+        res.status(500).json({ error: "Failed to list roles" });
+      }
+    },
+  );
+
+  /**
+   * @openapi
    * /plugin-api/snippets/{id}/share:
    *   post:
    *     summary: Share a snippet with a user or role

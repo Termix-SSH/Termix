@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  useHosts,
   usePermission,
   usePluginApi,
   useSettings,
@@ -31,7 +32,8 @@ import {
   useConfirmation,
 } from "@termix/plugin-sdk/ui";
 import { createSnippetsApi } from "./snippets-api";
-import { useSnippetRunner } from "./use-snippet-runner";
+import { useSnippetRunner, type TargetHost } from "./use-snippet-runner";
+import { SnippetShareView, type ShareTarget } from "./SnippetShareView";
 import { SnippetEditor, type SnippetFormValues } from "./SnippetEditor";
 import { SnippetSettings } from "./SnippetSettings";
 import { readSnippetSettings } from "./settings";
@@ -39,15 +41,21 @@ import {
   SnippetFolderDialog,
   type FolderFormValues,
 } from "./SnippetFolderDialog";
-import { SnippetFolderRow, SnippetRow } from "./SnippetTree";
-import { errorMessage, type Snippet, type SnippetFolder } from "./types";
+import { SnippetFolderRow, SnippetRow, type DropPosition } from "./SnippetTree";
+import {
+  errorMessage,
+  parseHostFilter,
+  type Snippet,
+  type SnippetFolder,
+} from "./types";
 
 const DOCS_URL = "https://docs.termix.site/features/terminal/snippets";
 
 type View =
   | { kind: "list" }
   | { kind: "edit"; snippet: Snippet | null; folder?: string }
-  | { kind: "settings" };
+  | { kind: "settings" }
+  | { kind: "share"; target: ShareTarget };
 
 interface FolderGroup {
   name: string;
@@ -71,11 +79,15 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
   const canCreate = usePermission("create");
   const canEdit = usePermission("edit");
   const canDelete = usePermission("delete");
+  const canShare = usePermission("share");
   const settings = useSettings("user");
   const display = readSnippetSettings(settings.values);
-  const { runOnActive, dialog: runnerDialog } = useSnippetRunner(
-    display.confirmExecution,
-  );
+  const {
+    runOnActive,
+    runOnHosts,
+    dialog: runnerDialog,
+  } = useSnippetRunner(display.confirmExecution);
+  const { hosts } = useHosts();
   const { confirmWithToast } = useConfirmation();
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -92,8 +104,36 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
     /** The name being edited, set even when the folder has no metadata row. */
     editName: string | null;
   } | null>(null);
+  const [dragged, setDragged] = useState<Snippet | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    id: number;
+    position: DropPosition;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importOverwriteRef = useRef(false);
+
+  const hostsById = useMemo(
+    () => new Map(hosts.map((host) => [Number(host.id), host])),
+    [hosts],
+  );
+
+  function targetHostsOf(snippet: Snippet): TargetHost[] {
+    if (snippet.isNote) return [];
+    return parseHostFilter(snippet.hostFilter).flatMap((id) => {
+      const host = hostsById.get(id);
+      return host
+        ? [
+            {
+              id,
+              name: host.name,
+              ip: host.ip,
+              username: host.username,
+              port: host.port,
+            },
+          ]
+        : [];
+    });
+  }
 
   const load = useCallback(async () => {
     if (!canView) {
@@ -186,6 +226,8 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
       description: values.description.trim() || null,
       folder: values.folder || null,
       isNote: values.isNote,
+      hostFilter:
+        !values.isNote && values.hostIds.length > 0 ? values.hostIds : null,
     };
     const editing = view.snippet;
     try {
@@ -207,6 +249,69 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
         errorMessage(err, t(editing ? "updateFailed" : "createFailed")),
       );
       return false;
+    }
+  }
+
+  function handleRun(snippet: Snippet) {
+    const targets = targetHostsOf(snippet);
+    if (targets.length > 0) runOnHosts(snippet, targets);
+    else runOnActive(snippet, null);
+  }
+
+  function endDrag() {
+    setDragged(null);
+    setDropTarget(null);
+  }
+
+  // Drops the dragged snippet next to a row, taking that row's folder.
+  async function handleDropOnRow(target: Snippet) {
+    const source = dragged;
+    const position = dropTarget?.position ?? "below";
+    endDrag();
+    if (!source || source.id === target.id) return;
+
+    const folder = target.folder ?? null;
+    const group = snippets.filter(
+      (s) => (s.folder ?? null) === folder && s.id !== source.id,
+    );
+    const index = group.findIndex((s) => s.id === target.id);
+    group.splice(position === "above" ? index : index + 1, 0, {
+      ...source,
+      folder,
+    });
+    await saveOrder(group, folder);
+  }
+
+  async function handleDropOnFolder(folder: string) {
+    const source = dragged;
+    endDrag();
+    if (!source || source.folder === folder) return;
+    const group = [
+      ...snippets.filter((s) => s.folder === folder && s.id !== source.id),
+      { ...source, folder },
+    ];
+    setFolderOverrides((prev) => new Map(prev).set(folder, true));
+    await saveOrder(group, folder);
+  }
+
+  async function saveOrder(group: Snippet[], folder: string | null) {
+    const ordered = group.map((s, order) => ({ ...s, order }));
+    const byId = new Map(ordered.map((s) => [s.id, s]));
+    setSnippets((prev) => {
+      const rest = prev.filter((s) => !byId.has(s.id));
+      return [...rest, ...ordered];
+    });
+    try {
+      await client.reorder(
+        ordered.map((s) => ({
+          id: s.id,
+          order: s.order,
+          folder: folder ?? "",
+        })),
+      );
+    } catch (err) {
+      toast.error(errorMessage(err, t("reorderFailed")));
+      await load();
     }
   }
 
@@ -381,6 +486,18 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
     );
   }
 
+  if (view.kind === "share") {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <SnippetShareView
+          target={view.target}
+          client={client}
+          onBack={() => setView({ kind: "list" })}
+        />
+      </div>
+    );
+  }
+
   if (view.kind === "settings") {
     return (
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -400,13 +517,38 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
       stripeIndex={stripe++}
       showCommand={display.showCommands}
       folderNames={folderNames}
+      targetHostNames={targetHostsOf(snippet).map(
+        (host) => host.name || host.ip || String(host.id),
+      )}
       canEdit={canEdit}
       canDelete={canDelete}
-      onRun={() => runOnActive(snippet, null)}
+      canShare={canShare}
+      draggable={canEdit && !snippet.isShared && !query}
+      dragActive={dragged !== null}
+      isDragging={dragged?.id === snippet.id}
+      dropIndicator={
+        dropTarget?.id === snippet.id && dragged?.id !== snippet.id
+          ? dropTarget.position
+          : null
+      }
+      onRun={() => handleRun(snippet)}
       onCopy={() => void handleCopy(snippet)}
       onEdit={() => setView({ kind: "edit", snippet })}
+      onShare={() =>
+        setView({ kind: "share", target: { kind: "snippet", snippet } })
+      }
       onMove={(folder) => void handleMoveSnippet(snippet, folder)}
       onDelete={() => handleDeleteSnippet(snippet)}
+      onDragStart={() => setDragged(snippet)}
+      onDragEnd={endDrag}
+      onDragOverRow={(position) =>
+        setDropTarget((prev) =>
+          prev?.id === snippet.id && prev.position === position
+            ? prev
+            : { id: snippet.id, position },
+        )
+      }
+      onDropRow={() => void handleDropOnRow(snippet)}
     />
   );
 
@@ -586,6 +728,10 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
                   canCreate={canCreate}
                   canEdit={canEdit}
                   canDelete={canDelete}
+                  canShare={canShare}
+                  acceptsDrop={
+                    dragged !== null && dragged.folder !== group.name
+                  }
                   onToggle={() => toggleFolder(group.name)}
                   onAddSnippet={() =>
                     setView({
@@ -600,13 +746,40 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
                       editName: group.name,
                     })
                   }
+                  onShare={() =>
+                    setView({
+                      kind: "share",
+                      target: { kind: "folder", name: group.name },
+                    })
+                  }
                   onDelete={() => handleDeleteFolder(group.name)}
+                  onDropSnippet={() => void handleDropOnFolder(group.name)}
                 >
                   {open && group.snippets.map(renderSnippet)}
                 </SnippetFolderRow>
               );
             })}
             {rootSnippets.map(renderSnippet)}
+            {dragged?.folder && (
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const source = dragged;
+                  endDrag();
+                  void saveOrder(
+                    [
+                      ...snippets.filter((s) => !s.folder),
+                      { ...source, folder: null },
+                    ],
+                    null,
+                  );
+                }}
+                className="m-2 px-3 py-3 text-center text-[11px] text-muted-foreground border border-dashed border-border"
+              >
+                {t("dropToRemoveFromFolder")}
+              </div>
+            )}
           </>
         )}
       </div>

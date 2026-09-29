@@ -30,6 +30,8 @@ export async function startServer(
     permissions?: string[];
     users?: string[];
     capabilities?: string[];
+    shareableUsers?: { id: string; username: string }[];
+    shareableRoles?: { id: number; name: string; displayName: string }[];
   } = {},
 ): Promise<TestServer> {
   const db = await createTestDb(pluginDir);
@@ -45,6 +47,8 @@ export async function startServer(
     manifest,
     capabilities: options.capabilities ?? manifest.capabilities,
     db: db.database,
+    shareableUsers: options.shareableUsers,
+    shareableRoles: options.shareableRoles,
     router: () => (router = express.Router()),
     permissions: options.permissions ?? [
       "snippets.view",
