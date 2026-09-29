@@ -198,6 +198,38 @@
         "label": "Enable Terminal Toolbar",
         "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
       },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
+      },
       "enableCommandHistory": {
         "label": "Command History",
         "description": "Record commands run in this terminal for history and autocomplete"

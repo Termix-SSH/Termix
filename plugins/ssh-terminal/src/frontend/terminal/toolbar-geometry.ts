@@ -53,12 +53,22 @@ function persistPosition(storageKey: string, position: ToolbarPosition): void {
   }
 }
 
-export function readStoredToolbarPosition(): ToolbarPosition {
-  return readStoredPosition(TOOLBAR_POSITION_STORAGE_KEY);
+/** Each anchor keeps its own drag offset; bottom keeps the original key. */
+export function toolbarPositionStorageKey(anchor = "bottom"): string {
+  return anchor === "bottom"
+    ? TOOLBAR_POSITION_STORAGE_KEY
+    : `${TOOLBAR_POSITION_STORAGE_KEY}-${anchor}`;
 }
 
-export function persistToolbarPosition(position: ToolbarPosition): void {
-  persistPosition(TOOLBAR_POSITION_STORAGE_KEY, position);
+export function readStoredToolbarPosition(anchor?: string): ToolbarPosition {
+  return readStoredPosition(toolbarPositionStorageKey(anchor));
+}
+
+export function persistToolbarPosition(
+  position: ToolbarPosition,
+  anchor?: string,
+): void {
+  persistPosition(toolbarPositionStorageKey(anchor), position);
 }
 
 export function clampToolbarPosition(

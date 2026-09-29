@@ -31,6 +31,11 @@ export const ADMIN_KEYS = {
 export const HOST_KEYS = {
   enableTerminal: "enableTerminal",
   enableTerminalToolbar: "enableTerminalToolbar",
+  terminalToolbarPosition: "terminalToolbarPosition",
+  terminalToolbarStartState: "terminalToolbarStartState",
+  terminalToolbarDisplay: "terminalToolbarDisplay",
+  terminalToolbarShowStatus: "terminalToolbarShowStatus",
+  terminalToolbarFade: "terminalToolbarFade",
   enableCommandHistory: "enableCommandHistory",
 } as const;
 

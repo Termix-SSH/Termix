@@ -33,6 +33,11 @@ import {
   type ToolbarDensity,
 } from "./toolbar-geometry";
 import {
+  isLeftAnchor,
+  readToolbarSettings,
+  toolbarAnchorClasses,
+} from "./toolbar-settings";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -143,15 +148,19 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     if (action.run) action.run(record, tabs as unknown as ShellApi);
     else if (action.tabType) tabs.openTab(record, action.tabType);
   };
-  const [density, setDensity] =
-    useState<SelectedToolbarDensity>(readStoredDensity);
+  const settings = useMemo(() => readToolbarSettings(host), [host]);
+  const { anchor } = settings;
+  const rememberDensity = settings.density === null;
+  const [density, setDensity] = useState<SelectedToolbarDensity>(
+    () => settings.density ?? readStoredDensity(),
+  );
   const [responsiveDensity, setResponsiveDensity] =
-    useState<SelectedToolbarDensity>(readStoredDensity);
-  const [position, setPosition] = useState<ToolbarPosition>(
-    readStoredToolbarPosition,
+    useState<SelectedToolbarDensity>(() => density);
+  const [position, setPosition] = useState<ToolbarPosition>(() =>
+    readStoredToolbarPosition(anchor),
   );
   const positionRef = useRef(position);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(settings.startCollapsed);
   const [densityOpen, setDensityOpen] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [retryImageAction, setRetryImageAction] = useState<(() => void) | null>(
@@ -160,7 +169,8 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hideToolbarRef = useRef<HTMLButtonElement>(null);
   const pendingExpansionFocusRef = useRef(false);
-  const pendingRightEdgeRef = useRef<number | null>(null);
+  // Keeps the anchored edge still when the toolbar grows or shrinks.
+  const pendingEdgeRef = useRef<number | null>(null);
   const mountedRef = useRef(false);
   const imageGenerationRef = useRef(0);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -182,7 +192,9 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     ? responsiveDensity
     : "icon";
   const showStats =
-    effectiveDensity === "expanded" && statusContributions.length > 0;
+    settings.showStatus &&
+    effectiveDensity === "expanded" &&
+    statusContributions.length > 0;
   const isMobile = useIsMobile();
 
   useLayoutEffect(() => {
@@ -196,23 +208,35 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   }, [isMobile]);
 
   useEffect(() => {
+    if (settings.density) setDensity(settings.density);
+  }, [settings.density]);
+
+  useEffect(() => {
+    const next = readStoredToolbarPosition(anchor);
+    positionRef.current = next;
+    setPosition(next);
+  }, [anchor]);
+
+  useEffect(() => {
+    if (!rememberDensity) return;
     if (desktopViewportReady !== true || isMobile !== false) return;
     try {
       window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
     } catch {
       // Storage can be unavailable in hardened browser contexts.
     }
-  }, [density, desktopViewportReady, isMobile]);
+  }, [density, desktopViewportReady, isMobile, rememberDensity]);
 
   // Picking an interface preset seeds this key, so pick the new value up
   // without needing the tab to remount.
   useEffect(() => {
+    if (!rememberDensity) return;
     if (desktopViewportReady !== true || isMobile !== false) return;
     const handler = () => setDensity(readStoredDensity());
     window.addEventListener("terminalToolbarDensityChanged", handler);
     return () =>
       window.removeEventListener("terminalToolbarDensityChanged", handler);
-  }, [desktopViewportReady, isMobile]);
+  }, [desktopViewportReady, isMobile, rememberDensity]);
   useEffect(() => {
     if (desktopViewportReady !== true || isMobile !== false) return;
     const measurement = measurementRef.current;
@@ -288,19 +312,21 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     if (extremeOffset) {
       positionRef.current = { x: 0, y: 0 };
       setPosition({ x: 0, y: 0 });
-      persistToolbarPosition({ x: 0, y: 0 });
+      persistToolbarPosition({ x: 0, y: 0 }, anchor);
       return;
     }
     if (toolbarRect.width > 0 && toolbarRect.height > 0) {
-      const pendingRightEdge = pendingRightEdgeRef.current;
-      pendingRightEdgeRef.current = null;
-      const baseRight = toolbarRect.right - positionRef.current.x;
+      const pendingEdge = pendingEdgeRef.current;
+      pendingEdgeRef.current = null;
+      const baseEdge =
+        (isLeftAnchor(anchor) ? toolbarRect.left : toolbarRect.right) -
+        positionRef.current.x;
       const next = clampToolbarPosition(
         {
           x:
-            pendingRightEdge == null
+            pendingEdge == null
               ? positionRef.current.x
-              : pendingRightEdge - baseRight,
+              : pendingEdge - baseEdge,
           y: positionRef.current.y,
         },
         toolbarRect,
@@ -313,7 +339,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
       ) {
         positionRef.current = next;
         setPosition(next);
-        persistToolbarPosition(next);
+        persistToolbarPosition(next, anchor);
       }
     }
     if (!collapsed && pendingExpansionFocusRef.current) {
@@ -321,6 +347,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
       hideToolbarRef.current?.focus();
     }
   }, [
+    anchor,
     collapsed,
     density,
     desktopViewportReady,
@@ -392,6 +419,11 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     reportImageResult(onPasteImage, pasteImage);
   };
   const chooseFile = () => fileInputRef.current?.click();
+  const anchoredEdge = () => {
+    const rect = toolbarRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return isLeftAnchor(anchor) ? rect.left : rect.right;
+  };
   const handleGrabPointerDown = (
     event: React.PointerEvent<HTMLButtonElement>,
   ) => {
@@ -436,7 +468,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   ) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    persistToolbarPosition(positionRef.current);
+    persistToolbarPosition(positionRef.current, anchor);
     dragRef.current = null;
     if (capturedPointerIdRef.current === event.pointerId) {
       capturedPointerIdRef.current = null;
@@ -517,8 +549,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
       aria-label={t("terminalToolbar.showToolbar")}
       title={t("terminalToolbar.showToolbar")}
       onClick={() => {
-        pendingRightEdgeRef.current =
-          toolbarRef.current?.getBoundingClientRect().right ?? null;
+        pendingEdgeRef.current = anchoredEdge();
         pendingExpansionFocusRef.current = true;
         setCollapsed(false);
       }}
@@ -548,8 +579,10 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
       <div
         ref={hostRef}
         data-terminal-toolbar-host
+        data-anchor={anchor}
         className={cn(
-          "pointer-events-none @container absolute inset-0 z-[110] flex items-end justify-center pb-2",
+          "pointer-events-none @container absolute inset-0 z-[110] flex",
+          toolbarAnchorClasses(anchor),
         )}
       >
         <input
@@ -650,7 +683,9 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
           data-terminal-toolbar-wide
           className={cn(
             "pointer-events-auto transition-opacity duration-300 hover:duration-0 focus-within:duration-0 hover:opacity-100 focus-within:opacity-100",
-            collapsed || densityOpen ? "opacity-100" : "opacity-30",
+            collapsed || densityOpen || !settings.fadeWhenIdle
+              ? "opacity-100"
+              : "opacity-30",
           )}
           style={{
             transform: `translate(${position.x}px, ${position.y}px)`,
@@ -741,8 +776,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                   aria-label={t("terminalToolbar.hideToolbar")}
                   title={t("terminalToolbar.hideToolbar")}
                   onClick={() => {
-                    pendingRightEdgeRef.current =
-                      toolbarRef.current?.getBoundingClientRect().right ?? null;
+                    pendingEdgeRef.current = anchoredEdge();
                     setCollapsed(true);
                   }}
                 >

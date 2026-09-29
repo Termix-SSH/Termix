@@ -976,4 +976,63 @@ describe("TerminalToolbar Phase 1", () => {
       expect(screen.queryByRole("button", { name: "AI Assistant" })).toBeNull();
     });
   });
+  describe("host toolbar settings", () => {
+    const withSettings = (values: Record<string, unknown>) =>
+      ({
+        ...host,
+        pluginSettings: { "ssh-terminal": values },
+      }) as unknown as Host;
+
+    it("anchors the toolbar where the host asks", () => {
+      const { container } = renderToolbar({
+        host: withSettings({ terminalToolbarPosition: "top-right" }),
+      });
+      const toolbarHost = container.querySelector(
+        "[data-terminal-toolbar-host]",
+      );
+      expect(toolbarHost).toHaveClass("items-start", "justify-end", "pt-2");
+      expect(toolbarHost).not.toHaveClass("items-end", "justify-center");
+    });
+
+    it("keeps a separate drag offset per anchor", () => {
+      localStorage.setItem(
+        "termix-terminal-toolbar-position-v2",
+        JSON.stringify({ x: 0, y: -40 }),
+      );
+      const { container } = renderToolbar({
+        host: withSettings({ terminalToolbarPosition: "top-left" }),
+      });
+      expect(
+        container.querySelector("[data-terminal-toolbar-wide]"),
+      ).toHaveStyle({ transform: "translate(0px, 0px)" });
+    });
+
+    it("starts minimized when the host asks", () => {
+      renderToolbar({
+        host: withSettings({ terminalToolbarStartState: "collapsed" }),
+      });
+      expect(
+        screen.getByRole("button", { name: "Expand toolbar" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Hide toolbar" })).toBeNull();
+    });
+
+    it("uses the host display mode without overwriting the saved one", () => {
+      localStorage.setItem("termix-terminal-toolbar-density", "labeled");
+      renderToolbar({ host: withSettings({ terminalToolbarDisplay: "icon" }) });
+      expect(screen.queryByText("Upload image")).toBeNull();
+      expect(localStorage.getItem("termix-terminal-toolbar-density")).toBe(
+        "labeled",
+      );
+    });
+
+    it("stays fully visible when fading is off", () => {
+      const { container } = renderToolbar({
+        host: withSettings({ terminalToolbarFade: false }),
+      });
+      const toolbar = container.querySelector("[data-terminal-toolbar-wide]");
+      expect(toolbar).toHaveClass("opacity-100");
+      expect(toolbar).not.toHaveClass("opacity-30");
+    });
+  });
 });
