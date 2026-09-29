@@ -129,8 +129,8 @@ const offline = () =>
   useHostActions: () => [],
   useActivityTypes: () => [],
   activityTarget: () => undefined,
-  useHomepageWidgetTypes: () => [],
-  homepageWidgetType: () => undefined,
+  useExtensions: () => [],
+  getExtension: () => undefined,
   usePluginUiPreferences: () => ({ values: {}, set: noop }),
   core: {
     logActivity: async () => {},

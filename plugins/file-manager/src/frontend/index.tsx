@@ -8,7 +8,11 @@ import {
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { GRID_SIZE } from "./homepage/homepage.js";
+import {
+  GRID_SIZE,
+  type FileManagerWidgetConfig,
+  type WidgetDefinition,
+} from "./homepage/homepage.js";
 import { FileManager } from "./FileManager.tsx";
 import FileManagerApp from "./FileManagerApp.tsx";
 import { SftpTransferTab } from "./SftpTransferTab.tsx";
@@ -113,7 +117,7 @@ export function activate(app: TermixApp): void {
       fileManagerHostSetting(host, "enableFileManager", true),
   });
 
-  app.registerHomepageWidget({
+  app.registerExtension("homepage.widgets", {
     id: "file_manager_widget",
     name: "File Manager",
     description: "Embedded SFTP file manager for a configured host",
@@ -122,9 +126,11 @@ export function activate(app: TermixApp): void {
     defaultConfig: { hostId: 0 },
     defaultSize: { w: GRID_SIZE * 20, h: GRID_SIZE * 14 },
     minSize: { w: GRID_SIZE * 10, h: GRID_SIZE * 8 },
-    component: FileManagerWidget as never,
-    editFormComponent: FileManagerWidgetEditForm as never,
-  });
+    components: {
+      view: FileManagerWidget,
+      editForm: FileManagerWidgetEditForm,
+    },
+  } satisfies WidgetDefinition<FileManagerWidgetConfig>);
 
   const openHost = ((host: PluginHostRecord | null, path?: string) =>
     openHostAction(app, host, path)) as never;

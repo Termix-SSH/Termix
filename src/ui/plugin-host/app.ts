@@ -35,7 +35,7 @@ import {
   registerDashboardCard,
   type DashboardCardRenderProps,
 } from "@/dashboard/dashboard-cards-registry";
-import { registerHomepageWidgetType } from "./homepage-widget-registry";
+import { registerExtension } from "./extension-registry";
 import { registerSettingsComponent } from "@/settings/settings-components";
 import {
   declareActionSlot,
@@ -45,7 +45,6 @@ import {
 } from "@/shell/action-registry";
 import { pluginApiFor, pluginFetch, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
-import type { RegisteredHomepageWidget } from "./homepage-widget-registry";
 import type { LucideIcon } from "lucide-react";
 import {
   registerLoginMethod,
@@ -360,16 +359,17 @@ export function createPluginApp(
       );
     },
 
-    registerHomepageWidget(widget) {
+    registerExtension(pointId, extension) {
+      const components = extension.components
+        ? Object.fromEntries(
+            Object.entries(extension.components).map(([name, component]) => [
+              name,
+              scoped(component),
+            ]),
+          )
+        : undefined;
       return track(
-        registerHomepageWidgetType({
-          ...widget,
-          pluginId,
-          component: scoped(widget.component),
-          editFormComponent: widget.editFormComponent
-            ? scoped(widget.editFormComponent)
-            : undefined,
-        } as unknown as RegisteredHomepageWidget),
+        registerExtension(pointId, { ...extension, components, pluginId }),
       );
     },
 

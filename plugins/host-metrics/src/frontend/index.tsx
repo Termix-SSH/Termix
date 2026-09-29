@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import { Activity, Server } from "lucide-react";
 import type {
-  HomepageWidgetContribution,
   HostEditorSectionProps,
   PluginHostRecord,
   StandaloneViewProps,
@@ -100,9 +99,7 @@ export async function activate(app: TermixApp): Promise<void> {
     component: MetricsHostSection,
   });
 
-  app.registerHomepageWidget(
-    metricsChartWidget as unknown as HomepageWidgetContribution,
-  );
+  app.registerExtension("homepage.widgets", metricsChartWidget);
 
   // Live CPU, memory and disk bars in the terminal toolbar's expanded view.
   app.registerSlotContribution("terminal.toolbarStatus", {

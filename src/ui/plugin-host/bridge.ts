@@ -2,15 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
-import {
-  getHomepageWidgetType,
-  useHomepageWidgetTypes,
-} from "./homepage-widget-registry";
+import { getExtension, useExtensions } from "./extension-registry";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   __setPluginHost,
-  type HomepageWidgetContribution,
+  type ExtensionContribution,
   type HostActionContribution,
   type PluginHostBridge,
   type PluginHostRecord,
@@ -380,11 +377,9 @@ export const pluginHostBridge: PluginHostBridge = {
     return { icon: def.icon, tab: def.id, titleKey: def.titleKey };
   },
 
-  useHomepageWidgetTypes: () =>
-    useHomepageWidgetTypes() as unknown as HomepageWidgetContribution[],
-  homepageWidgetType: (id) =>
-    getHomepageWidgetType(id) as unknown as
-      HomepageWidgetContribution | undefined,
+  useExtensions: (pointId) => useExtensions(pointId) as ExtensionContribution[],
+  getExtension: (pointId, id) =>
+    getExtension(pointId, id) as ExtensionContribution | undefined,
 
   usePluginUiPreferences: (pluginId) => {
     const ctx = useUiPreferencesContext();

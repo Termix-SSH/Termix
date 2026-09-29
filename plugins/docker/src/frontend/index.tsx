@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import { Box } from "lucide-react";
 import type {
-  HomepageWidgetContribution,
   StandaloneViewProps,
   TabProps,
   TermixApp,
@@ -57,9 +56,7 @@ export function activate(app: TermixApp): void {
     when: (host) => canUse && !!host.enableSsh && dockerEnabled(host),
   });
 
-  app.registerHomepageWidget(
-    dockerWidget as unknown as HomepageWidgetContribution,
-  );
+  app.registerExtension("homepage.widgets", dockerWidget);
 
   app.registerSlotContribution("onboarding.features", {
     actionId: "docker.feature",

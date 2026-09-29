@@ -57,6 +57,5 @@ export const dockerWidget: WidgetDefinition<DockerWidgetConfig> = {
   defaultConfig: { hostId: 0 },
   defaultSize: { w: GRID_SIZE * 20, h: GRID_SIZE * 14 },
   minSize: { w: GRID_SIZE * 10, h: GRID_SIZE * 8 },
-  component: DockerWidget,
-  editFormComponent: DockerWidgetEditForm,
+  components: { view: DockerWidget, editForm: DockerWidgetEditForm },
 };

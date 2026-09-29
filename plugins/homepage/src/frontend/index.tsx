@@ -10,7 +10,11 @@ import { HomepagePreviewCard } from "./HomepagePreviewCard.js";
 import { ServiceLinksCard } from "./ServiceLinksCard.js";
 import { DashboardHomepageView } from "./DashboardHomepageView.js";
 import { setHomepageApi } from "./api.js";
-import { drainQueuedWidgets } from "./widgets/WidgetRegistry.js";
+import {
+  WIDGET_POINT,
+  drainQueuedWidgets,
+  toExtension,
+} from "./widgets/WidgetRegistry.js";
 
 // Side-effect imports so widgets register themselves.
 import "./widgets/ServiceLinkWidget";
@@ -54,7 +58,7 @@ export function activate(app: TermixApp): void {
   app.onDispose(() => setHomepageApi(null));
 
   for (const widget of drainQueuedWidgets()) {
-    app.registerHomepageWidget(widget as never);
+    app.registerExtension(WIDGET_POINT, toExtension(widget));
   }
 
   app.registerTab("homepage", HomepageTab as ComponentType<TabProps>, {

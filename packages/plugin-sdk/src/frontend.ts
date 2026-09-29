@@ -608,21 +608,18 @@ export interface DashboardCardContribution {
   component: ComponentType<DashboardCardProps>;
 }
 
-export interface HomepageWidgetContribution<C = Record<string, unknown>> {
+/**
+ * One item in a named list another plugin reads (app.registerExtension). The
+ * reading plugin owns the point id and the item shape. Components go under
+ * `components` so core can scope them to the registering plugin.
+ */
+export interface ExtensionContribution {
   id: string;
   /** Set by core to the registering plugin's id; a plugin never sets this itself. */
   pluginId?: string;
-  name: string;
-  description: string;
-  category: "links" | "info" | "system" | "monitoring";
-  icon: ReactNode;
-  defaultConfig: C;
-  defaultSize: { w: number; h: number };
-  minSize: { w: number; h: number };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  component: ComponentType<any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  editFormComponent?: ComponentType<any>;
+  components?: Record<string, ComponentType<any>>;
+  [key: string]: unknown;
 }
 
 export interface SettingsComponentProps {
@@ -818,7 +815,10 @@ export interface TermixApp extends TermixAppInfo {
     binding: KeybindingDefaultContribution,
   ) => Disposer;
   registerDashboardCard: (card: DashboardCardContribution) => Disposer;
-  registerHomepageWidget: (widget: HomepageWidgetContribution) => Disposer;
+  registerExtension: (
+    pointId: string,
+    extension: ExtensionContribution,
+  ) => Disposer;
   registerSettingsComponent: (
     componentId: string,
     component: ComponentType<SettingsComponentProps>,
@@ -986,8 +986,11 @@ export interface PluginHostBridge {
   useHostActions: () => HostActionContribution[];
   useActivityTypes: () => string[];
   activityTarget: (type: string) => ActivityTargetInfo | undefined;
-  useHomepageWidgetTypes: () => HomepageWidgetContribution[];
-  homepageWidgetType: (id: string) => HomepageWidgetContribution | undefined;
+  useExtensions: (pointId: string) => ExtensionContribution[];
+  getExtension: (
+    pointId: string,
+    id: string,
+  ) => ExtensionContribution | undefined;
   core: PluginCoreApi;
   usePluginUiPreferences: (pluginId: string) => {
     values: Record<string, unknown>;
@@ -1333,19 +1336,21 @@ export function activityTarget(type: string): ActivityTargetInfo | undefined {
 }
 
 /**
- * Every homepage widget type any running plugin registered with
- * registerHomepageWidget, for the homepage plugin's own canvas and add-widget
- * menu. Reactive: it re-renders as plugins enable and disable.
+ * Every item any running plugin added to `pointId` with registerExtension.
+ * Reactive: it re-renders as plugins enable and disable.
  */
-export function useHomepageWidgetTypes(): HomepageWidgetContribution[] {
-  return requireHost().useHomepageWidgetTypes();
+export function useExtensions<T extends ExtensionContribution>(
+  pointId: string,
+): T[] {
+  return requireHost().useExtensions(pointId) as T[];
 }
 
-/** A single registered homepage widget type, by id, or undefined if none. */
-export function homepageWidgetType(
+/** A single item added to `pointId`, by id, or undefined if none. */
+export function getExtension<T extends ExtensionContribution>(
+  pointId: string,
   id: string,
-): HomepageWidgetContribution | undefined {
-  return requireHost().homepageWidgetType(id);
+): T | undefined {
+  return requireHost().getExtension(pointId, id) as T | undefined;
 }
 
 /**
