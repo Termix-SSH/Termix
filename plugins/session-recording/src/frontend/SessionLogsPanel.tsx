@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   useTranslation,
   useToast,
@@ -243,7 +243,8 @@ function LogRow({
 export function SessionLogsPanel() {
   const { t } = useTranslation();
   const toast = useToast();
-  const api = createSessionRecordingApi(usePluginApi());
+  const pluginApi = usePluginApi();
+  const api = useMemo(() => createSessionRecordingApi(pluginApi), [pluginApi]);
   const canView = usePermission("view");
   const [logs, setLogs] = useState<SessionLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
