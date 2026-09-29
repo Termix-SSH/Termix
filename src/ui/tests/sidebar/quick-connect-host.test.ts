@@ -3,7 +3,9 @@ import {
   createQuickConnectHost,
   isQuickConnectHost,
   quickConnectHostToPayload,
+  quickConnectTargets,
 } from "../../sidebar/quick-connect-host";
+import type { HostActionDef } from "../../sidebar/host-contributions";
 
 describe("quick connect host", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -130,5 +132,46 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
         authFields: { extra: true },
       }).quickConnectSavable,
     ).toBe(false);
+  });
+});
+
+describe("quickConnectTargets", () => {
+  const action = (over: Partial<HostActionDef>): HostActionDef => ({
+    id: "x",
+    titleKey: "x",
+    icon: () => null,
+    kind: "open",
+    when: () => true,
+    ...over,
+  });
+  const host = createQuickConnectHost({
+    ip: "10.0.0.3",
+    port: 22,
+    username: "root",
+    authType: "password",
+  });
+
+  it("puts connect actions first by priority, then opted-in tools", () => {
+    const targets = quickConnectTargets(
+      [
+        action({ id: "files", tabType: "files", quickConnect: true }),
+        action({ id: "docker", tabType: "docker" }),
+        action({ id: "vnc", kind: "connect", priority: 40, tabType: "vnc" }),
+        action({ id: "term", kind: "connect", priority: 100, tabType: "t" }),
+        action({ id: "run-only", kind: "connect", priority: 200 }),
+        action({
+          id: "off",
+          kind: "connect",
+          tabType: "off",
+          when: () => false,
+        }),
+      ],
+      host,
+    );
+    expect(targets.map((target) => target.id)).toEqual([
+      "term",
+      "vnc",
+      "files",
+    ]);
   });
 });

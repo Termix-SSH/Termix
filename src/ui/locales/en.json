@@ -1831,8 +1831,9 @@
         "domainLabel": "Domain",
         "domainPlaceholder": "optional",
         "connectToTerminal": "Connect to Terminal",
-        "connectWith": "Connect via {{protocol}}",
-        "connectToAction": "Connect to {{name}}"
+        "connectToAction": "Connect to {{name}}",
+        "sshProtocol": "SSH",
+        "noTarget": "Nothing installed can connect to this host type"
       },
       "sshTools": {
         "keyRecordingTitle": "Key Recording",

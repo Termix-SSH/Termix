@@ -1,6 +1,7 @@
 import type { SSHHostData } from "@/types";
 import type { Host } from "@/types/ui-types";
 import type { HostProtocolDef } from "./host-protocols";
+import { hostActionsFor, type HostActionDef } from "./host-contributions";
 
 type QuickConnectInput = Pick<
   Host,
@@ -97,4 +98,23 @@ export function quickConnectHostToPayload(host: Host): SSHHostData {
     enableSsh: true,
     sshPort: host.sshPort,
   };
+}
+
+/**
+ * Every way to reach the address: connect actions (terminal, RDP, VNC...)
+ * by priority, then tools that opted into Quick Connect. Only actions that
+ * open a tab work here, since the host is never saved.
+ */
+export function quickConnectTargets(
+  all: HostActionDef[],
+  host: Host,
+): HostActionDef[] {
+  const usable = hostActionsFor(all, host).filter((action) => action.tabType);
+  const connects = usable
+    .filter((action) => action.kind === "connect")
+    .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  const tools = usable.filter(
+    (action) => action.kind !== "connect" && action.quickConnect,
+  );
+  return [...connects, ...tools];
 }
