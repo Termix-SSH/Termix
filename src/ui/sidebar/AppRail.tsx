@@ -10,7 +10,7 @@ import {
   SquareArrowOutUpRight,
   User,
 } from "lucide-react";
-import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
+import type { TabType, ToolsTab } from "@/types/ui-types";
 import { Skeleton } from "@/components/skeleton";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { useRailItems, type RailItemDef } from "./rail-items";
@@ -35,7 +35,6 @@ type RailItem =
       view: RailView;
       icon: React.ReactNode;
       title: string;
-      dot?: boolean;
       promotable?: boolean;
       rightDockable?: boolean;
       useBadge?: () => number | null | undefined;
@@ -51,7 +50,6 @@ type RailItem =
 
 function buildRailButtons(
   items: RailItemDef[],
-  splitMode: SplitMode,
   t: (key: string) => string,
   hidden: Set<string>,
 ): RailItem[] {
@@ -71,7 +69,6 @@ function buildRailButtons(
         view: item.id as RailView,
         icon: <Icon size={16} />,
         title: t(item.labelKey),
-        dot: item.id === "split-screen" ? splitMode !== "none" : undefined,
         promotable: item.promotable,
         rightDockable: item.rightDockable,
         useBadge: item.useBadge,
@@ -108,7 +105,6 @@ const btnStyle = { margin: `0 ${rem(4)}`, padding: `0 ${rem(8)}` };
 export function AppRail({
   railView,
   sidebarOpen,
-  splitMode,
   username,
   isAdmin,
   pluginsSettled = true,
@@ -119,7 +115,6 @@ export function AppRail({
 }: {
   railView: RailView;
   sidebarOpen: boolean;
-  splitMode: SplitMode;
   username: string;
   isAdmin: boolean;
   /** False while plugins are still registering their rail items. */
@@ -215,7 +210,6 @@ export function AppRail({
   const railExpanded = pinned || (expandOnHover && hovered);
   const railButtons = buildRailButtons(
     railItems.filter((item) => item.placement !== "footer"),
-    splitMode,
     t,
     hiddenTabs,
   );
@@ -363,9 +357,6 @@ export function AppRail({
                   >
                     {item.title}
                   </span>
-                  {item.dot && (
-                    <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-accent-brand" />
-                  )}
                 </button>
               ),
             )}

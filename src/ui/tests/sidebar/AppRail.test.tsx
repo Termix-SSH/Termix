@@ -27,7 +27,6 @@ function renderRail(onRailClick = vi.fn()) {
     <AppRail
       railView="hosts"
       sidebarOpen={false}
-      splitMode="none"
       username="alice"
       isAdmin={false}
       onRailClick={onRailClick}

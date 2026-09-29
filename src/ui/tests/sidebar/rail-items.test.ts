@@ -60,7 +60,6 @@ describe("RAIL_ITEMS", () => {
       "quick-connect",
       "ssh-tools",
       "macros",
-      "split-screen",
       "sync",
     ]);
   });

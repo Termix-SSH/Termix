@@ -2,12 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildLayoutPayload as buildWorkspacePayload,
   buildLayoutTabSnapshots as buildWorkspaceTabSnapshots,
-  remapSlotIds,
+  resolveLayoutSplits,
   resolveLayoutTabTarget as resolveWorkspaceTabTarget,
   snapshotData,
 } from "@/shell/shell-layout";
 import { registerTabType, resetTabTypes } from "@/shell/tab-registry";
-import type { Host, Tab, WorkspaceTabSnapshot } from "@/types/ui-types";
+import { makeSplitTab } from "@/shell/split/split-tabs";
+import {
+  createPane,
+  createSplitNode,
+  createSplitState,
+  listPanes,
+} from "@/shell/split/split-tree";
+import type {
+  Host,
+  Tab,
+  WorkspacePayload,
+  WorkspaceTabSnapshot,
+} from "@/types/ui-types";
 
 // Plugin tab types take part in layouts only while registered, so the ones
 // these cases use are registered the way their plugins would.
@@ -130,20 +142,6 @@ describe("buildWorkspaceTabSnapshots", () => {
   });
 });
 
-describe("remapSlotIds", () => {
-  it("maps slot ids to live tab ids, preserving nulls and unresolved slots", () => {
-    const map = new Map([
-      ["slot-a", "new-tab-1"],
-      ["slot-b", "new-tab-2"],
-    ]);
-    const result = remapSlotIds(
-      ["slot-a", null, "slot-b", "slot-missing"],
-      map,
-    );
-    expect(result).toEqual(["new-tab-1", null, "new-tab-2", null]);
-  });
-});
-
 describe("resolveWorkspaceTabTarget", () => {
   const hosts: Host[] = [makeHost({ id: "1", syncId: "sync-web-01" })];
 
@@ -221,50 +219,71 @@ describe("resolveWorkspaceTabTarget", () => {
   });
 });
 
+function splitOf(id: string, tabIds: (string | null)[]): Tab {
+  const root = createSplitNode(
+    "row",
+    tabIds.map((tabId) => createPane(tabId)),
+  );
+  const split = makeSplitTab(id, `Split ${id}`, createSplitState(root), 0);
+  return split;
+}
+
 describe("buildWorkspacePayload", () => {
-  it("builds a full payload including pane assignment remapped to slot ids", () => {
+  it("saves every split with its pane tabs swapped for slot ids", () => {
     let counter = 0;
     const genSlotId = () => `slot-${counter++}`;
-
     const host = makeHost();
     const tabs: Tab[] = [
-      makeTab({ id: "t1", type: "terminal", host }),
-      makeTab({ id: "t2", type: "files", host }),
+      makeTab({ id: "t1", type: "terminal", host, parentSplitTabId: "a" }),
+      makeTab({ id: "t2", type: "files", host, parentSplitTabId: "a" }),
+      makeTab({ id: "t3", type: "terminal", host, parentSplitTabId: "b" }),
+      splitOf("a", ["t1", "t2", null]),
+      splitOf("b", ["t3"]),
     ];
 
     const payload = buildWorkspacePayload({
       tabs,
-      activeTabId: "t1",
-      splitMode: "2-way",
-      paneTabIds: ["t1", "t2", null, null, null, null],
-      rowSizes: [100],
-      rowColSizes: [[50, 50]],
+      activeTabId: "split-b",
       genSlotId,
     });
 
-    expect(payload.version).toBe(1);
-    expect(payload.activeSlotId).toBe("slot-0");
-    expect(payload.paneTabIds).toEqual([
+    expect(payload.version).toBe(2);
+    expect(payload.tabs.map((tab) => tab.slotId)).toEqual([
+      "slot-0",
+      "slot-1",
+      "slot-2",
+    ]);
+    expect(payload.splits).toHaveLength(2);
+    const [first, second] = payload.splits!;
+    expect(first.label).toBe("Split a");
+    expect(listPanes(first.root).map((pane) => pane.tabId)).toEqual([
       "slot-0",
       "slot-1",
       null,
-      null,
-      null,
-      null,
     ]);
-    expect(payload.splitMode).toBe("2-way");
-    expect(payload.rowSizes).toEqual([100]);
-    expect(payload.rowColSizes).toEqual([[50, 50]]);
+    expect(listPanes(second.root).map((pane) => pane.tabId)).toEqual([
+      "slot-2",
+    ]);
+    expect(payload.activeSlotId).toBe(second.slotId);
+    expect(payload.splitMode).toBeUndefined();
+  });
+
+  it("leaves out a split none of whose tabs are saved", () => {
+    const payload = buildWorkspacePayload({
+      tabs: [
+        makeTab({ id: "w", type: "web-endpoint", parentSplitTabId: "a" }),
+        splitOf("a", ["w", null]),
+      ],
+      activeTabId: "split-a",
+    });
+    expect(payload.splits).toEqual([]);
+    expect(payload.activeSlotId).toBeNull();
   });
 
   it("sets activeSlotId to null when the active tab is not capturable", () => {
     const payload = buildWorkspacePayload({
       tabs: [makeTab({ id: "t1", type: "host-manager" })],
       activeTabId: "t1",
-      splitMode: "none",
-      paneTabIds: [null, null, null, null, null, null],
-      rowSizes: [100],
-      rowColSizes: [[100]],
     });
     expect(payload.activeSlotId).toBeNull();
     expect(payload.tabs).toHaveLength(0);
@@ -274,10 +293,6 @@ describe("buildWorkspacePayload", () => {
     const payload = buildWorkspacePayload({
       tabs: [],
       activeTabId: "dashboard",
-      splitMode: "none",
-      paneTabIds: [null, null, null, null, null, null],
-      rowSizes: [100],
-      rowColSizes: [[100]],
       sidebar: {
         left: { view: "hosts", open: true, width: 320 },
         right: { view: "history", open: true, width: 240 },
@@ -290,18 +305,96 @@ describe("buildWorkspacePayload", () => {
     });
   });
 
-  it("omits sidebar when not supplied so older payloads stay unchanged", () => {
+  it("omits sidebar when not supplied", () => {
     const payload = buildWorkspacePayload({
       tabs: [],
       activeTabId: "dashboard",
-      splitMode: "none",
-      paneTabIds: [null, null, null, null, null, null],
-      rowSizes: [100],
-      rowColSizes: [[100]],
+    });
+    expect(payload.sidebar).toBeUndefined();
+  });
+});
+
+describe("resolveLayoutSplits", () => {
+  it("rebuilds each saved split with live tab ids", () => {
+    const tabs: Tab[] = [
+      makeTab({ id: "t1", type: "terminal", parentSplitTabId: "a" }),
+      makeTab({ id: "t2", type: "terminal", parentSplitTabId: "a" }),
+      splitOf("a", ["t1", "t2"]),
+    ];
+    const payload = buildWorkspacePayload({
+      tabs,
+      activeTabId: "split-a",
+      genSlotId: (() => {
+        let n = 0;
+        return () => `slot-${n++}`;
+      })(),
     });
 
-    expect(payload.sidebar).toBeUndefined();
-    expect(payload.version).toBe(1);
+    const live = new Map([
+      ["slot-0", "new-1"],
+      ["slot-1", "new-2"],
+    ]);
+    const [restored] = resolveLayoutSplits(payload, live);
+    expect(restored.label).toBe("Split a");
+    expect(restored.slotId).toBe(payload.splits![0].slotId);
+    expect(listPanes(restored.split.root).map((pane) => pane.tabId)).toEqual([
+      "new-1",
+      "new-2",
+    ]);
+  });
+
+  it("drops a saved split none of whose tabs came back", () => {
+    const payload = buildWorkspacePayload({
+      tabs: [
+        makeTab({ id: "t1", type: "terminal", parentSplitTabId: "a" }),
+        splitOf("a", ["t1"]),
+      ],
+      activeTabId: "split-a",
+    });
+    expect(resolveLayoutSplits(payload, new Map())).toEqual([]);
+  });
+
+  it("reads the single fixed-mode split of a version 1 payload", () => {
+    const payload: WorkspacePayload = {
+      version: 1,
+      tabs: [],
+      activeSlotId: "slot-a",
+      splitMode: "3-way",
+      paneTabIds: ["slot-a", "slot-b", "slot-c", null, null, null],
+      rowSizes: [30, 70],
+      rowColSizes: [[40, 60], [100]],
+    };
+    const live = new Map([
+      ["slot-a", "a"],
+      ["slot-b", "b"],
+      ["slot-c", "c"],
+    ]);
+    const [restored] = resolveLayoutSplits(payload, live);
+    expect(restored.label).toBeNull();
+    expect(restored.slotId).toBeNull();
+    const root = restored.split.root;
+    expect(root.kind).toBe("split");
+    if (root.kind !== "split") return;
+    expect(root.direction).toBe("row");
+    expect(root.sizes[0]).toBeCloseTo(40);
+    expect(listPanes(root).map((pane) => pane.tabId)).toEqual(["a", "b", "c"]);
+  });
+
+  it("finds no splits in a version 1 payload without one", () => {
+    expect(
+      resolveLayoutSplits(
+        {
+          version: 1,
+          tabs: [],
+          activeSlotId: null,
+          splitMode: "none",
+          paneTabIds: [],
+          rowSizes: [100],
+          rowColSizes: [[100]],
+        },
+        new Map(),
+      ),
+    ).toEqual([]);
   });
 });
 

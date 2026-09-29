@@ -10,19 +10,16 @@ import {
 } from "@/components/dropdown-menu";
 import type { RailView } from "@/sidebar/AppRail";
 import { useRailItems } from "@/sidebar/rail-items";
-import type { SplitMode } from "@/types/ui-types";
 import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 import { RailBadge } from "@/sidebar/RailBadge";
 
 export function MobileBottomBar({
   railView,
   sidebarOpen,
-  splitMode,
   onRailClick,
 }: {
   railView: RailView;
   sidebarOpen: boolean;
-  splitMode: SplitMode;
   onRailClick: (view: RailView) => void;
 }) {
   const { t } = useTranslation();
@@ -67,7 +64,6 @@ export function MobileBottomBar({
     <div className="md:hidden flex items-stretch shrink-0 bg-sidebar border-t border-border safe-bottom">
       {primaryItems.map((item) => {
         const active = sidebarOpen && railView === item.id;
-        const hasDot = item.id === "split-screen" && splitMode !== "none";
         const Icon = item.icon;
         return (
           <button
@@ -88,9 +84,6 @@ export function MobileBottomBar({
             <span className="max-w-full truncate px-0.5">
               {t(item.labelKey)}
             </span>
-            {hasDot && (
-              <span className="absolute top-1.5 right-[calc(50%-10px)] size-1.5 rounded-full bg-accent-brand" />
-            )}
           </button>
         );
       })}

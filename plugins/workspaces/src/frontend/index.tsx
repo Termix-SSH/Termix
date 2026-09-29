@@ -41,7 +41,7 @@ export function activate(app: TermixApp): void {
     id: "workspaces",
     icon: LayoutTemplate,
     titleKey: "nav.workspaces",
-    after: "split-screen",
+    after: "macros",
     permission: "use",
   });
   app.registerPanel("workspaces", Panel);

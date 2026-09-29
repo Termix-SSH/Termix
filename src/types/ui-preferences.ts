@@ -137,7 +137,6 @@ const CORE_HIDEABLE_RAIL_VIEWS = [
   "quick-connect",
   "ssh-tools",
   "macros",
-  "split-screen",
 ];
 
 const SIMPLE_HIDDEN_RAIL_TABS = CORE_HIDEABLE_RAIL_VIEWS.filter(

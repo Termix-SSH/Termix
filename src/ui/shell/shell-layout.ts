@@ -1,10 +1,15 @@
 import type {
   Host,
+  SplitState,
   Tab,
   WorkspacePayload,
+  WorkspaceSplitSnapshot,
   WorkspaceTabSnapshot,
 } from "@/types/ui-types";
+import { createId } from "@/lib/create-id";
 import { getTabType } from "./tab-registry";
+import { isSplitTab, restoreSplitState } from "./split/split-tabs";
+import { listPanes, mapTabIds } from "./split/split-tree";
 
 /**
  * Serializing and restoring the shell's arrangement: which tabs are open,
@@ -56,13 +61,6 @@ function opensAsSingleton(type: string): boolean {
   return !!def && (!!def.singleton || !!def.hostless);
 }
 
-function createSlotId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-}
-
 /**
  * Maps live tabs to snapshots, with a fresh slotId per tab. slotId is a
  * stable key within the saved payload, distinct from Tab.id, which is
@@ -70,7 +68,7 @@ function createSlotId(): string {
  */
 export function buildLayoutTabSnapshots(
   tabs: Tab[],
-  genSlotId: () => string = createSlotId,
+  genSlotId: () => string = createId,
 ): { snapshots: WorkspaceTabSnapshot[]; slotIdByTabId: Map<string, string> } {
   const capturable = tabs.filter((tab) => isCapturableTabType(tab.type));
   const slotIdByTabId = new Map(capturable.map((tab) => [tab.id, genSlotId()]));
@@ -88,16 +86,6 @@ export function buildLayoutTabSnapshots(
   }));
 
   return { snapshots, slotIdByTabId };
-}
-
-/** Remaps a slotId-keyed array (paneTabIds shape) to live tab ids. */
-export function remapSlotIds(
-  slotIds: (string | null)[],
-  slotIdToTabId: Map<string, string>,
-): (string | null)[] {
-  return slotIds.map((slotId) =>
-    slotId != null ? (slotIdToTabId.get(slotId) ?? null) : null,
-  );
 }
 
 /**
@@ -147,28 +135,74 @@ export function resolveLayoutTabTarget(
 export function buildLayoutPayload(input: {
   tabs: Tab[];
   activeTabId: string;
-  splitMode: WorkspacePayload["splitMode"];
-  paneTabIds: (string | null)[];
-  rowSizes: number[];
-  rowColSizes: number[][];
   genSlotId?: () => string;
   sidebar?: WorkspacePayload["sidebar"];
 }): WorkspacePayload {
+  const genSlotId = input.genSlotId ?? createId;
   const { snapshots, slotIdByTabId } = buildLayoutTabSnapshots(
     input.tabs,
-    input.genSlotId,
+    genSlotId,
   );
 
+  const splits: WorkspaceSplitSnapshot[] = [];
+  for (const tab of input.tabs) {
+    if (!isSplitTab(tab)) continue;
+    const root = mapTabIds(
+      tab.split.root,
+      (tabId) => slotIdByTabId.get(tabId) ?? null,
+    );
+    // A split whose tabs are all left out of layouts has nothing to restore.
+    if (!listPanes(root).some((pane) => pane.tabId)) continue;
+    const slotId = genSlotId();
+    slotIdByTabId.set(tab.id, slotId);
+    splits.push({
+      slotId,
+      label: tab.label,
+      root,
+      focusedPaneId: tab.split.focusedPaneId,
+    });
+  }
+
   return {
-    version: 1,
+    version: 2,
     tabs: snapshots,
     activeSlotId: slotIdByTabId.get(input.activeTabId) ?? null,
-    splitMode: input.splitMode,
-    paneTabIds: input.paneTabIds.map((tabId) =>
-      tabId != null ? (slotIdByTabId.get(tabId) ?? null) : null,
-    ),
-    rowSizes: input.rowSizes,
-    rowColSizes: input.rowColSizes,
+    splits,
     ...(input.sidebar ? { sidebar: input.sidebar } : {}),
   };
+}
+
+/**
+ * The splits a saved layout describes, with live tab ids. Version 1 payloads
+ * held one split as a fixed mode; it comes back with no label or slotId, so
+ * the caller names it.
+ */
+export function resolveLayoutSplits(
+  payload: WorkspacePayload,
+  slotIdToTabId: Map<string, string>,
+): { slotId: string | null; label: string | null; split: SplitState }[] {
+  const resolve = (slotId: string) => slotIdToTabId.get(slotId) ?? null;
+  if (Array.isArray(payload.splits)) {
+    return payload.splits.flatMap((saved) => {
+      const split = restoreSplitState(saved, resolve);
+      return split ? [{ slotId: saved.slotId, label: saved.label, split }] : [];
+    });
+  }
+  if (
+    typeof payload.splitMode === "string" &&
+    payload.splitMode !== "none" &&
+    Array.isArray(payload.paneTabIds)
+  ) {
+    const split = restoreSplitState(
+      {
+        mode: payload.splitMode,
+        paneInstanceIds: payload.paneTabIds,
+        rowSizes: payload.rowSizes,
+        rowColSizes: payload.rowColSizes,
+      },
+      resolve,
+    );
+    return split ? [{ slotId: null, label: null, split }] : [];
+  }
+  return [];
 }

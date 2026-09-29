@@ -19,10 +19,11 @@ import {
   ChevronUp,
   RefreshCw,
   X,
-  LayoutPanelLeft,
   Plus,
-  Minus,
   Pencil,
+  Columns2,
+  Rows2,
+  Ungroup,
   Maximize2,
   Minimize2,
   FolderOpen,
@@ -31,9 +32,25 @@ import {
 import { tabIcon } from "@/shell/tabUtils";
 import { isSessionTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
-import type { Tab, TabType, SplitMode } from "@/types/ui-types";
-import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
+import type { Tab, TabType } from "@/types/ui-types";
 import { ActionSlot } from "@/shell/ActionSlot";
+import {
+  canJoinSplit,
+  isSplitTab,
+  type SplitSummary,
+  type TabSplitAction,
+} from "@/shell/split/split-tabs";
+import { MAX_PANES } from "@/shell/split/split-tree";
+import { SplitLayoutMenu } from "@/shell/split/SplitLayoutMenu";
+import {
+  beginSplitDrag,
+  endSplitDrag,
+  isSplitDragging,
+  moveSplitDrag,
+} from "@/shell/split/split-drag";
+
+/** How far below the bar a dragged tab has to go before it drags into the view. */
+const DRAG_OUT_DISTANCE = 16;
 
 /**
  * Tabs holding a live connection that can be refreshed: the registered
@@ -46,16 +63,13 @@ function isConnectionTab(type: TabType): boolean {
 export function TabBar({
   tabs,
   activeTabId,
-  splitMode,
-  paneTabIds,
-  focusedPaneIndex,
+  splits,
+  activeSplitFull,
   onSetActiveTab,
   onCloseTab,
   onRefreshTab,
   onReorderTabs,
-  onSplitTab,
-  onAddToSplit,
-  onRemoveFromSplit,
+  onSplitAction,
   onRenameTab,
   onOpenFileManager,
   isAppFullscreen,
@@ -66,16 +80,15 @@ export function TabBar({
 }: {
   tabs: Tab[];
   activeTabId: string;
-  splitMode: SplitMode;
-  paneTabIds: (string | null)[];
-  focusedPaneIndex: number | null;
+  /** Every split tab and its panes, for the "Add to split" entries. */
+  splits: SplitSummary[];
+  /** The active tab is a split with no room for another pane. */
+  activeSplitFull: boolean;
   onSetActiveTab: (id: string) => void;
   onCloseTab: (id: string) => void;
   onRefreshTab: (id: string) => void;
   onReorderTabs: (tabs: Tab[]) => void;
-  onSplitTab: (tabId: string, mode: SplitMode) => void;
-  onAddToSplit: (tabId: string) => void;
-  onRemoveFromSplit: (tabId: string) => void;
+  onSplitAction: (action: TabSplitAction) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
   onOpenFileManager?: (tabId: string) => void;
   isAppFullscreen: boolean;
@@ -90,6 +103,7 @@ export function TabBar({
   const [dragTabId, setDragTabId] = useState<string | null>(null);
   const [dragTargetIndex, setDragTargetIndex] = useState<number | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [draggingOut, setDraggingOut] = useState(false);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
   const [contextPos, setContextPos] = useState<{ x: number; y: number } | null>(
     null,
@@ -125,8 +139,7 @@ export function TabBar({
   } | null>(null);
   const skipIndicatorAnimRef = useRef(false);
 
-  const isSplit = splitMode !== "none";
-  const paneCount = PANE_COUNTS[splitMode];
+  const activeIsSplit = isSplitTab(tabs.find((tab) => tab.id === activeTabId));
 
   const measureIndicator = useCallback(() => {
     const el = activeTabId ? tabEls.current.get(activeTabId) : null;
@@ -143,7 +156,7 @@ export function TabBar({
   // its pre-reorder position before this caught up, flashing at the old spot.
   useLayoutEffect(() => {
     measureIndicator();
-  }, [measureIndicator, tabs, splitMode, dragTargetIndex]);
+  }, [measureIndicator, tabs, dragTargetIndex]);
 
   useEffect(() => {
     const el = tabBarRef.current;
@@ -183,6 +196,35 @@ export function TabBar({
       if (Math.abs(e.clientX - d.startX) > 5) didDrag.current = true;
 
       const barRect = tabBarRef.current.getBoundingClientRect();
+
+      // Dragged down out of the bar: the tab heads for the view to be split.
+      const dragged = tabs.find((t) => t.id === d.id);
+      if (
+        canJoinSplit(dragged) &&
+        e.clientY > barRect.bottom + DRAG_OUT_DISTANCE
+      ) {
+        didDrag.current = true;
+        if (isSplitDragging()) moveSplitDrag(e.clientX, e.clientY);
+        else
+          beginSplitDrag(
+            {
+              kind: "tab",
+              tabId: d.id,
+              label: dragged!.customLabel || dragged!.label,
+            },
+            e.clientX,
+            e.clientY,
+          );
+        setDraggingOut(true);
+        dragTargetRef.current = d.index;
+        setDragTargetIndex(d.index);
+        return;
+      }
+      if (isSplitDragging()) {
+        endSplitDrag(false);
+        setDraggingOut(false);
+      }
+
       const x = Math.max(
         barRect.left + 2,
         Math.min(barRect.right - d.width - 6, e.clientX - d.offsetX),
@@ -212,7 +254,10 @@ export function TabBar({
       if (!dragData.current) return;
       const { id, index } = dragData.current;
       const to = dragTargetRef.current ?? index;
-      if (commit && to !== index) {
+      const droppedOut = isSplitDragging();
+      if (droppedOut) endSplitDrag(commit);
+      setDraggingOut(false);
+      if (commit && !droppedOut && to !== index) {
         const next = [...tabs];
         if (next[0].id !== id) next.splice(to, 0, next.splice(index, 1)[0]);
         skipIndicatorAnimRef.current = true;
@@ -308,9 +353,6 @@ export function TabBar({
           {tabs.map((tab, index) => {
             const active = tab.id === activeTabId;
             const isDragging = dragTabId === tab.id;
-            const paneIdx = paneTabIds.indexOf(tab.id);
-            const isInPane = paneIdx !== -1;
-            const isFocusedPane = isInPane && paneIdx === focusedPaneIndex;
             let translateX = 0;
             if (
               dragTabId &&
@@ -327,21 +369,12 @@ export function TabBar({
                 translateX = draggedWidth;
             }
 
-            const showFocusIndicator = isFocusedPane && isSplit;
-            const showInPaneIndicator = isInPane && isSplit && !isFocusedPane;
-
             return (
               <div
                 key={tab.id}
                 ref={(el) => {
                   if (el) tabEls.current.set(tab.id, el);
                   else tabEls.current.delete(tab.id);
-                }}
-                draggable={isSplit && tab.type !== "dashboard"}
-                onDragStart={(e) => {
-                  if (!isSplit || tab.type === "dashboard") return;
-                  e.dataTransfer.setData("text/plain", tab.id);
-                  e.dataTransfer.effectAllowed = "move";
                 }}
                 onClick={() =>
                   !dragTabId && !didDrag.current && onSetActiveTab(tab.id)
@@ -415,14 +448,6 @@ export function TabBar({
                     : `px-2.5 md:px-4 font-medium ${active ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
                 }`}
               >
-                {/* Focused-pane indicator: brand accent bottom border overlay */}
-                {showFocusIndicator && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-brand/70 z-10" />
-                )}
-                {/* In-pane (not focused) indicator: subtle dot */}
-                {showInPaneIndicator && (
-                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-muted-foreground/40 z-10" />
-                )}
                 {showTabNumbers && tab.type !== "dashboard" && (
                   <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/70">
                     {tabs.slice(0, index).filter((t) => t.type !== "dashboard")
@@ -483,6 +508,7 @@ export function TabBar({
 
           {dragTabId &&
             dragPos &&
+            !draggingOut &&
             (() => {
               const tab = tabs.find((t) => t.id === dragTabId)!;
               const active = tab.id === activeTabId;
@@ -573,6 +599,13 @@ export function TabBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <Separator orientation="vertical" />
+          <SplitLayoutMenu
+            activeIsSplit={activeIsSplit}
+            canAddPane={!activeSplitFull}
+            onSplit={(edge) => onSplitAction({ kind: "splitActive", edge })}
+            onPreset={(presetId) => onSplitAction({ kind: "preset", presetId })}
+          />
           {onToggleRightDock && (
             <>
               <Separator orientation="vertical" />
@@ -642,19 +675,26 @@ export function TabBar({
         (() => {
           const ctxTab = tabs.find((t) => t.id === contextTabId);
           if (!ctxTab) return null;
-          const isInPane = paneTabIds.includes(contextTabId);
-          const hasEmptySlot =
-            isSplit && paneTabIds.slice(0, paneCount).some((p) => p === null);
+          const joinable = canJoinSplit(ctxTab);
+          const itemClass =
+            "flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:pointer-events-none";
+          const runSplit = (action: TabSplitAction) => {
+            onSplitAction(action);
+            setContextTabId(null);
+          };
+          const menuTop = Math.min(contextPos.y, window.innerHeight - 160);
+          const menuLeft = Math.min(contextPos.x, window.innerWidth - 240);
           return (
             <div
               data-context-menu
               style={{
                 position: "fixed",
-                left: contextPos.x,
-                top: contextPos.y,
+                left: Math.max(4, menuLeft),
+                top: Math.max(4, menuTop),
+                maxHeight: window.innerHeight - Math.max(4, menuTop) - 8,
                 zIndex: 10000,
               }}
-              className="bg-popover border border-border shadow-lg py-1 min-w-[180px]"
+              className="bg-popover border border-border shadow-lg py-1 min-w-[200px] max-w-[260px] overflow-y-auto"
             >
               <div className="px-2 py-1 text-xs font-semibold text-muted-foreground truncate max-w-[200px]">
                 {ctxTab.label}
@@ -719,53 +759,109 @@ export function TabBar({
                 <Pencil className="size-3" />
                 {t("nav.renameTab")}
               </button>
-              {ctxTab.type !== "split-screen" && (
+              {isSplitTab(ctxTab) && (
                 <>
                   <div className="h-px bg-border my-1" />
-                  <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t("terminal.split.splitTab")}
-                  </div>
-                  {SPLIT_MODES.filter((m) => m.id !== "none").map((mode) => (
-                    <button
-                      key={mode.id}
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                      onClick={() => {
-                        onSplitTab(contextTabId, mode.id);
-                        setContextTabId(null);
-                      }}
-                    >
-                      <LayoutPanelLeft className="size-3 text-muted-foreground" />
-                      {mode.label}
-                    </button>
-                  ))}
+                  <button
+                    className={itemClass}
+                    onClick={() =>
+                      runSplit({ kind: "unsplit", splitTabId: ctxTab.id })
+                    }
+                  >
+                    <Ungroup className="size-3" />
+                    {t("splitScreen.unsplit")}
+                  </button>
                 </>
               )}
-              {isSplit && (
+              {joinable && (
                 <>
                   <div className="h-px bg-border my-1" />
-                  {isInPane ? (
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-                      onClick={() => {
-                        onRemoveFromSplit(contextTabId);
-                        setContextTabId(null);
-                      }}
-                    >
-                      <Minus className="size-3" />
-                      {t("terminal.split.removeFromSplit")}
-                    </button>
-                  ) : hasEmptySlot ? (
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                      onClick={() => {
-                        onAddToSplit(contextTabId);
-                        setContextTabId(null);
-                      }}
-                    >
-                      <Plus className="size-3" />
-                      {t("terminal.split.addToSplit")}
-                    </button>
-                  ) : null}
+                  <button
+                    className={itemClass}
+                    onClick={() =>
+                      runSplit({
+                        kind: "split",
+                        tabId: ctxTab.id,
+                        edge: "right",
+                      })
+                    }
+                  >
+                    <Columns2 className="size-3" />
+                    {t("splitScreen.splitRight")}
+                  </button>
+                  <button
+                    className={itemClass}
+                    onClick={() =>
+                      runSplit({
+                        kind: "split",
+                        tabId: ctxTab.id,
+                        edge: "bottom",
+                      })
+                    }
+                  >
+                    <Rows2 className="size-3" />
+                    {t("splitScreen.splitDown")}
+                  </button>
+                  {splits.map((split) => (
+                    <div key={split.id} className="flex flex-col">
+                      <div className="h-px bg-border my-1" />
+                      <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
+                        {t("splitScreen.addToSplit", { split: split.label })}
+                      </div>
+                      {split.panes.map((pane) => (
+                        <button
+                          key={pane.id}
+                          className={`${itemClass} pl-5`}
+                          onClick={() =>
+                            runSplit({
+                              kind: "addToPane",
+                              tabId: ctxTab.id,
+                              splitTabId: split.id,
+                              paneId: pane.id,
+                            })
+                          }
+                        >
+                          <span
+                            className={`truncate ${pane.label ? "" : "text-muted-foreground"}`}
+                          >
+                            {pane.label
+                              ? t("splitScreen.paneItem", {
+                                  index: pane.index,
+                                  label: pane.label,
+                                })
+                              : t("splitScreen.paneEmptyItem", {
+                                  index: pane.index,
+                                })}
+                          </span>
+                        </button>
+                      ))}
+                      {(["right", "bottom"] as const).map((edge) => (
+                        <button
+                          key={edge}
+                          className={`${itemClass} pl-5`}
+                          disabled={split.full}
+                          title={
+                            split.full
+                              ? t("splitScreen.maxPanes", { count: MAX_PANES })
+                              : undefined
+                          }
+                          onClick={() =>
+                            runSplit({
+                              kind: "addPane",
+                              tabId: ctxTab.id,
+                              splitTabId: split.id,
+                              edge,
+                            })
+                          }
+                        >
+                          <Plus className="size-3" />
+                          {edge === "right"
+                            ? t("splitScreen.newPaneRight")
+                            : t("splitScreen.newPaneBelow")}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
                 </>
               )}
               <div className="h-px bg-border my-1" />

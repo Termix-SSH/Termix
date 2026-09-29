@@ -127,12 +127,14 @@ function RegisteredTab({
   tab,
   isVisible,
   isFocusedPane,
+  inSplit,
   shell,
 }: {
   def: TabTypeDef;
   tab: Tab;
   isVisible: boolean;
   isFocusedPane: boolean;
+  inSplit: boolean;
   shell: TabShellCallbacks;
 }) {
   const { host, label } = tab;
@@ -157,6 +159,7 @@ function RegisteredTab({
       label={label}
       isVisible={isVisible}
       isFocusedPane={isFocusedPane}
+      inSplit={inSplit}
       handleRef={tab.terminalRef as React.Ref<unknown>}
       shell={shell}
     />
@@ -181,11 +184,18 @@ export interface TabRenderContext {
   shell: TabShellCallbacks;
   isVisible?: boolean;
   isFocusedPane?: boolean;
+  inSplit?: boolean;
   panelProps?: PromotedPanelProps;
 }
 
 export function renderTabContent(tab: Tab, context: TabRenderContext) {
-  const { shell, isVisible = true, isFocusedPane = true, panelProps } = context;
+  const {
+    shell,
+    isVisible = true,
+    isFocusedPane = true,
+    inSplit = false,
+    panelProps,
+  } = context;
 
   switch (tab.type) {
     case "dashboard":
@@ -237,6 +247,7 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
           tab={tab}
           isVisible={isVisible}
           isFocusedPane={isFocusedPane}
+          inSplit={inSplit}
           shell={shell}
         />
       );

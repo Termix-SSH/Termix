@@ -3088,6 +3088,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "BracketLeft",
             "Backslash",
             "Minus",
+            "Enter",
           ];
           if (globalCodes.includes(e.code)) {
             e.stopPropagation();

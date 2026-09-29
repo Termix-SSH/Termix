@@ -13,6 +13,7 @@ import {
   GripVertical,
   Key,
   KeyRound,
+  LayoutPanelLeft,
   Link,
   MemoryStick,
   MoreHorizontal,
@@ -28,6 +29,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -87,6 +89,12 @@ import {
 } from "@/sidebar/host-contributions";
 import { shell } from "@/plugin-host/shell-bridge";
 import type { TabShellCallbacks } from "@/shell/tab-registry";
+import {
+  openInSplit,
+  useSplitTargets,
+  type SplitOpenTarget,
+} from "@/shell/split/split-targets";
+import { MAX_PANES } from "@/shell/split/split-tree";
 
 export function statusCheckEnabled(host: Host): boolean {
   return host.statusCheckEnabled !== false;
@@ -276,6 +284,7 @@ export function HostItem({
   const pluginActions = hostActionsFor(allHostActions, host);
   const badges = hostBadgesFor(useHostBadges(), host);
   const pluginMenuItems = hostMenuItemsFor(useHostContextMenuItems(), host);
+  const splitTargets = useSplitTargets();
   const statusScheme = useStatusColorScheme();
   const { initialLoadComplete } = useServerStatusMeta();
   const statusCheckOn = statusCheckEnabled(host);
@@ -647,6 +656,88 @@ export function HostItem({
               {t("hosts.openInNewTab")}
             </DropdownMenuItem>
           )}
+          {defaultAction &&
+            (splitTargets.canStartSplit || splitTargets.splits.length > 0) && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <LayoutPanelLeft className="size-3.5 mr-2" />
+                  {t("splitScreen.openInSplit")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-w-72">
+                  {(() => {
+                    const openAt = (target: SplitOpenTarget) =>
+                      openInSplit(target, () =>
+                        openHostTab(defaultAction, { forceNewTab: true }),
+                      );
+                    return (
+                      <>
+                        {splitTargets.canStartSplit && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openAt({ kind: "newSplit" });
+                            }}
+                          >
+                            {t("splitScreen.openInNewSplit")}
+                          </DropdownMenuItem>
+                        )}
+                        {splitTargets.splits.map((split) => (
+                          <div key={split.id}>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              {split.label}
+                            </DropdownMenuLabel>
+                            {split.panes.map((pane) => (
+                              <DropdownMenuItem
+                                key={pane.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openAt({
+                                    kind: "pane",
+                                    splitTabId: split.id,
+                                    paneId: pane.id,
+                                  });
+                                }}
+                              >
+                                <span className="truncate">
+                                  {pane.label
+                                    ? t("splitScreen.paneItem", {
+                                        index: pane.index,
+                                        label: pane.label,
+                                      })
+                                    : t("splitScreen.paneEmptyItem", {
+                                        index: pane.index,
+                                      })}
+                                </span>
+                              </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuItem
+                              disabled={split.full}
+                              title={
+                                split.full
+                                  ? t("splitScreen.maxPanes", {
+                                      count: MAX_PANES,
+                                    })
+                                  : undefined
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAt({
+                                  kind: "newPane",
+                                  splitTabId: split.id,
+                                });
+                              }}
+                            >
+                              {t("splitScreen.newPaneRight")}
+                            </DropdownMenuItem>
+                          </div>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
           <DropdownMenuSeparator />
           {onEditHost && (
             <DropdownMenuItem

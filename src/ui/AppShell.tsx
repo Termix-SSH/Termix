@@ -9,11 +9,14 @@ import { Sheet, SheetContent } from "@/components/sheet";
 import {
   ChevronLeft,
   ChevronRight,
+  Columns2,
   Maximize2,
   Minimize2,
   PanelRight,
   RotateCcw,
+  Rows2,
   SquareArrowOutUpRight,
+  X,
 } from "lucide-react";
 import {
   useState,
@@ -42,7 +45,12 @@ import { MultiPanelHint } from "@/sidebar/MultiPanelHint";
 import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
 import { UI_ONBOARDING_VERSION } from "@/types/ui-preferences";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
-import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
+import { SplitView, type SplitViewActions } from "@/shell/split/SplitView";
+import { SplitDropOverlay } from "@/shell/split/SplitDropOverlay";
+import {
+  EmptyPanePicker,
+  type PickHostTarget,
+} from "@/shell/split/EmptyPanePicker";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
@@ -65,11 +73,6 @@ const HostsPanel = lazy(() =>
 const QuickConnectPanel = lazy(() =>
   import("@/sidebar/QuickConnectPanel").then((m) => ({
     default: m.QuickConnectPanel,
-  })),
-);
-const SplitScreenPanel = lazy(() =>
-  import("@/sidebar/SplitScreenPanel").then((m) => ({
-    default: m.SplitScreenPanel,
   })),
 );
 
@@ -118,13 +121,12 @@ import type {
   Tab,
   TabType,
   Host,
-  SplitMode,
   HostFolder,
   ThemeId,
   FontSizeId,
   WorkspacePayload,
 } from "@/types/ui-types";
-import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
+import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { getTabJumpDigit } from "@/lib/tab-jump-hotkey";
 import { useTheme } from "@/components/theme-provider";
@@ -146,7 +148,7 @@ import {
 } from "@/main-axios";
 import {
   buildLayoutPayload,
-  remapSlotIds,
+  resolveLayoutSplits,
   resolveLayoutTabTarget,
   snapshotData,
 } from "@/shell/shell-layout";
@@ -161,20 +163,75 @@ import { changeAppLanguage, consumeLoginLanguage } from "@/i18n/i18n";
 import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 import { buildHostTree } from "@/sidebar/build-host-tree";
 import {
-  assignTabsToSplit,
-  createSplitConfig,
-  releaseSplitTabs,
+  addSplitTab,
+  canJoinSplit,
+  closeSplitTab,
+  isSplitTab,
+  makeSplitTab,
+  nextSplitNumber,
+  placeTabInPane,
+  removeTab,
   restoreSplitTabs,
   serializeSplitTabs,
-  type PersistedSplitTab,
-} from "@/shell/splitTabUtils";
+  splitTabOf,
+  summarizeSplits,
+  updateSplit,
+  type SplitTab,
+  type TabSplitAction,
+} from "@/shell/split/split-tabs";
+import {
+  addPaneAtEdge,
+  assignTab,
+  canAddPane,
+  createPane,
+  createSplitNode,
+  createSplitState,
+  equalizeSplit,
+  findPane,
+  findPaneByTab,
+  focusPane,
+  listPanes,
+  MAX_PANES,
+  movePane,
+  neighborPane,
+  removePane,
+  resizeSplit,
+  shownPanes,
+  splitPane,
+  swapPanes,
+  toggleZoom,
+  type NavDirection,
+  type PaneEdge,
+  type PaneRect,
+  type SplitState,
+} from "@/shell/split/split-tree";
+import {
+  applyPreset,
+  buildPreset,
+  fromLegacyConfig,
+  type SplitPresetId,
+} from "@/shell/split/split-presets";
+import {
+  setSplitDropHandler,
+  type SplitDragSource,
+  type SplitDropHover,
+} from "@/shell/split/split-drag";
+import {
+  publishSplitTargets,
+  setSplitOpener,
+  type SplitOpenTarget,
+} from "@/shell/split/split-targets";
+import { registerPaletteEntry } from "@/shell/palette-registry";
+import { createId } from "@/lib/create-id";
 import {
   canRestoreTabType,
   getTabType,
   isPersistentTabType,
   isSessionTabType,
+  useTabTypes,
   type TabShellCallbacks,
 } from "@/shell/tab-registry";
+import { runHostAction } from "@/sidebar/host-contributions";
 import { getPanel, usePanels } from "@/shell/panel-registry";
 import { invokeAction } from "@/shell/action-registry";
 import { usePluginStore } from "@/plugin-host/plugin-store";
@@ -204,6 +261,7 @@ export function AppShell({
   // Re-render when plugins add or remove rail items, panels or tabs.
   useRailItems();
   const registeredPanels = usePanels();
+  const tabTypes = useTabTypes();
   const { settled: pluginsSettled } = usePluginStore();
   const [tabs, setTabs] = useState<Tab[]>([
     {
@@ -223,32 +281,9 @@ export function AppShell({
   // Flips to true once the initial DB read (restore or skip) is done — sync must not fire before this
   const [tabsReady, setTabsReady] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [splitMode, setSplitMode] = useState<SplitMode>("none");
-  // paneTabIds holds live tab.id values, which change on every restore, so we
-  // can't restore it from storage directly. It starts empty and gets filled in
-  // once by the reconciliation effect below, keyed off the stable instanceId
-  // values saved in termix_paneInstanceIds.
-  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(() =>
-    Array(6).fill(null),
-  );
+  // Split tabs are restored once their child tabs have stable live ids.
   const paneLayoutRestoredRef = useRef(false);
   const splitTabsRestoredRef = useRef(false);
-  useEffect(() => {
-    paneTabIdsRef.current = paneTabIds;
-  }, [paneTabIds]);
-  const [rowSizes, setRowSizes] = useState<number[]>(
-    () => defaultSizes("none").rowSizes,
-  );
-  const [rowColSizes, setRowColSizes] = useState<RowColSizes>(
-    () => defaultSizes("none").rowColSizes,
-  );
-  const changeSplitMode = useCallback((mode: SplitMode) => {
-    setSplitMode(mode);
-    const d = defaultSizes(mode);
-    setRowSizes(d.rowSizes);
-    setRowColSizes(d.rowColSizes);
-  }, []);
-  const [focusedPaneIndex, setFocusedPaneIndex] = useState<number | null>(null);
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
@@ -432,12 +467,13 @@ export function AppShell({
   const activeTabIdRef = useRef(activeTabId);
   const closeActiveTabRef = useRef<() => void>(() => {});
   const globalKeybindingsRef = useRef<CustomKeybinding[]>([]);
-  const splitModeRef = useRef(splitMode);
-  const focusedPaneIndexRef = useRef<number | null>(null);
-  const paneContentElsRef = useRef<(HTMLDivElement | null)[]>(
-    Array(6).fill(null),
-  );
-  const paneTabIdsRef = useRef<(string | null)[]>(Array(6).fill(null));
+  // Split actions for handlers registered once, e.g. the global hotkeys.
+  const splitActionsRef = useRef<{
+    splitActive: (edge: "right" | "bottom") => void;
+    navigate: (direction: NavDirection) => boolean;
+    zoomFocused: () => boolean;
+    closeFocusedPane: () => void;
+  } | null>(null);
   useEffect(() => {
     tabsRef.current = tabs;
   }, [tabs]);
@@ -478,13 +514,15 @@ export function AppShell({
         return;
       }
       if (type === "reconnectSession") {
-        const tabId = activeTabIdRef.current;
+        const tabId = focusedSessionTabId();
         if (!tabId) return;
         const termRef = terminalRefs.current.get(tabId);
         (termRef?.current as TabHandle | null)?.reconnect?.();
         return;
       }
-      const currentTabs = tabsRef.current;
+      const currentTabs = tabsRef.current.filter(
+        (tab) => !tab.parentSplitTabId,
+      );
       if (currentTabs.length < 2) return;
       const index = currentTabs.findIndex(
         (tab) => tab.id === activeTabIdRef.current,
@@ -530,60 +568,105 @@ export function AppShell({
       closeActiveTabRef.current();
     });
   }, []);
-  const skipSplitSyncRef = useRef(false);
-  const activeTabAvailable = tabs.some((tab) => tab.id === activeTabId);
-  useEffect(() => {
-    const active = tabs.find((tab) => tab.id === activeTabId);
-    const config = active?.type === "split-screen" ? active.splitConfig : null;
-    skipSplitSyncRef.current = true;
-    if (!config) {
-      setSplitMode("none");
-      setPaneTabIds(Array(6).fill(null));
-      setFocusedPaneIndex(null);
-      return;
-    }
-    setSplitMode(config.mode);
-    setPaneTabIds(config.paneTabIds);
-    setRowSizes(config.rowSizes);
-    setRowColSizes(config.rowColSizes);
-    setFocusedPaneIndex(0);
-  }, [activeTabId, activeTabAvailable]);
+  /** The tab the user is working in: the focused pane's inside a split. */
+  function focusedSessionTabId(): string | null {
+    const id = activeTabIdRef.current;
+    const active = tabsRef.current.find((tab) => tab.id === id);
+    if (!isSplitTab(active)) return id || null;
+    return findPane(active.split, active.split.focusedPaneId)?.tabId ?? null;
+  }
 
-  useEffect(() => {
-    if (skipSplitSyncRef.current) {
-      skipSplitSyncRef.current = false;
+  // ─── Where opened tabs go ─────────────────────────────────────────────────
+
+  const PENDING_TARGET_MS = 60_000;
+  /**
+   * The pane the next opened tab should fill, set when the user picks one
+   * (the empty pane picker, "Open in split"). `fresh` marks a pane created in
+   * the same click, which the last committed tabs do not show yet.
+   */
+  const pendingPaneTargetRef = useRef<{
+    splitTabId: string;
+    paneId: string;
+    at: number;
+    fresh: boolean;
+  } | null>(null);
+  // Set while a saved layout is applied, so its tabs stay where it puts them.
+  const suppressPaneTargetRef = useRef(false);
+
+  function targetPane(splitTabId: string, paneId: string, fresh = false) {
+    pendingPaneTargetRef.current = {
+      splitTabId,
+      paneId,
+      at: Date.now(),
+      fresh,
+    };
+  }
+
+  /**
+   * Shows a newly opened (or re-focused) tab. It fills the pane the user
+   * picked, else the focused pane of the active split when that is empty,
+   * else it simply becomes the active tab.
+   */
+  const placeOpenedTabRef = useRef<(tabId: string) => void>(() => {});
+  placeOpenedTabRef.current = (tabId: string) => {
+    const current = tabsRef.current;
+    const pending = pendingPaneTargetRef.current;
+    pendingPaneTargetRef.current = null;
+    if (suppressPaneTargetRef.current || tabId === "dashboard") {
+      setActiveTabId(tabId);
       return;
     }
-    if (splitMode === "none") return;
-    setTabs((prev) => {
-      const active = prev.find((tab) => tab.id === activeTabId);
-      if (active?.type !== "split-screen") return prev;
-      const config = createSplitConfig(splitMode, paneTabIds, {
-        rowSizes,
-        rowColSizes,
-      });
-      const updated = prev.map((tab) =>
-        tab.id === activeTabId ? { ...tab, splitConfig: config } : tab,
-      );
-      return assignTabsToSplit(updated, activeTabId, paneTabIds);
-    });
-  }, [activeTabId, paneTabIds, rowColSizes, rowSizes, splitMode]);
+    const existing = current.find((tab) => tab.id === tabId);
+
+    let target: { splitTabId: string; paneId: string } | null = null;
+    if (pending && Date.now() - pending.at < PENDING_TARGET_MS) {
+      const split = current.find((tab) => tab.id === pending.splitTabId);
+      if (
+        pending.fresh ||
+        (isSplitTab(split) && findPane(split.split, pending.paneId))
+      ) {
+        target = pending;
+      }
+    }
+    // Opening a session that already sits in a split shows it there.
+    if (!target && existing?.parentSplitTabId) {
+      setActiveTabId(tabId);
+      return;
+    }
+    if (!target) {
+      const active = current.find((tab) => tab.id === activeTabIdRef.current);
+      if (isSplitTab(active)) {
+        const focused = findPane(active.split, active.split.focusedPaneId);
+        if (focused && focused.tabId === null) {
+          target = { splitTabId: active.id, paneId: focused.id };
+        }
+      }
+    }
+    if (!target || (existing && !canJoinSplit(existing))) {
+      setActiveTabId(tabId);
+      return;
+    }
+    const { splitTabId, paneId } = target;
+    setTabs((prev) => placeTabInPane(prev, splitTabId, paneId, tabId));
+    setActiveTabId(splitTabId);
+  };
+
   // Panels like history and snippets act on "the terminal you're working in".
   // Once those panels can themselves be the active tab, activeTabId points at
   // the panel and the lookup misses, so remember the last terminal instead.
+  // In a split, the tab being worked in is the focused pane's.
+  const workingTabId = (() => {
+    const active = tabs.find((t) => t.id === activeTabId);
+    if (!isSplitTab(active)) return activeTabId;
+    return findPane(active.split, active.split.focusedPaneId)?.tabId ?? "";
+  })();
   const [lastTerminalTabId, setLastTerminalTabId] = useState(activeTabId);
   useEffect(() => {
-    const active = tabs.find((t) => t.id === activeTabId);
-    if (active && getTabType(active.type)?.commandTarget) {
-      setLastTerminalTabId(active.id);
+    const working = tabs.find((t) => t.id === workingTabId);
+    if (working && getTabType(working.type)?.commandTarget) {
+      setLastTerminalTabId(working.id);
     }
-  }, [activeTabId, tabs]);
-  useEffect(() => {
-    splitModeRef.current = splitMode;
-  }, [splitMode]);
-  useEffect(() => {
-    focusedPaneIndexRef.current = focusedPaneIndex;
-  }, [focusedPaneIndex]);
+  }, [workingTabId, tabs]);
   const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
     useState<boolean>(() => {
       const v = localStorage.getItem("commandPaletteShortcutEnabled");
@@ -595,12 +678,10 @@ export function AppShell({
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
   );
-  const [paneContentEls, setPaneContentEls] = useState<
-    (HTMLDivElement | null)[]
-  >(Array(6).fill(null));
-  useEffect(() => {
-    paneContentElsRef.current = paneContentEls;
-  }, [paneContentEls]);
+  // Each shown pane's content element, by pane id. The version bump
+  // re-renders so the placement effect moves tab nodes into new panes.
+  const paneElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [, setPaneElsVersion] = useState(0);
 
   // Stable per-tab DOM nodes — created once per tab, never destroyed while the tab lives.
   // We always portal each tab's content into its own node, then move that node between
@@ -608,6 +689,8 @@ export function AppShell({
   // target never changes (changing the target causes a remount).
   const tabNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const normalViewRef = useRef<HTMLDivElement>(null);
+  // The area below the tab bar, where tabs and panes are dropped to split.
+  const mainAreaRef = useRef<HTMLDivElement>(null);
   // Tab id the enter animation has already played for, so a re-render while
   // the tab stays active (there can be several right after a switch) doesn't
   // replay it — only a genuine switch to a different tab should.
@@ -650,13 +733,16 @@ export function AppShell({
     .filter((t): t is Tab => t !== undefined);
 
   const onPaneContentRef = useCallback(
-    (paneIndex: number, el: HTMLDivElement | null) => {
-      setPaneContentEls((prev) => {
-        if (prev[paneIndex] === el) return prev;
-        const next = [...prev];
-        next[paneIndex] = el;
-        return next;
-      });
+    (paneId: string, el: HTMLDivElement | null) => {
+      const els = paneElsRef.current;
+      if (el) {
+        if (els.get(paneId) === el) return;
+        els.set(paneId, el);
+      } else {
+        if (!els.has(paneId)) return;
+        els.delete(paneId);
+      }
+      setPaneElsVersion((version) => version + 1);
     },
     [],
   );
@@ -727,103 +813,34 @@ export function AppShell({
         }
       }
 
-      // Ctrl+Shift+\ — toggle 2-way split (side by side)
-      if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === "Backslash") {
-        e.preventDefault();
-        if (splitModeRef.current !== "none") {
-          selectSplitMode("none");
-        } else {
-          selectSplitMode("2-way");
-        }
-        return;
-      }
-
-      // Ctrl+Shift+- — toggle 3-way-horizontal split (top/bottom)
-      if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === "Minus") {
-        e.preventDefault();
-        if (splitModeRef.current !== "none") {
-          selectSplitMode("none");
-        } else {
-          selectSplitMode("3-way-horizontal");
-        }
-        return;
-      }
-
-      // Alt+Arrow — navigate between panes in split mode
-      if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
-        if (
-          e.code === "ArrowLeft" ||
-          e.code === "ArrowRight" ||
-          e.code === "ArrowUp" ||
-          e.code === "ArrowDown"
-        ) {
-          if (splitModeRef.current === "none") return;
-          const count = PANE_COUNTS[splitModeRef.current];
-          if (count < 2) return;
+      // Ctrl+Shift+\ splits right, Ctrl+Shift+- splits down, Ctrl+Shift+Enter
+      // zooms the focused pane.
+      if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
+        if (e.code === "Backslash" || e.code === "Minus") {
           e.preventDefault();
-          const current = focusedPaneIndexRef.current ?? 0;
-          const mode = splitModeRef.current;
-          const dir = e.code;
+          splitActionsRef.current?.splitActive(
+            e.code === "Backslash" ? "right" : "bottom",
+          );
+          return;
+        }
+        if (e.code === "Enter" && splitActionsRef.current?.zoomFocused()) {
+          e.preventDefault();
+          return;
+        }
+      }
 
-          // Layout-aware navigation maps: [left, right, up, down] per pane index.
-          // null means no movement in that direction.
-          const navMap: Record<string, (number | null)[][]> = {
-            "2-way": [
-              [null, 1, null, null],
-              [0, null, null, null],
-            ],
-            "2-way-horizontal": [
-              [null, null, null, 1],
-              [null, null, 0, null],
-            ],
-            "3-way": [
-              [null, 1, null, null],
-              [0, null, null, 2],
-              [0, null, 1, null],
-            ],
-            "3-way-horizontal": [
-              [null, 1, null, 2],
-              [0, null, null, 2],
-              [null, null, 0, null],
-            ],
-            "4-way": [
-              [null, 1, null, 2],
-              [0, null, null, 3],
-              [null, 3, 0, null],
-              [2, null, 1, null],
-            ],
-            "5-way": [
-              [null, 1, null, 3],
-              [0, 2, null, 4],
-              [1, null, null, 4],
-              [null, 4, 0, null],
-              [3, null, 1, null],
-            ],
-            "6-way": [
-              [null, 1, null, 3],
-              [0, 2, null, 4],
-              [1, null, null, 5],
-              [null, 4, 0, null],
-              [3, 5, 1, null],
-              [4, null, 2, null],
-            ],
-          };
-
-          const paneNav = navMap[mode]?.[current];
-          const dirIndex =
-            { ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3 }[dir] ??
-            -1;
-          const next = paneNav?.[dirIndex] ?? null;
-          if (next === null) return;
-
-          focusedPaneIndexRef.current = next;
-          setFocusedPaneIndex(next);
-          // Physically move DOM focus into the target pane's terminal
-          const tabId = paneTabIdsRef.current[next];
-          if (tabId) {
-            const termRef = terminalRefs.current.get(tabId);
-            (termRef?.current as TabHandle | null)?.focus?.();
-          }
+      // Alt+Arrow moves between panes of the active split
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+        const direction = (
+          {
+            ArrowLeft: "left",
+            ArrowRight: "right",
+            ArrowUp: "up",
+            ArrowDown: "down",
+          } as Record<string, NavDirection>
+        )[e.code];
+        if (direction && splitActionsRef.current?.navigate(direction)) {
+          e.preventDefault();
           return;
         }
       }
@@ -831,7 +848,9 @@ export function AppShell({
       // Cmd+1..9 on macOS, Alt+1..9 elsewhere — jump directly to the tab at that position
       const tabDigit = getTabJumpDigit(e);
       if (tabDigit !== null) {
-        const currentTabs = tabsRef.current;
+        const currentTabs = tabsRef.current.filter(
+          (tab) => !tab.parentSplitTabId,
+        );
         const index = tabDigit - 1;
         if (index < currentTabs.length) {
           e.preventDefault();
@@ -844,7 +863,9 @@ export function AppShell({
       if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
         if (e.code === "BracketRight" || e.code === "BracketLeft") {
           e.preventDefault();
-          const currentTabs = tabsRef.current;
+          const currentTabs = tabsRef.current.filter(
+            (tab) => !tab.parentSplitTabId,
+          );
           if (currentTabs.length < 2) return;
           const currentId = activeTabIdRef.current;
           const idx = currentTabs.findIndex((t) => t.id === currentId);
@@ -1165,10 +1186,6 @@ export function AppShell({
     return buildLayoutPayload({
       tabs,
       activeTabId,
-      splitMode,
-      paneTabIds,
-      rowSizes,
-      rowColSizes,
       sidebar: {
         left: { view: railView, open: sidebarOpen, width: sidebarWidth },
         right: {
@@ -1188,85 +1205,101 @@ export function AppShell({
     for (const tab of [...tabsRef.current]) {
       doCloseTab(tab.id);
     }
+    // Tabs reopened here must not be pulled into a pane of the old layout.
+    suppressPaneTargetRef.current = true;
+    pendingPaneTargetRef.current = null;
+    try {
+      const slotIdToNewTabId = new Map<string, string>();
+      const skippedTabs: string[] = [];
 
-    const slotIdToNewTabId = new Map<string, string>();
-    const skippedTabs: string[] = [];
+      for (const snapshot of payload.tabs) {
+        const target = resolveLayoutTabTarget(snapshot, allHostsRef.current);
 
-    for (const snapshot of payload.tabs) {
-      const target = resolveLayoutTabTarget(snapshot, allHostsRef.current);
+        if (target.kind === "skip") {
+          skippedTabs.push(snapshot.hostNameSnapshot || snapshot.label);
+          continue;
+        }
 
-      if (target.kind === "skip") {
-        skippedTabs.push(snapshot.hostNameSnapshot || snapshot.label);
-        continue;
+        if (target.kind === "singleton") {
+          openSingletonTab(
+            snapshot.type,
+            undefined,
+            target.host,
+            snapshotData(snapshot),
+          );
+          slotIdToNewTabId.set(snapshot.slotId, snapshot.type);
+          continue;
+        }
+
+        if (target.kind === "host") {
+          const newTabId = openTab(target.host, snapshot.type, {
+            instanceId: createId(),
+            restoredSessionId: null,
+            savedLabel: snapshot.customLabel ?? snapshot.label,
+            initialFilePath: snapshot.initialFilePath,
+            initialPath: snapshot.initialPath,
+          });
+          slotIdToNewTabId.set(snapshot.slotId, newTabId);
+        }
       }
 
-      if (target.kind === "singleton") {
-        openSingletonTab(
-          snapshot.type,
-          undefined,
-          target.host,
-          snapshotData(snapshot),
+      const splitIdBySlotId = new Map<string, string>();
+      const splitIdByTabId = new Map<string, string>();
+      let firstSplitId: string | null = null;
+      resolveLayoutSplits(payload, slotIdToNewTabId).forEach((saved, index) => {
+        const splitTab = makeSplitTab(
+          createId(),
+          saved.label || name || splitLabel(index + 1),
+          saved.split,
         );
-        slotIdToNewTabId.set(snapshot.slotId, snapshot.type);
-        continue;
+        if (saved.slotId) splitIdBySlotId.set(saved.slotId, splitTab.id);
+        for (const pane of listPanes(saved.split.root)) {
+          if (pane.tabId) splitIdByTabId.set(pane.tabId, splitTab.id);
+        }
+        firstSplitId ??= splitTab.id;
+        setTabs((prev) => addSplitTab(prev, splitTab));
+      });
+
+      // A tab that now sits in a split is shown through its split.
+      const activeSlot = payload.activeSlotId;
+      const activeTabInLayout = activeSlot
+        ? slotIdToNewTabId.get(activeSlot)
+        : undefined;
+      const activeId =
+        (activeSlot ? splitIdBySlotId.get(activeSlot) : undefined) ??
+        (activeTabInLayout
+          ? (splitIdByTabId.get(activeTabInLayout) ?? activeTabInLayout)
+          : undefined) ??
+        firstSplitId ??
+        "dashboard";
+      setActiveTabId(activeId);
+
+      // Older payloads predate the sidebar field, so leave the docks alone then.
+      const sidebar = payload.sidebar;
+      if (sidebar) {
+        if (sidebar.left.view) {
+          setRailView(
+            (sidebar.left.view === "split-screen"
+              ? "hosts"
+              : sidebar.left.view) as RailView,
+          );
+        }
+        setSidebarOpen(sidebar.left.open);
+        if (sidebar.left.width) setSidebarWidth(sidebar.left.width);
+
+        const right = sidebar.right.open ? sidebar.right.view : null;
+        setRightRailView(
+          right && rightDockableIds().includes(right)
+            ? (right as RailView)
+            : null,
+        );
+        if (sidebar.right.width) setRightSidebarWidth(sidebar.right.width);
       }
 
-      if (target.kind === "host") {
-        const newTabId = openTab(target.host, snapshot.type, {
-          instanceId: crypto.randomUUID(),
-          restoredSessionId: null,
-          savedLabel: snapshot.customLabel ?? snapshot.label,
-          initialFilePath: snapshot.initialFilePath,
-          initialPath: snapshot.initialPath,
-        });
-        slotIdToNewTabId.set(snapshot.slotId, newTabId);
-      }
+      return { skipped: skippedTabs };
+    } finally {
+      suppressPaneTargetRef.current = false;
     }
-
-    const restoredPaneIds = remapSlotIds(payload.paneTabIds, slotIdToNewTabId);
-    let restoredSplitTabId: string | null = null;
-    if (payload.splitMode !== "none" && restoredPaneIds.some(Boolean)) {
-      const instanceId = crypto.randomUUID();
-      restoredSplitTabId = `split-${instanceId}`;
-      const splitTab: Tab = {
-        id: restoredSplitTabId,
-        instanceId,
-        type: "split-screen",
-        label: name,
-        openedAt: Date.now(),
-        splitConfig: createSplitConfig(
-          payload.splitMode,
-          restoredPaneIds,
-          payload,
-        ),
-      };
-      setTabs((prev) =>
-        assignTabsToSplit([...prev, splitTab], splitTab.id, restoredPaneIds),
-      );
-    }
-
-    const activeId = payload.activeSlotId
-      ? (slotIdToNewTabId.get(payload.activeSlotId) ?? "dashboard")
-      : "dashboard";
-    setActiveTabId(restoredSplitTabId ?? activeId);
-
-    // Older payloads predate the sidebar field, so leave the docks alone then.
-    const sidebar = payload.sidebar;
-    if (sidebar) {
-      if (sidebar.left.view) setRailView(sidebar.left.view as RailView);
-      setSidebarOpen(sidebar.left.open);
-      if (sidebar.left.width) setSidebarWidth(sidebar.left.width);
-
-      const right = sidebar.right.open ? sidebar.right.view : null;
-      setRightRailView(
-        right && rightDockableIds().includes(right)
-          ? (right as RailView)
-          : null,
-      );
-      if (sidebar.right.width) setRightSidebarWidth(sidebar.right.width);
-    }
-
-    return { skipped: skippedTabs };
   }
 
   // On load: always read saved tabs from DB so background sessions are preserved across refreshes.
@@ -1365,8 +1398,8 @@ export function AppShell({
     if (tabsReady) notifyShellReady();
   }, [tabsReady]);
 
-  // Restore named split tabs once their child sessions have stable live ids. The old
-  // singleton keys are migrated once into Split #1 so existing layouts are preserved.
+  // Restore split tabs once their child sessions have stable live ids. The
+  // oldest single-split keys are migrated once into a first split.
   useEffect(() => {
     if (!tabsReady || paneLayoutRestoredRef.current) return;
     paneLayoutRestoredRef.current = true;
@@ -1374,60 +1407,41 @@ export function AppShell({
     try {
       const savedSplitTabs = JSON.parse(
         localStorage.getItem("termix_splitTabs") ?? "[]",
-      ) as PersistedSplitTab[];
+      ) as unknown;
       if (Array.isArray(savedSplitTabs) && savedSplitTabs.length > 0) {
         setTabs((prev) => restoreSplitTabs(savedSplitTabs, prev));
-        splitTabsRestoredRef.current = true;
         return;
       }
 
-      const savedInstanceIds: (string | null)[] = JSON.parse(
+      const savedInstanceIds = JSON.parse(
         localStorage.getItem("termix_paneInstanceIds") ?? "null",
+      ) as unknown;
+      const savedMode = localStorage.getItem("termix_splitMode");
+      if (!Array.isArray(savedInstanceIds) || !savedMode) return;
+      const savedSizes = JSON.parse(
+        localStorage.getItem("termix_paneSizes") ?? "null",
+      ) as { rowSizes?: unknown; rowColSizes?: unknown } | null;
+      const tabIdByInstanceId = new Map(
+        tabs.map((tab) => [tab.instanceId, tab.id]),
       );
-      const savedMode = localStorage.getItem("termix_splitMode") as SplitMode;
-      if (
-        !Array.isArray(savedInstanceIds) ||
-        !savedMode ||
-        savedMode === "none"
-      ) {
-        splitTabsRestoredRef.current = true;
-        return;
-      }
-
-      const restored = savedInstanceIds.map((instanceId) => {
-        if (instanceId == null) return null;
-        return tabs.find((t) => t.instanceId === instanceId)?.id ?? null;
-      });
-      if (restored.some((id) => id != null)) {
-        let sizes = defaultSizes(savedMode);
-        try {
-          const savedSizes = JSON.parse(
-            localStorage.getItem("termix_paneSizes") ?? "null",
-          ) as { rowSizes?: number[]; rowColSizes?: RowColSizes } | null;
-          if (
-            Array.isArray(savedSizes?.rowSizes) &&
-            Array.isArray(savedSizes?.rowColSizes)
-          ) {
-            sizes = {
-              rowSizes: savedSizes.rowSizes,
-              rowColSizes: savedSizes.rowColSizes,
-            };
-          }
-        } catch {
-          // silently fail
-        }
-        const instanceId = crypto.randomUUID();
-        const id = `split-${instanceId}`;
-        const splitTab: Tab = {
-          id,
-          instanceId,
-          type: "split-screen",
-          label: "Split #1",
-          openedAt: Date.now(),
-          splitConfig: createSplitConfig(savedMode, restored, sizes),
-        };
-        setTabs((prev) => assignTabsToSplit([...prev, splitTab], id, restored));
-        setActiveTabId(id);
+      const root = fromLegacyConfig(
+        savedMode,
+        savedInstanceIds.map((instanceId) =>
+          typeof instanceId === "string"
+            ? (tabIdByInstanceId.get(instanceId) ?? null)
+            : null,
+        ),
+        savedSizes?.rowSizes,
+        savedSizes?.rowColSizes,
+      );
+      if (root && listPanes(root).some((pane) => pane.tabId)) {
+        const splitTab = makeSplitTab(
+          createId(),
+          splitLabel(1),
+          createSplitState(root),
+        );
+        setTabs((prev) => addSplitTab(prev, splitTab));
+        setActiveTabId(splitTab.id);
       }
     } catch {
       // silently fail
@@ -1470,10 +1484,6 @@ export function AppShell({
     if (tabsReady) notifyTabsChanged();
   }, [
     tabs,
-    paneTabIds,
-    splitMode,
-    rowSizes,
-    rowColSizes,
     tabsReady,
     railView,
     sidebarOpen,
@@ -1511,16 +1521,12 @@ export function AppShell({
           JSON.stringify(t.data ?? null) === dataKey,
       );
       if (existing) {
-        setActiveTabId(existing.id);
+        placeOpenedTabRef.current(existing.id);
         return existing.id;
       }
     }
     const tabId = `${host.name}-${type}-${Date.now()}`;
-    const instanceId =
-      restore?.instanceId ??
-      (typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
+    const instanceId = restore?.instanceId ?? createId();
     const openedAt = Date.now();
     const ref = isSessionTabType(type) ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
@@ -1597,7 +1603,7 @@ export function AppShell({
         },
       ];
     });
-    setActiveTabId(tabId);
+    placeOpenedTabRef.current(tabId);
 
     if (isPersistentTabType(type)) {
       addOpenTab({
@@ -1643,10 +1649,7 @@ export function AppShell({
 
   /** A tab type that opens a fresh tab every time (a local shell). */
   function openMultiInstanceTab(type: TabType): string {
-    const instanceId =
-      typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    const instanceId = createId();
     const id = `${type}-${instanceId}`;
     const titleKey = getTabType(type)?.titleKey;
     const title = titleKey ? t(titleKey) : type;
@@ -1663,7 +1666,7 @@ export function AppShell({
         },
       ];
     });
-    setActiveTabId(id);
+    placeOpenedTabRef.current(id);
     return id;
   }
 
@@ -1750,7 +1753,7 @@ export function AppShell({
           },
         ];
       });
-      setActiveTabId(id);
+      placeOpenedTabRef.current(id);
       if (isPersistentTabType(type)) {
         addOpenTab({
           id,
@@ -1802,6 +1805,10 @@ export function AppShell({
     }
 
     terminalRefs.current.delete(id);
+    if (isSplitTab(tabToClose)) {
+      unsplit(id);
+      return;
+    }
     if (id === activeTabId) {
       const remaining = tabs.filter(
         (tab) => tab.id !== id && !tab.parentSplitTabId,
@@ -1810,26 +1817,9 @@ export function AppShell({
         remaining.length > 0 ? remaining[remaining.length - 1].id : "dashboard",
       );
     }
-    setPaneTabIds((prev) => prev.map((p) => (p === id ? null : p)));
     setTabs((prev) => {
-      const next =
-        tabToClose?.type === "split-screen"
-          ? releaseSplitTabs(prev, id)
-          : prev
-              .filter((tab) => tab.id !== id)
-              .map((tab) =>
-                tab.type === "split-screen" && tab.splitConfig
-                  ? {
-                      ...tab,
-                      splitConfig: {
-                        ...tab.splitConfig,
-                        paneTabIds: tab.splitConfig.paneTabIds.map((paneId) =>
-                          paneId === id ? null : paneId,
-                        ),
-                      },
-                    }
-                  : tab,
-              );
+      // A pane that held the tab stays, empty and focused, ready for the next one.
+      const next = removeTab(prev, id);
       if (next.length === 0)
         return [
           {
@@ -1890,8 +1880,17 @@ export function AppShell({
     doCloseTab(id);
   }
 
+  // In a split, closing acts on the focused pane: its session, or the pane
+  // itself once it is empty.
   closeActiveTabRef.current = () => {
     const id = activeTabIdRef.current;
+    const active = tabsRef.current.find((tab) => tab.id === id);
+    if (isSplitTab(active)) {
+      const tabId = focusedSessionTabId();
+      if (tabId) closeTab(tabId);
+      else closePaneOf(active.id, active.split.focusedPaneId);
+      return;
+    }
     if (id !== "dashboard") closeTab(id);
   };
 
@@ -1907,101 +1906,337 @@ export function AppShell({
     }
   }
 
-  function splitTabQuick(tabId: string, mode: SplitMode) {
-    if (mode === "none") return;
-    const count = PANE_COUNTS[mode];
-    const paneIds: (string | null)[] = Array(6).fill(null);
-    paneIds[0] = tabId;
-    let slot = 1;
-    for (const tab of tabs) {
-      if (slot >= count) break;
-      if (
-        tab.id !== tabId &&
-        tab.type !== "dashboard" &&
-        tab.type !== "split-screen" &&
-        !tab.parentSplitTabId
-      ) {
-        paneIds[slot++] = tab.id;
-      }
-    }
-    const splitNumber =
-      tabs.filter((tab) => tab.type === "split-screen").length + 1;
-    const instanceId =
-      typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
-    const id = `split-${instanceId}`;
-    const sizes = defaultSizes(mode);
-    const splitTab: Tab = {
-      id,
-      instanceId,
-      type: "split-screen",
-      label: `Split #${splitNumber}`,
-      openedAt: Date.now(),
-      splitConfig: createSplitConfig(mode, paneIds, sizes),
-    };
-    setTabs((prev) => assignTabsToSplit([...prev, splitTab], id, paneIds));
-    setActiveTabId(id);
-    setSplitMode(mode);
-    setPaneTabIds(paneIds);
-    setRowSizes(sizes.rowSizes);
-    setRowColSizes(sizes.rowColSizes);
-  }
+  // ─── Split screen ────────────────────────────────────────────────────────
 
-  function addTabToSplit(tabId: string) {
-    if (splitMode === "none") {
-      splitTabQuick(tabId, "2-way");
-      return;
-    }
-    setPaneTabIds((prev) => {
-      // Remove from any current slot first
-      const next = prev.map((p) => (p === tabId ? null : p));
-      // Find first empty slot within the current pane count
-      const count = PANE_COUNTS[splitMode];
-      for (let i = 0; i < count; i++) {
-        if (!next[i]) {
-          next[i] = tabId;
-          break;
-        }
-      }
-      return next;
-    });
-  }
+  const splitLabel = (number: number) =>
+    t("splitScreen.defaultLabel", { number });
 
-  function removeTabFromSplit(tabId: string) {
-    setPaneTabIds((prev) => prev.map((p) => (p === tabId ? null : p)));
-  }
-
-  function selectSplitMode(mode: SplitMode) {
-    const active = tabs.find((tab) => tab.id === activeTabId);
-    if (mode === "none") {
-      if (active?.type === "split-screen") doCloseTab(active.id);
-      return;
-    }
-    if (active?.type === "split-screen") {
-      changeSplitMode(mode);
-      return;
-    }
-    if (active && active.type !== "dashboard") {
-      splitTabQuick(active.id, mode);
-      return;
-    }
-    const firstSession = tabs.find(
-      (tab) =>
-        tab.type !== "dashboard" &&
-        tab.type !== "split-screen" &&
-        !tab.parentSplitTabId,
+  /**
+   * Edits a split with a change computed from the last committed state, for
+   * edits that create panes and so have to know the new pane's id.
+   */
+  function commitSplit(
+    splitTabId: string,
+    fn: (state: SplitState) => SplitState | null,
+  ): SplitState | null {
+    const current = tabsRef.current.find((tab) => tab.id === splitTabId);
+    if (!isSplitTab(current)) return null;
+    const next = fn(current.split);
+    setTabs((prev) =>
+      updateSplit(prev, splitTabId, (state) =>
+        state === current.split ? next : fn(state),
+      ),
     );
-    if (firstSession) splitTabQuick(firstSession.id, mode);
+    return next;
   }
 
-  function assignPane(paneIndex: number, tabId: string) {
-    setPaneTabIds((prev) => {
-      const next = prev.map((p) => (p === tabId ? null : p));
-      next[paneIndex] = tabId || null;
-      return next;
-    });
+  function editSplit(
+    splitTabId: string,
+    fn: (state: SplitState) => SplitState | null,
+  ) {
+    setTabs((prev) => updateSplit(prev, splitTabId, fn));
   }
+
+  function warnSplitFull() {
+    toast.error(t("splitScreen.maxPanes", { count: MAX_PANES }));
+  }
+
+  function openSplitTab(state: SplitState): SplitTab {
+    const number = nextSplitNumber(tabsRef.current, splitLabel);
+    const splitTab = makeSplitTab(createId(), splitLabel(number), state);
+    setTabs((prev) => addSplitTab(prev, splitTab));
+    setActiveTabId(splitTab.id);
+    return splitTab;
+  }
+
+  /** A new split of `tabId` (or of an empty pane) with a fresh pane at `edge`. */
+  function startSplit(tabId: string | null, edge: PaneEdge): SplitTab {
+    const own = createPane(tabId);
+    const fresh = createPane();
+    const leading = edge === "left" || edge === "top";
+    const root = createSplitNode(
+      edge === "left" || edge === "right" ? "row" : "column",
+      leading ? [fresh, own] : [own, fresh],
+    );
+    return openSplitTab(createSplitState(root, fresh.id));
+  }
+
+  function splitPaneOf(splitTabId: string, paneId: string, edge: PaneEdge) {
+    commitSplit(splitTabId, (state) => {
+      const result = splitPane(state, paneId, edge);
+      if (!result) warnSplitFull();
+      return result ? result.state : state;
+    });
+    setActiveTabId(splitTabId);
+  }
+
+  /**
+   * Splits a tab: a split grows at its focused pane, a tab inside a split
+   * grows at its own pane, anything else becomes a new split.
+   */
+  function splitTabAt(tabId: string, edge: PaneEdge) {
+    const current = tabsRef.current;
+    const tab = current.find((t) => t.id === tabId);
+    if (!tab) return;
+    if (isSplitTab(tab)) {
+      splitPaneOf(tab.id, tab.split.focusedPaneId, edge);
+      return;
+    }
+    const parent = splitTabOf(current, tabId);
+    const pane = parent ? findPaneByTab(parent.split, tabId) : undefined;
+    if (parent && pane) {
+      splitPaneOf(parent.id, pane.id, edge);
+      return;
+    }
+    startSplit(canJoinSplit(tab) ? tab.id : null, edge);
+  }
+
+  function applyLayoutPreset(presetId: SplitPresetId) {
+    const active = tabsRef.current.find(
+      (tab) => tab.id === activeTabIdRef.current,
+    );
+    if (isSplitTab(active)) {
+      commitSplit(active.id, (state) => applyPreset(state, presetId));
+      return;
+    }
+    const root = buildPreset(
+      presetId,
+      active && canJoinSplit(active) ? [active.id] : [],
+    );
+    openSplitTab(createSplitState(root));
+  }
+
+  /** Closes a split tab, sending its tabs back to the tab bar. */
+  function unsplit(splitTabId: string) {
+    const split = tabsRef.current.find((tab) => tab.id === splitTabId);
+    if (!isSplitTab(split)) return;
+    const focusedTabId =
+      findPane(split.split, split.split.focusedPaneId)?.tabId ??
+      listPanes(split.split.root).find((pane) => pane.tabId)?.tabId ??
+      null;
+    setTabs((prev) => closeSplitTab(prev, splitTabId));
+    if (activeTabIdRef.current === splitTabId) {
+      const fallback = tabsRef.current.filter(
+        (tab) => tab.id !== splitTabId && !tab.parentSplitTabId,
+      );
+      setActiveTabId(
+        focusedTabId ?? fallback[fallback.length - 1]?.id ?? "dashboard",
+      );
+    }
+  }
+
+  /** Removes a pane; its tab, if any, goes back to the tab bar. */
+  function closePaneOf(splitTabId: string, paneId: string) {
+    const split = tabsRef.current.find((tab) => tab.id === splitTabId);
+    if (!isSplitTab(split)) return;
+    if (listPanes(split.split.root).length <= 1) {
+      unsplit(splitTabId);
+      return;
+    }
+    editSplit(splitTabId, (state) => removePane(state, paneId));
+  }
+
+  function handleTabSplitAction(action: TabSplitAction) {
+    switch (action.kind) {
+      case "split":
+        splitTabAt(action.tabId, action.edge);
+        break;
+      case "splitActive":
+        splitTabAt(activeTabIdRef.current, action.edge);
+        break;
+      case "preset":
+        applyLayoutPreset(action.presetId);
+        break;
+      case "unsplit":
+        unsplit(action.splitTabId);
+        break;
+      case "addToPane":
+        setTabs((prev) =>
+          placeTabInPane(prev, action.splitTabId, action.paneId, action.tabId),
+        );
+        setActiveTabId(action.splitTabId);
+        break;
+      case "addPane":
+        commitSplit(action.splitTabId, (state) => {
+          const result = addPaneAtEdge(state, action.edge, action.tabId);
+          if (!result) warnSplitFull();
+          return result ? result.state : state;
+        });
+        setActiveTabId(action.splitTabId);
+        break;
+    }
+  }
+
+  /** "Open in split" from the host list: aim the next tab, then open it. */
+  const splitOpenerRef = useRef<
+    (target: SplitOpenTarget, open: () => void) => void
+  >(() => {});
+  splitOpenerRef.current = (target, open) => {
+    if (target.kind === "pane") {
+      targetPane(target.splitTabId, target.paneId);
+    } else if (target.kind === "newPane") {
+      const split = tabsRef.current.find((tab) => tab.id === target.splitTabId);
+      if (!isSplitTab(split)) return;
+      const result = addPaneAtEdge(split.split, "right");
+      if (!result) {
+        warnSplitFull();
+        return;
+      }
+      editSplit(split.id, (state) =>
+        state === split.split ? result.state : state,
+      );
+      setActiveTabId(split.id);
+      targetPane(split.id, result.paneId, true);
+    } else {
+      const active = tabsRef.current.find(
+        (tab) => tab.id === activeTabIdRef.current,
+      );
+      if (!active || !canJoinSplit(active)) return;
+      const splitTab = startSplit(active.id, "right");
+      targetPane(splitTab.id, splitTab.split.focusedPaneId, true);
+    }
+    open();
+  };
+
+  /** A tab or pane dropped on the main area. */
+  const splitDropRef = useRef<
+    (source: SplitDragSource, hover: SplitDropHover) => void
+  >(() => {});
+  splitDropRef.current = (source, hover) => {
+    if (source.kind === "pane") {
+      const toPaneId = hover.paneId;
+      if (!toPaneId) return;
+      editSplit(source.splitTabId, (state) =>
+        movePane(state, source.paneId, toPaneId, hover.target),
+      );
+      return;
+    }
+    const active = tabsRef.current.find(
+      (tab) => tab.id === activeTabIdRef.current,
+    );
+    if (hover.paneId === null) {
+      if (hover.target === "center") return;
+      const other =
+        active && canJoinSplit(active) && active.id !== source.tabId
+          ? active.id
+          : null;
+      const dragged = createPane(source.tabId);
+      const rest = createPane(other);
+      const leading = hover.target === "left" || hover.target === "top";
+      const root = createSplitNode(
+        hover.target === "left" || hover.target === "right" ? "row" : "column",
+        leading ? [dragged, rest] : [rest, dragged],
+      );
+      openSplitTab(createSplitState(root, dragged.id));
+      return;
+    }
+    if (!isSplitTab(active)) return;
+    const paneId = hover.paneId;
+    if (hover.target === "center") {
+      setTabs((prev) => placeTabInPane(prev, active.id, paneId, source.tabId));
+      return;
+    }
+    const edge = hover.target;
+    commitSplit(active.id, (state) => {
+      const result = splitPane(state, paneId, edge, source.tabId);
+      if (!result) warnSplitFull();
+      return result ? result.state : state;
+    });
+  };
+
+  splitActionsRef.current = {
+    splitActive: (edge) => splitTabAt(activeTabIdRef.current, edge),
+    navigate: (direction) => {
+      const active = tabsRef.current.find(
+        (tab) => tab.id === activeTabIdRef.current,
+      );
+      if (!isSplitTab(active)) return false;
+      const view = document.querySelector(`[data-split-view="${active.id}"]`);
+      if (!view) return false;
+      const rects: Record<string, PaneRect> = {};
+      view
+        .querySelectorAll<HTMLElement>("[data-split-pane-id]")
+        .forEach((el) => {
+          const id = el.dataset.splitPaneId;
+          if (id) rects[id] = el.getBoundingClientRect();
+        });
+      const next = neighborPane(active.split.focusedPaneId, direction, rects);
+      if (next) editSplit(active.id, (state) => focusPane(state, next));
+      return true;
+    },
+    zoomFocused: () => {
+      const active = tabsRef.current.find(
+        (tab) => tab.id === activeTabIdRef.current,
+      );
+      if (!isSplitTab(active) || listPanes(active.split.root).length < 2) {
+        return false;
+      }
+      editSplit(active.id, (state) => toggleZoom(state, state.focusedPaneId));
+      return true;
+    },
+    closeFocusedPane: () => {
+      const active = tabsRef.current.find(
+        (tab) => tab.id === activeTabIdRef.current,
+      );
+      if (isSplitTab(active)) {
+        closePaneOf(active.id, active.split.focusedPaneId);
+      }
+    },
+  };
+
+  useEffect(() => {
+    const disposeOpener = setSplitOpener((target, open) =>
+      splitOpenerRef.current(target, open),
+    );
+    const disposeDrop = setSplitDropHandler((source, hover) =>
+      splitDropRef.current(source, hover),
+    );
+    const activeIsSplit = () =>
+      isSplitTab(
+        tabsRef.current.find((tab) => tab.id === activeTabIdRef.current),
+      );
+    const entries = [
+      registerPaletteEntry({
+        id: "core.split.right",
+        titleKey: "splitScreen.splitRight",
+        icon: Columns2,
+        keywords: ["split", "pane"],
+        scope: "global",
+        run: () => splitActionsRef.current?.splitActive("right"),
+      }),
+      registerPaletteEntry({
+        id: "core.split.down",
+        titleKey: "splitScreen.splitDown",
+        icon: Rows2,
+        keywords: ["split", "pane"],
+        scope: "global",
+        run: () => splitActionsRef.current?.splitActive("bottom"),
+      }),
+      registerPaletteEntry({
+        id: "core.split.zoom",
+        titleKey: "splitScreen.zoom",
+        icon: Maximize2,
+        keywords: ["split", "pane"],
+        scope: "global",
+        when: activeIsSplit,
+        run: () => void splitActionsRef.current?.zoomFocused(),
+      }),
+      registerPaletteEntry({
+        id: "core.split.closePane",
+        titleKey: "splitScreen.closePane",
+        icon: X,
+        keywords: ["split", "pane"],
+        scope: "global",
+        when: activeIsSplit,
+        run: () => splitActionsRef.current?.closeFocusedPane(),
+      }),
+    ];
+    return () => {
+      disposeOpener();
+      disposeDrop();
+      for (const dispose of entries) dispose();
+    };
+  }, []);
 
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
 
@@ -2108,14 +2343,100 @@ export function AppShell({
     return id;
   }, [tabs]);
 
+  const activeTab = tabs.find((tab) => tab.id === activeTabId);
+  const activeSplit = isSplitTab(activeTab) ? activeTab : null;
+  // The pane each on-screen tab sits in, for the active split only.
+  const paneIdByTabId = new Map<string, string>();
+  if (activeSplit) {
+    for (const pane of shownPanes(activeSplit.split, isMobile)) {
+      if (pane.tabId) paneIdByTabId.set(pane.tabId, pane.id);
+    }
+  }
+  // Changes when panes appear, move or change tab, but not on a divider drag,
+  // which fits the terminals itself once it ends.
+  const splitShapeKey = activeSplit
+    ? `${activeSplit.id}|${activeSplit.split.zoomedPaneId ?? ""}|${[
+        ...paneIdByTabId.entries(),
+      ].join(",")}|${listPanes(activeSplit.split.root).length}`
+    : "";
+
   useEffect(() => {
     const id = resizeAllTerminals();
     return () => cancelAnimationFrame(id);
-  }, [splitMode, sidebarWidth, sidebarOpen, rightSidebarWidth, rightRailView]);
+  }, [
+    splitShapeKey,
+    sidebarWidth,
+    sidebarOpen,
+    rightSidebarWidth,
+    rightRailView,
+  ]);
 
-  const isSplit =
-    splitMode !== "none" &&
-    tabs.some((tab) => tab.id === activeTabId && tab.type === "split-screen");
+  // A tab inside a split is never shown on its own: activating one (tab jump,
+  // the connections panel, an existing session) shows its split instead,
+  // focused on its pane. Also falls back when the active tab is gone.
+  useLayoutEffect(() => {
+    if (!activeTab) {
+      if (!tabsReady) return;
+      const topLevel = tabs.filter((tab) => !tab.parentSplitTabId);
+      setActiveTabId(topLevel[topLevel.length - 1]?.id ?? "dashboard");
+      return;
+    }
+    if (!activeTab.parentSplitTabId) return;
+    const parent = splitTabOf(tabs, activeTab.id);
+    if (!parent) return;
+    const childId = activeTab.id;
+    setTabs((prev) =>
+      updateSplit(prev, parent.id, (state) => {
+        const pane = findPaneByTab(state, childId);
+        return pane ? focusPane(state, pane.id) : state;
+      }),
+    );
+    setActiveTabId(parent.id);
+  }, [activeTab, tabs, tabsReady]);
+
+  // Moving focus to a pane moves keyboard focus into its session, unless the
+  // user is in a menu or already typing in that pane.
+  const focusedPaneId = activeSplit?.split.focusedPaneId ?? null;
+  const focusedPaneTabId = focusedPaneId
+    ? (findPane(activeSplit!.split, focusedPaneId)?.tabId ?? null)
+    : null;
+  useEffect(() => {
+    if (!focusedPaneId || !focusedPaneTabId) return;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attempt = () => {
+      const focused = document.activeElement as HTMLElement | null;
+      const paneEl = paneElsRef.current.get(focusedPaneId);
+      if (focused && paneEl?.contains(focused)) return;
+      if (
+        focused?.closest?.(
+          '[data-split-pane-header], [role="menu"], [role="dialog"]',
+        )
+      ) {
+        return;
+      }
+      const tab = tabsRef.current.find((t) => t.id === focusedPaneTabId);
+      const handle = tab?.terminalRef?.current as TabHandle | null | undefined;
+      if (handle?.focus) {
+        handle.focus();
+        return;
+      }
+      // A session opened into the pane a moment ago may not have mounted yet.
+      if (attempts++ < 10) timer = setTimeout(attempt, 100);
+    };
+    const frame = requestAnimationFrame(attempt);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (timer) clearTimeout(timer);
+    };
+  }, [focusedPaneId, focusedPaneTabId]);
+
+  useEffect(() => {
+    publishSplitTargets({
+      splits: summarizeSplits(tabs, MAX_PANES),
+      canStartSplit: canJoinSplit(activeTab) && !activeTab?.parentSplitTabId,
+    });
+  }, [tabs, activeTab]);
 
   // Move each tab's stable DOM node to the right container (pane or normal-view).
   // This is vanilla DOM so React's portal target never changes — changing the portal
@@ -2140,9 +2461,9 @@ export function AppShell({
     for (const tab of tabs) {
       const isTerminal = !!getTabType(tab.type)?.ownBackground;
       const node = getTabNode(tab.id, isTerminal);
-      const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
-      const inPane = paneIdx !== -1;
-      const paneEl = inPane ? paneContentEls[paneIdx] : null;
+      const paneId = paneIdByTabId.get(tab.id);
+      const paneEl = paneId ? paneElsRef.current.get(paneId) : undefined;
+      const inPane = !!paneId;
       const activeInline = !inPane && tab.id === activeTabId;
 
       if (inPane && paneEl) {
@@ -2211,8 +2532,8 @@ export function AppShell({
 
   // What history/snippets/ssh-tools should act on. Falls back to the remembered
   // terminal when the active tab isn't one, and drops it once it's closed.
-  const targetTerminalTabId = terminalTabs.some((t) => t.id === activeTabId)
-    ? activeTabId
+  const targetTerminalTabId = terminalTabs.some((t) => t.id === workingTabId)
+    ? workingTabId
     : terminalTabs.some((t) => t.id === lastTerminalTabId)
       ? lastTerminalTabId
       : "";
@@ -2349,24 +2670,6 @@ export function AppShell({
               storageMode={
                 userPrefs.storageMode === "cloud" ? "cloud" : "local"
               }
-            />
-          </div>
-        )}
-
-        {railView === "split-screen" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <SplitScreenPanel
-              tabs={tabs.filter(
-                (tab) =>
-                  tab.type !== "split-screen" &&
-                  (!tab.parentSplitTabId ||
-                    tab.parentSplitTabId === activeTabId),
-              )}
-              splitMode={splitMode}
-              setSplitMode={selectSplitMode}
-              paneTabIds={paneTabIds}
-              setPaneTabIds={setPaneTabIds}
-              onAssignPane={assignPane}
             />
           </div>
         )}
@@ -2510,6 +2813,83 @@ export function AppShell({
     </Suspense>
   );
 
+  function splitViewActions(splitTabId: string): SplitViewActions {
+    return {
+      focusPane: (paneId) =>
+        editSplit(splitTabId, (state) => focusPane(state, paneId)),
+      resize: (nodeId, sizes) =>
+        editSplit(splitTabId, (state) => resizeSplit(state, nodeId, sizes)),
+      equalize: (nodeId) =>
+        editSplit(splitTabId, (state) => equalizeSplit(state, nodeId)),
+      splitPane: (paneId, edge) => splitPaneOf(splitTabId, paneId, edge),
+      closePane: (paneId) => closePaneOf(splitTabId, paneId),
+      closeSession: (tabId) => closeTab(tabId),
+      moveToTab: (paneId) => closePaneOf(splitTabId, paneId),
+      showInPane: (paneId, tabId) => {
+        if (tabId) {
+          setTabs((prev) => placeTabInPane(prev, splitTabId, paneId, tabId));
+        } else {
+          editSplit(splitTabId, (state) => assignTab(state, paneId, null));
+        }
+      },
+      swapPanes: (firstId, secondId) =>
+        editSplit(splitTabId, (state) => swapPanes(state, firstId, secondId)),
+      toggleZoom: (paneId) =>
+        editSplit(splitTabId, (state) => toggleZoom(state, paneId)),
+      resizeEnd: () => resizeAllTerminals(),
+    };
+  }
+
+  // Picking a host for a pane always starts a new session, so it never pulls
+  // a session out of the tab bar or another split.
+  const pickerShell: TabShellCallbacks = {
+    ...shellCallbacks,
+    openTab: (host, type, options) =>
+      shellCallbacks.openTab(host, type, { ...options, forceNewTab: true }),
+  };
+
+  function renderEmptyPane(
+    splitTabId: string,
+    paneId: string,
+    paneIndex: number,
+  ) {
+    return (
+      <EmptyPanePicker
+        paneIndex={paneIndex}
+        freeTabs={tabs.filter(
+          (tab) => !tab.parentSplitTabId && canJoinSplit(tab),
+        )}
+        hosts={allHosts}
+        newTabOptions={tabTypes
+          .filter((def) => def.multiInstance)
+          .map((def) => ({
+            type: def.id,
+            label: def.titleKey ? t(def.titleKey) : def.id,
+            icon: def.icon,
+          }))}
+        onPickTab={(tabId) =>
+          setTabs((prev) => placeTabInPane(prev, splitTabId, paneId, tabId))
+        }
+        onPickHost={(host, pick: PickHostTarget) => {
+          targetPane(splitTabId, paneId);
+          if ("item" in pick) {
+            const item = pick.action
+              .items?.(host)
+              .find((candidate) => candidate.id === pick.item.id);
+            item?.run(host, pickerShell);
+          } else {
+            runHostAction(pick.action, host, pickerShell);
+          }
+        }}
+        onOpenType={(type) => {
+          targetPane(splitTabId, paneId);
+          openMultiInstanceTab(type);
+        }}
+        onClosePane={() => closePaneOf(splitTabId, paneId)}
+      />
+    );
+  }
+
   const sidebarPanelContent = renderSidebarPanels(railView);
 
   // Sidebar header — shared
@@ -2626,7 +3006,6 @@ export function AppShell({
             <AppRail
               railView={railView}
               sidebarOpen={sidebarOpen}
-              splitMode={splitMode}
               username={username}
               isAdmin={showAdminUI}
               pluginsSettled={pluginsSettled}
@@ -2697,16 +3076,15 @@ export function AppShell({
               <TabBar
                 tabs={topLevelTabs}
                 activeTabId={activeTabId}
-                splitMode={splitMode}
-                paneTabIds={paneTabIds}
-                focusedPaneIndex={focusedPaneIndex}
+                splits={summarizeSplits(tabs, MAX_PANES)}
+                activeSplitFull={
+                  activeSplit ? !canAddPane(activeSplit.split) : false
+                }
                 onSetActiveTab={setActiveTabId}
                 onCloseTab={closeTab}
                 onRefreshTab={refreshTab}
                 onReorderTabs={reorderTopLevelTabs}
-                onSplitTab={splitTabQuick}
-                onAddToSplit={addTabToSplit}
-                onRemoveFromSplit={removeTabFromSplit}
+                onSplitAction={handleTabSplitAction}
                 onRenameTab={renameTab}
                 onOpenFileManager={(tabId) => {
                   const targetTab = tabs.find((t) => t.id === tabId);
@@ -2720,61 +3098,52 @@ export function AppShell({
                 onToggleRightDock={isMobile ? undefined : toggleRightDock}
                 showTabNumbers={showTabNumbers}
               />
-              <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-                {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
-                {!isMobile && (
-                  <div
-                    className="motion-workspace-layout absolute inset-0"
-                    style={{
-                      display: isSplit ? "flex" : "none",
-                      flexDirection: "column",
-                    }}
-                  >
+              <div
+                ref={mainAreaRef}
+                className="relative flex flex-col flex-1 min-h-0 overflow-hidden"
+              >
+                {activeSplit && (
+                  <div className="motion-workspace-layout absolute inset-0 flex flex-col">
                     <SplitView
+                      splitTab={activeSplit}
                       tabs={tabs}
-                      paneTabIds={paneTabIds}
-                      splitMode={splitMode}
-                      rowSizes={rowSizes}
-                      rowColSizes={rowColSizes}
-                      onRowSizesChange={setRowSizes}
-                      onRowColSizesChange={setRowColSizes}
-                      onReset={() => changeSplitMode(splitMode)}
-                      focusedPaneIndex={focusedPaneIndex}
-                      onTerminalResize={resizeAllTerminals}
+                      isMobile={isMobile}
+                      actions={splitViewActions(activeSplit.id)}
                       onPaneContentRef={onPaneContentRef}
-                      onPaneClick={setFocusedPaneIndex}
-                      onAssignPane={assignPane}
+                      renderEmptyPane={(paneId, paneIndex) =>
+                        renderEmptyPane(activeSplit.id, paneId, paneIndex)
+                      }
                     />
                   </div>
                 )}
+                <SplitDropOverlay containerRef={mainAreaRef} />
 
                 {/* Normal-view container. Tab nodes are appended here (or to pane elements)
                   by the DOM-placement effect above. React portals each tab's content
                   into its stable per-tab node so the component is never remounted.
-                  When split is active, shown on top only if the active tab is not in a pane. */}
+                  Hidden while a split is active. */}
                 <div
                   ref={normalViewRef}
                   className="absolute inset-0"
-                  style={{
-                    display: isSplit && !isMobile ? "none" : undefined,
-                  }}
+                  style={{ display: activeSplit ? "none" : undefined }}
                 >
                   {tabsByPortalOrder.map((tab) => {
                     const tabNode = getTabNode(
                       tab.id,
                       !!getTabType(tab.type)?.ownBackground,
                     );
-                    const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
-                    const inPane = paneIdx !== -1;
+                    const paneId = paneIdByTabId.get(tab.id);
+                    const inPane = !!paneId;
                     const activeInline = !inPane && tab.id === activeTabId;
                     const isFocusedPane = inPane
-                      ? paneIdx === (focusedPaneIndex ?? 0)
+                      ? paneId === focusedPaneId
                       : activeInline;
                     return createPortal(
                       renderTabContent(tab, {
                         shell: shellCallbacks,
                         isVisible: inPane || activeInline,
                         isFocusedPane,
+                        inSplit: inPane,
                         panelProps: {
                           terminalTabs,
                           targetTerminalTabId,
@@ -2796,7 +3165,6 @@ export function AppShell({
             <MobileBottomBar
               railView={railView}
               sidebarOpen={sidebarOpen}
-              splitMode={splitMode}
               onRailClick={handleRailClick}
             />
           </div>

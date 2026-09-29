@@ -54,6 +54,7 @@ export function TerminalTabContent({
   label,
   isVisible,
   isFocusedPane,
+  inSplit = false,
   handleRef,
   shell,
 }: TabProps) {
@@ -98,7 +99,7 @@ export function TerminalTabContent({
               initialPath={tab.data?.initialPath ?? tab.initialFilePath}
               title={label}
               showTitle={false}
-              splitScreen={false}
+              splitScreen={inSplit}
               onClose={() => shell.closeTab(tab.id)}
               onTitleChange={
                 host.terminalConfig?.useSSHTitle

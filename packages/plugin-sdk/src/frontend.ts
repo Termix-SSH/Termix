@@ -226,7 +226,13 @@ export interface TabProps {
   sshHost?: Record<string, unknown>;
   label: string;
   isVisible: boolean;
+  /** The pane the user is working in, or the active tab outside a split. */
   isFocusedPane: boolean;
+  /**
+   * Shown in a split pane next to other tabs. The shell moves focus between
+   * panes itself, so a tab should not grab focus on its own while this is set.
+   */
+  inSplit?: boolean;
   /** Forward to a component exposing `refresh()` or `disconnect()`. */
   handleRef: Ref<unknown>;
   shell: ShellApi;

@@ -2,7 +2,6 @@ import type {
   DashboardCardConfig,
   FontSizeId,
   UiFontId,
-  SplitMode,
 } from "@/types/ui-types";
 
 export const DASHBOARD_CARDS: DashboardCardConfig[] = [
@@ -134,25 +133,3 @@ export const FOLDER_COLORS = [
   "#ec4899",
   "#6b7280",
 ];
-
-export const SPLIT_MODES: { id: SplitMode; label: string }[] = [
-  { id: "none", label: "None" },
-  { id: "2-way", label: "2-Way" },
-  { id: "2-way-horizontal", label: "2-Way (H)" },
-  { id: "3-way", label: "3-Way (V)" },
-  { id: "3-way-horizontal", label: "3-Way (H)" },
-  { id: "4-way", label: "4-Way" },
-  { id: "5-way", label: "5-Way" },
-  { id: "6-way", label: "6-Way" },
-];
-
-export const PANE_COUNTS: Record<SplitMode, number> = {
-  none: 0,
-  "2-way": 2,
-  "2-way-horizontal": 2,
-  "3-way": 3,
-  "3-way-horizontal": 3,
-  "4-way": 4,
-  "5-way": 5,
-  "6-way": 6,
-};

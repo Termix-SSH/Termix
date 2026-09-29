@@ -42,6 +42,7 @@ export interface TabRenderProps {
   label: string;
   isVisible: boolean;
   isFocusedPane: boolean;
+  inSplit?: boolean;
   handleRef: Ref<unknown>;
   shell: TabShellCallbacks;
 }

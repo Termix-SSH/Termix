@@ -3,7 +3,6 @@ import {
   Cloud,
   Hammer,
   KeyRound,
-  LayoutPanelLeft,
   Plug,
   Server,
   Settings,
@@ -111,12 +110,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
     promotable: true,
     rightDockable: true,
-  },
-  {
-    id: "split-screen",
-    icon: LayoutPanelLeft,
-    labelKey: "nav.splitScreen",
-    separatorAfter: true,
   },
   {
     id: "sync",

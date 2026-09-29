@@ -253,6 +253,7 @@ export async function renderPlugin(
           label={type}
           isVisible
           isFocusedPane
+          inSplit={false}
           handleRef={null}
           shell={shell}
           {...props}
@@ -276,6 +277,7 @@ export async function renderPlugin(
           label={tab.label}
           isVisible
           isFocusedPane
+          inSplit={false}
           handleRef={null}
           shell={shell}
         />,

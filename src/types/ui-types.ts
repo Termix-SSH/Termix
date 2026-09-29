@@ -185,8 +185,8 @@ export type Tab = {
   initialPath?: string;
   /** Payload owned by the tab's plugin, e.g. which fleet or endpoint it shows. */
   data?: Record<string, unknown>;
-  /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
-  splitConfig?: SplitTabConfig;
+  /** Present only on a split-screen container tab. Pane tab ids reference live child tabs. */
+  split?: SplitState;
   /** Hides this session from the top-level tab bar while it belongs to a split tab. */
   parentSplitTabId?: string;
   terminalRef?: import("react").RefObject<{
@@ -252,23 +252,35 @@ export type UiFontId =
   | "caskaydia-cove";
 
 /** A tools panel view: core's own, or a rail panel a plugin registered. */
-export type ToolsTab = "ssh-tools" | "macros" | "split-screen" | (string & {});
-export type SplitMode =
-  | "none"
-  | "2-way"
-  | "2-way-horizontal"
-  | "3-way"
-  | "3-way-horizontal"
-  | "4-way"
-  | "5-way"
-  | "6-way";
+export type ToolsTab = "ssh-tools" | "macros" | (string & {});
 
-export type SplitTabConfig = {
-  mode: Exclude<SplitMode, "none">;
-  paneTabIds: (string | null)[];
-  rowSizes: number[];
-  rowColSizes: number[][];
-};
+/** "row" lays children side by side, "column" stacks them. */
+export type SplitDirection = "row" | "column";
+
+export interface PaneNode {
+  kind: "pane";
+  id: string;
+  tabId: string | null;
+}
+
+export interface SplitNode {
+  kind: "split";
+  id: string;
+  direction: SplitDirection;
+  children: LayoutNode[];
+  /** Percent of the parent per child, summing to 100. */
+  sizes: number[];
+}
+
+export type LayoutNode = PaneNode | SplitNode;
+
+/** The layout of one split tab. */
+export interface SplitState {
+  root: LayoutNode;
+  focusedPaneId: string;
+  /** A pane shown alone, filling the split, until unzoomed. */
+  zoomedPaneId?: string | null;
+}
 
 export type WorkspaceTabSnapshot = {
   /** Stable key within the saved tab list, not the live Tab.id (which is regenerated on every open). */
@@ -295,15 +307,27 @@ type WorkspaceDockState = {
   width: number;
 };
 
+/** One split tab in a saved layout, its pane tab ids swapped for slotIds. */
+export type WorkspaceSplitSnapshot = {
+  slotId: string;
+  label: string;
+  root: LayoutNode;
+  focusedPaneId: string;
+};
+
 export type WorkspacePayload = {
-  version: 1;
+  version: 1 | 2;
   tabs: WorkspaceTabSnapshot[];
+  /** A tab's slotId, or a split's. */
   activeSlotId: string | null;
-  splitMode: SplitMode;
-  /** Indexed identically to AppShell's paneTabIds (length 6), holding slotId instead of a live Tab.id. */
-  paneTabIds: (string | null)[];
-  rowSizes: number[];
-  rowColSizes: number[][];
+  /** Every split tab. Version 2 and later. */
+  splits?: WorkspaceSplitSnapshot[];
+  /** Version 1: the one split, as a fixed mode. */
+  splitMode?: string;
+  /** Version 1: indexed by the mode's pane order, holding slotIds. */
+  paneTabIds?: (string | null)[];
+  rowSizes?: number[];
+  rowColSizes?: number[][];
   /** Sidebar arrangement, so a workspace restores the whole layout and not just tabs. */
   sidebar?: {
     left: WorkspaceDockState;
