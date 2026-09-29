@@ -33,7 +33,7 @@ export interface SessionParticipantInfo {
   label: string | null;
 }
 
-function ParticipantsBadge({
+export function ParticipantsBadge({
   participants,
   ownerLabel,
 }: {
