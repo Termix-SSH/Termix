@@ -148,5 +148,17 @@
         "description": "Permitir que as sessões em direto neste servidor sejam partilhadas através de link ou com outros utilizadores."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nunca",
+        "oneHour": "1 hora",
+        "oneDay": "24 horas",
+        "sevenDays": "7 dias",
+        "thirtyDays": "30 dias",
+        "custom": "Personalizado"
+      }
+    }
   }
 }

@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "認証に失敗しました。資格情報を確認して再試行してください。",
     "timeout": "認証がタイムアウトしました。もう一度お試しください。"
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

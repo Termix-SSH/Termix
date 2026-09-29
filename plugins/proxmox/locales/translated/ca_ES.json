@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Mínim 15 segons. Amb quina freqüència s'han d'actualitzar les estadístiques del node Proxmox.",
     "proxmoxStatsNodeOverride": "Substitució del nom del node",
     "proxmoxStatsNodeOverrideDesc": "Anul·la la detecció automàtica del nom del node Proxmox (detectat per defecte mitjançant el nom de l'amfitrió).",
-    "proxmoxStatsNodeOverridePlaceholder": "Detectat automàticament des del nom d'amfitrió"
+    "proxmoxStatsNodeOverridePlaceholder": "Detectat automàticament des del nom d'amfitrió",
+    "docsLink": "Veure documents",
+    "hostNotFound": "No s'ha trobat l'amfitrió",
+    "loadingHost": "S'està carregant l'amfitrió...",
+    "none": "Cap",
+    "proxmoxGuestsSelected_one": "{{count}} convidat — {{selected}} seleccionat",
+    "proxmoxGuestsSelected_other": "{{count}} convidats — {{selected}} seleccionats",
+    "proxmoxImportButton_one": "Importa l'amfitrió {{count}}",
+    "proxmoxImportButton_other": "Importa els amfitrions {{count}}"
   },
   "proxmoxStats": {
     "tabTitle": "Estadístiques de Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "No s'han trobat màquines virtuals ni contenidors LXC en aquest node.",
     "noGuestsMatch": "No hi ha convidats que coincideixin amb els filtres actuals."
+  },
+  "terminal": {
+    "connected": "Connectat"
   }
 }

@@ -470,5 +470,8 @@
     },
     "seconds": "secondes",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Serveur distant requis. Connectez un serveur distant dans les paramètres pour utiliser ce type de connexion."
   }
 }

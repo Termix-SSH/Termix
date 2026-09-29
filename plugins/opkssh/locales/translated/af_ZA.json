@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Verifikasie het misluk. Kontroleer asseblief jou geloofsbriewe en probeer weer.",
     "timeout": "Verifikasie het verstryk. Probeer asseblief weer."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

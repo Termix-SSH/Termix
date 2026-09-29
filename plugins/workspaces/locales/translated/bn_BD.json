@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "কর্মক্ষেত্র",
     "workflow_workspaces_desc": "খোলা ট্যাবগুলো সংরক্ষণ করুন এবং পরে সম্পূর্ণ লেআউটটি আবার খুলুন।"
+  },
+  "hosts": {
+    "docsLink": "নথি দেখুন"
   }
 }

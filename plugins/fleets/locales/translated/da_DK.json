@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flåder"
+  },
+  "hosts": {
+    "docsLink": "Se dokumenter",
+    "sharing": {
+      "customHoursPlaceholder": "Timer indtil adgangen udløber",
+      "expiry": {
+        "never": "Aldrig",
+        "oneHour": "1 time",
+        "oneDay": "24 timer",
+        "sevenDays": "7 dage",
+        "thirtyDays": "30 dage",
+        "custom": "Skik"
+      },
+      "expiryLabel": "Udløb af adgang",
+      "levels": {
+        "connect": {
+          "label": "Forbinde",
+          "description": "Kun åbne sessioner: terminal, fjernskrivebord, filhåndtering, tunneler og Docker. Ingen adgang til værtkonfigurationen."
+        },
+        "view": {
+          "label": "Udsigt",
+          "description": "Opret forbindelse, plus se værtkonfigurationen. Hemmeligheder vises aldrig."
+        },
+        "edit": {
+          "label": "Redigere",
+          "description": "Se og rediger ikke-godkendelseshostindstillinger. Ejerens SSH-godkendelse forbliver privat og kun for ejeren."
+        },
+        "manage": {
+          "label": "Styre",
+          "description": "Rediger, plus del værten med andre, skift tilladelsesniveauer og tilbagekald adgang."
+        }
+      },
+      "noMatches": "Ingen matches fundet",
+      "permissionLevelLabel": "Tilladelsesniveau",
+      "rolesTab": "Roller",
+      "searchPlaceholder": "Søg efter brugere eller roller...",
+      "shareButton": "Dele",
+      "shareWithCount": "Del ({{count}})",
+      "usersTab": "Brugere"
+    }
   }
 }

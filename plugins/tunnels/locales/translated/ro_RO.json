@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Redirecționează un port de pe serverul la distanță înapoi către un port local de pe mașina ta.",
     "tunnelRequirementsText": "Serverul SSH trebuie să aibă setate GatewayPorts da, AllowTcpForwarding da și PermitRootLogin da în /etc/ssh/sshd_config.",
     "tunnelSettings": "Setări tunel",
-    "tunnelType": "Tipul de tunel"
+    "tunnelType": "Tipul de tunel",
+    "bindHost": "Legați gazda",
+    "docsLink": "Vizualizați documentele",
+    "hostNotFound": "Gazdă negăsită",
+    "loadingHost": "Se încarcă gazda..."
   },
   "nav": {
     "portForwarding": "Redirecționare",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinamic (-D)",
     "typeLocal": "Local (-L)",
     "typeRemote": "Telecomandă (-R)",
-    "working": "Lucru..."
+    "working": "Lucru...",
+    "start": "Început",
+    "stop": "Stop"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tuneluri",
+    "feature_tunnels_desc": "Redirecționează porturile printr-un server pentru a accesa servicii care nu sunt expuse."
   }
 }

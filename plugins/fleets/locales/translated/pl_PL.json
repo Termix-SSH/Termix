@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Floty"
+  },
+  "hosts": {
+    "docsLink": "Zobacz dokumentację",
+    "sharing": {
+      "customHoursPlaceholder": "Godziny do wygaśnięcia dostępu",
+      "expiry": {
+        "never": "Nigdy",
+        "oneHour": "1 godzina",
+        "oneDay": "24 godziny",
+        "sevenDays": "7 dni",
+        "thirtyDays": "30 dni",
+        "custom": "Niestandardowy"
+      },
+      "expiryLabel": "Wygaśnięcie dostępu",
+      "levels": {
+        "connect": {
+          "label": "Połączenie",
+          "description": "Tylko otwieranie sesji: terminal, pulpit zdalny, menedżer plików, tunele i Docker. Bez dostępu do konfiguracji hosta."
+        },
+        "view": {
+          "label": "Podgląd",
+          "description": "Jak Połączenie, plus podgląd konfiguracji hosta. Sekrety nigdy nie są pokazywane."
+        },
+        "edit": {
+          "label": "Edycja",
+          "description": "Jak Podgląd, plus zmiana ustawień hosta niezwiązanych z uwierzytelnianiem. Uwierzytelnianie SSH właściciela pozostaje prywatne i dostępne tylko dla niego."
+        },
+        "manage": {
+          "label": "Zarządzanie",
+          "description": "Jak Edycja, plus udostępnianie hosta innym, zmiana poziomów uprawnień i unieważnianie dostępu."
+        }
+      },
+      "noMatches": "Nie znaleziono wyników",
+      "permissionLevelLabel": "Poziom uprawnień",
+      "rolesTab": "Role",
+      "searchPlaceholder": "Wyszukaj użytkowników lub role...",
+      "shareButton": "Udostępnij",
+      "shareWithCount": "Udostępnij ({{count}})",
+      "usersTab": "Użytkownicy"
+    }
   }
 }

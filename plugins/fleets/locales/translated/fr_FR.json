@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flottes"
+  },
+  "hosts": {
+    "docsLink": "Voir la documentation",
+    "sharing": {
+      "customHoursPlaceholder": "Heures jusqu'à l'expiration de l'accès",
+      "expiry": {
+        "never": "Jamais",
+        "oneHour": "1 heure",
+        "oneDay": "24 heures",
+        "sevenDays": "7 jours",
+        "thirtyDays": "30 jours",
+        "custom": "Personnalisé"
+      },
+      "expiryLabel": "Expiration de l’accès",
+      "levels": {
+        "connect": {
+          "label": "Connexion",
+          "description": "Ouverture de sessions uniquement : terminal, bureau à distance, gestionnaire de fichiers, tunnels et Docker. Aucun accès à la configuration de l'hôte."
+        },
+        "view": {
+          "label": "Consultation",
+          "description": "Connexion, plus consultation de la configuration de l’hôte. Les secrets ne sont jamais affichés."
+        },
+        "edit": {
+          "label": "Modification",
+          "description": "Consultez et modifiez les paramètres de l'hôte sans authentification. L'authentification SSH du propriétaire reste privée et accessible uniquement à ce dernier."
+        },
+        "manage": {
+          "label": "Gestion",
+          "description": "Modification, plus partager l'hôte avec d'autres utilisateurs, modifier les niveaux de permission et révoquer l'accès."
+        }
+      },
+      "noMatches": "Aucun résultat trouvé",
+      "permissionLevelLabel": "Niveau de permission",
+      "rolesTab": "Rôles",
+      "searchPlaceholder": "Rechercher des utilisateurs ou des rôles…",
+      "shareButton": "Partager",
+      "shareWithCount": "Partager ({{count}})",
+      "usersTab": "Utilisateurs"
+    }
   }
 }

@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Este necesar un server la distanță. Conectați un server la distanță în Setări pentru a utiliza acest tip de conexiune."
+  },
+  "hosts": {
+    "docsLink": "Vizualizați documentele",
+    "hostNotFound": "Gazdă negăsită",
+    "loadingHost": "Se încarcă gazda..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Citirea din clipboard nu a reușit. Asigurați-vă că permisiunile de acces la clipboard sunt acordate.",
+    "clipboardWriteFailed": "Copierea în clipboard nu a reușit. Asigurați-vă că pagina este servită prin HTTPS sau localhost."
   }
 }

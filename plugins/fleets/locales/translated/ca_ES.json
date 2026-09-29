@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flotes"
+  },
+  "hosts": {
+    "docsLink": "Veure documents",
+    "sharing": {
+      "customHoursPlaceholder": "Hores fins que caduca l'accés",
+      "expiry": {
+        "never": "Mai",
+        "oneHour": "1 hora",
+        "oneDay": "24 hores",
+        "sevenDays": "7 dies",
+        "thirtyDays": "30 dies",
+        "custom": "Personalitzat"
+      },
+      "expiryLabel": "Caducitat de l'accés",
+      "levels": {
+        "connect": {
+          "label": "Connecta",
+          "description": "Només sessions obertes: terminal, escriptori remot, gestor de fitxers, túnels i Docker. No hi ha accés a la configuració de l'amfitrió."
+        },
+        "view": {
+          "label": "Vista",
+          "description": "Connecta't i consulta la configuració de l'amfitrió. Els secrets no es mostren mai."
+        },
+        "edit": {
+          "label": "Edita",
+          "description": "Visualitza i modifica la configuració de l'amfitrió que no és d'autenticació. L'autenticació SSH del propietari es manté privada i només del propietari."
+        },
+        "manage": {
+          "label": "Gestiona",
+          "description": "Edita i comparteix l'amfitrió amb altres persones, canvia els nivells de permisos i revoca l'accés."
+        }
+      },
+      "noMatches": "No s'han trobat coincidències",
+      "permissionLevelLabel": "Nivell de permís",
+      "rolesTab": "Rols",
+      "searchPlaceholder": "Cerca usuaris o rols...",
+      "shareButton": "Comparteix",
+      "shareWithCount": "Comparteix ({{count}})",
+      "usersTab": "Usuaris"
+    }
   }
 }

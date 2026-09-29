@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "텔넷",
     "virtualNetwork": "가상 네트워크",
-    "unencryptedShell": "암호화되지 않은 셸"
+    "unencryptedShell": "암호화되지 않은 셸",
+    "docsLink": "문서 보기"
   },
   "onboarding": {
     "feature_desktop": "원격 데스크톱",
@@ -274,5 +275,8 @@
         "label": "guacd URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "원격 서버가 필요합니다. 이 연결 유형을 사용하려면 설정에서 원격 서버를 연결하세요."
   }
 }

@@ -148,5 +148,17 @@
         "description": "Ermöglichen Sie es, Live-Sitzungen auf diesem Host per Link oder mit anderen Benutzern zu teilen."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nie",
+        "oneHour": "1 Stunde",
+        "oneDay": "24 Stunden",
+        "sevenDays": "7 Tage",
+        "thirtyDays": "30 Tage",
+        "custom": "Benutzerdefiniert"
+      }
+    }
   }
 }

@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuelt nettverk",
-    "unencryptedShell": "Ukryptert skall"
+    "unencryptedShell": "Ukryptert skall",
+    "docsLink": "Vis dokumenter"
   },
   "onboarding": {
     "feature_desktop": "Eksternt skrivebord",
@@ -274,5 +275,8 @@
         "label": "guacd-URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Ekstern server kreves. Koble til en ekstern server i Innstillinger for å bruke denne tilkoblingstypen."
   }
 }

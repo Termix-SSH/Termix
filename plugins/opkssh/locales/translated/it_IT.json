@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Autenticazione fallita. Controlla le credenziali e riprova.",
     "timeout": "Autenticazione scaduta. Riprova."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

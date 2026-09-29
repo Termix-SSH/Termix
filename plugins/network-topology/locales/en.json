@@ -57,5 +57,8 @@
       "title": "Use network graph",
       "description": "View and edit the network topology graph."
     }
+  },
+  "hosts": {
+    "docsLink": "View docs"
   }
 }

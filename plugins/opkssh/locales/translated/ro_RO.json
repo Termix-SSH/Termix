@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Autentificarea a eșuat. Verificați acreditările și încercați din nou.",
     "timeout": "Autentificarea a expirat. Vă rugăm să încercați din nou."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

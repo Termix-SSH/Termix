@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "সর্বনিম্ন ১৫ সেকেন্ড। কত ঘন ঘন প্রক্সমক্স নোড স্ট্যাটস রিফ্রেশ করতে হবে।",
     "proxmoxStatsNodeOverride": "নোডের নাম ওভাররাইড",
     "proxmoxStatsNodeOverrideDesc": "প্রক্সমক্স নোডের নামের স্বয়ংক্রিয় সনাক্তকরণকে অগ্রাহ্য করুন (যা ডিফল্টরূপে হোস্টনেমের মাধ্যমে সনাক্ত করা হয়)।",
-    "proxmoxStatsNodeOverridePlaceholder": "হোস্টনেম থেকে স্বয়ংক্রিয়ভাবে শনাক্ত করা হয়েছে"
+    "proxmoxStatsNodeOverridePlaceholder": "হোস্টনেম থেকে স্বয়ংক্রিয়ভাবে শনাক্ত করা হয়েছে",
+    "docsLink": "নথি দেখুন",
+    "hostNotFound": "হোস্ট খুঁজে পাওয়া যায়নি",
+    "loadingHost": "হোস্ট লোড হচ্ছে...",
+    "none": "কোনোটিই না",
+    "proxmoxGuestsSelected_one": "{{count}} অতিথি — {{selected}} নির্বাচিত",
+    "proxmoxGuestsSelected_other": "{{count}} জন অতিথি — {{selected}} জন নির্বাচিত",
+    "proxmoxImportButton_one": "{{count}} হোস্ট আমদানি করুন",
+    "proxmoxImportButton_other": "{{count}} হোস্ট আমদানি করুন"
   },
   "proxmoxStats": {
     "tabTitle": "প্রক্সমক্স পরিসংখ্যান",
@@ -102,5 +110,8 @@
     "filterLxc": "এলএক্সসি",
     "noGuests": "এই নোডে কোনো ভিএম বা এলএক্সসি কন্টেইনার খুঁজে পাওয়া যায়নি।",
     "noGuestsMatch": "বর্তমান ফিল্টারগুলোর সাথে কোনো অতিথি মেলে না।"
+  },
+  "terminal": {
+    "connected": "সংযুক্ত"
   }
 }

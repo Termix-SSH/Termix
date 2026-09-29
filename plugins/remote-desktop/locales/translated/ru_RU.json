@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Виртуальная сеть",
-    "unencryptedShell": "Незашифрованная оболочка"
+    "unencryptedShell": "Незашифрованная оболочка",
+    "docsLink": "Документация"
   },
   "onboarding": {
     "feature_desktop": "Удаленный рабочий стол",
@@ -274,5 +275,8 @@
         "label": "URL guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Требуется удаленный сервер. Для использования этого типа подключения подключите удаленный сервер в настройках."
   }
 }

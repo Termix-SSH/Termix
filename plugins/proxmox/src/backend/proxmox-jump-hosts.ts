@@ -10,8 +10,3 @@ export function parseProxmoxJumpHosts(raw: unknown): unknown[] | null {
     return null;
   }
 }
-
-export function serializeProxmoxJumpHosts(raw: unknown): string | null {
-  const parsed = parseProxmoxJumpHosts(raw);
-  return parsed ? JSON.stringify(parsed) : null;
-}

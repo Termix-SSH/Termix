@@ -83,5 +83,8 @@
         "description": "Zezwól asystentowi AI na pomoc w terminalu tego hosta. Domyślnie wyłączone, ale nadal wymaga włączenia AI na Twoim koncie."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Zobacz dokumentację"
   }
 }

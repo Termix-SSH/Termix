@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
+  },
+  "hosts": {
+    "docsLink": "Zobacz dokumentację",
+    "hostNotFound": "Nie znaleziono hosta",
+    "loadingHost": "Ładowanie hosta..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Nie udało się odczytać danych ze schowka. Upewnij się, że uprawnienia do schowka zostały przyznane.",
+    "clipboardWriteFailed": "Nie udało się skopiować do schowka. Upewnij się, że strona jest serwowana przez HTTPS lub localhost."
   }
 }

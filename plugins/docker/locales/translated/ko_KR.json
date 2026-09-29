@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "원격 서버가 필요합니다. 이 연결 유형을 사용하려면 설정에서 원격 서버를 연결하세요."
+  },
+  "hosts": {
+    "docsLink": "문서 보기",
+    "hostNotFound": "호스트를 찾을 수 없습니다",
+    "loadingHost": "호스트 로드 중..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "클립보드에서 읽지 못했습니다. 클립보드 권한이 허용되었는지 확인하세요.",
+    "clipboardWriteFailed": "클립보드에 복사하지 못했습니다. 페이지가 HTTPS 또는 localhost에서 제공되는지 확인하세요."
   }
 }

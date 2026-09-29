@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Pracovní prostory",
     "workflow_workspaces_desc": "Uložte si sadu otevřených karet a celé rozvržení si znovu otevřete později."
+  },
+  "hosts": {
+    "docsLink": "Zobrazit dokumenty"
   }
 }

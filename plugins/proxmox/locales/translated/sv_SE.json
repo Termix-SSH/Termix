@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minst 15 sekunder. Hur ofta Proxmox-nodstatistik ska uppdateras.",
     "proxmoxStatsNodeOverride": "Åsidosättning av nodnamn",
     "proxmoxStatsNodeOverrideDesc": "Åsidosätt automatisk detektering av Proxmox-nodnamnet (detekteras via värdnamn som standard).",
-    "proxmoxStatsNodeOverridePlaceholder": "Automatiskt identifierad från värdnamn"
+    "proxmoxStatsNodeOverridePlaceholder": "Automatiskt identifierad från värdnamn",
+    "docsLink": "Visa dokument",
+    "hostNotFound": "Värden hittades inte",
+    "loadingHost": "Laddar värd...",
+    "none": "Ingen",
+    "proxmoxGuestsSelected_one": "{{count}} gäst — {{selected}} vald",
+    "proxmoxGuestsSelected_other": "{{count}} gäster — {{selected}} vald",
+    "proxmoxImportButton_one": "Importera {{count}} värd",
+    "proxmoxImportButton_other": "Importera {{count}} värdar"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox-statistik",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Inga virtuella maskiner eller LXC-behållare hittades på den här noden.",
     "noGuestsMatch": "Inga gäster matchar de aktuella filtren."
+  },
+  "terminal": {
+    "connected": "Ansluten"
   }
 }

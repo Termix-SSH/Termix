@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Érvénytelen tanúsítvány engedélyezése",
     "webUiIgnoreCertDesc": "Csak közvetlen végpontok. A visszacsatolás már mentesül ez alól, így ennek nincs hatása az alagút végpontjaira.",
     "webUiRemoveEndpoint": "Végpont eltávolítása",
-    "webUiOpenFailed": "Nem sikerült megnyitni a webes végpontot"
+    "webUiOpenFailed": "Nem sikerült megnyitni a webes végpontot",
+    "bindHost": "Kötőállomás"
   }
 }

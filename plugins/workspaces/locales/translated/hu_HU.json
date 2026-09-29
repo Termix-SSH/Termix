@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Munkaterületek",
     "workflow_workspaces_desc": "Mentse el a megnyitott lapok egy készletét, és később nyissa meg újra a teljes elrendezést."
+  },
+  "hosts": {
+    "docsLink": "Dokumentumok megtekintése"
   }
 }

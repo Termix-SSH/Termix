@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flotte"
+  },
+  "hosts": {
+    "docsLink": "Visualizza documentazione",
+    "sharing": {
+      "customHoursPlaceholder": "Ore fino alla scadenza dell'accesso",
+      "expiry": {
+        "never": "Mai",
+        "oneHour": "1 ora",
+        "oneDay": "24 ore",
+        "sevenDays": "7 giorni",
+        "thirtyDays": "30 giorni",
+        "custom": "Personalizzato"
+      },
+      "expiryLabel": "Scadenza accesso",
+      "levels": {
+        "connect": {
+          "label": "Connetti",
+          "description": "Apri solo sessioni: terminale, desktop remoto, gestione file, tunnel e Docker. Nessun accesso alla configurazione dell'host."
+        },
+        "view": {
+          "label": "Visualizza",
+          "description": "Connetti, più visualizza la configurazione dell'host. I segreti non vengono mai mostrati."
+        },
+        "edit": {
+          "label": "Modifica",
+          "description": "Visualizza e modifica le impostazioni host senza autenticazione. L'autenticazione SSH del proprietario rimane privata e accessibile solo al proprietario."
+        },
+        "manage": {
+          "label": "Gestisci",
+          "description": "Modifica, più condividi l'host con altri, modifica i livelli di autorizzazione e revoca l'accesso."
+        }
+      },
+      "noMatches": "Nessuna corrispondenza trovata",
+      "permissionLevelLabel": "Livello di autorizzazione",
+      "rolesTab": "Ruoli",
+      "searchPlaceholder": "Cerca utenti o ruoli...",
+      "shareButton": "Condividi",
+      "shareWithCount": "Condividi ({{count}})",
+      "usersTab": "Utenti"
+    }
   }
 }

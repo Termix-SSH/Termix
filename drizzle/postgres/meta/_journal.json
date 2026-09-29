@@ -449,6 +449,13 @@
       "when": 1790700738799,
       "tag": "0063_giant_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1790704531255,
+      "tag": "0064_sticky_pestilence",
+      "breakpoints": true
     }
   ]
 }

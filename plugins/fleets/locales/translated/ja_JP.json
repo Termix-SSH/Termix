@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "艦隊"
+  },
+  "hosts": {
+    "docsLink": "ドキュメントを表示",
+    "sharing": {
+      "customHoursPlaceholder": "アクセス期限までの時間数",
+      "expiry": {
+        "never": "無期限",
+        "oneHour": "1時間",
+        "oneDay": "24時間",
+        "sevenDays": "7日間",
+        "thirtyDays": "30日間",
+        "custom": "カスタム"
+      },
+      "expiryLabel": "アクセス期限",
+      "levels": {
+        "connect": {
+          "label": "接続",
+          "description": "セッションのみ開く: ターミナル、リモートデスクトップ、ファイルマネージャー、トンネル、Docker。ホスト設定へのアクセスはありません。"
+        },
+        "view": {
+          "label": "表示",
+          "description": "接続に加え、ホスト設定を表示できます。シークレットは表示されません。"
+        },
+        "edit": {
+          "label": "編集",
+          "description": "認証不要のホスト設定を表示および変更できます。所有者のSSH認証情報は非公開で、所有者のみがアクセスできます。"
+        },
+        "manage": {
+          "label": "管理",
+          "description": "編集に加え、ホストを他者と共有し、権限レベルを変更、アクセスを取り消すことができます。"
+        }
+      },
+      "noMatches": "一致する結果がありません",
+      "permissionLevelLabel": "権限レベル",
+      "rolesTab": "ロール",
+      "searchPlaceholder": "ユーザーまたはロールを検索...",
+      "shareButton": "共有",
+      "shareWithCount": "共有 ({{count}})",
+      "usersTab": "ユーザー"
+    }
   }
 }

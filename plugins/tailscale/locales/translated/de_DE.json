@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Öffnen Sie den Browser zur Authentifizierung",
     "tailscaleCheckWaiting": "Warten auf Tailscale-Authentifizierung...",
     "tailscaleCheckTimeout": "Die Tailscale-Authentifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Mit Terminal verbinden",
+        "usernameLabel": "Benutzername"
+      }
+    }
   }
 }

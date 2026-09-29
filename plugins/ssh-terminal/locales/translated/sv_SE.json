@@ -470,5 +470,8 @@
     },
     "seconds": "sekunder",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Fjärrserver krävs. Anslut en fjärrserver i Inställningar för att använda den här anslutningstypen."
   }
 }

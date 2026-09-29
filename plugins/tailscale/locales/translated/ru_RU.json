@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Откройте браузер для аутентификации.",
     "tailscaleCheckWaiting": "Ожидание аутентификации Tailscale...",
     "tailscaleCheckTimeout": "Время ожидания аутентификации Tailscale истекло. Пожалуйста, попробуйте еще раз."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Подключиться к терминалу",
+        "usernameLabel": "Имя пользователя"
+      }
+    }
   }
 }

@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "প্রমাণীকরণের জন্য ব্রাউজার খুলুন",
     "tailscaleCheckWaiting": "টেইলস্কেল প্রমাণীকরণের জন্য অপেক্ষা করা হচ্ছে...",
     "tailscaleCheckTimeout": "টেইলস্কেল প্রমাণীকরণের সময়সীমা শেষ হয়ে গেছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "টার্মিনালের সাথে সংযোগ করুন",
+        "usernameLabel": "ব্যবহারকারীর নাম"
+      }
+    }
   }
 }

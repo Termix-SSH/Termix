@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Tillat ugyldig sertifikat",
     "webUiIgnoreCertDesc": "Kun direkte endepunkter. Loopback er allerede unntatt, så dette har ingen effekt på tunnelendepunkter.",
     "webUiRemoveEndpoint": "Fjern endepunkt",
-    "webUiOpenFailed": "Kunne ikke åpne nettendepunktet"
+    "webUiOpenFailed": "Kunne ikke åpne nettendepunktet",
+    "bindHost": "Bind vert"
   }
 }

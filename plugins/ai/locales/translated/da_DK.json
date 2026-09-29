@@ -83,5 +83,8 @@
         "description": "Tillad AI-assistenten at hjælpe i denne værts terminal. Deaktiveret som standard, og kræver stadig, at AI er aktiveret for din konto."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Se dokumenter"
   }
 }

@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Autentiseringen misslyckades. Kontrollera dina inloggningsuppgifter och försök igen.",
     "timeout": "Autentiseringen har gått ut. Försök igen."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

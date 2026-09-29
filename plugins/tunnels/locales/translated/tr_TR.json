@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Uzak sunucudaki bir portu, makinenizdeki yerel bir porta geri yönlendirin.",
     "tunnelRequirementsText": "SSH sunucusunda /etc/ssh/sshd_config dosyasında GatewayPorts yes, AllowTcpForwarding yes ve PermitRootLogin yes ayarlanmış olmalıdır.",
     "tunnelSettings": "Tünel Ayarları",
-    "tunnelType": "Tünel Türü"
+    "tunnelType": "Tünel Türü",
+    "bindHost": "Bağlanma Ana Bilgisayarı",
+    "docsLink": "Dokümanları görüntüle",
+    "hostNotFound": "Host bulunamadı",
+    "loadingHost": "Host yükleniyor..."
   },
   "nav": {
     "portForwarding": "İletme",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinamik (-D)",
     "typeLocal": "Yerel (-L)",
     "typeRemote": "Uzak (-R)",
-    "working": "Çalışıyor..."
+    "working": "Çalışıyor...",
+    "start": "Başlat",
+    "stop": "Durdur"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tüneller",
+    "feature_tunnels_desc": "Sunucu üzerinden port yönlendirmesi yaparak, erişime açık olmayan hizmetlere ulaşabilirsiniz."
   }
 }

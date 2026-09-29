@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Maak blaaier oop om te verifieer",
     "tailscaleCheckWaiting": "Wag vir Tailscale-verifikasie...",
     "tailscaleCheckTimeout": "Tailscale-verifikasie het verstryk. Probeer asseblief weer."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Koppel aan terminaal",
+        "usernameLabel": "Gebruikersnaam"
+      }
+    }
   }
 }

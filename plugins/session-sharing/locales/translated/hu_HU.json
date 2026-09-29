@@ -148,5 +148,17 @@
         "description": "Engedélyezi az élő munkamenetek megosztását ezen a gazdagépen linken vagy más felhasználókkal"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Soha",
+        "oneHour": "1 óra",
+        "oneDay": "24 óra",
+        "sevenDays": "7 nap",
+        "thirtyDays": "30 nap",
+        "custom": "Szokás"
+      }
+    }
   }
 }

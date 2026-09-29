@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Permitir certificado inválido",
     "webUiIgnoreCertDesc": "Apenas endpoints diretos. O loopback já está isento, pelo que isto não afeta os endpoints do túnel.",
     "webUiRemoveEndpoint": "Remover ponto final",
-    "webUiOpenFailed": "Falha ao abrir o endpoint web"
+    "webUiOpenFailed": "Falha ao abrir o endpoint web",
+    "bindHost": "Host de Ligação"
   }
 }

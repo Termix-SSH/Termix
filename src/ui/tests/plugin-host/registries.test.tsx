@@ -110,13 +110,13 @@ function activate(app: TermixApp) {
     kind: "connect",
     priority: 500,
     tabType: "fixture-tab",
-    when: (host) => host.enableFixture === true,
+    when: (host) => host.pluginSettings?.fixture?.enableFixture === true,
   });
   app.registerPaletteEntry({
     id: "fixture-entry",
     titleKey: "title",
     scope: "host",
-    when: (host) => host?.enableFixture === true,
+    when: (host) => host?.pluginSettings?.fixture?.enableFixture === true,
     run: (shell, host) => shell.openTab(host ?? null, "fixture-tab"),
   });
   app.registerDashboardCard({
@@ -262,7 +262,7 @@ describe("registries through the app object", () => {
 
   it("offers a host action only where it applies, and picks it as the default connect", async () => {
     await mount();
-    const on = host({ enableFixture: true } as Partial<Host>);
+    const on = host({ pluginSettings: { fixture: { enableFixture: true } } });
     const off = host();
     expect(hostActionsFor(listHostActions(), on).map((a) => a.id)).toEqual([
       "fixture-connect",
@@ -307,7 +307,9 @@ describe("registries through the app object", () => {
 
   it("offers a per-host palette entry that runs against the shell", async () => {
     const app = await mount();
-    const target = host({ enableFixture: true } as Partial<Host>);
+    const target = host({
+      pluginSettings: { fixture: { enableFixture: true } },
+    });
     const entries = paletteEntriesFor(listPaletteEntries(), "host", target);
     expect(entries.map((entry) => entry.id)).toEqual(["fixture-entry"]);
     expect(paletteEntriesFor(listPaletteEntries(), "host", host())).toEqual([]);

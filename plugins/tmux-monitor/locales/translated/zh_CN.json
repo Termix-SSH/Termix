@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "启用 Tmux 监控",
-    "enableTmuxMonitorDesc": "在 Tmux 监控中显示此主机，并将其 tmux 操作添加到侧边栏"
+    "enableTmuxMonitorDesc": "在 Tmux 监控中显示此主机，并将其 tmux 操作添加到侧边栏",
+    "docsLink": "查看文档"
   },
   "tmuxMonitor": {
     "title": "Tmux 监视器",

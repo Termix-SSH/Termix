@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Zezwól na nieprawidłowy certyfikat",
     "webUiIgnoreCertDesc": "Tylko bezpośrednie punkty końcowe. Pętla zwrotna jest już wyłączona, więc nie ma to wpływu na punkty końcowe tunelu.",
     "webUiRemoveEndpoint": "Usuń punkt końcowy",
-    "webUiOpenFailed": "Nie udało się otworzyć punktu końcowego sieci Web"
+    "webUiOpenFailed": "Nie udało się otworzyć punktu końcowego sieci Web",
+    "bindHost": "Host nasłuchu"
   }
 }

@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Sikertelen hitelesítés. Kérjük, ellenőrizze a hitelesítő adatait, és próbálja újra.",
     "timeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

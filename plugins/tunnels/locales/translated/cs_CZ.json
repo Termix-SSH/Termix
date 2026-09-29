@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Přesměrujte port na vzdáleném serveru zpět na lokální port na vašem počítači.",
     "tunnelRequirementsText": "SSH server musí mít v souboru /etc/ssh/sshd_config nastaveny hodnoty GatewayPorts – yes, AllowTcpForwarding – yes a PermitRootLogin – yes.",
     "tunnelSettings": "Nastavení tunelu",
-    "tunnelType": "Typ tunelu"
+    "tunnelType": "Typ tunelu",
+    "bindHost": "Vázat hostitele",
+    "docsLink": "Zobrazit dokumenty",
+    "hostNotFound": "Hostitel nenalezen",
+    "loadingHost": "Načítání hostitele..."
   },
   "nav": {
     "portForwarding": "Přeposílání",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynamický (-D)",
     "typeLocal": "Místní (-L)",
     "typeRemote": "Vzdálené (-R)",
-    "working": "Pracovní..."
+    "working": "Pracovní...",
+    "start": "Start",
+    "stop": "Zastávka"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunely",
+    "feature_tunnels_desc": "Přesměrování portů přes server pro přístup ke službám, které nejsou vystaveny."
   }
 }

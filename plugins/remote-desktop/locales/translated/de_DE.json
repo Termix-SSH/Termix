@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuelles Netzwerk",
-    "unencryptedShell": "Unverschlüsselte Shell"
+    "unencryptedShell": "Unverschlüsselte Shell",
+    "docsLink": "Dokumentation anzeigen"
   },
   "onboarding": {
     "feature_desktop": "Remote-Desktop",
@@ -274,5 +275,8 @@
         "label": "guacd-URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote-Server erforderlich. Um diesen Verbindungstyp zu verwenden, verbinden Sie einen Remote-Server in den Einstellungen."
   }
 }

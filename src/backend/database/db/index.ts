@@ -304,9 +304,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         key TEXT,
         key_password TEXT,
         key_type TEXT,
-        autostart_password TEXT,
-        autostart_key TEXT,
-        autostart_key_password TEXT,
         force_keyboard_interactive TEXT,
         status_check_enabled INTEGER NOT NULL DEFAULT 1,
         status_check_interval INTEGER,
@@ -910,9 +907,6 @@ const migrateSchema = () => {
     "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
   );
   addColumnIfNotExists("ssh_data", "force_keyboard_interactive", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "credential_id",
@@ -924,9 +918,6 @@ const migrateSchema = () => {
     "INTEGER",
   );
 
-  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "status_check_enabled",

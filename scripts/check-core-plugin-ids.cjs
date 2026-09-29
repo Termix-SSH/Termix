@@ -7,7 +7,8 @@
  * action, slot or permission id that starts with one ("docker.open"). The
  * shell (src/ui) also may not spell a view a plugin owns (a tab, panel or
  * dashboard card id from a manifest). What core needs from a plugin comes
- * through the registries instead.
+ * through the registries instead. Regex literals are read too, so
+ * /^\/plugin-api\/docker/ counts the same as "/plugin-api/docker".
  *
  * Tests and locales are exempt, and so is src/backend/upgrade/: the one-time
  * 2.8 to 2.9 data moves have to name the plugin each piece of data moves to,
@@ -22,17 +23,22 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ROOT = path.resolve(__dirname, "..");
-const SRC = path.join(ROOT, "src");
-const UI = path.join(SRC, "ui");
-const PLUGINS = path.join(ROOT, "plugins");
 const EXEMPT_DIRS = new Set(["tests", "locales"]);
-const EXEMPT_PATHS = [path.join(SRC, "backend", "upgrade")];
-const SSH_CONNECT = path.join(SRC, "backend", "hosts", "connect");
 const SSH_TERMS = new Set(["totp"]);
 
-function manifests() {
-  const dir = path.join(ROOT, "plugins");
+function paths(root) {
+  const src = path.join(root, "src");
+  return {
+    root,
+    src,
+    ui: path.join(src, "ui"),
+    plugins: path.join(root, "plugins"),
+    exempt: [path.join(src, "backend", "upgrade")],
+    sshConnect: path.join(src, "backend", "hosts", "connect"),
+  };
+}
+
+function manifests(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -41,10 +47,10 @@ function manifests() {
     .map((file) => JSON.parse(fs.readFileSync(file, "utf8")));
 }
 
-function names() {
+function names(pluginsDir) {
   const ids = new Set();
   const views = new Set();
-  for (const manifest of manifests()) {
+  for (const manifest of manifests(pluginsDir)) {
     ids.add(manifest.id);
     const contributes = manifest.contributes ?? {};
     for (const list of [
@@ -58,13 +64,13 @@ function names() {
   return { ids, views };
 }
 
-function walk(dir, out) {
-  if (EXEMPT_PATHS.includes(dir)) return out;
+function walk(dir, exempt, out) {
+  if (exempt.includes(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXEMPT_DIRS.has(entry.name)) continue;
-      walk(full, out);
+      walk(full, exempt, out);
     } else if (/\.(tsx?|mjs|cjs|jsx?)$/.test(entry.name)) {
       out.push(full);
     }
@@ -83,25 +89,43 @@ function literals(source) {
   return out;
 }
 
-function scan() {
-  const { ids, views } = names();
+/**
+ * Every regex literal in a file, with escaped slashes undone, so a pattern
+ * reads the way the path it matches does.
+ */
+function regexLiterals(source) {
+  const out = [];
+  const pattern =
+    /(^|[=(,:[!&|?{};]|\breturn)\s*\/((?:[^/\\\n[]|\\.|\[(?:[^\]\\\n]|\\.)*\])+)\/[dgimsuyv]*/gm;
+  for (const match of source.matchAll(pattern)) {
+    const body = match[2];
+    // A comment, not a pattern.
+    if (body.startsWith("/") || body.startsWith("*")) continue;
+    out.push(body.replace(/\\(.)/g, "$1"));
+  }
+  return out;
+}
+
+function scan(root = path.resolve(__dirname, "..")) {
+  const { src, ui, plugins, exempt, sshConnect } = paths(root);
+  const { ids, views } = names(plugins);
   const found = {};
   const add = (file, what) => {
-    const key = path.relative(ROOT, file).replaceAll("\\", "/");
+    const key = path.relative(root, file).replaceAll("\\", "/");
     (found[key] ??= new Set()).add(what);
   };
 
-  for (const file of walk(SRC, [])) {
+  for (const file of walk(src, exempt, [])) {
     const source = fs.readFileSync(file, "utf8");
-    const inShell = file.startsWith(UI + path.sep);
-    const inConnect = file.startsWith(SSH_CONNECT + path.sep);
+    const inShell = file.startsWith(ui + path.sep);
+    const inConnect = file.startsWith(sshConnect + path.sep);
     for (const match of source.matchAll(
       /(?:from|import)\s*\(?\s*["']([^"']+)["']/g,
     )) {
       const target = match[1].startsWith(".")
         ? path.resolve(path.dirname(file), match[1])
         : "";
-      if (target.startsWith(PLUGINS + path.sep)) {
+      if (target.startsWith(plugins + path.sep)) {
         add(file, `import ${match[1]}`);
       }
     }
@@ -117,6 +141,17 @@ function scan() {
       }
       const prefix = /^([a-z][a-z0-9-]*)\.[a-zA-Z]/.exec(text);
       if (prefix && ids.has(prefix[1])) add(file, text);
+    }
+    for (const pattern of regexLiterals(source)) {
+      for (const route of pattern.matchAll(
+        /\/plugin-(?:api|ws|assets)\/([a-z0-9-]+)/g,
+      )) {
+        if (ids.has(route[1])) add(file, `/${pattern}/`);
+      }
+      const sshTerm = inConnect && SSH_TERMS.has(pattern);
+      if (ids.has(pattern.replace(/^\^|\$$/g, "")) && !sshTerm) {
+        add(file, `/${pattern}/`);
+      }
     }
   }
   return Object.fromEntries(
@@ -140,4 +175,6 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { scan, regexLiterals };

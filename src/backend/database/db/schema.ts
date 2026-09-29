@@ -179,10 +179,6 @@ export const hosts = sqliteTable(
     keyType: text("key_type"),
     sudoPassword: text("sudo_password"),
 
-    autostartPassword: text("autostart_password"),
-    autostartKey: text("autostart_key", { length: 8192 }),
-    autostartKeyPassword: text("autostart_key_password"),
-
     credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     overrideCredentialUsername: integer("override_credential_username", {
       mode: "boolean",

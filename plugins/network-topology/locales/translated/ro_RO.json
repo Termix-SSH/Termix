@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "noduri {{count}}"
+  },
+  "hosts": {
+    "docsLink": "Vizualizați documentele"
   }
 }

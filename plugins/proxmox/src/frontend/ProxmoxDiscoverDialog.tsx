@@ -158,8 +158,6 @@ export function ProxmoxDiscoverDialog({
         jumpHosts: discoveredJumpHosts ?? undefined,
         ...importAuth,
         enableSsh: g.connectionType !== "rdp",
-        enableRdp: g.connectionType === "rdp",
-        enableDocker: g.enableDocker,
         connectionType: g.connectionType,
         tags: [
           "proxmox",
@@ -168,8 +166,13 @@ export function ProxmoxDiscoverDialog({
           g.type === "lxc" ? `ct-${g.vmid}` : `vm-${g.vmid}`,
           ...(g.enableDocker ? ["docker"] : []),
         ],
-        // This plugin's host settings travel with the import like an export's.
+        // Host settings travel with the import like an export's, keyed by
+        // the plugin that keeps them.
         pluginSettings: {
+          ...(g.connectionType === "rdp"
+            ? { "remote-desktop": { enableRdp: true, rdpPort: 3389 } }
+            : {}),
+          ...(g.enableDocker ? { docker: { enableDocker: true } } : {}),
           proxmox: {
             proxmoxConfig: {
               source: {

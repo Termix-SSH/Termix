@@ -27,7 +27,7 @@ function DockerWidget({
     );
   }
 
-  const host = toDockerHost(record as unknown as Record<string, unknown>);
+  const host = toDockerHost(record);
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
       <WidgetTitle title={widget.title} icon={<Box size={11} />} />

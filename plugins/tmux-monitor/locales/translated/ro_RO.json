@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Activează monitorul Tmux",
-    "enableTmuxMonitorDesc": "Afișează această gazdă în Monitorul Tmux și adaugă acțiunile sale tmux în bara laterală"
+    "enableTmuxMonitorDesc": "Afișează această gazdă în Monitorul Tmux și adaugă acțiunile sale tmux în bara laterală",
+    "docsLink": "Vizualizați documentele"
   },
   "tmuxMonitor": {
     "title": "Monitorul Tmux",

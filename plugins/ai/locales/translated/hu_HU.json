@@ -83,5 +83,8 @@
         "description": "Engedélyezi a mesterséges intelligencia asszisztensének a gazdagép terminálján való segítséget. Alapértelmezés szerint ki van kapcsolva, de továbbra is engedélyeznie kell a mesterséges intelligenciát a fiókjában."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Dokumentumok megtekintése"
   }
 }

@@ -148,5 +148,17 @@
         "description": "Tillåt att livesessioner på den här värden delas via länk eller med andra användare"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Aldrig",
+        "oneHour": "1 timme",
+        "oneDay": "24 timmar",
+        "sevenDays": "7 dagar",
+        "thirtyDays": "30 dagar",
+        "custom": "Beställnings"
+      }
+    }
   }
 }

@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flote"
+  },
+  "hosts": {
+    "docsLink": "Vizualizați documentele",
+    "sharing": {
+      "customHoursPlaceholder": "Ore până la expirarea accesului",
+      "expiry": {
+        "never": "Nu",
+        "oneHour": "1 oră",
+        "oneDay": "24 de ore",
+        "sevenDays": "7 zile",
+        "thirtyDays": "30 de zile",
+        "custom": "Personalizat"
+      },
+      "expiryLabel": "Expirarea accesului",
+      "levels": {
+        "connect": {
+          "label": "Conectează-te",
+          "description": "Deschideți doar sesiunile: terminal, desktop la distanță, manager de fișiere, tuneluri și Docker. Fără acces la configurația gazdei."
+        },
+        "view": {
+          "label": "Vedere",
+          "description": "Conectează-te și vezi configurația gazdei. Secretele nu sunt afișate niciodată."
+        },
+        "edit": {
+          "label": "Edita",
+          "description": "Vizualizați și modificați setările gazdei fără autentificare. Autentificarea SSH a proprietarului rămâne privată și exclusiv pentru proprietar."
+        },
+        "manage": {
+          "label": "Gestionează",
+          "description": "Editați, plus partajați gazda cu alții, modificați nivelurile de permisiune și revocați accesul."
+        }
+      },
+      "noMatches": "Nu s-au găsit potriviri",
+      "permissionLevelLabel": "Nivel de permisiune",
+      "rolesTab": "Roluri",
+      "searchPlaceholder": "Căutați utilizatori sau roluri...",
+      "shareButton": "Distribuie",
+      "shareWithCount": "Distribuie ({{count}})",
+      "usersTab": "Utilizatori"
+    }
   }
 }

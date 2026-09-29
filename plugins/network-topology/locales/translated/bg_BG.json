@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} възли"
+  },
+  "hosts": {
+    "docsLink": "Преглед на документи"
   }
 }

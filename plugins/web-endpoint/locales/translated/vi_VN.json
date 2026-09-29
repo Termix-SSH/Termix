@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Cho phép chứng chỉ không hợp lệ",
     "webUiIgnoreCertDesc": "Chỉ áp dụng cho các điểm cuối trực tiếp. Giao diện vòng lặp đã được miễn trừ, vì vậy điều này không ảnh hưởng đến các điểm cuối đường hầm.",
     "webUiRemoveEndpoint": "Xóa điểm cuối",
-    "webUiOpenFailed": "Không thể mở điểm cuối web"
+    "webUiOpenFailed": "Không thể mở điểm cuối web",
+    "bindHost": "Máy chủ bind"
   }
 }

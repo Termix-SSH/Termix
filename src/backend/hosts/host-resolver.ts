@@ -96,9 +96,6 @@ export async function resolveHostById(
   if (!ownerEquivalent) {
     // Owner-only operational secrets are never shared.
     host.sudoPassword = null;
-    host.autostartPassword = null;
-    host.autostartKey = null;
-    host.autostartKeyPassword = null;
   }
 
   // Parse JSON fields

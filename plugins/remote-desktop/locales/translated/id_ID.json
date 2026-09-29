@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Jaringan Virtual",
-    "unencryptedShell": "Shell yang tidak terenkripsi"
+    "unencryptedShell": "Shell yang tidak terenkripsi",
+    "docsLink": "Lihat dokumen"
   },
   "onboarding": {
     "feature_desktop": "Desktop jarak jauh",
@@ -274,5 +275,8 @@
         "label": "URL guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
   }
 }

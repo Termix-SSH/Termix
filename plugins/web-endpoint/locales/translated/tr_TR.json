@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Geçersiz sertifikaya izin ver",
     "webUiIgnoreCertDesc": "Yalnızca doğrudan uç noktalar için geçerlidir. Loopback zaten muaf tutulmuştur, bu nedenle tünel uç noktalarını etkilemez.",
     "webUiRemoveEndpoint": "Uç noktayı kaldır",
-    "webUiOpenFailed": "Web uç noktası açılamadı."
+    "webUiOpenFailed": "Web uç noktası açılamadı.",
+    "bindHost": "Bağlanma Ana Bilgisayarı"
   }
 }

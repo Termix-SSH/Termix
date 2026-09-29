@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Tmux-Monitor aktivieren",
-    "enableTmuxMonitorDesc": "Diesen Host im Tmux-Monitor anzeigen und seine tmux-Aktionen zur Seitenleiste hinzufügen"
+    "enableTmuxMonitorDesc": "Diesen Host im Tmux-Monitor anzeigen und seine tmux-Aktionen zur Seitenleiste hinzufügen",
+    "docsLink": "Dokumentation anzeigen"
   },
   "tmuxMonitor": {
     "title": "Tmux-Monitor",

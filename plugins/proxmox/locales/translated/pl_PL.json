@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimum 15 sekund. Jak często odświeżać statystyki węzła Proxmox.",
     "proxmoxStatsNodeOverride": "Nadpisanie nazwy węzła",
     "proxmoxStatsNodeOverrideDesc": "Zastąp automatyczne wykrywanie nazwy węzła Proxmox (domyślnie wykrywane za pomocą nazwy hosta).",
-    "proxmoxStatsNodeOverridePlaceholder": "Automatycznie wykryto na podstawie nazwy hosta"
+    "proxmoxStatsNodeOverridePlaceholder": "Automatycznie wykryto na podstawie nazwy hosta",
+    "docsLink": "Zobacz dokumentację",
+    "hostNotFound": "Nie znaleziono hosta",
+    "loadingHost": "Ładowanie hosta...",
+    "none": "Brak",
+    "proxmoxGuestsSelected_one": "{{count}} gość, wybrano {{selected}}",
+    "proxmoxGuestsSelected_other": "{{count}} gości, wybrano {{selected}}",
+    "proxmoxImportButton_one": "Importuj {{count}} host",
+    "proxmoxImportButton_other": "Importuj {{count}} hostów"
   },
   "proxmoxStats": {
     "tabTitle": "Statystyki Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Nie znaleziono maszyn wirtualnych ani kontenerów LXC na tym węźle.",
     "noGuestsMatch": "Żaden gość nie pasuje do bieżących filtrów."
+  },
+  "terminal": {
+    "connected": "Połączono"
   }
 }

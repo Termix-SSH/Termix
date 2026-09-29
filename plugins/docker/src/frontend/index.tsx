@@ -9,10 +9,10 @@ import type {
 import { DockerManager } from "./DockerManager";
 import DockerApp from "./DockerApp";
 import { dockerWidget } from "./DockerWidget";
-import { dockerEnabled, toDockerHost } from "./types";
+import { dockerEnabled, toDockerHost, type DockerHostSource } from "./types";
 
 function DockerTab({ host, sshHost, label, isVisible }: TabProps) {
-  const record = (host ?? sshHost) as Record<string, unknown> | undefined;
+  const record = host ?? (sshHost as DockerHostSource | undefined);
   return (
     <DockerManager
       host={record ? toDockerHost(record) : undefined}

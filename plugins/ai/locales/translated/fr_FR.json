@@ -83,5 +83,8 @@
         "description": "Autoriser l'assistant IA à vous aider dans le terminal de cet hôte. Désactivé par défaut ; l'IA doit être activée pour votre compte."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Voir la documentation"
   }
 }

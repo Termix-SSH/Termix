@@ -83,5 +83,8 @@
         "description": "Sta de AI-assistent toe om te helpen in de terminal van deze host. Standaard uitgeschakeld, maar AI moet nog steeds voor uw account zijn ingeschakeld."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Documenten bekijken"
   }
 }

@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Filolar"
+  },
+  "hosts": {
+    "docsLink": "Dokümanları görüntüle",
+    "sharing": {
+      "customHoursPlaceholder": "Erişim süresi (saat)",
+      "expiry": {
+        "never": "Süresiz",
+        "oneHour": "1 saat",
+        "oneDay": "24 saat",
+        "sevenDays": "7 gün",
+        "thirtyDays": "30 gün",
+        "custom": "Özel"
+      },
+      "expiryLabel": "Erişim süresi sonu",
+      "levels": {
+        "connect": {
+          "label": "Bağlan",
+          "description": "Yalnızca oturum açar: terminal, uzak masaüstü, dosya yöneticisi, tüneller ve Docker. Sunucu yapılandırmasına erişim yok."
+        },
+        "view": {
+          "label": "Görüntüle",
+          "description": "Bağlan iznine ek olarak sunucu yapılandırmasını görebilir. Gizli bilgiler asla gösterilmez."
+        },
+        "edit": {
+          "label": "Düzenle",
+          "description": "Kimlik doğrulaması gerektirmeyen sunucu ayarlarını görüntüleyin ve değiştirin. Sahibin SSH kimlik doğrulaması gizli kalır ve yalnızca sahibine özeldir."
+        },
+        "manage": {
+          "label": "Yönet",
+          "description": "Düzenleme iznine ek olarak sunucuyu başkalarıyla paylaşabilir, izin düzeylerini değiştirebilir ve erişimi iptal edebilir."
+        }
+      },
+      "noMatches": "Eşleşme bulunamadı",
+      "permissionLevelLabel": "İzin düzeyi",
+      "rolesTab": "Roller",
+      "searchPlaceholder": "Kullanıcı veya rol ara...",
+      "shareButton": "Paylaş",
+      "shareWithCount": "Paylaş ({{count}})",
+      "usersTab": "Kullanıcılar"
+    }
   }
 }

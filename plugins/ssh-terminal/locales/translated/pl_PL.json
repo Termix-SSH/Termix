@@ -470,5 +470,8 @@
     },
     "seconds": "sekundy",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
   }
 }

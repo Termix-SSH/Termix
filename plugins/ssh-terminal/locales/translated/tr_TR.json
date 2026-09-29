@@ -470,5 +470,8 @@
     },
     "seconds": "saniyeler",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
   }
 }

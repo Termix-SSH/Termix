@@ -78,6 +78,7 @@ const {
   writeHostPluginSettings,
   applyPluginHostImportSettings,
   setHostPluginEnabled,
+  checkHostPluginSettingsInput,
 } = await import("../../../database/routes/host-plugin-settings.js");
 
 function manifest(id: string, host: unknown): PluginManifest {
@@ -451,5 +452,40 @@ describe("share levels, legacy fields and generic writes", () => {
       ["4", "enableDocker", "true"],
     ]);
     expect(await setHostPluginEnabled("missing", [3], true)).toBe(false);
+  });
+});
+
+describe("checkHostPluginSettingsInput", () => {
+  it("passes declared keys through to the plugin that owns them", () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    const result = checkHostPluginSettingsInput({
+      docker: { enableDocker: true, socketPath: "/run/docker.sock" },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.skipped).toEqual([]);
+    expect(result.writes).toEqual([
+      {
+        manifest: DOCKER,
+        values: { enableDocker: true, socketPath: "/run/docker.sock" },
+      },
+    ]);
+  });
+
+  it("refuses a key the plugin does not declare and a value it rejects", () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    const { errors } = checkHostPluginSettingsInput({
+      docker: { dockerConfig: {}, enableDocker: "sure" },
+    });
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain("docker.dockerConfig");
+    expect(errors[1]).toContain("docker.enableDocker");
+  });
+
+  it("skips a plugin that is not running", () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "disabled" });
+    const result = checkHostPluginSettingsInput({
+      docker: { enableDocker: true },
+    });
+    expect(result).toEqual({ writes: [], skipped: ["docker"], errors: [] });
   });
 });

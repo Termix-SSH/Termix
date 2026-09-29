@@ -470,5 +470,8 @@
     },
     "seconds": "giây",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
   }
 }

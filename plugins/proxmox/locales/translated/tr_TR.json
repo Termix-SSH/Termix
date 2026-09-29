@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "En az 15 saniye. Proxmox düğüm istatistiklerinin ne sıklıkla yenilenmesi gerektiği.",
     "proxmoxStatsNodeOverride": "Düğüm adı geçersiz kılma",
     "proxmoxStatsNodeOverrideDesc": "Proxmox düğüm adının otomatik olarak algılanmasını (varsayılan olarak ana bilgisayar adı üzerinden algılanır) geçersiz kılın.",
-    "proxmoxStatsNodeOverridePlaceholder": "Ana bilgisayar adından otomatik olarak algılandı"
+    "proxmoxStatsNodeOverridePlaceholder": "Ana bilgisayar adından otomatik olarak algılandı",
+    "docsLink": "Dokümanları görüntüle",
+    "hostNotFound": "Host bulunamadı",
+    "loadingHost": "Host yükleniyor...",
+    "none": "Hiçbiri",
+    "proxmoxGuestsSelected_one": "{{count}} misafir — {{selected}} seçili",
+    "proxmoxGuestsSelected_other": "{{count}} misafir — {{selected}} seçili",
+    "proxmoxImportButton_one": "{{count}} ana makineyi içe aktar",
+    "proxmoxImportButton_other": "{{count}} sunucuyu içe aktar"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox İstatistikleri",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Bu düğümde hiçbir sanal makine veya LXC kapsayıcısı bulunamadı.",
     "noGuestsMatch": "Mevcut filtrelere uyan konuk bulunamadı."
+  },
+  "terminal": {
+    "connected": "Bağlandı"
   }
 }

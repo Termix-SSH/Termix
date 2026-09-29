@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Aktivera Tmux-monitorn",
-    "enableTmuxMonitorDesc": "Visa denna värd i Tmux Monitor och lägg till dess tmux-åtgärder i sidofältet"
+    "enableTmuxMonitorDesc": "Visa denna värd i Tmux Monitor och lägg till dess tmux-åtgärder i sidofältet",
+    "docsLink": "Visa dokument"
   },
   "tmuxMonitor": {
     "title": "Tmux-monitor",

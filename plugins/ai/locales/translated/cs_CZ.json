@@ -83,5 +83,8 @@
         "description": "Povolit asistentovi s umělou inteligencí pomáhat v terminálu tohoto hostitele. Ve výchozím nastavení vypnuto, ale stále vyžaduje, aby byla pro váš účet povolena umělá inteligence."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Zobrazit dokumenty"
   }
 }

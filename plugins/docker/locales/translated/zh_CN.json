@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"
+  },
+  "hosts": {
+    "docsLink": "查看文档",
+    "hostNotFound": "未找到主机",
+    "loadingHost": "正在加载主机..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "从剪贴板读取失败。请确保已授予剪贴板权限。",
+    "clipboardWriteFailed": "复制到剪贴板失败。请确保页面通过 HTTPS 或 localhost 提供服务。"
   }
 }

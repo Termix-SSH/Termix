@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Leitet einen Port auf dem Remote-Server zurück zu einem lokalen Port auf Ihrem Rechner weiter.",
     "tunnelRequirementsText": "Der SSH-Server muss in /etc/ssh/sshd_config die Optionen GatewayPorts yes, AllowTcpForwarding yes und PermitRootLogin yes gesetzt haben.",
     "tunnelSettings": "Tunnel-Einstellungen",
-    "tunnelType": "Tunneltyp"
+    "tunnelType": "Tunneltyp",
+    "bindHost": "Bind-Host",
+    "docsLink": "Dokumentation anzeigen",
+    "hostNotFound": "Host nicht gefunden",
+    "loadingHost": "Host wird geladen..."
   },
   "nav": {
     "portForwarding": "Weiterleitung",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynamisch (-D)",
     "typeLocal": "Lokal (-L)",
     "typeRemote": "Remote (-R)",
-    "working": "In Bearbeitung..."
+    "working": "In Bearbeitung...",
+    "start": "Start",
+    "stop": "Stop"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunnel",
+    "feature_tunnels_desc": "Leiten Sie Ports über einen Server weiter, um Dienste zu erreichen, die nicht öffentlich zugänglich sind."
   }
 }

@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "مساحات العمل",
     "workflow_workspaces_desc": "احفظ مجموعة من علامات التبويب المفتوحة وأعد فتح التخطيط بأكمله لاحقًا."
+  },
+  "hosts": {
+    "docsLink": "عرض المستندات"
   }
 }

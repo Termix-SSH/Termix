@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Άνοιγμα προγράμματος περιήγησης για έλεγχο ταυτότητας",
     "tailscaleCheckWaiting": "Αναμονή για έλεγχο ταυτότητας Tailscale...",
     "tailscaleCheckTimeout": "Το χρονικό όριο ελέγχου ταυτότητας κλίμακας έληξε. Δοκιμάστε ξανά."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Σύνδεση με τερματικό",
+        "usernameLabel": "Όνομα χρήστη"
+      }
+    }
   }
 }

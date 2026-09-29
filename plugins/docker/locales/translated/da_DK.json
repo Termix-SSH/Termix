@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Fjernserver kræves. Opret forbindelse til en fjernserver i Indstillinger for at bruge denne forbindelsestype."
+  },
+  "hosts": {
+    "docsLink": "Se dokumenter",
+    "hostNotFound": "Værten blev ikke fundet",
+    "loadingHost": "Indlæser vært..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Kunne ikke læse fra udklipsholderen. Sørg for, at der er givet tilladelse til udklipsholderen.",
+    "clipboardWriteFailed": "Kunne ikke kopiere til udklipsholder. Sørg for, at siden serveres via HTTPS eller localhost."
   }
 }

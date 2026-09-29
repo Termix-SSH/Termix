@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "โหนด {{count}}"
+  },
+  "hosts": {
+    "docsLink": "ดูเอกสาร"
   }
 }

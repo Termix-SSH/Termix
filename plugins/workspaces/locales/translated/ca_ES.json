@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Espais de treball",
     "workflow_workspaces_desc": "Desa un conjunt de pestanyes obertes i torna a obrir tot el disseny més tard."
+  },
+  "hosts": {
+    "docsLink": "Veure documents"
   }
 }

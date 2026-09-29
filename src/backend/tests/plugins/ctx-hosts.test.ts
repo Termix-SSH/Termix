@@ -140,11 +140,40 @@ vi.mock("../../hosts/status/host-status-service.js", () => ({
   },
 }));
 vi.mock("../../database/routes/host-plugin-settings.js", () => ({
-  applyPluginHostImportSettings: async (
-    hostId: number,
-    row: Record<string, unknown>,
+  loadHostPluginSettings: async (hostIds: number[]) =>
+    new Map(
+      hostIds.map((id) => [
+        id,
+        { fixture: { mine: `own-${id}` }, other: { theirs: true } },
+      ]),
+    ),
+  checkHostPluginSettingsInput: (
+    input: Record<string, Record<string, unknown>>,
   ) => {
-    h.importRows.push({ hostId, row });
+    const errors: string[] = [];
+    const writes: Array<{
+      manifest: { id: string };
+      values: Record<string, unknown>;
+    }> = [];
+    const skipped: string[] = [];
+    for (const [pluginId, values] of Object.entries(input)) {
+      if (pluginId === "off") {
+        skipped.push(pluginId);
+        continue;
+      }
+      for (const key of Object.keys(values)) {
+        if (key === "undeclared") errors.push(`${pluginId}.${key}`);
+      }
+      writes.push({ manifest: { id: pluginId }, values });
+    }
+    return { writes, skipped, errors };
+  },
+  writeHostPluginSettings: async (
+    manifest: { id: string },
+    hostId: number,
+    values: Record<string, unknown>,
+  ) => {
+    h.importRows.push({ hostId, row: { [manifest.id]: values } });
   },
 }));
 vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
@@ -361,6 +390,7 @@ describe("ctx.hosts", () => {
 
   it("creates a host once granted hosts:write", async () => {
     h.granted = new Set(["hosts:write"]);
+    h.importRows = [];
     const hosts = createPluginHosts({
       manifest: manifest(["hosts:write"]),
       audit: vi.fn(async () => {}),
@@ -371,19 +401,92 @@ describe("ctx.hosts", () => {
       port: 22,
       username: "root",
       authType: "password",
-      enableRdp: true,
+      tags: ["a", "b"],
+      jumpHosts: [{ hostId: 3 }],
+      pluginSettings: { "remote-desktop": { enableRdp: true } },
     });
     expect(created).toMatchObject({
       id: 99,
       name: "pve-guest",
       userId: "user-1",
+      tags: "a,b",
+      jumpHosts: [{ hostId: 3 }],
+      pluginSettings: { mine: "own-99" },
     });
-    expect(h.created).toHaveLength(1);
-    // Another plugin's fields go through its import normalizer.
-    expect(h.importRows.at(-1)).toMatchObject({
-      hostId: 99,
-      row: { enableRdp: true },
+    expect(h.created[0]).toMatchObject({
+      tags: "a,b",
+      jumpHosts: '[{"hostId":3}]',
     });
+    // Another plugin's settings go to that plugin, validated by core.
+    expect(h.importRows).toEqual([
+      { hostId: 99, row: { "remote-desktop": { enableRdp: true } } },
+    ]);
+  });
+
+  it("refuses a field the SDK does not take instead of dropping it", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(
+      hosts.create({
+        name: "n",
+        ip: "10.0.0.1",
+        port: 22,
+        username: "root",
+        authType: "password",
+        enableRdp: true,
+      } as never),
+    ).rejects.toThrow(/enableRdp/);
+    await expect(
+      hosts.update(5, { userId: "someone-else" } as never),
+    ).rejects.toThrow(/userId/);
+    await expect(
+      hosts.update(5, { pluginSettings: { docker: { undeclared: 1 } } }),
+    ).rejects.toThrow(/undeclared/);
+    expect(h.created).toHaveLength(0);
+    expect(h.updates).toHaveLength(0);
+  });
+
+  it("builds the record field by field, with no secret and no other plugin's settings", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.ownedHosts = [
+      {
+        id: 4,
+        userId: "user-1",
+        name: "own",
+        ip: "10.0.0.4",
+        port: 22,
+        username: "root",
+        authType: "password",
+        password: "secret",
+        key: "PRIVATE",
+        autostartPassword: "x",
+        terminalConfig: '{"keepaliveInterval":5,"fontSize":14}',
+        enableDocker: true,
+        jumpHosts: "[]",
+      },
+    ];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const [record] = await hosts.listOwned();
+    const loose = record as unknown as Record<string, unknown>;
+    for (const field of [
+      "password",
+      "key",
+      "autostartPassword",
+      "terminalConfig",
+      "enableDocker",
+    ]) {
+      expect(loose).not.toHaveProperty(field);
+    }
+    expect(record.sshOptions).toEqual({ keepaliveInterval: 5 });
+    expect(record.pluginSettings).toEqual({ mine: "own-4" });
+    expect(record.status).toEqual({ status: "reachable", lastChecked: "t" });
+    expect(record.enableSsh).toBe(true);
   });
 
   it("updates a host once granted hosts:write", async () => {
@@ -398,6 +501,7 @@ describe("ctx.hosts", () => {
     expect(h.updates).toEqual([
       { userId: "user-1", hostId: 5, patch: { name: "new" } },
     ]);
+    expect(updated?.pluginSettings).toEqual({ mine: "own-5" });
   });
 
   it("returns null updating a host that does not exist for this user", async () => {

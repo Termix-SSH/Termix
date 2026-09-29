@@ -253,12 +253,9 @@ export function normalizeImportedHost(
 const SENSITIVE_FIELDS = [
   "key",
   "keyPassword",
-  "autostartKey",
-  "autostartKeyPassword",
   "password",
   "sudoPassword",
   "socks5Password",
-  "autostartPassword",
 ];
 
 export function stripSensitiveFields(

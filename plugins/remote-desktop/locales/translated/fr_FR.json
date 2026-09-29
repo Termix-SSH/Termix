@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Réseau virtuel",
-    "unencryptedShell": "Shell non chiffré"
+    "unencryptedShell": "Shell non chiffré",
+    "docsLink": "Voir la documentation"
   },
   "onboarding": {
     "feature_desktop": "Bureau à distance",
@@ -274,5 +275,8 @@
         "label": "URL guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Serveur distant requis. Connectez un serveur distant dans les paramètres pour utiliser ce type de connexion."
   }
 }

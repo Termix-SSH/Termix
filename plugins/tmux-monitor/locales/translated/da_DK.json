@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Aktivér Tmux-skærm",
-    "enableTmuxMonitorDesc": "Vis denne vært i Tmux Monitor og tilføj dens tmux-handlinger til sidebjælken"
+    "enableTmuxMonitorDesc": "Vis denne vært i Tmux Monitor og tilføj dens tmux-handlinger til sidebjælken",
+    "docsLink": "Se dokumenter"
   },
   "tmuxMonitor": {
     "title": "Tmux-skærm",

@@ -9,7 +9,7 @@ export function activate(app: TermixApp): void {
     icon: Zap,
     kind: "open",
     order: 50,
-    when: (host) => hasMacAddress(host as Record<string, unknown>),
+    when: (host) => hasMacAddress(host),
     run: (host) => wakeHost(app.api, app.t, String(host.id)),
   });
 }

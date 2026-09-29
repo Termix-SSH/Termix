@@ -148,5 +148,17 @@
         "description": "Zezwól na udostępnianie sesji na żywo na tym hoście przez link lub innym użytkownikom"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nigdy",
+        "oneHour": "1 godzina",
+        "oneDay": "24 godziny",
+        "sevenDays": "7 dni",
+        "thirtyDays": "30 dni",
+        "custom": "Niestandardowy"
+      }
+    }
   }
 }

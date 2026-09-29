@@ -148,5 +148,17 @@
         "description": "このホスト上のライブセッションをリンクまたは他のユーザーと共有できるようにします。"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "無期限",
+        "oneHour": "1時間",
+        "oneDay": "24時間",
+        "sevenDays": "7日間",
+        "thirtyDays": "30日間",
+        "custom": "カスタム"
+      }
+    }
   }
 }

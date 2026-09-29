@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Телнет",
     "virtualNetwork": "Виртуална мрежа",
-    "unencryptedShell": "Некриптирана обвивка"
+    "unencryptedShell": "Некриптирана обвивка",
+    "docsLink": "Преглед на документи"
   },
   "onboarding": {
     "feature_desktop": "Отдалечен работен плот",
@@ -274,5 +275,8 @@
         "label": "URL адрес на GUACD"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Изисква се отдалечен сървър. Свържете се с отдалечен сървър в „Настройки“, за да използвате този тип връзка."
   }
 }

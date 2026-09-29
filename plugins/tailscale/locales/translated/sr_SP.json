@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Отворите прегледач за аутентификацију",
     "tailscaleCheckWaiting": "Чекање на Tailscale аутентификацију...",
     "tailscaleCheckTimeout": "Временско ограничење за аутентификацију Tailscale-а је истекло. Молимо покушајте поново."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Повежи се са терминалом",
+        "usernameLabel": "Корисничко име"
+      }
+    }
   }
 }

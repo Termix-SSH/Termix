@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuellt nätverk",
-    "unencryptedShell": "Okrypterat skal"
+    "unencryptedShell": "Okrypterat skal",
+    "docsLink": "Visa dokument"
   },
   "onboarding": {
     "feature_desktop": "Fjärrskrivbord",
@@ -274,5 +275,8 @@
         "label": "guacd-URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Fjärrserver krävs. Anslut en fjärrserver i Inställningar för att använda den här anslutningstypen."
   }
 }

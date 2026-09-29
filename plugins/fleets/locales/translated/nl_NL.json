@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Vloten"
+  },
+  "hosts": {
+    "docsLink": "Documenten bekijken",
+    "sharing": {
+      "customHoursPlaceholder": "Aantal uren tot de toegang verloopt",
+      "expiry": {
+        "never": "Nooit",
+        "oneHour": "1 uur",
+        "oneDay": "24 uur",
+        "sevenDays": "7 dagen",
+        "thirtyDays": "30 dagen",
+        "custom": "Aangepast"
+      },
+      "expiryLabel": "Toegang verloopt",
+      "levels": {
+        "connect": {
+          "label": "Verbinden",
+          "description": "Alleen open sessies: terminal, extern bureaublad, bestandsbeheer, tunnels en Docker. Geen toegang tot de hostconfiguratie."
+        },
+        "view": {
+          "label": "Weergave",
+          "description": "Maak verbinding en bekijk de hostconfiguratie. Geheime gegevens worden nooit weergegeven."
+        },
+        "edit": {
+          "label": "Bewerking",
+          "description": "Bekijk en wijzig de instellingen van de host die geen authenticatie vereist. De SSH-authenticatie van de eigenaar blijft privé en alleen toegankelijk voor de eigenaar."
+        },
+        "manage": {
+          "label": "Beheren",
+          "description": "Bewerken, de host delen met anderen, toegangsrechten wijzigen en toegang intrekken."
+        }
+      },
+      "noMatches": "Geen overeenkomsten gevonden",
+      "permissionLevelLabel": "Toegangsniveau",
+      "rolesTab": "Rollen",
+      "searchPlaceholder": "Gebruikers of rollen zoeken...",
+      "shareButton": "Deel",
+      "shareWithCount": "Delen ({{count}})",
+      "usersTab": "Gebruikers"
+    }
   }
 }

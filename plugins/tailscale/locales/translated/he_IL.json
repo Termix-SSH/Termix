@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "פתח את הדפדפן כדי לאמת",
     "tailscaleCheckWaiting": "ממתין לאימות Tailscale...",
     "tailscaleCheckTimeout": "אימות Tailscale הסתיים. אנא נסה שוב."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "התחברות לטרמינל",
+        "usernameLabel": "שם משתמש"
+      }
+    }
   }
 }

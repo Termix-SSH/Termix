@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "유효하지 않은 인증서를 허용합니다",
     "webUiIgnoreCertDesc": "직접 연결 엔드포인트에만 적용됩니다. 루프백은 이미 제외되어 있으므로 터널 엔드포인트에는 영향을 미치지 않습니다.",
     "webUiRemoveEndpoint": "엔드포인트를 제거합니다.",
-    "webUiOpenFailed": "웹 엔드포인트를 열 수 없습니다."
+    "webUiOpenFailed": "웹 엔드포인트를 열 수 없습니다.",
+    "bindHost": "바인드 호스트"
   }
 }

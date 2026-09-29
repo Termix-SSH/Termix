@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Ověření se nezdařilo. Zkontrolujte prosím své přihlašovací údaje a zkuste to znovu.",
     "timeout": "Časový limit ověření vypršel. Zkuste to prosím znovu."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

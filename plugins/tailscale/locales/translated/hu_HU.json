@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Böngésző megnyitása a hitelesítéshez",
     "tailscaleCheckWaiting": "Tailscale hitelesítésre várunk...",
     "tailscaleCheckTimeout": "A farokskálázási hitelesítés időtúllépést okozott. Próbálja újra."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Csatlakozás a terminálhoz",
+        "usernameLabel": "Felhasználónév"
+      }
+    }
   }
 }

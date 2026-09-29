@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Espaces de travail",
     "workflow_workspaces_desc": "Enregistrez une série d'onglets ouverts et rouvrez l'ensemble de la mise en page plus tard."
+  },
+  "hosts": {
+    "docsLink": "Voir la documentation"
   }
 }

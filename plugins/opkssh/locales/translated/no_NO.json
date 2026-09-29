@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Autentiseringen mislyktes. Sjekk legitimasjonen din og prøv på nytt.",
     "timeout": "Autentiseringen ble tidsavbrutt. Prøv på nytt."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

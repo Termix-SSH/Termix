@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Mínimo de 15 segundos. Com que frequência as estatísticas do nó Proxmox devem ser atualizadas.",
     "proxmoxStatsNodeOverride": "Substituição do nome do nó",
     "proxmoxStatsNodeOverrideDesc": "Substituir a deteção automática do nome do nó Proxmox (detetado por defeito através do nome do host).",
-    "proxmoxStatsNodeOverridePlaceholder": "Detetado automaticamente a partir do nome do host"
+    "proxmoxStatsNodeOverridePlaceholder": "Detetado automaticamente a partir do nome do host",
+    "docsLink": "Ver documentação",
+    "hostNotFound": "Host não encontrado",
+    "loadingHost": "A carregar o host...",
+    "none": "Nenhum",
+    "proxmoxGuestsSelected_one": "{{count}} convidado — {{selected}} selecionado",
+    "proxmoxGuestsSelected_other": "{{count}} convidados — {{selected}} selecionados",
+    "proxmoxImportButton_one": "Importar {{count}} host",
+    "proxmoxImportButton_other": "Importar {{count}} hosts"
   },
   "proxmoxStats": {
     "tabTitle": "Estatísticas do Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Nenhuma máquina virtual ou contentor LXC foi encontrado neste nó.",
     "noGuestsMatch": "Nenhum hóspede corresponde aos filtros atuais."
+  },
+  "terminal": {
+    "connected": "Ligado"
   }
 }

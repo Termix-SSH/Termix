@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "将远程服务器上的端口转发回您机器上的本地端口。",
     "tunnelRequirementsText": "SSH 服务器必须在 /etc/ssh/sshd_config 中设置 GatewayPorts yes、AllowTcpForwarding yes 和 PermitRootLogin yes。",
     "tunnelSettings": "隧道设置",
-    "tunnelType": "隧道类型"
+    "tunnelType": "隧道类型",
+    "bindHost": "绑定主机",
+    "docsLink": "查看文档",
+    "hostNotFound": "未找到主机",
+    "loadingHost": "正在加载主机..."
   },
   "nav": {
     "portForwarding": "转发",
@@ -134,6 +138,12 @@
     "typeDynamic": "动态 (-D)",
     "typeLocal": "本地 (-L)",
     "typeRemote": "远程 (-R)",
-    "working": "处理中..."
+    "working": "处理中...",
+    "start": "启动",
+    "stop": "停止"
+  },
+  "onboarding": {
+    "feature_tunnels": "隧道",
+    "feature_tunnels_desc": "通过服务器转发端口以访问未暴露的服务。"
   }
 }

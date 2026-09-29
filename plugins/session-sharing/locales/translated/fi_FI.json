@@ -148,5 +148,17 @@
         "description": "Salli live-istuntojen jakaminen tällä isännällä linkin kautta tai muiden käyttäjien kanssa"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Ei koskaan",
+        "oneHour": "1 tunti",
+        "oneDay": "24 tuntia",
+        "sevenDays": "7 päivää",
+        "thirtyDays": "30 päivää",
+        "custom": "Mukautettu"
+      }
+    }
   }
 }

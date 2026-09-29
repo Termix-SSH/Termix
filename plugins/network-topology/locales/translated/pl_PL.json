@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} węzłów"
+  },
+  "hosts": {
+    "docsLink": "Zobacz dokumentację"
   }
 }

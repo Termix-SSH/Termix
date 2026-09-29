@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "작업 공간",
     "workflow_workspaces_desc": "열려 있는 탭들을 저장해두었다가 나중에 전체 레이아웃을 다시 열어보세요."
+  },
+  "hosts": {
+    "docsLink": "문서 보기"
   }
 }

@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Aktifkan Monitor Tmux",
-    "enableTmuxMonitorDesc": "Tampilkan host ini di Tmux Monitor dan tambahkan aksi tmux-nya ke sidebar."
+    "enableTmuxMonitorDesc": "Tampilkan host ini di Tmux Monitor dan tambahkan aksi tmux-nya ke sidebar.",
+    "docsLink": "Lihat dokumen"
   },
   "tmuxMonitor": {
     "title": "Monitor Tmux",

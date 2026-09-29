@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
+  },
+  "hosts": {
+    "docsLink": "Lihat dokumen",
+    "hostNotFound": "Host tidak ditemukan",
+    "loadingHost": "Memuat host..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Gagal membaca dari clipboard. Pastikan izin clipboard telah diberikan.",
+    "clipboardWriteFailed": "Gagal menyalin ke papan klip. Pastikan halaman disajikan melalui HTTPS atau localhost."
   }
 }

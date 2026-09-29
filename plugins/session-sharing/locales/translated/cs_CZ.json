@@ -148,5 +148,17 @@
         "description": "Umožnit sdílení živých relací na tomto hostiteli prostřednictvím odkazu nebo s ostatními uživateli"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nikdy",
+        "oneHour": "1 hodina",
+        "oneDay": "24 hodin",
+        "sevenDays": "7 dní",
+        "thirtyDays": "30 dní",
+        "custom": "Zvyk"
+      }
+    }
   }
 }

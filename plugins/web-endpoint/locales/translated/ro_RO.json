@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Permiteți certificatul nevalid",
     "webUiIgnoreCertDesc": "Numai puncte finale directe. Loopback-ul este deja exceptat, deci acest lucru nu are efect asupra punctelor finale ale tunelului.",
     "webUiRemoveEndpoint": "Eliminați punctul final",
-    "webUiOpenFailed": "Nu s-a putut deschide endpoint-ul web"
+    "webUiOpenFailed": "Nu s-a putut deschide endpoint-ul web",
+    "bindHost": "Legați gazda"
   }
 }

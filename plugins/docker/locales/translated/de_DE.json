@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote-Server erforderlich. Um diesen Verbindungstyp zu verwenden, verbinden Sie einen Remote-Server in den Einstellungen."
+  },
+  "hosts": {
+    "docsLink": "Dokumentation anzeigen",
+    "hostNotFound": "Host nicht gefunden",
+    "loadingHost": "Host wird geladen..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Lesen aus der Zwischenablage fehlgeschlagen. Stellen Sie sicher, dass die Zwischenablageberechtigungen erteilt wurden.",
+    "clipboardWriteFailed": "Kopieren in die Zwischenablage fehlgeschlagen. Stellen Sie sicher, dass die Seite über HTTPS oder localhost bereitgestellt wird."
   }
 }

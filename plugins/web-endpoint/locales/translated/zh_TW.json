@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "允許無效證書",
     "webUiIgnoreCertDesc": "僅限直接端點。環回介面已獲豁免，因此對隧道端點沒有影響。",
     "webUiRemoveEndpoint": "移除端點",
-    "webUiOpenFailed": "開啟 Web 端點失敗"
+    "webUiOpenFailed": "開啟 Web 端點失敗",
+    "bindHost": "綁定主機"
   }
 }

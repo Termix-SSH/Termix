@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Salli virheellinen varmenne",
     "webUiIgnoreCertDesc": "Vain suorat päätepisteet. Loopback on jo vapautettu, joten tällä ei ole vaikutusta tunnelin päätepisteisiin.",
     "webUiRemoveEndpoint": "Poista päätepiste",
-    "webUiOpenFailed": "Verkkopäätepisteen avaaminen epäonnistui"
+    "webUiOpenFailed": "Verkkopäätepisteen avaaminen epäonnistui",
+    "bindHost": "Sido isäntä"
   }
 }

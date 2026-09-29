@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Mindestens 15 Sekunden. Wie oft sollen die Proxmox-Knotenstatistiken aktualisiert werden?",
     "proxmoxStatsNodeOverride": "Knotennamen überschreiben",
     "proxmoxStatsNodeOverrideDesc": "Die automatische Erkennung des Proxmox-Knotennamens (standardmäßig über den Hostnamen ermittelt) kann deaktiviert werden.",
-    "proxmoxStatsNodeOverridePlaceholder": "Automatisch anhand des Hostnamens erkannt"
+    "proxmoxStatsNodeOverridePlaceholder": "Automatisch anhand des Hostnamens erkannt",
+    "docsLink": "Dokumentation anzeigen",
+    "hostNotFound": "Host nicht gefunden",
+    "loadingHost": "Host wird geladen...",
+    "none": "Keine",
+    "proxmoxGuestsSelected_one": "{{count}} Gast — {{selected}} ausgewählt",
+    "proxmoxGuestsSelected_other": "{{count}} Gäste — {{selected}} ausgewählt",
+    "proxmoxImportButton_one": "{{count}} Host importieren",
+    "proxmoxImportButton_other": "{{count}} Hosts importieren"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox-Statistiken",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Auf diesem Knoten wurden keine VMs oder LXC-Container gefunden.",
     "noGuestsMatch": "Es gibt keine Gäste, die den aktuellen Filtern entsprechen."
+  },
+  "terminal": {
+    "connected": "Verbunden"
   }
 }

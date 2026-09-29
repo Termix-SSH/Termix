@@ -55,7 +55,7 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
       .prepare(
         `
           UPDATE ssh_data
-          SET password = ?, key = ?, key_password = ?, key_type = ?, autostart_password = ?, autostart_key = ?, autostart_key_password = ?, sudo_password = ?, updated_at = CURRENT_TIMESTAMP
+          SET password = ?, key = ?, key_password = ?, key_type = ?, sudo_password = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `,
       )
@@ -64,9 +64,6 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
         record.key || null,
         record.key_password || null,
         record.key_type || null,
-        record.autostart_password || null,
-        record.autostart_key || null,
-        record.autostart_key_password || null,
         record.sudo_password || null,
         recordId,
       );

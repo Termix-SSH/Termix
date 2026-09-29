@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Allow invalid certificate",
     "webUiIgnoreCertDesc": "Direct endpoints only. Loopback is already exempt, so this has no effect on tunnel endpoints.",
     "webUiRemoveEndpoint": "Remove endpoint",
-    "webUiOpenFailed": "Failed to open the web endpoint"
+    "webUiOpenFailed": "Failed to open the web endpoint",
+    "bindHost": "Bind Host"
   }
 }

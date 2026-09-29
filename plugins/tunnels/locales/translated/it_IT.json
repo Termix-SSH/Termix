@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Inoltra una porta sul server remoto verso una porta locale sulla tua macchina.",
     "tunnelRequirementsText": "Il server SSH deve avere GatewayPorts yes, AllowTcpForwarding yes e PermitRootLogin yes impostati in /etc/ssh/sshd_config.",
     "tunnelSettings": "Impostazioni tunnel",
-    "tunnelType": "Tipo di tunnel"
+    "tunnelType": "Tipo di tunnel",
+    "bindHost": "Host di bind",
+    "docsLink": "Visualizza documentazione",
+    "hostNotFound": "Host non trovato",
+    "loadingHost": "Caricamento host..."
   },
   "nav": {
     "portForwarding": "Inoltro",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinamico (-D)",
     "typeLocal": "Locale (-L)",
     "typeRemote": "Remoto (-R)",
-    "working": "In corso..."
+    "working": "In corso...",
+    "start": "Avvia",
+    "stop": "Ferma"
+  },
+  "onboarding": {
+    "feature_tunnels": "Gallerie",
+    "feature_tunnels_desc": "Inoltrare le porte attraverso un server per raggiungere servizi non esposti."
   }
 }

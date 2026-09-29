@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} নোড"
+  },
+  "hosts": {
+    "docsLink": "নথি দেখুন"
   }
 }

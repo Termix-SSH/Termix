@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Минимум 15 секунди. Колико често освежавати статистику Proxmox чвора.",
     "proxmoxStatsNodeOverride": "Замена имена чвора",
     "proxmoxStatsNodeOverrideDesc": "Поништи аутоматско откривање имена Proxmox чвора (подразумевано се открива преко имена хоста).",
-    "proxmoxStatsNodeOverridePlaceholder": "Аутоматски детектовано на основу имена хоста"
+    "proxmoxStatsNodeOverridePlaceholder": "Аутоматски детектовано на основу имена хоста",
+    "docsLink": "Прикажи документе",
+    "hostNotFound": "Хост није пронађен",
+    "loadingHost": "Учитавање хоста...",
+    "none": "Ниједан",
+    "proxmoxGuestsSelected_one": "{{count}} гост — {{selected}} изабрано",
+    "proxmoxGuestsSelected_other": "{{count}} гости — {{selected}} изабрано",
+    "proxmoxImportButton_one": "Увоз {{count}} хоста",
+    "proxmoxImportButton_other": "Увези {{count}} хостова"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox статистика",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "На овом чвору нису пронађене виртуелне машине или LXC контејнери.",
     "noGuestsMatch": "Ниједан гост не одговара тренутним филтерима."
+  },
+  "terminal": {
+    "connected": "Повезано"
   }
 }

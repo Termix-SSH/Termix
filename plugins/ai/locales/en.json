@@ -112,5 +112,8 @@
     "aiEnableTitle": "Turn it on",
     "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
     "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+  },
+  "hosts": {
+    "docsLink": "View docs"
   }
 }

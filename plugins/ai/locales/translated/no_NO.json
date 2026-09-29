@@ -83,5 +83,8 @@
         "description": "Tillat at AI-assistenten hjelper til i denne vertens terminal. Av som standard, og krever fortsatt at AI er aktivert for kontoen din."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Vis dokumenter"
   }
 }

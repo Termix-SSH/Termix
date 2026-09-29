@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Povolit neplatný certifikát",
     "webUiIgnoreCertDesc": "Pouze přímé koncové body. Zpětná smyčka je již vyňata, takže to nemá žádný vliv na koncové body tunelu.",
     "webUiRemoveEndpoint": "Odebrat koncový bod",
-    "webUiOpenFailed": "Nepodařilo se otevřít webový koncový bod"
+    "webUiOpenFailed": "Nepodařilo se otevřít webový koncový bod",
+    "bindHost": "Vázat hostitele"
   }
 }

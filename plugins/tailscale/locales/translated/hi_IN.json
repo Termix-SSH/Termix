@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "प्रमाणीकरण के लिए ब्राउज़र खोलें",
     "tailscaleCheckWaiting": "टेलस्केल प्रमाणीकरण की प्रतीक्षा की जा रही है...",
     "tailscaleCheckTimeout": "टेलस्केल प्रमाणीकरण का समय समाप्त हो गया। कृपया पुनः प्रयास करें।"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "टर्मिनल से कनेक्ट करें",
+        "usernameLabel": "उपयोगकर्ता नाम"
+      }
+    }
   }
 }

@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Aktiveer Tmux-monitor",
-    "enableTmuxMonitorDesc": "Wys hierdie gasheer in die Tmux Monitor en voeg sy tmux-aksies by die sybalk."
+    "enableTmuxMonitorDesc": "Wys hierdie gasheer in die Tmux Monitor en voeg sy tmux-aksies by die sybalk.",
+    "docsLink": "Bekyk dokumente"
   },
   "tmuxMonitor": {
     "title": "Tmux-monitor",

@@ -29,9 +29,10 @@ export type IconComponent = ComponentType<{
 }>;
 
 /**
- * A host as the shell holds it. Only the identifying fields are typed; the
- * rest of the record is passed through as the shell has it, so a plugin
- * that needs a feature column reads it by name.
+ * A host as the shell hands it to a plugin. Every field is listed here and
+ * core builds the record field by field, so a plugin cannot come to depend on
+ * a core column that is not part of this contract. A plugin's own host
+ * settings are in `pluginSettings[<plugin id>]`.
  */
 export interface PluginHostRecord {
   id: string;
@@ -41,6 +42,25 @@ export interface PluginHostRecord {
   username?: string;
   folder?: string;
   tags?: string[];
+  pin?: boolean;
+  notes?: string;
+  /** Stable across a desktop and the server it syncs with. */
+  syncId?: string | null;
+  /** Sub-host nesting: the host this one is organized under. */
+  parentHostId?: string | null;
+  authType?: string;
+  credentialId?: string | number | null;
+  overrideCredentialUsername?: boolean;
+  /** "ssh", or the id of the plugin protocol a host without SSH uses. */
+  connectionType?: string;
+  /** Desktop app: where connections to this host start from. */
+  connectionOrigin?: "local" | "remote" | null;
+  enableSsh?: boolean;
+  sshPort?: number;
+  jumpHosts?: { hostId: string | number }[];
+  statusCheckEnabled?: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval?: number | null;
   /** Keepalive, legacy algorithms, agent and environment options. */
   sshOptions?: HostSshOptions | null;
   /** Each enabled plugin's host settings, secrets redacted. */
@@ -49,7 +69,34 @@ export interface PluginHostRecord {
   protocolAuth?: Record<string, HostProtocolAuthSummary>;
   /** Set on a Quick Connect host, which is never saved. */
   quickConnectLogin?: QuickConnectLogin;
-  [key: string]: unknown;
+  /** Quick Connect only: core can save this host as it is. */
+  quickConnectSavable?: boolean;
+  /** Assigned when a host is opened in a tab; tells duplicate tabs apart. */
+  instanceId?: string;
+  /** Core's status: "online" once a login worked. */
+  status?: "online" | "reachable" | "offline" | "unknown";
+  online?: boolean;
+  /** Someone else owns this host and shared it with the user. */
+  isShared?: boolean;
+  permissionLevel?: "connect" | "view" | "edit" | "manage";
+  sharedExpiresAt?: string;
+  ownerUsername?: string;
+  /**
+   * A shared host's login per protocol ("ssh" or a plugin protocol): whether
+   * the owner shared theirs, and the recipient's own credential if they had
+   * to pick one.
+   */
+  authOverrides?: Partial<Record<string, HostAuthOverrideSummary>>;
+  /** A read-only copy of a host shared with the linked account. */
+  sharedCopy?: boolean;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly?: boolean;
+}
+
+export interface HostAuthOverrideSummary {
+  credentialId?: number | string;
+  required: boolean;
+  ownerAuthShared: boolean;
 }
 
 /** The protocol login a Quick Connect host carries, in plain text. */

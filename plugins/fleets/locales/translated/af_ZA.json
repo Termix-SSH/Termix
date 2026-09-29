@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Vlote"
+  },
+  "hosts": {
+    "docsLink": "Bekyk dokumente",
+    "sharing": {
+      "customHoursPlaceholder": "Ure totdat toegang verval",
+      "expiry": {
+        "never": "Nooit",
+        "oneHour": "1 uur",
+        "oneDay": "24 uur",
+        "sevenDays": "7 dae",
+        "thirtyDays": "30 dae",
+        "custom": "Pasgemaak"
+      },
+      "expiryLabel": "Toegang verval",
+      "levels": {
+        "connect": {
+          "label": "Verbind",
+          "description": "Slegs oop sessies: terminaal, afstandwerkskerm, lêerbestuurder, tonnels en Docker. Geen toegang tot die gasheerkonfigurasie nie."
+        },
+        "view": {
+          "label": "Bekyk",
+          "description": "Verbind, plus sien die gasheerkonfigurasie. Geheime word nooit gewys nie."
+        },
+        "edit": {
+          "label": "Wysig",
+          "description": "Bekyk, plus wysig nie-verifikasie gasheerinstellings. Die eienaar se SSH-verifikasie bly privaat en slegs vir die eienaar."
+        },
+        "manage": {
+          "label": "Bestuur",
+          "description": "Wysig, plus deel die gasheer met ander, verander toestemmingsvlakke en herroep toegang."
+        }
+      },
+      "noMatches": "Geen ooreenstemmings gevind nie",
+      "permissionLevelLabel": "Toestemmingsvlak",
+      "rolesTab": "Rolle",
+      "searchPlaceholder": "Soek gebruikers of rolle...",
+      "shareButton": "Deel",
+      "shareWithCount": "Deel ({{count}})",
+      "usersTab": "Gebruikers"
+    }
   }
 }

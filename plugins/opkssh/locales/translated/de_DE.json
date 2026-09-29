@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldeinformationen und versuchen Sie es erneut.",
     "timeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

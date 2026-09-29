@@ -83,5 +83,8 @@
         "description": "Erlauben Sie dem KI-Assistenten, im Terminal dieses Hosts Hilfe zu leisten. Standardmäßig deaktiviert; die KI muss weiterhin für Ihr Konto aktiviert sein."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Dokumentation anzeigen"
   }
 }

@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Tối thiểu 15 giây. Tần suất làm mới số liệu thống kê của node Proxmox.",
     "proxmoxStatsNodeOverride": "Ghi đè tên nút",
     "proxmoxStatsNodeOverrideDesc": "Ghi đè tính năng tự động phát hiện tên nút Proxmox (mặc định được phát hiện thông qua tên máy chủ).",
-    "proxmoxStatsNodeOverridePlaceholder": "Tự động nhận diện từ tên máy chủ"
+    "proxmoxStatsNodeOverridePlaceholder": "Tự động nhận diện từ tên máy chủ",
+    "docsLink": "Xem tài liệu",
+    "hostNotFound": "Không tìm thấy máy chủ",
+    "loadingHost": "Đang tải máy chủ...",
+    "none": "Không có",
+    "proxmoxGuestsSelected_one": "{{count}} máy khách — đã chọn {{selected}}",
+    "proxmoxGuestsSelected_other": "{{count}} máy khách — đã chọn {{selected}}",
+    "proxmoxImportButton_one": "Nhập {{count}} máy chủ",
+    "proxmoxImportButton_other": "Nhập {{count}} máy chủ"
   },
   "proxmoxStats": {
     "tabTitle": "Thống kê Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Không tìm thấy máy ảo hoặc vùng chứa LXC nào trên nút này.",
     "noGuestsMatch": "Hiện không có khách nào phù hợp với bộ lọc hiện tại."
+  },
+  "terminal": {
+    "connected": "Đã kết nối"
   }
 }

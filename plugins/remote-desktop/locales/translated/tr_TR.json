@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Sanal Ağ",
-    "unencryptedShell": "Şifrelenmemiş Shell"
+    "unencryptedShell": "Şifrelenmemiş Shell",
+    "docsLink": "Dokümanları görüntüle"
   },
   "onboarding": {
     "feature_desktop": "Uzaktan masaüstü",
@@ -274,5 +275,8 @@
         "label": "guacd URL'si"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
   }
 }

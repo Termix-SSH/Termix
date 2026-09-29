@@ -96,10 +96,6 @@ export type Host = {
   sudoPassword?: string;
   forceKeyboardInteractive?: boolean;
 
-  autostartPassword?: string;
-  autostartKey?: string;
-  autostartKeyPassword?: string;
-
   credentialId?: number;
   overrideCredentialUsername?: boolean;
   userId?: string;

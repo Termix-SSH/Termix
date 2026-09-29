@@ -1,10 +1,14 @@
 import { toast } from "sonner";
-import type { PluginApiClient, TermixApp } from "@termix/plugin-sdk/frontend";
+import type {
+  PluginApiClient,
+  PluginHostRecord,
+  TermixApp,
+} from "@termix/plugin-sdk/frontend";
 
-export function hasMacAddress(host: Record<string, unknown>): boolean {
-  const settings = host.pluginSettings as
-    Record<string, Record<string, unknown>> | undefined;
-  const macAddress = settings?.["wake-on-lan"]?.macAddress;
+export function hasMacAddress(
+  host: Pick<PluginHostRecord, "pluginSettings">,
+): boolean {
+  const macAddress = host.pluginSettings?.["wake-on-lan"]?.macAddress;
   return typeof macAddress === "string" && macAddress.trim().length > 0;
 }
 

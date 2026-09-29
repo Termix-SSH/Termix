@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "إعادة توجيه منفذ على الخادم البعيد إلى منفذ محلي على جهازك.",
     "tunnelRequirementsText": "يجب أن يحتوي خادم SSH على الإعدادات GatewayPorts yes و AllowTcpForwarding yes و PermitRootLogin yes في الملف /etc/ssh/sshd_config.",
     "tunnelSettings": "إعدادات النفق",
-    "tunnelType": "نوع النفق"
+    "tunnelType": "نوع النفق",
+    "bindHost": "مضيف الربط",
+    "docsLink": "عرض المستندات",
+    "hostNotFound": "المضيف غير موجود",
+    "loadingHost": "جارٍ تحميل المضيف..."
   },
   "nav": {
     "portForwarding": "إعادة التوجيه",
@@ -134,6 +138,12 @@
     "typeDynamic": "ديناميكي (-D)",
     "typeLocal": "محلي (-L)",
     "typeRemote": "بعيد (-R)",
-    "working": "جارٍ العمل..."
+    "working": "جارٍ العمل...",
+    "start": "تشغيل",
+    "stop": "إيقاف"
+  },
+  "onboarding": {
+    "feature_tunnels": "الأنفاق",
+    "feature_tunnels_desc": "إعادة توجيه المنافذ عبر خادم للوصول إلى الخدمات غير المكشوفة."
   }
 }

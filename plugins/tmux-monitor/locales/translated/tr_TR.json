@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Tmux İzleyiciyi Etkinleştir",
-    "enableTmuxMonitorDesc": "Bu ana bilgisayarı Tmux İzleyicide göster ve tmux eylemlerini kenar çubuğuna ekle"
+    "enableTmuxMonitorDesc": "Bu ana bilgisayarı Tmux İzleyicide göster ve tmux eylemlerini kenar çubuğuna ekle",
+    "docsLink": "Dokümanları görüntüle"
   },
   "tmuxMonitor": {
     "title": "Tmux İzleyici",

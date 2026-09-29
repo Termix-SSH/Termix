@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "העבר פורט בשרת המרוחק חזרה לפורט מקומי במחשב שלך.",
     "tunnelRequirementsText": "שרת ה-SSH חייב להגדיר את האפשרויות GatewayPorts כן, AllowTcpForwarding כן, ו-PermitRootLogin כן ב-/etc/ssh/sshd_config.",
     "tunnelSettings": "הגדרות מנהרה",
-    "tunnelType": "סוג המנהרה"
+    "tunnelType": "סוג המנהרה",
+    "bindHost": "מארח קשירה",
+    "docsLink": "הצג מסמכים",
+    "hostNotFound": "המארח לא נמצא",
+    "loadingHost": "טוען מארח..."
   },
   "nav": {
     "portForwarding": "העברה",
@@ -134,6 +138,12 @@
     "typeDynamic": "דינמי (-D)",
     "typeLocal": "מקומי (-L)",
     "typeRemote": "מרחוק (-R)",
-    "working": "עובד..."
+    "working": "עובד...",
+    "start": "הַתחָלָה",
+    "stop": "לְהַפְסִיק"
+  },
+  "onboarding": {
+    "feature_tunnels": "מנהרות",
+    "feature_tunnels_desc": "העברת פורטים דרך שרת כדי להגיע לשירותים שאינם חשופים."
   }
 }

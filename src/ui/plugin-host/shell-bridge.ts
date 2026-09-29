@@ -79,9 +79,25 @@ function subscribe(set: Set<() => void>, listener: () => void): () => void {
 
 const noop = () => {};
 
+/**
+ * A plugin hands back the typed record it got from the SDK, which carries
+ * fewer fields than the shell's own host. A tab should get the shell's host,
+ * with whatever the plugin set on top.
+ */
+export function withShellHost(host: Host | null): Host | null {
+  if (!host) return host;
+  const own = hosts.find((entry) => String(entry.id) === String(host.id));
+  if (!own || own === host) return host;
+  const merged: Record<string, unknown> = { ...own };
+  for (const [key, value] of Object.entries(host)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged as Host;
+}
+
 /** Forwards to the mounted shell; a no-op before it mounts or after logout. */
 export const shell: TabShellCallbacks = {
-  openTab: (...args) => callbacks?.openTab(...args),
+  openTab: (host, ...rest) => callbacks?.openTab(withShellHost(host), ...rest),
   openSingletonTab: (...args) => callbacks?.openSingletonTab(...args),
   closeTab: (...args) => callbacks?.closeTab(...args),
   renameTab: (...args) => callbacks?.renameTab(...args),

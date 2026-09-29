@@ -143,8 +143,55 @@ const SETTINGS_WRITERS: Record<
     updatePluginHostSettings(pluginId, hostId!, values),
 };
 
-function toHostRecord(host: unknown): PluginHostRecord {
-  return host as PluginHostRecord;
+/** Both host shapes the shell holds: its own list and the API's. */
+type ShellHost = Omit<Partial<PluginHostRecord>, "id" | "parentHostId"> & {
+  id: string | number;
+  parentHostId?: string | number | null;
+};
+
+/**
+ * The shell's host as the SDK types it. Copied field by field, so a core
+ * field reaches plugins only once it is part of PluginHostRecord.
+ */
+export function toHostRecord(host: ShellHost): PluginHostRecord {
+  return {
+    id: String(host.id),
+    name: host.name ?? "",
+    ip: host.ip ?? "",
+    port: host.port,
+    username: host.username,
+    folder: host.folder,
+    tags: host.tags,
+    pin: host.pin,
+    notes: host.notes,
+    syncId: host.syncId,
+    parentHostId: host.parentHostId == null ? null : String(host.parentHostId),
+    authType: host.authType,
+    credentialId: host.credentialId,
+    overrideCredentialUsername: host.overrideCredentialUsername,
+    connectionType: host.connectionType,
+    connectionOrigin: host.connectionOrigin,
+    enableSsh: host.enableSsh,
+    sshPort: host.sshPort,
+    jumpHosts: host.jumpHosts?.map((jump) => ({ hostId: jump.hostId })),
+    statusCheckEnabled: host.statusCheckEnabled,
+    statusCheckInterval: host.statusCheckInterval,
+    sshOptions: host.sshOptions,
+    pluginSettings: host.pluginSettings,
+    protocolAuth: host.protocolAuth,
+    quickConnectLogin: host.quickConnectLogin,
+    quickConnectSavable: host.quickConnectSavable,
+    instanceId: host.instanceId,
+    status: host.status,
+    online: host.online,
+    isShared: host.isShared,
+    permissionLevel: host.permissionLevel,
+    sharedExpiresAt: host.sharedExpiresAt,
+    ownerUsername: host.ownerUsername,
+    authOverrides: host.authOverrides,
+    sharedCopy: host.sharedCopy,
+    localOnly: host.localOnly,
+  };
 }
 
 export const pluginHostBridge: PluginHostBridge = {

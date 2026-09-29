@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "認証のためにブラウザを開く",
     "tailscaleCheckWaiting": "Tailscaleの認証を待っています...",
     "tailscaleCheckTimeout": "Tailscaleの認証がタイムアウトしました。もう一度お試しください。"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "ターミナルに接続",
+        "usernameLabel": "ユーザー名"
+      }
+    }
   }
 }

@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Kimlik doğrulaması için tarayıcıyı açın.",
     "tailscaleCheckWaiting": "Tailscale kimlik doğrulamasının tamamlanmasını bekliyoruz...",
     "tailscaleCheckTimeout": "Tailscale kimlik doğrulama işlemi zaman aşımına uğradı. Lütfen tekrar deneyin."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Terminale Bağlan",
+        "usernameLabel": "Kullanıcı Adı"
+      }
+    }
   }
 }

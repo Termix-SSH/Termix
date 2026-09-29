@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flåter"
+  },
+  "hosts": {
+    "docsLink": "Vis dokumenter",
+    "sharing": {
+      "customHoursPlaceholder": "Timer til tilgangen utløper",
+      "expiry": {
+        "never": "Aldri",
+        "oneHour": "1 time",
+        "oneDay": "24 timer",
+        "sevenDays": "7 dager",
+        "thirtyDays": "30 dager",
+        "custom": "Skikk"
+      },
+      "expiryLabel": "Utløpsdato for tilgang",
+      "levels": {
+        "connect": {
+          "label": "Koble til",
+          "description": "Kun åpne økter: terminal, eksternt skrivebord, filbehandler, tunneler og Docker. Ingen tilgang til vertskonfigurasjonen."
+        },
+        "view": {
+          "label": "Utsikt",
+          "description": "Koble til, pluss se vertskonfigurasjonen. Hemmeligheter vises aldri."
+        },
+        "edit": {
+          "label": "Redigere",
+          "description": "Vis og endre innstillinger for verter uten autentisering. Eierens SSH-autentisering forblir privat og kun for eieren."
+        },
+        "manage": {
+          "label": "Administrer",
+          "description": "Rediger, pluss del verten med andre, endre tillatelsesnivåer og tilbakekall tilgang."
+        }
+      },
+      "noMatches": "Ingen treff funnet",
+      "permissionLevelLabel": "Tillatelsesnivå",
+      "rolesTab": "Roller",
+      "searchPlaceholder": "Søk etter brukere eller roller...",
+      "shareButton": "Dele",
+      "shareWithCount": "Del ({{count}})",
+      "usersTab": "Brukere"
+    }
   }
 }

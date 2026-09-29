@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Bật Tmux Monitor",
-    "enableTmuxMonitorDesc": "Hiển thị máy chủ này trong Tmux Monitor và thêm các hành động tmux của nó vào thanh bên"
+    "enableTmuxMonitorDesc": "Hiển thị máy chủ này trong Tmux Monitor và thêm các hành động tmux của nó vào thanh bên",
+    "docsLink": "Xem tài liệu"
   },
   "tmuxMonitor": {
     "title": "Giám sát Tmux",

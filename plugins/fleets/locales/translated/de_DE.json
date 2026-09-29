@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flotten"
+  },
+  "hosts": {
+    "docsLink": "Dokumentation anzeigen",
+    "sharing": {
+      "customHoursPlaceholder": "Stunden bis zum Zugriffsablauf",
+      "expiry": {
+        "never": "Nie",
+        "oneHour": "1 Stunde",
+        "oneDay": "24 Stunden",
+        "sevenDays": "7 Tage",
+        "thirtyDays": "30 Tage",
+        "custom": "Benutzerdefiniert"
+      },
+      "expiryLabel": "Zugriffsablauf",
+      "levels": {
+        "connect": {
+          "label": "Verbinden",
+          "description": "Nur Sitzungen öffnen: Terminal, Remotedesktop, Dateimanager, Tunnel und Docker. Kein Zugriff auf die Hostkonfiguration."
+        },
+        "view": {
+          "label": "Anzeigen",
+          "description": "Verbinden sowie Hostkonfiguration anzeigen. Geheimnisse werden nie angezeigt."
+        },
+        "edit": {
+          "label": "Bearbeiten",
+          "description": "Sie können die Einstellungen für Hosts ohne Authentifizierung anzeigen und bearbeiten. Die SSH-Authentifizierung des Besitzers bleibt privat und ist nur für den Besitzer zugänglich."
+        },
+        "manage": {
+          "label": "Verwalten",
+          "description": "Bearbeiten sowie Host für andere freigeben, Berechtigungsstufen ändern und Zugriff entziehen."
+        }
+      },
+      "noMatches": "Keine Treffer gefunden",
+      "permissionLevelLabel": "Berechtigungsstufe",
+      "rolesTab": "Rollen",
+      "searchPlaceholder": "Benutzer oder Rollen suchen...",
+      "shareButton": "Teilen",
+      "shareWithCount": "Teilen ({{count}})",
+      "usersTab": "Benutzer"
+    }
   }
 }

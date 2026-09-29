@@ -106,5 +106,45 @@
   },
   "nav": {
     "fleets": "Fleets"
+  },
+  "hosts": {
+    "docsLink": "View docs",
+    "sharing": {
+      "customHoursPlaceholder": "Hours until access expires",
+      "expiry": {
+        "never": "Never",
+        "oneHour": "1 hour",
+        "oneDay": "24 hours",
+        "sevenDays": "7 days",
+        "thirtyDays": "30 days",
+        "custom": "Custom"
+      },
+      "expiryLabel": "Access expiry",
+      "levels": {
+        "connect": {
+          "label": "Connect",
+          "description": "Open sessions only: terminal, remote desktop, file manager, tunnels and Docker. No access to the host configuration."
+        },
+        "view": {
+          "label": "View",
+          "description": "Connect, plus see the host configuration. Secrets are never shown."
+        },
+        "edit": {
+          "label": "Edit",
+          "description": "View, plus modify non-authentication host settings. The owner's SSH authentication stays private and owner-only."
+        },
+        "manage": {
+          "label": "Manage",
+          "description": "Edit, plus share the host with others, change permission levels and revoke access."
+        }
+      },
+      "noMatches": "No matches found",
+      "permissionLevelLabel": "Permission level",
+      "rolesTab": "Roles",
+      "searchPlaceholder": "Search users or roles...",
+      "shareButton": "Share",
+      "shareWithCount": "Share ({{count}})",
+      "usersTab": "Users"
+    }
   }
 }

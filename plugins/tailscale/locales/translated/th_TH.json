@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "เปิดเบราว์เซอร์เพื่อยืนยันตัวตน",
     "tailscaleCheckWaiting": "กำลังรอการยืนยันตัวตนจาก Tailscale...",
     "tailscaleCheckTimeout": "การตรวจสอบสิทธิ์ Tailscale หมดเวลา โปรดลองอีกครั้ง"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "เชื่อมต่อกับเทอร์มินัล",
+        "usernameLabel": "ชื่อผู้ใช้"
+      }
+    }
   }
 }

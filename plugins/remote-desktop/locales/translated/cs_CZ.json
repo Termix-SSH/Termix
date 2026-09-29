@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuální síť",
-    "unencryptedShell": "Nešifrovaný shell"
+    "unencryptedShell": "Nešifrovaný shell",
+    "docsLink": "Zobrazit dokumenty"
   },
   "onboarding": {
     "feature_desktop": "Vzdálená plocha",
@@ -274,5 +275,8 @@
         "label": "URL GUACD"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Je vyžadován vzdálený server. Pro použití tohoto typu připojení se připojte ke vzdálenému serveru v Nastavení."
   }
 }

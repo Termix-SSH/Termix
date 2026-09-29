@@ -721,9 +721,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           key_password TEXT,
           key_type TEXT,
           sudo_password TEXT,
-          autostart_password TEXT,
-          autostart_key TEXT,
-          autostart_key_password TEXT,
           credential_id INTEGER,
           override_credential_username INTEGER,
           jump_hosts TEXT,
@@ -817,8 +814,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -840,9 +837,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.keyPassword || null,
           decrypted.keyType || null,
           decrypted.sudoPassword || null,
-          decrypted.autostartPassword || null,
-          decrypted.autostartKey || null,
-          decrypted.autostartKeyPassword || null,
           decrypted.credentialId || null,
           decrypted.overrideCredentialUsername ? 1 : 0,
           decrypted.jumpHosts || null,
@@ -1177,9 +1171,6 @@ app.post(
                   keyPassword: host.key_password,
                   keyType: host.key_type,
                   sudoPassword: host.sudo_password,
-                  autostartPassword: host.autostart_password,
-                  autostartKey: host.autostart_key,
-                  autostartKeyPassword: host.autostart_key_password,
                   credentialId: host.credential_id || null,
                   overrideCredentialUsername: Boolean(
                     host.override_credential_username,

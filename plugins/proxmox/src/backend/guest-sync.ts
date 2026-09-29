@@ -49,8 +49,8 @@ export function proxmoxSourceKey(source: {
   return `${source.sourceHostId}:${source.node}:${source.type}:${source.vmid}`;
 }
 
-export interface ImportedGuest {
-  host: Record<string, unknown>;
+export interface ImportedGuest<H = Record<string, unknown>> {
+  host: H;
   config: Record<string, unknown>;
   source: ProxmoxSource;
 }
@@ -60,13 +60,13 @@ export interface ImportedGuest {
  * source lives in each guest's proxmoxConfig host setting, not on the host
  * row, so the caller passes both.
  */
-export function indexImportedGuests(
-  hosts: Record<string, unknown>[],
+export function indexImportedGuests<H extends { id: unknown }>(
+  hosts: H[],
   configs: Array<{ hostId: number; value: unknown }>,
   sourceHostId: number,
-): Map<string, ImportedGuest> {
+): Map<string, ImportedGuest<H>> {
   const configById = new Map(configs.map((c) => [c.hostId, c.value]));
-  const out = new Map<string, ImportedGuest>();
+  const out = new Map<string, ImportedGuest<H>>();
   for (const host of hosts) {
     const config = parseJsonObject(configById.get(Number(host.id)));
     const source = getProxmoxSource(config);

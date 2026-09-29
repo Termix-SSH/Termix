@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Uwierzytelnienie nie powiodło się. Sprawdź poświadczenia i spróbuj ponownie.",
     "timeout": "Upłynął limit czasu uwierzytelniania. Spróbuj ponownie."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

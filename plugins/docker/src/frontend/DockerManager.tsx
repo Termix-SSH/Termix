@@ -90,10 +90,7 @@ function DockerManagerInner({
   // standalone window has no shell, so it keeps the host it was given.
   const liveRecord = useHost(host?.id);
   const currentHost = React.useMemo(
-    () =>
-      liveRecord
-        ? toDockerHost(liveRecord as unknown as Record<string, unknown>)
-        : host,
+    () => (liveRecord ? toDockerHost(liveRecord) : host),
     [liveRecord, host],
   );
   const enabled = dockerEnabled(currentHost);

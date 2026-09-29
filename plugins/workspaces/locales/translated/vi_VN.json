@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Không gian làm việc",
     "workflow_workspaces_desc": "Lưu lại một nhóm các tab đang mở và mở lại toàn bộ bố cục sau."
+  },
+  "hosts": {
+    "docsLink": "Xem tài liệu"
   }
 }

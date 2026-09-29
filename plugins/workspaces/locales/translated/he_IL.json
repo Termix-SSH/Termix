@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "סביבות עבודה",
     "workflow_workspaces_desc": "שמור קבוצת כרטיסיות פתוחות ופתח מחדש את כל הפריסה מאוחר יותר."
+  },
+  "hosts": {
+    "docsLink": "הצג מסמכים"
   }
 }

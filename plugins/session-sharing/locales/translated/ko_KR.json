@@ -148,5 +148,17 @@
         "description": "이 호스트에서 진행되는 라이브 세션을 링크 또는 다른 사용자와 공유하세요."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "안 함",
+        "oneHour": "1시간",
+        "oneDay": "24시간",
+        "sevenDays": "7일",
+        "thirtyDays": "30일",
+        "custom": "사용자 지정"
+      }
+    }
   }
 }

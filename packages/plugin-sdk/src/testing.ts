@@ -8,7 +8,11 @@
  * The vitest config these run under comes from @termix/plugin-sdk/vitest-preset.
  */
 
-import { LoginMethodError, PluginCapabilityError } from "./backend.js";
+import {
+  LoginMethodError,
+  PLUGIN_HOST_INPUT_KEYS,
+  PluginCapabilityError,
+} from "./backend.js";
 import type {
   PluginContext,
   PluginDisposables,
@@ -394,6 +398,74 @@ function noopLogger(): PluginLogger {
     warn: () => {},
     error: () => {},
   };
+}
+
+const HOST_INPUT_KEYS = new Set<string>(PLUGIN_HOST_INPUT_KEYS);
+
+/** Refuses a key ctx.hosts does not take, the way core does. */
+function checkHostInput(input: PluginHostUpdateInput): void {
+  const unknown = Object.keys(input ?? {}).filter(
+    (key) => !HOST_INPUT_KEYS.has(key),
+  );
+  if (unknown.length > 0) {
+    throw new Error(`ctx.hosts does not take ${unknown.join(", ")}`);
+  }
+}
+
+function emptyHostRecord(id: number, userId: string): PluginHostRecord {
+  return {
+    id,
+    userId,
+    syncId: null,
+    name: null,
+    ip: "",
+    port: 22,
+    username: "",
+    authType: "password",
+    credentialId: null,
+    overrideCredentialUsername: false,
+    connectionType: "ssh",
+    tags: null,
+    folder: null,
+    parentHostId: null,
+    pin: false,
+    notes: null,
+    jumpHosts: [],
+    enableSsh: true,
+    sshPort: null,
+    statusCheckEnabled: true,
+    statusCheckInterval: null,
+    connectionOrigin: null,
+    sshOptions: {},
+    pluginSettings: {},
+    status: null,
+    localOnly: false,
+    createdAt: null,
+    updatedAt: null,
+  };
+}
+
+function applyHostInput(
+  record: PluginHostRecord,
+  input: PluginHostUpdateInput,
+): PluginHostRecord {
+  const {
+    tags,
+    pluginSettings: _settings,
+    forceKeyboardInteractive: _fki,
+    ...rest
+  } = input;
+  const next: PluginHostRecord = { ...record };
+  for (const [key, value] of Object.entries(rest)) {
+    if (value !== undefined)
+      (next as unknown as Record<string, unknown>)[key] = value;
+  }
+  if (tags !== undefined) {
+    next.tags = Array.isArray(tags) ? tags.join(",") : tags;
+  }
+  if (next.jumpHosts === null) next.jumpHosts = [];
+  if (next.sshOptions === null) next.sshOptions = {};
+  return next;
 }
 
 /**
@@ -823,14 +895,12 @@ export function createFakeContext(
       create: async (
         host: PluginHostCreateInput,
       ): Promise<PluginHostRecord> => {
+        checkHostInput(host);
         const id = nextHostId++;
-        const record: PluginHostRecord = {
-          tags: null,
-          folder: null,
-          ...host,
-          id,
-          userId: actor ?? "unknown",
-        };
+        const record = applyHostInput(
+          emptyHostRecord(id, actor ?? "unknown"),
+          host,
+        );
         hostRecordsById.set(id, record);
         return record;
       },
@@ -838,9 +908,10 @@ export function createFakeContext(
         hostId: number,
         patch: PluginHostUpdateInput,
       ): Promise<PluginHostRecord | null> => {
+        checkHostInput(patch);
         const existing = hostRecordsById.get(hostId);
         if (!existing) return null;
-        const updated = { ...existing, ...patch };
+        const updated = applyHostInput(existing, patch);
         hostRecordsById.set(hostId, updated);
         return updated;
       },

@@ -470,5 +470,8 @@
     },
     "seconds": "segons",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Cal un servidor remot. Connecteu un servidor remot a Configuració per utilitzar aquest tipus de connexió."
   }
 }

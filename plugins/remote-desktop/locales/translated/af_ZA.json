@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuele Netwerk",
-    "unencryptedShell": "Ongeënkripteerde dop"
+    "unencryptedShell": "Ongeënkripteerde dop",
+    "docsLink": "Bekyk dokumente"
   },
   "onboarding": {
     "feature_desktop": "Afstandlessenaar",
@@ -274,5 +275,8 @@
         "label": "guacd-URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Afstandbediener word benodig. Koppel 'n afstandbediener in Instellings om hierdie verbindingstipe te gebruik."
   }
 }

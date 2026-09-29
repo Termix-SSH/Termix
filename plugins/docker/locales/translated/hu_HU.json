@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Távoli szerver szükséges. Csatlakoztasson egy távoli szervert a Beállításokban a kapcsolattípus használatához."
+  },
+  "hosts": {
+    "docsLink": "Dokumentumok megtekintése",
+    "hostNotFound": "Nem található gazdagép",
+    "loadingHost": "Gazdagép betöltése..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Nem sikerült beolvasni a vágólapról. Győződjön meg arról, hogy a vágólapra vonatkozó engedélyek meg vannak adva.",
+    "clipboardWriteFailed": "Nem sikerült a vágólapra másolni. Győződjön meg arról, hogy az oldal HTTPS vagy localhost protokollon keresztül jelenik meg."
   }
 }

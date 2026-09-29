@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Továbbítsd a távoli szerver egyik portját a saját gépeden lévő helyi portra.",
     "tunnelRequirementsText": "Az SSH szervernek a /etc/ssh/sshd_config fájlban be kell állítania a GatewayPorts yes, az AllowTcpForwarding yes és a PermitRootLogin yes értékeket.",
     "tunnelSettings": "Alagútbeállítások",
-    "tunnelType": "Alagút típusa"
+    "tunnelType": "Alagút típusa",
+    "bindHost": "Kötőállomás",
+    "docsLink": "Dokumentumok megtekintése",
+    "hostNotFound": "Nem található gazdagép",
+    "loadingHost": "Gazdagép betöltése..."
   },
   "nav": {
     "portForwarding": "Szállítmányozás",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinamikus (-D)",
     "typeLocal": "Helyi (-L)",
     "typeRemote": "Távoli (-R)",
-    "working": "Dolgozó..."
+    "working": "Dolgozó...",
+    "start": "Indul",
+    "stop": "Stop"
+  },
+  "onboarding": {
+    "feature_tunnels": "Alagutak",
+    "feature_tunnels_desc": "Portok továbbítása egy szerveren keresztül a nem elérhető szolgáltatások eléréséhez."
   }
 }

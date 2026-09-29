@@ -470,5 +470,8 @@
     },
     "seconds": "segundos",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "É necessário um servidor remoto. Conecte um servidor remoto nas Configurações para usar este tipo de conexão."
   }
 }

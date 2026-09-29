@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "원격 서버의 포트를 내 컴퓨터의 로컬 포트로 역방향 포워딩합니다.",
     "tunnelRequirementsText": "SSH 서버의 /etc/ssh/sshd_config에 GatewayPorts yes, AllowTcpForwarding yes, PermitRootLogin yes가 설정되어 있어야 합니다.",
     "tunnelSettings": "터널 설정",
-    "tunnelType": "터널 유형"
+    "tunnelType": "터널 유형",
+    "bindHost": "바인드 호스트",
+    "docsLink": "문서 보기",
+    "hostNotFound": "호스트를 찾을 수 없습니다",
+    "loadingHost": "호스트 로드 중..."
   },
   "nav": {
     "portForwarding": "전송",
@@ -134,6 +138,12 @@
     "typeDynamic": "동적 (-D)",
     "typeLocal": "로컬 (-L)",
     "typeRemote": "원격 (-R)",
-    "working": "작업 중..."
+    "working": "작업 중...",
+    "start": "시작",
+    "stop": "중지"
+  },
+  "onboarding": {
+    "feature_tunnels": "터널",
+    "feature_tunnels_desc": "서버를 통해 포트를 포워딩하여 외부에 노출되지 않은 서비스에 접근할 수 있습니다."
   }
 }

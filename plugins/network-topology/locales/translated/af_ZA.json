@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} nodusse"
+  },
+  "hosts": {
+    "docsLink": "Bekyk dokumente"
   }
 }

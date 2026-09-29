@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "อย่างน้อย 15 วินาที ความถี่ในการอัปเดตสถิติโหนด Proxmox",
     "proxmoxStatsNodeOverride": "การแทนที่ชื่อโหนด",
     "proxmoxStatsNodeOverrideDesc": "ยกเลิกการตรวจจับชื่อโหนด Proxmox อัตโนมัติ (โดยค่าเริ่มต้นจะตรวจจับผ่านชื่อโฮสต์)",
-    "proxmoxStatsNodeOverridePlaceholder": "ตรวจจับอัตโนมัติจากชื่อโฮสต์"
+    "proxmoxStatsNodeOverridePlaceholder": "ตรวจจับอัตโนมัติจากชื่อโฮสต์",
+    "docsLink": "ดูเอกสาร",
+    "hostNotFound": "ไม่พบโฮสต์",
+    "loadingHost": "กำลังโหลดโฮสต์...",
+    "none": "ไม่มี",
+    "proxmoxGuestsSelected_one": "{{count}} แขก — {{selected}} เลือกแล้ว",
+    "proxmoxGuestsSelected_other": "แขก {{count}} คน — แขก {{selected}} คน ที่เลือก",
+    "proxmoxImportButton_one": "นำเข้าโฮสต์ {{count}}",
+    "proxmoxImportButton_other": "นำเข้าโฮสต์ {{count}}"
   },
   "proxmoxStats": {
     "tabTitle": "สถิติ Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "ไม่พบเครื่องเสมือน (VM) หรือคอนเทนเนอร์ LXC บนโหนดนี้",
     "noGuestsMatch": "ไม่มีแขกท่านใดตรงกับตัวกรองที่มีอยู่ในขณะนี้"
+  },
+  "terminal": {
+    "connected": "เชื่อมต่อแล้ว"
   }
 }

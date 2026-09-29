@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "工作區",
     "workflow_workspaces_desc": "儲存一組開啟的標籤頁，稍後重新開啟整個佈局。"
+  },
+  "hosts": {
+    "docsLink": "檢視文件"
   }
 }

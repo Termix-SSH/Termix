@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "认证失败，请检查凭据并重试。",
     "timeout": "认证超时，请重试。"
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

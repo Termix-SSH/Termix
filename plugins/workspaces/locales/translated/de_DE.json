@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Arbeitsbereiche",
     "workflow_workspaces_desc": "Speichern Sie einen Satz geöffneter Tabs und öffnen Sie das gesamte Layout später wieder."
+  },
+  "hosts": {
+    "docsLink": "Dokumentation anzeigen"
   }
 }

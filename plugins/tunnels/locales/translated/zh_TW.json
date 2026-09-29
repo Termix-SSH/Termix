@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "將遠端伺服器的連接埠轉送回本機的連接埠。",
     "tunnelRequirementsText": "SSH 伺服器必須在 /etc/ssh/sshd_config 中設定 GatewayPorts yes、AllowTcpForwarding yes 以及 PermitRootLogin yes。",
     "tunnelSettings": "通道設定",
-    "tunnelType": "通道類型"
+    "tunnelType": "通道類型",
+    "bindHost": "綁定主機",
+    "docsLink": "檢視文件",
+    "hostNotFound": "找不到主機",
+    "loadingHost": "正在載入主機..."
   },
   "nav": {
     "portForwarding": "轉發",
@@ -134,6 +138,12 @@
     "typeDynamic": "動態 (-D)",
     "typeLocal": "本機 (-L)",
     "typeRemote": "遠端 (-R)",
-    "working": "處理中..."
+    "working": "處理中...",
+    "start": "啟動",
+    "stop": "停止"
+  },
+  "onboarding": {
+    "feature_tunnels": "隧道",
+    "feature_tunnels_desc": "透過伺服器轉送連接埠以存取未公開的服務。"
   }
 }

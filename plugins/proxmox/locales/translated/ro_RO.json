@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minim 15 secunde. Cât de des se actualizează statisticile nodului Proxmox.",
     "proxmoxStatsNodeOverride": "Suprascriere nume nod",
     "proxmoxStatsNodeOverrideDesc": "Suprascrie detectarea automată a numelui nodului Proxmox (detectat implicit prin numele de gazdă).",
-    "proxmoxStatsNodeOverridePlaceholder": "Detectat automat de la numele de gazdă"
+    "proxmoxStatsNodeOverridePlaceholder": "Detectat automat de la numele de gazdă",
+    "docsLink": "Vizualizați documentele",
+    "hostNotFound": "Gazdă negăsită",
+    "loadingHost": "Se încarcă gazda...",
+    "none": "Nici unul",
+    "proxmoxGuestsSelected_one": "{{count}} invitat — {{selected}} selectat",
+    "proxmoxGuestsSelected_other": "{{count}} invitați — {{selected}} selectați",
+    "proxmoxImportButton_one": "Importați gazda {{count}}",
+    "proxmoxImportButton_other": "Importați gazde {{count}}"
   },
   "proxmoxStats": {
     "tabTitle": "Statistici Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Nu s-au găsit mașini virtuale sau containere LXC pe acest nod.",
     "noGuestsMatch": "Niciun invitat nu corespunde filtrelor actuale."
+  },
+  "terminal": {
+    "connected": "Conectat"
   }
 }

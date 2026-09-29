@@ -148,5 +148,17 @@
         "description": "Laat regstreekse sessies op hierdie gasheer via skakel of met ander gebruikers gedeel word"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nooit",
+        "oneHour": "1 uur",
+        "oneDay": "24 uur",
+        "sevenDays": "7 dae",
+        "thirtyDays": "30 dae",
+        "custom": "Pasgemaak"
+      }
+    }
   }
 }

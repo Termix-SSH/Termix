@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "É necessário um servidor remoto. Ligue um servidor remoto nas Definições para utilizar este tipo de ligação."
+  },
+  "hosts": {
+    "docsLink": "Ver documentação",
+    "hostNotFound": "Host não encontrado",
+    "loadingHost": "A carregar o host..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Erro ao ler da área de transferência. Certifique-se de que as permissões da área de transferência foram concedidas.",
+    "clipboardWriteFailed": "Erro ao copiar para a área de transferência. Certifique-se de que a página é servida via HTTPS ou localhost."
   }
 }

@@ -92,7 +92,7 @@ const PROTOCOLS: {
 ];
 
 function RemoteDesktopTab({ tab, host, isVisible, handleRef }: TabProps) {
-  const record = host as unknown as RemoteHostLogin | undefined;
+  const record: RemoteHostLogin | undefined = host;
   return (
     <GuacamoleApp
       ref={handleRef as Ref<GuacamoleAppHandle>}
@@ -175,6 +175,12 @@ function ToolbarCard({
   );
 }
 
+/** The Wake-on-LAN address a host keeps, the default for a session's wake packet. */
+function wakeOnLanMac(host: PluginHostRecord | undefined): string | null {
+  const value = host?.pluginSettings?.["wake-on-lan"]?.macAddress;
+  return typeof value === "string" && value ? value : null;
+}
+
 function RdpSection(props: HostEditorSectionProps) {
   const { form, setField, setGuacField } = remoteDesktopForm(props);
   return (
@@ -183,7 +189,7 @@ function RdpSection(props: HostEditorSectionProps) {
         form={form}
         setField={setField}
         setGuacField={setGuacField}
-        host={props.host as { macAddress?: string | null } | undefined}
+        host={{ macAddress: wakeOnLanMac(props.host) }}
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
@@ -200,7 +206,7 @@ function VncSection(props: HostEditorSectionProps) {
         form={form}
         setField={setField}
         setGuacField={setGuacField}
-        host={props.host as { macAddress?: string | null } | undefined}
+        host={{ macAddress: wakeOnLanMac(props.host) }}
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
@@ -246,7 +252,7 @@ function registerNativeRdp(app: TermixApp): void {
       order: 105,
       when: (host) => protocolEnabled(host, "rdp"),
       run: (host) => {
-        const record = host as unknown as RemoteHostLogin;
+        const record: RemoteHostLogin = host;
         void openNativeRdp({
           host: String(record.ip ?? ""),
           port: hostRemoteOptions(record).rdpPort,

@@ -470,5 +470,8 @@
     },
     "seconds": "秒",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "リモートサーバーが必要です。この接続タイプを使用するには、設定でリモートサーバーを接続してください。"
   }
 }

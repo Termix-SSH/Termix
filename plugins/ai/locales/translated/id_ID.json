@@ -83,5 +83,8 @@
         "description": "Izinkan asisten AI untuk membantu di terminal host ini. Secara default dinonaktifkan, dan AI tetap perlu diaktifkan untuk akun Anda."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Lihat dokumen"
   }
 }

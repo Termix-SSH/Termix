@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "ส่งต่อพอร์ตบนเซิร์ฟเวอร์ระยะไกลกลับมายังพอร์ตภายในเครื่องของคุณ",
     "tunnelRequirementsText": "เซิร์ฟเวอร์ SSH ต้องตั้งค่า GatewayPorts yes, AllowTcpForwarding yes และ PermitRootLogin yes ในไฟล์ /etc/ssh/sshd_config",
     "tunnelSettings": "การตั้งค่าอุโมงค์",
-    "tunnelType": "ประเภทอุโมงค์"
+    "tunnelType": "ประเภทอุโมงค์",
+    "bindHost": "โฮสต์ผูก",
+    "docsLink": "ดูเอกสาร",
+    "hostNotFound": "ไม่พบโฮสต์",
+    "loadingHost": "กำลังโหลดโฮสต์..."
   },
   "nav": {
     "portForwarding": "การส่งต่อ",
@@ -134,6 +138,12 @@
     "typeDynamic": "ไดนามิก (-D)",
     "typeLocal": "ท้องถิ่น (-L)",
     "typeRemote": "รีโมท (-R)",
-    "working": "การทำงาน..."
+    "working": "การทำงาน...",
+    "start": "เริ่ม",
+    "stop": "หยุด"
+  },
+  "onboarding": {
+    "feature_tunnels": "อุโมงค์",
+    "feature_tunnels_desc": "ส่งต่อพอร์ตผ่านเซิร์ฟเวอร์เพื่อเข้าถึงบริการที่ไม่เปิดเผยต่อสาธารณะ"
   }
 }

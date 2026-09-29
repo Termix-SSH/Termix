@@ -83,5 +83,8 @@
         "description": "Tillåt AI-assistenten att hjälpa till i den här värdens terminal. Av som standard och kräver fortfarande att AI är aktiverat för ditt konto."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Visa dokument"
   }
 }

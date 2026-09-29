@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimálně 15 sekund. Jak často aktualizovat statistiky uzlu Proxmox.",
     "proxmoxStatsNodeOverride": "Přepsání názvu uzlu",
     "proxmoxStatsNodeOverrideDesc": "Přepsat automatickou detekci názvu uzlu Proxmox (ve výchozím nastavení detekováno pomocí názvu hostitele).",
-    "proxmoxStatsNodeOverridePlaceholder": "Automaticky detekováno z názvu hostitele"
+    "proxmoxStatsNodeOverridePlaceholder": "Automaticky detekováno z názvu hostitele",
+    "docsLink": "Zobrazit dokumenty",
+    "hostNotFound": "Hostitel nenalezen",
+    "loadingHost": "Načítání hostitele...",
+    "none": "Žádný",
+    "proxmoxGuestsSelected_one": "{{count}} host — {{selected}} vybráno",
+    "proxmoxGuestsSelected_other": "{{count}} hosté — {{selected}} vybráno",
+    "proxmoxImportButton_one": "Importovat hostitele {{count}}",
+    "proxmoxImportButton_other": "Importovat hostitele {{count}}"
   },
   "proxmoxStats": {
     "tabTitle": "Statistiky Proxmoxu",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Na tomto uzlu nebyly nalezeny žádné virtuální počítače ani kontejnery LXC.",
     "noGuestsMatch": "Aktuálním filtrům neodpovídají žádní hosté."
+  },
+  "terminal": {
+    "connected": "Připojeno"
   }
 }

@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Tmux মনিটর সক্রিয় করুন",
-    "enableTmuxMonitorDesc": "এই হোস্টটিকে Tmux মনিটরে দেখান এবং এর tmux অ্যাকশনগুলো সাইডবারে যোগ করুন।"
+    "enableTmuxMonitorDesc": "এই হোস্টটিকে Tmux মনিটরে দেখান এবং এর tmux অ্যাকশনগুলো সাইডবারে যোগ করুন।",
+    "docsLink": "নথি দেখুন"
   },
   "tmuxMonitor": {
     "title": "Tmux মনিটর",

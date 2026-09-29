@@ -112,9 +112,6 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     credentialId: null,
     shareSshAuth: false,
     sudoPassword: "owner-sudo",
-    autostartPassword: "auto-pass",
-    autostartKey: null,
-    autostartKeyPassword: null,
     jumpHosts: null,
     tunnelConnections: null,
     terminalConfig: null,
@@ -519,7 +516,6 @@ describe("resolveHostById", () => {
     expect(host.username).toBe("cred-user");
     // Owner-only operational secrets are NOT stripped for the admin.
     expect(host.sudoPassword).toBe("owner-sudo");
-    expect(host.autostartPassword).toBe("auto-pass");
   });
 
   it("audits every admin-bypass host resolution", async () => {

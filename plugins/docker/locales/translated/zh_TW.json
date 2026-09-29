@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
+  },
+  "hosts": {
+    "docsLink": "檢視文件",
+    "hostNotFound": "找不到主機",
+    "loadingHost": "正在載入主機..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "從剪貼簿讀取失敗。請確認已授予剪貼簿權限。",
+    "clipboardWriteFailed": "複製到剪貼簿失敗。請確認頁面是透過 HTTPS 或 localhost 提供。"
   }
 }

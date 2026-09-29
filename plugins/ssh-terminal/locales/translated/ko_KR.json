@@ -470,5 +470,8 @@
     },
     "seconds": "초",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "원격 서버가 필요합니다. 이 연결 유형을 사용하려면 설정에서 원격 서버를 연결하세요."
   }
 }

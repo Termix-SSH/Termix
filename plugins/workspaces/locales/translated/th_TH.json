@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "พื้นที่ทำงาน",
     "workflow_workspaces_desc": "บันทึกชุดแท็บที่เปิดอยู่ แล้วเปิดเค้าโครงทั้งหมดอีกครั้งในภายหลัง"
+  },
+  "hosts": {
+    "docsLink": "ดูเอกสาร"
   }
 }

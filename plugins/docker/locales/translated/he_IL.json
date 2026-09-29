@@ -114,5 +114,17 @@
         "podman": "פודמן"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "נדרש שרת מרוחק. יש להתחבר לשרת מרוחק בהגדרות כדי להשתמש בסוג חיבור זה."
+  },
+  "hosts": {
+    "docsLink": "הצג מסמכים",
+    "hostNotFound": "המארח לא נמצא",
+    "loadingHost": "טוען מארח..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "הקריאה מהלוח נכשלה. ודא שהרשאות הלוח ניתנות.",
+    "clipboardWriteFailed": "ההעתקה ללוח נכשלה. ודא שהדף מוגש דרך HTTPS או localhost."
   }
 }

@@ -83,5 +83,8 @@
         "description": "Cho phép trợ lý AI hỗ trợ trong thiết bị đầu cuối của máy chủ này. Mặc định là tắt, nhưng bạn vẫn cần bật AI cho tài khoản của mình."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Xem tài liệu"
   }
 }

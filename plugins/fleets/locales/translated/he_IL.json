@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "ציי רכב"
+  },
+  "hosts": {
+    "docsLink": "הצג מסמכים",
+    "sharing": {
+      "customHoursPlaceholder": "שעות עד לפקיעת הגישה",
+      "expiry": {
+        "never": "לְעוֹלָם לֹא",
+        "oneHour": "שעה אחת",
+        "oneDay": "24 שעות",
+        "sevenDays": "7 ימים",
+        "thirtyDays": "30 ימים",
+        "custom": "מִנְהָג"
+      },
+      "expiryLabel": "פקיעת גישה",
+      "levels": {
+        "connect": {
+          "label": "לְחַבֵּר",
+          "description": "הפעלות פתוחות בלבד: טרמינל, שולחן עבודה מרוחק, מנהל קבצים, מנהרות ו-Docker. אין גישה לתצורת המארח."
+        },
+        "view": {
+          "label": "נוֹף",
+          "description": "התחבר, בנוסף ראה את תצורת המארח. סודות לעולם אינם מוצגים."
+        },
+        "edit": {
+          "label": "לַעֲרוֹך",
+          "description": "הצג ושנה הגדרות של מארח שאינו קשור לאימות. אימות ה-SSH של הבעלים נשאר פרטי ולבעלים בלבד."
+        },
+        "manage": {
+          "label": "לְנַהֵל",
+          "description": "עריכה, בנוסף לשיתוף המארח עם אחרים, שינוי רמות הרשאה וביטול גישה."
+        }
+      },
+      "noMatches": "לא נמצאו התאמות",
+      "permissionLevelLabel": "רמת הרשאה",
+      "rolesTab": "תפקידים",
+      "searchPlaceholder": "חיפוש משתמשים או תפקידים...",
+      "shareButton": "לַחֲלוֹק",
+      "shareWithCount": "שתף ({{count}})",
+      "usersTab": "משתמשים"
+    }
   }
 }

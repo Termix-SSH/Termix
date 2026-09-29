@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Teruskan port pada server jarak jauh kembali ke port lokal pada mesin Anda.",
     "tunnelRequirementsText": "Server SSH harus memiliki pengaturan GatewayPorts yes, AllowTcpForwarding yes, dan PermitRootLogin yes di /etc/ssh/sshd_config.",
     "tunnelSettings": "Pengaturan Terowongan",
-    "tunnelType": "Jenis Terowongan"
+    "tunnelType": "Jenis Terowongan",
+    "bindHost": "Host Terikat",
+    "docsLink": "Lihat dokumen",
+    "hostNotFound": "Host tidak ditemukan",
+    "loadingHost": "Memuat host..."
   },
   "nav": {
     "portForwarding": "Meneruskan",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinamis (-D)",
     "typeLocal": "Lokal (-L)",
     "typeRemote": "Jarak Jauh (-R)",
-    "working": "Bekerja..."
+    "working": "Bekerja...",
+    "start": "Awal",
+    "stop": "Berhenti"
+  },
+  "onboarding": {
+    "feature_tunnels": "Terowongan",
+    "feature_tunnels_desc": "Meneruskan port melalui server untuk mengakses layanan yang tidak terekspos."
   }
 }

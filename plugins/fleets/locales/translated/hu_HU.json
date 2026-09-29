@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flották"
+  },
+  "hosts": {
+    "docsLink": "Dokumentumok megtekintése",
+    "sharing": {
+      "customHoursPlaceholder": "Órák a hozzáférés lejártáig",
+      "expiry": {
+        "never": "Soha",
+        "oneHour": "1 óra",
+        "oneDay": "24 óra",
+        "sevenDays": "7 nap",
+        "thirtyDays": "30 nap",
+        "custom": "Szokás"
+      },
+      "expiryLabel": "Hozzáférés lejárata",
+      "levels": {
+        "connect": {
+          "label": "Csatlakozás",
+          "description": "Csak nyitott munkamenetek: terminál, távoli asztal, fájlkezelő, alagutak és Docker. Nincs hozzáférés a gazdagép konfigurációjához."
+        },
+        "view": {
+          "label": "Kilátás",
+          "description": "Csatlakozás, valamint a gazdagép konfigurációjának megtekintése. A titkos kódok soha nem jelennek meg."
+        },
+        "edit": {
+          "label": "Szerkesztés",
+          "description": "A nem hitelesítési hosztbeállítások megtekintése és módosítása. A tulajdonos SSH-hitelesítése privát és csak a tulajdonos számára elérhető marad."
+        },
+        "manage": {
+          "label": "Kezelés",
+          "description": "Szerkeszd, és oszd meg a gazdagépet másokkal, módosítsd a jogosultsági szinteket és vond vissza a hozzáférést."
+        }
+      },
+      "noMatches": "Nincs találat",
+      "permissionLevelLabel": "Jogosultsági szint",
+      "rolesTab": "Szerepkörök",
+      "searchPlaceholder": "Felhasználók vagy szerepkörök keresése...",
+      "shareButton": "Részesedés",
+      "shareWithCount": "Megosztás ({{count}})",
+      "usersTab": "Felhasználók"
+    }
   }
 }

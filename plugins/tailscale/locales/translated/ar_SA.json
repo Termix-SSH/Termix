@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "افتح المتصفح للمصادقة",
     "tailscaleCheckWaiting": "في انتظار مصادقة Tailscale...",
     "tailscaleCheckTimeout": "انتهت مهلة مصادقة Tailscale. يرجى المحاولة مرة أخرى."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "اتصل بالطرفية",
+        "usernameLabel": "اسم المستخدم"
+      }
+    }
   }
 }

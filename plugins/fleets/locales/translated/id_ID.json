@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Armada"
+  },
+  "hosts": {
+    "docsLink": "Lihat dokumen",
+    "sharing": {
+      "customHoursPlaceholder": "Waktu hingga akses berakhir",
+      "expiry": {
+        "never": "Tidak pernah",
+        "oneHour": "1 jam",
+        "oneDay": "24 jam",
+        "sevenDays": "7 hari",
+        "thirtyDays": "30 hari",
+        "custom": "Kebiasaan"
+      },
+      "expiryLabel": "Kedaluwarsa akses",
+      "levels": {
+        "connect": {
+          "label": "Menghubungkan",
+          "description": "Hanya sesi yang diizinkan untuk dibuka: terminal, desktop jarak jauh, pengelola file, terowongan, dan Docker. Tidak ada akses ke konfigurasi host."
+        },
+        "view": {
+          "label": "Melihat",
+          "description": "Hubungkan, dan lihat konfigurasi host. Rahasia tidak akan pernah ditampilkan."
+        },
+        "edit": {
+          "label": "Edit",
+          "description": "Lihat, dan ubah pengaturan host non-autentikasi. Autentikasi SSH pemilik tetap bersifat pribadi dan hanya untuk pemilik."
+        },
+        "manage": {
+          "label": "Mengelola",
+          "description": "Edit, bagikan host dengan orang lain, ubah tingkat izin, dan cabut akses."
+        }
+      },
+      "noMatches": "Tidak ditemukan kecocokan.",
+      "permissionLevelLabel": "Tingkat izin",
+      "rolesTab": "Peran",
+      "searchPlaceholder": "Cari pengguna atau peran...",
+      "shareButton": "Membagikan",
+      "shareWithCount": "Bagikan ({{count}})",
+      "usersTab": "Pengguna"
+    }
   }
 }

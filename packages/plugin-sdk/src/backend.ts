@@ -556,55 +556,118 @@ export interface PluginHostSummary {
 }
 
 /**
- * A host record wide enough for a plugin that creates or updates hosts on the
- * user's behalf (import, discovery, sync), decrypted for that user. Unlike
- * PluginHostSummary this carries the fields a plugin needs to set up a
- * connectable host, not just what a list view shows. Still no secret auth
- * material (password, key, vault tokens): a plugin that creates a host picks
- * an authType and, for "credential", a credentialId it does not need to see
- * the contents of.
+ * A host as ctx.hosts hands it to a plugin that creates, updates or scans
+ * hosts on the user's behalf (import, discovery, sync), decrypted for that
+ * user. Every field is listed here and core builds it field by field, so a
+ * core column a plugin needs has to be added to this contract first. Carries
+ * no secret auth material (password, key, vault tokens): a plugin that
+ * creates a host picks an authType and, for "credential", a credentialId it
+ * does not need to see the contents of.
  */
 export interface PluginHostRecord {
   id: number;
   userId: string;
+  /** Stable across a desktop and the server it syncs with. */
+  syncId: string | null;
   name: string | null;
   ip: string;
   port: number;
   username: string;
   authType: string;
-  credentialId?: number | null;
-  overrideCredentialUsername?: boolean | null;
-  connectionType?: string | null;
+  credentialId: number | null;
+  overrideCredentialUsername: boolean;
+  /** "ssh", or the id of the plugin protocol a host without SSH uses. */
+  connectionType: string;
+  /** Comma-separated, as ssh_data stores them. */
   tags: string | null;
   folder: string | null;
-  jumpHosts?: unknown;
-  enableSsh?: boolean | null;
+  parentHostId: number | null;
+  pin: boolean;
+  notes: string | null;
+  jumpHosts: PluginHostJumpHost[];
+  enableSsh: boolean;
+  sshPort: number | null;
+  statusCheckEnabled: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval: number | null;
+  connectionOrigin: "local" | "remote" | null;
   /** Keepalive, legacy algorithms, agent and environment options. */
-  sshOptions?: HostSshOptions | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-  [key: string]: unknown;
+  sshOptions: HostSshOptions;
+  /**
+   * The calling plugin's own host settings, secrets redacted. Another
+   * plugin's settings are that plugin's to hand out, through a service.
+   */
+  pluginSettings: Record<string, unknown>;
+  /** Core's last reachability check, or null before the first one. */
+  status: PluginHostStatusEntry | null;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface PluginHostJumpHost {
+  hostId: number;
 }
 
 /**
- * Fields a plugin may set when creating a host it will own or manage. Fields
- * that belong to another plugin's host settings (a protocol switch or port) are
- * handed to that plugin's host import normalizer, as on a bulk import.
+ * The fields a plugin may set when it creates a host. A key not listed here
+ * is refused with an error rather than dropped. Host settings go in
+ * `pluginSettings`, keyed by the plugin that declares them, and are
+ * validated against that plugin's manifest: an undeclared key is refused, and
+ * settings for a plugin that is not running are skipped and logged.
  */
-export type PluginHostCreateInput = Partial<
-  Omit<PluginHostRecord, "id" | "userId">
-> & {
+export interface PluginHostCreateInput {
   name: string;
   ip: string;
   port: number;
   username: string;
   authType: string;
-};
+  credentialId?: number | null;
+  overrideCredentialUsername?: boolean;
+  connectionType?: string;
+  /** Comma-separated or a list. */
+  tags?: string | string[] | null;
+  folder?: string | null;
+  pin?: boolean;
+  notes?: string | null;
+  jumpHosts?: PluginHostJumpHost[] | null;
+  enableSsh?: boolean;
+  sshPort?: number | null;
+  statusCheckEnabled?: boolean;
+  statusCheckInterval?: number | null;
+  forceKeyboardInteractive?: boolean;
+  sshOptions?: HostSshOptions | null;
+  /** Host settings by plugin id, the shape a Termix export carries. */
+  pluginSettings?: Record<string, Record<string, unknown>>;
+}
 
-/** Fields a plugin may change on a host it already created or was granted access to. */
-export type PluginHostUpdateInput = Partial<
-  Omit<PluginHostRecord, "id" | "userId">
->;
+/** Fields a plugin may change on a host the acting user owns. */
+export type PluginHostUpdateInput = Partial<PluginHostCreateInput>;
+
+/** Every key PluginHostCreateInput and PluginHostUpdateInput accept. */
+export const PLUGIN_HOST_INPUT_KEYS = [
+  "name",
+  "ip",
+  "port",
+  "username",
+  "authType",
+  "credentialId",
+  "overrideCredentialUsername",
+  "connectionType",
+  "tags",
+  "folder",
+  "pin",
+  "notes",
+  "jumpHosts",
+  "enableSsh",
+  "sshPort",
+  "statusCheckEnabled",
+  "statusCheckInterval",
+  "forceKeyboardInteractive",
+  "sshOptions",
+  "pluginSettings",
+] as const satisfies readonly (keyof PluginHostCreateInput)[];
 
 /** The same shape canAccessHost returns internally, without secrets. */
 export interface PluginHostAccess {

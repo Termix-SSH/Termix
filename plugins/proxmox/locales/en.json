@@ -104,6 +104,17 @@
     "proxmoxResultFailed": "{{count}} failed",
     "proxmoxImportComplete": "Proxmox import complete: {{summary}}",
     "proxmoxDiscoveryFailed": "Discovery failed",
-    "proxmoxImportFailed": "Import failed"
+    "proxmoxImportFailed": "Import failed",
+    "docsLink": "View docs",
+    "hostNotFound": "Host not found",
+    "loadingHost": "Loading host...",
+    "none": "None",
+    "proxmoxGuestsSelected_one": "{{count}} guest — {{selected}} selected",
+    "proxmoxGuestsSelected_other": "{{count}} guests — {{selected}} selected",
+    "proxmoxImportButton_one": "Import {{count}} host",
+    "proxmoxImportButton_other": "Import {{count}} hosts"
+  },
+  "terminal": {
+    "connected": "Connected"
   }
 }

@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Ongeldig certificaat toestaan",
     "webUiIgnoreCertDesc": "Alleen directe eindpunten. Loopback is al uitgezonderd, dus dit heeft geen effect op tunnel-eindpunten.",
     "webUiRemoveEndpoint": "Eindpunt verwijderen",
-    "webUiOpenFailed": "Het openen van het web-eindpunt is mislukt."
+    "webUiOpenFailed": "Het openen van het web-eindpunt is mislukt.",
+    "bindHost": "Bind Host"
   }
 }

@@ -15,9 +15,14 @@ import { createCurrentPluginSettingsRepository } from "../repositories/factory.j
 import type { PluginSettingsRecord } from "../repositories/plugin-settings-repository.js";
 import {
   declaredFields,
+  findField,
   resolveFieldValue,
   setSetting,
 } from "../../plugins/settings.js";
+import {
+  coerceSettingValue,
+  validateSettingValue,
+} from "@termix/plugin-sdk/settings";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { consume } from "../../plugins/registry.js";
 import { sshLogger } from "../../utils/logger.js";
@@ -260,6 +265,49 @@ export async function writeHostPluginSettings(
       });
     }
   }
+}
+
+/**
+ * Checks the host settings a ctx.hosts write carries, keyed by plugin id,
+ * before anything is written. A key the plugin does not declare, or a value
+ * its field refuses, is an error. A plugin that is not running has nowhere to
+ * keep them, so its entry is skipped and named in `skipped`.
+ */
+export function checkHostPluginSettingsInput(
+  input: Record<string, Record<string, unknown>>,
+): {
+  writes: Array<{ manifest: PluginManifest; values: Record<string, unknown> }>;
+  skipped: string[];
+  errors: string[];
+} {
+  const running = new Map(hostSettingsPlugins().map((m) => [m.id, m]));
+  const writes: Array<{
+    manifest: PluginManifest;
+    values: Record<string, unknown>;
+  }> = [];
+  const skipped: string[] = [];
+  const errors: string[] = [];
+  for (const [pluginId, values] of Object.entries(input)) {
+    const manifest = running.get(pluginId);
+    if (!manifest) {
+      skipped.push(pluginId);
+      continue;
+    }
+    for (const [key, value] of Object.entries(values)) {
+      const field = findField(manifest, "host", key);
+      if (!field) {
+        errors.push(`${pluginId}.${key} is not a host setting it declares`);
+        continue;
+      }
+      const error = validateSettingValue(
+        field,
+        coerceSettingValue(field, value),
+      );
+      if (error) errors.push(`${pluginId}.${key}: ${error}`);
+    }
+    writes.push({ manifest, values });
+  }
+  return { writes, skipped, errors };
 }
 
 /**

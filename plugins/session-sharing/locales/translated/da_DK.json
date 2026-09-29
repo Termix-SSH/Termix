@@ -148,5 +148,17 @@
         "description": "Tillad live-sessioner på denne vært at blive delt via link eller med andre brugere"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Aldrig",
+        "oneHour": "1 time",
+        "oneDay": "24 timer",
+        "sevenDays": "7 dage",
+        "thirtyDays": "30 dage",
+        "custom": "Skik"
+      }
+    }
   }
 }

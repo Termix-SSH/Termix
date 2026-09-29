@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Otwórz przeglądarkę, aby uwierzytelnić",
     "tailscaleCheckWaiting": "Oczekiwanie na uwierzytelnienie Tailscale...",
     "tailscaleCheckTimeout": "Upłynął limit czasu uwierzytelniania Tailscale. Spróbuj ponownie."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Połącz z terminalem",
+        "usernameLabel": "Nazwa użytkownika"
+      }
+    }
   }
 }

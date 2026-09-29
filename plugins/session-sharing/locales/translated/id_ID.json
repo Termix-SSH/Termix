@@ -148,5 +148,17 @@
         "description": "Izinkan sesi langsung di host ini dibagikan melalui tautan atau dengan pengguna lain."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Tidak pernah",
+        "oneHour": "1 jam",
+        "oneDay": "24 jam",
+        "sevenDays": "7 hari",
+        "thirtyDays": "30 hari",
+        "custom": "Kebiasaan"
+      }
+    }
   }
 }

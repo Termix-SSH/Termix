@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Ruang kerja",
     "workflow_workspaces_desc": "Simpan sekumpulan tab yang terbuka dan buka kembali seluruh tata letak nanti."
+  },
+  "hosts": {
+    "docsLink": "Lihat dokumen"
   }
 }

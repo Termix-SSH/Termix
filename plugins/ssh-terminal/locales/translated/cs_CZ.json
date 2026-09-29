@@ -470,5 +470,8 @@
     },
     "seconds": "sekundy",
     "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Je vyžadován vzdálený server. Pro použití tohoto typu připojení se připojte ke vzdálenému serveru v Nastavení."
   }
 }

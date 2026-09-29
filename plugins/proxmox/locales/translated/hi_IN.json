@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "कम से कम 15 सेकंड। प्रोक्समॉक्स नोड के आंकड़ों को कितनी बार रीफ्रेश करना है?",
     "proxmoxStatsNodeOverride": "नोड नाम ओवरराइड",
     "proxmoxStatsNodeOverrideDesc": "Proxmox नोड नाम की स्वतः पहचान को ओवरराइड करें (जो डिफ़ॉल्ट रूप से होस्टनाम के माध्यम से पता लगाया जाता है)।",
-    "proxmoxStatsNodeOverridePlaceholder": "होस्टनाम से स्वतः पता लगाया गया"
+    "proxmoxStatsNodeOverridePlaceholder": "होस्टनाम से स्वतः पता लगाया गया",
+    "docsLink": "दस्तावेज़ देखें",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "loadingHost": "होस्ट लोड हो रहा है...",
+    "none": "कोई नहीं",
+    "proxmoxGuestsSelected_one": "{{count}} अतिथि — {{selected}} चयनित",
+    "proxmoxGuestsSelected_other": "{{count}} अतिथि — {{selected}} चयनित",
+    "proxmoxImportButton_one": "{{count}} होस्ट आयात करें",
+    "proxmoxImportButton_other": "{{count}} होस्ट आयात करें"
   },
   "proxmoxStats": {
     "tabTitle": "प्रॉक्समॉक्स आँकड़े",
@@ -102,5 +110,8 @@
     "filterLxc": "एलएक्ससी",
     "noGuests": "इस नोड पर कोई वीएम या एलएक्ससी कंटेनर नहीं मिला।",
     "noGuestsMatch": "वर्तमान फ़िल्टरों से कोई अतिथि मेल नहीं खाता।"
+  },
+  "terminal": {
+    "connected": "कनेक्टेड"
   }
 }

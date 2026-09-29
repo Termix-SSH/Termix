@@ -189,10 +189,6 @@ export const hosts = pgTable(
     keyType: text("key_type"),
     sudoPassword: text("sudo_password"),
 
-    autostartPassword: text("autostart_password"),
-    autostartKey: text("autostart_key"),
-    autostartKeyPassword: text("autostart_key_password"),
-
     credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     overrideCredentialUsername: boolean("override_credential_username"),
     jumpHosts: text("jump_hosts"),

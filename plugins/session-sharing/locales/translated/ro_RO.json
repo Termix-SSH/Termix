@@ -148,5 +148,17 @@
         "description": "Permiteți partajarea sesiunilor live de pe această gazdă prin link sau cu alți utilizatori"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nu",
+        "oneHour": "1 oră",
+        "oneDay": "24 de ore",
+        "sevenDays": "7 zile",
+        "thirtyDays": "30 de zile",
+        "custom": "Personalizat"
+      }
+    }
   }
 }

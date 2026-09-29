@@ -36,9 +36,6 @@ describe("RawSqliteUserEncryptionMigrationStore", () => {
       key: "k",
       key_password: "kp",
       key_type: "ed25519",
-      autostart_password: "ap",
-      autostart_key: "ak",
-      autostart_key_password: "akp",
       sudo_password: "sp",
     });
     store.updateCredentialSensitiveFields(13, {
@@ -56,17 +53,7 @@ describe("RawSqliteUserEncryptionMigrationStore", () => {
     expect(db.prepare).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE ssh_credentials"),
     );
-    expect(run).toHaveBeenCalledWith(
-      "p",
-      "k",
-      "kp",
-      "ed25519",
-      "ap",
-      "ak",
-      "akp",
-      "sp",
-      12,
-    );
+    expect(run).toHaveBeenCalledWith("p", "k", "kp", "ed25519", "sp", 12);
     expect(run).toHaveBeenCalledWith("p", "k", "kp", "priv", "pub", "rsa", 13);
   });
 

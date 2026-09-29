@@ -148,5 +148,17 @@
         "description": "Cho phép chia sẻ các phiên trực tiếp trên máy chủ này qua liên kết hoặc với những người dùng khác."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Không bao giờ",
+        "oneHour": "1 giờ",
+        "oneDay": "24 giờ",
+        "sevenDays": "7 ngày",
+        "thirtyDays": "30 ngày",
+        "custom": "Tùy chỉnh"
+      }
+    }
   }
 }
