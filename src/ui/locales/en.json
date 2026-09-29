@@ -883,7 +883,9 @@
     "localOnlyDesc": "This host is not sent to the server and does not appear on your other devices.",
     "folderLocalOnly": "Keep on this device only",
     "folderLocalOnlyDesc": "This folder and every host in it stay on this device and are not sent to the server.",
-    "sudoPasswordDesc": "Used when the terminal fills a sudo prompt, and by features that run commands with sudo."
+    "sudoPasswordDesc": "Used when the terminal fills a sudo prompt, and by features that run commands with sudo.",
+    "speedSearch": "Search hosts — ↑ ↓ select, Enter connect, Esc close",
+    "speedSearchList": "Host list. Type or press / to search."
   },
   "commandPalette": {
     "searchPlaceholder": "Search hosts, commands, or settings...",
