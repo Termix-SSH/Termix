@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import {
   Braces,
+  Copy,
   Hammer,
   History,
   Laptop,
@@ -10,6 +11,7 @@ import {
 import type {
   PanelProps,
   PluginHostRecord,
+  PluginTabRecord,
   StandaloneViewProps,
   TabProps,
   TermixApp,
@@ -120,6 +122,26 @@ export function activate(app: TermixApp): void {
       preload: loadTerminal,
     },
   );
+
+  app.registerAction(
+    "terminal.duplicateTab",
+    ((_handle: unknown, tab?: PluginTabRecord) => {
+      if (tab?.type === "terminal" && tab.host) {
+        app.tabs.openTab(tab.host, "terminal", { forceNewTab: true });
+      }
+    }) as never,
+    { permission: "use" },
+  );
+  app.registerSlotContribution("tab.menu", {
+    actionId: "terminal.duplicateTab",
+    titleKey: "terminal.duplicateTab",
+    icon: Copy,
+    kind: "button",
+    when: ({ tab }) => {
+      const target = tab as PluginTabRecord | undefined;
+      return target?.type === "terminal" && !!target.host;
+    },
+  });
 
   app.registerHostAction({
     id: "terminal",
