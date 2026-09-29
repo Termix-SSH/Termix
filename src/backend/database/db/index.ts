@@ -1264,10 +1264,11 @@ const migrateSchema = () => {
 
   // Copy unencrypted username/domain into protocol-specific columns for old guac hosts.
   // Passwords are handled via the legacy field name fallback in lazy-field-encryption.ts.
+  // Credential-backed hosts can still match on later boots; keep their saved domain.
   const usernameDomainBackfills = [
     {
       protocol: "rdp",
-      sql: "UPDATE ssh_data SET rdp_user = username, rdp_password = password, rdp_domain = domain WHERE connection_type = 'rdp' AND rdp_user IS NULL AND rdp_password IS NULL",
+      sql: "UPDATE ssh_data SET rdp_user = username, rdp_password = password, rdp_domain = COALESCE(rdp_domain, domain) WHERE connection_type = 'rdp' AND rdp_user IS NULL AND rdp_password IS NULL",
     },
     {
       protocol: "vnc",
