@@ -283,9 +283,8 @@ router.get(
  *   get:
  *     summary: Get all active backend sessions for the current user
  *     description: >
- *       Returns the live terminal sessions the caller owns. Sessions other
- *       users shared with the caller come from the session sharing plugin.
- *       Used by the Active Connections panel and tab restore logic.
+ *       Returns the live terminal sessions the caller owns. Used by the
+ *       Active Connections panel and tab restore logic.
  *     tags:
  *       - Open Tabs
  *     responses:
@@ -310,17 +309,6 @@ router.get(
  *                     type: boolean
  *                   createdAt:
  *                     type: number
- *                   isOwnSession:
- *                     type: boolean
- *                   sharedByUsername:
- *                     type: string
- *                     nullable: true
- *                   permissionLevel:
- *                     type: string
- *                     nullable: true
- *                   shareId:
- *                     type: string
- *                     nullable: true
  */
 router.get(
   "/active-sessions",
@@ -336,10 +324,6 @@ router.get(
         tabInstanceId: s.tabInstanceId,
         isConnected: s.isConnected,
         createdAt: s.createdAt,
-        isOwnSession: true,
-        sharedByUsername: null as string | null,
-        permissionLevel: null as string | null,
-        shareId: null as string | null,
       }));
 
       return res.json(result);

@@ -30,14 +30,19 @@ export function registerTable(
   definition: PluginTableDefinition,
 ): unknown {
   const definitions = registered.get(pluginId) ?? [];
-  const existing = definitions.find((entry) => entry.name === definition.name);
-  if (existing) {
-    // Re-registering on re-activation is normal: the module is cached, so
-    // activate runs again against the same definitions.
-    return getTable(pluginId, definition.name);
+  const index = definitions.findIndex(
+    (entry) => entry.name === definition.name,
+  );
+  if (index >= 0) {
+    // Re-registering on re-activation is normal. The same definition keeps
+    // its table object; a changed one (an updated plugin) is rebuilt.
+    if (JSON.stringify(definitions[index]) === JSON.stringify(definition)) {
+      return getTable(pluginId, definition.name);
+    }
+    definitions[index] = definition;
+  } else {
+    definitions.push(definition);
   }
-
-  definitions.push(definition);
   registered.set(pluginId, definitions);
 
   const table = buildTable(pluginId, definition);
@@ -87,11 +92,64 @@ async function execute(statements: string[]): Promise<void> {
 }
 
 /**
+ * Postgres runs DDL inside a transaction, so one migration file applies
+ * whole or not at all. Through drizzle's transaction because a pool would
+ * spread a raw BEGIN and the statements over different connections.
+ */
+async function executeInTransaction(statements: string[]): Promise<void> {
+  const { getDb } = await import("../database/db/index.js");
+  const db = getDb() as unknown as {
+    transaction: (
+      fn: (tx: {
+        execute: (query: unknown) => Promise<unknown>;
+      }) => Promise<void>,
+    ) => Promise<void>;
+  };
+  await db.transaction(async (tx) => {
+    for (const statement of statements) {
+      await tx.execute(sql.raw(statement));
+    }
+  });
+}
+
+/**
+ * SQLite has one connection, so a raw BEGIN covers the statements and the
+ * migration record together.
+ */
+async function sqliteTransaction(fn: () => Promise<void>): Promise<void> {
+  const { runStatement } =
+    await import("../utils/crypto-migration/raw-rows.js");
+  await runStatement(sql.raw("BEGIN"));
+  try {
+    await fn();
+    await runStatement(sql.raw("COMMIT"));
+  } catch (error) {
+    await runStatement(sql.raw("ROLLBACK")).catch(() => {});
+    throw error;
+  }
+}
+
+async function executeNamingFailure(statements: string[]): Promise<void> {
+  const { runStatement } =
+    await import("../utils/crypto-migration/raw-rows.js");
+  for (const [index, statement] of statements.entries()) {
+    try {
+      await runStatement(sql.raw(statement));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `statement ${index + 1} of ${statements.length} failed (earlier ones are already applied on MySQL): ${message}`,
+      );
+    }
+  }
+}
+
+/**
  * Builds the runner that applies migrations against the live database.
  *
- * No transaction on any engine: MySQL commits implicitly on DDL, and each
- * migration is recorded once it has run, so a retry after a failure starts
- * at the migration that failed.
+ * SQLite and Postgres apply each migration file atomically. MySQL commits
+ * implicitly on DDL, so there a failed file can leave earlier statements
+ * applied; the error names the statement so it can be fixed by hand.
  */
 async function createMigrationRunner(
   dialect: DatabaseDialect = resolveDatabaseDialect(),
@@ -109,7 +167,13 @@ async function createMigrationRunner(
         checksum: row.checksum,
       }));
     },
-    execute,
+    execute:
+      dialect === "postgres"
+        ? executeInTransaction
+        : dialect === "mysql"
+          ? executeNamingFailure
+          : execute,
+    transaction: dialect === "sqlite" ? sqliteTransaction : undefined,
     record: async (pluginId, migration) => {
       await repository.record(pluginId, migration.id, migration.checksum);
     },

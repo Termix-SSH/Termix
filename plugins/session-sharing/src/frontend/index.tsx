@@ -1,3 +1,5 @@
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
 import { useEffect, type ComponentType } from "react";
 import { Presentation, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,7 +11,8 @@ import {
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { bindApi, getSharedWithMe, listCollabRooms } from "./api";
+import { bindApi, listCollabRooms } from "./api";
+import { SharedWithMeSection } from "./SharedWithMeSection";
 import CollabGuestView from "./CollabGuestView";
 import { CollabPanel } from "./CollabPanel";
 import { CollabRoomTab } from "./CollabRoomTab";
@@ -24,7 +27,6 @@ import { REMOTE_DISPLAY_SLOT } from "./shared";
 
 const COLLAB = "collab";
 const SHARE_ACTION = "session-sharing.share";
-const SHARED_WITH_ME_ACTION = "sessions.sharedWithMe";
 const SEEN_ROOMS_KEY = "termix:collab-rooms-seen";
 const INVITE_POLL_MS = 60_000;
 
@@ -237,9 +239,12 @@ export function activate(app: TermixApp): void {
     >,
   });
 
-  // Core's active connections list asks for sessions shared with the user.
-  app.registerAction(SHARED_WITH_ME_ACTION, () => getSharedWithMe(), {
-    permission: "use",
+  // The "Shared with me" section of the active connections list.
+  app.registerSlotContribution("connections.sections", {
+    actionId: "session-sharing.sharedWithMe",
+    titleKey: "connections.sectionSharedWithMe",
+    kind: "component",
+    component: SharedWithMeSection as ComponentType<Record<string, unknown>>,
   });
 }
 

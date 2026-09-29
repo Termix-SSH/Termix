@@ -22,13 +22,10 @@ type GeneralSettingsSectionProps = {
   allowPasswordLogin: boolean;
   passwordLoginForced?: boolean;
   handleTogglePasswordLogin: () => void;
-  oidcAutoProvision: boolean;
-  handleToggleOidcAutoProvision: () => void;
+  externalAutoProvision: boolean;
+  handleToggleExternalAutoProvision: () => void;
   secondFactorAfterExternalLogin: boolean;
   handleToggleSecondFactorAfterExternalLogin: () => void;
-  oidcSilentLoginDefault: boolean;
-  oidcSilentLoginDefaultLocked: boolean;
-  handleToggleOidcSilentLoginDefault: () => void;
   allowPasswordReset: boolean;
   handleTogglePasswordReset: () => void;
   sessionTimeout: string;
@@ -54,13 +51,10 @@ export function AdminGeneralSettingsSection({
   allowPasswordLogin,
   passwordLoginForced,
   handleTogglePasswordLogin,
-  oidcAutoProvision,
-  handleToggleOidcAutoProvision,
+  externalAutoProvision,
+  handleToggleExternalAutoProvision,
   secondFactorAfterExternalLogin,
   handleToggleSecondFactorAfterExternalLogin,
-  oidcSilentLoginDefault,
-  oidcSilentLoginDefaultLocked,
-  handleToggleOidcSilentLoginDefault,
   allowPasswordReset,
   handleTogglePasswordReset,
   sessionTimeout,
@@ -147,8 +141,8 @@ export function AdminGeneralSettingsSection({
           description={t("admin.oidcAutoProvisionDesc")}
         >
           <AdminToggle
-            on={oidcAutoProvision}
-            onToggle={handleToggleOidcAutoProvision}
+            on={externalAutoProvision}
+            onToggle={handleToggleExternalAutoProvision}
           />
         </SettingRow>
         <SettingRow
@@ -158,20 +152,6 @@ export function AdminGeneralSettingsSection({
           <AdminToggle
             on={secondFactorAfterExternalLogin}
             onToggle={handleToggleSecondFactorAfterExternalLogin}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t("admin.oidcSilentLoginDefault")}
-          description={
-            oidcSilentLoginDefaultLocked
-              ? t("admin.oidcSilentLoginDefaultLockedDesc")
-              : t("admin.oidcSilentLoginDefaultDesc")
-          }
-        >
-          <AdminToggle
-            on={oidcSilentLoginDefault}
-            onToggle={handleToggleOidcSilentLoginDefault}
-            disabled={oidcSilentLoginDefaultLocked}
           />
         </SettingRow>
         <SettingRow

@@ -26,7 +26,6 @@ type PluginSettingsBag = Record<string, Record<string, unknown>>;
  */
 export function HostStatsTab({
   form,
-  setField,
   updateForm,
   host,
 }: HostEditorSectionProps) {

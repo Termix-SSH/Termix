@@ -155,9 +155,6 @@ export interface PluginTabRecord {
   instanceId?: string;
   /** A backend session a session tab should reattach to. */
   restoredSessionId?: string | null;
-  /** A live shared session this tab joins instead of connecting its own. */
-  joinSharedSessionId?: string | null;
-  joinShareId?: string | null;
   [key: string]: unknown;
 }
 
@@ -192,6 +189,11 @@ export interface ShellApi {
     options?: OpenTabOptions,
   ) => void;
   openSingletonTab: (type: string, options?: OpenTabOptions) => void;
+  /**
+   * Connects to a host the way clicking it in the host list does: its
+   * default connection, or `type` when given.
+   */
+  connectHost: (host: PluginHostRecord, type?: string) => void;
   closeTab: (tabId: string) => void;
   renameTab: (tabId: string, label: string) => void;
   /** Saves a quick-connect tab's host as a real host. Absent in some shells. */
@@ -212,7 +214,7 @@ export interface ShellApi {
 
 export interface TabsApi extends Pick<
   ShellApi,
-  "openTab" | "openSingletonTab" | "closeTab" | "openRailView"
+  "openTab" | "openSingletonTab" | "connectHost" | "closeTab" | "openRailView"
 > {
   /** The current tabs and split layout, or null before the shell mounts. */
   getLayout: () => ShellLayout | null;
@@ -1085,6 +1087,15 @@ export interface PluginCoreApi {
   listHosts: (pluginId: string) => Promise<PluginHostRecord[]>;
   /** The user's stored credentials, without their secrets. */
   listCredentials: () => Promise<PluginCredentialSummary[]>;
+  /** Tells the shell hosts were added or changed, so lists reload. */
+  notifyHostsChanged: () => void;
+  /** How the user wants host status shown: the brand accent, or green/red. */
+  getHostStatusColorScheme: () => "accent" | "status";
+  /**
+   * The token the desktop app's embedded backend accepts, for work the
+   * desktop main process does on the renderer's behalf. Null in a browser.
+   */
+  getLocalAuthToken: () => string | null;
 }
 
 /** A stored credential as a picker needs it. Secrets never leave core. */
@@ -1114,8 +1125,17 @@ export interface HostStatusInfo {
 
 let host: PluginHostBridge | null = null;
 
-/** Called once by core. Not part of the plugin API. */
+/**
+ * Called once by core, before any plugin loads. Not part of the plugin API:
+ * once set it cannot be swapped, so a plugin cannot replace the bridge every
+ * other plugin talks through.
+ */
 export function __setPluginHost(bridge: PluginHostBridge | null): void {
+  if (host && bridge !== host) {
+    throw new Error(
+      "@termix/plugin-sdk/frontend: the plugin host is already set",
+    );
+  }
   host = bridge;
 }
 
@@ -1209,6 +1229,21 @@ export function logActivity(
   hostName: string,
 ): Promise<void> {
   return requireHost().core.logActivity(type, hostId, hostName);
+}
+
+/** Tells the shell hosts were added or changed, so its lists reload. */
+export function notifyHostsChanged(): void {
+  requireHost().core.notifyHostsChanged();
+}
+
+/** How the user wants host status shown: the brand accent, or green/red. */
+export function getHostStatusColorScheme(): "accent" | "status" {
+  return requireHost().core.getHostStatusColorScheme();
+}
+
+/** The desktop app's local backend token, or null in a browser. */
+export function getLocalAuthToken(): string | null {
+  return requireHost().core.getLocalAuthToken();
 }
 
 export function getHostPassword(
@@ -1583,3 +1618,6 @@ export function useConnectionRetry({
 
 export type { PluginManifest } from "./manifest.js";
 export type { ReactNode };
+
+// The desktop bridge types, and the window.electronAPI global they declare.
+export type * from "./desktop.js";

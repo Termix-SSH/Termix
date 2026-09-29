@@ -630,7 +630,14 @@ const isolatedWindows = createIsolatedWindows({
 // ctx.desktop.openIsolatedWindow is the one caller today.
 const BACKEND_REQUEST_HANDLERS = {
   "open-isolated-window": (payload) => isolatedWindows.open(payload),
-  "launch-native-rdp": (payload) => launchNativeRdp(payload),
+  // The OS client for a protocol. Only RDP has one wired up.
+  "launch-external-client": (payload) =>
+    payload?.protocol === "rdp"
+      ? launchNativeRdp(payload)
+      : {
+          success: false,
+          error: `No external client for ${payload?.protocol ?? "this protocol"}`,
+        },
   "sync-proxy-config": (payload) => {
     linkedServer.setLinkedServer(payload);
     return { success: true };
@@ -1590,9 +1597,9 @@ ipcMain.handle("get-embedded-server-status", () => {
   };
 });
 
-// OIDC System Browser Authentication (RFC 8252)
+// External login through the system browser (RFC 8252)
 ipcMain.handle(
-  "oidc-system-browser-auth",
+  "external-browser-login",
   async (_event, authUrl, callbackPort) => {
     const http = require("http");
 
@@ -1666,7 +1673,7 @@ ipcMain.handle(
       // Timeout after 5 minutes
       timeout = setTimeout(
         () => {
-          fail(new Error("OIDC authentication timed out"));
+          fail(new Error("External login timed out"));
         },
         5 * 60 * 1000,
       );
@@ -1868,8 +1875,28 @@ function getC2SRemoteBaseUrl() {
   return serverUrl.replace(/\/$/, "");
 }
 
+// The socket path on the linked server that relays C2S streams. The plugin
+// that owns the relay tells us where it is, so nothing here names it.
+let c2sRelayPath = null;
+const C2S_RELAY_PATH_PATTERN =
+  /^\/plugin-ws\/[a-z0-9][a-z0-9-]*\/[A-Za-z0-9/_-]+$/;
+
+ipcMain.handle("set-c2s-relay-path", (_event, relayPath) => {
+  if (
+    typeof relayPath !== "string" ||
+    !C2S_RELAY_PATH_PATTERN.test(relayPath)
+  ) {
+    return { success: false, error: "Invalid relay path" };
+  }
+  c2sRelayPath = relayPath;
+  return { success: true };
+});
+
 function getC2SRelayUrl() {
-  const relayHttpUrl = `${getC2SRemoteBaseUrl()}/plugin-ws/tunnels/c2s/stream`;
+  if (!c2sRelayPath) {
+    throw new Error("Client tunnels are not available yet. Try again shortly.");
+  }
+  const relayHttpUrl = `${getC2SRemoteBaseUrl()}${c2sRelayPath}`;
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 

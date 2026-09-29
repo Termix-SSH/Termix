@@ -20,7 +20,9 @@
     "ssh:connect",
     "db:own",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "users:impersonate",
+    "db:core-refs"
   ],
   "provides": [
     {
@@ -86,7 +88,8 @@
       "key": "enableTunnel",
       "labelKey": "hosts.tabTunnels",
       "editorTab": "general"
-    }
+    },
+    "uses": ["homepage.widgets"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

@@ -14,12 +14,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Walks up from a plugin directory to the repo that holds src/ui.
+ * Walks up from a plugin directory to a Termix checkout, if it is in one.
  *
- * Plugin frontends and their tests still reach core through the "@/" alias
- * (the legacy debt A7 and D1 remove), so the preset has to resolve it. A
- * plugin developed outside this repo has no src/ui to point at, which is
- * exactly right: the alias stops resolving and the import fails loudly.
+ * Inside the repo the SDK's browser entries and the test host resolve to
+ * core's source, so a test exercises the real registries. Outside it they
+ * resolve to the builds the SDK ships in dist/host.
  */
 function findRepoRoot(startDir: string): string | null {
   let dir = startDir;
@@ -83,7 +82,13 @@ export function pluginVitestConfig(
           "@/types": path.join(repoRoot, "src", "types"),
           "@": path.join(repoRoot, "src", "ui"),
         }
-      : {}),
+      : {
+          // Outside a Termix checkout: the UI kit resolves through the
+          // package, and the test host is the copy the SDK ships.
+          "@termix/plugin-host/testing": fileURLToPath(
+            new URL("./host/testing-host.js", import.meta.url),
+          ),
+        }),
     ...options.alias,
   };
 
@@ -112,6 +117,10 @@ export function pluginVitestConfig(
             environment: "jsdom",
             globals: true,
             setupFiles: [setupFile],
+            // Run the SDK through Vite rather than plain Node, so its import
+            // of the test host sees the alias above and the plugin and the
+            // host share one copy of @termix/plugin-sdk/frontend.
+            server: { deps: { inline: [/@termix\/plugin-sdk/] } },
             include: ["tests/frontend/**/*.test.{ts,tsx}"],
           },
         },

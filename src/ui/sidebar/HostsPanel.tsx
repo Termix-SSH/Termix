@@ -291,10 +291,10 @@ export function HostsPanel({
         ? t("hosts.filterOnline")
         : t("hosts.filterOffline");
     if (key === "protocol") return group.toUpperCase();
-    if (key === "auth")
-      return t(
-        `hosts.filterAuth${group.charAt(0).toUpperCase() + group.slice(1)}`,
-      );
+    if (key === "auth") {
+      const labelKey = sshAuthProviders.find(group)?.labelKey;
+      return labelKey ? t(labelKey, { defaultValue: group }) : group;
+    }
     return group;
   }
 

@@ -343,25 +343,6 @@ export function registerUserSettingsRoutes(
 
   /**
    * @openapi
-   * /users/session-sharing-enabled:
-   *   get:
-   *     summary: Get session sharing globally enabled setting
-   *     description: Returns whether live session sharing (terminal and remote desktop share links and in-app joins) is allowed instance-wide. Overrides every per-host toggle when false.
-   *     tags:
-   *       - Users
-   *     responses:
-   *       200:
-   *         description: Session sharing enabled status.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 enabled:
-   *                   type: boolean
-   */
-  /**
-   * @openapi
    * /users/audit-forwarding:
    *   get:
    *     summary: Get audit log forwarding settings (admin only)

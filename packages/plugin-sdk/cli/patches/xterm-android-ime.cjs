@@ -1,14 +1,20 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const xtermDir = path.join(
-  __dirname,
-  "..",
-  "node_modules",
-  "@xterm",
-  "xterm",
-  "lib",
-);
+// Run by `termix-plugin build` with TERMIX_PATCH_ROOT set to the plugin, so
+// the package resolves the way the plugin's bundle will resolve it.
+function packageDir(name) {
+  const root = process.env.TERMIX_PATCH_ROOT || process.cwd();
+  // Walked by hand: a package whose exports map hides package.json cannot be
+  // found with require.resolve.
+  for (let dir = path.resolve(root); ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, "node_modules", name);
+    if (fs.existsSync(path.join(candidate, "package.json"))) return candidate;
+    if (path.dirname(dir) === dir) return path.join(root, "node_modules", name);
+  }
+}
+
+const xtermDir = path.join(packageDir("@xterm/xterm"), "lib");
 
 // Backport the textarea-shrink fix from gmuxapp/xterm.js@6a011cf while
 // xtermjs/xterm.js#3600 remains unresolved upstream. Android IMEs can restart

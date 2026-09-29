@@ -57,6 +57,7 @@ export async function startServer(
     permissions?: string[];
     linkedUsers?: Record<string, number>;
     before?: (sqlite: TestDb["sqlite"]) => void;
+    settings?: Record<string, unknown>;
   } = {},
 ): Promise<TestServer> {
   const db = await createTestDb(pluginDir, { before: options.before });
@@ -74,6 +75,7 @@ export async function startServer(
     permissions: options.permissions,
     linkedUsers: options.linkedUsers,
     baseUrl: "https://termix.test",
+    settings: options.settings,
   });
 
   const { activate } = await import("../../src/backend/index.js");

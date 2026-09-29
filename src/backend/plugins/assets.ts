@@ -93,12 +93,7 @@ export function describePluginFrontend(
   const entry = frontendEntry(plugin);
   if (!entry || !fileExists(entry.file)) return { ...none, locales };
 
-  const stat = fs.statSync(entry.file);
-  const assetVersion = crypto
-    .createHash("sha256")
-    .update(`${plugin.manifest.version}:${stat.size}:${stat.mtimeMs}`)
-    .digest("hex")
-    .slice(0, 12);
+  const assetVersion = contentVersion(entry.file, plugin.manifest.version);
 
   return {
     frontend: true,
@@ -106,6 +101,29 @@ export function describePluginFrontend(
     assetVersion,
     locales: locales.sort(),
   };
+}
+
+const versionCache = new Map<string, { stamp: string; version: string }>();
+
+/**
+ * A hash of the bundle's bytes, not its mtime: assets are cached as immutable
+ * for a year, and a rebuilt .tmxplug has a fixed mtime, so a same-size rebuild
+ * would otherwise keep serving the stale copy.
+ */
+function contentVersion(file: string, version: string): string {
+  const stat = fs.statSync(file);
+  // ctime, unlike mtime, cannot be set by tar, so an unpack always changes it.
+  const stamp = `${version}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+  const cached = versionCache.get(file);
+  if (cached?.stamp === stamp) return cached.version;
+  const hashed = crypto
+    .createHash("sha256")
+    .update(version)
+    .update(fs.readFileSync(file))
+    .digest("hex")
+    .slice(0, 12);
+  versionCache.set(file, { stamp, version: hashed });
+  return hashed;
 }
 
 /**

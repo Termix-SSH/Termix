@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { setThemePreview } from "../look/theme-preview";
 import { Info, Palette, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,7 +14,6 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  useTabsSafe,
 } from "@termix/plugin-sdk/ui";
 import {
   useSettings,
@@ -69,7 +69,8 @@ export function HostTerminalSettings({
   const { t } = useTranslation();
   const client = useTerminalClientSettings();
   const userSettings = useSettings("user");
-  const { setPreviewTerminalTheme } = useTabsSafe();
+  // The preview ends when the editor section goes away.
+  useEffect(() => () => setThemePreview(null), []);
 
   const stored = ((editorForm?.pluginSettings as HostPluginSettings)?.[
     PLUGIN_ID
@@ -222,7 +223,7 @@ export function HostTerminalSettings({
                   onChange={(e) => {
                     const newTheme = e.target.value;
                     setField("theme", newTheme);
-                    setPreviewTerminalTheme(newTheme);
+                    setThemePreview(newTheme);
                     if (newTheme === "custom" && !form.customThemeColors) {
                       setField("customThemeColors", {
                         ...TERMINAL_THEMES.termixDark.colors,

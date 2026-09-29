@@ -5,7 +5,7 @@ const CALLBACK_PATH = "/oidc-callback";
  * listener or the mobile app's scheme, which get the token in the URL
  * because they cannot read a cookie.
  */
-export function isOidcTokenCallback(value: string): boolean {
+export function isExternalTokenCallback(value: string): boolean {
   if (value.startsWith("termix-mobile:")) return true;
 
   try {

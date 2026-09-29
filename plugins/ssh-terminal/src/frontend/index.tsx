@@ -1,3 +1,5 @@
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
 import { lazy, Suspense, type ComponentType } from "react";
 import {
   Braces,

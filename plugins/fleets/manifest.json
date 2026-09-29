@@ -70,6 +70,7 @@
         "descriptionKey": "permissions.execute.description",
         "defaultRoles": ["user"]
       }
-    ]
+    ],
+    "uses": ["snippets.extractInputs"]
   }
 }

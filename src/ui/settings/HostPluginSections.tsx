@@ -17,7 +17,7 @@ import { PluginIcon } from "@/lib/plugin-icon";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { usePluginScope } from "@/plugin-host/scope";
 import { SettingsFieldRow } from "./SettingsFields";
-import { hasVisibleFields, isFieldActive } from "./settings-fields-util";
+import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
 
 /** Values for every plugin on one host: { [pluginId]: { [key]: value } }. */
 export type HostPluginSettings = Record<string, Record<string, unknown>>;
@@ -202,7 +202,7 @@ function HostPluginSection({
 
       {enabled &&
         host.fields
-          .filter((field) => isFieldActive(field, shown))
+          .filter((field) => isFieldShown(field, shown))
           .map((field) => (
             <SettingsFieldRow
               key={field.key}

@@ -11,7 +11,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { findUnownedTableWrites } from "@termix/plugin-sdk/ddl";
+import {
+  collectOwnedIndexes,
+  findUnownedTableWrites,
+} from "@termix/plugin-sdk/ddl";
 import { LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
 
 const state = vi.hoisted(() => ({
@@ -74,6 +77,40 @@ describe("the migration checker", () => {
     ["a truncate", "TRUNCATE TABLE users"],
     ["an unlogged table", "CREATE UNLOGGED TABLE users (id int)"],
     ["a CTE write", "WITH x AS (SELECT 1) DELETE FROM users"],
+    [
+      "a Postgres dollar-quoted string hiding a statement",
+      "SELECT $$'$$; UPDATE users SET is_admin = true; SELECT $$'$$",
+    ],
+    [
+      "a MySQL backslash escape hiding a statement",
+      "SELECT 'a\\''; UPDATE users SET is_admin = 1; SELECT ''",
+    ],
+    ["dropping a core index by name", "DROP INDEX idx_sessions_user_id"],
+    ["altering a core index by name", "ALTER INDEX users_pkey RENAME TO x"],
+    ["dropping a core sequence", "DROP SEQUENCE users_id_seq"],
+    ["a cascade", "DROP TABLE p_foo_a CASCADE"],
+    [
+      "a MySQL multi-table update",
+      "UPDATE p_foo_a JOIN users ON 1 = 1 SET users.is_admin = 1",
+    ],
+    ["a MySQL comma update", "UPDATE p_foo_a, users SET users.is_admin = 1"],
+    [
+      "a MySQL multi-table delete",
+      "DELETE p_foo_a, users FROM p_foo_a JOIN users",
+    ],
+    [
+      "a delete with USING",
+      "DELETE FROM p_foo_a, users USING p_foo_a JOIN users",
+    ],
+    ["SELECT INTO", "SELECT * INTO users_copy FROM users"],
+    ["writing a file", "SELECT 1 INTO OUTFILE '/tmp/x'"],
+    ["reading a server file", "SELECT pg_read_file('/etc/passwd')"],
+    ["changing a server setting", "SELECT set_config('x', 'y', false)"],
+    [
+      "running a string as SQL",
+      "SELECT query_to_xml('DELETE FROM users', true, true, '')",
+    ],
+    ["setval on a core sequence", "SELECT setval('users_id_seq', 1)"],
   ])("refuses %s", (_label, sql) => {
     expect(findUnownedTableWrites("foo", sql)).not.toEqual([]);
   });
@@ -90,8 +127,32 @@ describe("the migration checker", () => {
       "a quoted name in a string",
       "INSERT INTO p_foo_a (x) VALUES ('DROP TABLE users')",
     ],
+    [
+      "dropping an index it created in the same file",
+      "CREATE INDEX idx_foo_a ON p_foo_a (id); DROP INDEX idx_foo_a",
+    ],
+    ["dropping a prefixed index", "DROP INDEX IF EXISTS p_foo_a_idx"],
+    [
+      "setval on its own sequence",
+      "SELECT setval(pg_get_serial_sequence('p_foo_a', 'id'), 1)",
+    ],
+    ["its own sequence", "CREATE SEQUENCE IF NOT EXISTS p_foo_seq"],
   ])("allows %s", (_label, sql) => {
     expect(findUnownedTableWrites("foo", sql)).toEqual([]);
+  });
+
+  it("allows dropping an index an earlier migration created", () => {
+    const owned = collectOwnedIndexes("foo", [
+      "CREATE INDEX idx_foo_a ON p_foo_a (id)",
+      "CREATE INDEX idx_core ON users (id)",
+    ]);
+    expect([...owned]).toEqual(["idx_foo_a"]);
+    expect(
+      findUnownedTableWrites("foo", "DROP INDEX idx_foo_a", new Set(), owned),
+    ).toEqual([]);
+    expect(
+      findUnownedTableWrites("foo", "DROP INDEX idx_core", new Set(), owned),
+    ).not.toEqual([]);
   });
 
   it("passes every migration a bundled plugin ships", () => {

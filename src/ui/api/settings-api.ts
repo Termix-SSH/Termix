@@ -76,7 +76,7 @@ export async function updateAnalyticsEnabled(
 }
 
 // ============================================================================
-// TERMINAL IMAGE STORAGE SETTINGS
+// BRANDING SETTINGS
 // ============================================================================
 
 export interface BrandingSettings {

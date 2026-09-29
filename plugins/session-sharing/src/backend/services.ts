@@ -38,7 +38,7 @@ export interface SessionGuestsV1 {
   recordJoin: (shareId: string) => Promise<void>;
 }
 
-export const SESSION_GUESTS_KEY = "sessions.sharing.guests";
+export const SESSION_GUESTS_KEY = "session-sharing.guests";
 
 function toRef(share: ShareRecord): SharedSessionRef {
   return {

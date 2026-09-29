@@ -45,12 +45,12 @@ describe("snippets activate", () => {
     const service = server.mock.services.get("snippets.access") as {
       list: () => Promise<unknown>;
     };
-    const listed = await server.mock.ctx.asUser("user-1", () => service.list());
+    const listed = await server.mock.actAs("user-1", () => service.list());
     expect(listed).toEqual([
       expect.objectContaining({ name: "Deploy", content: "echo deploy" }),
     ]);
 
-    const otherUsersList = await server.mock.ctx.asUser("user-2", () =>
+    const otherUsersList = await server.mock.actAs("user-2", () =>
       service.list(),
     );
     expect(otherUsersList).toEqual([]);
@@ -64,7 +64,7 @@ describe("snippets activate", () => {
       remove: (id: number) => Promise<unknown>;
     };
     const asUser = <T>(fn: () => Promise<T>) =>
-      server!.mock.ctx.asUser("user-1", fn);
+      server!.mock.actAs("user-1", fn);
 
     await expect(
       asUser(() => service.create({ name: "x", content: "ls" })),

@@ -416,7 +416,9 @@ describe("room guest links", () => {
         roomGuestToken: "guess",
         clientIp: "9.9.9.9",
       });
-      if (!result.ok && result.reason === "Too many requests") refused = true;
+      if (result.ok === false && result.reason === "Too many requests") {
+        refused = true;
+      }
     }
     expect(refused).toBe(true);
   });

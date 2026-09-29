@@ -78,19 +78,10 @@ export interface PluginContributions {
   uiPresets?: PluginUiPresets;
 }
 
-/** A secret as it arrives from the server. The value never leaves the server. */
-export interface RedactedSecret {
-  set: boolean;
-}
-
-export function isRedactedSecret(value: unknown): value is RedactedSecret {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    typeof (value as RedactedSecret).set === "boolean"
-  );
-}
+export {
+  isRedactedSecret,
+  type RedactedSecret,
+} from "@termix/plugin-sdk/settings";
 
 export type PluginSettingsValues = Record<string, unknown>;
 

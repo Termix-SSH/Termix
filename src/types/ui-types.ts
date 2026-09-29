@@ -166,12 +166,6 @@ export type Tab = {
   host?: Host;
   openedAt: number;
   restoredSessionId?: string | null;
-  /** Set when this tab joins someone else's live shared session instead of connecting/attaching its own. */
-  joinSharedSessionId?: string | null;
-  joinShareId?: string | null;
-  initialFilePath?: string;
-  /** Directory to open a Files tab into, distinct from initialFilePath (a specific file to open in an editor window). */
-  initialPath?: string;
   /** Payload owned by the tab's plugin, e.g. which fleet or endpoint it shows. */
   data?: Record<string, unknown>;
   /** Present only on a split-screen container tab. Pane tab ids reference live child tabs. */
@@ -189,7 +183,6 @@ export type Tab = {
     notifyResize?: () => void;
     refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
-    openFileManager?: () => void;
     focus?: () => void;
   } | null>;
 };
@@ -281,9 +274,9 @@ export type WorkspaceTabSnapshot = {
   hostNameSnapshot?: string | null;
   label: string;
   customLabel?: string;
+  /** Read from payloads saved before tabs carried `data`. */
   initialFilePath?: string;
   initialPath?: string;
-  /** Read from payloads saved before tabs carried `data`. */
   fleetId?: number;
   /** The tab's plugin payload. */
   data?: Record<string, unknown>;
@@ -323,17 +316,3 @@ export type WorkspacePayload = {
     right: WorkspaceDockState;
   };
 };
-
-const FOLDER_ICONS = [
-  "folder",
-  "server",
-  "cloud",
-  "database",
-  "box",
-  "network",
-  "copy",
-  "settings",
-  "cpu",
-  "globe",
-] as const;
-type FolderIconId = (typeof FOLDER_ICONS)[number];

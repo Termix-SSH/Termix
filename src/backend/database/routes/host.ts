@@ -2303,19 +2303,6 @@ registerHostNetworkRoutes(router, {
 
 export default router;
 
-/**
- * A config field arriving as a JSON string (an import, or a client that
- * stringified it) must still reach storage as an object. Malformed input
- * becomes null rather than throwing inside a host save.
- */
-function safeParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
 /** Seconds between status checks, or null to follow the global setting. */
 function normalizeStatusInterval(value: unknown): number | null {
   const seconds = Number(value);

@@ -34,6 +34,7 @@ import { runSecretSourcesTokenMigration } from "./secret-sources-token-migration
 import { runTotpMigration } from "./totp-migration.js";
 import { runNotificationChannelMigration } from "./notification-channel-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
+import { runSsoSettingsMigration } from "./sso-settings-migration.js";
 
 const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runTailscaleSettingsMigration", runTailscaleSettingsMigration],
@@ -64,6 +65,7 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runTotpMigration", runTotpMigration],
   ["runNotificationChannelMigration", runNotificationChannelMigration],
   ["runTermixIdentityCaMigration", runTermixIdentityCaMigration],
+  ["runSsoSettingsMigration", runSsoSettingsMigration],
 ];
 
 export async function runPluginDataMigrations(): Promise<void> {

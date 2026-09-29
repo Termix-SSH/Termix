@@ -40,6 +40,8 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     },
   }),
   createCurrentUserAuthRepository: () => ({
+    listIdentitiesForUser: async (userId: string) =>
+      h.identities.filter((row) => row.userId === userId),
     moveIdentities: async (from: string, to: string) => {
       for (const row of h.identities) if (row.userId === from) row.userId = to;
     },
@@ -68,8 +70,8 @@ vi.mock("../../../utils/logger.js", () => {
   return { authLogger: log };
 });
 
-const { registerUserOidcAccountRoutes } =
-  await import("../../../database/routes/user-oidc-account-routes.js");
+const { registerUserExternalAccountRoutes } =
+  await import("../../../database/routes/user-external-account-routes.js");
 
 let server: http.Server;
 let base: string;
@@ -114,7 +116,7 @@ beforeEach(async () => {
 
   const router = express.Router();
   router.use(express.json());
-  registerUserOidcAccountRoutes(router, {
+  registerUserExternalAccountRoutes(router, {
     authenticateJWT: (req, _res, next) => {
       (req as unknown as { userId: string }).userId =
         req.header("x-user") ?? "";
@@ -164,6 +166,24 @@ describe("linking an external account to a password account", () => {
     expect(h.deleted).toEqual(["sso"]);
   });
 
+  it("takes the new path and field name", async () => {
+    const response = await post("/link-external-to-password", {
+      externalUserId: "sso",
+      targetUsername: "alice",
+    });
+    expect(response.status).toBe(200);
+    expect(h.identities[0].userId).toBe("local");
+  });
+
+  it("refuses a target that already signs in externally", async () => {
+    h.identities.push({ userId: "local", providerId: "ldap:4", subject: "x" });
+    const response = await post("/link-external-to-password", {
+      externalUserId: "sso",
+      targetUsername: "alice",
+    });
+    expect(response.status).toBe(400);
+  });
+
   it("is for admins only", async () => {
     const response = await post(
       "/link-oidc-to-password",
@@ -197,6 +217,18 @@ describe("unlinking", () => {
       isOidc: false,
       oidcIdentifier: null,
     });
+    expect(h.identities).toEqual([]);
+  });
+
+  it("takes the new path", async () => {
+    await post("/link-external-to-password", {
+      externalUserId: "sso",
+      targetUsername: "alice",
+    });
+    const response = await post("/unlink-external-from-password", {
+      userId: "local",
+    });
+    expect(response.status).toBe(200);
     expect(h.identities).toEqual([]);
   });
 

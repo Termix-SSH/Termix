@@ -69,7 +69,9 @@ describe("session-sharing activate", () => {
     expect(rendered.registered.slot("shell.overlay")).toHaveLength(2);
     expect(rendered.registered.actions().sort()).toEqual([
       "session-sharing.share",
-      "sessions.sharedWithMe",
+    ]);
+    expect(rendered.registered.slot("connections.sections")).toEqual([
+      "session-sharing.sharedWithMe",
     ]);
   });
 
@@ -164,20 +166,6 @@ describe("session-sharing activate", () => {
           permissionLevel: "read-only",
         }),
       ),
-    );
-  });
-
-  it("answers sessions shared with the user through the api", async () => {
-    const shared = [{ sessionId: "s", isOwnSession: false }];
-    rendered = await renderWithApp(plugin, {
-      manifest,
-      locales,
-      api: stubApi({
-        get: vi.fn(async () => ({ data: shared })) as never,
-      }),
-    });
-    await expect(invokeAction("sessions.sharedWithMe")).resolves.toEqual(
-      shared,
     );
   });
 

@@ -119,6 +119,7 @@ import {
   isElectron,
 } from "@termix/plugin-sdk/ui";
 import {
+  notifyHostsChanged,
   useTranslation,
   invokeAction,
   usePluginApi,
@@ -1558,9 +1559,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 onClick: () => {
                   void enableHostAutoTmux(api, hostConfig.id as number)
                     .then(() => {
-                      window.dispatchEvent(
-                        new CustomEvent("termix:hosts-changed"),
-                      );
+                      notifyHostsChanged();
                       toast.success(
                         t("terminal.autoTmuxEnabled", { host: hostLabel }),
                       );

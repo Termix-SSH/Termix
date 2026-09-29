@@ -48,7 +48,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   }, []);
 
   useEffect(() => {
-    // Popped-out windows (terminal/tunnel/file-manager/etc.) share the main
+    // Popped-out plugin windows share the main
     // window's session rather than owning their own login -- there's no
     // login form to fall back to here. On a cold Electron launch this
     // window's renderer can start before the embedded backend has finished

@@ -1,7 +1,8 @@
 {
   "nav": {
     "files": "Files",
-    "sftp": "SFTP"
+    "sftp": "SFTP",
+    "openFileManager": "Open File Manager"
   },
   "permissions": {
     "use": {
@@ -520,6 +521,9 @@
     "transferError": "Transfer failed",
     "transferFailedRetryHint": "Partial data was kept on the destination. Retry will resume when the connection is back.",
     "transferPartialHint": "Could not transfer: {{paths}}",
-    "transferSuccess": "Transfer complete"
+    "transferSuccess": "Transfer complete",
+    "metricsHopSourceRead": "Source → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → dest (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → dest (local): {{throughput}}"
   }
 }

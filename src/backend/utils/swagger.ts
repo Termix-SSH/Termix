@@ -8,6 +8,42 @@ type SwaggerJSDocOptions = Parameters<typeof swaggerJSDoc>[0];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// dist/backend/backend/utils -> the repository.
+const REPO_ROOT = path.join(__dirname, "..", "..", "..", "..");
+
+/**
+ * A tag per plugin, named and described by its manifest, so the reference
+ * groups a plugin's routes without core naming any plugin.
+ */
+async function pluginTags(): Promise<{ name: string; description: string }[]> {
+  const pluginsDir = path.join(REPO_ROOT, "plugins");
+  const tags: { name: string; description: string }[] = [];
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(pluginsDir);
+  } catch {
+    return tags;
+  }
+  for (const entry of entries.sort()) {
+    try {
+      const manifest = JSON.parse(
+        await fs.readFile(
+          path.join(pluginsDir, entry, "manifest.json"),
+          "utf8",
+        ),
+      ) as { name?: string; description?: string };
+      if (manifest.name) {
+        tags.push({
+          name: manifest.name,
+          description: manifest.description ?? "",
+        });
+      }
+    } catch {
+      // Not a plugin folder.
+    }
+  }
+  return tags;
+}
 
 const swaggerOptions: SwaggerJSDocOptions = {
   definition: {
@@ -48,28 +84,12 @@ const swaggerOptions: SwaggerJSDocOptions = {
     ],
     tags: [
       {
-        name: "AI",
-        description: "AI assistant providers, conversations and proposals",
-      },
-      {
-        name: "Alerts",
-        description: "System alerts and notifications management",
-      },
-      {
         name: "Credentials",
         description: "SSH credential management",
       },
       {
-        name: "Network Topology",
-        description: "Network topology visualization and management",
-      },
-      {
         name: "RBAC",
         description: "Role-based access control for host sharing",
-      },
-      {
-        name: "Terminal",
-        description: "Terminal command history",
       },
       {
         name: "Users",
@@ -80,22 +100,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "Dashboard statistics and activity",
       },
       {
-        name: "Docker",
-        description: "Docker container management",
-      },
-      {
-        name: "SSH Tunnels",
-        description: "SSH tunnel connection management",
-      },
-      {
-        name: "Host Metrics",
-        description: "Host status monitoring, metrics collection, and managers",
-      },
-      {
-        name: "File Manager",
-        description: "SSH file management operations",
-      },
-      {
         name: "SSH",
         description: "SSH host management and configuration",
       },
@@ -104,48 +108,8 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "Host enrollment and onboarding",
       },
       {
-        name: "Fleets",
-        description: "Fleet grouping, membership, and inventory",
-      },
-      {
-        name: "Workspaces",
-        description: "Saved tab and split layouts",
-      },
-      {
         name: "Open Tabs",
         description: "Per-user open tab state",
-      },
-      {
-        name: "Automations",
-        description: "Scheduled and triggered automations",
-      },
-      {
-        name: "Guacamole",
-        description: "Remote desktop sessions",
-      },
-      {
-        name: "Proxmox",
-        description: "Proxmox host integration",
-      },
-      {
-        name: "Proxmox Stats",
-        description: "Proxmox node and VM statistics",
-      },
-      {
-        name: "Session Sharing",
-        description: "Share live sessions by link or with another user",
-      },
-      {
-        name: "Collab",
-        description: "Collaboration rooms that present a live session",
-      },
-      {
-        name: "Session Logs",
-        description: "Session recording and playback",
-      },
-      {
-        name: "Homepage",
-        description: "Homepage service links and layout",
       },
       {
         name: "Audit",
@@ -156,24 +120,8 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "API key management",
       },
       {
-        name: "Vault",
-        description: "HashiCorp Vault SSH signing profiles",
-      },
-      {
-        name: "Termix ID",
-        description: "Built-in SSH certificate authority",
-      },
-      {
-        name: "Tailscale",
-        description: "Tailscale network integration",
-      },
-      {
         name: "Sync",
         description: "Remote sync between desktop and server",
-      },
-      {
-        name: "Tunnel Presets",
-        description: "Saved tunnel configurations",
       },
       {
         name: "User Preferences",
@@ -201,6 +149,11 @@ const swaggerOptions: SwaggerJSDocOptions = {
     path.join(__dirname, "..", "services", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "hosts", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "hosts", "**", "*.js").replace(/\\/g, "/"),
+    // Plugin routes document themselves. Read from source, because a plugin's
+    // bundle drops comments.
+    path
+      .join(REPO_ROOT, "plugins", "*", "src", "backend", "**", "*.ts")
+      .replace(/\\/g, "/"),
   ],
 };
 
@@ -210,6 +163,8 @@ async function generateOpenAPISpec() {
       operation: "openapi_generate_start",
     });
 
+    const definition = swaggerOptions.definition as { tags?: unknown[] };
+    definition.tags = [...(definition.tags ?? []), ...(await pluginTags())];
     const swaggerSpec = await swaggerJSDoc(swaggerOptions);
 
     const outputPath = path.join(

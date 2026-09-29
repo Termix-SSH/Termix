@@ -1,38 +1,31 @@
 const fs = require("fs");
 const path = require("path");
 
+// Run by `termix-plugin build` with TERMIX_PATCH_ROOT set to the plugin, so
+// the package resolves the way the plugin's bundle will resolve it.
+function packageDir(name) {
+  const root = process.env.TERMIX_PATCH_ROOT || process.cwd();
+  // Walked by hand: a package whose exports map hides package.json cannot be
+  // found with require.resolve.
+  for (let dir = path.resolve(root); ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, "node_modules", name);
+    if (fs.existsSync(path.join(candidate, "package.json"))) return candidate;
+    if (path.dirname(dir) === dir) return path.join(root, "node_modules", name);
+  }
+}
+
 const guacdClientPath = path.join(
-  __dirname,
-  "..",
-  "node_modules",
-  "guacamole-lite",
+  packageDir("guacamole-lite"),
   "lib",
   "GuacdClient.js",
 );
-const cryptPath = path.join(
-  __dirname,
-  "..",
-  "node_modules",
-  "guacamole-lite",
-  "lib",
-  "Crypt.js",
-);
+const cryptPath = path.join(packageDir("guacamole-lite"), "lib", "Crypt.js");
 const clientConnectionPath = path.join(
-  __dirname,
-  "..",
-  "node_modules",
-  "guacamole-lite",
+  packageDir("guacamole-lite"),
   "lib",
   "ClientConnection.js",
 );
-const serverPath = path.join(
-  __dirname,
-  "..",
-  "node_modules",
-  "guacamole-lite",
-  "lib",
-  "Server.js",
-);
+const serverPath = path.join(packageDir("guacamole-lite"), "lib", "Server.js");
 
 if (
   !fs.existsSync(guacdClientPath) ||

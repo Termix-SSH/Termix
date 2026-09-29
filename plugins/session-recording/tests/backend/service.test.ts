@@ -59,7 +59,11 @@ async function setup(): Promise<{
     trackSession: () => () => {},
     recordActivity: async () => {},
   };
-  const repo = createSessionRecordingRepository(db.database, table, hosts);
+  const repo = createSessionRecordingRepository(
+    db.database,
+    table,
+    hosts as never,
+  );
 
   const mock = createMockCtx({
     pluginId: manifest.id,

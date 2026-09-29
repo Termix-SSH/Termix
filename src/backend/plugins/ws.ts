@@ -49,7 +49,12 @@ interface Route {
   declared: readonly string[];
   handler?: PluginWebSocketHandler;
   rawHandler?: RawUpgradeHandler;
+  /** Sockets handed to rawHandler, destroyed when the route goes away. */
+  rawSockets?: Set<Duplex>;
 }
+
+/** Largest frame a plugin socket accepts. ws defaults to 100MB. */
+const MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
 
 /** Keyed by "<pluginId>:<path>". */
 const routes = new Map<string, Route>();
@@ -177,6 +182,11 @@ async function handlePluginUpgrade(
 
   if (route.rawHandler) {
     const rawHandler = route.rawHandler;
+    const tracked = route.rawSockets;
+    if (tracked) {
+      tracked.add(socket);
+      socket.once("close", () => tracked.delete(socket));
+    }
     asCaller(() => rawHandler(request, socket, head, userId));
     return true;
   }
@@ -270,7 +280,10 @@ export function registerPluginWsRoute(
     handler,
   });
   if (options.public) auditPublicSocket(pluginId, normalized);
-  servers.set(routeKey, new WebSocketServer({ noServer: true }));
+  servers.set(
+    routeKey,
+    new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES }),
+  );
 
   pluginLogger.info(`Mounted /plugin-ws/${pluginId}${normalized}`, {
     operation: "plugin_ws_mount",
@@ -301,6 +314,7 @@ export function registerPluginWsUpgrade(
     options,
     declared,
     rawHandler: handler,
+    rawSockets: new Set(),
   });
   if (options.public) auditPublicSocket(pluginId, normalized);
 
@@ -312,7 +326,17 @@ export function registerPluginWsUpgrade(
 }
 
 function disposeRoute(routeKey: string, pluginId: string, path: string): void {
+  const route = routes.get(routeKey);
   routes.delete(routeKey);
+
+  for (const socket of route?.rawSockets ?? []) {
+    try {
+      socket.destroy();
+    } catch {
+      // Already gone.
+    }
+  }
+  route?.rawSockets?.clear();
 
   const server = servers.get(routeKey);
   if (server) {

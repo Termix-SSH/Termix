@@ -797,7 +797,19 @@
           }
         }
       }
-    ]
+    ],
+    "uiPresets": {
+      "simple": {
+        "toolbarDensity": "icon"
+      },
+      "balanced": {
+        "toolbarDensity": "labeled"
+      },
+      "advanced": {
+        "toolbarDensity": "expanded"
+      }
+    },
+    "uses": ["files.openEditor", "files.openHost", "snippets.startupCommand"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

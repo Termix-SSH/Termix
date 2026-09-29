@@ -636,7 +636,8 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
       return res.status(400).json({ error: "Missing host" });
     }
     try {
-      const result = await ctx.desktop.launchNativeRdp({
+      const result = await ctx.desktop.launchExternalClient({
+        protocol: "rdp",
         host: body.host,
         port: Number(body.port) || DEFAULT_PORT.rdp,
         username: typeof body.username === "string" ? body.username : undefined,

@@ -17,8 +17,8 @@ import { GuacamoleTokenService } from "../../src/backend/token-service.js";
 
 const manifest = manifestJson as unknown as PluginManifest;
 
-// The token key comes from JWT_SECRET; without one each service picks its own.
-process.env.JWT_SECRET = "remote-desktop-test-secret";
+// Without a fixed key each token service picks its own.
+process.env.GUACAMOLE_ENCRYPTION_KEY = "ab".repeat(32);
 
 function target(
   overrides: Partial<PluginProtocolTarget["auth"]> = {},

@@ -168,5 +168,11 @@
         "custom": "Custom"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Shared with me",
+    "sharedBy": "Shared by {{username}}",
+    "join": "Join",
+    "sharedSessionLabel": "{{hostName}} (shared)"
   }
 }

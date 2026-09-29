@@ -21,7 +21,8 @@
     "ssh:connect",
     "db:own",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "users:impersonate"
   ],
   "contributes": {
     "tabs": [

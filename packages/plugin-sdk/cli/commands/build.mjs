@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import { BACKEND_EXTERNALS, FRONTEND_EXTERNALS } from "../lib/externals.mjs";
 import { staticUrlImports } from "../lib/static-url-imports.mjs";
@@ -48,10 +50,109 @@ export function externalRequireInterop(externals) {
   };
 }
 
+const SDK_PATCHES = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "patches",
+);
+
+/**
+ * Patches a dependency before it is bundled, so the fix ships inside the
+ * plugin rather than depending on whoever ran npm install.
+ *
+ * package.json "termix": { "patches": ["xterm-android-ime"] } names patches
+ * the SDK ships for libraries several plugins share. Any .cjs file in the
+ * plugin's own patches/ folder runs too. Every patch must be safe to run
+ * twice.
+ */
+export function applyPatches(cwd, pluginId) {
+  const pkgPath = path.join(cwd, "package.json");
+  const pkg = fs.existsSync(pkgPath)
+    ? JSON.parse(fs.readFileSync(pkgPath, "utf8"))
+    : {};
+  const scripts = [];
+  for (const name of pkg.termix?.patches ?? []) {
+    const file = path.join(SDK_PATCHES, `${name}.cjs`);
+    if (!/^[a-z0-9-]+$/.test(name) || !fs.existsSync(file)) {
+      throw new Error(`${pluginId}: the SDK has no patch named "${name}"`);
+    }
+    scripts.push(file);
+  }
+  const own = path.join(cwd, "patches");
+  if (fs.existsSync(own)) {
+    for (const file of fs.readdirSync(own).sort()) {
+      if (file.endsWith(".cjs")) scripts.push(path.join(own, file));
+    }
+  }
+  for (const file of scripts) {
+    const result = spawnSync(process.execPath, [file], {
+      cwd,
+      env: { ...process.env, TERMIX_PATCH_ROOT: cwd },
+      stdio: "inherit",
+    });
+    if (result.status !== 0) {
+      throw new Error(`${pluginId}: patch ${path.basename(file)} failed`);
+    }
+  }
+}
+
+const THEME_CSS = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "dist",
+  "host",
+  "theme.css",
+);
+
+/**
+ * Compiles the Tailwind classes the plugin's frontend uses into
+ * dist/frontend.css, against the theme core ships in the SDK. Core only
+ * compiles its own classes, so a class no core file happens to use would
+ * otherwise have no CSS at all. Appended to whatever CSS the bundle already
+ * produced (a library's stylesheet the plugin imports).
+ */
+export async function buildTailwind(cwd, outDir) {
+  const { compile, optimize } = await import("@tailwindcss/node");
+  const { Scanner } = await import("@tailwindcss/oxide");
+  if (!fs.existsSync(THEME_CSS)) {
+    throw new Error("The SDK theme is missing. Run: npm run build:sdk");
+  }
+  const input = [
+    '@import "tailwindcss/theme.css" theme(reference);',
+    `@import ${JSON.stringify(THEME_CSS.replaceAll("\\", "/"))};`,
+    '@import "tailwindcss/utilities.css" layer(utilities);',
+  ].join("\n");
+  const compiler = await compile(input, {
+    base: path.dirname(THEME_CSS),
+    onDependency: () => {},
+  });
+  const scanner = new Scanner({
+    sources: [
+      {
+        base: path.join(cwd, "src", "frontend"),
+        pattern: "**/*",
+        negated: false,
+      },
+    ],
+  });
+  // Flattened and minified the way core's own CSS is, so it does not rely
+  // on native CSS nesting.
+  const css = optimize(compiler.build(scanner.scan()), {
+    minify: true,
+  }).code.trim();
+  if (!css) return;
+  const target = path.join(outDir, "frontend.css");
+  const existing = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
+  fs.writeFileSync(target, `${existing}${existing ? "\n" : ""}${css}\n`);
+}
+
 export async function build({ cwd }) {
   const manifest = readManifest(cwd);
   const pluginId = manifest.id ?? path.basename(cwd);
   const outDir = path.join(cwd, "dist");
+
+  applyPatches(cwd, pluginId);
 
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
@@ -122,6 +223,8 @@ export async function build({ cwd }) {
       ],
     });
   }
+
+  if (frontendEntry) await buildTailwind(cwd, outDir);
 
   copyDir(path.join(cwd, "locales"), path.join(outDir, "locales"));
   copyDir(path.join(cwd, "migrations"), path.join(outDir, "migrations"));

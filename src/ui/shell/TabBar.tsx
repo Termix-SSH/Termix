@@ -26,7 +26,6 @@ import {
   Ungroup,
   Maximize2,
   Minimize2,
-  FolderOpen,
   PanelRight,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
@@ -71,7 +70,6 @@ export function TabBar({
   onReorderTabs,
   onSplitAction,
   onRenameTab,
-  onOpenFileManager,
   isAppFullscreen,
   onToggleAppFullscreen,
   rightDockOpen,
@@ -90,7 +88,6 @@ export function TabBar({
   onReorderTabs: (tabs: Tab[]) => void;
   onSplitAction: (action: TabSplitAction) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
-  onOpenFileManager?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
   rightDockOpen?: boolean;
@@ -712,21 +709,6 @@ export function TabBar({
                   {t("nav.refreshTab")}
                 </button>
               )}
-              {typeof ctxTab.terminalRef?.current?.openFileManager ===
-                "function" &&
-                ctxTab.host &&
-                onOpenFileManager && (
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      onOpenFileManager(contextTabId);
-                      setContextTabId(null);
-                    }}
-                  >
-                    <FolderOpen className="size-3" />
-                    {t("nav.openFileManager")}
-                  </button>
-                )}
               {/* Plugins add entries here, invoked with the tab's surface handle. */}
               <ActionSlot
                 slotId="tab.menu"

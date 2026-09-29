@@ -484,9 +484,9 @@ export function HostStatusCard({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                {/* Plugins such as host metrics show live usage here. */}
+                {/* Plugins add live details to a host row here. */}
                 <ComponentSlot
-                  slotId="dashboard.hostMetrics"
+                  slotId="dashboard.hostRow"
                   props={{
                     hostId: Number(host.id),
                     online: availability === "online",

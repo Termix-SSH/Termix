@@ -21,7 +21,6 @@ import {
 import { getHostDefaults } from "@/api/settings-api";
 import type { Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
-import { useTabsSafe } from "@/shell/TabContext";
 import { updatePluginHostSettings } from "@/api/plugins-api";
 import {
   applyHostDraft,
@@ -93,7 +92,6 @@ export function HostEditor({
 }) {
   const { t } = useTranslation();
   const hostSettingPlugins = usePluginHostSections();
-  const { setPreviewTerminalTheme } = useTabsSafe();
   const [form, setForm] = useState(() =>
     applyHostDraft(createHostEditorForm(host), host ? undefined : draft),
   );
@@ -124,7 +122,7 @@ export function HostEditor({
     useState<CredentialOption | null>(null);
   useEffect(() => {
     getUserInfo()
-      .then((info) => setIsOidcUser(info.is_oidc))
+      .then((info) => setIsOidcUser(info.is_external ?? info.is_oidc))
       .catch(() => {});
   }, []);
 
@@ -196,7 +194,6 @@ export function HostEditor({
       );
 
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
-      setPreviewTerminalTheme(null);
       onSave(saved);
     } catch {
       toast.error(t("hosts.failedToSave"));
@@ -1104,12 +1101,11 @@ export function HostEditor({
         <Button
           variant="ghost"
           onClick={() => {
-            setPreviewTerminalTheme(null);
             onBack();
           }}
           disabled={saving}
         >
-          {t("hosts.guac.cancelBtn")}
+          {t("hosts.editorCancel")}
         </Button>
         {!readOnly && (
           <Button
@@ -1119,10 +1115,10 @@ export function HostEditor({
             disabled={saving}
           >
             {saving
-              ? t("hosts.guac.savingBtn")
+              ? t("hosts.editorSaving")
               : host
-                ? t("hosts.guac.updateHostBtn")
-                : t("hosts.guac.addHostBtn")}
+                ? t("hosts.editorUpdate")
+                : t("hosts.editorAdd")}
           </Button>
         )}
       </div>

@@ -7,7 +7,7 @@
     "name": "Termix"
   },
   "license": "MIT",
-  "repository": "https://github.com/Termix-SSH/Plugin-RemoteDesktop",
+  "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Terminal",
   "icon": "Monitor",
   "engine": {
@@ -21,7 +21,8 @@
     "ssh:connect",
     "network:serve",
     "desktop:window",
-    "ui:surface"
+    "ui:surface",
+    "users:impersonate"
   ],
   "optionalDependencies": {
     "session-recording": "^1.0.0",
@@ -442,7 +443,8 @@
             "labelKey": "settings.host.guacamoleConfig.label",
             "default": {},
             "hidden": true,
-            "shareRead": "edit"
+            "shareRead": "edit",
+            "secretKeys": ["gateway-password"]
           },
           {
             "key": "enableToolbar",
@@ -454,7 +456,8 @@
           }
         ]
       }
-    }
+    },
+    "uses": ["session.remoteDisplay", "wakeOnLan.macAddress"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

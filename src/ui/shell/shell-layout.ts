@@ -66,8 +66,6 @@ export function buildLayoutTabSnapshots(
     hostNameSnapshot: tab.host?.name ?? null,
     label: tab.label,
     customLabel: tab.customLabel,
-    initialFilePath: tab.initialFilePath,
-    initialPath: tab.initialPath,
     data: tab.data,
   }));
 
@@ -82,9 +80,13 @@ export function snapshotData(
   snapshot: WorkspaceTabSnapshot,
 ): Record<string, unknown> | undefined {
   if (snapshot.data) return snapshot.data;
-  return snapshot.fleetId !== undefined
-    ? { fleetId: snapshot.fleetId }
-    : undefined;
+  // Payloads saved before tabs carried `data` kept these as fields of their own.
+  const legacy: Record<string, unknown> = {};
+  if (snapshot.fleetId !== undefined) legacy.fleetId = snapshot.fleetId;
+  if (snapshot.initialFilePath)
+    legacy.initialFilePath = snapshot.initialFilePath;
+  if (snapshot.initialPath) legacy.initialPath = snapshot.initialPath;
+  return Object.keys(legacy).length > 0 ? legacy : undefined;
 }
 
 /**

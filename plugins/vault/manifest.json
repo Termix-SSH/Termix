@@ -75,7 +75,8 @@
         }
       ]
     },
-    "syncEntities": ["vaultProfiles"]
+    "syncEntities": ["vaultProfiles"],
+    "uses": ["terminal.overlay"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

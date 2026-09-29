@@ -625,7 +625,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
     if (!DataCrypto.getUserDataKey(userId)) {
       if (isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(
+        const oidcUnlocked = await authManager.authenticateExternalUser(
           userId,
           deviceInfo.type,
         );
@@ -1058,7 +1058,7 @@ app.post(
 
       if (!DataCrypto.getUserDataKey(userId)) {
         if (isOidcUser) {
-          const oidcUnlocked = await authManager.authenticateOIDCUser(
+          const oidcUnlocked = await authManager.authenticateExternalUser(
             userId,
             deviceInfo.type,
           );

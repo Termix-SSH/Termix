@@ -15,13 +15,13 @@ import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
 import {
   buildOriginWsUrl,
   getBasePath,
-  guacStateToStage,
   isElectron,
   resolveConnectionOrigin,
   type ConnectionOrigin,
   type ConnectionStage,
 } from "@termix/plugin-sdk/ui";
 import { errorMessage } from "./host-remote";
+import { guacStateToStage } from "./guacamole-state.ts";
 import { isPasteShortcut, pasteTextToRemote } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 import { bindPointerInput } from "./guacamole-pointer.ts";
@@ -87,8 +87,6 @@ interface GuacamoleDisplayProps {
   onStageChange?: (stage: ConnectionStage) => void;
   onZoomChange?: (zoom: number) => void;
 }
-
-const isDev = import.meta.env.DEV;
 
 export const GuacamoleDisplay = forwardRef<
   GuacamoleDisplayHandle,

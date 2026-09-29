@@ -23,7 +23,8 @@
     "network:serve",
     "ui:surface",
     "events:core",
-    "kv:own"
+    "kv:own",
+    "users:impersonate"
   ],
   "provides": [
     {
@@ -108,7 +109,19 @@
       "key": "enableFileManager",
       "labelKey": "hostCapability.label",
       "editorTab": "plugins"
-    }
+    },
+    "uiPresets": {
+      "simple": {
+        "viewMode": "grid"
+      },
+      "balanced": {
+        "viewMode": "grid"
+      },
+      "advanced": {
+        "viewMode": "list"
+      }
+    },
+    "uses": ["homepage.widgets", "host-metrics.disk", "terminal.open"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

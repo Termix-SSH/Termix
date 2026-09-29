@@ -46,6 +46,7 @@ import {
 } from "@termix/plugin-sdk/ui";
 import { ConnectionLogPanel } from "@termix/plugin-sdk/ui";
 import {
+  usePluginUiPreferences,
   invokeAction,
   useConnectionRetry,
   logActivity,
@@ -177,25 +178,32 @@ function FileManagerContent({
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
-    const saved = localStorage.getItem("fileManagerViewMode");
-    return saved === "grid" || saved === "list" ? saved : "grid";
-  });
+  // An interface preset sets this too, so it is a plugin UI preference.
+  const { values: fmPrefs, set: setFmPref } = usePluginUiPreferences<{
+    viewMode: "grid" | "list";
+  }>();
+  const viewMode: "grid" | "list" =
+    fmPrefs.viewMode === "list" ? "list" : "grid";
+  const setViewMode = useCallback(
+    (next: "grid" | "list") => setFmPref("viewMode", next),
+    [setFmPref],
+  );
+  useEffect(() => {
+    // Before 2.9 the view mode lived in this browser's localStorage.
+    try {
+      const legacy = localStorage.getItem("fileManagerViewMode");
+      if (legacy === null) return;
+      localStorage.removeItem("fileManagerViewMode");
+      if (legacy === "grid" || legacy === "list") setFmPref("viewMode", legacy);
+    } catch {
+      // Storage can be unavailable.
+    }
+  }, []);
   const [density, setDensity] = useState<"comfortable" | "compact">(() =>
     localStorage.getItem("fileManagerDensity") === "compact"
       ? "compact"
       : "comfortable",
   );
-  // Picking an interface preset seeds this key from another part of the app.
-  useEffect(() => {
-    const handler = () => {
-      const saved = localStorage.getItem("fileManagerViewMode");
-      if (saved === "grid" || saved === "list") setViewMode(saved);
-    };
-    window.addEventListener("fileManagerViewModeChanged", handler);
-    return () =>
-      window.removeEventListener("fileManagerViewModeChanged", handler);
-  }, []);
   const [sortBy, setSortBy] = useState<"name" | "modified" | "size">(() => {
     const saved = localStorage.getItem("fileManagerSortBy");
     return saved === "name" || saved === "modified" || saved === "size"
@@ -3327,10 +3335,6 @@ function FileManagerContent({
         .catch(() => {});
     }
   }, [currentHost?.id]);
-
-  useEffect(() => {
-    localStorage.setItem("fileManagerViewMode", viewMode);
-  }, [viewMode]);
 
   useEffect(() => {
     localStorage.setItem("fileManagerDensity", density);

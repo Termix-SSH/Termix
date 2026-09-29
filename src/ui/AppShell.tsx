@@ -230,7 +230,6 @@ import {
 } from "@/shell/tab-registry";
 import { runHostAction } from "@/sidebar/host-contributions";
 import { getPanel, usePanels } from "@/shell/panel-registry";
-import { invokeAction } from "@/shell/action-registry";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
   notifyShellReady,
@@ -1142,19 +1141,6 @@ export function AppShell({
     );
   }, [allHosts]);
 
-  // Let HostManager trigger tab opens via custom event
-  useEffect(() => {
-    const handle = (e: Event) => {
-      const { hostId, type } = (
-        e as CustomEvent<{ hostId: string; type?: TabType }>
-      ).detail;
-      const host = allHosts.find((h) => h.id === hostId);
-      if (host) connectHost(host, type);
-    };
-    window.addEventListener("termix:open-tab", handle);
-    return () => window.removeEventListener("termix:open-tab", handle);
-  }, [allHosts]);
-
   function buildWorkspacePayload(): WorkspacePayload {
     return buildLayoutPayload({
       tabs,
@@ -1205,13 +1191,16 @@ export function AppShell({
         }
 
         if (target.kind === "host") {
-          const newTabId = openTab(target.host, snapshot.type, {
-            instanceId: createId(),
-            restoredSessionId: null,
-            savedLabel: snapshot.customLabel ?? snapshot.label,
-            initialFilePath: snapshot.initialFilePath,
-            initialPath: snapshot.initialPath,
-          });
+          const newTabId = openTab(
+            target.host,
+            snapshot.type,
+            {
+              instanceId: createId(),
+              restoredSessionId: null,
+              savedLabel: snapshot.customLabel ?? snapshot.label,
+            },
+            { data: snapshotData(snapshot) },
+          );
           slotIdToNewTabId.set(snapshot.slotId, newTabId);
         }
       }
@@ -1474,10 +1463,6 @@ export function AppShell({
       instanceId: string;
       restoredSessionId: string | null;
       savedLabel?: string;
-      initialFilePath?: string;
-      initialPath?: string;
-      joinSharedSessionId?: string | null;
-      joinShareId?: string | null;
     },
     options?: {
       data?: Record<string, unknown>;
@@ -1506,10 +1491,6 @@ export function AppShell({
 
     let finalLabel = host.name;
     const savedLabel = restore?.savedLabel;
-    const initialFilePath = restore?.initialFilePath;
-    const initialPath = restore?.initialPath;
-    const joinSharedSessionId = restore?.joinSharedSessionId ?? null;
-    const joinShareId = restore?.joinShareId ?? null;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
       savedLabel != null &&
@@ -1531,10 +1512,7 @@ export function AppShell({
             openedAt,
             terminalRef: ref,
             restoredSessionId: restore?.restoredSessionId ?? null,
-            joinSharedSessionId,
-            joinShareId,
-            initialFilePath,
-            initialPath,
+            data: options?.data,
           },
         ];
       }
@@ -1568,10 +1546,6 @@ export function AppShell({
           openedAt,
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
-          joinSharedSessionId,
-          joinShareId,
-          initialFilePath,
-          initialPath,
           data: options?.data,
         },
       ];
@@ -1690,7 +1664,6 @@ export function AppShell({
       const id = type;
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.hostManager"),
-        sftp: t("nav.sftp"),
       };
       // A plugin tab names itself; promoted rail panels reuse the rail's own
       // label so the two stay in sync.
@@ -1701,7 +1674,7 @@ export function AppShell({
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);
         if (existing) {
-          // --- tmux-monitor --- refocusing with a host preselects it
+          // Refocusing a singleton with a host or data passes it on.
           if (!host && data === undefined) return prev;
           return prev.map((t) =>
             t.id === id
@@ -1721,7 +1694,7 @@ export function AppShell({
             type,
             label,
             openedAt: Date.now(),
-            ...(host ? { host } : {}), // --- tmux-monitor ---
+            ...(host ? { host } : {}),
             ...(data !== undefined ? { data } : {}),
           },
         ];
@@ -2537,6 +2510,7 @@ export function AppShell({
     },
     openSingletonTab: (type, options) =>
       openSingletonTab(type, undefined, undefined, options?.data),
+    connectHost: (host, type) => connectHost(host, type as TabType),
     closeTab: (tabId) => closeTab(tabId),
     renameTab: (tabId, label) => renameTab(tabId, label),
 
@@ -2697,35 +2671,6 @@ export function AppShell({
               }}
               onRenameTab={renameTab}
               onReorderTabs={setTabs}
-              onJoinSharedSession={(session) => {
-                if (!session.shareId) return;
-                const existingHost = allHosts.find(
-                  (h) => h.id === String(session.hostId),
-                );
-                const host: Host = existingHost ?? {
-                  id: String(session.hostId),
-                  name: session.hostName,
-                  username: "",
-                  ip: "",
-                  port: 0,
-                  folder: "",
-                  online: false,
-                  cpu: null,
-                  ram: null,
-                  lastAccess: new Date().toISOString(),
-                  authType: "none",
-                  enableSsh: false,
-                  sshPort: 22,
-                };
-                void invokeAction("terminal.open", host, {
-                  joinSharedSessionId: session.sessionId,
-                  joinShareId: session.shareId,
-                  label: t("connections.sharedSessionLabel", {
-                    hostName: session.hostName,
-                  }),
-                });
-                if (isMobile) setSidebarOpen(false);
-              }}
             />
           </div>
         )}
@@ -3037,12 +2982,6 @@ export function AppShell({
                 onReorderTabs={reorderTopLevelTabs}
                 onSplitAction={handleTabSplitAction}
                 onRenameTab={renameTab}
-                onOpenFileManager={(tabId) => {
-                  const targetTab = tabs.find((t) => t.id === tabId);
-                  if (targetTab?.host) {
-                    void invokeAction("host.openFiles", targetTab.host);
-                  }
-                }}
                 isAppFullscreen={isAppFullscreen}
                 onToggleAppFullscreen={toggleAppFullscreen}
                 rightDockOpen={rightRailView !== null}

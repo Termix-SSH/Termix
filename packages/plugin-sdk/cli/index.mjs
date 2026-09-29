@@ -6,7 +6,8 @@
  */
 
 import process from "node:process";
-import { build } from "./commands/build.mjs";
+import { applyPatches, build } from "./commands/build.mjs";
+import { readManifest } from "./lib/plugin-dir.mjs";
 import { validate } from "./commands/validate.mjs";
 import { test } from "./commands/test.mjs";
 import { pack } from "./commands/pack.mjs";
@@ -15,6 +16,7 @@ import { migrations } from "./commands/migrations.mjs";
 
 const COMMANDS = {
   build,
+  patch: async ({ cwd }) => applyPatches(cwd, readManifest(cwd).id),
   validate,
   test,
   pack,
@@ -32,6 +34,7 @@ if (!command || command === "--help" || command === "-h") {
       "Usage: termix-plugin <command>",
       "",
       "  build      Bundle the plugin into dist/",
+      "  patch      Apply the plugin's dependency patches (build does this too)",
       "  validate   Check manifest.json and the files it names",
       "  test       Run the plugin's vitest suite",
       "  pack       Write <id>-<version>.tmxplug of the built plugin [--out dir]",

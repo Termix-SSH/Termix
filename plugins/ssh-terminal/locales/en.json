@@ -513,7 +513,39 @@
     "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
     "useSSHTitleLabel": "Use SSH Window Title",
     "useUserDefaults": "Use user defaults",
-    "useUserTerminalDefaultsDesc": "Keep this host in step with the terminal defaults in your profile."
+    "useUserTerminalDefaultsDesc": "Keep this host in step with the terminal defaults in your profile.",
+    "enableTunnel": "Enable Tunnel",
+    "enableFileManager": "Enable File Manager",
+    "enableDocker": "Enable Docker",
+    "startupSnippet": "Startup Snippet",
+    "quickActions": "Quick Actions",
+    "proxmoxLastSyncStatus": {
+      "success": "Success"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "RDP URL copied",
+    "vncUrlCopied": "VNC URL copied",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "No credential (direct credentials below)",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Credential",
+      "authTypeNone": "None",
+      "recordingPath": "Recording Path",
+      "recordingName": "Recording Name",
+      "saveHostFirst": "Save the host first.",
+      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
+      "permissionLevel": "Permission Level",
+      "typeHeader": "Type",
+      "targetHeader": "Target",
+      "permissionHeader": "Permission",
+      "cancelBtn": "Cancel",
+      "savingBtn": "Saving...",
+      "updateHostBtn": "Update Host",
+      "addHostBtn": "Add Host"
+    },
+    "filterAuthVault": "Vault"
   },
   "nav": {
     "history": "History",

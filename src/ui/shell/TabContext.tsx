@@ -36,8 +36,6 @@ interface TabContextType {
     },
   ) => void;
   updateTab: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
-  previewTerminalTheme: string | null;
-  setPreviewTerminalTheme: (theme: string | null) => void;
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
@@ -62,8 +60,6 @@ const NOOP_TABS: TabContextType = {
   reorderTabs: () => {},
   updateHostConfig: () => {},
   updateTab: () => {},
-  previewTerminalTheme: null,
-  setPreviewTerminalTheme: () => {},
 };
 
 export function useTabsSafe(): TabContextType {
@@ -86,9 +82,6 @@ export function TabProvider({ children }: TabProviderProps) {
   ]);
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
-  const [previewTerminalTheme, setPreviewTerminalTheme] = useState<
-    string | null
-  >(null);
   const [initialMaxId] = useState(2);
   const nextTabId = useRef(initialMaxId);
 
@@ -372,8 +365,6 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
-      previewTerminalTheme,
-      setPreviewTerminalTheme,
     }),
     [
       tabs,
@@ -386,8 +377,6 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
-      previewTerminalTheme,
-      setPreviewTerminalTheme,
     ],
   );
 

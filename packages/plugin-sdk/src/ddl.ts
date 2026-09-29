@@ -429,7 +429,35 @@ const REFUSED_STATEMENTS = new Set([
 
 /** What a migration may CREATE, ALTER or DROP. Anything else is refused. */
 const TABLE_OBJECTS = new Set(["TABLE", "VIEW"]);
-const HARMLESS_OBJECTS = new Set(["SEQUENCE", "TYPE"]);
+/** Allowed, but only under the plugin's own prefix. */
+const PREFIXED_OBJECTS = new Set(["SEQUENCE", "TYPE"]);
+
+/**
+ * Functions that read files, change server settings or run a string as SQL.
+ * A SELECT calling one of them could do anything, so it is refused.
+ */
+const REFUSED_FUNCTIONS = new Set([
+  "SET_CONFIG",
+  "PG_READ_FILE",
+  "PG_READ_BINARY_FILE",
+  "PG_LS_DIR",
+  "PG_STAT_FILE",
+  "PG_FILE_WRITE",
+  "LO_IMPORT",
+  "LO_EXPORT",
+  "LO_FROM_BYTEA",
+  "DBLINK",
+  "DBLINK_EXEC",
+  "QUERY_TO_XML",
+  "QUERY_TO_XML_AND_XMLSCHEMA",
+  "PG_TERMINATE_BACKEND",
+  "PG_CANCEL_BACKEND",
+  "PG_RELOAD_CONF",
+  "LOAD_FILE",
+  "LOAD_EXTENSION",
+  "SYS_EXEC",
+  "SYS_EVAL",
+]);
 
 const CREATE_MODIFIERS = [
   "OR",
@@ -460,9 +488,27 @@ export function findUnownedTableWrites(
   pluginId: string,
   sql: string,
   ownedLegacy: ReadonlySet<string> = new Set(),
+  ownedIndexes: ReadonlySet<string> = new Set(),
 ): string[] {
   const prefix = tablePrefix(pluginId);
   const problems: string[] = [];
+  const indexes = new Set([
+    ...ownedIndexes,
+    ...collectOwnedIndexes(pluginId, [sql], ownedLegacy),
+  ]);
+
+  // The splitter and tokenizer follow standard quoting only. MySQL backslash
+  // escapes, E'' strings and Postgres dollar quoting would let a string end
+  // somewhere else for the engine than for this check, so none are allowed.
+  if (sql.includes("\\")) {
+    problems.push("backslashes are not allowed in a plugin migration");
+  }
+  if (/\$[A-Za-z_0-9]*\$/.test(sql)) {
+    problems.push(
+      "dollar-quoted strings are not allowed in a plugin migration",
+    );
+  }
+  if (problems.length > 0) return problems;
 
   for (const statement of splitStatements(sql)) {
     const tokens = tokenize(statement);
@@ -507,16 +553,47 @@ export function findUnownedTableWrites(
       continue;
     }
 
+    if (first !== "CREATE" && find("CASCADE") > 0) {
+      problems.push("CASCADE is not allowed in a plugin migration");
+      continue;
+    }
+
     if (first === "CREATE" || first === "ALTER" || first === "DROP") {
       let at = skip(1, CREATE_MODIFIERS);
       const object = upper(at);
       if (object === "INDEX") {
         // The index name is free; the table after ON is what it writes to.
         const on = find("ON", at);
-        if (on > 0) table(skip(on + 1, ["ONLY"]));
+        if (on > 0) {
+          table(skip(on + 1, ["ONLY"]));
+        } else if (first === "CREATE") {
+          problems.push("CREATE INDEX without ON is not allowed");
+        } else {
+          // DROP INDEX name: only an index this plugin created.
+          const nameAt = skip(at + 1, ["IF", "EXISTS", "CONCURRENTLY"]);
+          const name = tokens[nameAt];
+          if (
+            !name ||
+            name.kind === "punct" ||
+            tokens[nameAt + 1]?.value === "." ||
+            (!name.value.startsWith(prefix) && !indexes.has(name.value))
+          ) {
+            problems.push(
+              `${first} INDEX "${name?.value ?? ""}" is not an index this plugin created`,
+            );
+          }
+        }
         continue;
       }
-      if (HARMLESS_OBJECTS.has(object)) continue;
+      if (PREFIXED_OBJECTS.has(object)) {
+        const name = tokens[skip(at + 1, ["IF", "NOT", "EXISTS"])];
+        if (!name || !name.value.startsWith(prefix)) {
+          problems.push(
+            `${first} ${object} "${name?.value ?? ""}" is not prefixed "${prefix}"`,
+          );
+        }
+        continue;
+      }
       if (!TABLE_OBJECTS.has(object)) {
         problems.push(
           `${first} ${object || tokens[at]?.value || ""} is not allowed in a plugin migration`.trim(),
@@ -565,6 +642,14 @@ export function findUnownedTableWrites(
     }
 
     if (first === "UPDATE") {
+      // MySQL writes every table before SET: UPDATE a JOIN b ... SET b.x = 1.
+      const set = find("SET");
+      const end = set > 0 ? set : tokens.length;
+      for (let at = 1; at < end; at++) {
+        if (upper(at) === "JOIN" || tokens[at].value === ",") {
+          table(at + 1);
+        }
+      }
       table(
         skip(1, [
           "OR",
@@ -582,12 +667,51 @@ export function findUnownedTableWrites(
 
     if (first === "DELETE") {
       const from = find("FROM");
-      if (from > 0) table(skip(from + 1, ["ONLY"]));
-      else problems.push("DELETE without FROM is not allowed");
+      if (from < 0) {
+        problems.push("DELETE without FROM is not allowed");
+        continue;
+      }
+      // MySQL: DELETE a, b FROM ... deletes from a and b.
+      let at = skip(1, ["LOW_PRIORITY", "QUICK", "IGNORE"]);
+      if (at < from) {
+        while (at < from) {
+          at = table(at);
+          if (tokens[at]?.value !== ",") break;
+          at++;
+        }
+        continue;
+      }
+      at = table(skip(from + 1, ["ONLY"]));
+      // DELETE FROM a, b USING ... deletes from both.
+      while (tokens[at]?.value === ",") at = table(at + 1);
       continue;
     }
 
-    if (first !== "SELECT" && first !== "COMMENT") {
+    if (first === "SELECT") {
+      // SELECT ... INTO creates a table on Postgres and writes a file on
+      // MySQL.
+      if (find("INTO") > 0) {
+        problems.push("SELECT INTO is not allowed in a plugin migration");
+        continue;
+      }
+      for (let at = 0; at < tokens.length; at++) {
+        if (REFUSED_FUNCTIONS.has(upper(at)) && tokens[at + 1]?.value === "(") {
+          problems.push(
+            `${tokens[at].value}() is not allowed in a plugin migration`,
+          );
+        }
+      }
+      // setval can break a core table's ids, so only the plugin's own.
+      for (const match of statement.matchAll(/setval\s*\(\s*([^,]*)/gi)) {
+        const target = /'([^']*)'/.exec(match[1])?.[1];
+        if (!target || !target.startsWith(prefix)) {
+          problems.push("setval() may only target this plugin's own sequences");
+        }
+      }
+      continue;
+    }
+
+    if (first !== "COMMENT") {
       problems.push(
         `"${tokens[0].value}" statements are not allowed in a plugin migration`,
       );
@@ -595,4 +719,45 @@ export function findUnownedTableWrites(
   }
 
   return problems;
+}
+
+/**
+ * Names of the indexes a plugin's migrations create on its own tables, so a
+ * later DROP INDEX with no ON clause can be checked against them.
+ */
+export function collectOwnedIndexes(
+  pluginId: string,
+  sqls: readonly string[],
+  ownedLegacy: ReadonlySet<string> = new Set(),
+): Set<string> {
+  const prefix = tablePrefix(pluginId);
+  const owned = new Set<string>();
+  for (const sql of sqls) {
+    for (const statement of splitStatements(sql)) {
+      const tokens = tokenize(statement);
+      const upper = (at: number) =>
+        tokens[at]?.kind === "word" ? tokens[at].value.toUpperCase() : "";
+      if (upper(0) !== "CREATE") continue;
+      let at = 1;
+      while (CREATE_MODIFIERS.includes(upper(at))) at++;
+      if (upper(at) !== "INDEX") continue;
+      at++;
+      while (["IF", "NOT", "EXISTS"].includes(upper(at))) at++;
+      const name = tokens[at];
+      let on = at;
+      while (on < tokens.length && upper(on) !== "ON") on++;
+      if (upper(on + 1) === "ONLY") on++;
+      const target = tokens[on + 1];
+      if (
+        name &&
+        name.kind !== "punct" &&
+        target &&
+        tokens[on + 2]?.value !== "." &&
+        (target.value.startsWith(prefix) || ownedLegacy.has(target.value))
+      ) {
+        owned.add(name.value);
+      }
+    }
+  }
+  return owned;
 }

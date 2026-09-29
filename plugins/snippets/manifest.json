@@ -21,7 +21,8 @@
     "credentials:use",
     "hosts:write",
     "ui:surface",
-    "events:core"
+    "events:core",
+    "db:core-refs"
   ],
   "provides": [
     {
@@ -140,6 +141,11 @@
     ],
     "http": {
       "adminImpersonation": true
-    }
+    },
+    "uses": [
+      "host-metrics.toolbar",
+      "terminal.sendToActive",
+      "terminal.sendToSession"
+    ]
   }
 }

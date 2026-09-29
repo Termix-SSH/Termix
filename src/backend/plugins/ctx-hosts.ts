@@ -81,7 +81,6 @@ export const HOST_SECRET_FIELDS = [
   "passphrase",
   "sudoPassword",
   "socks5Password",
-  "vaultToken",
 ] as const;
 
 /** A copy of a host with every secret field removed, nested ones included. */
