@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SftpTransferTab } from "../../src/frontend/SftpTransferTab";
 
 const api = vi.hoisted(() => ({
+  confirmBeforeTrash: undefined as boolean | undefined,
   addTransferRecent: vi.fn(),
   browseSSHDirectory: vi.fn(),
   changeSSHPermissions: vi.fn(),
@@ -51,12 +52,20 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
+vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@termix/plugin-sdk/frontend")>()),
+  useSettings: () => ({
+    values: { confirmBeforeTrash: api.confirmBeforeTrash },
+  }),
+}));
+
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  api.confirmBeforeTrash = undefined;
   api.getSSHHosts.mockResolvedValue([
     {
       id: 1,
@@ -206,12 +215,29 @@ describe("SftpTransferTab", () => {
     });
   });
 
+  it("moves files to trash directly when confirmation is disabled", async () => {
+    api.confirmBeforeTrash = false;
+    render(<SftpTransferTab />);
+    await selectHosts();
+    fireEvent.contextMenu(screen.getByText("remote-1.txt"));
+    await userEvent.click(screen.getByText("sftpTransfer.delete"));
+    await waitFor(() =>
+      expect(api.deleteSSHItem).toHaveBeenCalledWith(
+        "1",
+        "/srv/remote-1.txt",
+        false,
+      ),
+    );
+    expect(screen.queryByText("sftpTransfer.deleteSelectedItems")).toBeNull();
+  });
+
   it("deletes a remote file after confirming", async () => {
     render(<SftpTransferTab />);
     await selectHosts();
 
     fireEvent.contextMenu(screen.getByText("remote-1.txt"));
     await userEvent.click(screen.getByText("sftpTransfer.delete"));
+    expect(api.deleteSSHItem).not.toHaveBeenCalled();
     const confirmButtons = await screen.findAllByText("sftpTransfer.delete");
     await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 

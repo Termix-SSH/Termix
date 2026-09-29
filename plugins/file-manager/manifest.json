@@ -79,6 +79,13 @@
           "min": 1,
           "max": 8,
           "default": 4
+        },
+        {
+          "key": "confirmBeforeTrash",
+          "type": "boolean",
+          "labelKey": "settings.user.confirmBeforeTrash.label",
+          "descriptionKey": "settings.user.confirmBeforeTrash.description",
+          "default": true
         }
       ],
       "host": {
