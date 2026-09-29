@@ -347,9 +347,9 @@ export const GuacamoleDisplay = forwardRef<
       (hasKeyboardFocusRef.current || displayIsFocused);
 
     if (!shouldCaptureInput) {
+      keyboard.reset();
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
-      keyboard.reset();
       return;
     }
 
@@ -368,17 +368,8 @@ export const GuacamoleDisplay = forwardRef<
     };
 
     keyboard.onkeyup = (keysym: number) => {
-      if (!clientRef.current) return;
-      if (!isVisible || !windowFocusedRef.current) return;
-
-      const activeDisplay = displayElementRef.current;
-      const stillFocused =
-        !!activeDisplay &&
-        typeof document !== "undefined" &&
-        document.activeElement === activeDisplay;
-
-      if (!hasKeyboardFocusRef.current && !stillFocused) return;
-      clientRef.current.sendKeyEvent(0, keysym);
+      // Focus loss must still release keys already sent to the remote host.
+      clientRef.current?.sendKeyEvent(0, keysym);
     };
   }, [isVisible]);
 
