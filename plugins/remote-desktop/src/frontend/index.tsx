@@ -117,12 +117,14 @@ function RemoteDesktopStandalone({ hostId, view }: StandaloneViewProps) {
 /** What collab rooms and shared-session links draw a stream with. */
 function RemoteDisplay({
   token,
+  connectionOrigin,
   protocol,
   isVisible,
   onConnect,
   onError,
 }: {
   token: string;
+  connectionOrigin?: "local" | "remote";
   protocol: Protocol;
   isVisible: boolean;
   onConnect?: () => void;
@@ -130,7 +132,7 @@ function RemoteDisplay({
 }) {
   return (
     <GuacamoleDisplay
-      connectionConfig={{ token, protocol, type: protocol }}
+      connectionConfig={{ token, protocol, type: protocol, connectionOrigin }}
       isVisible={isVisible}
       onConnect={onConnect}
       onError={onError}

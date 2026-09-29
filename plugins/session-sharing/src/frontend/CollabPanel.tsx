@@ -12,15 +12,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@termix/plugin-sdk/ui";
-import { createCollabRoom, listCollabRooms, type CollabRoom } from "./api";
+import type { CollabRoom } from "./api";
+import type { MeetingBackend } from "./meeting-backend";
 import { getErrorMessage } from "./shared";
 
 export function CollabPanel({
   onOpenRoom,
+  backend,
 }: {
   onOpenRoom: (room: CollabRoom) => void;
+  backend: MeetingBackend;
 }) {
   const { t } = useTranslation();
+  const { createCollabRoom, listCollabRooms } = backend.api;
   const [rooms, setRooms] = useState<CollabRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -37,7 +41,7 @@ export function CollabPanel({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [backend]);
 
   useEffect(() => {
     void refresh();
