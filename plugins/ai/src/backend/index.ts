@@ -2,10 +2,12 @@ import type { Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { hostImportNormalizer } from "./host-import.js";
 import { createAiRepository } from "./repository.js";
+import { registerProviderSync } from "./sync.js";
 import { registerAiRoutes } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
   const repository = await createAiRepository(ctx);
+  await registerProviderSync(ctx, repository);
 
   registerAiRoutes(ctx.http.router<Router>(), repository, ctx);
 
