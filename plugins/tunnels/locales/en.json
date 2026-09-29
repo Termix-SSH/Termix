@@ -148,7 +148,11 @@
     "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
     "activeTunnels": "Active Tunnels",
     "start": "Start",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Tunnel authentication",
+    "authRetry": "The previous code was not accepted. Enter a new code.",
+    "authAnswer": "Authentication response",
+    "authContinue": "Continue"
   },
   "permissions": {
     "use": {

@@ -32,6 +32,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
+  answerC2SAuth: (id, answer) =>
+    ipcRenderer.invoke("answer-c2s-auth", id, answer),
+  onC2SAuthPrompt: (callback) => {
+    const listener = (_event, prompt) => callback(prompt);
+    ipcRenderer.on("c2s-auth-prompt", listener);
+    return () => ipcRenderer.removeListener("c2s-auth-prompt", listener);
+  },
   getC2STunnelConfig: () => ipcRenderer.invoke("get-c2s-tunnel-config"),
   saveC2STunnelConfig: (config) =>
     ipcRenderer.invoke("save-c2s-tunnel-config", config),

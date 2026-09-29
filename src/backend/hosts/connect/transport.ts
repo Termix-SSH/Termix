@@ -19,6 +19,7 @@ import type {
   MutableConnectConfig,
   SshAuthLog,
   SshConnectHost,
+  SshPromptChannel,
 } from "./types.js";
 
 function getHostSocks5Config(host: SshConnectHost): SOCKS5Config | null {
@@ -48,6 +49,7 @@ class SshTransportError extends Error {
 }
 
 export interface OpenTransportOptions {
+  prompt?: SshPromptChannel;
   /** Knock before connecting when the host has a sequence. Default true. */
   portKnock?: boolean;
   /** Resolve DNS up front for a direct connection. Default true. */
@@ -111,7 +113,11 @@ export async function openSshTransport(
 
   const jumpUserId = host.userId || "";
   if (host.jumpHosts && host.jumpHosts.length > 0 && jumpUserId) {
-    const jumpClient = await createJumpHostChain(host.jumpHosts, jumpUserId);
+    const jumpClient = await createJumpHostChain(
+      host.jumpHosts,
+      jumpUserId,
+      options.prompt,
+    );
     if (!jumpClient) {
       throw new SshTransportError(
         "Failed to connect through jump hosts",

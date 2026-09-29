@@ -1987,6 +1987,11 @@ async function getC2SRelayHeaders(relayUrl) {
   return headers;
 }
 
+const attachC2SAuth = require("./c2s-auth.cjs").createC2SAuthBridge(
+  ipcMain,
+  () => mainWindow,
+);
+
 function getC2STunnelName(tunnel, index = 0) {
   if (tunnel.name) return tunnel.name;
   const localAddress = getC2SLocalAddress(tunnel);
@@ -2103,6 +2108,7 @@ async function openC2SRelay(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
   );
+  attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
   const pendingChunks = [];
   let ready = false;
   let closed = false;
@@ -2192,22 +2198,33 @@ async function openC2SRelay(
   });
 }
 
-async function testC2SRelay(tunnel, targetHost, targetPort, authToken) {
+async function testC2SRelay(
+  tunnel,
+  targetHost,
+  targetPort,
+  authToken,
+  runtime,
+) {
   const tunnelConfig = normalizeC2STunnelAddresses(tunnel);
   const relayUrl = getC2SRelayUrl();
   const headers = await getC2SRelayHeaders(relayUrl, authToken);
+  if (runtime && c2sTunnelRuntimes.get(tunnel.name) !== runtime) {
+    return { success: false, error: "Tunnel stopped" };
+  }
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
   );
+  attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
 
+  if (runtime) runtime.authSocket = ws;
   return new Promise((resolve) => {
     let settled = false;
     const settle = (result) => {
       if (settled) return;
       settled = true;
       try {
-        ws.close();
+        if (!runtime || !result.success) ws.close();
       } catch {
         // expected during shutdown
       }
@@ -2216,12 +2233,13 @@ async function testC2SRelay(tunnel, targetHost, targetPort, authToken) {
 
     const timer = setTimeout(() => {
       settle({ success: false, error: "Tunnel test timed out" });
-    }, 15000);
+    }, 180_000);
 
     ws.on("open", () => {
       ws.send(
         JSON.stringify({
           type: "test",
+          keepAlive: !!runtime,
           tunnelConfig,
           targetHost,
           targetPort,
@@ -2250,6 +2268,9 @@ async function testC2SRelay(tunnel, targetHost, targetPort, authToken) {
       settle(createC2SFailure(error.message, "Tunnel test failed"));
     });
     ws.on("close", () => {
+      if (runtime && c2sTunnelRuntimes.get(tunnel.name) === runtime) {
+        setC2STunnelError(tunnel.name, "Endpoint SSH connection closed");
+      }
       clearTimeout(timer);
       settle({ success: false, error: "Tunnel test connection closed" });
     });
@@ -2502,6 +2523,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0, authToken) {
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
   );
+  attachC2SAuth(ws, tunnel.name || getC2STunnelName(tunnel));
   const sockets = new Map();
   let closed = false;
 
@@ -2690,7 +2712,10 @@ async function startC2STunnel(tunnel, index = 0, authToken) {
   const resolvedTunnel = await resolveC2SRemoteSourceHost(tunnel);
   const mode = resolvedTunnel.mode || resolvedTunnel.tunnelType || "local";
   const tunnelName = getC2STunnelName(resolvedTunnel, index);
-  const tunnelConfig = normalizeC2STunnelAddresses(resolvedTunnel);
+  const tunnelConfig = {
+    ...normalizeC2STunnelAddresses(resolvedTunnel),
+    sessionId: crypto.randomUUID(),
+  };
   const bindHost = getC2SLocalAddress(tunnelConfig);
   const sourcePort = Number(resolvedTunnel.sourcePort);
   logToFile(`[c2s] starting tunnel ${tunnelName}`, {
@@ -2741,6 +2766,10 @@ async function startC2STunnel(tunnel, index = 0, authToken) {
 
   const sockets = new Set();
   const server = net.createServer((socket) => {
+    if (!c2sTunnelRuntimes.get(tunnelName)?.status.connected) {
+      socket.destroy();
+      return;
+    }
     sockets.add(socket);
     socket.on("close", () => sockets.delete(socket));
     if (mode === "dynamic") {
@@ -2783,33 +2812,38 @@ async function startC2STunnel(tunnel, index = 0, authToken) {
         reason: "Verifying endpoint SSH connection",
       });
 
-      const verifyTunnel =
-        mode === "dynamic"
-          ? testC2SRelay(
-              { ...tunnel, name: `${tunnelName}::verify`, mode },
-              undefined,
-              undefined,
-            )
-          : testC2SRelay(
-              { ...tunnel, name: `${tunnelName}::verify`, mode },
-              tunnel.targetHost || "127.0.0.1",
-              Number(tunnel.endpointPort),
-            );
+      const runtime = c2sTunnelRuntimes.get(tunnelName);
+      const verifyTunnel = testC2SRelay(
+        { ...tunnelConfig, name: tunnelName, mode },
+        mode === "dynamic" ? undefined : getC2SRemoteAddress(tunnelConfig),
+        mode === "dynamic" ? undefined : Number(tunnelConfig.endpointPort),
+        authToken,
+        runtime,
+      );
 
-      verifyTunnel.then((result) => {
-        if (!c2sTunnelRuntimes.has(tunnelName)) return;
-        if (result.success) {
-          setC2STunnelStatus(tunnelName, {
-            connected: true,
-            status: "CONNECTED",
-          });
-        } else {
-          setC2STunnelError(
-            tunnelName,
-            result.error || "Endpoint SSH connection failed",
-          );
-        }
-      });
+      verifyTunnel
+        .then((result) => {
+          if (c2sTunnelRuntimes.get(tunnelName) !== runtime) return;
+          if (result.success) {
+            setC2STunnelStatus(tunnelName, {
+              connected: true,
+              status: "CONNECTED",
+            });
+          } else {
+            setC2STunnelError(
+              tunnelName,
+              result.error || "Endpoint SSH connection failed",
+            );
+          }
+        })
+        .catch((error) => {
+          if (c2sTunnelRuntimes.get(tunnelName) === runtime) {
+            setC2STunnelError(
+              tunnelName,
+              error.message || "Endpoint SSH connection failed",
+            );
+          }
+        });
 
       resolve({ success: true, tunnelName });
     });
@@ -2826,6 +2860,7 @@ async function stopC2STunnel(tunnelName) {
     connected: false,
     status: "DISCONNECTING",
   });
+  runtime.authSocket?.close();
 
   return new Promise((resolve) => {
     if (typeof runtime.close === "function") {
@@ -2850,6 +2885,7 @@ async function stopC2STunnel(tunnelName) {
 function stopAllC2STunnels() {
   for (const [tunnelName, runtime] of c2sTunnelRuntimes.entries()) {
     try {
+      runtime.authSocket?.close();
       if (typeof runtime.close === "function") {
         runtime.close();
       } else {

@@ -60,6 +60,15 @@ export interface ElectronAPI {
     serverUrl: string,
     allowInvalidCertificate?: boolean,
   ) => Promise<ConnectionTestResult>;
+  answerC2SAuth: (id: string, answer: string | null) => Promise<boolean>;
+  onC2SAuthPrompt: (
+    callback: (prompt: {
+      id: string;
+      closed?: boolean;
+      tunnelName?: string;
+      request?: import("@termix/plugin-sdk/backend").PluginSshPromptRequest;
+    }) => void,
+  ) => () => void;
   getC2STunnelConfig: () => Promise<unknown[]>;
   saveC2STunnelConfig: (
     config: unknown[],
