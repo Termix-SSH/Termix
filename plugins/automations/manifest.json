@@ -84,6 +84,12 @@
         "titleKey": "nav.automations",
         "icon": "Workflow",
         "openFrom": ["rail"]
+      },
+      {
+        "id": "host_maintenance",
+        "titleKey": "maintenance.title",
+        "icon": "Wrench",
+        "openFrom": ["host-context-menu"]
       }
     ],
     "permissions": [
