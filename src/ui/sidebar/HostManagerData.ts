@@ -58,6 +58,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     lastAccess: "",
     tags: h.tags ?? [],
     syncId: h.syncId ?? null,
+    pluginSettings: h.pluginSettings ?? {},
     authType: h.authType,
     shareSshAuth: h.shareSshAuth ?? false,
     password: h.password,
