@@ -25,6 +25,7 @@ const state = vi.hoisted(() => ({
   ]),
   fetchCalls: [] as Array<{ url: string; allowlist: readonly string[] }>,
   lastTls: null as Record<string, unknown> | null,
+  lastIdleTimeout: undefined as number | undefined,
   lastSignal: null as AbortSignal | null,
   lastRedirect: undefined as RequestRedirect | undefined,
 }));
@@ -65,8 +66,10 @@ vi.mock("../../utils/safe-outbound-fetch.js", () => ({
     init: RequestInit,
     allowlist: readonly string[],
     tls: Record<string, unknown> = {},
+    idleTimeoutMs?: number,
   ) => {
     state.lastTls = tls;
+    state.lastIdleTimeout = idleTimeoutMs;
     state.lastRedirect = init.redirect;
     state.lastSignal = init.signal ?? null;
     state.fetchCalls.push({ url, allowlist });
@@ -300,6 +303,12 @@ describe("ctx.fetch", () => {
     expect(state.lastTls).toEqual({ ca: "PEM" });
     await ctx.fetch("https://example.com");
     expect(state.lastTls).toEqual({});
+  });
+
+  it("hands the caller's timeout to the guard for the body idle timeout", async () => {
+    const ctx = contextFor(["network:outbound"]);
+    await ctx.fetch("https://example.com/stream", { timeoutMs: 600_000 });
+    expect(state.lastIdleTimeout).toBe(600_000);
   });
 
   it("aborts the request, and a streamed body, when the caller's signal fires", async () => {

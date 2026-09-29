@@ -5,6 +5,7 @@ import type { LookupAddress, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
+  outboundIdleTimeout,
   readResponseTextLimited,
   safeOutboundFetch,
 } from "../../utils/safe-outbound-fetch.js";
@@ -280,6 +281,17 @@ describe("safeOutboundFetch", () => {
       server.close();
     }
   }, 10_000);
+});
+
+describe("outboundIdleTimeout", () => {
+  it("keeps undici's 5 minute default as the floor", () => {
+    expect(outboundIdleTimeout()).toBe(300_000);
+    expect(outboundIdleTimeout(30_000)).toBe(300_000);
+  });
+
+  it("raises the idle timeout for a longer request timeout", () => {
+    expect(outboundIdleTimeout(600_000)).toBe(600_000);
+  });
 });
 
 describe("redirect handling", () => {

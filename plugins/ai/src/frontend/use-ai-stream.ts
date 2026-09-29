@@ -43,9 +43,9 @@ export function useAiStream() {
     setState(INITIAL);
   }, []);
 
+  // The run's own cleanup clears abortRef, after it has handed its steps over.
   const stop = useCallback(() => {
     abortRef.current?.abort();
-    abortRef.current = null;
     setState((prev) => ({ ...prev, streaming: false }));
   }, []);
 
@@ -56,7 +56,15 @@ export function useAiStream() {
       model?: string;
       conversationId?: number | null;
       activeTab?: string | null;
-      onComplete?: (conversationId: number | null, reply: string) => void;
+      /**
+       * Called however the run ends, with its steps, which are then cleared
+       * from the live state. Keeping them is up to the caller.
+       */
+      onComplete?: (
+        conversationId: number | null,
+        reply: string,
+        tools: ToolActivity[],
+      ) => void;
     }) => {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -74,6 +82,20 @@ export function useAiStream() {
       let conversationId = input.conversationId ?? null;
       let replyText = "";
       let toolSequence = 0;
+      const runTools: ToolActivity[] = [];
+
+      const finish = (error?: string | null) => {
+        // A newer send took over; this run's state is already gone.
+        if (abortRef.current !== controller) return;
+        input.onComplete?.(conversationId, replyText, runTools);
+        setState((prev) => ({
+          ...prev,
+          streaming: false,
+          assistantText: "",
+          tools: [],
+          ...(error ? { error } : {}),
+        }));
+      };
 
       try {
         const response = await aiApp().fetch("chat/stream", {
@@ -152,6 +174,11 @@ export function useAiStream() {
               // prev.tools.length appended a duplicate entry that no result
               // could ever match, leaving it stuck on "running".
               const activityId = `tool-${toolSequence++}`;
+              runTools.push({
+                id: activityId,
+                name: event.name,
+                arguments: event.arguments ?? {},
+              });
               setState((prev) => ({
                 ...prev,
                 tools: [
@@ -164,6 +191,15 @@ export function useAiStream() {
                 ],
               }));
             } else if (event.type === "tool_result") {
+              for (let i = runTools.length - 1; i >= 0; i -= 1) {
+                if (
+                  runTools[i].name === event.name &&
+                  !("result" in runTools[i])
+                ) {
+                  runTools[i] = { ...runTools[i], result: event.result };
+                  break;
+                }
+              }
               setState((prev) => {
                 const tools = [...prev.tools];
                 // Attach to the most recent call of this tool awaiting a result.
@@ -186,20 +222,15 @@ export function useAiStream() {
           }
         }
 
-        setState((prev) => ({ ...prev, streaming: false }));
-        input.onComplete?.(conversationId, replyText);
+        finish();
       } catch (error) {
-        if (controller.signal.aborted) {
-          setState((prev) => ({ ...prev, streaming: false }));
-          return;
-        }
-        setState((prev) => ({
-          ...prev,
-          streaming: false,
-          error: getErrorMessage(error, "The assistant stopped unexpectedly"),
-        }));
+        finish(
+          controller.signal.aborted
+            ? null
+            : getErrorMessage(error, "The assistant stopped unexpectedly"),
+        );
       } finally {
-        abortRef.current = null;
+        if (abortRef.current === controller) abortRef.current = null;
       }
     },
     [],

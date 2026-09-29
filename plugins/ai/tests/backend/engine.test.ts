@@ -200,4 +200,79 @@ describe("runAgent", () => {
     expect(events.at(-1)).toMatchObject({ type: "error" });
     expect(streamChat.mock.calls.length).toBeLessThanOrEqual(8);
   });
+
+  it("emits every message it adds so the caller can store the run", async () => {
+    handler.mockResolvedValue({ hosts: [] });
+    streamChat
+      .mockReturnValueOnce(
+        chunks(
+          { type: "text", text: "Looking" },
+          {
+            type: "tool_call",
+            call: { id: "c1", name: "list_hosts", arguments: {} },
+          },
+          { type: "done" },
+        ),
+      )
+      .mockReturnValueOnce(
+        chunks({ type: "text", text: "none" }, { type: "done" }),
+      );
+
+    const stored = (await collect())
+      .filter((e) => e.type === "message")
+      .map((e) => e.message);
+
+    expect(stored).toEqual([
+      {
+        role: "assistant",
+        content: "Looking",
+        toolCalls: [{ id: "c1", name: "list_hosts", arguments: {} }],
+      },
+      {
+        role: "tool",
+        content: JSON.stringify({ hosts: [] }),
+        toolCallId: "c1",
+        toolName: "list_hosts",
+      },
+      { role: "assistant", content: "none" },
+    ]);
+  });
+
+  it("explains a stream the provider cut off", async () => {
+    streamChat.mockReturnValueOnce(
+      (async function* () {
+        yield { type: "text", text: "par" } as ChatChunk;
+        throw Object.assign(new TypeError("terminated"), {
+          cause: Object.assign(new Error("Body Timeout Error"), {
+            code: "UND_ERR_BODY_TIMEOUT",
+          }),
+        });
+      })(),
+    );
+
+    const events = await collect();
+    expect(events.at(-1).type).toBe("error");
+    expect(events.at(-1).message).toMatch(/stopped sending data/);
+  });
+
+  it("stays quiet when the user stopped it", async () => {
+    const controller = new AbortController();
+    streamChat.mockReturnValueOnce(
+      (async function* () {
+        yield { type: "text", text: "" } as ChatChunk;
+        controller.abort();
+        throw new Error("This operation was aborted");
+      })(),
+    );
+
+    const events: any[] = [];
+    for await (const event of runAgent({
+      ...BASE,
+      history: [],
+      signal: controller.signal,
+    })) {
+      events.push(event);
+    }
+    expect(events.some((e) => e.type === "error")).toBe(false);
+  });
 });

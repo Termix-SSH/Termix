@@ -9,18 +9,18 @@ import {
   readPrivateAllowlist,
   resolveAiAccess,
 } from "./gating.js";
-import { createProviderFetch } from "./providers/http.js";
+import { toChatHistory, toStoredMessage } from "./history.js";
+import {
+  createProviderFetch,
+  describeProviderError,
+} from "./providers/http.js";
 import {
   FALLBACK_MODELS,
   getAdapter,
   REQUIRES_API_KEY,
   REQUIRES_BASE_URL,
 } from "./providers/registry.js";
-import type {
-  AiProviderType,
-  ChatMessage,
-  ProviderConfig,
-} from "./providers/types.js";
+import type { AiProviderType, ProviderConfig } from "./providers/types.js";
 import { isAiProviderType } from "./providers/types.js";
 import type { AiRepository } from "./repository.js";
 import { serviceAvailable } from "./services.js";
@@ -464,13 +464,18 @@ export function registerAiRoutes(
 
         res.json({ models, source: "live" });
       } catch (err) {
+        const warning = describeProviderError(
+          err,
+          "Could not reach the provider",
+        );
+        ctx.log.warn(`Model detection failed: ${warning}`);
         // A provider that cannot be reached yet still gets a usable list, so
         // the form is never a blank text box the user has to guess into.
         const fallback = FALLBACK_MODELS[providerType as AiProviderType] ?? [];
         res.json({
           models: fallback,
           source: fallback.length ? "fallback" : "none",
-          warning: err instanceof Error ? err.message : undefined,
+          warning,
         });
       }
     },
@@ -515,7 +520,10 @@ export function registerAiRoutes(
         res.json({ models });
       } catch (err) {
         // The message can carry the allowlist hint, which the user needs.
-        const message = getErrorMessage(err, "Could not reach the provider");
+        const message = describeProviderError(
+          err,
+          "Could not reach the provider",
+        );
         ctx.log.warn(`Failed to list provider models: ${message}`);
         res.status(502).json({ error: message });
       }
@@ -752,29 +760,23 @@ export function registerAiRoutes(
           }
         }, 30000);
 
+        // req's own "close" already fired once express read the body, so the
+        // response is what tells us the client went away.
         const abort = new AbortController();
-        req.on("close", () => {
+        res.on("close", () => {
           clearInterval(heartbeat);
-          abort.abort();
+          if (!res.writableFinished) abort.abort();
         });
 
         const send = (event: unknown) => {
+          if (res.writableEnded || res.destroyed) return;
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         };
 
         send({ type: "conversation", conversationId: conversation.id });
 
-        const chatHistory: ChatMessage[] = history.map((entry) => ({
-          role: entry.role as ChatMessage["role"],
-          content: entry.content,
-          ...(entry.toolCalls
-            ? { toolCalls: JSON.parse(entry.toolCalls) }
-            : {}),
-        }));
+        const chatHistory = toChatHistory(history);
         chatHistory.push({ role: "user", content: message.trim() });
-
-        let assistantText = "";
-        let assistantToolCalls: unknown[] = [];
 
         try {
           for await (const event of runAgent({
@@ -795,11 +797,14 @@ export function registerAiRoutes(
             tools,
             signal: abort.signal,
           })) {
-            if (event.type === "assistant_message") {
-              assistantText = event.content;
-              // Kept so the next message replays them verbatim. Gemini rejects
-              // a turn whose functionCall parts lost their thoughtSignature.
-              assistantToolCalls = event.toolCalls;
+            if (event.type === "message") {
+              // Every step is kept, tool results included, so the next message
+              // replays the run verbatim. Gemini rejects a turn whose
+              // functionCall parts lost their thoughtSignature.
+              await repository.appendMessage({
+                conversationId: conversation.id,
+                ...toStoredMessage(event.message),
+              });
               continue;
             }
 
@@ -829,23 +834,13 @@ export function registerAiRoutes(
         } finally {
           clearInterval(heartbeat);
         }
-
-        if (assistantText || assistantToolCalls.length) {
-          await repository.appendMessage({
-            conversationId: conversation.id,
-            role: "assistant",
-            content: assistantText,
-            toolCalls: assistantToolCalls.length
-              ? JSON.stringify(assistantToolCalls)
-              : null,
-          });
-        }
         await repository.touchConversation(conversation.id);
 
         send({ type: "done" });
         res.end();
       } catch (err) {
         logError("AI chat stream failed", err);
+        if (res.writableEnded || res.destroyed) return;
         if (res.headersSent) {
           res.write(
             `data: ${JSON.stringify({ type: "error", message: "The assistant stopped unexpectedly" })}\n\n`,

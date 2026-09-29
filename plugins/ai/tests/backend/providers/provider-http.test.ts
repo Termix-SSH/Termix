@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { createProviderFetch } from "../../../src/backend/providers/http.js";
+import {
+  createProviderFetch,
+  describeProviderError,
+} from "../../../src/backend/providers/http.js";
+import { AiProviderError } from "../../../src/backend/providers/types.js";
 import { PRIVATE_DESTINATION_MESSAGE } from "../../../src/backend/egress.js";
 
 describe("createProviderFetch", () => {
@@ -60,5 +64,55 @@ describe("createProviderFetch", () => {
     await expect(
       providerFetch("https://api.openai.com/v1/models", { method: "GET" }),
     ).rejects.toThrow("socket hang up");
+  });
+});
+
+describe("describeProviderError", () => {
+  const undiciError = (message: string, cause?: unknown) =>
+    Object.assign(new TypeError(message), { cause });
+
+  it("explains a body that went quiet instead of a bare terminated", () => {
+    const error = undiciError(
+      "terminated",
+      Object.assign(new Error("Body Timeout Error"), {
+        code: "UND_ERR_BODY_TIMEOUT",
+      }),
+    );
+    expect(describeProviderError(error, "fallback")).toMatch(
+      /stopped sending data/,
+    );
+  });
+
+  it("explains a refused connection", () => {
+    const error = undiciError(
+      "fetch failed",
+      Object.assign(new Error("connect ECONNREFUSED"), {
+        code: "ECONNREFUSED",
+      }),
+    );
+    expect(describeProviderError(error, "fallback")).toMatch(/refused/);
+  });
+
+  it("maps a private address refused after DNS to the allowlist hint", () => {
+    const error = undiciError(
+      "fetch failed",
+      new Error("Private destinations are not allowed"),
+    );
+    expect(describeProviderError(error, "fallback")).toBe(
+      PRIVATE_DESTINATION_MESSAGE,
+    );
+  });
+
+  it("names the cause of an unfamiliar fetch failure", () => {
+    const error = undiciError("fetch failed", new Error("something odd"));
+    expect(describeProviderError(error, "fallback")).toBe(
+      "The provider request failed: something odd",
+    );
+  });
+
+  it("keeps a provider error's own message", () => {
+    expect(
+      describeProviderError(new AiProviderError("bad key", 401), "fallback"),
+    ).toBe("bad key");
   });
 });

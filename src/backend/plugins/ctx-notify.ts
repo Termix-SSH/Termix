@@ -185,6 +185,7 @@ export function createPluginFetch(deps: Deps): PluginFetch {
               ? { rejectUnauthorized: false }
               : {}),
           },
+          init.timeoutMs,
         );
       } finally {
         clearTimeout(timer);

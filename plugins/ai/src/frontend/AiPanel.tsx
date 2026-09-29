@@ -11,7 +11,6 @@ import {
   Textarea,
 } from "@termix/plugin-sdk/ui";
 import {
-  getAiConversation,
   getAiProviders,
   getAiStatus,
   setAiOptIn,
@@ -22,6 +21,12 @@ import { AiMessage } from "./AiMessage";
 import { AiProviderSettings } from "./AiProviderSettings";
 import { AiToolCall } from "./AiToolCall";
 import { ProposalCard } from "./ProposalCard";
+import {
+  buildTimeline,
+  finishedRunEntries,
+  userEntry,
+  type HistoryEntry,
+} from "./transcript";
 import { useAiStream, type ToolActivity } from "./use-ai-stream";
 import {
   activeMentionQuery,
@@ -29,22 +34,6 @@ import {
   type MentionItem,
 } from "./useMentions";
 import { mentionLabel } from "./labels";
-
-interface HistoryEntry {
-  role: "user" | "assistant";
-  content: string;
-}
-
-/** One entry in the rendered conversation, in the order it happened. */
-type TimelineItem =
-  | {
-      kind: "message";
-      key: string;
-      role: "user" | "assistant";
-      content: string;
-    }
-  | { kind: "tool"; key: string; tool: ToolActivity }
-  | { kind: "proposal"; key: string; proposal: AiProposal };
 
 export function AiPanel({ activeTab }: { activeTab?: string | null }) {
   const { t } = useTranslation();
@@ -59,6 +48,7 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
   const [resolvedProposals, setResolvedProposals] = useState<
     Record<number, { status: "applied" | "rejected"; resultSummary?: string }>
   >({});
+  const runCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -157,33 +147,15 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
     });
   }, [state.assistantText, state.tools.length, history.length]);
 
-  const reloadHistory = useCallback(
-    async (conversationId: number | null, reply: string) => {
-      // Reload from the server so the transcript is the stored one rather
-      // than a client-side reconstruction.
-      if (conversationId) {
-        try {
-          const loaded = await getAiConversation(conversationId);
-          setHistory(
-            loaded.messages
-              .filter((entry) => entry.role !== "tool")
-              .map((entry) => ({
-                role: entry.role as "user" | "assistant",
-                content: entry.content,
-              })),
-          );
-          return;
-        } catch {
-          // Fall through to keeping the streamed copy.
-        }
-      }
-
-      // No stored copy to fall back on, so the streamed reply is appended
-      // locally. Without this it would vanish when the next turn resets the
-      // stream state.
-      if (reply) {
-        setHistory((prev) => [...prev, { role: "assistant", content: reply }]);
-      }
+  // The run's steps stay in the transcript, so the next message does not wipe
+  // what the assistant already looked at.
+  const keepRun = useCallback(
+    (_conversationId: number | null, reply: string, tools: ToolActivity[]) => {
+      const runId = runCountRef.current++;
+      setHistory((prev) => [
+        ...prev,
+        ...finishedRunEntries(runId, tools, reply),
+      ]);
     },
     [],
   );
@@ -193,14 +165,14 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
     if (!message || !providerId || state.streaming) return;
 
     setInput("");
-    setHistory((prev) => [...prev, { role: "user", content: message }]);
+    setHistory((prev) => [...prev, userEntry(message)]);
 
     await send({
       message,
       providerId,
       conversationId: state.conversationId,
       activeTab,
-      onComplete: reloadHistory,
+      onComplete: keepRun,
     });
   }
 
@@ -233,14 +205,14 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
           : `I approved "${label}". It completed.`
         : `I rejected "${label}". Do not retry it unless I ask.`;
 
-    setHistory((prev) => [...prev, { role: "user", content: followUp }]);
+    setHistory((prev) => [...prev, userEntry(followUp)]);
 
     void send({
       message: followUp,
       providerId,
       conversationId: state.conversationId,
       activeTab,
-      onComplete: reloadHistory,
+      onComplete: keepRun,
     });
   }
 
@@ -254,70 +226,7 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
     };
   });
 
-  /**
-   * The reply exists in two places once a turn finishes: the streamed text in
-   * `state`, and the stored copy that `onComplete` reloads into `history`.
-   * Whichever arrives is shown exactly once, and the stored copy wins because
-   * it sits in the right place in the timeline.
-   */
-  const last = history[history.length - 1];
-  const historyEndsWithThisReply =
-    state.assistantText.length > 0 &&
-    last?.role === "assistant" &&
-    last.content === state.assistantText;
-
-  const streamingReply = historyEndsWithThisReply ? "" : state.assistantText;
-
-  /**
-   * One ordered list rather than three stacked blocks.
-   *
-   * Tool calls happen before the reply that describes them, but once a turn
-   * ends its reply moves into `history`, which used to render above a separate
-   * tools block. The tool call appeared to jump below the answer it produced.
-   * Splicing the current turn's activity in ahead of its own reply keeps the
-   * order stable across that handover.
-   */
-  const timeline: TimelineItem[] = [];
-
-  const trailingReply = historyEndsWithThisReply ? history.length - 1 : -1;
-
-  history.forEach((entry, index) => {
-    if (index === trailingReply) return;
-    timeline.push({
-      kind: "message",
-      key: `history-${index}`,
-      role: entry.role,
-      content: entry.content,
-    });
-  });
-
-  for (const tool of state.tools) {
-    timeline.push({ kind: "tool", key: tool.id, tool });
-  }
-
-  if (trailingReply >= 0) {
-    timeline.push({
-      kind: "message",
-      key: `history-${trailingReply}`,
-      role: "assistant",
-      content: history[trailingReply].content,
-    });
-  } else if (streamingReply) {
-    timeline.push({
-      kind: "message",
-      key: "streaming",
-      role: "assistant",
-      content: streamingReply,
-    });
-  }
-
-  for (const proposal of proposals) {
-    timeline.push({
-      kind: "proposal",
-      key: `proposal-${proposal.id}`,
-      proposal,
-    });
-  }
+  const timeline = buildTimeline(history, state, proposals);
 
   if (loading) {
     return (
@@ -405,7 +314,7 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
               <AiToolCall
                 key={item.key}
                 tool={item.tool}
-                streaming={state.streaming}
+                streaming={item.live && state.streaming}
               />
             );
           }

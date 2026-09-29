@@ -11,6 +11,12 @@ import { Button } from "@termix/plugin-sdk/ui";
 import { getAiProviders, type AiProposal, type AiProvider } from "../ai-api";
 import { AiMessage } from "../AiMessage";
 import { AiToolCall } from "../AiToolCall";
+import {
+  buildTimeline,
+  finishedRunEntries,
+  userEntry,
+  type HistoryEntry,
+} from "../transcript";
 import { useAiStream } from "../use-ai-stream";
 import { TerminalProposalCard } from "./TerminalProposalCard";
 import {
@@ -19,25 +25,6 @@ import {
   readStoredAiPanelPosition,
   type ToolbarPosition,
 } from "./panel-geometry";
-
-interface HistoryEntry {
-  role: "user" | "assistant";
-  content: string;
-}
-
-type TimelineItem =
-  | {
-      kind: "message";
-      key: string;
-      role: "user" | "assistant";
-      content: string;
-    }
-  | {
-      kind: "tool";
-      key: string;
-      tool: import("../use-ai-stream").ToolActivity;
-    }
-  | { kind: "proposal"; key: string; proposal: AiProposal };
 
 interface TerminalAiPanelProps {
   hostLabel: string;
@@ -75,6 +62,7 @@ export function TerminalAiPanel({
     Record<number, { status: "applied" | "rejected"; resultSummary?: string }>
   >({});
   const conversationIdRef = useRef<number | null>(null);
+  const runCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Prefilled rather than sent: the user sees exactly what the terminal is
@@ -202,7 +190,7 @@ export function TerminalAiPanel({
     const message = input.trim();
     if (!message || !providerId || state.streaming) return;
 
-    setHistory((current) => [...current, { role: "user", content: message }]);
+    setHistory((current) => [...current, userEntry(message)]);
     setInput("");
 
     void send({
@@ -210,14 +198,13 @@ export function TerminalAiPanel({
       providerId,
       conversationId: conversationIdRef.current,
       activeTab: activeTab ?? `terminal:${hostLabel}`,
-      onComplete: (conversationId, reply) => {
+      onComplete: (conversationId, reply, tools) => {
         conversationIdRef.current = conversationId;
-        if (reply) {
-          setHistory((current) => [
-            ...current,
-            { role: "assistant", content: reply },
-          ]);
-        }
+        const runId = runCountRef.current++;
+        setHistory((current) => [
+          ...current,
+          ...finishedRunEntries(runId, tools, reply),
+        ]);
       },
     });
   }, [activeTab, hostLabel, input, providerId, send, state.streaming]);
@@ -232,58 +219,7 @@ export function TerminalAiPanel({
     };
   });
 
-  // The reply exists in two places once a turn finishes: the streamed text in
-  // `state`, and the copy `onComplete` appended to `history`. Show it once,
-  // and keep tool calls spliced in ahead of the reply they produced instead
-  // of in a separate trailing block, so the timeline reads in the order
-  // things actually happened rather than text-then-tools-then-proposals.
-  const last = history[history.length - 1];
-  const historyEndsWithThisReply =
-    state.assistantText.length > 0 &&
-    last?.role === "assistant" &&
-    last.content === state.assistantText;
-  const streamingReply = historyEndsWithThisReply ? "" : state.assistantText;
-  const trailingReply = historyEndsWithThisReply ? history.length - 1 : -1;
-
-  const timeline: TimelineItem[] = [];
-
-  history.forEach((entry, index) => {
-    if (index === trailingReply) return;
-    timeline.push({
-      kind: "message",
-      key: `history-${index}`,
-      role: entry.role,
-      content: entry.content,
-    });
-  });
-
-  for (const tool of state.tools) {
-    timeline.push({ kind: "tool", key: tool.id, tool });
-  }
-
-  if (trailingReply >= 0) {
-    timeline.push({
-      kind: "message",
-      key: `history-${trailingReply}`,
-      role: "assistant",
-      content: history[trailingReply].content,
-    });
-  } else if (streamingReply) {
-    timeline.push({
-      kind: "message",
-      key: "streaming",
-      role: "assistant",
-      content: streamingReply,
-    });
-  }
-
-  for (const proposal of proposals) {
-    timeline.push({
-      kind: "proposal",
-      key: `proposal-${proposal.id}`,
-      proposal,
-    });
-  }
+  const timeline = buildTimeline(history, state, proposals);
 
   return (
     <div
@@ -371,7 +307,7 @@ export function TerminalAiPanel({
               <AiToolCall
                 key={item.key}
                 tool={item.tool}
-                streaming={state.streaming}
+                streaming={item.live && state.streaming}
               />
             );
           }

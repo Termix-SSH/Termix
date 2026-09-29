@@ -1635,7 +1635,11 @@ export interface PluginFetchInit {
   method?: string;
   headers?: Record<string, string>;
   body?: string;
-  /** Aborts the request after this long. Defaults to 30 seconds. */
+  /**
+   * Aborts the request when no response headers arrive within this long.
+   * Defaults to 30 seconds. A streamed body may also sit idle between chunks
+   * for this long, never less than 5 minutes.
+   */
   timeoutMs?: number;
   /**
    * Exact private or loopback hosts this request may reach. Everything else

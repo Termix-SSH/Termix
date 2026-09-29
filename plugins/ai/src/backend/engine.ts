@@ -1,4 +1,5 @@
 import { getErrorMessage } from "./errors.js";
+import { describeProviderError } from "./providers/http.js";
 import { getAdapter } from "./providers/registry.js";
 import type {
   ChatMessage,
@@ -27,7 +28,8 @@ export type EngineEvent =
   | { type: "tool_call"; name: string; arguments: Record<string, unknown> }
   | { type: "tool_result"; name: string; result: unknown }
   | { type: "proposal"; draft: ProposalDraft }
-  | { type: "assistant_message"; content: string; toolCalls: ToolCall[] }
+  /** A message added to the conversation, for the caller to store. */
+  | { type: "message"; message: ChatMessage }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -74,23 +76,34 @@ export async function* runAgent(
         }
       }
     } catch (error) {
-      const message = getErrorMessage(error, "The provider request failed");
+      // The user stopped it; there is no one left to show an error to.
+      if (options.signal?.aborted) return;
+      const message = describeProviderError(
+        error,
+        "The provider request failed",
+      );
       yield { type: "error", message };
       return;
     }
 
     if (failed) return;
 
-    yield { type: "assistant_message", content: text, toolCalls: calls };
-
     if (!calls.length) {
+      yield { type: "message", message: { role: "assistant", content: text } };
       yield { type: "done" };
       return;
     }
 
-    messages.push({ role: "assistant", content: text, toolCalls: calls });
+    const assistant: ChatMessage = {
+      role: "assistant",
+      content: text,
+      toolCalls: calls,
+    };
+    messages.push(assistant);
+    yield { type: "message", message: assistant };
 
     for (const call of calls) {
+      if (options.signal?.aborted) return;
       yield { type: "tool_call", name: call.name, arguments: call.arguments };
 
       const result = await runTool(byName, call, options.context);
@@ -107,7 +120,7 @@ export async function* runAgent(
         yield { type: "proposal", draft: result };
         // The model is told the proposal is awaiting the user rather than done,
         // so it does not go on to describe the change as applied.
-        messages.push({
+        const pending: ChatMessage = {
           role: "tool",
           content: JSON.stringify({
             status: "awaiting_user_approval",
@@ -115,17 +128,21 @@ export async function* runAgent(
           }),
           toolCallId: call.id,
           toolName: call.name,
-        });
+        };
+        messages.push(pending);
+        yield { type: "message", message: pending };
         continue;
       }
 
       yield { type: "tool_result", name: call.name, result: redact(result) };
-      messages.push({
+      const answer: ChatMessage = {
         role: "tool",
         content: redactToJson(result),
         toolCallId: call.id,
         toolName: call.name,
-      });
+      };
+      messages.push(answer);
+      yield { type: "message", message: answer };
     }
   }
 

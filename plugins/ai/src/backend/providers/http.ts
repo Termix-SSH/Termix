@@ -60,6 +60,59 @@ export function createProviderFetch(
   };
 }
 
+const NETWORK_MESSAGES: Record<string, string> = {
+  UND_ERR_BODY_TIMEOUT:
+    "The provider stopped sending data for too long and the reply was cut off. A slow or overloaded model can cause this.",
+  UND_ERR_SOCKET:
+    "The provider closed the connection before the reply finished.",
+  ECONNRESET: "The provider closed the connection before the reply finished.",
+  UND_ERR_HEADERS_TIMEOUT: "The provider did not answer in time.",
+  UND_ERR_CONNECT_TIMEOUT:
+    "Timed out connecting to the provider. Check the base URL.",
+  ETIMEDOUT: "Timed out connecting to the provider. Check the base URL.",
+  ECONNREFUSED:
+    "The provider refused the connection. Check the base URL and that the provider is running.",
+  ENOTFOUND: "The provider's host name could not be found. Check the base URL.",
+  EAI_AGAIN: "The provider's host name could not be found. Check the base URL.",
+  EHOSTUNREACH: "The provider's host is unreachable from this server.",
+  ENETUNREACH: "The provider's host is unreachable from this server.",
+};
+
+/**
+ * undici reports network failures as a bare "fetch failed" or "terminated"
+ * with the real reason on `cause`, which is useless to show as is.
+ */
+export function describeProviderError(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof AiProviderError) return error.message;
+  if (!(error instanceof Error)) {
+    return typeof error === "string" && error ? error : fallback;
+  }
+
+  const cause = (error as { cause?: unknown }).cause as
+    (Error & { code?: string }) | undefined;
+  const code = cause?.code ?? (error as { code?: string }).code;
+  if (code && NETWORK_MESSAGES[code]) return NETWORK_MESSAGES[code];
+
+  const causeMessage = cause instanceof Error ? cause.message : "";
+  if (/private destinations/i.test(causeMessage)) {
+    return PRIVATE_DESTINATION_MESSAGE;
+  }
+  if (code && /CERT|SELF_SIGNED|UNABLE_TO_VERIFY/i.test(code)) {
+    return `The provider's TLS certificate is not trusted (${code}).`;
+  }
+
+  if (/^(fetch failed|terminated)$/i.test(error.message)) {
+    if (causeMessage) return `The provider request failed: ${causeMessage}`;
+    return error.message === "terminated"
+      ? NETWORK_MESSAGES.UND_ERR_SOCKET
+      : fallback;
+  }
+  return error.message || fallback;
+}
+
 export function joinUrl(base: string, path: string): string {
   return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 }

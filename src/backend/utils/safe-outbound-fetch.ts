@@ -188,11 +188,19 @@ export async function readResponseTextLimited(
   return Buffer.concat(chunks, total).toString("utf8");
 }
 
+/** undici's own default for both, kept as the floor. */
+const DEFAULT_IDLE_TIMEOUT_MS = 300_000;
+
+export function outboundIdleTimeout(timeoutMs?: number): number {
+  return Math.max(timeoutMs ?? 0, DEFAULT_IDLE_TIMEOUT_MS);
+}
+
 export async function safeOutboundFetch(
   rawUrl: string,
   options: RequestInit,
   allowedPrivateHosts: readonly string[] = [],
   tls: OutboundTlsOptions = {},
+  idleTimeoutMs?: number,
 ): Promise<Response> {
   const url = new URL(rawUrl);
   if (
@@ -226,7 +234,12 @@ export async function safeOutboundFetch(
     } as never)) as unknown as Response;
   }
 
+  // A slow model can go quiet for minutes mid-stream. Past bodyTimeout undici
+  // kills the body with a bare "terminated".
+  const idle = outboundIdleTimeout(idleTimeoutMs);
   const dispatcher = new Agent({
+    headersTimeout: idle,
+    bodyTimeout: idle,
     connect: {
       lookup: createDnsLookupHook(lookup, allowPrivate),
       ...(tls.ca ? { ca: tls.ca } : {}),
