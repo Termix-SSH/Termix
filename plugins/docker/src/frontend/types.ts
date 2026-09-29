@@ -56,7 +56,6 @@ export interface DockerHost {
   username?: string;
   syncId?: string | null;
   connectionOrigin?: "local" | "remote" | null;
-  terminalConfig?: Record<string, unknown> | null;
   pluginSettings?: Record<string, Record<string, unknown> | undefined>;
 }
 

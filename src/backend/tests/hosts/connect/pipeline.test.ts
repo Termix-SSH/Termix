@@ -267,7 +267,7 @@ describe("buildConnectConfig per auth type", () => {
       host({
         authType: "agent",
         password: null,
-        terminalConfig: { agentSocketPath: "/tmp/agent.sock" },
+        sshOptions: { agentSocketPath: "/tmp/agent.sock" },
       }),
     );
     expect(outcome.status).toBe("ready");
@@ -388,7 +388,7 @@ describe("profile defaults", () => {
 
   it("host keepalive settings apply where the transport honoured them", async () => {
     const withSettings = host({
-      terminalConfig: { keepaliveInterval: 10, keepaliveCountMax: 2 },
+      sshOptions: { keepaliveInterval: 10, keepaliveCountMax: 2 },
     });
     const terminal = await build(withSettings, "terminal");
     expect(terminal.config.keepaliveInterval).toBe(10000);

@@ -163,12 +163,18 @@ function visibleHostPluginSettings(
  * clients outside Termix (Termix-Mobile) that have not moved to
  * pluginSettings yet. Registered as ctx.registry.provide(
  * "<id>.hostPayloadLegacy", fn); the function gets the plugin's own host
- * values and the host, and never overwrites a field core already set.
+ * values and the host, and never overwrites a field core already set. When
+ * both are objects the plugin's keys are added to core's, under the same
+ * rule.
  */
 export type PluginHostPayloadLegacy = (
   values: Record<string, unknown>,
   host: Record<string, unknown>,
 ) => Record<string, unknown> | null;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
 
 function applyLegacyFields(
   host: Record<string, unknown>,
@@ -183,7 +189,14 @@ function applyLegacyFields(
     if (!legacy) continue;
     try {
       for (const [key, value] of Object.entries(legacy(own, host) ?? {})) {
-        if (!(key in host)) host[key] = value;
+        const current = host[key];
+        if (current === undefined || current === null) {
+          host[key] = value;
+        } else if (isPlainObject(current) && isPlainObject(value)) {
+          // An object core already sends (terminalConfig) gains the plugin's
+          // keys, still never over one core set.
+          host[key] = { ...value, ...current };
+        }
       }
     } catch {
       // A plugin's compat shape must never break a host read.

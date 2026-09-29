@@ -10,6 +10,8 @@
  * transports could leave core's internals behind.
  */
 
+import type { HostSshOptions } from "./ssh-options.js";
+export type { HostSshOptions } from "./ssh-options.js";
 import type { PluginManifest, PluginSettingsField } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 
@@ -575,6 +577,8 @@ export interface PluginHostRecord {
   folder: string | null;
   jumpHosts?: unknown;
   enableSsh?: boolean | null;
+  /** Keepalive, legacy algorithms, agent and environment options. */
+  sshOptions?: HostSshOptions | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   [key: string]: unknown;
@@ -775,6 +779,7 @@ export interface PluginSshHost {
   username: string;
   userId?: string | null;
   authType?: string | null;
+  sshOptions?: HostSshOptions | null;
   [key: string]: unknown;
 }
 

@@ -1,3 +1,5 @@
+import type { HostSshOptions } from "@termix/plugin-sdk/frontend";
+
 /** A host as the shell hands it to the file manager. */
 export interface SSHHost {
   id: number;
@@ -19,7 +21,7 @@ export interface SSHHost {
   overrideCredentialUsername?: boolean;
   userId?: string;
   jumpHosts?: Array<{ hostId: number }>;
-  terminalConfig?: Record<string, unknown>;
+  sshOptions?: HostSshOptions | null;
   notes?: string;
   useSocks5?: boolean;
   socks5Host?: string;

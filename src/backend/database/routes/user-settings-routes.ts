@@ -30,13 +30,34 @@ export type HostDefaults = {
   socks5Password?: string;
   credentialId?: number | null;
   statusCheckEnabled?: boolean;
-  fontSize?: number;
-  fontFamily?: string;
-  theme?: string;
-  cursorStyle?: string;
-  cursorBlink?: boolean;
-  autoTmux?: boolean;
 };
+
+/**
+ * Keys host_defaults held before the terminal's new-host defaults became the
+ * ssh-terminal plugin's admin settings. Kept in the stored row for the boot
+ * copy and a downgrade, never served or overwritten here.
+ */
+const LEGACY_TERMINAL_HOST_DEFAULTS = [
+  "fontSize",
+  "fontFamily",
+  "theme",
+  "cursorStyle",
+  "cursorBlink",
+  "autoTmux",
+  "enableCommandHistory",
+];
+
+function parseHostDefaults(value: string | null): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch {
+    return {};
+  }
+}
 
 async function getAdminActor(
   userId: string | undefined,
@@ -574,10 +595,11 @@ export function registerUserSettingsRoutes(
    */
   router.get("/host-defaults", authenticateJWT, async (_req, res) => {
     try {
-      const value =
-        await createCurrentSettingsRepository().get("host_defaults");
-      const defaults: HostDefaults = value ? JSON.parse(value) : {};
-      res.json(defaults);
+      const stored = parseHostDefaults(
+        await createCurrentSettingsRepository().get("host_defaults"),
+      );
+      for (const key of LEGACY_TERMINAL_HOST_DEFAULTS) delete stored[key];
+      res.json(stored as HostDefaults);
     } catch (err) {
       authLogger.error("Failed to get host defaults", err);
       res.status(500).json({ error: "Failed to get host defaults" });
@@ -613,10 +635,20 @@ export function registerUserSettingsRoutes(
       if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
-      const defaults: HostDefaults = req.body;
-      await createCurrentSettingsRepository().set(
+      const defaults: HostDefaults = { ...(req.body ?? {}) };
+      for (const key of LEGACY_TERMINAL_HOST_DEFAULTS) {
+        delete (defaults as Record<string, unknown>)[key];
+      }
+      const settings = createCurrentSettingsRepository();
+      const stored = parseHostDefaults(await settings.get("host_defaults"));
+      const legacy = Object.fromEntries(
+        LEGACY_TERMINAL_HOST_DEFAULTS.filter((key) => key in stored).map(
+          (key) => [key, stored[key]],
+        ),
+      );
+      await settings.set(
         "host_defaults",
-        JSON.stringify(defaults),
+        JSON.stringify({ ...legacy, ...defaults }),
       );
 
       const { ipAddress, userAgent } = getRequestMeta(req);

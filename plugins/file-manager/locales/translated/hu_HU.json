@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP örökölt mód"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Egyidejű fájlátvitel",
+        "description": "Hány fájlt tölt fel vagy tölt le egyszerre az egymás melletti helyi/távoli kezelő. Csökkentse ezt az értéket, ha a szerver korlátozza az SFTP csatornákat."
+      }
     }
   },
   "nav": {

@@ -70,18 +70,10 @@ describe("sudoPasswordOf", () => {
       ...extra,
     }) as MetricsHost;
 
-  it("prefers the host's sudo password", () => {
-    expect(
-      sudoPasswordOf(
-        host({ sudoPassword: "a", terminalConfig: { sudoPassword: "b" } }),
-      ),
-    ).toBe("a");
-  });
-
-  it("falls back to the terminal config", () => {
-    expect(
-      sudoPasswordOf(host({ terminalConfig: { sudoPassword: "b" } })),
-    ).toBe("b");
+  it("reads the sudo password core resolved for the host", () => {
+    // Core's resolver already folds a 2.8 terminal_config copy into it.
+    expect(sudoPasswordOf(host({ sudoPassword: "a" }))).toBe("a");
+    expect(sudoPasswordOf(host({ sudoPassword: "" }))).toBeUndefined();
     expect(sudoPasswordOf(host({}))).toBeUndefined();
   });
 });

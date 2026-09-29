@@ -66,4 +66,8 @@ export async function runCoreBootMigrations(): Promise<void> {
   const { runHostStatusConfigMigration } =
     await import("./utils/crypto-migration/host-status-config-migration.js");
   await runHostStatusConfigMigration();
+
+  const { runSshOptionsMigration } =
+    await import("./utils/crypto-migration/ssh-options-migration.js");
+  await runSshOptionsMigration();
 }

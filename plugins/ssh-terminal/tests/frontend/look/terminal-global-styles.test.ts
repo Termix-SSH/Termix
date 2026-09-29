@@ -1,5 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
-import { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
+import {
+  ensureTerminalFontsLoaded,
+  installTerminalGlobalStyles,
+} from "../../../src/frontend/look/terminal-global-styles";
+
+describe("installTerminalGlobalStyles", () => {
+  it("adds the font faces while the plugin runs and removes them after", () => {
+    const dispose = installTerminalGlobalStyles();
+    const style = document.head.querySelector(
+      "style[data-termix-terminal-styles]",
+    );
+    expect(style?.innerHTML).toContain("Caskaydia Cove Nerd Font Mono");
+    dispose();
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).toBeNull();
+  });
+});
 
 describe("ensureTerminalFontsLoaded", () => {
   it("requests regular, bold, italic, and bold-italic variants for the given font", () => {

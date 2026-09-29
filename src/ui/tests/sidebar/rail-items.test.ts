@@ -52,13 +52,12 @@ describe("RAIL_ITEMS", () => {
     // "port-forwarding" to the tunnels plugin's, "serial" to the serial
     // plugin's, "collab" to the session-sharing plugin's, and "session-logs"
     // to the session-recording plugin's, "termix-id" to the termix-identity
-    // plugin's.
+    // plugin's, "ssh-tools" to the ssh-terminal plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
       "connections",
       "quick-connect",
-      "ssh-tools",
       "macros",
       "sync",
     ]);
@@ -70,10 +69,10 @@ describe("RAIL_ITEMS", () => {
     );
   });
 
-  it("marks exactly the three mobile primary slots", () => {
+  it("marks core's mobile primary slots", () => {
     expect(
       RAIL_ITEMS.filter((item) => item.mobilePrimary).map((item) => item.id),
-    ).toEqual(["hosts", "quick-connect", "ssh-tools"]);
+    ).toEqual(["hosts", "quick-connect"]);
   });
 
   it("marks the panels that can open as a tab", () => {
@@ -81,7 +80,7 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual(["ssh-tools", "macros"]);
+    ).toEqual(["macros"]);
   });
 
   it("derives promotableIds from the promotable flag", () => {
@@ -118,7 +117,7 @@ describe("RAIL_ITEMS", () => {
   });
 
   it("only offers reference panels in the right dock", () => {
-    expect(rightDockableIds()).toEqual(["connections", "ssh-tools", "macros"]);
+    expect(rightDockableIds()).toEqual(["connections", "macros"]);
   });
 });
 

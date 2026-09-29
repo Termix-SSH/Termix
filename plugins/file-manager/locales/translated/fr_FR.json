@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Mode SCP hérité"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferts de fichiers simultanés",
+        "description": "Nombre de fichiers que le gestionnaire local/distant côte à côte télécharge ou charge simultanément. Réduisez cette valeur si votre serveur limite le nombre de canaux SFTP."
+      }
     }
   },
   "nav": {

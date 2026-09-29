@@ -28,7 +28,7 @@ import {
   updatePluginHostSettings,
   updatePluginUserSettings,
 } from "@/api/plugins-api";
-import { getCookie, getUserInfo } from "@/main-axios";
+import { getCookie, getUserInfo, setCookie } from "@/main-axios";
 import { logActivity } from "@/api/dashboard-api";
 import { getCredentials, getHostPassword } from "@/api/credentials-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
@@ -37,7 +37,6 @@ import {
   parseCustomKeybindings,
   patchOpenTab,
 } from "@/api/open-tabs-api";
-import { setHostAutoTmux } from "@/api/host-terminal-config-api";
 import { usePluginScope } from "./scope";
 import { knownPluginIds, usePluginStore } from "./plugin-store";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
@@ -362,8 +361,10 @@ export const pluginHostBridge: PluginHostBridge = {
     patchOpenTab: (instanceId, updates) => patchOpenTab(instanceId, updates),
     getCustomKeybindings: async () =>
       parseCustomKeybindings((await getUserPreferences()).customKeybindings),
-    setHostAutoTmux: (hostId, autoTmux) => setHostAutoTmux(hostId, autoTmux),
     getClientPreference: (name) => getCookie(name),
+    setClientPreference: (name, value) => {
+      void setCookie(name, value, 365);
+    },
     listHosts: async () =>
       (await getSSHHosts({ includeStatus: false })).map(toHostRecord),
     listCredentials: async () => {

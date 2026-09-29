@@ -74,6 +74,11 @@
         "id": "history",
         "titleKey": "nav.history",
         "icon": "History"
+      },
+      {
+        "id": "ssh-tools",
+        "titleKey": "nav.sshTools",
+        "icon": "Hammer"
       }
     ],
     "actionSlots": [
@@ -142,6 +147,66 @@
           "labelKey": "settings.admin.commandHistoryForNewHosts.label",
           "descriptionKey": "settings.admin.commandHistoryForNewHosts.description",
           "default": true
+        },
+        {
+          "key": "newHostTheme",
+          "type": "custom",
+          "component": "newHostTheme",
+          "group": "settings.admin.group.newHosts",
+          "default": "termix"
+        },
+        {
+          "key": "newHostFontFamily",
+          "type": "custom",
+          "component": "newHostFontFamily",
+          "group": "settings.admin.group.newHosts",
+          "default": "Caskaydia Cove Nerd Font Mono"
+        },
+        {
+          "key": "newHostFontSize",
+          "type": "number",
+          "labelKey": "settings.admin.newHostFontSize.label",
+          "descriptionKey": "settings.admin.newHostFontSize.description",
+          "group": "settings.admin.group.newHosts",
+          "min": 8,
+          "max": 36,
+          "default": 14
+        },
+        {
+          "key": "newHostCursorStyle",
+          "type": "select",
+          "labelKey": "settings.admin.newHostCursorStyle.label",
+          "group": "settings.admin.group.newHosts",
+          "default": "bar",
+          "options": [
+            {
+              "value": "block",
+              "labelKey": "hosts.cursorStyleBlock"
+            },
+            {
+              "value": "underline",
+              "labelKey": "hosts.cursorStyleUnderline"
+            },
+            {
+              "value": "bar",
+              "labelKey": "hosts.cursorStyleBar"
+            }
+          ]
+        },
+        {
+          "key": "newHostCursorBlink",
+          "type": "boolean",
+          "labelKey": "settings.admin.newHostCursorBlink.label",
+          "group": "settings.admin.group.newHosts",
+          "default": true
+        },
+        {
+          "key": "newHostAutoTmux",
+          "type": "boolean",
+          "labelKey": "settings.admin.newHostAutoTmux.label",
+          "descriptionKey": "settings.admin.newHostAutoTmux.description",
+          "group": "settings.admin.group.newHosts",
+          "default": false
         },
         {
           "key": "touchInput",
@@ -331,9 +396,364 @@
             "descriptionKey": "settings.host.enableCommandHistory.description",
             "default": true,
             "defaultFrom": "commandHistoryForNewHosts"
+          },
+          {
+            "key": "inheritAppearance",
+            "type": "boolean",
+            "labelKey": "settings.host.inheritAppearance.label",
+            "hidden": true,
+            "default": true
+          },
+          {
+            "key": "theme",
+            "type": "string",
+            "labelKey": "settings.host.theme.label",
+            "hidden": true,
+            "default": "termix",
+            "defaultFrom": "newHostTheme"
+          },
+          {
+            "key": "cursorBlink",
+            "type": "boolean",
+            "labelKey": "settings.host.cursorBlink.label",
+            "hidden": true,
+            "default": true,
+            "defaultFrom": "newHostCursorBlink"
+          },
+          {
+            "key": "cursorStyle",
+            "type": "select",
+            "labelKey": "settings.host.cursorStyle.label",
+            "hidden": true,
+            "default": "bar",
+            "options": [
+              {
+                "value": "block",
+                "labelKey": "hosts.cursorStyleBlock"
+              },
+              {
+                "value": "underline",
+                "labelKey": "hosts.cursorStyleUnderline"
+              },
+              {
+                "value": "bar",
+                "labelKey": "hosts.cursorStyleBar"
+              }
+            ],
+            "defaultFrom": "newHostCursorStyle"
+          },
+          {
+            "key": "fontSize",
+            "type": "number",
+            "labelKey": "settings.host.fontSize.label",
+            "hidden": true,
+            "default": 14,
+            "defaultFrom": "newHostFontSize"
+          },
+          {
+            "key": "fontFamily",
+            "type": "string",
+            "labelKey": "settings.host.fontFamily.label",
+            "hidden": true,
+            "default": "Caskaydia Cove Nerd Font Mono",
+            "defaultFrom": "newHostFontFamily"
+          },
+          {
+            "key": "scrollback",
+            "type": "number",
+            "labelKey": "settings.host.scrollback.label",
+            "hidden": true,
+            "default": 10000
+          },
+          {
+            "key": "letterSpacing",
+            "type": "number",
+            "labelKey": "settings.host.letterSpacing.label",
+            "hidden": true,
+            "default": 0
+          },
+          {
+            "key": "lineHeight",
+            "type": "number",
+            "labelKey": "settings.host.lineHeight.label",
+            "hidden": true,
+            "default": 1
+          },
+          {
+            "key": "bellStyle",
+            "type": "select",
+            "labelKey": "settings.host.bellStyle.label",
+            "hidden": true,
+            "default": "none",
+            "options": [
+              {
+                "value": "none",
+                "labelKey": "hosts.bellStyleNone"
+              },
+              {
+                "value": "sound",
+                "labelKey": "hosts.bellStyleSound"
+              },
+              {
+                "value": "visual",
+                "labelKey": "hosts.bellStyleVisual"
+              },
+              {
+                "value": "both",
+                "labelKey": "hosts.bellStyleBoth"
+              }
+            ]
+          },
+          {
+            "key": "minimumContrastRatio",
+            "type": "number",
+            "labelKey": "settings.host.minimumContrastRatio.label",
+            "hidden": true,
+            "default": 1
+          },
+          {
+            "key": "backgroundImage",
+            "type": "string",
+            "labelKey": "settings.host.backgroundImage.label",
+            "hidden": true,
+            "default": ""
+          },
+          {
+            "key": "backgroundImageOpacity",
+            "type": "number",
+            "labelKey": "settings.host.backgroundImageOpacity.label",
+            "hidden": true,
+            "default": 0.15
+          },
+          {
+            "key": "customThemeColors",
+            "type": "json",
+            "labelKey": "settings.host.customThemeColors.label",
+            "hidden": true
+          },
+          {
+            "key": "rightClickSelectsWord",
+            "type": "boolean",
+            "labelKey": "settings.host.rightClickSelectsWord.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "macOptionIsMeta",
+            "type": "boolean",
+            "labelKey": "settings.host.macOptionIsMeta.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "fastScrollModifier",
+            "type": "select",
+            "labelKey": "settings.host.fastScrollModifier.label",
+            "hidden": true,
+            "default": "alt",
+            "options": [
+              {
+                "value": "alt",
+                "labelKey": "hosts.fastScrollModifierAlt"
+              },
+              {
+                "value": "ctrl",
+                "labelKey": "hosts.fastScrollModifierCtrl"
+              },
+              {
+                "value": "shift",
+                "labelKey": "hosts.fastScrollModifierShift"
+              }
+            ]
+          },
+          {
+            "key": "fastScrollSensitivity",
+            "type": "number",
+            "labelKey": "settings.host.fastScrollSensitivity.label",
+            "hidden": true,
+            "default": 5
+          },
+          {
+            "key": "backspaceMode",
+            "type": "select",
+            "labelKey": "settings.host.backspaceMode.label",
+            "hidden": true,
+            "default": "normal",
+            "options": [
+              {
+                "value": "normal",
+                "labelKey": "hosts.backspaceModeNormal"
+              },
+              {
+                "value": "control-h",
+                "labelKey": "hosts.backspaceModeControlH"
+              }
+            ]
+          },
+          {
+            "key": "autoMosh",
+            "type": "boolean",
+            "labelKey": "settings.host.autoMosh.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "moshCommand",
+            "type": "string",
+            "labelKey": "settings.host.moshCommand.label",
+            "hidden": true,
+            "default": ""
+          },
+          {
+            "key": "autoTmux",
+            "type": "boolean",
+            "labelKey": "settings.host.autoTmux.label",
+            "hidden": true,
+            "default": false,
+            "defaultFrom": "newHostAutoTmux"
+          },
+          {
+            "key": "useSSHTitle",
+            "type": "boolean",
+            "labelKey": "settings.host.useSSHTitle.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "syntaxHighlighting",
+            "type": "boolean",
+            "labelKey": "settings.host.syntaxHighlighting.label",
+            "hidden": true,
+            "default": true
+          },
+          {
+            "key": "syntaxHighlightingOptions",
+            "type": "json",
+            "labelKey": "settings.host.syntaxHighlightingOptions.label",
+            "hidden": true
+          },
+          {
+            "key": "linkClickBehavior",
+            "type": "select",
+            "labelKey": "settings.host.linkClickBehavior.label",
+            "hidden": true,
+            "default": "default",
+            "options": [
+              {
+                "value": "default",
+                "labelKey": "hosts.linkClickBehaviorDefault"
+              },
+              {
+                "value": "confirm",
+                "labelKey": "hosts.linkClickBehaviorConfirm"
+              },
+              {
+                "value": "direct",
+                "labelKey": "hosts.linkClickBehaviorDirect"
+              }
+            ]
+          },
+          {
+            "key": "localEcho",
+            "type": "select",
+            "labelKey": "settings.host.localEcho.label",
+            "hidden": true,
+            "default": "default",
+            "options": [
+              {
+                "value": "default",
+                "labelKey": "hosts.localEchoDefault"
+              },
+              {
+                "value": "off",
+                "labelKey": "hosts.localEchoOff"
+              },
+              {
+                "value": "auto",
+                "labelKey": "hosts.localEchoAuto"
+              },
+              {
+                "value": "on",
+                "labelKey": "hosts.localEchoOn"
+              }
+            ]
+          },
+          {
+            "key": "passwordPromptAutoFill",
+            "type": "boolean",
+            "labelKey": "settings.host.passwordPromptAutoFill.label",
+            "hidden": true,
+            "default": true
+          },
+          {
+            "key": "sudoPasswordAutoFill",
+            "type": "boolean",
+            "labelKey": "settings.host.sudoPasswordAutoFill.label",
+            "hidden": true,
+            "default": false
           }
         ]
-      }
+      },
+      "user": [
+        {
+          "key": "terminalDefaults",
+          "type": "custom",
+          "component": "terminalDefaults",
+          "default": {}
+        },
+        {
+          "key": "customThemes",
+          "type": "json",
+          "labelKey": "settings.user.customThemes.label",
+          "hidden": true,
+          "default": []
+        },
+        {
+          "key": "commandAutocomplete",
+          "type": "boolean",
+          "labelKey": "settings.user.commandAutocomplete.label",
+          "descriptionKey": "settings.user.commandAutocomplete.description",
+          "default": false
+        },
+        {
+          "key": "localEcho",
+          "type": "select",
+          "labelKey": "settings.user.localEcho.label",
+          "descriptionKey": "settings.user.localEcho.description",
+          "default": "auto",
+          "options": [
+            {
+              "value": "off",
+              "labelKey": "hosts.localEchoOff"
+            },
+            {
+              "value": "auto",
+              "labelKey": "hosts.localEchoAuto"
+            },
+            {
+              "value": "on",
+              "labelKey": "hosts.localEchoOn"
+            }
+          ]
+        },
+        {
+          "key": "linkClickBehavior",
+          "type": "select",
+          "labelKey": "settings.user.linkClickBehavior.label",
+          "descriptionKey": "settings.user.linkClickBehavior.description",
+          "default": "confirm",
+          "options": [
+            {
+              "value": "confirm",
+              "labelKey": "hosts.linkClickBehaviorConfirm"
+            },
+            {
+              "value": "direct",
+              "labelKey": "hosts.linkClickBehaviorDirect"
+            }
+          ]
+        }
+      ]
     }
   },
   "locales": "locales",

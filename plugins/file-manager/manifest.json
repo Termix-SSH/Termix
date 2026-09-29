@@ -70,6 +70,17 @@
       }
     ],
     "settings": {
+      "user": [
+        {
+          "key": "transferConcurrency",
+          "type": "number",
+          "labelKey": "settings.user.transferConcurrency.label",
+          "descriptionKey": "settings.user.transferConcurrency.description",
+          "min": 1,
+          "max": 8,
+          "default": 4
+        }
+      ],
       "host": {
         "editorGroup": "ssh",
         "editorOrder": 60,

@@ -400,6 +400,13 @@
       "when": 1790393787230,
       "tag": "0056_rare_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "6",
+      "when": 1790651053202,
+      "tag": "0057_green_hydra",
+      "breakpoints": true
     }
   ]
 }

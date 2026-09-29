@@ -73,7 +73,6 @@ import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { Select2 } from "@/components/select2";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
-import { ConnectionDefaultsSettings } from "./ConnectionDefaultsSettings";
 import {
   FeatureSettingsSection,
   featureSectionId,
@@ -195,40 +194,6 @@ type ApiErrorLike = {
 
 function apiErrorMessage(error: unknown, fallback: string) {
   return (error as ApiErrorLike).response?.data?.error || fallback;
-}
-
-// Local transfer concurrency is the file-manager plugin's own setting; this
-// panel just offers the control, using the same storage key the plugin reads.
-const TRANSFER_CONCURRENCY_STORAGE_KEY =
-  "termix:file-manager:transfer-concurrency";
-const DEFAULT_TRANSFER_CONCURRENCY = 4;
-const MAX_TRANSFER_CONCURRENCY = 8;
-
-function clampTransferConcurrency(value: unknown): number {
-  const n = Math.floor(Number(value));
-  if (!Number.isFinite(n)) return DEFAULT_TRANSFER_CONCURRENCY;
-  return Math.min(MAX_TRANSFER_CONCURRENCY, Math.max(1, n));
-}
-
-function getTransferConcurrency(): number {
-  try {
-    const raw = localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY);
-    return raw === null
-      ? DEFAULT_TRANSFER_CONCURRENCY
-      : clampTransferConcurrency(raw);
-  } catch {
-    return DEFAULT_TRANSFER_CONCURRENCY;
-  }
-}
-
-function setTransferConcurrency(value: number): number {
-  const clamped = clampTransferConcurrency(value);
-  try {
-    localStorage.setItem(TRANSFER_CONCURRENCY_STORAGE_KEY, String(clamped));
-  } catch {
-    // storage unavailable
-  }
-  return clamped;
 }
 
 type CreatedProfileApiKey = {
@@ -526,7 +491,6 @@ export function UserProfilePanel({
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
-    commandAutocomplete?: boolean | null;
     commandPaletteEnabled?: boolean | null;
     showHostTags?: boolean | null;
     hostTrayOnClick?: boolean | null;
@@ -636,15 +600,6 @@ export function UserProfilePanel({
   }, [linkedAccount, storageMode, onPrefsChange]);
 
   // Settings toggles — all backed by localStorage
-  const [commandAutocomplete, setCommandAutocomplete] = useState(
-    () => localStorage.getItem("commandAutocomplete") === "true",
-  );
-  const [terminalLinkClickBehavior, setTerminalLinkClickBehavior] = useState(
-    () => localStorage.getItem("terminalLinkClickBehavior") ?? "confirm",
-  );
-  const [transferConcurrency, setTransferConcurrencyState] = useState(() =>
-    getTransferConcurrency(),
-  );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -801,7 +756,6 @@ export function UserProfilePanel({
         "termix-font-size",
         "termix-ui-font",
         "i18nextLng",
-        "commandAutocomplete",
         "commandPaletteShortcutEnabled",
         "showHostTags",
         "hostTrayOnClick",
@@ -822,7 +776,6 @@ export function UserProfilePanel({
         "dashboardTab.mainWidthPct",
         "termix-terminal-toolbar-density",
         "fileManagerViewMode",
-        TRANSFER_CONCURRENCY_STORAGE_KEY,
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -845,13 +798,6 @@ export function UserProfilePanel({
         if (prefs.language) {
           const language = await changeAppLanguage(prefs.language);
           setLanguage(language);
-        }
-        if (prefs.commandAutocomplete != null) {
-          setCommandAutocomplete(prefs.commandAutocomplete);
-          localStorage.setItem(
-            "commandAutocomplete",
-            String(prefs.commandAutocomplete),
-          );
         }
         if (prefs.commandPaletteEnabled != null) {
           setCommandPaletteEnabled(prefs.commandPaletteEnabled);
@@ -935,8 +881,6 @@ export function UserProfilePanel({
     applyAccentColor(DEFAULT_ACCENT);
     setLanguage("en");
     void changeAppLanguage("en");
-    setCommandAutocomplete(false);
-    localStorage.setItem("commandAutocomplete", "false");
     setCommandPaletteEnabled(true);
     localStorage.setItem("commandPaletteShortcutEnabled", "true");
     updateSidebarPrefs((prev) => ({
@@ -976,7 +920,6 @@ export function UserProfilePanel({
         fontSize: "md",
         accentColor: DEFAULT_ACCENT,
         language: "en",
-        commandAutocomplete: false,
         commandPaletteEnabled: true,
         pinAppRail: false,
         expandAppRailOnHover: true,
@@ -1031,11 +974,6 @@ export function UserProfilePanel({
     const restoredLang = normalizeLanguageCode(restore("i18nextLng", "en"));
     setLanguage(restoredLang);
     void changeAppLanguage(restoredLang);
-
-    const restoredAutocomplete =
-      restore("commandAutocomplete", "false") === "true";
-    setCommandAutocomplete(restoredAutocomplete);
-    localStorage.setItem("commandAutocomplete", String(restoredAutocomplete));
 
     const restoredPalette =
       restore("commandPaletteShortcutEnabled", "true") !== "false";
@@ -1722,48 +1660,8 @@ export function UserProfilePanel({
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-              {t("newUi.sidebar.userProfile.settingsTerminal")}
+              {t("newUi.sidebar.userProfile.settingsTabsAndShortcuts")}
             </span>
-            <ConnectionDefaultsSettings />
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.commandAutocomplete")}
-              description={t(
-                "newUi.sidebar.userProfile.commandAutocompleteDesc",
-              )}
-            >
-              <FakeSwitch
-                checked={commandAutocomplete}
-                onChange={(v) => {
-                  setCommandAutocomplete(v);
-                  localStorage.setItem("commandAutocomplete", v.toString());
-                  if (storageMode === "cloud")
-                    saveToCloud({ commandAutocomplete: v });
-                }}
-              />
-            </SettingRow>
-            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium leading-snug">
-                  {t("newUi.sidebar.userProfile.localEcho")}
-                </span>
-                <span className="text-xs text-muted-foreground leading-snug">
-                  {t("newUi.sidebar.userProfile.localEchoDesc")}
-                </span>
-              </div>
-              <select
-                defaultValue={
-                  localStorage.getItem("terminalLocalEchoMode") ?? "auto"
-                }
-                onChange={(e) =>
-                  localStorage.setItem("terminalLocalEchoMode", e.target.value)
-                }
-                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="off">{t("hosts.localEchoOff")}</option>
-                <option value="auto">{t("hosts.localEchoAuto")}</option>
-                <option value="on">{t("hosts.localEchoOn")}</option>
-              </select>
-            </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.keyboardShortcuts")}
               description={t(
@@ -1778,59 +1676,6 @@ export function UserProfilePanel({
                 {t("newUi.sidebar.userProfile.manageShortcuts")}
               </Button>
             </SettingRow>
-            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium leading-snug">
-                  {t("newUi.sidebar.userProfile.terminalLinkBehavior")}
-                </span>
-                <span className="text-xs text-muted-foreground leading-snug">
-                  {t("newUi.sidebar.userProfile.terminalLinkBehaviorDesc")}
-                </span>
-              </div>
-              <Select2
-                value={terminalLinkClickBehavior}
-                onChange={(e) => {
-                  setTerminalLinkClickBehavior(e.target.value);
-                  localStorage.setItem(
-                    "terminalLinkClickBehavior",
-                    e.target.value,
-                  );
-                }}
-                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="confirm">
-                  {t("hosts.linkClickBehaviorConfirm")}
-                </option>
-                <option value="direct">
-                  {t("hosts.linkClickBehaviorDirect")}
-                </option>
-              </Select2>
-            </div>
-            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium leading-snug">
-                  {t("newUi.sidebar.userProfile.transferConcurrency")}
-                </span>
-                <span className="text-xs text-muted-foreground leading-snug">
-                  {t("newUi.sidebar.userProfile.transferConcurrencyDesc")}
-                </span>
-              </div>
-              <Select2
-                value={transferConcurrency}
-                onChange={(e) =>
-                  setTransferConcurrencyState(
-                    setTransferConcurrency(Number(e.target.value)),
-                  )
-                }
-                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                {Array.from({ length: MAX_TRANSFER_CONCURRENCY }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                ))}
-              </Select2>
-            </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandPalette")}
               description={t("newUi.sidebar.userProfile.commandPaletteDesc")}

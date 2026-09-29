@@ -15,6 +15,7 @@ import { runFileManagerSettingsMigration } from "./file-manager-settings-migrati
 import { runTunnelsSettingsMigration } from "./tunnels-settings-migration.js";
 import { runWebEndpointSettingsMigration } from "./web-endpoint-settings-migration.js";
 import { runSshTerminalSettingsMigration } from "./ssh-terminal-settings-migration.js";
+import { runSshTerminalLookMigration } from "./ssh-terminal-look-migration.js";
 import { runTmuxMonitorSettingsMigration } from "./tmux-monitor-settings-migration.js";
 import { runSessionSharingSettingsMigration } from "./session-sharing-settings-migration.js";
 import { runSessionRecordingSettingsMigration } from "./session-recording-settings-migration.js";
@@ -39,6 +40,7 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runTunnelsSettingsMigration", runTunnelsSettingsMigration],
   ["runWebEndpointSettingsMigration", runWebEndpointSettingsMigration],
   ["runSshTerminalSettingsMigration", runSshTerminalSettingsMigration],
+  ["runSshTerminalLookMigration", runSshTerminalLookMigration],
   ["runTmuxMonitorSettingsMigration", runTmuxMonitorSettingsMigration],
   ["runSessionSharingSettingsMigration", runSessionSharingSettingsMigration],
   [

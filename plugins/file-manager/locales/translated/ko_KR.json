@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP 레거시 모드"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "동시 파일 전송",
+        "description": "로컬/원격 파일 관리자가 동시에 업로드 또는 다운로드할 수 있는 파일 수를 지정합니다. 서버에서 SFTP 채널 수를 제한하는 경우 이 값을 낮추십시오."
+      }
     }
   },
   "nav": {

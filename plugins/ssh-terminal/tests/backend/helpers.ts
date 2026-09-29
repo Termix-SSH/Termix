@@ -9,6 +9,7 @@ import {
   type TestDb,
 } from "@termix/plugin-sdk/testing";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginHostSummary } from "@termix/plugin-sdk/backend";
 import manifestJson from "../../manifest.json";
 
 export const pluginDir = fileURLToPath(new URL("../..", import.meta.url));
@@ -32,7 +33,11 @@ export interface TestServer {
  * the way core mounts it, with the acting user taken from a test header.
  */
 export async function startServer(
-  options: { permissions?: string[]; settings?: Record<string, unknown> } = {},
+  options: {
+    permissions?: string[];
+    settings?: Record<string, unknown>;
+    hosts?: PluginHostSummary[];
+  } = {},
 ): Promise<TestServer> {
   const db = await createTestDb(pluginDir);
   for (const user of ["user-1", "user-2"]) {
@@ -51,6 +56,7 @@ export async function startServer(
     router: () => (router = express.Router()),
     permissions: options.permissions,
     settings: options.settings,
+    hosts: options.hosts,
   });
 
   const { activate } = await import("../../src/backend/index.js");

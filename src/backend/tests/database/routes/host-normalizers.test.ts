@@ -425,3 +425,57 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.password).toBeUndefined();
   });
 });
+
+describe("transformHostResponse terminal fields", () => {
+  const row = (extra: Record<string, unknown>) =>
+    transformHostResponse({ id: 1, tags: "", ...extra });
+
+  it("sends the SSH options and core's own terminalConfig keys only", () => {
+    const host = row({
+      sshOptions: JSON.stringify({ keepaliveInterval: 20 }),
+      terminalConfig: JSON.stringify({
+        startupSnippetId: 3,
+        theme: "nord",
+        keepaliveInterval: 5,
+      }),
+    });
+    expect(host.sshOptions).toEqual({ keepaliveInterval: 20 });
+    expect(host.terminalConfig).toEqual({
+      keepaliveInterval: 20,
+      startupSnippetId: 3,
+    });
+  });
+
+  it("reads the options out of terminal_config before the boot copy", () => {
+    const host = row({
+      sshOptions: null,
+      terminalConfig: JSON.stringify({ agentForwarding: true }),
+    });
+    expect(host.sshOptions).toEqual({ agentForwarding: true });
+  });
+
+  it("surfaces a 2.8 sudo password for the sanitizers to strip", () => {
+    const host = row({
+      sudoPassword: null,
+      terminalConfig: JSON.stringify({ sudoPassword: "legacy" }),
+    });
+    const stripped = stripSensitiveFields(host);
+    expect(stripped.hasSudoPassword).toBe(true);
+    expect(stripped).not.toHaveProperty("sudoPassword");
+    expect(JSON.stringify(stripped)).not.toContain("legacy");
+  });
+
+  it("hides the owner's agent socket from a shared recipient", () => {
+    const shared = sanitizeHostForRecipient(
+      row({
+        sshOptions: JSON.stringify({
+          agentSocketPath: "/run/agent",
+          keepaliveInterval: 9,
+        }),
+      }),
+      "edit",
+    );
+    expect(shared.sshOptions).toEqual({ keepaliveInterval: 9 });
+    expect(shared.terminalConfig).toEqual({ keepaliveInterval: 9 });
+  });
+});

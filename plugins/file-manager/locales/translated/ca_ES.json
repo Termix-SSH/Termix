@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Mode Llegat de SCP"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferències simultànies de fitxers",
+        "description": "Quants fitxers puja o descarrega el gestor local/remot en paral·lel alhora. Redueix aquest valor si el teu servidor limita els canals SFTP."
+      }
     }
   },
   "nav": {

@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP Legacy-läge"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Samtidiga filöverföringar",
+        "description": "Hur många filer den sida vid sida lokala/fjärrstyrda hanteraren laddar upp eller laddar ner samtidigt. Sänk detta om din server begränsar SFTP-kanaler."
+      }
     }
   },
   "nav": {

@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Mode Warisan SCP"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transfer File Serentak",
+        "description": "Jumlah file yang diunggah atau diunduh oleh pengelola file lokal/jarak jauh secara bersamaan. Kurangi nilai ini jika server Anda membatasi saluran SFTP."
+      }
     }
   },
   "nav": {

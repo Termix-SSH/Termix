@@ -1,9 +1,7 @@
-import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import type { Host } from "@/types/ui-types";
 import type { SSHHostData } from "@/types";
 import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import type { HostDefaults } from "@/api/settings-api";
-import type { TerminalDefaults } from "@/lib/connection-defaults";
 import {
   listHostProtocols,
   protocolPort,
@@ -15,49 +13,6 @@ type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
 export type { HostProtocols };
 
 export type HostAuthType = Host["authType"];
-export type HostCursorStyle = NonNullable<
-  Host["terminalConfig"]
->["cursorStyle"];
-export type HostBellStyle = NonNullable<Host["terminalConfig"]>["bellStyle"];
-export type HostBackspaceMode = NonNullable<
-  Host["terminalConfig"]
->["backspaceMode"];
-export type HostFastScrollModifier = NonNullable<
-  Host["terminalConfig"]
->["fastScrollModifier"];
-
-export const terminalAppearanceKeys = [
-  "theme",
-  "cursorBlink",
-  "cursorStyle",
-  "fontSize",
-  "fontFamily",
-  "scrollback",
-  "letterSpacing",
-  "lineHeight",
-  "bellStyle",
-  "minimumContrastRatio",
-  "backgroundImage",
-  "backgroundImageOpacity",
-  "customThemeColors",
-] as const satisfies readonly (keyof TerminalDefaults)[];
-
-export interface UserConnectionDefaults {
-  terminal: TerminalDefaults;
-}
-
-function hasOwn(value: object | undefined, key: PropertyKey): boolean {
-  return !!value && Object.prototype.hasOwnProperty.call(value, key);
-}
-
-function stripKeys<T extends Record<string, unknown>>(
-  value: T,
-  keys: readonly string[],
-): Partial<T> {
-  const result = { ...value };
-  for (const key of keys) delete result[key];
-  return result;
-}
 
 type SnippetListItem = {
   id: number;
@@ -111,23 +66,9 @@ export function applyHostDraft(
 export function createHostEditorForm(
   host: Host | null,
   defaults?: HostDefaults,
-  connectionDefaults?: UserConnectionDefaults,
 ) {
   const d = host ? undefined : defaults;
-  const terminalConfig = {
-    ...(connectionDefaults?.terminal ?? {}),
-    ...(host?.terminalConfig ?? {}),
-  };
-  const rawTheme = terminalConfig.theme ?? d?.theme;
-  const normalizedTheme =
-    !rawTheme ||
-    ["Termix Dark", "Termix Light", "termixDark", "termixLight"].includes(
-      rawTheme,
-    )
-      ? "termix"
-      : rawTheme === "custom" || TERMINAL_THEMES[rawTheme]
-        ? rawTheme
-        : "termix";
+  const sshOptions = host?.sshOptions ?? {};
 
   return {
     name: host?.name ?? "",
@@ -169,68 +110,18 @@ export function createHostEditorForm(
       "local" | "remote" | null,
     localOnly: host?.localOnly ?? false,
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
-    inheritTerminalAppearance:
-      !host ||
-      terminalAppearanceKeys.every((key) => !hasOwn(host.terminalConfig, key)),
-    localEcho: host?.terminalConfig?.localEcho ?? "default",
-    fontSize: terminalConfig.fontSize ?? d?.fontSize ?? 14,
-    fontFamily:
-      terminalConfig.fontFamily ??
-      d?.fontFamily ??
-      "Caskaydia Cove Nerd Font Mono",
-    theme: normalizedTheme,
-    cursorStyle: (terminalConfig.cursorStyle ?? d?.cursorStyle ?? "bar") as
-      "block" | "underline" | "bar",
-    cursorBlink: terminalConfig.cursorBlink ?? d?.cursorBlink ?? true,
-    scrollback: terminalConfig.scrollback ?? 10000,
-    letterSpacing: terminalConfig.letterSpacing ?? 0,
-    lineHeight: terminalConfig.lineHeight ?? 1.0,
-    bellStyle: (terminalConfig.bellStyle ?? "none") as
-      "none" | "sound" | "visual" | "both",
-    rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
-    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? false,
-    fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
-      "alt" | "ctrl" | "shift",
-    fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
-    minimumContrastRatio: terminalConfig.minimumContrastRatio ?? 1,
-    backspaceMode: (host?.terminalConfig?.backspaceMode ?? "normal") as
-      "normal" | "control-h",
     startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
-    moshCommand: host?.terminalConfig?.moshCommand ?? "",
-    agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
-    autoMosh: host?.terminalConfig?.autoMosh ?? false,
-    autoTmux: host?.terminalConfig?.autoTmux ?? d?.autoTmux ?? false,
-    passwordPromptAutoFill:
-      host?.terminalConfig?.passwordPromptAutoFill ?? true,
-    sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
     sudoPassword: host?.hasSudoPassword
       ? "existing_sudo_password"
-      : (host?.terminalConfig?.sudoPassword ?? ""),
-    keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
-    keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
-    backgroundImage: terminalConfig.backgroundImage ?? "",
-    backgroundImageOpacity: terminalConfig.backgroundImageOpacity ?? 0.15,
-    customThemeColors: terminalConfig.customThemeColors ?? null,
-    allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
-    linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
-      "default") as "default" | "confirm" | "direct",
-    agentSocketPath: host?.terminalConfig?.agentSocketPath ?? "",
-    agentIdentity: host?.terminalConfig?.agentIdentity ?? "",
-    useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
-    syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
-    syntaxHighlightingOptions: {
-      logLevels:
-        host?.terminalConfig?.syntaxHighlightingOptions?.logLevels ?? true,
-      paths: host?.terminalConfig?.syntaxHighlightingOptions?.paths ?? true,
-      timestamps:
-        host?.terminalConfig?.syntaxHighlightingOptions?.timestamps ?? true,
-      ipAddresses:
-        host?.terminalConfig?.syntaxHighlightingOptions?.ipAddresses ?? true,
-      urls: host?.terminalConfig?.syntaxHighlightingOptions?.urls ?? true,
-      numbers: host?.terminalConfig?.syntaxHighlightingOptions?.numbers ?? true,
-    },
+      : (host?.sudoPassword ?? ""),
+    keepaliveInterval: sshOptions.keepaliveInterval ?? 60,
+    keepaliveCountMax: sshOptions.keepaliveCountMax ?? 5,
+    allowLegacyAlgorithms: sshOptions.allowLegacyAlgorithms ?? true,
+    agentForwarding: sshOptions.agentForwarding ?? false,
+    agentSocketPath: sshOptions.agentSocketPath ?? "",
+    agentIdentity: sshOptions.agentIdentity ?? "",
     environmentVariables:
-      host?.terminalConfig?.environmentVariables ??
+      sshOptions.environmentVariables ??
       ([] as { key: string; value: string }[]),
     jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
     portKnockSequence:
@@ -295,17 +186,14 @@ export function omitOwnerSshAuthFromSharedEdit(
     ...editableFields
   } = payload;
 
-  const terminalConfig = editableFields.terminalConfig
-    ? { ...editableFields.terminalConfig }
+  const sshOptions = editableFields.sshOptions
+    ? { ...editableFields.sshOptions }
     : undefined;
-  if (terminalConfig) {
-    delete terminalConfig.sudoPassword;
-    delete terminalConfig.agentSocketPath;
-  }
+  if (sshOptions) delete sshOptions.agentSocketPath;
 
   return {
     ...editableFields,
-    terminalConfig,
+    sshOptions,
   } as SSHHostData;
 }
 
@@ -325,53 +213,6 @@ export function buildHostEditorPayload(
   const primaryProtocol = protocols.enableSsh
     ? undefined
     : listHostProtocols().find((protocol) => protocols[protocol.settingKey]);
-  const terminalConfig = {
-    theme: form.theme,
-    cursorBlink: form.cursorBlink,
-    cursorStyle: form.cursorStyle,
-    fontSize: Number(form.fontSize),
-    fontFamily: form.fontFamily,
-    scrollback: Number(form.scrollback),
-    letterSpacing: Number(form.letterSpacing),
-    lineHeight: Number(form.lineHeight),
-    bellStyle: form.bellStyle,
-    rightClickSelectsWord: form.rightClickSelectsWord,
-    macOptionIsMeta: form.macOptionIsMeta,
-    fastScrollModifier: form.fastScrollModifier,
-    fastScrollSensitivity: Number(form.fastScrollSensitivity),
-    minimumContrastRatio: Number(form.minimumContrastRatio),
-    backspaceMode: form.backspaceMode,
-    startupSnippetId: form.startupSnippetId ?? null,
-    moshCommand: form.moshCommand || null,
-    agentForwarding: form.agentForwarding,
-    autoMosh: form.autoMosh,
-    autoTmux: form.autoTmux,
-    passwordPromptAutoFill: form.passwordPromptAutoFill,
-    sudoPasswordAutoFill: form.sudoPasswordAutoFill,
-    sudoPassword:
-      form.sudoPassword === "existing_sudo_password"
-        ? undefined
-        : form.sudoPassword || null,
-    keepaliveInterval: Number(form.keepaliveInterval),
-    keepaliveCountMax: Number(form.keepaliveCountMax),
-    environmentVariables: form.environmentVariables,
-    useSSHTitle: form.useSSHTitle,
-    syntaxHighlighting: form.syntaxHighlighting,
-    syntaxHighlightingOptions: form.syntaxHighlightingOptions,
-    backgroundImage: form.backgroundImage || null,
-    backgroundImageOpacity: Number(form.backgroundImageOpacity),
-    customThemeColors: form.theme === "custom" ? form.customThemeColors : null,
-    allowLegacyAlgorithms: form.allowLegacyAlgorithms,
-    linkClickBehavior:
-      form.linkClickBehavior !== "default" ? form.linkClickBehavior : undefined,
-    localEcho: form.localEcho !== "default" ? form.localEcho : undefined,
-    agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
-    agentIdentity: usesAgent ? form.agentIdentity || null : null,
-  };
-  const terminalOverrides = form.inheritTerminalAppearance
-    ? stripKeys(terminalConfig, terminalAppearanceKeys)
-    : terminalConfig;
-
   return {
     connectionType: primaryProtocol?.id ?? "ssh",
     name: form.name,
@@ -485,6 +326,24 @@ export function buildHostEditorPayload(
     })),
     statusCheckEnabled: form.statusCheckEnabled,
     statusCheckInterval: form.statusCheckInterval,
-    terminalConfig: protocols.enableSsh ? terminalOverrides : null,
+    // Left out with SSH off, so the stored values stay as they are.
+    ...(protocols.enableSsh
+      ? {
+          sudoPassword:
+            form.sudoPassword === "existing_sudo_password"
+              ? undefined
+              : form.sudoPassword || "",
+          sshOptions: {
+            keepaliveInterval: Number(form.keepaliveInterval),
+            keepaliveCountMax: Number(form.keepaliveCountMax),
+            allowLegacyAlgorithms: form.allowLegacyAlgorithms,
+            agentForwarding: form.agentForwarding,
+            agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
+            agentIdentity: usesAgent ? form.agentIdentity || null : null,
+            environmentVariables: form.environmentVariables,
+          },
+          terminalConfig: { startupSnippetId: form.startupSnippetId ?? null },
+        }
+      : {}),
   };
 }

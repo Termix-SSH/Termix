@@ -1,7 +1,15 @@
 import { lazy, Suspense, type ComponentType } from "react";
-import { History, Laptop, SquareTerminal, Terminal } from "lucide-react";
+import {
+  Hammer,
+  History,
+  Laptop,
+  SquareTerminal,
+  Terminal,
+} from "lucide-react";
+import { listHosts } from "@termix/plugin-sdk/frontend";
 import type {
   PanelProps,
+  PluginHostRecord,
   StandaloneViewProps,
   TabProps,
   TermixApp,
@@ -24,6 +32,25 @@ import { ImageStorageTest } from "./settings/ImageStorageTest";
 import { HostTerminalSection } from "./settings/HostTerminalSection";
 import { resetTouchInputSettingsCache } from "./terminal/touch-input-settings-store";
 import { hostSetting } from "./terminal-api";
+import { SshToolsPanel } from "./ssh-tools/SshToolsPanel";
+import { TerminalDefaultsSettings } from "./settings/TerminalDefaultsSettings";
+import {
+  NewHostFontSetting,
+  NewHostThemeSetting,
+} from "./settings/NewHostLookSettings";
+import { TerminalPreview } from "./look/TerminalPreview";
+import { installTerminalGlobalStyles } from "./look/terminal-global-styles";
+import {
+  listTerminalThemes,
+  resolveTerminalLook,
+  type ResolveLookRequest,
+} from "./look/look-actions";
+import {
+  invalidateTerminalClientSettings,
+  loadTerminalClientSettings,
+  resetTerminalClientSettings,
+} from "./terminal-settings";
+import { moveLocalTerminalPreferences } from "./settings/local-preferences-migration";
 
 const LocalTerminal = lazy(() =>
   import("./local-terminal/LocalTerminal").then((m) => ({
@@ -65,6 +92,7 @@ function LocalTerminalTab({ tab, isVisible }: TabProps) {
  * history panel and the places other plugins can plug into a session.
  */
 export function activate(app: TermixApp): void {
+  app.onDispose(installTerminalGlobalStyles());
   app.registerTab(
     "terminal",
     TerminalTabWithRegistry as unknown as ComponentType<TabProps>,
@@ -147,6 +175,22 @@ export function activate(app: TermixApp): void {
     separatorAfter: true,
   });
 
+  app.registerPanel(
+    "ssh-tools",
+    SshToolsPanel as unknown as ComponentType<PanelProps>,
+  );
+  app.registerRailItem({
+    id: "ssh-tools",
+    icon: Hammer,
+    titleKey: "nav.sshTools",
+    after: "quick-connect",
+    hideable: true,
+    mobilePrimary: true,
+    promotable: true,
+    rightDockable: true,
+    separatorAfter: true,
+  });
+
   // Places other plugins can fill: toolbar buttons and readouts, a side
   // panel and overlays that follow the session's connection flow.
   app.declareActionSlot({ id: TERMINAL_TOOLBAR_SLOT, accepts: ["button"] });
@@ -199,8 +243,38 @@ export function activate(app: TermixApp): void {
       },
     })) as never);
 
+  // The terminal look for other terminal-like surfaces (docker, serial,
+  // proxmox), which must not import this plugin. Each answers undefined
+  // while this plugin is off, and the caller falls back to plain colors.
+  app.registerComponent(
+    "terminal.preview",
+    TerminalPreview as unknown as ComponentType<Record<string, unknown>>,
+  );
+  app.registerAction("terminal.resolveTheme", (async (
+    request: ResolveLookRequest & { hostId?: number | string } = {},
+  ) => {
+    const settings = await loadTerminalClientSettings(app.api).catch(
+      () => null,
+    );
+    let host: PluginHostRecord | null | undefined = request.host;
+    if (!host && request.hostId !== undefined) {
+      host = (await listHosts().catch(() => [])).find(
+        (entry) => String(entry.id) === String(request.hostId),
+      );
+    }
+    return resolveTerminalLook({ ...request, host }, settings?.user);
+  }) as never);
+  app.registerAction("terminal.themes", () => listTerminalThemes());
+
   app.registerSettingsComponent("touchInput", TouchInputSettings);
   app.registerSettingsComponent("imageStorageTest", ImageStorageTest);
+  app.registerSettingsComponent("terminalDefaults", TerminalDefaultsSettings);
+  app.registerSettingsComponent("newHostTheme", NewHostThemeSetting);
+  app.registerSettingsComponent("newHostFontFamily", NewHostFontSetting);
+
+  app.onSettingsChanged(() => invalidateTerminalClientSettings());
+  if (!app.guest) void moveLocalTerminalPreferences(app);
 
   app.onDispose(resetTouchInputSettingsCache);
+  app.onDispose(resetTerminalClientSettings);
 }

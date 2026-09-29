@@ -201,6 +201,9 @@ export const hosts = mysqlTable(
       .default(true),
     statusCheckInterval: int("status_check_interval"),
     terminalConfig: text("terminal_config"),
+    // SSH connection options core's connect pipeline reads (keepalive,
+    // legacy algorithms, agent, environment). JSON.
+    sshOptions: text("ssh_options"),
     quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: boolean("enable_ssh").notNull().default(true),

@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP 传统模式"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "同时文件传输",
+        "description": "本地/远程并排管理器同时上传或下载的文件数量。如果您的服务器限制 SFTP 通道，请降低此值。"
+      }
     }
   },
   "nav": {

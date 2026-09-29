@@ -3,6 +3,11 @@ import {
   normalizeTouchInputSettings,
   type TouchInputSettings,
 } from "../shared/touch-input-settings";
+import {
+  readUserSettings,
+  type NewHostTerminalDefaults,
+  type TerminalUserSettings,
+} from "../shared/terminal-settings";
 
 /** Calls to this plugin's own routes under /plugin-api/ssh-terminal/. */
 
@@ -11,13 +16,27 @@ export interface TerminalClientSettings {
   sessionPersistence: boolean;
   commandHistoryEnabled: boolean;
   touchInput: TouchInputSettings;
+  newHostDefaults?: NewHostTerminalDefaults;
+  user: TerminalUserSettings;
 }
 
 export async function getClientSettings(
   api: PluginApiClient,
 ): Promise<TerminalClientSettings> {
   const { data } = await api.get<TerminalClientSettings>("/client-settings");
-  return { ...data, touchInput: normalizeTouchInputSettings(data?.touchInput) };
+  return {
+    ...data,
+    touchInput: normalizeTouchInputSettings(data?.touchInput),
+    user: readUserSettings(data?.user as unknown as Record<string, unknown>),
+  };
+}
+
+/** Turns auto tmux on for a host (its terminal host setting). */
+export async function enableHostAutoTmux(
+  api: PluginApiClient,
+  hostId: number,
+): Promise<void> {
+  await api.put(`/hosts/${hostId}/auto-tmux`, { enabled: true });
 }
 
 export async function saveCommandToHistory(

@@ -13,6 +13,7 @@ import type { TerminalSessionManager } from "./session-manager.js";
 import {
   ADMIN_KEYS,
   HOST_KEYS,
+  MOVABLE_USER_KEYS,
   readClientSettings,
   readImageStorageSettings,
 } from "./settings.js";
@@ -521,6 +522,99 @@ export function registerTerminalRoutes(
     } catch (err) {
       log.error("Failed to load terminal client settings", err);
       res.status(500).json({ error: "Failed to load settings" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/ssh-terminal/user-settings:
+   *   put:
+   *     summary: Save some of the caller's terminal settings
+   *     description: Writes the caller's local echo, link click and command autocomplete settings. The terminal uses it once, to move values a browser kept before 2.9.0.
+   *     tags:
+   *       - Terminal
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               localEcho:
+   *                 type: string
+   *               linkClickBehavior:
+   *                 type: string
+   *               commandAutocomplete:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Saved.
+   *       400:
+   *         description: A value the setting does not accept.
+   */
+  router.put("/user-settings", json, async (req, res) => {
+    const userId = ctx.currentActor();
+    if (!userId) return res.status(401).json({ error: "Sign in first" });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    try {
+      for (const key of MOVABLE_USER_KEYS) {
+        if (body[key] !== undefined) {
+          await ctx.settings.setUser(userId, key, body[key]);
+        }
+      }
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: getErrorMessage(err, "Invalid setting") });
+    }
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/ssh-terminal/hosts/{hostId}/auto-tmux:
+   *   put:
+   *     summary: Turn auto tmux on or off for a host
+   *     description: Sets the host's autoTmux terminal setting. Used by the "enable Auto-Tmux" action shown when a persisted session expires. Needs edit access to the host.
+   *     tags:
+   *       - Terminal
+   *     parameters:
+   *       - in: path
+   *         name: hostId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               enabled:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Saved.
+   *       400:
+   *         description: Invalid host id or value.
+   *       403:
+   *         description: No edit access to the host.
+   */
+  router.put("/hosts/:hostId/auto-tmux", json, async (req, res) => {
+    const hostId = Number(req.params.hostId);
+    const enabled = (req.body ?? {}).enabled;
+    if (!Number.isInteger(hostId) || typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "Invalid host or value" });
+    }
+    try {
+      const access = await ctx.hosts.checkAccess(hostId, "edit");
+      if (!access.hasAccess) {
+        return res.status(403).json({ error: "Access denied to host" });
+      }
+      await ctx.settings.setHost(hostId, HOST_KEYS.autoTmux, enabled);
+      res.json({ success: true, autoTmux: enabled });
+    } catch (err) {
+      log.error("Failed to update auto tmux", err);
+      res.status(500).json({ error: "Failed to update auto tmux" });
     }
   });
 

@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Modalità SCP legacy"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Trasferimenti simultanei di file",
+        "description": "Quanti file il gestore locale/remoto affiancato carica o scarica contemporaneamente. Riduci questo valore se il tuo server limita i canali SFTP."
+      }
     }
   },
   "nav": {

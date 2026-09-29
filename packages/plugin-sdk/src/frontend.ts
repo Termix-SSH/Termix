@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ComponentType, ReactNode, Ref } from "react";
 import type { PluginManifest } from "./manifest.js";
+import type { HostSshOptions } from "./ssh-options.js";
+export type { HostSshOptions } from "./ssh-options.js";
 
 export type Disposer = () => void;
 
@@ -39,6 +41,10 @@ export interface PluginHostRecord {
   username?: string;
   folder?: string;
   tags?: string[];
+  /** Keepalive, legacy algorithms, agent and environment options. */
+  sshOptions?: HostSshOptions | null;
+  /** Each enabled plugin's host settings, secrets redacted. */
+  pluginSettings?: Record<string, Record<string, unknown>>;
   [key: string]: unknown;
 }
 
@@ -863,10 +869,10 @@ export interface PluginCoreApi {
   ) => Promise<void>;
   /** The user's custom keybindings, enabled or not. */
   getCustomKeybindings: () => Promise<CustomKeybinding[]>;
-  /** Turns auto tmux on or off in a host's terminal options. */
-  setHostAutoTmux: (hostId: number, autoTmux: boolean) => Promise<void>;
   /** A browser-side UI preference (a cookie, or the desktop app's store). */
   getClientPreference: (name: string) => string | undefined;
+  /** Saves a browser-side UI preference where getClientPreference reads it. */
+  setClientPreference: (name: string, value: string) => void;
   /** Every host the user can see, fetched now rather than from the shell's cache. */
   listHosts: () => Promise<PluginHostRecord[]>;
   /** The user's stored credentials, without their secrets. */
@@ -1015,15 +1021,12 @@ export function getCustomKeybindings(): Promise<CustomKeybinding[]> {
   return requireHost().core.getCustomKeybindings();
 }
 
-export function setHostAutoTmux(
-  hostId: number,
-  autoTmux: boolean,
-): Promise<void> {
-  return requireHost().core.setHostAutoTmux(hostId, autoTmux);
-}
-
 export function getClientPreference(name: string): string | undefined {
   return requireHost().core.getClientPreference(name);
+}
+
+export function setClientPreference(name: string, value: string): void {
+  requireHost().core.setClientPreference(name, value);
 }
 
 export function listHosts(): Promise<PluginHostRecord[]> {

@@ -22,6 +22,7 @@ export function hostToSSHHost(h: Host): SSHHost {
     keyType: h.keyType,
     credentialId: h.credentialId ? parseInt(h.credentialId, 10) : undefined,
     terminalConfig: h.terminalConfig,
+    sshOptions: h.sshOptions,
     hasSudoPassword: h.hasSudoPassword,
     pluginSettings: h.pluginSettings ?? {},
     connectionType: "ssh",

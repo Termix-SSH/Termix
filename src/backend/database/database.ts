@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { sshOptionsForWrite } from "../hosts/ssh-options.js";
 import express from "express";
 import http from "http";
 import https from "https";
@@ -722,6 +723,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           status_check_enabled INTEGER NOT NULL DEFAULT 1,
           status_check_interval INTEGER,
           terminal_config TEXT,
+          ssh_options TEXT,
           quick_actions TEXT,
           notes TEXT,
           use_socks5 INTEGER,
@@ -799,8 +801,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -831,6 +833,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.statusCheckEnabled === false ? 0 : 1,
           decrypted.statusCheckInterval ?? null,
           decrypted.terminalConfig || null,
+          decrypted.sshOptions || null,
           decrypted.quickActions || null,
           decrypted.notes || null,
           decrypted.useSocks5 ? 1 : 0,
@@ -1148,6 +1151,13 @@ app.post(
                   jumpHosts: host.jump_hosts,
                   ...legacyStatusCheck(host),
                   terminalConfig: host.terminal_config,
+                  // Exports from before 2.9.0 carry these in terminal_config.
+                  sshOptions:
+                    host.ssh_options ??
+                    sshOptionsForWrite({
+                      terminalConfig: host.terminal_config,
+                    }) ??
+                    null,
                   quickActions: host.quick_actions,
                   notes: host.notes,
                   useSocks5: Boolean(host.use_socks5),

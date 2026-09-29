@@ -6,7 +6,6 @@ import {
   Server,
   Settings,
   User,
-  Hammer,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,9 +33,6 @@ const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 
-const SshToolsPanel = lazy(() =>
-  import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
-);
 /** Download a likely next tab without starting a connection or mounting UI. */
 export function preloadTabSurface(type: TabType): void {
   const loader = getTabType(type)?.preload;
@@ -107,8 +103,6 @@ export function tabIcon(type: TabType) {
     case "macros":
       return <Braces className="size-3.5" />;
 
-    case "ssh-tools":
-      return <Hammer className="size-3.5" />;
     case "split-screen":
       return <LayoutPanelLeft className="size-3.5" />;
     default: {
@@ -217,16 +211,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
             terminalTabs={panelProps?.terminalTabs ?? []}
             activeTabId={panelProps?.targetTerminalTabId ?? ""}
             storageMode={panelProps?.storageMode ?? "local"}
-          />
-        </PanelTabFrame>,
-      );
-
-    case "ssh-tools":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <SshToolsPanel
-            terminalTabs={panelProps?.terminalTabs ?? []}
-            activeTabId={panelProps?.targetTerminalTabId ?? ""}
           />
         </PanelTabFrame>,
       );

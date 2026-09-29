@@ -65,8 +65,7 @@ describe("omitOwnerSshAuthFromSharedEdit", () => {
     expect(sharedEdit.name).toBe(payload.name);
     expect(sharedEdit.ip).toBe("10.0.0.42");
     expect(sharedEdit.notes).toBe("editable");
-    expect(sharedEdit.terminalConfig?.sudoPassword).toBeUndefined();
-    expect(sharedEdit.terminalConfig?.agentSocketPath).toBeUndefined();
+    expect(sharedEdit.sshOptions?.agentSocketPath).toBeUndefined();
     for (const field of [
       "authType",
       "credentialId",
@@ -169,10 +168,7 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload.sshOptions as unknown as Record<string, unknown> | null;
 
     expect(tc?.agentSocketPath).toBe("/run/user/1000/gnupg/S.gpg-agent.ssh");
     expect(payload.password).toBeNull();
@@ -187,10 +183,7 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload.sshOptions as unknown as Record<string, unknown> | null;
 
     expect(tc?.agentSocketPath).toBeNull();
   });
@@ -204,15 +197,12 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload.sshOptions as unknown as Record<string, unknown> | null;
 
     expect(tc?.agentSocketPath).toBeNull();
   });
 
-  it("preserves agentIdentity in terminalConfig when authType is agent", () => {
+  it("preserves agentIdentity in sshOptions when authType is agent", () => {
     const form = {
       ...createHostEditorForm(null),
       authType: "agent" as const,
@@ -220,10 +210,7 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload.sshOptions as unknown as Record<string, unknown> | null;
 
     expect(tc?.agentIdentity).toBe(
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
@@ -239,15 +226,12 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload.sshOptions as unknown as Record<string, unknown> | null;
 
     expect(tc?.agentIdentity).toBeNull();
   });
 
-  it("keeps agentIdentity in terminalConfig for shared edits (not owner-private)", () => {
+  it("keeps agentIdentity in sshOptions for shared edits (not owner-private)", () => {
     const form = {
       ...createHostEditorForm(null),
       authType: "agent" as const,
@@ -257,38 +241,9 @@ describe("buildHostEditorPayload auth field isolation", () => {
     const payload = buildHostEditorPayload(form, sshOnly);
     const sharedEdit = omitOwnerSshAuthFromSharedEdit(payload);
 
-    expect(sharedEdit.terminalConfig?.agentIdentity).toBe(
+    expect(sharedEdit.sshOptions?.agentIdentity).toBe(
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
     );
-  });
-
-  it("preserves sudo password autofill settings", () => {
-    const form = {
-      ...createHostEditorForm(null),
-      sudoPasswordAutoFill: true,
-      sudoPassword: "sudo-secret",
-    };
-
-    const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
-
-    expect(tc?.sudoPasswordAutoFill).toBe(true);
-    expect(tc?.sudoPassword).toBe("sudo-secret");
-  });
-
-  it("defaults password prompt autofill on and saves it when turned off", () => {
-    expect(createHostEditorForm(null).passwordPromptAutoFill).toBe(true);
-
-    const form = {
-      ...createHostEditorForm(null),
-      passwordPromptAutoFill: false,
-    };
-    const payload = buildHostEditorPayload(form, sshOnly);
-
-    expect(payload.terminalConfig?.passwordPromptAutoFill).toBe(false);
   });
 });
 
@@ -305,10 +260,7 @@ describe("sudo password persistence indicator", () => {
     const form = { ...createHostEditorForm(host) };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload as unknown as Record<string, unknown>;
 
     expect(tc?.sudoPassword).toBeUndefined();
     expect(JSON.parse(JSON.stringify(tc))).not.toHaveProperty("sudoPassword");
@@ -322,15 +274,12 @@ describe("sudo password persistence indicator", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload as unknown as Record<string, unknown>;
 
     expect(tc?.sudoPassword).toBe("new-sudo-pass");
   });
 
-  it("sends null to explicitly clear a saved sudo password", () => {
+  it("sends an empty value to explicitly clear a saved sudo password", () => {
     const host = { hasSudoPassword: true } as Host;
     const form = {
       ...createHostEditorForm(host),
@@ -338,12 +287,9 @@ describe("sudo password persistence indicator", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as unknown as Record<
-      string,
-      unknown
-    > | null;
+    const tc = payload as unknown as Record<string, unknown>;
 
-    expect(tc?.sudoPassword).toBeNull();
+    expect(tc?.sudoPassword).toBe("");
   });
 });
 
@@ -434,43 +380,6 @@ describe("RDP/VNC/Telnet password persistence indicator", () => {
   });
 });
 
-describe("user connection defaults", () => {
-  const defaults = {
-    terminal: { fontSize: 18, cursorBlink: false },
-  };
-
-  it("shows inherited values without persisting them as host overrides", () => {
-    const host = {
-      enableSsh: true,
-      terminalConfig: { autoTmux: true },
-    } as unknown as Host;
-    const form = createHostEditorForm(host, undefined, defaults);
-
-    expect(form).toMatchObject({
-      fontSize: 18,
-      cursorBlink: false,
-      inheritTerminalAppearance: true,
-    });
-
-    const payload = buildHostEditorPayload(form, sshOnly);
-    expect(payload.terminalConfig).toMatchObject({ autoTmux: true });
-    expect(payload.terminalConfig).not.toHaveProperty("fontSize");
-  });
-
-  it("keeps explicit host overrides above user defaults", () => {
-    const host = {
-      enableSsh: true,
-      terminalConfig: { fontSize: 12 },
-    } as unknown as Host;
-    const form = createHostEditorForm(host, undefined, defaults);
-
-    expect(form).toMatchObject({
-      fontSize: 12,
-      inheritTerminalAppearance: false,
-    });
-  });
-});
-
 describe("createHostEditorForm credentialId", () => {
   it("coerces a numeric credentialId to a string so credential lookups match", () => {
     const form = createHostEditorForm({
@@ -486,20 +395,6 @@ describe("createHostEditorForm credentialId", () => {
 
   it("falls back to an empty string when there is no credential", () => {
     expect(createHostEditorForm(null).credentialId).toBe("");
-  });
-});
-
-describe("createHostEditorForm auto-tmux", () => {
-  it("inherits the admin default for a new host but keeps an existing host's own choice", () => {
-    expect(createHostEditorForm(null, { autoTmux: true }).autoTmux).toBe(true);
-    expect(createHostEditorForm(null, {}).autoTmux).toBe(false);
-
-    const host = {
-      id: "1",
-      name: "box",
-      terminalConfig: { autoTmux: false },
-    } as unknown as Host;
-    expect(createHostEditorForm(host, { autoTmux: true }).autoTmux).toBe(false);
   });
 });
 
@@ -532,18 +427,44 @@ describe("connectionOriginAppliesTo", () => {
   });
 });
 
-describe("macOS Option character defaults", () => {
-  it("leaves Option available for keyboard-layout characters by default", () => {
-    const form = createHostEditorForm(null);
-    expect(form.macOptionIsMeta).toBe(false);
-    expect(
-      buildHostEditorPayload(form, sshOnly).terminalConfig?.macOptionIsMeta,
-    ).toBe(false);
+describe("terminal fields", () => {
+  it("sends only the startup snippet in terminalConfig, and the SSH options on their own", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      startupSnippetId: 4,
+      keepaliveInterval: 30,
+      agentForwarding: true,
+      environmentVariables: [{ key: "LANG", value: "C" }],
+    };
+    const payload = buildHostEditorPayload(form, sshOnly);
+
+    expect(payload.terminalConfig).toEqual({ startupSnippetId: 4 });
+    expect(payload.sshOptions).toMatchObject({
+      keepaliveInterval: 30,
+      keepaliveCountMax: 5,
+      allowLegacyAlgorithms: true,
+      agentForwarding: true,
+      environmentVariables: [{ key: "LANG", value: "C" }],
+    });
   });
 
-  it("preserves an explicitly saved Meta preference", () => {
-    const host = { terminalConfig: { macOptionIsMeta: true } } as Host;
-    expect(createHostEditorForm(host).macOptionIsMeta).toBe(true);
+  it("reads a host's SSH options back into the form", () => {
+    const host = {
+      sshOptions: { keepaliveInterval: 15, allowLegacyAlgorithms: false },
+      terminalConfig: { startupSnippetId: 2 },
+    } as unknown as Host;
+    const form = createHostEditorForm(host);
+
+    expect(form.keepaliveInterval).toBe(15);
+    expect(form.allowLegacyAlgorithms).toBe(false);
+    expect(form.startupSnippetId).toBe(2);
+  });
+
+  it("leaves the terminal fields out with SSH off", () => {
+    const payload = buildHostEditorPayload(createHostEditorForm(null), rdpOnly);
+    expect(payload).not.toHaveProperty("terminalConfig");
+    expect(payload).not.toHaveProperty("sshOptions");
+    expect(payload).not.toHaveProperty("sudoPassword");
   });
 });
 

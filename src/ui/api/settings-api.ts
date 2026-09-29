@@ -125,12 +125,6 @@ export type HostDefaults = {
   socks5Password?: string;
   credentialId?: number | null;
   statusCheckEnabled?: boolean;
-  fontSize?: number;
-  fontFamily?: string;
-  theme?: string;
-  cursorStyle?: string;
-  cursorBlink?: boolean;
-  autoTmux?: boolean;
 };
 
 export async function getHostDefaults(): Promise<HostDefaults> {

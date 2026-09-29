@@ -1,4 +1,8 @@
 import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+import {
+  parseSshOptions,
+  type HostSshOptions,
+} from "../../hosts/ssh-options.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -70,6 +74,9 @@ export const OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS = [
   "sudoPassword",
   "agentSocketPath",
 ] as const;
+
+/** SSH options only the host's owner may change. */
+export const OWNER_PRIVATE_SSH_OPTION_FIELDS = ["agentSocketPath"] as const;
 
 export function containsOwnerPrivateAuthUpdate(
   hostData: Record<string, unknown>,
@@ -176,6 +183,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   statusCheckEnabled?: unknown;
   statusCheckInterval?: unknown;
   terminalConfig?: unknown;
+  sshOptions?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
   useSocks5?: unknown;
@@ -272,6 +280,7 @@ export function stripSensitiveFields(
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
   result.hasPassword = !!host.password;
+  // 2.8 editors kept the sudo password inside terminal_config.
   result.hasSudoPassword =
     !!host.sudoPassword || !!terminalConfigForSudo?.sudoPassword;
   result.hasRdpPassword = !!host.rdpPassword;
@@ -340,16 +349,13 @@ export function sanitizeHostForRecipient(
   // can't see (or share permission on) the parent host row, so a shared
   // host always renders at root rather than leaking another host's id.
   delete stripped.parentHostId;
-  if (
-    stripped.terminalConfig &&
-    typeof stripped.terminalConfig === "object" &&
-    !Array.isArray(stripped.terminalConfig)
-  ) {
-    const terminalConfig = {
-      ...(stripped.terminalConfig as Record<string, unknown>),
-    };
-    delete terminalConfig.agentSocketPath;
-    stripped.terminalConfig = terminalConfig;
+  for (const field of ["terminalConfig", "sshOptions"] as const) {
+    const value = stripped[field];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const copy = { ...(value as Record<string, unknown>) };
+      for (const key of OWNER_PRIVATE_SSH_OPTION_FIELDS) delete copy[key];
+      stripped[field] = copy;
+    }
   }
   const authOverrides =
     stripped.authOverrides &&
@@ -396,6 +402,50 @@ export function parseSharedSource(
   }
 }
 
+function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * sshOptions, and terminalConfig in the shape 2.8 clients and exports read: core's own
+ * keys only (the SSH options and the startup snippet). The terminal's look
+ * and behavior are the ssh-terminal plugin's host settings, which it puts
+ * back through its hostPayloadLegacy. A sudo password 2.8 kept in
+ * terminal_config comes out as sudoPassword, for the sanitizers to handle.
+ */
+export function hostTerminalExport(host: Record<string, unknown>): {
+  sshOptions: HostSshOptions;
+  terminalConfig?: Record<string, unknown>;
+  sudoPassword?: unknown;
+} {
+  const raw = parseJsonObject(host.terminalConfig);
+  const sshOptions = parseSshOptions(
+    host.sshOptions != null ? host.sshOptions : raw,
+  );
+  const terminalConfig: Record<string, unknown> = { ...sshOptions };
+  if (raw && raw.startupSnippetId !== undefined) {
+    terminalConfig.startupSnippetId = raw.startupSnippetId;
+  }
+  const legacySudo = !host.sudoPassword ? raw?.sudoPassword : undefined;
+  return {
+    sshOptions,
+    terminalConfig:
+      Object.keys(terminalConfig).length > 0 ? terminalConfig : undefined,
+    ...(legacySudo ? { sudoPassword: legacySudo } : {}),
+  };
+}
+
 export function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -436,9 +486,7 @@ export function transformHostResponse(
       typeof host.statusCheckInterval === "number"
         ? host.statusCheckInterval
         : null,
-    terminalConfig: host.terminalConfig
-      ? JSON.parse(host.terminalConfig as string)
-      : undefined,
+    ...hostTerminalExport(host),
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)

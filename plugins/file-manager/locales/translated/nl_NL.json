@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP Legacy-modus"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Gelijktijdige bestandsoverdracht",
+        "description": "Hoeveel bestanden de lokale/externe manager naast elkaar tegelijkertijd uploadt of downloadt. Verlaag deze waarde als uw server het aantal SFTP-kanalen beperkt."
+      }
     }
   },
   "nav": {

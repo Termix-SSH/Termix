@@ -355,6 +355,7 @@ export function formatLocalModified(
 // ---------------------------------------------------------------------------
 // Parallel transfers
 
+/** Where a browser kept the preference before it became a user setting. */
 export const TRANSFER_CONCURRENCY_STORAGE_KEY =
   "termix:file-manager:transfer-concurrency";
 export const DEFAULT_TRANSFER_CONCURRENCY = 4;
@@ -366,26 +367,19 @@ export function clampTransferConcurrency(value: unknown): number {
   return Math.min(MAX_TRANSFER_CONCURRENCY, Math.max(1, n));
 }
 
-/** How many files are transferred at the same time (1 = one after another). */
-export function getTransferConcurrency(): number {
+/**
+ * The value this browser kept before 2.9.0, removed as it is read so it only
+ * moves into the transferConcurrency user setting once. Null when none.
+ */
+export function takeLegacyTransferConcurrency(): number | null {
   try {
     const raw = localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY);
-    return raw === null
-      ? DEFAULT_TRANSFER_CONCURRENCY
-      : clampTransferConcurrency(raw);
+    if (raw === null) return null;
+    localStorage.removeItem(TRANSFER_CONCURRENCY_STORAGE_KEY);
+    return clampTransferConcurrency(raw);
   } catch {
-    return DEFAULT_TRANSFER_CONCURRENCY;
+    return null;
   }
-}
-
-export function setTransferConcurrency(value: number): number {
-  const clamped = clampTransferConcurrency(value);
-  try {
-    localStorage.setItem(TRANSFER_CONCURRENCY_STORAGE_KEY, String(clamped));
-  } catch {
-    // storage unavailable
-  }
-  return clamped;
 }
 
 /**

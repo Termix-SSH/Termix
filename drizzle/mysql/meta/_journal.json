@@ -435,6 +435,13 @@
       "when": 1790447309827,
       "tag": "0061_plugin_settings_scope_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "5",
+      "when": 1790651054515,
+      "tag": "0062_smooth_speed",
+      "breakpoints": true
     }
   ]
 }

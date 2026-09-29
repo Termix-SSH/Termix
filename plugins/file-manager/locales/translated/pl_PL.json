@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Tryb SCP Legacy"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Jednoczesne przesyłanie plików",
+        "description": "Ile plików lokalny/zdalny menedżer obok siebie przesyła lub pobiera jednocześnie? Zmniejsz tę wartość, jeśli Twój serwer ogranicza kanały SFTP."
+      }
     }
   },
   "nav": {

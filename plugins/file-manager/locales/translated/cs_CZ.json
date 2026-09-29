@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Starší režim SCP"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Současné přenosy souborů",
+        "description": "Kolik souborů souběžně nahrává nebo stahuje lokální/vzdálený správce. Snižte tuto hodnotu, pokud váš server omezuje SFTP kanály."
+      }
     }
   },
   "nav": {

@@ -141,11 +141,7 @@ function canCopyHostPassword(host: Host): boolean {
 }
 
 function canCopyHostSudoPassword(host: Host): boolean {
-  return (
-    !!host.hasSudoPassword ||
-    !!host.sudoPassword ||
-    !!host.terminalConfig?.sudoPassword
-  );
+  return !!host.hasSudoPassword || !!host.sudoPassword;
 }
 
 /**

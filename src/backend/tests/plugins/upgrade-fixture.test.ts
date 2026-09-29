@@ -289,7 +289,18 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       enableTerminal: true,
       enableCommandHistory: false,
       enableTerminalToolbar: false,
+      // The look it saved in terminal_config, which took it off the user's.
+      inheritAppearance: false,
+      theme: "dracula",
+      fontSize: 16,
+      cursorStyle: "block",
+      autoTmux: true,
+      sudoPasswordAutoFill: true,
+      localEcho: "on",
     });
+    expect(
+      await settings(booted, "ssh-terminal", `host/${HOSTS.key}`),
+    ).toMatchObject({ inheritAppearance: true, passwordPromptAutoFill: false });
     expect(await host("session-recording")).toMatchObject({
       enableSessionRecording: false,
     });
@@ -361,6 +372,9 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       enableTerminal: true,
       enableCommandHistory: true,
       enableTerminalToolbar: true,
+      inheritAppearance: true,
+      autoTmux: false,
+      passwordPromptAutoFill: true,
     });
     expect(await host("session-recording")).toMatchObject({
       enableSessionRecording: true,
@@ -389,6 +403,18 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       expect(byId.get(Number(id))?.auth_type, `host ${id}`).toBe(want);
     }
     expect(Number(byId.get(HOSTS.rdpOnly)?.enable_ssh)).toBe(0);
+
+    // The connection options in terminal_config moved to core's ssh_options.
+    const [options] = await selectRows<{ ssh_options: string | null }>(
+      sql`SELECT ssh_options FROM ssh_data WHERE id = ${HOSTS.password}`,
+    );
+    expect(JSON.parse(options.ssh_options ?? "{}")).toEqual({
+      keepaliveInterval: 30,
+      keepaliveCountMax: 4,
+      allowLegacyAlgorithms: false,
+      agentForwarding: true,
+      environmentVariables: [{ key: "D4", value: "yes" }],
+    });
 
     const ctx = await pluginCtx("remote-desktop");
     const target = await asUser(USERS.admin, () =>
@@ -439,6 +465,14 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       sessionPersistence: false,
       commandHistoryForNewHosts: false,
       imageMaxCount: 7,
+      newHostFontSize: 20,
+      newHostTheme: "nord",
+      newHostAutoTmux: true,
+    });
+    expect(await settings(booted, "ssh-terminal", "user")).toMatchObject({
+      terminalDefaults: { fontSize: 18, cursorBlink: false },
+      customThemes: [expect.objectContaining({ id: "d4-theme" })],
+      commandAutocomplete: true,
     });
     expect(await settings(booted, "step-ca", "admin")).toMatchObject({
       caUrl: "https://ca.d4.example",

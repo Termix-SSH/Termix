@@ -21,6 +21,12 @@
       "scpLegacy": {
         "label": "SCP Legacy Mode"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Simultaneous File Transfers",
+        "description": "How many files the side by side local/remote manager uploads or downloads at the same time. Lower this if your server limits SFTP channels."
+      }
     }
   },
   "hostCapability": {

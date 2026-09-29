@@ -1,11 +1,12 @@
-import { useTheme } from "@/components/theme-provider";
-import {
-  TERMINAL_THEMES,
-  resolveTerminalFontFamily,
-} from "@/lib/terminal-themes";
-import type { TerminalConfig } from "@/types";
+import { useAppTheme } from "@termix/plugin-sdk/ui";
+import { TERMINAL_THEMES, resolveTerminalFontFamily } from "./terminal-themes";
+import type { TerminalThemeColors } from "../../shared/terminal-settings";
 
-interface TerminalPreviewProps {
+/**
+ * A few lines of sample output in a terminal look. Also registered as the
+ * "terminal.preview" component for other plugins' pickers.
+ */
+export interface TerminalPreviewProps {
   theme: string;
   fontSize?: number;
   fontFamily?: string;
@@ -13,7 +14,7 @@ interface TerminalPreviewProps {
   cursorBlink?: boolean;
   letterSpacing?: number;
   lineHeight?: number;
-  customThemeColors?: TerminalConfig["customThemeColors"];
+  customThemeColors?: TerminalThemeColors | null;
 }
 
 export function TerminalPreview({
@@ -26,7 +27,7 @@ export function TerminalPreview({
   lineHeight = 1.0,
   customThemeColors,
 }: TerminalPreviewProps) {
-  const { theme: appTheme } = useTheme();
+  const { theme: appTheme } = useAppTheme();
 
   const resolvedTheme =
     theme === "termix"

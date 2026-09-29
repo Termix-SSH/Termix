@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Modo SCP Legado"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferências simultâneas de ficheiros",
+        "description": "Quantos ficheiros o gestor local/remoto lado a lado carrega ou descarrega simultaneamente? Diminua este valor se o seu servidor limitar os canais SFTP."
+      }
     }
   },
   "nav": {

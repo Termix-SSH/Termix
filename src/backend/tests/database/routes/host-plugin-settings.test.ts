@@ -415,6 +415,22 @@ describe("share levels, legacy fields and generic writes", () => {
     expect(host.name).toBe("web");
   });
 
+  it("adds a plugin's keys to an object core already sends, never over core's", () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    registryProviders.set("docker.hostPayloadLegacy", () => ({
+      terminalConfig: { theme: "nord", startupSnippetId: 99 },
+    }));
+    const host: Record<string, unknown> = {
+      id: 2,
+      terminalConfig: { startupSnippetId: 1 },
+    };
+    attachHostPluginSettings(
+      [host],
+      new Map([[2, { docker: { enableDocker: true } }]]),
+    );
+    expect(host.terminalConfig).toEqual({ theme: "nord", startupSnippetId: 1 });
+  });
+
   it("imports an export's plugin values, leaving secrets out", async () => {
     loaded.push({ id: "remote-desktop", manifest: DESKTOP, state: "active" });
     await applyPluginHostImportSettings(9, {

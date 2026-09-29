@@ -642,7 +642,10 @@ export function SidebarTree({
         })),
         statusCheckEnabled: host.statusCheckEnabled,
         statusCheckInterval: host.statusCheckInterval,
-        terminalConfig: host.terminalConfig ?? null,
+        terminalConfig: host.terminalConfig?.startupSnippetId
+          ? { startupSnippetId: host.terminalConfig.startupSnippetId }
+          : null,
+        sshOptions: host.sshOptions ?? null,
       };
       const created = await createSSHHost(duplicateHost);
       // Plugin host settings live outside the host row. Secrets come back

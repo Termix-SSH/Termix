@@ -435,6 +435,13 @@
       "when": 1790393788357,
       "tag": "0061_red_lila_cheney",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790651053871,
+      "tag": "0062_curvy_killmonger",
+      "breakpoints": true
     }
   ]
 }

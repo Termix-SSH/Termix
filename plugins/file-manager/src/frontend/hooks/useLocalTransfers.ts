@@ -1,9 +1,10 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { createElement } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "../host-types";
 import type { LocalWalkResult } from "@termix/plugin-sdk/ui";
+import { useSettings } from "@termix/plugin-sdk/frontend";
 import {
   cancelLocalTransfer,
   createLocalTransferId,
@@ -20,8 +21,10 @@ import {
 import {
   UnsafeLocalNameError,
   buildLocalDestination,
-  getTransferConcurrency,
+  clampTransferConcurrency,
+  DEFAULT_TRANSFER_CONCURRENCY,
   runWithConcurrency,
+  takeLegacyTransferConcurrency,
   joinRemotePath,
   planRemoteDirectories,
   remoteBaseName,
@@ -129,6 +132,27 @@ export function useLocalTransfers({
 }: UseLocalTransfersOptions) {
   const { t } = useTranslation();
   const batchCounter = useRef(0);
+
+  // "Simultaneous file transfers", the transferConcurrency user setting.
+  const userSettings = useSettings("user");
+  const concurrencyRef = useRef(DEFAULT_TRANSFER_CONCURRENCY);
+  concurrencyRef.current = clampTransferConcurrency(
+    userSettings.values.transferConcurrency ?? DEFAULT_TRANSFER_CONCURRENCY,
+  );
+  const { loaded: settingsLoaded, save: saveUserSettings } = userSettings;
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    // A value this browser kept before 2.9.0 fills a setting still at its default.
+    const legacy = takeLegacyTransferConcurrency();
+    if (
+      legacy !== null &&
+      legacy !== concurrencyRef.current &&
+      concurrencyRef.current === DEFAULT_TRANSFER_CONCURRENCY
+    ) {
+      concurrencyRef.current = legacy;
+      void saveUserSettings({ transferConcurrency: legacy }).catch(() => {});
+    }
+  }, [settingsLoaded, saveUserSettings]);
 
   const runBatch = useCallback(
     async (
@@ -316,7 +340,7 @@ export function useLocalTransfers({
           let reason: string | undefined;
           await runWithConcurrency(
             plan.files,
-            getTransferConcurrency(),
+            concurrencyRef.current,
             async (file) => {
               const fileName = file.relativePath.split("/").pop()!;
               const targetDir = remoteDirForRelativePath(
@@ -520,7 +544,7 @@ export function useLocalTransfers({
           let reason: string | undefined;
           await runWithConcurrency(
             work,
-            getTransferConcurrency(),
+            concurrencyRef.current,
             async ({ entry, dest }) => {
               const fileName = entry.relativePath.split("/").pop()!;
               const transferId = createLocalTransferId("local-download");

@@ -30,11 +30,9 @@ import {
   createHostEditorForm,
   mapSnippetResponse,
   omitOwnerSshAuthFromSharedEdit,
-  terminalAppearanceKeys,
   type HostAuthType,
   type HostProtocols,
 } from "./HostEditorData";
-import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import { withProtocolSettings } from "./host-protocols";
 import {
@@ -98,24 +96,12 @@ export function HostEditor({
   const { t } = useTranslation();
   const hostSettingPlugins = usePluginHostSections();
   const { setPreviewTerminalTheme } = useTabsSafe();
-  const connectionDefaults = useConnectionDefaults();
   const [form, setForm] = useState(() =>
-    applyHostDraft(
-      createHostEditorForm(host, undefined, connectionDefaults),
-      host ? undefined : draft,
-    ),
+    applyHostDraft(createHostEditorForm(host), host ? undefined : draft),
   );
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
     onDirtyChange?.(true);
-    setForm((p) => ({
-      ...p,
-      [k]: v,
-      ...(terminalAppearanceKeys.includes(
-        k as (typeof terminalAppearanceKeys)[number],
-      )
-        ? { inheritTerminalAppearance: false }
-        : {}),
-    }));
+    setForm((p) => ({ ...p, [k]: v }));
   };
 
   /** Sets several fields at once, from the latest form. For plugin sections. */
@@ -154,15 +140,21 @@ export function HostEditor({
   }, [adminTargetUserId]);
 
   useEffect(() => {
-    if (!connectionDefaults.ready) return;
     if (host) {
-      setForm(createHostEditorForm(host, undefined, connectionDefaults));
+      setForm(createHostEditorForm(host));
       return;
     }
     getHostDefaults()
-      .then((d) => setForm(createHostEditorForm(null, d, connectionDefaults)))
+      .then((d) =>
+        setForm((current) => ({
+          ...applyHostDraft(createHostEditorForm(null, d), draft),
+          // A plugin's section may already have filled in its new-host values.
+          pluginSettings: current.pluginSettings,
+        })),
+      )
       .catch(() => {});
-  }, [host, connectionDefaults]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [host]);
 
   useEffect(() => {
     if (!host?.id || form.vncAuthType !== "direct" || form.vncPassword) return;
@@ -486,6 +478,87 @@ export function HostEditor({
                         }
                         className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
+                    </div>
+                  </div>
+                  <SettingRow
+                    label={t("hosts.sshAgentForwardingLabel")}
+                    description={t("hosts.sshAgentForwardingShortDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.agentForwarding}
+                      onChange={(v) => setField("agentForwarding", v)}
+                    />
+                  </SettingRow>
+                  <div className="flex flex-col gap-3 border-t border-border pt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.environmentVariablesLabel")}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                        onClick={() =>
+                          setField("environmentVariables", [
+                            ...form.environmentVariables,
+                            { key: "", value: "" },
+                          ])
+                        }
+                      >
+                        <Plus className="size-3 mr-1" />{" "}
+                        {t("hosts.addVariableBtn")}
+                      </Button>
+                    </div>
+                    {form.environmentVariables.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground/50">
+                        {t("hosts.noEnvVars")}
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      {form.environmentVariables.map((ev, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Input
+                            className="h-7 text-xs flex-1"
+                            placeholder="KEY"
+                            value={ev.key}
+                            onChange={(e) => {
+                              const updated = [...form.environmentVariables];
+                              updated[i] = {
+                                ...updated[i],
+                                key: e.target.value,
+                              };
+                              setField("environmentVariables", updated);
+                            }}
+                          />
+                          <Input
+                            className="h-7 text-xs flex-1"
+                            placeholder="VALUE"
+                            value={ev.value}
+                            onChange={(e) => {
+                              const updated = [...form.environmentVariables];
+                              updated[i] = {
+                                ...updated[i],
+                                value: e.target.value,
+                              };
+                              setField("environmentVariables", updated);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="text-destructive"
+                            onClick={() =>
+                              setField(
+                                "environmentVariables",
+                                form.environmentVariables.filter(
+                                  (_, idx) => idx !== i,
+                                ),
+                              )
+                            }
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1005,51 +1078,32 @@ export function HostEditor({
                       onChange={(v) => setField("allowLegacyAlgorithms", v)}
                     />
                   </SettingRow>
-                  <SettingRow
-                    label={t("hosts.passwordPromptAutoFillLabel")}
-                    description={t("hosts.passwordPromptAutoFillDesc")}
-                  >
-                    <FakeSwitch
-                      checked={form.passwordPromptAutoFill}
-                      onChange={(v) => setField("passwordPromptAutoFill", v)}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.sudoPasswordLabel")}
+                    </label>
+                    <PasswordInput
+                      className="h-8 text-xs pr-8"
+                      placeholder={
+                        form.sudoPassword === "existing_sudo_password"
+                          ? t("hosts.sudoPasswordSaved")
+                          : "••••••••"
+                      }
+                      value={
+                        form.sudoPassword === "existing_sudo_password"
+                          ? ""
+                          : form.sudoPassword
+                      }
+                      onFocus={() => {
+                        if (form.sudoPassword === "existing_sudo_password")
+                          setField("sudoPassword", "");
+                      }}
+                      onChange={(e) => setField("sudoPassword", e.target.value)}
                     />
-                  </SettingRow>
-                  <SettingRow
-                    label={t("hosts.sudoPasswordAutoFillLabel")}
-                    description={t("hosts.sudoPasswordAutoFillDesc")}
-                  >
-                    <FakeSwitch
-                      checked={form.sudoPasswordAutoFill}
-                      onChange={(v) => setField("sudoPasswordAutoFill", v)}
-                    />
-                  </SettingRow>
-                  {form.sudoPasswordAutoFill && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.sudoPasswordLabel")}
-                      </label>
-                      <PasswordInput
-                        className="h-8 text-xs pr-8"
-                        placeholder={
-                          form.sudoPassword === "existing_sudo_password"
-                            ? t("hosts.sudoPasswordSaved")
-                            : "••••••••"
-                        }
-                        value={
-                          form.sudoPassword === "existing_sudo_password"
-                            ? ""
-                            : form.sudoPassword
-                        }
-                        onFocus={() => {
-                          if (form.sudoPassword === "existing_sudo_password")
-                            setField("sudoPassword", "");
-                        }}
-                        onChange={(e) =>
-                          setField("sudoPassword", e.target.value)
-                        }
-                      />
-                    </div>
-                  )}
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.sudoPasswordDesc")}
+                    </p>
+                  </div>
                 </div>
               </SectionCard>
             </>

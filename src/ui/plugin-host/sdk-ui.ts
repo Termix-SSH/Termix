@@ -29,6 +29,7 @@ export * from "@/components/select";
 export * from "@/components/select2";
 export * from "@/components/separator";
 export * from "@/components/skeleton";
+export * from "@/components/slider";
 export * from "@/components/switch";
 export * from "@/components/textarea";
 export * from "@/components/tooltip";
@@ -103,17 +104,9 @@ export { useIsMobile } from "@/hooks/use-mobile";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
 
-// Terminal look: themes, fonts and clipboard, shared by every terminal-like
-// surface (the SSH and local terminals, the docker console, serial).
-export * from "@/lib/terminal-themes";
-export { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
-export { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
-export * from "@/lib/terminal-look/terminal-font-zoom";
-export { TerminalPreview } from "@/components/terminal-preview/TerminalPreview";
-export {
-  HostTerminalSettings,
-  type HostTerminalSettingsProps,
-} from "@/sidebar/HostTerminalSettings";
+// Clipboard helpers and the app theme, shared by every terminal-like surface.
+// The terminal look itself (themes, fonts, the preview) is the ssh-terminal
+// plugin's, offered through its "terminal.*" actions and components.
 export { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 export { RobustClipboardProvider } from "@/lib/clipboard-provider";
 export { useTheme as useAppTheme } from "@/components/theme-provider";
@@ -144,10 +137,9 @@ export {
   resolveRemoteHostId,
 } from "@/lib/remote-server-api";
 export { remoteServerUrl as linkedServerUrl } from "@/plugin-host/desktop";
-export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 
 // Dashboard reads. The calls a plugin makes on the user's behalf (recent
-// activity, sudo autofill, open tabs, keybindings, auto tmux) are typed in
+// activity, sudo autofill, open tabs, keybindings) are typed in
 // @termix/plugin-sdk/frontend instead.
 export {
   getRecentActivity,

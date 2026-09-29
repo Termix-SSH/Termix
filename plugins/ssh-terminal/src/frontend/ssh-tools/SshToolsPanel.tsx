@@ -1,31 +1,42 @@
-import { useState, useRef, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/button";
-import { Separator } from "@/components/separator";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import { KeyRound, Terminal } from "lucide-react";
-import type { Tab } from "@/types/ui-types";
-import { getCookie, getHostPassword, setCookie } from "@/main-axios";
 import { toast } from "sonner";
+import { Button, Separator } from "@termix/plugin-sdk/ui";
+import {
+  getClientPreference,
+  getHostPassword,
+  setClientPreference,
+  useTranslation,
+  type PanelProps,
+} from "@termix/plugin-sdk/frontend";
+import {
+  getSessionHandle,
+  sessionsSnapshot,
+  subscribeSessions,
+} from "../session-registry";
 
-export function SshToolsPanel({
-  terminalTabs,
-  activeTabId,
-}: {
-  terminalTabs: Tab[];
-  activeTabId: string;
-}) {
+/**
+ * SSH Tools: type into several open terminals at once, fill their saved
+ * passwords, and the terminal's clipboard preferences.
+ */
+export function SshToolsPanel({ targetTab }: PanelProps) {
   const { t } = useTranslation();
+  const terminalTabs = useSyncExternalStore(
+    subscribeSessions,
+    sessionsSnapshot,
+  );
+  const activeTabId = targetTab?.id ?? "";
   const [keyRecording, setKeyRecording] = useState(false);
   const [rightClickPaste, setRightClickPaste] = useState(
-    () => getCookie("rightClickCopyPaste") !== "false",
+    () => getClientPreference("rightClickCopyPaste") !== "false",
   );
   const [copyOnSelect, setCopyOnSelect] = useState(
-    () => getCookie("copyOnSelect") === "true",
+    () => getClientPreference("copyOnSelect") === "true",
   );
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
     () =>
       new Set(
-        activeTabId && terminalTabs.some((t) => t.id === activeTabId)
+        activeTabId && terminalTabs.some((tab) => tab.id === activeTabId)
           ? [activeTabId]
           : [],
       ),
@@ -49,7 +60,7 @@ export function SshToolsPanel({
   }
 
   function selectAll() {
-    setSelectedTabIds(new Set(terminalTabs.map((t) => t.id)));
+    setSelectedTabIds(new Set(terminalTabs.map((tab) => tab.id)));
   }
 
   function deselectAll() {
@@ -58,8 +69,7 @@ export function SshToolsPanel({
 
   function broadcast(data: string) {
     for (const tabId of selectedTabIds) {
-      const tab = terminalTabs.find((t) => t.id === tabId);
-      tab?.terminalRef?.current?.sendInput?.(data);
+      getSessionHandle(tabId)?.sendInput(data);
     }
   }
 
@@ -68,10 +78,10 @@ export function SshToolsPanel({
     let missing = 0;
 
     for (const tabId of selectedTabIds) {
-      const tab = terminalTabs.find((t) => t.id === tabId);
-      const hostId = tab?.host?.id ? Number(tab.host.id) : null;
-      const ref = tab?.terminalRef?.current;
-      if (!hostId || !ref?.sendInput) {
+      const tab = terminalTabs.find((session) => session.id === tabId);
+      const hostId = tab?.hostId ?? null;
+      const ref = getSessionHandle(tabId);
+      if (!hostId || !ref) {
         missing++;
         continue;
       }
@@ -87,24 +97,19 @@ export function SshToolsPanel({
     }
 
     if (filled > 0) {
-      toast.success(
-        t("newUi.sidebar.sshTools.fillPasswordSuccess", { count: filled }),
-      );
+      toast.success(t("sshTools.fillPasswordSuccess", { count: filled }));
     }
     if (missing > 0) {
-      toast.error(
-        t("newUi.sidebar.sshTools.fillPasswordMissing", { count: missing }),
-      );
+      toast.error(t("sshTools.fillPasswordMissing", { count: missing }));
     }
   }
 
   function broadcastArrow(normalSeq: string, appSeq: string) {
     for (const tabId of selectedTabIds) {
-      const tab = terminalTabs.find((t) => t.id === tabId);
-      const ref = tab?.terminalRef?.current;
+      const ref = getSessionHandle(tabId);
       if (!ref) continue;
       const appMode = ref.getApplicationCursorKeysMode?.() ?? false;
-      ref.sendInput?.(appMode ? appSeq : normalSeq);
+      ref.sendInput(appMode ? appSeq : normalSeq);
     }
   }
 
@@ -214,27 +219,27 @@ export function SshToolsPanel({
     <div className="flex flex-col gap-3 p-3">
       <div className="flex flex-col gap-2">
         <span className="text-xs font-bold uppercase tracking-widest">
-          {t("newUi.sidebar.sshTools.keyRecordingTitle")}
+          {t("sshTools.keyRecordingTitle")}
         </span>
 
         {/* Terminal selector */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
-              {t("newUi.sidebar.sshTools.recordToTerminals")}
+              {t("sshTools.recordToTerminals")}
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={selectAll}
                 className="text-[10px] text-accent-brand hover:text-accent-brand/70"
               >
-                {t("newUi.sidebar.sshTools.selectAll")}
+                {t("sshTools.selectAll")}
               </button>
               <button
                 onClick={deselectAll}
                 className="text-[10px] text-accent-brand hover:text-accent-brand/70"
               >
-                {t("newUi.sidebar.sshTools.selectNone")}
+                {t("sshTools.selectNone")}
               </button>
             </div>
           </div>
@@ -243,7 +248,7 @@ export function SshToolsPanel({
             <div className="flex items-center gap-1.5 px-2.5 py-2 border border-dashed border-border/60 text-muted-foreground/40">
               <Terminal className="size-3 shrink-0" />
               <span className="text-xs">
-                {t("newUi.sidebar.sshTools.noTerminalTabsOpen")}
+                {t("sshTools.noTerminalTabsOpen")}
               </span>
             </div>
           ) : (
@@ -271,7 +276,7 @@ export function SshToolsPanel({
                     </div>
                     <Terminal className="size-3 shrink-0 opacity-60" />
                     <span className="text-xs font-medium truncate flex-1">
-                      {tab.label}
+                      {tab.label || tab.hostName || tab.ip}
                     </span>
                   </button>
                 );
@@ -287,10 +292,10 @@ export function SshToolsPanel({
           onClick={toggleRecording}
         >
           {keyRecording
-            ? `${t("newUi.sidebar.sshTools.stopRecording")} (${selectedTabIds.size})`
+            ? `${t("sshTools.stopRecording")} (${selectedTabIds.size})`
             : selectedTabIds.size === 0
-              ? t("newUi.sidebar.sshTools.selectTerminalsAbove")
-              : `${t("newUi.sidebar.sshTools.startRecording")} (${selectedTabIds.size})`}
+              ? t("sshTools.selectTerminalsAbove")
+              : `${t("sshTools.startRecording")} (${selectedTabIds.size})`}
         </Button>
 
         {keyRecording && (
@@ -305,7 +310,7 @@ export function SshToolsPanel({
               // intercept it in onPaste.
               e.target.value = "";
             }}
-            placeholder={t("newUi.sidebar.sshTools.broadcastInputPlaceholder")}
+            placeholder={t("sshTools.broadcastInputPlaceholder")}
             className="w-full px-2.5 py-2 text-xs bg-background border border-accent-brand/40 text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-accent-brand/70 caret-transparent"
           />
         )}
@@ -320,8 +325,8 @@ export function SshToolsPanel({
         >
           <KeyRound className="size-3.5 mr-2" />
           {selectedTabIds.size === 0
-            ? t("newUi.sidebar.sshTools.selectTerminalsAbove")
-            : `${t("newUi.sidebar.sshTools.fillPassword")} (${selectedTabIds.size})`}
+            ? t("sshTools.selectTerminalsAbove")
+            : `${t("sshTools.fillPassword")} (${selectedTabIds.size})`}
         </Button>
       </div>
 
@@ -329,17 +334,20 @@ export function SshToolsPanel({
 
       <div className="flex flex-col gap-2">
         <span className="text-xs font-bold uppercase tracking-widest">
-          {t("newUi.sidebar.sshTools.settingsTitle")}
+          {t("sshTools.settingsTitle")}
         </span>
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">
-            {t("newUi.sidebar.sshTools.enableRightClickCopyPaste")}
+            {t("sshTools.enableRightClickCopyPaste")}
           </span>
           <button
             onClick={() => {
               const next = !rightClickPaste;
               setRightClickPaste(next);
-              setCookie("rightClickCopyPaste", next ? "true" : "false");
+              setClientPreference(
+                "rightClickCopyPaste",
+                next ? "true" : "false",
+              );
             }}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center border-2 transition-colors ${
               rightClickPaste
@@ -354,13 +362,13 @@ export function SshToolsPanel({
         </div>
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">
-            {t("newUi.sidebar.sshTools.copyOnSelect")}
+            {t("sshTools.copyOnSelect")}
           </span>
           <button
             onClick={() => {
               const next = !copyOnSelect;
               setCopyOnSelect(next);
-              setCookie("copyOnSelect", next ? "true" : "false");
+              setClientPreference("copyOnSelect", next ? "true" : "false");
             }}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center border-2 transition-colors ${
               copyOnSelect

@@ -1,3 +1,4 @@
+import type { HostSshOptions } from "@termix/plugin-sdk/frontend";
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
@@ -95,7 +96,8 @@ export type Host = {
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */
   statusCheckInterval?: number | null;
-  terminalConfig?: Partial<TerminalConfig>;
+  terminalConfig?: HostTerminalConfig;
+  sshOptions?: HostSshOptions;
   notes?: string;
 
   useSocks5?: boolean;
@@ -219,7 +221,8 @@ export interface HostData {
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */
   statusCheckInterval?: number | null;
-  terminalConfig?: Partial<TerminalConfig>;
+  terminalConfig?: HostTerminalConfig;
+  sshOptions?: HostSshOptions;
   notes?: string;
 
   useSocks5?: boolean;
@@ -353,77 +356,16 @@ export interface Tab {
 // TERMINAL CONFIGURATION TYPES
 // ============================================================================
 
-export interface TerminalConfig {
-  localEcho?: "default" | "off" | "auto" | "on";
-  cursorBlink: boolean;
-  cursorStyle: "block" | "underline" | "bar";
-  fontSize: number;
-  fontFamily: string;
-  letterSpacing: number;
-  lineHeight: number;
-  theme: string;
-
-  scrollback: number;
-  bellStyle: "none" | "sound" | "visual" | "both";
-  rightClickSelectsWord: boolean;
-  macOptionIsMeta: boolean;
-  fastScrollModifier: "alt" | "ctrl" | "shift";
-  fastScrollSensitivity: number;
-  minimumContrastRatio: number;
-
-  backspaceMode: "normal" | "control-h";
-  agentForwarding: boolean;
-  environmentVariables: Array<{ key: string; value: string }>;
-  startupSnippetId: number | null;
-  autoMosh: boolean;
-  moshCommand: string;
-  passwordPromptAutoFill?: boolean;
-  sudoPasswordAutoFill: boolean;
-  sudoPassword?: string | null;
-  keepaliveInterval?: number;
-  keepaliveCountMax?: number;
-  autoTmux: boolean;
-  syntaxHighlighting: boolean;
-  syntaxHighlightingOptions?: {
-    logLevels: boolean;
-    paths: boolean;
-    timestamps: boolean;
-    ipAddresses: boolean;
-    urls: boolean;
-    numbers: boolean;
-  };
-  backgroundImage?: string;
-  backgroundImageOpacity?: number;
-  allowLegacyAlgorithms?: boolean;
-  linkClickBehavior?: "confirm" | "direct";
-  useSSHTitle?: boolean;
-  agentSocketPath?: string;
-  agentIdentity?: string;
-  customThemeColors?: {
-    background: string;
-    foreground: string;
-    cursor?: string;
-    cursorAccent?: string;
-    selectionBackground?: string;
-    selectionForeground?: string;
-    black: string;
-    red: string;
-    green: string;
-    yellow: string;
-    blue: string;
-    magenta: string;
-    cyan: string;
-    white: string;
-    brightBlack: string;
-    brightRed: string;
-    brightGreen: string;
-    brightYellow: string;
-    brightBlue: string;
-    brightMagenta: string;
-    brightCyan: string;
-    brightWhite: string;
-  };
+/**
+ * What core still keeps in ssh_data.terminal_config. The terminal's look and
+ * behavior are the ssh-terminal plugin's host settings, and the connection
+ * options have their own column (sshOptions).
+ */
+export interface HostTerminalConfig {
+  startupSnippetId?: number | null;
 }
+
+export type { HostSshOptions } from "@termix/plugin-sdk/frontend";
 
 // ============================================================================
 // TAB TYPES

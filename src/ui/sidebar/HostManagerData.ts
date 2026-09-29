@@ -44,8 +44,6 @@ function parseJson<T>(v: unknown): T | undefined {
 export function sshHostToHost(h: SSHHostWithStatus): Host {
   const host = h as RawSSHHost;
   const isSshHost = h.connectionType === "ssh" || !h.connectionType;
-  const parsedTerminalConfig = parseJson(h.terminalConfig) as
-    (Host["terminalConfig"] & { sudoPassword?: string }) | undefined;
   return {
     id: String(h.id),
     name: h.name,
@@ -117,9 +115,9 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),
     portKnockSequence: parseJson(h.portKnockSequence) ?? [],
-    terminalConfig: parsedTerminalConfig as Host["terminalConfig"],
-    hasSudoPassword:
-      !!host.hasSudoPassword || !!parsedTerminalConfig?.sudoPassword,
+    terminalConfig: parseJson(h.terminalConfig) as Host["terminalConfig"],
+    sshOptions: parseJson(h.sshOptions) as Host["sshOptions"],
+    hasSudoPassword: !!host.hasSudoPassword,
     statusCheckEnabled: h.statusCheckEnabled !== false,
     statusCheckInterval: h.statusCheckInterval ?? null,
     forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,

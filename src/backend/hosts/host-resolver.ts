@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { parseSshOptions } from "./ssh-options.js";
 import { findUsableCredential } from "./usable-credential.js";
 import { resolveExternalSecretRefs } from "./external-secrets.js";
 import {
@@ -116,16 +117,25 @@ export async function resolveHostById(
     }
   }
   if (
-    !ownerEquivalent &&
     host.terminalConfig &&
     typeof host.terminalConfig === "object" &&
     !Array.isArray(host.terminalConfig)
   ) {
-    host.terminalConfig = {
-      ...(host.terminalConfig as Record<string, unknown>),
-      sudoPassword: null,
-    };
+    // 2.8 editors kept the sudo password inside terminal_config. It is only
+    // ever handed out as sudoPassword, and only to the owner.
+    const { sudoPassword: legacySudo, ...rest } = host.terminalConfig as Record<
+      string,
+      unknown
+    >;
+    if (ownerEquivalent && !host.sudoPassword && legacySudo) {
+      host.sudoPassword = legacySudo;
+    }
+    host.terminalConfig = rest;
   }
+  // A row the boot copy has not reached yet still has them in terminal_config.
+  host.sshOptions = parseSshOptions(
+    host.sshOptions != null ? host.sshOptions : host.terminalConfig,
+  );
   if (typeof host.socks5ProxyChain === "string" && host.socks5ProxyChain) {
     try {
       host.socks5ProxyChain = JSON.parse(host.socks5ProxyChain as string);

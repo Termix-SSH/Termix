@@ -1,30 +1,14 @@
+import {
+  DEFAULT_APPEARANCE,
+  DEFAULT_BEHAVIOR,
+  DEFAULT_MOSH_COMMAND,
+  type TerminalThemeColors,
+} from "../../shared/terminal-settings";
+
 export interface TerminalTheme {
   name: string;
   category: "dark" | "light" | "colorful";
-  colors: {
-    background: string;
-    foreground: string;
-    cursor?: string;
-    cursorAccent?: string;
-    selectionBackground?: string;
-    selectionForeground?: string;
-    black: string;
-    red: string;
-    green: string;
-    yellow: string;
-    blue: string;
-    magenta: string;
-    cyan: string;
-    white: string;
-    brightBlack: string;
-    brightRed: string;
-    brightGreen: string;
-    brightYellow: string;
-    brightBlue: string;
-    brightMagenta: string;
-    brightCyan: string;
-    brightWhite: string;
-  };
+  colors: TerminalThemeColors;
 }
 
 export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
@@ -837,36 +821,11 @@ export const FAST_SCROLL_MODIFIERS = [
   { value: "shift", label: "Shift", labelKey: "hosts.fastScrollModifierShift" },
 ] as const;
 
+/** A terminal's full configuration before anything is overridden. */
 export const DEFAULT_TERMINAL_CONFIG = {
-  cursorBlink: true,
-  cursorStyle: "bar" as const,
-  fontSize: 14,
-  fontFamily: "Caskaydia Cove Nerd Font Mono",
-  letterSpacing: 0,
-  lineHeight: 1.0,
-  theme: "termix",
-
-  scrollback: 10000,
-  bellStyle: "none" as const,
-  rightClickSelectsWord: false,
-  macOptionIsMeta: false,
-  fastScrollModifier: "alt" as const,
-  fastScrollSensitivity: 5,
-  minimumContrastRatio: 1,
-
-  backspaceMode: "normal" as const,
-  agentForwarding: false,
-  environmentVariables: [] as Array<{ key: string; value: string }>,
-  startupSnippetId: null as number | null,
-  autoMosh: false,
-  moshCommand: "mosh-server new -s -l LANG=en_US.UTF-8",
-  passwordPromptAutoFill: true,
-  sudoPasswordAutoFill: false,
-  keepaliveInterval: undefined as number | undefined,
-  keepaliveCountMax: undefined as number | undefined,
-  autoTmux: false,
-  backgroundImage: "" as string,
-  backgroundImageOpacity: 0.15,
+  ...DEFAULT_APPEARANCE,
+  ...DEFAULT_BEHAVIOR,
+  moshCommand: DEFAULT_MOSH_COMMAND,
 };
 
 export type TerminalConfigType = typeof DEFAULT_TERMINAL_CONFIG;

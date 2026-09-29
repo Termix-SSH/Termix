@@ -35,7 +35,9 @@ import {
   isValidPort,
   normalizeProtocolEnableFields,
   OWNER_PRIVATE_AUTH_FIELDS,
+  OWNER_PRIVATE_SSH_OPTION_FIELDS,
   OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS,
+  hostTerminalExport,
   sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
@@ -68,6 +70,11 @@ import {
   resolveRecipientSharedHostAuthentication,
 } from "../../utils/shared-host-auth-resolver.js";
 import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
+import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
+import {
+  mergeStoredTerminalFields,
+  parseTerminalConfig,
+} from "./host-terminal-fields.js";
 
 const router = express.Router();
 router.use(rejectSharedCopyWrites("host", /^\/db\/host\/(\d+)$/));
@@ -191,6 +198,7 @@ router.post(
       statusCheckEnabled,
       statusCheckInterval,
       terminalConfig,
+      sshOptions,
       forceKeyboardInteractive,
       domain,
       notes,
@@ -298,6 +306,7 @@ router.post(
           ? terminalConfig
           : JSON.stringify(terminalConfig)
         : null,
+      sshOptions: sshOptionsForWrite({ sshOptions, terminalConfig }) ?? null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       domain: domain || null,
       notes: notes || null,
@@ -789,6 +798,7 @@ router.put(
       statusCheckEnabled,
       statusCheckInterval,
       terminalConfig,
+      sshOptions,
       forceKeyboardInteractive,
       domain,
       notes,
@@ -900,7 +910,6 @@ router.put(
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       domain: domain || null,
       notes: notes || null,
-      sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
       socks5Port: socks5Port || null,
@@ -939,6 +948,13 @@ router.put(
           : null,
       telnetUser: telnetUser || null,
     };
+
+    const nextSshOptions = sshOptionsForWrite({ sshOptions, terminalConfig });
+    if (nextSshOptions !== undefined) sshDataObj.sshOptions = nextSshOptions;
+    // The editor leaves sudoPassword out when the user did not touch it.
+    if (sudoPassword !== undefined) {
+      sshDataObj.sudoPassword = sudoPassword || null;
+    }
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
     if ((connectionType || "ssh") !== "ssh") {
@@ -1055,77 +1071,29 @@ router.put(
           });
         }
 
-        const parseTerminalConfig = (
-          value: unknown,
-        ): Record<string, unknown> | null => {
-          if (!value) return null;
-          if (
-            typeof value === "object" &&
-            value !== null &&
-            !Array.isArray(value)
-          ) {
-            return { ...(value as Record<string, unknown>) };
-          }
-          if (typeof value === "string") {
-            const parsed = JSON.parse(value) as unknown;
-            if (
-              typeof parsed === "object" &&
-              parsed !== null &&
-              !Array.isArray(parsed)
-            ) {
-              return { ...(parsed as Record<string, unknown>) };
-            }
-          }
-          return null;
-        };
-
-        if (hostData.terminalConfig === undefined) {
-          delete sshDataObj.terminalConfig;
-        } else {
-          let incomingTerminalConfig: Record<string, unknown> | null;
-          try {
-            incomingTerminalConfig = parseTerminalConfig(
-              hostData.terminalConfig,
-            );
-          } catch {
-            return res.status(400).json({ error: "Invalid terminal config" });
-          }
-
-          if (!incomingTerminalConfig) {
-            return res.status(400).json({ error: "Invalid terminal config" });
-          }
-          const protectedTerminalConfigField =
-            OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS.find((field) =>
-              Object.prototype.hasOwnProperty.call(
-                incomingTerminalConfig,
-                field,
-              ),
-            );
-          if (protectedTerminalConfigField) {
-            return res.status(403).json({
-              error:
-                "Only the host owner can change private SSH authentication settings",
-            });
-          }
-
-          const ownerHost =
-            await createCurrentHostResolutionRepository().findHostById(
-              Number(hostId),
-              ownerId,
-            );
-          const ownerTerminalConfig = parseTerminalConfig(
-            ownerHost?.terminalConfig,
+        const incomingTerminalConfig = parseTerminalConfig(
+          hostData.terminalConfig,
+        );
+        const protectedTerminalConfigField =
+          OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS.find((field) =>
+            Object.prototype.hasOwnProperty.call(
+              incomingTerminalConfig ?? {},
+              field,
+            ),
           );
-          if (ownerTerminalConfig) {
-            for (const field of OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS) {
-              if (
-                Object.prototype.hasOwnProperty.call(ownerTerminalConfig, field)
-              ) {
-                incomingTerminalConfig[field] = ownerTerminalConfig[field];
-              }
-            }
-          }
-          sshDataObj.terminalConfig = JSON.stringify(incomingTerminalConfig);
+        const incomingSshOptions = parseTerminalConfig(hostData.sshOptions);
+        const protectedSshOptionField = OWNER_PRIVATE_SSH_OPTION_FIELDS.find(
+          (field) =>
+            Object.prototype.hasOwnProperty.call(
+              incomingSshOptions ?? {},
+              field,
+            ),
+        );
+        if (protectedTerminalConfigField || protectedSshOptionField) {
+          return res.status(403).json({
+            error:
+              "Only the host owner can change private SSH authentication settings",
+          });
         }
 
         const referenceViolations: Array<[unknown, number | null, string]> = [
@@ -1157,33 +1125,17 @@ router.put(
         for (const field of OWNER_PRIVATE_AUTH_FIELDS.ssh) {
           delete sshDataObj[field];
         }
-      } else if (
-        sshDataObj.terminalConfig &&
-        (hostData.terminalConfig as Record<string, unknown> | undefined)
-          ?.sudoPassword === undefined
-      ) {
-        // The editor omits sudoPassword entirely when the user hasn't
-        // touched the field, so preserve whatever is already stored instead
-        // of letting the wholesale terminalConfig replacement below wipe it.
-        const existingHost =
-          await createCurrentHostResolutionRepository().findHostById(
-            Number(hostId),
-            ownerId,
-          );
-        const existingTerminalConfig = existingHost?.terminalConfig
-          ? (JSON.parse(existingHost.terminalConfig as string) as Record<
-              string,
-              unknown
-            >)
-          : undefined;
-        if (existingTerminalConfig?.sudoPassword !== undefined) {
-          const incomingTerminalConfig = JSON.parse(
-            sshDataObj.terminalConfig as string,
-          ) as Record<string, unknown>;
-          incomingTerminalConfig.sudoPassword =
-            existingTerminalConfig.sudoPassword;
-          sshDataObj.terminalConfig = JSON.stringify(incomingTerminalConfig);
-        }
+      }
+
+      const terminalFieldsError = await mergeStoredTerminalFields(
+        sshDataObj,
+        hostData,
+        Number(hostId),
+        ownerId,
+        accessInfo.isOwner,
+      );
+      if (terminalFieldsError) {
+        return res.status(400).json({ error: terminalFieldsError });
       }
 
       await createCurrentHostRepository().updateEncryptedForUser(
@@ -1292,90 +1244,6 @@ router.put(
  *       500:
  *         description: Failed to fetch SSH data.
  */
-/**
- * @openapi
- * /host/db/host/{id}/terminal-config:
- *   patch:
- *     summary: Update a host's terminal behaviour flags
- *     description: Merges the given flags into the host's terminalConfig. Owner or a recipient with edit access. Currently supports autoTmux; used by the "enable Auto-Tmux" action shown when a persisted session expires.
- *     tags:
- *       - Hosts
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               autoTmux:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Updated.
- *       403:
- *         description: No edit access.
- *       404:
- *         description: Host not found.
- */
-router.patch(
-  "/db/host/:id/terminal-config",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId!;
-    const hostId = parseInt(String(req.params.id), 10);
-    const { autoTmux } = req.body ?? {};
-
-    if (isNaN(hostId)) {
-      return res.status(400).json({ error: "Invalid host ID" });
-    }
-    if (typeof autoTmux !== "boolean") {
-      return res.status(400).json({ error: "autoTmux must be a boolean" });
-    }
-
-    try {
-      const access = await permissionManager.canAccessHost(
-        userId,
-        hostId,
-        "edit",
-      );
-      if (!access.hasAccess) {
-        return res.status(403).json({ error: "Access denied to host" });
-      }
-      const ownerId =
-        await createCurrentHostResolutionRepository().findHostOwnerId(hostId);
-      const host = ownerId
-        ? await createCurrentHostRepository().findByIdForUser(ownerId, hostId)
-        : null;
-      if (!host || !ownerId) {
-        return res.status(404).json({ error: "Host not found" });
-      }
-
-      let terminalConfig: Record<string, unknown> = {};
-      if (host.terminalConfig) {
-        try {
-          terminalConfig = JSON.parse(host.terminalConfig);
-        } catch {
-          terminalConfig = {};
-        }
-      }
-      await createCurrentHostRepository().updateForUser(ownerId, hostId, {
-        terminalConfig: JSON.stringify({ ...terminalConfig, autoTmux }),
-      });
-
-      res.json({ success: true, autoTmux });
-    } catch (error) {
-      sshLogger.error("Failed to update host terminal config", error, {
-        operation: "host_terminal_config_update",
-        hostId,
-        userId,
-      });
-      res.status(500).json({ error: "Failed to update terminal config" });
-    }
-  },
-);
-
 router.get(
   "/db/host",
   authenticateJWT,
@@ -1770,16 +1638,8 @@ router.get(
       const resolved = (await resolveHostCredentials(host, userId)) || host;
       let value = resolved[field];
 
-      if (!value && field === "sudoPassword" && resolved.terminalConfig) {
-        try {
-          const tc =
-            typeof resolved.terminalConfig === "string"
-              ? JSON.parse(resolved.terminalConfig)
-              : resolved.terminalConfig;
-          value = tc?.sudoPassword || null;
-        } catch {
-          // malformed JSON — leave value null
-        }
+      if (!value && field === "sudoPassword") {
+        value = hostTerminalExport(resolved).sudoPassword || null;
       }
 
       if (!value) {
@@ -1901,16 +1761,19 @@ router.get(
             credentialId: resolvedHost.credentialId || null,
             overrideCredentialUsername:
               !!resolvedHost.overrideCredentialUsername,
-            sudoPassword: resolvedHost.sudoPassword || null,
+            sudoPassword:
+              resolvedHost.sudoPassword ||
+              hostTerminalExport(resolvedHost).sudoPassword ||
+              null,
             jumpHosts: resolvedHost.jumpHosts
               ? JSON.parse(resolvedHost.jumpHosts as string)
               : null,
             quickActions: resolvedHost.quickActions
               ? JSON.parse(resolvedHost.quickActions as string)
               : null,
-            terminalConfig: resolvedHost.terminalConfig
-              ? JSON.parse(resolvedHost.terminalConfig as string)
-              : null,
+            terminalConfig:
+              hostTerminalExport(resolvedHost).terminalConfig ?? null,
+            sshOptions: hostTerminalExport(resolvedHost).sshOptions,
             forceKeyboardInteractive:
               resolvedHost.forceKeyboardInteractive === "true",
             useSocks5: !!resolvedHost.useSocks5,
@@ -2034,16 +1897,18 @@ router.get(
                 !!resolvedHost.overrideCredentialUsername,
               sudoPassword: shareMode
                 ? null
-                : resolvedHost.sudoPassword || null,
+                : resolvedHost.sudoPassword ||
+                  hostTerminalExport(resolvedHost).sudoPassword ||
+                  null,
               jumpHosts: resolvedHost.jumpHosts
                 ? JSON.parse(resolvedHost.jumpHosts as string)
                 : null,
               quickActions: resolvedHost.quickActions
                 ? JSON.parse(resolvedHost.quickActions as string)
                 : null,
-              terminalConfig: resolvedHost.terminalConfig
-                ? JSON.parse(resolvedHost.terminalConfig as string)
-                : null,
+              terminalConfig:
+                hostTerminalExport(resolvedHost).terminalConfig ?? null,
+              sshOptions: hostTerminalExport(resolvedHost).sshOptions,
               forceKeyboardInteractive:
                 resolvedHost.forceKeyboardInteractive === "true",
               useSocks5: !!resolvedHost.useSocks5,

@@ -8,16 +8,28 @@ import {
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { TriangleAlert } from "lucide-react";
-import { useTranslation, useTheme } from "@termix/plugin-sdk/frontend";
 import {
-  DEFAULT_TERMINAL_CONFIG,
-  TERMINAL_FONTS,
-  ensureTerminalFontsLoaded,
-  resolveTermixThemeColors,
-} from "@termix/plugin-sdk/ui";
+  invokeAction,
+  useTranslation,
+  useTheme,
+} from "@termix/plugin-sdk/frontend";
 import type { SerialConfig, SerialHandle } from "./types.js";
 import { isElectron } from "./electron.js";
 import { resolveSerialWsUrl } from "./transport.js";
+
+interface SerialLook {
+  colors: Record<string, string | undefined>;
+  fontFamily: string;
+  fontSize: number;
+}
+
+const FALLBACK_COLORS = {
+  background: "#0c0d0b",
+  foreground: "#fafafa",
+  cursor: "#fafafa",
+  cursorAccent: "#0c0d0b",
+};
+const FALLBACK_FONT = '"SF Mono", Consolas, "Liberation Mono", monospace';
 
 type WebSerialPort = {
   open(options: {
@@ -63,17 +75,24 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
 
   useEffect(() => {
     if (!terminal) return;
-    // The same look as every other terminal in the app.
-    const font =
-      TERMINAL_FONTS.find(
-        (candidate) => candidate.value === DEFAULT_TERMINAL_CONFIG.fontFamily,
-      ) ?? TERMINAL_FONTS[0];
-    ensureTerminalFontsLoaded(font.value);
-    terminal.options.theme = {
-      ...resolveTermixThemeColors(DEFAULT_TERMINAL_CONFIG.theme, appTheme),
+    let active = true;
+    terminal.options.theme = { ...FALLBACK_COLORS };
+    terminal.options.fontFamily = FALLBACK_FONT;
+    terminal.options.fontSize = 14;
+    // The user's terminal look from the SSH terminal, when it is running.
+    void invokeAction("terminal.resolveTheme", { appTheme })
+      .then((look) => {
+        const resolved = look as SerialLook | undefined;
+        if (!active || !resolved) return;
+        terminal.options.theme = { ...resolved.colors };
+        terminal.options.fontFamily = resolved.fontFamily;
+        terminal.options.fontSize = resolved.fontSize;
+        fitAddonRef.current?.fit();
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
     };
-    terminal.options.fontFamily = font.fallback;
-    terminal.options.fontSize = DEFAULT_TERMINAL_CONFIG.fontSize;
   }, [terminal, appTheme]);
 
   // ── WebSocket (Electron) path ──────────────────────────────────────────

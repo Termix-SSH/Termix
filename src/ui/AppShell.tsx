@@ -77,9 +77,6 @@ const QuickConnectPanel = lazy(() =>
 );
 
 // Secondary rail panels — load on first open, not with the shell critical path.
-const SshToolsPanel = lazy(() =>
-  import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
-);
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
@@ -988,7 +985,6 @@ export function AppShell({
               "termix-font-size",
               "termix-ui-font",
               "i18nextLng",
-              "commandAutocomplete",
               "commandPaletteShortcutEnabled",
               "showHostTags",
               "hostTrayOnClick",
@@ -1019,14 +1015,6 @@ export function AppShell({
           if (loginLanguage && loginLanguage !== prefs.language) {
             void saveUserPreferences({ language: loginLanguage });
           }
-          if (
-            prefs.commandAutocomplete !== null &&
-            prefs.commandAutocomplete !== undefined
-          )
-            localStorage.setItem(
-              "commandAutocomplete",
-              String(prefs.commandAutocomplete),
-            );
           if (
             prefs.commandPaletteEnabled !== null &&
             prefs.commandPaletteEnabled !== undefined
@@ -2530,7 +2518,7 @@ export function AppShell({
     ]);
   }
 
-  // What history/snippets/ssh-tools should act on. Falls back to the remembered
+  // What history, snippets and macros should act on. Falls back to the remembered
   // terminal when the active tab isn't one, and drops it once it's closed.
   const targetTerminalTabId = terminalTabs.some((t) => t.id === workingTabId)
     ? workingTabId
@@ -2651,15 +2639,6 @@ export function AppShell({
               if (isMobile) setSidebarOpen(false);
             }}
           />
-        )}
-
-        {railView === "ssh-tools" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <SshToolsPanel
-              terminalTabs={terminalTabs}
-              activeTabId={targetTerminalTabId}
-            />
-          </div>
         )}
 
         {railView === "macros" && (

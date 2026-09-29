@@ -132,3 +132,78 @@ describe("client settings and image storage", () => {
     expect(result.body.connected).toBe(false);
   });
 });
+
+describe("terminal settings routes", () => {
+  const host = (id: number, userId = "user-1") => ({
+    id,
+    userId,
+    name: `h${id}`,
+    ip: "10.0.0.1",
+    port: 22,
+    username: "root",
+    tags: null,
+    folder: null,
+    authType: "password",
+  });
+
+  it("hands every user their own terminal settings and the new-host defaults", async () => {
+    server = await startServer({
+      settings: { newHostFontSize: 20, newHostTheme: "nord" },
+    });
+    await server.mock.ctx.settings.setUser(
+      "user-1",
+      "commandAutocomplete",
+      true,
+    );
+    await server.mock.ctx.settings.setUser("user-1", "terminalDefaults", {
+      fontSize: 18,
+    });
+    const { body } = await server.request("GET", "/client-settings");
+    expect(body.user).toMatchObject({
+      commandAutocomplete: true,
+      terminalDefaults: { fontSize: 18 },
+      localEcho: "auto",
+      linkClickBehavior: "confirm",
+    });
+    expect(body.newHostDefaults).toMatchObject({ fontSize: 20, theme: "nord" });
+    const other = await server.request("GET", "/client-settings", {
+      user: "user-2",
+    });
+    expect(other.body.user.commandAutocomplete).toBe(false);
+  });
+
+  it("saves the browser preferences a user moves over, for that user only", async () => {
+    server = await startServer();
+    const saved = await server.request("PUT", "/user-settings", {
+      body: { localEcho: "on", linkClickBehavior: "direct", theme: "x" },
+    });
+    expect(saved.status).toBe(200);
+    expect(await server.mock.ctx.settings.getUser("user-1", "localEcho")).toBe(
+      "on",
+    );
+    expect(
+      await server.mock.ctx.settings.getUser("user-2", "localEcho"),
+    ).not.toBe("on");
+  });
+
+  it("turns auto tmux on for a host the user can edit", async () => {
+    server = await startServer({ hosts: [host(1)] });
+    const saved = await server.request("PUT", "/hosts/1/auto-tmux", {
+      body: { enabled: true },
+    });
+    expect(saved.status).toBe(200);
+    expect(await server.mock.ctx.settings.getHost(1, "autoTmux")).toBe(true);
+  });
+
+  it("refuses auto tmux on a host the user cannot reach, or a bad body", async () => {
+    server = await startServer({ hosts: [host(1)] });
+    const unknown = await server.request("PUT", "/hosts/2/auto-tmux", {
+      body: { enabled: true },
+    });
+    expect(unknown.status).toBe(403);
+    const bad = await server.request("PUT", "/hosts/1/auto-tmux", {
+      body: { enabled: "yes" },
+    });
+    expect(bad.status).toBe(400);
+  });
+});

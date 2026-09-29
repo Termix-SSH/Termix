@@ -8,6 +8,8 @@ import {
   type TabProps,
 } from "@termix/plugin-sdk/frontend";
 import type { Host } from "../types";
+import { hostTerminalValues } from "../terminal-settings";
+import { readHostTerminalSettings } from "../../shared/terminal-settings";
 
 /** The session fields the shell keeps on a terminal tab. */
 interface TerminalTabRecord {
@@ -63,6 +65,9 @@ export function TerminalTabContent({
   const { t } = useTranslation();
   const { previewTerminalTheme } = useTabsSafe();
   const isMobile = useIsMobile();
+  const useSshTitle = readHostTerminalSettings(
+    hostTerminalValues(host),
+  ).useSSHTitle;
 
   if (!host) {
     return (
@@ -102,7 +107,7 @@ export function TerminalTabContent({
               splitScreen={inSplit}
               onClose={() => shell.closeTab(tab.id)}
               onTitleChange={
-                host.terminalConfig?.useSSHTitle
+                useSshTitle
                   ? (title) => shell.renameTab(tab.id, title)
                   : undefined
               }

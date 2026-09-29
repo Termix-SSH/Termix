@@ -1,4 +1,8 @@
-import type { SSHAuthType, TerminalConfig } from "./index.js";
+import type {
+  HostSshOptions,
+  HostTerminalConfig,
+  SSHAuthType,
+} from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
 export type Host = {
@@ -44,7 +48,8 @@ export type Host = {
 
   /** Stable identity across a desktop/server sync pair. */
   syncId?: string | null;
-  terminalConfig?: Partial<TerminalConfig>;
+  terminalConfig?: HostTerminalConfig;
+  sshOptions?: HostSshOptions;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -155,7 +160,6 @@ type KnownTabType =
   | "admin-settings"
   // Rail panels that can also open full-width in the main area.
   | "macros"
-  | "ssh-tools"
   | "split-screen";
 
 /**
@@ -252,7 +256,7 @@ export type UiFontId =
   | "caskaydia-cove";
 
 /** A tools panel view: core's own, or a rail panel a plugin registered. */
-export type ToolsTab = "ssh-tools" | "macros" | (string & {});
+export type ToolsTab = "macros" | (string & {});
 
 /** "row" lays children side by side, "column" stacks them. */
 export type SplitDirection = "row" | "column";

@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP:n vanha tila"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Samanaikaiset tiedostonsiirrot",
+        "description": "Kuinka monta tiedostoa rinnakkainen paikallinen/etähallinta lataa tai lataa samanaikaisesti. Laske tätä arvoa, jos palvelimesi rajoittaa SFTP-kanavia."
+      }
     }
   },
   "nav": {

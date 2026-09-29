@@ -145,6 +145,30 @@ describe("runSshTerminalSettingsMigration", () => {
     expect(JSON.parse(localDir!.value!)).toBe("sysenc:/data/images");
   });
 
+  it("moves the terminal half of the admin host defaults to the new-host settings", async () => {
+    coreSettings.set(
+      "host_defaults",
+      JSON.stringify({
+        useSocks5: true,
+        fontSize: 18,
+        fontFamily: "Fira Code",
+        theme: "Termix Dark",
+        cursorStyle: "wobble",
+        cursorBlink: false,
+        autoTmux: true,
+      }),
+    );
+
+    await runSshTerminalSettingsMigration();
+
+    expect(admin("newHostFontSize")).toBe(18);
+    expect(admin("newHostFontFamily")).toBe("Fira Code");
+    expect(admin("newHostTheme")).toBe("termix");
+    expect(admin("newHostCursorStyle")).toBeUndefined();
+    expect(admin("newHostCursorBlink")).toBe(false);
+    expect(admin("newHostAutoTmux")).toBe(true);
+  });
+
   it("copies each host that switched something off, keeping the rest on", async () => {
     hostRows.push(
       {

@@ -1,6 +1,5 @@
 import { authApi } from "@/main-axios";
 import { createTtlRequestCache } from "@/lib/ttl-request-cache";
-import type { TerminalTheme } from "@/lib/terminal-themes";
 import type { CustomKeybinding } from "@/types/keybindings";
 import { invokeAction, isActionRegistered } from "@/shell/action-registry";
 
@@ -115,12 +114,6 @@ export async function getSessionTimeoutMinutes(): Promise<number> {
 // USER PREFERENCES API
 // ============================================================================
 
-export interface SavedCustomTheme {
-  id: string;
-  name: string;
-  colors: TerminalTheme["colors"];
-}
-
 export interface UserPreferences {
   reopenTabsOnLogin: boolean;
   theme?: string | null;
@@ -128,7 +121,6 @@ export interface UserPreferences {
   accentColor?: string | null;
   language?: string | null;
   storageMode?: string | null;
-  commandAutocomplete?: boolean | null;
   commandPaletteEnabled?: boolean | null;
   showHostTags?: boolean | null;
   hostTrayOnClick?: boolean | null;
@@ -141,20 +133,8 @@ export interface UserPreferences {
   hiddenRailTabs?: string | null;
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
-  customThemes?: string | null;
   customKeybindings?: string | null;
-  terminalDefaults?: string | null;
   terminalMacros?: string | null;
-}
-
-export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 export function parseCustomKeybindings(

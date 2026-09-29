@@ -135,7 +135,6 @@ const CORE_HIDEABLE_RAIL_VIEWS = [
   "credentials",
   "connections",
   "quick-connect",
-  "ssh-tools",
   "macros",
 ];
 

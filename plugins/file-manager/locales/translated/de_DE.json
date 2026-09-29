@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP-Legacy-Modus"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Gleichzeitige Dateiübertragungen",
+        "description": "Wie viele Dateien der lokale/Remote-Manager gleichzeitig hoch- oder herunterlädt. Verringern Sie diesen Wert, wenn Ihr Server die Anzahl der SFTP-Kanäle begrenzt."
+      }
     }
   },
   "nav": {

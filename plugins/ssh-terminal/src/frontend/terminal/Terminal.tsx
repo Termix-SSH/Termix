@@ -27,10 +27,23 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
 import {
   deleteCommandFromHistory,
+  enableHostAutoTmux,
   getClientSettings,
   getCommandHistory,
   hostSetting,
 } from "../terminal-api";
+import { useTerminalSettings } from "../terminal-settings";
+import {
+  DEFAULT_TERMINAL_CONFIG,
+  TERMINAL_FONTS,
+  resolveTerminalFontFamily,
+} from "../look/terminal-themes";
+import { resolveTermixThemeColors } from "../look/terminal-theme";
+import { ensureTerminalFontsLoaded } from "../look/terminal-global-styles";
+import {
+  getNextTerminalFontSize,
+  getTerminalFontZoomDirection,
+} from "../look/terminal-font-zoom";
 import { TmuxSessionPicker } from "./TmuxSessionPicker";
 import { getTerminalBufferText } from "./terminal-buffer-text.ts";
 import { getMacLineNavigationSequence } from "../lib/mac-line-navigation";
@@ -90,10 +103,6 @@ import {
   PassphraseDialog,
   BrowserSignInDialog,
   HostKeyVerificationDialog,
-  DEFAULT_TERMINAL_CONFIG,
-  TERMINAL_FONTS,
-  resolveTerminalFontFamily,
-  ensureTerminalFontsLoaded,
   useAppTheme as useTheme,
   globalShortcutHandler,
   isTabJumpHotkey,
@@ -103,14 +112,10 @@ import {
   useConnectionLog,
   ConnectionScreen,
   Button,
-  resolveTermixThemeColors,
-  getNextTerminalFontSize,
-  getTerminalFontZoomDirection,
   hydrateLocalSharedHostAuth,
   findMatchingKeybinding,
   SnippetVariablesDialog,
   type CustomKeybinding,
-  useConnectionDefaults,
   isElectron,
 } from "@termix/plugin-sdk/ui";
 import {
@@ -123,7 +128,7 @@ import {
   logActivity,
   getHostPassword,
   patchOpenTab,
-  setHostAutoTmux,
+  useHost,
 } from "@termix/plugin-sdk/frontend";
 
 type HostKeyVerificationData = Omit<
@@ -157,6 +162,17 @@ interface SSHTerminalProps {
   isFocusedPane?: boolean;
   /** Fires when the backend reports the created session id (collab presenting). */
   onSessionReady?: (sessionId: string) => void;
+}
+
+/**
+ * The host's startup snippet. Core still keeps it in the host's terminal
+ * config until snippets owns it.
+ */
+function startupSnippetOf(host: object): number | null {
+  const config = (host as { terminalConfig?: { startupSnippetId?: unknown } })
+    .terminalConfig;
+  const id = Number(config?.startupSnippetId);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -205,7 +221,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
     const { addLog } = useConnectionLog();
-    const { terminal: terminalDefaults } = useConnectionDefaults();
+    // An embedded terminal (a widget, another plugin's window) gets only a
+    // connect config; the shell's record for the host carries its settings.
+    const shellHost = useHost(host ? undefined : hostConfig.id);
+    const settingsHost: object = host ?? shellHost ?? hostConfig;
+    const { config: termSettings, user: termUser } =
+      useTerminalSettings(settingsHost);
+    // Callbacks bound once (socket handlers, xterm hooks) read these.
+    const termSettingsRef = useRef(termSettings);
+    termSettingsRef.current = termSettings;
+    const termUserRef = useRef(termUser);
+    termUserRef.current = termUser;
     const showToolbar = hostSetting(host, "enableTerminalToolbar", true);
     const outputListenersRef = useRef(new Set<(data: string) => void>());
 
@@ -213,14 +239,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       `terminal_theme_host_${hostConfig.id}`,
     );
     const config = {
-      ...DEFAULT_TERMINAL_CONFIG,
-      ...terminalDefaults,
-      ...hostConfig.terminalConfig,
-      theme:
-        savedTheme ||
-        hostConfig.terminalConfig?.theme ||
-        terminalDefaults.theme ||
-        DEFAULT_TERMINAL_CONFIG.theme,
+      ...termSettings,
+      theme: savedTheme || termSettings.theme || DEFAULT_TERMINAL_CONFIG.theme,
     };
 
     // Ctrl+/- / Ctrl+wheel terminal zoom is persisted per-host and takes
@@ -530,8 +550,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [showHistoryDialog, hostConfig.id]);
 
     useEffect(() => {
-      const autocompleteEnabled =
-        localStorage.getItem("commandAutocomplete") === "true";
+      const autocompleteEnabled = termUser.commandAutocomplete;
 
       if (hostConfig.id && autocompleteEnabled) {
         getCommandHistory(api, hostConfig.id!)
@@ -545,7 +564,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       } else {
         autocompleteHistory.current = [];
       }
-    }, [hostConfig.id]);
+    }, [hostConfig.id, termUser.commandAutocomplete]);
 
     useEffect(() => {
       showAutocompleteRef.current = showAutocomplete;
@@ -591,7 +610,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [autosuggestion]);
 
     const isAutocompleteEnabled = useCallback(
-      () => localStorage.getItem("commandAutocomplete") === "true",
+      () => termUserRef.current.commandAutocomplete,
       [],
     );
 
@@ -1208,7 +1227,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       controlStringModeRef.current = controlString.isActive;
 
       const syntaxHighlightingEnabled =
-        hostConfig.terminalConfig?.syntaxHighlighting !== false;
+        termSettingsRef.current.syntaxHighlighting !== false;
       if (
         !syntaxHighlightingEnabled ||
         alternateScreen.sawSequence ||
@@ -1221,7 +1240,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       return highlightTerminalOutput(
         output,
-        hostConfig.terminalConfig?.syntaxHighlightingOptions,
+        termSettingsRef.current.syntaxHighlightingOptions,
       );
     }
 
@@ -1244,9 +1263,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
+      const sudoPassword = hostConfig.sudoPassword as string | undefined;
       let passwordToFill = isSudoPrompt
-        ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
-        : hostConfig.password || hostConfig.terminalConfig?.sudoPassword;
+        ? sudoPassword || hostConfig.password
+        : hostConfig.password || sudoPassword;
 
       if (!passwordToFill && hostConfig.id) {
         passwordToFill = isSudoPrompt
@@ -1262,7 +1282,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function maybeOfferPasswordFill(strippedData: string) {
-      if (hostConfig.terminalConfig?.passwordPromptAutoFill === false) return;
+      if (termSettingsRef.current.passwordPromptAutoFill === false) return;
 
       // PTY output can split a short prompt like "[sudo] password for user: "
       // across multiple WebSocket chunks, so match against a rolling buffer
@@ -1280,12 +1300,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Sudo autofill is opt-in: the saved sudo password must not be sent
       // to a privilege-escalation prompt unless the host explicitly enables it.
-      if (isSudoPrompt && !hostConfig.terminalConfig?.sudoPasswordAutoFill) {
+      if (isSudoPrompt && !termSettingsRef.current.sudoPasswordAutoFill) {
         return;
       }
 
       const hasStoredPassword =
-        hostConfig.terminalConfig?.sudoPassword ||
+        hostConfig.sudoPassword ||
         hostConfig.password ||
         hostConfig.hasSudoPassword ||
         hostConfig.hasPassword;
@@ -1542,7 +1562,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const canEnable =
         typeof hostConfig.id === "number" &&
-        !hostConfig.terminalConfig?.autoTmux &&
+        !termSettingsRef.current.autoTmux &&
         !hostConfig.joinShareId;
       toast.warning(notice, {
         duration: 15000,
@@ -1551,7 +1571,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               action: {
                 label: t("terminal.enableAutoTmuxAction"),
                 onClick: () => {
-                  void setHostAutoTmux(hostConfig.id as number, true)
+                  void enableHostAutoTmux(api, hostConfig.id as number)
                     .then(() => {
                       window.dispatchEvent(
                         new CustomEvent("termix:hosts-changed"),
@@ -1746,8 +1766,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         terminalInputDisposableRef.current?.dispose();
         localEchoRef.current = new TerminalLocalEcho(
           resolveLocalEchoMode(
-            hostConfig.terminalConfig?.localEcho,
-            localStorage.getItem("terminalLocalEchoMode"),
+            termSettingsRef.current.localEcho,
+            termUserRef.current.localEcho,
           ),
         );
         terminalInputDisposableRef.current = terminal.onData((data) => {
@@ -1936,17 +1956,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             logTerminalActivity();
 
             setTimeout(async () => {
-              const terminalConfig = {
-                ...DEFAULT_TERMINAL_CONFIG,
-                ...terminalDefaults,
-                ...hostConfig.terminalConfig,
-              };
+              const settings = termSettingsRef.current;
+              const environmentVariables =
+                (
+                  hostConfig.sshOptions as
+                    | {
+                        environmentVariables?: { key: string; value: string }[];
+                      }
+                    | null
+                    | undefined
+                )?.environmentVariables ?? [];
+              const startupSnippetId = startupSnippetOf(settingsHost);
 
-              if (
-                terminalConfig.environmentVariables &&
-                terminalConfig.environmentVariables.length > 0
-              ) {
-                for (const envVar of terminalConfig.environmentVariables) {
+              if (environmentVariables.length > 0) {
+                for (const envVar of environmentVariables) {
                   if (envVar.key && envVar.value && ws.readyState === 1) {
                     ws.send(
                       JSON.stringify({
@@ -1958,11 +1981,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              if (terminalConfig.startupSnippetId) {
+              if (startupSnippetId) {
                 try {
                   const resolved = (await invokeAction(
                     "snippets.resolveForTerminal",
-                    terminalConfig.startupSnippetId,
+                    startupSnippetId,
                     {
                       ip: hostConfig.ip,
                       username: hostConfig.username,
@@ -1990,11 +2013,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              if (terminalConfig.autoMosh && ws.readyState === 1) {
+              if (settings.autoMosh && ws.readyState === 1) {
                 ws.send(
                   JSON.stringify({
                     type: "input",
-                    data: terminalConfig.moshCommand + "\n",
+                    data: settings.moshCommand + "\n",
                   }),
                 );
               }
@@ -2491,11 +2514,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       if (!terminal) return;
 
-      const config = {
-        ...DEFAULT_TERMINAL_CONFIG,
-        ...terminalDefaults,
-        ...hostConfig.terminalConfig,
-      };
+      const config = termSettingsRef.current;
 
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(
@@ -2560,23 +2579,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [
-      terminal,
-      terminalDefaults,
-      hostConfig.terminalConfig,
-      previewTheme,
-      appTheme,
-      isFitted,
-    ]);
+    }, [terminal, termSettings, previewTheme, appTheme, isFitted]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
 
-      const config = {
-        ...DEFAULT_TERMINAL_CONFIG,
-        ...terminalDefaults,
-        ...hostConfig.terminalConfig,
-      };
+      const config = termSettingsRef.current;
 
       const fontFamily = resolveTerminalFontFamily(config.fontFamily);
       ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
@@ -2647,10 +2655,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             ? uri
             : `https://${uri}`;
 
-        const hostBehavior = hostConfig.terminalConfig?.linkClickBehavior;
-        const globalBehavior =
-          localStorage.getItem("terminalLinkClickBehavior") ?? "confirm";
-        const behavior = hostBehavior ?? globalBehavior;
+        const hostBehavior = termSettingsRef.current.linkClickBehavior;
+        const behavior =
+          hostBehavior && hostBehavior !== "default"
+            ? hostBehavior
+            : termUserRef.current.linkClickBehavior;
 
         if (behavior === "direct") {
           window.open(url, "_blank");
@@ -2701,11 +2710,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return false;
         }
 
-        const cfg = {
-          ...DEFAULT_TERMINAL_CONFIG,
-          ...terminalDefaults,
-          ...hostConfig.terminalConfig,
-        };
+        const cfg = termSettingsRef.current;
         const mod = cfg.fastScrollModifier;
         const modHeld =
           (mod === "alt" && ev.altKey) ||
@@ -2835,12 +2840,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-        const config = {
-          ...DEFAULT_TERMINAL_CONFIG,
-          ...terminalDefaults,
-          ...hostConfig.terminalConfig,
-        };
-        if (config.backspaceMode !== "control-h") return;
+        if (termSettingsRef.current.backspaceMode !== "control-h") return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -3042,7 +3042,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           const sequence = getAndroidHardwareKeySequence(
             e,
             terminal.modes.applicationCursorKeysMode,
-            hostConfig.terminalConfig?.backspaceMode,
+            termSettingsRef.current.backspaceMode,
           );
           if (sequence) {
             e.preventDefault();
@@ -3300,8 +3300,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           };
 
-          const autocompleteEnabled =
-            localStorage.getItem("commandAutocomplete") === "true";
+          const autocompleteEnabled = termUserRef.current.commandAutocomplete;
 
           if (!autocompleteEnabled) {
             clearAutosuggestion();

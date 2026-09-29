@@ -2,6 +2,7 @@ import {
   prepareHostImports,
   remapImportedJumpHosts,
 } from "./host-import-order.js";
+import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
@@ -674,6 +675,12 @@ export function registerHostBulkRoutes(
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)
               : null,
+            // A 2.8 export carries these inside terminalConfig.
+            sshOptions:
+              sshOptionsForWrite({
+                sshOptions: hostData.sshOptions,
+                terminalConfig: hostData.terminalConfig,
+              }) ?? null,
             forceKeyboardInteractive: hostData.forceKeyboardInteractive
               ? "true"
               : "false",
@@ -918,6 +925,7 @@ export function registerHostBulkRoutes(
             statusCheckEnabled: true,
             statusCheckInterval: null,
             terminalConfig: null,
+            sshOptions: null,
             forceKeyboardInteractive: "false",
             notes: null,
             useSocks5: 0,

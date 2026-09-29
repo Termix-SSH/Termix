@@ -1,33 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type React from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { Button } from "@/components/button";
 import {
+  Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from "@/components/dialog";
-import { SettingRow } from "@/components/section-card";
-import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
+  SettingRow,
+} from "@termix/plugin-sdk/ui";
+import {
+  useTranslation,
+  type SettingsComponentProps,
+} from "@termix/plugin-sdk/frontend";
 import {
   CURSOR_STYLES,
   TERMINAL_FONTS,
   TERMINAL_THEMES,
-} from "@/lib/terminal-themes";
+} from "../look/terminal-themes";
+import { fromTriState, toTriState, type TriState } from "./tri-state";
 import {
-  fromTriState,
-  toTriState,
+  readUserSettings,
   type TerminalDefaults,
-  type TriState,
-} from "@/lib/connection-defaults";
-import {
-  getUserPreferences,
-  parseCustomThemes,
-  type SavedCustomTheme,
-} from "@/api/open-tabs-api";
+} from "../../shared/terminal-settings";
 
 const inputClass =
   "h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring";
@@ -63,40 +58,36 @@ function TriStateSelect({
       value={toTriState(value)}
       onChange={(e) => onChange(fromTriState(e.target.value as TriState))}
     >
-      <option value="inherit">
-        {t("newUi.sidebar.connectionDefaults.inherit")}
-      </option>
-      <option value="on">{t("newUi.sidebar.connectionDefaults.on")}</option>
-      <option value="off">{t("newUi.sidebar.connectionDefaults.off")}</option>
+      <option value="inherit">{t("terminalDefaults.inherit")}</option>
+      <option value="on">{t("terminalDefaults.on")}</option>
+      <option value="off">{t("terminalDefaults.off")}</option>
     </select>
   );
 }
 
-export function ConnectionDefaultsSettings() {
+/**
+ * The user's terminal defaults (the `terminalDefaults` user setting): the
+ * look every host that follows the user starts from. Applied to the form,
+ * saved with the rest of the section.
+ */
+export function TerminalDefaultsSettings({
+  values,
+  setValue,
+  running,
+}: SettingsComponentProps) {
   const { t } = useTranslation();
-  const defaults = useConnectionDefaults();
+  const saved = useMemo(() => readUserSettings(values), [values]);
   const [open, setOpen] = useState(false);
   const [terminal, setTerminal] = useState<TerminalDefaults>({});
-  const [saving, setSaving] = useState(false);
-  const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
 
-  useEffect(() => {
-    if (!defaults.ready) return;
-    setTerminal(defaults.terminal);
-  }, [defaults.ready, defaults.terminal]);
+  const configuredCount = Object.values(saved.terminalDefaults).filter(
+    (value) => value !== undefined,
+  ).length;
 
-  useEffect(() => {
-    if (!open) return;
-    getUserPreferences()
-      .then((prefs) => setSavedThemes(parseCustomThemes(prefs.customThemes)))
-      .catch(() => {});
-  }, [open]);
-
-  const configuredCount = useMemo(() => {
-    const count = (source: Record<string, unknown>) =>
-      Object.values(source).filter((value) => value !== undefined).length;
-    return count(defaults.terminal);
-  }, [defaults.terminal]);
+  const openDialog = () => {
+    setTerminal(saved.terminalDefaults);
+    setOpen(true);
+  };
 
   const updateTerminal = <K extends keyof TerminalDefaults>(
     key: K,
@@ -104,8 +95,7 @@ export function ConnectionDefaultsSettings() {
   ) => setTerminal((current) => ({ ...current, [key]: value }));
 
   const applySavedTheme = (id: string) => {
-    if (!id) return;
-    const theme = savedThemes.find((entry) => entry.id === id);
+    const theme = saved.customThemes.find((entry) => entry.id === id);
     if (!theme) return;
     setTerminal((current) => ({
       ...current,
@@ -114,35 +104,30 @@ export function ConnectionDefaultsSettings() {
     }));
   };
 
-  async function save() {
-    setSaving(true);
-    try {
-      await defaults.saveTerminalDefaults(terminal);
-      toast.success(t("newUi.sidebar.connectionDefaults.saved"));
-      setOpen(false);
-    } catch {
-      toast.error(t("newUi.sidebar.connectionDefaults.saveFailed"));
-    } finally {
-      setSaving(false);
-    }
-  }
+  const apply = () => {
+    const cleaned = Object.fromEntries(
+      Object.entries(terminal).filter(([, value]) => value !== undefined),
+    );
+    setValue("terminalDefaults", cleaned);
+    setOpen(false);
+  };
 
-  const inheritLabel = t("newUi.sidebar.connectionDefaults.inherit");
+  const inheritLabel = t("terminalDefaults.inherit");
 
   return (
     <>
       <SettingRow
-        label={t("newUi.sidebar.connectionDefaults.title")}
-        description={t("newUi.sidebar.connectionDefaults.description")}
+        label={t("terminalDefaults.title")}
+        description={t("terminalDefaults.description")}
         badge={configuredCount > 0 ? String(configuredCount) : undefined}
       >
         <Button
           variant="outline"
           size="sm"
-          disabled={!defaults.ready}
-          onClick={() => setOpen(true)}
+          disabled={!running}
+          onClick={openDialog}
         >
-          {t("newUi.sidebar.connectionDefaults.manage")}
+          {t("terminalDefaults.manage")}
         </Button>
       </SettingRow>
 
@@ -150,10 +135,10 @@ export function ConnectionDefaultsSettings() {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">
-              {t("newUi.sidebar.connectionDefaults.title")}
+              {t("terminalDefaults.title")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              {t("newUi.sidebar.connectionDefaults.dialogDescription")}{" "}
+              {t("terminalDefaults.dialogDescription")}{" "}
               <a
                 href="https://docs.termix.site/features/files-and-hosts/connection-defaults"
                 target="_blank"
@@ -205,21 +190,17 @@ export function ConnectionDefaultsSettings() {
                 </select>
               </Field>
 
-              {savedThemes.length > 0 && (
-                <Field
-                  label={t("newUi.sidebar.connectionDefaults.savedThemeLabel")}
-                >
+              {saved.customThemes.length > 0 && (
+                <Field label={t("terminalDefaults.savedThemeLabel")}>
                   <select
                     className={inputClass}
                     value=""
                     onChange={(e) => applySavedTheme(e.target.value)}
                   >
                     <option value="">
-                      {t(
-                        "newUi.sidebar.connectionDefaults.savedThemePlaceholder",
-                      )}
+                      {t("terminalDefaults.savedThemePlaceholder")}
                     </option>
-                    {savedThemes.map((theme) => (
+                    {saved.customThemes.map((theme) => (
                       <option key={theme.id} value={theme.id}>
                         {theme.name}
                       </option>
@@ -317,25 +298,15 @@ export function ConnectionDefaultsSettings() {
           </div>
 
           <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setTerminal({});
-              }}
-            >
-              {t("newUi.sidebar.connectionDefaults.clearAll")}
+            <Button variant="ghost" size="sm" onClick={() => setTerminal({})}>
+              {t("terminalDefaults.clearAll")}
             </Button>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
                 {t("common.cancel")}
               </Button>
-              <Button
-                size="sm"
-                disabled={saving || !defaults.ready}
-                onClick={save}
-              >
-                {saving ? t("common.saving") : t("common.save")}
+              <Button size="sm" onClick={apply}>
+                {t("terminalDefaults.apply")}
               </Button>
             </div>
           </div>

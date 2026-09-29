@@ -104,4 +104,64 @@ describe(`${manifest.id} activate`, () => {
       }),
     ).resolves.toBe(false);
   });
+
+  it("owns the SSH Tools panel and its rail item", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.panels()).toContain("ssh-tools");
+    expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+      "ssh-tools",
+    );
+  });
+
+  it("registers its settings components", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.settingsComponents()).toEqual(
+      expect.arrayContaining([
+        "terminalDefaults",
+        "newHostTheme",
+        "newHostFontFamily",
+      ]),
+    );
+  });
+
+  it("offers the terminal look to other plugins through actions", async () => {
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: {
+        get: async () => ({ data: { user: { terminalDefaults: {} } } }),
+      } as never,
+    });
+    const look = (await rendered.app.invokeAction("terminal.resolveTheme", {
+      host: {
+        id: "1",
+        name: "h",
+        ip: "10.0.0.1",
+        port: 22,
+        pluginSettings: {
+          "ssh-terminal": { inheritAppearance: false, theme: "dracula" },
+        },
+      },
+      appTheme: "dark",
+    })) as { themeId: string; colors: { background: string } };
+    expect(look.themeId).toBe("dracula");
+    expect(look.colors.background).toBe("#282a36");
+
+    const themes = (await rendered.app.invokeAction("terminal.themes")) as {
+      id: string;
+    }[];
+    expect(themes.map((theme) => theme.id)).toContain("dracula");
+    expect(themes.map((theme) => theme.id)).not.toContain("termixDark");
+  });
+
+  it("adds the terminal font faces while active and removes them on deactivate", async () => {
+    const app = await renderWithApp(plugin, { manifest, locales });
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).not.toBeNull();
+    await app.deactivate();
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).toBeNull();
+  });
 });

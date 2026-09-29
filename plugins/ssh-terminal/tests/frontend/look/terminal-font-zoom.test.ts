@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
-} from "@/lib/terminal-look/terminal-font-zoom";
+} from "../../../src/frontend/look/terminal-font-zoom";
 
 function keyEvent(
   overrides: Partial<KeyboardEvent>,

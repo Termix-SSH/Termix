@@ -8,7 +8,6 @@ export type MetricsHost = PluginSshHost & {
   enableSsh?: boolean | null;
   password?: string | null;
   sudoPassword?: string | null;
-  terminalConfig?: { sudoPassword?: string | null } | null;
   enableDocker?: boolean | null;
   jumpHosts?: Array<{ hostId: number }> | null;
 };
@@ -24,7 +23,7 @@ export function supportsMetrics(
 }
 
 export function sudoPasswordOf(host: MetricsHost): string | undefined {
-  return host.sudoPassword || host.terminalConfig?.sudoPassword || undefined;
+  return host.sudoPassword || undefined;
 }
 
 export type ConnectionLogType = "info" | "success" | "warning" | "error";

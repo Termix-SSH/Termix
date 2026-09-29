@@ -1,80 +1,145 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Info, Palette, Plus, X, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Info, Palette, X, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { Select2 } from "@/components/select2";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Slider } from "@/components/slider";
 import {
+  Button,
+  FakeSwitch,
+  Input,
+  SectionCard,
+  Select2,
+  SettingRow,
+  Slider,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/tooltip";
-import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
-import { TerminalPreview } from "@/components/terminal-preview/TerminalPreview";
+  useTabsSafe,
+} from "@termix/plugin-sdk/ui";
+import {
+  useSettings,
+  useTranslation,
+  type HostEditorSectionProps,
+} from "@termix/plugin-sdk/frontend";
+import { TerminalPreview } from "../look/TerminalPreview";
 import {
   TERMINAL_THEMES,
   TERMINAL_FONTS,
   BELL_STYLES,
   FAST_SCROLL_MODIFIERS,
   CURSOR_STYLES,
-} from "@/lib/terminal-themes";
+} from "../look/terminal-themes";
 import {
   TERMINAL_FONT_ZOOM_MIN,
   TERMINAL_FONT_ZOOM_MAX,
-} from "@/lib/terminal-look/terminal-font-zoom";
+} from "../look/terminal-font-zoom";
 import {
-  getUserPreferences,
-  saveUserPreferences,
-  parseCustomThemes,
+  APPEARANCE_KEYS,
+  INHERIT_APPEARANCE_KEY,
+  pickTerminalValues,
+  readHostTerminalSettings,
+  readUserSettings,
+  type BackspaceMode,
+  type BellStyle,
+  type CursorStyle,
+  type FastScrollModifier,
+  type HostTerminalSettings as HostTerminalValues,
   type SavedCustomTheme,
-} from "@/api/open-tabs-api";
-import { useTabsSafe } from "@/shell/TabContext";
-import type {
-  HostBackspaceMode,
-  HostBellStyle,
-  HostCursorStyle,
-  HostEditorForm,
-  HostFastScrollModifier,
-} from "./HostEditorData";
+} from "../../shared/terminal-settings";
+import {
+  invalidateTerminalClientSettings,
+  useTerminalClientSettings,
+} from "../terminal-settings";
 
+const PLUGIN_ID = "ssh-terminal";
 const CUSTOM_FONT_OPTION = "__custom__";
+const APPEARANCE = new Set<string>(APPEARANCE_KEYS);
 
-export interface HostTerminalSettingsProps {
-  // The host editor form, as handed to a host editor section.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  form: any;
-  setField: (key: string, value: unknown) => void;
-  snippets?: unknown[];
-}
+type HostPluginSettings = Record<string, Record<string, unknown>>;
 
-/** The host editor's terminal appearance and behavior cards. */
+/**
+ * The host editor's terminal appearance and behavior cards. The values are
+ * this plugin's host settings, kept on the editor form under pluginSettings
+ * and saved with the host; the startup snippet is still a core host field.
+ */
 export function HostTerminalSettings({
-  form: rawForm,
-  setField: rawSetField,
+  form: editorForm,
+  setField: setCoreField,
+  updateForm,
+  host,
   snippets: rawSnippets,
-}: HostTerminalSettingsProps) {
+}: Pick<
+  HostEditorSectionProps,
+  "form" | "setField" | "updateForm" | "host" | "snippets"
+>) {
   const { t } = useTranslation();
-  const form = rawForm as HostEditorForm;
-  const setField = rawSetField as <K extends keyof HostEditorForm>(
-    key: K,
-    value: HostEditorForm[K],
-  ) => void;
+  const client = useTerminalClientSettings();
+  const userSettings = useSettings("user");
   const snippets = (rawSnippets ?? []) as { id: number; name: string }[];
   const { setPreviewTerminalTheme } = useTabsSafe();
+
+  const stored = ((editorForm?.pluginSettings as HostPluginSettings)?.[
+    PLUGIN_ID
+  ] ?? {}) as Record<string, unknown>;
+  // A new host starts from the admin's new-host defaults.
+  const seed = host ? {} : (client?.newHostDefaults ?? {});
+  const own = readHostTerminalSettings({ ...seed, ...stored });
+  const userDefaults = pickTerminalValues(
+    client?.user.terminalDefaults ?? {},
+    APPEARANCE_KEYS,
+  );
+  // While the host follows the user, show the look it will actually get.
+  const form = {
+    ...own,
+    ...(own.inheritAppearance ? userDefaults : {}),
+    startupSnippetId: (editorForm?.startupSnippetId ?? null) as number | null,
+  } as HostTerminalValues & { startupSnippetId: number | null };
+
+  const writeValues = (values: Record<string, unknown>) =>
+    updateForm((current) => {
+      const all = (current.pluginSettings ?? {}) as HostPluginSettings;
+      return {
+        ...current,
+        pluginSettings: {
+          ...all,
+          [PLUGIN_ID]: { ...(all[PLUGIN_ID] ?? {}), ...values },
+        },
+      };
+    });
+
+  const setField = <K extends keyof HostTerminalValues>(
+    key: K,
+    value: HostTerminalValues[K],
+  ) =>
+    writeValues({
+      [key]: value,
+      // Touching the look takes the host off the user's defaults.
+      ...(APPEARANCE.has(key) ? { [INHERIT_APPEARANCE_KEY]: false } : {}),
+    });
+
+  const setInheritAppearance = (inherit: boolean) => {
+    if (inherit) {
+      writeValues({ [INHERIT_APPEARANCE_KEY]: true });
+      return;
+    }
+    // Keep what was shown, so switching off does not change the look.
+    const shown: Record<string, unknown> = {};
+    for (const key of APPEARANCE_KEYS) shown[key] = form[key];
+    writeValues({ ...shown, [INHERIT_APPEARANCE_KEY]: false });
+  };
+
   const [isCustomFont, setIsCustomFont] = useState(
     () => !TERMINAL_FONTS.some((f) => f.value === form.fontFamily),
   );
-  const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
+  const savedThemes: SavedCustomTheme[] = useMemo(
+    () => readUserSettings(userSettings.values).customThemes,
+    [userSettings.values],
+  );
   const [savingTheme, setSavingTheme] = useState(false);
 
-  useEffect(() => {
-    getUserPreferences()
-      .then((prefs) => setSavedThemes(parseCustomThemes(prefs.customThemes)))
-      .catch(() => {});
-  }, []);
+  const saveThemes = async (updated: SavedCustomTheme[]) => {
+    await userSettings.save({ customThemes: updated });
+    invalidateTerminalClientSettings();
+  };
 
   const handleSaveAsGlobalTheme = async () => {
     const colors = form.customThemeColors;
@@ -83,16 +148,18 @@ export function HostTerminalSettings({
     if (!name || !name.trim()) return;
     setSavingTheme(true);
     try {
-      const newTheme: SavedCustomTheme = {
-        id: `theme-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: name.trim(),
-        colors,
-      };
-      const updated = [...savedThemes, newTheme];
-      await saveUserPreferences({
-        customThemes: JSON.stringify(updated),
-      });
-      setSavedThemes(updated);
+      await saveThemes([
+        ...savedThemes,
+        {
+          id:
+            "theme-" +
+            Date.now() +
+            "-" +
+            Math.random().toString(36).slice(2, 8),
+          name: name.trim(),
+          colors,
+        },
+      ]);
       toast.success(t("hosts.saveGlobalThemeSuccess"));
     } catch {
       toast.error(t("hosts.saveGlobalThemeError"));
@@ -102,12 +169,8 @@ export function HostTerminalSettings({
   };
 
   const handleDeleteGlobalTheme = async (id: string) => {
-    const updated = savedThemes.filter((theme) => theme.id !== id);
     try {
-      await saveUserPreferences({
-        customThemes: JSON.stringify(updated),
-      });
-      setSavedThemes(updated);
+      await saveThemes(savedThemes.filter((theme) => theme.id !== id));
     } catch {
       toast.error(t("hosts.saveGlobalThemeError"));
     }
@@ -127,25 +190,18 @@ export function HostTerminalSettings({
       >
         <div className="flex flex-col gap-4 py-3">
           <SettingRow
-            label={t("hosts.useUserDefaults", {
-              defaultValue: "Use user defaults",
-            })}
-            description={t("hosts.useUserTerminalDefaultsDesc", {
-              defaultValue:
-                "Keep this host synchronized with Terminal defaults from User Profile.",
-            })}
+            label={t("hosts.useUserDefaults")}
+            description={t("hosts.useUserTerminalDefaultsDesc")}
           >
             <FakeSwitch
-              checked={form.inheritTerminalAppearance}
-              onChange={(value) => setField("inheritTerminalAppearance", value)}
+              checked={form.inheritAppearance}
+              onChange={setInheritAppearance}
             />
           </SettingRow>
           <fieldset
-            disabled={form.inheritTerminalAppearance}
+            disabled={form.inheritAppearance}
             className={
-              form.inheritTerminalAppearance
-                ? "contents opacity-60"
-                : "contents"
+              form.inheritAppearance ? "contents opacity-60" : "contents"
             }
           >
             <div className="space-y-2">
@@ -264,7 +320,7 @@ export function HostTerminalSettings({
                 <Select2
                   value={form.cursorStyle}
                   onChange={(e) =>
-                    setField("cursorStyle", e.target.value as HostCursorStyle)
+                    setField("cursorStyle", e.target.value as CursorStyle)
                   }
                   className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 >
@@ -316,7 +372,7 @@ export function HostTerminalSettings({
                 <Select2
                   value={form.bellStyle}
                   onChange={(e) =>
-                    setField("bellStyle", e.target.value as HostBellStyle)
+                    setField("bellStyle", e.target.value as BellStyle)
                   }
                   className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 >
@@ -334,10 +390,7 @@ export function HostTerminalSettings({
                 <Select2
                   value={form.backspaceMode}
                   onChange={(e) =>
-                    setField(
-                      "backspaceMode",
-                      e.target.value as HostBackspaceMode,
-                    )
+                    setField("backspaceMode", e.target.value as BackspaceMode)
                   }
                   className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 >
@@ -684,15 +737,6 @@ export function HostTerminalSettings({
             />
           </SettingRow>
           <SettingRow
-            label={t("hosts.sshAgentForwardingLabel")}
-            description={t("hosts.sshAgentForwardingShortDesc")}
-          >
-            <FakeSwitch
-              checked={form.agentForwarding}
-              onChange={(v) => setField("agentForwarding", v)}
-            />
-          </SettingRow>
-          <SettingRow
             label={t("hosts.useSSHTitleLabel")}
             description={t("hosts.useSSHTitleDesc")}
           >
@@ -708,6 +752,24 @@ export function HostTerminalSettings({
             <FakeSwitch
               checked={form.autoMosh}
               onChange={(v) => setField("autoMosh", v)}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t("hosts.passwordPromptAutoFillLabel")}
+            description={t("hosts.passwordPromptAutoFillDesc")}
+          >
+            <FakeSwitch
+              checked={form.passwordPromptAutoFill}
+              onChange={(v) => setField("passwordPromptAutoFill", v)}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t("hosts.sudoPasswordAutoFillLabel")}
+            description={t("hosts.sudoPasswordAutoFillDesc")}
+          >
+            <FakeSwitch
+              checked={form.sudoPasswordAutoFill}
+              onChange={(v) => setField("sudoPasswordAutoFill", v)}
             />
           </SettingRow>
           <div className="flex flex-col gap-1.5">
@@ -769,74 +831,6 @@ export function HostTerminalSettings({
               {t("hosts.linkClickBehaviorDesc")}
             </p>
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.environmentVariablesLabel")}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                onClick={() =>
-                  setField("environmentVariables", [
-                    ...form.environmentVariables,
-                    { key: "", value: "" },
-                  ])
-                }
-              >
-                <Plus className="size-3 mr-1" /> {t("hosts.addVariableBtn")}
-              </Button>
-            </div>
-            {form.environmentVariables.length === 0 && (
-              <p className="text-[10px] text-muted-foreground/50">
-                {t("hosts.noEnvVars")}
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {form.environmentVariables.map((ev, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Input
-                    className="h-7 text-xs flex-1"
-                    placeholder="KEY"
-                    value={ev.key}
-                    onChange={(e) => {
-                      const updated = [...form.environmentVariables];
-                      updated[i] = {
-                        ...updated[i],
-                        key: e.target.value,
-                      };
-                      setField("environmentVariables", updated);
-                    }}
-                  />
-                  <Input
-                    className="h-7 text-xs flex-1"
-                    placeholder="VALUE"
-                    value={ev.value}
-                    onChange={(e) => {
-                      const updated = [...form.environmentVariables];
-                      updated[i] = {
-                        ...updated[i],
-                        value: e.target.value,
-                      };
-                      setField("environmentVariables", updated);
-                    }}
-                  />
-                  <button
-                    className="text-destructive"
-                    onClick={() =>
-                      setField(
-                        "environmentVariables",
-                        form.environmentVariables.filter((_, idx) => idx !== i),
-                      )
-                    }
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -847,7 +841,7 @@ export function HostTerminalSettings({
                 onChange={(e) =>
                   setField(
                     "fastScrollModifier",
-                    e.target.value as HostFastScrollModifier,
+                    e.target.value as FastScrollModifier,
                   )
                 }
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -897,7 +891,7 @@ export function HostTerminalSettings({
               <Select2
                 value={form.startupSnippetId ?? ""}
                 onChange={(e) =>
-                  setField(
+                  setCoreField(
                     "startupSnippetId",
                     e.target.value ? Number(e.target.value) : null,
                   )

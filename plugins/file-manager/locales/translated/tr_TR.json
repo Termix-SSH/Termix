@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP Eski Modu"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Eşzamanlı Dosya Aktarımları",
+        "description": "Yan yana yerel/uzaktan yönetici tarafından aynı anda yüklenen veya indirilen dosya sayısı. Sunucunuz SFTP kanallarını sınırlandırıyorsa bu değeri düşürün."
+      }
     }
   },
   "nav": {

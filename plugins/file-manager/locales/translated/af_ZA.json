@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "SCP Legacy-modus"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Gelyktydige lêeroordragte",
+        "description": "Hoeveel lêers die sy-aan-sy plaaslike/afgeleë bestuurder gelyktydig oplaai of aflaai. Verlaag dit as jou bediener SFTP-kanale beperk."
+      }
     }
   },
   "nav": {

@@ -616,7 +616,6 @@ async function syncProxmoxHost(
         telnetPassword: null,
         jumpHosts: serializeProxmoxJumpHosts(discovery.jumpHosts),
         quickActions: null,
-        terminalConfig: null,
         forceKeyboardInteractive: "false",
         useSocks5: 0,
         socks5Host: null,

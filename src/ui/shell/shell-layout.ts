@@ -23,10 +23,10 @@ import { listPanes, mapTabIds } from "./split/split-tree";
  * purpose: the shell always keeps one alive as the fallback tab, so it is
  * not a meaningful part of an arrangement.
  */
-const CORE_CAPTURABLE = new Set(["macros", "ssh-tools"]);
+const CORE_CAPTURABLE = new Set(["macros"]);
 
 /** Core types reopened as singletons, with an optional preselected host. */
-const CORE_SINGLETON = new Set(["macros", "ssh-tools"]);
+const CORE_SINGLETON = new Set(["macros"]);
 
 /** Core tab types that are never part of a saved arrangement. */
 const CORE_UNSAVED = new Set([

@@ -40,7 +40,12 @@ const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   quickActions: ["quickActions"],
   // Every plugin's host settings, enable switches included.
   featureFlags: ["pluginSettings", "forceKeyboardInteractive"],
-  advanced: ["statusCheckEnabled", "statusCheckInterval", "terminalConfig"],
+  advanced: [
+    "statusCheckEnabled",
+    "statusCheckInterval",
+    "terminalConfig",
+    "sshOptions",
+  ],
 };
 
 export const SECRET_KEYS = [

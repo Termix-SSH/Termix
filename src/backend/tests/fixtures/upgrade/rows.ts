@@ -186,6 +186,20 @@ const HOST_ROWS: Row[] = [
     enable_docker: 1,
     docker_config: JSON.stringify({ runtime: "podman" }),
     enable_ai_assistant: 1,
+    // Its own terminal look, behavior and SSH options, all in one JSON.
+    terminal_config: JSON.stringify({
+      theme: "dracula",
+      fontSize: 16,
+      cursorStyle: "block",
+      autoTmux: true,
+      sudoPasswordAutoFill: true,
+      localEcho: "on",
+      keepaliveInterval: 30,
+      keepaliveCountMax: 4,
+      allowLegacyAlgorithms: false,
+      agentForwarding: true,
+      environmentVariables: [{ key: "D4", value: "yes" }],
+    }),
     mac_address: "AA:BB:CC:DD:EE:04",
     wol_broadcast_address: "10.4.0.255",
     stats_config: JSON.stringify({
@@ -198,6 +212,8 @@ const HOST_ROWS: Row[] = [
     }),
   }),
   host(HOSTS.key, "d4-key", {
+    // Behavior only: this host kept following the user's look.
+    terminal_config: JSON.stringify({ passwordPromptAutoFill: false }),
     key: PRIVATE_KEY,
     key_password: "d4-key-pass",
     key_type: "ssh-ed25519",
@@ -362,6 +378,15 @@ export const ROWS: Record<string, Row[]> = {
         resizeMethod: "reconnect",
         enableDrive: true,
       }),
+      terminal_defaults: JSON.stringify({ fontSize: 18, cursorBlink: false }),
+      custom_themes: JSON.stringify([
+        {
+          id: "d4-theme",
+          name: "d4 theme",
+          colors: { background: "#101010", foreground: "#f0f0f0" },
+        },
+      ]),
+      command_autocomplete: 1,
     },
   ],
   sso_providers: [
@@ -811,7 +836,13 @@ export const ROWS: Record<string, Row[]> = {
     ["metrics_history_retention_days", "14"],
     [
       "host_defaults",
-      JSON.stringify({ metricsEnabled: false, enableCommandHistory: false }),
+      JSON.stringify({
+        metricsEnabled: false,
+        enableCommandHistory: false,
+        fontSize: 20,
+        theme: "nord",
+        autoTmux: true,
+      }),
     ],
     ["ai_globally_enabled", "true"],
     ["ai_private_endpoint_allowlist", JSON.stringify(["10.4.0.0/24"])],

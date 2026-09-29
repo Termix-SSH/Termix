@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Chế độ SCP cũ"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Truyền tệp đồng thời",
+        "description": "Số lượng tệp mà trình quản lý cục bộ/từ xa song song tải lên hoặc tải xuống cùng lúc. Giảm giá trị này nếu máy chủ của bạn giới hạn số kênh SFTP."
+      }
     }
   },
   "nav": {

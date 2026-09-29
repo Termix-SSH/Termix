@@ -1,5 +1,4 @@
-const style = document.createElement("style");
-style.innerHTML = `
+const TERMINAL_STYLES = `
 @font-face {
   font-family: 'Caskaydia Cove Nerd Font Mono';
   src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');
@@ -74,7 +73,19 @@ style.innerHTML = `
   font-feature-settings: "liga" 0, "calt" 0;
 }
 `;
-document.head.appendChild(style);
+
+/**
+ * The terminal font faces and xterm scrollbar rules, added to the page while
+ * this plugin is active. Returns the disposer.
+ */
+export function installTerminalGlobalStyles(): () => void {
+  if (typeof document === "undefined") return () => {};
+  const style = document.createElement("style");
+  style.dataset.termixTerminalStyles = "";
+  style.innerHTML = TERMINAL_STYLES;
+  document.head.appendChild(style);
+  return () => style.remove();
+}
 
 // Canvas fillText() does not reliably trigger @font-face fetches on every
 // browser engine (notably Android WebView) the way rendering real DOM text

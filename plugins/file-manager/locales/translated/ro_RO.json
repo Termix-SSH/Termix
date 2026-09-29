@@ -395,6 +395,12 @@
       "scpLegacy": {
         "label": "Modul SCP Legacy"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferuri simultane de fișiere",
+        "description": "Câte fișiere încarcă sau descarcă simultan managerul local/la distanță. Reduceți această valoare dacă serverul dvs. limitează canalele SFTP."
+      }
     }
   },
   "nav": {

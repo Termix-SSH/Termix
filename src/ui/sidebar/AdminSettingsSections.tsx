@@ -482,23 +482,6 @@ export function AdminHostDefaultsSection({
           </SettingRow>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-border pt-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {t("admin.hostDefaultsTerminal")}
-          </span>
-          <SettingRow
-            label={t("admin.hostDefaultsAutoTmux")}
-            description={t("admin.hostDefaultsAutoTmuxDesc")}
-          >
-            <AdminToggle
-              on={defaults.autoTmux ?? false}
-              onToggle={() =>
-                setDefaults((p) => ({ ...p, autoTmux: !(p.autoTmux ?? false) }))
-              }
-            />
-          </SettingRow>
-        </div>
-
         <Button
           variant="outline"
           size="sm"

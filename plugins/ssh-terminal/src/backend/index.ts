@@ -1,7 +1,7 @@
 import type { Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { createTerminalLogger } from "./helpers.js";
-import { hostImportNormalizer } from "./host-import.js";
+import { hostImportNormalizer, hostPayloadLegacy } from "./host-import.js";
 import { createHistoryRepository } from "./history-repository.js";
 import { registerTerminalRoutes } from "./routes.js";
 import {
@@ -171,6 +171,7 @@ export async function activate(ctx: PluginContext) {
     "ssh-terminal.hostImportNormalizer",
     hostImportNormalizer,
   );
+  ctx.registry.provide("ssh-terminal.hostPayloadLegacy", hostPayloadLegacy);
 
   ctx.log.info("SSH terminal mounted at /plugin-ws/ssh-terminal/terminal");
 }

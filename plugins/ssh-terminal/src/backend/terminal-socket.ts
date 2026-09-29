@@ -8,6 +8,7 @@ import ssh2Pkg, {
 } from "ssh2";
 import {
   PluginSshInteractionError,
+  type HostSshOptions,
   type PluginContext,
   type PluginSshHost,
   type PluginSshPrepared,
@@ -32,6 +33,7 @@ import {
   type TerminalLogger,
 } from "./helpers.js";
 import { SSHAuthManager } from "./keyboard-prompt.js";
+import { HOST_KEYS } from "./settings.js";
 import {
   isMessageAllowedForParticipant,
   type TerminalSessionManager,
@@ -76,11 +78,8 @@ interface ConnectToHostData {
       protocol?: "tcp" | "udp";
       delay?: number;
     }>;
-    terminalConfig?: {
-      keepaliveInterval?: number;
-      keepaliveCountMax?: number;
-      [key: string]: unknown;
-    };
+    /** Keepalive, legacy algorithms, agent and environment options. */
+    sshOptions?: HostSshOptions | null;
     /** When true, ignore key material and force password auth (fallback path). */
     passwordFallbackOnly?: boolean;
   };
@@ -1434,7 +1433,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
             socks5Password?: string;
             socks5ProxyChain?: unknown;
             portKnockSequence?: ConnectToHostData["hostConfig"]["portKnockSequence"];
-            terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
+            sshOptions?: HostSshOptions | null;
           })
         | null = null;
 
@@ -1520,8 +1519,8 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
               hostConfig.socks5ProxyChain = resolvedHostData.socks5ProxyChain;
             }
 
-            if (!hostConfig.terminalConfig && resolvedHostData.terminalConfig) {
-              hostConfig.terminalConfig = resolvedHostData.terminalConfig;
+            if (!hostConfig.sshOptions && resolvedHostData.sshOptions) {
+              hostConfig.sshOptions = resolvedHostData.sshOptions;
             }
 
             if (
@@ -1548,6 +1547,17 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
       }
 
       const serverHostId = resolveServerHostId(id, resolvedHostData);
+
+      let autoTmuxEnabled = false;
+      if (serverHostId != null) {
+        try {
+          autoTmuxEnabled =
+            (await ctx.settings.getHost(serverHostId, HOST_KEYS.autoTmux)) ===
+            true;
+        } catch {
+          autoTmuxEnabled = false;
+        }
+      }
 
       // Resolve credentials server-side when frontend doesn't provide them
       let resolvedCredentials = {
@@ -2115,7 +2125,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                 }
               });
 
-              const autoTmux = hostConfig.terminalConfig?.autoTmux === true;
+              const autoTmux = autoTmuxEnabled;
 
               // Helper to run initialPath/executeCommand after the shell
               // (or tmux session) is ready
@@ -2692,7 +2702,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         keyType: resolvedCredentials.keyType,
         certPublicKey: resolvedCredentials.certPublicKey,
         forceKeyboardInteractive: hostConfig.forceKeyboardInteractive,
-        terminalConfig: hostConfig.terminalConfig,
+        sshOptions: hostConfig.sshOptions,
         jumpHosts: hostConfig.jumpHosts,
         useSocks5: hostConfig.useSocks5,
         socks5Host: hostConfig.socks5Host,
@@ -2758,7 +2768,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         return;
       }
 
-      if (hostConfig.terminalConfig?.agentForwarding) {
+      if (hostConfig.sshOptions?.agentForwarding) {
         if (connectConfig.privateKey) {
           try {
             const parsed = ssh2Utils.parseKey(
