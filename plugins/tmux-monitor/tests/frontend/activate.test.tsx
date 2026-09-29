@@ -92,11 +92,17 @@ describe("host editor section", () => {
       protocols: { ssh: true },
     });
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getAllByRole("button")[0]);
 
     const settings = (form.pluginSettings as Record<string, unknown>)[
       "tmux-monitor"
     ] as { enableTmuxMonitor: boolean };
     expect(settings.enableTmuxMonitor).toBe(true);
+    fireEvent.click(screen.getAllByRole("button")[1]);
+    expect(
+      (form.pluginSettings as Record<string, Record<string, unknown>>)[
+        "tmux-monitor"
+      ],
+    ).toEqual({ enableTmuxMonitor: true, mouseEnabled: false });
   });
 });

@@ -65,6 +65,27 @@ describe("createTmuxSessionsService", () => {
     expect(writes[0]).toContain("main");
   });
 
+  it("uses the host's saved mouse setting when attaching", async () => {
+    const { ctx } = createFakeContext({ pluginId: "tmux-monitor" });
+    await ctx.settings.setHost(7, "mouseEnabled", false);
+    const writes: string[] = [];
+    const service = createTmuxSessionsService(ctx);
+    await service.attachOrCreate(
+      { write: (value: string) => writes.push(value) },
+      "main",
+      undefined,
+      7,
+    );
+    await service.attachOrCreate(
+      { write: (value: string) => writes.push(value) },
+      "other",
+      undefined,
+      8,
+    );
+    expect(writes[0]).toContain("mouse off");
+    expect(writes[1]).toContain("mouse on");
+  });
+
   it("waitForSession() falls back to the requested name on timeout", async () => {
     vi.useFakeTimers();
     try {

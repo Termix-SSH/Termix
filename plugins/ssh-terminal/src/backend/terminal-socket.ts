@@ -778,7 +778,12 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                 const existingName = tmuxData.sessionName || undefined;
                 if (existingName) {
                   void tmux
-                    .attachOrCreate(session.sshStream, existingName)
+                    .attachOrCreate(
+                      session.sshStream,
+                      existingName,
+                      undefined,
+                      session.hostId,
+                    )
                     .catch(() => {});
                   session.tmuxSessionName = existingName;
                   sshLogger.info("User selected tmux session to attach", {
@@ -795,7 +800,12 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                 } else {
                   const newName = `termix-${session.hostId}-${Date.now().toString(36).slice(-4)}`;
                   void tmux
-                    .attachOrCreate(session.sshStream, undefined, newName)
+                    .attachOrCreate(
+                      session.sshStream,
+                      undefined,
+                      newName,
+                      session.hostId,
+                    )
                     .catch(() => {});
                   const sshConn = session.sshConn;
                   if (sshConn) {
@@ -2156,7 +2166,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                 // skip detection and reuse the same path as the manual
                 // "tmux_attach" websocket message.
                 void tmux
-                  .attachOrCreate(stream, tmuxAttachSession)
+                  .attachOrCreate(stream, tmuxAttachSession, undefined, id)
                   .catch(() => {});
                 {
                   const session = sessionManager.getSession(boundSessionId);
@@ -2193,7 +2203,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                     } else if (detection.sessions.length === 0) {
                       const newName = `termix-${id}-${Date.now().toString(36).slice(-4)}`;
                       void tmux
-                        .attachOrCreate(stream, undefined, newName)
+                        .attachOrCreate(stream, undefined, newName, id)
                         .catch(() => {});
                       const confirmed = await tmux.waitForSession(
                         conn,
