@@ -299,7 +299,7 @@ export function KeybindingsDialog({
                           : formatCombo(def.combo)}
                       </span>
                       <span className="text-xs text-muted-foreground truncate">
-                        {def.description}
+                        {t(def.descriptionKey)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">

@@ -815,22 +815,26 @@ export function resolveTerminalFontFamily(fontFamily?: string): string {
 }
 
 export const CURSOR_STYLES = [
-  { value: "block", label: "Block" },
-  { value: "underline", label: "Underline" },
-  { value: "bar", label: "Bar" },
+  { value: "block", label: "Block", labelKey: "hosts.cursorStyleBlock" },
+  {
+    value: "underline",
+    label: "Underline",
+    labelKey: "hosts.cursorStyleUnderline",
+  },
+  { value: "bar", label: "Bar", labelKey: "hosts.cursorStyleBar" },
 ] as const;
 
 export const BELL_STYLES = [
-  { value: "none", label: "None" },
-  { value: "sound", label: "Sound" },
-  { value: "visual", label: "Visual" },
-  { value: "both", label: "Both" },
+  { value: "none", label: "None", labelKey: "hosts.bellStyleNone" },
+  { value: "sound", label: "Sound", labelKey: "hosts.bellStyleSound" },
+  { value: "visual", label: "Visual", labelKey: "hosts.bellStyleVisual" },
+  { value: "both", label: "Both", labelKey: "hosts.bellStyleBoth" },
 ] as const;
 
 export const FAST_SCROLL_MODIFIERS = [
-  { value: "alt", label: "Alt" },
-  { value: "ctrl", label: "Ctrl" },
-  { value: "shift", label: "Shift" },
+  { value: "alt", label: "Alt", labelKey: "hosts.fastScrollModifierAlt" },
+  { value: "ctrl", label: "Ctrl", labelKey: "hosts.fastScrollModifierCtrl" },
+  { value: "shift", label: "Shift", labelKey: "hosts.fastScrollModifierShift" },
 ] as const;
 
 export const DEFAULT_TERMINAL_CONFIG = {

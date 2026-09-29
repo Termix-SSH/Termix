@@ -58,6 +58,7 @@ const HOST_REFERENCES = [
   },
   { field: "jumpHosts[].hostId", entityType: "hosts" },
   { field: "quickActions[].snippetId", entityType: "commandSnippet" },
+  { field: "terminalConfig.startupSnippetId", entityType: "commandSnippet" },
 ] as const;
 
 /** Columns that only mean something on the device that holds them. */

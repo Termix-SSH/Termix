@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { HostSessionStatus } from "./host-session-status.js";
+import { HostSessionStatus } from "../../hosts/host-session-status.js";
 
 describe("HostSessionStatus", () => {
   it("reports only the first connection and last disconnection per host", () => {

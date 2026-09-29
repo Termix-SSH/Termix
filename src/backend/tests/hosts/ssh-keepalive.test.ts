@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveSshKeepalive } from "./ssh-keepalive.js";
+import { resolveSshKeepalive } from "../../hosts/ssh-keepalive.js";
 
 describe("resolveSshKeepalive", () => {
   it("preserves zero to disable SSH keepalives", () => {

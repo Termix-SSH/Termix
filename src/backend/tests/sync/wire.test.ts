@@ -35,6 +35,7 @@ beforeEach(() => {
     references: [
       { field: "parentId", syncField: "parentSyncId", entityType: "things" },
       { field: "hops[].thingId", entityType: "things" },
+      { field: "config.startId", entityType: "things" },
       {
         field: "bindings[].action.snippetId",
         entityType: "things",
@@ -109,6 +110,29 @@ describe("serializing references", () => {
     expect(back.parentSyncId).toBeUndefined();
     expect(JSON.parse(back.hops as string)).toEqual([{ thingId: 3 }]);
     expect(back.bindings).toEqual([{ action: { snippetId: "12" } }]);
+  });
+
+  it("rewrites an id nested in a JSON object column", async () => {
+    const wire = await serializeReferences(
+      entity("things"),
+      { config: JSON.stringify({ theme: "dark", startId: 5 }) },
+      toSync,
+    );
+    expect(JSON.parse(wire.config as string)).toEqual({
+      theme: "dark",
+      startId: "sync-5",
+    });
+
+    const back = await deserializeReferences(
+      entity("things"),
+      wire,
+      toId,
+      null,
+    );
+    expect(JSON.parse(back.config as string)).toEqual({
+      theme: "dark",
+      startId: 5,
+    });
   });
 
   it("keeps the current value when a referenced row is not here", async () => {

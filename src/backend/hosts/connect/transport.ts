@@ -1,6 +1,6 @@
 /**
- * How the bytes get to a host: port knocking, a Cloudflare Access tunnel, a
- * jump host chain or a SOCKS5 proxy, in that order. Sets config.sock and
+ * How the bytes get to a host: port knocking, a jump host chain or a SOCKS5
+ * proxy, in that order. Sets config.sock and
  * returns the jump client so the caller can close it with the connection.
  */
 
@@ -39,7 +39,7 @@ function getHostSocks5Config(host: SshConnectHost): SOCKS5Config | null {
 class SshTransportError extends Error {
   constructor(
     message: string,
-    readonly stage: "cloudflare" | "jump-host" | "jump-forward" | "proxy",
+    readonly stage: "jump-host" | "jump-forward" | "proxy",
     options?: { cause?: unknown },
   ) {
     super(message, options);
@@ -50,8 +50,6 @@ class SshTransportError extends Error {
 export interface OpenTransportOptions {
   /** Knock before connecting when the host has a sequence. Default true. */
   portKnock?: boolean;
-  /** Use terminalConfig.cfAccessClient* when present. Default true. */
-  cloudflare?: boolean;
   /** Resolve DNS up front for a direct connection. Default true. */
   resolveDns?: boolean;
   log?: SshAuthLog;
@@ -59,7 +57,7 @@ export interface OpenTransportOptions {
 
 export interface OpenedTransport {
   jumpClient: Client | null;
-  via: "direct" | "proxy" | "jump" | "cloudflare";
+  via: "direct" | "proxy" | "jump";
 }
 
 function forwardThrough(
@@ -94,8 +92,6 @@ export async function openSshTransport(
   config: MutableConnectConfig,
   options: OpenTransportOptions = {},
 ): Promise<OpenedTransport> {
-  const log = options.log ?? (() => {});
-
   if (
     options.portKnock !== false &&
     Array.isArray(host.portKnockSequence) &&
@@ -112,42 +108,6 @@ export async function openSshTransport(
   }
 
   let via: OpenedTransport["via"] = "direct";
-
-  const terminalConfig = (host.terminalConfig ?? {}) as Record<string, unknown>;
-  if (
-    options.cloudflare !== false &&
-    terminalConfig.cfAccessClientId &&
-    terminalConfig.cfAccessClientSecret
-  ) {
-    try {
-      const WebSocket = (await import("ws")).default;
-      const { createWebSocketDuplex, waitForWebSocketOpen } =
-        await import("../cloudflare-websocket.js");
-      const cfHostname = (terminalConfig.cfTunnelHostname as string) || host.ip;
-      const cfWs = new WebSocket(
-        `wss://${cfHostname}/cdn-cgi/access/ssh-connect`,
-        {
-          headers: {
-            "CF-Access-Client-Id": terminalConfig.cfAccessClientId as string,
-            "CF-Access-Client-Secret":
-              terminalConfig.cfAccessClientSecret as string,
-          },
-        },
-      );
-      await waitForWebSocketOpen(cfWs, 30000);
-      config.sock = createWebSocketDuplex(
-        cfWs,
-      ) as unknown as typeof config.sock;
-      via = "cloudflare";
-      log("info", "Connected via Cloudflare Tunnel");
-    } catch (error) {
-      throw new SshTransportError(
-        "Cloudflare tunnel connection failed: " + getErrorMessage(error),
-        "cloudflare",
-        { cause: error },
-      );
-    }
-  }
 
   const jumpUserId = host.userId || "";
   if (host.jumpHosts && host.jumpHosts.length > 0 && jumpUserId) {

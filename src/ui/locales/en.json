@@ -1008,7 +1008,19 @@
     "localOnly": "Keep on this device only",
     "localOnlyDesc": "This host is not sent to the server and does not appear on your other devices.",
     "folderLocalOnly": "Keep on this device only",
-    "folderLocalOnlyDesc": "This folder and every host in it stay on this device and are not sent to the server."
+    "folderLocalOnlyDesc": "This folder and every host in it stay on this device and are not sent to the server.",
+    "cursorStyleBlock": "Block",
+    "cursorStyleUnderline": "Underline",
+    "cursorStyleBar": "Bar",
+    "bellStyleNone": "None",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "Visual",
+    "bellStyleBoth": "Both",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierShift": "Shift",
+    "backspaceModeNormal": "Normal (DEL)",
+    "backspaceModeControlH": "Control-H (BS)"
   },
   "commandPalette": {
     "searchPlaceholder": "Search hosts, commands, or settings...",
@@ -2008,7 +2020,17 @@
         "snippetLabel": "Snippet",
         "selectSnippetPlaceholder": "Select a snippet",
         "orphanedSnippetWarning": "snippet not found",
-        "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers."
+        "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+        "builtIn": {
+          "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+          "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+          "copyCmdC": "Copy selection (Cmd+C)",
+          "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+          "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+          "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+          "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+          "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+        }
       },
       "connectionDefaults": {
         "title": "Connection Defaults",

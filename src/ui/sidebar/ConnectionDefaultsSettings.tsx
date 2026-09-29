@@ -278,7 +278,7 @@ export function ConnectionDefaultsSettings() {
                   <option value="">{inheritLabel}</option>
                   {CURSOR_STYLES.map((style) => (
                     <option key={style.value} value={style.value}>
-                      {style.label}
+                      {t(style.labelKey)}
                     </option>
                   ))}
                 </select>

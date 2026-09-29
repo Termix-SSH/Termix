@@ -14,6 +14,11 @@ import {
   serializeProxmoxJumpHosts,
 } from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "./proxmox-shared.js";
+import {
+  indexImportedGuests,
+  parseJsonObject,
+  type ProxmoxSource,
+} from "./guest-sync.js";
 
 /** A thrown value's message, or the fallback when it is not an Error. */
 function getErrorMessage(error: unknown, fallback = "Unknown error"): string {
@@ -187,17 +192,6 @@ type ProxmoxGuest = {
 /** The resolved host ctx.ssh.connect hands back, plus the sudo secret proxmox needs for pvesh. */
 type PluginSshHostWithSudo = PluginHostRecord & { sudoPassword?: string };
 
-type ProxmoxSource = {
-  source: "proxmox";
-  sourceHostId: number;
-  node: string;
-  vmid: number;
-  type: "qemu" | "lxc";
-  lastSeenAt?: string;
-  lastStatus?: string;
-  missingSince?: string | null;
-};
-
 type ProxmoxSyncResult = {
   created: number;
   updated: number;
@@ -205,41 +199,6 @@ type ProxmoxSyncResult = {
   skipped: number;
   errors: string[];
 };
-
-function parseJsonObject(value: unknown): Record<string, unknown> {
-  if (!value) return {};
-  if (typeof value === "object") return value as Record<string, unknown>;
-  if (typeof value !== "string") return {};
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object"
-      ? (parsed as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function getProxmoxSource(host: Record<string, unknown>): ProxmoxSource | null {
-  const config = parseJsonObject(host.proxmoxConfig);
-  const source = config.source;
-  if (!source || typeof source !== "object") return null;
-  const src = source as Record<string, unknown>;
-  if (
-    src.source !== "proxmox" ||
-    typeof src.sourceHostId !== "number" ||
-    typeof src.node !== "string" ||
-    typeof src.vmid !== "number" ||
-    (src.type !== "qemu" && src.type !== "lxc")
-  ) {
-    return null;
-  }
-  return src as ProxmoxSource;
-}
-
-function proxmoxSourceKey(source: ProxmoxSource): string {
-  return `${source.sourceHostId}:${source.node}:${source.type}:${source.vmid}`;
-}
 
 function guestSourceKey(sourceHostId: number, guest: ProxmoxGuest): string {
   return `${sourceHostId}:${guest.node}:${guest.type}:${guest.vmid}`;
@@ -552,19 +511,18 @@ async function syncProxmoxHost(
       string,
       unknown
     >[];
-    const existingBySource = new Map<string, Record<string, unknown>>();
-    for (const host of existingHosts) {
-      const source = getProxmoxSource(host);
-      if (source?.sourceHostId === sourceHostId) {
-        existingBySource.set(proxmoxSourceKey(source), host);
-      }
-    }
+    const existingBySource = indexImportedGuests(
+      existingHosts,
+      await ctx.settings.listHostValues("proxmoxConfig"),
+      sourceHostId,
+    );
 
     const seen = new Set<string>();
     for (const guest of discovery.guests) {
       const key = guestSourceKey(sourceHostId, guest);
       seen.add(key);
-      const existing = existingBySource.get(key);
+      const imported = existingBySource.get(key);
+      const existing = imported?.host;
       const source: ProxmoxSource = {
         source: "proxmox",
         sourceHostId,
@@ -576,13 +534,7 @@ async function syncProxmoxHost(
         missingSince: null,
       };
 
-      const baseConfig = existing
-        ? parseJsonObject(existing.proxmoxConfig)
-        : {};
-      const proxmoxConfig = {
-        ...baseConfig,
-        source,
-      };
+      const proxmoxConfig = { ...(imported?.config ?? {}), source };
       const existingConnectionType =
         existing?.connectionType === "ssh" || existing?.connectionType === "rdp"
           ? existing.connectionType
@@ -616,7 +568,6 @@ async function syncProxmoxHost(
         connectionType,
         folder: existing?.folder || sourceHostName,
         tags: mergeTags(existing?.tags, guestTags(guest), ["proxmox-missing"]),
-        proxmoxConfig: JSON.stringify(proxmoxConfig),
         updatedAt: now,
       };
 
@@ -629,6 +580,11 @@ async function syncProxmoxHost(
           existing.id as number,
           update as PluginHostUpdateInput,
         );
+        await ctx.settings.setHost(
+          existing.id as number,
+          "proxmoxConfig",
+          proxmoxConfig,
+        );
         result.updated++;
         continue;
       }
@@ -639,7 +595,7 @@ async function syncProxmoxHost(
         enableRdp: connectionType === "rdp",
       });
 
-      await ctx.hosts.create({
+      const created = await ctx.hosts.create({
         ...update,
         createdAt: now,
         pin: false,
@@ -660,8 +616,6 @@ async function syncProxmoxHost(
         telnetPassword: null,
         jumpHosts: serializeProxmoxJumpHosts(discovery.jumpHosts),
         quickActions: null,
-        statsConfig: null,
-        dockerConfig: null,
         terminalConfig: null,
         forceKeyboardInteractive: "false",
         useSocks5: 0,
@@ -672,30 +626,28 @@ async function syncProxmoxHost(
         socks5ProxyChain: null,
         portKnockSequence: null,
       } as unknown as PluginHostCreateInput);
+      await ctx.settings.setHost(
+        Number(created.id),
+        "proxmoxConfig",
+        proxmoxConfig,
+      );
       result.created++;
     }
 
     if (discovery.config.markMissingGuests) {
-      for (const [key, existing] of existingBySource.entries()) {
+      for (const [key, { host, config, source }] of existingBySource) {
         if (seen.has(key)) continue;
-        const config = parseJsonObject(existing.proxmoxConfig);
-        const source = getProxmoxSource(existing);
-        if (!source) continue;
-        const missingSince = source.missingSince || now;
         await ctx.hosts.update(
-          existing.id as number,
+          host.id as number,
           {
-            tags: mergeTags(existing.tags, ["proxmox-missing"]),
-            proxmoxConfig: JSON.stringify({
-              ...config,
-              source: {
-                ...source,
-                missingSince,
-              },
-            }),
+            tags: mergeTags(host.tags, ["proxmox-missing"]),
             updatedAt: now,
           } as PluginHostUpdateInput,
         );
+        await ctx.settings.setHost(host.id as number, "proxmoxConfig", {
+          ...config,
+          source: { ...source, missingSince: source.missingSince || now },
+        });
         result.markedMissing++;
       }
     }

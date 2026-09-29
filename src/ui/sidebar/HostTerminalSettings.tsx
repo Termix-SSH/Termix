@@ -270,7 +270,7 @@ export function HostTerminalSettings({
                 >
                   {CURSOR_STYLES.map((s) => (
                     <option key={s.value} value={s.value}>
-                      {s.label}
+                      {t(s.labelKey)}
                     </option>
                   ))}
                 </Select2>
@@ -322,7 +322,7 @@ export function HostTerminalSettings({
                 >
                   {BELL_STYLES.map((b) => (
                     <option key={b.value} value={b.value}>
-                      {b.label}
+                      {t(b.labelKey)}
                     </option>
                   ))}
                 </Select2>
@@ -341,8 +341,12 @@ export function HostTerminalSettings({
                   }
                   className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 >
-                  <option value="normal">Normal (DEL)</option>
-                  <option value="control-h">Control-H (BS)</option>
+                  <option value="normal">
+                    {t("hosts.backspaceModeNormal")}
+                  </option>
+                  <option value="control-h">
+                    {t("hosts.backspaceModeControlH")}
+                  </option>
                 </Select2>
               </div>
             </div>
@@ -850,7 +854,7 @@ export function HostTerminalSettings({
               >
                 {FAST_SCROLL_MODIFIERS.map((m) => (
                   <option key={m.value} value={m.value}>
-                    {m.label}
+                    {t(m.labelKey)}
                   </option>
                 ))}
               </Select2>

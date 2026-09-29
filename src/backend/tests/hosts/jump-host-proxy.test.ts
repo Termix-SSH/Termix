@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
+import { getJumpHostSocks5Config } from "../../hosts/jump-host-proxy.js";
 
 describe("getJumpHostSocks5Config", () => {
   it("uses the first jump host proxy settings", () => {

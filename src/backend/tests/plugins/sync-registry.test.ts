@@ -197,6 +197,16 @@ describe("core sync entities", () => {
     );
   });
 
+  it("translates every snippet a host points at", () => {
+    const fields = (getEntity("hosts")?.references ?? [])
+      .filter((reference) => reference.entityType === "commandSnippet")
+      .map((reference) => reference.field);
+    expect(fields).toEqual([
+      "quickActions[].snippetId",
+      "terminalConfig.startupSnippetId",
+    ]);
+  });
+
   it("encrypts host and credential secrets", () => {
     expect(getEntity("hosts")?.encryptedFields).toContain("password");
     expect(getEntity("sshCredentials")?.encryptedFields).toContain(

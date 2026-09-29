@@ -3,7 +3,7 @@ import type { KeyCombo } from "@/types/keybindings";
 export interface DefaultKeybindingInfo {
   id: string;
   combo: KeyCombo;
-  description: string;
+  descriptionKey: string;
 }
 
 export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
@@ -17,7 +17,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: false,
       meta: false,
     },
-    description: "Copy selection (Ctrl+C, only when text is selected)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.copyCtrlC",
   },
   {
     id: "default-copy-ctrlshiftc",
@@ -29,7 +29,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: true,
       meta: false,
     },
-    description: "Copy selection (Ctrl+Shift+C)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.copyCtrlShiftC",
   },
   {
     id: "default-copy-cmdc",
@@ -41,7 +41,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: false,
       meta: true,
     },
-    description: "Copy selection (Cmd+C)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.copyCmdC",
   },
   {
     id: "default-paste-ctrlshiftv",
@@ -53,7 +53,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: true,
       meta: false,
     },
-    description: "Paste from clipboard (Ctrl+Shift+V)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.pasteCtrlShiftV",
   },
   {
     id: "default-ctrlaltw",
@@ -65,7 +65,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: false,
       meta: false,
     },
-    description: "Send Ctrl+W to shell (blocked from closing browser tab)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.ctrlW",
   },
   {
     id: "default-ctrlaltt",
@@ -77,7 +77,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: false,
       meta: false,
     },
-    description: "Send Ctrl+T to shell (blocked from opening browser tab)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.ctrlT",
   },
   {
     id: "default-ctrlaltn",
@@ -89,7 +89,7 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: false,
       meta: false,
     },
-    description: "Send Ctrl+N to shell (blocked from opening browser window)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.ctrlN",
   },
   {
     id: "default-ctrlaltq",
@@ -101,6 +101,6 @@ export const BUILT_IN_DEFAULTS: DefaultKeybindingInfo[] = [
       shift: false,
       meta: false,
     },
-    description: "Send Ctrl+Q to shell (blocked from quitting browser)",
+    descriptionKey: "newUi.sidebar.keybindings.builtIn.ctrlQ",
   },
 ];
