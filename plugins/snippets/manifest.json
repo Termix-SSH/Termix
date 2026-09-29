@@ -79,6 +79,20 @@
           "labelKey": "settings.foldersCollapsed.label",
           "descriptionKey": "settings.foldersCollapsed.description",
           "default": true
+        },
+        {
+          "key": "showCommands",
+          "type": "boolean",
+          "labelKey": "settings.showCommands.label",
+          "descriptionKey": "settings.showCommands.description",
+          "default": true
+        },
+        {
+          "key": "confirmExecution",
+          "type": "boolean",
+          "labelKey": "settings.confirmExecution.label",
+          "descriptionKey": "settings.confirmExecution.description",
+          "default": false
         }
       ]
     },

@@ -22,7 +22,7 @@ export interface RunTarget {
  * rather than touching a terminal ref directly, since core's tab state is
  * not part of the plugin surface.
  */
-export function useSnippetRunner() {
+export function useSnippetRunner(confirmExecution = false) {
   const { t } = useTranslation();
   const [runningSnippet, setRunningSnippet] = useState<{
     snippet: Snippet;
@@ -35,9 +35,7 @@ export function useSnippetRunner() {
 
   const handleConfirmRun = useCallback(
     (snippet: Snippet, execute: () => void) => {
-      const shouldConfirm =
-        localStorage.getItem("confirmSnippetExecution") === "true";
-      if (!shouldConfirm) {
+      if (!confirmExecution) {
         execute();
         return;
       }
@@ -49,7 +47,7 @@ export function useSnippetRunner() {
         duration: 6000,
       });
     },
-    [t],
+    [confirmExecution, t],
   );
 
   async function sendResolvedToTarget(

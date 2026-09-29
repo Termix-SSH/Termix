@@ -1,291 +1,65 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  usePluginApi,
-  useTranslation,
-  useSettings,
   usePermission,
+  usePluginApi,
+  useSettings,
+  useTranslation,
   type PanelProps,
 } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
-  ChevronDown,
-  ChevronRight,
-  Copy,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Download,
-  Folder,
+  ExternalLink,
   FolderPlus,
-  Pencil,
-  Play,
+  MoreHorizontal,
   Plus,
   Search,
-  Share2,
-  Trash2,
+  SlidersHorizontal,
   Upload,
+  X,
 } from "lucide-react";
 import {
-  Badge,
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Select2,
-  Switch,
-  Textarea,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  copyToClipboard,
+  useConfirmation,
 } from "@termix/plugin-sdk/ui";
 import { createSnippetsApi } from "./snippets-api";
 import { useSnippetRunner } from "./use-snippet-runner";
+import { SnippetEditor, type SnippetFormValues } from "./SnippetEditor";
+import { SnippetSettings } from "./SnippetSettings";
+import { readSnippetSettings } from "./settings";
 import {
-  errorMessage,
-  FOLDER_ICONS,
-  type Snippet,
-  type SnippetFolder,
-} from "./types";
+  SnippetFolderDialog,
+  type FolderFormValues,
+} from "./SnippetFolderDialog";
+import { SnippetFolderRow, SnippetRow } from "./SnippetTree";
+import { errorMessage, type Snippet, type SnippetFolder } from "./types";
 
-const ROOT_FOLDER = "__root__";
+const DOCS_URL = "https://docs.termix.site/features/terminal/snippets";
 
-interface EditState {
-  id: number | null;
+type View =
+  | { kind: "list" }
+  | { kind: "edit"; snippet: Snippet | null; folder?: string }
+  | { kind: "settings" };
+
+interface FolderGroup {
   name: string;
-  content: string;
-  description: string;
-  folder: string;
-  isNote: boolean;
+  folder: SnippetFolder | null;
+  snippets: Snippet[];
 }
 
-const EMPTY_EDIT: EditState = {
-  id: null,
-  name: "",
-  content: "",
-  description: "",
-  folder: "",
-  isNote: false,
-};
-
-function groupByFolder(snippets: Snippet[]): Map<string, Snippet[]> {
-  const groups = new Map<string, Snippet[]>();
-  for (const snippet of snippets) {
-    const key = snippet.folder || ROOT_FOLDER;
-    const list = groups.get(key) ?? [];
-    list.push(snippet);
-    groups.set(key, list);
-  }
-  return groups;
-}
-
-function SnippetEditDialog({
-  open,
-  initial,
-  folders,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  initial: EditState;
-  folders: SnippetFolder[];
-  onClose: () => void;
-  onSave: (state: EditState) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [state, setState] = useState<EditState>(initial);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (open) setState(initial);
-  }, [open, initial]);
-
-  const isEdit = initial.id !== null;
-
+function matchesQuery(snippet: Snippet, query: string): boolean {
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {t(isEdit ? "editSnippetTitle" : "createSnippetTitle")}
-          </DialogTitle>
-          <DialogDescription>
-            {t(isEdit ? "editSnippetDescription" : "createSnippetDescription")}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold">{t("nameLabel")}</label>
-            <Input
-              value={state.name}
-              placeholder={t("namePlaceholder")}
-              onChange={(e) =>
-                setState((s) => ({ ...s, name: e.target.value }))
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold">
-              {t("descriptionLabel")}
-            </label>
-            <Input
-              value={state.description}
-              placeholder={t("descriptionPlaceholder")}
-              onChange={(e) =>
-                setState((s) => ({ ...s, description: e.target.value }))
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold">{t("folderLabel")}</label>
-            <Select2
-              value={state.folder}
-              onChange={(e) =>
-                setState((s) => ({ ...s, folder: e.target.value }))
-              }
-            >
-              <option value="">{t("noFolder")}</option>
-              {folders.map((f) => (
-                <option key={f.id} value={f.name}>
-                  {f.name}
-                </option>
-              ))}
-            </Select2>
-          </div>
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold">{t("typeLabel")}</label>
-            <div className="flex items-center gap-2 text-xs">
-              <span>{t("typeCommand")}</span>
-              <Switch
-                checked={state.isNote}
-                onCheckedChange={(checked) =>
-                  setState((s) => ({ ...s, isNote: checked }))
-                }
-              />
-              <span>{t("typeNote")}</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold">
-              {t(state.isNote ? "noteLabel" : "commandLabel")}
-            </label>
-            <Textarea
-              className="min-h-32 font-mono text-xs"
-              value={state.content}
-              placeholder={t(
-                state.isNote ? "notePlaceholder" : "commandPlaceholder",
-              )}
-              onChange={(e) =>
-                setState((s) => ({ ...s, content: e.target.value }))
-              }
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
-            {t("cancel")}
-          </Button>
-          <Button
-            disabled={saving || !state.name.trim() || !state.content.trim()}
-            onClick={async () => {
-              setSaving(true);
-              try {
-                await onSave(state);
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            {t(isEdit ? "saveSnippetButton" : "createSnippetButton")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function FolderEditDialog({
-  open,
-  initial,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  initial: {
-    name: string;
-    color: string | null;
-    icon: string | null;
-    isEdit: boolean;
-  };
-  onClose: () => void;
-  onSave: (
-    name: string,
-    color: string | null,
-    icon: string | null,
-  ) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [name, setName] = useState(initial.name);
-  const [icon, setIcon] = useState(initial.icon ?? FOLDER_ICONS[0]);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setName(initial.name);
-      setIcon(initial.icon ?? FOLDER_ICONS[0]);
-    }
-  }, [open, initial]);
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>
-            {t(initial.isEdit ? "editFolderTitle" : "createFolderTitle")}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold">
-              {t("folderNameLabel")}
-            </label>
-            <Input
-              value={name}
-              placeholder={t("folderNamePlaceholder")}
-              onChange={(e) => setName(e.target.value)}
-              disabled={initial.isEdit}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold">
-              {t("folderIconLabel")}
-            </label>
-            <Select2 value={icon} onChange={(e) => setIcon(e.target.value)}>
-              {FOLDER_ICONS.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </Select2>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
-            {t("cancel")}
-          </Button>
-          <Button
-            disabled={saving || !name.trim()}
-            onClick={async () => {
-              setSaving(true);
-              try {
-                await onSave(name.trim(), null, icon);
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            {t(initial.isEdit ? "saveFolderButton" : "createFolderButton")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    snippet.name.toLowerCase().includes(query) ||
+    (snippet.description ?? "").toLowerCase().includes(query) ||
+    snippet.content.toLowerCase().includes(query)
   );
 }
 
@@ -297,42 +71,44 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
   const canCreate = usePermission("create");
   const canEdit = usePermission("edit");
   const canDelete = usePermission("delete");
-  const { runOnActive, dialog: runnerDialog } = useSnippetRunner();
-
-  const collapsedSetting = useSettings("user");
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
-    new Set(),
+  const settings = useSettings("user");
+  const display = readSnippetSettings(settings.values);
+  const { runOnActive, dialog: runnerDialog } = useSnippetRunner(
+    display.confirmExecution,
   );
-  const defaultCollapsed = collapsedSetting.values.foldersCollapsed !== false;
+  const { confirmWithToast } = useConfirmation();
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [folders, setFolders] = useState<SnippetFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  const [editState, setEditState] = useState<EditState | null>(null);
-  const [folderEditState, setFolderEditState] = useState<{
-    name: string;
-    color: string | null;
-    icon: string | null;
-    isEdit: boolean;
+  const [view, setView] = useState<View>({ kind: "list" });
+  // Folders the user opened or closed by hand; the rest follow the setting.
+  const [folderOverrides, setFolderOverrides] = useState<Map<string, boolean>>(
+    new Map(),
+  );
+  const [folderDialog, setFolderDialog] = useState<{
+    folder: SnippetFolder | null;
+    /** The name being edited, set even when the folder has no metadata row. */
+    editName: string | null;
   } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const importOverwriteRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!canView) {
       setLoading(false);
       return;
     }
-    setLoading(true);
     try {
       const [snippetList, folderList] = await Promise.all([
         client.list(),
         client.listFolders(),
       ]);
-      setSnippets(snippetList);
-      setFolders(folderList);
-    } catch {
-      toast.error(t("loading"));
+      setSnippets(Array.isArray(snippetList) ? snippetList : []);
+      setFolders(Array.isArray(folderList) ? folderList : []);
+    } catch (err) {
+      toast.error(errorMessage(err, t("loadFailed")));
     } finally {
       setLoading(false);
     }
@@ -342,118 +118,184 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
     void load();
   }, [load]);
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return snippets;
-    return snippets.filter(
-      (s) =>
-        s.name.toLowerCase().includes(query) ||
-        s.description?.toLowerCase().includes(query),
-    );
-  }, [snippets, search]);
+  const query = search.trim().toLowerCase();
 
-  const grouped = useMemo(() => groupByFolder(filtered), [filtered]);
+  const { groups, rootSnippets } = useMemo(() => {
+    const byFolder = new Map<string, FolderGroup>();
+    for (const folder of folders) {
+      byFolder.set(folder.name, {
+        name: folder.name,
+        folder,
+        snippets: [],
+      });
+    }
+    const root: Snippet[] = [];
+    for (const snippet of snippets) {
+      if (query && !matchesQuery(snippet, query)) continue;
+      if (!snippet.folder) {
+        root.push(snippet);
+        continue;
+      }
+      const group = byFolder.get(snippet.folder) ?? {
+        name: snippet.folder,
+        folder: null,
+        snippets: [],
+      };
+      group.snippets.push(snippet);
+      byFolder.set(snippet.folder, group);
+    }
+    const sorted = Array.from(byFolder.values())
+      .filter((group) => !query || group.snippets.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { groups: sorted, rootSnippets: root };
+  }, [folders, snippets, query]);
 
-  function isCollapsed(folder: string): boolean {
-    if (collapsedFolders.has(folder)) return !defaultCollapsed ? false : true;
-    return defaultCollapsed;
+  const folderNames = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...folders.map((f) => f.name),
+          ...snippets.flatMap((s) => (s.folder ? [s.folder] : [])),
+        ]),
+      ).sort((a, b) => a.localeCompare(b)),
+    [folders, snippets],
+  );
+
+  function isOpen(name: string): boolean {
+    if (query) return true;
+    return folderOverrides.get(name) ?? !display.foldersCollapsed;
   }
 
-  function toggleFolder(folder: string) {
-    setCollapsedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(folder)) next.delete(folder);
-      else next.add(folder);
+  function toggleFolder(name: string) {
+    setFolderOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(name, !isOpen(name));
       return next;
     });
   }
 
-  async function handleSaveSnippet(state: EditState) {
+  function setAllFolders(open: boolean) {
+    setFolderOverrides(new Map(folderNames.map((name) => [name, open])));
+  }
+
+  async function handleSaveSnippet(values: SnippetFormValues) {
+    if (view.kind !== "edit") return false;
+    const body = {
+      name: values.name.trim(),
+      content: values.content.trim(),
+      description: values.description.trim() || null,
+      folder: values.folder || null,
+      isNote: values.isNote,
+    };
+    const editing = view.snippet;
     try {
-      if (state.id !== null) {
-        await client.update(state.id, {
-          name: state.name.trim(),
-          content: state.content.trim(),
-          description: state.description.trim() || null,
-          folder: state.folder || null,
-          isNote: state.isNote,
-        });
+      if (editing) {
+        await client.update(editing.id, body);
         toast.success(t("updateSuccess"));
       } else {
-        await client.create({
-          name: state.name.trim(),
-          content: state.content.trim(),
-          description: state.description.trim() || null,
-          folder: state.folder || null,
-          isNote: state.isNote,
-        });
+        await client.create(body);
         toast.success(t("createSuccess"));
       }
-      setEditState(null);
-      await load();
-    } catch (err) {
-      toast.error(
-        errorMessage(
-          err,
-          t(state.id !== null ? "updateFailed" : "createFailed"),
-        ),
-      );
-    }
-  }
-
-  async function handleDeleteSnippet(snippet: Snippet) {
-    try {
-      await client.remove(snippet.id);
-      await load();
-    } catch (err) {
-      toast.error(errorMessage(err, t("deleteFailed")));
-    }
-  }
-
-  async function handleSaveFolder(
-    name: string,
-    color: string | null,
-    icon: string | null,
-  ) {
-    try {
-      if (folderEditState?.isEdit) {
-        await client.updateFolderMetadata(name, { color, icon });
-        toast.success(t("folderEditSuccess"));
-      } else {
-        await client.createFolder({ name, color, icon });
-        toast.success(t("folderCreateSuccess"));
+      if (body.folder) {
+        setFolderOverrides((prev) => new Map(prev).set(body.folder!, true));
       }
-      setFolderEditState(null);
+      setView({ kind: "list" });
       await load();
+      return true;
     } catch (err) {
       toast.error(
-        errorMessage(
-          err,
-          t(
-            folderEditState?.isEdit ? "folderEditFailed" : "folderCreateFailed",
-          ),
-        ),
+        errorMessage(err, t(editing ? "updateFailed" : "createFailed")),
       );
+      return false;
     }
   }
 
-  async function handleDeleteFolder(folder: SnippetFolder) {
+  function handleDeleteSnippet(snippet: Snippet) {
+    void confirmWithToast(
+      t("deleteSnippetConfirm", { name: snippet.name }),
+      async () => {
+        try {
+          await client.remove(snippet.id);
+          toast.success(t("deleteSuccess"));
+          await load();
+        } catch (err) {
+          toast.error(errorMessage(err, t("deleteFailed")));
+        }
+      },
+      t("delete"),
+      t("cancel"),
+    );
+  }
+
+  async function handleMoveSnippet(snippet: Snippet, folder: string | null) {
     try {
-      await client.deleteFolder(folder.name);
-      toast.success(t("folderDeleteSuccess"));
+      await client.update(snippet.id, { folder });
       await load();
-    } catch {
-      toast.error(t("folderDeleteFailed"));
+    } catch (err) {
+      toast.error(errorMessage(err, t("updateFailed")));
     }
   }
 
   async function handleCopy(snippet: Snippet) {
+    const ok = await copyToClipboard(snippet.content);
+    if (ok) toast.success(t("copySuccess"));
+    else toast.error(t("copyFailed"));
+  }
+
+  async function handleSaveFolder(values: FolderFormValues) {
+    const editName = folderDialog?.editName ?? null;
     try {
-      await navigator.clipboard.writeText(snippet.content);
-      toast.success(t("copySuccess"));
-    } catch {
-      // Clipboard access denied; nothing further to do.
+      if (editName === null) {
+        await client.createFolder(values);
+        toast.success(t("folderCreateSuccess"));
+      } else {
+        // A folder named only on its snippets gets a metadata row first.
+        if (!folderDialog?.folder) {
+          await client.createFolder({ name: editName });
+        }
+        if (values.name !== editName) {
+          await client.renameFolder(editName, values.name);
+          setFolderOverrides((prev) => {
+            const next = new Map(prev);
+            const wasOpen = next.get(editName);
+            next.delete(editName);
+            if (wasOpen !== undefined) next.set(values.name, wasOpen);
+            return next;
+          });
+        }
+        await client.updateFolderMetadata(values.name, {
+          color: values.color,
+          icon: values.icon,
+        });
+        toast.success(t("folderEditSuccess"));
+      }
+      setFolderDialog(null);
+      await load();
+    } catch (err) {
+      toast.error(
+        errorMessage(
+          err,
+          t(editName === null ? "folderCreateFailed" : "folderEditFailed"),
+        ),
+      );
     }
+  }
+
+  function handleDeleteFolder(name: string) {
+    void confirmWithToast(
+      t("deleteFolderConfirm", { name }),
+      async () => {
+        try {
+          await client.deleteFolder(name);
+          toast.success(t("folderDeleteSuccess"));
+          await load();
+        } catch (err) {
+          toast.error(errorMessage(err, t("folderDeleteFailed")));
+        }
+      },
+      t("delete"),
+      t("cancel"),
+    );
   }
 
   async function handleExport() {
@@ -465,103 +307,252 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "snippets-export.json";
+      link.download = "termix-snippets.json";
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch {
-      // Export failed silently; nothing to recover client-side.
+      toast.success(t("exportSuccess"));
+    } catch (err) {
+      toast.error(errorMessage(err, t("exportFailed")));
     }
   }
 
   async function handleImport(file: File) {
+    let parsed: { snippets?: unknown; folders?: unknown };
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      await client.bulkImport({
-        snippets: data.snippets,
-        folders: data.folders,
-        overwrite: false,
-      });
-      await load();
+      parsed = JSON.parse(await file.text());
     } catch {
-      toast.error(t("importFailed"));
+      toast.error(t("importInvalidFile"));
+      return;
     }
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      (!Array.isArray(parsed.snippets) && !Array.isArray(parsed.folders))
+    ) {
+      toast.error(t("importInvalidFile"));
+      return;
+    }
+    try {
+      const result = (await client.bulkImport({
+        snippets: Array.isArray(parsed.snippets) ? parsed.snippets : [],
+        folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+        overwrite: importOverwriteRef.current,
+      })) as {
+        snippetsImported?: number;
+        snippetsUpdated?: number;
+        snippetsSkipped?: number;
+      };
+      toast.success(
+        t("importSuccess", {
+          imported: result.snippetsImported ?? 0,
+          updated: result.snippetsUpdated ?? 0,
+          skipped: result.snippetsSkipped ?? 0,
+        }),
+      );
+      await load();
+    } catch (err) {
+      toast.error(errorMessage(err, t("importFailed")));
+    }
+  }
+
+  function startImport(overwrite: boolean) {
+    importOverwriteRef.current = overwrite;
+    fileInputRef.current?.click();
   }
 
   if (!canView) {
     return null;
   }
 
-  const folderKeys = Array.from(grouped.keys()).sort((a, b) => {
-    if (a === ROOT_FOLDER) return -1;
-    if (b === ROOT_FOLDER) return 1;
-    return a.localeCompare(b);
-  });
+  if (view.kind === "edit") {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <SnippetEditor
+          snippet={view.snippet}
+          defaultFolder={view.folder}
+          folders={folders}
+          onBack={() => setView({ kind: "list" })}
+          onSave={handleSaveSnippet}
+        />
+        {runnerDialog}
+      </div>
+    );
+  }
+
+  if (view.kind === "settings") {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <SnippetSettings
+          settings={settings}
+          onBack={() => setView({ kind: "list" })}
+        />
+      </div>
+    );
+  }
+
+  let stripe = 0;
+  const renderSnippet = (snippet: Snippet) => (
+    <SnippetRow
+      key={snippet.id}
+      snippet={snippet}
+      stripeIndex={stripe++}
+      showCommand={display.showCommands}
+      folderNames={folderNames}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      onRun={() => runOnActive(snippet, null)}
+      onCopy={() => void handleCopy(snippet)}
+      onEdit={() => setView({ kind: "edit", snippet })}
+      onMove={(folder) => void handleMoveSnippet(snippet, folder)}
+      onDelete={() => handleDeleteSnippet(snippet)}
+    />
+  );
+
+  const isEmpty = groups.length === 0 && rootSnippets.length === 0;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
-      <div className="flex items-center gap-2 p-2 border-b border-border">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            className="pl-7 h-8"
-            value={search}
-            placeholder={t("searchPlaceholder")}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        {canCreate && (
-          <>
-            <Button
-              size="icon"
-              variant="ghost"
-              title={t("newFolder")}
-              onClick={() =>
-                setFolderEditState({
-                  name: "",
-                  color: null,
-                  icon: null,
-                  isEdit: false,
-                })
-              }
-            >
-              <FolderPlus className="size-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              title={t("newSnippet")}
-              onClick={() => setEditState({ ...EMPTY_EDIT })}
-            >
-              <Plus className="size-4" />
-            </Button>
-          </>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border text-xs">
-        <Button size="sm" variant="ghost" onClick={handleExport}>
-          <Download className="size-3.5 mr-1" />
-          {t("importExport")}
-        </Button>
-        <label className="inline-flex">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-col px-2 py-1.5 shrink-0 border-b border-border/60 gap-1.5">
+        <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60">
+          <Search className="size-3 text-muted-foreground/60 shrink-0" />
           <input
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleImport(file);
-              e.target.value = "";
-            }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
           />
-          <Button size="sm" variant="ghost" asChild>
-            <span>
-              <Upload className="size-3.5 mr-1" />
-              {t("importExport")}
-            </span>
-          </Button>
-        </label>
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              title={t("clearSearch")}
+              className="text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void handleImport(file);
+          }}
+        />
+
+        <div className="flex items-center gap-1.5 overflow-x-auto overflow-y-hidden toolbar-scrollbar">
+          <div className="flex items-center border border-border shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-foreground"
+                  title={t("importExport")}
+                >
+                  <Upload className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs">
+                {canCreate && (
+                  <>
+                    <DropdownMenuItem onClick={() => startImport(false)}>
+                      <Upload className="size-3.5 mr-2" />
+                      {t("importSkipExisting")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => startImport(true)}>
+                      <Upload className="size-3.5 mr-2" />
+                      {t("importOverwrite")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem
+                  onClick={() => void handleExport()}
+                  disabled={snippets.length === 0}
+                >
+                  <Download className="size-3.5 mr-2" />
+                  {t("exportSnippets")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="w-px self-stretch bg-border" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-foreground"
+                  title={t("moreActions")}
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs min-w-44">
+                {canCreate && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        setFolderDialog({ folder: null, editName: null })
+                      }
+                    >
+                      <FolderPlus className="size-3.5 mr-2" />
+                      {t("newFolder")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => setAllFolders(true)}>
+                  <ChevronsUpDown className="size-3.5 mr-2" />
+                  {t("expandAll")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAllFolders(false)}>
+                  <ChevronsDownUp className="size-3.5 mr-2" />
+                  {t("collapseAll")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="w-px self-stretch bg-border" />
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              title={t("docsLink")}
+              className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+            >
+              <ExternalLink className="size-3.5" />
+            </a>
+          </div>
+          <div className="flex items-center border border-border shrink-0">
+            <button
+              onClick={() => setView({ kind: "settings" })}
+              title={t("settingsTitle")}
+              className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+            >
+              <SlidersHorizontal className="size-3.5" />
+            </button>
+          </div>
+          {canCreate && (
+            <div className="flex items-center border border-accent-brand/30 ml-auto shrink-0">
+              <button
+                onClick={() => setView({ kind: "edit", snippet: null })}
+                title={t("newSnippet")}
+                className="flex items-center justify-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 transition-colors"
+              >
+                <Plus className="size-3 shrink-0" />
+                <span className="hidden min-[280px]:inline">
+                  {t("newSnippet")}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -569,170 +560,70 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
           <div className="p-4 text-xs text-muted-foreground">
             {t("loading")}
           </div>
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center gap-1 px-4 py-8 text-center">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t(query ? "noSearchResults" : "emptyTitle")}
+            </span>
+            {!query && (
+              <span className="text-[11px] text-muted-foreground/60">
+                {t("emptyDescription")}
+              </span>
+            )}
+          </div>
         ) : (
-          folderKeys.map((folderKey) => {
-            const items = grouped.get(folderKey) ?? [];
-            const folder = folders.find((f) => f.name === folderKey);
-            const isRoot = folderKey === ROOT_FOLDER;
-            const collapsed = isCollapsed(folderKey);
-
-            return (
-              <div key={folderKey}>
-                {!isRoot && (
-                  <div className="flex items-center justify-between px-2 py-1.5 hover:bg-muted/40 group">
-                    <button
-                      className="flex items-center gap-1.5 flex-1 text-left text-xs font-semibold"
-                      onClick={() => toggleFolder(folderKey)}
-                    >
-                      {collapsed ? (
-                        <ChevronRight className="size-3.5" />
-                      ) : (
-                        <ChevronDown className="size-3.5" />
-                      )}
-                      <Folder className="size-3.5" />
-                      {folderKey}
-                      <Badge variant="outline" className="ml-1 text-[10px]">
-                        {items.length}
-                      </Badge>
-                    </button>
-                    {canEdit && folder && (
-                      <div className="hidden group-hover:flex items-center gap-1">
-                        <button
-                          onClick={() =>
-                            setFolderEditState({
-                              name: folder.name,
-                              color: folder.color,
-                              icon: folder.icon,
-                              isEdit: true,
-                            })
-                          }
-                        >
-                          <Pencil className="size-3.5 text-muted-foreground" />
-                        </button>
-                        {canDelete && (
-                          <button
-                            onClick={() => void handleDeleteFolder(folder)}
-                          >
-                            <Trash2 className="size-3.5 text-muted-foreground" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {!collapsed && items.length === 0 && (
-                  <div className="px-4 py-2 text-xs text-muted-foreground">
-                    {t("noSnippetsInFolder")}
-                  </div>
-                )}
-                {!collapsed &&
-                  items.map((snippet) => (
-                    <div
-                      key={snippet.id}
-                      className="flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-muted/40 group"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 text-xs font-medium truncate">
-                          {snippet.name}
-                          {snippet.isShared && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {t("shareTitle")}
-                            </Badge>
-                          )}
-                        </div>
-                        {snippet.description && (
-                          <div className="text-[11px] text-muted-foreground truncate">
-                            {snippet.description}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                        {!snippet.isNote && (
-                          <button
-                            title={t("run")}
-                            onClick={() => runOnActive(snippet, null)}
-                          >
-                            <Play className="size-3.5 text-muted-foreground" />
-                          </button>
-                        )}
-                        {snippet.isNote && (
-                          <button
-                            title={t("pasteToTerminal")}
-                            onClick={() => runOnActive(snippet, null)}
-                          >
-                            <Copy className="size-3.5 text-muted-foreground" />
-                          </button>
-                        )}
-                        <button
-                          title={t("copySuccess")}
-                          onClick={() => void handleCopy(snippet)}
-                        >
-                          <Copy className="size-3.5 text-muted-foreground" />
-                        </button>
-                        {canEdit && !snippet.isShared && (
-                          <button
-                            title={t("editSnippetTitle")}
-                            onClick={() =>
-                              setEditState({
-                                id: snippet.id,
-                                name: snippet.name,
-                                content: snippet.content,
-                                description: snippet.description ?? "",
-                                folder: snippet.folder ?? "",
-                                isNote: snippet.isNote,
-                              })
-                            }
-                          >
-                            <Pencil className="size-3.5 text-muted-foreground" />
-                          </button>
-                        )}
-                        {!snippet.isShared && (
-                          <button title={t("shareTitle")}>
-                            <Share2 className="size-3.5 text-muted-foreground" />
-                          </button>
-                        )}
-                        {canDelete && !snippet.isShared && (
-                          <button
-                            title={t("deleteFailed")}
-                            onClick={() => void handleDeleteSnippet(snippet)}
-                          >
-                            <Trash2 className="size-3.5 text-muted-foreground" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            );
-          })
+          <>
+            {groups.map((group, index) => {
+              const open = isOpen(group.name);
+              return (
+                <SnippetFolderRow
+                  key={group.name}
+                  name={group.name}
+                  folder={group.folder}
+                  count={group.snippets.length}
+                  open={open}
+                  stripeIndex={index}
+                  canCreate={canCreate}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  onToggle={() => toggleFolder(group.name)}
+                  onAddSnippet={() =>
+                    setView({
+                      kind: "edit",
+                      snippet: null,
+                      folder: group.name,
+                    })
+                  }
+                  onEdit={() =>
+                    setFolderDialog({
+                      folder: group.folder,
+                      editName: group.name,
+                    })
+                  }
+                  onDelete={() => handleDeleteFolder(group.name)}
+                >
+                  {open && group.snippets.map(renderSnippet)}
+                </SnippetFolderRow>
+              );
+            })}
+            {rootSnippets.map(renderSnippet)}
+          </>
         )}
       </div>
 
-      <div className="flex items-center justify-between px-2 py-1.5 border-t border-border text-xs">
-        <span>{t("foldersCollapsedLabel")}</span>
-        <Switch
-          checked={defaultCollapsed}
-          onCheckedChange={(checked) => {
-            setCollapsedFolders(new Set());
-            void collapsedSetting.save({ foldersCollapsed: checked });
-          }}
-        />
-      </div>
-
-      {editState && (
-        <SnippetEditDialog
-          open
-          initial={editState}
-          folders={folders}
-          onClose={() => setEditState(null)}
-          onSave={handleSaveSnippet}
-        />
-      )}
-      {folderEditState && (
-        <FolderEditDialog
-          open
-          initial={folderEditState}
-          onClose={() => setFolderEditState(null)}
+      {folderDialog && (
+        <SnippetFolderDialog
+          folder={
+            folderDialog.folder ??
+            (folderDialog.editName
+              ? ({
+                  name: folderDialog.editName,
+                  color: null,
+                  icon: null,
+                } as SnippetFolder)
+              : null)
+          }
+          onClose={() => setFolderDialog(null)}
           onSave={handleSaveFolder}
         />
       )}
