@@ -518,6 +518,89 @@ describe("connectHost", () => {
     dispose();
   });
 
+  it("answers TOTP on key and password jump hops and closes the entire chain", async () => {
+    const { createJumpHostChain } = await vi.importActual<
+      typeof import("../../../hosts/jump-host-chain.js")
+    >("../../../hosts/jump-host-chain.js");
+    mocks.resolveHostById
+      .mockResolvedValueOnce(
+        host({ id: 2, authType: "key", key: plainKey, password: null }),
+      )
+      .mockResolvedValueOnce(host({ id: 3, password: "hop-password" }));
+    FakeSshClient.nextBehaviour = ["hang", "hang"];
+    const prompt = {
+      ask: vi
+        .fn()
+        .mockResolvedValueOnce("111111")
+        .mockResolvedValueOnce("222222"),
+    };
+    const pending = createJumpHostChain(
+      [{ hostId: 2 }, { hostId: 3 }],
+      "user-1",
+      prompt,
+    );
+    await vi.waitFor(() =>
+      expect(FakeSshClient.instances[0]?.connectConfig).toBeTruthy(),
+    );
+    const first = FakeSshClient.instances[0];
+    expect(first.connectConfig?.privateKey).toBeTruthy();
+    const firstAnswer = vi.fn();
+    first.emit(
+      "keyboard-interactive",
+      "",
+      "",
+      "",
+      [{ prompt: "Verification code:", echo: false }],
+      firstAnswer,
+    );
+    await vi.waitFor(() =>
+      expect(firstAnswer).toHaveBeenCalledWith(["111111"]),
+    );
+    first.emit("ready");
+    await vi.waitFor(() =>
+      expect(FakeSshClient.instances[1]?.connectConfig).toBeTruthy(),
+    );
+    const second = FakeSshClient.instances[1];
+    const secondAnswer = vi.fn();
+    second.emit(
+      "keyboard-interactive",
+      "",
+      "",
+      "",
+      [
+        { prompt: "Password:", echo: false },
+        { prompt: "Verification code:", echo: false },
+      ],
+      secondAnswer,
+    );
+    await vi.waitFor(() =>
+      expect(secondAnswer).toHaveBeenCalledWith(["hop-password", "222222"]),
+    );
+    second.emit("ready");
+    expect(await pending).toBe(second);
+    expect(prompt.ask.mock.calls[0][0].prompt).toContain("Jump host 1/2");
+    expect(prompt.ask.mock.calls[1][0].prompt).toContain("Jump host 2/2");
+    second.emit("close");
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(true);
+  });
+
+  it("passes the interactive prompt channel through to jump hosts", async () => {
+    const jumpClient = new FakeSshClient();
+    mocks.createJumpHostChain.mockResolvedValueOnce(jumpClient);
+    const prompt = { ask: vi.fn().mockResolvedValue("123456") };
+    const connection = await connectHost(host({ jumpHosts: [{ hostId: 2 }] }), {
+      userId: "user-1",
+      prompt,
+    });
+    expect(mocks.createJumpHostChain).toHaveBeenCalledWith(
+      [{ hostId: 2 }],
+      "owner-1",
+      prompt,
+    );
+    connection.dispose();
+  });
+
   it("goes through the jump chain and forwards to the target", async () => {
     const jumpClient = new FakeSshClient();
     mocks.createJumpHostChain.mockResolvedValueOnce(jumpClient);
@@ -528,6 +611,7 @@ describe("connectHost", () => {
     expect(mocks.createJumpHostChain).toHaveBeenCalledWith(
       [{ hostId: 2 }, { hostId: 3 }],
       "owner-1",
+      undefined,
     );
     expect(jumpClient.forwardOut).toHaveBeenCalledWith(
       "127.0.0.1",

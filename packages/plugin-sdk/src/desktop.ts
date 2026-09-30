@@ -3,6 +3,8 @@
  * only inside the Termix desktop app; check isElectron before calling it.
  */
 
+import type { PluginSshPromptRequest } from "./backend.js";
+
 export interface ServerConfig {
   serverUrl?: string;
   allowInvalidCertificate?: boolean;
@@ -65,6 +67,15 @@ export interface ElectronAPI {
     serverUrl: string,
     allowInvalidCertificate?: boolean,
   ) => Promise<ConnectionTestResult>;
+  answerC2SAuth: (id: string, answer: string | null) => Promise<boolean>;
+  onC2SAuthPrompt: (
+    callback: (prompt: {
+      id: string;
+      closed?: boolean;
+      tunnelName?: string;
+      request?: PluginSshPromptRequest;
+    }) => void,
+  ) => () => void;
   getC2STunnelConfig: () => Promise<unknown[]>;
   saveC2STunnelConfig: (
     config: unknown[],

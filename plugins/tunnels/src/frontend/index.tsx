@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { Network, Plug } from "lucide-react";
 import type { TabProps, TermixApp } from "@termix/plugin-sdk/frontend";
+import { TunnelAuthPrompts } from "./TunnelAuthPrompts";
 import { TunnelTab } from "./TunnelTab";
 import { HostTunnelsSection } from "./HostTunnelsSection";
 import {
@@ -27,6 +28,12 @@ export function activate(app: TermixApp): void {
   if (typeof window !== "undefined" && window.electronAPI?.setC2SRelayPath) {
     void window.electronAPI.setC2SRelayPath(C2S_RELAY_PATH);
   }
+  app.registerSlotContribution("shell.overlay", {
+    actionId: "tunnels.authPrompts",
+    titleKey: "tunnels.authTitle",
+    kind: "component",
+    component: TunnelAuthPrompts as ComponentType<Record<string, unknown>>,
+  });
   // apiFor("remote") hands back app.api itself outside the desktop app.
   const remote = app.apiFor("remote");
   setTunnelsApi(app.api, {
