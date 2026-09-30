@@ -132,7 +132,10 @@
     "youArePresenting": "You are presenting in another tab. Stop presenting to hand the stage over.",
     "created": "Room created",
     "invited": "Members invited",
-    "roomTab": "Meeting"
+    "roomTab": "Meeting",
+    "serverChanged": "The meeting server changed. Reopen this meeting from the Meetings panel.",
+    "hostNotSynced": "Sync this host to the meeting server before presenting.",
+    "linkRequiresServer": "Link this desktop to a Termix server and create the meeting there to share a web link."
   },
   "nav": {
     "collab": "Meetings"

@@ -1,4 +1,5 @@
 import http from "node:http";
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import express, { type Router } from "express";
@@ -85,7 +86,20 @@ export async function startServer(
     settings?: Record<string, unknown>;
   } = {},
 ): Promise<TestServer> {
-  const db = await createTestDb(pluginDir);
+  const db = await createTestDb(pluginDir, {
+    before: (sqlite) => {
+      sqlite.exec("ALTER TABLE ssh_data ADD COLUMN sync_id TEXT");
+    },
+  });
+  const refs = await db.database.refs();
+  db.database.refs = async () =>
+    ({
+      ...refs,
+      hosts: sqliteTable("ssh_data", {
+        id: integer("id").primaryKey(),
+        syncId: text("sync_id"),
+      }),
+    }) as Awaited<ReturnType<typeof db.database.refs>>;
   for (const user of options.users ?? ["alice", "bob", "carol"]) {
     db.sqlite
       .prepare("INSERT INTO users (id, username, is_admin) VALUES (?, ?, ?)")

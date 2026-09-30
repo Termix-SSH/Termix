@@ -28,6 +28,28 @@ async function present(s: TestServer, roomId: string, user = "alice") {
 }
 
 describe("collab rooms", () => {
+  it("resolves a synced host to the server ID only with connect access", async () => {
+    server = await startServer({ hostIds: [41, 42], accessibleHostIds: [42] });
+    server.db.sqlite.exec("UPDATE ssh_data SET sync_id = 'shared-host'");
+    expect(await server.request("GET", "/meeting-host/shared-host")).toEqual({
+      status: 200,
+      body: { id: 42 },
+    });
+    server.db.sqlite.exec(
+      "UPDATE ssh_data SET sync_id = 'private-host' WHERE id = 41",
+    );
+    expect(
+      (await server.request("GET", "/meeting-host/private-host")).status,
+    ).toBe(404);
+    expect(
+      (await server.request("GET", "/meeting-host/missing-host")).status,
+    ).toBe(404);
+    expect(
+      (await server.request("GET", "/meeting-host/shared-host", { user: null }))
+        .status,
+    ).toBe(401);
+  });
+
   it("creates a room with the creator as host and hides the guest token", async () => {
     server = await startServer();
     const res = await server.request("POST", "/rooms", {
