@@ -53,7 +53,11 @@ import {
 } from "@/shell/split/EmptyPanePicker";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
-import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
+import {
+  dispatchCtrlW,
+  createCommandPaletteShortcutMatcher,
+  isShiftKey,
+} from "@/lib/app-keyboard-shortcuts";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
 import type {
@@ -476,7 +480,6 @@ export function AppShell({
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  const lastShiftTime = useRef(0);
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const closeActiveTabRef = useRef<() => void>(() => {});
@@ -762,26 +765,21 @@ export function AppShell({
   // Double-shift or Ctrl+K opens the command palette. Double-shift alone was
   // hard to discover.
   useEffect(() => {
+    if (!commandPaletteShortcutEnabled) return;
+    const shortcut = createCommandPaletteShortcutMatcher();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isShiftKey(e) && !e.repeat) {
-        const now = Date.now();
-        if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
-          setCommandPaletteOpen((prev) => !prev);
-        lastShiftTime.current = now;
-      }
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        !e.shiftKey &&
-        !e.altKey &&
-        e.code === "KeyK" &&
-        commandPaletteShortcutEnabled
-      ) {
-        e.preventDefault();
-        setCommandPaletteOpen((prev) => !prev);
-      }
+      if (!shortcut.matches(e)) return;
+      if (!isShiftKey(e)) e.preventDefault();
+      setCommandPaletteOpen((prev) => !prev);
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", shortcut.reset);
+    window.addEventListener("compositionstart", shortcut.reset);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", shortcut.reset);
+      window.removeEventListener("compositionstart", shortcut.reset);
+    };
   }, [commandPaletteShortcutEnabled]);
 
   // Ctrl+Shift+E toggles between the two most recent sidebar panels.
