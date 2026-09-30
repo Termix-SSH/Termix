@@ -259,6 +259,8 @@ export interface CollabRoomDetail {
   members: CollabRoomMember[];
   online: CollabOnlineUser[];
   stage: CollabStage;
+  /** Anonymous guests watching the stage through the guest link. */
+  guests?: { label: string | null }[];
   controllerUserId: string | null;
   controlRequests: CollabControlRequest[];
   /** Where live room events are served, as /plugin-ws/<id>/<path>. */

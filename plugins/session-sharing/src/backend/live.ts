@@ -34,6 +34,10 @@ export interface LiveSessionProvider {
     shareId: string,
     controllerUserId: string | null,
   ) => void;
+  listGuests?: (
+    sessionId: string,
+    shareId: string,
+  ) => { label: string | null }[];
   createViewerToken?: (sessionId: string, readOnly: boolean) => string;
 }
 
@@ -102,6 +106,24 @@ export function createLiveSessions(ctx: PluginContext) {
     ): Promise<boolean> {
       const session = await getSession(protocol, sessionId);
       return !!session && session.isConnected && session.userId === userId;
+    },
+
+    /** Anonymous link guests on one share; empty when the type cannot tell. */
+    async listGuests(
+      protocol: string,
+      sessionId: string,
+      shareId: string,
+      asUser?: string,
+    ): Promise<{ label: string | null }[]> {
+      const live = provider(protocol);
+      if (!live || !("listGuests" in live)) return [];
+      try {
+        return (
+          (await run(asUser, () => live.listGuests(sessionId, shareId))) ?? []
+        );
+      } catch {
+        return [];
+      }
     },
 
     /** Ends the session for every guest. Best effort, like before. */

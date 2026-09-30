@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { AlertCircle, Eye, Presentation, Users } from "lucide-react";
+import { AlertCircle, Eye, Presentation } from "lucide-react";
 import { RemoteDisplay } from "./shared";
-import {
-  GuestTerminalView,
-  type SessionParticipantInfo,
-} from "./SharedSessionView";
+import { GuestTerminalView } from "./SharedSessionView";
 import { resolveCollabGuestStage, type CollabGuestStage } from "./api";
 
 const POLL_MS = 5000;
@@ -21,7 +18,6 @@ export default function CollabGuestView() {
   const [roomName, setRoomName] = useState<string | null>(null);
   const [stage, setStage] = useState<CollabGuestStage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [participantCount, setParticipantCount] = useState(0);
   const stageShareIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +37,6 @@ export default function CollabGuestView() {
         if (nextShareId !== stageShareIdRef.current) {
           stageShareIdRef.current = nextShareId;
           setStage(result.stage);
-          setParticipantCount(0);
         }
       } catch {
         if (!cancelled) setError(t("collab.guest.linkInvalid"));
@@ -66,12 +61,6 @@ export default function CollabGuestView() {
           {roomName ?? t("collab.guest.title")}
         </span>
         <div className="flex items-center gap-3 shrink-0 ml-auto text-xs text-muted-foreground">
-          {participantCount >= 2 && (
-            <span className="flex items-center gap-1">
-              <Users className="size-3.5" />
-              {participantCount}
-            </span>
-          )}
           <span className="flex items-center gap-1">
             <Eye className="size-3.5" />
             {t("sessionSharing.guestView.readOnlyBadge")}
@@ -92,9 +81,6 @@ export default function CollabGuestView() {
             share={{ permissionLevel: "read-only" }}
             wsPath={stage.wsPath ?? ""}
             hideBadges
-            onParticipantsChange={(participants: SessionParticipantInfo[]) =>
-              setParticipantCount(participants.length)
-            }
           />
         ) : stage.connectParams?.token ? (
           <RemoteDisplay

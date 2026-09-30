@@ -253,6 +253,39 @@ describe("TerminalSessionManager - multiplayer participants", () => {
     sessionManager.destroySession(id);
   });
 
+  it("keeps the roster from link guests and lists them per share", () => {
+    const id = createConnectedSession();
+    const ownerWs = makeFakeWs();
+    sessionManager.attachWs(id, "owner-1", ownerWs);
+
+    const guestWs = makeFakeWs();
+    sessionManager.joinAsParticipant(id, guestWs, {
+      userId: null,
+      permissionLevel: "read-only",
+      guestLabel: "Guest 1",
+      shareId: "share-a",
+    });
+    const memberWs = makeFakeWs();
+    sessionManager.joinAsParticipant(id, memberWs, {
+      userId: "alice",
+      permissionLevel: "read-only",
+      shareId: "share-a",
+    });
+
+    const sentTypes = (ws: ReturnType<typeof makeFakeWs>) =>
+      (ws.send as ReturnType<typeof vi.fn>).mock.calls.map(
+        (call) => JSON.parse(call[0] as string).type,
+      );
+    expect(sentTypes(guestWs)).not.toContain("participants");
+    expect(sentTypes(memberWs)).toContain("participants");
+    expect(sessionManager.listShareGuests(id, "share-a")).toEqual([
+      { label: "Guest 1" },
+    ]);
+    expect(sessionManager.listShareGuests(id, "share-b")).toEqual([]);
+
+    sessionManager.destroySession(id);
+  });
+
   it("setRoomShareControl makes only the controller read-write and never touches the owner", () => {
     const id = createConnectedSession();
     const ownerWs = makeFakeWs();

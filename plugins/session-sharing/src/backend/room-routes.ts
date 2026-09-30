@@ -364,6 +364,16 @@ export function registerRoomRoutes(
       }
 
       const members = await rooms.listMembers(roomId);
+      const stageShare = await liveStageShare(access.room);
+      const guests =
+        stageShare && access.room.stageProtocol
+          ? await live.listGuests(
+              access.room.stageProtocol,
+              stageShare.sessionId,
+              stageShare.id,
+              stageShare.ownerUserId,
+            )
+          : [];
       const mayReview = access.isHost || access.room.presenterUserId === userId;
       const controlRequests = await store.listRequests(roomId);
       res.json({
@@ -373,6 +383,7 @@ export function registerRoomRoutes(
         members,
         online: await hub.onlineUsers(roomId),
         stage: stagePayload(access.room),
+        guests,
         controllerUserId: await store.getController(roomId),
         controlRequests: mayReview
           ? controlRequests
@@ -1119,6 +1130,65 @@ export function registerRoomRoutes(
           res,
           "collab_control_request_dismiss_error",
           "Failed to dismiss control request",
+        )(error);
+      }
+    },
+  );
+
+  /**
+   * @openapi
+   * /plugin-api/session-sharing/rooms/{id}/guests/remove:
+   *   post:
+   *     summary: Disconnect every anonymous guest watching the stage (host only)
+   *     description: The guest link stays valid, so a guest may open it again.
+   *     tags:
+   *       - Collab
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Guests disconnected
+   *       403:
+   *         description: Not the host
+   *       404:
+   *         description: Not a member, or no such room
+   */
+  router.post(
+    "/rooms/:id/guests/remove",
+    requireUse,
+    async (req: Request, res: Response) => {
+      const userId = actorOf(ctx);
+      const roomId = String(req.params.id);
+      try {
+        const access = await requireRoomMember(roomId, userId);
+        if (!access) return res.status(404).json({ error: "Room not found" });
+        if (!access.isHost) {
+          return res
+            .status(403)
+            .json({ error: "Only the host can remove guests" });
+        }
+        const share = await liveStageShare(access.room);
+        if (share && access.room.stageProtocol) {
+          await live.disconnectParticipants(
+            access.room.stageProtocol,
+            share.sessionId,
+            share.id,
+            { userId: null, reason: "The host removed the guests" },
+            share.ownerUserId,
+          );
+        }
+        res.json({ success: true });
+      } catch (error) {
+        fail(
+          res,
+          "collab_guests_remove_error",
+          "Failed to remove guests",
         )(error);
       }
     },

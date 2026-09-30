@@ -142,6 +142,8 @@ export async function activate(ctx: PluginContext) {
       sessionManager.ownerEndSession(sessionId, reason),
     disconnectParticipants: (sessionId, shareId, options) =>
       sessionManager.disconnectShareParticipants(sessionId, shareId, options),
+    listGuests: (sessionId, shareId) =>
+      sessionManager.listShareGuests(sessionId, shareId),
     setRoomShareControl: (sessionId, shareId, controllerUserId) =>
       sessionManager.setRoomShareControl(sessionId, shareId, controllerUserId),
     subscribe: (sessionId, onData) => {

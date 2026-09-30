@@ -3,6 +3,7 @@ import { useTranslation } from "@termix/plugin-sdk/frontend";
 import {
   Check,
   Crown,
+  Eye,
   Hand,
   MonitorUp,
   MousePointerClick,
@@ -31,6 +32,7 @@ interface CollabMembersSidebarProps {
   onControl: (userId: string | null) => Promise<void>;
   onDismissRequest: (userId: string) => Promise<void>;
   onRemoveMember: (userId: string) => Promise<void>;
+  onRemoveGuests: () => Promise<void>;
 }
 
 export function CollabMembersSidebar({
@@ -40,6 +42,7 @@ export function CollabMembersSidebar({
   onControl,
   onDismissRequest,
   onRemoveMember,
+  onRemoveGuests,
 }: CollabMembersSidebarProps) {
   const { t } = useTranslation();
   const [removing, setRemoving] = useState<{
@@ -47,6 +50,7 @@ export function CollabMembersSidebar({
     username: string;
   } | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const guests = detail.guests ?? [];
   const onlineIds = new Set(detail.online.map((user) => user.userId));
   const presenterUserId = detail.stage.presenterUserId;
   const canManageControl = detail.isHost || presenterUserId === detail.me;
@@ -252,6 +256,40 @@ export function CollabMembersSidebar({
             );
           })}
         </div>
+        {guests.length > 0 && (
+          <div className="mt-3 border-t border-border pt-2">
+            <div className="flex items-center gap-2 px-2 pb-1">
+              <Eye className="size-3.5 text-muted-foreground" />
+              <h3 className="flex-1 text-xs font-semibold uppercase tracking-wide">
+                {t("collab.guestsWithCount", { count: guests.length })}
+              </h3>
+              {detail.isHost && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  disabled={busyUserId === "guests"}
+                  onClick={() => void run("guests", onRemoveGuests)}
+                >
+                  {t("collab.removeGuests")}
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              {guests.map((guest, index) => (
+                <div
+                  key={index}
+                  className="flex min-h-9 items-center gap-2 px-2 py-1 text-xs"
+                >
+                  <span className="size-2 shrink-0 rounded-full bg-green-500" />
+                  <span className="truncate">
+                    {guest.label || t("collab.anonymousGuest")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <AlertDialog

@@ -103,6 +103,7 @@ export function CollabRoomTab({
     presentCollabStage,
     requestCollabStageControl,
     removeCollabMember,
+    removeCollabGuests,
     setCollabGuestLink,
     setCollabStageControl,
     stopCollabStage,
@@ -304,6 +305,16 @@ export function CollabRoomTab({
     if (!roomId) return;
     try {
       await dismissCollabControlRequest(roomId, targetId);
+      await refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
+
+  async function removeGuests() {
+    if (!roomId) return;
+    try {
+      await removeCollabGuests(roomId);
       await refresh();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -607,7 +618,7 @@ export function CollabRoomTab({
             onClick={() => setMembersOpen((open) => !open)}
           >
             <Users className="mr-1 size-3.5" />
-            {detail?.members.length ?? 0}
+            {(detail?.members.length ?? 0) + (detail?.guests?.length ?? 0)}
           </Button>
           <Button
             size="sm"
@@ -779,6 +790,7 @@ export function CollabRoomTab({
             onControl={changeControl}
             onDismissRequest={dismissControlRequest}
             onRemoveMember={removeMember}
+            onRemoveGuests={removeGuests}
           />
         )}
       </div>

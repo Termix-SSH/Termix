@@ -36,6 +36,11 @@ export interface LiveSessionsV1 {
     shareId: string,
     options: { reason: string; userId?: string | null },
   ) => number;
+  /** The anonymous link guests watching through one share. */
+  listGuests: (
+    sessionId: string,
+    shareId: string,
+  ) => { label: string | null }[];
   /** Hands input control of a room share to one member, or back to the owner. */
   setRoomShareControl: (
     sessionId: string,

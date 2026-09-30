@@ -168,6 +168,13 @@ export function createMeetingApi(
     );
   }
 
+  async function removeCollabGuests(roomId: string): Promise<void> {
+    await call(
+      () => api().post(room(roomId, "/guests/remove")),
+      "Failed to remove guests",
+    );
+  }
+
   function getDirectory() {
     return call(
       () =>
@@ -202,6 +209,7 @@ export function createMeetingApi(
     endCollabRoom,
     deleteCollabRoom,
     setCollabGuestLink,
+    removeCollabGuests,
     getDirectory,
     resolveHost,
   };

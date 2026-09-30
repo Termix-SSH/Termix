@@ -264,6 +264,33 @@ describe("collab rooms", () => {
     ]);
   });
 
+  it("lists stage guests for members and lets only the host remove them", async () => {
+    server = await startServer();
+    const roomId = await roomWithBob(server);
+    await present(server, roomId);
+
+    const detail = await server.request("GET", `/rooms/${roomId}`, {
+      user: "bob",
+    });
+    expect(detail.body.guests).toEqual([{ label: "Guest 1" }]);
+    expect(
+      (
+        await server.request("POST", `/rooms/${roomId}/guests/remove`, {
+          user: "bob",
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await server.request("POST", `/rooms/${roomId}/guests/remove`)).status,
+    ).toBe(200);
+    expect(server.live.calls).toContainEqual([
+      "disconnectParticipants",
+      "sess-alice",
+      expect.any(String),
+      { userId: null, reason: "The host removed the guests" },
+    ]);
+  });
+
   it("ends a one-off room for good and keeps a persistent one", async () => {
     server = await startServer();
     const oneOff = await roomWithBob(server);

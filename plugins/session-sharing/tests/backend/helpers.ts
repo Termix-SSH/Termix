@@ -50,6 +50,7 @@ export function createFakeLive() {
       setRoomShareControl: (...args: unknown[]) => {
         calls.push(["setRoomShareControl", ...args]);
       },
+      listGuests: () => [{ label: "Guest 1" }],
     },
   };
 }

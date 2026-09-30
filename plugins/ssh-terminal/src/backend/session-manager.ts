@@ -486,7 +486,28 @@ export class TerminalSessionManager {
       participants.every((participant) => participant.isOwner)
     )
       return;
-    this.broadcast(sessionId, { type: "participants", participants });
+    // Link guests are anonymous viewers; they do not get the roster.
+    this.broadcast(
+      sessionId,
+      { type: "participants", participants },
+      (participant) => participant.userId !== null,
+    );
+  }
+
+  /** The anonymous link guests watching through one share. */
+  listShareGuests(
+    sessionId: string,
+    shareId: string,
+  ): { label: string | null }[] {
+    const session = this.sessions.get(sessionId);
+    if (!session) return [];
+    return Array.from(session.participants.values())
+      .filter(
+        (participant) =>
+          participant.userId === null &&
+          participant.joinedViaShareId === shareId,
+      )
+      .map((participant) => ({ label: participant.guestLabel ?? null }));
   }
 
   /**
@@ -554,12 +575,17 @@ export class TerminalSessionManager {
   }
 
   /** Fans out a message to every OPEN participant socket; skips closed ones and send failures. */
-  broadcast(sessionId: string, message: object): void {
+  broadcast(
+    sessionId: string,
+    message: object,
+    include?: (participant: SessionParticipant) => boolean,
+  ): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     const payload = JSON.stringify(message);
     for (const participant of session.participants.values()) {
       if (participant.ws.readyState !== WebSocket.OPEN) continue;
+      if (include && !include(participant)) continue;
       try {
         participant.ws.send(payload);
       } catch {
