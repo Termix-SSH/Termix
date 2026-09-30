@@ -18,7 +18,6 @@
   "homepage": {
     "title": "Homepage",
     "addWidget": "Add Widget",
-    "noWidgetsInCategory": "No widgets in this category",
     "editWidget": "Edit Widget",
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",
@@ -169,7 +168,8 @@
     "noServices": "No services set up",
     "configureLocation": "Set a location in the widget settings",
     "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "serviceNamePlaceholder": "My service",
+    "noWidgetsInCategory": "No widgets in this category"
   },
   "permissions": {
     "use": {

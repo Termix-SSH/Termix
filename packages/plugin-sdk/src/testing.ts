@@ -2104,8 +2104,6 @@ export interface RenderedPluginApp {
     hostProtocols: () => string[];
     hostEditorSections: () => string[];
     dashboardCards: () => string[];
-    /** Ids this plugin added to an extension point. */
-    extensions: (pointId: string) => string[];
     settingsComponents: () => string[];
     slot: (slotId: string) => string[];
     actions: () => string[];
@@ -2135,13 +2133,6 @@ export interface RenderedPluginApp {
   renderTab: (type: string, props?: Record<string, unknown>) => HTMLElement;
   renderPanel: (id: string, props?: Record<string, unknown>) => HTMLElement;
   renderDashboardCard: (id: string) => HTMLElement;
-  /** Renders one component of a contributed extension, "view" by default. */
-  renderExtension: (
-    pointId: string,
-    id: string,
-    component?: string,
-    props?: Record<string, unknown>,
-  ) => HTMLElement;
   renderHostEditorSection: (
     id: string,
     props?: Record<string, unknown>,

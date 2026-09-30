@@ -365,8 +365,6 @@ export interface WidgetTypeDefinition<C = Record<string, unknown>> {
   minSize: { w: number; h: number };
   component: React.ComponentType<WidgetComponentProps<C>>;
   editFormComponent?: React.ComponentType<WidgetEditFormProps<C>>;
-  /** Renders the translated name or description in the add menu. */
-  labelComponent?: React.ComponentType<{ part: "name" | "description" }>;
 }
 
 export interface DragState {
