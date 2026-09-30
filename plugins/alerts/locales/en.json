@@ -160,5 +160,13 @@
     "save": "Save",
     "saving": "Saving...",
     "delete": "Delete"
+  },
+  "widget": {
+    "name": "Alert Feed",
+    "description": "Your latest alerts, with a quick way to mark them read",
+    "maxItems": "Max items",
+    "showRead": "Show read alerts",
+    "allClear": "All clear",
+    "loading": "Loading..."
   }
 }

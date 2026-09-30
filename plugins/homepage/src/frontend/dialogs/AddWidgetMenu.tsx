@@ -136,9 +136,19 @@ export function AddWidgetMenu({ state, onAdd, onClose }: AddWidgetMenuProps) {
             >
               <span className="text-accent-brand shrink-0">{type.icon}</span>
               <div className="flex flex-col min-w-0">
-                <span className="font-medium truncate">{type.name}</span>
+                <span className="font-medium truncate">
+                  {type.labelComponent ? (
+                    <type.labelComponent part="name" />
+                  ) : (
+                    type.name
+                  )}
+                </span>
                 <span className="text-[10px] text-muted-foreground truncate">
-                  {type.description}
+                  {type.labelComponent ? (
+                    <type.labelComponent part="description" />
+                  ) : (
+                    type.description
+                  )}
                 </span>
               </div>
             </button>
