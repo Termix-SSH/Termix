@@ -1357,6 +1357,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }, 15000);
     }
 
+    function reconnectTerminal() {
+      isUnmountingRef.current = false;
+      shouldNotReconnectRef.current = false;
+      isReconnectingRef.current = false;
+      isConnectingRef.current = false;
+      reconnectAttempts.current = 0;
+      wasDisconnectedBySSH.current = false;
+      wasConnectedRef.current = false;
+      updateConnectionError(null);
+      setShowDisconnectedOverlay(false);
+      if (terminal) {
+        terminal.clear();
+        const cols = terminal.cols;
+        const rows = terminal.rows;
+        connectToHost(cols, rows);
+      }
+    }
+
     useImperativeHandle(
       ref,
       () => ({
@@ -1396,22 +1414,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnected(false);
           setIsConnecting(false);
         },
-        reconnect: () => {
-          isUnmountingRef.current = false;
-          shouldNotReconnectRef.current = false;
-          isReconnectingRef.current = false;
-          isConnectingRef.current = false;
-          reconnectAttempts.current = 0;
-          wasDisconnectedBySSH.current = false;
-          wasConnectedRef.current = false;
-          updateConnectionError(null);
-          setShowDisconnectedOverlay(false);
-          if (terminal) {
-            terminal.clear();
-            const cols = terminal.cols;
-            const rows = terminal.rows;
-            connectToHost(cols, rows);
-          }
+        reconnect: reconnectTerminal,
+        reconnectIfDisconnected: () => {
+          if (
+            !terminal ||
+            isConnected ||
+            isUnmountingRef.current ||
+            isConnectingRef.current ||
+            isReconnectingRef.current ||
+            reconnectTimeoutRef.current !== null
+          )
+            return false;
+          reconnectTerminal();
+          return true;
         },
         isConnected: () => isConnected,
         fit: () => {

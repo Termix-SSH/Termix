@@ -67,6 +67,7 @@ export function TabBar({
   onSetActiveTab,
   onCloseTab,
   onRefreshTab,
+  onReconnectDisconnected,
   onReorderTabs,
   onSplitAction,
   onRenameTab,
@@ -85,6 +86,7 @@ export function TabBar({
   onSetActiveTab: (id: string) => void;
   onCloseTab: (id: string) => void;
   onRefreshTab: (id: string) => void;
+  onReconnectDisconnected?: () => void;
   onReorderTabs: (tabs: Tab[]) => void;
   onSplitAction: (action: TabSplitAction) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
@@ -707,6 +709,18 @@ export function TabBar({
                 >
                   <RefreshCw className="size-3" />
                   {t("nav.refreshTab")}
+                </button>
+              )}
+              {onReconnectDisconnected && (
+                <button
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    onReconnectDisconnected();
+                    setContextTabId(null);
+                  }}
+                >
+                  <RefreshCw className="size-3" />
+                  {t("nav.reconnectDisconnectedTerminals")}
                 </button>
               )}
               {/* Plugins add entries here, invoked with the tab's surface handle. */}

@@ -314,6 +314,8 @@ export interface TabHandle {
   focus?: () => void;
   fit?: () => void;
   reconnect?: () => void;
+  /** Start a manual reconnect only when disconnected and idle; return whether it started. */
+  reconnectIfDisconnected?: () => boolean;
   disconnect?: () => void;
   isConnected?: () => boolean;
   sendInput?: (data: string) => void;

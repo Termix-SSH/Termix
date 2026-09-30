@@ -293,7 +293,13 @@
     "collapseSideMenu": "Collapse Menu",
     "roleAdministrator": "Administrator",
     "roleUser": "User",
-    "sync": "Sync"
+    "sync": "Sync",
+    "reconnectDisconnectedTerminals": "Reconnect all disconnected terminals",
+    "reconnectingTerminals_one": "Reconnecting {{count}} terminal",
+    "reconnectingTerminals_other": "Reconnecting {{count}} terminals",
+    "noDisconnectedTerminals": "No disconnected terminals are ready to reconnect",
+    "reconnectTerminalsFailed_one": "Could not start reconnecting {{count}} terminal",
+    "reconnectTerminalsFailed_other": "Could not start reconnecting {{count}} terminals"
   },
   "hosts": {
     "hosts": "Hosts",
