@@ -113,10 +113,18 @@ describe("session-scoped tmux mouse", () => {
         expect(args).toEqual([
           "-u",
           "set-option",
+          "-q",
           "-t",
           `=${name}`,
           "mouse",
           "off",
+          ";",
+          "set-option",
+          "-q",
+          "-t",
+          `=${name}`,
+          "history-limit",
+          "50000",
           ";",
           "attach-session",
           "-t",
@@ -146,6 +154,7 @@ describe("session-scoped tmux mouse", () => {
       command.indexOf("attach-session"),
     );
     expect(command).toContain("mouse on");
+    expect(command).toContain("history-limit 50000");
     expect(command).not.toMatch(/set -g|set-hook|bind-key|set-clipboard/);
   });
 });

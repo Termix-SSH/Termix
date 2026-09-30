@@ -134,6 +134,10 @@ export async function waitForTmuxSession(
 /**
  * Write tmux attach or new-session command to the interactive shell stream.
  * Uses && exit so the shell only closes if tmux started successfully.
+ *
+ * Options are set on this session only so the user's own tmux config stays
+ * untouched. -q keeps an older tmux that lacks an option from aborting the
+ * attach.
  */
 export function attachOrCreateTmuxSession(
   stream: ClientChannel,
@@ -148,7 +152,8 @@ export function attachOrCreateTmuxSession(
     ? []
     : [`new-session -d -s ${shellEscape(name)}`];
   commands.push(
-    `set-option -t ${target} mouse ${mouseEnabled ? "on" : "off"}`,
+    `set-option -q -t ${target} mouse ${mouseEnabled ? "on" : "off"}`,
+    `set-option -q -t ${target} history-limit 50000`,
     `attach-session -t ${target}`,
   );
   stream.write(`${tmuxCommand(commands.join(" \\; "))} && exit\r`);
