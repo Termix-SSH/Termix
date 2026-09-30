@@ -147,6 +147,29 @@ function endpointUrl(
 export function createWebEndpointRoutes(ctx: PluginContext): Router {
   const router = express.Router();
 
+  /**
+   * @openapi
+   * /plugin-api/web-endpoint/open:
+   *   post:
+   *     summary: Open a tunnel to a host's web endpoint
+   *     description: For endpoints reached through SSH. Returns the local port the tunnel listens on.
+   *     tags: [Web Endpoint]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [hostId, endpointId]
+   *             properties:
+   *               hostId: { type: integer }
+   *               endpointId: { type: string }
+   *     responses:
+   *       200: { description: The local port. }
+   *       400: { description: Invalid request, or the endpoint does not use a tunnel. }
+   *       401: { description: Not signed in. }
+   *       404: { description: Host or endpoint not found. }
+   */
   router.post("/open", async (req, res) => {
     const userId = ctx.currentActor();
     if (!userId) {
@@ -199,6 +222,29 @@ export function createWebEndpointRoutes(ctx: PluginContext): Router {
    * just opened for a tunnel one) so ctx.desktop.openIsolatedWindow's
    * capability check and audit line cover the whole decision, not just the
    * final "open a window" step.
+   */
+  /**
+   * @openapi
+   * /plugin-api/web-endpoint/open-window:
+   *   post:
+   *     summary: Open a host's web endpoint in a desktop window
+   *     tags: [Web Endpoint]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [hostId, endpointId]
+   *             properties:
+   *               hostId: { type: integer }
+   *               endpointId: { type: string }
+   *               ignoreCert: { type: boolean, description: Accept a self-signed certificate for this window. }
+   *     responses:
+   *       200: { description: The window opened. }
+   *       400: { description: Invalid request. }
+   *       401: { description: Not signed in. }
+   *       404: { description: Host not found or access denied. }
    */
   router.post("/open-window", async (req, res) => {
     const userId = ctx.currentActor();

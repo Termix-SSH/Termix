@@ -200,6 +200,23 @@ export function registerRoomRoutes(
   } = actions;
   const requireUse = ctx.rbac.require("use") as never;
 
+  /**
+   * @openapi
+   * /plugin-api/session-sharing/meeting-host/{syncId}:
+   *   get:
+   *     summary: Find this server's id for a synced host
+   *     description: A desktop presents a host by its sync id; this returns the matching host the caller may connect to.
+   *     tags: [Collab]
+   *     parameters:
+   *       - in: path
+   *         name: syncId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: The host id. }
+   *       401: { description: Not signed in. }
+   *       404: { description: No reachable host with that sync id. }
+   */
   router.get(
     "/meeting-host/:syncId",
     requireUse,

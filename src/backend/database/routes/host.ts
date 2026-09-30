@@ -572,7 +572,6 @@ router.post(
  *               authType:
  *                 type: string
  *                 description: Any registered SSH auth type that works for an unsaved host (password, key, credential, agent, none, or one a plugin marks for Quick Connect).
- *                 description: Authentication method
  *               password:
  *                 type: string
  *                 description: Password (required if authType is password)
@@ -1490,9 +1489,26 @@ router.get(
 );
 
 /**
- * Returns the minimum authentication material needed by the desktop app to
- * connect to a shared host from the recipient's own network. The response is
- * deliberately transient: callers must not persist it or include it in logs.
+ * @openapi
+ * /host/db/host/{id}/local-connection-auth:
+ *   get:
+ *     summary: Get the login a desktop needs to reach a shared host itself
+ *     description: The minimum authentication material for connecting to a shared host from the recipient's own network. Transient; callers must not store or log it.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The connection auth.
+ *       400:
+ *         description: Invalid id.
+ *       404:
+ *         description: Shared host not found.
  */
 router.get(
   "/db/host/:id/local-connection-auth",

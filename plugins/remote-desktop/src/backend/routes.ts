@@ -502,7 +502,7 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
    *         name: probe
    *         schema:
    *           type: string
-   *         description: "0" skips dialing guacd.
+   *         description: Set to 0 to skip dialing guacd.
    *       - in: query
    *         name: hostId
    *         schema:

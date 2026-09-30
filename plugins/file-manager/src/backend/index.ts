@@ -2050,6 +2050,30 @@ export async function activate(ctx: PluginContext) {
     closeDedicatedTransferSession,
   };
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/transferMethodPreview:
+   *   post:
+   *     summary: Preview how a host to host transfer would run
+   *     description: Says whether tar or per-file SFTP would be used, and why, without moving anything.
+   *     tags: [File Manager]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [sourceSessionId, destSessionId, sourcePaths, destPath]
+   *             properties:
+   *               sourceSessionId: { type: string }
+   *               destSessionId: { type: string }
+   *               sourcePaths: { type: array, items: { type: string } }
+   *               destPath: { type: string }
+   *               methodPreference: { type: string, enum: [auto, tar, item_sftp] }
+   *     responses:
+   *       200: { description: The chosen method and the reason. }
+   *       400: { description: Missing parameters. }
+   */
   app.post("/transferMethodPreview", async (req, res) => {
     const {
       sourceSessionId,
@@ -2095,6 +2119,34 @@ export async function activate(ctx: PluginContext) {
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/transferToHost:
+   *   post:
+   *     summary: Copy or move files from one host to another
+   *     description: Starts a background transfer between two of the caller's file manager sessions.
+   *     tags: [File Manager]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [sourceSessionId, destSessionId, sourcePaths, destPath]
+   *             properties:
+   *               sourceSessionId: { type: string }
+   *               destSessionId: { type: string }
+   *               sourcePaths: { type: array, items: { type: string } }
+   *               destPath: { type: string }
+   *               methodPreference: { type: string, enum: [auto, tar, item_sftp] }
+   *               move: { type: boolean, description: Delete the source after a successful copy. }
+   *               parallelSegmentCount: { type: integer }
+   *     responses:
+   *       200: { description: The new transfer id. }
+   *       400: { description: Missing parameters or a session is not connected. }
+   *       403: { description: A session belongs to someone else. }
+   *       500: { description: The transfer could not start. }
+   */
   app.post("/transferToHost", async (req, res) => {
     const {
       sourceSessionId,
@@ -2168,6 +2220,16 @@ export async function activate(ctx: PluginContext) {
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/activeTransfers:
+   *   get:
+   *     summary: List the caller's running host to host transfers
+   *     tags: [File Manager]
+   *     responses:
+   *       200: { description: The active transfers. }
+   *       401: { description: Not signed in. }
+   */
   app.get("/activeTransfers", async (req, res) => {
     const userId = ctx.currentActor();
     if (!userId)
@@ -2176,6 +2238,22 @@ export async function activate(ctx: PluginContext) {
     res.json({ transfers: listActiveTransfers(userId) });
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/transferStatus/{transferId}:
+   *   get:
+   *     summary: Get a transfer's progress
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: path
+   *         name: transferId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: The transfer's status and progress. }
+   *       401: { description: Not signed in. }
+   *       404: { description: No such transfer for this user. }
+   */
   app.get("/transferStatus/:transferId", async (req, res) => {
     const userId = ctx.currentActor();
     const transferId = req.params.transferId;
@@ -2187,6 +2265,21 @@ export async function activate(ctx: PluginContext) {
     res.json(status);
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/transferCancel/{transferId}:
+   *   post:
+   *     summary: Cancel a running transfer
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: path
+   *         name: transferId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: The transfer was asked to stop. }
+   *       401: { description: Not signed in. }
+   */
   app.post("/transferCancel/:transferId", (req, res) => {
     const userId = ctx.currentActor();
     const transferId = req.params.transferId;
@@ -2200,6 +2293,22 @@ export async function activate(ctx: PluginContext) {
     res.json({ ok: true });
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/transferCleanup/{transferId}:
+   *   post:
+   *     summary: Remove the partial files a cancelled transfer left
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: path
+   *         name: transferId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: What was removed. }
+   *       401: { description: Not signed in. }
+   *       404: { description: No such transfer for this user. }
+   */
   app.post("/transferCleanup/:transferId", async (req, res) => {
     const userId = ctx.currentActor();
     const transferId = req.params.transferId;
@@ -2219,6 +2328,22 @@ export async function activate(ctx: PluginContext) {
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/transferRetry/{transferId}:
+   *   post:
+   *     summary: Retry a failed or cancelled transfer
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: path
+   *         name: transferId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: The transfer started again. }
+   *       401: { description: Not signed in. }
+   *       404: { description: No such transfer for this user. }
+   */
   app.post("/transferRetry/:transferId", (req, res) => {
     const userId = ctx.currentActor();
     const transferId = req.params.transferId;

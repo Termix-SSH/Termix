@@ -57,6 +57,22 @@ export function registerFileOperationRoutes(
     return session;
   }
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/trash:
+   *   get:
+   *     summary: List items in the host's Termix trash
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: Trashed items, the retention in days and whether the caller may change it. }
+   *       400: { description: The session is not connected. }
+   *       403: { description: The session belongs to someone else. }
+   */
   app.get("/trash", async (req, res) => {
     const session = await ownedSession(req, res);
     if (!session) return;
@@ -73,6 +89,25 @@ export function registerFileOperationRoutes(
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/trash/{id}/restore:
+   *   post:
+   *     summary: Restore a trashed item to where it was
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string }
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: The restored path. }
+   *       409: { description: Something already exists at the original path. }
+   */
   app.post("/trash/:id/restore", async (req, res) => {
     const session = await ownedSession(req, res);
     if (!session) return;
@@ -91,6 +126,25 @@ export function registerFileOperationRoutes(
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/trash/{id}:
+   *   delete:
+   *     summary: Delete a trashed item for good
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string }
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: Deleted. }
+   *       500: { description: The delete failed on the host. }
+   */
   app.delete("/trash/:id", async (req, res) => {
     const session = await ownedSession(req, res);
     if (!session) return;
@@ -105,6 +159,21 @@ export function registerFileOperationRoutes(
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/trash:
+   *   delete:
+   *     summary: Empty the host's Termix trash
+   *     tags: [File Manager]
+   *     parameters:
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200: { description: How many items were deleted. }
+   *       500: { description: The delete failed on the host. }
+   */
   app.delete("/trash", async (req, res) => {
     const session = await ownedSession(req, res);
     if (!session) return;
@@ -115,6 +184,26 @@ export function registerFileOperationRoutes(
     }
   });
 
+  /**
+   * @openapi
+   * /plugin-api/file-manager/trash-retention:
+   *   put:
+   *     summary: Set how long trashed items are kept (admin only)
+   *     tags: [File Manager]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [retentionDays]
+   *             properties:
+   *               retentionDays: { type: integer, minimum: 1, maximum: 3650 }
+   *     responses:
+   *       200: { description: The new retention. }
+   *       400: { description: Out of range. }
+   *       403: { description: Admin access required. }
+   */
   app.put("/trash-retention", async (req, res) => {
     if (!(await canManageRetention())) {
       return res.status(403).json({ error: "Admin access required" });

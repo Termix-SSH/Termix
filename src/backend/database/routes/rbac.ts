@@ -671,6 +671,49 @@ router.delete(
   },
 );
 
+/**
+ * @openapi
+ * /rbac/host/{id}/access/{accessId}:
+ *   patch:
+ *     summary: Change a host access rule
+ *     description: Updates the permission level or the expiry of one share. Requires the right to manage sharing on the host.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: accessId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               permissionLevel:
+ *                 type: string
+ *                 enum: [connect, view, edit, manage]
+ *               durationHours:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Hours from now until the share expires. Null removes the expiry.
+ *     responses:
+ *       200:
+ *         description: The updated rule.
+ *       400:
+ *         description: Invalid id or nothing to change.
+ *       403:
+ *         description: Not allowed to manage sharing on this host.
+ *       404:
+ *         description: No such rule.
+ */
 router.patch(
   "/host/:id/access/:accessId",
   authenticateJWT,

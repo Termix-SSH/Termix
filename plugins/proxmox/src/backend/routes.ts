@@ -900,6 +900,29 @@ router.get("/discover/stream", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /plugin-api/proxmox/discover:
+ *   post:
+ *     summary: Discover the guests on a Proxmox node
+ *     description: Lists the node's VMs and containers so they can be added as hosts. /discover/stream reports the same with progress.
+ *     tags: [Proxmox]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hostId]
+ *             properties:
+ *               hostId: { type: integer }
+ *     responses:
+ *       200: { description: The guests found. }
+ *       400: { description: Missing or invalid hostId. }
+ *       403: { description: Access denied to the host. }
+ *       404: { description: Host not found. }
+ *       422: { description: Host is not a Proxmox node or is unreachable. }
+ */
 router.post("/discover", async (req, res) => {
   const { hostId } = req.body as { hostId?: unknown };
   const userId = pluginCtx().currentActor()!;
