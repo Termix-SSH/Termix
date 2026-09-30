@@ -91,6 +91,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     statusCheckEnabled: h.statusCheckEnabled !== false,
     statusCheckInterval: h.statusCheckInterval ?? null,
     forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,
+    pluginSettings: h.pluginSettings,
     useSocks5: h.useSocks5,
     socks5Host: h.socks5Host,
     socks5Port: h.socks5Port,
