@@ -227,5 +227,9 @@
     "failed": "{{name}} failed",
     "error": "Failed to execute {{name}}"
   },
-  "paletteHintPaste": "Paste in the active terminal tab"
+  "paletteHintPaste": "Paste in the active terminal tab",
+  "targetTerminals": "Run in",
+  "targetTerminalsHint": "optional, else the active tab",
+  "selectAll": "All",
+  "selectNone": "None"
 }

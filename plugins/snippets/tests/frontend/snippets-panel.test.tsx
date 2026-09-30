@@ -210,3 +210,37 @@ describe("snippets panel", () => {
     );
   });
 });
+
+describe("snippet target terminals", () => {
+  it("runs a snippet in every picked terminal", async () => {
+    const sent: Array<[string, string]> = [];
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: fakeApi([snippet({})]),
+      permissions: PERMISSIONS,
+      hosts: HOSTS as never,
+    });
+    rendered.app.registerAction("terminal.listSessions", () => [
+      { id: "s1", label: "web-1", hostName: "web-1" },
+      { id: "s2", label: "web-2", hostName: "web-2" },
+    ]);
+    rendered.app.registerAction("terminal.sendToSession", ((
+      id: string,
+      text: string,
+    ) => {
+      sent.push([id, text]);
+      return true;
+    }) as never);
+    rendered.renderPanel("snippets", { active: true });
+
+    fireEvent.click(await screen.findByText(locales.selectAll));
+    fireEvent.click(screen.getAllByTitle(locales.run)[0]);
+    await waitFor(() =>
+      expect(sent).toEqual([
+        ["s1", "ls -la"],
+        ["s2", "ls -la"],
+      ]),
+    );
+  });
+});

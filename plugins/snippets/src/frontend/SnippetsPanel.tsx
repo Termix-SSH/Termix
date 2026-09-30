@@ -33,6 +33,11 @@ import {
 } from "@termix/plugin-sdk/ui";
 import { createSnippetsApi } from "./snippets-api";
 import { useSnippetRunner, type TargetHost } from "./use-snippet-runner";
+import {
+  TargetTerminals,
+  toRunTargets,
+  useOpenTerminals,
+} from "./TargetTerminals";
 import { SnippetShareView, type ShareTarget } from "./SnippetShareView";
 import { SnippetEditor, type SnippetFormValues } from "./SnippetEditor";
 import { SnippetSettings } from "./SnippetSettings";
@@ -83,10 +88,22 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
   const settings = useSettings("user");
   const display = readSnippetSettings(settings.values);
   const {
+    runSnippet,
     runOnActive,
     runOnHosts,
     dialog: runnerDialog,
   } = useSnippetRunner(display.confirmExecution);
+  const openTerminals = useOpenTerminals();
+  const [selectedTerminals, setSelectedTerminals] = useState<Set<string>>(
+    () => new Set(),
+  );
+  useEffect(() => {
+    setSelectedTerminals((prev) => {
+      const open = new Set(openTerminals.map((terminal) => terminal.id));
+      const next = new Set([...prev].filter((id) => open.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [openTerminals]);
   const { hosts } = useHosts();
   const { confirmWithToast } = useConfirmation();
 
@@ -254,7 +271,9 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
 
   function handleRun(snippet: Snippet) {
     const targets = targetHostsOf(snippet);
-    if (targets.length > 0) runOnHosts(snippet, targets);
+    const terminalTargets = toRunTargets(openTerminals, selectedTerminals);
+    if (targets.length > 0 && !snippet.isNote) runOnHosts(snippet, targets);
+    else if (terminalTargets.length > 0) runSnippet(snippet, terminalTargets);
     else runOnActive(snippet, null);
   }
 
@@ -575,6 +594,12 @@ export function SnippetsPanel({ active: _active }: PanelProps) {
             </button>
           )}
         </div>
+
+        <TargetTerminals
+          terminals={openTerminals}
+          selected={selectedTerminals}
+          onChange={setSelectedTerminals}
+        />
 
         <input
           ref={fileInputRef}
