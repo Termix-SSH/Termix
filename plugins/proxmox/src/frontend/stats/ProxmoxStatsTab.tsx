@@ -42,8 +42,12 @@ interface HostConfig {
   name: string;
   ip: string;
   username: string;
-  enableProxmoxStats?: boolean;
-  proxmoxStatsConfig?: string | ProxmoxStatsConfig | null;
+  pluginSettings?: {
+    proxmox?: {
+      enableProxmoxStats?: boolean;
+      proxmoxStatsConfig?: string | ProxmoxStatsConfig | null;
+    };
+  };
   authType?: string;
   port?: number;
   [key: string]: unknown;
@@ -115,9 +119,10 @@ function ProxmoxStatsInner({
     null,
   );
 
+  const proxmoxSettings = currentHostConfig?.pluginSettings?.proxmox;
   const statsConfig = React.useMemo(
-    () => parseProxmoxStatsConfig(currentHostConfig?.proxmoxStatsConfig),
-    [currentHostConfig?.proxmoxStatsConfig],
+    () => parseProxmoxStatsConfig(proxmoxSettings?.proxmoxStatsConfig),
+    [proxmoxSettings?.proxmoxStatsConfig],
   );
 
   React.useEffect(() => {
@@ -162,7 +167,7 @@ function ProxmoxStatsInner({
     });
   }, []);
 
-  const notEnabled = currentHostConfig?.enableProxmoxStats !== true;
+  const notEnabled = proxmoxSettings?.enableProxmoxStats !== true;
   const stopPollingRef = React.useRef<(() => void) | null>(null);
 
   const fetchSnapshot = React.useCallback(async (): Promise<void> => {
