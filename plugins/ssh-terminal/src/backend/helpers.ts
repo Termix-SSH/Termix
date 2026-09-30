@@ -154,6 +154,17 @@ export function isRetriableDnsError(error: unknown): boolean {
   );
 }
 
+type LookupResult = { address: string; family: number };
+
+// Prefer IPv4: ssh2 gets one address and has no fallback, and a name that
+// also has an AAAA record often points at a v6 address sshd is not bound to.
+export function pickSshAddress(result: LookupResult | LookupResult[]): string {
+  const list = Array.isArray(result) ? result : [result];
+  if (list.length === 0)
+    throw Object.assign(new Error("No address found"), { code: "ENOTFOUND" });
+  return (list.find((entry) => entry.family === 4) ?? list[0]).address;
+}
+
 /** Resolves a hostname up front, retrying transient container DNS failures. */
 export async function resolveHostForSshConnect(
   host: string,
@@ -168,10 +179,10 @@ export async function resolveHostForSshConnect(
 
   for (let attempt = 0; ; attempt += 1) {
     try {
-      const result = await lookup(normalized);
+      const address = pickSshAddress(await lookup(normalized, { all: true }));
       return {
-        host: result.address,
-        resolvedAddress: result.address,
+        host: address,
+        resolvedAddress: address,
         attempts: attempt + 1,
       };
     } catch (error) {

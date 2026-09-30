@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   isRetriableDnsError,
+  pickSshAddress,
   resolveHostForSshConnect,
   resolveSshConnectConfigHost,
   shouldResolveBeforeSshConnect,
@@ -75,5 +76,26 @@ describe("SSH DNS resolution", () => {
       originalHost: "alp",
       resolvedHost: "10.0.0.6",
     });
+  });
+
+  it("prefers an IPv4 address when a name has both", async () => {
+    const lookup = vi.fn().mockResolvedValue([
+      { address: "::1", family: 6 },
+      { address: "10.0.0.7", family: 4 },
+    ]);
+
+    await expect(resolveHostForSshConnect("box", lookup)).resolves.toEqual({
+      host: "10.0.0.7",
+      resolvedAddress: "10.0.0.7",
+      attempts: 1,
+    });
+    expect(lookup).toHaveBeenCalledWith("box", { all: true });
+  });
+
+  it("falls back to IPv6 when that is all there is", () => {
+    expect(pickSshAddress([{ address: "2001:db8::2", family: 6 }])).toBe(
+      "2001:db8::2",
+    );
+    expect(() => pickSshAddress([])).toThrow();
   });
 });
