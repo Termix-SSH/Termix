@@ -23,6 +23,7 @@ export interface SchedulerDeps {
   repository: AutomationRepository;
   engine: Pick<AutomationEngine, "run">;
   log: PluginLogger;
+  isMaintaining?: (userId: string, hostId: number) => Promise<boolean>;
   /** Watchers brought in line with the enabled automations every tick. */
   reconcile: Array<(now: number) => Promise<unknown>>;
 }
@@ -78,6 +79,14 @@ export function createScheduler(deps: SchedulerDeps) {
     for (const state of open) {
       const automation = await repository.findById(state.automationId);
       if (!automation || !automation.enabled) continue;
+      const hostId = Number(state.stateKey.split(":")[0]);
+      if (
+        Number.isFinite(hostId) &&
+        (await deps.isMaintaining?.(automation.userId, hostId))
+      ) {
+        await repository.clearBreach(automation.id, state.stateKey);
+        continue;
+      }
 
       let definition: AutomationDefinition;
       try {
@@ -96,7 +105,6 @@ export function createScheduler(deps: SchedulerDeps) {
         continue;
       }
 
-      const hostId = Number(state.stateKey.split(":")[0]);
       await repository.upsertTriggerState({
         automationId: automation.id,
         stateKey: state.stateKey,

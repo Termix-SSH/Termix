@@ -438,3 +438,132 @@ describe("watchedHosts", () => {
     expect((await triggers.watchedHosts("metric_threshold")).size).toBe(0);
   });
 });
+
+describe("maintenance suppression", () => {
+  it("updates the status baseline without firing or replaying maintenance edges", async () => {
+    let maintaining = false;
+    const guarded = createTriggers(
+      repository as never,
+      { run },
+      log,
+      async () => maintaining,
+    );
+    addAutomation({
+      kind: "host_status",
+      hostSelector: { kind: "all" },
+      to: "offline",
+      cooldownMinutes: 0,
+    });
+    await guarded.onStatus({ hostId: 7, ownerUserId: "user-1", online: true });
+    maintaining = true;
+    await guarded.onStatus({ hostId: 7, ownerUserId: "user-1", online: false });
+    maintaining = false;
+    await guarded.onStatus({ hostId: 7, ownerUserId: "user-1", online: false });
+    expect(run).not.toHaveBeenCalled();
+    await guarded.onStatus({ hostId: 7, ownerUserId: "user-1", online: true });
+    await guarded.onStatus({ hostId: 7, ownerUserId: "user-1", online: false });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+  it("maintains health baselines and suppresses container events", async () => {
+    const guarded = createTriggers(
+      repository as never,
+      { run },
+      log,
+      async () => true,
+    );
+    addAutomation({
+      kind: "health_check",
+      hostSelector: { kind: "all" },
+      to: "failing",
+      cooldownMinutes: 0,
+    });
+    addAutomation({
+      kind: "docker_event",
+      hostSelector: { kind: "all" },
+      event: "exited",
+      cooldownMinutes: 0,
+    });
+    await guarded.onHealthCheck({
+      hostId: 7,
+      userId: "user-1",
+      checkId: "http",
+      ok: true,
+    });
+    await guarded.onHealthCheck({
+      hostId: 7,
+      userId: "user-1",
+      checkId: "http",
+      ok: false,
+    });
+    await guarded.onDockerEvent({
+      hostId: 7,
+      ownerUserId: "user-1",
+      container: "app",
+      event: "exited",
+    });
+    expect(run).not.toHaveBeenCalled();
+    expect(triggerState.get("1:7:http")?.lastObservedState).toBe("failing");
+  });
+  it("clears a metric dwell window so maintenance time cannot count toward a later alert", async () => {
+    let maintaining = true;
+    const guarded = createTriggers(
+      repository as never,
+      { run },
+      log,
+      async () => maintaining,
+    );
+    addAutomation({
+      kind: "metric_threshold",
+      hostSelector: { kind: "all" },
+      metric: { path: "cpu.percent" },
+      operator: ">",
+      value: 90,
+      forSeconds: 60,
+      cooldownMinutes: 0,
+    });
+    triggerState.set("1:7", {
+      breachStartedAt: "2000-01-01T00:00:00Z",
+    });
+    const event = {
+      hostId: 7,
+      ownerUserId: "user-1",
+      metrics: { cpu: { percent: 99 } },
+    };
+    await guarded.onMetrics(event);
+    expect(triggerState.get("1:7")?.breachStartedAt).toBeNull();
+    maintaining = false;
+    await guarded.onMetrics(event);
+    expect(run).not.toHaveBeenCalled();
+    expect(triggerState.get("1:7")?.breachStartedAt).not.toBeNull();
+  });
+  it("suppresses tunnel disconnects but preserves security login events", async () => {
+    const guarded = createTriggers(
+      repository as never,
+      { run },
+      log,
+      async () => true,
+    );
+    addAutomation({
+      kind: "internal_event",
+      event: "tunnel_disconnected",
+      cooldownMinutes: 0,
+    });
+    addAutomation({
+      kind: "internal_event",
+      event: "user_login",
+      cooldownMinutes: 0,
+    });
+    await guarded.onInternalEvent({
+      event: "tunnel_disconnected",
+      userId: "user-1",
+      hostId: 7,
+    });
+    expect(run).not.toHaveBeenCalled();
+    await guarded.onInternalEvent({
+      event: "user_login",
+      userId: "user-1",
+      hostId: 7,
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});
