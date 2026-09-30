@@ -1,3 +1,5 @@
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
 import type { Ref } from "react";
 import { Usb } from "lucide-react";
 import type {

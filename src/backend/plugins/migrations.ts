@@ -20,6 +20,7 @@ import { pluginLogger } from "../utils/logger.js";
 import type { DatabaseDialect } from "../database/db/dialect.js";
 import { LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
 import {
+  collectOwnedIndexes,
   findUnownedTableWrites,
   splitStatements,
 } from "@termix/plugin-sdk/ddl";
@@ -27,9 +28,6 @@ import {
 // The splitter is shared with createTestDb in the SDK, so tests apply a
 // migration exactly the way this runner does.
 export { LEGACY_TABLE_OWNERS, splitStatements };
-
-/** Dialect directory names, matching DatabaseDialect exactly. */
-const DIALECTS: readonly DatabaseDialect[] = ["sqlite", "postgres", "mysql"];
 
 const FILE_PATTERN = /^(\d{4})_([a-z0-9_]+)\.sql$/;
 
@@ -120,7 +118,7 @@ export function readMigrations(
 export function assertOwnedTables(
   pluginId: string,
   sql: string,
-  options: { bundled?: boolean } = {},
+  options: { bundled?: boolean; ownedIndexes?: ReadonlySet<string> } = {},
 ): void {
   const legacy = new Set(
     options.bundled
@@ -129,16 +127,19 @@ export function assertOwnedTables(
           .map(([table]) => table)
       : [],
   );
-  const problems = findUnownedTableWrites(pluginId, sql, legacy).map(
-    (problem) => {
-      // Name the owner when the table is another plugin's legacy table.
-      const table = /writes to "([^"]+)"/.exec(problem)?.[1];
-      const owner = table ? LEGACY_TABLE_OWNERS[table] : undefined;
-      return owner && owner !== pluginId
-        ? `may not touch "${table}": it belongs to the "${owner}" plugin`
-        : problem;
-    },
-  );
+  const problems = findUnownedTableWrites(
+    pluginId,
+    sql,
+    legacy,
+    options.ownedIndexes,
+  ).map((problem) => {
+    // Name the owner when the table is another plugin's legacy table.
+    const table = /writes to "([^"]+)"/.exec(problem)?.[1];
+    const owner = table ? LEGACY_TABLE_OWNERS[table] : undefined;
+    return owner && owner !== pluginId
+      ? `may not touch "${table}": it belongs to the "${owner}" plugin`
+      : problem;
+  });
   if (problems.length > 0) {
     throw new Error(
       `Plugin "${pluginId}" migration refused: ${problems.join("; ")}`,
@@ -197,9 +198,13 @@ export async function applyPluginMigrations(
 
   if (pending.length === 0) return [];
 
+  const ownedIndexes = collectOwnedIndexes(
+    pluginId,
+    migrations.map((migration) => migration.sql),
+  );
   const run = async () => {
     for (const migration of pending) {
-      assertOwnedTables(pluginId, migration.sql, options);
+      assertOwnedTables(pluginId, migration.sql, { ...options, ownedIndexes });
       const statements = splitStatements(migration.sql);
       await runner.execute(statements);
       await runner.record(pluginId, migration);

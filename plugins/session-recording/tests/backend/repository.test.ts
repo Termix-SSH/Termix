@@ -50,7 +50,11 @@ async function setup() {
     .run("user-1", "alice");
   db.sqlite.prepare("INSERT INTO ssh_data (id) VALUES (?)").run(7);
   const table = await db.database.define(sessionRecordings);
-  return createSessionRecordingRepository(db.database, table, fakeHosts);
+  return createSessionRecordingRepository(
+    db.database,
+    table,
+    fakeHosts as never,
+  );
 }
 
 describe("session recording repository", () => {

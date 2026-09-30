@@ -43,10 +43,8 @@ const CREDENTIAL_ITEM_DENSITY_TOKENS = {
 export function CredentialItem({
   cred,
   usedByCount = 0,
-  query = "",
   stripeIndex = 0,
   isMenuOpen = false,
-  onMenuOpenChange,
   isTrayOpen = false,
   onTrayOpenChange,
   onDragStart,

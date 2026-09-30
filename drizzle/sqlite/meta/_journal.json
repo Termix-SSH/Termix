@@ -421,6 +421,13 @@
       "when": 1790704530590,
       "tag": "0059_adorable_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "6",
+      "when": 1790742085632,
+      "tag": "0060_fine_cerise",
+      "breakpoints": true
     }
   ]
 }

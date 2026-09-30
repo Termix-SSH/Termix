@@ -11,6 +11,7 @@ import {
   defineTable,
   encryptedText,
   id,
+  refHost,
   refUser,
   text,
   varchar,
@@ -133,5 +134,38 @@ describe("plugin user data", () => {
         )
         .get(),
     ).toEqual({ user_id: "u1", note: "x" });
+  });
+
+  it("skips imported rows that point at another user or host", async () => {
+    sqlite.exec("DROP TABLE ssh_data");
+    sqlite.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY, user_id TEXT)");
+    sqlite.exec(
+      "INSERT INTO ssh_data (id, user_id) VALUES (1, 'u2'), (2, 'u1')",
+    );
+    const grants = defineTable("grant", {
+      id: id(),
+      ownerId: refUser(),
+      granteeId: refUser(),
+      hostId: refHost(),
+    });
+    for (const statement of createTableSql("sqlite", "fixture", grants)) {
+      sqlite.exec(statement);
+    }
+    registerTable("fixture", grants);
+
+    const file = new Database(":memory:");
+    file.exec(
+      "CREATE TABLE p_fixture_grant (id INTEGER PRIMARY KEY, owner_id TEXT, grantee_id TEXT, host_id INTEGER)",
+    );
+    file.exec(`INSERT INTO p_fixture_grant (owner_id, grantee_id, host_id) VALUES
+      ('old', 'old', 1), ('old', 'u1', 1), ('old', 'old', 2)`);
+
+    const result = await importUserPluginRows(file, "u2");
+    expect(result).toMatchObject({ imported: 1, skipped: 2 });
+    expect(
+      sqlite
+        .prepare("SELECT owner_id, grantee_id, host_id FROM p_fixture_grant")
+        .all(),
+    ).toEqual([{ owner_id: "u2", grantee_id: "u2", host_id: 1 }]);
   });
 });

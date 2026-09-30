@@ -23,6 +23,10 @@ export interface UserOwnedTable {
   /** The legacy core name the table adopted, for older export files. */
   legacyName?: string;
   userColumn: string;
+  /** Other refUser columns, such as a grantee or the user who shared. */
+  otherUserColumns: string[];
+  /** refHost columns. */
+  hostColumns: string[];
   /** Columns that travel, as SQL names. The primary key and secrets do not. */
   columns: string[];
   definition: PluginTableDefinition;
@@ -39,6 +43,13 @@ export function listUserOwnedTables(): UserOwnedTable[] {
       table: prefixedTableName(pluginId, definition.name),
       legacyName: definition.adopts,
       userColumn: columnName(user[0], user[1]),
+      otherUserColumns: entries
+        .filter(([, column]) => column.type === "refUser")
+        .slice(1)
+        .map(([property, column]) => columnName(property, column)),
+      hostColumns: entries
+        .filter(([, column]) => column.type === "refHost")
+        .map(([property, column]) => columnName(property, column)),
       columns: entries
         .filter(
           ([, column]) =>
@@ -131,9 +142,39 @@ export interface PluginRowsImport {
 }
 
 /**
+ * Whether a row from an import file may be written as `userId`. The file is
+ * user input, so a reference to anyone else's user or host is not trusted:
+ * other user columns must point back at the row's own owner, and host columns
+ * at a host the importing user owns.
+ */
+async function rowReferencesAllowed(
+  owned: UserOwnedTable,
+  source: Row,
+  userId: string,
+): Promise<boolean> {
+  const owner = source[owned.userColumn];
+  for (const column of owned.otherUserColumns) {
+    const value = source[column];
+    if (value !== null && value !== undefined && value !== owner) return false;
+  }
+  for (const column of owned.hostColumns) {
+    const value = source[column];
+    if (value === null || value === undefined) continue;
+    const rows = await selectRows(
+      sql`SELECT 1 FROM ${sql.identifier("ssh_data")} WHERE ${sql.identifier(
+        "id",
+      )} = ${value} AND ${sql.identifier("user_id")} = ${userId} LIMIT 1`,
+    );
+    if (rows.length === 0) return false;
+  }
+  return true;
+}
+
+/**
  * Copies plugin rows from an import file into this server as `userId`. A row
- * matching one the user already has is skipped. Files from before 2.9 carry
- * the legacy table names, which are read too.
+ * matching one the user already has is skipped, and so is one that points at
+ * another user or at a host the importer does not own. Files from before 2.9
+ * carry the legacy table names, which are read too.
  */
 export async function importUserPluginRows(
   importDb: SqliteLike,
@@ -157,10 +198,18 @@ export async function importUserPluginRows(
       const columns = owned.columns.filter(
         (column) => column === owned.userColumn || source[column] !== undefined,
       );
+      const owner = source[owned.userColumn];
       const values = columns.map((column) =>
-        column === owned.userColumn ? userId : source[column],
+        column === owned.userColumn ||
+        (owned.otherUserColumns.includes(column) && source[column] === owner)
+          ? userId
+          : source[column],
       );
       try {
+        if (!(await rowReferencesAllowed(owned, source, userId))) {
+          summary.skipped++;
+          continue;
+        }
         const existing = await selectRows(
           sql`SELECT 1 FROM ${sql.identifier(owned.table)} WHERE ${sql.join(
             columns.map((column, index) =>

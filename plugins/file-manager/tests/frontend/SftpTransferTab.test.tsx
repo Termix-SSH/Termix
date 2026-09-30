@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SftpTransferTab } from "../../src/frontend/SftpTransferTab";
 
 const api = vi.hoisted(() => ({
+  confirmBeforeTrash: undefined as boolean | undefined,
   addTransferRecent: vi.fn(),
   browseSSHDirectory: vi.fn(),
   changeSSHPermissions: vi.fn(),
@@ -51,12 +52,20 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
+vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@termix/plugin-sdk/frontend")>()),
+  useSettings: () => ({
+    values: { confirmBeforeTrash: api.confirmBeforeTrash },
+  }),
+}));
+
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  api.confirmBeforeTrash = undefined;
   api.getSSHHosts.mockResolvedValue([
     {
       id: 1,
@@ -115,6 +124,35 @@ async function selectHosts() {
 }
 
 describe("SftpTransferTab", () => {
+  it("opens the server login directory when no default path is configured", async () => {
+    const hosts = await api.getSSHHosts();
+    api.getSSHHosts.mockResolvedValue(
+      hosts.map((host: object) => ({ ...host, pluginSettings: {} })),
+    );
+    api.browseSSHDirectory.mockImplementation(
+      async (sessionId: string, path: string) => ({
+        status: "ok",
+        path: path === "." ? `/srv/home-${sessionId}` : path,
+        files: [
+          {
+            name: `remote-${sessionId}.txt`,
+            type: "file",
+            path: `/srv/home-${sessionId}/remote-${sessionId}.txt`,
+            size: 1,
+          },
+        ],
+      }),
+    );
+    render(<SftpTransferTab />);
+    await selectHosts();
+    await waitFor(() => {
+      expect(api.browseSSHDirectory).toHaveBeenCalledWith("1", ".");
+      expect(api.browseSSHDirectory).toHaveBeenCalledWith("2", ".");
+    });
+    expect(await screen.findByDisplayValue("/srv/home-1")).toBeTruthy();
+    expect(await screen.findByDisplayValue("/srv/home-2")).toBeTruthy();
+  });
+
   it("loads file manager-enabled hosts into both host pickers", async () => {
     render(<SftpTransferTab />);
     const selects = await screen.findAllByRole("combobox");
@@ -206,12 +244,29 @@ describe("SftpTransferTab", () => {
     });
   });
 
+  it("moves files to trash directly when confirmation is disabled", async () => {
+    api.confirmBeforeTrash = false;
+    render(<SftpTransferTab />);
+    await selectHosts();
+    fireEvent.contextMenu(screen.getByText("remote-1.txt"));
+    await userEvent.click(screen.getByText("sftpTransfer.delete"));
+    await waitFor(() =>
+      expect(api.deleteSSHItem).toHaveBeenCalledWith(
+        "1",
+        "/srv/remote-1.txt",
+        false,
+      ),
+    );
+    expect(screen.queryByText("sftpTransfer.deleteSelectedItems")).toBeNull();
+  });
+
   it("deletes a remote file after confirming", async () => {
     render(<SftpTransferTab />);
     await selectHosts();
 
     fireEvent.contextMenu(screen.getByText("remote-1.txt"));
     await userEvent.click(screen.getByText("sftpTransfer.delete"));
+    expect(api.deleteSSHItem).not.toHaveBeenCalled();
     const confirmButtons = await screen.findAllByText("sftpTransfer.delete");
     await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 

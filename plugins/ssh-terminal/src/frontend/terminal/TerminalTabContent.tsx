@@ -1,7 +1,8 @@
 import { lazy, Suspense } from "react";
+import { useThemePreview } from "../look/theme-preview";
 import { TerminalSquare } from "lucide-react";
 import type { TerminalHandle, TerminalHostConfig } from "./Terminal";
-import { useIsMobile, useTabsSafe } from "@termix/plugin-sdk/ui";
+import { useIsMobile } from "@termix/plugin-sdk/ui";
 import {
   useTranslation,
   invokeAction,
@@ -63,7 +64,7 @@ export function TerminalTabContent({
   const tab = tabRecord as unknown as TerminalTabRecord;
   const host = hostRecord as unknown as Host | undefined;
   const { t } = useTranslation();
-  const { previewTerminalTheme } = useTabsSafe();
+  const previewTerminalTheme = useThemePreview();
   const isMobile = useIsMobile();
   const useSshTitle = readHostTerminalSettings(
     hostTerminalValues(host),

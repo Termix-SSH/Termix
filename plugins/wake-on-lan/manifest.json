@@ -46,7 +46,8 @@
             "type": "string",
             "labelKey": "settings.host.macAddress.label",
             "descriptionKey": "settings.host.macAddress.description",
-            "placeholderKey": "settings.host.macAddress.placeholder"
+            "placeholderKey": "settings.host.macAddress.placeholder",
+            "defaultable": false
           },
           {
             "key": "broadcastAddress",

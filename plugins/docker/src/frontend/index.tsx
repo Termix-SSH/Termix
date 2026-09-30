@@ -1,3 +1,5 @@
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
 import type { ComponentType } from "react";
 import { Box } from "lucide-react";
 import type {

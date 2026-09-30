@@ -10,11 +10,7 @@ import {
 } from "./images/image-storage-settings.js";
 import { DEFAULT_TIMEOUT_MINUTES } from "./session-manager.js";
 import {
-  DEFAULT_APPEARANCE,
-  NEW_HOST_ADMIN_KEYS,
-  pickTerminalValues,
   readUserSettings,
-  type NewHostTerminalDefaults,
   type TerminalUserSettings,
 } from "../shared/terminal-settings.js";
 
@@ -84,8 +80,6 @@ export interface ClientSettings {
   sessionPersistence: boolean;
   commandHistoryEnabled: boolean;
   touchInput: TouchInputSettings;
-  /** What a new host's terminal starts with. */
-  newHostDefaults: NewHostTerminalDefaults;
   /** The caller's own terminal settings. */
   user: TerminalUserSettings;
 }
@@ -114,26 +108,6 @@ export async function readClientSettings(
     sessionPersistence: all[ADMIN_KEYS.sessionPersistence] !== false,
     commandHistoryEnabled: all[ADMIN_KEYS.commandHistoryEnabled] !== false,
     touchInput: normalizeTouchInputSettings(touch),
-    newHostDefaults: readNewHostDefaults(all),
     user: readUserSettings(user),
   };
-}
-
-/** The admin's new-host terminal defaults, typed, with the built-in ones under them. */
-export function readNewHostDefaults(
-  admin: Record<string, unknown>,
-): NewHostTerminalDefaults {
-  const byHostKey: Record<string, unknown> = {};
-  for (const [adminKey, hostKey] of Object.entries(NEW_HOST_ADMIN_KEYS)) {
-    byHostKey[hostKey] = admin[adminKey];
-  }
-  return {
-    fontSize: DEFAULT_APPEARANCE.fontSize,
-    fontFamily: DEFAULT_APPEARANCE.fontFamily,
-    theme: DEFAULT_APPEARANCE.theme,
-    cursorStyle: DEFAULT_APPEARANCE.cursorStyle,
-    cursorBlink: DEFAULT_APPEARANCE.cursorBlink,
-    autoTmux: false,
-    ...pickTerminalValues(byHostKey, Object.values(NEW_HOST_ADMIN_KEYS)),
-  } as NewHostTerminalDefaults;
 }

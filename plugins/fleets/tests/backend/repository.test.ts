@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 function fakeHosts(hosts: PluginHostSummary[]): PluginHosts {
-  return {
+  return <PluginHosts>(<unknown>{
     list: async () => hosts,
     get: async (hostId) => hosts.find((h) => h.id === hostId) ?? null,
     checkAccess: async (hostId) => {
@@ -37,7 +37,7 @@ function fakeHosts(hosts: PluginHostSummary[]): PluginHosts {
     share: async (hostId) => ({ hostId, shared: true }),
     listUsers: async () => [],
     listRoles: async () => [],
-  };
+  });
 }
 
 async function setup(hosts: PluginHostSummary[]) {

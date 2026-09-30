@@ -19,15 +19,14 @@ describe("fleets.access", () => {
     const service = server.mock.services.get("fleets.access") as FleetsService;
 
     await expect(
-      server.mock.ctx.asUser("user-1", () => service.create({ name: "prod" })),
+      server.mock.actAs("user-1", () => service.create({ name: "prod" })),
     ).rejects.toThrow("fleets.manage");
   });
 
   it("adds only hosts the caller can see", async () => {
     server = await startServer();
     const service = server.mock.services.get("fleets.access") as FleetsService;
-    const run = <T>(fn: () => Promise<T>) =>
-      server!.mock.ctx.asUser("user-1", fn);
+    const run = <T>(fn: () => Promise<T>) => server!.mock.actAs("user-1", fn);
 
     const fleet = await run(() => service.create({ name: "prod" }));
     await run(() => service.addMember(fleet.id, 10));

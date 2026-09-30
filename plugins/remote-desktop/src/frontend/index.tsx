@@ -17,6 +17,7 @@ import {
 } from "@termix/plugin-sdk/frontend";
 import {
   FakeSwitch,
+  HostFeatureFields,
   SectionCard,
   SettingRow,
   isElectron,
@@ -166,6 +167,7 @@ function ToolbarCard({
       <SettingRow
         label={t("settings.host.enableToolbar.label")}
         description={t("settings.host.enableToolbar.description")}
+        defaultKey="enableToolbar"
       >
         <FakeSwitch
           checked={form.enableToolbar}
@@ -250,6 +252,27 @@ function TelnetSection(props: HostEditorSectionProps) {
       />
       <ToolbarCard form={form} setField={setField} />
       <SectionNotes protocol="telnet" />
+    </>
+  );
+}
+
+/**
+ * The defaults editor's remote desktop section: the display settings and the
+ * toolbar, which every host follows unless its own guacd settings say
+ * otherwise. A host edits these in its protocol tabs instead.
+ */
+function DisplayDefaultsSection(props: HostEditorSectionProps) {
+  const { t } = useTranslation();
+  const { form, setField } = remoteDesktopForm(props);
+  return (
+    <>
+      <SectionCard
+        title={t("settings.host.displayGroup")}
+        icon={<Monitor className="size-3.5" />}
+      >
+        <HostFeatureFields form={props.form} updateForm={props.updateForm} />
+      </SectionCard>
+      <ToolbarCard form={form} setField={setField} />
     </>
   );
 }
@@ -342,6 +365,16 @@ function registerHostSurfaces(app: TermixApp): void {
       component: SECTIONS[protocol.id],
     });
   }
+
+  app.registerHostEditorSection({
+    id: "remote-desktop-display",
+    group: "top",
+    titleKey: "settings.host.displayDefaultsTab",
+    icon: Monitor,
+    order: 40,
+    defaults: "only",
+    component: DisplayDefaultsSection,
+  });
 
   if (isElectron()) registerNativeRdp(app);
 }

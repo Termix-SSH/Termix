@@ -13,10 +13,6 @@ import locales from "../../locales/en.json";
 const manifest = manifestJson as unknown as PluginManifest;
 
 const linked = vi.hoisted(() => ({ serverUrl: null as string | null }));
-vi.mock("@/lib/linked-server", () => ({
-  getLinkedSession: async () =>
-    linked.serverUrl ? { serverUrl: linked.serverUrl, token: "t" } : null,
-}));
 
 let rendered: RenderedPluginApp | null = null;
 
@@ -76,7 +72,11 @@ function stubApi(options: { identity?: boolean; linked?: number[] } = {}) {
 
 describe(`${manifest.id} activate`, () => {
   it("registers the rail item, panel, tab and credential badge", async () => {
-    rendered = await renderWithApp(plugin, { manifest, locales });
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      remoteServerUrl: () => linked.serverUrl,
+    });
     expect(rendered.registered.railItems()).toEqual([
       expect.objectContaining({
         id: "termix-id",
@@ -106,7 +106,11 @@ describe(`${manifest.id} activate`, () => {
       isElectron: true,
       invoke: vi.fn(async () => null),
     };
-    rendered = await renderWithApp(plugin, { manifest, locales });
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      remoteServerUrl: () => linked.serverUrl,
+    });
     await waitFor(() =>
       expect(rendered!.registered.railItems()).toEqual([
         expect.objectContaining({ id: "termix-id", hidden: true }),
@@ -120,7 +124,11 @@ describe(`${manifest.id} activate`, () => {
       isElectron: true,
       invoke: vi.fn(async () => null),
     };
-    rendered = await renderWithApp(plugin, { manifest, locales });
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      remoteServerUrl: () => linked.serverUrl,
+    });
     await waitFor(() =>
       expect(rendered!.registered.railItems()[0]?.hidden).toBe(true),
     );

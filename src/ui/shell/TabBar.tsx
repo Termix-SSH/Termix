@@ -26,7 +26,6 @@ import {
   Ungroup,
   Maximize2,
   Minimize2,
-  FolderOpen,
   PanelRight,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
@@ -68,10 +67,10 @@ export function TabBar({
   onSetActiveTab,
   onCloseTab,
   onRefreshTab,
+  onReconnectDisconnected,
   onReorderTabs,
   onSplitAction,
   onRenameTab,
-  onOpenFileManager,
   isAppFullscreen,
   onToggleAppFullscreen,
   rightDockOpen,
@@ -87,10 +86,10 @@ export function TabBar({
   onSetActiveTab: (id: string) => void;
   onCloseTab: (id: string) => void;
   onRefreshTab: (id: string) => void;
+  onReconnectDisconnected?: () => void;
   onReorderTabs: (tabs: Tab[]) => void;
   onSplitAction: (action: TabSplitAction) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
-  onOpenFileManager?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
   rightDockOpen?: boolean;
@@ -712,26 +711,23 @@ export function TabBar({
                   {t("nav.refreshTab")}
                 </button>
               )}
-              {typeof ctxTab.terminalRef?.current?.openFileManager ===
-                "function" &&
-                ctxTab.host &&
-                onOpenFileManager && (
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      onOpenFileManager(contextTabId);
-                      setContextTabId(null);
-                    }}
-                  >
-                    <FolderOpen className="size-3" />
-                    {t("nav.openFileManager")}
-                  </button>
-                )}
+              {onReconnectDisconnected && (
+                <button
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    onReconnectDisconnected();
+                    setContextTabId(null);
+                  }}
+                >
+                  <RefreshCw className="size-3" />
+                  {t("nav.reconnectDisconnectedTerminals")}
+                </button>
+              )}
               {/* Plugins add entries here, invoked with the tab's surface handle. */}
               <ActionSlot
                 slotId="tab.menu"
                 when={{ tab: ctxTab, handle: ctxTab.terminalRef?.current }}
-                context={() => [ctxTab.terminalRef?.current]}
+                context={() => [ctxTab.terminalRef?.current, ctxTab]}
                 renderItem={(contribution, invoke) => (
                   <button
                     className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"

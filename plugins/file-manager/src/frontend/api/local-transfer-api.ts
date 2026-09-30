@@ -9,10 +9,11 @@
 // configured Remote Sync server) and the main process resolves the rest, so a
 // compromised renderer cannot turn the transfer bridge into an HTTP client.
 
-import type {
-  LocalTransferOrigin,
-  LocalTransferProgress,
-} from "@termix/plugin-sdk/ui";
+import {
+  getLocalAuthToken,
+  type LocalTransferOrigin,
+  type LocalTransferProgress,
+} from "@termix/plugin-sdk/frontend";
 import { getSessionOrigin } from "./client";
 import { getDeviceId } from "@termix/plugin-sdk/ui";
 
@@ -67,11 +68,7 @@ function transferOriginFor(sessionId: string): LocalTransferOrigin {
  */
 function localAuthTokenFor(origin: LocalTransferOrigin): string | undefined {
   if (origin !== "local") return undefined;
-  try {
-    return localStorage.getItem("jwt") || undefined;
-  } catch {
-    return undefined;
-  }
+  return getLocalAuthToken() ?? undefined;
 }
 
 export function createLocalTransferId(prefix: string): string {

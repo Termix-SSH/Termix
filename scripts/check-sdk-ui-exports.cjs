@@ -93,6 +93,8 @@ const ALLOWED = [
   "GridColSpan",
   "GridLayout",
   "GridSlot",
+  "HostDefaultBadge",
+  "HostDefaultField",
   "HostFeatureFields",
   "HostFeatureFieldsProps",
   "HostKeyVerificationDialog",
@@ -106,16 +108,6 @@ const ALLOWED = [
   "Label",
   "LineChart",
   "LineChartSeries",
-  "LocalCollectedFile",
-  "LocalDirectoryListing",
-  "LocalFileEntry",
-  "LocalFsHomeInfo",
-  "LocalFsResult",
-  "LocalTransferOrigin",
-  "LocalTransferProgress",
-  "LocalTrashResult",
-  "LocalWalkFile",
-  "LocalWalkResult",
   "LogContext",
   "LogEntry",
   "MFAPromptMode",
@@ -178,9 +170,7 @@ const ALLOWED = [
   "VersionInfo",
   "WebSocketConnectionTarget",
   "WidgetTitle",
-  "badgeVariants",
   "buildOriginWsUrl",
-  "buttonVariants",
   "cn",
   "copyToClipboard",
   "createFrontendLogger",
@@ -195,12 +185,9 @@ const ALLOWED = [
   "getUptime",
   "getVersionInfo",
   "globalShortcutHandler",
-  "guacStateToStage",
-  "guacStateToStatus",
   "hydrateLocalSharedHostAuth",
   "isElectron",
   "isMacPlatform",
-  "isQuickConnectHost",
   "isTabJumpHotkey",
   "linkedServerUrl",
   "markAdaptiveResourceUsed",
@@ -215,6 +202,7 @@ const ALLOWED = [
   "useAppTheme",
   "useConfirmation",
   "useConnectionLog",
+  "useIsDefaultsEditor",
   "useIsMobile",
   "useOptionalConnectionLog",
   "useTabs",
@@ -243,6 +231,53 @@ function exportedNames(file = SDK_UI, tsconfig = TSCONFIG) {
     .sort();
 }
 
+const SNAPSHOT = path.join(ROOT, "packages", "plugin-sdk", "ui.api.txt");
+
+/**
+ * One line per export with its type as the compiler prints it. Committed as
+ * packages/plugin-sdk/ui.api.txt, so a changed prop or signature shows up as
+ * a diff instead of reaching plugins unnoticed.
+ */
+function exportSignatures(file = SDK_UI, tsconfig = TSCONFIG) {
+  const ts = require("typescript");
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    tsconfig,
+    {},
+    { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => {} },
+  );
+  const program = ts.createProgram([file], {
+    ...(parsed?.options ?? {}),
+    noEmit: true,
+  });
+  const checker = program.getTypeChecker();
+  const source = program.getSourceFile(file);
+  const symbol = source && checker.getSymbolAtLocation(source);
+  const flags =
+    ts.TypeFormatFlags.NoTruncation |
+    ts.TypeFormatFlags.WriteArrowStyleSignature;
+  return checker
+    .getExportsOfModule(symbol)
+    .map((entry) => {
+      const target =
+        entry.flags & ts.SymbolFlags.Alias
+          ? checker.getAliasedSymbol(entry)
+          : entry;
+      const isValue = !!(target.flags & ts.SymbolFlags.Value);
+      const declaration = target.declarations?.[0] ?? source;
+      const type = isValue
+        ? checker.getTypeOfSymbolAtLocation(target, declaration)
+        : checker.getDeclaredTypeOfSymbol(target);
+      const text = checker
+        .typeToString(type, undefined, flags)
+        .replace(/import\("[^"]*"\)\./g, "")
+        .replace(/\s+/g, " ");
+      return `${entry.getName()} (${isValue ? "value" : "type"}): ${text}`;
+    })
+    .sort()
+    .join("\n")
+    .concat("\n");
+}
+
 /** What the module adds to, and drops from, the allowlist. */
 function compare(names, allowed = ALLOWED) {
   const allowedSet = new Set(allowed);
@@ -254,6 +289,36 @@ function compare(names, allowed = ALLOWED) {
 }
 
 function main() {
+  const fs = require("node:fs");
+  if (/^export (type )?\*/m.test(fs.readFileSync(SDK_UI, "utf8"))) {
+    console.error(
+      "sdk-ui.ts uses export *; name each export so nothing becomes public API by accident.",
+    );
+    process.exit(1);
+  }
+  if (process.argv.includes("--update-snapshot")) {
+    fs.writeFileSync(SNAPSHOT, exportSignatures());
+    console.log(`Wrote ${path.relative(ROOT, SNAPSHOT)}`);
+    return;
+  }
+  const saved = fs.existsSync(SNAPSHOT)
+    ? fs.readFileSync(SNAPSHOT, "utf8")
+    : "";
+  const current = exportSignatures();
+  if (current !== saved) {
+    const before = new Set(saved.split("\n"));
+    const after = new Set(current.split("\n"));
+    console.error(
+      "@termix/plugin-sdk/ui changed shape. If that is deliberate, run: node scripts/check-sdk-ui-exports.cjs --update-snapshot",
+    );
+    for (const line of saved.split("\n")) {
+      if (line && !after.has(line)) console.error(`  - ${line.slice(0, 200)}`);
+    }
+    for (const line of current.split("\n")) {
+      if (line && !before.has(line)) console.error(`  + ${line.slice(0, 200)}`);
+    }
+    process.exitCode = 1;
+  }
   const names = exportedNames();
   if (process.argv.includes("--list")) {
     console.log(names.join("\n"));
@@ -278,4 +343,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { ALLOWED, compare, exportedNames };
+module.exports = { ALLOWED, compare, exportedNames, exportSignatures };

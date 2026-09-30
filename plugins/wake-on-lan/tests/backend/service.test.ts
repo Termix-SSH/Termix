@@ -17,6 +17,9 @@ const HOST = {
   name: "server",
   ip: "10.0.0.5",
   port: 22,
+  username: "root",
+  tags: "",
+  folder: "",
   authType: "password",
 };
 

@@ -47,7 +47,7 @@ import {
   type PluginContext,
   type PluginModule,
   type PluginOpenIsolatedWindowRequest,
-  type PluginNativeRdpRequest,
+  type PluginExternalClientRequest,
 } from "@termix/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
@@ -191,14 +191,17 @@ export function createPluginContext(
       await import("../database/repositories/factory.js");
     return createCurrentPluginSettingsRepository();
   };
-  // A user named by the plugin instead of the ambient actor. Honoured, like
-  // ctx.asUser, and audited the same way.
+  // A user named by the plugin instead of the ambient actor. The same thing
+  // as ctx.asUser, so it needs the same capability and gets the same audit.
   const namedUser = (
     userId: string | undefined,
     via: string,
   ): string | undefined => {
     if (!userId) return getActor();
     if (userId !== getActor()) {
+      if (!declared.includes("users:impersonate")) {
+        throw capabilityRefused(pluginId, "users:impersonate");
+      }
       void writeAudit(
         manifest,
         {
@@ -342,11 +345,11 @@ export function createPluginContext(
 
   const dbRefs = guarded(
     manifest,
-    "db:own",
+    "db:core-refs",
     async () => {
       // Read-only by convention, not by engine: a plugin holding these can
-      // write through them. The capability and the audit line are the record
-      // that it did. See the header of this file.
+      // write through them, which is why the capability is rated high. The
+      // audit line is the record that it asked.
       const schema = await import("../database/db/schema.js");
       return {
         users: schema.users,
@@ -380,25 +383,25 @@ export function createPluginContext(
     },
   );
 
-  const desktopLaunchNativeRdp = guarded(
+  const desktopLaunchExternalClient = guarded(
     manifest,
     "desktop:window",
-    async (request: PluginNativeRdpRequest) => {
+    async (request: PluginExternalClientRequest) => {
       const { isElectronIpcAvailable, requestFromElectronMain } =
         await import("../utils/electron-ipc-bridge.js");
       if (!isElectronIpcAvailable()) {
         throw new Error(
-          `Plugin ${pluginId} tried to open the native RDP client outside the desktop app`,
+          `Plugin ${pluginId} tried to open an external client outside the desktop app`,
         );
       }
       return requestFromElectronMain<{ success: boolean; error?: string }>(
-        "launch-native-rdp",
+        "launch-external-client",
         request,
       );
     },
     {
-      action: "desktop_launch_native_rdp",
-      details: () => "opened the native RDP client",
+      action: "desktop_launch_external_client",
+      details: () => "opened an external client",
     },
   );
 
@@ -455,7 +458,26 @@ export function createPluginContext(
               `Declare the events:core capability to listen to core topics.`,
           );
         }
-        const unsubscribe = pluginEvents.on(topic, listener);
+        // A throwing listener counts against the plugin's error budget.
+        const counted: typeof listener = (payload) => {
+          try {
+            const result = listener(payload) as unknown;
+            if (
+              result &&
+              typeof (result as Promise<void>).then === "function"
+            ) {
+              return (result as Promise<void>).catch((error) => {
+                void reportRuntimeError(pluginId, error);
+                throw error;
+              });
+            }
+            return result as never;
+          } catch (error) {
+            void reportRuntimeError(pluginId, error);
+            throw error;
+          }
+        };
+        const unsubscribe = pluginEvents.on(topic, counted);
         handle.bag.add(unsubscribe, `event listener for "${topic}"`);
         return unsubscribe;
       },
@@ -502,7 +524,10 @@ export function createPluginContext(
     },
 
     registry: {
+      // Keys are namespaced by plugin id, so one plugin cannot replace or
+      // remove what another provides. Anyone may consume.
       provide: (key, value) => {
+        assertOwnRegistryKey(pluginId, key);
         registry.provide(key, value);
         handle.bag.add(
           () => void registry.revoke(key, value),
@@ -510,7 +535,10 @@ export function createPluginContext(
         );
       },
       consume: (key) => registry.consume(key),
-      revoke: (key, value) => registry.revoke(key, value),
+      revoke: (key, value) => {
+        assertOwnRegistryKey(pluginId, key);
+        return registry.revoke(key, value);
+      },
     },
 
     services: {
@@ -548,8 +576,18 @@ export function createPluginContext(
         );
       },
 
-      get: (service, options) =>
-        serviceRegistry.createServiceHandle(
+      get: (service, options) => {
+        // Declared, like getShared: a plugin reaches only the services its
+        // manifest names in requires, or its own.
+        const known =
+          manifest.requires?.some((entry) => entry.service === service) ||
+          manifest.provides?.some((entry) => entry.service === service);
+        if (!known) {
+          throw new Error(
+            `Plugin ${pluginId} cannot use service "${service}": it is not declared in the manifest's requires array`,
+          );
+        }
+        return serviceRegistry.createServiceHandle(
           service,
           pluginId,
           {
@@ -562,7 +600,8 @@ export function createPluginContext(
             audit: (entry) => writeServiceAudit(entry),
           },
           options?.provider ?? "",
-        ),
+        );
+      },
 
       providers: (service) => serviceRegistry.listProviderNames(service),
     },
@@ -709,10 +748,20 @@ export function createPluginContext(
         if (!declared.includes("network:serve")) {
           throw capabilityRefused(pluginId, "network:serve");
         }
+        // Only a signed-in caller's socket counts against the error budget,
+        // so an anonymous peer cannot switch the plugin off.
+        const counted: typeof wsHandler = async (connection) => {
+          try {
+            return await wsHandler(connection);
+          } catch (error) {
+            if (connection.userId) void reportRuntimeError(pluginId, error);
+            throw error;
+          }
+        };
         const dispose = registerPluginWsRoute(
           pluginId,
           path,
-          wsHandler,
+          counted,
           declared,
           options,
         );
@@ -767,7 +816,40 @@ export function createPluginContext(
 
       getHost: (hostId, key) =>
         pluginSettings.getSetting(manifest, "host", hostId, key) as never,
-      setHost: async (hostId, key, value) => {
+      getHostFor: async (hostId, userId, key) => {
+        const { personalHostValue } =
+          await import("../hosts/defaults/personal.js");
+        const personal = await personalHostValue(
+          manifest,
+          Number(hostId),
+          userId,
+          key,
+        );
+        return (
+          personal.applies
+            ? personal.value
+            : await pluginSettings.getSetting(manifest, "host", hostId, key)
+        ) as never;
+      },
+      getHostDefault: async (userId, key) => {
+        const { userHostDefault } =
+          await import("../hosts/defaults/personal.js");
+        return (await userHostDefault(manifest, userId, key)) as never;
+      },
+      setHost: async (hostId, key, value, options) => {
+        const { changeHostOverrides } =
+          await import("../hosts/defaults/overrides.js");
+        if (options?.inherit) {
+          if (!pluginSettings.findField(manifest, "host", key)) {
+            throw new Error(
+              `"${key}" is not a host setting this plugin declares`,
+            );
+          }
+          await changeHostOverrides([Number(hostId)], {
+            inherit: [[pluginId, key]],
+          });
+          return;
+        }
         const error = await pluginSettings.setSetting(
           manifest,
           "host",
@@ -776,6 +858,7 @@ export function createPluginContext(
           value,
         );
         if (error) throw new Error(error);
+        await changeHostOverrides([Number(hostId)], { own: [[pluginId, key]] });
       },
 
       listHostValues: async (key) => {
@@ -840,13 +923,14 @@ export function createPluginContext(
 
     hosts: createPluginHosts({ manifest, bag: handle.bag, audit: auditCall }),
 
-    schedule: createPluginSchedule(handle.bag, (message, error) =>
+    schedule: createPluginSchedule(handle.bag, (message, error) => {
       pluginLogger.error(
         message,
         error instanceof Error ? error : new Error(String(error)),
         logContext,
-      ),
-    ),
+      );
+      void reportRuntimeError(pluginId, error);
+    }),
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
     notify: createPluginNotify({
       manifest,
@@ -864,7 +948,7 @@ export function createPluginContext(
 
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
-      launchNativeRdp: (request) => desktopLaunchNativeRdp(request),
+      launchExternalClient: (request) => desktopLaunchExternalClient(request),
       available: () => isElectronIpcAvailable(),
     },
 
@@ -909,6 +993,9 @@ export function createPluginContext(
           `Plugin ${pluginId} called ctx.asUser without a user id`,
         );
       }
+      if (!declared.includes("users:impersonate")) {
+        throw capabilityRefused(pluginId, "users:impersonate");
+      }
       await writeAudit(
         manifest,
         {
@@ -939,6 +1026,14 @@ async function reportRuntimeError(
     await getPluginRuntime().loader.reportError(pluginId, error);
   } catch {
     // The budget is a safety net, not a dependency of serving a request.
+  }
+}
+
+function assertOwnRegistryKey(pluginId: string, key: string): void {
+  if (typeof key !== "string" || !key.startsWith(`${pluginId}.`)) {
+    throw new Error(
+      `Plugin ${pluginId} may only use registry keys under "${pluginId}.", not "${key}"`,
+    );
   }
 }
 

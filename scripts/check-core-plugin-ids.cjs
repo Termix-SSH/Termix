@@ -10,7 +10,13 @@
  * through the registries instead. Regex literals are read too, so
  * /^\/plugin-api\/docker/ counts the same as "/plugin-api/docker".
  *
- * Tests and locales are exempt, and so is src/backend/upgrade/: the one-time
+ * Ids come from every plugin manifest and from docker/bundled-plugins.json, so
+ * the check still means something once plugins live in their own repos. An
+ * action, slot or extension point id a plugin owns ("terminal.open") counts
+ * too, whatever its prefix. electron/ and vite.config.ts are read as well.
+ *
+ * src/backend/tests, src/ui/tests and src/ui/locales are exempt, and so is
+ * src/backend/upgrade/: the one-time
  * 2.8 to 2.9 data moves have to name the plugin each piece of data moves to,
  * the same way LEGACY_TABLE_OWNERS in the SDK names the plugin that adopts
  * each legacy table.
@@ -23,7 +29,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const EXEMPT_DIRS = new Set(["tests", "locales"]);
+const { owners } = require("./check-plugin-uses.cjs");
 const SSH_TERMS = new Set(["totp"]);
 
 function paths(root) {
@@ -33,12 +39,20 @@ function paths(root) {
     src,
     ui: path.join(src, "ui"),
     plugins: path.join(root, "plugins"),
-    exempt: [path.join(src, "backend", "upgrade")],
+    bundled: path.join(root, "docker", "bundled-plugins.json"),
+    extra: [path.join(root, "electron"), path.join(root, "vite.config.ts")],
+    exempt: [
+      path.join(src, "backend", "upgrade"),
+      path.join(src, "backend", "tests"),
+      path.join(src, "ui", "tests"),
+      path.join(src, "ui", "locales"),
+    ],
     sshConnect: path.join(src, "backend", "hosts", "connect"),
   };
 }
 
 function manifests(dir) {
+  if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -47,9 +61,15 @@ function manifests(dir) {
     .map((file) => JSON.parse(fs.readFileSync(file, "utf8")));
 }
 
-function names(pluginsDir) {
+function names(pluginsDir, bundledFile) {
   const ids = new Set();
   const views = new Set();
+  if (bundledFile && fs.existsSync(bundledFile)) {
+    for (const entry of JSON.parse(fs.readFileSync(bundledFile, "utf8"))
+      .plugins ?? []) {
+      if (typeof entry?.id === "string") ids.add(entry.id);
+    }
+  }
   for (const manifest of manifests(pluginsDir)) {
     ids.add(manifest.id);
     const contributes = manifest.contributes ?? {};
@@ -65,11 +85,15 @@ function names(pluginsDir) {
 }
 
 function walk(dir, exempt, out) {
-  if (exempt.includes(dir)) return out;
+  if (exempt.includes(dir) || !fs.existsSync(dir)) return out;
+  if (fs.statSync(dir).isFile()) {
+    out.push(dir);
+    return out;
+  }
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXEMPT_DIRS.has(entry.name)) continue;
+      if (entry.name === "node_modules") continue;
       walk(full, exempt, out);
     } else if (/\.(tsx?|mjs|cjs|jsx?)$/.test(entry.name)) {
       out.push(full);
@@ -107,16 +131,25 @@ function regexLiterals(source) {
 }
 
 function scan(root = path.resolve(__dirname, "..")) {
-  const { src, ui, plugins, exempt, sshConnect } = paths(root);
-  const { ids, views } = names(plugins);
+  const { src, ui, plugins, bundled, extra, exempt, sshConnect } = paths(root);
+  const { ids, views } = names(plugins, bundled);
+  const owned = fs.existsSync(plugins) ? owners(plugins) : new Map();
   const found = {};
   const add = (file, what) => {
     const key = path.relative(root, file).replaceAll("\\", "/");
     (found[key] ??= new Set()).add(what);
   };
 
-  for (const file of walk(src, exempt, [])) {
-    const source = fs.readFileSync(file, "utf8");
+  const files = walk(src, exempt, []);
+  for (const target of extra) walk(target, exempt, files);
+  for (const file of files) {
+    // A line marked "plugin-id-ok" names a plugin on purpose, such as a key
+    // an older release stored; the marker has to say why.
+    const source = fs
+      .readFileSync(file, "utf8")
+      .split("\n")
+      .filter((line) => !/plugin-id-ok: \S/.test(line))
+      .join("\n");
     const inShell = file.startsWith(ui + path.sep);
     const inConnect = file.startsWith(sshConnect + path.sep);
     for (const match of source.matchAll(
@@ -141,6 +174,7 @@ function scan(root = path.resolve(__dirname, "..")) {
       }
       const prefix = /^([a-z][a-z0-9-]*)\.[a-zA-Z]/.exec(text);
       if (prefix && ids.has(prefix[1])) add(file, text);
+      if (owned.has(text)) add(file, `${text} (owned by ${owned.get(text)})`);
     }
     for (const pattern of regexLiterals(source)) {
       for (const route of pattern.matchAll(

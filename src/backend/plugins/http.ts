@@ -38,6 +38,43 @@ const DEFAULT_BODY_LIMIT = "2mb";
 /** Routers by plugin id, read by the dispatcher in plugin-api-routes.ts. */
 const routers = new Map<string, Router>();
 
+/**
+ * Requests per minute one address may make to one plugin's public routes.
+ * They run without a login, so they are the cheap way to hammer a plugin.
+ */
+function publicRateLimit(): number {
+  const parsed = Number(process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 120;
+}
+const PUBLIC_RATE_WINDOW_MS = 60_000;
+const publicHits = new Map<string, { count: number; resetAt: number }>();
+
+/** True when this request is over the public route limit. */
+export function overPublicRateLimit(
+  pluginId: string,
+  ip: string,
+  now = Date.now(),
+): boolean {
+  if (publicHits.size > 10_000) {
+    for (const [hitKey, entry] of publicHits) {
+      if (entry.resetAt <= now) publicHits.delete(hitKey);
+    }
+  }
+  const hitKey = `${pluginId}|${ip}`;
+  const entry = publicHits.get(hitKey);
+  if (!entry || entry.resetAt <= now) {
+    publicHits.set(hitKey, { count: 1, resetAt: now + PUBLIC_RATE_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > publicRateLimit();
+}
+
+/** Test seam. */
+export function resetPublicRateLimits(): void {
+  publicHits.clear();
+}
+
 /** Declared public paths by plugin id, for the admin plugin details. */
 const publicRoutes = new Map<string, string[]>();
 
@@ -151,6 +188,11 @@ export function createPluginRouter({
   reportError,
 }: CreatePluginRouterArgs): Router {
   const pluginId = manifest.id;
+  if (routers.has(pluginId)) {
+    throw new Error(
+      `Plugin ${pluginId} already has a router; call ctx.http.router() once`,
+    );
+  }
   const declaredPublic = (options?.public ?? []).map((path) =>
     normalizePublicPath(path),
   );
@@ -209,6 +251,11 @@ export function createPluginRouter({
 
   outer.use((req: Request, res: Response, next: NextFunction) => {
     if (isPublicRequest(req, publicPaths)) {
+      const ip = req.ip || req.socket?.remoteAddress || "unknown";
+      if (overPublicRateLimit(pluginId, ip)) {
+        res.status(429).json({ error: "Too many requests" });
+        return;
+      }
       pluginLogger.info(`Unauthenticated request to ${pluginId}${req.path}`, {
         operation: "plugin_http_public_request",
       });

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Pencil, Share2, Trash2 } from "lucide-react";
+import { FolderOpen, Pencil, Settings2, Share2, Trash2 } from "lucide-react";
 import type { HostFolder } from "@/types/ui-types";
 
 export function FolderActions({
@@ -44,6 +44,24 @@ export function FolderActions({
           <Share2 className="size-3" />
         </button>
       )}
+      <button
+        type="button"
+        title={t("hostDefaults.folderDefaultsAction")}
+        className={actionButtonClass}
+        onClick={(e) => {
+          e.stopPropagation();
+          window.dispatchEvent(
+            new CustomEvent("host-manager:edit-defaults", {
+              detail: {
+                level: "folder",
+                folderName: folder.path ?? folder.name,
+              },
+            }),
+          );
+        }}
+      >
+        <Settings2 className="size-3" />
+      </button>
       <button
         type="button"
         title={t("hosts.editFolder")}
