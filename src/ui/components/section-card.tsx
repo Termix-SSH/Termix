@@ -42,7 +42,9 @@ export function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0">
+    // In a gap-4 form stack the gap already spaces the row, so its own padding
+    // and divider would double up.
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0 [.gap-4>&]:py-0 [.gap-4>&]:border-0">
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium leading-snug">{label}</span>

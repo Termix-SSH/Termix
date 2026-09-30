@@ -220,9 +220,17 @@ export function HostEditorWebUiSection({
           ) : undefined
         }
       >
-        <div className="flex flex-col gap-4 py-3">
-          {enableWebUi && (
-            <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 py-3">
+          {!enableWebUi ? (
+            <p className="text-xs text-muted-foreground">
+              {t("hosts.webUiEndpointsDisabled")}
+            </p>
+          ) : endpoints.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {t("hosts.webUiNoEndpoints")}
+            </p>
+          ) : (
+            <>
               {endpoints.map((endpoint, index) => {
                 const rowError = webEndpointRowError(endpoint);
                 return (
@@ -497,7 +505,7 @@ export function HostEditorWebUiSection({
                 );
               })}
 
-              {!tunnelAvailable && endpoints.length > 0 && (
+              {!tunnelAvailable && (
                 // Shown whenever tunnelling is unavailable, not only once a row
                 // already asks for it: the Tunnel option renders disabled, and
                 // a disabled control with no stated reason reads as the
@@ -506,7 +514,7 @@ export function HostEditorWebUiSection({
                   {t("hosts.webUiAccessTunnelUnavailable")}
                 </p>
               )}
-            </div>
+            </>
           )}
         </div>
       </SectionCard>

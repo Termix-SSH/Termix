@@ -153,17 +153,23 @@ export function HostEditor({
   const savePluginHostSettings = async (
     hostId: number,
     values: Record<string, Record<string, unknown>> | undefined,
-  ) => {
-    if (!values || !Number.isInteger(hostId)) return;
+  ): Promise<Record<string, Record<string, unknown>>> => {
+    const saved: Record<string, Record<string, unknown>> = {};
+    if (!values || !Number.isInteger(hostId)) return saved;
 
     for (const [pluginId, fields] of Object.entries(values)) {
       if (!fields || Object.keys(fields).length === 0) continue;
       try {
-        await updatePluginHostSettings(pluginId, hostId, fields);
+        saved[pluginId] = await updatePluginHostSettings(
+          pluginId,
+          hostId,
+          fields,
+        );
       } catch {
         toast.error(t("settings.pluginSettingsSaveFailed"));
       }
     }
+    return saved;
   };
 
   const handleSave = async () => {
@@ -186,12 +192,20 @@ export function HostEditor({
       // After the host: a new one has no id to scope settings to until it
       // exists. A failure here must not claim the host itself failed to save.
       const pluginValues = withProtocolSettings(form.pluginSettings, protocols);
-      await savePluginHostSettings(
+      const savedPluginValues = await savePluginHostSettings(
         Number(saved.id),
         host
           ? pluginValues
           : withNewHostDefaults(pluginValues ?? {}, hostSettingPlugins),
       );
+      // The host was read back before these were written.
+      saved = {
+        ...saved,
+        pluginSettings: {
+          ...(saved.pluginSettings ?? {}),
+          ...savedPluginValues,
+        },
+      };
 
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       onSave(saved);
