@@ -52,3 +52,9 @@ npm run build      # build into dist/
 npm run test       # run this plugin's tests
 npm run typecheck  # type-check this plugin
 ```
+
+## Reconnecting a workspace
+
+Use **Reconnect all disconnected terminals** from a tab's context menu or the command palette after a network interruption. It retries mounted SSH terminal tabs, including hidden tabs and split panes, through their existing manual reconnect flow. Connected terminals and terminals already connecting or waiting for an automatic retry are skipped. Invoking the action again does not interrupt an in-flight connection; failures in one tab do not stop the others. The notification counts reconnect attempts started, not successful connections.
+
+This is a manual workspace action. It does not add automatic SSH-error retries, resume/network listeners, tmux-session restoration or scrollback preservation. Existing authentication prompts, host-key validation and manual-reconnect behavior still apply. Other session plugins participate only if they expose the SDK's optional `reconnectIfDisconnected` handle method.

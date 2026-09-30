@@ -12,7 +12,9 @@ function setup(remote: object, owned = true) {
     (req: Request, res: Response) => Promise<unknown>
   >();
   registerFileDownloadRoutes(
-    { post: (path, handler) => routes.set(path, handler) } as Express,
+    {
+      post: (path, handler) => routes.set(path, handler),
+    } as unknown as Express,
     {
       ctx: {
         currentActor: () => "user",

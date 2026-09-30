@@ -44,6 +44,8 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("ssh:connect", "high"),
   entry("process:spawn", "high"),
   entry("users:write", "high"),
+  entry("users:impersonate", "high"),
+  entry("db:core-refs", "high"),
   entry("auth:provide", "high"),
   entry("device:serial", "high"),
   entry("notify:hub", "high"),

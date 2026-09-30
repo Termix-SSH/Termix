@@ -86,7 +86,7 @@ describe("ProxmoxPollingManager", () => {
     };
     const manager = new ProxmoxPollingManager<TestHost>({
       fetchHostById,
-      withSshConnection,
+      withSshConnection: withSshConnection as never,
       historyRepository,
     });
     return { manager, fetchHostById, withSshConnection, historyRepository };

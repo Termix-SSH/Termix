@@ -96,8 +96,8 @@ export interface PluginFiles {
  * to query through `db`. Both require db:own.
  *
  * Scoped by name: every table carries the p_<id>_ prefix, and `refs` exposes
- * users, ssh_data, roles and user_roles read-only so a plugin can join against
- * them without being able to write them. In-process code could reach around
+ * users, ssh_data, roles and user_roles (behind db:core-refs) so a plugin can
+ * join against them. In-process code could reach around
  * all of this. The capability, the prefix, lint and review are the contract,
  * not a sandbox.
  */
@@ -106,7 +106,10 @@ export interface PluginDatabase {
   define: <T = unknown>(definition: PluginTableDefinition) => Promise<T>;
   /** Drizzle handle, scoped to this plugin's tables. */
   client: <T = unknown>() => Promise<T>;
-  /** Read-only references to the core tables a plugin may point at. */
+  /**
+   * Core tables a plugin may join against: users, hosts, roles, userRoles.
+   * Needs db:core-refs. Treat them as read-only.
+   */
   refs: <T = unknown>() => Promise<T>;
   /**
    * Flushes writes to disk. Call it after every write: on SQLite the database
@@ -235,6 +238,11 @@ export interface PluginSync {
   registerEntity: (entity: SyncEntityRegistration) => void;
 }
 
+/**
+ * A plain key/value hand-off between plugins. `provide` and `revoke` only take
+ * keys under the plugin's own id (`<pluginId>.something`); anyone may
+ * `consume`.
+ */
 export interface PluginRegistry {
   provide: <T>(key: string, value: T) => void;
   consume: <T>(key: string) => T | undefined;
@@ -252,7 +260,11 @@ export interface PluginServices {
     implementation: T,
     options?: { name?: string },
   ) => void;
-  /** `provider` picks a named provider; omitted, the unnamed one. */
+  /**
+   * The service must be listed in the manifest's `requires` (or be one this
+   * plugin provides). `provider` picks a named provider; omitted, the unnamed
+   * one. A `userId` other than the acting user needs users:impersonate.
+   */
   get: <T extends object>(
     service: string,
     options?: { userId?: string; provider?: string },
@@ -488,15 +500,44 @@ export interface PluginSettings {
   getUser: <T = unknown>(userId: string, key: string) => Promise<T | undefined>;
   setUser: (userId: string, key: string, value: unknown) => Promise<void>;
 
-  /** Per-host settings. */
+  /**
+   * Per-host settings. A host follows its host defaults (server, user,
+   * folder) for every key it has not set itself, and the value read here is
+   * already the resolved one.
+   */
   getHost: <T = unknown>(
     hostId: number | string,
     key: string,
   ) => Promise<T | undefined>;
+  /**
+   * The value as one user sees it. Only a `personal` field differs from
+   * getHost: on a host shared with that user and following its defaults, it
+   * resolves against the user's own defaults rather than the owner's.
+   */
+  getHostFor: <T = unknown>(
+    hostId: number | string,
+    userId: string,
+    key: string,
+  ) => Promise<T | undefined>;
+  /**
+   * What a user's hosts get for a host field when nothing more specific
+   * sets it: their own defaults, then the server's, then the manifest
+   * default. For something with no host, such as a quick connect.
+   */
+  getHostDefault: <T = unknown>(
+    userId: string,
+    key: string,
+  ) => Promise<T | undefined>;
+  /**
+   * Writes a host value, which makes it the host's own rather than
+   * following its defaults. `{ inherit: true }` hands the key back to the
+   * defaults instead and ignores `value`.
+   */
   setHost: (
     hostId: number | string,
     key: string,
     value: unknown,
+    options?: { inherit?: boolean },
   ) => Promise<void>;
 
   /**
@@ -530,7 +571,14 @@ export interface PluginSettings {
     scope: "admin" | "user" | "host",
     validator: (
       values: Record<string, unknown>,
-      context: { hostId?: number },
+      /**
+       * `defaults` is set when the values are a host defaults level being
+       * saved rather than one host, so there is no hostId.
+       */
+      context: {
+        hostId?: number;
+        defaults?: { level: "admin" | "user" | "folder" };
+      },
     ) => Record<string, string> | void | Promise<Record<string, string> | void>,
   ) => () => void;
 
@@ -1340,6 +1388,12 @@ export interface PluginLoginInstance {
    * route ("oidc", "github", "google", "ldap"). Leave unset otherwise.
    */
   type?: string;
+  /**
+   * Redirect methods: the login page starts this instance without a click,
+   * for a server that signs everyone in through one provider. The first
+   * instance that asks wins.
+   */
+  autoStart?: boolean;
 }
 
 export interface PluginLoginMethod {
@@ -1468,7 +1522,13 @@ export interface PluginOpenIsolatedWindowRequest {
  * Electron only: rejects when the server is not running embedded in the
  * desktop app. Needs desktop:window.
  */
-export interface PluginNativeRdpRequest {
+/**
+ * A host to open in the operating system's own client for a protocol. The
+ * desktop app supports "rdp" (mstsc on Windows) today; any other protocol is
+ * refused.
+ */
+export interface PluginExternalClientRequest {
+  protocol: string;
   host: string;
   port?: number;
   username?: string;
@@ -1480,12 +1540,11 @@ export interface PluginDesktop {
     request: PluginOpenIsolatedWindowRequest,
   ) => Promise<{ success: true }>;
   /**
-   * Opens the operating system's own RDP client (mstsc on Windows) for a
-   * host. The password is never passed; the client asks for it. Windows
-   * desktop app only.
+   * Opens the operating system's own client for a protocol. The password is
+   * never passed; the client asks for it. Desktop app only.
    */
-  launchNativeRdp: (
-    request: PluginNativeRdpRequest,
+  launchExternalClient: (
+    request: PluginExternalClientRequest,
   ) => Promise<{ success: boolean; error?: string }>;
   /** Whether the server runs embedded in the desktop app, so the calls above can work. */
   available: () => boolean;
@@ -1942,8 +2001,8 @@ export interface PluginContext {
    * no request behind it. Always audited, and every core API inside still
    * applies that user's RBAC.
    *
-   * This is the only way a plugin can name a user. Nothing else trusts a user
-   * id that came from plugin code.
+   * Needs users:impersonate. That and a `userId` option on services.get or
+   * secrets.getShared are the only ways a plugin can name a user.
    */
   asUser: <T>(userId: string, fn: () => Promise<T> | T) => Promise<T>;
 

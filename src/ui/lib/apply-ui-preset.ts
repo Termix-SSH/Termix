@@ -165,10 +165,4 @@ export async function applyPresetSideEffects(
     JSON.stringify(buildDashboardSlots(target.dashboard.enabledCards)),
   );
   window.dispatchEvent(new Event("dashboardSlotsChanged"));
-
-  writeLocal("termix-terminal-toolbar-density", target.terminal.toolbarDensity);
-  window.dispatchEvent(new Event("terminalToolbarDensityChanged"));
-
-  writeLocal("fileManagerViewMode", target.fileManager.viewMode);
-  window.dispatchEvent(new Event("fileManagerViewModeChanged"));
 }

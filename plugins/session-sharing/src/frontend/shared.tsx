@@ -17,6 +17,7 @@ export const REMOTE_SESSION_TOKEN_ACTION = "session.remoteDisplay.token";
 
 export interface RemoteDisplayProps {
   token: string;
+  connectionOrigin?: "local" | "remote";
   protocol: string;
   isVisible: boolean;
   onConnect?: () => void;
@@ -65,14 +66,25 @@ export async function createRemoteSessionToken(
 }
 
 /** A socket URL for a /plugin-ws/<id>/<path>?query path the server handed out. */
-export async function wsUrlForPath(wsPath: string): Promise<string | null> {
+export async function wsTargetForPath(
+  wsPath: string,
+  origin: "local" | "remote" = "local",
+) {
   const [pathname, query] = wsPath.split("?", 2);
   const match = /^\/plugin-ws\/([^/]+)(\/.*)$/.exec(pathname);
   if (!match) return null;
-  const target = await pluginWsUrl(match[1], match[2]);
+  const target = await pluginWsUrl(match[1], match[2], { origin });
   if (!target) return null;
-  if (!query) return target.url;
-  return `${target.url}${target.url.includes("?") ? "&" : "?"}${query}`;
+  return {
+    ...target,
+    url: query
+      ? `${target.url}${target.url.includes("?") ? "&" : "?"}${query}`
+      : target.url,
+  };
+}
+
+export async function wsUrlForPath(wsPath: string): Promise<string | null> {
+  return (await wsTargetForPath(wsPath))?.url ?? null;
 }
 
 export function getErrorMessage(error: unknown): string {

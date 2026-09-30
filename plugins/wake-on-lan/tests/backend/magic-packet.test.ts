@@ -72,7 +72,7 @@ describe("sendMagicPacket", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSocket = (dgram.createSocket as ReturnType<typeof vi.fn>)();
+    mockSocket = (dgram.createSocket as unknown as () => typeof mockSocket)();
     (mockSocket.bind as ReturnType<typeof vi.fn>).mockImplementation(
       (cb: () => void) => cb(),
     );

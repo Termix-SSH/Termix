@@ -25,7 +25,7 @@ import {
   serializeLocalFilesDragPayload,
   sortLocalEntries,
 } from "../../src/frontend/local-transfer-utils";
-import type { LocalFileEntry } from "@termix/plugin-sdk/ui";
+import type { LocalFileEntry } from "@termix/plugin-sdk/frontend";
 
 describe("drag payloads", () => {
   it("round-trips local file payloads", () => {

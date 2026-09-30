@@ -20,7 +20,6 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   accentColor: row?.accentColor ?? null,
   language: row?.language ?? null,
   storageMode: row?.storageMode ?? "cloud",
-  commandAutocomplete: row?.commandAutocomplete ?? null,
   commandPaletteEnabled: row?.commandPaletteEnabled ?? null,
   showHostTags: row?.showHostTags ?? null,
   hostTrayOnClick: row?.hostTrayOnClick ?? null,
@@ -32,22 +31,8 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   hiddenRailTabs: row?.hiddenRailTabs ?? null,
   compactHostView: row?.compactHostView ?? null,
   statusColorScheme: row?.statusColorScheme ?? null,
-  customThemes: row?.customThemes ?? null,
   customKeybindings: row?.customKeybindings ?? null,
-  terminalDefaults: row?.terminalDefaults ?? null,
 });
-
-const connectionDefaultFields = ["terminalDefaults"] as const;
-
-export function validateDefaultsJson(value: string): boolean {
-  if (value.length > 32_768) return false;
-  try {
-    const parsed = JSON.parse(value);
-    return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
-  } catch {
-    return false;
-  }
-}
 
 /**
  * @openapi
@@ -82,9 +67,6 @@ export function validateDefaultsJson(value: string): boolean {
  *                 storageMode:
  *                   type: string
  *                   nullable: true
- *                 commandAutocomplete:
- *                   type: boolean
- *                   nullable: true
  *                 commandPaletteEnabled:
  *                   type: boolean
  *                   nullable: true
@@ -118,10 +100,6 @@ export function validateDefaultsJson(value: string): boolean {
  *                 statusColorScheme:
  *                   type: string
  *                   nullable: true
- *                 customThemes:
- *                   type: string
- *                   nullable: true
- *                   description: JSON-encoded array of the user's saved global custom terminal themes.
  *                 customKeybindings:
  *                   type: string
  *                   nullable: true
@@ -170,8 +148,6 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: string
  *               storageMode:
  *                 type: string
- *               commandAutocomplete:
- *                 type: boolean
  *               commandPaletteEnabled:
  *                 type: boolean
  *               pinAppRail:
@@ -186,9 +162,6 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: boolean
  *               hiddenRailTabs:
  *                 type: string
- *               customThemes:
- *                 type: string
- *                 description: JSON-encoded array of the user's saved global custom terminal themes.
  *               customKeybindings:
  *                 type: string
  *                 description: JSON-encoded array of the user's custom keybindings. Each action is checked against the shell's own types and the parameters a plugin declares for its type.
@@ -205,7 +178,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     accentColor,
     language,
     storageMode,
-    commandAutocomplete,
     commandPaletteEnabled,
     pinAppRail,
     expandAppRailOnHover,
@@ -213,9 +185,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     disableUpdateCheck,
     confirmTabClose,
     hiddenRailTabs,
-    customThemes,
     customKeybindings,
-    terminalDefaults,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -223,7 +193,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     accentColor?: string | null;
     language?: string | null;
     storageMode?: string | null;
-    commandAutocomplete?: boolean | null;
     commandPaletteEnabled?: boolean | null;
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
@@ -231,9 +200,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
-    customThemes?: string | null;
     customKeybindings?: string | null;
-    terminalDefaults?: string | null;
   };
   // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme are no
   // longer writable here -- they moved to /host-sidebar/preferences as of the
@@ -262,52 +229,10 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     language,
     storageMode,
     hiddenRailTabs,
-    customThemes,
     customKeybindings,
-    terminalDefaults,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
-    }
-  }
-
-  const connectionDefaults = {
-    terminalDefaults,
-  };
-  for (const key of connectionDefaultFields) {
-    const value = connectionDefaults[key];
-    if (value !== undefined && value !== null && !validateDefaultsJson(value)) {
-      return res.status(400).json({
-        error: `${key} must be a JSON-encoded object of at most 32 KiB`,
-      });
-    }
-  }
-
-  if (customThemes !== undefined && customThemes !== null) {
-    let parsedThemes: unknown;
-    try {
-      parsedThemes = JSON.parse(customThemes);
-    } catch {
-      return res
-        .status(400)
-        .json({ error: "customThemes must be a JSON-encoded array" });
-    }
-    if (!Array.isArray(parsedThemes) || parsedThemes.length > 100) {
-      return res.status(400).json({
-        error: "customThemes must be a JSON array of at most 100 themes",
-      });
-    }
-    const isValidTheme = (entry: unknown): boolean =>
-      !!entry &&
-      typeof entry === "object" &&
-      typeof (entry as { id?: unknown }).id === "string" &&
-      typeof (entry as { name?: unknown }).name === "string" &&
-      !!(entry as { colors?: unknown }).colors &&
-      typeof (entry as { colors?: unknown }).colors === "object";
-    if (!parsedThemes.every(isValidTheme)) {
-      return res.status(400).json({
-        error: "Each custom theme must have an id, name, and colors object",
-      });
     }
   }
 
@@ -334,7 +259,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   }
 
   const boolFields: Record<string, boolean | null | undefined> = {
-    commandAutocomplete,
     commandPaletteEnabled,
     pinAppRail,
     expandAppRailOnHover,
@@ -354,8 +278,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (language !== undefined) updates.language = language;
   if (storageMode !== undefined) updates.storageMode = storageMode;
   if (hiddenRailTabs !== undefined) updates.hiddenRailTabs = hiddenRailTabs;
-  if (commandAutocomplete !== undefined)
-    updates.commandAutocomplete = commandAutocomplete;
   if (commandPaletteEnabled !== undefined)
     updates.commandPaletteEnabled = commandPaletteEnabled;
   if (pinAppRail !== undefined) updates.pinAppRail = pinAppRail;
@@ -366,11 +288,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (disableUpdateCheck !== undefined)
     updates.disableUpdateCheck = disableUpdateCheck;
   if (confirmTabClose !== undefined) updates.confirmTabClose = confirmTabClose;
-  if (customThemes !== undefined) updates.customThemes = customThemes;
   if (customKeybindings !== undefined)
     updates.customKeybindings = customKeybindings;
-  if (terminalDefaults !== undefined)
-    updates.terminalDefaults = terminalDefaults;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

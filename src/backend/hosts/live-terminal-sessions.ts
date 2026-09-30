@@ -22,7 +22,6 @@ export interface LiveSessionInfo {
   createdAt: number;
   lastDetachedAt: number | null;
   tabInstanceId: string | null;
-  tmuxSessionName: string | null;
   cols: number;
   rows: number;
 }

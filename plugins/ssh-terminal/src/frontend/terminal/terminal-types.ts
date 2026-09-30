@@ -24,6 +24,7 @@ export interface TerminalHostConfig {
 export interface TerminalHandle {
   disconnect: () => void;
   reconnect: () => void;
+  reconnectIfDisconnected: () => boolean;
   isConnected: () => boolean;
   fit: () => void;
   focus: () => void;

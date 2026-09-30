@@ -21,6 +21,8 @@ import {
   isElectron,
 } from "@termix/plugin-sdk/ui";
 import {
+  ChevronDown,
+  ChevronRight,
   ChevronsDownUp,
   ChevronsUpDown,
   ExternalLink,
@@ -57,6 +59,24 @@ import { SearchResults } from "./SearchResults";
 import { PanePreview } from "./PanePreview";
 import type { SelectedPane } from "./types";
 
+import { HostOverview } from "./HostOverview";
+import {
+  readMonitorValue,
+  saveMonitorValue,
+  readExpanded,
+  readSelectedPane,
+} from "./monitor-storage";
+
+type TreeAction =
+  | { type: "pane"; pane: SelectedPane }
+  | {
+      type: "attach" | "tags" | "rename" | "killSession" | "newWindow";
+      session: string;
+    }
+  | { type: "killPane"; paneId: string }
+  | { type: "split"; paneId: string; direction: "h" | "v" }
+  | { type: "killWindow"; session: string; index: number };
+
 const OVERVIEW_POLL_MS = 10_000;
 const METRICS_POLL_MS = 10_000;
 const TIME_TICK_MS = 30_000;
@@ -73,23 +93,13 @@ function expandedStorageKey(hostId: string | number): string {
   return `${LS_PREFIX}expanded-${hostId}`;
 }
 
-function readStoredExpanded(hostId: string | number): Set<string> | null {
-  try {
-    const raw = localStorage.getItem(expandedStorageKey(hostId));
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return new Set(parsed.filter((v): v is string => typeof v === "string"));
-  } catch {
-    return null;
-  }
-}
-
 export function TmuxMonitor({
   initialHostId,
+  initialHostRequest,
   isVisible = true,
 }: {
   initialHostId?: number;
+  initialHostRequest?: number;
   isVisible?: boolean;
 }) {
   const { t } = useTranslation();
@@ -99,12 +109,38 @@ export function TmuxMonitor({
     () =>
       allHosts.filter(
         (h) =>
+          h.enableSsh !== false &&
           ((h.connectionType as string | undefined) ?? "ssh") === "ssh" &&
           tmuxMonitorEnabled(h),
       ),
     [allHosts],
   );
   const [selectedHostId, setSelectedHostId] = useState<string | number | null>(
+    null,
+  );
+  const [scope, setScope] = useState<"all" | "single">(() =>
+    readMonitorValue<string>("scope", "all") === "single" ? "single" : "all",
+  );
+  const [hostFilter, setHostFilter] = useState(() => {
+    const value = readMonitorValue<unknown>("filter", "");
+    return typeof value === "string" ? value : "";
+  });
+  const [collapsedHosts, setCollapsedHosts] = useState<Set<string>>(() => {
+    const value = readMonitorValue<unknown>("collapsed-hosts", []);
+    return new Set(
+      Array.isArray(value)
+        ? value.filter((id): id is string => typeof id === "string")
+        : [],
+    );
+  });
+  const [expandedByHost, setExpandedByHost] = useState<
+    Record<string, Set<string>>
+  >({});
+  const [pendingAction, setPendingAction] = useState<{
+    hostId: string | number;
+    action: TreeAction;
+  } | null>(null);
+  const [overviewHostId, setOverviewHostId] = useState<string | number | null>(
     null,
   );
   const [overview, setOverview] = useState<TmuxOverview | null>(null);
@@ -132,6 +168,7 @@ export function TmuxMonitor({
   // stale (the user switched away while the request was in flight) and must
   // not overwrite the current tree.
   const activeHostRef = useRef<string | number | null>(null);
+  const hostGeneration = useRef(0);
   const overviewSignatureRef = useRef("");
   const metricsSignatureRef = useRef("");
   // True when the expanded-session set for the current host was restored from
@@ -153,7 +190,7 @@ export function TmuxMonitor({
 
   // -- resizable tree panel (same pattern as the AppShell host sidebar) -------
   const [treeWidth, setTreeWidth] = useState(() => {
-    const saved = Number(localStorage.getItem(LS_TREE_WIDTH_KEY));
+    const saved = Number(readMonitorValue("tree-width", TREE_WIDTH_DEFAULT));
     return Number.isFinite(saved) && saved >= TREE_WIDTH_MIN
       ? Math.min(saved, TREE_WIDTH_MAX)
       : TREE_WIDTH_DEFAULT;
@@ -203,12 +240,18 @@ export function TmuxMonitor({
         hosts.some((h) => String(h.id) === String(initialHostId))
       ) {
         initialHostPicked.current = true;
-        return initialHostId;
+        return hosts.find((h) => String(h.id) === String(initialHostId))!.id;
       }
-      const stored = localStorage.getItem(LS_LAST_HOST_KEY);
-      if (stored !== null && hosts.some((h) => String(h.id) === stored)) {
+      const stored = readMonitorValue<string | number | null>(
+        "last-host",
+        null,
+      );
+      if (
+        stored !== null &&
+        hosts.some((h) => String(h.id) === String(stored))
+      ) {
         initialHostPicked.current = true;
-        return stored;
+        return hosts.find((h) => String(h.id) === String(stored))!.id;
       }
       initialHostPicked.current = true;
       return hosts[0].id;
@@ -219,7 +262,7 @@ export function TmuxMonitor({
   // for it), fall back the same way the initial pick does.
   useEffect(() => {
     if (!hostsLoaded || selectedHostId === null) return;
-    if (hosts.some((h) => h.id === selectedHostId)) return;
+    if (hosts.some((h) => String(h.id) === String(selectedHostId))) return;
     setSelectedHostId(hosts.length > 0 ? hosts[0].id : null);
   }, [hostsLoaded, hosts, selectedHostId]);
 
@@ -227,12 +270,20 @@ export function TmuxMonitor({
   // follow it so the requested host gets selected without a remount.
   useEffect(() => {
     if (initialHostId == null) return;
-    if (hosts.some((h) => String(h.id) === String(initialHostId)))
-      setSelectedHostId(initialHostId);
+    const host = hosts.find((h) => String(h.id) === String(initialHostId));
+    if (host) setSelectedHostId(host.id);
+    setHostFilter("");
+    saveMonitorValue("filter", "");
+    setCollapsedHosts((previous) => {
+      const next = new Set(previous);
+      next.delete(String(initialHostId));
+      saveMonitorValue("collapsed-hosts", [...next]);
+      return next;
+    });
     // Intentionally not depending on `hosts`: the mount effect already picks
     // the initial host once hosts load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialHostId]);
+  }, [initialHostId, initialHostRequest]);
 
   // -- relative time refresh --------------------------------------------------
   useEffect(() => {
@@ -244,24 +295,54 @@ export function TmuxMonitor({
   // -- overview polling -----------------------------------------------------
   const loadOverview = useCallback(
     async (hostId: string | number, silent = false) => {
+      const generation = hostGeneration.current;
       if (!silent) {
         setOverviewLoading(true);
         setOverviewError(null);
       }
       try {
         const data = await getTmuxOverview(Number(hostId));
-        if (activeHostRef.current !== hostId) return true;
+        if (
+          activeHostRef.current !== hostId ||
+          generation !== hostGeneration.current
+        )
+          return true;
         const signature = JSON.stringify(data);
         const changed = signature !== overviewSignatureRef.current;
         overviewSignatureRef.current = signature;
+        setOverviewError(null);
+        setOverviewHostId(hostId);
         setOverview(data);
+        setSelectedPane((pane) => {
+          const candidate = pane ?? readSelectedPane(hostId);
+          const exists =
+            candidate &&
+            data.sessions.some(
+              (session) =>
+                session.name === candidate.sessionName &&
+                session.windows.some(
+                  (win) =>
+                    win.index === candidate.windowIndex &&
+                    win.panes.some((p) => p.id === candidate.paneId),
+                ),
+            );
+          if (!exists) saveMonitorValue(`pane-${hostId}`, null);
+          return exists ? candidate : null;
+        });
         setExpandedSessions((prev) => {
           if (expandedRestoredRef.current || prev.size > 0) return prev;
           return new Set(data.sessions.map((s) => s.name));
         });
         return changed;
       } catch (err) {
-        if (activeHostRef.current !== hostId) return true;
+        if (
+          activeHostRef.current !== hostId ||
+          generation !== hostGeneration.current
+        )
+          return true;
+        setPendingAction((pending) =>
+          pending?.hostId === hostId ? null : pending,
+        );
         if (!silent) {
           const axiosErr = err as {
             code?: string;
@@ -294,7 +375,11 @@ export function TmuxMonitor({
         if (silent) throw err;
         return false;
       } finally {
-        if (!silent && activeHostRef.current === hostId)
+        if (
+          !silent &&
+          activeHostRef.current === hostId &&
+          generation === hostGeneration.current
+        )
           setOverviewLoading(false);
       }
     },
@@ -314,8 +399,9 @@ export function TmuxMonitor({
     }
     setRefreshing(true);
     try {
-      const ok = await loadOverview(selectedHostId, true);
-      if (!ok) toast.error(t("tmuxMonitor.refreshFailed"));
+      await loadOverview(selectedHostId, true);
+    } catch {
+      toast.error(t("tmuxMonitor.refreshFailed"));
     } finally {
       setRefreshing(false);
     }
@@ -323,8 +409,12 @@ export function TmuxMonitor({
 
   useEffect(() => {
     activeHostRef.current = selectedHostId;
+    hostGeneration.current++;
     setOverview(null);
+    setOverviewHostId(null);
     setSelectedPane(null);
+    overviewSignatureRef.current = "";
+    metricsSignatureRef.current = "";
     setSearchResults(null);
     setMetrics([]);
     if (selectedHostId === null) return;
@@ -333,7 +423,7 @@ export function TmuxMonitor({
     } catch {
       // localStorage may be unavailable
     }
-    const storedExpanded = readStoredExpanded(selectedHostId);
+    const storedExpanded = readExpanded(selectedHostId);
     expandedRestoredRef.current = storedExpanded !== null;
     setExpandedSessions(storedExpanded ?? new Set());
     loadOverview(selectedHostId);
@@ -359,7 +449,14 @@ export function TmuxMonitor({
   useAdaptivePolling(
     async () => {
       if (selectedHostId === null) return;
-      const next = await getTmuxMetrics(Number(selectedHostId));
+      const hostId = selectedHostId;
+      const generation = hostGeneration.current;
+      const next = await getTmuxMetrics(Number(hostId));
+      if (
+        activeHostRef.current !== hostId ||
+        generation !== hostGeneration.current
+      )
+        return;
       const signature = JSON.stringify(next);
       const changed = signature !== metricsSignatureRef.current;
       metricsSignatureRef.current = signature;
@@ -371,7 +468,10 @@ export function TmuxMonitor({
       maxIntervalMs: 60_000,
       stablePollsPerStep: 3,
     },
-    selectedHostId !== null && !!overview?.available && isVisible,
+    selectedHostId !== null &&
+      overviewHostId === selectedHostId &&
+      !!overview?.available &&
+      isVisible,
   );
 
   // -- keyboard shortcuts -----------------------------------------------------
@@ -403,6 +503,7 @@ export function TmuxMonitor({
     setSearching(true);
     try {
       const result = await searchTmux(Number(selectedHostId), query);
+      if (activeHostRef.current !== selectedHostId) return;
       setSearchResults(result.matches);
       setSearchLimits(result);
       setSearchedQuery(query);
@@ -415,6 +516,10 @@ export function TmuxMonitor({
 
   const persistExpanded = useCallback(
     (hostId: string | number, set: Set<string>) => {
+      setExpandedByHost((previous) => ({
+        ...previous,
+        [String(hostId)]: new Set(set),
+      }));
       try {
         localStorage.setItem(
           expandedStorageKey(hostId),
@@ -441,8 +546,7 @@ export function TmuxMonitor({
   const selectPane = useCallback(
     (pane: SelectedPane) => {
       setSelectedPane(pane);
-      if (selectedHostId !== null)
-        focusTmuxPane(Number(selectedHostId), pane.paneId).catch(() => {});
+      saveMonitorValue(`pane-${selectedHostId}`, pane);
     },
     [selectedHostId],
   );
@@ -461,6 +565,17 @@ export function TmuxMonitor({
     }
   }
 
+  useEffect(() => {
+    if (
+      selectedPane &&
+      selectedHostId !== null &&
+      overviewHostId === selectedHostId
+    )
+      void focusTmuxPane(Number(selectedHostId), selectedPane.paneId).catch(
+        () => {},
+      );
+  }, [selectedHostId, overviewHostId, selectedPane]);
+
   // -- create session ---------------------------------------------------------
   const [newSessionName, setNewSessionName] = useState("");
   const [newSessionOpen, setNewSessionOpen] = useState(false);
@@ -477,6 +592,7 @@ export function TmuxMonitor({
     setCreatingSession(true);
     try {
       await createTmuxSession(Number(selectedHostId), name);
+      if (activeHostRef.current !== selectedHostId) return;
       toast.success(t("tmuxMonitor.sessionCreated", { name }));
       setNewSessionOpen(false);
       setNewSessionName("");
@@ -484,7 +600,7 @@ export function TmuxMonitor({
       setExpandedSessions(next);
       expandedRestoredRef.current = true;
       persistExpanded(selectedHostId, next);
-      loadOverview(selectedHostId, true);
+      void loadOverview(selectedHostId, true).catch(() => {});
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
       toast.error(
@@ -504,7 +620,8 @@ export function TmuxMonitor({
       if (selectedHostId === null) return;
       try {
         await splitTmuxPane(Number(selectedHostId), paneId, direction);
-        loadOverview(selectedHostId, true);
+        if (activeHostRef.current !== selectedHostId) return;
+        void loadOverview(selectedHostId, true).catch(() => {});
         nudgePreviewRedraw();
       } catch {
         toast.error(t("tmuxMonitor.splitFailed"));
@@ -519,7 +636,8 @@ export function TmuxMonitor({
       if (selectedHostId === null) return;
       try {
         await createTmuxWindow(Number(selectedHostId), sessionName);
-        loadOverview(selectedHostId, true);
+        if (activeHostRef.current !== selectedHostId) return;
+        void loadOverview(selectedHostId, true).catch(() => {});
         nudgePreviewRedraw();
       } catch {
         toast.error(t("tmuxMonitor.windowCreateFailed"));
@@ -560,6 +678,7 @@ export function TmuxMonitor({
     setRenaming(true);
     try {
       await renameTmuxSession(Number(selectedHostId), renameTarget, newName);
+      if (activeHostRef.current !== selectedHostId) return;
       toast.success(t("tmuxMonitor.sessionRenamed", { name: newName }));
       if (expandedSessions.has(renameTarget)) {
         const next = new Set(expandedSessions);
@@ -574,7 +693,7 @@ export function TmuxMonitor({
         setSelectedPane({ ...selectedPane, sessionName: newName });
       }
       setRenameTarget(null);
-      loadOverview(selectedHostId, true);
+      void loadOverview(selectedHostId, true).catch(() => {});
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
       toast.error(
@@ -590,6 +709,7 @@ export function TmuxMonitor({
     setKilling(true);
     try {
       await killTmuxSession(Number(selectedHostId), killTarget);
+      if (activeHostRef.current !== selectedHostId) return;
       toast.success(t("tmuxMonitor.sessionKilled", { name: killTarget }));
       if (selectedPane?.sessionName === killTarget) setSelectedPane(null);
       if (expandedSessions.has(killTarget)) {
@@ -599,7 +719,7 @@ export function TmuxMonitor({
         persistExpanded(selectedHostId, next);
       }
       setKillTarget(null);
-      loadOverview(selectedHostId, true);
+      void loadOverview(selectedHostId, true).catch(() => {});
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
       toast.error(
@@ -649,11 +769,13 @@ export function TmuxMonitor({
         killWindowTarget.sessionName,
         killWindowTarget.windowIndex,
       );
+      if (activeHostRef.current !== selectedHostId) return;
       const wasViewing =
         selectedPane?.sessionName === killWindowTarget.sessionName &&
         selectedPane?.windowIndex === killWindowTarget.windowIndex;
       setKillWindowTarget(null);
       const data = await getTmuxOverview(Number(selectedHostId));
+      if (activeHostRef.current !== selectedHostId) return;
       setOverview(data);
       if (wasViewing) selectSurvivor(data, killWindowTarget.sessionName);
       nudgePreviewRedraw();
@@ -677,12 +799,14 @@ export function TmuxMonitor({
     setKillingPane(true);
     try {
       await killTmuxPane(Number(selectedHostId), killPaneTarget);
+      if (activeHostRef.current !== selectedHostId) return;
       const viewedSession =
         selectedPane?.paneId === killPaneTarget
           ? selectedPane.sessionName
           : null;
       setKillPaneTarget(null);
       const data = await getTmuxOverview(Number(selectedHostId));
+      if (activeHostRef.current !== selectedHostId) return;
       setOverview(data);
       if (viewedSession) selectSurvivor(data, viewedSession);
       nudgePreviewRedraw();
@@ -716,9 +840,10 @@ export function TmuxMonitor({
     setSavingTags(true);
     try {
       await setTmuxSessionTags(Number(selectedHostId), tagsTarget, tags);
+      if (activeHostRef.current !== selectedHostId) return;
       toast.success(t("tmuxMonitor.tagsSaved"));
       setTagsTarget(null);
-      loadOverview(selectedHostId, true);
+      void loadOverview(selectedHostId, true).catch(() => {});
     } catch {
       toast.error(t("tmuxMonitor.tagsSaveFailed"));
     } finally {
@@ -789,7 +914,7 @@ export function TmuxMonitor({
   }, [metrics]);
 
   const selectedHost: PluginHostRecord | undefined = hosts.find(
-    (h) => h.id === selectedHostId,
+    (h) => String(h.id) === String(selectedHostId),
   );
   const hostLabel = selectedHost
     ? selectedHost.name ||
@@ -798,6 +923,156 @@ export function TmuxMonitor({
   const selectedPaneMetrics = selectedPane
     ? metricsByPane.get(selectedPane.paneId)
     : undefined;
+
+  function executeTreeAction(action: TreeAction) {
+    if (
+      action.type === "pane" &&
+      !overview?.sessions.some(
+        (session) =>
+          session.name === action.pane.sessionName &&
+          session.windows.some(
+            (win) =>
+              win.index === action.pane.windowIndex &&
+              win.panes.some((pane) => pane.id === action.pane.paneId),
+          ),
+      )
+    )
+      return;
+    switch (action.type) {
+      case "pane":
+        selectPane(action.pane);
+        break;
+      case "attach":
+        attachInline(action.session);
+        break;
+      case "tags":
+        openTagsEditor(action.session);
+        break;
+      case "rename":
+        setRenameDraft(action.session);
+        setRenameTarget(action.session);
+        break;
+      case "killSession":
+        setKillTarget(action.session);
+        break;
+      case "newWindow":
+        void newWindow(action.session);
+        break;
+      case "killPane":
+        setKillPaneTarget(action.paneId);
+        break;
+      case "split":
+        void splitPane(action.paneId, action.direction);
+        break;
+      case "killWindow":
+        setKillWindowTarget({
+          sessionName: action.session,
+          windowIndex: action.index,
+        });
+        break;
+    }
+  }
+  function dispatchTreeAction(hostId: string | number, action: TreeAction) {
+    if (hostId === selectedHostId && overviewHostId === hostId)
+      executeTreeAction(action);
+    else {
+      setPendingAction({ hostId, action });
+      setSelectedHostId(hostId);
+    }
+  }
+  const executeTreeActionRef = useRef(executeTreeAction);
+  executeTreeActionRef.current = executeTreeAction;
+  useEffect(() => {
+    if (
+      !pendingAction ||
+      pendingAction.hostId !== selectedHostId ||
+      overviewHostId !== selectedHostId
+    )
+      return;
+    setPendingAction(null);
+    executeTreeActionRef.current(pendingAction.action);
+  }, [pendingAction, selectedHostId, overviewHostId]);
+  useEffect(() => {
+    setPendingAction((pending) =>
+      pending?.hostId === selectedHostId ? pending : null,
+    );
+    setRenameTarget(null);
+    setKillTarget(null);
+    setTagsTarget(null);
+    setKillPaneTarget(null);
+    setKillWindowTarget(null);
+    setNewSessionOpen(false);
+  }, [selectedHostId]);
+
+  useEffect(() => {
+    if (selectedHostId !== null && overviewHostId === selectedHostId)
+      saveMonitorValue(`pane-${selectedHostId}`, selectedPane);
+  }, [selectedHostId, overviewHostId, selectedPane]);
+
+  const filteredHosts =
+    scope === "single"
+      ? hosts.filter((h) => h.id === selectedHostId)
+      : hosts.filter((h) =>
+          `${h.name ?? ""} ${h.ip ?? ""}`
+            .toLowerCase()
+            .includes(hostFilter.toLowerCase().trim()),
+        );
+
+  function backgroundTree(
+    hostId: string | number,
+    data: TmuxOverview,
+    values: TmuxPaneMetrics[],
+  ) {
+    const expanded =
+      expandedByHost[String(hostId)] ??
+      readExpanded(hostId) ??
+      new Set(data.sessions.map((session) => session.name));
+    const byPane = new Map(values.map((m) => [m.paneId, m]));
+    const bySession = new Map<string, SessionMetricsAgg>();
+    for (const m of values) {
+      const agg = bySession.get(m.sessionName) ?? {
+        cpu: 0,
+        memKb: 0,
+        gpuMb: 0,
+      };
+      agg.cpu += m.cpuPercent;
+      agg.memKb += m.memRssKb;
+      agg.gpuMb += m.gpuMemMb;
+      bySession.set(m.sessionName, agg);
+    }
+    const run = (action: TreeAction) => dispatchTreeAction(hostId, action);
+    return (
+      <SessionTree
+        sessions={data.sessions}
+        expandedSessions={expanded}
+        onToggleSession={(name) => {
+          const next = new Set(expanded);
+          if (next.has(name)) next.delete(name);
+          else next.add(name);
+          persistExpanded(hostId, next);
+        }}
+        selectedPaneId={null}
+        onSelectPane={(pane) => run({ type: "pane", pane })}
+        metricsByPane={byPane}
+        metricsBySession={bySession}
+        onEditTags={(session) => run({ type: "tags", session })}
+        onAttachSession={(session) => run({ type: "attach", session })}
+        onSelectSession={(session) => run({ type: "attach", session })}
+        onNewWindow={(session) => run({ type: "newWindow", session })}
+        onRenameSession={(session) => run({ type: "rename", session })}
+        onKillSession={(session) => run({ type: "killSession", session })}
+        onKillPane={(paneId) => run({ type: "killPane", paneId })}
+        onSplitPane={(paneId, direction) =>
+          run({ type: "split", paneId, direction })
+        }
+        onKillWindow={(session, index) =>
+          run({ type: "killWindow", session, index })
+        }
+        compact={treeWidth < 280}
+        now={now}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full w-full bg-background text-foreground">
@@ -904,6 +1179,52 @@ export function TmuxMonitor({
             </a>
           </span>
         </div>
+        <div className="space-y-2 border-b border-border p-2">
+          <select
+            className="h-8 w-full border border-border bg-background px-2 text-sm"
+            aria-label={t("tmuxMonitor.hostScope")}
+            value={scope}
+            onChange={(e) => {
+              const value = e.target.value === "single" ? "single" : "all";
+              setScope(value);
+              saveMonitorValue("scope", value);
+            }}
+          >
+            <option value="all">{t("tmuxMonitor.allHosts")}</option>
+            <option value="single">{t("tmuxMonitor.singleHost")}</option>
+          </select>
+          {scope === "all" ? (
+            <Input
+              aria-label={t("tmuxMonitor.filterHosts")}
+              placeholder={t("tmuxMonitor.filterHosts")}
+              value={hostFilter}
+              onChange={(e) => {
+                setHostFilter(e.target.value);
+                saveMonitorValue("filter", e.target.value);
+              }}
+              className="h-8"
+            />
+          ) : (
+            <select
+              className="h-8 w-full border border-border bg-background px-2 text-sm"
+              aria-label={t("tmuxMonitor.selectHost")}
+              value={selectedHostId ?? ""}
+              onChange={(e) => {
+                setPendingAction(null);
+                setSelectedHostId(
+                  hosts.find((h) => String(h.id) === e.target.value)?.id ??
+                    null,
+                );
+              }}
+            >
+              {hosts.map((host) => (
+                <option key={host.id} value={host.id}>
+                  {host.name || host.ip}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         {/* Radix wraps the viewport content in a display:table div sized to
             the widest row, so one long pane path would stretch every row and
             clip the right-aligned actions; force block so rows shrink and
@@ -920,74 +1241,151 @@ export function TmuxMonitor({
                 </p>
               </div>
             )}
-            {overviewLoading && (
-              <div className="space-y-3 px-2 py-2">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="space-y-1.5">
-                    <Skeleton className="h-5 w-full" />
-                    <Skeleton className="ml-6 h-3.5 w-3/4" />
-                    <Skeleton className="ml-6 h-3.5 w-2/3" />
-                  </div>
-                ))}
-              </div>
-            )}
-            {overviewError && (
-              <div className="space-y-2 px-2 py-4">
-                <p className="text-sm text-destructive">{overviewError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() =>
-                    selectedHostId !== null && loadOverview(selectedHostId)
-                  }
+            {filteredHosts.map((host) => {
+              const active = host.id === selectedHostId;
+              const collapsed =
+                scope === "all" && collapsedHosts.has(String(host.id));
+              return (
+                <section
+                  key={host.id}
+                  aria-label={host.name || String(host.ip)}
                 >
-                  <RefreshCw className="mr-1 size-3" />
-                  {t("tmuxMonitor.retry")}
-                </Button>
-              </div>
-            )}
-            {overview && !overview.available && (
-              <div className="px-2 py-4">
-                <p className="text-sm text-muted-foreground">
-                  {t("tmuxMonitor.tmuxUnavailable")}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground/70">
-                  {t("tmuxMonitor.tmuxInstallHint")}{" "}
-                  <code className="font-mono">sudo apt install tmux</code>
-                </p>
-              </div>
-            )}
-            {overview?.available && overview.sessions.length === 0 && (
-              <p className="px-2 py-4 text-sm text-muted-foreground">
-                {t("tmuxMonitor.noSessions")}
+                  <div
+                    className={`flex items-center gap-1 px-1 py-2 ${active ? "bg-accent-brand/10" : ""}`}
+                  >
+                    {scope === "all" && (
+                      <button
+                        aria-label={t("tmuxMonitor.toggleHost", {
+                          host: host.name || host.ip,
+                        })}
+                        aria-expanded={!collapsed}
+                        onClick={() => {
+                          const next = new Set(collapsedHosts);
+                          if (collapsed) next.delete(String(host.id));
+                          else next.add(String(host.id));
+                          setCollapsedHosts(next);
+                          saveMonitorValue("collapsed-hosts", [...next]);
+                        }}
+                      >
+                        {collapsed ? (
+                          <ChevronRight className="size-4" />
+                        ) : (
+                          <ChevronDown className="size-4" />
+                        )}
+                      </button>
+                    )}
+                    <button
+                      className="min-w-0 flex-1 truncate text-left text-sm font-medium"
+                      aria-pressed={active}
+                      onClick={() => {
+                        setPendingAction(null);
+                        setSelectedHostId(host.id);
+                      }}
+                    >
+                      {host.name || host.ip}
+                    </button>
+                  </div>
+                  {!collapsed &&
+                    (active ? (
+                      <>
+                        {overviewLoading && (
+                          <div className="space-y-3 px-2 py-2">
+                            {[0, 1, 2].map((i) => (
+                              <div key={i} className="space-y-1.5">
+                                <Skeleton className="h-5 w-full" />
+                                <Skeleton className="ml-6 h-3.5 w-3/4" />
+                                <Skeleton className="ml-6 h-3.5 w-2/3" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {overviewError && (
+                          <div className="space-y-2 px-2 py-4">
+                            <p className="text-sm text-destructive">
+                              {overviewError}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() =>
+                                selectedHostId !== null &&
+                                loadOverview(selectedHostId)
+                              }
+                            >
+                              <RefreshCw className="mr-1 size-3" />
+                              {t("tmuxMonitor.retry")}
+                            </Button>
+                          </div>
+                        )}
+                        {overview && !overview.available && (
+                          <div className="px-2 py-4">
+                            <p className="text-sm text-muted-foreground">
+                              {t("tmuxMonitor.tmuxUnavailable")}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground/70">
+                              {t("tmuxMonitor.tmuxInstallHint")}{" "}
+                              <code className="font-mono">
+                                sudo apt install tmux
+                              </code>
+                            </p>
+                          </div>
+                        )}
+                        {overview?.available &&
+                          overview.sessions.length === 0 && (
+                            <p className="px-2 py-4 text-sm text-muted-foreground">
+                              {t("tmuxMonitor.noSessions")}
+                            </p>
+                          )}
+                        {overview?.available &&
+                          overviewHostId === selectedHostId && (
+                            <SessionTree
+                              sessions={overview.sessions}
+                              expandedSessions={expandedSessions}
+                              onToggleSession={toggleSession}
+                              selectedPaneId={selectedPane?.paneId ?? null}
+                              onSelectPane={selectPane}
+                              metricsByPane={metricsByPane}
+                              metricsBySession={metricsBySession}
+                              onEditTags={openTagsEditor}
+                              onAttachSession={openTerminal}
+                              onSelectSession={attachInline}
+                              onNewWindow={newWindow}
+                              onRenameSession={(name) => {
+                                setRenameDraft(name);
+                                setRenameTarget(name);
+                              }}
+                              onKillSession={setKillTarget}
+                              onKillPane={setKillPaneTarget}
+                              onSplitPane={splitPane}
+                              onKillWindow={(sessionName, windowIndex) =>
+                                setKillWindowTarget({
+                                  sessionName,
+                                  windowIndex,
+                                })
+                              }
+                              compact={treeWidth < 280}
+                              now={now}
+                            />
+                          )}
+                      </>
+                    ) : (
+                      isVisible &&
+                      selectedHostId !== null && (
+                        <HostOverview hostId={Number(host.id)}>
+                          {(data, values) =>
+                            backgroundTree(host.id, data, values)
+                          }
+                        </HostOverview>
+                      )
+                    ))}
+                </section>
+              );
+            })}
+            {hosts.length > 0 && filteredHosts.length === 0 && (
+              <p className="p-2 text-xs text-muted-foreground">
+                {t("tmuxMonitor.noMatchingHosts")}
               </p>
-            )}
-            {overview?.available && (
-              <SessionTree
-                sessions={overview.sessions}
-                expandedSessions={expandedSessions}
-                onToggleSession={toggleSession}
-                selectedPaneId={selectedPane?.paneId ?? null}
-                onSelectPane={selectPane}
-                metricsByPane={metricsByPane}
-                metricsBySession={metricsBySession}
-                onEditTags={openTagsEditor}
-                onAttachSession={openTerminal}
-                onNewWindow={newWindow}
-                onRenameSession={(name) => {
-                  setRenameDraft(name);
-                  setRenameTarget(name);
-                }}
-                onKillSession={setKillTarget}
-                onKillPane={setKillPaneTarget}
-                onSplitPane={splitPane}
-                onKillWindow={(sessionName, windowIndex) =>
-                  setKillWindowTarget({ sessionName, windowIndex })
-                }
-                compact={treeWidth < 280}
-                now={now}
-              />
             )}
           </div>
         </ScrollArea>
@@ -1077,7 +1475,7 @@ export function TmuxMonitor({
 
         {/* Pane preview */}
         <div className="flex min-h-0 flex-1 flex-col">
-          {selectedPane && selectedHost ? (
+          {selectedPane && selectedHost && overviewHostId === selectedHostId ? (
             <PanePreview
               key={`${selectedHost.id}:${selectedPane.sessionName}`}
               host={selectedHost}
@@ -1086,7 +1484,10 @@ export function TmuxMonitor({
               terminalRef={previewTermRef}
               onSplit={(direction) => splitPane(selectedPane.paneId, direction)}
               onKillPane={() => setKillPaneTarget(selectedPane.paneId)}
-              onClose={() => setSelectedPane(null)}
+              onClose={() => {
+                setSelectedPane(null);
+                saveMonitorValue(`pane-${selectedHostId}`, null);
+              }}
             />
           ) : hostsLoaded && hosts.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">

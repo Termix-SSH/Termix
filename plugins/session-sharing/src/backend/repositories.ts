@@ -520,6 +520,17 @@ export function createDirectory(
       return !!rows[0]?.isAdmin;
     },
 
+    async hostIdsBySyncId(syncId: string): Promise<number[]> {
+      const { hosts } = await refs();
+      const rows = await (
+        await client()
+      )
+        .select({ id: hosts.id })
+        .from(hosts)
+        .where(eq(hosts.syncId, syncId));
+      return rows.map((row: { id: number }) => row.id);
+    },
+
     async hostExists(hostId: number): Promise<boolean> {
       const { hosts } = await refs();
       const rows = await (

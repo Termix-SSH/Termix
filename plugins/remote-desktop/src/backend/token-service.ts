@@ -117,17 +117,8 @@ export class GuacamoleTokenService {
       }
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
-    if (jwtSecret) {
-      return crypto
-        .createHash("sha256")
-        .update(jwtSecret + "_guacamole")
-        .digest();
-    }
-
-    this.log.warn("No persistent encryption key found, generating random key", {
-      operation: "guac_key_generation",
-    });
+    // A token lives for seconds between issue and connect, so a fresh key
+    // per boot is enough and nothing is derived from core's own secrets.
     return crypto.randomBytes(KEY_LENGTH);
   }
 

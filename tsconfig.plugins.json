@@ -1,0 +1,12 @@
+{
+  "extends": "./packages/plugin-sdk/tsconfig.plugin.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.plugins.tsbuildinfo"
+  },
+  "include": [
+    "plugins/*/src/**/*.ts",
+    "plugins/*/src/**/*.tsx",
+    "plugins/*/tests/**/*.ts",
+    "plugins/*/tests/**/*.tsx"
+  ]
+}

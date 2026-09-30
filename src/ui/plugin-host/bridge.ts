@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isElectron } from "@/lib/electron";
+import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
@@ -430,6 +432,18 @@ export const pluginHostBridge: PluginHostBridge = {
       (await getSSHHosts({ includeStatus: false })).map((host) =>
         toPluginHostRecord(host, pluginId ?? null),
       ),
+    notifyHostsChanged: () => {
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+    },
+    getHostStatusColorScheme: () => readStatusColorScheme(),
+    getLocalAuthToken: () => {
+      if (!isElectron()) return null;
+      try {
+        return localStorage.getItem("jwt");
+      } catch {
+        return null;
+      }
+    },
     listCredentials: async () => {
       const raw = await getCredentials();
       const list = Array.isArray(raw)

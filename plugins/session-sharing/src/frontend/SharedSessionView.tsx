@@ -33,7 +33,7 @@ export interface SessionParticipantInfo {
   label: string | null;
 }
 
-function ParticipantsBadge({
+export function ParticipantsBadge({
   participants,
   ownerLabel,
 }: {
@@ -135,7 +135,11 @@ export function GuestTerminalView({
     terminal.open(xtermRef.current);
     fitAddon.fit();
 
-    const resizeObserver = new ResizeObserver(() => fitAddon.fit());
+    let sharedSize: { cols: number; rows: number } | null = null;
+    const resizeObserver = new ResizeObserver(() => {
+      if (sharedSize) terminal.resize(sharedSize.cols, sharedSize.rows);
+      else fitAddon.fit();
+    });
     resizeObserver.observe(xtermRef.current);
 
     let cancelled = false;
@@ -163,6 +167,21 @@ export function GuestTerminalView({
         }
 
         switch (msg.type) {
+          case "resized": {
+            const { cols, rows } = msg;
+            if (
+              typeof cols === "number" &&
+              typeof rows === "number" &&
+              Number.isInteger(cols) &&
+              Number.isInteger(rows) &&
+              cols > 0 &&
+              rows > 0
+            ) {
+              sharedSize = { cols, rows };
+              terminal.resize(cols, rows);
+            }
+            break;
+          }
           case "data":
             if (typeof msg.data === "string") terminal.write(msg.data);
             break;

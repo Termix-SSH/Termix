@@ -1,6 +1,6 @@
 import { fileManagerHostSetting } from "./host-settings";
 import type { ComponentType } from "react";
-import { FolderSearch, ArrowLeftRight } from "lucide-react";
+import { FolderOpen, FolderSearch, ArrowLeftRight } from "lucide-react";
 import {
   invokeAction,
   type PluginHostRecord,
@@ -70,8 +70,14 @@ function openEditorAction(
   app.tabs.openTab(host, "files", { data: { initialFilePath: filePath } });
 }
 
+/** Where this plugin serves the streaming routes the desktop app calls. */
+const TRANSFER_API_PATH = "/plugin-api/file-manager";
+
 export function activate(app: TermixApp): void {
   setFileManagerApp(app);
+  if (typeof window !== "undefined") {
+    void window.electronAPI?.localTransfer?.setApiPath?.(TRANSFER_API_PATH);
+  }
   app.onDispose(() => setFileManagerApp(null));
   app.registerTab("files", FilesTab as unknown as ComponentType<TabProps>, {
     icon: FolderSearch,
@@ -135,8 +141,21 @@ export function activate(app: TermixApp): void {
   const openHost = ((host: PluginHostRecord | null, path?: string) =>
     openHostAction(app, host, path)) as never;
   app.registerAction("files.openHost", openHost);
-  // The shell's "open in file manager" tab button asks for this.
-  app.registerAction("host.openFiles", openHost);
+  // "Open File Manager" in the tab bar's menu, for a terminal tab. The
+  // terminal answers with its working directory and opens the files tab.
+  app.registerAction("file-manager.openFromTab", ((handle: unknown) =>
+    (
+      handle as { openFileManager?: () => void } | null
+    )?.openFileManager?.()) as never);
+  app.registerSlotContribution("tab.menu", {
+    actionId: "file-manager.openFromTab",
+    titleKey: "nav.openFileManager",
+    icon: FolderOpen,
+    kind: "button",
+    when: (context) =>
+      typeof (context.handle as { openFileManager?: unknown } | null)
+        ?.openFileManager === "function",
+  });
   app.registerAction("files.openEditor", ((
     host: PluginHostRecord | null,
     filePath: string,

@@ -99,7 +99,7 @@ function sessionIds(): string[] {
     .map((row) => String(row.id));
 }
 
-describe("AuthManager.revokeSessionsByOidc", () => {
+describe("AuthManager.revokeSessionsByExternalSession", () => {
   beforeAll(() => {
     mocks.sqlite!.exec(`
       CREATE TABLE sessions (
@@ -147,7 +147,7 @@ describe("AuthManager.revokeSessionsByOidc", () => {
     });
 
     await expect(
-      authManager.revokeSessionsByOidc({
+      authManager.revokeSessionsByExternalSession({
         ssoProviderId: 7,
         sub: "subject-1",
         sid: "session-1",
@@ -181,7 +181,7 @@ describe("AuthManager.revokeSessionsByOidc", () => {
     });
 
     await expect(
-      authManager.revokeSessionsByOidc({
+      authManager.revokeSessionsByExternalSession({
         ssoProviderId: 7,
         sub: "subject-1",
       }),
@@ -192,7 +192,7 @@ describe("AuthManager.revokeSessionsByOidc", () => {
 
   it("does not persist when no session matches", async () => {
     await expect(
-      authManager.revokeSessionsByOidc({
+      authManager.revokeSessionsByExternalSession({
         ssoProviderId: 7,
         sid: "missing",
       }),
@@ -212,7 +212,7 @@ describe("AuthManager.revokeSessionsByOidc", () => {
     mocks.saveDatabase.mockRejectedValueOnce(new Error("disk full"));
 
     await expect(
-      authManager.revokeSessionsByOidc({
+      authManager.revokeSessionsByExternalSession({
         ssoProviderId: 7,
         sid: "session-1",
       }),

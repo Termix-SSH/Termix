@@ -61,7 +61,7 @@ describe("automations activate", () => {
       capabilities: manifest.capabilities.filter((c) => c !== "notify:send"),
     });
     await expect(
-      withoutNotify.ctx.notify.send([1], { title: "t", body: "b" }),
+      withoutNotify.ctx.notify.send({ title: "t", body: "b" } as never),
     ).rejects.toBeInstanceOf(PluginCapabilityError);
   });
 

@@ -69,8 +69,56 @@ describe("session-sharing activate", () => {
     expect(rendered.registered.slot("shell.overlay")).toHaveLength(2);
     expect(rendered.registered.actions().sort()).toEqual([
       "session-sharing.share",
-      "sessions.sharedWithMe",
     ]);
+    expect(rendered.registered.slot("connections.sections")).toEqual([
+      "session-sharing.sharedWithMe",
+    ]);
+  });
+
+  it("shows terminal participants and clears them after the last guest leaves or the socket closes", async () => {
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: stubApi(),
+    });
+    expect(rendered.registered.slot("terminal.overlay")).toEqual([
+      "session-sharing.participants",
+    ]);
+    let receive: (message: {
+      type: string;
+      [key: string]: unknown;
+    }) => void = () => {};
+    const unsubscribe = vi.fn();
+    rendered.renderSlot("terminal.overlay", {
+      subscribe: (listener: typeof receive) => {
+        receive = listener;
+        return unsubscribe;
+      },
+    });
+    const owner = { isOwner: true, permissionLevel: "read-write", label: null };
+    const guest = {
+      isOwner: false,
+      permissionLevel: "read-only",
+      label: "Guest 1",
+    };
+    await act(() =>
+      receive({ type: "participants", participants: [owner, guest] }),
+    );
+    expect(
+      screen.getByTitle(
+        `${locales.sessionSharing.guestView.ownerLabel}, Guest 1`,
+      ).textContent,
+    ).toBe("2");
+    await act(() => receive({ type: "participants", participants: [owner] }));
+    expect(screen.queryByText("2")).toBeNull();
+    await act(() =>
+      receive({ type: "participants", participants: [owner, guest] }),
+    );
+    await act(() => receive({ type: "session_closed" }));
+    expect(screen.queryByText("2")).toBeNull();
+    await rendered.deactivate();
+    expect(unsubscribe).toHaveBeenCalled();
+    rendered = null;
   });
 
   it("registers only the guest views on a guest page", async () => {
@@ -164,20 +212,6 @@ describe("session-sharing activate", () => {
           permissionLevel: "read-only",
         }),
       ),
-    );
-  });
-
-  it("answers sessions shared with the user through the api", async () => {
-    const shared = [{ sessionId: "s", isOwnSession: false }];
-    rendered = await renderWithApp(plugin, {
-      manifest,
-      locales,
-      api: stubApi({
-        get: vi.fn(async () => ({ data: shared })) as never,
-      }),
-    });
-    await expect(invokeAction("sessions.sharedWithMe")).resolves.toEqual(
-      shared,
     );
   });
 

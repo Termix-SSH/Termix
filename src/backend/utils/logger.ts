@@ -34,7 +34,6 @@ export interface LogContext {
   operation?: string;
   userId?: string;
   hostId?: number;
-  tunnelName?: string;
   sessionId?: string;
   requestId?: string;
   duration?: number;
@@ -139,8 +138,6 @@ export class Logger {
         contextParts.push(`user:${sanitizedContext.userId}`);
       if (sanitizedContext.hostId)
         contextParts.push(`host:${sanitizedContext.hostId}`);
-      if (sanitizedContext.tunnelName)
-        contextParts.push(`tunnel:${sanitizedContext.tunnelName}`);
       if (sanitizedContext.sessionId)
         contextParts.push(`session:${sanitizedContext.sessionId}`);
       if (sanitizedContext.requestId)
@@ -253,10 +250,6 @@ export class Logger {
 
   ssh(message: string, context?: LogContext): void {
     this.info(`SSH: ${message}`, { ...context, operation: "ssh" });
-  }
-
-  tunnel(message: string, context?: LogContext): void {
-    this.info(`TUNNEL: ${message}`, { ...context, operation: "tunnel" });
   }
 
   file(message: string, context?: LogContext): void {

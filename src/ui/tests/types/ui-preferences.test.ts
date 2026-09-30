@@ -150,8 +150,6 @@ describe("PRESETS.balanced", () => {
       rowActions: "full",
     });
     expect(PRESETS.balanced.rail.hiddenTabs).toEqual([]);
-    expect(PRESETS.balanced.terminal.toolbarDensity).toBe("labeled");
-    expect(PRESETS.balanced.fileManager.viewMode).toBe("grid");
     expect(PRESETS.balanced.hostEditor.mode).toBe("full");
   });
 
@@ -218,5 +216,28 @@ describe("plugin areas", () => {
       },
     });
     expect(overrides).toEqual({ "plugin:docker": { ok: "card" } });
+  });
+});
+
+describe("areas that moved into plugins", () => {
+  it("maps version 2 terminal and file manager overrides to their plugins", () => {
+    expect(
+      sanitizeUiOverrides(
+        {
+          terminal: { toolbarDensity: "expanded" },
+          fileManager: { viewMode: "list" },
+        },
+        2,
+      ),
+    ).toEqual({
+      "plugin:ssh-terminal": { toolbarDensity: "expanded" },
+      "plugin:file-manager": { viewMode: "list" },
+    });
+  });
+
+  it("drops the old names from a current payload", () => {
+    expect(
+      sanitizeUiOverrides({ terminal: { toolbarDensity: "icon" } }),
+    ).toEqual({});
   });
 });

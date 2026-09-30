@@ -23,6 +23,7 @@ import { FieldCrypto } from "../utils/field-crypto.js";
 import { syncLogger } from "../utils/logger.js";
 import { getPluginRuntime } from "../plugins/index.js";
 import { singletonSyncId } from "./wire.js";
+import { parseDefaultOverrides } from "../../types/host-defaults.js";
 import {
   exportHostPluginSettings,
   importHostPluginSettings,
@@ -31,6 +32,14 @@ import {
   exportProtocolLogins,
   importProtocolLogins,
 } from "./host-protocol-auth.js";
+import {
+  coversHostDefault,
+  eraseHostDefault,
+  loadAdminDefaults,
+  loadHostDefaults,
+  writeAdminDefaults,
+  writeHostDefault,
+} from "./host-defaults.js";
 
 const CREDENTIAL_REFERENCE = {
   field: "credentialId",
@@ -167,9 +176,22 @@ export function registerCoreSyncEntities(): void {
       }),
       afterWrite: async ({ id, userId, wire, resolveId }) => {
         if (id === null) return;
-        await importHostPluginSettings(id, wire.pluginSettings);
+        // The server owns host defaults: it keeps what the host set itself
+        // and resolves the rest. A desktop takes the server's values as sent.
+        const { getLink } = await import("./client/link-store.js");
+        const onServer = !(await getLink().catch(() => null));
+        await importHostPluginSettings(
+          id,
+          wire.pluginSettings,
+          onServer ? parseDefaultOverrides(wire.defaultOverrides) : null,
+        );
         await importProtocolLogins(id, userId, wire.protocolAuth, resolveId);
         await dropInvalidParent(userId, id);
+        if (onServer) {
+          const { applyDefaultsAfterHostWrite } =
+            await import("../hosts/defaults/index.js");
+          await applyDefaultsAfterHostWrite(id);
+        }
         const { SharedHostSecretsManager } =
           await import("../utils/shared-host-secrets-manager.js");
         await SharedHostSecretsManager.getInstance().resyncHost(id);
@@ -190,6 +212,29 @@ export function registerCoreSyncEntities(): void {
         );
         return access.hasAccess;
       },
+    },
+  );
+
+  // After hosts: a folder's jump chain names hosts by syncId.
+  registerEntity(
+    CORE_OWNER,
+    { type: "hostDefaults", table: null, order: 60 },
+    {
+      load: loadHostDefaults,
+      write: writeHostDefault,
+      erase: eraseHostDefault,
+      covers: (syncId) => coversHostDefault(syncId, activeManifest),
+    },
+  );
+
+  registerEntity(
+    CORE_OWNER,
+    { type: "hostDefaultsAdmin", table: null, order: 7, singleton: true },
+    {
+      readOnly: true,
+      load: loadAdminDefaults,
+      write: writeAdminDefaults,
+      erase: async () => {},
     },
   );
 

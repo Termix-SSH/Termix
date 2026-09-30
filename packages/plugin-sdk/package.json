@@ -37,6 +37,10 @@
       "types": "./dist/frontend.d.ts",
       "default": "./dist/frontend.js"
     },
+    "./desktop": {
+      "types": "./dist/desktop.d.ts",
+      "default": "./dist/desktop.js"
+    },
     "./manifest": {
       "types": "./dist/manifest.d.ts",
       "default": "./dist/manifest.js"
@@ -70,29 +74,46 @@
       "default": "./dist/ssh-certs.js"
     },
     "./tsconfig.plugin.json": "./tsconfig.plugin.json",
-    "./schema/manifest.schema.json": "./schema/manifest.schema.json"
+    "./schema/manifest.schema.json": "./schema/manifest.schema.json",
+    "./ui": {
+      "types": "./dist/host/ui.d.ts",
+      "default": "./dist/host/ui.js"
+    },
+    "./testing-host": {
+      "default": "./dist/host/testing-host.js"
+    },
+    "./theme.css": "./dist/host/theme.css"
   },
   "files": [
     "dist",
     "cli",
     "schema",
     "tsconfig.plugin.json",
-    "README.md"
+    "README.md",
+    "client.d.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@tailwindcss/node": "^4.2.4",
+    "@tailwindcss/oxide": "^4.2.4",
     "esbuild": "^0.28.1",
     "semver": "^7.6.3",
+    "tailwindcss": "^4.2.4",
     "tar": "^7.5.22"
   },
   "peerDependencies": {
-    "drizzle-orm": "*",
-    "ssh2": "*",
+    "@testing-library/react": "^16.3.3",
     "better-sqlite3": "*",
+    "drizzle-orm": "*",
+    "i18next": "^26.4.2",
     "react": "*",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.14",
+    "sonner": "^2.0.8",
+    "ssh2": "*",
     "vitest": "*"
   },
   "peerDependenciesMeta": {
@@ -109,6 +130,9 @@
       "optional": true
     },
     "vitest": {
+      "optional": true
+    },
+    "@testing-library/react": {
       "optional": true
     }
   },

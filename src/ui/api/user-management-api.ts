@@ -221,20 +221,22 @@ export async function updateRegistrationAllowed(
   }
 }
 
-export async function getOidcAutoProvision(): Promise<{ enabled: boolean }> {
+export async function getExternalAutoProvision(): Promise<{
+  enabled: boolean;
+}> {
   try {
-    const response = await authApi.get("/users/oidc-auto-provision");
+    const response = await authApi.get("/users/external-auto-provision");
     return response.data;
   } catch (error) {
     handleApiError(error, "check OIDC auto-provision status");
   }
 }
 
-export async function updateOidcAutoProvision(
+export async function updateExternalAutoProvision(
   enabled: boolean,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.patch("/users/oidc-auto-provision", {
+    const response = await authApi.patch("/users/external-auto-provision", {
       enabled,
     });
     return response.data;
@@ -267,31 +269,6 @@ export async function updateSecondFactorAfterExternalLogin(
     return response.data;
   } catch (error) {
     handleApiError(error, "update second factor after external login");
-  }
-}
-
-export async function getOidcSilentLoginDefault(): Promise<{
-  enabled: boolean;
-  locked?: boolean;
-}> {
-  try {
-    const response = await authApi.get("/users/oidc-silent-login-default");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get OIDC silent login default");
-  }
-}
-
-export async function updateOidcSilentLoginDefault(
-  enabled: boolean,
-): Promise<{ enabled: boolean }> {
-  try {
-    const response = await authApi.patch("/users/oidc-silent-login-default", {
-      enabled,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update OIDC silent login default");
   }
 }
 

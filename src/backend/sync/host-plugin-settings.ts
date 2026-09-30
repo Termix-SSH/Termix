@@ -12,6 +12,7 @@ import {
   setSetting,
 } from "../plugins/settings.js";
 import { databaseLogger } from "../utils/logger.js";
+import type { DefaultOverrides } from "../../types/host-defaults.js";
 import {
   hostSettingsPlugins,
   type HostPluginSettings,
@@ -50,10 +51,16 @@ export async function exportHostPluginSettings(
   return result;
 }
 
-/** Writes what a synced host carried, translated back to local ids. */
+/**
+ * Writes what a synced host carried, translated back to local ids. With
+ * `only`, a classified namespace takes just the keys the host sets itself;
+ * the rest follow this side's defaults and are written by the materialize
+ * pass that follows.
+ */
 export async function importHostPluginSettings(
   hostId: number,
   carried: unknown,
+  only?: DefaultOverrides | null,
 ): Promise<void> {
   if (!carried || typeof carried !== "object") return;
   const byPlugin = carried as HostPluginSettings;
@@ -63,8 +70,10 @@ export async function importHostPluginSettings(
     const hook = consume<PluginHostSettingsSync>(
       `${manifest.id}.hostSettingsSync`,
     );
+    const ownKeys = only?.[manifest.id];
     for (const field of declaredFields(manifest, "host")) {
       if (field.type === "secret" || !(field.key in own)) continue;
+      if (ownKeys && !ownKeys.includes(field.key)) continue;
       try {
         const value = hook?.importValue
           ? await hook.importValue(field.key, own[field.key])

@@ -121,7 +121,7 @@ function consumerFixture(
 ): Fixture {
   return createFixturePlugin({
     id: "docker",
-    capabilities: ["kv:own"],
+    capabilities: ["kv:own", "users:impersonate"],
     backendSource: CONSUMER_SOURCE,
     manifestOverrides: { category: "Infrastructure", requires },
   });
@@ -219,6 +219,7 @@ describe("plugin service contracts", () => {
 
   it("activates anyway when an unsatisfied requirement is optional", async () => {
     consumer = consumerFixture([
+      { service: SERVICE, versionRange: "^1.2.0", optional: true },
       { service: "testplugin.absent", versionRange: "^1.0.0", optional: true },
     ]);
 

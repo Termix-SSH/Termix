@@ -34,36 +34,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@termix/plugin-sdk/ui";
-import {
-  Input,
-  PluginComponent,
-  resolveConnectionOrigin,
-} from "@termix/plugin-sdk/ui";
+import { Input, PluginComponent } from "@termix/plugin-sdk/ui";
 import { CollabMembersSidebar } from "./CollabMembersSidebar";
 import {
   RemoteDisplay,
   createRemoteSessionToken,
   getErrorMessage,
-  wsUrlForPath,
+  wsTargetForPath,
 } from "./shared";
-import {
-  deleteCollabRoom,
-  endCollabRoom,
-  dismissCollabControlRequest,
-  getCollabRoom,
-  getCollabStage,
-  inviteCollabMembers,
-  presentCollabStage,
-  requestCollabStageControl,
-  removeCollabMember,
-  setCollabGuestLink,
-  setCollabStageControl,
-  stopCollabStage,
-  getDirectory,
-  type CollabRoomDetail,
-  type CollabStage,
-  type DirectoryRole,
-} from "./api";
+import type { CollabRoomDetail, CollabStage, DirectoryRole } from "./api";
+import { meetingGuestUrl, type MeetingBackend } from "./meeting-backend";
 
 type SharedProtocol = "ssh" | "rdp" | "vnc" | "telnet";
 
@@ -84,9 +64,10 @@ const POLL_FALLBACK_MS = 15000;
 
 // The terminal socket the ssh-terminal plugin serves. Authentication rides on
 // the jwt cookie the way every terminal WS connection does.
-async function roomEventsWsUrl(roomId: string): Promise<string | null> {
-  const { eventsWsPath } = await getCollabRoom(roomId);
-  return wsUrlForPath(eventsWsPath);
+async function roomEventsWsUrl(roomId: string, backend: MeetingBackend) {
+  const { eventsWsPath } = await backend.api.getCollabRoom(roomId);
+  await backend.assertCurrent();
+  return wsTargetForPath(eventsWsPath, backend.origin);
 }
 
 type PresentDraft =
@@ -105,11 +86,28 @@ type PresentChoice = {
 export function CollabRoomTab({
   roomId,
   isVisible,
+  backend,
 }: {
+  backend: MeetingBackend;
   roomId?: string;
   isVisible: boolean;
 }) {
   const { t } = useTranslation();
+  const {
+    deleteCollabRoom,
+    endCollabRoom,
+    dismissCollabControlRequest,
+    getCollabRoom,
+    getCollabStage,
+    inviteCollabMembers,
+    presentCollabStage,
+    requestCollabStageControl,
+    removeCollabMember,
+    setCollabGuestLink,
+    setCollabStageControl,
+    stopCollabStage,
+    getDirectory,
+  } = backend.api;
   const [detail, setDetail] = useState<CollabRoomDetail | null>(null);
   const [stage, setStage] = useState<CollabStage | null>(null);
   const [ended, setEnded] = useState(false);
@@ -145,6 +143,7 @@ export function CollabRoomTab({
   const draftRef = useRef<PresentDraft | null>(null);
   draftRef.current = draft;
   const stageKeyRef = useRef<string | null>(null);
+  const presenterRef = useRef<string | null>(null);
   const refreshSequence = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -153,6 +152,14 @@ export function CollabRoomTab({
     try {
       const nextDetail = await getCollabRoom(roomId);
       if (sequence !== refreshSequence.current) return;
+      // Only discard a confirmed presentation that another member took over.
+      if (
+        presenterRef.current === nextDetail.me &&
+        nextDetail.stage.presenterUserId !== nextDetail.me
+      ) {
+        setDraft(null);
+      }
+      presenterRef.current = nextDetail.stage.presenterUserId;
       setDetail(nextDetail);
       setLoadError(null);
       // Presenting locally? The local session is the stage - don't join it.
@@ -181,7 +188,7 @@ export function CollabRoomTab({
         setLoadError(getErrorMessage(error));
       }
     }
-  }, [roomId]);
+  }, [roomId, backend]);
 
   useEffect(() => {
     void refresh();
@@ -207,10 +214,10 @@ export function CollabRoomTab({
     const connect = async () => {
       if (cancelled) return;
       try {
-        const url = await roomEventsWsUrl(roomId);
+        const url = await roomEventsWsUrl(roomId, backend);
         if (cancelled) return;
         if (!url) throw new Error("No terminal endpoint is available");
-        ws = new WebSocket(url);
+        ws = new WebSocket(url.url, url.protocols);
       } catch {
         startPolling();
         reconnectTimer = setTimeout(() => void connect(), 5000);
@@ -350,19 +357,21 @@ export function CollabRoomTab({
     if (!roomId) return;
     setPresentOpen(false);
     try {
+      await backend.assertCurrent();
+      if (backend.origin === "remote") {
+        if (!host.syncId) throw new Error(t("collab.hostNotSynced"));
+        const resolved = await backend.api.resolveHost(host.syncId);
+        host = { ...host, id: String(resolved.id), connectionOrigin: "remote" };
+      } else {
+        host = { ...host, connectionOrigin: "local" };
+      }
       if (protocol === "ssh") {
         setDraft({ protocol, host });
         return;
       }
       const response = await createRemoteSessionToken(
         Number(host.id),
-        await resolveConnectionOrigin(
-          {
-            connectionOrigin: host.connectionOrigin as
-              "local" | "remote" | undefined,
-          },
-          { defaultRemote: true },
-        ),
+        backend.origin,
         protocol,
       );
       if (!response?.connectionId) {
@@ -456,8 +465,16 @@ export function CollabRoomTab({
     }
   }
 
-  function guestLinkUrl(token: string) {
-    return `${window.location.origin}${window.location.pathname}?view=collab-guest&token=${token}`;
+  async function copyGuestLink(token: string) {
+    try {
+      await backend.assertCurrent();
+      const url = meetingGuestUrl(backend.publicUrl, token);
+      if (!url) throw new Error(t("collab.linkRequiresServer"));
+      await navigator.clipboard.writeText(url);
+      toast.success(t("collab.linkCopied"));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   }
 
   async function handleInvite() {
@@ -639,10 +656,7 @@ export function CollabRoomTab({
               variant="outline"
               className="h-8 text-xs"
               onClick={() => {
-                void navigator.clipboard
-                  .writeText(guestLinkUrl(guestLinkToken))
-                  .then(() => toast.success(t("collab.linkCopied")))
-                  .catch((error) => toast.error(getErrorMessage(error)));
+                void copyGuestLink(guestLinkToken);
               }}
             >
               {t("collab.copyLink")}
@@ -697,6 +711,7 @@ export function CollabRoomTab({
               />
             ) : (
               <RemoteDisplay
+                connectionOrigin={backend.origin}
                 token={draft.token}
                 protocol={draft.protocol}
                 isVisible={isVisible}
@@ -725,6 +740,7 @@ export function CollabRoomTab({
                   id="terminal.view"
                   hostConfig={{
                     id: stage.hostId ?? undefined,
+                    connectionOrigin: backend.origin,
                     name: detail?.room.name ?? "stage",
                     ip: "",
                     port: 0,
@@ -739,6 +755,7 @@ export function CollabRoomTab({
                 />
               ) : stage.connectParams?.token ? (
                 <RemoteDisplay
+                  connectionOrigin={backend.origin}
                   key={stage.connectParams.token}
                   token={stage.connectParams.token}
                   protocol={stage.protocol}

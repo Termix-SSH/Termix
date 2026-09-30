@@ -24,6 +24,9 @@ vi.mock("../../utils/crypto-migration/raw-rows.js", () => ({
   runStatement: vi.fn(async () => {}),
 }));
 
+vi.mock("../../hosts/defaults/overrides.js", () => ({
+  changeHostOverrides: async () => {},
+}));
 vi.mock("../../utils/logger.js", () => {
   const logger = {
     debug: vi.fn(),

@@ -200,6 +200,32 @@ export function registerRoomRoutes(
   } = actions;
   const requireUse = ctx.rbac.require("use") as never;
 
+  router.get(
+    "/meeting-host/:syncId",
+    requireUse,
+    async (req: Request, res: Response) => {
+      if (!ctx.currentActor())
+        return res.status(401).json({ error: "Authentication required" });
+      try {
+        for (const id of await directory.hostIdsBySyncId(
+          String(req.params.syncId),
+        )) {
+          if ((await ctx.hosts.checkAccess(id, "connect")).hasAccess) {
+            return res.json({ id });
+          }
+        }
+        return res.status(404).json({
+          error:
+            "The host must be synced to the meeting server before presenting",
+        });
+      } catch {
+        return res
+          .status(500)
+          .json({ error: "Failed to resolve meeting host" });
+      }
+    },
+  );
+
   const audit = (
     req: Request,
     action: string,

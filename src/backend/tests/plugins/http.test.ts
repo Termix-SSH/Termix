@@ -401,3 +401,28 @@ describe("ctx.http streaming", () => {
     expect(rest).toContain("data: done");
   });
 });
+
+describe("public route rate limit", () => {
+  afterEach(() => {
+    http.resetPublicRateLimits();
+    delete process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT;
+  });
+
+  it("allows up to the limit per address and plugin, then refuses", () => {
+    process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT = "3";
+    const now = 1_000;
+    const hits = [1, 2, 3, 4].map(() =>
+      http.overPublicRateLimit("demo", "1.2.3.4", now),
+    );
+    expect(hits).toEqual([false, false, false, true]);
+    expect(http.overPublicRateLimit("demo", "5.6.7.8", now)).toBe(false);
+    expect(http.overPublicRateLimit("other", "1.2.3.4", now)).toBe(false);
+  });
+
+  it("starts a new window after a minute", () => {
+    process.env.TERMIX_PLUGIN_PUBLIC_RATE_LIMIT = "1";
+    expect(http.overPublicRateLimit("demo", "ip", 0)).toBe(false);
+    expect(http.overPublicRateLimit("demo", "ip", 10)).toBe(true);
+    expect(http.overPublicRateLimit("demo", "ip", 60_001)).toBe(false);
+  });
+});

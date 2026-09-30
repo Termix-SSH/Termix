@@ -60,6 +60,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   startC2SAutoStartTunnels: () =>
     ipcRenderer.invoke("start-c2s-autostart-tunnels"),
+  setC2SRelayPath: (relayPath) =>
+    ipcRenderer.invoke("set-c2s-relay-path", relayPath),
 
   onCloseActiveTab: (callback) => {
     const listener = () => callback();
@@ -79,8 +81,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
       timeoutMs,
     ),
 
+  externalBrowserLogin: (authUrl, callbackPort) =>
+    ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
+  // 2.8 name, read by older server login pages. Remove in 3.0.0.
   oidcSystemBrowserAuth: (authUrl, callbackPort) =>
-    ipcRenderer.invoke("oidc-system-browser-auth", authUrl, callbackPort),
+    ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
 
   openExternalEditor: (fileData) =>
     ipcRenderer.invoke("open-external-editor", fileData),
@@ -158,6 +163,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     open: (targetPath) => ipcRenderer.invoke("local-fs:open", targetPath),
   },
   localTransfer: {
+    setApiPath: (apiPath) =>
+      ipcRenderer.invoke("local-transfer:set-api", apiPath),
     upload: (options) => ipcRenderer.invoke("local-transfer:upload", options),
     download: (options) =>
       ipcRenderer.invoke("local-transfer:download", options),

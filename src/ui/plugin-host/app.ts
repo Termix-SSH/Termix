@@ -94,6 +94,16 @@ export function createPluginApp(
   let disposed = false;
 
   const track = (disposer: Disposer): Disposer => {
+    // An activate that outlived its timeout, or ran on after a disable, still
+    // registers things. Nothing will dispose them later, so undo them now.
+    if (disposed) {
+      try {
+        disposer();
+      } catch {
+        // A failing disposer must not throw into the plugin's activate.
+      }
+      return () => {};
+    }
     bag.push(disposer);
     return () => {
       const index = bag.indexOf(disposer);
@@ -221,6 +231,7 @@ export function createPluginApp(
           icon: withIconBoundary(pluginId, section.icon as never) as never,
           order: section.order,
           visible: section.visible,
+          defaults: section.defaults,
           component: scoped(
             section.component as unknown as ComponentType<HostEditorSectionRenderProps>,
           ),
@@ -526,6 +537,7 @@ export function createPluginApp(
       ...tabsApi,
       openTab: shell.openTab as TermixApp["tabs"]["openTab"],
       openSingletonTab: shell.openSingletonTab,
+      connectHost: shell.connectHost as TermixApp["tabs"]["connectHost"],
       closeTab: shell.closeTab,
       onChange: (listener) => track(tabsApi.onChange(listener)),
       onReady: (listener) => track(tabsApi.onReady(listener)),

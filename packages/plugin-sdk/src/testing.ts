@@ -68,7 +68,7 @@ import type {
 import type { SyncEntityRegistration } from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
 import type {
-  PluginNativeRdpRequest,
+  PluginExternalClientRequest,
   PluginProtocolTarget,
   PluginHostStatusEntry,
   PluginNotification,
@@ -297,8 +297,8 @@ export interface FakePluginContext {
     title?: string;
     ignoreCert?: boolean;
   }>;
-  /** Every ctx.desktop.launchNativeRdp call, in order. */
-  nativeRdpLaunches: PluginNativeRdpRequest[];
+  /** Every ctx.desktop.launchExternalClient call, in order. */
+  externalClientLaunches: PluginExternalClientRequest[];
   /** Every ctx.credentials.resolveHostProtocol call, in order. */
   credentialReads: Array<{ hostId: number; protocol: string }>;
   /** Every ctx.credentials.createSshKey call, with the id it answered. */
@@ -361,6 +361,11 @@ export interface FakePluginContext {
   runScheduled: () => Promise<void>;
   /** Changes the acting user, as core's request middleware would. */
   setActor: (userId: string | undefined) => void;
+  /**
+   * Runs `fn` as `userId`, the way a request from that user would. For test
+   * code standing in for a caller; unlike ctx.asUser it needs no capability.
+   */
+  actAs: <T>(userId: string, fn: () => Promise<T> | T) => Promise<T>;
   /** Provided or seeded services, by name or "<service>#<provider>". */
   services: Map<string, object>;
 }
@@ -497,7 +502,8 @@ export function createFakeContext(
   const sshConnections: FakePluginContext["sshConnections"] = [];
   const hostShares: FakePluginContext["hostShares"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
-  const nativeRdpLaunches: FakePluginContext["nativeRdpLaunches"] = [];
+  const externalClientLaunches: FakePluginContext["externalClientLaunches"] =
+    [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
   const createdSshKeys: FakePluginContext["createdSshKeys"] = [];
   const notifications: FakePluginContext["notifications"] = [];
@@ -695,10 +701,12 @@ export function createFakeContext(
 
     registry: {
       provide: (key, value) => {
+        assertOwnRegistryKey(pluginId, key);
         registryProviders.set(key, value);
       },
       consume: (key) => registryProviders.get(key) as never,
       revoke: (key, value) => {
+        assertOwnRegistryKey(pluginId, key);
         if (!registryProviders.has(key)) return false;
         if (value !== undefined && registryProviders.get(key) !== value) {
           return false;
@@ -818,8 +826,16 @@ export function createFakeContext(
 
       getHost: async (hostId, key) =>
         settings.get(settingsKey("host", String(hostId), key)) as never,
-      setHost: async (hostId, key, value) =>
-        writeSetting("host", String(hostId), key, value),
+      getHostFor: async (hostId, _userId, key) =>
+        settings.get(settingsKey("host", String(hostId), key)) as never,
+      // Host defaults live in core; the mock stands in the user's own
+      // setting of the same key, so a test can set one with setUser.
+      getHostDefault: async (userId, key) =>
+        settings.get(settingsKey("user", userId, key)) as never,
+      setHost: async (hostId, key, value, options) =>
+        options?.inherit
+          ? void settings.delete(settingsKey("host", String(hostId), key))
+          : writeSetting("host", String(hostId), key, value),
 
       listHostValues: async (key) => {
         const found: Array<{ hostId: number; userId: string; value: never }> =
@@ -1128,8 +1144,8 @@ export function createFakeContext(
         desktopWindows.push(request);
         return { success: true };
       },
-      launchNativeRdp: async (request) => {
-        nativeRdpLaunches.push(request);
+      launchExternalClient: async (request) => {
+        externalClientLaunches.push(request);
         return { success: true };
       },
       available: () => options.desktopAvailable ?? false,
@@ -1309,7 +1325,7 @@ export function createFakeContext(
     hostShares,
     auth,
     desktopWindows,
-    nativeRdpLaunches,
+    externalClientLaunches,
     credentialReads,
     createdSshKeys,
     notifications,
@@ -1336,6 +1352,15 @@ export function createFakeContext(
     },
     setActor: (userId) => {
       actor = userId;
+    },
+    actAs: async (userId, fn) => {
+      const previous = actor;
+      actor = userId;
+      try {
+        return await fn();
+      } finally {
+        actor = previous;
+      }
     },
     services,
   };
@@ -1477,6 +1502,11 @@ export function createMockCtx(
   const gatedCtx: PluginContext = {
     ...ctx,
 
+    asUser: async (userId, fn) => {
+      require("users:impersonate");
+      return ctx.asUser(userId, fn);
+    },
+
     db: {
       define: async (definition) => {
         require("db:own");
@@ -1487,7 +1517,7 @@ export function createMockCtx(
         return guardedDb.client();
       },
       refs: async () => {
-        require("db:own");
+        require("db:core-refs");
         return guardedDb.refs();
       },
       persist: async (persistOptions) => {
@@ -1745,9 +1775,9 @@ export function createMockCtx(
         require("desktop:window");
         return ctx.desktop.openIsolatedWindow(request);
       },
-      launchNativeRdp: async (request) => {
+      launchExternalClient: async (request) => {
         require("desktop:window");
-        return ctx.desktop.launchNativeRdp(request);
+        return ctx.desktop.launchExternalClient(request);
       },
       available: () => ctx.desktop.available(),
     },
@@ -1882,7 +1912,7 @@ export interface TestDbOptions {
    * Runs after the core stub tables exist and before the plugin's migrations,
    * e.g. to create the legacy table an adoption migration renames.
    */
-  before?: (sqlite: TestSqlite) => void | Promise<void>;
+  before?: (sqlite: TestSqlite) => unknown;
   /** Skip applying the migrations, to apply them by hand later. */
   skipMigrations?: boolean;
 }
@@ -2046,6 +2076,8 @@ export interface RenderWithAppOptions {
   ready?: boolean;
   /** Stands in for app.api and usePluginApi(), e.g. a stub of the routes. */
   api?: import("./frontend.js").PluginApiClient;
+  /** What app.desktop.remoteServerUrl() answers. Read on every call. */
+  remoteServerUrl?: () => string | null | Promise<string | null>;
 }
 
 /** A call a plugin made on the shell, recorded instead of performed. */
@@ -2149,4 +2181,12 @@ export async function renderWithApp(
   // test runner resolves it through its alias.
   const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
   return host.renderPlugin(plugin, options);
+}
+
+function assertOwnRegistryKey(pluginId: string, key: string): void {
+  if (typeof key !== "string" || !key.startsWith(`${pluginId}.`)) {
+    throw new Error(
+      `Plugin ${pluginId} may only use registry keys under "${pluginId}.", not "${key}"`,
+    );
+  }
 }

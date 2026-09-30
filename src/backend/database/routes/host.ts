@@ -26,6 +26,7 @@ import {
   createCurrentHostRepository,
   createCurrentUserRepository,
   createCurrentSharedHostAuthOverrideRepository,
+  createCurrentHostDefaultsRepository,
 } from "../repositories/factory.js";
 import {
   applyHostKeyTypeUpdate,
@@ -51,6 +52,7 @@ import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
+import { registerHostDefaultsRoutes } from "./host-defaults-routes.js";
 import { registerHostStatusRoutes } from "./host-status-routes.js";
 import {
   applyHostEnrollmentDefaults,
@@ -71,6 +73,11 @@ import {
 } from "../../utils/shared-host-auth-resolver.js";
 import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
+import {
+  applyDefaultsAfterHostWrite,
+  applyHostDefaultsToWrite,
+} from "../../hosts/defaults/index.js";
+import { applyPersonalHostValues } from "../../hosts/defaults/personal.js";
 import {
   applyProtocolAuthPlan,
   attachProtocolAuth,
@@ -385,6 +392,14 @@ router.post(
     }
 
     try {
+      sshDataObj.defaultOverrides = JSON.stringify(
+        await applyHostDefaultsToWrite({
+          ownerId: userId,
+          hostId: null,
+          columns: sshDataObj,
+          body: hostData,
+        }),
+      );
       const result = await createCurrentHostRepository().createEncryptedForUser(
         userId,
         sshDataObj,
@@ -402,6 +417,7 @@ router.post(
       }
 
       const createdHost = result;
+      await applyDefaultsAfterHostWrite(createdHost.id as number);
       if (protocolAuthPatch) {
         await writeProtocolAuth(
           userId,
@@ -1072,11 +1088,37 @@ router.put(
         return res.status(400).json({ error: terminalFieldsError });
       }
 
+      const storedRow = (
+        await createCurrentHostDefaultsRepository().listHosts({
+          hostIds: [Number(hostId)],
+        })
+      )[0];
+      sshDataObj.defaultOverrides = JSON.stringify(
+        await applyHostDefaultsToWrite({
+          ownerId,
+          hostId: Number(hostId),
+          columns: sshDataObj,
+          body: hostData,
+          stored: storedRow,
+          lockedKeys: accessInfo.isOwner ? [] : ["auth"],
+        }),
+      );
+
       await createCurrentHostRepository().updateEncryptedForUser(
         ownerId,
         Number(hostId),
         sshDataObj,
       );
+      await applyDefaultsAfterHostWrite(Number(hostId), {
+        moved:
+          !!storedRow &&
+          ((sshDataObj.folder !== undefined &&
+            (sshDataObj.folder ?? null) !== (storedRow.folder ?? null)) ||
+            (sshDataObj.parentHostId !== undefined &&
+              (sshDataObj.parentHostId ?? null) !==
+                (storedRow.parentHostId ?? null))),
+        ownerId,
+      });
       if (protocolAuthPlan) {
         await applyProtocolAuthPlan(ownerId, Number(hostId), protocolAuthPlan);
       }
@@ -1296,14 +1338,15 @@ router.get(
 
       // After sanitizing: the connect-level projection reduces a shared host
       // to an allowlist, which would drop this again. One query for the list.
-      attachHostPluginSettings(
-        sanitized,
-        await loadHostPluginSettings(
-          sanitized
-            .map((host) => Number(host.id))
-            .filter((id) => Number.isInteger(id)),
-        ),
+      const pluginSettingsByHost = await loadHostPluginSettings(
+        sanitized
+          .map((host) => Number(host.id))
+          .filter((id) => Number.isInteger(id)),
       );
+      await applyPersonalHostValues(pluginSettingsByHost, userId).catch(
+        () => {},
+      );
+      attachHostPluginSettings(sanitized, pluginSettingsByHost);
 
       res.json(sanitized);
     } catch (err) {
@@ -1432,6 +1475,7 @@ router.get(
             resolvedSharedResult,
             accessInfo.permissionLevel,
           ),
+          userId,
         ),
       );
     } catch (err) {
@@ -2301,20 +2345,16 @@ registerHostNetworkRoutes(router, {
   requireDataAccess,
 });
 
-export default router;
+registerHostDefaultsRoutes(router, {
+  authenticateJWT,
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+  requireAdminSettings: permissionManager.requirePermission(
+    "admin.settings.manage",
+  ),
+});
 
-/**
- * A config field arriving as a JSON string (an import, or a client that
- * stringified it) must still reach storage as an object. Malformed input
- * becomes null rather than throwing inside a host save.
- */
-function safeParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+export default router;
 
 /** Seconds between status checks, or null to follow the global setting. */
 function normalizeStatusInterval(value: unknown): number | null {
