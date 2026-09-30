@@ -81,6 +81,7 @@ export interface TerminalBehavior {
   localEcho: HostLocalEcho;
   passwordPromptAutoFill: boolean;
   sudoPasswordAutoFill: boolean;
+  autoReconnect: boolean;
 }
 
 /** Everything the host editor's Terminal tab edits. */
@@ -121,6 +122,7 @@ export const BEHAVIOR_KEYS = [
   "localEcho",
   "passwordPromptAutoFill",
   "sudoPasswordAutoFill",
+  "autoReconnect",
 ] as const satisfies readonly (keyof TerminalBehavior)[];
 
 export const INHERIT_APPEARANCE_KEY = "inheritAppearance";
@@ -169,6 +171,7 @@ export const DEFAULT_BEHAVIOR: TerminalBehavior = {
   localEcho: "auto",
   passwordPromptAutoFill: true,
   sudoPasswordAutoFill: false,
+  autoReconnect: false,
 };
 
 export const DEFAULT_HOST_TERMINAL_SETTINGS: HostTerminalSettings = {

@@ -44,6 +44,7 @@
     "reconnect": "Reconnect",
     "reconnected": "Reconnected successfully",
     "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Connection lost, reconnecting...",
     "searchCaseSensitive": "Match Case",
     "searchClose": "Close (Escape)",
     "searchNext": "Next Match (Enter)",
@@ -352,6 +353,9 @@
       },
       "sudoPasswordAutoFill": {
         "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
       }
     },
     "user": {
@@ -479,6 +483,8 @@
     "none": "None",
     "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
     "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
     "rightClickSelectsWord": "Right Click Selects Word",
     "rightClickSelectsWordLabel": "Right-click Selects Word",
     "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",

@@ -702,6 +702,13 @@
             "labelKey": "settings.host.sudoPasswordAutoFill.label",
             "hidden": true,
             "default": false
+          },
+          {
+            "key": "autoReconnect",
+            "type": "boolean",
+            "labelKey": "settings.host.autoReconnect.label",
+            "hidden": true,
+            "default": false
           }
         ]
       },

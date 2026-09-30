@@ -721,6 +721,16 @@ export function HostTerminalSettings({
             />
           </SettingRow>
           <SettingRow
+            label={t("hosts.autoReconnectLabel")}
+            defaultKey="autoReconnect"
+            description={t("hosts.autoReconnectDesc")}
+          >
+            <FakeSwitch
+              checked={form.autoReconnect}
+              onChange={(v) => setField("autoReconnect", v)}
+            />
+          </SettingRow>
+          <SettingRow
             label={t("hosts.passwordPromptAutoFillLabel")}
             defaultKey="passwordPromptAutoFill"
             description={t("hosts.passwordPromptAutoFillDesc")}

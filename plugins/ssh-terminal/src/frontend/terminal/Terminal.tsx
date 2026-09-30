@@ -282,6 +282,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
     const localEchoRef = useRef<TerminalLocalEcho | null>(null);
     const sessionOriginRef = useRef<"local" | "remote">("local");
+    // Set while an auto reconnect runs, so the old output stays on screen.
+    const keepScrollbackRef = useRef(false);
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
@@ -1514,6 +1516,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       if (reconnectAttempts.current >= maxReconnectAttempts) {
         setIsConnecting(false);
+        keepScrollbackRef.current = false;
         shouldNotReconnectRef.current = true;
         setShowDisconnectedOverlay(true);
         addLog({
@@ -1526,7 +1529,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       isReconnectingRef.current = true;
 
-      if (terminal && !isAttachingSessionRef.current) {
+      if (
+        terminal &&
+        !isAttachingSessionRef.current &&
+        !keepScrollbackRef.current
+      ) {
         terminal.clear();
       }
 
@@ -1564,7 +1571,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (terminal && hostConfig) {
-          if (!isAttachingSessionRef.current) {
+          if (!isAttachingSessionRef.current && !keepScrollbackRef.current) {
             terminal.clear();
           }
           const cols = terminal.cols;
@@ -1929,6 +1936,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               errorMessage.toLowerCase().includes("timeout") ||
               errorMessage.toLowerCase().includes("network")
             ) {
+              if (keepScrollbackRef.current && !isUnmountingRef.current) {
+                // The host is still unreachable; try again after the backoff.
+                isConnectingRef.current = false;
+                wasDisconnectedBySSH.current = false;
+                attemptReconnection();
+                return;
+              }
               updateConnectionError(errorMessage);
               setIsConnected(false);
               if (terminal) {
@@ -1948,6 +1962,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   errorMessage.toLowerCase().includes("key"))) ||
               errorMessage.toLowerCase().includes("incorrect password")
             ) {
+              keepScrollbackRef.current = false;
               updateConnectionError(errorMessage);
               setIsConnecting(false);
               shouldNotReconnectRef.current = true;
@@ -1960,6 +1975,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             updateConnectionError(errorMessage);
             setIsConnecting(false);
           } else if (msg.type === "connected") {
+            if (keepScrollbackRef.current) {
+              keepScrollbackRef.current = false;
+              reconnectAttempts.current = 0;
+            }
             wasConnectedRef.current = true;
             setIsConnected(true);
             setIsConnecting(false);
@@ -2061,7 +2080,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               if (onClose) onClose();
             } else if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
-              setShowDisconnectedOverlay(true);
+              if (
+                termSettingsRef.current.autoReconnect &&
+                !isUnmountingRef.current
+              ) {
+                wasDisconnectedBySSH.current = false;
+                shouldNotReconnectRef.current = false;
+                reconnectAttempts.current = 0;
+                keepScrollbackRef.current = true;
+                terminal?.write(
+                  `
+[2m${t("terminal.autoReconnecting")}[0m
+`,
+                );
+                attemptReconnection();
+              } else {
+                setShowDisconnectedOverlay(true);
+              }
             } else if (!connectionErrorRef.current) {
               updateConnectionError(
                 msg.message || t("terminal.connectionRejected"),
@@ -2386,6 +2421,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (
           !wasConnectedRef.current &&
           !isAttachingSessionRef.current &&
+          !keepScrollbackRef.current &&
           event.wasClean &&
           (event.code === 1005 || event.code === 1000)
         ) {
