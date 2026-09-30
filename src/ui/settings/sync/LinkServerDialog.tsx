@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Switch } from "@/components/switch";
@@ -23,6 +23,11 @@ import {
   type SyncStatus,
 } from "@/api/sync-api";
 import { ProxySettingsFields } from "./ProxySettingsFields";
+import {
+  forgetServerUrl,
+  getSavedServerUrls,
+  rememberServerUrl,
+} from "./saved-servers";
 
 type Step = "server" | "signin" | "choose" | "finishing";
 
@@ -69,6 +74,7 @@ export function LinkServerDialog({
 }: LinkServerDialogProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>(relogin ? "signin" : "server");
+  const [savedUrls, setSavedUrls] = useState<string[]>(getSavedServerUrls);
   const [target, setTarget] = useState<ServerTarget>({
     serverUrl: relogin?.serverUrl ?? "",
     customHeaders: [],
@@ -157,6 +163,7 @@ export function LinkServerDialog({
         mode: chosen,
         serverName,
       });
+      rememberServerUrl(target.serverUrl);
       toast.success(t("sync.wizard.linked"));
       onLinked(status);
       onOpenChange(false);
@@ -268,6 +275,35 @@ export function LinkServerDialog({
               <p className="text-[10px] text-muted-foreground">
                 {t("sync.wizard.serverUrlHint")}
               </p>
+              {!relogin && savedUrls.length > 0 && (
+                <div className="flex flex-col gap-1 pt-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("sync.wizard.savedServers")}
+                  </span>
+                  {savedUrls.map((url) => (
+                    <div
+                      key={url}
+                      className="flex items-center border border-border hover:bg-muted"
+                    >
+                      <button
+                        type="button"
+                        className="flex-1 min-w-0 truncate px-2 py-1.5 text-left font-mono text-xs"
+                        onClick={() => setTarget({ ...target, serverUrl: url })}
+                      >
+                        {url}
+                      </button>
+                      <button
+                        type="button"
+                        title={t("sync.wizard.removeServer")}
+                        className="px-2 py-1.5 text-muted-foreground hover:text-destructive"
+                        onClick={() => setSavedUrls(forgetServerUrl(url))}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {problem && (

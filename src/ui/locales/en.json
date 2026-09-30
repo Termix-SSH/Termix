@@ -1982,6 +1982,8 @@
     "wizard": {
       "title": "Link to a Termix server",
       "reloginTitle": "Sign in again",
+      "savedServers": "Recent servers",
+      "removeServer": "Remove from the list",
       "serverDescription": "Enter the address you use to open Termix in your browser.",
       "signinDescription": "Sign in to {{url}}",
       "chooseDescription": "This device already has data. What should happen to it?",
