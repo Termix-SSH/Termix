@@ -147,7 +147,8 @@
     "uses": [
       "host-metrics.toolbar",
       "terminal.sendToActive",
-      "terminal.sendToSession"
+      "terminal.sendToSession",
+      "terminal.listSessions"
     ]
   }
 }
