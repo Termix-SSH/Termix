@@ -285,10 +285,13 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
         )}
         {!isDesktop && AuthEditor && (
           <AuthEditor
-            form={authFields}
-            setField={(key, value) =>
-              setAuthFields((current) => ({ ...current, [key]: value }))
-            }
+            form={{ ...authFields, ip: host, port, username }}
+            setField={(key, value) => {
+              if (key === "ip") setHost(String(value ?? ""));
+              else if (key === "port") setPort(String(value ?? ""));
+              else if (key === "username") setUsername(String(value ?? ""));
+              else setAuthFields((current) => ({ ...current, [key]: value }));
+            }}
           />
         )}
         <div className="flex flex-col gap-1.5 pt-1">

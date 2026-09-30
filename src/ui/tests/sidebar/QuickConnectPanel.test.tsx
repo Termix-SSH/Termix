@@ -14,6 +14,16 @@ vi.mock("@/api/credentials-api", () => ({
 vi.mock("@/api/auth-methods-api", () => ({
   getSshAuthProviders: vi.fn(async () => []),
 }));
+const authMocks = vi.hoisted(() => ({
+  providers: [] as Record<string, unknown>[],
+  editors: [] as Record<string, unknown>[],
+}));
+vi.mock("@/hooks/useSshAuthProviders", () => ({
+  useSshAuthProviders: () => ({ providers: authMocks.providers }),
+}));
+vi.mock("@/plugin-host/auth-registry", () => ({
+  useSshAuthEditors: () => authMocks.editors,
+}));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -30,6 +40,8 @@ import {
 
 afterEach(() => {
   cleanup();
+  authMocks.providers = [];
+  authMocks.editors = [];
   resetHostContributions();
 });
 
@@ -127,5 +139,52 @@ describe("QuickConnectPanel", () => {
     expect(
       screen.getByText("newUi.sidebar.quickConnect.noTarget"),
     ).toBeTruthy();
+  });
+
+  it("lets a plugin auth editor fill the host address", async () => {
+    registerDefaults();
+    authMocks.providers = [
+      {
+        type: "password",
+        labelKey: "password",
+        available: true,
+        quickConnect: true,
+      },
+      {
+        type: "tailnet",
+        labelKey: "tailnet",
+        available: true,
+        quickConnect: true,
+      },
+    ];
+    authMocks.editors = [
+      {
+        id: "tailnet",
+        component: ({
+          setField,
+        }: {
+          setField: (k: string, v: unknown) => void;
+        }) => (
+          <button type="button" onClick={() => setField("ip", "100.64.0.5")}>
+            pick device
+          </button>
+        ),
+      },
+    ];
+    const onConnect = vi.fn();
+    render(<QuickConnectPanel onConnect={onConnect} />);
+    fireEvent.change(screen.getByDisplayValue("password"), {
+      target: { value: "tailnet" },
+    });
+    fireEvent.click(screen.getByText("pick device"));
+    const input = screen.getByPlaceholderText(
+      "newUi.sidebar.quickConnect.hostPlaceholder",
+    ) as HTMLInputElement;
+    expect(input.value).toBe("100.64.0.5");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onConnect).toHaveBeenCalledWith(
+      expect.objectContaining({ ip: "100.64.0.5", authType: "tailnet" }),
+      "terminal",
+    );
   });
 });
