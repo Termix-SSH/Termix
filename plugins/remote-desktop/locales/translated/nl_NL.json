@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtueel netwerk",
-    "unencryptedShell": "Niet-versleutelde shell"
+    "unencryptedShell": "Niet-versleutelde shell",
+    "docsLink": "Documenten bekijken"
   },
   "onboarding": {
     "feature_desktop": "Extern bureaublad",
@@ -274,5 +275,8 @@
         "label": "guacd URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Externe server vereist. Verbind een externe server in de instellingen om dit verbindingstype te gebruiken."
   }
 }

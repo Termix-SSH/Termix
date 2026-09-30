@@ -99,7 +99,7 @@ describe("onMetrics", () => {
     });
 
     expect(run).toHaveBeenCalledTimes(1);
-    expect(run.mock.calls[0][0]).toMatchObject({
+    expect((run.mock.calls[0] as unknown[])[0]).toMatchObject({
       triggerType: "metric_threshold",
       triggerHostId: 7,
     });

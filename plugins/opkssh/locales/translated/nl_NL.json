@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Authenticatie mislukt. Controleer uw inloggegevens en probeer het opnieuw.",
     "timeout": "De authenticatie is mislukt vanwege een time-out. Probeer het opnieuw."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

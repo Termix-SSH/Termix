@@ -493,6 +493,8 @@ router.get(
           name: plugin.manifest.name,
           version: plugin.manifest.version,
           source: plugin.source,
+          // A bundled plugin updated from a signed .tmxplug can be mirrored.
+          artifact: !!plugin.artifact,
           enabled: records.get(plugin.id)?.state === "enabled",
           active: plugin.state === "active",
           desktop: plugin.manifest.desktop ?? "mirror",
@@ -517,7 +519,7 @@ router.get(
  * /sync/v2/plugins/{id}/package:
  *   get:
  *     summary: Download an installed plugin so a linked desktop can install it
- *     description: Only for plugins installed on this server, not bundled ones. Sends the original .tmxplug when there is one, with its signature in the X-Termix-Signature header, otherwise a fresh archive of the plugin folder.
+ *     description: Only for plugins installed on this server, or bundled ones replaced by a signed update. Sends the original .tmxplug when there is one, with its signature in the X-Termix-Signature header, otherwise a fresh archive of the plugin folder.
  *     tags:
  *       - Sync
  *     parameters:
@@ -541,11 +543,10 @@ router.get(
       const plugin = (await listPluginsForDesktop()).find(
         (candidate) => candidate.id === pluginId,
       );
-      if (!plugin || plugin.source !== "user") {
+      if (!plugin || (plugin.source !== "user" && !plugin.artifact)) {
         return res.status(404).json({ error: "Plugin not found" });
       }
-      const { getPluginsDir } = await import("../../plugins/paths.js");
-      const artifact = path.join(getPluginsDir(), `${pluginId}.tmxplug`);
+      const artifact = plugin.artifact ?? "";
       res.setHeader("Content-Type", "application/gzip");
       if (fs.existsSync(artifact)) {
         const sig = `${artifact}.sig`;

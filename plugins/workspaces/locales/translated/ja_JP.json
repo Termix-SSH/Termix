@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "ワークスペース",
     "workflow_workspaces_desc": "開いているタブのセットを保存し、後でレイアウト全体を再度開くことができます。"
+  },
+  "hosts": {
+    "docsLink": "ドキュメントを表示"
   }
 }

@@ -1,10 +1,6 @@
 import type { ComponentType } from "react";
 import { Network, Plug } from "lucide-react";
-import type {
-  HomepageWidgetContribution,
-  TabProps,
-  TermixApp,
-} from "@termix/plugin-sdk/frontend";
+import type { TabProps, TermixApp } from "@termix/plugin-sdk/frontend";
 import { TunnelTab } from "./TunnelTab";
 import { HostTunnelsSection } from "./HostTunnelsSection";
 import {
@@ -24,7 +20,13 @@ function TunnelTabView({ host }: TabProps) {
   return <TunnelTab host={host} />;
 }
 
+/** This plugin's C2S relay socket, which the desktop app dials on the linked server. */
+const C2S_RELAY_PATH = "/plugin-ws/tunnels/c2s/stream";
+
 export function activate(app: TermixApp): void {
+  if (typeof window !== "undefined" && window.electronAPI?.setC2SRelayPath) {
+    void window.electronAPI.setC2SRelayPath(C2S_RELAY_PATH);
+  }
   // apiFor("remote") hands back app.api itself outside the desktop app.
   const remote = app.apiFor("remote");
   setTunnelsApi(app.api, {
@@ -84,7 +86,7 @@ export function activate(app: TermixApp): void {
     icon: Plug as ComponentType<{ className?: string }>,
   });
 
-  app.registerHomepageWidget({
+  app.registerExtension("homepage.widgets", {
     id: "tunnel_widget",
     name: "Tunnel Manager",
     description: "Embedded SSH tunnel manager for a configured host",
@@ -93,9 +95,8 @@ export function activate(app: TermixApp): void {
     defaultConfig: { hostId: 0 },
     defaultSize: { w: GRID_SIZE * 16, h: GRID_SIZE * 10 },
     minSize: { w: GRID_SIZE * 8, h: GRID_SIZE * 6 },
-    component: TunnelWidget,
-    editFormComponent: TunnelWidgetEditForm,
-  } as HomepageWidgetContribution);
+    components: { view: TunnelWidget, editForm: TunnelWidgetEditForm },
+  });
 
   // The dashboard's active tunnel counter.
   app.registerAction(

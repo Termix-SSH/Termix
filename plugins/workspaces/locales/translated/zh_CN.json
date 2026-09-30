@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "工作区",
     "workflow_workspaces_desc": "保存当前打开的标签页组合，方便之后一键恢复整个布局。"
+  },
+  "hosts": {
+    "docsLink": "查看文档"
   }
 }

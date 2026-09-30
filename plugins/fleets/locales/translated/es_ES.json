@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flotas"
+  },
+  "hosts": {
+    "docsLink": "Ver documentación",
+    "sharing": {
+      "customHoursPlaceholder": "Horas hasta que caduque el acceso",
+      "expiry": {
+        "never": "Nunca",
+        "oneHour": "1 hora",
+        "oneDay": "24 horas",
+        "sevenDays": "7 días",
+        "thirtyDays": "30 días",
+        "custom": "Personalizado"
+      },
+      "expiryLabel": "Caducidad del acceso",
+      "levels": {
+        "connect": {
+          "label": "Conectar",
+          "description": "Abrir solo sesiones: terminal, escritorio remoto, gestor de archivos, túneles y Docker. Sin acceso a la configuración del host."
+        },
+        "view": {
+          "label": "Ver",
+          "description": "Conectar, además de ver la configuración del host. Los secretos nunca se muestran."
+        },
+        "edit": {
+          "label": "Editar",
+          "description": "Visualice y modifique la configuración del host que no requiere autenticación. La autenticación SSH del propietario permanece privada y solo accesible para él."
+        },
+        "manage": {
+          "label": "Gestionar",
+          "description": "Editar, además de compartir el host con otros, cambiar niveles de permiso y revocar el acceso."
+        }
+      },
+      "noMatches": "No se han encontrado coincidencias",
+      "permissionLevelLabel": "Nivel de permiso",
+      "rolesTab": "Roles",
+      "searchPlaceholder": "Buscar usuarios o roles...",
+      "shareButton": "Compartir",
+      "shareWithCount": "Compartir ({{count}})",
+      "usersTab": "Usuarios"
+    }
   }
 }

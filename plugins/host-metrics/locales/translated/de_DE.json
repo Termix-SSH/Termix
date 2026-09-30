@@ -51,10 +51,6 @@
     "processesRunning": "laufend",
     "loginStats": "SSH-Anmeldestatistiken",
     "noRecentLoginData": "Keine aktuellen Anmeldedaten",
-    "executingQuickAction": "{{name}} wird ausgeführt...",
-    "quickActionSuccess": "{{name}} erfolgreich abgeschlossen",
-    "quickActionFailed": "{{name}} fehlgeschlagen",
-    "quickActionError": "Fehler beim Ausführen von {{name}}",
     "ports": {
       "title": "Lauschende Ports",
       "protocol": "Protokoll",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Hinzufügen",
     "visibleWidgets": "Sichtbare Widgets",
     "widgetsMovedToHostMetrics": "Karten werden jetzt direkt im Tab „Host-Metriken“ hinzugefügt, angeordnet und in der Größe verändert. Öffnen Sie die Host-Metriken für diesen Host und verwenden Sie „Anpassen“, um auszuwählen, welche Karten angezeigt werden.",
-    "quickActionsLabel": "Schnellaktionen",
-    "quickActionsToolbar": "Schnellaktionen erscheinen als Schaltflächen in der Host-Metriken-Symbolleiste zur Ausführung von Befehlen mit einem Klick.",
-    "noQuickActions": "Noch keine Schnellaktionen.",
-    "buttonLabel": "Schaltflächenbeschriftung",
-    "selectSnippetPlaceholder": "Snippet auswählen...",
-    "addActionBtn": "Aktion hinzufügen",
     "hostNotFound": "Host nicht gefunden",
     "loadingHost": "Host wird geladen..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Datenträger"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Abbrechen",
-        "confirmRunButton": "Ausführen",
-        "confirmRunMessage": "„{{name}}“ ausführen?"
-      }
-    }
   },
   "terminal": {
     "connected": "Verbunden"

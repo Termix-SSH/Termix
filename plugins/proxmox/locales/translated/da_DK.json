@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimum 15 sekunder. Hvor ofte skal Proxmox-nodestatistikker opdateres.",
     "proxmoxStatsNodeOverride": "Tilsidesættelse af nodenavn",
     "proxmoxStatsNodeOverrideDesc": "Tilsidesæt automatisk detektion af Proxmox-nodenavnet (registreres som standard via værtsnavn).",
-    "proxmoxStatsNodeOverridePlaceholder": "Automatisk registreret fra værtsnavn"
+    "proxmoxStatsNodeOverridePlaceholder": "Automatisk registreret fra værtsnavn",
+    "docsLink": "Se dokumenter",
+    "hostNotFound": "Værten blev ikke fundet",
+    "loadingHost": "Indlæser vært...",
+    "none": "Ingen",
+    "proxmoxGuestsSelected_one": "{{count}} gæst — {{selected}} valgt",
+    "proxmoxGuestsSelected_other": "{{count}} gæster — {{selected}} valgt",
+    "proxmoxImportButton_one": "Importér {{count}} vært",
+    "proxmoxImportButton_other": "Importér {{count}} værter"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox-statistik",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Der blev ikke fundet nogen VM'er eller LXC-containere på denne node.",
     "noGuestsMatch": "Ingen gæster matcher de nuværende filtre."
+  },
+  "terminal": {
+    "connected": "Forbundet"
   }
 }

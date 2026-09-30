@@ -66,7 +66,8 @@ vi.mock("../../utils/audit-logger.js", () => ({
   getRequestMeta: () => ({ ipAddress: "", userAgent: "" }),
 }));
 
-const { AuthManager } = await import("../../utils/auth-manager.js");
+const { AuthManager, setPluginImpersonationCheck, allowsAdminImpersonation } =
+  await import("../../utils/auth-manager.js");
 const authManager = AuthManager.getInstance();
 const middleware = authManager.createAuthMiddleware();
 
@@ -215,5 +216,49 @@ describe("AuthManager admin impersonation", () => {
     const { req, nexted } = await runMiddleware(token("regular1"));
     expect(nexted).toBe(true);
     expect((req as unknown as { userId: string }).userId).toBe("regular1");
+  });
+
+  it("rejects the header on a plugin route whose manifest did not opt in", async () => {
+    setPluginImpersonationCheck((pluginId) => pluginId === "opted-in");
+    try {
+      const { res, nexted } = await runMiddleware(token("admin1"), {
+        "x-admin-target-user": "target1",
+        __url: "/plugin-api/other/items",
+      });
+      expect(nexted).toBe(false);
+      expect(res.statusCode).toBe(403);
+      expect((res.body as { code?: string }).code).toBe(
+        "IMPERSONATION_NOT_ALLOWED",
+      );
+    } finally {
+      setPluginImpersonationCheck(() => false);
+    }
+  });
+
+  it("lets an admin act for a user on a plugin that opted in", async () => {
+    setPluginImpersonationCheck((pluginId) => pluginId === "opted-in");
+    try {
+      const { req, nexted } = await runMiddleware(token("admin1"), {
+        "x-admin-target-user": "target1",
+        __url: "/plugin-api/opted-in/items?x=1",
+      });
+      expect(nexted).toBe(true);
+      expect((req as unknown as { userId: string }).userId).toBe("target1");
+    } finally {
+      setPluginImpersonationCheck(() => false);
+    }
+  });
+
+  it("matches the plugin id exactly, not as a prefix", () => {
+    setPluginImpersonationCheck((pluginId) => pluginId === "opted-in");
+    try {
+      expect(allowsAdminImpersonation("/plugin-api/opted-in")).toBe(true);
+      expect(allowsAdminImpersonation("/plugin-api/opted-in-too/x")).toBe(
+        false,
+      );
+      expect(allowsAdminImpersonation("/users/sessions")).toBe(false);
+    } finally {
+      setPluginImpersonationCheck(() => false);
+    }
   });
 });

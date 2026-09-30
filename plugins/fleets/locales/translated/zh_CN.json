@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "舰队"
+  },
+  "hosts": {
+    "docsLink": "查看文档",
+    "sharing": {
+      "customHoursPlaceholder": "过期前的小时数",
+      "expiry": {
+        "never": "永不过期",
+        "oneHour": "1 小时",
+        "oneDay": "24 小时",
+        "sevenDays": "7 天",
+        "thirtyDays": "30 天",
+        "custom": "自定义"
+      },
+      "expiryLabel": "访问有效期",
+      "levels": {
+        "connect": {
+          "label": "连接",
+          "description": "仅打开会话：终端、远程桌面、文件管理器、隧道和 Docker。无权访问主机配置。"
+        },
+        "view": {
+          "label": "查看",
+          "description": "连接，并查看主机配置。凭据信息从不显示。"
+        },
+        "edit": {
+          "label": "编辑",
+          "description": "查看并修改无需身份验证的主机设置。所有者的 SSH 身份验证信息将保持私密，仅限所有者本人查看。"
+        },
+        "manage": {
+          "label": "管理",
+          "description": "编辑，并与其他用户共享主机、更改权限级别及撤销访问。"
+        }
+      },
+      "noMatches": "未找到匹配项",
+      "permissionLevelLabel": "权限级别",
+      "rolesTab": "角色",
+      "searchPlaceholder": "搜索用户或角色...",
+      "shareButton": "共享",
+      "shareWithCount": "共享（{{count}}）",
+      "usersTab": "用户"
+    }
   }
 }

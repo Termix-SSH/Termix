@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flotily"
+  },
+  "hosts": {
+    "docsLink": "Zobrazit dokumenty",
+    "sharing": {
+      "customHoursPlaceholder": "Hodiny do vypršení přístupu",
+      "expiry": {
+        "never": "Nikdy",
+        "oneHour": "1 hodina",
+        "oneDay": "24 hodin",
+        "sevenDays": "7 dní",
+        "thirtyDays": "30 dní",
+        "custom": "Zvyk"
+      },
+      "expiryLabel": "Vypršení přístupu",
+      "levels": {
+        "connect": {
+          "label": "Připojit",
+          "description": "Pouze otevřené relace: terminál, vzdálená plocha, správce souborů, tunely a Docker. Bez přístupu ke konfiguraci hostitele."
+        },
+        "view": {
+          "label": "Pohled",
+          "description": "Připojte se a podívejte se na konfiguraci hostitele. Tajné kódy se nikdy nezobrazují."
+        },
+        "edit": {
+          "label": "Upravit",
+          "description": "Zobrazení a úprava nastavení hostitele bez ověřování. Ověřování vlastníka přes SSH zůstává soukromé a pouze pro vlastníka."
+        },
+        "manage": {
+          "label": "Spravovat",
+          "description": "Upravovat a sdílet hostitele s ostatními, měnit úrovně oprávnění a odebírat přístup."
+        }
+      },
+      "noMatches": "Nenalezeny žádné shody",
+      "permissionLevelLabel": "Úroveň oprávnění",
+      "rolesTab": "Role",
+      "searchPlaceholder": "Hledat uživatele nebo role...",
+      "shareButton": "Podíl",
+      "shareWithCount": "Sdílet ({{count}})",
+      "usersTab": "Uživatelé"
+    }
   }
 }

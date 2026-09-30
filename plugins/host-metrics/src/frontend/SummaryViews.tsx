@@ -27,7 +27,7 @@ function RowBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-/** CPU, RAM and disk bars in a dashboard host row ("dashboard.hostMetrics"). */
+/** CPU, RAM and disk bars in a dashboard host row ("dashboard.hostRow"). */
 export function createDashboardHostMetrics(store: MetricsSummaryStore) {
   return function DashboardHostMetrics(props: Record<string, unknown>) {
     const { t } = useTranslation();

@@ -83,5 +83,8 @@
         "description": "Permiteți asistentului AI să vă ajute în terminalul acestei gazde. Dezactivat în mod implicit, dar este nevoie ca AI să fie activat pentru contul dvs."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Vizualizați documentele"
   }
 }

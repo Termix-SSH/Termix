@@ -5,21 +5,18 @@ import {
   CardContent,
   ConnectionLogProvider,
   ConnectionScreen,
-  DEFAULT_TERMINAL_CONFIG,
   RobustClipboardProvider,
   Select2,
-  TERMINAL_FONTS,
   copyToClipboard,
-  ensureTerminalFontsLoaded,
   isElectron,
   pluginWsUrl,
   readFromClipboard,
   resolveConnectionOrigin,
-  resolveTermixThemeColors,
   useAppTheme as useTheme,
   useConnectionLog,
 } from "@termix/plugin-sdk/ui";
 import type { DockerHost } from "../types";
+import { useConsoleLook, type ConsoleLook } from "./console-look";
 import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
@@ -31,6 +28,20 @@ import {
   useTranslation,
   useConnectionRetry,
 } from "@termix/plugin-sdk/frontend";
+
+function applyConsoleLook(
+  terminal: NonNullable<ReturnType<typeof useXTerm>["instance"]>,
+  look: ConsoleLook,
+): void {
+  terminal.options.cursorBlink = look.cursorBlink;
+  terminal.options.cursorStyle = look.cursorStyle;
+  terminal.options.fontSize = look.fontSize;
+  terminal.options.fontFamily = look.fontFamily;
+  terminal.options.scrollback = look.scrollback;
+  terminal.options.letterSpacing = look.letterSpacing;
+  terminal.options.lineHeight = look.lineHeight;
+  terminal.options.theme = { ...look.colors };
+}
 
 interface ConsoleTerminalProps {
   containerId: string;
@@ -60,20 +71,14 @@ function ConsoleTerminalInner({
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const { addLog, clearLogs } = useConnectionLog();
 
-  const terminalConfig = React.useMemo(
-    () => ({
-      ...DEFAULT_TERMINAL_CONFIG,
-      ...(hostConfig.terminalConfig as Partial<
-        typeof DEFAULT_TERMINAL_CONFIG
-      > | null),
-    }),
-    [hostConfig.terminalConfig],
+  // The SSH terminal's look on this host, or plain colors while it is off.
+  const look = useConsoleLook(
+    hostConfig as unknown as Parameters<typeof useConsoleLook>[0],
+    appTheme,
   );
-
-  const themeColors = React.useMemo(() => {
-    const activeTheme = terminalConfig.theme;
-    return resolveTermixThemeColors(activeTheme, appTheme);
-  }, [terminalConfig.theme, appTheme]);
+  const themeColors = look.colors;
+  const lookRef = React.useRef<ConsoleLook>(look);
+  lookRef.current = look;
 
   const [isConnected, setIsConnected] = React.useState(false);
   const [isConnecting, setIsConnecting] = React.useState(false);
@@ -96,19 +101,7 @@ function ConsoleTerminalInner({
     terminal.loadAddon(clipboardAddon);
     terminal.loadAddon(webLinksAddon);
 
-    const fontConfig = TERMINAL_FONTS.find(
-      (f) => f.value === terminalConfig.fontFamily,
-    );
-    const fontFamily = fontConfig?.fallback ?? TERMINAL_FONTS[0].fallback;
-    ensureTerminalFontsLoaded(fontConfig?.value ?? TERMINAL_FONTS[0].value);
-
-    terminal.options.cursorBlink = terminalConfig.cursorBlink;
-    terminal.options.cursorStyle = terminalConfig.cursorStyle;
-    terminal.options.fontSize = terminalConfig.fontSize;
-    terminal.options.fontFamily = fontFamily;
-    terminal.options.scrollback = terminalConfig.scrollback;
-    terminal.options.letterSpacing = terminalConfig.letterSpacing;
-    terminal.options.lineHeight = terminalConfig.lineHeight;
+    applyConsoleLook(terminal, lookRef.current);
 
     const readTextFromClipboard = async (): Promise<string> => {
       return readFromClipboard();
@@ -199,31 +192,6 @@ function ConsoleTerminalInner({
       return true;
     });
 
-    terminal.options.theme = {
-      background: themeColors.background,
-      foreground: themeColors.foreground,
-      cursor: themeColors.cursor,
-      cursorAccent: themeColors.cursorAccent,
-      selectionBackground: themeColors.selectionBackground,
-      selectionForeground: themeColors.selectionForeground,
-      black: themeColors.black,
-      red: themeColors.red,
-      green: themeColors.green,
-      yellow: themeColors.yellow,
-      blue: themeColors.blue,
-      magenta: themeColors.magenta,
-      cyan: themeColors.cyan,
-      white: themeColors.white,
-      brightBlack: themeColors.brightBlack,
-      brightRed: themeColors.brightRed,
-      brightGreen: themeColors.brightGreen,
-      brightYellow: themeColors.brightYellow,
-      brightBlue: themeColors.brightBlue,
-      brightMagenta: themeColors.brightMagenta,
-      brightCyan: themeColors.brightCyan,
-      brightWhite: themeColors.brightWhite,
-    };
-
     setTimeout(() => {
       fitAddon.fit();
     }, 100);
@@ -262,7 +230,13 @@ function ConsoleTerminalInner({
 
       terminal.dispose();
     };
-  }, [terminal, t, terminalConfig, themeColors]);
+  }, [terminal, t]);
+
+  React.useEffect(() => {
+    if (!terminal) return;
+    applyConsoleLook(terminal, look);
+    fitAddonRef.current?.fit();
+  }, [terminal, look]);
 
   const disconnect = React.useCallback(() => {
     if (wsRef.current) {

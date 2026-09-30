@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Izinkan sertifikat tidak valid",
     "webUiIgnoreCertDesc": "Hanya untuk endpoint langsung. Loopback sudah dikecualikan, jadi ini tidak berpengaruh pada endpoint tunnel.",
     "webUiRemoveEndpoint": "Hapus titik akhir",
-    "webUiOpenFailed": "Gagal membuka titik akhir web."
+    "webUiOpenFailed": "Gagal membuka titik akhir web.",
+    "bindHost": "Host Terikat"
   }
 }

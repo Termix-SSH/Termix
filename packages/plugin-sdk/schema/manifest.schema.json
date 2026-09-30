@@ -82,12 +82,12 @@
         "termix": {
           "type": "string",
           "minLength": 1,
-          "description": "Display string only. Never enforced."
+          "description": "Semver range of Termix releases the plugin runs on, e.g. \">=2.9.0\"."
         },
         "api": {
           "type": "string",
-          "pattern": "^[0-9]+$",
-          "description": "Plugin SDK major version. The real compatibility gate."
+          "minLength": 1,
+          "description": "Semver range of the plugin API it needs, e.g. \"1\" or \"^1.2\"."
         }
       }
     },
@@ -115,6 +115,8 @@
           "notify:send",
           "audit:read",
           "desktop:window",
+          "users:impersonate",
+          "db:core-refs",
           "hosts:read",
           "db:own",
           "kv:own",
@@ -278,6 +280,117 @@
         },
         "guest": {
           "type": "boolean"
+        },
+        "protocols": {
+          "type": "array",
+          "description": "Connection protocols whose per-host login core stores, encrypts, shares and syncs for the plugin.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,31}$",
+                "not": {
+                  "enum": ["ssh"]
+                }
+              },
+              "credentialFields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["key"],
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9]{0,31}$",
+                      "not": {
+                        "enum": [
+                          "username",
+                          "password",
+                          "authType",
+                          "credentialId"
+                        ]
+                      }
+                    },
+                    "secret": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "defaultPort": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "hostLoginFallback": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "enum": ["username", "password"]
+                }
+              }
+            }
+          }
+        },
+        "keybindingActions": {
+          "type": "array",
+          "description": "Keybinding actions the plugin adds, with the parameters a saved binding carries.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9.-]{0,63}$",
+                "not": {
+                  "enum": [
+                    "nextTab",
+                    "previousTab",
+                    "openCommandPalette",
+                    "reconnectSession"
+                  ]
+                }
+              },
+              "params": {
+                "type": "object",
+                "propertyNames": {
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9]{0,31}$",
+                  "not": {
+                    "const": "type"
+                  }
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["type"],
+                  "properties": {
+                    "type": {
+                      "enum": ["string", "boolean"]
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "pattern": {
+                      "type": "string"
+                    },
+                    "maxLength": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "syncEntity": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9]*$"
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "syncEntities": {
           "type": "array",
@@ -790,7 +903,21 @@
                       "defaultFrom": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A non-secret admin field whose value a new host starts with."
+                        "description": "Deprecated and ignored. Host defaults cover every host field."
+                      },
+                      "defaultable": {
+                        "type": "boolean",
+                        "description": "Whether the field can have a host default. On by default for non-secret fields."
+                      },
+                      "defaultLevels": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": { "enum": ["admin", "user", "folder"] },
+                        "description": "Levels that may set a default for the field. All three by default."
+                      },
+                      "personal": {
+                        "type": "boolean",
+                        "description": "A look-and-feel value: a user a host is shared with gets their own default for it."
                       },
                       "shareRead": {
                         "type": "string",
@@ -800,6 +927,15 @@
                       "ownerOnly": {
                         "type": "boolean",
                         "description": "Only the host's owner may change it."
+                      },
+                      "secretKeys": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": "JSON fields only: keys inside the stored object that hold secrets."
                       }
                     }
                   }
@@ -840,6 +976,10 @@
           "additionalProperties": false,
           "description": "HTTP options for the plugin's /plugin-api/<id>/ router.",
           "properties": {
+            "adminImpersonation": {
+              "type": "boolean",
+              "description": "An admin may call the plugin's routes on behalf of another user with the X-Admin-Target-User header."
+            },
             "legacyPaths": {
               "type": "array",
               "description": "Old URLs under /<plugin id>/ served by the plugin's router with that prefix removed.",
@@ -864,7 +1004,9 @@
                     "type": "string",
                     "pattern": "^(/[A-Za-z0-9_.-]+)+$"
                   },
-                  "status": { "enum": [307, 308] }
+                  "status": {
+                    "enum": [307, 308]
+                  }
                 }
               }
             }
@@ -942,6 +1084,16 @@
                 ]
               }
             }
+          }
+        },
+        "uses": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Other plugins' action, slot and extension point ids this plugin calls, fills or extends.",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$"
           }
         }
       }

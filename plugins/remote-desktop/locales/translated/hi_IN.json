@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "वर्चुअल नेटवर्क",
-    "unencryptedShell": "अनएन्क्रिप्टेड शेल"
+    "unencryptedShell": "अनएन्क्रिप्टेड शेल",
+    "docsLink": "दस्तावेज़ देखें"
   },
   "onboarding": {
     "feature_desktop": "दूरवर्ती डेस्कटॉप",
@@ -274,5 +275,8 @@
         "label": "guacd URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "रिमोट सर्वर आवश्यक है। इस कनेक्शन प्रकार का उपयोग करने के लिए सेटिंग्स में जाकर रिमोट सर्वर कनेक्ट करें।"
   }
 }

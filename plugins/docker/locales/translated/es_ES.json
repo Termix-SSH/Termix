@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Se requiere un servidor remoto. Conecte un servidor remoto en Configuración para usar este tipo de conexión."
+  },
+  "hosts": {
+    "docsLink": "Ver documentación",
+    "hostNotFound": "Host no encontrado",
+    "loadingHost": "Cargando host..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "No se pudo leer del portapapeles. Asegúrese de que los permisos del portapapeles estén concedidos.",
+    "clipboardWriteFailed": "Error al copiar al portapapeles. Asegúrese de que la página se sirva a través de HTTPS o en localhost."
   }
 }

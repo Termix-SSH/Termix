@@ -1,7 +1,19 @@
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
 import { lazy, Suspense, type ComponentType } from "react";
-import { History, Laptop, SquareTerminal, Terminal } from "lucide-react";
+import {
+  Braces,
+  Copy,
+  Hammer,
+  History,
+  Laptop,
+  SquareTerminal,
+  Terminal,
+} from "lucide-react";
 import type {
   PanelProps,
+  PluginHostRecord,
+  PluginTabRecord,
   StandaloneViewProps,
   TabProps,
   TermixApp,
@@ -24,6 +36,30 @@ import { ImageStorageTest } from "./settings/ImageStorageTest";
 import { HostTerminalSection } from "./settings/HostTerminalSection";
 import { resetTouchInputSettingsCache } from "./terminal/touch-input-settings-store";
 import { hostSetting } from "./terminal-api";
+import { SshToolsPanel } from "./ssh-tools/SshToolsPanel";
+import { MacrosPanel } from "./macros/MacrosPanel";
+import {
+  TERMINAL_KEYBINDING_DEFAULTS,
+  validateSendControlCode,
+  validateSendText,
+} from "./lib/keybinding-dispatch";
+import {
+  PasteNote,
+  SendControlCodeEditor,
+  SendTextEditor,
+} from "./lib/keybinding-editors";
+import { TerminalPreview } from "./look/TerminalPreview";
+import { installTerminalGlobalStyles } from "./look/terminal-global-styles";
+import {
+  listTerminalThemes,
+  resolveTerminalLook,
+  type ResolveLookRequest,
+} from "./look/look-actions";
+import {
+  invalidateTerminalClientSettings,
+  resetTerminalClientSettings,
+} from "./terminal-settings";
+import { moveLocalTerminalPreferences } from "./settings/local-preferences-migration";
 
 const LocalTerminal = lazy(() =>
   import("./local-terminal/LocalTerminal").then((m) => ({
@@ -65,6 +101,7 @@ function LocalTerminalTab({ tab, isVisible }: TabProps) {
  * history panel and the places other plugins can plug into a session.
  */
 export function activate(app: TermixApp): void {
+  app.onDispose(installTerminalGlobalStyles());
   app.registerTab(
     "terminal",
     TerminalTabWithRegistry as unknown as ComponentType<TabProps>,
@@ -81,6 +118,26 @@ export function activate(app: TermixApp): void {
       preload: loadTerminal,
     },
   );
+
+  app.registerAction(
+    "terminal.duplicateTab",
+    ((_handle: unknown, tab?: PluginTabRecord) => {
+      if (tab?.type === "terminal" && tab.host) {
+        app.tabs.openTab(tab.host, "terminal", { forceNewTab: true });
+      }
+    }) as never,
+    { permission: "use" },
+  );
+  app.registerSlotContribution("tab.menu", {
+    actionId: "terminal.duplicateTab",
+    titleKey: "terminal.duplicateTab",
+    icon: Copy,
+    kind: "button",
+    when: ({ tab }) => {
+      const target = tab as PluginTabRecord | undefined;
+      return target?.type === "terminal" && !!target.host;
+    },
+  });
 
   app.registerHostAction({
     id: "terminal",
@@ -101,6 +158,7 @@ export function activate(app: TermixApp): void {
     titleKey: "hosts.tabTerminal",
     icon: SquareTerminal,
     order: 10,
+    defaults: true,
     component: HostTerminalSection,
   });
 
@@ -146,6 +204,61 @@ export function activate(app: TermixApp): void {
     rightDockable: true,
     separatorAfter: true,
   });
+
+  app.registerPanel(
+    "ssh-tools",
+    SshToolsPanel as unknown as ComponentType<PanelProps>,
+  );
+  app.registerRailItem({
+    id: "ssh-tools",
+    icon: Hammer,
+    titleKey: "nav.sshTools",
+    after: "quick-connect",
+    hideable: true,
+    mobilePrimary: true,
+    promotable: true,
+    rightDockable: true,
+    separatorAfter: true,
+  });
+
+  app.registerPanel(
+    "macros",
+    MacrosPanel as unknown as ComponentType<PanelProps>,
+  );
+  app.registerRailItem({
+    id: "macros",
+    icon: Braces,
+    titleKey: "nav.macros",
+    after: "ssh-tools",
+    hideable: true,
+    promotable: true,
+    rightDockable: true,
+    separatorAfter: true,
+  });
+
+  // The keys a user can bind to the terminal's own actions, and its
+  // built-in keys they can rebind. The terminal runs these itself.
+  app.registerKeybindingAction({ id: "copy", titleKey: "keybindings.copy" });
+  app.registerKeybindingAction({
+    id: "paste",
+    titleKey: "keybindings.paste",
+    editor: PasteNote,
+  });
+  app.registerKeybindingAction({
+    id: "sendControlCode",
+    titleKey: "keybindings.sendControlCode",
+    editor: SendControlCodeEditor,
+    validate: validateSendControlCode,
+  });
+  app.registerKeybindingAction({
+    id: "sendText",
+    titleKey: "keybindings.sendText",
+    editor: SendTextEditor,
+    validate: validateSendText,
+  });
+  for (const binding of TERMINAL_KEYBINDING_DEFAULTS) {
+    app.registerKeybindingDefault(binding);
+  }
 
   // Places other plugins can fill: toolbar buttons and readouts, a side
   // panel and overlays that follow the session's connection flow.
@@ -199,8 +312,34 @@ export function activate(app: TermixApp): void {
       },
     })) as never);
 
+  // The terminal look for other terminal-like surfaces (docker, serial,
+  // proxmox), which must not import this plugin. Each answers undefined
+  // while this plugin is off, and the caller falls back to plain colors.
+  app.registerComponent(
+    "terminal.preview",
+    TerminalPreview as unknown as ComponentType<Record<string, unknown>>,
+  );
+  app.registerAction("terminal.resolveTheme", (async (
+    request: ResolveLookRequest & { hostId?: number | string } = {},
+  ) => {
+    let host: PluginHostRecord | null | undefined = request.host;
+    if (!host && request.hostId !== undefined) {
+      host =
+        app.getHost(request.hostId) ??
+        (await app.listHosts().catch(() => [])).find(
+          (entry) => String(entry.id) === String(request.hostId),
+        );
+    }
+    return resolveTerminalLook({ ...request, host });
+  }) as never);
+  app.registerAction("terminal.themes", () => listTerminalThemes());
+
   app.registerSettingsComponent("touchInput", TouchInputSettings);
   app.registerSettingsComponent("imageStorageTest", ImageStorageTest);
 
+  app.onSettingsChanged(() => invalidateTerminalClientSettings());
+  if (!app.guest) void moveLocalTerminalPreferences(app);
+
   app.onDispose(resetTouchInputSettingsCache);
+  app.onDispose(resetTerminalClientSettings);
 }

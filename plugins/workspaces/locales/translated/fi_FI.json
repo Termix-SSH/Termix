@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Työtilat",
     "workflow_workspaces_desc": "Tallenna joukko avoimia välilehtiä ja avaa koko asettelu uudelleen myöhemmin."
+  },
+  "hosts": {
+    "docsLink": "Näytä dokumentit"
   }
 }

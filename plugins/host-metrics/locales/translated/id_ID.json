@@ -51,10 +51,6 @@
     "processesRunning": "berlari",
     "loginStats": "Statistik Login SSH",
     "noRecentLoginData": "Tidak ada data login terbaru.",
-    "executingQuickAction": "Menjalankan {{name}}...",
-    "quickActionSuccess": "{{name}} berhasil diselesaikan",
-    "quickActionFailed": "{{name}} gagal",
-    "quickActionError": "Gagal mengeksekusi {{name}}",
     "ports": {
       "title": "Port Pendengaran",
       "protocol": "Protokol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Menambahkan",
     "visibleWidgets": "Widget yang Terlihat",
     "widgetsMovedToHostMetrics": "Kartu sekarang ditambahkan, diatur, dan diubah ukurannya langsung di tab Metrik Host. Buka Metrik Host untuk host ini dan gunakan Sesuaikan untuk memilih kartu mana yang akan ditampilkan.",
-    "quickActionsLabel": "Tindakan Cepat",
-    "quickActionsToolbar": "Tindakan cepat muncul sebagai tombol di bilah alat Metrik Host untuk eksekusi perintah sekali klik.",
-    "noQuickActions": "Belum ada tindakan cepat.",
-    "buttonLabel": "Label tombol",
-    "selectSnippetPlaceholder": "Pilih cuplikan...",
-    "addActionBtn": "Tambahkan Tindakan",
     "hostNotFound": "Host tidak ditemukan",
     "loadingHost": "Memuat host..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Membatalkan",
-        "confirmRunButton": "Berlari",
-        "confirmRunMessage": "Jalankan \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Terhubung"

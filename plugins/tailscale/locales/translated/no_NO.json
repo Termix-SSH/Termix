@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Åpne nettleseren for å autentisere",
     "tailscaleCheckWaiting": "Venter på Tailscale-autentisering...",
     "tailscaleCheckTimeout": "Tailscale-autentiseringen er tidsavbrutt. Prøv på nytt."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Koble til terminalen",
+        "usernameLabel": "Brukernavn"
+      }
+    }
   }
 }

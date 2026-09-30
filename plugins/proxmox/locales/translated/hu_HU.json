@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimum 15 másodperc. A Proxmox csomópont statisztikáinak frissítési gyakorisága.",
     "proxmoxStatsNodeOverride": "Csomópont nevének felülbírálása",
     "proxmoxStatsNodeOverrideDesc": "A Proxmox csomópont nevének automatikus észlelésének felülbírálása (alapértelmezés szerint a gazdagépnév alapján észlelhető).",
-    "proxmoxStatsNodeOverridePlaceholder": "Automatikusan felismerve a gazdagépnév alapján"
+    "proxmoxStatsNodeOverridePlaceholder": "Automatikusan felismerve a gazdagépnév alapján",
+    "docsLink": "Dokumentumok megtekintése",
+    "hostNotFound": "Nem található gazdagép",
+    "loadingHost": "Gazdagép betöltése...",
+    "none": "Egyik sem",
+    "proxmoxGuestsSelected_one": "{{count}} vendég — {{selected}} kiválasztva",
+    "proxmoxGuestsSelected_other": "{{count}} vendégek — {{selected}} kiválasztva",
+    "proxmoxImportButton_one": "Importálja a {{count}} gazdagépet",
+    "proxmoxImportButton_other": "{{count}} hosztok importálása"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox statisztikák",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Nem találhatók virtuális gépek vagy LXC konténerek ezen a csomóponton.",
     "noGuestsMatch": "Egyik vendég sem felel meg a jelenlegi szűrőknek."
+  },
+  "terminal": {
+    "connected": "Csatlakoztatva"
   }
 }

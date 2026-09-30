@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Sieć wirtualna",
-    "unencryptedShell": "Niezaszyfrowana powłoka"
+    "unencryptedShell": "Niezaszyfrowana powłoka",
+    "docsLink": "Zobacz dokumentację"
   },
   "onboarding": {
     "feature_desktop": "Zdalny pulpit",
@@ -274,5 +275,8 @@
         "label": "Adres URL guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
   }
 }

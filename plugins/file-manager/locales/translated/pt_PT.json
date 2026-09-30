@@ -382,7 +382,10 @@
     "defaultPathLabel": "Caminho Predefinido",
     "fileManagerPathHint": "O diretório a abrir quando o gestor de ficheiros for iniciado para este host",
     "fileManagerUrlCopied": "URL do gestor de ficheiros copiada",
-    "copyFileManagerUrlAction": "Copiar URL do Gestor de Ficheiros"
+    "copyFileManagerUrlAction": "Copiar URL do Gestor de Ficheiros",
+    "docsLink": "Ver documentação",
+    "hostNotFound": "Host não encontrado",
+    "loadingHost": "A carregar o host..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "Modo SCP Legado"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferências simultâneas de ficheiros",
+        "description": "Quantos ficheiros o gestor local/remoto lado a lado carrega ou descarrega simultaneamente? Diminua este valor se o seu servidor limitar os canais SFTP."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Ficheiros"
+  },
+  "onboarding": {
+    "feature_files": "Gestor de arquivos",
+    "feature_files_desc": "Navegue, carregue, descarregue e edite ficheiros via SFTP sem sair da aplicação."
+  },
+  "terminal": {
+    "runTitle": "A executar {{command}} - {{host}}",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Navegar pelas pastas de destino",
+    "browsePathError": "Não foi possível abrir este caminho no host de destino.",
+    "browsePathWillBeCreated": "Esta pasta ainda não existe. Será criada quando a transferência for iniciada.",
+    "cancel": "Cancelar",
+    "cleanupDestFiles": "Limpar destino",
+    "cleanupDestFilesError": "A limpeza falhou.",
+    "cleanupDestFilesNothing": "Nada a limpar no destino.",
+    "cleanupDestFilesPartial": "Não foi possível remover alguns ficheiros parciais.",
+    "cleanupDestFilesSuccess": "Ficheiros parciais removidos do destino.",
+    "confirmCopy": "Copiar",
+    "confirmMove": "Mover",
+    "copyFolderToHost": "Copiar pasta para o host…",
+    "copyItemsToHost": "Copiar {{count}} itens para o host…",
+    "copyToHost": "Copiar para o host…",
+    "destinationPath": "Caminho de destino",
+    "destMustBeDirectory": "O destino deve ser uma pasta para transferências de vários itens.",
+    "goUp": "Subir",
+    "hostAuthRequired": "Autenticação necessária — abra o Gestor de Ficheiros neste host primeiro",
+    "hostConnecting": "A ligar…",
+    "hostConnectionFailed": "Falha na ligação",
+    "hostDisconnected": "Desligado",
+    "hostReady": "Pronto",
+    "itemsSummary": "{{count}} itens",
+    "jumpHostLimitation": "Ambos os hosts têm de ser acessíveis a partir do servidor Termix. O encaminhamento direto entre hosts não é suportado.",
+    "methodAuto": "Automático",
+    "methodAutoHint": "Escolhe tar ou SFTP por ficheiro com base no número de ficheiros, tamanho e compressibilidade. Os ficheiros únicos usam sempre SFTP por streaming.",
+    "methodItemSftp": "SFTP por ficheiro",
+    "methodItemSftpHint": "Transfere cada ficheiro individualmente por SFTP. Funciona em todos os hosts, incluindo Windows.",
+    "methodItemSftpLimitation": "Cada ficheiro utiliza o mesmo stream SFTP como uma cópia de um único ficheiro, um após o outro. O progresso é combinado para todos os ficheiros, pelo que a barra se move lentamente durante ficheiros grandes.",
+    "methodLabel": "Método de transferência",
+    "methodPreviewError": "Não foi possível pré-visualizar o método de transferência. O servidor ainda escolherá um método quando iniciar.",
+    "methodPreviewLoading": "A calcular o método de transferência…",
+    "methodPreviewScanSummary": "{{fileCount}} ficheiros, {{totalSize}} no total (analisados no host de origem).",
+    "methodPreviewWillUseItemSftp": "Utilizará: SFTP por ficheiro",
+    "methodPreviewWillUseTar": "Utilizará: Arquivo Tar",
+    "methodReason": {
+      "user_item_sftp": "Optou por SFTP ficheiro a ficheiro.",
+      "user_tar": "Optou por ficheiro tar.",
+      "tar_unavailable": "O tar não está disponível num ou em ambos os anfitriões — será usado SFTP ficheiro a ficheiro.",
+      "windows_host": "Está envolvido um anfitrião Windows — o tar não é utilizado.",
+      "auto_multi_large": "Automático: vários ficheiros, incluindo um grande ({{largestSize}}) com dados compressíveis — o tar agrupa numa transferência única.",
+      "auto_single_large_in_archive": "Automático: um ficheiro grande ({{largestSize}}) neste conjunto — SFTP ficheiro a ficheiro.",
+      "auto_many_incompressible": "Automático: dados maioritariamente incompressíveis — SFTP ficheiro a ficheiro.",
+      "auto_many_files": "Automático: muitos ficheiros ({{fileCount}}) — o tar reduz a sobrecarga por ficheiro.",
+      "auto_default": "Automático: SFTP ficheiro a ficheiro para este conjunto."
+    },
+    "methodTar": "Arquivo Tar",
+    "methodTarHint": "Comprime na origem, transfere um arquivo, extrai no destino. Requer tar em ambos os hosts Unix.",
+    "metricsCompress": "Compressão na origem: {{duration}}",
+    "metricsExtract": "Extração no destino: {{duration}}",
+    "metricsPrepare": "Preparar destino: {{duration}}",
+    "metricsRouteBenchmark": "Sondagem de percurso — direta: {{direct}}, retransmissão: {{relay}}",
+    "metricsSourceDelete": "Remoção da origem: {{duration}}",
+    "metricsTotal": "Total: {{duration}}",
+    "metricsTransfer": "Ponta a ponta: {{throughput}} ({{duration}})",
+    "metricsVerify": "Verificado por SHA-256: {{duration}}",
+    "moveFolderToHost": "Mover pasta para o host…",
+    "moveItemsToHost": "Mover {{count}} itens para o host…",
+    "moveToHost": "Mover para o host…",
+    "noHostsConnected": "Não há outros hosts do gestor de ficheiros disponíveis.",
+    "noHostsConnectedHint": "Adicione outro host SSH com o Gestor de Ficheiros ativado no Gestor de Hosts.",
+    "parallelSegmentsHint": "Os ficheiros grandes são divididos em partes de 256 MB. Múltiplas vias utilizam ligações separadas (como iniciar várias transferências) para um maior débito total.",
+    "parallelSegmentsLabel": "Vias de transferência paralelas",
+    "parallelSegmentsOption": "{{count}} vias",
+    "progressBenchmarking": "Selecionando a rota de transferência mais rápida…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Cancelar",
+    "progressCancelling": "A cancelar…",
+    "progressCompressing": "A comprimir no host de origem…",
+    "progressExtracting": "A extrair no destino…",
+    "progressItems": "{{current}} / {{total}} ficheiros",
+    "progressReconnecting": "A reconectar…",
+    "progressStalled": "Parado",
+    "progressTotalSpeed": "{{speed}} total ({{lanes}} vias)",
+    "progressTransferring": "A transferir dados…",
+    "progressTransferringItems": "A transferir ficheiros ({{current}} de {{total}})…",
+    "progressVerifying": "Verificação da integridade do ficheiro…",
+    "recentDestinations": "Destinos recentes",
+    "resumedHint": "Reconectado a uma transferência ativa iniciada noutra janela.",
+    "retryTransfer": "Repetir",
+    "retryTransferError": "A repetição falhou.",
+    "selectDestinationHost": "Selecionar host de destino",
+    "transferCancelled": "Transferência cancelada",
+    "transferCancelledCopyHint": "Poderão permanecer ficheiros parciais no destino.",
+    "transferCancelledMoveHint": "Poderão permanecer ficheiros parciais no destino. Os ficheiros de origem não foram removidos.",
+    "transferError": "Transferência falhou",
+    "transferFailedRetryHint": "Foram mantidos dados parciais no destino. A repetição será retomada quando a ligação for restabelecida.",
+    "transferPartialHint": "Não foi possível transferir: {{paths}}",
+    "transferSuccess": "Transferência concluída"
   }
 }

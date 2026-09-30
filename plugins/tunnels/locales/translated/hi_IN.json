@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "दूरस्थ सर्वर पर एक पोर्ट को अपनी मशीन पर स्थानीय पोर्ट पर वापस अग्रेषित करें।",
     "tunnelRequirementsText": "SSH सर्वर में /etc/ssh/sshd_config में GatewayPorts yes, AllowTcpForwarding yes, और PermitRootLogin yes सेट होना चाहिए।",
     "tunnelSettings": "टनल सेटिंग्स",
-    "tunnelType": "टनल प्रकार"
+    "tunnelType": "टनल प्रकार",
+    "bindHost": "बाइंड होस्ट",
+    "docsLink": "दस्तावेज़ देखें",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "loadingHost": "होस्ट लोड हो रहा है..."
   },
   "nav": {
     "portForwarding": "अग्रेषित करना",
@@ -134,6 +138,12 @@
     "typeDynamic": "डायनामिक (-D)",
     "typeLocal": "स्थानीय (-L)",
     "typeRemote": "दूरस्थ (-R)",
-    "working": "कार्यरत..."
+    "working": "कार्यरत...",
+    "start": "शुरू करें",
+    "stop": "बंद करें"
+  },
+  "onboarding": {
+    "feature_tunnels": "सुरंगों",
+    "feature_tunnels_desc": "सर्वर के माध्यम से पोर्ट को फॉरवर्ड करके उन सेवाओं तक पहुंचें जो उपलब्ध नहीं हैं।"
   }
 }

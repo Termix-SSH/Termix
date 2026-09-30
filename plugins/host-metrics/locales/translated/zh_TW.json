@@ -51,10 +51,6 @@
     "processesRunning": "執行中",
     "loginStats": "SSH 登入統計資訊",
     "noRecentLoginData": "沒有最近的登入資料",
-    "executingQuickAction": "正在執行 {{name}}...",
-    "quickActionSuccess": "{{name}} 已成功完成",
-    "quickActionFailed": "{{name}} 失敗",
-    "quickActionError": "無法執行 {{name}}",
     "ports": {
       "title": "監聽中的連接埠",
       "protocol": "通訊協定",
@@ -235,12 +231,6 @@
     "addExcludedMount": "添加",
     "visibleWidgets": "可見的小工具",
     "widgetsMovedToHostMetrics": "現在卡片可直接在主機指標分頁中新增、排列和調整大小。開啟此主機的主機指標，然後使用自訂功能選擇要顯示的卡片。",
-    "quickActionsLabel": "快速動作",
-    "quickActionsToolbar": "快速動作會以按鈕形式顯示在主機計量工具列上，可一鍵執行指令。",
-    "noQuickActions": "尚無快速動作。",
-    "buttonLabel": "按鈕標籤",
-    "selectSnippetPlaceholder": "選取程式碼片段...",
-    "addActionBtn": "新增動作",
     "hostNotFound": "找不到主機",
     "loadingHost": "正在載入主機..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "磁碟"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "取消",
-        "confirmRunButton": "執行",
-        "confirmRunMessage": "執行 \"{{name}}\"？"
-      }
-    }
   },
   "terminal": {
     "connected": "已連線"

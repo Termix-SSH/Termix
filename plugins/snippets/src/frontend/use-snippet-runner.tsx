@@ -5,12 +5,12 @@ import {
   useTranslation,
 } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
-import { SnippetVariablesDialog } from "@termix/plugin-sdk/ui";
 import {
   hasSnippetInputs,
   resolveSnippetContent,
   type SnippetHostContext,
-} from "./snippet-variables";
+} from "../shared/variables.js";
+import { SnippetVariablesDialog } from "./SnippetVariablesDialog";
 import { createSnippetsApi } from "./snippets-api";
 import {
   ExecutionResultsDialog,
@@ -259,7 +259,7 @@ export function useSnippetRunner(confirmExecution = false) {
 
   const variablesDialog = runningSnippet ? (
     <SnippetVariablesDialog
-      snippet={runningSnippet.snippet as never}
+      snippet={runningSnippet.snippet}
       host={runningSnippet.host}
       onCancel={() => setRunningSnippet(null)}
       onConfirm={runningSnippet.onConfirm}

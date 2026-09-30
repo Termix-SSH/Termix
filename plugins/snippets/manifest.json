@@ -21,7 +21,8 @@
     "credentials:use",
     "hosts:write",
     "ui:surface",
-    "events:core"
+    "events:core",
+    "db:core-refs"
   ],
   "provides": [
     {
@@ -95,8 +96,58 @@
           "descriptionKey": "settings.confirmExecution.description",
           "default": false
         }
-      ]
+      ],
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 15,
+        "fields": [
+          {
+            "key": "startupSnippetId",
+            "type": "number",
+            "labelKey": "host.startupTitle",
+            "descriptionKey": "host.startupDescription",
+            "hidden": true,
+            "min": 1,
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
+          },
+          {
+            "key": "quickActions",
+            "type": "json",
+            "labelKey": "host.quickActionsTitle",
+            "descriptionKey": "host.quickActionsDescription",
+            "hidden": true,
+            "default": [],
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
+          }
+        ]
+      }
     },
-    "syncEntities": ["snippetFolders", "snippets"]
+    "syncEntities": ["snippetFolders", "snippets"],
+    "keybindingActions": [
+      {
+        "id": "runSnippet",
+        "params": {
+          "snippetId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "maxLength": 20,
+            "syncEntity": "snippets"
+          },
+          "appendEnter": {
+            "type": "boolean"
+          }
+        }
+      }
+    ],
+    "http": {
+      "adminImpersonation": true
+    },
+    "uses": [
+      "host-metrics.toolbar",
+      "terminal.sendToActive",
+      "terminal.sendToSession"
+    ]
   }
 }

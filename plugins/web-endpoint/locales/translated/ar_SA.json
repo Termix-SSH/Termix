@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "السماح بشهادة غير صالحة",
     "webUiIgnoreCertDesc": "نقاط النهاية المباشرة فقط. تم إعفاء نقاط نهاية Loopback بالفعل، لذا لن يكون لهذا أي تأثير على نقاط نهاية النفق.",
     "webUiRemoveEndpoint": "إزالة نقطة النهاية",
-    "webUiOpenFailed": "فشل فتح نقطة نهاية الويب"
+    "webUiOpenFailed": "فشل فتح نقطة نهاية الويب",
+    "bindHost": "مضيف الربط"
   }
 }

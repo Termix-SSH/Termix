@@ -14,10 +14,40 @@ import semver from "semver";
 import { isKnownCapability } from "./capabilities.js";
 
 /**
- * The SDK major version this build implements. engine.api is the real
- * compatibility gate; engine.termix is a display string and is never enforced.
+ * The plugin API this build implements. A minor bump adds to the API and
+ * never removes; a major bump may break plugins.
+ *
+ * engine.api is a semver range checked against this ("1" means any 1.x,
+ * "^1.2" needs 1.2 or later). engine.termix is checked against the core
+ * version by the server.
  */
-export const SUPPORTED_PLUGIN_API_VERSION = "1";
+export const PLUGIN_API_VERSION = "1.0.0";
+
+/** The API major, the default engine.api for a new plugin. */
+export const SUPPORTED_PLUGIN_API_VERSION = String(
+  semver.major(PLUGIN_API_VERSION),
+);
+
+/** Whether this build's plugin API satisfies a manifest's engine.api. */
+export function isApiCompatible(range: string): boolean {
+  return (
+    semver.validRange(range) !== null &&
+    semver.satisfies(PLUGIN_API_VERSION, range)
+  );
+}
+
+/**
+ * Whether a core version satisfies a manifest's engine.termix. A prerelease
+ * core (2.9.0-beta.1) counts as that release.
+ */
+export function isTermixCompatible(
+  range: string,
+  coreVersion: string | null,
+): boolean {
+  if (!coreVersion || !semver.valid(semver.coerce(coreVersion))) return true;
+  if (semver.validRange(range) === null) return false;
+  return semver.satisfies(semver.coerce(coreVersion)!.version, range);
+}
 
 export const PLUGIN_CATEGORIES = [
   "Terminal",
@@ -59,14 +89,12 @@ export const RESERVED_PLUGIN_IDS: readonly string[] = [
 /** A preset key is a plain property name, never a prototype one. */
 const PRESET_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
-const API_VERSION_PATTERN = /^[0-9]+$/;
 /** Service names are dotted, e.g. "ssh.transport". */
 const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 const SECRET_KEY_PATTERN = /^[a-z0-9-]+$/;
 /** Action ids name a frontend function, so segments may be camelCase. */
 const ACTION_ID_PATTERN = /^[a-z0-9-]+(\.[a-zA-Z0-9-]+)+$/;
 const HANDLER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const PERMISSION_PATTERN = /^[a-z0-9-]+(\.[a-z0-9_-]+)+$/;
 /**
  * A plugin-relative permission name. Unlike a full id one segment is fine,
  * and underscores are allowed in the first segment too ("manage_providers").
@@ -98,9 +126,12 @@ export interface PluginAuthor {
 }
 
 export interface PluginEngine {
-  /** Display string only, e.g. ">=2.9.0". Never enforced. */
+  /** Semver range of Termix releases the plugin runs on, e.g. ">=2.9.0". */
   termix: string;
-  /** SDK major version as a string. The real gate. */
+  /**
+   * Semver range of the plugin API it needs, e.g. "1" or "^1.2". Use the
+   * lowest minor whose API you call, so older cores refuse it cleanly.
+   */
   api: string;
 }
 
@@ -245,11 +276,30 @@ export interface PluginSettingsField {
   /** Registered component id. Required when type is "custom". */
   component?: string;
   /**
-   * Host scope only: the admin field whose value a new host starts with,
-   * instead of `default`. Hosts that never saved the field still read
-   * `default`.
+   * Deprecated and ignored: host defaults cover every host field now. Still
+   * accepted so an older manifest loads. Removed in 3.0.0.
    */
   defaultFrom?: string;
+  /**
+   * Host scope only: whether the field can have a host default (server,
+   * user or folder) that hosts follow until they set their own. On by
+   * default for every field except secrets and json fields with
+   * `secretKeys`. Turn it off for a value that only makes sense per host,
+   * such as a MAC address or an API endpoint.
+   */
+  defaultable?: boolean;
+  /**
+   * Host scope only: the levels that may set a default for it. Defaults to
+   * all three. Leave "admin" out for a value that points at one user's own
+   * rows (a snippet id, a profile id).
+   */
+  defaultLevels?: Array<"admin" | "user" | "folder">;
+  /**
+   * Host scope only: a look-and-feel value. When the host follows its
+   * defaults, a user it is shared with gets their own defaults for it
+   * rather than the owner's.
+   */
+  personal?: boolean;
   /**
    * Host scope only: the lowest share level whose recipients see this value
    * in the host payload. Defaults to "connect", everyone who sees the host.
@@ -257,6 +307,11 @@ export interface PluginSettingsField {
   shareRead?: "connect" | "view" | "edit" | "manage";
   /** Host scope only: only the host's owner may change it. */
   ownerOnly?: boolean;
+  /**
+   * JSON fields only: keys inside the stored object that hold secrets, such
+   * as a gateway password. Core clears them from exports like any secret.
+   */
+  secretKeys?: string[];
   /**
    * Stored and validated like any field, but not drawn by the generic
    * settings form, because the plugin edits it in its own UI (a host editor
@@ -344,7 +399,92 @@ export interface PluginContributions {
    * off and a desktop can list them in its sync settings.
    */
   syncEntities?: string[];
+  /**
+   * Other plugins' action, slot and extension point ids this plugin calls,
+   * fills or extends. Declaration only: nothing breaks when the owner is
+   * missing, but the coupling is written down where tools and people can
+   * see it.
+   */
+  uses?: string[];
+  /**
+   * Keybinding actions this plugin adds to Appearance > Keybindings, with
+   * the parameters a saved binding carries. Core validates saved bindings
+   * against these without running plugin code, and translates a parameter
+   * naming a sync entity over sync.
+   */
+  keybindingActions?: PluginKeybindingActionContribution[];
+  /**
+   * Connection protocols whose per-host login core stores, encrypts,
+   * shares, exports and syncs for this plugin, read back with
+   * ctx.credentials.resolveHostProtocol.
+   */
+  protocols?: PluginProtocolContribution[];
 }
+
+/** A field a protocol login carries besides username and password. */
+export interface PluginProtocolCredentialField {
+  key: string;
+  /** Encrypted with the owner's data key and never sent to a browser. */
+  secret?: boolean;
+}
+
+export interface PluginProtocolContribution {
+  /** Stored with each login. Never change it once hosts use it. */
+  id: string;
+  credentialFields?: PluginProtocolCredentialField[];
+  /**
+   * The port an import row without one gets, for a host whose main
+   * protocol this is.
+   */
+  defaultPort?: number;
+  /**
+   * What the owner's login falls back to from the host's own SSH login
+   * when the protocol login leaves it empty.
+   */
+  hostLoginFallback?: Array<"username" | "password">;
+}
+
+/** Protocol ids core keeps for itself. */
+export const RESERVED_PROTOCOL_IDS: readonly string[] = ["ssh"];
+
+/** Login keys a declared credential field may not reuse. */
+export const RESERVED_PROTOCOL_FIELD_KEYS: readonly string[] = [
+  "username",
+  "password",
+  "authType",
+  "credentialId",
+];
+
+/** One parameter a saved keybinding action carries next to its type. */
+export interface PluginKeybindingParam {
+  type: "string" | "boolean";
+  required?: boolean;
+  /** A regular expression a string value must match. */
+  pattern?: string;
+  maxLength?: number;
+  /**
+   * The value is a local row id of this sync entity, stored as a string.
+   * Sync sends the row's syncId instead.
+   */
+  syncEntity?: string;
+}
+
+export interface PluginKeybindingActionContribution {
+  /**
+   * Stored as the binding's action.type. New actions use
+   * "<plugin id>.<name>"; the bundled ones keep their 2.8 names.
+   */
+  id: string;
+  params?: Record<string, PluginKeybindingParam>;
+}
+
+/** Keybinding action types the shell runs itself; no plugin may declare them. */
+export const CORE_KEYBINDING_ACTIONS: readonly string[] = [
+  "nextTab",
+  "previousTab",
+  "openCommandPalette",
+  "reconnectSession",
+];
 
 /**
  * How a desktop linked to a server treats this plugin.
@@ -376,6 +516,12 @@ export interface PluginHttpContribution {
    * Core routes win a clash.
    */
   legacyRedirects?: PluginLegacyRedirect[];
+  /**
+   * An admin may call this plugin's routes on behalf of another user with
+   * the X-Admin-Target-User header (the admin "manage user" panel). Without
+   * it core refuses the header on every route under /plugin-api/<id>/.
+   */
+  adminImpersonation?: boolean;
 }
 
 export interface PluginLegacyRedirect {
@@ -478,6 +624,9 @@ const ALLOWED_CONTRIBUTES = new Set([
   "uiPresets",
   "auth",
   "syncEntities",
+  "uses",
+  "keybindingActions",
+  "protocols",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -496,8 +645,12 @@ const ALLOWED_SETTINGS_FIELD = [
   "component",
   "hidden",
   "defaultFrom",
+  "defaultable",
+  "defaultLevels",
+  "personal",
   "shareRead",
   "ownerOnly",
+  "secretKeys",
 ];
 
 const SHARE_LEVELS = ["connect", "view", "edit", "manage"];
@@ -652,9 +805,20 @@ function validateEngine(engine: unknown, errors: string[]): void {
   }
   rejectUnknown(engine, ["termix", "api"], '"engine"', errors);
   requireString(engine.termix, "engine.termix", errors);
-  if (typeof engine.api !== "string" || !API_VERSION_PATTERN.test(engine.api)) {
+  if (
+    typeof engine.termix === "string" &&
+    semver.validRange(engine.termix) === null
+  ) {
     errors.push(
-      `Field "engine.api" must be an integer string, got: ${JSON.stringify(engine.api)}`,
+      `Field "engine.termix" must be a semver range, got: ${JSON.stringify(engine.termix)}`,
+    );
+  }
+  if (
+    typeof engine.api !== "string" ||
+    semver.validRange(engine.api) === null
+  ) {
+    errors.push(
+      `Field "engine.api" must be a semver range such as "1" or "^1.2", got: ${JSON.stringify(engine.api)}`,
     );
   }
 }
@@ -809,6 +973,28 @@ function validateSyncEntities(value: unknown, errors: string[]) {
   }
 }
 
+function validateUses(value: unknown, errors: string[]) {
+  const where = "contributes.uses";
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${where} must be a non-empty array`);
+    return;
+  }
+  const seen = new Set<string>();
+  for (const id of value) {
+    if (
+      typeof id !== "string" ||
+      !/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(id)
+    ) {
+      errors.push(
+        `${where} entries must be dotted ids such as "terminal.open"`,
+      );
+      continue;
+    }
+    if (seen.has(id)) errors.push(`${where} duplicates "${id}"`);
+    seen.add(id);
+  }
+}
+
 function validateNameList(value: unknown, where: string, errors: string[]) {
   if (!Array.isArray(value) || value.length === 0) {
     errors.push(`${where} must be a non-empty array`);
@@ -939,6 +1125,9 @@ function validateContributes(
   if (contributes.syncEntities !== undefined) {
     validateSyncEntities(contributes.syncEntities, errors);
   }
+  if (contributes.uses !== undefined) {
+    validateUses(contributes.uses, errors);
+  }
   validatePermissions(contributes.permissions, pluginId, errors);
   validateActions(contributes.actions, errors);
   validateActionSlots(contributes.actionSlots, errors);
@@ -947,6 +1136,220 @@ function validateContributes(
   validateAuthContribution(contributes.auth, errors);
   validateHttpContribution(contributes.http, pluginId, errors);
   validateUiPresets(contributes.uiPresets, errors);
+  validateKeybindingActions(contributes.keybindingActions, errors);
+  validateProtocols(contributes.protocols, errors);
+}
+
+export const PROTOCOL_ID_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
+export const PROTOCOL_FIELD_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9]{0,31}$/;
+
+function validateProtocols(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  const where = "contributes.protocols";
+  if (!Array.isArray(value)) {
+    errors.push(`Field "${where}" must be an array`);
+    return;
+  }
+  const seen = new Set<string>();
+  value.forEach((raw, index) => {
+    const at = `${where}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(
+      raw,
+      ["id", "credentialFields", "defaultPort", "hostLoginFallback"],
+      at,
+      errors,
+    );
+    if (typeof raw.id !== "string" || !PROTOCOL_ID_PATTERN.test(raw.id)) {
+      errors.push(
+        `${at}.id must be lowercase letters, digits and dashes, starting with a letter`,
+      );
+    } else if (RESERVED_PROTOCOL_IDS.includes(raw.id)) {
+      errors.push(`${at}.id "${raw.id}" belongs to core`);
+    } else {
+      if (seen.has(raw.id)) errors.push(`${at}.id duplicates "${raw.id}"`);
+      seen.add(raw.id);
+    }
+    if (
+      raw.defaultPort !== undefined &&
+      (typeof raw.defaultPort !== "number" ||
+        !Number.isInteger(raw.defaultPort) ||
+        raw.defaultPort < 1 ||
+        raw.defaultPort > 65535)
+    ) {
+      errors.push(`${at}.defaultPort must be a port number`);
+    }
+    if (raw.hostLoginFallback !== undefined) {
+      if (
+        !Array.isArray(raw.hostLoginFallback) ||
+        raw.hostLoginFallback.some(
+          (entry) => entry !== "username" && entry !== "password",
+        )
+      ) {
+        errors.push(
+          `${at}.hostLoginFallback must list "username" and/or "password"`,
+        );
+      }
+    }
+    if (raw.credentialFields === undefined) return;
+    if (!Array.isArray(raw.credentialFields)) {
+      errors.push(`${at}.credentialFields must be an array`);
+      return;
+    }
+    const keys = new Set<string>();
+    raw.credentialFields.forEach((field, fieldIndex) => {
+      const fieldAt = `${at}.credentialFields[${fieldIndex}]`;
+      if (!isPlainObject(field)) {
+        errors.push(`${fieldAt} must be an object`);
+        return;
+      }
+      rejectUnknown(field, ["key", "secret"], fieldAt, errors);
+      if (
+        typeof field.key !== "string" ||
+        !PROTOCOL_FIELD_KEY_PATTERN.test(field.key)
+      ) {
+        errors.push(`${fieldAt}.key must be letters and digits`);
+      } else if (RESERVED_PROTOCOL_FIELD_KEYS.includes(field.key)) {
+        errors.push(`${fieldAt}.key "${field.key}" is part of every login`);
+      } else {
+        if (keys.has(field.key)) {
+          errors.push(`${fieldAt}.key duplicates "${field.key}"`);
+        }
+        keys.add(field.key);
+      }
+      if (field.secret !== undefined && typeof field.secret !== "boolean") {
+        errors.push(`${fieldAt}.secret must be a boolean`);
+      }
+    });
+  });
+}
+
+const KEYBINDING_ACTION_PATTERN = /^[a-zA-Z][a-zA-Z0-9.-]{0,63}$/;
+const KEYBINDING_PARAM_PATTERN = /^[a-zA-Z][a-zA-Z0-9]{0,31}$/;
+
+function validateKeybindingParam(
+  param: unknown,
+  at: string,
+  errors: string[],
+): void {
+  if (!isPlainObject(param)) {
+    errors.push(`${at} must be an object`);
+    return;
+  }
+  rejectUnknown(
+    param,
+    ["type", "required", "pattern", "maxLength", "syncEntity"],
+    at,
+    errors,
+  );
+  if (param.type !== "string" && param.type !== "boolean") {
+    errors.push(`${at}.type must be "string" or "boolean"`);
+  }
+  if (param.required !== undefined && typeof param.required !== "boolean") {
+    errors.push(`${at}.required must be a boolean`);
+  }
+  if (param.pattern !== undefined) {
+    let valid = typeof param.pattern === "string";
+    if (valid) {
+      try {
+        new RegExp(param.pattern as string);
+      } catch {
+        valid = false;
+      }
+    }
+    if (!valid) errors.push(`${at}.pattern must be a regular expression`);
+  }
+  if (
+    param.maxLength !== undefined &&
+    (typeof param.maxLength !== "number" ||
+      !Number.isInteger(param.maxLength) ||
+      param.maxLength < 1)
+  ) {
+    errors.push(`${at}.maxLength must be a positive integer`);
+  }
+  if (param.syncEntity !== undefined) {
+    if (
+      typeof param.syncEntity !== "string" ||
+      !/^[a-zA-Z][a-zA-Z0-9]*$/.test(param.syncEntity)
+    ) {
+      errors.push(`${at}.syncEntity must be a sync entity wire name`);
+    } else if (param.type !== "string") {
+      errors.push(`${at}.syncEntity needs a string parameter`);
+    }
+  }
+}
+
+function validateKeybindingActions(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  const where = "contributes.keybindingActions";
+  if (!Array.isArray(value)) {
+    errors.push(`Field "${where}" must be an array`);
+    return;
+  }
+  const seen = new Set<string>();
+  value.forEach((raw, index) => {
+    const at = `${where}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(raw, ["id", "params"], at, errors);
+    if (typeof raw.id !== "string" || !KEYBINDING_ACTION_PATTERN.test(raw.id)) {
+      errors.push(`${at}.id must be letters, digits, dots and dashes`);
+    } else if (CORE_KEYBINDING_ACTIONS.includes(raw.id)) {
+      errors.push(`${at}.id "${raw.id}" is one of the shell's own actions`);
+    } else {
+      if (seen.has(raw.id)) errors.push(`${at}.id duplicates "${raw.id}"`);
+      seen.add(raw.id);
+    }
+    if (raw.params === undefined) return;
+    if (!isPlainObject(raw.params)) {
+      errors.push(`${at}.params must be an object`);
+      return;
+    }
+    for (const [name, param] of Object.entries(raw.params)) {
+      if (!KEYBINDING_PARAM_PATTERN.test(name) || name === "type") {
+        errors.push(`${at}.params.${name} is not a valid parameter name`);
+      }
+      validateKeybindingParam(param, `${at}.params.${name}`, errors);
+    }
+  });
+}
+
+/**
+ * Checks one saved keybinding action against the parameters its declaration
+ * lists. A parameter the declaration does not list is refused, so a binding
+ * cannot carry arbitrary data under a declared type.
+ */
+export function validateKeybindingActionParams(
+  action: Record<string, unknown>,
+  declaration: PluginKeybindingActionContribution,
+): boolean {
+  const params = declaration.params ?? {};
+  for (const key of Object.keys(action)) {
+    if (key !== "type" && !(key in params) && action[key] != null) {
+      return false;
+    }
+  }
+  for (const [name, param] of Object.entries(params)) {
+    const value = action[name];
+    if (value === undefined || value === null) {
+      if (param.required) return false;
+      continue;
+    }
+    if (param.type === "boolean") {
+      if (typeof value !== "boolean") return false;
+      continue;
+    }
+    if (typeof value !== "string") return false;
+    if (param.required && value.length === 0) return false;
+    if (value.length > (param.maxLength ?? 65_536)) return false;
+    if (param.pattern && !new RegExp(param.pattern).test(value)) return false;
+  }
+  return true;
 }
 
 function isPresetValue(value: unknown): boolean {
@@ -1041,10 +1444,18 @@ function validateHttpContribution(
   }
   rejectUnknown(
     value,
-    ["legacyPaths", "legacyRedirects"],
+    ["legacyPaths", "legacyRedirects", "adminImpersonation"],
     "contributes.http",
     errors,
   );
+  if (
+    value.adminImpersonation !== undefined &&
+    typeof value.adminImpersonation !== "boolean"
+  ) {
+    errors.push(
+      'Field "contributes.http.adminImpersonation" must be a boolean',
+    );
+  }
   validateLegacyRedirects(value.legacyRedirects, errors);
   const paths = value.legacyPaths;
   if (paths === undefined) return;
@@ -1200,20 +1611,33 @@ function validateSettings(settings: unknown, errors: string[]): void {
       typeof host.enableKey === "string" ? host.enableKey : undefined,
     );
 
-    const adminKeys = new Set(
-      (Array.isArray(settings.admin) ? settings.admin : [])
-        .filter(isPlainObject)
-        // A secret never becomes a default the host editor can read.
-        .filter((field) => field.type !== "secret")
-        .map((field) => field.key),
-    );
     host.fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
       const fieldAt = `${at}.fields[${index}]`;
-      if ("defaultFrom" in raw && !adminKeys.has(raw.defaultFrom as string)) {
-        errors.push(
-          `${fieldAt}.defaultFrom must name one of this plugin's non-secret admin fields`,
-        );
+      if ("defaultFrom" in raw && typeof raw.defaultFrom !== "string") {
+        errors.push(`${fieldAt}.defaultFrom must be a string`);
+      }
+      for (const flag of ["defaultable", "personal"]) {
+        if (flag in raw && typeof raw[flag] !== "boolean") {
+          errors.push(`${fieldAt}.${flag} must be a boolean`);
+        }
+      }
+      if ("defaultLevels" in raw) {
+        const levels = raw.defaultLevels;
+        if (
+          !Array.isArray(levels) ||
+          levels.length === 0 ||
+          levels.some(
+            (level) => !["admin", "user", "folder"].includes(level as string),
+          )
+        ) {
+          errors.push(
+            `${fieldAt}.defaultLevels must be a non-empty array of "admin", "user" or "folder"`,
+          );
+        }
+      }
+      if (raw.type === "secret" && raw.defaultable === true) {
+        errors.push(`${fieldAt} is a secret and cannot be defaultable`);
       }
       if (
         "shareRead" in raw &&
@@ -1226,6 +1650,18 @@ function validateSettings(settings: unknown, errors: string[]): void {
       if ("ownerOnly" in raw && typeof raw.ownerOnly !== "boolean") {
         errors.push(`${fieldAt}.ownerOnly must be a boolean`);
       }
+      if ("secretKeys" in raw) {
+        const keys = raw.secretKeys;
+        if (raw.type !== "json") {
+          errors.push(`${fieldAt}.secretKeys is only valid on json fields`);
+        } else if (
+          !Array.isArray(keys) ||
+          keys.length === 0 ||
+          keys.some((key) => typeof key !== "string" || key.length === 0)
+        ) {
+          errors.push(`${fieldAt}.secretKeys must be a non-empty string array`);
+        }
+      }
     });
   }
   for (const scope of ["admin", "user"] as const) {
@@ -1233,7 +1669,14 @@ function validateSettings(settings: unknown, errors: string[]): void {
     if (!Array.isArray(fields)) continue;
     fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
-      for (const key of ["defaultFrom", "shareRead", "ownerOnly"]) {
+      for (const key of [
+        "defaultFrom",
+        "defaultable",
+        "defaultLevels",
+        "personal",
+        "shareRead",
+        "ownerOnly",
+      ]) {
         if (key in raw) {
           errors.push(
             `${where}.${scope}[${index}].${key} is only valid on host fields`,
@@ -1649,10 +2092,10 @@ export function parseManifest(raw: unknown): ParsedManifest {
 
   const manifest = raw as PluginManifest;
 
-  if (manifest.engine.api !== SUPPORTED_PLUGIN_API_VERSION) {
+  if (!isApiCompatible(manifest.engine.api)) {
     return {
       errors: [
-        `Plugin targets SDK API version ${manifest.engine.api}, but this build implements ${SUPPORTED_PLUGIN_API_VERSION}`,
+        `Plugin needs plugin API ${manifest.engine.api}, but this build implements ${PLUGIN_API_VERSION}`,
       ],
     };
   }

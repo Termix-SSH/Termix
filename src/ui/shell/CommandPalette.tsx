@@ -23,22 +23,25 @@ import {
   Clock,
   Folder,
   Pencil,
-  Play,
-  Clipboard,
 } from "lucide-react";
 import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
-import { listSnippets } from "@/lib/snippet-provider";
-import type { Host, TabType, Tab, Snippet } from "@/types/ui-types";
+import type { Host, TabType, Tab } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
 import { RAIL_UTILITY_ITEMS, useRailItems } from "@/sidebar/rail-items";
-import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
 import {
   defaultConnectAction,
   hostActionsFor,
   runHostAction,
   useHostActions,
 } from "@/sidebar/host-contributions";
-import { paletteEntriesFor, usePaletteEntries } from "./palette-registry";
+import {
+  filterPaletteItems,
+  loadPaletteGroup,
+  paletteEntriesFor,
+  usePaletteEntries,
+  usePaletteGroups,
+  type PaletteItemDef,
+} from "./palette-registry";
 import { activityTarget } from "@/lib/activity-types";
 import { shell } from "@/plugin-host/shell-bridge";
 
@@ -71,9 +74,11 @@ export function CommandPalette({
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
-  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const paletteGroups = usePaletteGroups();
+  const [groupItems, setGroupItems] = useState<
+    Record<string, PaletteItemDef[]>
+  >({});
   const [selectedValue, setSelectedValue] = useState("");
-  const { runSnippet, dialog: runSnippetDialog } = useSnippetRunner();
 
   useEffect(() => {
     if (isOpen) {
@@ -82,11 +87,23 @@ export function CommandPalette({
       getRecentActivity(5)
         .then(setRecentActivity)
         .catch(() => {});
-      listSnippets()
-        .then((data) => setSnippets(data as unknown as Snippet[]))
-        .catch(() => {});
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    for (const group of paletteGroups) {
+      void loadPaletteGroup(group).then((items) => {
+        if (!cancelled) {
+          setGroupItems((prev) => ({ ...prev, [group.id]: items }));
+        }
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, paletteGroups]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -130,16 +147,6 @@ export function CommandPalette({
     groupedHosts.push({ folder, hosts: fhosts });
   }
 
-  const filteredSnippets = search.trim()
-    ? snippets.filter((s) => {
-        const query = search.toLowerCase();
-        return (
-          s.name.toLowerCase().includes(query) ||
-          s.content.toLowerCase().includes(query)
-        );
-      })
-    : [];
-
   useEffect(() => {
     if (!isOpen) return;
     const firstHost = filteredHosts[0];
@@ -159,10 +166,7 @@ export function CommandPalette({
   };
   const showHostResultsFirst = search.trim().length > 0;
 
-  // Closing the palette unmounts this component (AppShell only renders it
-  // while commandPaletteOpen is true), so keep rendering just the variables
-  // dialog after close if a snippet run is still pending its inputs.
-  if (!isOpen) return runSnippetDialog;
+  if (!isOpen) return null;
 
   return (
     <div
@@ -327,53 +331,64 @@ export function CommandPalette({
               </>
             )}
 
-            {filteredSnippets.length > 0 && (
-              <>
-                <CommandSeparator className="my-2" />
-                <CommandGroup
-                  heading={t("commandPalette.snippets")}
-                  className="px-2"
-                >
-                  {filteredSnippets.map((snippet) => (
-                    <CommandItem
-                      key={snippet.id}
-                      value={`snippet-${snippet.id}`}
-                      onSelect={() => {
-                        if (!activeTargetTab) return;
-                        handleAction(() =>
-                          runSnippet(snippet, [activeTargetTab]),
-                        );
-                      }}
-                      className={cn(
-                        "group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer",
-                        !activeTargetTab && "pointer-events-none opacity-50",
-                      )}
-                    >
-                      <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
-                        {snippet.isNote ? (
-                          <Clipboard className="size-4 text-accent-brand" />
-                        ) : (
-                          <Play className="size-4 text-accent-brand" />
-                        )}
-                      </div>
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <span className="text-sm font-semibold truncate">
-                          {snippet.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground truncate font-mono">
-                          {snippet.content}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                        {activeTargetTab
-                          ? t("commandPalette.runSnippetDesc")
-                          : t("newUi.sidebar.snippets.noTerminalTabsOpen")}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            )}
+            {paletteGroups.map((group) => {
+              const items = filterPaletteItems(
+                groupItems[group.id] ?? [],
+                search,
+                group.showWhenEmpty,
+              );
+              if (items.length === 0) return null;
+              return (
+                <React.Fragment key={`group-${group.id}`}>
+                  <CommandSeparator className="my-2" />
+                  <CommandGroup heading={t(group.titleKey)} className="px-2">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      const blocked = !!item.needsTarget && !activeTargetTab;
+                      return (
+                        <CommandItem
+                          key={`${group.id}-${item.id}`}
+                          value={`group-${group.id}-${item.id}`}
+                          onSelect={() => {
+                            if (blocked) return;
+                            handleAction(() =>
+                              item.run({ targetTab: activeTargetTab, shell }),
+                            );
+                          }}
+                          className={cn(
+                            "group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer",
+                            blocked && "pointer-events-none opacity-50",
+                          )}
+                        >
+                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
+                            {Icon && (
+                              <Icon className="size-4 text-accent-brand" />
+                            )}
+                          </div>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="text-sm font-semibold truncate">
+                              {item.title}
+                            </span>
+                            {item.description && (
+                              <span className="text-xs text-muted-foreground truncate font-mono">
+                                {item.description}
+                              </span>
+                            )}
+                          </div>
+                          {(blocked || item.hint) && (
+                            <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                              {blocked
+                                ? t("commandPalette.noTargetTab")
+                                : item.hint}
+                            </span>
+                          )}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </React.Fragment>
+              );
+            })}
 
             {paletteEntriesFor(paletteEntries, "global").length > 0 && (
               <>
@@ -661,8 +676,6 @@ export function CommandPalette({
           </div>
         </Command>
       </div>
-
-      {runSnippetDialog}
     </div>
   );
 }

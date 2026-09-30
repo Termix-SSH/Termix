@@ -75,7 +75,11 @@
     "tmuxWindows": "Παράθυρα",
     "unknownError": "Παρουσιάστηκε άγνωστο σφάλμα",
     "websocketAbnormalClose": "Η σύνδεση έκλεισε απροσδόκητα. Αυτό μπορεί να οφείλεται σε πρόβλημα αντίστροφης μεσολάβησης ή ρύθμισης παραμέτρων SSL. Ελέγξτε τα αρχεία καταγραφής διακομιστή.",
-    "websocketError": "Σφάλμα σύνδεσης WebSocket"
+    "websocketError": "Σφάλμα σύνδεσης WebSocket",
+    "clipboardReadFailed": "Αποτυχία ανάγνωσης από το πρόχειρο. Βεβαιωθείτε ότι έχουν εκχωρηθεί δικαιώματα στο πρόχειρο.",
+    "clipboardWriteFailed": "Αποτυχία αντιγραφής στο πρόχειρο. Βεβαιωθείτε ότι η σελίδα προβάλλεται μέσω HTTPS ή localhost.",
+    "connected": "Συνδεδεμένος",
+    "totpCodeLabel": "Κωδικός επαλήθευσης"
   },
   "terminalToolbar": {
     "detachTmux": "Αποσύνδεση tmux",
@@ -175,6 +179,10 @@
       },
       "imageMaxBytes": {
         "label": "Μέγιστος αριθμός byte αποθήκευσης"
+      },
+      "newHostAutoTmux": {
+        "label": "Αυτόματο Tmux",
+        "description": "Εκτελέστε τερματικά νέων κεντρικών υπολογιστών μέσα στο tmux, ώστε οι συνεδρίες να επιβιώσουν από αποσυνδέσεις (απαιτείται tmux στον κεντρικό υπολογιστή)"
       }
     },
     "host": {
@@ -189,9 +197,281 @@
       "enableTerminal": {
         "label": "Ενεργοποίηση τερματικού"
       }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Αυτόματη συμπλήρωση εντολών",
+        "description": "Εμφάνιση αυτόματης συμπλήρωσης κατά την πληκτρολόγηση εάν πατήσετε το Tab"
+      },
+      "localEcho": {
+        "label": "Τοπική Ηχώ",
+        "description": "Μειώστε την αντιληπτή καθυστέρηση εισόδου χρησιμοποιώντας ασφαλή τοπική πρόβλεψη πληκτρολόγησης"
+      },
+      "linkClickBehavior": {
+        "label": "Κλικ στον σύνδεσμο τερματικού",
+        "description": "Προεπιλεγμένη συμπεριφορά κατά το κλικ σε συνδέσμους στο τερματικό"
+      }
     }
   },
   "palette": {
     "localTerminal": "Τοπικό τερματικό"
+  },
+  "hosts": {
+    "addHost": "Προσθήκη κεντρικού υπολογιστή",
+    "applyGlobalThemeTooltip": "Εφαρμογή αυτού του θέματος",
+    "backgroundImageDesc": "Προαιρετική διεύθυνση URL για εικόνα φόντου τερματικού",
+    "backgroundImageLabel": "URL εικόνας φόντου",
+    "backgroundImageOpacityLabel": "Αδιαφάνεια εικόνας φόντου",
+    "backspaceMode": "Λειτουργία Backspace",
+    "backspaceModeLabel": "Λειτουργία Backspace",
+    "behaviorAndAdvanced": "Συμπεριφορά & Προχωρημένοι",
+    "bellStyle": "Στυλ καμπάνας",
+    "bellStyleLabel": "Στυλ καμπάνας",
+    "colorTheme": "Θέμα χρώματος",
+    "cursorBlink": "Αναβοσβήσιμο δρομέα",
+    "cursorBlinking": "Δρομέας που αναβοσβήνει",
+    "cursorBlinkingDesc": "Ενεργοποίηση κινούμενης εικόνας που αναβοσβήνει για τον κέρσορα του τερματικού",
+    "cursorStyle": "Στυλ Δρομέα",
+    "cursorStyleLabel": "Στυλ δρομέα",
+    "customThemeAnsiColors": "Χρώματα ANSI",
+    "customThemeBackground": "Φόντο",
+    "customThemeBlack": "Μαύρος",
+    "customThemeBlue": "Μπλε",
+    "customThemeBrightBlack": "Φωτεινό μαύρο",
+    "customThemeBrightBlue": "Φωτεινό Μπλε",
+    "customThemeBrightCyan": "Φωτεινό κυανό",
+    "customThemeBrightGreen": "Φωτεινό Πράσινο",
+    "customThemeBrightMagenta": "Φωτεινό Ματζέντα",
+    "customThemeBrightRed": "Φωτεινό κόκκινο",
+    "customThemeBrightWhite": "Φωτεινό λευκό",
+    "customThemeBrightYellow": "Φωτεινό κίτρινο",
+    "customThemeColors": "Προσαρμοσμένα χρώματα",
+    "customThemeCursor": "Δρομέας",
+    "customThemeCursorAccent": "Προφορά δρομέα",
+    "customThemeCyan": "Κυανό",
+    "customThemeForeground": "Προσκήνιο",
+    "customThemeGreen": "Πράσινος",
+    "customThemeMagenta": "Πορφύρα βαφή",
+    "customThemeRed": "Κόκκινος",
+    "customThemeResetTooltip": "Επαναφορά στις προεπιλογές",
+    "customThemeSelection": "Επιλογή",
+    "customThemeWhite": "Λευκό",
+    "customThemeYellow": "Κίτρινος",
+    "deleteGlobalThemeTooltip": "Διαγραφή αυτού του θέματος",
+    "docsLink": "Προβολή εγγράφων",
+    "enableAutoMosh": "Ενεργοποίηση Αυτόματης Μετατροπής",
+    "enableAutoMoshDesc": "Προτιμήστε το Mosh αντί για SSH, εάν είναι διαθέσιμο",
+    "enableAutoTmux": "Ενεργοποίηση Auto-Tmux",
+    "enableAutoTmuxDesc": "Διατηρήστε το κέλυφος (shell) και οτιδήποτε εκτελείται σε αυτό ενεργό σε αποσυνδέσεις και επανεκκινήσεις του προγράμματος περιήγησης, εκτελώντας το μέσα στο tmux (το tmux πρέπει να είναι εγκατεστημένο στον κεντρικό υπολογιστή)",
+    "fastScrollModifier": "Τροποποιητής γρήγορης κύλισης",
+    "fastScrollModifierLabel": "Τροποποιητής γρήγορης κύλισης",
+    "fastScrollSensitivity": "Ευαισθησία γρήγορης κύλισης",
+    "fastScrollSensitivityLabel": "Ευαισθησία γρήγορης κύλισης",
+    "fontFamily": "Οικογένεια γραμματοσειρών",
+    "fontFamilyCustomHint": "Επιλέξτε μια γραμματοσειρά που περιλαμβάνεται στο πακέτο ή επιλέξτε Προσαρμοσμένη και πληκτρολογήστε το ακριβές όνομα μιας γραμματοσειράς που είναι ήδη εγκατεστημένη στο σύστημά σας (π.χ. MesloLGS NF, Noto Sans Mono). Το Termix δεν μπορεί να εγκαταστήσει γραμματοσειρές για εσάς, εγκαταστήστε την πρώτα στο λειτουργικό σας σύστημα.",
+    "fontFamilyCustomOption": "Εθιμο...",
+    "fontFamilyCustomPlaceholder": "Ακριβές όνομα γραμματοσειράς, π.χ. MesloLGS NF",
+    "fontFamilyLabel": "Οικογένεια γραμματοσειρών",
+    "fontSize": "Μέγεθος γραμματοσειράς",
+    "fontSizeLabel": "Μέγεθος γραμματοσειράς",
+    "hostNotFound": "Δεν βρέθηκε κεντρικός υπολογιστής",
+    "letterSpacing": "Απόσταση γραμμάτων",
+    "letterSpacingPx": "Απόσταση γραμμάτων (px)",
+    "lineHeight": "Ύψος γραμμής",
+    "lineHeightLabel": "Ύψος γραμμής",
+    "linkClickBehaviorConfirm": "Εμφάνιση αναδυόμενου παραθύρου για άνοιγμα ή αντιγραφή",
+    "linkClickBehaviorDefault": "Προεπιλογή (ακολουθήστε τη ρύθμιση της εφαρμογής)",
+    "linkClickBehaviorDesc": "Ελέγχει τι συμβαίνει όταν κάνετε κλικ σε έναν σύνδεσμο στο τερματικό. Χρησιμοποιήστε την επιλογή \"Προεπιλογή\" για να ακολουθήσετε τη ρύθμιση σε επίπεδο εφαρμογής.",
+    "linkClickBehaviorDirect": "Άνοιγμα απευθείας",
+    "linkClickBehaviorLabel": "Συμπεριφορά κλικ σε σύνδεσμο",
+    "loadingHost": "Φόρτωση κεντρικού υπολογιστή...",
+    "localEchoAuto": "Αυτόματο",
+    "localEchoDefault": "Χρήση καθολικής ρύθμισης",
+    "localEchoDesc": "Προβλέψτε ασφαλείς εκτυπώσιμες πληκτρολογήσεις τοπικά σε αργές συνδέσεις. Οι προτροπές κωδικού πρόσβασης και η εισαγωγή ελέγχου δεν επαναλαμβάνονται ποτέ.",
+    "localEchoLabel": "Τοπική Ηχώ",
+    "localEchoOff": "Μακριά από",
+    "localEchoOn": "Πάντα ενεργοποιημένο",
+    "macOptionIsMetaLabel": "Το πλήκτρο Option στέλνει μεταδεδομένα",
+    "macOptionIsMetaShortDesc": "Απενεργοποίηση της πληκτρολόγησης ειδικών χαρακτήρων (όπως @ ή |) με το πλήκτρο Option/Alt σε macOS αντί για την αποστολή Meta",
+    "moshCommand": "Εντολή MOSH",
+    "moshCommandLabel": "Διοίκηση Μος",
+    "noSavedThemes": "Δεν υπάρχουν ακόμη αποθηκευμένα θέματα",
+    "none": "Κανένας",
+    "rightClickSelectsWord": "Δεξί κλικ για επιλογή Word",
+    "rightClickSelectsWordLabel": "Δεξί κλικ Επιλέγει το Word",
+    "rightClickSelectsWordShortDesc": "Επιλέξτε τη λέξη κάτω από τον κέρσορα με δεξί κλικ",
+    "saveAsGlobalTheme": "Αποθήκευση ως καθολικό θέμα",
+    "saveGlobalThemeError": "Η αποθήκευση του θέματος απέτυχε",
+    "saveGlobalThemeNamePrompt": "Εισαγάγετε ένα όνομα για αυτό το θέμα",
+    "saveGlobalThemeSuccess": "Το θέμα αποθηκεύτηκε",
+    "savedThemesLabel": "Αποθηκευμένα Θέματα",
+    "scrollbackBufferLabel": "Ενδιάμεσο buffer κύλισης προς τα πίσω",
+    "scrollbackMaxLines": "Μέγιστος αριθμός γραμμών που διατηρούνται στο ιστορικό",
+    "sudoPasswordAutoFill": "Αυτόματη συμπλήρωση κωδικού πρόσβασης Sudo",
+    "sudoPasswordAutoFillDesc": "Αποθηκεύστε έναν κωδικό πρόσβασης sudo, ώστε οι μετρήσεις του κεντρικού υπολογιστή, οι προτροπές του τερματικού και άλλα να μπορούν να εκτελούν αυτόματα προνομιακές εντολές.",
+    "sudoPasswordAutoFillLabel": "Αυτόματη συμπλήρωση κωδικού πρόσβασης Sudo",
+    "syntaxCategoryIpAddresses": "Διευθύνσεις IP",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Επίπεδα καταγραφής",
+    "syntaxCategoryLogLevelsDesc": "σφάλμα, προειδοποίηση, πληροφορίες, εντοπισμός σφαλμάτων, μοιραίο",
+    "syntaxCategoryNumbers": "Αριθμοί με ετικέτες",
+    "syntaxCategoryNumbersDesc": "θύρα 8080, έξοδος 1, κατάσταση 404",
+    "syntaxCategoryPaths": "Διαδρομές αρχείων",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "Χρονικές σημάνσεις",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15-01-2024",
+    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Χρωματισμός εξόδου τερματικού (σφάλματα, διαδρομές, IP, χρονικές σημάνσεις)",
+    "syntaxHighlightingLabel": "Επισήμανση σύνταξης",
+    "terminalAppearance": "Εμφάνιση τερματικού",
+    "theme": "Θέμα",
+    "themePreview": "Προεπισκόπηση θέματος",
+    "useSSHTitleDesc": "Ενημερώστε τον τίτλο της καρτέλας από τον τίτλο του παραθύρου του κελύφους αντί για το όνομα του κεντρικού υπολογιστή",
+    "useSSHTitleLabel": "Χρήση τίτλου παραθύρου SSH"
+  },
+  "nav": {
+    "history": "Ιστορία",
+    "localTerminal": "Τοπικό τερματικό",
+    "sshTools": "Εργαλεία SSH",
+    "terminal": "Τερματικό",
+    "macros": "Μακροεντολές"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Πληκτρολογήστε εδώ για να μεταδώσετε πληκτρολογήσεις...",
+    "copyOnSelect": "Αυτόματη αντιγραφή επιλεγμένου κειμένου",
+    "enableRightClickCopyPaste": "Ενεργοποίηση αντιγραφής/επικόλλησης με δεξί κλικ",
+    "fillPassword": "Συμπληρώστε τον κωδικό πρόσβασης",
+    "fillPasswordMissing": "Δεν υπάρχει αποθηκευμένος κωδικός πρόσβασης για {{count}} επιλεγμένα τερματικά",
+    "fillPasswordSuccess": "Συμπληρώθηκε ο κωδικός πρόσβασης σε {{count}} τερματικό(α)",
+    "keyRecordingTitle": "Ηχογράφηση κλειδιών",
+    "noTerminalTabsOpen": "Δεν υπάρχουν ανοιχτές καρτέλες τερματικού",
+    "recordToTerminals": "Εγγραφή σε τερματικά",
+    "selectAll": "Ολοι",
+    "selectNone": "Κανένας",
+    "selectTerminalsAbove": "Επιλέξτε τερματικά παραπάνω",
+    "settingsTitle": "Ρυθμίσεις",
+    "startRecording": "Έναρξη εγγραφής",
+    "stopRecording": "Διακοπή εγγραφής"
+  },
+  "terminalDefaults": {
+    "clearAll": "Εκκαθάριση όλων",
+    "description": "Ορίστε τιμές που κληρονομεί κάθε κεντρικός υπολογιστής, εκτός εάν τις παρακάμπτει.",
+    "dialogDescription": "Αυτά ισχύουν για κεντρικούς υπολογιστές που αφήνουν μια ρύθμιση μη καθορισμένη. Οτιδήποτε οριστεί σε έναν κεντρικό υπολογιστή κερδίζει.",
+    "inherit": "Κληρονομώ",
+    "manage": "Διαχειρίζομαι",
+    "off": "Μακριά από",
+    "on": "Επί",
+    "title": "Προεπιλογές σύνδεσης"
+  },
+  "keybindings": {
+    "copy": "Αντιγραφή επιλογής",
+    "paste": "Πάστα",
+    "sendControlCode": "Αποστολή σήματος Ctrl+γράμμα",
+    "sendText": "Αποστολή κειμένου",
+    "controlCodeLabel": "Επιστολή",
+    "textLabel": "Μήνυμα προς αποστολή",
+    "appendEnterLabel": "Πατήστε Enter μετά την αποστολή",
+    "clipboardPermissionNote": "Ενδέχεται να ζητηθεί άδεια για το πρόχειρο κατά την πρώτη χρήση σε ορισμένα προγράμματα περιήγησης.",
+    "textRequired": "Εισαγάγετε το κείμενο που θέλετε να στείλετε",
+    "controlCodeRequired": "Εισαγάγετε ένα μόνο γράμμα για τον κωδικό ελέγχου"
+  },
+  "macros": {
+    "title": "Μακροεντολές",
+    "description": "Εκτελέστε μια αποθηκευμένη σειρά εντολών σε ένα τερματικό και αντιδράστε σε ό,τι στέλνει πίσω ο διακομιστής.",
+    "target": "Στόχος",
+    "noTerminal": "Δεν υπάρχει ανοιχτό τερματικό",
+    "empty": "Δεν υπάρχουν ακόμη μακροεντολές",
+    "emptyHint": "Δημιουργήστε μια μακροεντολή για να αυτοματοποιήσετε μια ροή τερματικού, όπως σύνδεση, επανεκκίνηση μιας υπηρεσίας ή απάντηση σε μηνύματα.",
+    "create": "Νέα μακροεντολή",
+    "back": "Επιστροφή στις μακροεντολές",
+    "name": "Ονομα",
+    "namePlaceholder": "Επανεκκίνηση διακομιστή ιστού",
+    "nameRequired": "Δώστε ένα όνομα στη μακροεντολή πριν από την αποθήκευση",
+    "descriptionLabel": "Περιγραφή",
+    "descriptionPlaceholder": "Τι κάνει αυτή η μακροεντολή (προαιρετικό)",
+    "unsaved": "Μη αποθηκευμένες αλλαγές",
+    "save": "Εκτός",
+    "saved": "Η μακροεντολή αποθηκεύτηκε",
+    "saveFailed": "Δεν ήταν δυνατή η αποθήκευση της μακροεντολής",
+    "delete": "Διαγράφω",
+    "deleteTitle": "Διαγραφή αυτής της μακροεντολής;",
+    "deleteBody": "Το \"{{name}}\" θα διαγραφεί οριστικά. Δεν είναι δυνατή η αναίρεση αυτής της ενέργειας.",
+    "deleted": "Η μακροεντολή διαγράφηκε",
+    "cancel": "Ματαίωση",
+    "run": "Τρέξιμο",
+    "stop": "Στάση",
+    "running": "Τρέξιμο...",
+    "completed": "Η μακροεντολή ολοκληρώθηκε",
+    "failed": "Η μακροεντολή απέτυχε.",
+    "loadFailed": "Δεν ήταν δυνατή η φόρτωση μακροεντολών",
+    "needTerminal": "Ανοίξτε και συνδέστε πρώτα ένα τερματικό",
+    "noSteps": "Αυτή η μακροεντολή δεν έχει ακόμη βήματα. Προσθέστε ένα παρακάτω.",
+    "addStep": "Προσθήκη βήματος",
+    "stepNumber": "Βήμα {{number}}",
+    "removeStep": "Αφαίρεση βήματος",
+    "confirmRunTitle": "Εκτέλεση αυτής της μακροεντολής;",
+    "confirmRunBody": "Η εντολή \"{{name}}\" θα στείλει εντολές στον χρήστη {{host}}.",
+    "confirmRunAction": "Εκτέλεση μακροεντολής",
+    "stepTypes": {
+      "send": {
+        "label": "Αποστολή εντολής",
+        "help": "Πληκτρολογεί κείμενο στο τερματικό, όπως θα το γράφατε."
+      },
+      "wait": {
+        "label": "Περιμένετε για έξοδο",
+        "help": "Παύει μέχρι ο διακομιστής να εκτυπώσει το κείμενο που ονομάζετε, σαν να σας ζητείται κωδικός πρόσβασης."
+      },
+      "delay": {
+        "label": "Παύση",
+        "help": "Περιμένει ένα συγκεκριμένο χρονικό διάστημα πριν από το επόμενο βήμα."
+      },
+      "if": {
+        "label": "Εάν η έξοδος περιέχει",
+        "help": "Ελέγχει όλα όσα έχει εκτυπώσει μέχρι στιγμής ο διακομιστής και, στη συνέχεια, εκτελεί μία από τις δύο διακλαδώσεις."
+      },
+      "repeat": {
+        "label": "Επαναλαμβάνω",
+        "help": "Εκτελεί τα βήματα στο εσωτερικό του έναν καθορισμένο αριθμό φορών."
+      }
+    },
+    "send": {
+      "text": "Εντολή ή κείμενο",
+      "textPlaceholder": "επανεκκίνηση systemctl nginx",
+      "pressEnter": "Πατήστε Enter μετά την αποστολή",
+      "pressEnterHelp": "Απενεργοποιήστε αυτήν τη λειτουργία για να πληκτρολογείτε κείμενο χωρίς να το υποβάλλετε."
+    },
+    "wait": {
+      "pattern": "Περιμένετε μέχρι η έξοδος να περιέχει",
+      "patternPlaceholder": "σύνθημα:",
+      "timeout": "Παραιτήσου μετά",
+      "onTimeout": "Αν δεν εμφανιστεί ποτέ",
+      "stop": "Διακοπή της μακροεντολής",
+      "continue": "Συνέχισε ούτως ή άλλως"
+    },
+    "delay": {
+      "duration": "Περιμένω για"
+    },
+    "ifStep": {
+      "pattern": "Εάν η έξοδος περιέχει",
+      "patternPlaceholder": "Ενεργό: ενεργό (σε λειτουργία)",
+      "then": "Στη συνέχεια, κάντε αυτό",
+      "else": "Διαφορετικά, κάντε αυτό",
+      "emptyBranch": "Χωρίς σκαλοπάτια"
+    },
+    "repeat": {
+      "count": "Αριθμός φορών",
+      "times": "φορές"
+    },
+    "match": {
+      "useRegex": "Ταίριασμα με μια κανονική έκφραση",
+      "useRegexHelp": "Αφήστε το απενεργοποιημένο για να ταιριάζει ακριβώς με το κείμενο όπως είναι γραμμένο.",
+      "invalidRegex": "Δεν είναι έγκυρη κανονική έκφραση, θα αντιστοιχιστεί ως απλό κείμενο"
+    },
+    "seconds": "δευτερόλεπτα",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Απαιτείται απομακρυσμένος διακομιστής. Συνδέστε έναν απομακρυσμένο διακομιστή στις Ρυθμίσεις για να χρησιμοποιήσετε αυτόν τον τύπο σύνδεσης."
   }
 }

@@ -98,6 +98,7 @@ const offline = () =>
   useTabs: () => ({
     openTab: noop,
     openSingletonTab: noop,
+    connectHost: noop,
     closeTab: noop,
     getLayout: () => null,
     applyLayout: async () => ({ skipped: [] }),
@@ -129,18 +130,22 @@ const offline = () =>
   useHostActions: () => [],
   useActivityTypes: () => [],
   activityTarget: () => undefined,
-  useHomepageWidgetTypes: () => [],
-  homepageWidgetType: () => undefined,
+  useExtensions: () => [],
+  getExtension: () => undefined,
   usePluginUiPreferences: () => ({ values: {}, set: noop }),
   core: {
     logActivity: async () => {},
     getHostPassword: async () => null,
     patchOpenTab: async () => {},
     getCustomKeybindings: async () => [],
-    setHostAutoTmux: async () => {},
+    runKeybindingAction: () => false,
     getClientPreference: () => undefined,
+    setClientPreference: () => {},
     listHosts: async () => [],
     listCredentials: async () => [],
+    notifyHostsChanged: () => {},
+    getHostStatusColorScheme: () => "accent",
+    getLocalAuthToken: () => null,
   },
 };
 

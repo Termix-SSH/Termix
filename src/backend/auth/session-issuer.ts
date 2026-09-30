@@ -4,6 +4,7 @@
  * they all behave the same way.
  */
 
+import { isExternalAccount } from "./external-account.js";
 import type { Request, Response } from "express";
 import { AuthManager } from "../utils/auth-manager.js";
 import { authLogger } from "../utils/logger.js";
@@ -139,6 +140,8 @@ export async function issueSession(
       is_admin: !!user.isAdmin,
       username: user.username,
       userId: user.id,
+      is_external: isExternalAccount(user),
+      // 2.8 name, kept until 3.0.0.
       is_oidc: !!user.isOidc,
       // Any second factor; the name is what 2.8 clients read.
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(

@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} узлов"
+  },
+  "hosts": {
+    "docsLink": "Документация"
   }
 }

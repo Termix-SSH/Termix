@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "يلزم وجود خادم بعيد. قم بتوصيل خادم بعيد في الإعدادات لاستخدام نوع الاتصال هذا."
+  },
+  "hosts": {
+    "docsLink": "عرض المستندات",
+    "hostNotFound": "المضيف غير موجود",
+    "loadingHost": "جارٍ تحميل المضيف..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "فشلت القراءة من الحافظة. تأكد من منح أذونات الحافظة.",
+    "clipboardWriteFailed": "فشل النسخ إلى الحافظة. تأكد من تقديم الصفحة عبر HTTPS أو localhost."
   }
 }

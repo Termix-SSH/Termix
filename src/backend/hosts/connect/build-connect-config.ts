@@ -22,7 +22,7 @@ import type {
 interface PurposeDefaults {
   keepaliveIntervalMs: number;
   keepaliveCountMax: number;
-  /** Let terminalConfig.keepalive* override the defaults. */
+  /** Let the host's sshOptions.keepalive* override the defaults. */
   hostKeepalive: boolean;
   readyTimeout: number;
   /** Socket idle timeout, when the transport set one. */
@@ -146,13 +146,12 @@ export async function buildConnectConfig(
   const authType = host.authType || "none";
   const serverHostId = options.serverHostId ?? host.id;
   const isJumpHost = profile === "jump";
-  const terminalConfig = (host.terminalConfig ?? undefined) as
-    Record<string, unknown> | undefined;
+  const sshOptions = host.sshOptions ?? undefined;
 
   const keepalive = defaults.hostKeepalive
     ? resolveSshKeepalive(
-        terminalConfig?.keepaliveInterval as number | undefined,
-        terminalConfig?.keepaliveCountMax as number | undefined,
+        sshOptions?.keepaliveInterval,
+        sshOptions?.keepaliveCountMax,
         defaults.keepaliveIntervalMs,
         defaults.keepaliveCountMax,
       )
@@ -184,9 +183,7 @@ export async function buildConnectConfig(
       isJumpHost,
       preloaded,
     ),
-    algorithms: buildSSHAlgorithms(
-      terminalConfig?.allowLegacyAlgorithms !== false,
-    ),
+    algorithms: buildSSHAlgorithms(sshOptions?.allowLegacyAlgorithms !== false),
   };
   if (defaults.env) config.env = { ...defaults.env };
   if (defaults.socketTimeout) config.timeout = defaults.socketTimeout;

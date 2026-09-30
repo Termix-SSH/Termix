@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Робочі простори",
     "workflow_workspaces_desc": "Збережіть набір відкритих вкладок і знову відкрийте весь макет пізніше."
+  },
+  "hosts": {
+    "docsLink": "Переглянути документи"
   }
 }

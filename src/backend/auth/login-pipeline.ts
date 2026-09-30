@@ -177,7 +177,7 @@ async function unlockUser(
 
   if (identity.kind === "external" || user.isOidc) {
     try {
-      await authManager.authenticateOIDCUser(user.id, deviceType);
+      await authManager.authenticateExternalUser(user.id, deviceType);
     } catch (error) {
       authLogger.error("Failed to set up external user encryption", error, {
         operation: "external_user_encryption_setup_failed",
@@ -243,6 +243,9 @@ export async function runLogin(
     const { runNotificationChannelMigration } =
       await import("../upgrade/notification-channel-migration.js");
     await runNotificationChannelMigration(user.id);
+    const { runProtocolAuthMigration } =
+      await import("../upgrade/protocol-auth-migration.js");
+    await runProtocolAuthMigration(user.id);
   }
   await syncSharedCredentialsForUserRoles(
     user.id,

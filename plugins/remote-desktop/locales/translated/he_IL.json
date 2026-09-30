@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "טלנט",
     "virtualNetwork": "רשת וירטואלית",
-    "unencryptedShell": "מעטפת לא מוצפנת"
+    "unencryptedShell": "מעטפת לא מוצפנת",
+    "docsLink": "הצג מסמכים"
   },
   "onboarding": {
     "feature_desktop": "שולחן עבודה מרוחק",
@@ -274,5 +275,8 @@
         "label": "כתובת אתר של guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "נדרש שרת מרוחק. יש להתחבר לשרת מרוחק בהגדרות כדי להשתמש בסוג חיבור זה."
   }
 }

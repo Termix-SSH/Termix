@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Tmuxモニターを有効にする",
-    "enableTmuxMonitorDesc": "Tmuxモニターにこのホストを表示し、tmuxアクションをサイドバーに追加します。"
+    "enableTmuxMonitorDesc": "Tmuxモニターにこのホストを表示し、tmuxアクションをサイドバーに追加します。",
+    "docsLink": "ドキュメントを表示"
   },
   "tmuxMonitor": {
     "title": "Tmux モニター",

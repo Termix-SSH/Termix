@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Échec de l'authentification. Veuillez vérifier vos identifiants et réessayer.",
     "timeout": "L'authentification a expiré. Veuillez réessayer."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

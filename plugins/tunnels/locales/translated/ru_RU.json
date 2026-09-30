@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Пробросить порт на удалённом сервере на локальный порт вашей машины.",
     "tunnelRequirementsText": "На SSH-сервере должны быть установлены параметры GatewayPorts yes, AllowTcpForwarding yes и PermitRootLogin yes в /etc/ssh/sshd_config.",
     "tunnelSettings": "Настройки туннеля",
-    "tunnelType": "Тип туннеля"
+    "tunnelType": "Тип туннеля",
+    "bindHost": "Хост для привязки",
+    "docsLink": "Документация",
+    "hostNotFound": "Хост не найден",
+    "loadingHost": "Загрузка хоста..."
   },
   "nav": {
     "portForwarding": "Пересылка",
@@ -134,6 +138,12 @@
     "typeDynamic": "Динамический (-D)",
     "typeLocal": "Локальный (-L)",
     "typeRemote": "Удалённый (-R)",
-    "working": "Выполняется..."
+    "working": "Выполняется...",
+    "start": "Запустить",
+    "stop": "Остановить"
+  },
+  "onboarding": {
+    "feature_tunnels": "Туннели",
+    "feature_tunnels_desc": "Перенаправляйте порты через сервер для доступа к службам, которые не доступны извне."
   }
 }

@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Todennus epäonnistui. Tarkista tunnistetietosi ja yritä uudelleen.",
     "timeout": "Todennus aikakatkaistiin. Yritä uudelleen."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

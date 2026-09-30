@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuelt netværk",
-    "unencryptedShell": "Ukrypteret skal"
+    "unencryptedShell": "Ukrypteret skal",
+    "docsLink": "Se dokumenter"
   },
   "onboarding": {
     "feature_desktop": "Fjernskrivebord",
@@ -274,5 +275,8 @@
         "label": "guacd-URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Fjernserver kræves. Opret forbindelse til en fjernserver i Indstillinger for at bruge denne forbindelsestype."
   }
 }

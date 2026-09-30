@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
+  },
+  "hosts": {
+    "docsLink": "Dokümanları görüntüle",
+    "hostNotFound": "Host bulunamadı",
+    "loadingHost": "Host yükleniyor..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Panodan okuma başarısız oldu. Pano izinlerinin verildiğinden emin olun.",
+    "clipboardWriteFailed": "Panoya kopyalama başarısız oldu. Sayfanın HTTPS veya localhost üzerinden sunulduğundan emin olun."
   }
 }

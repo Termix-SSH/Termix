@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuaaliverkko",
-    "unencryptedShell": "Salaamaton kuori"
+    "unencryptedShell": "Salaamaton kuori",
+    "docsLink": "Näytä dokumentit"
   },
   "onboarding": {
     "feature_desktop": "Etätyöpöytä",
@@ -274,5 +275,8 @@
         "label": "guacd-URL-osoite"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Etäpalvelin vaaditaan. Yhdistä etäpalvelin asetuksissa käyttääksesi tätä yhteystyyppiä."
   }
 }

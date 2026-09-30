@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Espacios de trabajo",
     "workflow_workspaces_desc": "Guarda un conjunto de pestañas abiertas y vuelve a abrir toda la interfaz más tarde."
+  },
+  "hosts": {
+    "docsLink": "Ver documentación"
   }
 }

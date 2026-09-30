@@ -45,6 +45,11 @@ import {
   listSettingsComponents,
 } from "@/settings/settings-components";
 import { getSlotContributions, listActions } from "@/shell/action-registry";
+import { listPaletteGroups, loadPaletteGroup } from "@/shell/palette-registry";
+import {
+  listKeybindingActions,
+  listKeybindingDefaults,
+} from "@/shell/keybinding-registry";
 import {
   getLoginMethodUI,
   getSecondFactorUI,
@@ -55,6 +60,7 @@ import { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
 import type { Host, Tab } from "@/types/ui-types";
 import { createPluginApp } from "./app";
 import { installPluginHostBridge, setPluginApiForTesting } from "./bridge";
+import { setRemoteServerUrlForTesting } from "./desktop";
 import { setPluginSummaries, setFrontendState } from "./plugin-store";
 import {
   notifyShellReady,
@@ -76,6 +82,7 @@ function recordingShell(calls: ShellCall[]): TabShellCallbacks {
   return {
     openTab: record("openTab"),
     openSingletonTab: record("openSingletonTab"),
+    connectHost: record("connectHost"),
     closeTab: record("closeTab"),
     renameTab: record("renameTab"),
     openRailView: record("openRailView"),
@@ -182,6 +189,7 @@ export async function renderPlugin(
     pluginId,
     (options.api as Parameters<typeof setPluginApiForTesting>[1]) ?? null,
   );
+  setRemoteServerUrlForTesting(options.remoteServerUrl ?? null);
   const handle = createPluginApp(pluginId, manifest, summary.contributes, {
     guest: options.guest,
   });
@@ -240,6 +248,18 @@ export async function renderPlugin(
       loginMethods: () => mine(listLoginMethodUIs()).map((method) => method.id),
       secondFactors: () =>
         mine(listSecondFactorUIs()).map((factor) => factor.id),
+      paletteGroups: () => mine(listPaletteGroups()).map((group) => group.id),
+      keybindingActions: () =>
+        mine(listKeybindingActions()).map((action) => action.id),
+      keybindingDefaults: () =>
+        mine(listKeybindingDefaults()).map((binding) => binding.id),
+    },
+
+    async loadPaletteGroup(id) {
+      const group =
+        listPaletteGroups().find((entry) => entry.id === id) ??
+        missing("a palette group", id);
+      return (await loadPaletteGroup(group)) as never;
     },
 
     renderTab(type, props = {}) {
@@ -390,6 +410,7 @@ export async function renderPlugin(
         handle.dispose();
         setFrontendState(pluginId, "inactive");
         setPluginApiForTesting(pluginId, null);
+        setRemoteServerUrlForTesting(null);
       }
     },
   };

@@ -1,7 +1,7 @@
 import type { Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { createTerminalLogger } from "./helpers.js";
-import { hostImportNormalizer } from "./host-import.js";
+import { hostImportNormalizer, hostPayloadLegacy } from "./host-import.js";
 import { createHistoryRepository } from "./history-repository.js";
 import { registerTerminalRoutes } from "./routes.js";
 import {
@@ -22,7 +22,10 @@ import {
 import { ADMIN_KEYS } from "./settings.js";
 import { commandHistory } from "./tables.js";
 import { createTerminalSocket } from "./terminal-socket.js";
-import { validateAdminSettings } from "./settings-validation.js";
+import {
+  validateAdminSettings,
+  validateUserSettings,
+} from "./settings-validation.js";
 
 function toInfo(session: TerminalSession): LiveSessionInfo {
   return {
@@ -57,6 +60,7 @@ function optionalService<T extends object>(
 export async function activate(ctx: PluginContext) {
   const log = createTerminalLogger(ctx.log);
   ctx.settings.onValidate("admin", validateAdminSettings);
+  ctx.settings.onValidate("user", validateUserSettings);
 
   const table = await ctx.db.define(commandHistory);
   const history = createHistoryRepository(ctx.db, table);
@@ -171,6 +175,7 @@ export async function activate(ctx: PluginContext) {
     "ssh-terminal.hostImportNormalizer",
     hostImportNormalizer,
   );
+  ctx.registry.provide("ssh-terminal.hostPayloadLegacy", hostPayloadLegacy);
 
   ctx.log.info("SSH terminal mounted at /plugin-ws/ssh-terminal/terminal");
 }

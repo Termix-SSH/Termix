@@ -129,15 +129,10 @@ async function resolveManagerHost(
   if (!access.hasAccess) throw new AccessDeniedError();
   const host = await ctx.ssh.resolveHost(hostId);
   if (!host) throw new AccessDeniedError("Host not found");
-  const terminalConfig = host.terminalConfig as
-    { sudoPassword?: string } | undefined;
   return {
     id: hostId,
     userId: String(host.userId ?? ""),
-    sudoPassword:
-      (host.sudoPassword as string | undefined) ||
-      terminalConfig?.sudoPassword ||
-      undefined,
+    sudoPassword: (host.sudoPassword as string | undefined) || undefined,
   };
 }
 

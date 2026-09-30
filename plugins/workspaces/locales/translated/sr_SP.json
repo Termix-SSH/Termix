@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Радни простори",
     "workflow_workspaces_desc": "Сачувајте скуп отворених картица и поново отворите цео распоред касније."
+  },
+  "hosts": {
+    "docsLink": "Прикажи документе"
   }
 }

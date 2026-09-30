@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Videresend en port på den eksterne serveren tilbake til en lokal port på maskinen din.",
     "tunnelRequirementsText": "SSH-serveren må ha GatewayPorts ja, AllowTcpForwarding ja og PermitRootLogin ja angitt i /etc/ssh/sshd_config.",
     "tunnelSettings": "Tunnelinnstillinger",
-    "tunnelType": "Tunneltype"
+    "tunnelType": "Tunneltype",
+    "bindHost": "Bind vert",
+    "docsLink": "Vis dokumenter",
+    "hostNotFound": "Verten ble ikke funnet",
+    "loadingHost": "Laster inn vert ..."
   },
   "nav": {
     "portForwarding": "Videresending",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynamisk (-D)",
     "typeLocal": "Lokal (-L)",
     "typeRemote": "Fjernkontroll (-R)",
-    "working": "Arbeider..."
+    "working": "Arbeider...",
+    "start": "Start",
+    "stop": "Stoppe"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunneler",
+    "feature_tunnels_desc": "Videresend porter gjennom en server for å nå tjenester som ikke er eksponert."
   }
 }

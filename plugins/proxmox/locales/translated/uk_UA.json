@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Мінімум 15 секунд. Як часто оновлювати статистику вузла Proxmox.",
     "proxmoxStatsNodeOverride": "Перевизначення назви вузла",
     "proxmoxStatsNodeOverrideDesc": "Перевизначити автоматичне визначення імені вузла Proxmox (за замовчуванням визначається через ім'я хоста).",
-    "proxmoxStatsNodeOverridePlaceholder": "Автоматично визначено за назвою хоста"
+    "proxmoxStatsNodeOverridePlaceholder": "Автоматично визначено за назвою хоста",
+    "docsLink": "Переглянути документи",
+    "hostNotFound": "Хост не знайдено",
+    "loadingHost": "Завантаження хоста...",
+    "none": "Жоден",
+    "proxmoxGuestsSelected_one": "{{count}} гість — {{selected}} вибрано",
+    "proxmoxGuestsSelected_other": "{{count}} гостей — {{selected}} вибрано",
+    "proxmoxImportButton_one": "Імпортувати хост {{count}}",
+    "proxmoxImportButton_other": "Імпортувати {{count}} хостів"
   },
   "proxmoxStats": {
     "tabTitle": "Статистика Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "На цьому вузлі не знайдено віртуальних машин або контейнерів LXC.",
     "noGuestsMatch": "Немає гостей, які відповідають поточним фільтрам."
+  },
+  "terminal": {
+    "connected": "Підключено"
   }
 }

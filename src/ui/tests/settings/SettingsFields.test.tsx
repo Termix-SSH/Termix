@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PluginSettingsField } from "@/api/plugins-api";
 import { SettingsFieldRow } from "@/settings/SettingsFields";
-import { isFieldActive } from "@/settings/settings-fields-util";
+import { isFieldShown } from "@/settings/settings-fields-util";
 import {
   registerSettingsComponent,
   resetSettingsComponents,
@@ -272,7 +272,7 @@ describe("errors", () => {
   });
 });
 
-describe("isFieldActive", () => {
+describe("isFieldShown", () => {
   const gated: PluginSettingsField = {
     key: "socketPath",
     type: "string",
@@ -281,16 +281,16 @@ describe("isFieldActive", () => {
   };
 
   it("is inactive while the named boolean is off", () => {
-    expect(isFieldActive(gated, { enableDocker: false })).toBe(false);
-    expect(isFieldActive(gated, {})).toBe(false);
+    expect(isFieldShown(gated, { enableDocker: false })).toBe(false);
+    expect(isFieldShown(gated, {})).toBe(false);
   });
 
   it("is active once the named boolean is on", () => {
-    expect(isFieldActive(gated, { enableDocker: true })).toBe(true);
+    expect(isFieldShown(gated, { enableDocker: true })).toBe(true);
   });
 
   it("is always active without a requires", () => {
-    expect(isFieldActive({ key: "a", type: "string", labelKey: "k" }, {})).toBe(
+    expect(isFieldShown({ key: "a", type: "string", labelKey: "k" }, {})).toBe(
       true,
     );
   });

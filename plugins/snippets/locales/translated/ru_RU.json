@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Запуск \"{{name}}\"",
+  "variablesDialogDescription": "Перед запуском заполните необходимые для этого фрагмента значения.",
+  "variablesPreviewLabel": "Предварительный просмотр",
+  "variablesConfirmButton": "Бегать",
+  "keybindings": {
+    "runSnippet": "Запустить существующий фрагмент",
+    "snippetLabel": "Фрагмент",
+    "selectSnippet": "Выберите фрагмент",
+    "snippetMissing": "фрагмент не найден",
+    "snippetRequired": "Выберите фрагмент"
+  },
+  "paletteHintRun": "Запустите в активной вкладке терминала.",
+  "host": {
+    "startupTitle": "Фрагмент запуска",
+    "quickActionsTitle": "Быстрые действия",
+    "quickActionsDescription": "Быстрые действия отображаются в виде кнопок на панели инструментов метрик хоста для выполнения команд в один клик.",
+    "noQuickActions": "Пока нет быстрых действий.",
+    "buttonLabel": "Надпись кнопки",
+    "selectSnippet": "Выбрать сниппет...",
+    "addQuickAction": "Добавить действие"
+  },
+  "quickActions": {
+    "running": "Выполняется {{name}}...",
+    "succeeded": "{{name}} успешно завершено",
+    "failed": "{{name}} не удалось",
+    "error": "Не удалось выполнить {{name}}"
+  }
+}

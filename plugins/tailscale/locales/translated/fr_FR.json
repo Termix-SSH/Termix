@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Ouvrez votre navigateur pour vous authentifier.",
     "tailscaleCheckWaiting": "En attente de l'authentification Tailscale...",
     "tailscaleCheckTimeout": "L'authentification Tailscale a expiré. Veuillez réessayer."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Se connecter au terminal",
+        "usernameLabel": "Nom d’utilisateur"
+      }
+    }
   }
 }

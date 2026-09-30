@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "A autenticação falhou. Verifique suas credenciais e tente novamente.",
     "timeout": "A autenticação expirou. Tente novamente."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

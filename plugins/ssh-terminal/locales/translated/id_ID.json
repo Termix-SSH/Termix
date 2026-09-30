@@ -75,7 +75,11 @@
     "tmuxWindows": "Windows",
     "unknownError": "Terjadi kesalahan yang tidak diketahui.",
     "websocketAbnormalClose": "Koneksi terputus secara tidak terduga. Ini mungkin disebabkan oleh masalah konfigurasi reverse proxy atau SSL. Silakan periksa log server.",
-    "websocketError": "Kesalahan koneksi WebSocket"
+    "websocketError": "Kesalahan koneksi WebSocket",
+    "clipboardReadFailed": "Gagal membaca dari clipboard. Pastikan izin clipboard telah diberikan.",
+    "clipboardWriteFailed": "Gagal menyalin ke papan klip. Pastikan halaman disajikan melalui HTTPS atau localhost.",
+    "connected": "Terhubung",
+    "totpCodeLabel": "Kode Verifikasi"
   },
   "terminalToolbar": {
     "detachTmux": "Lepaskan tmux",
@@ -175,6 +179,10 @@
       },
       "imageMaxBytes": {
         "label": "Byte penyimpanan maksimum"
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Jalankan terminal host baru di dalam tmux agar sesi tetap berjalan meskipun terjadi pemutusan koneksi (membutuhkan tmux pada host)."
       }
     },
     "host": {
@@ -189,9 +197,281 @@
       "enableTerminal": {
         "label": "Aktifkan Terminal"
       }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Pelengkapan Otomatis Perintah",
+        "description": "Tampilkan fitur pelengkapan otomatis saat mengetik jika Anda menekan tombol Tab."
+      },
+      "localEcho": {
+        "label": "Gema Lokal",
+        "description": "Kurangi latensi input yang dirasakan menggunakan prediksi penekanan tombol lokal yang aman."
+      },
+      "linkClickBehavior": {
+        "label": "Klik Tautan Terminal",
+        "description": "Perilaku default saat mengklik tautan di terminal."
+      }
     }
   },
   "palette": {
     "localTerminal": "Terminal Lokal"
+  },
+  "hosts": {
+    "addHost": "Tambahkan Host",
+    "applyGlobalThemeTooltip": "Terapkan tema ini",
+    "backgroundImageDesc": "URL opsional untuk gambar latar belakang terminal.",
+    "backgroundImageLabel": "URL Gambar Latar Belakang",
+    "backgroundImageOpacityLabel": "Opasitas Gambar Latar Belakang",
+    "backspaceMode": "Mode Hapus",
+    "backspaceModeLabel": "Mode Hapus",
+    "behaviorAndAdvanced": "Perilaku & Tingkat Lanjut",
+    "bellStyle": "Gaya Lonceng",
+    "bellStyleLabel": "Gaya Lonceng",
+    "colorTheme": "Tema Warna",
+    "cursorBlink": "Kedipan Kursor",
+    "cursorBlinking": "Kursor Berkedip",
+    "cursorBlinkingDesc": "Aktifkan animasi berkedip untuk kursor terminal.",
+    "cursorStyle": "Gaya Kursor",
+    "cursorStyleLabel": "Gaya Kursor",
+    "customThemeAnsiColors": "Warna ANSI",
+    "customThemeBackground": "Latar belakang",
+    "customThemeBlack": "Hitam",
+    "customThemeBlue": "Biru",
+    "customThemeBrightBlack": "Hitam Terang",
+    "customThemeBrightBlue": "Biru Terang",
+    "customThemeBrightCyan": "Biru Muda Terang",
+    "customThemeBrightGreen": "Hijau Terang",
+    "customThemeBrightMagenta": "Magenta Terang",
+    "customThemeBrightRed": "Merah Terang",
+    "customThemeBrightWhite": "Putih Terang",
+    "customThemeBrightYellow": "Kuning Cerah",
+    "customThemeColors": "Warna Kustom",
+    "customThemeCursor": "Kursor",
+    "customThemeCursorAccent": "Aksen Kursor",
+    "customThemeCyan": "Biru muda",
+    "customThemeForeground": "Latar depan",
+    "customThemeGreen": "Hijau",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Merah",
+    "customThemeResetTooltip": "Kembalikan ke pengaturan default",
+    "customThemeSelection": "Pilihan",
+    "customThemeWhite": "Putih",
+    "customThemeYellow": "Kuning",
+    "deleteGlobalThemeTooltip": "Hapus tema ini",
+    "docsLink": "Lihat dokumen",
+    "enableAutoMosh": "Aktifkan Auto-Mosh",
+    "enableAutoMoshDesc": "Lebih baik menggunakan Mosh daripada SSH jika tersedia.",
+    "enableAutoTmux": "Aktifkan Auto-Tmux",
+    "enableAutoTmuxDesc": "Jaga agar shell Anda dan semua yang berjalan di dalamnya tetap aktif meskipun terjadi pemutusan koneksi dan restart browser dengan menjalankan perintah di dalam tmux (tmux harus diinstal pada host).",
+    "fastScrollModifier": "Pengubah Gulir Cepat",
+    "fastScrollModifierLabel": "Pengubah Gulir Cepat",
+    "fastScrollSensitivity": "Sensitivitas Gulir Cepat",
+    "fastScrollSensitivityLabel": "Sensitivitas Gulir Cepat",
+    "fontFamily": "Keluarga Font",
+    "fontFamilyCustomHint": "Pilih font yang sudah tersedia, atau pilih Kustom dan ketik nama persis font yang sudah terpasang di sistem Anda (misalnya MesloLGS NF, Noto Sans Mono). Termix tidak dapat memasang font untuk Anda, pasang terlebih dahulu di sistem operasi Anda.",
+    "fontFamilyCustomOption": "Kebiasaan...",
+    "fontFamilyCustomPlaceholder": "Nama font yang tepat, misalnya MesloLGS NF",
+    "fontFamilyLabel": "Keluarga Font",
+    "fontSize": "Ukuran Huruf",
+    "fontSizeLabel": "Ukuran Huruf",
+    "hostNotFound": "Host tidak ditemukan",
+    "letterSpacing": "Jarak Antar Huruf",
+    "letterSpacingPx": "Jarak Antar Huruf (px)",
+    "lineHeight": "Tinggi Baris",
+    "lineHeightLabel": "Tinggi Baris",
+    "linkClickBehaviorConfirm": "Tampilkan jendela pop-up untuk membuka atau menyalin",
+    "linkClickBehaviorDefault": "Default (ikuti pengaturan aplikasi)",
+    "linkClickBehaviorDesc": "Mengontrol apa yang terjadi saat Anda mengklik tautan di terminal. Gunakan 'Default' untuk mengikuti pengaturan tingkat aplikasi.",
+    "linkClickBehaviorDirect": "Buka langsung",
+    "linkClickBehaviorLabel": "Perilaku Klik Tautan",
+    "loadingHost": "Memuat host...",
+    "localEchoAuto": "Otomatis",
+    "localEchoDefault": "Gunakan pengaturan global",
+    "localEchoDesc": "Memprediksi penekanan tombol yang aman dan dapat dicetak secara lokal pada koneksi lambat. Permintaan kata sandi dan input kontrol tidak pernah diulang.",
+    "localEchoLabel": "Gema Lokal",
+    "localEchoOff": "Mati",
+    "localEchoOn": "Selalu aktif",
+    "macOptionIsMetaLabel": "Tombol Opsi Mengirim Meta",
+    "macOptionIsMetaShortDesc": "Nonaktifkan pengetikan karakter khusus (seperti @ atau |) dengan tombol Option/Alt di macOS sebagai pengganti pengiriman Meta.",
+    "moshCommand": "Komando MOSH",
+    "moshCommandLabel": "Perintah Mosh",
+    "noSavedThemes": "Belum ada tema yang tersimpan.",
+    "none": "Tidak ada",
+    "rightClickSelectsWord": "Klik kanan memilih Word",
+    "rightClickSelectsWordLabel": "Klik kanan Pilih Word",
+    "rightClickSelectsWordShortDesc": "Pilih kata di bawah kursor dengan klik kanan.",
+    "saveAsGlobalTheme": "Simpan sebagai Tema Global",
+    "saveGlobalThemeError": "Gagal menyimpan tema",
+    "saveGlobalThemeNamePrompt": "Masukkan nama untuk tema ini",
+    "saveGlobalThemeSuccess": "Tema tersimpan",
+    "savedThemesLabel": "Tema Tersimpan",
+    "scrollbackBufferLabel": "Buffer Gulir Balik",
+    "scrollbackMaxLines": "Jumlah maksimum baris yang disimpan dalam riwayat",
+    "sudoPasswordAutoFill": "Isi Otomatis Kata Sandi Sudo",
+    "sudoPasswordAutoFillDesc": "Simpan kata sandi sudo agar metrik host, perintah terminal, dan lainnya dapat menjalankan perintah istimewa secara otomatis.",
+    "sudoPasswordAutoFillLabel": "Isi Otomatis Kata Sandi Sudo",
+    "syntaxCategoryIpAddresses": "Alamat IP",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Tingkat Log",
+    "syntaxCategoryLogLevelsDesc": "kesalahan, peringatan, info, debug, fatal",
+    "syntaxCategoryNumbers": "Angka Berlabel",
+    "syntaxCategoryNumbersDesc": "port 8080, keluar 1, status 404",
+    "syntaxCategoryPaths": "Jalur File",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "Cap waktu",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Berikan warna pada output terminal (kesalahan, jalur, IP, stempel waktu)",
+    "syntaxHighlightingLabel": "Penyorotan Sintaksis",
+    "terminalAppearance": "Tampilan Terminal",
+    "theme": "Tema",
+    "themePreview": "Pratinjau Tema",
+    "useSSHTitleDesc": "Perbarui judul tab dari judul jendela shell, bukan nama host.",
+    "useSSHTitleLabel": "Gunakan Judul Jendela SSH"
+  },
+  "nav": {
+    "history": "Sejarah",
+    "localTerminal": "Terminal Lokal",
+    "sshTools": "Alat SSH",
+    "terminal": "Terminal",
+    "macros": "Makro"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Ketik di sini untuk menyiarkan ketukan keyboard...",
+    "copyOnSelect": "Salin teks yang dipilih secara otomatis",
+    "enableRightClickCopyPaste": "Aktifkan salin/tempel dengan klik kanan",
+    "fillPassword": "Isi kata sandi",
+    "fillPasswordMissing": "Tidak ada kata sandi tersimpan untuk {{count}} terminal yang dipilih",
+    "fillPasswordSuccess": "Kata sandi dimasukkan ke dalam terminal {{count}}",
+    "keyRecordingTitle": "Rekaman Kunci",
+    "noTerminalTabsOpen": "Tidak ada tab terminal yang terbuka.",
+    "recordToTerminals": "Rekam ke terminal",
+    "selectAll": "Semua",
+    "selectNone": "Tidak ada",
+    "selectTerminalsAbove": "Pilih terminal di atas",
+    "settingsTitle": "Pengaturan",
+    "startRecording": "Mulai Merekam",
+    "stopRecording": "Hentikan Perekaman"
+  },
+  "terminalDefaults": {
+    "clearAll": "Hapus Semua",
+    "description": "Tetapkan nilai-nilai yang akan diwarisi oleh setiap host kecuali jika host tersebut menimpanya.",
+    "dialogDescription": "Ketentuan ini berlaku untuk host yang tidak mengatur apa pun. Apa pun yang diatur pada host akan berlaku.",
+    "inherit": "Mewarisi",
+    "manage": "Mengelola",
+    "off": "Mati",
+    "on": "Pada",
+    "title": "Pengaturan Koneksi Default"
+  },
+  "keybindings": {
+    "copy": "Salin pilihan",
+    "paste": "Pasta",
+    "sendControlCode": "Kirim sinyal Ctrl+huruf",
+    "sendText": "Kirim pesan teks",
+    "controlCodeLabel": "Surat",
+    "textLabel": "Teks untuk dikirim",
+    "appendEnterLabel": "Tekan Enter setelah mengirim",
+    "clipboardPermissionNote": "Pada beberapa browser, mungkin akan meminta izin akses clipboard saat pertama kali digunakan.",
+    "textRequired": "Masukkan teks yang ingin dikirim",
+    "controlCodeRequired": "Masukkan satu huruf untuk kode kontrol."
+  },
+  "macros": {
+    "title": "Makro",
+    "description": "Jalankan serangkaian perintah yang tersimpan di terminal, dan tanggapi apa yang dikirimkan kembali oleh server.",
+    "target": "Target",
+    "noTerminal": "Tidak ada terminal yang terbuka",
+    "empty": "Belum ada makro",
+    "emptyHint": "Buat makro untuk mengotomatiskan alur terminal, seperti masuk, memulai ulang layanan, atau menjawab perintah.",
+    "create": "Makro baru",
+    "back": "Kembali ke makro",
+    "name": "Nama",
+    "namePlaceholder": "Mulai ulang server web",
+    "nameRequired": "Beri nama makro sebelum menyimpannya.",
+    "descriptionLabel": "Keterangan",
+    "descriptionPlaceholder": "Fungsi makro ini (opsional)",
+    "unsaved": "Perubahan yang belum disimpan",
+    "save": "Menyimpan",
+    "saved": "Makro tersimpan",
+    "saveFailed": "Makro tidak dapat disimpan.",
+    "delete": "Menghapus",
+    "deleteTitle": "Hapus makro ini?",
+    "deleteBody": "\"{{name}}\" akan dihapus secara permanen. Ini tidak dapat dibatalkan.",
+    "deleted": "Makro dihapus",
+    "cancel": "Membatalkan",
+    "run": "Berlari",
+    "stop": "Berhenti",
+    "running": "Berlari...",
+    "completed": "Makro selesai",
+    "failed": "Makro gagal",
+    "loadFailed": "Makro tidak dapat dimuat",
+    "needTerminal": "Buka dan sambungkan terminal terlebih dahulu.",
+    "noSteps": "Makro ini belum memiliki langkah. Tambahkan langkah di bawah ini.",
+    "addStep": "Tambahkan langkah",
+    "stepNumber": "Langkah {{number}}",
+    "removeStep": "Hapus langkah",
+    "confirmRunTitle": "Jalankan makro ini?",
+    "confirmRunBody": "\"{{name}}\" akan mengirimkan perintah ke {{host}}.",
+    "confirmRunAction": "Jalankan makro",
+    "stepTypes": {
+      "send": {
+        "label": "Kirim perintah",
+        "help": "Mengetik teks ke terminal, sama seperti jika Anda mengetiknya."
+      },
+      "wait": {
+        "label": "Tunggu hingga muncul output.",
+        "help": "Akan berhenti sejenak hingga server menampilkan teks yang Anda sebutkan, seperti saat meminta kata sandi."
+      },
+      "delay": {
+        "label": "Berhenti sebentar",
+        "help": "Menunggu dalam jangka waktu tertentu sebelum melanjutkan ke langkah berikutnya."
+      },
+      "if": {
+        "label": "Jika output berisi",
+        "help": "Memeriksa semua yang telah dicetak server sejauh ini, lalu menjalankan salah satu dari dua cabang."
+      },
+      "repeat": {
+        "label": "Mengulang",
+        "help": "Menjalankan langkah-langkah di dalamnya sebanyak jumlah kali yang telah ditentukan."
+      }
+    },
+    "send": {
+      "text": "Perintah atau teks",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Tekan Enter setelah mengirim",
+      "pressEnterHelp": "Matikan opsi ini untuk mengetik teks tanpa mengirimkannya."
+    },
+    "wait": {
+      "pattern": "Tunggu hingga output berisi",
+      "patternPlaceholder": "kata sandi:",
+      "timeout": "Menyerah setelah",
+      "onTimeout": "Jika itu tidak pernah muncul",
+      "stop": "Hentikan makro",
+      "continue": "Tetaplah melanjutkan"
+    },
+    "delay": {
+      "duration": "Tunggu"
+    },
+    "ifStep": {
+      "pattern": "Jika outputnya berisi",
+      "patternPlaceholder": "Aktif: aktif (berjalan)",
+      "then": "Kemudian lakukan ini",
+      "else": "Jika tidak, lakukan ini",
+      "emptyBranch": "Tidak ada tangga"
+    },
+    "repeat": {
+      "count": "Jumlah kali",
+      "times": "waktu"
+    },
+    "match": {
+      "useRegex": "Cocokkan dengan ekspresi reguler",
+      "useRegexHelp": "Hilangkan bagian ini agar sesuai persis dengan teks yang tertulis.",
+      "invalidRegex": "Bukan ekspresi reguler yang valid, akan dicocokkan sebagai teks biasa."
+    },
+    "seconds": "detik",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
   }
 }

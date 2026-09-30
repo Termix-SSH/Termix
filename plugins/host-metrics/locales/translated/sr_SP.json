@@ -51,10 +51,6 @@
     "processesRunning": "трчање",
     "loginStats": "Статистика SSH пријава",
     "noRecentLoginData": "Нема скорашњих података за пријављивање",
-    "executingQuickAction": "Извршава се {{name}}...",
-    "quickActionSuccess": "{{name}} успешно завршено",
-    "quickActionFailed": "{{name}} није успело",
-    "quickActionError": "Није успело извршавање {{name}}",
     "ports": {
       "title": "Портови за слушање",
       "protocol": "Протокол",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Додај",
     "visibleWidgets": "Видљиви виџети",
     "widgetsMovedToHostMetrics": "Картице се сада додају, распоређују и мењају им се величина директно на картици „Host Metrics“. Отворите „Host Metrics“ за овог хоста и користите „Customize“ да бисте изабрали које ће картице бити приказане.",
-    "quickActionsLabel": "Брзе акције",
-    "quickActionsToolbar": "Брзе акције се појављују као дугмад у траци са алаткама Host Metrics за извршавање команди једним кликом.",
-    "noQuickActions": "Још нема брзих акција.",
-    "buttonLabel": "Ознака дугмета",
-    "selectSnippetPlaceholder": "Изаберите исечак...",
-    "addActionBtn": "Додај акцију",
     "hostNotFound": "Хост није пронађен",
     "loadingHost": "Учитавање хоста..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Диск"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Откажи",
-        "confirmRunButton": "Трчи",
-        "confirmRunMessage": "Покрени „{{name}}“?"
-      }
-    }
   },
   "terminal": {
     "connected": "Повезано"

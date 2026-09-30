@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}}개 노드"
+  },
+  "hosts": {
+    "docsLink": "문서 보기"
   }
 }

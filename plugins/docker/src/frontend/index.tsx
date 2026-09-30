@@ -1,7 +1,8 @@
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
 import type { ComponentType } from "react";
 import { Box } from "lucide-react";
 import type {
-  HomepageWidgetContribution,
   StandaloneViewProps,
   TabProps,
   TermixApp,
@@ -9,10 +10,10 @@ import type {
 import { DockerManager } from "./DockerManager";
 import DockerApp from "./DockerApp";
 import { dockerWidget } from "./DockerWidget";
-import { dockerEnabled, toDockerHost } from "./types";
+import { dockerEnabled, toDockerHost, type DockerHostSource } from "./types";
 
 function DockerTab({ host, sshHost, label, isVisible }: TabProps) {
-  const record = (host ?? sshHost) as Record<string, unknown> | undefined;
+  const record = host ?? (sshHost as DockerHostSource | undefined);
   return (
     <DockerManager
       host={record ? toDockerHost(record) : undefined}
@@ -57,9 +58,7 @@ export function activate(app: TermixApp): void {
     when: (host) => canUse && !!host.enableSsh && dockerEnabled(host),
   });
 
-  app.registerHomepageWidget(
-    dockerWidget as unknown as HomepageWidgetContribution,
-  );
+  app.registerExtension("homepage.widgets", dockerWidget);
 
   app.registerSlotContribution("onboarding.features", {
     actionId: "docker.feature",

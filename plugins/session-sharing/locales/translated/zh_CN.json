@@ -148,5 +148,17 @@
         "description": "允许通过链接或其他方式共享此主机上的实时会话。"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "永不过期",
+        "oneHour": "1 小时",
+        "oneDay": "24 小时",
+        "sevenDays": "7 天",
+        "thirtyDays": "30 天",
+        "custom": "自定义"
+      }
+    }
   }
 }

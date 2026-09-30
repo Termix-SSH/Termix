@@ -39,6 +39,7 @@ export function TerminalTabWithRegistry(props: TabProps) {
           id: tabRecord.id,
           hostId: host ? Number(host.id) || null : null,
           hostName: host?.name,
+          label: props.label,
           ip: host?.ip,
           username: host?.username,
           port: host?.port,

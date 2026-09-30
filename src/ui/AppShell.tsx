@@ -53,13 +53,23 @@ import {
 } from "@/shell/split/EmptyPanePicker";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
-import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
+import { reconnectDisconnectedTabs } from "@/shell/reconnect-tabs";
+import {
+  dispatchCtrlW,
+  createCommandPaletteShortcutMatcher,
+  isShiftKey,
+} from "@/lib/app-keyboard-shortcuts";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
 import type {
   CustomKeybinding,
   KeybindingActionType,
 } from "@/types/keybindings";
+import {
+  GLOBAL_KEYBINDING_EVENT,
+  getKeybindingAction,
+  runKeybindingAction,
+} from "@/shell/keybinding-registry";
 
 // Shell surfaces that are not needed for first paint.
 const CommandPalette = lazy(() =>
@@ -74,14 +84,6 @@ const QuickConnectPanel = lazy(() =>
   import("@/sidebar/QuickConnectPanel").then((m) => ({
     default: m.QuickConnectPanel,
   })),
-);
-
-// Secondary rail panels — load on first open, not with the shell critical path.
-const SshToolsPanel = lazy(() =>
-  import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
-);
-const MacrosPanel = lazy(() =>
-  import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 
 const UserProfilePanel = lazy(() =>
@@ -233,7 +235,6 @@ import {
 } from "@/shell/tab-registry";
 import { runHostAction } from "@/sidebar/host-contributions";
 import { getPanel, usePanels } from "@/shell/panel-registry";
-import { invokeAction } from "@/shell/action-registry";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
   notifyShellReady,
@@ -337,6 +338,24 @@ export function AppShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
+
+  // Host defaults open in the host manager, from anywhere (the admin panel,
+  // a folder's menu).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setSidebarOpen(true);
+      setRailView("hosts");
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("host-manager:edit-defaults", { detail }),
+        );
+      }, 0);
+    };
+    window.addEventListener("termix:open-host-defaults", handler);
+    return () =>
+      window.removeEventListener("termix:open-host-defaults", handler);
+  }, []);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -462,7 +481,6 @@ export function AppShell({
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  const lastShiftTime = useRef(0);
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const closeActiveTabRef = useRef<() => void>(() => {});
@@ -486,16 +504,7 @@ export function AppShell({
           if (cancelled) return;
           globalKeybindingsRef.current = parseCustomKeybindings(
             prefs.customKeybindings,
-          ).filter(
-            (binding) =>
-              binding.enabled &&
-              [
-                "nextTab",
-                "previousTab",
-                "openCommandPalette",
-                "reconnectSession",
-              ].includes(binding.action.type),
-          );
+          ).filter((binding) => binding.enabled);
         })
         .catch(() => {});
     };
@@ -538,14 +547,17 @@ export function AppShell({
         event.target.closest("[data-keybinding-recorder]")
       )
         return;
+      // Only actions that run anywhere; a terminal's own are its to handle.
       const binding = findMatchingKeybinding(
         event,
-        globalKeybindingsRef.current,
+        globalKeybindingsRef.current.filter(
+          (entry) => getKeybindingAction(entry.action.type)?.scope === "global",
+        ),
       );
       if (!binding) return;
       event.preventDefault();
       event.stopPropagation();
-      runAction(binding.action.type);
+      runKeybindingAction(binding.action);
     };
     const handleAction = (event: Event) =>
       runAction(
@@ -553,10 +565,10 @@ export function AppShell({
       );
 
     window.addEventListener("keydown", handleKeyDown, true);
-    window.addEventListener("termix:global-keybinding", handleAction);
+    window.addEventListener(GLOBAL_KEYBINDING_EVENT, handleAction);
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
-      window.removeEventListener("termix:global-keybinding", handleAction);
+      window.removeEventListener(GLOBAL_KEYBINDING_EVENT, handleAction);
     };
   }, []);
   useEffect(() => {
@@ -651,7 +663,7 @@ export function AppShell({
     setActiveTabId(splitTabId);
   };
 
-  // Panels like history and snippets act on "the terminal you're working in".
+  // Panels that type into a terminal act on "the terminal you're working in".
   // Once those panels can themselves be the active tab, activeTabId points at
   // the panel and the lookup misses, so remember the last terminal instead.
   // In a split, the tab being worked in is the focused pane's.
@@ -754,26 +766,21 @@ export function AppShell({
   // Double-shift or Ctrl+K opens the command palette. Double-shift alone was
   // hard to discover.
   useEffect(() => {
+    if (!commandPaletteShortcutEnabled) return;
+    const shortcut = createCommandPaletteShortcutMatcher();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isShiftKey(e) && !e.repeat) {
-        const now = Date.now();
-        if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
-          setCommandPaletteOpen((prev) => !prev);
-        lastShiftTime.current = now;
-      }
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        !e.shiftKey &&
-        !e.altKey &&
-        e.code === "KeyK" &&
-        commandPaletteShortcutEnabled
-      ) {
-        e.preventDefault();
-        setCommandPaletteOpen((prev) => !prev);
-      }
+      if (!shortcut.matches(e)) return;
+      if (!isShiftKey(e)) e.preventDefault();
+      setCommandPaletteOpen((prev) => !prev);
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", shortcut.reset);
+    window.addEventListener("compositionstart", shortcut.reset);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", shortcut.reset);
+      window.removeEventListener("compositionstart", shortcut.reset);
+    };
   }, [commandPaletteShortcutEnabled]);
 
   // Ctrl+Shift+E toggles between the two most recent sidebar panels.
@@ -988,13 +995,11 @@ export function AppShell({
               "termix-font-size",
               "termix-ui-font",
               "i18nextLng",
-              "commandAutocomplete",
               "commandPaletteShortcutEnabled",
               "showHostTags",
               "hostTrayOnClick",
               "pinAppRail",
               "expandAppRailOnHover",
-              "confirmSnippetExecution",
               "disableUpdateCheck",
               "confirmTabClose",
               "hiddenRailTabs",
@@ -1019,14 +1024,6 @@ export function AppShell({
           if (loginLanguage && loginLanguage !== prefs.language) {
             void saveUserPreferences({ language: loginLanguage });
           }
-          if (
-            prefs.commandAutocomplete !== null &&
-            prefs.commandAutocomplete !== undefined
-          )
-            localStorage.setItem(
-              "commandAutocomplete",
-              String(prefs.commandAutocomplete),
-            );
           if (
             prefs.commandPaletteEnabled !== null &&
             prefs.commandPaletteEnabled !== undefined
@@ -1061,14 +1058,6 @@ export function AppShell({
             );
             window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
           }
-          if (
-            prefs.confirmSnippetExecution !== null &&
-            prefs.confirmSnippetExecution !== undefined
-          )
-            localStorage.setItem(
-              "confirmSnippetExecution",
-              String(prefs.confirmSnippetExecution),
-            );
           if (
             prefs.disableUpdateCheck !== null &&
             prefs.disableUpdateCheck !== undefined
@@ -1169,19 +1158,6 @@ export function AppShell({
     );
   }, [allHosts]);
 
-  // Let HostManager trigger tab opens via custom event
-  useEffect(() => {
-    const handle = (e: Event) => {
-      const { hostId, type } = (
-        e as CustomEvent<{ hostId: string; type?: TabType }>
-      ).detail;
-      const host = allHosts.find((h) => h.id === hostId);
-      if (host) connectHost(host, type);
-    };
-    window.addEventListener("termix:open-tab", handle);
-    return () => window.removeEventListener("termix:open-tab", handle);
-  }, [allHosts]);
-
   function buildWorkspacePayload(): WorkspacePayload {
     return buildLayoutPayload({
       tabs,
@@ -1232,13 +1208,16 @@ export function AppShell({
         }
 
         if (target.kind === "host") {
-          const newTabId = openTab(target.host, snapshot.type, {
-            instanceId: createId(),
-            restoredSessionId: null,
-            savedLabel: snapshot.customLabel ?? snapshot.label,
-            initialFilePath: snapshot.initialFilePath,
-            initialPath: snapshot.initialPath,
-          });
+          const newTabId = openTab(
+            target.host,
+            snapshot.type,
+            {
+              instanceId: createId(),
+              restoredSessionId: null,
+              savedLabel: snapshot.customLabel ?? snapshot.label,
+            },
+            { data: snapshotData(snapshot) },
+          );
           slotIdToNewTabId.set(snapshot.slotId, newTabId);
         }
       }
@@ -1501,10 +1480,6 @@ export function AppShell({
       instanceId: string;
       restoredSessionId: string | null;
       savedLabel?: string;
-      initialFilePath?: string;
-      initialPath?: string;
-      joinSharedSessionId?: string | null;
-      joinShareId?: string | null;
     },
     options?: {
       data?: Record<string, unknown>;
@@ -1533,10 +1508,6 @@ export function AppShell({
 
     let finalLabel = host.name;
     const savedLabel = restore?.savedLabel;
-    const initialFilePath = restore?.initialFilePath;
-    const initialPath = restore?.initialPath;
-    const joinSharedSessionId = restore?.joinSharedSessionId ?? null;
-    const joinShareId = restore?.joinShareId ?? null;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
       savedLabel != null &&
@@ -1558,10 +1529,7 @@ export function AppShell({
             openedAt,
             terminalRef: ref,
             restoredSessionId: restore?.restoredSessionId ?? null,
-            joinSharedSessionId,
-            joinShareId,
-            initialFilePath,
-            initialPath,
+            data: options?.data,
           },
         ];
       }
@@ -1595,10 +1563,6 @@ export function AppShell({
           openedAt,
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
-          joinSharedSessionId,
-          joinShareId,
-          initialFilePath,
-          initialPath,
           data: options?.data,
         },
       ];
@@ -1717,7 +1681,6 @@ export function AppShell({
       const id = type;
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.hostManager"),
-        sftp: t("nav.sftp"),
       };
       // A plugin tab names itself; promoted rail panels reuse the rail's own
       // label so the two stay in sync.
@@ -1728,7 +1691,7 @@ export function AppShell({
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);
         if (existing) {
-          // --- tmux-monitor --- refocusing with a host preselects it
+          // Refocusing a singleton with a host or data passes it on.
           if (!host && data === undefined) return prev;
           return prev.map((t) =>
             t.id === id
@@ -1748,7 +1711,7 @@ export function AppShell({
             type,
             label,
             openedAt: Date.now(),
-            ...(host ? { host } : {}), // --- tmux-monitor ---
+            ...(host ? { host } : {}),
             ...(data !== undefined ? { data } : {}),
           },
         ];
@@ -1833,6 +1796,24 @@ export function AppShell({
       return next;
     });
   }
+
+  const reconnectAllRef = useRef<() => void>(() => {});
+  function reconnectAllDisconnected() {
+    const { reconnected, failed } = reconnectDisconnectedTabs(tabsRef.current);
+    if (reconnected || !failed)
+      toast(
+        t(
+          reconnected
+            ? "nav.reconnectingTerminals"
+            : "nav.noDisconnectedTerminals",
+          { count: reconnected },
+        ),
+      );
+    if (failed)
+      toast.error(t("nav.reconnectTerminalsFailed", { count: failed }));
+  }
+
+  reconnectAllRef.current = reconnectAllDisconnected;
 
   function refreshTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
@@ -2197,6 +2178,14 @@ export function AppShell({
       );
     const entries = [
       registerPaletteEntry({
+        id: "core.reconnectDisconnected",
+        titleKey: "nav.reconnectDisconnectedTerminals",
+        icon: RotateCcw,
+        keywords: ["reconnect", "disconnected", "ssh", "all", "network"],
+        scope: "global",
+        run: () => reconnectAllRef.current(),
+      }),
+      registerPaletteEntry({
         id: "core.split.right",
         titleKey: "splitScreen.splitRight",
         icon: Columns2,
@@ -2530,7 +2519,7 @@ export function AppShell({
     ]);
   }
 
-  // What history/snippets/ssh-tools should act on. Falls back to the remembered
+  // What command-target panels act on. Falls back to the remembered
   // terminal when the active tab isn't one, and drops it once it's closed.
   const targetTerminalTabId = terminalTabs.some((t) => t.id === workingTabId)
     ? workingTabId
@@ -2564,6 +2553,7 @@ export function AppShell({
     },
     openSingletonTab: (type, options) =>
       openSingletonTab(type, undefined, undefined, options?.data),
+    connectHost: (host, type) => connectHost(host, type as TabType),
     closeTab: (tabId) => closeTab(tabId),
     renameTab: (tabId, label) => renameTab(tabId, label),
 
@@ -2653,27 +2643,6 @@ export function AppShell({
           />
         )}
 
-        {railView === "ssh-tools" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <SshToolsPanel
-              terminalTabs={terminalTabs}
-              activeTabId={targetTerminalTabId}
-            />
-          </div>
-        )}
-
-        {railView === "macros" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <MacrosPanel
-              terminalTabs={terminalTabs}
-              activeTabId={targetTerminalTabId}
-              storageMode={
-                userPrefs.storageMode === "cloud" ? "cloud" : "local"
-              }
-            />
-          </div>
-        )}
-
         {registeredPanels.map((panel) => {
           const shown = railView === panel.id;
           // A kept-mounted panel lives in the owning dock only, so two live
@@ -2745,36 +2714,6 @@ export function AppShell({
               }}
               onRenameTab={renameTab}
               onReorderTabs={setTabs}
-              onJoinSharedSession={(session) => {
-                if (!session.shareId) return;
-                const existingHost = allHosts.find(
-                  (h) => h.id === String(session.hostId),
-                );
-                const host: Host = existingHost ?? {
-                  id: String(session.hostId),
-                  name: session.hostName,
-                  username: "",
-                  ip: "",
-                  port: 0,
-                  folder: "",
-                  online: false,
-                  cpu: null,
-                  ram: null,
-                  lastAccess: new Date().toISOString(),
-                  authType: "none",
-                  enableSsh: false,
-                  sshPort: 22,
-                  quickActions: [],
-                };
-                void invokeAction("terminal.open", host, {
-                  joinSharedSessionId: session.sessionId,
-                  joinShareId: session.shareId,
-                  label: t("connections.sharedSessionLabel", {
-                    hostName: session.hostName,
-                  }),
-                });
-                if (isMobile) setSidebarOpen(false);
-              }}
             />
           </div>
         )}
@@ -3083,15 +3022,10 @@ export function AppShell({
                 onSetActiveTab={setActiveTabId}
                 onCloseTab={closeTab}
                 onRefreshTab={refreshTab}
+                onReconnectDisconnected={reconnectAllDisconnected}
                 onReorderTabs={reorderTopLevelTabs}
                 onSplitAction={handleTabSplitAction}
                 onRenameTab={renameTab}
-                onOpenFileManager={(tabId) => {
-                  const targetTab = tabs.find((t) => t.id === tabId);
-                  if (targetTab?.host) {
-                    void invokeAction("host.openFiles", targetTab.host);
-                  }
-                }}
                 isAppFullscreen={isAppFullscreen}
                 onToggleAppFullscreen={toggleAppFullscreen}
                 rightDockOpen={rightRailView !== null}
@@ -3144,14 +3078,6 @@ export function AppShell({
                         isVisible: inPane || activeInline,
                         isFocusedPane,
                         inSplit: inPane,
-                        panelProps: {
-                          terminalTabs,
-                          targetTerminalTabId,
-                          storageMode:
-                            userPrefs.storageMode === "cloud"
-                              ? "cloud"
-                              : "local",
-                        },
                       }),
                       tabNode,
                       tab.id,

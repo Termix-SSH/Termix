@@ -112,9 +112,6 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     credentialId: null,
     shareSshAuth: false,
     sudoPassword: "owner-sudo",
-    autostartPassword: "auto-pass",
-    autostartKey: null,
-    autostartKeyPassword: null,
     jumpHosts: null,
     tunnelConnections: null,
     terminalConfig: null,
@@ -307,9 +304,11 @@ describe("resolveHostById", () => {
       unknown
     >;
     expect(host.authType).toBe("agent");
+    expect(host.sshOptions).toEqual({
+      agentSocketPath: "/run/user/1000/ssh-agent.sock",
+    });
     expect(host.terminalConfig).toEqual({
       agentSocketPath: "/run/user/1000/ssh-agent.sock",
-      sudoPassword: null,
     });
   });
 
@@ -449,10 +448,43 @@ describe("resolveHostById", () => {
     expect(host.password).toBeNull();
     expect(host.key).toBeNull();
     expect(host.credentialId).toBeNull();
-    expect(host.terminalConfig).toEqual({
-      theme: "termix",
+    // The owner's legacy sudo password never reaches a recipient.
+    expect(host.terminalConfig).toEqual({ theme: "termix" });
+    expect(host.sudoPassword).toBeNull();
+  });
+
+  it("hands the owner a 2.8 sudo password and SSH options kept in terminal_config", async () => {
+    state.host = baseHost({
       sudoPassword: null,
+      sshOptions: null,
+      terminalConfig: JSON.stringify({
+        sudoPassword: "legacy-sudo",
+        keepaliveInterval: 12,
+        theme: "nord",
+      }),
     });
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.sudoPassword).toBe("legacy-sudo");
+    expect(host.sshOptions).toEqual({ keepaliveInterval: 12 });
+    expect(host.terminalConfig).toEqual({
+      keepaliveInterval: 12,
+      theme: "nord",
+    });
+  });
+
+  it("prefers the ssh_options column once it is filled", async () => {
+    state.host = baseHost({
+      sshOptions: JSON.stringify({ keepaliveCountMax: 3 }),
+      terminalConfig: JSON.stringify({ keepaliveInterval: 12 }),
+    });
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.sshOptions).toEqual({ keepaliveCountMax: 3 });
   });
 
   it("resolves an admin bypass like the owner, keeping owner-only secrets", async () => {
@@ -484,7 +516,6 @@ describe("resolveHostById", () => {
     expect(host.username).toBe("cred-user");
     // Owner-only operational secrets are NOT stripped for the admin.
     expect(host.sudoPassword).toBe("owner-sudo");
-    expect(host.autostartPassword).toBe("auto-pass");
   });
 
   it("audits every admin-bypass host resolution", async () => {

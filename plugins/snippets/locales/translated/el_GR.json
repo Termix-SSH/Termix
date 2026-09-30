@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Εκτέλεση \"{{name}}\"",
+  "variablesDialogDescription": "Συμπληρώστε τις τιμές που χρειάζεται αυτό το τμήμα κώδικα πριν το εκτελέσετε.",
+  "variablesPreviewLabel": "Πρεμιέρα",
+  "variablesConfirmButton": "Τρέξιμο",
+  "keybindings": {
+    "runSnippet": "Εκτέλεση υπάρχοντος αποσπάσματος",
+    "snippetLabel": "Απόσπασμα",
+    "selectSnippet": "Επιλέξτε ένα απόσπασμα",
+    "snippetMissing": "το απόσπασμα δεν βρέθηκε",
+    "snippetRequired": "Επιλέξτε ένα απόσπασμα"
+  },
+  "paletteHintRun": "Εκτέλεση στην ενεργή καρτέλα τερματικού",
+  "host": {
+    "startupTitle": "Απόσπασμα εκκίνησης",
+    "quickActionsTitle": "Γρήγορες ενέργειες",
+    "quickActionsDescription": "Οι γρήγορες ενέργειες εμφανίζονται ως κουμπιά στη γραμμή εργαλείων Μετρήσεων κεντρικού υπολογιστή για εκτέλεση εντολών με ένα κλικ.",
+    "noQuickActions": "Δεν υπάρχουν ακόμη γρήγορες ενέργειες.",
+    "buttonLabel": "Ετικέτα κουμπιού",
+    "selectSnippet": "Επιλογή αποσπάσματος...",
+    "addQuickAction": "Προσθήκη ενέργειας"
+  },
+  "quickActions": {
+    "running": "Εκτέλεση {{name}}...",
+    "succeeded": "{{name}} ολοκληρώθηκε με επιτυχία",
+    "failed": "{{name}} απέτυχε",
+    "error": "Αποτυχία εκτέλεσης {{name}}"
+  }
+}

@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Forward a port on the remote server back to a local port on your machine.",
     "tunnelRequirementsText": "The SSH server must have GatewayPorts yes, AllowTcpForwarding yes, and PermitRootLogin yes set in /etc/ssh/sshd_config.",
     "tunnelSettings": "Tunnel Settings",
-    "tunnelType": "Tunnel Type"
+    "tunnelType": "Tunnel Type",
+    "bindHost": "Bind Host",
+    "docsLink": "View docs",
+    "hostNotFound": "Host not found",
+    "loadingHost": "Loading host..."
   },
   "nav": {
     "portForwarding": "Forwarding",
@@ -142,7 +146,9 @@
     "socksProxy": "SOCKS5 proxy",
     "waiting": "Waiting",
     "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
-    "activeTunnels": "Active Tunnels"
+    "activeTunnels": "Active Tunnels",
+    "start": "Start",
+    "stop": "Stop"
   },
   "permissions": {
     "use": {
@@ -157,5 +163,9 @@
         "description": "Set up SSH tunnels through this host."
       }
     }
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunnels",
+    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
   }
 }

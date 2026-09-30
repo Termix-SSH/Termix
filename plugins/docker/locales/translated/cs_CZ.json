@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Je vyžadován vzdálený server. Pro použití tohoto typu připojení se připojte ke vzdálenému serveru v Nastavení."
+  },
+  "hosts": {
+    "docsLink": "Zobrazit dokumenty",
+    "hostNotFound": "Hostitel nenalezen",
+    "loadingHost": "Načítání hostitele..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Čtení ze schránky se nezdařilo. Ujistěte se, že máte povolena přístup ke schránce.",
+    "clipboardWriteFailed": "Kopírování do schránky se nezdařilo. Ujistěte se, že stránka je zobrazována přes HTTPS nebo localhost."
   }
 }

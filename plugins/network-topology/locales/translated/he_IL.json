@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "צמתים {{count}}"
+  },
+  "hosts": {
+    "docsLink": "הצג מסמכים"
   }
 }

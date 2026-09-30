@@ -51,10 +51,6 @@
     "processesRunning": "দৌড়ানো",
     "loginStats": "SSH লগইন পরিসংখ্যান",
     "noRecentLoginData": "সাম্প্রতিক কোনো লগইন ডেটা নেই",
-    "executingQuickAction": "{{name}} কার্যকর করা হচ্ছে ...",
-    "quickActionSuccess": "{{name}} সফলভাবে সম্পন্ন হয়েছে",
-    "quickActionFailed": "{{name}} ব্যর্থ হয়েছে",
-    "quickActionError": "{{name}} কার্যকর করতে ব্যর্থ হয়েছে",
     "ports": {
       "title": "লিসেনিং পোর্ট",
       "protocol": "প্রোটোকল",
@@ -235,12 +231,6 @@
     "addExcludedMount": "যোগ করুন",
     "visibleWidgets": "দৃশ্যমান উইজেট",
     "widgetsMovedToHostMetrics": "এখন কার্ডগুলি সরাসরি হোস্ট মেট্রিক্স ট্যাবে যোগ, সাজানো এবং আকার পরিবর্তন করা যায়। এই হোস্টের জন্য হোস্ট মেট্রিক্স খুলুন এবং কোন কার্ডগুলি দেখানো হবে তা বেছে নিতে কাস্টমাইজ ব্যবহার করুন।",
-    "quickActionsLabel": "দ্রুত পদক্ষেপ",
-    "quickActionsToolbar": "এক ক্লিকে কমান্ড কার্যকর করার জন্য কুইক অ্যাকশনগুলো হোস্ট মেট্রিক্স টুলবারে বাটন হিসেবে প্রদর্শিত হয়।",
-    "noQuickActions": "এখনো কোনো দ্রুত পদক্ষেপ নেওয়া হয়নি।",
-    "buttonLabel": "বোতাম লেবেল",
-    "selectSnippetPlaceholder": "স্নিপেট নির্বাচন করুন...",
-    "addActionBtn": "অ্যাকশন যোগ করুন",
     "hostNotFound": "হোস্ট খুঁজে পাওয়া যায়নি",
     "loadingHost": "হোস্ট লোড হচ্ছে..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "ডিস্ক"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "বাতিল করুন",
-        "confirmRunButton": "দৌড়",
-        "confirmRunMessage": "\"{{name}} \" চালান?"
-      }
-    }
   },
   "terminal": {
     "connected": "সংযুক্ত"

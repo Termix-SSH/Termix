@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Avaa selain todennusta varten",
     "tailscaleCheckWaiting": "Odotetaan Tailscale-todennusta...",
     "tailscaleCheckTimeout": "Tailscale-todennus aikakatkaistiin. Yritä uudelleen."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Yhdistä terminaaliin",
+        "usernameLabel": "Käyttäjätunnus"
+      }
+    }
   }
 }

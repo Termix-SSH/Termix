@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Çalıştır \"{{name}}\"",
+  "variablesDialogDescription": "Bu kod parçasını çalıştırmadan önce gerekli değerleri girin.",
+  "variablesPreviewLabel": "Önizleme",
+  "variablesConfirmButton": "Koşmak",
+  "keybindings": {
+    "runSnippet": "Mevcut kod parçasını çalıştır",
+    "snippetLabel": "Alıntı",
+    "selectSnippet": "Bir parça seçin",
+    "snippetMissing": "Kod parçası bulunamadı",
+    "snippetRequired": "Bir parça seçin"
+  },
+  "paletteHintRun": "Etkin terminal sekmesinde çalıştırın.",
+  "host": {
+    "startupTitle": "Başlangıç Betiği",
+    "quickActionsTitle": "Hızlı Eylemler",
+    "quickActionsDescription": "Hızlı eylemler, tek tıklamayla komut çalıştırmak için Ana Bilgisayar Metrikleri araç çubuğunda düğme olarak görünür.",
+    "noQuickActions": "Henüz hızlı eylem yok.",
+    "buttonLabel": "Düğme etiketi",
+    "selectSnippet": "Parçacık seç...",
+    "addQuickAction": "Eylem Ekle"
+  },
+  "quickActions": {
+    "running": "{{name}} çalıştırılıyor...",
+    "succeeded": "{{name}} başarıyla tamamlandı",
+    "failed": "{{name}} başarısız oldu",
+    "error": "{{name}} çalıştırılamadı"
+  }
+}

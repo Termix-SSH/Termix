@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Tmux monitor engedélyezése",
-    "enableTmuxMonitorDesc": "Mutassa meg ezt a gépet a Tmux Monitorban, és adja hozzá a tmux műveleteit az oldalsávhoz"
+    "enableTmuxMonitorDesc": "Mutassa meg ezt a gépet a Tmux Monitorban, és adja hozzá a tmux műveleteit az oldalsávhoz",
+    "docsLink": "Dokumentumok megtekintése"
   },
   "tmuxMonitor": {
     "title": "Tmux monitor",

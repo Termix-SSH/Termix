@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Çalışma Alanları",
     "workflow_workspaces_desc": "Açık sekmeleri kaydedin ve daha sonra tüm düzeni yeniden açın."
+  },
+  "hosts": {
+    "docsLink": "Dokümanları görüntüle"
   }
 }

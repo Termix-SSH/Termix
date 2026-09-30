@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Laat ongeldige sertifikaat toe",
     "webUiIgnoreCertDesc": "Slegs direkte eindpunte. Teruglus is reeds vrygestel, dus het dit geen effek op tonneleindpunte nie.",
     "webUiRemoveEndpoint": "Verwyder eindpunt",
-    "webUiOpenFailed": "Kon nie die web-eindpunt oopmaak nie"
+    "webUiOpenFailed": "Kon nie die web-eindpunt oopmaak nie",
+    "bindHost": "Bind gasheer"
   }
 }

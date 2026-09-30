@@ -4,9 +4,10 @@
  * to guacd). Needs credentials:read, the one critical capability, and every
  * call is audited whether it succeeds or not.
  *
- * The protocol credentials themselves stay in core, next to the host, because
- * core's sharing model (per-recipient secret snapshots, personal overrides)
- * is what decides which ones a shared recipient may use.
+ * The logins themselves stay in core, next to the host, because core's
+ * sharing model (per-recipient secret snapshots, personal overrides) decides
+ * which ones a shared recipient may use. A plugin reads only the protocols
+ * its own manifest declares in contributes.protocols.
  *
  * registerSecretResolver is the other half: a plugin that resolves
  * "<scheme>://..." references in a host's secret fields (secret-sources and
@@ -21,8 +22,6 @@
 
 import type {
   PluginCredentials,
-  PluginHostProtocol,
-  PluginProtocolTarget,
   PluginSshKeyCredential,
 } from "@termix/plugin-sdk/backend";
 import ssh2 from "ssh2";
@@ -31,6 +30,7 @@ import { assertCapability, capabilityRefused } from "./permissions.js";
 import { getActor } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import { registerSecretResolver } from "../hosts/connect/secret-resolver-registry.js";
+import { findHostProtocol } from "../hosts/protocol-auth/registry.js";
 
 type AuditFn = (
   action: string,
@@ -43,8 +43,6 @@ interface Deps {
   bag: DisposableBag;
   audit: AuditFn;
 }
-
-const PROTOCOLS: PluginHostProtocol[] = ["rdp", "vnc", "telnet"];
 
 type HostRow = Record<string, unknown>;
 
@@ -66,100 +64,6 @@ function parseJumpHosts(value: unknown): Array<{ hostId: number }> {
     .map((hop) => Number((hop as { hostId?: unknown })?.hostId))
     .filter((id) => Number.isInteger(id) && id > 0)
     .map((hostId) => ({ hostId }));
-}
-
-async function resolveOwnerAuth(
-  host: HostRow,
-  protocol: PluginHostProtocol,
-): Promise<PluginProtocolTarget["auth"]> {
-  const credentialId = host[`${protocol}CredentialId`] as number | null;
-  const authType =
-    str(host[`${protocol}AuthType`]) ||
-    (credentialId ? "credential" : "direct");
-  let username = str(host[`${protocol}User`]);
-  let password = str(host[`${protocol}Password`]);
-
-  if (authType === "credential" && credentialId) {
-    const { createCurrentHostResolutionRepository } =
-      await import("../database/repositories/factory.js");
-    const credential =
-      await createCurrentHostResolutionRepository().findCredentialByIdForUser(
-        credentialId,
-        host.userId as string,
-      );
-    // The domain never comes from a stored credential.
-    if (credential?.username) username = credential.username;
-    if (credential?.password) password = credential.password;
-  }
-
-  if (protocol === "rdp") username ||= str(host.username);
-  password ||= str(host.password);
-
-  return {
-    authType,
-    username,
-    password,
-    domain: str(host.rdpDomain) || str(host.domain),
-  };
-}
-
-async function resolveRecipientAuth(
-  host: HostRow,
-  hostId: number,
-  userId: string,
-  protocol: PluginHostProtocol,
-): Promise<PluginProtocolTarget["auth"]> {
-  const { resolveRecipientSharedHostAuthentication } =
-    await import("../utils/shared-host-auth-resolver.js");
-  // Recipients never read the owner's raw secrets, so start from nothing.
-  const recipientHost = {
-    ...host,
-    password: null,
-    rdpUser: null,
-    rdpPassword: null,
-    vncUser: null,
-    vncPassword: null,
-    telnetUser: null,
-    telnetPassword: null,
-  };
-  let resolution: Awaited<
-    ReturnType<typeof resolveRecipientSharedHostAuthentication>
-  >;
-  try {
-    resolution = await resolveRecipientSharedHostAuthentication(
-      recipientHost as never,
-      hostId,
-      userId,
-      protocol,
-    );
-  } catch {
-    // Same as before the move: connect without stored credentials.
-    resolution = { source: "required" };
-  }
-
-  const auth =
-    resolution.source === "personal-override"
-      ? { ...resolution.credential, domain: null }
-      : resolution.source === "owner-shared"
-        ? resolution.secret
-        : null;
-
-  let authType = "direct";
-  if (resolution.source === "personal-override") authType = "credential";
-  else if (resolution.source === "owner-shared") authType = resolution.authType;
-  else if (
-    resolution.source === "secretless" &&
-    str(host[`${protocol}AuthType`]) === "none"
-  ) {
-    authType = "none";
-  }
-
-  return {
-    authType,
-    username: str(auth?.username),
-    password: str(auth?.password),
-    domain: str(auth?.domain) || str(host.rdpDomain) || str(host.domain),
-  };
 }
 
 function derivePublicKey(
@@ -326,8 +230,15 @@ export function createPluginCredentials({
       const details = `${protocol} credentials for host ${hostId}`;
       try {
         await assertCapability(pluginId, "credentials:read", declared);
-        if (!PROTOCOLS.includes(protocol)) {
-          throw new Error(`Unsupported protocol: ${String(protocol)}`);
+        // Another plugin that declared the same id first owns it.
+        const own =
+          manifest.contributes?.protocols?.some(
+            (entry) => entry.id === protocol,
+          ) && findHostProtocol(protocol)?.pluginId === pluginId;
+        if (!own) {
+          throw new Error(
+            `Plugin ${pluginId} does not declare protocol "${String(protocol)}" in contributes.protocols`,
+          );
         }
       } catch (error) {
         await audit("credentials_read", details, {
@@ -378,9 +289,12 @@ export function createPluginCredentials({
         }
       }
 
+      const declaredProtocol = findHostProtocol(protocol)!;
+      const { resolveOwnerProtocolLogin, resolveRecipientProtocolLogin } =
+        await import("../hosts/protocol-auth/protocol-auth.js");
       const auth = shared
-        ? await resolveRecipientAuth(host, hostId, userId, protocol)
-        : await resolveOwnerAuth(host, protocol);
+        ? await resolveRecipientProtocolLogin(host, userId, declaredProtocol)
+        : await resolveOwnerProtocolLogin(host, declaredProtocol);
 
       await audit("credentials_read", details, { success: true });
       return {

@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Mở trình duyệt để xác thực.",
     "tailscaleCheckWaiting": "Đang chờ xác thực Tailscale...",
     "tailscaleCheckTimeout": "Quá trình xác thực Tailscale đã hết hạn. Vui lòng thử lại."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Kết nối đến Terminal",
+        "usernameLabel": "Tên đăng nhập"
+      }
+    }
   }
 }

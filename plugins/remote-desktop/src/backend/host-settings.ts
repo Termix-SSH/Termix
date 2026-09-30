@@ -141,7 +141,43 @@ export function normalizeImportedHost(
   return Object.keys(out).length > 0 ? out : null;
 }
 
-/** User setting key to the guacd parameter it sets. */
+/**
+ * Registered as "remote-desktop.hostPayloadLegacy": each protocol's login
+ * in the flat 2.8 shape (rdpUser, rdpDomain, vncAuthType and so on), for
+ * Termix-Mobile until it reads protocolAuth. Built from the payload's own
+ * protocolAuth, which core already reduced for a shared recipient.
+ */
+export function hostPayloadLegacy(
+  _values: Record<string, unknown>,
+  host: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const logins = asObject(host.protocolAuth);
+  if (!logins) return null;
+  const out: Record<string, unknown> = {};
+  for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+    const login = asObject(logins[protocol]);
+    if (!login) continue;
+    out[`${protocol}AuthType`] = login.authType;
+    if (login.credentialId !== undefined) {
+      out[`${protocol}CredentialId`] = login.credentialId;
+    }
+    if (typeof login.username === "string" && login.username) {
+      out[`${protocol}User`] = login.username;
+    }
+    if (typeof login.hasPassword === "boolean") {
+      const name = protocol.charAt(0).toUpperCase() + protocol.slice(1);
+      out[`has${name}Password`] = login.hasPassword;
+    }
+    const domain = asObject(login.fields)?.domain;
+    if (protocol === "rdp" && typeof domain === "string" && domain) {
+      out.rdpDomain = domain;
+      out.domain = domain;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/** Display field key to the guacd parameter it sets. */
 const USER_DEFAULT_PARAMS: Record<string, string> = {
   colorDepth: "color-depth",
   resizeMethod: "resize-method",
@@ -157,8 +193,8 @@ const USER_DEFAULT_PARAMS: Record<string, string> = {
 };
 
 /**
- * The user's RDP defaults as guacd parameters. "inherit" leaves a parameter
- * to the host and guacd; on and off become booleans.
+ * Display settings as guacd parameters. "inherit" leaves a parameter to the
+ * host and guacd; on and off become booleans.
  */
 export function userDefaultParams(
   values: Record<string, unknown>,
@@ -179,9 +215,22 @@ export function userDefaultParams(
   return params;
 }
 
-export async function readUserDefaults(
+/**
+ * The display settings a session runs with, as guacd parameters: the host's
+ * as this user sees them (their own defaults while the host follows its
+ * defaults), or with no host, this user's defaults.
+ */
+export async function readDisplayDefaults(
   ctx: PluginContext,
   userId: string,
+  hostId?: number,
 ): Promise<Record<string, unknown>> {
-  return userDefaultParams(await ctx.settings.getAll("user", userId));
+  const values: Record<string, unknown> = {};
+  for (const key of Object.keys(USER_DEFAULT_PARAMS)) {
+    values[key] =
+      hostId === undefined
+        ? await ctx.settings.getHostDefault(userId, key)
+        : await ctx.settings.getHostFor(hostId, userId, key);
+  }
+  return userDefaultParams(values);
 }

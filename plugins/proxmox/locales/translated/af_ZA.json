@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimum 15 sekondes. Hoe gereeld om Proxmox-nodusstatistieke te verfris.",
     "proxmoxStatsNodeOverride": "Nodenaam-oorskrywing",
     "proxmoxStatsNodeOverrideDesc": "Ignoreer outomatiese opsporing van die Proxmox-nodusnaam (standaard opgespoor via gasheernaam).",
-    "proxmoxStatsNodeOverridePlaceholder": "Outomaties opgespoor vanaf gasheernaam"
+    "proxmoxStatsNodeOverridePlaceholder": "Outomaties opgespoor vanaf gasheernaam",
+    "docsLink": "Bekyk dokumente",
+    "hostNotFound": "Gasheer nie gevind nie",
+    "loadingHost": "Laai gasheer...",
+    "none": "Geen",
+    "proxmoxGuestsSelected_one": "{{count}} gas — {{selected}} gekies",
+    "proxmoxGuestsSelected_other": "{{count}} gaste — {{selected}} gekies",
+    "proxmoxImportButton_one": "Voer {{count}} gasheer in",
+    "proxmoxImportButton_other": "Voer {{count}} gashere in"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox-statistieke",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Geen VM'e of LXC-houers is op hierdie node gevind nie.",
     "noGuestsMatch": "Geen gaste stem ooreen met die huidige filters nie."
+  },
+  "terminal": {
+    "connected": "Verbonde"
   }
 }

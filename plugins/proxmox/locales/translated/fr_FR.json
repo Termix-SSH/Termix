@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimum 15 secondes. Fréquence d'actualisation des statistiques du nœud Proxmox.",
     "proxmoxStatsNodeOverride": "Remplacement du nom du nœud",
     "proxmoxStatsNodeOverrideDesc": "Désactiver la détection automatique du nom du nœud Proxmox (détecté par défaut via le nom d'hôte).",
-    "proxmoxStatsNodeOverridePlaceholder": "Détection automatique à partir du nom d'hôte"
+    "proxmoxStatsNodeOverridePlaceholder": "Détection automatique à partir du nom d'hôte",
+    "docsLink": "Voir la documentation",
+    "hostNotFound": "Hôte introuvable",
+    "loadingHost": "Chargement de l'hôte...",
+    "none": "Aucun",
+    "proxmoxGuestsSelected_one": "{{count}} invité — {{selected}} sélectionné",
+    "proxmoxGuestsSelected_other": "{{count}} invités — {{selected}} sélectionnés",
+    "proxmoxImportButton_one": "Importer {{count}} hôte",
+    "proxmoxImportButton_other": "Importer {{count}} hôtes"
   },
   "proxmoxStats": {
     "tabTitle": "Statistiques Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Aucune machine virtuelle ni conteneur LXC n'a été trouvé sur ce nœud.",
     "noGuestsMatch": "Aucun invité ne correspond aux filtres actuels."
+  },
+  "terminal": {
+    "connected": "Connecté"
   }
 }

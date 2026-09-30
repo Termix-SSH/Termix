@@ -148,5 +148,17 @@
         "description": "La direktesendte økter på denne verten deles via lenke eller med andre brukere"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Aldri",
+        "oneHour": "1 time",
+        "oneDay": "24 timer",
+        "sevenDays": "7 dager",
+        "thirtyDays": "30 dager",
+        "custom": "Skikk"
+      }
+    }
   }
 }

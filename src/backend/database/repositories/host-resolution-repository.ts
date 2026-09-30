@@ -15,9 +15,6 @@ export interface HostKeyVerificationRecord {
 export interface HostUpdateStateRecord {
   userId: string;
   credentialId: number | null;
-  rdpCredentialId: number | null;
-  vncCredentialId: number | null;
-  telnetCredentialId: number | null;
   authType: string;
   parentHostId: number | null;
   folder: string | null;
@@ -142,9 +139,6 @@ export class HostResolutionRepository {
       .select({
         userId: hosts.userId,
         credentialId: hosts.credentialId,
-        rdpCredentialId: hosts.rdpCredentialId,
-        vncCredentialId: hosts.vncCredentialId,
-        telnetCredentialId: hosts.telnetCredentialId,
         authType: hosts.authType,
         parentHostId: hosts.parentHostId,
         folder: hosts.folder,

@@ -148,5 +148,17 @@
         "description": "Permet que les sessions en directe d'aquest amfitrió es comparteixin mitjançant un enllaç o amb altres usuaris"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Mai",
+        "oneHour": "1 hora",
+        "oneDay": "24 hores",
+        "sevenDays": "7 dies",
+        "thirtyDays": "30 dies",
+        "custom": "Personalitzat"
+      }
+    }
   }
 }

@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Etäpalvelin vaaditaan. Yhdistä etäpalvelin asetuksissa käyttääksesi tätä yhteystyyppiä."
+  },
+  "hosts": {
+    "docsLink": "Näytä dokumentit",
+    "hostNotFound": "Isäntää ei löydy",
+    "loadingHost": "Ladataan isäntää..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Leikepöydän lukeminen epäonnistui. Varmista, että leikepöydän käyttöoikeudet on myönnetty.",
+    "clipboardWriteFailed": "Kopiointi leikepöydälle epäonnistui. Varmista, että sivua käytetään HTTPS:n tai paikallisen isännän kautta."
   }
 }

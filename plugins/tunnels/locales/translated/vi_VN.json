@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Chuyển tiếp một cổng trên máy chủ từ xa về một cổng cục bộ trên máy của bạn.",
     "tunnelRequirementsText": "Máy chủ SSH phải có GatewayPorts yes, AllowTcpForwarding yes, và PermitRootLogin yes được đặt trong /etc/ssh/sshd_config.",
     "tunnelSettings": "Cài đặt đường hầm",
-    "tunnelType": "Loại đường hầm"
+    "tunnelType": "Loại đường hầm",
+    "bindHost": "Máy chủ bind",
+    "docsLink": "Xem tài liệu",
+    "hostNotFound": "Không tìm thấy máy chủ",
+    "loadingHost": "Đang tải máy chủ..."
   },
   "nav": {
     "portForwarding": "Chuyển tiếp",
@@ -134,6 +138,12 @@
     "typeDynamic": "Động (-D)",
     "typeLocal": "Cục bộ (-L)",
     "typeRemote": "Từ xa (-R)",
-    "working": "Đang làm việc..."
+    "working": "Đang làm việc...",
+    "start": "Bắt đầu",
+    "stop": "Dừng"
+  },
+  "onboarding": {
+    "feature_tunnels": "Đường hầm",
+    "feature_tunnels_desc": "Chuyển tiếp cổng thông qua máy chủ để truy cập các dịch vụ không được công khai."
   }
 }

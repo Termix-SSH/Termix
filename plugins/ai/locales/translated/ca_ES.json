@@ -83,5 +83,8 @@
         "description": "Permet que l'assistent d'IA ajudi al terminal d'aquest amfitrió. Desactivat per defecte, però encara cal que la IA estigui activada per al teu compte."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Veure documents"
   }
 }

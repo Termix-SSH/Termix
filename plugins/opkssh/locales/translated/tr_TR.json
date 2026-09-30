@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Kimlik doğrulaması başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edip tekrar deneyin.",
     "timeout": "Kimlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

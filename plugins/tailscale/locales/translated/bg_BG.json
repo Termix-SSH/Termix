@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Отворете браузъра за удостоверяване",
     "tailscaleCheckWaiting": "Чака се удостоверяване на Tailscale...",
     "tailscaleCheckTimeout": "Времето за изчакване на удостоверяването на Tailscale изтече. Моля, опитайте отново."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Свързване с терминала",
+        "usernameLabel": "Потребителско име"
+      }
+    }
   }
 }

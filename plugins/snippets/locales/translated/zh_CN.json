@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "运行“{{name}}”",
+  "variablesDialogDescription": "运行此代码片段之前，请填写所需的值。",
+  "variablesPreviewLabel": "预览",
+  "variablesConfirmButton": "运行",
+  "keybindings": {
+    "runSnippet": "运行现有代码片段",
+    "snippetLabel": "片段",
+    "selectSnippet": "选择代码片段",
+    "snippetMissing": "未找到代码片段",
+    "snippetRequired": "选择代码片段"
+  },
+  "paletteHintRun": "在活动终端标签页中运行",
+  "host": {
+    "startupTitle": "启动代码片段",
+    "quickActionsTitle": "快速操作",
+    "quickActionsDescription": "快速操作以按钮形式显示在主机指标工具栏中，以便一键执行命令。",
+    "noQuickActions": "尚无快速操作。",
+    "buttonLabel": "按钮标签",
+    "selectSnippet": "选择代码片段...",
+    "addQuickAction": "添加操作"
+  },
+  "quickActions": {
+    "running": "正在执行 {{name}}...",
+    "succeeded": "{{name}} 执行成功",
+    "failed": "{{name}} 执行失败",
+    "error": "执行 {{name}} 失败"
+  }
+}

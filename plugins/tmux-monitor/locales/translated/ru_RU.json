@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Включить монитор Tmux",
-    "enableTmuxMonitorDesc": "Показывать этот хост в Мониторе Tmux и добавлять действия tmux в боковую панель"
+    "enableTmuxMonitorDesc": "Показывать этот хост в Мониторе Tmux и добавлять действия tmux в боковую панель",
+    "docsLink": "Документация"
   },
   "tmuxMonitor": {
     "title": "Монитор Tmux",

@@ -38,6 +38,25 @@ describe(`${manifest.id} activate`, () => {
     }
   });
 
+  it("reads its switches from its own host settings", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    const host = (settings: Record<string, unknown>) => ({
+      id: "1",
+      name: "pve",
+      ip: "10.0.0.1",
+      port: 22,
+      pluginSettings: { proxmox: settings },
+    });
+    const ids = (settings: Record<string, unknown>) =>
+      rendered!.registered.hostActionsFor(host(settings)).map((a) => a.id);
+    expect(ids({ enableProxmox: true })).toContain("proxmox-discover");
+    expect(ids({})).not.toContain("proxmox-discover");
+    expect(ids({ enableProxmoxStats: true })).toContain("proxmox-stats");
+    expect(plugin.proxmoxSettings(host({ enableProxmoxStats: true }))).toEqual({
+      enableProxmoxStats: true,
+    });
+  });
+
   it("removes everything it registered on deactivate", async () => {
     const app = await renderWithApp(plugin, { manifest, locales });
     await app.deactivate();

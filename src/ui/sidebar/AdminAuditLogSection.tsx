@@ -26,7 +26,7 @@ const RESOURCE_TYPES = [
   "user",
   "host",
   "credential",
-  "snippet",
+  "plugin",
   "session",
   "api_key",
   "setting",

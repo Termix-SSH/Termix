@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Povolit monitorování Tmux",
-    "enableTmuxMonitorDesc": "Zobrazit tohoto hostitele v Tmux Monitoru a přidat jeho tmux akce do postranního panelu"
+    "enableTmuxMonitorDesc": "Zobrazit tohoto hostitele v Tmux Monitoru a přidat jeho tmux akce do postranního panelu",
+    "docsLink": "Zobrazit dokumenty"
   },
   "tmuxMonitor": {
     "title": "Monitor Tmux",

@@ -1,4 +1,4 @@
-import type { ComponentType, Ref } from "react";
+import { useEffect, useState, type ComponentType, type Ref } from "react";
 import {
   Info,
   MessagesSquare,
@@ -7,6 +7,7 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import {
+  invokeAction,
   useTranslation,
   type HostEditorSectionProps,
   type PluginHostRecord,
@@ -16,6 +17,7 @@ import {
 } from "@termix/plugin-sdk/frontend";
 import {
   FakeSwitch,
+  HostFeatureFields,
   SectionCard,
   SettingRow,
   isElectron,
@@ -45,6 +47,7 @@ import {
   isQuickConnectHost,
   protocolEnabled,
   type Protocol,
+  rdpDomain,
   type RemoteHostLogin,
 } from "./host-remote";
 import { remoteDesktopForm } from "./remote-form";
@@ -91,7 +94,7 @@ const PROTOCOLS: {
 ];
 
 function RemoteDesktopTab({ tab, host, isVisible, handleRef }: TabProps) {
-  const record = host as unknown as RemoteHostLogin | undefined;
+  const record: RemoteHostLogin | undefined = host;
   return (
     <GuacamoleApp
       ref={handleRef as Ref<GuacamoleAppHandle>}
@@ -164,6 +167,7 @@ function ToolbarCard({
       <SettingRow
         label={t("settings.host.enableToolbar.label")}
         description={t("settings.host.enableToolbar.description")}
+        defaultKey="enableToolbar"
       >
         <FakeSwitch
           checked={form.enableToolbar}
@@ -174,15 +178,42 @@ function ToolbarCard({
   );
 }
 
+/**
+ * The Wake-on-LAN address a host keeps, the default for a session's wake
+ * packet. Null while that plugin is off.
+ */
+function useWakeOnLanMac(hostId: string | undefined): string | null {
+  const [mac, setMac] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!hostId) {
+      setMac(null);
+      return;
+    }
+    invokeAction("wakeOnLan.macAddress", hostId)
+      .then((value) => {
+        if (active) setMac(typeof value === "string" && value ? value : null);
+      })
+      .catch(() => {
+        if (active) setMac(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hostId]);
+  return mac;
+}
+
 function RdpSection(props: HostEditorSectionProps) {
   const { form, setField, setGuacField } = remoteDesktopForm(props);
+  const macAddress = useWakeOnLanMac(props.host?.id);
   return (
     <>
       <HostEditorRdpTab
         form={form}
         setField={setField}
         setGuacField={setGuacField}
-        host={props.host as { macAddress?: string | null } | undefined}
+        host={{ macAddress }}
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
@@ -193,13 +224,14 @@ function RdpSection(props: HostEditorSectionProps) {
 
 function VncSection(props: HostEditorSectionProps) {
   const { form, setField, setGuacField } = remoteDesktopForm(props);
+  const macAddress = useWakeOnLanMac(props.host?.id);
   return (
     <>
       <HostEditorVncTab
         form={form}
         setField={setField}
         setGuacField={setGuacField}
-        host={props.host as { macAddress?: string | null } | undefined}
+        host={{ macAddress }}
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
@@ -220,6 +252,27 @@ function TelnetSection(props: HostEditorSectionProps) {
       />
       <ToolbarCard form={form} setField={setField} />
       <SectionNotes protocol="telnet" />
+    </>
+  );
+}
+
+/**
+ * The defaults editor's remote desktop section: the display settings and the
+ * toolbar, which every host follows unless its own guacd settings say
+ * otherwise. A host edits these in its protocol tabs instead.
+ */
+function DisplayDefaultsSection(props: HostEditorSectionProps) {
+  const { t } = useTranslation();
+  const { form, setField } = remoteDesktopForm(props);
+  return (
+    <>
+      <SectionCard
+        title={t("settings.host.displayGroup")}
+        icon={<Monitor className="size-3.5" />}
+      >
+        <HostFeatureFields form={props.form} updateForm={props.updateForm} />
+      </SectionCard>
+      <ToolbarCard form={form} setField={setField} />
     </>
   );
 }
@@ -245,12 +298,12 @@ function registerNativeRdp(app: TermixApp): void {
       order: 105,
       when: (host) => protocolEnabled(host, "rdp"),
       run: (host) => {
-        const record = host as unknown as RemoteHostLogin;
+        const record: RemoteHostLogin = host;
         void openNativeRdp({
           host: String(record.ip ?? ""),
           port: hostRemoteOptions(record).rdpPort,
-          username: record.rdpUser,
-          domain: record.domain,
+          username: record.protocolAuth?.rdp?.username ?? undefined,
+          domain: rdpDomain(record),
         })
           .then((result) => {
             if (result.success) toast.success(app.t("hosts.nativeRdpOpened"));
@@ -312,6 +365,16 @@ function registerHostSurfaces(app: TermixApp): void {
       component: SECTIONS[protocol.id],
     });
   }
+
+  app.registerHostEditorSection({
+    id: "remote-desktop-display",
+    group: "top",
+    titleKey: "settings.host.displayDefaultsTab",
+    icon: Monitor,
+    order: 40,
+    defaults: "only",
+    component: DisplayDefaultsSection,
+  });
 
   if (isElectron()) registerNativeRdp(app);
 }

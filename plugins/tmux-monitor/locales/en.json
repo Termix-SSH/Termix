@@ -2,7 +2,8 @@
   "hosts": {
     "enableTmuxMonitor": "Enable Tmux Monitor",
     "enableTmuxMonitorDesc": "Show this host in the Tmux Monitor and add its tmux actions to the sidebar",
-    "tabTmuxMonitor": "Tmux Monitor"
+    "tabTmuxMonitor": "Tmux Monitor",
+    "docsLink": "View docs"
   },
   "nav": {
     "tmuxMonitor": "Tmux Monitor"
@@ -99,6 +100,14 @@
     "timeJustNow": "just now",
     "timeMinutes": "{{count}}m ago",
     "timeHours": "{{count}}h ago",
-    "timeDays": "{{count}}d ago"
+    "timeDays": "{{count}}d ago",
+    "allHosts": "All hosts",
+    "singleHost": "Single host",
+    "hostScope": "Monitor scope",
+    "filterHosts": "Filter hosts by name or address",
+    "selectHost": "Select host",
+    "toggleHost": "Expand or collapse {{host}}",
+    "noMatchingHosts": "No matching hosts",
+    "toggleSession": "Expand or collapse {{session}}"
   }
 }

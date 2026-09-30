@@ -192,9 +192,6 @@ describe("HostResolutionRepository", () => {
     await expect(repository.findHostUpdateState(1)).resolves.toEqual({
       userId: "user-1",
       credentialId: 7,
-      rdpCredentialId: null,
-      vncCredentialId: null,
-      telnetCredentialId: null,
       authType: "password",
       parentHostId: null,
       folder: null,

@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Deschideți browserul pentru autentificare",
     "tailscaleCheckWaiting": "Se așteaptă autentificarea Tailscale...",
     "tailscaleCheckTimeout": "Autentificarea la scară mică a expirat. Vă rugăm să încercați din nou."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Conectați-vă la terminal",
+        "usernameLabel": "Nume de utilizator"
+      }
+    }
   }
 }

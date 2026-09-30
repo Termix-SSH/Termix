@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Минимум 15 секунди. Колко често да се обновяват статистическите данни за възлите на Proxmox.",
     "proxmoxStatsNodeOverride": "Замяна на името на възела",
     "proxmoxStatsNodeOverrideDesc": "Игнориране на автоматичното откриване на името на възела Proxmox (по подразбиране се открива чрез името на хоста).",
-    "proxmoxStatsNodeOverridePlaceholder": "Автоматично разпознато от името на хоста"
+    "proxmoxStatsNodeOverridePlaceholder": "Автоматично разпознато от името на хоста",
+    "docsLink": "Преглед на документи",
+    "hostNotFound": "Хостът не е намерен",
+    "loadingHost": "Зареждане на хоста...",
+    "none": "Няма",
+    "proxmoxGuestsSelected_one": "{{count}} гост — {{selected}} избран",
+    "proxmoxGuestsSelected_other": "{{count}} гости — {{selected}} избрани",
+    "proxmoxImportButton_one": "Импортиране на хост {{count}}",
+    "proxmoxImportButton_other": "Импортиране на {{count}} хостове"
   },
   "proxmoxStats": {
     "tabTitle": "Статистика на Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "На този възел не са намерени виртуални машини или LXC контейнери.",
     "noGuestsMatch": "Няма гости, които да отговарят на текущите филтри."
+  },
+  "terminal": {
+    "connected": "Свързан"
   }
 }

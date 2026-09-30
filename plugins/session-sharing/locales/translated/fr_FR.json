@@ -148,5 +148,17 @@
         "description": "Autoriser le partage des sessions en direct sur cet hébergeur via un lien ou avec d'autres utilisateurs"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Jamais",
+        "oneHour": "1 heure",
+        "oneDay": "24 heures",
+        "sevenDays": "7 jours",
+        "thirtyDays": "30 jours",
+        "custom": "Personnalisé"
+      }
+    }
   }
 }

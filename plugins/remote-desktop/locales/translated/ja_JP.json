@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "仮想ネットワーク",
-    "unencryptedShell": "暗号化されていないシェル"
+    "unencryptedShell": "暗号化されていないシェル",
+    "docsLink": "ドキュメントを表示"
   },
   "onboarding": {
     "feature_desktop": "リモートデスクトップ",
@@ -274,5 +275,8 @@
         "label": "guacd URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "リモートサーバーが必要です。この接続タイプを使用するには、設定でリモートサーバーを接続してください。"
   }
 }

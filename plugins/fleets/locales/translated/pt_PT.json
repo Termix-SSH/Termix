@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Frotas"
+  },
+  "hosts": {
+    "docsLink": "Ver documentação",
+    "sharing": {
+      "customHoursPlaceholder": "Horas até à expiração do acesso",
+      "expiry": {
+        "never": "Nunca",
+        "oneHour": "1 hora",
+        "oneDay": "24 horas",
+        "sevenDays": "7 dias",
+        "thirtyDays": "30 dias",
+        "custom": "Personalizado"
+      },
+      "expiryLabel": "Expiração do acesso",
+      "levels": {
+        "connect": {
+          "label": "Ligar",
+          "description": "Abrir apenas sessões: terminal, ambiente de trabalho remoto, gestor de ficheiros, túneis e Docker. Sem acesso à configuração do anfitrião."
+        },
+        "view": {
+          "label": "Ver",
+          "description": "Ligar e ver a configuração do anfitrião. Os segredos nunca são mostrados."
+        },
+        "edit": {
+          "label": "Editar",
+          "description": "Visualize e modifique as definições do host que não requerem autenticação. A autenticação SSH do proprietário permanece privada e restrita ao proprietário."
+        },
+        "manage": {
+          "label": "Gerir",
+          "description": "Editar, além de partilhar o anfitrião com outras pessoas, alterar os níveis de permissão e revogar o acesso."
+        }
+      },
+      "noMatches": "Nenhuma correspondência encontrada",
+      "permissionLevelLabel": "Nível de permissão",
+      "rolesTab": "Funções",
+      "searchPlaceholder": "Procurar utilizadores ou funções...",
+      "shareButton": "Partilhar",
+      "shareWithCount": "Partilhar ({{count}})",
+      "usersTab": "Utilizadores"
+    }
   }
 }

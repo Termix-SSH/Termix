@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "最低15秒。Proxmoxノードの統計情報を更新する頻度。",
     "proxmoxStatsNodeOverride": "ノード名の上書き",
     "proxmoxStatsNodeOverrideDesc": "Proxmoxノード名の自動検出（デフォルトではホスト名で検出）を上書きします。",
-    "proxmoxStatsNodeOverridePlaceholder": "ホスト名から自動検出"
+    "proxmoxStatsNodeOverridePlaceholder": "ホスト名から自動検出",
+    "docsLink": "ドキュメントを表示",
+    "hostNotFound": "ホストが見つかりません",
+    "loadingHost": "ホストを読み込み中...",
+    "none": "なし",
+    "proxmoxGuestsSelected_one": "{{count}} ゲスト — {{selected}} 選択中",
+    "proxmoxGuestsSelected_other": "{{count}} ゲスト — {{selected}} 選択中",
+    "proxmoxImportButton_one": "{{count}} ホストをインポート",
+    "proxmoxImportButton_other": "{{count}} 台のホストをインポート"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox統計情報",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "このノード上にはVMまたはLXCコンテナは見つかりませんでした。",
     "noGuestsMatch": "現在の検索条件に一致するゲストはいません。"
+  },
+  "terminal": {
+    "connected": "接続中"
   }
 }

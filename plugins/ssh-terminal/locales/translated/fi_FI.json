@@ -75,7 +75,11 @@
     "tmuxWindows": "Ikkunat",
     "unknownError": "Tuntematon virhe tapahtui",
     "websocketAbnormalClose": "Yhteys katkesi odottamatta. Tämä voi johtua käänteisestä välityspalvelimesta tai SSL-määritysongelmasta. Tarkista palvelimen lokit.",
-    "websocketError": "WebSocket-yhteysvirhe"
+    "websocketError": "WebSocket-yhteysvirhe",
+    "clipboardReadFailed": "Leikepöydän lukeminen epäonnistui. Varmista, että leikepöydän käyttöoikeudet on myönnetty.",
+    "clipboardWriteFailed": "Kopiointi leikepöydälle epäonnistui. Varmista, että sivua käytetään HTTPS:n tai paikallisen isännän kautta.",
+    "connected": "Yhdistetty",
+    "totpCodeLabel": "Vahvistuskoodi"
   },
   "terminalToolbar": {
     "detachTmux": "Irrota tmux",
@@ -175,6 +179,10 @@
       },
       "imageMaxBytes": {
         "label": "Tallennustilan enimmäismäärä tavuja"
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Aja uusien isäntien päätteitä tmuxin sisällä, jotta istunnot selviävät katkaisuista (tarvitsee tmuxin isännässä)"
       }
     },
     "host": {
@@ -189,9 +197,281 @@
       "enableTerminal": {
         "label": "Ota terminaali käyttöön"
       }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Komennon automaattinen täydennys",
+        "description": "Näytä automaattinen täydennys kirjoitettaessa, jos painat sarkainnäppäintä"
+      },
+      "localEcho": {
+        "label": "Paikallinen kaiku",
+        "description": "Vähennä havaittua syöttöviivettä käyttämällä turvallista paikallista näppäinpainalluksen ennustusta"
+      },
+      "linkClickBehavior": {
+        "label": "Päätelinkin napsautus",
+        "description": "Oletuskäyttäytyminen linkkejä napsautettaessa terminaalissa"
+      }
     }
   },
   "palette": {
     "localTerminal": "Paikallinen terminaali"
+  },
+  "hosts": {
+    "addHost": "Lisää isäntä",
+    "applyGlobalThemeTooltip": "Käytä tätä teemaa",
+    "backgroundImageDesc": "Valinnainen URL-osoite päätelaitteen taustakuvalle",
+    "backgroundImageLabel": "Taustakuvan URL-osoite",
+    "backgroundImageOpacityLabel": "Taustakuvan läpinäkyvyys",
+    "backspaceMode": "Askelpalautintila",
+    "backspaceModeLabel": "Askelpalautintila",
+    "behaviorAndAdvanced": "Käyttäytyminen ja edistyneet",
+    "bellStyle": "Kellotyyli",
+    "bellStyleLabel": "Kellotyyli",
+    "colorTheme": "Väriteema",
+    "cursorBlink": "Kohdistimen vilkkuminen",
+    "cursorBlinking": "Kohdistimen vilkkuminen",
+    "cursorBlinkingDesc": "Ota käyttöön päätekohdistimen vilkkuva animaatio",
+    "cursorStyle": "Kohdistimen tyyli",
+    "cursorStyleLabel": "Kohdistimen tyyli",
+    "customThemeAnsiColors": "ANSI-värit",
+    "customThemeBackground": "Tausta",
+    "customThemeBlack": "Musta",
+    "customThemeBlue": "Sininen",
+    "customThemeBrightBlack": "Kirkkaan musta",
+    "customThemeBrightBlue": "Kirkkaan sininen",
+    "customThemeBrightCyan": "Kirkkaan syaani",
+    "customThemeBrightGreen": "Kirkkaanvihreä",
+    "customThemeBrightMagenta": "Kirkkaan magenta",
+    "customThemeBrightRed": "Kirkkaanpunainen",
+    "customThemeBrightWhite": "Kirkkaan valkoinen",
+    "customThemeBrightYellow": "Kirkkaan keltainen",
+    "customThemeColors": "Mukautetut värit",
+    "customThemeCursor": "Kohdistin",
+    "customThemeCursorAccent": "Kohdistimen aksentti",
+    "customThemeCyan": "Syaani",
+    "customThemeForeground": "Etuala",
+    "customThemeGreen": "Vihreä",
+    "customThemeMagenta": "Purppura",
+    "customThemeRed": "Punainen",
+    "customThemeResetTooltip": "Palauta oletusasetukset",
+    "customThemeSelection": "Valinta",
+    "customThemeWhite": "Valkoinen",
+    "customThemeYellow": "Keltainen",
+    "deleteGlobalThemeTooltip": "Poista tämä teema",
+    "docsLink": "Näytä dokumentit",
+    "enableAutoMosh": "Ota automaattinen mosh käyttöön",
+    "enableAutoMoshDesc": "Suosi Moshia SSH:n sijaan, jos saatavilla",
+    "enableAutoTmux": "Ota automaattinen Tmux käyttöön",
+    "enableAutoTmuxDesc": "Pidä komentotulkkisi ja kaikki siinä käynnissä olevat toiminnot toiminnassa yhteyskatkosten ja selaimen uudelleenkäynnistysten aikana suorittamalla se tmuxin sisällä (tmuxin on oltava asennettuna isäntäkoneelle)",
+    "fastScrollModifier": "Nopea vieritysmuokkain",
+    "fastScrollModifierLabel": "Nopea vieritysmuokkain",
+    "fastScrollSensitivity": "Nopea vieritysherkkyys",
+    "fastScrollSensitivityLabel": "Nopea vieritysherkkyys",
+    "fontFamily": "Fonttiperhe",
+    "fontFamilyCustomHint": "Valitse pakettifontti tai valitse Mukautettu ja kirjoita järjestelmääsi jo asennetun fontin tarkka nimi (esim. MesloLGS NF, Noto Sans Mono). Termix ei voi asentaa fontteja puolestasi, asenna se ensin käyttöjärjestelmääsi.",
+    "fontFamilyCustomOption": "Mukautettu...",
+    "fontFamilyCustomPlaceholder": "Tarkka fontin nimi, esim. MesloLGS NF",
+    "fontFamilyLabel": "Fonttiperhe",
+    "fontSize": "Fonttikoko",
+    "fontSizeLabel": "Fonttikoko",
+    "hostNotFound": "Isäntää ei löydy",
+    "letterSpacing": "Kirjainväli",
+    "letterSpacingPx": "Kirjainväli (px)",
+    "lineHeight": "Viivan korkeus",
+    "lineHeightLabel": "Viivan korkeus",
+    "linkClickBehaviorConfirm": "Näytä ponnahdusikkuna avaamista tai kopioimista varten",
+    "linkClickBehaviorDefault": "Oletus (noudata sovelluksen asetuksia)",
+    "linkClickBehaviorDesc": "Määrittää, mitä tapahtuu, kun napsautat linkkiä terminaalissa. Käytä 'Oletus'-asetusta noudattaaksesi sovellustason asetuksia.",
+    "linkClickBehaviorDirect": "Avaa suoraan",
+    "linkClickBehaviorLabel": "Linkin klikkauskäyttäytyminen",
+    "loadingHost": "Ladataan isäntää...",
+    "localEchoAuto": "Automaattinen",
+    "localEchoDefault": "Käytä yleistä asetusta",
+    "localEchoDesc": "Ennusta turvalliset tulostettavat näppäinpainallukset paikallisesti hitailla yhteyksillä. Salasanakehotteita ja ohjaussyötettä ei koskaan toisteta.",
+    "localEchoLabel": "Paikallinen kaiku",
+    "localEchoOff": "Pois",
+    "localEchoOn": "Aina päällä",
+    "macOptionIsMetaLabel": "Option Key lähettää metatiedot",
+    "macOptionIsMetaShortDesc": "Poista käytöstä erikoismerkkien (kuten @ tai |) kirjoittaminen Option/Alt-näppäimellä macOS:ssä Meta-viestin lähettämisen sijaan",
+    "moshCommand": "MOSH-komento",
+    "moshCommandLabel": "Moshin komento",
+    "noSavedThemes": "Ei vielä tallennettuja teemoja",
+    "none": "Ei mitään",
+    "rightClickSelectsWord": "Hiiren kakkospainikkeen napsautus valitsee sanan",
+    "rightClickSelectsWordLabel": "Napsauta hiiren kakkospainikkeella ja valitsee sanan",
+    "rightClickSelectsWordShortDesc": "Valitse kohdistimen alla oleva sana hiiren kakkospainikkeella",
+    "saveAsGlobalTheme": "Tallenna globaalina teemana",
+    "saveGlobalThemeError": "Teeman tallentaminen epäonnistui",
+    "saveGlobalThemeNamePrompt": "Anna teemalle nimi",
+    "saveGlobalThemeSuccess": "Teema tallennettu",
+    "savedThemesLabel": "Tallennetut teemat",
+    "scrollbackBufferLabel": "Vieroituspuskuri",
+    "scrollbackMaxLines": "Historiassa säilytettävien rivien enimmäismäärä",
+    "sudoPasswordAutoFill": "Sudo-salasanan automaattinen täyttö",
+    "sudoPasswordAutoFillDesc": "Tallenna sudo-salasana, jotta isäntämittarit, päätekehotteet ja muut voivat suorittaa etuoikeutettuja komentoja automaattisesti.",
+    "sudoPasswordAutoFillLabel": "Sudo-salasanan automaattinen täyttö",
+    "syntaxCategoryIpAddresses": "IP-osoitteet",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Lokitasot",
+    "syntaxCategoryLogLevelsDesc": "virhe, varoitus, tiedot, debug, kohtalokas",
+    "syntaxCategoryNumbers": "Merkityt numerot",
+    "syntaxCategoryNumbersDesc": "portti 8080, uloskäynti 1, tila 404",
+    "syntaxCategoryPaths": "Tiedostopolut",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/tiedosto.txt",
+    "syntaxCategoryTimestamps": "Aikaleimat",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15.1.2024",
+    "syntaxCategoryUrls": "URL-osoitteet",
+    "syntaxCategoryUrlsDesc": "https://esimerkki.com",
+    "syntaxHighlightingDesc": "Väritä päätelaitteen tuloste (virheet, polut, IP-osoitteet, aikaleimat)",
+    "syntaxHighlightingLabel": "Syntaksin korostus",
+    "terminalAppearance": "Päätelaitteen ulkonäkö",
+    "theme": "Teema",
+    "themePreview": "Teeman esikatselu",
+    "useSSHTitleDesc": "Päivitä välilehden otsikko komentotulkin ikkunan otsikosta isäntänimen sijaan",
+    "useSSHTitleLabel": "Käytä SSH-ikkunan otsikkoa"
+  },
+  "nav": {
+    "history": "Historia",
+    "localTerminal": "Paikallinen terminaali",
+    "sshTools": "SSH-työkalut",
+    "terminal": "Terminaali",
+    "macros": "Makrot"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Kirjoita tähän lähettääksesi näppäinpainalluksia...",
+    "copyOnSelect": "Kopioi valittu teksti automaattisesti",
+    "enableRightClickCopyPaste": "Ota käyttöön hiiren kakkospainikkeella kopiointi/liitäminen",
+    "fillPassword": "Täytä salasana",
+    "fillPasswordMissing": "Ei tallennettua salasanaa {{count}} valitulle päätteelle/päätteille",
+    "fillPasswordSuccess": "Salasana syötetty {{count}} terminaaliin/terminaaleihin",
+    "keyRecordingTitle": "Näppäinten tallennus",
+    "noTerminalTabsOpen": "Ei auki olevia päätevälilehtiä",
+    "recordToTerminals": "Tallenna terminaaleihin",
+    "selectAll": "Kaikki",
+    "selectNone": "Ei mitään",
+    "selectTerminalsAbove": "Valitse päätteet yllä",
+    "settingsTitle": "Asetukset",
+    "startRecording": "Aloita tallennus",
+    "stopRecording": "Lopeta tallennus"
+  },
+  "terminalDefaults": {
+    "clearAll": "Tyhjennä kaikki",
+    "description": "Aseta arvot, jotka jokainen isäntä perii, ellei se korvaa niitä.",
+    "dialogDescription": "Nämä koskevat isäntiä, jotka jättävät asetuksen asettamatta. Mikä tahansa isännälle asetettu arvo voittaa.",
+    "inherit": "Periä",
+    "manage": "Hallitse",
+    "off": "Pois",
+    "on": "Päällä",
+    "title": "Yhteysoletukset"
+  },
+  "keybindings": {
+    "copy": "Kopioi valinta",
+    "paste": "Liitä",
+    "sendControlCode": "Lähetä Ctrl+kirjain-signaali",
+    "sendText": "Lähetä tekstiviesti",
+    "controlCodeLabel": "Kirje",
+    "textLabel": "Lähetettävä tekstiviesti",
+    "appendEnterLabel": "Paina Enter lähetyksen jälkeen",
+    "clipboardPermissionNote": "Saattaa pyytää leikepöydän käyttöoikeutta ensimmäisellä käyttökerralla joissakin selaimissa.",
+    "textRequired": "Kirjoita lähetettävä teksti",
+    "controlCodeRequired": "Syötä yksi kirjain ohjauskoodille"
+  },
+  "macros": {
+    "title": "Makrot",
+    "description": "Suorita tallennettu komentosarja terminaalissa ja reagoi palvelimen lähettämiin komentoihin.",
+    "target": "Kohde",
+    "noTerminal": "Ei auki olevaa terminaalia",
+    "empty": "Ei vielä makroja",
+    "emptyHint": "Luo makro automatisoidaksesi päätetyönkulun, kuten sisäänkirjautumisen, palvelun uudelleenkäynnistyksen tai kehotteisiin vastaamisen.",
+    "create": "Uusi makro",
+    "back": "Takaisin makroihin",
+    "name": "Nimi",
+    "namePlaceholder": "Käynnistä web-palvelin uudelleen",
+    "nameRequired": "Anna makrolle nimi ennen tallentamista",
+    "descriptionLabel": "Kuvaus",
+    "descriptionPlaceholder": "Mitä tämä makro tekee (valinnainen)",
+    "unsaved": "Tallentamattomat muutokset",
+    "save": "Tallentaa",
+    "saved": "Makro tallennettu",
+    "saveFailed": "Makroa ei voitu tallentaa",
+    "delete": "Poistaa",
+    "deleteTitle": "Poistetaanko tämä makro?",
+    "deleteBody": "\"{{name}}\" poistetaan pysyvästi. Tätä ei voi perua.",
+    "deleted": "Makro poistettu",
+    "cancel": "Peruuttaa",
+    "run": "Juokse",
+    "stop": "Stop",
+    "running": "Juoksemassa...",
+    "completed": "Makro valmis",
+    "failed": "Makro epäonnistui",
+    "loadFailed": "Makrojen lataaminen epäonnistui",
+    "needTerminal": "Avaa ja kytke ensin päätelaite",
+    "noSteps": "Tällä makrolla ei ole vielä vaiheita. Lisää yksi alle.",
+    "addStep": "Lisää vaihe",
+    "stepNumber": "Vaihe {{number}}",
+    "removeStep": "Poista vaihe",
+    "confirmRunTitle": "Suoritetaanko tämä makro?",
+    "confirmRunBody": "\"{{name}}\" lähettää komentoja {{host}}:een.",
+    "confirmRunAction": "Suorita makro",
+    "stepTypes": {
+      "send": {
+        "label": "Lähetä komento",
+        "help": "Kirjoittaa tekstiä terminaaliin aivan kuin olisit kirjoittanut sen."
+      },
+      "wait": {
+        "label": "Odota tulostetta",
+        "help": "Pysähtyy, kunnes palvelin tulostaa nimeämäsi tekstin, kuten salasanakehotteen."
+      },
+      "delay": {
+        "label": "Tauko",
+        "help": "Odottaa tietyn ajan ennen seuraavaa vaihetta."
+      },
+      "if": {
+        "label": "Jos tuloste sisältää",
+        "help": "Tarkistaa kaiken, mitä palvelin on tähän mennessä tulostanut, ja suorittaa sitten toisen kahdesta haarasta."
+      },
+      "repeat": {
+        "label": "Toistaa",
+        "help": "Suorittaa sen sisällä olevat vaiheet tietyn määrän kertoja."
+      }
+    },
+    "send": {
+      "text": "Komento tai teksti",
+      "textPlaceholder": "systemctl käynnistä nginx uudelleen",
+      "pressEnter": "Paina Enter lähetyksen jälkeen",
+      "pressEnterHelp": "Poista tämä käytöstä kirjoittaaksesi tekstiä lähettämättä sitä."
+    },
+    "wait": {
+      "pattern": "Odota, kunnes tuloste sisältää",
+      "patternPlaceholder": "salasana:",
+      "timeout": "Luovuta jälkeenpäin",
+      "onTimeout": "Jos se ei koskaan ilmesty",
+      "stop": "Pysäytä makro",
+      "continue": "Jatka joka tapauksessa"
+    },
+    "delay": {
+      "duration": "Odota"
+    },
+    "ifStep": {
+      "pattern": "Jos tuloste sisältää",
+      "patternPlaceholder": "Aktiivinen: aktiivinen (käynnissä)",
+      "then": "Tee sitten tämä",
+      "else": "Muuten tee näin",
+      "emptyBranch": "Ei portaita"
+    },
+    "repeat": {
+      "count": "Kuinka monta kertaa",
+      "times": "kertaa"
+    },
+    "match": {
+      "useRegex": "Säännöllisen lausekkeen mukainen osuma",
+      "useRegexHelp": "Jätä tämä pois, jotta teksti vastaa täysin kirjoitettua tekstiä.",
+      "invalidRegex": "Ei kelvollinen säännöllinen lauseke, se tulkitaan pelkkänä tekstinä"
+    },
+    "seconds": "sekuntia",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Etäpalvelin vaaditaan. Yhdistä etäpalvelin asetuksissa käyttääksesi tätä yhteystyyppiä."
   }
 }

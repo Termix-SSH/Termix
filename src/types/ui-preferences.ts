@@ -17,7 +17,7 @@
  */
 
 /** 2: the docker and host metrics areas moved to their plugins. */
-export const UI_PREFERENCES_VERSION = 2;
+export const UI_PREFERENCES_VERSION = 3;
 
 /** Bump when onboarding gains steps existing users should be shown again. */
 export const UI_ONBOARDING_VERSION = 2;
@@ -30,16 +30,12 @@ export type UiAreaKey =
   | "credentialList"
   | "rail"
   | "dashboard"
-  | "terminal"
-  | "fileManager"
   | "hostEditor";
 
 export type UiDensity = "comfortable" | "compact";
 export type UiTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 export type UiRowActions = "essential" | "full";
 export type UiEmptyStateVerbosity = "minimal" | "guided";
-export type UiToolbarDensity = "icon" | "labeled" | "expanded";
-export type UiFileViewMode = "grid" | "list";
 export type UiHostEditorMode = "simple" | "full";
 
 export interface UiChromePreferences {
@@ -75,15 +71,6 @@ export interface UiDashboardPreferences {
   enabledCards: string[];
 }
 
-export interface UiTerminalPreferences {
-  toolbarDensity: UiToolbarDensity;
-}
-
-export interface UiFileManagerPreferences {
-  viewMode: UiFileViewMode;
-  showHiddenFiles: boolean;
-}
-
 export interface UiHostEditorPreferences {
   mode: UiHostEditorMode;
 }
@@ -94,8 +81,6 @@ export interface UiAreaPreferences {
   credentialList: UiCredentialListPreferences;
   rail: UiRailPreferences;
   dashboard: UiDashboardPreferences;
-  terminal: UiTerminalPreferences;
-  fileManager: UiFileManagerPreferences;
   hostEditor: UiHostEditorPreferences;
 }
 
@@ -135,8 +120,6 @@ const CORE_HIDEABLE_RAIL_VIEWS = [
   "credentials",
   "connections",
   "quick-connect",
-  "ssh-tools",
-  "macros",
 ];
 
 const SIMPLE_HIDDEN_RAIL_TABS = CORE_HIDEABLE_RAIL_VIEWS.filter(
@@ -151,10 +134,8 @@ const BALANCED_DASHBOARD_CARDS = [
   "host_status",
   "recent_activity",
 ];
-// Advanced adds service links but leaves network_graph and homepage_preview
-// off: both are wide, and enabling them by default pushes the dashboard past
-// the edge of the screen. They stay available in the Add card tray.
-const ADVANCED_DASHBOARD_CARDS = [...BALANCED_DASHBOARD_CARDS, "service_links"];
+// Only core's own cards: a plugin's cards are added from the Add card tray.
+const ADVANCED_DASHBOARD_CARDS = [...BALANCED_DASHBOARD_CARDS];
 
 export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
   simple: {
@@ -183,8 +164,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
         "host_status",
       ],
     },
-    terminal: { toolbarDensity: "icon" },
-    fileManager: { viewMode: "grid", showHiddenFiles: false },
     hostEditor: { mode: "simple" },
   },
   balanced: {
@@ -204,9 +183,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     credentialList: { density: "comfortable", showTags: true },
     rail: { hiddenTabs: [] },
     dashboard: { enabledCards: BALANCED_DASHBOARD_CARDS },
-    terminal: { toolbarDensity: "labeled" },
-    // FileManager.tsx has always defaulted to grid when nothing is stored.
-    fileManager: { viewMode: "grid", showHiddenFiles: false },
     // 3 is defaultLayoutFromWidgets's own default, i.e. today's behavior.
     hostEditor: { mode: "full" },
   },
@@ -227,9 +203,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     credentialList: { density: "compact", showTags: true },
     rail: { hiddenTabs: [] },
     dashboard: { enabledCards: ADVANCED_DASHBOARD_CARDS },
-    terminal: { toolbarDensity: "expanded" },
-    // List packs more files and metadata per screen than the grid.
-    fileManager: { viewMode: "list", showHiddenFiles: true },
     hostEditor: { mode: "full" },
   },
 };
@@ -274,16 +247,6 @@ const AREA_SPECS: {
   },
   dashboard: {
     enabledCards: { kind: "stringArray" },
-  },
-  terminal: {
-    toolbarDensity: {
-      kind: "enum",
-      values: ["icon", "labeled", "expanded"],
-    },
-  },
-  fileManager: {
-    viewMode: { kind: "enum", values: ["grid", "list"] },
-    showHiddenFiles: { kind: "bool" },
   },
   hostEditor: {
     mode: { kind: "enum", values: ["simple", "full"] },
@@ -351,11 +314,21 @@ function sanitizePluginArea(input: unknown): Record<string, unknown> {
   return out;
 }
 
-/** Version 1 stored the docker and host metrics areas under core names. */
-const LEGACY_PLUGIN_AREAS: Record<string, UiPluginAreaKey> = {
-  docker: "plugin:docker",
-  hostMetrics: "plugin:host-metrics",
-};
+/**
+ * Areas that moved into a plugin: before `version` they were stored under
+ * core's name. Version 1 had docker and host metrics, version 2 the terminal
+ * and the file manager.
+ */
+const MOVED_PLUGIN_AREAS: Array<{
+  before: number;
+  legacy: string;
+  area: UiPluginAreaKey;
+}> = [
+  { before: 2, legacy: "docker", area: "plugin:docker" }, // plugin-id-ok: 2.8 key
+  { before: 2, legacy: "hostMetrics", area: "plugin:host-metrics" },
+  { before: 3, legacy: "terminal", area: "plugin:ssh-terminal" },
+  { before: 3, legacy: "fileManager", area: "plugin:file-manager" },
+];
 
 export function sanitizeUiOverrides(
   input: unknown,
@@ -364,9 +337,10 @@ export function sanitizeUiOverrides(
   const out: Record<string, Record<string, unknown>> = {};
   if (!input || typeof input !== "object") return out as UiOverrides;
 
-  if (version < 2) {
+  const moves = MOVED_PLUGIN_AREAS.filter((move) => version < move.before);
+  if (moves.length > 0) {
     const upgraded = { ...(input as Record<string, unknown>) };
-    for (const [legacy, area] of Object.entries(LEGACY_PLUGIN_AREAS)) {
+    for (const { legacy, area } of moves) {
       if (legacy in upgraded) {
         upgraded[area] = upgraded[legacy];
         delete upgraded[legacy];

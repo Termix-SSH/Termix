@@ -31,6 +31,8 @@ import {
   useTranslation,
   usePluginApi,
   useHosts,
+  useTabs,
+  getHostStatusColorScheme,
   useHostActions,
   type PluginHostRecord,
 } from "@termix/plugin-sdk/frontend";
@@ -101,24 +103,6 @@ interface NetworkGraphCardProps {
 
 type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
 
-type StatusColorScheme = "accent" | "status";
-
-/** Reads the sidebar preferences cache directly, same as core's status dots do. */
-function readStatusColorScheme(): StatusColorScheme {
-  try {
-    const raw = localStorage.getItem("hostSidebarPreferences");
-    if (!raw) return "accent";
-    const parsed = JSON.parse(raw) as {
-      display?: { statusColorScheme?: string };
-    };
-    return parsed?.display?.statusColorScheme === "status"
-      ? "status"
-      : "accent";
-  } catch {
-    return "accent";
-  }
-}
-
 function resolveCssVar(varName: string, fallback: string): string {
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue(varName)
@@ -151,7 +135,7 @@ function buildNodeSvg(
 ): string {
   const isOnline = status === "online";
   const isOffline = status === "offline";
-  const useRealColors = readStatusColorScheme() === "status";
+  const useRealColors = getHostStatusColorScheme() === "status";
   let statusColor: string;
   if (isOnline) {
     statusColor = useRealColors
@@ -583,10 +567,10 @@ export function NetworkGraphCard({
 
   const hideMenu = () => setContextMenu((p) => ({ ...p, visible: false }));
 
+  const shellTabs = useTabs();
   const fireOpen = (hostId: string, type?: string) => {
-    window.dispatchEvent(
-      new CustomEvent("termix:open-tab", { detail: { hostId, type } }),
-    );
+    const host = liveHosts.find((candidate) => String(candidate.id) === hostId);
+    if (host) shellTabs.connectHost(host, type);
   };
 
   const handleContextAction = (action: string) => {

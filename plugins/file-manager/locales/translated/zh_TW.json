@@ -382,7 +382,10 @@
     "defaultPathLabel": "預設路徑",
     "fileManagerPathHint": "啟動此主機的檔案管理員時開啟的目錄。",
     "fileManagerUrlCopied": "檔案管理員 URL 已複製",
-    "copyFileManagerUrlAction": "複製檔案管理員 URL"
+    "copyFileManagerUrlAction": "複製檔案管理員 URL",
+    "docsLink": "檢視文件",
+    "hostNotFound": "找不到主機",
+    "loadingHost": "正在載入主機..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP 舊版模式"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "同時文件傳輸",
+        "description": "本機/遠端並排管理器同時上傳或下載的檔案數量。如果您的伺服器限制 SFTP 通道，請降低此值。"
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "檔案"
+  },
+  "onboarding": {
+    "feature_files": "文件管理器",
+    "feature_files_desc": "無需離開應用程序，即可透過 SFTP 瀏覽、上傳、下載和編輯檔案。"
+  },
+  "terminal": {
+    "runTitle": "正在執行 {{command}} - {{host}}",
+    "terminalTitle": "終端機 - {{host}}",
+    "terminalWithPath": "終端機 - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "瀏覽目標資料夾",
+    "browsePathError": "無法在目標主機上開啟此路徑。",
+    "browsePathWillBeCreated": "此資料夾尚不存在。傳送開始時將會建立。",
+    "cancel": "取消",
+    "cleanupDestFiles": "清理目的地",
+    "cleanupDestFilesError": "清理失敗",
+    "cleanupDestFilesNothing": "目的地無需清理",
+    "cleanupDestFilesPartial": "部分檔案無法移除",
+    "cleanupDestFilesSuccess": "已從目的地移除部分檔案",
+    "confirmCopy": "複製",
+    "confirmMove": "移動",
+    "copyFolderToHost": "複製資料夾至主機…",
+    "copyItemsToHost": "複製 {{count}} 個項目到主機…",
+    "copyToHost": "複製到主機…",
+    "destinationPath": "目標路徑",
+    "destMustBeDirectory": "多項目傳送時，目標必須是資料夾",
+    "goUp": "向上",
+    "hostAuthRequired": "需要驗證 — 請先在此主機上開啟檔案管理員",
+    "hostConnecting": "連線中…",
+    "hostConnectionFailed": "連線失敗",
+    "hostDisconnected": "未連線",
+    "hostReady": "就緒",
+    "itemsSummary": "{{count}} 個項目",
+    "jumpHostLimitation": "兩台主機都必須可從 Termix 伺服器連線。不支援主機對主機的直接路由。",
+    "methodAuto": "自動",
+    "methodAutoHint": "根據檔案數量、大小及可壓縮性選擇 tar 封存或逐檔 SFTP。單一檔案一律使用串流 SFTP。",
+    "methodItemSftp": "逐檔 SFTP",
+    "methodItemSftpHint": "透過 SFTP 逐一傳輸每個檔案。適用於所有主機，包括 Windows。",
+    "methodItemSftpLimitation": "每個檔案依序使用相同的 SFTP 串流作為單一檔案複製。進度會合併所有檔案，因此處理大型檔案時進度條會緩慢移動。",
+    "methodLabel": "傳輸方法",
+    "methodPreviewError": "無法預覽傳輸方法。啟動時伺服器仍會選擇一個方法。",
+    "methodPreviewLoading": "正在計算傳輸方法…",
+    "methodPreviewScanSummary": "{{fileCount}} 個檔案，總計 {{totalSize}}（已在來源主機掃描）。",
+    "methodPreviewWillUseItemSftp": "將使用：逐檔 SFTP",
+    "methodPreviewWillUseTar": "將使用：Tar 封存",
+    "methodReason": {
+      "user_item_sftp": "您選擇了逐檔 SFTP。",
+      "user_tar": "您選擇了 tar 封存。",
+      "tar_unavailable": "一或多部主機無法使用 tar，將改用逐檔 SFTP。",
+      "windows_host": "涉及 Windows 主機，因此不使用 tar。",
+      "auto_multi_large": "自動：多個檔案中包含一個具可壓縮資料的大型檔案 ({{largestSize}})，tar 會將所有檔案封裝成單一傳輸。",
+      "auto_single_large_in_archive": "自動：此集合中有一個大型檔案 ({{largestSize}}) — 逐檔 SFTP。",
+      "auto_many_incompressible": "自動：多為不可壓縮資料 — 逐檔 SFTP。",
+      "auto_many_files": "自動：多個檔案 ({{fileCount}}) — tar 可減少逐檔傳輸的額外負擔。",
+      "auto_default": "自動：此集合使用逐檔 SFTP。"
+    },
+    "methodTar": "Tar 封存",
+    "methodTarHint": "在來源主機壓縮，傳輸一個封存檔，在目標主機解壓縮。需兩台 Unix 主機皆安裝 tar。",
+    "metricsCompress": "在來源主機壓縮: {{duration}}",
+    "metricsExtract": "在目標主機解壓縮: {{duration}}",
+    "metricsPrepare": "準備目標：{{duration}}",
+    "metricsRouteBenchmark": "路由探測 — 直接： {{direct}}，中繼： {{relay}}",
+    "metricsSourceDelete": "從來源主機刪除: {{duration}}",
+    "metricsTotal": "總計: {{duration}}",
+    "metricsTransfer": "端對端: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 已驗證： {{duration}}",
+    "moveFolderToHost": "移動資料夾至主機…",
+    "moveItemsToHost": "將 {{count}} 個項目移至主機…",
+    "moveToHost": "移動到主機…",
+    "noHostsConnected": "無其他可用的檔案管理員主機。",
+    "noHostsConnectedHint": "在主機管理員中新增另一個已啟用檔案管理員的 SSH 主機。",
+    "parallelSegmentsHint": "大型檔案會分割成 256 MB 區塊。多個通道會使用獨立的連線（如同啟動多個傳輸作業）以獲取更高的總傳輸速率。",
+    "parallelSegmentsLabel": "平行傳輸通道",
+    "parallelSegmentsOption": "{{count}} 個通道",
+    "progressBenchmarking": "選擇最快的傳輸路線…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "取消",
+    "progressCancelling": "正在取消…",
+    "progressCompressing": "在來源主機壓縮中…",
+    "progressExtracting": "在目標主機解壓縮中…",
+    "progressItems": "{{current}} / {{total}} 個檔案",
+    "progressReconnecting": "重新連線中…",
+    "progressStalled": "停滯",
+    "progressTotalSpeed": "總計 {{speed}}（{{lanes}} 個通道）",
+    "progressTransferring": "傳輸資料中…",
+    "progressTransferringItems": "傳輸檔案中（{{current}} / {{total}}）…",
+    "progressVerifying": "正在驗證檔案完整性…",
+    "recentDestinations": "最近使用的目的地",
+    "resumedHint": "已重新連線至在另一個視窗中啟動的進行中傳輸。",
+    "retryTransfer": "重試",
+    "retryTransferError": "重試失敗",
+    "selectDestinationHost": "選擇目標主機",
+    "transferCancelled": "傳輸已取消",
+    "transferCancelledCopyHint": "部分檔案可能仍留在目的地。",
+    "transferCancelledMoveHint": "部分檔案可能仍留在目的地，來源檔案未被移除。",
+    "transferError": "傳送失敗",
+    "transferFailedRetryHint": "部分資料已保留在目的地。重新連線後，重試將從斷點繼續。",
+    "transferPartialHint": "無法傳送：{{paths}}",
+    "transferSuccess": "傳送完成"
   }
 }

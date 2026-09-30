@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Öppna webbläsaren för att autentisera",
     "tailscaleCheckWaiting": "Väntar på Tailscale-autentisering...",
     "tailscaleCheckTimeout": "Tailscale-autentiseringen har gått ut. Försök igen."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Anslut till terminalen",
+        "usernameLabel": "Användarnamn"
+      }
+    }
   }
 }

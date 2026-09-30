@@ -4,7 +4,7 @@ import { byOrderThenId, createRegistry } from "@/lib/registry";
 type Icon = ComponentType<{ className?: string; size?: number | string }>;
 
 /**
- * A connection protocol a plugin adds next to SSH (RDP, VNC). Its on/off
+ * A connection protocol a plugin adds next to SSH. Its on/off
  * switch and port are the plugin's own host settings, so core reads them
  * from host.pluginSettings[pluginId] and never knows the protocol by name.
  */

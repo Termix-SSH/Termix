@@ -6,7 +6,13 @@ import {
   SECRET_KEYS,
   type ExportPayload,
   type FieldGroup,
+  pluginSecretKeys,
 } from "../../sidebar/host-export-payload";
+
+// What the remote-desktop manifest declares for its guacamoleConfig field.
+const RDP_SECRETS = {
+  "remote-desktop": { guacamoleConfig: ["gateway-password"] },
+};
 
 const ALL_GROUPS = new Set<FieldGroup>([
   "connection",
@@ -14,7 +20,6 @@ const ALL_GROUPS = new Set<FieldGroup>([
   "tags",
   "proxy",
   "jumpHosts",
-  "quickActions",
   "featureFlags",
   "advanced",
 ]);
@@ -209,7 +214,13 @@ describe("buildExportPayload", () => {
   });
 
   it("nulls the guacamole gateway password when credentials are excluded", () => {
-    const out = buildExportPayload(rdpRaw(), null, ALL_GROUPS, false);
+    const out = buildExportPayload(
+      rdpRaw(),
+      null,
+      ALL_GROUPS,
+      false,
+      RDP_SECRETS,
+    );
     const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBeNull();
     expect(config["gateway-hostname"]).toBe("gw.example.com");
@@ -223,7 +234,7 @@ describe("buildExportPayload", () => {
 
   it("does not mutate the source payload when nulling nested secrets", () => {
     const raw = rdpRaw();
-    buildExportPayload(raw, null, ALL_GROUPS, false);
+    buildExportPayload(raw, null, ALL_GROUPS, false, RDP_SECRETS);
     const config = gatewayConfig(raw.hosts[0]);
     expect(config["gateway-password"]).toBe("gw-secret");
   });
@@ -271,7 +282,7 @@ describe("maskSecrets", () => {
   });
 
   it("masks the guacamole gateway password", () => {
-    const out = maskSecrets(rdpRaw());
+    const out = maskSecrets(rdpRaw(), RDP_SECRETS);
     const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBe("<included>");
     expect(config["gateway-hostname"]).toBe("gw.example.com");
@@ -285,5 +296,28 @@ describe("maskSecrets", () => {
     expect(chain[1].password).toBe("<included>");
     expect(JSON.stringify(out)).not.toContain("proxy-secret-1");
     expect(JSON.stringify(out)).not.toContain("proxy-secret-2");
+  });
+});
+
+describe("pluginSecretKeys", () => {
+  it("reads secretKeys off each plugin's host fields", () => {
+    expect(
+      pluginSecretKeys([
+        {
+          id: "remote-desktop",
+          contributes: {
+            settings: {
+              host: {
+                fields: [
+                  { key: "guacamoleConfig", secretKeys: ["gateway-password"] },
+                  { key: "enableRdp" },
+                ],
+              },
+            },
+          },
+        },
+        { id: "docker", contributes: null },
+      ]),
+    ).toEqual(RDP_SECRETS);
   });
 });

@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} knooppunten"
+  },
+  "hosts": {
+    "docsLink": "Documenten bekijken"
   }
 }

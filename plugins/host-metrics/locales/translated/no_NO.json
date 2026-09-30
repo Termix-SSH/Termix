@@ -51,10 +51,6 @@
     "processesRunning": "løping",
     "loginStats": "SSH-påloggingsstatistikk",
     "noRecentLoginData": "Ingen nylige påloggingsdata",
-    "executingQuickAction": "Utfører {{name}}...",
-    "quickActionSuccess": "{{name}} fullført",
-    "quickActionFailed": "{{name}} mislyktes",
-    "quickActionError": "Kunne ikke utføre {{name}}",
     "ports": {
       "title": "Lytteporter",
       "protocol": "Protokoll",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Legge til",
     "visibleWidgets": "Synlige widgeter",
     "widgetsMovedToHostMetrics": "Kort legges nå til, arrangeres og endres i størrelse direkte i fanen Vertsmålinger. Åpne Vertsmålinger for denne verten og bruk Tilpass for å velge hvilke kort som vises.",
-    "quickActionsLabel": "Hurtighandlinger",
-    "quickActionsToolbar": "Hurtighandlinger vises som knapper i verktøylinjen for vertsmålinger for utførelse av kommandoer med ett klikk.",
-    "noQuickActions": "Ingen hurtighandlinger ennå.",
-    "buttonLabel": "Knappetikett",
-    "selectSnippetPlaceholder": "Velg utdrag...",
-    "addActionBtn": "Legg til handling",
     "hostNotFound": "Verten ble ikke funnet",
     "loadingHost": "Laster inn vert ..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Kansellere",
-        "confirmRunButton": "Løp",
-        "confirmRunMessage": "Kjør \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Tilkoblet"

@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Serveur distant requis. Connectez un serveur distant dans les paramètres pour utiliser ce type de connexion."
+  },
+  "hosts": {
+    "docsLink": "Voir la documentation",
+    "hostNotFound": "Hôte introuvable",
+    "loadingHost": "Chargement de l'hôte..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Échec de la lecture du presse-papiers. Assurez-vous que les autorisations du presse-papiers sont accordées.",
+    "clipboardWriteFailed": "Échec de la copie dans le presse-papiers. Assurez-vous que la page est servie en HTTPS ou localhost."
   }
 }

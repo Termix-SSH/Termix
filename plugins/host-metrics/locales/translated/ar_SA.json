@@ -51,10 +51,6 @@
     "processesRunning": "قيد التشغيل",
     "loginStats": "إحصائيات تسجيل الدخول عبر SSH",
     "noRecentLoginData": "لا توجد بيانات تسجيل دخول حديثة",
-    "executingQuickAction": "جارٍ تنفيذ {{name}}...",
-    "quickActionSuccess": "تم إكمال {{name}} بنجاح",
-    "quickActionFailed": "فشل {{name}}",
-    "quickActionError": "فشل تنفيذ {{name}}",
     "ports": {
       "title": "المنافذ المستمعة",
       "protocol": "البروتوكول",
@@ -235,12 +231,6 @@
     "addExcludedMount": "يضيف",
     "visibleWidgets": "الأدوات المرئية",
     "widgetsMovedToHostMetrics": "تتم الآن إضافة البطاقات وترتيبها وتغيير حجمها مباشرةً في علامة تبويب مقاييس المضيف. افتح مقاييس المضيف لهذا المضيف واستخدم تخصيص لاختيار البطاقات التي ستظهر.",
-    "quickActionsLabel": "إجراءات سريعة",
-    "quickActionsToolbar": "تظهر الإجراءات السريعة كأزرار في شريط أدوات مقاييس المضيف لتنفيذ الأوامر بنقرة واحدة.",
-    "noQuickActions": "لا توجد إجراءات سريعة بعد.",
-    "buttonLabel": "تسمية الزر",
-    "selectSnippetPlaceholder": "اختر مقتطفًا...",
-    "addActionBtn": "إضافة إجراء",
     "hostNotFound": "المضيف غير موجود",
     "loadingHost": "جارٍ تحميل المضيف..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "القرص"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "إلغاء",
-        "confirmRunButton": "تشغيل",
-        "confirmRunMessage": "تشغيل \"{{name}}\"؟"
-      }
-    }
   },
   "terminal": {
     "connected": "متصل"

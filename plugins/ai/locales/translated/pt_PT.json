@@ -83,5 +83,8 @@
         "description": "Permita que o assistente de IA ajude no terminal deste host. Desativado por defeito, mas ainda precisa que a IA esteja ativada para a sua conta."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Ver documentação"
   }
 }

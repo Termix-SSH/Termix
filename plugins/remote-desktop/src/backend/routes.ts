@@ -23,7 +23,7 @@ import {
   PORT_KEY,
   isRemoteProtocol,
   readHostSettings,
-  readUserDefaults,
+  readDisplayDefaults,
   type RemoteProtocol,
 } from "./host-settings.js";
 import { errorMessage, type RemoteDesktopLogger } from "./log.js";
@@ -203,7 +203,7 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
       const userId = ctx.currentActor();
       if (type === "rdp" && userId) {
         for (const [key, value] of Object.entries(
-          await readUserDefaults(ctx, userId),
+          await readDisplayDefaults(ctx, userId),
         )) {
           if (isServerOwnedSetting(key)) continue;
           if (options[key] === undefined) options[key] = value;
@@ -319,9 +319,11 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
         });
       }
 
-      // The user's RDP defaults sit under whatever the host sets itself.
+      // The display settings sit under whatever the host's guacd settings say.
       const { config, guacdOverrides } = cleanGuacConfig({
-        ...(protocol === "rdp" ? await readUserDefaults(ctx, userId) : {}),
+        ...(protocol === "rdp"
+          ? await readDisplayDefaults(ctx, userId, hostId)
+          : {}),
         ...settings.guacamoleConfig,
       });
       let guacConfig = config;
@@ -337,7 +339,7 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
       const domain = resolveRdpDomain(
         target.auth.authType,
         body.promptedDomain,
-        target.auth.domain,
+        target.auth.fields.domain ?? "",
       );
 
       let hostname = target.host.ip;
@@ -545,7 +547,9 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
             .json({ error: "Protocol is not enabled for this host" });
         }
         const { guacdOverrides } = cleanGuacConfig({
-          ...(protocol === "rdp" ? await readUserDefaults(ctx, userId) : {}),
+          ...(protocol === "rdp"
+            ? await readDisplayDefaults(ctx, userId, hostId)
+            : {}),
           ...settings.guacamoleConfig,
         });
         guacd = {
@@ -636,7 +640,8 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
       return res.status(400).json({ error: "Missing host" });
     }
     try {
-      const result = await ctx.desktop.launchNativeRdp({
+      const result = await ctx.desktop.launchExternalClient({
+        protocol: "rdp",
         host: body.host,
         port: Number(body.port) || DEFAULT_PORT.rdp,
         username: typeof body.username === "string" ? body.username : undefined,

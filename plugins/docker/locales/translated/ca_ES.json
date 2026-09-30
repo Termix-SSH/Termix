@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Cal un servidor remot. Connecteu un servidor remot a Configuració per utilitzar aquest tipus de connexió."
+  },
+  "hosts": {
+    "docsLink": "Veure documents",
+    "hostNotFound": "No s'ha trobat l'amfitrió",
+    "loadingHost": "S'està carregant l'amfitrió..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "No s'ha pogut llegir del porta-retalls. Assegureu-vos que els permisos del porta-retalls estiguin concedits.",
+    "clipboardWriteFailed": "No s'ha pogut copiar al porta-retalls. Assegureu-vos que la pàgina es serveix per HTTPS o localhost."
   }
 }

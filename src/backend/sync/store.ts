@@ -331,7 +331,13 @@ export async function writeWireRow(
   const written = await findStoredRow(entity, userId, syncId);
   const id = typeof written?.id === "number" ? written.id : null;
   if (entity.afterWrite) {
-    await entity.afterWrite({ id, userId, wire, created: !current });
+    await entity.afterWrite({
+      id,
+      userId,
+      wire,
+      created: !current,
+      resolveId: resolvers.resolveId,
+    });
   }
   DatabaseSaveTrigger.triggerSave("sync_write");
   return { id, created: !current };

@@ -10,6 +10,29 @@ Browse and control tmux sessions, windows and panes across your hosts.
 - Attach a terminal to any pane.
 - Tag sessions with your own labels.
 
+## Unified monitor
+
+Open Tmux Monitor from a host action or the command palette. **All hosts**
+shows an expandable tree for each SSH host with the monitor enabled. Filter
+by host name or address, or choose **Single host** to use one host at a time.
+Click a session name or pane to switch the live preview. The tree actions
+continue to target the host containing that session, even when two hosts
+have identical session names or pane IDs. The toolbar and output search
+operate on the selected host.
+
+The monitor remembers its mode, filter, collapsed hosts, expanded sessions,
+last host and selected pane locally. An explicit host action takes precedence
+over the saved host and clears the filter. A saved pane is restored only if
+it still exists in the host's latest overview.
+
+Expanded background hosts poll overview and resource metrics independently,
+with at most four background hosts loading at once. Collapsing or filtering
+out a background host stops its polling; switching away from the monitor
+stops all overview/metrics polling. The selected host keeps polling while
+its preview is active, including when its tree is collapsed. These controls
+use the existing SSH APIs and require only tmux on the remote hosts, not
+Auto Tmux.
+
 ## Settings
 
 ### Host

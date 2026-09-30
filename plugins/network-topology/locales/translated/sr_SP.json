@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} чворова"
+  },
+  "hosts": {
+    "docsLink": "Прикажи документе"
   }
 }

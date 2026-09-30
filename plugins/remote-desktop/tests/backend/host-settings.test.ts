@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  hostPayloadLegacy,
   normalizeImportedHost,
   userDefaultParams,
 } from "../../src/backend/host-settings.js";
@@ -78,5 +79,40 @@ describe("userDefaultParams", () => {
       "disable-copy": true,
       "enable-wallpaper": false,
     });
+  });
+});
+
+describe("hostPayloadLegacy", () => {
+  it("puts each login back in its 2.8 flat shape for older clients", () => {
+    expect(
+      hostPayloadLegacy(
+        {},
+        {
+          protocolAuth: {
+            rdp: {
+              authType: "direct",
+              credentialId: null,
+              username: "admin",
+              fields: { domain: "CORP" },
+              hasPassword: true,
+            },
+            vnc: { authType: "credential", credentialId: 4 },
+          },
+        },
+      ),
+    ).toEqual({
+      rdpAuthType: "direct",
+      rdpCredentialId: null,
+      rdpUser: "admin",
+      hasRdpPassword: true,
+      rdpDomain: "CORP",
+      domain: "CORP",
+      vncAuthType: "credential",
+      vncCredentialId: 4,
+    });
+  });
+
+  it("adds nothing for a host without logins", () => {
+    expect(hostPayloadLegacy({}, {})).toBeNull();
   });
 });

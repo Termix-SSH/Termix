@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "運行“{{name}}",
+  "variablesDialogDescription": "在運行此程式碼片段之前，請填寫所需的值。",
+  "variablesPreviewLabel": "預覽",
+  "variablesConfirmButton": "跑步",
+  "keybindings": {
+    "runSnippet": "運行現有程式碼片段",
+    "snippetLabel": "片段",
+    "selectSnippet": "選擇一段文字",
+    "snippetMissing": "未找到程式碼片段",
+    "snippetRequired": "選擇一段文字"
+  },
+  "paletteHintRun": "在活動終端選項卡中運行",
+  "host": {
+    "startupTitle": "啟動程式碼片段",
+    "quickActionsTitle": "快速動作",
+    "quickActionsDescription": "快速動作會以按鈕形式顯示在主機計量工具列上，可一鍵執行指令。",
+    "noQuickActions": "尚無快速動作。",
+    "buttonLabel": "按鈕標籤",
+    "selectSnippet": "選取程式碼片段...",
+    "addQuickAction": "新增動作"
+  },
+  "quickActions": {
+    "running": "正在執行 {{name}}...",
+    "succeeded": "{{name}} 已成功完成",
+    "failed": "{{name}} 失敗",
+    "error": "無法執行 {{name}}"
+  }
+}

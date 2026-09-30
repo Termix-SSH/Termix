@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Uruchom „{{name}}”",
+  "variablesDialogDescription": "Przed uruchomieniem snippetu wprowadź wymagane wartości.",
+  "variablesPreviewLabel": "Podgląd",
+  "variablesConfirmButton": "Uruchom",
+  "keybindings": {
+    "runSnippet": "Uruchom istniejący snippet",
+    "snippetLabel": "Snippet",
+    "selectSnippet": "Wybierz snippet",
+    "snippetMissing": "nie znaleziono snippetu",
+    "snippetRequired": "Wybierz snippet"
+  },
+  "paletteHintRun": "Uruchom w aktywnej karcie terminala",
+  "host": {
+    "startupTitle": "Snippet startowy",
+    "quickActionsTitle": "Szybkie akcje",
+    "quickActionsDescription": "Szybkie akcje pojawiają się jako przyciski na pasku narzędzi Metryki hosta, umożliwiając wykonanie polecenia jednym kliknięciem.",
+    "noQuickActions": "Brak szybkich akcji.",
+    "buttonLabel": "Etykieta przycisku",
+    "selectSnippet": "Wybierz snippet...",
+    "addQuickAction": "Dodaj akcję"
+  },
+  "quickActions": {
+    "running": "Wykonywanie {{name}}...",
+    "succeeded": "{{name}} ukończono pomyślnie",
+    "failed": "{{name}} nie powiodło się",
+    "error": "Nie udało się wykonać {{name}}"
+  }
+}

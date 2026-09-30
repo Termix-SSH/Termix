@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Run \"{{name}}\"",
+  "variablesDialogDescription": "Füllen Sie die für diesen Codeabschnitt erforderlichen Werte aus, bevor Sie ihn ausführen.",
+  "variablesPreviewLabel": "Vorschau",
+  "variablesConfirmButton": "Laufen",
+  "keybindings": {
+    "runSnippet": "Vorhandenen Codeausschnitt ausführen",
+    "snippetLabel": "Ausschnitt",
+    "selectSnippet": "Wählen Sie einen Ausschnitt aus",
+    "snippetMissing": "Ausschnitt nicht gefunden",
+    "snippetRequired": "Wählen Sie einen Ausschnitt aus"
+  },
+  "paletteHintRun": "Im aktiven Terminal-Tab ausführen",
+  "host": {
+    "startupTitle": "Startup-Snippet",
+    "quickActionsTitle": "Schnellaktionen",
+    "quickActionsDescription": "Schnellaktionen erscheinen als Schaltflächen in der Host-Metriken-Symbolleiste zur Ausführung von Befehlen mit einem Klick.",
+    "noQuickActions": "Noch keine Schnellaktionen.",
+    "buttonLabel": "Schaltflächenbeschriftung",
+    "selectSnippet": "Snippet auswählen...",
+    "addQuickAction": "Aktion hinzufügen"
+  },
+  "quickActions": {
+    "running": "{{name}} wird ausgeführt...",
+    "succeeded": "{{name}} erfolgreich abgeschlossen",
+    "failed": "{{name}} fehlgeschlagen",
+    "error": "Fehler beim Ausführen von {{name}}"
+  }
+}

@@ -56,15 +56,26 @@ export interface DockerHost {
   username?: string;
   syncId?: string | null;
   connectionOrigin?: "local" | "remote" | null;
-  terminalConfig?: Record<string, unknown> | null;
   pluginSettings?: Record<string, Record<string, unknown> | undefined>;
 }
 
+/** The fields toDockerHost reads from a shell or API host. */
+export type DockerHostSource = Omit<DockerHost, "id" | "name"> & {
+  id: string | number;
+  name?: string | null;
+};
+
 /** Any host record the shell or an API hands over, as a DockerHost. */
-export function toDockerHost(record: Record<string, unknown>): DockerHost {
+export function toDockerHost(record: DockerHostSource): DockerHost {
   return {
-    ...(record as unknown as DockerHost),
     id: Number(record.id),
+    name: record.name ?? undefined,
+    ip: record.ip,
+    port: record.port,
+    username: record.username,
+    syncId: record.syncId ?? null,
+    connectionOrigin: record.connectionOrigin ?? null,
+    pluginSettings: record.pluginSettings,
   };
 }
 

@@ -1,3 +1,4 @@
+import { useSettings } from "@termix/plugin-sdk/frontend";
 import { fileManagerHostSetting } from "./host-settings";
 import {
   useCallback,
@@ -373,11 +374,11 @@ function RemotePane({
         ...current,
         connectionState: "ready",
         sessionId: result.sessionId || String(host.id),
-        path: fileManagerHostSetting(host, "defaultPath", "") || "/",
+        path: fileManagerHostSetting(host, "defaultPath", "") || ".",
       }));
       await loadRemotePath(
         result.sessionId || String(host.id),
-        fileManagerHostSetting(host, "defaultPath", "") || "/",
+        fileManagerHostSetting(host, "defaultPath", "") || ".",
       );
     },
     [loadRemotePath, setPane],
@@ -548,6 +549,8 @@ function RemotePane({
 }
 
 export function SftpTransferTab() {
+  const confirmBeforeTrash =
+    useSettings("user").values.confirmBeforeTrash !== false;
   const { t } = useTranslation();
   const formatTransferMetrics = useMemo(
     () => createFormatTransferMetrics(t),
@@ -894,10 +897,10 @@ export function SftpTransferTab() {
     }
   };
 
-  const handleDeleteConfirmed = async () => {
-    if (!deleteTarget) return;
-    const entries = getContextEntries(deleteTarget);
-    const paneId = deleteTarget.paneId;
+  const handleDeleteConfirmed = async (target = deleteTarget) => {
+    if (!target) return;
+    const entries = getContextEntries(target);
+    const paneId = target.paneId;
     setDeleteTarget(null);
     if (entries.length === 0) return;
 
@@ -1071,7 +1074,8 @@ export function SftpTransferTab() {
               <ContextMenuButton
                 disabled={!canMutateContextPane || contextEntries.length === 0}
                 onClick={() => {
-                  setDeleteTarget(contextMenu);
+                  if (confirmBeforeTrash) setDeleteTarget(contextMenu);
+                  else void handleDeleteConfirmed(contextMenu);
                   setContextMenu(null);
                 }}
               >

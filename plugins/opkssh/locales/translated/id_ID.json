@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
     "timeout": "Autentikasi habis waktu. Silakan coba lagi."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

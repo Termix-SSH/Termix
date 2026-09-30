@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "تشغيل \"{{name}}\"",
+  "variablesDialogDescription": "أدخل القيم التي يحتاجها هذا المقتطف البرمجي قبل تشغيله.",
+  "variablesPreviewLabel": "معاينة",
+  "variablesConfirmButton": "يجري",
+  "keybindings": {
+    "runSnippet": "تشغيل المقتطف البرمجي الحالي",
+    "snippetLabel": "مقتطف",
+    "selectSnippet": "حدد جزءًا من التعليمات البرمجية",
+    "snippetMissing": "لم يتم العثور على المقتطف",
+    "snippetRequired": "حدد جزءًا من التعليمات البرمجية"
+  },
+  "paletteHintRun": "قم بتشغيله في علامة تبويب الطرفية النشطة",
+  "host": {
+    "startupTitle": "مقتطف بدء التشغيل",
+    "quickActionsTitle": "إجراءات سريعة",
+    "quickActionsDescription": "تظهر الإجراءات السريعة كأزرار في شريط أدوات مقاييس المضيف لتنفيذ الأوامر بنقرة واحدة.",
+    "noQuickActions": "لا توجد إجراءات سريعة بعد.",
+    "buttonLabel": "تسمية الزر",
+    "selectSnippet": "اختر مقتطفًا...",
+    "addQuickAction": "إضافة إجراء"
+  },
+  "quickActions": {
+    "running": "جارٍ تنفيذ {{name}}...",
+    "succeeded": "تم إكمال {{name}} بنجاح",
+    "failed": "فشل {{name}}",
+    "error": "فشل تنفيذ {{name}}"
+  }
+}

@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "الحد الأدنى 15 ثانية. عدد مرات تحديث إحصائيات عقدة Proxmox.",
     "proxmoxStatsNodeOverride": "تجاوز اسم العقدة",
     "proxmoxStatsNodeOverrideDesc": "تجاوز الكشف التلقائي عن اسم عقدة Proxmox (يتم الكشف عنه عبر اسم المضيف افتراضيًا).",
-    "proxmoxStatsNodeOverridePlaceholder": "تم اكتشافه تلقائيًا من اسم المضيف"
+    "proxmoxStatsNodeOverridePlaceholder": "تم اكتشافه تلقائيًا من اسم المضيف",
+    "docsLink": "عرض المستندات",
+    "hostNotFound": "المضيف غير موجود",
+    "loadingHost": "جارٍ تحميل المضيف...",
+    "none": "لا يوجد",
+    "proxmoxGuestsSelected_one": "{{count}} جهاز ضيف — {{selected}} مُحدد",
+    "proxmoxGuestsSelected_other": "{{count}} أجهزة ضيفة — {{selected}} مُحددة",
+    "proxmoxImportButton_one": "استيراد {{count}} مضيف",
+    "proxmoxImportButton_other": "استيراد {{count}} مضيفين"
   },
   "proxmoxStats": {
     "tabTitle": "إحصائيات Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "لم يتم العثور على أي أجهزة افتراضية أو حاويات LXC على هذه العقدة.",
     "noGuestsMatch": "لا يوجد ضيوف يطابقون المعايير الحالية."
+  },
+  "terminal": {
+    "connected": "متصل"
   }
 }

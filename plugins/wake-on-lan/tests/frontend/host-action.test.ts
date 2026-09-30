@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { toast } from "sonner";
 import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
-import { hasMacAddress, wakeHost } from "../../src/frontend/host-action.js";
+import {
+  hasMacAddress,
+  macAddressOf,
+  wakeHost,
+} from "../../src/frontend/host-action.js";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -23,6 +27,26 @@ function stubApi(overrides: Partial<PluginApiClient> = {}): PluginApiClient {
 }
 
 const t = (key: string) => key;
+
+describe("macAddressOf", () => {
+  it("returns the trimmed MAC address a host keeps", () => {
+    expect(
+      macAddressOf({
+        pluginSettings: {
+          "wake-on-lan": { macAddress: " aa:bb:cc:dd:ee:ff " },
+        },
+      }),
+    ).toBe("aa:bb:cc:dd:ee:ff");
+  });
+
+  it("is null without a host or an address", () => {
+    expect(macAddressOf(undefined)).toBeNull();
+    expect(macAddressOf({ pluginSettings: {} })).toBeNull();
+    expect(
+      macAddressOf({ pluginSettings: { "wake-on-lan": { macAddress: "  " } } }),
+    ).toBeNull();
+  });
+});
 
 describe("hasMacAddress", () => {
   it("is true when the host's wake-on-lan settings carry a MAC address", () => {

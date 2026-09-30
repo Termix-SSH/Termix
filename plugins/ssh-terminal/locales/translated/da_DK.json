@@ -75,7 +75,11 @@
     "tmuxWindows": "Vinduer",
     "unknownError": "Der opstod en ukendt fejl",
     "websocketAbnormalClose": "Forbindelsen blev lukket uventet. Dette kan skyldes et problem med reverse proxy eller SSL-konfigurationen. Tjek venligst serverlogfilerne.",
-    "websocketError": "WebSocket-forbindelsesfejl"
+    "websocketError": "WebSocket-forbindelsesfejl",
+    "clipboardReadFailed": "Kunne ikke læse fra udklipsholderen. Sørg for, at der er givet tilladelse til udklipsholderen.",
+    "clipboardWriteFailed": "Kunne ikke kopiere til udklipsholder. Sørg for, at siden serveres via HTTPS eller localhost.",
+    "connected": "Forbundet",
+    "totpCodeLabel": "Bekræftelseskode"
   },
   "terminalToolbar": {
     "detachTmux": "Afmonter tmux",
@@ -175,6 +179,10 @@
       },
       "imageMaxBytes": {
         "label": "Maks. lagerplads i bytes"
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Kør nye værters terminaler inde i tmux, så sessioner overlever afbrydelser (kræver tmux på værten)"
       }
     },
     "host": {
@@ -189,9 +197,281 @@
       "enableTerminal": {
         "label": "Aktivér terminal"
       }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Kommando Autofuldførelse",
+        "description": "Vis autofuldførelse under indtastning, hvis du trykker på tabulatortasten"
+      },
+      "localEcho": {
+        "label": "Lokalt ekko",
+        "description": "Reducer opfattet inputforsinkelse ved hjælp af sikker lokal tastetrykforudsigelse"
+      },
+      "linkClickBehavior": {
+        "label": "Klik på terminallink",
+        "description": "Standardadfærd ved klik på links i terminalen"
+      }
     }
   },
   "palette": {
     "localTerminal": "Lokal terminal"
+  },
+  "hosts": {
+    "addHost": "Tilføj vært",
+    "applyGlobalThemeTooltip": "Anvend dette tema",
+    "backgroundImageDesc": "Valgfri URL til et baggrundsbillede i terminalen",
+    "backgroundImageLabel": "URL til baggrundsbillede",
+    "backgroundImageOpacityLabel": "Baggrundsbilledets opacitet",
+    "backspaceMode": "Backspace-tilstand",
+    "backspaceModeLabel": "Backspace-tilstand",
+    "behaviorAndAdvanced": "Adfærd og avanceret",
+    "bellStyle": "Klokkestil",
+    "bellStyleLabel": "Klokkestil",
+    "colorTheme": "Farvetema",
+    "cursorBlink": "Markørblink",
+    "cursorBlinking": "Markøren blinker",
+    "cursorBlinkingDesc": "Aktivér blinkende animation for terminalmarkøren",
+    "cursorStyle": "Markørstil",
+    "cursorStyleLabel": "Markørstil",
+    "customThemeAnsiColors": "ANSI-farver",
+    "customThemeBackground": "Baggrund",
+    "customThemeBlack": "Sort",
+    "customThemeBlue": "Blå",
+    "customThemeBrightBlack": "Klar sort",
+    "customThemeBrightBlue": "Klarblå",
+    "customThemeBrightCyan": "Lys cyan",
+    "customThemeBrightGreen": "Klargrøn",
+    "customThemeBrightMagenta": "Lys magenta",
+    "customThemeBrightRed": "Klar rød",
+    "customThemeBrightWhite": "Klar hvid",
+    "customThemeBrightYellow": "Klar gul",
+    "customThemeColors": "Brugerdefinerede farver",
+    "customThemeCursor": "Markør",
+    "customThemeCursorAccent": "Markøraccent",
+    "customThemeCyan": "Cyan",
+    "customThemeForeground": "Forgrund",
+    "customThemeGreen": "Grøn",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Rød",
+    "customThemeResetTooltip": "Nulstil til standardindstillinger",
+    "customThemeSelection": "Udvælgelse",
+    "customThemeWhite": "Hvid",
+    "customThemeYellow": "Gul",
+    "deleteGlobalThemeTooltip": "Slet dette tema",
+    "docsLink": "Se dokumenter",
+    "enableAutoMosh": "Aktivér automatisk mosh",
+    "enableAutoMoshDesc": "Foretræk Mosh frem for SSH, hvis det er muligt",
+    "enableAutoTmux": "Aktivér Auto-Tmux",
+    "enableAutoTmuxDesc": "Hold din shell og alt, der kører i den, i live på tværs af afbrydelser og genstart af browseren ved at køre den inde i tmux (tmux skal være installeret på værten)",
+    "fastScrollModifier": "Hurtig scroll-modifikator",
+    "fastScrollModifierLabel": "Hurtig scroll-modifikator",
+    "fastScrollSensitivity": "Hurtig scrollfølsomhed",
+    "fastScrollSensitivityLabel": "Hurtig scrollfølsomhed",
+    "fontFamily": "Skrifttypefamilie",
+    "fontFamilyCustomHint": "Vælg en medfølgende skrifttype, eller vælg Brugerdefineret og skriv det nøjagtige navn på en skrifttype, der allerede er installeret på dit system (f.eks. MesloLGS NF, Noto Sans Mono). Termix kan ikke installere skrifttyper for dig, så installer det først på dit operativsystem.",
+    "fontFamilyCustomOption": "Skik...",
+    "fontFamilyCustomPlaceholder": "Præcis skrifttypenavn, f.eks. MesloLGS NF",
+    "fontFamilyLabel": "Skrifttypefamilie",
+    "fontSize": "Skriftstørrelse",
+    "fontSizeLabel": "Skriftstørrelse",
+    "hostNotFound": "Værten blev ikke fundet",
+    "letterSpacing": "Bogstavafstand",
+    "letterSpacingPx": "Bogstavafstand (px)",
+    "lineHeight": "Linjehøjde",
+    "lineHeightLabel": "Linjehøjde",
+    "linkClickBehaviorConfirm": "Vis pop op-vindue for at åbne eller kopiere",
+    "linkClickBehaviorDefault": "Standard (følg app-indstilling)",
+    "linkClickBehaviorDesc": "Styrer, hvad der sker, når du klikker på et link i terminalen. Brug 'Standard' for at følge indstillingen på appniveau.",
+    "linkClickBehaviorDirect": "Åbn direkte",
+    "linkClickBehaviorLabel": "Linkkliksadfærd",
+    "loadingHost": "Indlæser vært...",
+    "localEchoAuto": "Automatisk",
+    "localEchoDefault": "Brug global indstilling",
+    "localEchoDesc": "Forudsig sikre, udskrivbare tastetryk lokalt på langsomme forbindelser. Adgangskodeprompter og kontrolinput gentages aldrig.",
+    "localEchoLabel": "Lokalt ekko",
+    "localEchoOff": "Slukket",
+    "localEchoOn": "Altid tændt",
+    "macOptionIsMetaLabel": "Alternativtast sender meta",
+    "macOptionIsMetaShortDesc": "Deaktiver muligheden for at skrive specialtegn (som @ eller |) med Option/Alt-tasten på macOS i stedet for at sende Meta",
+    "moshCommand": "MOSH-kommando",
+    "moshCommandLabel": "Mosh-kommandoen",
+    "noSavedThemes": "Ingen gemte temaer endnu",
+    "none": "Ingen",
+    "rightClickSelectsWord": "Højreklik markerer ord",
+    "rightClickSelectsWordLabel": "Højreklik markerer ord",
+    "rightClickSelectsWordShortDesc": "Vælg ordet under markøren ved højreklik",
+    "saveAsGlobalTheme": "Gem som globalt tema",
+    "saveGlobalThemeError": "Temaet kunne ikke gemmes",
+    "saveGlobalThemeNamePrompt": "Indtast et navn til dette tema",
+    "saveGlobalThemeSuccess": "Tema gemt",
+    "savedThemesLabel": "Gemte temaer",
+    "scrollbackBufferLabel": "Scrollback-buffer",
+    "scrollbackMaxLines": "Maksimalt antal linjer gemt i historikken",
+    "sudoPasswordAutoFill": "Sudo-adgangskode automatisk udfyldning",
+    "sudoPasswordAutoFillDesc": "Gem en sudo-adgangskode, så værtsmålinger, terminalprompter og andre kan køre privilegerede kommandoer automatisk.",
+    "sudoPasswordAutoFillLabel": "Sudo-adgangskode automatisk udfyldning",
+    "syntaxCategoryIpAddresses": "IP-adresser",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Logniveauer",
+    "syntaxCategoryLogLevelsDesc": "fejl, advarsel, info, fejlfinding, fatal",
+    "syntaxCategoryNumbers": "Mærkede tal",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "Filstier",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/fil.txt",
+    "syntaxCategoryTimestamps": "Tidsstempler",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL'er",
+    "syntaxCategoryUrlsDesc": "https://eksempel.com",
+    "syntaxHighlightingDesc": "Farvlæg terminaloutput (fejl, stier, IP'er, tidsstempler)",
+    "syntaxHighlightingLabel": "Syntaksfremhævning",
+    "terminalAppearance": "Terminalens udseende",
+    "theme": "Tema",
+    "themePreview": "Temaforhåndsvisning",
+    "useSSHTitleDesc": "Opdater fanetitlen fra skallens vinduestitel i stedet for værtsnavnet",
+    "useSSHTitleLabel": "Brug SSH-vinduestitel"
+  },
+  "nav": {
+    "history": "Historie",
+    "localTerminal": "Lokal terminal",
+    "sshTools": "SSH-værktøjer",
+    "terminal": "Terminal",
+    "macros": "Makroer"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Skriv her for at udsende tastetryk...",
+    "copyOnSelect": "Kopier automatisk den markerede tekst",
+    "enableRightClickCopyPaste": "Aktivér højreklik med kopiering/indsætning",
+    "fillPassword": "Udfyld adgangskode",
+    "fillPasswordMissing": "Ingen gemt adgangskode til {{count}} valgte terminal(er)",
+    "fillPasswordSuccess": "Udfyldt adgangskode i {{count}} terminal(er)",
+    "keyRecordingTitle": "Nøgleoptagelse",
+    "noTerminalTabsOpen": "Ingen terminalfaner åbne",
+    "recordToTerminals": "Optag til terminaler",
+    "selectAll": "Alle",
+    "selectNone": "Ingen",
+    "selectTerminalsAbove": "Vælg terminaler ovenfor",
+    "settingsTitle": "Indstillinger",
+    "startRecording": "Start optagelse",
+    "stopRecording": "Stop optagelse"
+  },
+  "terminalDefaults": {
+    "clearAll": "Ryd alt",
+    "description": "Angiv værdier, som hver vært arver, medmindre den tilsidesætter dem.",
+    "dialogDescription": "Disse gælder for værter, der ikke har angivet en indstilling. Alt, hvad der er angivet på en vært, vinder.",
+    "inherit": "Arve",
+    "manage": "Styre",
+    "off": "Slukket",
+    "on": "På",
+    "title": "Standardindstillinger for forbindelse"
+  },
+  "keybindings": {
+    "copy": "Kopiér valg",
+    "paste": "Indsæt",
+    "sendControlCode": "Send Ctrl+bogstavsignal",
+    "sendText": "Send sms",
+    "controlCodeLabel": "Bogstav",
+    "textLabel": "Tekst der skal sendes",
+    "appendEnterLabel": "Tryk Enter efter afsendelse",
+    "clipboardPermissionNote": "Kan bede om tilladelse til udklipsholder ved første brug i nogle browsere.",
+    "textRequired": "Indtast den tekst, der skal sendes",
+    "controlCodeRequired": "Indtast et enkelt bogstav for kontrolkoden"
+  },
+  "macros": {
+    "title": "Makroer",
+    "description": "Kør en gemt række kommandoer i en terminal, og reager på, hvad serveren sender tilbage.",
+    "target": "Mål",
+    "noTerminal": "Ingen terminal åben",
+    "empty": "Ingen makroer endnu",
+    "emptyHint": "Opret en makro for at automatisere et terminalflow, f.eks. at logge ind, genstarte en tjeneste eller besvare prompts.",
+    "create": "Ny makro",
+    "back": "Tilbage til makroer",
+    "name": "Navn",
+    "namePlaceholder": "Genstart webserveren",
+    "nameRequired": "Giv makroen et navn, før du gemmer den",
+    "descriptionLabel": "Beskrivelse",
+    "descriptionPlaceholder": "Hvad denne makro gør (valgfrit)",
+    "unsaved": "Ikke-gemte ændringer",
+    "save": "Spare",
+    "saved": "Makro gemt",
+    "saveFailed": "Makroen kunne ikke gemmes",
+    "delete": "Slet",
+    "deleteTitle": "Slette denne makro?",
+    "deleteBody": "\"{{name}}\" vil blive slettet permanent. Dette kan ikke fortrydes.",
+    "deleted": "Makro slettet",
+    "cancel": "Ophæve",
+    "run": "Løbe",
+    "stop": "Stop",
+    "running": "Løber...",
+    "completed": "Makro færdig",
+    "failed": "Makro mislykkedes",
+    "loadFailed": "Makroer kunne ikke indlæses",
+    "needTerminal": "Åbn og tilslut først en terminal",
+    "noSteps": "Denne makro har endnu ingen trin. Tilføj et nedenfor.",
+    "addStep": "Tilføj trin",
+    "stepNumber": "Trin {{number}}",
+    "removeStep": "Fjern trin",
+    "confirmRunTitle": "Køre denne makro?",
+    "confirmRunBody": "\"{{name}}\" sender kommandoer til {{host}}.",
+    "confirmRunAction": "Kør makro",
+    "stepTypes": {
+      "send": {
+        "label": "Send kommando",
+        "help": "Skriver tekst i terminalen, på samme måde som hvis du havde skrevet den."
+      },
+      "wait": {
+        "label": "Vent på output",
+        "help": "Holder pause, indtil serveren udskriver den tekst, du navngiver, f.eks. en adgangskodeprompt."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Venter et fast tidsrum før næste trin."
+      },
+      "if": {
+        "label": "Hvis outputtet indeholder",
+        "help": "Kontrollerer alt, hvad serveren har udskrevet indtil videre, og kører derefter en af to grene."
+      },
+      "repeat": {
+        "label": "Gentage",
+        "help": "Kører trinnene inde i den et bestemt antal gange."
+      }
+    },
+    "send": {
+      "text": "Kommando eller tekst",
+      "textPlaceholder": "systemctl genstart nginx",
+      "pressEnter": "Tryk Enter efter afsendelse",
+      "pressEnterHelp": "Slå dette fra for at skrive tekst uden at indsende den."
+    },
+    "wait": {
+      "pattern": "Vent indtil outputtet indeholder",
+      "patternPlaceholder": "adgangskode:",
+      "timeout": "Giv op efter",
+      "onTimeout": "Hvis det aldrig dukker op",
+      "stop": "Stop makroen",
+      "continue": "Fortsæt alligevel"
+    },
+    "delay": {
+      "duration": "Vent på"
+    },
+    "ifStep": {
+      "pattern": "Hvis outputtet indeholder",
+      "patternPlaceholder": "Aktiv: aktiv (løber)",
+      "then": "Så gør dette",
+      "else": "Ellers gør dette",
+      "emptyBranch": "Ingen trin"
+    },
+    "repeat": {
+      "count": "Antal gange",
+      "times": "gange"
+    },
+    "match": {
+      "useRegex": "Match med et regulært udtryk",
+      "useRegexHelp": "Slå dette fra for at teksten skal være præcis som den er skrevet.",
+      "invalidRegex": "Ikke et gyldigt regulært udtryk, det vil blive matchet som almindelig tekst"
+    },
+    "seconds": "sekunder",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Fjernserver kræves. Opret forbindelse til en fjernserver i Indstillinger for at bruge denne forbindelsestype."
   }
 }

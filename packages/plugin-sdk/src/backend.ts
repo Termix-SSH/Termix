@@ -10,6 +10,8 @@
  * transports could leave core's internals behind.
  */
 
+import type { HostSshOptions } from "./ssh-options.js";
+export type { HostSshOptions } from "./ssh-options.js";
 import type { PluginManifest, PluginSettingsField } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 
@@ -94,8 +96,8 @@ export interface PluginFiles {
  * to query through `db`. Both require db:own.
  *
  * Scoped by name: every table carries the p_<id>_ prefix, and `refs` exposes
- * users, ssh_data, roles and user_roles read-only so a plugin can join against
- * them without being able to write them. In-process code could reach around
+ * users, ssh_data, roles and user_roles (behind db:core-refs) so a plugin can
+ * join against them. In-process code could reach around
  * all of this. The capability, the prefix, lint and review are the contract,
  * not a sandbox.
  */
@@ -104,7 +106,10 @@ export interface PluginDatabase {
   define: <T = unknown>(definition: PluginTableDefinition) => Promise<T>;
   /** Drizzle handle, scoped to this plugin's tables. */
   client: <T = unknown>() => Promise<T>;
-  /** Read-only references to the core tables a plugin may point at. */
+  /**
+   * Core tables a plugin may join against: users, hosts, roles, userRoles.
+   * Needs db:core-refs. Treat them as read-only.
+   */
   refs: <T = unknown>() => Promise<T>;
   /**
    * Flushes writes to disk. Call it after every write: on SQLite the database
@@ -165,6 +170,8 @@ export interface SyncWriteEvent {
   /** The row as it arrived, before references were resolved. */
   wire: SyncRow;
   created: boolean;
+  /** Another entity's syncId to its local id here, for ids serialize put on the wire. */
+  resolveId?: (entityType: string, syncId: string) => Promise<number | null>;
 }
 
 export interface SyncEntityRegistration {
@@ -189,7 +196,7 @@ export interface SyncEntityRegistration {
   singleton?: boolean;
   /**
    * Names core uses when its own rows point at this entity without knowing
-   * which plugin provides it, e.g. "commandSnippet" for a host quick action.
+   * which plugin provides it. Nothing in core uses one today.
    */
   answersTo?: readonly string[];
   /**
@@ -231,6 +238,11 @@ export interface PluginSync {
   registerEntity: (entity: SyncEntityRegistration) => void;
 }
 
+/**
+ * A plain key/value hand-off between plugins. `provide` and `revoke` only take
+ * keys under the plugin's own id (`<pluginId>.something`); anyone may
+ * `consume`.
+ */
 export interface PluginRegistry {
   provide: <T>(key: string, value: T) => void;
   consume: <T>(key: string) => T | undefined;
@@ -248,7 +260,11 @@ export interface PluginServices {
     implementation: T,
     options?: { name?: string },
   ) => void;
-  /** `provider` picks a named provider; omitted, the unnamed one. */
+  /**
+   * The service must be listed in the manifest's `requires` (or be one this
+   * plugin provides). `provider` picks a named provider; omitted, the unnamed
+   * one. A `userId` other than the acting user needs users:impersonate.
+   */
   get: <T extends object>(
     service: string,
     options?: { userId?: string; provider?: string },
@@ -484,15 +500,44 @@ export interface PluginSettings {
   getUser: <T = unknown>(userId: string, key: string) => Promise<T | undefined>;
   setUser: (userId: string, key: string, value: unknown) => Promise<void>;
 
-  /** Per-host settings. */
+  /**
+   * Per-host settings. A host follows its host defaults (server, user,
+   * folder) for every key it has not set itself, and the value read here is
+   * already the resolved one.
+   */
   getHost: <T = unknown>(
     hostId: number | string,
     key: string,
   ) => Promise<T | undefined>;
+  /**
+   * The value as one user sees it. Only a `personal` field differs from
+   * getHost: on a host shared with that user and following its defaults, it
+   * resolves against the user's own defaults rather than the owner's.
+   */
+  getHostFor: <T = unknown>(
+    hostId: number | string,
+    userId: string,
+    key: string,
+  ) => Promise<T | undefined>;
+  /**
+   * What a user's hosts get for a host field when nothing more specific
+   * sets it: their own defaults, then the server's, then the manifest
+   * default. For something with no host, such as a quick connect.
+   */
+  getHostDefault: <T = unknown>(
+    userId: string,
+    key: string,
+  ) => Promise<T | undefined>;
+  /**
+   * Writes a host value, which makes it the host's own rather than
+   * following its defaults. `{ inherit: true }` hands the key back to the
+   * defaults instead and ignores `value`.
+   */
   setHost: (
     hostId: number | string,
     key: string,
     value: unknown,
+    options?: { inherit?: boolean },
   ) => Promise<void>;
 
   /**
@@ -526,7 +571,14 @@ export interface PluginSettings {
     scope: "admin" | "user" | "host",
     validator: (
       values: Record<string, unknown>,
-      context: { hostId?: number },
+      /**
+       * `defaults` is set when the values are a host defaults level being
+       * saved rather than one host, so there is no hostId.
+       */
+      context: {
+        hostId?: number;
+        defaults?: { level: "admin" | "user" | "folder" };
+      },
     ) => Record<string, string> | void | Promise<Record<string, string> | void>,
   ) => () => void;
 
@@ -552,53 +604,118 @@ export interface PluginHostSummary {
 }
 
 /**
- * A host record wide enough for a plugin that creates or updates hosts on the
- * user's behalf (import, discovery, sync), decrypted for that user. Unlike
- * PluginHostSummary this carries the fields a plugin needs to set up a
- * connectable host, not just what a list view shows. Still no secret auth
- * material (password, key, vault tokens): a plugin that creates a host picks
- * an authType and, for "credential", a credentialId it does not need to see
- * the contents of.
+ * A host as ctx.hosts hands it to a plugin that creates, updates or scans
+ * hosts on the user's behalf (import, discovery, sync), decrypted for that
+ * user. Every field is listed here and core builds it field by field, so a
+ * core column a plugin needs has to be added to this contract first. Carries
+ * no secret auth material (password, key, vault tokens): a plugin that
+ * creates a host picks an authType and, for "credential", a credentialId it
+ * does not need to see the contents of.
  */
 export interface PluginHostRecord {
   id: number;
   userId: string;
+  /** Stable across a desktop and the server it syncs with. */
+  syncId: string | null;
   name: string | null;
   ip: string;
   port: number;
   username: string;
   authType: string;
-  credentialId?: number | null;
-  overrideCredentialUsername?: boolean | null;
-  connectionType?: string | null;
+  credentialId: number | null;
+  overrideCredentialUsername: boolean;
+  /** "ssh", or the id of the plugin protocol a host without SSH uses. */
+  connectionType: string;
+  /** Comma-separated, as ssh_data stores them. */
   tags: string | null;
   folder: string | null;
-  jumpHosts?: unknown;
-  enableSsh?: boolean | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-  [key: string]: unknown;
+  parentHostId: number | null;
+  pin: boolean;
+  notes: string | null;
+  jumpHosts: PluginHostJumpHost[];
+  enableSsh: boolean;
+  sshPort: number | null;
+  statusCheckEnabled: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval: number | null;
+  connectionOrigin: "local" | "remote" | null;
+  /** Keepalive, legacy algorithms, agent and environment options. */
+  sshOptions: HostSshOptions;
+  /**
+   * The calling plugin's own host settings, secrets redacted. Another
+   * plugin's settings are that plugin's to hand out, through a service.
+   */
+  pluginSettings: Record<string, unknown>;
+  /** Core's last reachability check, or null before the first one. */
+  status: PluginHostStatusEntry | null;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface PluginHostJumpHost {
+  hostId: number;
 }
 
 /**
- * Fields a plugin may set when creating a host it will own or manage. Fields
- * that belong to another plugin's host settings (enableRdp, rdpPort) are
- * handed to that plugin's host import normalizer, as on a bulk import.
+ * The fields a plugin may set when it creates a host. A key not listed here
+ * is refused with an error rather than dropped. Host settings go in
+ * `pluginSettings`, keyed by the plugin that declares them, and are
+ * validated against that plugin's manifest: an undeclared key is refused, and
+ * settings for a plugin that is not running are skipped and logged.
  */
-export type PluginHostCreateInput = Partial<
-  Omit<PluginHostRecord, "id" | "userId">
-> & {
+export interface PluginHostCreateInput {
   name: string;
   ip: string;
   port: number;
   username: string;
   authType: string;
-};
+  credentialId?: number | null;
+  overrideCredentialUsername?: boolean;
+  connectionType?: string;
+  /** Comma-separated or a list. */
+  tags?: string | string[] | null;
+  folder?: string | null;
+  pin?: boolean;
+  notes?: string | null;
+  jumpHosts?: PluginHostJumpHost[] | null;
+  enableSsh?: boolean;
+  sshPort?: number | null;
+  statusCheckEnabled?: boolean;
+  statusCheckInterval?: number | null;
+  forceKeyboardInteractive?: boolean;
+  sshOptions?: HostSshOptions | null;
+  /** Host settings by plugin id, the shape a Termix export carries. */
+  pluginSettings?: Record<string, Record<string, unknown>>;
+}
 
-/** Fields a plugin may change on a host it already created or was granted access to. */
-export type PluginHostUpdateInput = Partial<
-  Omit<PluginHostRecord, "id" | "userId">
->;
+/** Fields a plugin may change on a host the acting user owns. */
+export type PluginHostUpdateInput = Partial<PluginHostCreateInput>;
+
+/** Every key PluginHostCreateInput and PluginHostUpdateInput accept. */
+export const PLUGIN_HOST_INPUT_KEYS = [
+  "name",
+  "ip",
+  "port",
+  "username",
+  "authType",
+  "credentialId",
+  "overrideCredentialUsername",
+  "connectionType",
+  "tags",
+  "folder",
+  "pin",
+  "notes",
+  "jumpHosts",
+  "enableSsh",
+  "sshPort",
+  "statusCheckEnabled",
+  "statusCheckInterval",
+  "forceKeyboardInteractive",
+  "sshOptions",
+  "pluginSettings",
+] as const satisfies readonly (keyof PluginHostCreateInput)[];
 
 /** The same shape canAccessHost returns internally, without secrets. */
 export interface PluginHostAccess {
@@ -775,6 +892,7 @@ export interface PluginSshHost {
   username: string;
   userId?: string | null;
   authType?: string | null;
+  sshOptions?: HostSshOptions | null;
   [key: string]: unknown;
 }
 
@@ -959,7 +1077,7 @@ export interface PluginSsh {
   /**
    * A ready client at the end of a jump host chain, each hop resolved and
    * authenticated through the pipeline. For forwarding to something that is
-   * not an SSH server (an RDP port behind a bastion).
+   * not an SSH server (a remote desktop port behind a bastion).
    */
   jumpChain: <Client = unknown>(
     jumpHosts: Array<{ hostId: number }>,
@@ -1270,6 +1388,12 @@ export interface PluginLoginInstance {
    * route ("oidc", "github", "google", "ldap"). Leave unset otherwise.
    */
   type?: string;
+  /**
+   * Redirect methods: the login page starts this instance without a click,
+   * for a server that signs everyone in through one provider. The first
+   * instance that asks wins.
+   */
+  autoStart?: boolean;
 }
 
 export interface PluginLoginMethod {
@@ -1398,7 +1522,13 @@ export interface PluginOpenIsolatedWindowRequest {
  * Electron only: rejects when the server is not running embedded in the
  * desktop app. Needs desktop:window.
  */
-export interface PluginNativeRdpRequest {
+/**
+ * A host to open in the operating system's own client for a protocol. The
+ * desktop app supports "rdp" (mstsc on Windows) today; any other protocol is
+ * refused.
+ */
+export interface PluginExternalClientRequest {
+  protocol: string;
   host: string;
   port?: number;
   username?: string;
@@ -1410,19 +1540,21 @@ export interface PluginDesktop {
     request: PluginOpenIsolatedWindowRequest,
   ) => Promise<{ success: true }>;
   /**
-   * Opens the operating system's own RDP client (mstsc on Windows) for a
-   * host. The password is never passed; the client asks for it. Windows
-   * desktop app only.
+   * Opens the operating system's own client for a protocol. The password is
+   * never passed; the client asks for it. Desktop app only.
    */
-  launchNativeRdp: (
-    request: PluginNativeRdpRequest,
+  launchExternalClient: (
+    request: PluginExternalClientRequest,
   ) => Promise<{ success: boolean; error?: string }>;
   /** Whether the server runs embedded in the desktop app, so the calls above can work. */
   available: () => boolean;
 }
 
-/** A host protocol whose credentials core keeps next to the host. */
-export type PluginHostProtocol = "rdp" | "vnc" | "telnet";
+/**
+ * A host protocol whose login core keeps next to the host: any id a plugin
+ * declares in contributes.protocols.
+ */
+export type PluginHostProtocol = string;
 
 /**
  * What a plugin needs to hand a host's protocol login to something core
@@ -1447,7 +1579,8 @@ export interface PluginProtocolTarget {
     authType: string;
     username: string;
     password: string;
-    domain: string;
+    /** The protocol's declared credentialFields, secret ones included; "" when unset. */
+    fields: Record<string, string>;
   };
 }
 
@@ -1487,7 +1620,11 @@ export interface PluginCredentials {
    * permission and an unlocked data key. Audited.
    */
   createSshKey: (input: PluginSshKeyCredentialInput) => Promise<{ id: number }>;
-  /** Null when the host does not exist or the acting user cannot connect to it. */
+  /**
+   * The host's login for one of this plugin's own contributes.protocols.
+   * Null when the host does not exist or the acting user cannot connect to
+   * it. Needs credentials:read. Audited.
+   */
   resolveHostProtocol: (
     hostId: number,
     protocol: PluginHostProtocol,
@@ -1864,8 +2001,8 @@ export interface PluginContext {
    * no request behind it. Always audited, and every core API inside still
    * applies that user's RBAC.
    *
-   * This is the only way a plugin can name a user. Nothing else trusts a user
-   * id that came from plugin code.
+   * Needs users:impersonate. That and a `userId` option on services.get or
+   * secrets.getShared are the only ways a plugin can name a user.
    */
   asUser: <T>(userId: string, fn: () => Promise<T> | T) => Promise<T>;
 

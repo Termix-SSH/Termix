@@ -382,7 +382,10 @@
     "defaultPathLabel": "Đường dẫn mặc định",
     "fileManagerPathHint": "Thư mục sẽ mở khi khởi chạy Trình quản lý tập tin cho máy này.",
     "fileManagerUrlCopied": "Đã sao chép URL Trình quản lý tệp",
-    "copyFileManagerUrlAction": "Sao chép URL File Manager"
+    "copyFileManagerUrlAction": "Sao chép URL File Manager",
+    "docsLink": "Xem tài liệu",
+    "hostNotFound": "Không tìm thấy máy chủ",
+    "loadingHost": "Đang tải máy chủ..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "Chế độ SCP cũ"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Truyền tệp đồng thời",
+        "description": "Số lượng tệp mà trình quản lý cục bộ/từ xa song song tải lên hoặc tải xuống cùng lúc. Giảm giá trị này nếu máy chủ của bạn giới hạn số kênh SFTP."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Tệp"
+  },
+  "onboarding": {
+    "feature_files": "Trình quản lý tập tin",
+    "feature_files_desc": "Duyệt, tải lên, tải xuống và chỉnh sửa tệp qua SFTP mà không cần rời khỏi ứng dụng."
+  },
+  "terminal": {
+    "runTitle": "Đang chạy {{command}} - {{host}}",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Duyệt thư mục đích",
+    "browsePathError": "Không thể mở đường dẫn này trên máy chủ đích.",
+    "browsePathWillBeCreated": "Thư mục này chưa tồn tại. Nó sẽ được tạo khi truyền tải bắt đầu.",
+    "cancel": "Hủy",
+    "cleanupDestFiles": "Dọn dẹp đích",
+    "cleanupDestFilesError": "Dọn dẹp thất bại",
+    "cleanupDestFilesNothing": "Không có gì để dọn dẹp ở đích",
+    "cleanupDestFilesPartial": "Không thể xóa một số tệp chưa hoàn chỉnh",
+    "cleanupDestFilesSuccess": "Đã xóa các tệp chưa hoàn chỉnh ở đích",
+    "confirmCopy": "Sao chép",
+    "confirmMove": "Di chuyển",
+    "copyFolderToHost": "Sao chép thư mục tới máy chủ…",
+    "copyItemsToHost": "Sao chép {{count}} mục đến máy chủ…",
+    "copyToHost": "Sao chép đến máy chủ…",
+    "destinationPath": "Đường dẫn đích",
+    "destMustBeDirectory": "Đích phải là thư mục khi truyền tải nhiều mục",
+    "goUp": "Lên trên",
+    "hostAuthRequired": "Yêu cầu xác thực — mở Trình quản lý tệp trên máy chủ này trước",
+    "hostConnecting": "Đang kết nối…",
+    "hostConnectionFailed": "Kết nối thất bại",
+    "hostDisconnected": "Chưa kết nối",
+    "hostReady": "Sẵn sàng",
+    "itemsSummary": "{{count}} mục",
+    "jumpHostLimitation": "Cả hai máy chủ phải có thể truy cập từ máy chủ Termix. Không hỗ trợ định tuyến trực tiếp giữa các máy.",
+    "methodAuto": "Tự động",
+    "methodAutoHint": "Chọn tar hoặc SFTP từng tệp dựa trên số lượng tệp, kích thước và khả năng nén. Tệp đơn lẻ luôn dùng SFTP truyền luồng.",
+    "methodItemSftp": "SFTP từng tệp",
+    "methodItemSftpHint": "Truyền từng tệp riêng lẻ qua SFTP. Hoạt động trên mọi máy, bao gồm Windows.",
+    "methodItemSftpLimitation": "Mỗi tệp sử dụng cùng một luồng SFTP như bản sao tệp đơn lẻ, lần lượt từng tệp một. Tiến trình được gộp chung cho tất cả tệp, do đó thanh tiến trình di chuyển chậm khi có tệp lớn.",
+    "methodLabel": "Phương thức truyền",
+    "methodPreviewError": "Không thể xem trước phương thức truyền. Máy chủ vẫn sẽ chọn phương thức khi bạn bắt đầu.",
+    "methodPreviewLoading": "Đang tính toán phương thức truyền…",
+    "methodPreviewScanSummary": "{{fileCount}} tệp, tổng {{totalSize}} (đã quét trên máy nguồn).",
+    "methodPreviewWillUseItemSftp": "Sẽ dùng: SFTP từng tệp",
+    "methodPreviewWillUseTar": "Sẽ dùng: Lưu trữ tar",
+    "methodReason": {
+      "user_item_sftp": "Bạn đã chọn SFTP từng tệp.",
+      "user_tar": "Bạn đã chọn dùng tar.",
+      "tar_unavailable": "Tar không có trên một hoặc cả hai máy — sẽ dùng SFTP từng tệp thay thế.",
+      "windows_host": "Có máy Windows — không dùng tar.",
+      "auto_multi_large": "Tự động: nhiều tệp bao gồm một tệp lớn ({{largestSize}}) có dữ liệu nén được — tar gộp thành một lần chuyển.",
+      "auto_single_large_in_archive": "Tự động: một tệp lớn ({{largestSize}}) trong tập này — SFTP từng tệp.",
+      "auto_many_incompressible": "Tự động: dữ liệu hầu như không nén được — SFTP từng tệp.",
+      "auto_many_files": "Tự động: nhiều tệp ({{fileCount}}) — tar giảm chi phí trên mỗi tệp.",
+      "auto_default": "Tự động: SFTP từng tệp cho tập này."
+    },
+    "methodTar": "Lưu trữ tar",
+    "methodTarHint": "Nén tại nguồn, truyền một tệp lưu trữ, giải nén tại đích. Yêu cầu tar trên cả hai máy Unix.",
+    "metricsCompress": "Nén tại nguồn: {{duration}}",
+    "metricsExtract": "Giải nén tại đích: {{duration}}",
+    "metricsPrepare": "Chuẩn bị đích: {{duration}}",
+    "metricsRouteBenchmark": "Tìm đường dẫn — trực tiếp: {{direct}}, chuyển tiếp: {{relay}}",
+    "metricsSourceDelete": "Xóa khỏi nguồn: {{duration}}",
+    "metricsTotal": "Tổng: {{duration}}",
+    "metricsTransfer": "Toàn trình: {{throughput}} ({{duration}})",
+    "metricsVerify": "Đã xác thực SHA-256: {{duration}}",
+    "moveFolderToHost": "Di chuyển thư mục tới máy chủ…",
+    "moveItemsToHost": "Di chuyển {{count}} mục tới máy chủ…",
+    "moveToHost": "Di chuyển đến máy chủ…",
+    "noHostsConnected": "Không có máy chủ nào khác có Trình quản lý tệp khả dụng.",
+    "noHostsConnectedHint": "Thêm một máy chủ SSH khác đã bật Trình quản lý tệp trong Trình quản lý máy chủ.",
+    "parallelSegmentsHint": "Các tệp lớn được chia thành các khối 256 MB. Nhiều làn sử dụng các kết nối riêng biệt (như khởi chạy nhiều lần truyền) để tăng tổng thông lượng.",
+    "parallelSegmentsLabel": "Làn truyền song song",
+    "parallelSegmentsOption": "{{count}} làn",
+    "progressBenchmarking": "Chọn tuyến đường chuyển tiếp nhanh nhất…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Hủy",
+    "progressCancelling": "Đang hủy…",
+    "progressCompressing": "Đang nén trên máy nguồn…",
+    "progressExtracting": "Đang giải nén tại đích…",
+    "progressItems": "{{current}} / {{total}} tệp",
+    "progressReconnecting": "Đang kết nối lại…",
+    "progressStalled": "Đình trệ",
+    "progressTotalSpeed": "{{speed}} tổng ({{lanes}} làn)",
+    "progressTransferring": "Đang truyền dữ liệu…",
+    "progressTransferringItems": "Đang truyền tệp ({{current}}/{{total}})…",
+    "progressVerifying": "Đang xác minh tính toàn vẹn của tệp…",
+    "recentDestinations": "Đích gần đây",
+    "resumedHint": "Đã kết nối lại với một tác vụ chuyển đang hoạt động được bắt đầu từ cửa sổ khác.",
+    "retryTransfer": "Thử lại",
+    "retryTransferError": "Thử lại thất bại",
+    "selectDestinationHost": "Chọn máy chủ đích",
+    "transferCancelled": "Đã hủy chuyển",
+    "transferCancelledCopyHint": "Các tệp chưa hoàn chỉnh có thể còn ở đích.",
+    "transferCancelledMoveHint": "Các tệp chưa hoàn chỉnh có thể còn ở đích. Tệp nguồn chưa bị xóa.",
+    "transferError": "Truyền tải thất bại",
+    "transferFailedRetryHint": "Dữ liệu chưa hoàn chỉnh được giữ ở đích. Thử lại sẽ tiếp tục khi kết nối được khôi phục.",
+    "transferPartialHint": "Không thể truyền tải: {{paths}}",
+    "transferSuccess": "Truyền tải hoàn tất"
   }
 }

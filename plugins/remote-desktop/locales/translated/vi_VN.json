@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Mạng ảo",
-    "unencryptedShell": "Shell không mã hóa"
+    "unencryptedShell": "Shell không mã hóa",
+    "docsLink": "Xem tài liệu"
   },
   "onboarding": {
     "feature_desktop": "Máy tính từ xa",
@@ -274,5 +275,8 @@
         "label": "URL guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
   }
 }

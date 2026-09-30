@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Vidarebefordra en port på fjärrservern tillbaka till en lokal port på din maskin.",
     "tunnelRequirementsText": "SSH-servern måste ha GatewayPorts ja, AllowTcpForwarding ja och PermitRootLogin ja angivna i /etc/ssh/sshd_config.",
     "tunnelSettings": "Tunnelinställningar",
-    "tunnelType": "Tunneltyp"
+    "tunnelType": "Tunneltyp",
+    "bindHost": "Bind värd",
+    "docsLink": "Visa dokument",
+    "hostNotFound": "Värden hittades inte",
+    "loadingHost": "Laddar värd..."
   },
   "nav": {
     "portForwarding": "Spedition",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynamisk (-D)",
     "typeLocal": "Lokal (-L)",
     "typeRemote": "Fjärrkontroll (-R)",
-    "working": "Arbetssätt..."
+    "working": "Arbetssätt...",
+    "start": "Start",
+    "stop": "Stopp"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunnlar",
+    "feature_tunnels_desc": "Vidarebefordra portar via en server för att nå tjänster som inte är exponerade."
   }
 }

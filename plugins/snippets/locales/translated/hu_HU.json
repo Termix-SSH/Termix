@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Futtassa a \"{{name}}\"",
+  "variablesDialogDescription": "Töltse ki a kódrészlet futtatása előtt szükséges értékeket.",
+  "variablesPreviewLabel": "Előnézet",
+  "variablesConfirmButton": "Fut",
+  "keybindings": {
+    "runSnippet": "Meglévő kódrészlet futtatása",
+    "snippetLabel": "Töredék",
+    "selectSnippet": "Válasszon ki egy részletet",
+    "snippetMissing": "részlet nem található",
+    "snippetRequired": "Válasszon ki egy részletet"
+  },
+  "paletteHintRun": "Futtatás az aktív terminálfülön",
+  "host": {
+    "startupTitle": "Indítási kódrészlet",
+    "quickActionsTitle": "Gyors műveletek",
+    "quickActionsDescription": "A gyors műveletek gombokként jelennek meg a Host Metrics eszköztáron, így egyetlen kattintással végrehajthatók a parancsok.",
+    "noQuickActions": "Még nincsenek gyors intézkedések.",
+    "buttonLabel": "Gomb felirata",
+    "selectSnippet": "Válasszon részletet...",
+    "addQuickAction": "Művelet hozzáadása"
+  },
+  "quickActions": {
+    "running": "{{name}} végrehajtása ...",
+    "succeeded": "{{name}} sikeresen befejeződött",
+    "failed": "{{name}} sikertelen",
+    "error": "Nem sikerült végrehajtani a {{name}} parancsot."
+  }
+}

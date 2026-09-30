@@ -3,16 +3,14 @@ import type { Client as SSHClient } from "ssh2";
 import { execElevated } from "@termix/plugin-sdk/host-commands";
 import type {
   PluginHostCreateInput,
-  PluginHostRecord,
+  PluginHostJumpHost,
   PluginHostUpdateInput,
+  PluginSshHost,
 } from "@termix/plugin-sdk/backend";
 import { connectSsh } from "./ssh.js";
 import { pluginCtx } from "./plugin-ctx.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
-import {
-  parseProxmoxJumpHosts,
-  serializeProxmoxJumpHosts,
-} from "./proxmox-jump-hosts.js";
+import { parseProxmoxJumpHosts } from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "./proxmox-shared.js";
 import {
   indexImportedGuests,
@@ -190,7 +188,7 @@ type ProxmoxGuest = {
 };
 
 /** The resolved host ctx.ssh.connect hands back, plus the sudo secret proxmox needs for pvesh. */
-type PluginSshHostWithSudo = PluginHostRecord & { sudoPassword?: string };
+type PluginSshHostWithSudo = PluginSshHost & { sudoPassword?: string };
 
 type ProxmoxSyncResult = {
   created: number;
@@ -213,6 +211,22 @@ function guestTags(guest: ProxmoxGuest): string[] {
     idTag,
     ...(guest.enableDocker ? ["docker"] : []),
   ];
+}
+
+/**
+ * The switches another plugin keeps for an imported guest. An entry for a
+ * plugin that is not running is skipped by core.
+ */
+export function guestPluginSettings(
+  connectionType: "ssh" | "rdp",
+  enableDocker: boolean,
+): Record<string, Record<string, unknown>> {
+  return {
+    ...(connectionType === "rdp"
+      ? { "remote-desktop": { enableRdp: true, rdpPort: 3389 } }
+      : {}),
+    ...(enableDocker ? { docker: { enableDocker: true } } : {}),
+  };
 }
 
 function mergeTags(
@@ -261,7 +275,7 @@ async function discoverProxmoxGuestsForHost(
     timeoutMs: 35000,
     overrides: { tryKeyboard: false, readyTimeout: 30000 },
   });
-  const hostWithSudo = host as PluginSshHostWithSudo;
+  const hostWithSudo: PluginSshHostWithSudo = host;
   const hostCredentialId = (hostWithSudo.credentialId as number | null) ?? null;
 
   try {
@@ -498,7 +512,7 @@ async function syncProxmoxHost(
 
   try {
     const discovery = await discoverProxmoxGuestsForHost(userId, sourceHostId);
-    const sourceHostName = discovery.host.name || "Proxmox";
+    const sourceHostName = String(discovery.host.name || "Proxmox");
     const defaultCredentialId =
       discovery.config.defaultCredentialId ?? discovery.credentialId ?? null;
     const importAuth = resolveProxmoxImportAuth(
@@ -507,12 +521,8 @@ async function syncProxmoxHost(
     );
     const now = new Date().toISOString();
 
-    const existingHosts = (await ctx.hosts.listOwned()) as unknown as Record<
-      string,
-      unknown
-    >[];
     const existingBySource = indexImportedGuests(
-      existingHosts,
+      await ctx.hosts.listOwned(),
       await ctx.settings.listHostValues("proxmoxConfig"),
       sourceHostId,
     );
@@ -560,7 +570,7 @@ async function syncProxmoxHost(
             : connectionType === "rdp"
               ? ""
               : "root";
-      const update: Record<string, unknown> = {
+      const update: PluginHostUpdateInput = {
         name: guest.name,
         ip: guest.ip || existing?.ip || "0.0.0.0",
         port,
@@ -568,7 +578,7 @@ async function syncProxmoxHost(
         connectionType,
         folder: existing?.folder || sourceHostName,
         tags: mergeTags(existing?.tags, guestTags(guest), ["proxmox-missing"]),
-        updatedAt: now,
+        pluginSettings: { [ctx.pluginId]: { proxmoxConfig } },
       };
 
       if (existing) {
@@ -576,77 +586,46 @@ async function syncProxmoxHost(
           update.credentialId = importAuth.credentialId;
           update.overrideCredentialUsername = false;
         }
-        await ctx.hosts.update(
-          existing.id as number,
-          update as PluginHostUpdateInput,
-        );
-        await ctx.settings.setHost(
-          existing.id as number,
-          "proxmoxConfig",
-          proxmoxConfig,
-        );
+        await ctx.hosts.update(existing.id, update);
         result.updated++;
         continue;
       }
 
-      Object.assign(update, {
-        enableDocker: guest.enableDocker,
-        enableSsh: connectionType === "ssh",
-        enableRdp: connectionType === "rdp",
-      });
-
-      const created = await ctx.hosts.create({
+      await ctx.hosts.create({
         ...update,
-        createdAt: now,
+        name: guest.name,
+        ip: update.ip!,
+        port,
+        username,
+        enableSsh: connectionType === "ssh",
         pin: false,
         authType: connectionType === "rdp" ? "password" : importAuth.authType,
         credentialId: connectionType === "ssh" ? importAuth.credentialId : null,
-        overrideCredentialUsername: importAuth.overrideCredentialUsername,
-        password: null,
-        key: null,
-        keyPassword: null,
-        keyType: null,
-        rdpUser: null,
-        rdpPassword: null,
-        rdpDomain: null,
-        rdpPort: connectionType === "rdp" ? 3389 : null,
-        vncUser: null,
-        vncPassword: null,
-        telnetUser: null,
-        telnetPassword: null,
-        jumpHosts: serializeProxmoxJumpHosts(discovery.jumpHosts),
-        quickActions: null,
-        terminalConfig: null,
-        forceKeyboardInteractive: "false",
-        useSocks5: 0,
-        socks5Host: null,
-        socks5Port: null,
-        socks5Username: null,
-        socks5Password: null,
-        socks5ProxyChain: null,
-        portKnockSequence: null,
-      } as unknown as PluginHostCreateInput);
-      await ctx.settings.setHost(
-        Number(created.id),
-        "proxmoxConfig",
-        proxmoxConfig,
-      );
+        overrideCredentialUsername: !!importAuth.overrideCredentialUsername,
+        jumpHosts: (parseProxmoxJumpHosts(discovery.jumpHosts) ??
+          []) as PluginHostJumpHost[],
+        forceKeyboardInteractive: false,
+        pluginSettings: {
+          ...update.pluginSettings,
+          ...guestPluginSettings(connectionType, guest.enableDocker),
+        },
+      });
       result.created++;
     }
 
     if (discovery.config.markMissingGuests) {
       for (const [key, { host, config, source }] of existingBySource) {
         if (seen.has(key)) continue;
-        await ctx.hosts.update(
-          host.id as number,
-          {
-            tags: mergeTags(host.tags, ["proxmox-missing"]),
-            updatedAt: now,
-          } as PluginHostUpdateInput,
-        );
-        await ctx.settings.setHost(host.id as number, "proxmoxConfig", {
-          ...config,
-          source: { ...source, missingSince: source.missingSince || now },
+        await ctx.hosts.update(host.id, {
+          tags: mergeTags(host.tags, ["proxmox-missing"]),
+          pluginSettings: {
+            [ctx.pluginId]: {
+              proxmoxConfig: {
+                ...config,
+                source: { ...source, missingSince: source.missingSince || now },
+              },
+            },
+          },
         });
         result.markedMissing++;
       }
@@ -992,22 +971,15 @@ router.post("/import", async (req, res) => {
     return res.status(400).json({ error: "No hosts to import" });
   }
   const result = { success: 0, failed: 0, errors: [] as string[] };
-  for (const entry of hosts as Array<Record<string, unknown>>) {
-    const { pluginSettings, ...input } = entry;
+  for (const entry of hosts as PluginHostCreateInput[]) {
     try {
-      const created = await ctx.hosts.create(
-        input as unknown as PluginHostCreateInput,
-      );
-      const own = (pluginSettings as Record<string, unknown> | undefined)?.[
-        ctx.pluginId
-      ] as Record<string, unknown> | undefined;
-      for (const [key, value] of Object.entries(own ?? {})) {
-        await ctx.settings.setHost(Number(created.id), key, value);
-      }
+      // Core refuses any field it does not take, and any host setting its
+      // plugin does not declare.
+      await ctx.hosts.create(entry);
       result.success++;
     } catch (err: unknown) {
       result.failed++;
-      result.errors.push(`${String(input.name)}: ${getErrorMessage(err)}`);
+      result.errors.push(`${String(entry?.name)}: ${getErrorMessage(err)}`);
     }
   }
   return res.json(result);

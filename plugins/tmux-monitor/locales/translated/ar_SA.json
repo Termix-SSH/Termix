@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "تمكين مراقب Tmux",
-    "enableTmuxMonitorDesc": "إظهار هذا المضيف في مراقب Tmux وإضافة إجراءات tmux الخاصة به إلى الشريط الجانبي"
+    "enableTmuxMonitorDesc": "إظهار هذا المضيف في مراقب Tmux وإضافة إجراءات tmux الخاصة به إلى الشريط الجانبي",
+    "docsLink": "عرض المستندات"
   },
   "tmuxMonitor": {
     "title": "مراقب Tmux",

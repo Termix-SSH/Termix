@@ -382,7 +382,10 @@
     "defaultPathLabel": "Jalur Default",
     "fileManagerPathHint": "Direktori yang akan dibuka saat pengelola file diluncurkan untuk host ini.",
     "fileManagerUrlCopied": "URL Pengelola File disalin",
-    "copyFileManagerUrlAction": "Salin URL Pengelola File"
+    "copyFileManagerUrlAction": "Salin URL Pengelola File",
+    "docsLink": "Lihat dokumen",
+    "hostNotFound": "Host tidak ditemukan",
+    "loadingHost": "Memuat host..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "Mode Warisan SCP"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transfer File Serentak",
+        "description": "Jumlah file yang diunggah atau diunduh oleh pengelola file lokal/jarak jauh secara bersamaan. Kurangi nilai ini jika server Anda membatasi saluran SFTP."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Berkas"
+  },
+  "onboarding": {
+    "feature_files": "Pengelola berkas",
+    "feature_files_desc": "Jelajahi, unggah, unduh, dan edit file melalui SFTP tanpa meninggalkan aplikasi."
+  },
+  "terminal": {
+    "runTitle": "Menjalankan {{command}} - {{host}}",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Telusuri folder tujuan",
+    "browsePathError": "Tidak dapat membuka jalur ini pada host tujuan.",
+    "browsePathWillBeCreated": "Folder ini belum ada. Folder ini akan dibuat saat transfer dimulai.",
+    "cancel": "Membatalkan",
+    "cleanupDestFiles": "Tujuan pembersihan",
+    "cleanupDestFilesError": "Pembersihan gagal",
+    "cleanupDestFilesNothing": "Tidak ada yang perlu dibersihkan di tempat tujuan.",
+    "cleanupDestFilesPartial": "Beberapa file parsial tidak dapat dihapus.",
+    "cleanupDestFilesSuccess": "File parsial telah dihapus dari tujuan.",
+    "confirmCopy": "Menyalin",
+    "confirmMove": "Bergerak",
+    "copyFolderToHost": "Salin folder ke host…",
+    "copyItemsToHost": "Salin {{count}} item ke host…",
+    "copyToHost": "Salin ke host…",
+    "destinationPath": "Jalur tujuan",
+    "destMustBeDirectory": "Tujuan harus berupa direktori untuk transfer multi-item.",
+    "goUp": "Naik",
+    "hostAuthRequired": "Diperlukan autentikasi — buka File Manager di host ini terlebih dahulu.",
+    "hostConnecting": "Menghubungkan…",
+    "hostConnectionFailed": "Koneksi gagal",
+    "hostDisconnected": "Tidak terhubung",
+    "hostReady": "Siap",
+    "itemsSummary": "{{count}} item",
+    "jumpHostLimitation": "Kedua host harus dapat dijangkau dari server Termix. Perutean langsung antar host tidak didukung.",
+    "methodAuto": "Mobil",
+    "methodAutoHint": "Memilih antara tar atau SFTP per-file berdasarkan jumlah file, ukuran, dan kemampuan kompresi. File tunggal selalu menggunakan SFTP streaming.",
+    "methodItemSftp": "SFTP per file",
+    "methodItemSftpHint": "Transfer setiap file secara individual melalui SFTP. Berfungsi di semua host termasuk Windows.",
+    "methodItemSftpLimitation": "Setiap berkas menggunakan aliran SFTP yang sama sebagai salinan berkas tunggal, satu demi satu. Kemajuan digabungkan di semua berkas, sehingga bilah kemajuan bergerak lambat selama pemrosesan berkas berukuran besar.",
+    "methodLabel": "Metode transfer",
+    "methodPreviewError": "Metode transfer tidak dapat dipratinjau. Server akan tetap memilih metode saat Anda memulai.",
+    "methodPreviewLoading": "Metode perhitungan transfer…",
+    "methodPreviewScanSummary": "{{fileCount}} berkas, {{totalSize}} total (dipindai pada host sumber).",
+    "methodPreviewWillUseItemSftp": "Akan menggunakan: SFTP per file",
+    "methodPreviewWillUseTar": "Akan menggunakan: Arsip Tar",
+    "methodReason": {
+      "user_item_sftp": "Anda memilih SFTP per-file.",
+      "user_tar": "Anda memilih arsip tar.",
+      "tar_unavailable": "Tar tidak tersedia di salah satu atau kedua host — SFTP per-file akan digunakan sebagai gantinya.",
+      "windows_host": "Sistem operasi yang digunakan adalah Windows — tar tidak digunakan.",
+      "auto_multi_large": "Otomatis: beberapa file termasuk file besar ({{largestSize}}) dengan data yang dapat dikompresi — tar menggabungkan menjadi satu transfer.",
+      "auto_single_large_in_archive": "Otomatis: satu file besar ({{largestSize}}) dalam set ini — SFTP per file.",
+      "auto_many_incompressible": "Otomatis: sebagian besar data tidak dapat dikompresi — SFTP per file.",
+      "auto_many_files": "Otomatis: banyak file ({{fileCount}}) — tar mengurangi overhead per file.",
+      "auto_default": "Otomatis: SFTP per-file untuk set ini."
+    },
+    "methodTar": "Arsip Tar",
+    "methodTarHint": "Kompres di sumber, transfer satu arsip, ekstrak di tujuan. Membutuhkan tar di kedua host Unix.",
+    "metricsCompress": "Kompres pada sumber: {{duration}}",
+    "metricsExtract": "Ekstrak pada tujuan: {{duration}}",
+    "metricsPrepare": "Siapkan tujuan: {{duration}}",
+    "metricsRouteBenchmark": "Pemeriksaan rute — langsung: {{direct}}, relai: {{relay}}",
+    "metricsSourceDelete": "Hapus dari sumber: {{duration}}",
+    "metricsTotal": "Total: {{duration}}",
+    "metricsTransfer": "Ujung ke ujung: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 terverifikasi: {{duration}}",
+    "moveFolderToHost": "Pindahkan folder ke host…",
+    "moveItemsToHost": "Pindahkan {{count}} item ke host…",
+    "moveToHost": "Pindah ke host…",
+    "noHostsConnected": "Tidak ada penyedia pengelola file lain yang tersedia.",
+    "noHostsConnectedHint": "Tambahkan host SSH lain dengan File Manager diaktifkan di Host Manager.",
+    "parallelSegmentsHint": "File berukuran besar dibagi menjadi bagian-bagian berukuran 256 MB. Beberapa jalur menggunakan koneksi terpisah (seperti memulai beberapa transfer) untuk throughput total yang lebih tinggi.",
+    "parallelSegmentsLabel": "Jalur transfer paralel",
+    "parallelSegmentsOption": "{{count}} jalur",
+    "progressBenchmarking": "Memilih rute transfer tercepat…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Membatalkan",
+    "progressCancelling": "Membatalkan…",
+    "progressCompressing": "Kompresi pada host sumber…",
+    "progressExtracting": "Mengekstraksi pada tujuan…",
+    "progressItems": "berkas {{current}} / {{total}}",
+    "progressReconnecting": "Menghubungkan kembali…",
+    "progressStalled": "Terhenti",
+    "progressTotalSpeed": "{{speed}} total ({{lanes}} lajur)",
+    "progressTransferring": "Mentransfer data…",
+    "progressTransferringItems": "Mentransfer berkas ({{current}} dari {{total}})…",
+    "progressVerifying": "Memverifikasi integritas file…",
+    "recentDestinations": "Destinasi terkini",
+    "resumedHint": "Terhubung kembali ke transfer aktif yang dimulai di jendela lain.",
+    "retryTransfer": "Mencoba kembali",
+    "retryTransferError": "Percobaan ulang gagal.",
+    "selectDestinationHost": "Pilih host tujuan",
+    "transferCancelled": "Transfer dibatalkan",
+    "transferCancelledCopyHint": "File yang tidak lengkap mungkin masih tersisa di tujuan.",
+    "transferCancelledMoveHint": "Sebagian berkas mungkin masih tersisa di tujuan. Berkas sumber tidak dihapus.",
+    "transferError": "Transfer gagal",
+    "transferFailedRetryHint": "Sebagian data tersimpan di tujuan. Upaya pengulangan akan dilanjutkan saat koneksi kembali pulih.",
+    "transferPartialHint": "Tidak dapat mentransfer: {{paths}}",
+    "transferSuccess": "Transfer selesai"
   }
 }

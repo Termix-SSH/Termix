@@ -83,5 +83,8 @@
         "description": "Permite que el asistente de IA te ayude en la terminal de este host. Está desactivado por defecto y aún así necesitas tener la IA habilitada para tu cuenta."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Ver documentación"
   }
 }

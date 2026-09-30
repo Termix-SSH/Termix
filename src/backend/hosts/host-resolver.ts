@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { parseSshOptions } from "./ssh-options.js";
 import { findUsableCredential } from "./usable-credential.js";
 import { resolveExternalSecretRefs } from "./external-secrets.js";
 import {
@@ -12,7 +13,7 @@ import { resolveRecipientSharedHostAuthentication } from "../utils/shared-host-a
 import {
   pickResolvedPassword,
   pickResolvedUsername,
-  expandOidcUsername,
+  expandExternalUsername,
 } from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
 
@@ -95,9 +96,6 @@ export async function resolveHostById(
   if (!ownerEquivalent) {
     // Owner-only operational secrets are never shared.
     host.sudoPassword = null;
-    host.autostartPassword = null;
-    host.autostartKey = null;
-    host.autostartKeyPassword = null;
   }
 
   // Parse JSON fields
@@ -116,28 +114,30 @@ export async function resolveHostById(
     }
   }
   if (
-    !ownerEquivalent &&
     host.terminalConfig &&
     typeof host.terminalConfig === "object" &&
     !Array.isArray(host.terminalConfig)
   ) {
-    host.terminalConfig = {
-      ...(host.terminalConfig as Record<string, unknown>),
-      sudoPassword: null,
-    };
+    // 2.8 editors kept the sudo password inside terminal_config. It is only
+    // ever handed out as sudoPassword, and only to the owner.
+    const { sudoPassword: legacySudo, ...rest } = host.terminalConfig as Record<
+      string,
+      unknown
+    >;
+    if (ownerEquivalent && !host.sudoPassword && legacySudo) {
+      host.sudoPassword = legacySudo;
+    }
+    host.terminalConfig = rest;
   }
+  // A row the boot copy has not reached yet still has them in terminal_config.
+  host.sshOptions = parseSshOptions(
+    host.sshOptions != null ? host.sshOptions : host.terminalConfig,
+  );
   if (typeof host.socks5ProxyChain === "string" && host.socks5ProxyChain) {
     try {
       host.socks5ProxyChain = JSON.parse(host.socks5ProxyChain as string);
     } catch {
       host.socks5ProxyChain = [];
-    }
-  }
-  if (typeof host.quickActions === "string" && host.quickActions) {
-    try {
-      host.quickActions = JSON.parse(host.quickActions as string);
-    } catch {
-      host.quickActions = [];
     }
   }
   if (typeof host.portKnockSequence === "string" && host.portKnockSequence) {
@@ -210,7 +210,7 @@ export async function resolveHostById(
     }
   }
 
-  host.username = await expandOidcUsername(
+  host.username = await expandExternalUsername(
     host.username as string | undefined,
     ownerEquivalent ? ownerId : userId,
   );

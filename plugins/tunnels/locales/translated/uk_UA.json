@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Перенаправте порт на віддаленому сервері назад на локальний порт на вашому комп'ютері.",
     "tunnelRequirementsText": "Для SSH-сервера у файлі /etc/ssh/sshd_config мають бути встановлені значення GatewayPorts: «так», AllowTcpForwarding: «так» та PermitRootLogin: «так».",
     "tunnelSettings": "Налаштування тунелю",
-    "tunnelType": "Тип тунелю"
+    "tunnelType": "Тип тунелю",
+    "bindHost": "Прив’язати хост",
+    "docsLink": "Переглянути документи",
+    "hostNotFound": "Хост не знайдено",
+    "loadingHost": "Завантаження хоста..."
   },
   "nav": {
     "portForwarding": "Переадресація",
@@ -134,6 +138,12 @@
     "typeDynamic": "Динамічний (-D)",
     "typeLocal": "Місцевий (-L)",
     "typeRemote": "Віддалений (-R)",
-    "working": "Працюємо..."
+    "working": "Працюємо...",
+    "start": "Початок",
+    "stop": "СТІЙ"
+  },
+  "onboarding": {
+    "feature_tunnels": "Тунелі",
+    "feature_tunnels_desc": "Переадресовувати порти через сервер для доступу до служб, які не піддаються впливу."
   }
 }

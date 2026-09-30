@@ -1,4 +1,4 @@
-import type { TerminalConfig } from "../types";
+import type { HostSshOptions } from "@termix/plugin-sdk/frontend";
 
 export interface TerminalHostConfig {
   id?: number;
@@ -17,13 +17,14 @@ export interface TerminalHostConfig {
   keyType?: string;
   authType?: string;
   credentialId?: number;
-  terminalConfig?: Partial<TerminalConfig>;
+  sshOptions?: HostSshOptions | null;
   [key: string]: unknown;
 }
 
 export interface TerminalHandle {
   disconnect: () => void;
   reconnect: () => void;
+  reconnectIfDisconnected: () => boolean;
   isConnected: () => boolean;
   fit: () => void;
   focus: () => void;

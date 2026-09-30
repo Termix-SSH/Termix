@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Проследите порт на удаљеном серверу назад на локални порт на вашој машини.",
     "tunnelRequirementsText": "SSH сервер мора имати подешена подешавања за GatewayPorts, AllowTcpForwarding и PermitRootLogin у /etc/ssh/sshd_config.",
     "tunnelSettings": "Подешавања тунела",
-    "tunnelType": "Тип тунела"
+    "tunnelType": "Тип тунела",
+    "bindHost": "Повежи хост",
+    "docsLink": "Прикажи документе",
+    "hostNotFound": "Хост није пронађен",
+    "loadingHost": "Учитавање хоста..."
   },
   "nav": {
     "portForwarding": "Преусмеравање",
@@ -134,6 +138,12 @@
     "typeDynamic": "Динамички (-Д)",
     "typeLocal": "Локално (-Л)",
     "typeRemote": "Даљински (-R)",
-    "working": "Ради се..."
+    "working": "Ради се...",
+    "start": "Почетак",
+    "stop": "Заустави"
+  },
+  "onboarding": {
+    "feature_tunnels": "Тунели",
+    "feature_tunnels_desc": "Прослеђујте портове кроз сервер да бисте дошли до сервиса који нису изложени."
   }
 }

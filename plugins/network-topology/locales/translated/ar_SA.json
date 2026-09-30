@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} عقدة"
+  },
+  "hosts": {
+    "docsLink": "عرض المستندات"
   }
 }

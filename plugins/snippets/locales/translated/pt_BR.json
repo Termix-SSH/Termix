@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Executar \"{{name}}\"",
+  "variablesDialogDescription": "Preencha os valores necessários para este trecho de código antes de executá-lo.",
+  "variablesPreviewLabel": "Pré-visualização",
+  "variablesConfirmButton": "Correr",
+  "keybindings": {
+    "runSnippet": "Executar trecho de código existente",
+    "snippetLabel": "Trecho",
+    "selectSnippet": "Selecione um trecho",
+    "snippetMissing": "trecho não encontrado",
+    "snippetRequired": "Selecione um trecho"
+  },
+  "paletteHintRun": "Execute na aba do terminal ativo",
+  "host": {
+    "startupTitle": "Trecho de startup",
+    "quickActionsTitle": "Ações rápidas",
+    "quickActionsDescription": "As ações rápidas aparecem como botões na barra de ferramentas do Host Metrics para execução de comandos com um único clique.",
+    "noQuickActions": "Nenhuma ação imediata ainda.",
+    "buttonLabel": "Rótulo do botão",
+    "selectSnippet": "Selecione o trecho...",
+    "addQuickAction": "Adicionar ação"
+  },
+  "quickActions": {
+    "running": "Executando {{name}}...",
+    "succeeded": "{{name}} concluído com sucesso",
+    "failed": "{{name}} falhou",
+    "error": "Falha ao executar {{name}}"
+  }
+}

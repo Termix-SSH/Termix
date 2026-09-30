@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Ejecutar \"{{name}}\"",
+  "variablesDialogDescription": "Rellena los valores que necesita este fragmento de código antes de ejecutarlo.",
+  "variablesPreviewLabel": "Avance",
+  "variablesConfirmButton": "Correr",
+  "keybindings": {
+    "runSnippet": "Ejecutar el fragmento existente",
+    "snippetLabel": "Retazo",
+    "selectSnippet": "Seleccione un fragmento",
+    "snippetMissing": "Fragmento no encontrado",
+    "snippetRequired": "Seleccione un fragmento"
+  },
+  "paletteHintRun": "Ejecutar en la pestaña de terminal activa",
+  "host": {
+    "startupTitle": "Fragmento de inicio",
+    "quickActionsTitle": "Acciones rápidas",
+    "quickActionsDescription": "Las acciones rápidas aparecen como botones en la barra de herramientas de Métricas del host para la ejecución de comandos con un solo clic.",
+    "noQuickActions": "Aún no hay acciones rápidas.",
+    "buttonLabel": "Etiqueta del botón",
+    "selectSnippet": "Seleccionar fragmento...",
+    "addQuickAction": "Añadir acción"
+  },
+  "quickActions": {
+    "running": "Ejecutando {{name}}...",
+    "succeeded": "{{name}} completado correctamente",
+    "failed": "{{name}} falló",
+    "error": "Error al ejecutar {{name}}"
+  }
+}

@@ -1,3 +1,4 @@
+import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -121,6 +122,7 @@ export function registerUserAdminRoutes(
           userId: u.id,
           username: u.username,
           is_admin: u.isAdmin,
+          is_external: isExternalAccount(u),
           is_oidc: u.isOidc,
           password_hash: u.passwordHash ? "set" : null,
           // Management-only details stay admin-eyes-only; regular users hit
@@ -647,7 +649,7 @@ export function registerUserAdminRoutes(
       if (outcome.status === "wipe_confirmation_required") {
         return res.status(409).json({
           error:
-            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and snippets.",
+            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and other saved data.",
           code: "DATA_WIPE_REQUIRED",
         });
       }

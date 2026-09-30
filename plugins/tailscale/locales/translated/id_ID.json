@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Buka Browser untuk Melakukan Otentikasi",
     "tailscaleCheckWaiting": "Menunggu autentikasi Tailscale...",
     "tailscaleCheckTimeout": "Autentikasi Tailscale habis waktu. Silakan coba lagi."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Hubungkan ke Terminal",
+        "usernameLabel": "Nama belakang"
+      }
+    }
   }
 }

@@ -1,9 +1,12 @@
-import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import type { Host } from "@/types/ui-types";
-import type { SSHHostData } from "@/types";
-import type { HostDraft } from "@termix/plugin-sdk/frontend";
-import type { HostDefaults } from "@/api/settings-api";
-import type { TerminalDefaults } from "@/lib/connection-defaults";
+import type { HostProtocolAuthInput, SSHHostData } from "@/types";
+import {
+  HOST_PROTOCOL_SECRET_KEPT,
+  type HostDraft,
+  type HostProtocolAuthForm,
+  type HostProtocolAuthSummary,
+} from "@termix/plugin-sdk/frontend";
+import type { DefaultOverrides } from "@/types/host-defaults";
 import {
   listHostProtocols,
   protocolPort,
@@ -15,56 +18,6 @@ type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
 export type { HostProtocols };
 
 export type HostAuthType = Host["authType"];
-export type HostCursorStyle = NonNullable<
-  Host["terminalConfig"]
->["cursorStyle"];
-export type HostBellStyle = NonNullable<Host["terminalConfig"]>["bellStyle"];
-export type HostBackspaceMode = NonNullable<
-  Host["terminalConfig"]
->["backspaceMode"];
-export type HostFastScrollModifier = NonNullable<
-  Host["terminalConfig"]
->["fastScrollModifier"];
-
-export const terminalAppearanceKeys = [
-  "theme",
-  "cursorBlink",
-  "cursorStyle",
-  "fontSize",
-  "fontFamily",
-  "scrollback",
-  "letterSpacing",
-  "lineHeight",
-  "bellStyle",
-  "minimumContrastRatio",
-  "backgroundImage",
-  "backgroundImageOpacity",
-  "customThemeColors",
-] as const satisfies readonly (keyof TerminalDefaults)[];
-
-export interface UserConnectionDefaults {
-  terminal: TerminalDefaults;
-}
-
-function hasOwn(value: object | undefined, key: PropertyKey): boolean {
-  return !!value && Object.prototype.hasOwnProperty.call(value, key);
-}
-
-function stripKeys<T extends Record<string, unknown>>(
-  value: T,
-  keys: readonly string[],
-): Partial<T> {
-  const result = { ...value };
-  for (const key of keys) delete result[key];
-  return result;
-}
-
-type SnippetListItem = {
-  id: number;
-  name?: string;
-  title?: string;
-};
-type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
 
 /**
  * Whether the Connection Origin control is meaningful for a host.
@@ -76,18 +29,6 @@ type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
  */
 export function connectionOriginAppliesTo(protocols: HostProtocols): boolean {
   return Object.values(protocols).some(Boolean);
-}
-
-export function mapSnippetResponse(
-  res: unknown,
-): { id: number; name: string }[] {
-  const snippetRes = res as SnippetResponse;
-  return (
-    Array.isArray(snippetRes) ? snippetRes : (snippetRes.snippets ?? [])
-  ).map((s) => ({
-    id: s.id,
-    name: s.name ?? s.title ?? `Snippet ${s.id}`,
-  }));
 }
 
 /** Overlays a plugin's draft on a new host's form. */
@@ -108,26 +49,68 @@ export function applyHostDraft(
   };
 }
 
-export function createHostEditorForm(
-  host: Host | null,
-  defaults?: HostDefaults,
-  connectionDefaults?: UserConnectionDefaults,
-) {
-  const d = host ? undefined : defaults;
-  const terminalConfig = {
-    ...(connectionDefaults?.terminal ?? {}),
-    ...(host?.terminalConfig ?? {}),
-  };
-  const rawTheme = terminalConfig.theme ?? d?.theme;
-  const normalizedTheme =
-    !rawTheme ||
-    ["Termix Dark", "Termix Light", "termixDark", "termixLight"].includes(
-      rawTheme,
-    )
-      ? "termix"
-      : rawTheme === "custom" || TERMINAL_THEMES[rawTheme]
-        ? rawTheme
-        : "termix";
+/** A saved login as the editor form holds it; saved secrets stay behind a placeholder. */
+export function protocolAuthForm(
+  summaries: Record<string, HostProtocolAuthSummary> | undefined,
+): Record<string, HostProtocolAuthForm> {
+  const form: Record<string, HostProtocolAuthForm> = {};
+  for (const [protocol, summary] of Object.entries(summaries ?? {})) {
+    const fields: Record<string, string> = { ...(summary.fields ?? {}) };
+    for (const key of summary.secretFieldKeys ?? []) {
+      fields[key] = HOST_PROTOCOL_SECRET_KEPT;
+    }
+    form[protocol] = {
+      authType:
+        summary.authType ?? (summary.credentialId ? "credential" : "direct"),
+      credentialId:
+        summary.credentialId != null ? String(summary.credentialId) : "",
+      username: summary.username ?? "",
+      password: summary.hasPassword ? HOST_PROTOCOL_SECRET_KEPT : "",
+      fields,
+    };
+  }
+  return form;
+}
+
+/**
+ * The logins a host save sends: one per plugin protocol the editor knows,
+ * removed when its switch is off. A saved secret left alone is not sent.
+ */
+export function protocolAuthPayload(
+  form: Record<string, HostProtocolAuthForm>,
+  protocols: HostProtocols,
+): Record<string, HostProtocolAuthInput | null> {
+  const payload: Record<string, HostProtocolAuthInput | null> = {};
+  for (const protocol of listHostProtocols()) {
+    if (!protocols[protocol.settingKey]) {
+      payload[protocol.id] = null;
+      continue;
+    }
+    const login = form[protocol.id];
+    if (!login) continue;
+    const direct = login.authType === "direct";
+    payload[protocol.id] = {
+      authType: login.authType,
+      credentialId:
+        login.authType === "credential" && login.credentialId
+          ? Number(login.credentialId)
+          : null,
+      username: direct ? login.username || null : null,
+      ...(direct && login.password !== HOST_PROTOCOL_SECRET_KEPT
+        ? { password: login.password || null }
+        : {}),
+      fields: Object.fromEntries(
+        Object.entries(login.fields).filter(
+          ([, value]) => value !== HOST_PROTOCOL_SECRET_KEPT,
+        ),
+      ),
+    };
+  }
+  return payload;
+}
+
+export function createHostEditorForm(host: Host | null) {
+  const sshOptions = host?.sshOptions ?? {};
 
   return {
     name: host?.name ?? "",
@@ -143,12 +126,7 @@ export function createHostEditorForm(
       : (host?.keyPassword ?? ""),
     keyType: host?.keyType ?? "auto",
     keySubTab: "paste" as "paste" | "upload",
-    credentialId:
-      host?.credentialId != null
-        ? String(host.credentialId)
-        : d?.credentialId != null
-          ? String(d.credentialId)
-          : "",
+    credentialId: host?.credentialId != null ? String(host.credentialId) : "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
     parentHostId: host?.parentHostId ?? "",
@@ -156,11 +134,11 @@ export function createHostEditorForm(
     tagInput: "",
     notes: host?.notes ?? "",
     pin: host?.pin ?? false,
-    useSocks5: host?.useSocks5 ?? d?.useSocks5 ?? false,
-    socks5Host: host?.socks5Host ?? d?.socks5Host ?? "",
-    socks5Port: host?.socks5Port ?? d?.socks5Port ?? 1080,
-    socks5Username: host?.socks5Username ?? d?.socks5Username ?? "",
-    socks5Password: host?.socks5Password ?? d?.socks5Password ?? "",
+    useSocks5: host?.useSocks5 ?? false,
+    socks5Host: host?.socks5Host ?? "",
+    socks5Port: host?.socks5Port ?? 1080,
+    socks5Username: host?.socks5Username ?? "",
+    socks5Password: host?.socks5Password ?? "",
     socks5ProxyMode: ((host?.socks5ProxyChain ?? []).length > 0
       ? "chain"
       : "single") as "single" | "chain",
@@ -169,103 +147,25 @@ export function createHostEditorForm(
       "local" | "remote" | null,
     localOnly: host?.localOnly ?? false,
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
-    inheritTerminalAppearance:
-      !host ||
-      terminalAppearanceKeys.every((key) => !hasOwn(host.terminalConfig, key)),
-    localEcho: host?.terminalConfig?.localEcho ?? "default",
-    fontSize: terminalConfig.fontSize ?? d?.fontSize ?? 14,
-    fontFamily:
-      terminalConfig.fontFamily ??
-      d?.fontFamily ??
-      "Caskaydia Cove Nerd Font Mono",
-    theme: normalizedTheme,
-    cursorStyle: (terminalConfig.cursorStyle ?? d?.cursorStyle ?? "bar") as
-      "block" | "underline" | "bar",
-    cursorBlink: terminalConfig.cursorBlink ?? d?.cursorBlink ?? true,
-    scrollback: terminalConfig.scrollback ?? 10000,
-    letterSpacing: terminalConfig.letterSpacing ?? 0,
-    lineHeight: terminalConfig.lineHeight ?? 1.0,
-    bellStyle: (terminalConfig.bellStyle ?? "none") as
-      "none" | "sound" | "visual" | "both",
-    rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
-    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? false,
-    fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
-      "alt" | "ctrl" | "shift",
-    fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
-    minimumContrastRatio: terminalConfig.minimumContrastRatio ?? 1,
-    backspaceMode: (host?.terminalConfig?.backspaceMode ?? "normal") as
-      "normal" | "control-h",
-    startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
-    moshCommand: host?.terminalConfig?.moshCommand ?? "",
-    agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
-    autoMosh: host?.terminalConfig?.autoMosh ?? false,
-    autoTmux: host?.terminalConfig?.autoTmux ?? d?.autoTmux ?? false,
-    passwordPromptAutoFill:
-      host?.terminalConfig?.passwordPromptAutoFill ?? true,
-    sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
     sudoPassword: host?.hasSudoPassword
       ? "existing_sudo_password"
-      : (host?.terminalConfig?.sudoPassword ?? ""),
-    keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
-    keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
-    backgroundImage: terminalConfig.backgroundImage ?? "",
-    backgroundImageOpacity: terminalConfig.backgroundImageOpacity ?? 0.15,
-    customThemeColors: terminalConfig.customThemeColors ?? null,
-    allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
-    linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
-      "default") as "default" | "confirm" | "direct",
-    agentSocketPath: host?.terminalConfig?.agentSocketPath ?? "",
-    agentIdentity: host?.terminalConfig?.agentIdentity ?? "",
-    useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
-    syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
-    syntaxHighlightingOptions: {
-      logLevels:
-        host?.terminalConfig?.syntaxHighlightingOptions?.logLevels ?? true,
-      paths: host?.terminalConfig?.syntaxHighlightingOptions?.paths ?? true,
-      timestamps:
-        host?.terminalConfig?.syntaxHighlightingOptions?.timestamps ?? true,
-      ipAddresses:
-        host?.terminalConfig?.syntaxHighlightingOptions?.ipAddresses ?? true,
-      urls: host?.terminalConfig?.syntaxHighlightingOptions?.urls ?? true,
-      numbers: host?.terminalConfig?.syntaxHighlightingOptions?.numbers ?? true,
-    },
+      : (host?.sudoPassword ?? ""),
+    keepaliveInterval: sshOptions.keepaliveInterval ?? 60,
+    keepaliveCountMax: sshOptions.keepaliveCountMax ?? 5,
+    allowLegacyAlgorithms: sshOptions.allowLegacyAlgorithms ?? true,
+    agentForwarding: sshOptions.agentForwarding ?? false,
+    agentSocketPath: sshOptions.agentSocketPath ?? "",
+    agentIdentity: sshOptions.agentIdentity ?? "",
     environmentVariables:
-      host?.terminalConfig?.environmentVariables ??
+      sshOptions.environmentVariables ??
       ([] as { key: string; value: string }[]),
     jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
     portKnockSequence:
       host?.portKnockSequence ??
       ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
-    quickActions:
-      host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
-    rdpCredentialId: host?.rdpCredentialId ?? "",
-    rdpUser: host?.rdpUser ?? "",
-    rdpPassword: host?.hasRdpPassword
-      ? "existing_rdp_password"
-      : (host?.rdpPassword ?? ""),
-    domain: host?.domain ?? "",
-    vncCredentialId: host?.vncCredentialId ?? "",
-    vncPassword: host?.hasVncPassword
-      ? "existing_vnc_password"
-      : (host?.vncPassword ?? ""),
-    vncUser: host?.vncUser ?? "",
-    telnetUser: host?.telnetUser ?? "",
-    telnetPassword: host?.hasTelnetPassword
-      ? "existing_telnet_password"
-      : (host?.telnetPassword ?? ""),
-    telnetCredentialId:
-      host?.telnetCredentialId != null ? String(host.telnetCredentialId) : "",
-    rdpAuthType: (host?.rdpAuthType ??
-      (host?.rdpCredentialId ? "credential" : "direct")) as
-      "direct" | "credential" | "none",
-    vncAuthType: (host?.vncAuthType ??
-      (host?.vncCredentialId ? "credential" : "direct")) as
-      "direct" | "credential",
-    telnetAuthType: (host?.telnetAuthType ??
-      (host?.telnetCredentialId ? "credential" : "direct")) as
-      "direct" | "credential",
-    statusCheckEnabled:
-      host?.statusCheckEnabled ?? d?.statusCheckEnabled ?? true,
+    // Each plugin protocol's login, edited by that plugin's host editor tab.
+    protocolAuth: protocolAuthForm(host?.protocolAuth),
+    statusCheckEnabled: host?.statusCheckEnabled ?? true,
     statusCheckInterval: (host?.statusCheckInterval ?? null) as number | null,
 
     // Host-scope plugin settings, keyed by plugin id. Loaded with the host and
@@ -274,6 +174,12 @@ export function createHostEditorForm(
       string,
       Record<string, unknown>
     >,
+
+    // Host default keys the host sets itself; the rest follow its defaults.
+    // Null until known, for a host saved before host defaults.
+    defaultOverrides: (host
+      ? (host.defaultOverrides ?? null)
+      : {}) as DefaultOverrides | null,
   };
 }
 
@@ -295,17 +201,14 @@ export function omitOwnerSshAuthFromSharedEdit(
     ...editableFields
   } = payload;
 
-  const terminalConfig = editableFields.terminalConfig
-    ? { ...editableFields.terminalConfig }
+  const sshOptions = editableFields.sshOptions
+    ? { ...editableFields.sshOptions }
     : undefined;
-  if (terminalConfig) {
-    delete terminalConfig.sudoPassword;
-    delete terminalConfig.agentSocketPath;
-  }
+  if (sshOptions) delete sshOptions.agentSocketPath;
 
   return {
     ...editableFields,
-    terminalConfig,
+    sshOptions,
   } as SSHHostData;
 }
 
@@ -325,53 +228,6 @@ export function buildHostEditorPayload(
   const primaryProtocol = protocols.enableSsh
     ? undefined
     : listHostProtocols().find((protocol) => protocols[protocol.settingKey]);
-  const terminalConfig = {
-    theme: form.theme,
-    cursorBlink: form.cursorBlink,
-    cursorStyle: form.cursorStyle,
-    fontSize: Number(form.fontSize),
-    fontFamily: form.fontFamily,
-    scrollback: Number(form.scrollback),
-    letterSpacing: Number(form.letterSpacing),
-    lineHeight: Number(form.lineHeight),
-    bellStyle: form.bellStyle,
-    rightClickSelectsWord: form.rightClickSelectsWord,
-    macOptionIsMeta: form.macOptionIsMeta,
-    fastScrollModifier: form.fastScrollModifier,
-    fastScrollSensitivity: Number(form.fastScrollSensitivity),
-    minimumContrastRatio: Number(form.minimumContrastRatio),
-    backspaceMode: form.backspaceMode,
-    startupSnippetId: form.startupSnippetId ?? null,
-    moshCommand: form.moshCommand || null,
-    agentForwarding: form.agentForwarding,
-    autoMosh: form.autoMosh,
-    autoTmux: form.autoTmux,
-    passwordPromptAutoFill: form.passwordPromptAutoFill,
-    sudoPasswordAutoFill: form.sudoPasswordAutoFill,
-    sudoPassword:
-      form.sudoPassword === "existing_sudo_password"
-        ? undefined
-        : form.sudoPassword || null,
-    keepaliveInterval: Number(form.keepaliveInterval),
-    keepaliveCountMax: Number(form.keepaliveCountMax),
-    environmentVariables: form.environmentVariables,
-    useSSHTitle: form.useSSHTitle,
-    syntaxHighlighting: form.syntaxHighlighting,
-    syntaxHighlightingOptions: form.syntaxHighlightingOptions,
-    backgroundImage: form.backgroundImage || null,
-    backgroundImageOpacity: Number(form.backgroundImageOpacity),
-    customThemeColors: form.theme === "custom" ? form.customThemeColors : null,
-    allowLegacyAlgorithms: form.allowLegacyAlgorithms,
-    linkClickBehavior:
-      form.linkClickBehavior !== "default" ? form.linkClickBehavior : undefined,
-    localEcho: form.localEcho !== "default" ? form.localEcho : undefined,
-    agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
-    agentIdentity: usesAgent ? form.agentIdentity || null : null,
-  };
-  const terminalOverrides = form.inheritTerminalAppearance
-    ? stripKeys(terminalConfig, terminalAppearanceKeys)
-    : terminalConfig;
-
   return {
     connectionType: primaryProtocol?.id ?? "ssh",
     name: form.name,
@@ -423,68 +279,33 @@ export function buildHostEditorPayload(
     enableSsh: protocols.enableSsh,
     sshPort: Number(form.sshPort),
     forceKeyboardInteractive: form.forceKeyboardInteractive,
-    rdpAuthType: protocols.enableRdp ? form.rdpAuthType : null,
-    rdpCredentialId:
-      protocols.enableRdp &&
-      form.rdpAuthType === "credential" &&
-      form.rdpCredentialId
-        ? Number(form.rdpCredentialId)
-        : null,
-    rdpUser:
-      protocols.enableRdp && form.rdpAuthType === "direct"
-        ? form.rdpUser || null
-        : null,
-    rdpPassword:
-      protocols.enableRdp &&
-      form.rdpAuthType === "direct" &&
-      form.rdpPassword !== "existing_rdp_password"
-        ? form.rdpPassword || null
-        : null,
-    rdpDomain: form.domain || null,
-    vncAuthType: protocols.enableVnc ? form.vncAuthType : null,
-    vncCredentialId:
-      protocols.enableVnc &&
-      form.vncAuthType === "credential" &&
-      form.vncCredentialId
-        ? Number(form.vncCredentialId)
-        : null,
-    vncPassword:
-      protocols.enableVnc &&
-      form.vncAuthType === "direct" &&
-      form.vncPassword !== "existing_vnc_password"
-        ? form.vncPassword || null
-        : null,
-    vncUser:
-      protocols.enableVnc && form.vncAuthType === "direct"
-        ? form.vncUser || null
-        : null,
-    telnetAuthType: protocols.enableTelnet ? form.telnetAuthType : null,
-    telnetCredentialId:
-      protocols.enableTelnet &&
-      form.telnetAuthType === "credential" &&
-      form.telnetCredentialId
-        ? Number(form.telnetCredentialId)
-        : null,
-    telnetUser:
-      protocols.enableTelnet && form.telnetAuthType === "direct"
-        ? form.telnetUser || null
-        : null,
-    telnetPassword:
-      protocols.enableTelnet &&
-      form.telnetAuthType === "direct" &&
-      form.telnetPassword !== "existing_telnet_password"
-        ? form.telnetPassword || null
-        : null,
+    protocolAuth: protocolAuthPayload(form.protocolAuth, protocols),
     // The editor keeps ids as strings; the API and every backend lookup take
     // a number, and a string id does not compare equal on Postgres/MySQL.
     jumpHosts: form.jumpHosts.map((j) => ({ hostId: Number(j.hostId) })),
     portKnockSequence: form.portKnockSequence,
-    quickActions: form.quickActions.map((a) => ({
-      name: a.name,
-      snippetId: Number(a.snippetId),
-    })),
     statusCheckEnabled: form.statusCheckEnabled,
     statusCheckInterval: form.statusCheckInterval,
-    terminalConfig: protocols.enableSsh ? terminalOverrides : null,
+    ...(form.defaultOverrides
+      ? { defaultOverrides: form.defaultOverrides }
+      : {}),
+    // Left out with SSH off, so the stored values stay as they are.
+    ...(protocols.enableSsh
+      ? {
+          sudoPassword:
+            form.sudoPassword === "existing_sudo_password"
+              ? undefined
+              : form.sudoPassword || "",
+          sshOptions: {
+            keepaliveInterval: Number(form.keepaliveInterval),
+            keepaliveCountMax: Number(form.keepaliveCountMax),
+            allowLegacyAlgorithms: form.allowLegacyAlgorithms,
+            agentForwarding: form.agentForwarding,
+            agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
+            agentIdentity: usesAgent ? form.agentIdentity || null : null,
+            environmentVariables: form.environmentVariables,
+          },
+        }
+      : {}),
   };
 }

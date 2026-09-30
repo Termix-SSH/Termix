@@ -3,7 +3,9 @@
  * plugin's own settings.
  *
  * Admin keys from the core `settings` table: session persistence, command
- * history, touch input tuning and terminal image storage. The image storage
+ * history, the terminal half of the admin host defaults (a new host's font,
+ * theme, cursor and auto tmux), touch input tuning and terminal image
+ * storage. The image storage
  * local directory was never sent to a browser, so it lands as a secret field,
  * which keeps it that way. The legacy rows are left in place for a release;
  * nothing reads them any more.
@@ -52,6 +54,40 @@ const asJson: Parse = (raw) => {
   }
 };
 
+const CURSOR_STYLES = ["block", "underline", "bar"];
+/** 2.8 spellings of the theme that follows the app. */
+const LEGACY_TERMIX_THEMES = [
+  "Termix Dark",
+  "Termix Light",
+  "termixDark",
+  "termixLight",
+];
+
+/** One terminal key of the admin host defaults, or undefined when unusable. */
+function newHostDefault(key: string, defaults: unknown): unknown {
+  if (!defaults || typeof defaults !== "object") return undefined;
+  const value = (defaults as Record<string, unknown>)[key];
+  switch (key) {
+    case "fontSize": {
+      const size = Number(value);
+      return Number.isFinite(size) && size >= 8 && size <= 36
+        ? size
+        : undefined;
+    }
+    case "fontFamily":
+      return typeof value === "string" && value ? value : undefined;
+    case "theme":
+      if (typeof value !== "string" || !value) return undefined;
+      return LEGACY_TERMIX_THEMES.includes(value) ? "termix" : value;
+    case "cursorStyle":
+      return typeof value === "string" && CURSOR_STYLES.includes(value)
+        ? value
+        : undefined;
+    default:
+      return typeof value === "boolean" ? value : undefined;
+  }
+}
+
 /** Legacy core key -> the admin field the plugin declares. */
 const ADMIN_MOVES: {
   legacyKey: string;
@@ -84,6 +120,21 @@ const ADMIN_MOVES: {
       return typeof value === "boolean" ? value : undefined;
     },
   },
+  ...(
+    [
+      ["fontSize", "newHostFontSize"],
+      ["fontFamily", "newHostFontFamily"],
+      ["theme", "newHostTheme"],
+      ["cursorStyle", "newHostCursorStyle"],
+      ["cursorBlink", "newHostCursorBlink"],
+      ["autoTmux", "newHostAutoTmux"],
+    ] as const
+  ).map(([legacyField, field]) => ({
+    // The terminal half of the admin host defaults, for new hosts.
+    legacyKey: "host_defaults",
+    field,
+    parse: (raw: string) => newHostDefault(legacyField, asJson(raw)),
+  })),
   { legacyKey: "touch_input_settings", field: "touchInput", parse: asJson },
   {
     legacyKey: "terminal_image_storage_mode",

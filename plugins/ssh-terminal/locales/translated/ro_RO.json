@@ -75,7 +75,11 @@
     "tmuxWindows": "Ferestre",
     "unknownError": "A apărut o eroare necunoscută",
     "websocketAbnormalClose": "Conexiunea s-a închis pe neașteptate. Acest lucru se poate datora unei probleme de configurare a proxy-ului invers sau a SSL. Vă rugăm să verificați jurnalele serverului.",
-    "websocketError": "Eroare de conexiune WebSocket"
+    "websocketError": "Eroare de conexiune WebSocket",
+    "clipboardReadFailed": "Citirea din clipboard nu a reușit. Asigurați-vă că permisiunile de acces la clipboard sunt acordate.",
+    "clipboardWriteFailed": "Copierea în clipboard nu a reușit. Asigurați-vă că pagina este servită prin HTTPS sau localhost.",
+    "connected": "Conectat",
+    "totpCodeLabel": "Cod de verificare"
   },
   "terminalToolbar": {
     "detachTmux": "Detașați tmux",
@@ -175,6 +179,10 @@
       },
       "imageMaxBytes": {
         "label": "Capacitate maximă de stocare în octeți"
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Rulează terminalele noilor gazde în interiorul tmux, astfel încât sesiunile să supraviețuiască deconectărilor (necesită tmux pe gazdă)"
       }
     },
     "host": {
@@ -189,9 +197,281 @@
       "enableTerminal": {
         "label": "Activează terminalul"
       }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Completare automată a comenzilor",
+        "description": "Afișează completarea automată în timpul tastării dacă apeși pe Tab"
+      },
+      "localEcho": {
+        "label": "Ecou local",
+        "description": "Reduceți latența percepută a intrării folosind predicția sigură a apăsărilor de taste locale"
+      },
+      "linkClickBehavior": {
+        "label": "Clic pe linkul terminalului",
+        "description": "Comportament implicit la clic pe linkuri în terminal"
+      }
     }
   },
   "palette": {
     "localTerminal": "Terminal local"
+  },
+  "hosts": {
+    "addHost": "Adăugați gazdă",
+    "applyGlobalThemeTooltip": "Aplică această temă",
+    "backgroundImageDesc": "URL opțional pentru o imagine de fundal a terminalului",
+    "backgroundImageLabel": "URL-ul imaginii de fundal",
+    "backgroundImageOpacityLabel": "Opacitatea imaginii de fundal",
+    "backspaceMode": "Mod Backspace",
+    "backspaceModeLabel": "Mod Backspace",
+    "behaviorAndAdvanced": "Comportament și Avansat",
+    "bellStyle": "Stil clopot",
+    "bellStyleLabel": "Stil clopot",
+    "colorTheme": "Temă de culoare",
+    "cursorBlink": "Clipire cursor",
+    "cursorBlinking": "Cursorul clipește",
+    "cursorBlinkingDesc": "Activează animația intermitentă pentru cursorul terminalului",
+    "cursorStyle": "Stilul cursorului",
+    "cursorStyleLabel": "Stilul cursorului",
+    "customThemeAnsiColors": "Culori ANSI",
+    "customThemeBackground": "Fundal",
+    "customThemeBlack": "Negru",
+    "customThemeBlue": "Albastru",
+    "customThemeBrightBlack": "Negru strălucitor",
+    "customThemeBrightBlue": "Albastru strălucitor",
+    "customThemeBrightCyan": "Cian strălucitor",
+    "customThemeBrightGreen": "Verde strălucitor",
+    "customThemeBrightMagenta": "Magenta strălucitor",
+    "customThemeBrightRed": "Roșu aprins",
+    "customThemeBrightWhite": "Alb strălucitor",
+    "customThemeBrightYellow": "Galben strălucitor",
+    "customThemeColors": "Culori personalizate",
+    "customThemeCursor": "Cursor",
+    "customThemeCursorAccent": "Accent cursor",
+    "customThemeCyan": "Cian",
+    "customThemeForeground": "Prim plan",
+    "customThemeGreen": "Verde",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Roşu",
+    "customThemeResetTooltip": "Resetare la setările implicite",
+    "customThemeSelection": "Selecţie",
+    "customThemeWhite": "Alb",
+    "customThemeYellow": "Galben",
+    "deleteGlobalThemeTooltip": "Ștergeți această temă",
+    "docsLink": "Vizualizați documentele",
+    "enableAutoMosh": "Activează Auto-Mosh",
+    "enableAutoMoshDesc": "Preferă Mosh în locul SSH dacă este disponibil",
+    "enableAutoTmux": "Activează Auto-Tmux",
+    "enableAutoTmuxDesc": "Mențineți shell-ul și tot ce rulează în el în funcțiune după deconectări și reporniri ale browserului, rulând în interiorul tmux (tmux trebuie să fie instalat pe gazdă).",
+    "fastScrollModifier": "Modificator de derulare rapidă",
+    "fastScrollModifierLabel": "Modificator de derulare rapidă",
+    "fastScrollSensitivity": "Sensibilitate rapidă la derulare",
+    "fastScrollSensitivityLabel": "Sensibilitate rapidă la derulare",
+    "fontFamily": "Familie de fonturi",
+    "fontFamilyCustomHint": "Alegeți un font inclus în pachet sau alegeți Personalizat și introduceți numele exact al unui font deja instalat pe sistemul dvs. (de exemplu, MesloLGS NF, Noto Sans Mono). Termix nu poate instala fonturi automat, instalați-l mai întâi pe sistemul dvs. de operare.",
+    "fontFamilyCustomOption": "Personalizat...",
+    "fontFamilyCustomPlaceholder": "Numele exact al fontului, de exemplu MesloLGS NF",
+    "fontFamilyLabel": "Familie de fonturi",
+    "fontSize": "Dimensiunea fontului",
+    "fontSizeLabel": "Dimensiunea fontului",
+    "hostNotFound": "Gazdă negăsită",
+    "letterSpacing": "Spațierea literelor",
+    "letterSpacingPx": "Spațiere litere (px)",
+    "lineHeight": "Înălțimea liniei",
+    "lineHeightLabel": "Înălțimea liniei",
+    "linkClickBehaviorConfirm": "Afișează o fereastră pop-up pentru deschidere sau copiere",
+    "linkClickBehaviorDefault": "Implicit (urmați setările aplicației)",
+    "linkClickBehaviorDesc": "Controlează ce se întâmplă când dai clic pe un link în terminal. Folosește „Implicit” pentru a urma setarea la nivel de aplicație.",
+    "linkClickBehaviorDirect": "Deschideți direct",
+    "linkClickBehaviorLabel": "Comportamentul clicurilor pe link",
+    "loadingHost": "Se încarcă gazda...",
+    "localEchoAuto": "Automat",
+    "localEchoDefault": "Folosește setarea globală",
+    "localEchoDesc": "Preziceți local apăsările de taste imprimabile în siguranță pe conexiuni lente. Solicitările de parolă și intrările de control nu sunt niciodată reluate.",
+    "localEchoLabel": "Ecou local",
+    "localEchoOff": "Dezactivat",
+    "localEchoOn": "Mereu pornit",
+    "macOptionIsMetaLabel": "Tasta Opțiune Trimite Meta",
+    "macOptionIsMetaShortDesc": "Dezactivați tastarea caracterelor speciale (cum ar fi @ sau |) cu tasta Option/Alt pe macOS în loc să trimiteți Meta",
+    "moshCommand": "Comandamentul MOSH",
+    "moshCommandLabel": "Comandamentul Mosh",
+    "noSavedThemes": "Nicio temă salvată încă",
+    "none": "Nici unul",
+    "rightClickSelectsWord": "Clic dreapta selectează cuvântul",
+    "rightClickSelectsWordLabel": "Clic dreapta Selectează Word",
+    "rightClickSelectsWordShortDesc": "Selectați cuvântul de sub cursor prin clic dreapta",
+    "saveAsGlobalTheme": "Salvați ca temă globală",
+    "saveGlobalThemeError": "Nu s-a putut salva tema",
+    "saveGlobalThemeNamePrompt": "Introduceți un nume pentru această temă",
+    "saveGlobalThemeSuccess": "Tema a fost salvată",
+    "savedThemesLabel": "Teme salvate",
+    "scrollbackBufferLabel": "Buffer de derulare înapoi",
+    "scrollbackMaxLines": "Numărul maxim de linii păstrate în istoric",
+    "sudoPasswordAutoFill": "Completare automată parolă Sudo",
+    "sudoPasswordAutoFillDesc": "Stocați o parolă sudo, astfel încât metricile gazdei, prompturile terminalului și alte funcții să poată executa automat comenzi privilegiate.",
+    "sudoPasswordAutoFillLabel": "Completare automată parolă Sudo",
+    "syntaxCategoryIpAddresses": "Adrese IP",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Niveluri de jurnal",
+    "syntaxCategoryLogLevelsDesc": "eroare, avertizare, informații, depanare, fatal",
+    "syntaxCategoryNumbers": "Numere etichetate",
+    "syntaxCategoryNumbersDesc": "portul 8080, ieșirea 1, starea 404",
+    "syntaxCategoryPaths": "Căi de fișiere",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "Marcaje temporale",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15.01.2024",
+    "syntaxCategoryUrls": "URL-uri",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Colorează ieșirea terminalului (erori, căi, IP-uri, timestamp-uri)",
+    "syntaxHighlightingLabel": "Evidențierea sintaxei",
+    "terminalAppearance": "Aspectul terminalului",
+    "theme": "Temă",
+    "themePreview": "Previzualizare temă",
+    "useSSHTitleDesc": "Actualizează titlul filei din titlul ferestrei shell-ului în loc de numele gazdei",
+    "useSSHTitleLabel": "Folosește titlul ferestrei SSH"
+  },
+  "nav": {
+    "history": "Istorie",
+    "localTerminal": "Terminal local",
+    "sshTools": "Instrumente SSH",
+    "terminal": "Terminal",
+    "macros": "Macrocomenzi"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Tastați aici pentru a difuza apăsările de taste...",
+    "copyOnSelect": "Copiază automat textul selectat",
+    "enableRightClickCopyPaste": "Activează copierea/lipirea cu clic dreapta",
+    "fillPassword": "Completați parola",
+    "fillPasswordMissing": "Nu există o parolă salvată pentru {{count}} terminal(e) selectat(e)",
+    "fillPasswordSuccess": "Parola a fost introdusă în terminalul(ele) {{count}}",
+    "keyRecordingTitle": "Înregistrare cheie",
+    "noTerminalTabsOpen": "Nicio filă de terminal deschisă",
+    "recordToTerminals": "Înregistrare pe terminale",
+    "selectAll": "Toate",
+    "selectNone": "Nici unul",
+    "selectTerminalsAbove": "Selectați terminalele de mai sus",
+    "settingsTitle": "Setări",
+    "startRecording": "Începeți înregistrarea",
+    "stopRecording": "Opriți înregistrarea"
+  },
+  "terminalDefaults": {
+    "clearAll": "Ștergeți tot",
+    "description": "Setați valorile pe care fiecare gazdă le moștenește, cu excepția cazului în care le suprascrie.",
+    "dialogDescription": "Acestea se aplică gazdelor care lasă o setare neconfigurată. Orice setare este setată pe o gazdă este câștigătoare.",
+    "inherit": "Moşteni",
+    "manage": "Gestionează",
+    "off": "Dezactivat",
+    "on": "Pe",
+    "title": "Setări implicite ale conexiunii"
+  },
+  "keybindings": {
+    "copy": "Copiați selecția",
+    "paste": "Pastă",
+    "sendControlCode": "Trimite semnal Ctrl+literă",
+    "sendText": "Trimiteți mesaj text",
+    "controlCodeLabel": "Scrisoare",
+    "textLabel": "Text de trimis",
+    "appendEnterLabel": "Apăsați Enter după trimitere",
+    "clipboardPermissionNote": "În unele browsere, este posibil să solicite permisiunea pentru clipboard la prima utilizare.",
+    "textRequired": "Introduceți textul de trimis",
+    "controlCodeRequired": "Introduceți o singură literă pentru codul de control"
+  },
+  "macros": {
+    "title": "Macrocomenzi",
+    "description": "Executați o serie de comenzi salvate într-un terminal și reacționați la ceea ce serverul trimite înapoi.",
+    "target": "Ţintă",
+    "noTerminal": "Niciun terminal deschis",
+    "empty": "Încă nu există macrocomenzi",
+    "emptyHint": "Creați o macrocomandă pentru a automatiza un flux de lucru în terminal, cum ar fi conectarea, repornirea unui serviciu sau răspunsul la solicitări.",
+    "create": "Macrocomandă nouă",
+    "back": "Înapoi la macrocomenzi",
+    "name": "Nume",
+    "namePlaceholder": "Reporniți serverul web",
+    "nameRequired": "Dați un nume macrocomenzii înainte de salvare",
+    "descriptionLabel": "Descriere",
+    "descriptionPlaceholder": "Ce face această macrocomandă (opțional)",
+    "unsaved": "Modificări nesalvate",
+    "save": "Salva",
+    "saved": "Macrocomandă salvată",
+    "saveFailed": "Nu s-a putut salva macrocomanda",
+    "delete": "Şterge",
+    "deleteTitle": "Ștergeți această macrocomandă?",
+    "deleteBody": "„{{name}}” va fi șters definitiv. Această acțiune nu poate fi anulată.",
+    "deleted": "Macrocomandă ștearsă",
+    "cancel": "Anula",
+    "run": "Aleargă",
+    "stop": "Stop",
+    "running": "Funcţionare...",
+    "completed": "Macrocomandă finalizată",
+    "failed": "Macrocomanda a eșuat",
+    "loadFailed": "Nu s-au putut încărca macrocomenzile",
+    "needTerminal": "Deschideți și conectați mai întâi un terminal",
+    "noSteps": "Această macrocomandă nu are încă pași. Adăugați unul mai jos.",
+    "addStep": "Adăugați un pas",
+    "stepNumber": "Pasul {{number}}",
+    "removeStep": "Eliminați pasul",
+    "confirmRunTitle": "Rulați această macrocomandă?",
+    "confirmRunBody": "„{{name}}” va trimite comenzi către {{host}}.",
+    "confirmRunAction": "Executare macrocomandă",
+    "stepTypes": {
+      "send": {
+        "label": "Trimiteți comanda",
+        "help": "Introduce text în terminal, la fel ca și cum l-ai fi tastat."
+      },
+      "wait": {
+        "label": "Așteptați ieșirea",
+        "help": "Se întrerupe până când serverul afișează textul pe care îl denumiți, ca o solicitare de parolă."
+      },
+      "delay": {
+        "label": "Pauză",
+        "help": "Așteaptă o perioadă fixă de timp înainte de pasul următor."
+      },
+      "if": {
+        "label": "Dacă ieșirea conține",
+        "help": "Verifică tot ce a imprimat serverul până acum, apoi rulează una dintre cele două ramificații."
+      },
+      "repeat": {
+        "label": "Repeta",
+        "help": "Execută pașii din interiorul său de un număr stabilit de ori."
+      }
+    },
+    "send": {
+      "text": "Comandă sau text",
+      "textPlaceholder": "repornirea systemctl a nginx",
+      "pressEnter": "Apăsați Enter după trimitere",
+      "pressEnterHelp": "Dezactivați această opțiune pentru a introduce text fără a-l trimite."
+    },
+    "wait": {
+      "pattern": "Așteptați până când ieșirea conține",
+      "patternPlaceholder": "parolă:",
+      "timeout": "Renunță după",
+      "onTimeout": "Dacă nu apare niciodată",
+      "stop": "Opriți macrocomanda",
+      "continue": "Continuă oricum"
+    },
+    "delay": {
+      "duration": "Așteptați"
+    },
+    "ifStep": {
+      "pattern": "Dacă ieșirea conține",
+      "patternPlaceholder": "Activ: activ (alergând)",
+      "then": "Apoi fă asta",
+      "else": "Altfel, fă asta",
+      "emptyBranch": "Fără trepte"
+    },
+    "repeat": {
+      "count": "Numărul de ori",
+      "times": "ori"
+    },
+    "match": {
+      "useRegex": "Potrivire cu o expresie regulată",
+      "useRegexHelp": "Omiteți această opțiune pentru a corespunde exact textului așa cum este scris.",
+      "invalidRegex": "Nu este o expresie regulată validă, va fi găsită ca text simplu."
+    },
+    "seconds": "secunde",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Este necesar un server la distanță. Conectați un server la distanță în Setări pentru a utiliza acest tip de conexiune."
   }
 }

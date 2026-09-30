@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "艦隊"
+  },
+  "hosts": {
+    "docsLink": "檢視文件",
+    "sharing": {
+      "customHoursPlaceholder": "存取到期前的小時數",
+      "expiry": {
+        "never": "永不",
+        "oneHour": "1 小時",
+        "oneDay": "24 小時",
+        "sevenDays": "7 天",
+        "thirtyDays": "30 天",
+        "custom": "自訂"
+      },
+      "expiryLabel": "存取期限",
+      "levels": {
+        "connect": {
+          "label": "連線",
+          "description": "僅開啟工作階段：終端機、遠端桌面、檔案管理員、通道和 Docker。無法存取主機設定。"
+        },
+        "view": {
+          "label": "檢視",
+          "description": "連線，並可查看主機設定。機密資料絕不顯示。"
+        },
+        "edit": {
+          "label": "編輯",
+          "description": "查看並修改無需身份驗證的主機設定。所有者的 SSH 身份驗證資訊將保持私密，僅限所有者本人查看。"
+        },
+        "manage": {
+          "label": "管理",
+          "description": "編輯，並可與他人分享主機、變更權限層級及撤銷存取權。"
+        }
+      },
+      "noMatches": "找不到符合項目",
+      "permissionLevelLabel": "權限層級",
+      "rolesTab": "角色",
+      "searchPlaceholder": "搜尋使用者或角色...",
+      "shareButton": "分享",
+      "shareWithCount": "分享 ({{count}})",
+      "usersTab": "使用者"
+    }
   }
 }

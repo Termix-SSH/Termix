@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Ekstern server kreves. Koble til en ekstern server i Innstillinger for å bruke denne tilkoblingstypen."
+  },
+  "hosts": {
+    "docsLink": "Vis dokumenter",
+    "hostNotFound": "Verten ble ikke funnet",
+    "loadingHost": "Laster inn vert ..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Kunne ikke lese fra utklippstavlen. Sørg for at utklippstavlen har tillatelser.",
+    "clipboardWriteFailed": "Kunne ikke kopiere til utklippstavlen. Sørg for at siden serveres via HTTPS eller localhost."
   }
 }

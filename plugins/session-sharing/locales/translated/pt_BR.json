@@ -148,5 +148,17 @@
         "description": "Permitir que as sessões ao vivo neste servidor sejam compartilhadas por meio de link ou com outros usuários."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nunca",
+        "oneHour": "1 hora",
+        "oneDay": "24 horas",
+        "sevenDays": "7 dias",
+        "thirtyDays": "30 dias",
+        "custom": "Personalizado"
+      }
+    }
   }
 }

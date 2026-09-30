@@ -24,7 +24,8 @@
     "network:outbound",
     "network:serve",
     "settings:read-core",
-    "ui:surface"
+    "ui:surface",
+    "users:impersonate"
   ],
   "optionalDependencies": {
     "fleets": "^1.0.0",
@@ -119,7 +120,8 @@
     ],
     "http": {
       "legacyPaths": ["/automations/webhook"]
-    }
+    },
+    "uses": ["alerts.openChannels"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"],

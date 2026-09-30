@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "È necessario un server remoto. Per utilizzare questo tipo di connessione, collega un server remoto nelle Impostazioni."
+  },
+  "hosts": {
+    "docsLink": "Visualizza documentazione",
+    "hostNotFound": "Host non trovato",
+    "loadingHost": "Caricamento host..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Lettura dagli appunti non riuscita. Assicurati che i permessi degli appunti siano stati concessi.",
+    "clipboardWriteFailed": "Copia negli appunti non riuscita. Assicurati che la pagina sia servita via HTTPS o localhost."
   }
 }

@@ -46,7 +46,8 @@
     "tailscaleAddHost": "Add host",
     "tailscaleCopyIp": "Copy Tailscale IP",
     "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP"
+    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
     "tailscaleCheckRequired": "Tailscale Authentication Required",
@@ -73,5 +74,13 @@
     "tsDisabled": "Tailscale disconnected",
     "tsExitNode": "Exit node",
     "tsExitNodeActive": "Exit node active"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Connect to Terminal",
+        "usernameLabel": "Username"
+      }
+    }
   }
 }

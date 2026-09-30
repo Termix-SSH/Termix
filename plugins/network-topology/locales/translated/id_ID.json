@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} node"
+  },
+  "hosts": {
+    "docsLink": "Lihat dokumen"
   }
 }

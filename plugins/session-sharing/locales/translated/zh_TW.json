@@ -148,5 +148,17 @@
         "description": "允許透過連結或其他方式分享此主機上的即時會話。"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "永不",
+        "oneHour": "1 小時",
+        "oneDay": "24 小時",
+        "sevenDays": "7 天",
+        "thirtyDays": "30 天",
+        "custom": "自訂"
+      }
+    }
   }
 }

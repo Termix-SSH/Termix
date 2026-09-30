@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Åbn browseren for at godkende",
     "tailscaleCheckWaiting": "Venter på Tailscale-godkendelse...",
     "tailscaleCheckTimeout": "Tailscale-godkendelsen er udløbet. Prøv igen."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Opret forbindelse til terminalen",
+        "usernameLabel": "Brugernavn"
+      }
+    }
   }
 }

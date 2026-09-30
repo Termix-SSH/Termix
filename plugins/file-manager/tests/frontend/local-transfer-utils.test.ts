@@ -8,9 +8,8 @@ import {
   buildLocalDestination,
   clampTransferConcurrency,
   describeLocalKind,
-  getTransferConcurrency,
   runWithConcurrency,
-  setTransferConcurrency,
+  takeLegacyTransferConcurrency,
   DEFAULT_TRANSFER_CONCURRENCY,
   TRANSFER_CONCURRENCY_STORAGE_KEY,
   formatLocalModified,
@@ -26,7 +25,7 @@ import {
   serializeLocalFilesDragPayload,
   sortLocalEntries,
 } from "../../src/frontend/local-transfer-utils";
-import type { LocalFileEntry } from "@termix/plugin-sdk/ui";
+import type { LocalFileEntry } from "@termix/plugin-sdk/frontend";
 
 describe("drag payloads", () => {
   it("round-trips local file payloads", () => {
@@ -300,15 +299,19 @@ describe("local entry presentation", () => {
 describe("parallel transfers", () => {
   beforeEach(() => localStorage.clear());
 
-  it("clamps and persists the concurrency preference", () => {
-    expect(getTransferConcurrency()).toBe(DEFAULT_TRANSFER_CONCURRENCY);
+  it("clamps the concurrency preference", () => {
     expect(clampTransferConcurrency(0)).toBe(1);
     expect(clampTransferConcurrency(99)).toBe(8);
     expect(clampTransferConcurrency("3.7")).toBe(3);
     expect(clampTransferConcurrency("nope")).toBe(DEFAULT_TRANSFER_CONCURRENCY);
-    expect(setTransferConcurrency(6)).toBe(6);
-    expect(localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY)).toBe("6");
-    expect(getTransferConcurrency()).toBe(6);
+  });
+
+  it("reads the value a browser kept before 2.9.0 once, then forgets it", () => {
+    expect(takeLegacyTransferConcurrency()).toBeNull();
+    localStorage.setItem(TRANSFER_CONCURRENCY_STORAGE_KEY, "12");
+    expect(takeLegacyTransferConcurrency()).toBe(8);
+    expect(localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY)).toBeNull();
+    expect(takeLegacyTransferConcurrency()).toBeNull();
   });
 
   const deferred = () => {

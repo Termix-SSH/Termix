@@ -2,11 +2,9 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { PasswordInput } from "@/components/password-input";
 import { SettingRow } from "@/components/section-card";
 import { Database, Lock, RefreshCw, Server, Settings } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
-import type { HostDefaults } from "@/api/settings-api";
 import type { TlsStatus } from "@/api/tls-api";
 
 type GeneralSettingsSectionProps = {
@@ -22,13 +20,10 @@ type GeneralSettingsSectionProps = {
   allowPasswordLogin: boolean;
   passwordLoginForced?: boolean;
   handleTogglePasswordLogin: () => void;
-  oidcAutoProvision: boolean;
-  handleToggleOidcAutoProvision: () => void;
+  externalAutoProvision: boolean;
+  handleToggleExternalAutoProvision: () => void;
   secondFactorAfterExternalLogin: boolean;
   handleToggleSecondFactorAfterExternalLogin: () => void;
-  oidcSilentLoginDefault: boolean;
-  oidcSilentLoginDefaultLocked: boolean;
-  handleToggleOidcSilentLoginDefault: () => void;
   allowPasswordReset: boolean;
   handleTogglePasswordReset: () => void;
   sessionTimeout: string;
@@ -54,13 +49,10 @@ export function AdminGeneralSettingsSection({
   allowPasswordLogin,
   passwordLoginForced,
   handleTogglePasswordLogin,
-  oidcAutoProvision,
-  handleToggleOidcAutoProvision,
+  externalAutoProvision,
+  handleToggleExternalAutoProvision,
   secondFactorAfterExternalLogin,
   handleToggleSecondFactorAfterExternalLogin,
-  oidcSilentLoginDefault,
-  oidcSilentLoginDefaultLocked,
-  handleToggleOidcSilentLoginDefault,
   allowPasswordReset,
   handleTogglePasswordReset,
   sessionTimeout,
@@ -147,8 +139,8 @@ export function AdminGeneralSettingsSection({
           description={t("admin.oidcAutoProvisionDesc")}
         >
           <AdminToggle
-            on={oidcAutoProvision}
-            onToggle={handleToggleOidcAutoProvision}
+            on={externalAutoProvision}
+            onToggle={handleToggleExternalAutoProvision}
           />
         </SettingRow>
         <SettingRow
@@ -158,20 +150,6 @@ export function AdminGeneralSettingsSection({
           <AdminToggle
             on={secondFactorAfterExternalLogin}
             onToggle={handleToggleSecondFactorAfterExternalLogin}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t("admin.oidcSilentLoginDefault")}
-          description={
-            oidcSilentLoginDefaultLocked
-              ? t("admin.oidcSilentLoginDefaultLockedDesc")
-              : t("admin.oidcSilentLoginDefaultDesc")
-          }
-        >
-          <AdminToggle
-            on={oidcSilentLoginDefault}
-            onToggle={handleToggleOidcSilentLoginDefault}
-            disabled={oidcSilentLoginDefaultLocked}
           />
         </SettingRow>
         <SettingRow
@@ -358,17 +336,11 @@ export function AdminDatabaseSection({
 type AdminHostDefaultsSectionProps = {
   open: boolean;
   onToggle: () => void;
-  defaults: HostDefaults;
-  setDefaults: Dispatch<SetStateAction<HostDefaults>>;
-  handleSaveDefaults: () => void;
 };
 
 export function AdminHostDefaultsSection({
   open,
   onToggle,
-  defaults,
-  setDefaults,
-  handleSaveDefaults,
 }: AdminHostDefaultsSectionProps) {
   const { t } = useTranslation();
 
@@ -379,133 +351,23 @@ export function AdminHostDefaultsSection({
       open={open}
       onToggle={onToggle}
     >
-      <div className="flex flex-col gap-4 pt-3">
+      <div className="flex flex-col gap-3 pt-3">
         <span className="text-[10px] text-muted-foreground">
-          {t("admin.hostDefaultsDesc")}
+          {t("hostDefaults.adminSectionDescription")}
         </span>
-
-        <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {t("admin.hostDefaultsSocks5")}
-          </span>
-          <SettingRow
-            label={t("admin.hostDefaultsUseSocks5")}
-            description={t("admin.hostDefaultsUseSocks5Desc")}
-          >
-            <AdminToggle
-              on={defaults.useSocks5 ?? false}
-              onToggle={() =>
-                setDefaults((p) => ({ ...p, useSocks5: !p.useSocks5 }))
-              }
-            />
-          </SettingRow>
-          {defaults.useSocks5 && (
-            <div className="flex flex-col gap-3 ml-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  {t("admin.hostDefaultsSocks5Host")}
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    value={defaults.socks5Host ?? ""}
-                    onChange={(e) =>
-                      setDefaults((p) => ({ ...p, socks5Host: e.target.value }))
-                    }
-                    placeholder="127.0.0.1"
-                    className="text-xs"
-                  />
-                  <Input
-                    type="number"
-                    value={defaults.socks5Port ?? 1080}
-                    onChange={(e) =>
-                      setDefaults((p) => ({
-                        ...p,
-                        socks5Port: Number(e.target.value),
-                      }))
-                    }
-                    placeholder="1080"
-                    className="text-xs w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  {t("admin.hostDefaultsSocks5Username")}
-                </label>
-                <Input
-                  value={defaults.socks5Username ?? ""}
-                  onChange={(e) =>
-                    setDefaults((p) => ({
-                      ...p,
-                      socks5Username: e.target.value,
-                    }))
-                  }
-                  className="text-xs"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  {t("admin.hostDefaultsSocks5Password")}
-                </label>
-                <PasswordInput
-                  value={defaults.socks5Password ?? ""}
-                  onChange={(e) =>
-                    setDefaults((p) => ({
-                      ...p,
-                      socks5Password: e.target.value,
-                    }))
-                  }
-                  className="h-8 text-xs pr-8"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-border pt-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {t("admin.hostDefaultsStatus")}
-          </span>
-          <SettingRow
-            label={t("admin.hostDefaultsStatusCheckEnabled")}
-            description={t("admin.hostDefaultsStatusCheckEnabledDesc")}
-          >
-            <AdminToggle
-              on={defaults.statusCheckEnabled ?? true}
-              onToggle={() =>
-                setDefaults((p) => ({
-                  ...p,
-                  statusCheckEnabled: !(p.statusCheckEnabled ?? true),
-                }))
-              }
-            />
-          </SettingRow>
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-border pt-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {t("admin.hostDefaultsTerminal")}
-          </span>
-          <SettingRow
-            label={t("admin.hostDefaultsAutoTmux")}
-            description={t("admin.hostDefaultsAutoTmuxDesc")}
-          >
-            <AdminToggle
-              on={defaults.autoTmux ?? false}
-              onToggle={() =>
-                setDefaults((p) => ({ ...p, autoTmux: !(p.autoTmux ?? false) }))
-              }
-            />
-          </SettingRow>
-        </div>
-
         <Button
           variant="outline"
           size="sm"
           className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-          onClick={handleSaveDefaults}
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("termix:open-host-defaults", {
+                detail: { level: "admin" },
+              }),
+            )
+          }
         >
-          {t("common.save")}
+          {t("hostDefaults.editServerDefaults")}
         </Button>
       </div>
     </AccordionSection>

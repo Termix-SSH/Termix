@@ -23,10 +23,23 @@ import { FieldCrypto } from "../utils/field-crypto.js";
 import { syncLogger } from "../utils/logger.js";
 import { getPluginRuntime } from "../plugins/index.js";
 import { singletonSyncId } from "./wire.js";
+import { parseDefaultOverrides } from "../../types/host-defaults.js";
 import {
   exportHostPluginSettings,
   importHostPluginSettings,
 } from "./host-plugin-settings.js";
+import {
+  exportProtocolLogins,
+  importProtocolLogins,
+} from "./host-protocol-auth.js";
+import {
+  coversHostDefault,
+  eraseHostDefault,
+  loadAdminDefaults,
+  loadHostDefaults,
+  writeAdminDefaults,
+  writeHostDefault,
+} from "./host-defaults.js";
 
 const CREDENTIAL_REFERENCE = {
   field: "credentialId",
@@ -37,28 +50,11 @@ const CREDENTIAL_REFERENCE = {
 const HOST_REFERENCES = [
   CREDENTIAL_REFERENCE,
   {
-    field: "rdpCredentialId",
-    syncField: "rdpCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "vncCredentialId",
-    syncField: "vncCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "telnetCredentialId",
-    syncField: "telnetCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
     field: "parentHostId",
     syncField: "parentHostSyncId",
     entityType: "hosts",
   },
   { field: "jumpHosts[].hostId", entityType: "hosts" },
-  { field: "quickActions[].snippetId", entityType: "commandSnippet" },
-  { field: "terminalConfig.startupSnippetId", entityType: "commandSnippet" },
 ] as const;
 
 /** Columns that only mean something on the device that holds them. */
@@ -68,6 +64,13 @@ const HOST_LOCAL_FIELDS = [
   "sharedSource",
   "hostKeyLastVerified",
 ];
+
+/**
+ * Columns kept until 3.0.0 that nothing reads any more: their values moved
+ * into plugin host settings, which sync with the host's pluginSettings. They
+ * stay off the wire so a stale local id never reaches the other side.
+ */
+const HOST_RETIRED_FIELDS = ["quickActions"];
 
 let registered = false;
 
@@ -148,7 +151,7 @@ export function registerCoreSyncEntities(): void {
       table: hosts,
       order: 50,
       encryptedFields: FieldCrypto.fieldsFor("ssh_data"),
-      readOnlyFields: HOST_LOCAL_FIELDS,
+      readOnlyFields: [...HOST_LOCAL_FIELDS, ...HOST_RETIRED_FIELDS],
       references: HOST_REFERENCES,
       shouldSync: (row) => !row.localOnly && !row.sharedSource,
       permissions: {
@@ -156,17 +159,39 @@ export function registerCoreSyncEntities(): void {
         update: "hosts.edit",
         delete: "hosts.delete",
       },
-      serialize: async (row) => ({
+      serialize: async (row, resolveSyncId) => ({
         ...row,
         pluginSettings:
           typeof row.id === "number"
             ? await exportHostPluginSettings(row.id)
             : {},
+        protocolAuth:
+          typeof row.id === "number"
+            ? await exportProtocolLogins(
+                row.id,
+                String(row.userId),
+                resolveSyncId,
+              )
+            : {},
       }),
-      afterWrite: async ({ id, userId, wire }) => {
+      afterWrite: async ({ id, userId, wire, resolveId }) => {
         if (id === null) return;
-        await importHostPluginSettings(id, wire.pluginSettings);
+        // The server owns host defaults: it keeps what the host set itself
+        // and resolves the rest. A desktop takes the server's values as sent.
+        const { getLink } = await import("./client/link-store.js");
+        const onServer = !(await getLink().catch(() => null));
+        await importHostPluginSettings(
+          id,
+          wire.pluginSettings,
+          onServer ? parseDefaultOverrides(wire.defaultOverrides) : null,
+        );
+        await importProtocolLogins(id, userId, wire.protocolAuth, resolveId);
         await dropInvalidParent(userId, id);
+        if (onServer) {
+          const { applyDefaultsAfterHostWrite } =
+            await import("../hosts/defaults/index.js");
+          await applyDefaultsAfterHostWrite(id);
+        }
         const { SharedHostSecretsManager } =
           await import("../utils/shared-host-secrets-manager.js");
         await SharedHostSecretsManager.getInstance().resyncHost(id);
@@ -190,6 +215,29 @@ export function registerCoreSyncEntities(): void {
     },
   );
 
+  // After hosts: a folder's jump chain names hosts by syncId.
+  registerEntity(
+    CORE_OWNER,
+    { type: "hostDefaults", table: null, order: 60 },
+    {
+      load: loadHostDefaults,
+      write: writeHostDefault,
+      erase: eraseHostDefault,
+      covers: (syncId) => coversHostDefault(syncId, activeManifest),
+    },
+  );
+
+  registerEntity(
+    CORE_OWNER,
+    { type: "hostDefaultsAdmin", table: null, order: 7, singleton: true },
+    {
+      readOnly: true,
+      load: loadAdminDefaults,
+      write: writeAdminDefaults,
+      erase: async () => {},
+    },
+  );
+
   // dashboardServiceLinks (70) and homepageItems (80) belong to homepage.
 
   registerEntity(CORE_OWNER, {
@@ -198,13 +246,18 @@ export function registerCoreSyncEntities(): void {
     order: 90,
     singleton: true,
     readOnlyFields: ["storageMode"],
-    references: [
-      {
-        field: "customKeybindings[].action.snippetId",
-        entityType: "commandSnippet",
-        idType: "string",
-      },
-    ],
+    // A keybinding parameter a plugin declares with a syncEntity holds a
+    // local row id of that entity; the wire carries its syncId.
+    serialize: (row, resolveSyncId) =>
+      mapKeybindingReferences(row, async (entityType, value) => {
+        const id = Number(value);
+        return Number.isInteger(id) ? resolveSyncId(entityType, id) : null;
+      }),
+    deserialize: (row, resolveId) =>
+      mapKeybindingReferences(row, async (entityType, value) => {
+        const id = await resolveId(entityType, value);
+        return id === null ? null : String(id);
+      }),
   });
 
   registerEntity(
@@ -251,6 +304,43 @@ export function registerCoreSyncEntities(): void {
       erase: (userId, syncId) => eraseSharedCopy("hosts", userId, syncId),
     },
   );
+}
+
+/**
+ * Rewrites every keybinding parameter whose declaration names a sync entity,
+ * keeping the column's storage form. A value that does not map becomes null.
+ */
+export async function mapKeybindingReferences(
+  row: SyncRow,
+  map: (entityType: string, value: string) => Promise<string | null>,
+): Promise<SyncRow> {
+  const stored = row.customKeybindings;
+  if (typeof stored !== "string" || !stored) return row;
+  let bindings: unknown;
+  try {
+    bindings = JSON.parse(stored);
+  } catch {
+    return row;
+  }
+  if (!Array.isArray(bindings)) return row;
+  const { findKeybindingAction } =
+    await import("../database/routes/keybinding-validation.js");
+  let changed = false;
+  for (const binding of bindings) {
+    const action = (binding as { action?: Record<string, unknown> } | null)
+      ?.action;
+    if (!action || typeof action.type !== "string") continue;
+    const params = findKeybindingAction(action.type)?.params ?? {};
+    for (const [name, param] of Object.entries(params)) {
+      const value = action[name];
+      if (!param.syncEntity || typeof value !== "string" || !value) continue;
+      action[name] = await map(param.syncEntity, value);
+      changed = true;
+    }
+  }
+  return changed
+    ? { ...row, customKeybindings: JSON.stringify(bindings) }
+    : row;
 }
 
 /** A synced parent link that would make a cycle here is dropped. */
@@ -392,11 +482,9 @@ const SHARED_HOST_DROP = [
   "id",
   "userId",
   "credentialId",
-  "rdpCredentialId",
-  "vncCredentialId",
-  "telnetCredentialId",
   "parentHostId",
   "pluginSettings",
+  "protocolAuth",
   "quickActions",
   "createdAt",
   "updatedAt",

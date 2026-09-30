@@ -11,6 +11,7 @@ import {
   parseManifest,
   validateManifest,
   SUPPORTED_PLUGIN_API_VERSION,
+  isTermixCompatible,
 } from "../../plugins/manifest.js";
 
 function base(overrides: Record<string, unknown> = {}) {
@@ -91,7 +92,35 @@ describe("manifest v2 validation", () => {
     );
 
     expect(manifest).toBeUndefined();
-    expect(errors.join()).toMatch(/SDK API version/);
+    expect(errors.join()).toMatch(/needs plugin API 2/);
+  });
+
+  it("accepts an api range this build satisfies", () => {
+    for (const api of ["1", "^1.0.0", ">=1.0.0 <2", "1.x"]) {
+      expect(
+        parseManifest(base({ engine: { termix: ">=2.9.0", api } })).errors,
+      ).toEqual([]);
+    }
+  });
+
+  it("refuses an api range needing a newer minor", () => {
+    const { errors } = parseManifest(
+      base({ engine: { termix: ">=2.9.0", api: "^1.99" } }),
+    );
+    expect(errors.join()).toMatch(/needs plugin API \^1\.99/);
+  });
+
+  it("refuses an engine that is not a semver range", () => {
+    expect(
+      validateManifest(base({ engine: { termix: "soon", api: "one" } })).join(),
+    ).toMatch(/engine.termix.*semver[\s\S]*engine.api.*semver/);
+  });
+
+  it("checks engine.termix against the core version", () => {
+    expect(isTermixCompatible(">=2.9.0", "2.9.0")).toBe(true);
+    expect(isTermixCompatible(">=2.9.0", "2.9.0-beta.3")).toBe(true);
+    expect(isTermixCompatible(">=3.0.0", "2.9.1")).toBe(false);
+    expect(isTermixCompatible(">=3.0.0", null)).toBe(true);
   });
 
   it("fills in the entry point defaults", () => {
@@ -684,5 +713,142 @@ describe("contributes.http.legacyRedirects", () => {
     expect(errors).toMatch(/to must be a path/);
     expect(errors).toMatch(/status must be 307 or 308/);
     expect(errors).toMatch(/extra/);
+  });
+});
+
+describe("contributes.http.adminImpersonation", () => {
+  it("accepts a boolean and refuses anything else", () => {
+    expect(
+      validateManifest(
+        base({ contributes: { http: { adminImpersonation: true } } }),
+      ),
+    ).toEqual([]);
+    expect(
+      validateManifest(
+        base({ contributes: { http: { adminImpersonation: "yes" } } }),
+      ).join(),
+    ).toMatch(/adminImpersonation" must be a boolean/);
+  });
+});
+
+describe("contributes.keybindingActions", () => {
+  const withActions = (keybindingActions: unknown) =>
+    validateManifest(base({ contributes: { keybindingActions } }));
+
+  it("accepts actions with typed parameters", () => {
+    expect(
+      withActions([
+        { id: "sample.run" },
+        {
+          id: "sample.send",
+          params: {
+            itemId: {
+              type: "string",
+              required: true,
+              pattern: "^[0-9]+$",
+              maxLength: 20,
+              syncEntity: "items",
+            },
+            enter: { type: "boolean" },
+          },
+        },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("refuses the shell's own actions, duplicates and bad ids", () => {
+    const errors = withActions([
+      { id: "nextTab" },
+      { id: "sample.run" },
+      { id: "sample.run" },
+      { id: "bad id" },
+    ]).join();
+    expect(errors).toMatch(/one of the shell's own actions/);
+    expect(errors).toMatch(/duplicates "sample.run"/);
+    expect(errors).toMatch(/letters, digits, dots and dashes/);
+  });
+
+  it("refuses bad parameters", () => {
+    const errors = withActions([
+      {
+        id: "sample.run",
+        params: {
+          type: { type: "string" },
+          a: { type: "number" },
+          b: { type: "string", pattern: "(" },
+          c: { type: "boolean", syncEntity: "items" },
+          d: { type: "string", extra: 1 },
+        },
+      },
+    ]).join();
+    expect(errors).toMatch(/params.type is not a valid parameter name/);
+    expect(errors).toMatch(/a.type must be "string" or "boolean"/);
+    expect(errors).toMatch(/b.pattern must be a regular expression/);
+    expect(errors).toMatch(/c.syncEntity needs a string parameter/);
+    expect(errors).toMatch(/d/);
+  });
+});
+
+describe("contributes.protocols", () => {
+  const withProtocols = (protocols: unknown) =>
+    validateManifest(base({ contributes: { protocols } }));
+
+  it("accepts protocols with credential fields", () => {
+    expect(
+      withProtocols([
+        {
+          id: "spice",
+          credentialFields: [
+            { key: "display" },
+            { key: "ticket", secret: true },
+          ],
+          defaultPort: 5930,
+          hostLoginFallback: ["username", "password"],
+        },
+        { id: "x2go" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("refuses core's protocol, duplicates and bad ids", () => {
+    const errors = withProtocols([
+      { id: "ssh" },
+      { id: "spice" },
+      { id: "spice" },
+      { id: "Bad_Id" },
+    ]);
+    expect(errors.join("\n")).toMatch(/"ssh" belongs to core/);
+    expect(errors.join("\n")).toMatch(/duplicates "spice"/);
+    expect(errors.join("\n")).toMatch(/\[3\]\.id must be lowercase/);
+  });
+
+  it("refuses field keys every login already has, and duplicate keys", () => {
+    const errors = withProtocols([
+      {
+        id: "spice",
+        credentialFields: [
+          { key: "password" },
+          { key: "display" },
+          { key: "display", secret: "yes" },
+        ],
+      },
+    ]);
+    expect(errors.join("\n")).toMatch(/"password" is part of every login/);
+    expect(errors.join("\n")).toMatch(/duplicates "display"/);
+    expect(errors.join("\n")).toMatch(/secret must be a boolean/);
+  });
+
+  it("refuses unknown keys, bad ports and bad fallbacks", () => {
+    const errors = withProtocols([
+      {
+        id: "spice",
+        defaultPort: 70000,
+        hostLoginFallback: ["key"],
+        extra: true,
+      },
+    ]);
+    expect(errors.join("\n")).toMatch(/defaultPort must be a port number/);
+    expect(errors.join("\n")).toMatch(/hostLoginFallback/);
+    expect(errors.join("\n")).toMatch(/extra/);
   });
 });

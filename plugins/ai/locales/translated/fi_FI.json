@@ -83,5 +83,8 @@
         "description": "Salli tekoälyavustaja auttaa tämän isännän terminaalissa. Oletusarvoisesti pois päältä, mutta tekoälyn on silti oltava käytössä tililläsi."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Näytä dokumentit"
   }
 }

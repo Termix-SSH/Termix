@@ -33,19 +33,18 @@ export function isQuickConnectHost(host: Pick<Host, "id">): boolean {
 export function createQuickConnectHost(input: QuickConnectInput): Host {
   const protocol = input.protocol;
   if (protocol) {
-    // Protocol logins are core host fields named after the protocol.
-    const login = {
-      [`${protocol.id}AuthType`]: "direct",
-      [`${protocol.id}User`]: input.username,
-      [`${protocol.id}Password`]: input.password,
-    };
     return {
       ...createQuickConnectHost({ ...input, protocol: undefined, port: 22 }),
-      ...login,
+      // Never saved, so the login travels in plain text to the protocol's tab.
+      quickConnectLogin: {
+        protocol: protocol.id,
+        username: input.username,
+        password: input.password,
+        fields: input.domain ? { domain: input.domain } : {},
+      },
       port: input.port,
       enableSsh: false,
       quickConnectSavable: false,
-      domain: input.domain,
       pluginSettings: {
         [protocol.pluginId]: {
           [protocol.settingKey]: true,
@@ -71,7 +70,6 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
     ram: null,
     lastAccess: new Date().toISOString(),
     pin: false,
-    quickActions: [],
     enableSsh: true,
     sshPort: input.port,
     quickConnectSavable:
@@ -101,7 +99,7 @@ export function quickConnectHostToPayload(host: Host): SSHHostData {
 }
 
 /**
- * Every way to reach the address: connect actions (terminal, RDP, VNC...)
+ * Every way to reach the address: connect actions (terminal, remote desktop)
  * by priority, then tools that opted into Quick Connect. Only actions that
  * open a tab work here, since the host is never saved.
  */

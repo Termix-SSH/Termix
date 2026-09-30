@@ -263,11 +263,20 @@ describe("shared host authentication override routes", () => {
     expect(unauthenticatedResponse.status).toBe(401);
   });
 
-  it("serves every real protocol and rejects invalid protocol names", async () => {
-    const rdpResponse = await invoke("get", {}, "rdp");
-    expect(rdpResponse.status).toBe(200);
-    expect(rdpResponse.body.protocol).toBe("rdp");
+  it("serves any protocol a plugin declares and rejects the rest", async () => {
+    const { setHostProtocolSource } =
+      await import("../../../hosts/protocol-auth/registry.js");
+    setHostProtocolSource(() => [
+      { id: "spice", pluginId: "spice-plugin", pluginName: "Spice" },
+    ]);
+    const declared = await invoke("get", {}, "spice");
+    setHostProtocolSource(() => []);
+    expect(declared.status).toBe(200);
+    expect(declared.body.protocol).toBe("spice");
     expect(state.writes).toEqual([]);
+
+    const undeclared = await invoke("get", {}, "spice");
+    expect(undeclared.status).toBe(400);
 
     const invalidResponse = await invoke("get", {}, "smtp");
     expect(invalidResponse).toEqual({

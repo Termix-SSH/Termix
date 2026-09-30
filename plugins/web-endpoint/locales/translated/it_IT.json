@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Consenti certificato non valido",
     "webUiIgnoreCertDesc": "Solo endpoint diretti. Il loopback è già escluso, quindi ciò non ha alcun effetto sugli endpoint del tunnel.",
     "webUiRemoveEndpoint": "Rimuovi endpoint",
-    "webUiOpenFailed": "Impossibile aprire l'endpoint web"
+    "webUiOpenFailed": "Impossibile aprire l'endpoint web",
+    "bindHost": "Host di bind"
   }
 }

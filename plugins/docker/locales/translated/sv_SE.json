@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Fjärrserver krävs. Anslut en fjärrserver i Inställningar för att använda den här anslutningstypen."
+  },
+  "hosts": {
+    "docsLink": "Visa dokument",
+    "hostNotFound": "Värden hittades inte",
+    "loadingHost": "Laddar värd..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Kunde inte läsa från urklipp. Kontrollera att behörigheter för urklipp är beviljade.",
+    "clipboardWriteFailed": "Kunde inte kopiera till urklipp. Kontrollera att sidan serveras via HTTPS eller localhost."
   }
 }

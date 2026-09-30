@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Изпълни „{{name}}“",
+  "variablesDialogDescription": "Попълнете стойностите, необходими на този фрагмент, преди да го изпълните.",
+  "variablesPreviewLabel": "Преглед",
+  "variablesConfirmButton": "Бягане",
+  "keybindings": {
+    "runSnippet": "Изпълнете съществуващия фрагмент",
+    "snippetLabel": "Фрагмент",
+    "selectSnippet": "Изберете фрагмент",
+    "snippetMissing": "фрагмент не е намерен",
+    "snippetRequired": "Изберете фрагмент"
+  },
+  "paletteHintRun": "Изпълняване в активния раздел на терминала",
+  "host": {
+    "startupTitle": "Стартов фрагмент",
+    "quickActionsTitle": "Бързи действия",
+    "quickActionsDescription": "Бързите действия се показват като бутони в лентата с инструменти Host Metrics за изпълнение на команди с едно щракване.",
+    "noQuickActions": "Все още няма бързи действия.",
+    "buttonLabel": "Етикет на бутона",
+    "selectSnippet": "Изберете фрагмент...",
+    "addQuickAction": "Добавяне на действие"
+  },
+  "quickActions": {
+    "running": "Изпълнява се {{name}}...",
+    "succeeded": "{{name}} завършено успешно",
+    "failed": "{{name}} неуспешно",
+    "error": "Неуспешно изпълнение на {{name}}"
+  }
+}

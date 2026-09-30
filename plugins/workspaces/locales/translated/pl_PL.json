@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Obszary robocze",
     "workflow_workspaces_desc": "Zapisz zestaw otwartych kart i otwórz cały układ później."
+  },
+  "hosts": {
+    "docsLink": "Zobacz dokumentację"
   }
 }

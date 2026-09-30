@@ -289,7 +289,18 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       enableTerminal: true,
       enableCommandHistory: false,
       enableTerminalToolbar: false,
+      // The look it saved in terminal_config, which took it off the user's.
+      inheritAppearance: false,
+      theme: "dracula",
+      fontSize: 16,
+      cursorStyle: "block",
+      autoTmux: true,
+      sudoPasswordAutoFill: true,
+      localEcho: "on",
     });
+    expect(
+      await settings(booted, "ssh-terminal", `host/${HOSTS.key}`),
+    ).toMatchObject({ inheritAppearance: true, passwordPromptAutoFill: false });
     expect(await host("session-recording")).toMatchObject({
       enableSessionRecording: false,
     });
@@ -315,6 +326,10 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       containerRuntime: "podman",
     });
     expect(await host("ai")).toMatchObject({ enableAiAssistant: true });
+    expect(await host("snippets")).toMatchObject({
+      startupSnippetId: 1,
+      quickActions: [{ name: "d4-uptime", snippetId: 1 }],
+    });
     expect(await host("wake-on-lan")).toMatchObject({
       macAddress: "AA:BB:CC:DD:EE:04",
       broadcastAddress: "10.4.0.255",
@@ -361,6 +376,9 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       enableTerminal: true,
       enableCommandHistory: true,
       enableTerminalToolbar: true,
+      inheritAppearance: true,
+      autoTmux: false,
+      passwordPromptAutoFill: true,
     });
     expect(await host("session-recording")).toMatchObject({
       enableSessionRecording: true,
@@ -390,11 +408,57 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
     }
     expect(Number(byId.get(HOSTS.rdpOnly)?.enable_ssh)).toBe(0);
 
-    const ctx = await pluginCtx("remote-desktop");
-    const target = await asUser(USERS.admin, () =>
-      ctx.credentials.resolveHostProtocol(HOSTS.rdpOnly, "rdp"),
+    // The connection options in terminal_config moved to core's ssh_options.
+    const [options] = await selectRows<{ ssh_options: string | null }>(
+      sql`SELECT ssh_options FROM ssh_data WHERE id = ${HOSTS.password}`,
     );
-    expect(target?.auth.password).toBe("d4-rdp-password");
+    expect(JSON.parse(options.ssh_options ?? "{}")).toEqual({
+      keepaliveInterval: 30,
+      keepaliveCountMax: 4,
+      allowLegacyAlgorithms: false,
+      agentForwarding: true,
+      environmentVariables: [{ key: "D4", value: "yes" }],
+    });
+
+    // Every 2.8 RDP, VNC and Telnet login reads back through
+    // host_protocol_auth, the only place core reads them from now.
+    const ctx = await pluginCtx("remote-desktop");
+    const resolve = (hostId: number, protocol: string) =>
+      asUser(USERS.admin, () =>
+        ctx.credentials.resolveHostProtocol(hostId, protocol),
+      );
+    expect((await resolve(HOSTS.rdpOnly, "rdp"))?.auth).toMatchObject({
+      authType: "direct",
+      username: "d4-rdp-user",
+      password: "d4-rdp-password",
+    });
+    expect((await resolve(HOSTS.desktop, "rdp"))?.auth).toEqual({
+      authType: "direct",
+      username: "d4-rdp-user",
+      password: "d4-rdp-password",
+      fields: { domain: "D4-DOMAIN" },
+    });
+    expect((await resolve(HOSTS.desktop, "vnc"))?.auth).toMatchObject({
+      authType: "direct",
+      username: "d4-vnc-user",
+      password: "d4-vnc-password",
+    });
+    expect((await resolve(HOSTS.desktop, "telnet"))?.auth).toMatchObject({
+      authType: "credential",
+      username: "deploy",
+    });
+
+    const logins = await selectRows<{ host_id: number; protocol: string }>(
+      sql`SELECT host_id, protocol FROM host_protocol_auth ORDER BY host_id, protocol`,
+    );
+    expect(
+      logins.map((row) => `${Number(row.host_id)}:${row.protocol}`),
+    ).toEqual([
+      `${HOSTS.rdpOnly}:rdp`,
+      `${HOSTS.desktop}:rdp`,
+      `${HOSTS.desktop}:telnet`,
+      `${HOSTS.desktop}:vnc`,
+    ]);
   });
 
   it("registers an SSH auth provider for every 2.8 auth type", async () => {
@@ -439,6 +503,19 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       sessionPersistence: false,
       commandHistoryForNewHosts: false,
       imageMaxCount: 7,
+      newHostFontSize: 20,
+      newHostTheme: "nord",
+      newHostAutoTmux: true,
+    });
+    expect(await settings(booted, "ssh-terminal", "user")).toMatchObject({
+      terminalDefaults: { fontSize: 18, cursorBlink: false },
+      customThemes: [expect.objectContaining({ id: "d4-theme" })],
+      commandAutocomplete: true,
+      macros: [expect.objectContaining({ id: "d4-macro", name: "d4 macro" })],
+    });
+    expect(await settings(booted, "snippets", "user")).toMatchObject({
+      confirmExecution: true,
+      foldersCollapsed: false,
     });
     expect(await settings(booted, "step-ca", "admin")).toMatchObject({
       caUrl: "https://ca.d4.example",

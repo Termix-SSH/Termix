@@ -148,5 +148,17 @@
         "description": "Consenti la condivisione delle sessioni live su questo host tramite link o con altri utenti"
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Mai",
+        "oneHour": "1 ora",
+        "oneDay": "24 ore",
+        "sevenDays": "7 giorni",
+        "thirtyDays": "30 giorni",
+        "custom": "Personalizzato"
+      }
+    }
   }
 }

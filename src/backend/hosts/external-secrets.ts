@@ -20,9 +20,6 @@ const SECRET_FIELDS = [
   "keyPassword",
   "sudoPassword",
   "socks5Password",
-  "rdpPassword",
-  "vncPassword",
-  "telnetPassword",
 ] as const;
 
 const REFERENCE_PATTERN = /^([a-z][a-z0-9+.-]*):\/\//i;

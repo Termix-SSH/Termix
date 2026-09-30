@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { dispatchKeybindingAction } from "../../../src/frontend/lib/keybinding-dispatch";
+import {
+  dispatchKeybindingAction,
+  isTerminalKeybindingAction,
+  validateSendControlCode,
+  validateSendText,
+} from "../../../src/frontend/lib/keybinding-dispatch";
 import type { Terminal } from "@xterm/xterm";
 import type { KeybindingDispatchContext } from "../../../src/frontend/lib/keybinding-dispatch";
-import * as sdkFrontend from "@termix/plugin-sdk/frontend";
-
-vi.mock("@termix/plugin-sdk/frontend", () => ({ invokeAction: vi.fn() }));
 
 function makeContext(
   overrides: Partial<KeybindingDispatchContext> = {},
@@ -90,65 +92,36 @@ describe("dispatchKeybindingAction", () => {
     expect(ctx.sentData).toEqual(["ls -la\r"]);
   });
 
-  it("runSnippet resolves the snippet through the snippets.resolveForTerminal action and sends its content with a trailing return", async () => {
-    vi.mocked(sdkFrontend.invokeAction).mockResolvedValue({
-      needsInputs: false,
-      content: "uptime",
-    });
+  it("leaves any other action to whoever registered it", () => {
     const ctx = makeContext();
-    dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(sdkFrontend.invokeAction).toHaveBeenCalledWith(
-      "snippets.resolveForTerminal",
-      1,
-      null,
-    );
-    expect(ctx.sentData).toEqual(["uptime\r"]);
-  });
-
-  it("runSnippet does nothing when the snippet no longer exists", async () => {
-    vi.mocked(sdkFrontend.invokeAction).mockResolvedValue(undefined);
-    const ctx = makeContext();
-    dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
-    await Promise.resolve();
-    await Promise.resolve();
+    expect(
+      dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx),
+    ).toBe(false);
+    expect(dispatchKeybindingAction({ type: "nextTab" }, ctx)).toBe(false);
+    expect(dispatchKeybindingAction({ type: "copy" }, ctx)).toBe(true);
     expect(ctx.sentData).toEqual([]);
   });
 
-  it("runSnippet passes hostContext through to the resolve action", async () => {
-    vi.mocked(sdkFrontend.invokeAction).mockResolvedValue({
-      needsInputs: false,
-      content: "ping 10.0.0.5 -p 22",
-    });
-    const ctx = makeContext({
-      hostContext: { ip: "10.0.0.5", username: "root", port: 22 },
-    });
-    dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(sdkFrontend.invokeAction).toHaveBeenCalledWith(
-      "snippets.resolveForTerminal",
-      1,
-      { ip: "10.0.0.5", username: "root", port: 22 },
+  it("knows which actions are its own", () => {
+    expect(isTerminalKeybindingAction("sendText")).toBe(true);
+    expect(isTerminalKeybindingAction("runSnippet")).toBe(false);
+  });
+});
+
+describe("keybinding validators", () => {
+  it("needs text to send", () => {
+    expect(validateSendText({ type: "sendText", text: " " })).toBe(
+      "keybindings.textRequired",
     );
-    expect(ctx.sentData).toEqual(["ping 10.0.0.5 -p 22\r"]);
+    expect(validateSendText({ type: "sendText", text: "ls" })).toBeNull();
   });
 
-  it("runSnippet defers to onSnippetNeedsInputs instead of sending when the action reports needsInputs", async () => {
-    vi.mocked(sdkFrontend.invokeAction).mockResolvedValue({
-      needsInputs: true,
-      content: "echo $INPUT_1",
-    });
-    const onSnippetNeedsInputs = vi.fn();
-    const ctx = makeContext({ onSnippetNeedsInputs });
-    dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(ctx.sentData).toEqual([]);
-    expect(onSnippetNeedsInputs).toHaveBeenCalledWith({
-      id: "1",
-      content: "echo $INPUT_1",
-    });
+  it("needs a single letter for a control code", () => {
+    expect(
+      validateSendControlCode({ type: "sendControlCode", controlCode: "ab" }),
+    ).toBe("keybindings.controlCodeRequired");
+    expect(
+      validateSendControlCode({ type: "sendControlCode", controlCode: "w" }),
+    ).toBeNull();
   });
 });

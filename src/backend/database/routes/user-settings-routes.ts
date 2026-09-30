@@ -22,22 +22,6 @@ import {
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
-export type HostDefaults = {
-  useSocks5?: boolean;
-  socks5Host?: string;
-  socks5Port?: number;
-  socks5Username?: string;
-  socks5Password?: string;
-  credentialId?: number | null;
-  statusCheckEnabled?: boolean;
-  fontSize?: number;
-  fontFamily?: string;
-  theme?: string;
-  cursorStyle?: string;
-  cursorBlink?: boolean;
-  autoTmux?: boolean;
-};
-
 async function getAdminActor(
   userId: string | undefined,
 ): Promise<UserRecord | null> {
@@ -322,25 +306,6 @@ export function registerUserSettingsRoutes(
 
   /**
    * @openapi
-   * /users/session-sharing-enabled:
-   *   get:
-   *     summary: Get session sharing globally enabled setting
-   *     description: Returns whether live session sharing (terminal/RDP/VNC/Telnet share links and in-app joins) is allowed instance-wide. Overrides every per-host toggle when false.
-   *     tags:
-   *       - Users
-   *     responses:
-   *       200:
-   *         description: Session sharing enabled status.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 enabled:
-   *                   type: boolean
-   */
-  /**
-   * @openapi
    * /users/audit-forwarding:
    *   get:
    *     summary: Get audit log forwarding settings (admin only)
@@ -557,84 +522,4 @@ export function registerUserSettingsRoutes(
     "update_notification_private_endpoints",
     "notification endpoint",
   );
-
-  /**
-   * @openapi
-   * /users/host-defaults:
-   *   get:
-   *     summary: Get host creation defaults
-   *     description: Returns the global default settings applied when creating a new host.
-   *     tags:
-   *       - Users
-   *     responses:
-   *       200:
-   *         description: Host defaults object.
-   *       500:
-   *         description: Failed to get host defaults.
-   */
-  router.get("/host-defaults", authenticateJWT, async (_req, res) => {
-    try {
-      const value =
-        await createCurrentSettingsRepository().get("host_defaults");
-      const defaults: HostDefaults = value ? JSON.parse(value) : {};
-      res.json(defaults);
-    } catch (err) {
-      authLogger.error("Failed to get host defaults", err);
-      res.status(500).json({ error: "Failed to get host defaults" });
-    }
-  });
-
-  /**
-   * @openapi
-   * /users/host-defaults:
-   *   patch:
-   *     summary: Update host creation defaults (admin only)
-   *     description: Sets global default settings applied when a new host is created.
-   *     tags:
-   *       - Users
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *     responses:
-   *       200:
-   *         description: Host defaults updated.
-   *       403:
-   *         description: Not authorized.
-   *       500:
-   *         description: Failed to update host defaults.
-   */
-  router.patch("/host-defaults", authenticateJWT, async (req, res) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    try {
-      const actor = await getAdminActor(userId);
-      if (!actor) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-      const defaults: HostDefaults = req.body;
-      await createCurrentSettingsRepository().set(
-        "host_defaults",
-        JSON.stringify(defaults),
-      );
-
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId,
-        username: actor.username ?? userId,
-        action: "update_host_defaults",
-        resourceType: "setting",
-        details: JSON.stringify(defaults),
-        ipAddress,
-        userAgent,
-        success: true,
-      });
-
-      res.json(defaults);
-    } catch (err) {
-      authLogger.error("Failed to update host defaults", err);
-      res.status(500).json({ error: "Failed to update host defaults" });
-    }
-  });
 }

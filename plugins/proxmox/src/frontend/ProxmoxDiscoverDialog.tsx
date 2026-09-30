@@ -1,5 +1,8 @@
 import { useRef, useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  notifyHostsChanged,
+  useTranslation,
+} from "@termix/plugin-sdk/frontend";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@termix/plugin-sdk/ui";
@@ -11,8 +14,12 @@ import {
   DialogFooter,
 } from "@termix/plugin-sdk/ui";
 import { Select2 } from "@termix/plugin-sdk/ui";
-import { discoverProxmoxGuestsStream, importProxmoxHosts } from "./proxmox-api";
-import { listHosts, type PluginHostRecord } from "@termix/plugin-sdk/frontend";
+import {
+  discoverProxmoxGuestsStream,
+  importProxmoxHosts,
+  listHosts,
+} from "./proxmox-api";
+import type { PluginHostRecord } from "@termix/plugin-sdk/frontend";
 import type { ProxmoxGuest } from "./types";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth";
 
@@ -158,8 +165,6 @@ export function ProxmoxDiscoverDialog({
         jumpHosts: discoveredJumpHosts ?? undefined,
         ...importAuth,
         enableSsh: g.connectionType !== "rdp",
-        enableRdp: g.connectionType === "rdp",
-        enableDocker: g.enableDocker,
         connectionType: g.connectionType,
         tags: [
           "proxmox",
@@ -168,8 +173,13 @@ export function ProxmoxDiscoverDialog({
           g.type === "lxc" ? `ct-${g.vmid}` : `vm-${g.vmid}`,
           ...(g.enableDocker ? ["docker"] : []),
         ],
-        // This plugin's host settings travel with the import like an export's.
+        // Host settings travel with the import like an export's, keyed by
+        // the plugin that keeps them.
         pluginSettings: {
+          ...(g.connectionType === "rdp"
+            ? { "remote-desktop": { enableRdp: true, rdpPort: 3389 } }
+            : {}),
+          ...(g.enableDocker ? { docker: { enableDocker: true } } : {}),
           proxmox: {
             proxmoxConfig: {
               source: {
@@ -194,7 +204,7 @@ export function ProxmoxDiscoverDialog({
       if (toImport.length) {
         const updated = await listHosts();
         onHostsChanged(updated);
-        window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+        notifyHostsChanged();
       }
 
       const msg = [

@@ -148,5 +148,17 @@
         "description": "Sta toe dat live sessies op deze host via een link of met andere gebruikers worden gedeeld."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nooit",
+        "oneHour": "1 uur",
+        "oneDay": "24 uur",
+        "sevenDays": "7 dagen",
+        "thirtyDays": "30 dagen",
+        "custom": "Aangepast"
+      }
+    }
   }
 }

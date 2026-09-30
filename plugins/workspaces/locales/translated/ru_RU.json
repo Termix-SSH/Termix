@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Рабочие места",
     "workflow_workspaces_desc": "Сохраните набор открытых вкладок и откройте весь интерфейс позже."
+  },
+  "hosts": {
+    "docsLink": "Документация"
   }
 }

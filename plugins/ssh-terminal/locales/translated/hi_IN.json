@@ -75,7 +75,11 @@
     "tmuxWindows": "विंडो",
     "unknownError": "अज्ञात त्रुटि हुई",
     "websocketAbnormalClose": "कनेक्शन अप्रत्याशित रूप से बंद हो गया। यह रिवर्स प्रॉक्सी या SSL कॉन्फ़िगरेशन समस्या के कारण हो सकता है। कृपया सर्वर लॉग जाँचें।",
-    "websocketError": "WebSocket कनेक्शन त्रुटि"
+    "websocketError": "WebSocket कनेक्शन त्रुटि",
+    "clipboardReadFailed": "क्लिपबोर्ड से पढ़ने में विफल। सुनिश्चित करें कि क्लिपबोर्ड अनुमतियाँ दी गई हैं।",
+    "clipboardWriteFailed": "क्लिपबोर्ड पर कॉपी करने में विफल। सुनिश्चित करें कि पेज HTTPS या लोकलहोस्ट पर सर्व किया गया है।",
+    "connected": "कनेक्टेड",
+    "totpCodeLabel": "सत्यापन कोड"
   },
   "terminalToolbar": {
     "detachTmux": "tmux को अलग करें",
@@ -175,6 +179,10 @@
       },
       "imageMaxBytes": {
         "label": "अधिकतम संग्रहण बाइट्स"
+      },
+      "newHostAutoTmux": {
+        "label": "ऑटो-टीमक्स",
+        "description": "नए होस्ट के टर्मिनलों को tmux के अंदर चलाएं ताकि डिस्कनेक्ट होने पर भी सेशन जारी रहें (इसके लिए होस्ट पर tmux होना आवश्यक है)।"
       }
     },
     "host": {
@@ -189,9 +197,281 @@
       "enableTerminal": {
         "label": "टर्मिनल सक्षम करें"
       }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "कमांड ऑटोकम्प्लीट",
+        "description": "टैब दबाने पर टाइप करते समय ऑटो-कंप्लीट दिखाएं"
+      },
+      "localEcho": {
+        "label": "स्थानीय प्रतिध्वनि",
+        "description": "सुरक्षित स्थानीय कीस्ट्रोक पूर्वानुमान का उपयोग करके इनपुट विलंबता को कम करें"
+      },
+      "linkClickBehavior": {
+        "label": "टर्मिनल लिंक क्लिक",
+        "description": "टर्मिनल में लिंक क्लिक करने पर डिफ़ॉल्ट व्यवहार"
+      }
     }
   },
   "palette": {
     "localTerminal": "स्थानीय टर्मिनल"
+  },
+  "hosts": {
+    "addHost": "होस्ट जोड़ें",
+    "applyGlobalThemeTooltip": "इस थीम को लागू करें",
+    "backgroundImageDesc": "टर्मिनल पृष्ठभूमि छवि के लिए वैकल्पिक URL",
+    "backgroundImageLabel": "पृष्ठभूमि छवि URL",
+    "backgroundImageOpacityLabel": "पृष्ठभूमि छवि अपारदर्शिता",
+    "backspaceMode": "बैकस्पेस मोड",
+    "backspaceModeLabel": "बैकस्पेस मोड",
+    "behaviorAndAdvanced": "व्यवहार और उन्नत",
+    "bellStyle": "बेल शैली",
+    "bellStyleLabel": "घंटी शैली",
+    "colorTheme": "रंग थीम",
+    "cursorBlink": "कर्सर ब्लिंक",
+    "cursorBlinking": "कर्सर झपकना",
+    "cursorBlinkingDesc": "टर्मिनल कर्सर के लिए झपकने वाला एनीमेशन सक्षम करें",
+    "cursorStyle": "कर्सर शैली",
+    "cursorStyleLabel": "कर्सर शैली",
+    "customThemeAnsiColors": "ANSI रंग",
+    "customThemeBackground": "पृष्ठभूमि",
+    "customThemeBlack": "काला",
+    "customThemeBlue": "नीला",
+    "customThemeBrightBlack": "चमकदार काला",
+    "customThemeBrightBlue": "चमकदार नीला",
+    "customThemeBrightCyan": "चमकदार सियान",
+    "customThemeBrightGreen": "चमकदार हरा",
+    "customThemeBrightMagenta": "चमकदार मैजेंटा",
+    "customThemeBrightRed": "चमकदार लाल",
+    "customThemeBrightWhite": "चमकदार सफेद",
+    "customThemeBrightYellow": "चमकदार पीला",
+    "customThemeColors": "कस्टम रंग",
+    "customThemeCursor": "कर्सर",
+    "customThemeCursorAccent": "कर्सर एक्सेंट",
+    "customThemeCyan": "सियान",
+    "customThemeForeground": "अग्रभूमि",
+    "customThemeGreen": "हरा",
+    "customThemeMagenta": "मैजेंटा",
+    "customThemeRed": "लाल",
+    "customThemeResetTooltip": "डिफ़ॉल्ट पर रीसेट करें",
+    "customThemeSelection": "चयन",
+    "customThemeWhite": "सफेद",
+    "customThemeYellow": "पीला",
+    "deleteGlobalThemeTooltip": "इस थीम को हटाएँ",
+    "docsLink": "दस्तावेज़ देखें",
+    "enableAutoMosh": "ऑटो-मोश सक्षम करें",
+    "enableAutoMoshDesc": "यदि उपलब्ध हो तो SSH के बजाय Mosh को प्राथमिकता दें",
+    "enableAutoTmux": "ऑटो-tmux सक्षम करें",
+    "enableAutoTmuxDesc": "अपने शेल और उसमें चल रहे किसी भी चीज़ को डिस्कनेक्ट होने और ब्राउज़र के रीस्टार्ट होने पर भी चालू रखने के लिए, tmux के अंदर चलाएँ (होस्ट पर tmux इंस्टॉल होना चाहिए)।",
+    "fastScrollModifier": "फास्ट स्क्रॉल मॉडिफ़ायर",
+    "fastScrollModifierLabel": "तेज़ स्क्रॉल संशोधक",
+    "fastScrollSensitivity": "फास्ट स्क्रॉल संवेदनशीलता",
+    "fastScrollSensitivityLabel": "तेज़ स्क्रॉल संवेदनशीलता",
+    "fontFamily": "फ़ॉन्ट परिवार",
+    "fontFamilyCustomHint": "किसी पहले से इंस्टॉल किए गए फॉन्ट को चुनें, या कस्टम चुनें और अपने सिस्टम पर पहले से इंस्टॉल किए गए फॉन्ट का नाम लिखें (जैसे MesloLGS NF, Noto Sans Mono)। Termix आपके लिए फॉन्ट इंस्टॉल नहीं कर सकता, इसलिए पहले इसे अपने ऑपरेटिंग सिस्टम पर इंस्टॉल करें।",
+    "fontFamilyCustomOption": "रिवाज़...",
+    "fontFamilyCustomPlaceholder": "फ़ॉन्ट का सटीक नाम, उदाहरण के लिए MesloLGS NF",
+    "fontFamilyLabel": "फ़ॉन्ट परिवार",
+    "fontSize": "फ़ॉन्ट आकार",
+    "fontSizeLabel": "फ़ॉन्ट आकार",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "letterSpacing": "अक्षर अंतराल",
+    "letterSpacingPx": "अक्षर अंतराल (px)",
+    "lineHeight": "पंक्ति ऊंचाई",
+    "lineHeightLabel": "पंक्ति ऊंचाई",
+    "linkClickBehaviorConfirm": "खोलने या कॉपी करने के लिए पॉपअप दिखाएं",
+    "linkClickBehaviorDefault": "डिफ़ॉल्ट (ऐप सेटिंग का अनुसरण करें)",
+    "linkClickBehaviorDesc": "टर्मिनल में लिंक क्लिक करने पर क्या होता है यह नियंत्रित करता है। ऐप-स्तरीय सेटिंग का अनुसरण करने के लिए 'डिफ़ॉल्ट' का उपयोग करें।",
+    "linkClickBehaviorDirect": "सीधे खोलें",
+    "linkClickBehaviorLabel": "लिंक क्लिक व्यवहार",
+    "loadingHost": "होस्ट लोड हो रहा है...",
+    "localEchoAuto": "स्वचालित",
+    "localEchoDefault": "वैश्विक सेटिंग का उपयोग करें",
+    "localEchoDesc": "धीमे कनेक्शन पर स्थानीय रूप से सुरक्षित और प्रिंट करने योग्य कीस्ट्रोक्स का अनुमान लगाएं। पासवर्ड प्रॉम्प्ट और नियंत्रण इनपुट कभी भी प्रदर्शित नहीं होते हैं।",
+    "localEchoLabel": "स्थानीय प्रतिध्वनि",
+    "localEchoOff": "बंद",
+    "localEchoOn": "हमेशा बने रहें",
+    "macOptionIsMetaLabel": "विकल्प कुंजी मेटा भेजती है",
+    "macOptionIsMetaShortDesc": "macOS पर Option/Alt कुंजी के साथ विशेष वर्ण (जैसे @ या |) टाइप करने को अक्षम करें, Meta भेजने के बजाय",
+    "moshCommand": "MOSH कमांड",
+    "moshCommandLabel": "Mosh कमांड",
+    "noSavedThemes": "अभी तक कोई थीम सेव नहीं की गई है",
+    "none": "कोई नहीं",
+    "rightClickSelectsWord": "राइट क्लिक शब्द चयन",
+    "rightClickSelectsWordLabel": "राइट-क्लिक शब्द चुनता है",
+    "rightClickSelectsWordShortDesc": "राइट-क्लिक पर कर्सर के नीचे का शब्द चुनें",
+    "saveAsGlobalTheme": "वैश्विक थीम के रूप में सहेजें",
+    "saveGlobalThemeError": "थीम सहेजने में विफल",
+    "saveGlobalThemeNamePrompt": "इस थीम के लिए एक नाम दर्ज करें",
+    "saveGlobalThemeSuccess": "थीम सहेजी गई",
+    "savedThemesLabel": "सहेजे गए विषय",
+    "scrollbackBufferLabel": "स्क्रॉलबैक बफ़र",
+    "scrollbackMaxLines": "इतिहास में रखी जाने वाली लाइनों की अधिकतम संख्या",
+    "sudoPasswordAutoFill": "sudo पासवर्ड ऑटो-फिल",
+    "sudoPasswordAutoFillDesc": "sudo पासवर्ड संग्रहीत करें ताकि होस्ट मेट्रिक्स, टर्मिनल संकेत और अन्य स्वचालित रूप से विशेषाधिकार प्राप्त कमांड चला सकें।",
+    "sudoPasswordAutoFillLabel": "sudo पासवर्ड स्वतः-भरण",
+    "syntaxCategoryIpAddresses": "IP पते",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "लॉग स्तर",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "लेबल की गई संख्याएँ",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "फ़ाइल पथ",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "समय-चिह्न",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "टर्मिनल आउटपुट को रंगीन करें (त्रुटियाँ, पथ, IP, समय-चिह्न)",
+    "syntaxHighlightingLabel": "सिंटैक्स हाइलाइटिंग",
+    "terminalAppearance": "टर्मिनल स्वरूप",
+    "theme": "थीम",
+    "themePreview": "थीम पूर्वावलोकन",
+    "useSSHTitleDesc": "टैब शीर्षक को होस्ट नाम के बजाय शेल की विंडो शीर्षक से अपडेट करें",
+    "useSSHTitleLabel": "SSH विंडो शीर्षक का उपयोग करें"
+  },
+  "nav": {
+    "history": "इतिहास",
+    "localTerminal": "स्थानीय टर्मिनल",
+    "sshTools": "SSH टूल्स",
+    "terminal": "टर्मिनल",
+    "macros": "मैक्रो"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "कीस्ट्रोक्स प्रसारित करने के लिए यहाँ टाइप करें...",
+    "copyOnSelect": "चयनित टेक्स्ट को स्वचालित रूप से कॉपी करें",
+    "enableRightClickCopyPaste": "राइट-क्लिक कॉपी/पेस्ट सक्षम करें",
+    "fillPassword": "पासवर्ड भरें",
+    "fillPasswordMissing": "{{count}} चयनित टर्मिनल(ों) के लिए कोई सहेजा गया पासवर्ड नहीं",
+    "fillPasswordSuccess": "{{count}} टर्मिनल(ों) में पासवर्ड भरा गया",
+    "keyRecordingTitle": "की रिकॉर्डिंग",
+    "noTerminalTabsOpen": "कोई टर्मिनल टैब खुला नहीं",
+    "recordToTerminals": "टर्मिनलों में रिकॉर्ड करें",
+    "selectAll": "सभी",
+    "selectNone": "कोई नहीं",
+    "selectTerminalsAbove": "ऊपर के टर्मिनल चुनें",
+    "settingsTitle": "सेटिंग्स",
+    "startRecording": "रिकॉर्डिंग शुरू करें",
+    "stopRecording": "रिकॉर्डिंग रोकें"
+  },
+  "terminalDefaults": {
+    "clearAll": "सभी साफ करें",
+    "description": "ऐसे मान निर्धारित करें जिन्हें प्रत्येक होस्ट विरासत में प्राप्त करेगा, जब तक कि वह उन्हें ओवरराइड न कर दे।",
+    "dialogDescription": "ये नियम उन होस्ट पर लागू होते हैं जो कोई सेटिंग नहीं छोड़ते हैं। होस्ट पर जो भी सेटिंग सेट होती है, वही मान्य होती है।",
+    "inherit": "इनहेरिट",
+    "manage": "प्रबंधित करना",
+    "off": "बंद",
+    "on": "पर",
+    "title": "कनेक्शन डिफ़ॉल्ट"
+  },
+  "keybindings": {
+    "copy": "चयन की प्रतिलिपि बनाएँ",
+    "paste": "पेस्ट करें",
+    "sendControlCode": "Ctrl+अक्षर सिग्नल भेजें",
+    "sendText": "संदेश भेजें",
+    "controlCodeLabel": "पत्र",
+    "textLabel": "भेजने के लिए संदेश",
+    "appendEnterLabel": "भेजने के बाद एंटर दबाएँ",
+    "clipboardPermissionNote": "कुछ ब्राउज़रों में पहली बार उपयोग करने पर क्लिपबोर्ड की अनुमति मांगी जा सकती है।",
+    "textRequired": "भेजने के लिए टेक्स्ट दर्ज करें",
+    "controlCodeRequired": "नियंत्रण कोड के लिए एक अक्षर दर्ज करें"
+  },
+  "macros": {
+    "title": "मैक्रो",
+    "description": "टर्मिनल में सहेजे गए कमांडों की एक श्रृंखला चलाएं, और सर्वर द्वारा वापस भेजे गए कमांडों पर प्रतिक्रिया दें।",
+    "target": "लक्ष्य",
+    "noTerminal": "कोई टर्मिनल खुला नहीं है",
+    "empty": "अभी तक कोई मैक्रो नहीं है",
+    "emptyHint": "लॉग इन करना, किसी सेवा को रीस्टार्ट करना या प्रॉम्प्ट का जवाब देना जैसे टर्मिनल कार्यों को स्वचालित करने के लिए एक मैक्रो बनाएं।",
+    "create": "नया मैक्रो",
+    "back": "मैक्रोज़ पर वापस जाएँ",
+    "name": "नाम",
+    "namePlaceholder": "वेब सर्वर को पुनः आरंभ करें",
+    "nameRequired": "मैक्रो को सेव करने से पहले उसे एक नाम दें।",
+    "descriptionLabel": "विवरण",
+    "descriptionPlaceholder": "यह मैक्रो क्या करता है (वैकल्पिक)",
+    "unsaved": "असहेजित परिवर्तन",
+    "save": "बचाना",
+    "saved": "मैक्रो सहेजा गया",
+    "saveFailed": "मैक्रो को सहेजा नहीं जा सका",
+    "delete": "मिटाना",
+    "deleteTitle": "क्या इस मैक्रो को हटा दें?",
+    "deleteBody": "\"{{name}}\" को स्थायी रूप से हटा दिया जाएगा। इसे पूर्ववत नहीं किया जा सकता है।",
+    "deleted": "मैक्रो हटा दिया गया",
+    "cancel": "रद्द करना",
+    "run": "दौड़ना",
+    "stop": "रुकना",
+    "running": "दौड़ना...",
+    "completed": "मैक्रो समाप्त हो गया",
+    "failed": "मैक्रो विफल रहा",
+    "loadFailed": "मैक्रो लोड नहीं हो सके",
+    "needTerminal": "सबसे पहले एक टर्मिनल खोलें और उससे कनेक्ट करें।",
+    "noSteps": "इस मैक्रो में अभी तक कोई चरण नहीं है। कृपया नीचे एक चरण जोड़ें।",
+    "addStep": "चरण जोड़ें",
+    "stepNumber": "चरण {{number}}",
+    "removeStep": "चरण हटाएँ",
+    "confirmRunTitle": "क्या आप इस मैक्रो को चलाना चाहते हैं?",
+    "confirmRunBody": "\"{{name}}\" {{host}} को कमांड भेजेगा।",
+    "confirmRunAction": "मैक्रो चलाएँ",
+    "stepTypes": {
+      "send": {
+        "label": "कमांड भेजें",
+        "help": "यह टर्मिनल में ठीक उसी तरह टेक्स्ट टाइप करता है जैसे आप उसे खुद टाइप करते हैं।"
+      },
+      "wait": {
+        "label": "आउटपुट की प्रतीक्षा करें",
+        "help": "यह तब तक रुका रहता है जब तक सर्वर आपके द्वारा बताए गए टेक्स्ट को प्रिंट नहीं कर देता, जैसे पासवर्ड प्रॉम्प्ट।"
+      },
+      "delay": {
+        "label": "विराम",
+        "help": "अगले चरण से पहले एक निश्चित समय तक प्रतीक्षा करता है।"
+      },
+      "if": {
+        "label": "यदि आउटपुट में शामिल है",
+        "help": "यह सर्वर द्वारा अब तक प्रिंट की गई हर चीज़ की जाँच करता है, फिर दो शाखाओं में से एक को चलाता है।"
+      },
+      "repeat": {
+        "label": "दोहराना",
+        "help": "इसके अंदर के चरणों को निर्धारित संख्या में बार-बार दोहराता है।"
+      }
+    },
+    "send": {
+      "text": "आदेश या पाठ",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "भेजने के बाद एंटर दबाएँ",
+      "pressEnterHelp": "इसे बंद करने पर आपको टेक्स्ट टाइप करने के बाद उसे सबमिट करने की आवश्यकता नहीं होगी।"
+    },
+    "wait": {
+      "pattern": "आउटपुट में यह जानकारी आने तक प्रतीक्षा करें",
+      "patternPlaceholder": "पासवर्ड:",
+      "timeout": "हार मान लो",
+      "onTimeout": "अगर यह कभी प्रकट नहीं होता",
+      "stop": "मैक्रो को रोकें",
+      "continue": "फिर भी आगे बढ़ते रहो।"
+    },
+    "delay": {
+      "duration": "के लिए प्रतीक्षा करें"
+    },
+    "ifStep": {
+      "pattern": "यदि आउटपुट में शामिल है",
+      "patternPlaceholder": "सक्रिय: सक्रिय (चल रहा)",
+      "then": "फिर ऐसा करें",
+      "else": "अन्यथा ऐसा करें",
+      "emptyBranch": "कोई कदम नहीं"
+    },
+    "repeat": {
+      "count": "कितनी बार",
+      "times": "टाइम्स"
+    },
+    "match": {
+      "useRegex": "नियमित अभिव्यक्ति के साथ मिलान करें",
+      "useRegexHelp": "इसे हटा दें ताकि यह लिखे गए पाठ से बिल्कुल मेल खाए।",
+      "invalidRegex": "यह एक मान्य रेगुलर एक्सप्रेशन नहीं है, इसे सादे टेक्स्ट के रूप में ही माना जाएगा।"
+    },
+    "seconds": "सेकंड",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "रिमोट सर्वर आवश्यक है। इस कनेक्शन प्रकार का उपयोग करने के लिए सेटिंग्स में जाकर रिमोट सर्वर कनेक्ट करें।"
   }
 }

@@ -63,6 +63,36 @@ describe(`${manifest.id} activate`, () => {
     );
   });
 
+  it("duplicates only the SSH connection configuration into a fresh tab", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    const host = { id: 7, name: "server", ip: "192.0.2.1", port: 22 };
+    expect(rendered.registered.slot("tab.menu")).toContain(
+      "terminal.duplicateTab",
+    );
+    await rendered.app.invokeAction("terminal.duplicateTab", undefined, {
+      id: "old-tab",
+      type: "terminal",
+      host,
+      instanceId: "old-instance",
+      data: { initialPath: "/tmp", joinSharedSessionId: "shared-session" },
+    });
+    expect(rendered.shellCalls).toEqual([
+      {
+        method: "openTab",
+        args: [
+          { ...host, pluginSettings: {} },
+          "terminal",
+          { forceNewTab: true },
+        ],
+      },
+    ]);
+    await rendered.app.invokeAction("terminal.duplicateTab", undefined, {
+      id: "local",
+      type: "local-terminal",
+    });
+    expect(rendered.shellCalls).toHaveLength(1);
+  });
+
   it("owns the host editor's Terminal tab in the SSH group", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.hostEditorSections()).toEqual(["terminal"]);
@@ -103,5 +133,65 @@ describe(`${manifest.id} activate`, () => {
         run: true,
       }),
     ).resolves.toBe(false);
+  });
+
+  it("owns the SSH Tools panel and its rail item", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.panels()).toContain("ssh-tools");
+    expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+      "ssh-tools",
+    );
+  });
+
+  it("registers its settings components", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.settingsComponents()).toEqual(
+      expect.arrayContaining(["touchInput", "imageStorageTest"]),
+    );
+    // Terminal defaults are host defaults now, set in the host editor.
+    expect(rendered.registered.settingsComponents()).not.toContain(
+      "terminalDefaults",
+    );
+  });
+
+  it("offers the terminal look to other plugins through actions", async () => {
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: {
+        get: async () => ({ data: { user: { terminalDefaults: {} } } }),
+      } as never,
+    });
+    const look = (await rendered.app.invokeAction("terminal.resolveTheme", {
+      host: {
+        id: "1",
+        name: "h",
+        ip: "10.0.0.1",
+        port: 22,
+        pluginSettings: {
+          "ssh-terminal": { inheritAppearance: false, theme: "dracula" },
+        },
+      },
+      appTheme: "dark",
+    })) as { themeId: string; colors: { background: string } };
+    expect(look.themeId).toBe("dracula");
+    expect(look.colors.background).toBe("#282a36");
+
+    const themes = (await rendered.app.invokeAction("terminal.themes")) as {
+      id: string;
+    }[];
+    expect(themes.map((theme) => theme.id)).toContain("dracula");
+    expect(themes.map((theme) => theme.id)).not.toContain("termixDark");
+  });
+
+  it("adds the terminal font faces while active and removes them on deactivate", async () => {
+    const app = await renderWithApp(plugin, { manifest, locales });
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).not.toBeNull();
+    await app.deactivate();
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).toBeNull();
   });
 });

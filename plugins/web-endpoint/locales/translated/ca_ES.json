@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Permetre certificat no vàlid",
     "webUiIgnoreCertDesc": "Només punts finals directes. El bucle ja està exempt, per tant, això no té cap efecte sobre els punts finals del túnel.",
     "webUiRemoveEndpoint": "Elimina el punt final",
-    "webUiOpenFailed": "No s'ha pogut obrir el punt final web."
+    "webUiOpenFailed": "No s'ha pogut obrir el punt final web.",
+    "bindHost": "Vincula l'amfitrió"
   }
 }

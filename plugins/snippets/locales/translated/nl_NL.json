@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Uitvoeren \"{{name}}\"",
+  "variablesDialogDescription": "Vul de waarden in die dit codefragment nodig heeft voordat je het uitvoert.",
+  "variablesPreviewLabel": "Voorbeeld",
+  "variablesConfirmButton": "Loop",
+  "keybindings": {
+    "runSnippet": "Voer het bestaande codefragment uit.",
+    "snippetLabel": "Fragment",
+    "selectSnippet": "Selecteer een fragment",
+    "snippetMissing": "fragment niet gevonden",
+    "snippetRequired": "Selecteer een fragment"
+  },
+  "paletteHintRun": "Voer dit uit in het actieve terminaltabblad.",
+  "host": {
+    "startupTitle": "Opstartfragment",
+    "quickActionsTitle": "Snelle acties",
+    "quickActionsDescription": "Snelle acties verschijnen als knoppen in de Host Metrics-werkbalk, zodat u opdrachten met één klik kunt uitvoeren.",
+    "noQuickActions": "Nog geen snelle acties ondernomen.",
+    "buttonLabel": "Knoplabel",
+    "selectSnippet": "Selecteer fragment...",
+    "addQuickAction": "Actie toevoegen"
+  },
+  "quickActions": {
+    "running": "Het uitvoeren van {{name}}...",
+    "succeeded": "{{name}} succesvol voltooid",
+    "failed": "{{name}} mislukt",
+    "error": "Het uitvoeren van {{name}} is mislukt."
+  }
+}

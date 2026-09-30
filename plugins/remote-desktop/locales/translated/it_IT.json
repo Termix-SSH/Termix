@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Rete virtuale",
-    "unencryptedShell": "Shell non crittografata"
+    "unencryptedShell": "Shell non crittografata",
+    "docsLink": "Visualizza documentazione"
   },
   "onboarding": {
     "feature_desktop": "Desktop remoto",
@@ -274,5 +275,8 @@
         "label": "URL guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "È necessario un server remoto. Per utilizzare questo tipo di connessione, collega un server remoto nelle Impostazioni."
   }
 }

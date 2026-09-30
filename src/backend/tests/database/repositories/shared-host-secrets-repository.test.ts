@@ -31,10 +31,13 @@ describe("SharedHostSecretsRepository", () => {
       INSERT INTO ssh_credentials (id, user_id, name, username, auth_type) VALUES
         (123, 'user-1', 'cred-123', 'root', 'password'),
         (124, 'user-1', 'cred-124', 'root', 'password');
-      INSERT INTO ssh_data (id, user_id, name, ip, port, username, credential_id, rdp_credential_id, auth_type)
-      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 'password'),
-        (43, 'owner-1', 'staging', '10.0.0.43', 22, 'root', NULL, NULL, 'password'),
-        (44, 'owner-2', 'other', '10.0.0.44', 22, 'root', 123, NULL, 'password');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, credential_id, auth_type)
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 'password'),
+        (43, 'owner-1', 'staging', '10.0.0.43', 22, 'root', NULL, 'password'),
+        (44, 'owner-2', 'other', '10.0.0.44', 22, 'root', 123, 'password');
+      INSERT INTO host_protocol_auth (host_id, user_id, protocol, auth_type, credential_id)
+      VALUES (42, 'owner-1', 'spice', 'credential', 124),
+        (43, 'owner-1', 'spice', 'direct', NULL);
       INSERT INTO host_access (id, host_id, user_id, role_id, granted_by)
       VALUES
         (1, 42, 'user-1', NULL, 'owner-1'),

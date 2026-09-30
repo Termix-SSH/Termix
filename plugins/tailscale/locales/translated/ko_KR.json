@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "인증하려면 브라우저를 여세요",
     "tailscaleCheckWaiting": "Tailscale 인증을 기다리는 중...",
     "tailscaleCheckTimeout": "Tailscale 인증 시간이 초과되었습니다. 다시 시도해 주세요."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "터미널에 연결",
+        "usernameLabel": "사용자 이름"
+      }
+    }
   }
 }

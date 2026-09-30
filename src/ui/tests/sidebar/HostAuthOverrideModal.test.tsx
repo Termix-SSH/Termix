@@ -49,7 +49,7 @@ const host = {
       ownerAuthShared: false,
     },
   },
-} as Host;
+} as unknown as Host;
 
 beforeEach(() => {
   api.getCredentials.mockReset();

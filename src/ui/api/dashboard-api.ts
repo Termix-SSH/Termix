@@ -12,7 +12,7 @@ export interface UptimeInfo {
 export interface RecentActivityItem {
   id: number;
   userId: string;
-  /** Core records file_manager and tunnel; plugin tabs record their own. */
+  /** The activity type; each plugin records its own. */
   type: string;
   hostId: number;
   hostName: string;

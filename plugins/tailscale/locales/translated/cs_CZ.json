@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Otevřít prohlížeč pro ověření",
     "tailscaleCheckWaiting": "Čekání na ověření Tailscale...",
     "tailscaleCheckTimeout": "Časový limit pro ověřování Tailscale vypršel. Zkuste to prosím znovu."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Připojení k terminálu",
+        "usernameLabel": "Uživatelské jméno"
+      }
+    }
   }
 }

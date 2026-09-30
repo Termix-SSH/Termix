@@ -68,10 +68,9 @@ export function PanePreview({
 
   // The host's own authType travels in the spread, so a Tailscale host still
   // gets the Tailscale-aware PTY path. The SSH port may be non-standard.
-  const hostRecord = host as unknown as Record<string, unknown>;
-  const resolvedPort = hostRecord.sshPort ?? hostRecord.port;
+  const resolvedPort = host.sshPort ?? host.port;
   const terminalHostConfig = {
-    ...hostRecord,
+    ...host,
     port: resolvedPort,
     sshPort: resolvedPort,
     instanceId: instanceIdRef.current,

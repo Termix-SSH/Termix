@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Spazi di lavoro",
     "workflow_workspaces_desc": "Salva le schede aperte e riapri l'intero layout in seguito."
+  },
+  "hosts": {
+    "docsLink": "Visualizza documentazione"
   }
 }

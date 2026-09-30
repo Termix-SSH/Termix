@@ -6,6 +6,10 @@
  * a second ssh2 would mean a second set of native bindings. A plugin may
  * depend on anything outside these lists, and that does get bundled.
  *
+ * A plugin lists the ones it uses as peerDependencies. Only add a package here
+ * when core itself ships it; a library one plugin needs belongs in that
+ * plugin's own dependencies, so it can update without a core release.
+ *
  * Node builtins are external automatically through platform: "node".
  */
 
@@ -18,9 +22,6 @@ export const BACKEND_EXTERNALS = [
   "multer",
   "cookie-parser",
   "axios",
-  "jszip",
-  "guacamole-lite",
-  "@anthropic-ai/sdk",
   "drizzle-orm",
   "drizzle-orm/*",
   // Native image processing, loaded on first use by the terminal's image upload.

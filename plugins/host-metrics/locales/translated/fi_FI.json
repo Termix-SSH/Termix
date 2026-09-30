@@ -51,10 +51,6 @@
     "processesRunning": "juokseminen",
     "loginStats": "SSH-kirjautumistilastot",
     "noRecentLoginData": "Ei viimeaikaisia kirjautumistietoja",
-    "executingQuickAction": "Suoritetaan {{name}}...",
-    "quickActionSuccess": "{{name}} suoritettu onnistuneesti",
-    "quickActionFailed": "{{name}} epäonnistui",
-    "quickActionError": "Suoritus epäonnistui {{name}}",
     "ports": {
       "title": "Kuunteluportit",
       "protocol": "Protokolla",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Lisätä",
     "visibleWidgets": "Näkyvät widgetit",
     "widgetsMovedToHostMetrics": "Kortteja lisätään, järjestetään ja niiden kokoa muutetaan nyt suoraan Isännän mittarit -välilehdellä. Avaa tämän isännän Isännän mittarit ja valitse näytettävät kortit Mukauta-toiminnolla.",
-    "quickActionsLabel": "Pikatoiminnot",
-    "quickActionsToolbar": "Pikatoiminnot näkyvät painikkeina isäntämetriikkatyökalurivillä komentojen suorittamista varten yhdellä napsautuksella.",
-    "noQuickActions": "Ei vielä nopeita toimia.",
-    "buttonLabel": "Painikkeen nimi",
-    "selectSnippetPlaceholder": "Valitse katkelma...",
-    "addActionBtn": "Lisää toiminto",
     "hostNotFound": "Isäntää ei löydy",
     "loadingHost": "Ladataan isäntää..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Levy"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Peruuttaa",
-        "confirmRunButton": "Juokse",
-        "confirmRunMessage": "Suorittaa \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Yhdistetty"

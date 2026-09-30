@@ -1,4 +1,5 @@
 import type { Client } from "ssh2";
+import type { PluginHostUpdateInput } from "@termix/plugin-sdk/backend";
 import { execCommand } from "@termix/plugin-sdk/host-commands";
 import { getTool } from "./catalog.js";
 import type { ToolDeps } from "./types.js";
@@ -93,7 +94,7 @@ export async function applyProposal(
       const hostId = requireNumber(payload.hostId, "hostId");
       const changes = (payload.changes ?? {}) as Record<string, unknown>;
 
-      const updates: Record<string, unknown> = {};
+      const updates: PluginHostUpdateInput = {};
       if (changes.name !== undefined)
         updates.name = requireString(changes.name, "name");
       if (changes.ip !== undefined)

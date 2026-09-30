@@ -92,6 +92,13 @@ function ProxmoxStatsStandalone({ hostId }: StandaloneViewProps) {
   return <ProxmoxStatsApp hostId={hostId} />;
 }
 
+/** This plugin's host settings, as they arrive on the host record. */
+export function proxmoxSettings(
+  host: Pick<PluginHostRecord, "pluginSettings">,
+): Record<string, unknown> {
+  return host.pluginSettings?.proxmox ?? {};
+}
+
 export function activate(app: TermixApp): void {
   setProxmoxApp(app);
   app.onDispose(() => setProxmoxApp(null));
@@ -136,7 +143,7 @@ export function activate(app: TermixApp): void {
     return (
       <DropdownMenuItem
         onClick={() => openDiscover({})}
-        disabled={!hosts.some((host) => host.enableProxmox)}
+        disabled={!hosts.some((host) => proxmoxSettings(host).enableProxmox)}
       >
         <Server className="size-3.5 mr-2" />
         {t("hosts.proxmoxImportTitle")}
@@ -166,9 +173,9 @@ export function activate(app: TermixApp): void {
     icon: Boxes,
     kind: "open",
     order: 90,
-    when: (host) => !!host.enableProxmox,
+    when: (host) => !!proxmoxSettings(host).enableProxmox,
     run: (host) => {
-      const config = host.proxmoxConfig as
+      const config = proxmoxSettings(host).proxmoxConfig as
         | { defaultCredentialId?: number | null; defaultAuthType?: string }
         | undefined;
       openDiscover({
@@ -205,6 +212,6 @@ export function activate(app: TermixApp): void {
     order: 60,
     tabType: "proxmox-stats",
     copyUrlView: "proxmox-stats",
-    when: (host) => host.enableProxmoxStats === true,
+    when: (host) => proxmoxSettings(host).enableProxmoxStats === true,
   });
 }

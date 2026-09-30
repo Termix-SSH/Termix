@@ -25,7 +25,6 @@ function host(id: string, name: string): Host {
     authType: "password",
     pin: false,
     enableSsh: true,
-    quickActions: [],
   } as Host;
 }
 

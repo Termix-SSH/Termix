@@ -69,7 +69,6 @@ const baseHost: Host = {
   enableRdp: true,
   enableVnc: true,
   enableTelnet: true,
-  quickActions: [],
 } as unknown as Host;
 
 const noop = () => {};
@@ -185,6 +184,30 @@ describe("HostItem density parity", () => {
     (density) => {
       renderHostItem(density);
       expect(screen.getByTitle("nav.copyPassword")).toBeTruthy();
+    },
+  );
+
+  it.each(["hover", "click", "always", "actionsOnly"] as const)(
+    "keeps the compact host address visible with %s actions",
+    (trayTrigger) => {
+      const props = {
+        host: baseHost,
+        onOpenTab: noop,
+        onDelete: noop,
+        onDuplicate: noop,
+        density: "compact" as const,
+        trayTrigger,
+      };
+      const { rerender } = render(<HostItem {...props} />);
+      expect(screen.getByText(baseHost.ip).classList.contains("hidden")).toBe(
+        false,
+      );
+      rerender(<HostItem {...props} isHovered />);
+      expect(screen.getByText(baseHost.ip).classList.contains("hidden")).toBe(
+        false,
+      );
+      rerender(<HostItem {...props} isTrayOpen selectionMode />);
+      expect(screen.getAllByText(baseHost.ip)).toHaveLength(1);
     },
   );
 

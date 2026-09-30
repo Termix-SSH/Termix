@@ -382,7 +382,10 @@
     "defaultPathLabel": "Percorso predefinito",
     "fileManagerPathHint": "La directory da aprire all'avvio del file manager per questo host.",
     "fileManagerUrlCopied": "URL file manager copiato",
-    "copyFileManagerUrlAction": "Copia URL File Manager"
+    "copyFileManagerUrlAction": "Copia URL File Manager",
+    "docsLink": "Visualizza documentazione",
+    "hostNotFound": "Host non trovato",
+    "loadingHost": "Caricamento host..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "Modalità SCP legacy"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Trasferimenti simultanei di file",
+        "description": "Quanti file il gestore locale/remoto affiancato carica o scarica contemporaneamente. Riduci questo valore se il tuo server limita i canali SFTP."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "File"
+  },
+  "onboarding": {
+    "feature_files": "Gestore file",
+    "feature_files_desc": "Esplora, carica, scarica e modifica file tramite SFTP senza uscire dall'applicazione."
+  },
+  "terminal": {
+    "runTitle": "Esecuzione {{command}} - {{host}}",
+    "terminalTitle": "Terminale - {{host}}",
+    "terminalWithPath": "Terminale - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Sfoglia cartelle di destinazione",
+    "browsePathError": "Impossibile aprire questo percorso sull'host di destinazione.",
+    "browsePathWillBeCreated": "Questa cartella non esiste ancora. Verrà creata all'avvio del trasferimento.",
+    "cancel": "Annulla",
+    "cleanupDestFiles": "Pulisci destinazione",
+    "cleanupDestFilesError": "Pulizia fallita",
+    "cleanupDestFilesNothing": "Niente da pulire sulla destinazione",
+    "cleanupDestFilesPartial": "Alcuni file parziali non sono stati rimossi",
+    "cleanupDestFilesSuccess": "File parziali rimossi dalla destinazione",
+    "confirmCopy": "Copia",
+    "confirmMove": "Sposta",
+    "copyFolderToHost": "Copia cartella sull'host…",
+    "copyItemsToHost": "Copia {{count}} elementi su host…",
+    "copyToHost": "Copia su host…",
+    "destinationPath": "Percorso di destinazione",
+    "destMustBeDirectory": "La destinazione deve essere una directory per il trasferimento di più elementi",
+    "goUp": "Salire",
+    "hostAuthRequired": "Autenticazione richiesta — aprire prima File Manager su questo host",
+    "hostConnecting": "Connessione in corso…",
+    "hostConnectionFailed": "Connessione non riuscita",
+    "hostDisconnected": "Non connesso",
+    "hostReady": "Pronto",
+    "itemsSummary": "{{count}} elementi",
+    "jumpHostLimitation": "Entrambi gli host devono essere raggiungibili dal server Termix. Il routing diretto host-to-host non è supportato.",
+    "methodAuto": "Auto",
+    "methodAutoHint": "Sceglie tar o SFTP per file in base al numero, dimensione e comprimibilità dei file. I file singoli usano sempre SFTP in streaming.",
+    "methodItemSftp": "SFTP per file",
+    "methodItemSftpHint": "Trasferisce ogni file singolarmente tramite SFTP. Funziona su tutti gli host, incluso Windows.",
+    "methodItemSftpLimitation": "Ogni file utilizza lo stesso flusso SFTP come una copia di file singolo, uno dopo l'altro. L'avanzamento è combinato su tutti i file, quindi la barra si muove lentamente durante i file di grandi dimensioni.",
+    "methodLabel": "Metodo di trasferimento",
+    "methodPreviewError": "Impossibile visualizzare l'anteprima del metodo di trasferimento. Il server sceglierà comunque un metodo all'avvio.",
+    "methodPreviewLoading": "Calcolo del metodo di trasferimento…",
+    "methodPreviewScanSummary": "{{fileCount}} file, {{totalSize}} in totale (scansionati sull'host sorgente).",
+    "methodPreviewWillUseItemSftp": "Userà: SFTP per file",
+    "methodPreviewWillUseTar": "Userà: Archivio Tar",
+    "methodReason": {
+      "user_item_sftp": "Hai scelto SFTP per-file.",
+      "user_tar": "Hai scelto archivio tar.",
+      "tar_unavailable": "Tar non è disponibile su uno o entrambi gli host — verrà utilizzato SFTP per-file.",
+      "windows_host": "È coinvolto un host Windows — tar non viene utilizzato.",
+      "auto_multi_large": "Auto: più file, incluso un file grande ({{largestSize}}) con dati comprimibili — tar li raggruppa in un unico trasferimento.",
+      "auto_single_large_in_archive": "Auto: un file grande ({{largestSize}}) in questo set — SFTP per-file.",
+      "auto_many_incompressible": "Auto: dati per lo più incomprimibili — SFTP per-file.",
+      "auto_many_files": "Auto: molti file ({{fileCount}}) — tar riduce il sovraccarico per-file.",
+      "auto_default": "Auto: SFTP per-file per questo set."
+    },
+    "methodTar": "Archivio Tar",
+    "methodTarHint": "Comprime sul sorgente, trasferisce un archivio, estrae sulla destinazione. Richiede tar su entrambi gli host Unix.",
+    "metricsCompress": "Compressione sul sorgente: {{duration}}",
+    "metricsExtract": "Estrazione sulla destinazione: {{duration}}",
+    "metricsPrepare": "Prepara destinazione: {{duration}}",
+    "metricsRouteBenchmark": "Sondaggio di percorso — diretto: {{direct}}, relè: {{relay}}",
+    "metricsSourceDelete": "Rimozione dal sorgente: {{duration}}",
+    "metricsTotal": "Totale: {{duration}}",
+    "metricsTransfer": "End-to-end: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 verificato: {{duration}}",
+    "moveFolderToHost": "Sposta cartella sull'host…",
+    "moveItemsToHost": "Sposta {{count}} elementi sull'host…",
+    "moveToHost": "Sposta su host…",
+    "noHostsConnected": "Nessun altro host con File Manager disponibile.",
+    "noHostsConnectedHint": "Aggiungi un altro host SSH con File Manager abilitato nella Gestione Host.",
+    "parallelSegmentsHint": "I file di grandi dimensioni vengono suddivisi in blocchi da 256 MB. Più corsie utilizzano connessioni separate (come avviare più trasferimenti) per una maggiore velocità complessiva.",
+    "parallelSegmentsLabel": "Corsie di trasferimento parallele",
+    "parallelSegmentsOption": "{{count}} corsie",
+    "progressBenchmarking": "Selezione del percorso di trasferimento più veloce…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Annulla",
+    "progressCancelling": "Annullamento in corso…",
+    "progressCompressing": "Compressione sull'host sorgente…",
+    "progressExtracting": "Estrazione sulla destinazione…",
+    "progressItems": "{{current}} / {{total}} file",
+    "progressReconnecting": "Riconnessione…",
+    "progressStalled": "Bloccato",
+    "progressTotalSpeed": "{{speed}} totale ({{lanes}} corsie)",
+    "progressTransferring": "Trasferimento dati…",
+    "progressTransferringItems": "Trasferimento file ({{current}} di {{total}})…",
+    "progressVerifying": "Verifica dell'integrità del file…",
+    "recentDestinations": "Destinazioni recenti",
+    "resumedHint": "Riconnesso a un trasferimento attivo avviato in un'altra finestra.",
+    "retryTransfer": "Riprova",
+    "retryTransferError": "Riprova fallita",
+    "selectDestinationHost": "Seleziona host di destinazione",
+    "transferCancelled": "Trasferimento annullato",
+    "transferCancelledCopyHint": "Potrebbero rimanere file parziali sulla destinazione.",
+    "transferCancelledMoveHint": "Potrebbero rimanere file parziali sulla destinazione. I file sorgente non sono stati rimossi.",
+    "transferError": "Trasferimento non riuscito",
+    "transferFailedRetryHint": "I dati parziali sono stati conservati sulla destinazione. Il nuovo tentativo riprenderà quando la connessione sarà ripristinata.",
+    "transferPartialHint": "Impossibile trasferire: {{paths}}",
+    "transferSuccess": "Trasferimento completato"
   }
 }

@@ -213,7 +213,8 @@
     "tabVnc": "ভিএনসি",
     "tabTelnet": "টেলনেট",
     "virtualNetwork": "ভার্চুয়াল নেটওয়ার্ক",
-    "unencryptedShell": "এনক্রিপ্টবিহীন শেল"
+    "unencryptedShell": "এনক্রিপ্টবিহীন শেল",
+    "docsLink": "নথি দেখুন"
   },
   "onboarding": {
     "feature_desktop": "রিমোট ডেস্কটপ",
@@ -274,5 +275,8 @@
         "label": "guacd URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "রিমোট সার্ভার প্রয়োজন। এই সংযোগের ধরণটি ব্যবহার করতে সেটিংস-এ একটি রিমোট সার্ভার সংযুক্ত করুন।"
   }
 }

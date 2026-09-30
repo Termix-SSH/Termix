@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "composite": false,
+    "incremental": false
+  },
+  "files": ["src/vite-env.d.ts", "src/ui/plugin-host/sdk-ui.ts"],
+  "include": []
+}

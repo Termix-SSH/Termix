@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import { Activity, Server } from "lucide-react";
 import type {
-  HomepageWidgetContribution,
   HostEditorSectionProps,
   PluginHostRecord,
   StandaloneViewProps,
@@ -97,12 +96,11 @@ export async function activate(app: TermixApp): Promise<void> {
     titleKey: "hosts.tabHostMetrics",
     icon: Activity,
     order: 70,
+    defaults: true,
     component: MetricsHostSection,
   });
 
-  app.registerHomepageWidget(
-    metricsChartWidget as unknown as HomepageWidgetContribution,
-  );
+  app.registerExtension("homepage.widgets", metricsChartWidget);
 
   // Live CPU, memory and disk bars in the terminal toolbar's expanded view.
   app.registerSlotContribution("terminal.toolbarStatus", {
@@ -114,7 +112,7 @@ export async function activate(app: TermixApp): Promise<void> {
   });
 
   // The usage bars in the dashboard's host status card.
-  app.registerSlotContribution("dashboard.hostMetrics", {
+  app.registerSlotContribution("dashboard.hostRow", {
     actionId: "host-metrics.dashboardHost",
     titleKey: "nav.hostMetrics",
     kind: "component",
@@ -138,6 +136,12 @@ export async function activate(app: TermixApp): Promise<void> {
 
   app.declareActionSlot({
     id: "host-metrics.managers",
+    accepts: ["component"],
+  });
+  // Buttons before the toolbar's own controls, drawn with { hostId, host }.
+  // The snippets plugin puts a host's quick actions here.
+  app.declareActionSlot({
+    id: "host-metrics.toolbar",
     accepts: ["component"],
   });
 }

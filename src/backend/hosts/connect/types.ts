@@ -1,5 +1,6 @@
 import type { Client, ConnectConfig } from "ssh2";
 import type { WebSocket } from "ws";
+import type { HostSshOptions } from "../ssh-options.js";
 
 /**
  * What a connection is for, as a free label ("terminal", "metrics"). Auth
@@ -35,7 +36,7 @@ export interface SshConnectHost {
    */
   pluginSettings?: Record<string, Record<string, unknown>> | null;
   forceKeyboardInteractive?: boolean | null;
-  terminalConfig?: Record<string, unknown> | null;
+  sshOptions?: HostSshOptions | null;
   jumpHosts?: Array<{ hostId: number }> | null;
   useSocks5?: boolean | null;
   socks5Host?: string | null;

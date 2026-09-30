@@ -51,10 +51,6 @@
     "processesRunning": "in esecuzione",
     "loginStats": "Statistiche di accesso SSH",
     "noRecentLoginData": "Nessun dato di accesso recente",
-    "executingQuickAction": "Esecuzione di {{name}}...",
-    "quickActionSuccess": "{{name}} completato con successo",
-    "quickActionFailed": "{{name}} non riuscito",
-    "quickActionError": "Impossibile eseguire {{name}}",
     "ports": {
       "title": "Porte in ascolto",
       "protocol": "Protocollo",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Aggiungere",
     "visibleWidgets": "Widget visibili",
     "widgetsMovedToHostMetrics": "Le schede ora vengono aggiunte, disposte e ridimensionate direttamente nella scheda Metriche host. Apri Metriche host per questo host e usa Personalizza per scegliere quali schede mostrare.",
-    "quickActionsLabel": "Azioni Rapide",
-    "quickActionsToolbar": "Le azioni rapide appaiono come pulsanti nella barra delle metriche host per l'esecuzione di comandi con un clic.",
-    "noQuickActions": "Nessuna azione rapida ancora.",
-    "buttonLabel": "Etichetta pulsante",
-    "selectSnippetPlaceholder": "Seleziona snippet...",
-    "addActionBtn": "Aggiungi Azione",
     "hostNotFound": "Host non trovato",
     "loadingHost": "Caricamento host..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Disco"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Annulla",
-        "confirmRunButton": "Esegui",
-        "confirmRunMessage": "Eseguire \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Connesso"

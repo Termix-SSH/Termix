@@ -189,10 +189,6 @@ export const hosts = mysqlTable(
     keyType: text("key_type"),
     sudoPassword: text("sudo_password"),
 
-    autostartPassword: text("autostart_password"),
-    autostartKey: text("autostart_key"),
-    autostartKeyPassword: text("autostart_key_password"),
-
     credentialId: int("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     overrideCredentialUsername: boolean("override_credential_username"),
     jumpHosts: text("jump_hosts"),
@@ -201,30 +197,14 @@ export const hosts = mysqlTable(
       .default(true),
     statusCheckInterval: int("status_check_interval"),
     terminalConfig: text("terminal_config"),
+    // SSH connection options core's connect pipeline reads (keepalive,
+    // legacy algorithms, agent, environment). JSON.
+    sshOptions: text("ssh_options"),
     quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: boolean("enable_ssh").notNull().default(true),
 
     sshPort: int("ssh_port").default(22),
-
-    rdpCredentialId: int("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-    rdpUser: text("rdp_user"),
-    rdpPassword: text("rdp_password"),
-    rdpDomain: text("rdp_domain"),
-
-    vncCredentialId: int("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-    vncPassword: text("vnc_password"),
-    vncUser: text("vnc_user"),
-
-    telnetUser: text("telnet_user"),
-    telnetPassword: text("telnet_password"),
-    telnetCredentialId: int("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-
-    rdpAuthType: text("rdp_auth_type"),
-    vncAuthType: text("vnc_auth_type"),
-    telnetAuthType: text("telnet_auth_type"),
-
-    domain: text("domain"),
 
     useSocks5: boolean("use_socks5"),
     socks5Host: text("socks5_host"),
@@ -236,7 +216,7 @@ export const hosts = mysqlTable(
     // null = use the desktop app's global default; "local" | "remote" pins
     // this specific host's SSH/Docker-console/Serial connections to originate
     // from the embedded local backend or a connected remote sync server.
-    // Ignored for rdp/vnc/telnet, which always require the remote server.
+    // Ignored for plugin protocols, which always need the remote server.
     connectionOrigin: text("connection_origin"),
 
     portKnockSequence: text("port_knock_sequence"),
@@ -257,6 +237,11 @@ export const hosts = mysqlTable(
     // Desktop only: set on the read-only copy of a host someone shared with
     // the linked account. JSON with the share's owner and permission level.
     sharedSource: text("shared_source"),
+    // Which host default keys this host sets itself, per namespace, as JSON:
+    // {"core":["sshPort"],"<pluginId>":["key"]}. Null, or a missing
+    // namespace, means not classified yet. Every other key follows the
+    // defaults and its column holds the resolved value.
+    defaultOverrides: text("default_overrides"),
 
     createdAt: text("created_at")
       .notNull()
@@ -343,6 +328,45 @@ export const sshCredentialUsage = mysqlTable(
   ],
 );
 
+// A host's login for a protocol a plugin declares (contributes.protocols),
+// owned and encrypted like the host itself. `fields` holds the protocol's
+// non-secret declared fields as JSON, `secret_fields` its secret ones.
+export const hostProtocolAuth = mysqlTable(
+  "host_protocol_auth",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    protocol: varchar("protocol", { length: 255 }).notNull(),
+    authType: text("auth_type").notNull().default("direct"),
+    credentialId: int("credential_id").references(() => sshCredentials.id, {
+      onDelete: "set null",
+    }),
+    username: text("username"),
+    password: text("password"),
+    fields: text("fields"),
+    secretFields: text("secret_fields"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_host_protocol_auth_host_protocol").on(
+      table.hostId,
+      table.protocol,
+    ),
+    index("idx_host_protocol_auth_user").on(table.userId),
+    index("idx_host_protocol_auth_credential").on(table.credentialId),
+  ],
+);
+
 export const sshFolders = mysqlTable(
   "ssh_folders",
   {
@@ -369,6 +393,41 @@ export const sshFolders = mysqlTable(
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
   (table) => [index("idx_ssh_folders_user_id").on(table.userId)],
+);
+
+/**
+ * Host defaults at one level. A host follows the deepest level that sets a
+ * key: its folders (deepest first), then its owner, then the server, then the
+ * built-in value. `scope_key` is "admin", "u:<userId>" or "f:<folderId>", so
+ * the unique index holds for the admin level too.
+ */
+export const hostDefaults = mysqlTable(
+  "host_defaults",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    level: mysqlEnum("level", ["admin", "user", "folder"]).notNull(),
+    scopeKey: varchar("scope_key", { length: 255 }).notNull(),
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    folderId: int("folder_id").references(() => sshFolders.id, {
+      onDelete: "cascade",
+    }),
+    namespace: varchar("namespace", { length: 255 }).notNull(),
+    key: varchar("key", { length: 255 }).notNull(),
+    value: text("value"),
+    updatedBy: text("updated_by"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_host_defaults_scope_key").on(
+      table.scopeKey,
+      table.namespace,
+      table.key,
+    ),
+    index("idx_host_defaults_user").on(table.userId),
+    index("idx_host_defaults_folder").on(table.folderId),
+  ],
 );
 
 export const recentActivity = mysqlTable(
@@ -490,6 +549,8 @@ export const sharedHostSecrets = mysqlTable(
     encryptedKeyPassword: text("encrypted_key_password"),
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
+    // A plugin protocol's declared credential fields, JSON, encrypted.
+    encryptedFields: text("encrypted_fields"),
 
     createdAt: text("created_at")
       .notNull()

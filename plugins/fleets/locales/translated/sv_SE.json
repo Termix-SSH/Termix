@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Flottor"
+  },
+  "hosts": {
+    "docsLink": "Visa dokument",
+    "sharing": {
+      "customHoursPlaceholder": "Timmar tills åtkomsten upphör",
+      "expiry": {
+        "never": "Aldrig",
+        "oneHour": "1 timme",
+        "oneDay": "24 timmar",
+        "sevenDays": "7 dagar",
+        "thirtyDays": "30 dagar",
+        "custom": "Beställnings"
+      },
+      "expiryLabel": "Åtkomstutgång",
+      "levels": {
+        "connect": {
+          "label": "Ansluta",
+          "description": "Endast öppna sessioner: terminal, fjärrskrivbord, filhanterare, tunnlar och Docker. Ingen åtkomst till värdkonfigurationen."
+        },
+        "view": {
+          "label": "Se",
+          "description": "Anslut, plus se värdkonfigurationen. Hemligheter visas aldrig."
+        },
+        "edit": {
+          "label": "Redigera",
+          "description": "Visa och ändra inställningar för icke-autentiseringsvärdar. Ägarens SSH-autentisering förblir privat och endast för ägaren."
+        },
+        "manage": {
+          "label": "Hantera",
+          "description": "Redigera, plus dela värden med andra, ändra behörighetsnivåer och återkalla åtkomst."
+        }
+      },
+      "noMatches": "Inga träffar hittades",
+      "permissionLevelLabel": "Behörighetsnivå",
+      "rolesTab": "Roller",
+      "searchPlaceholder": "Sök användare eller roller...",
+      "shareButton": "Dela",
+      "shareWithCount": "Dela ({{count}})",
+      "usersTab": "Användare"
+    }
   }
 }

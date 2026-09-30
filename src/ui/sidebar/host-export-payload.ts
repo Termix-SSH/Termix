@@ -4,7 +4,6 @@ export type FieldGroup =
   | "tags"
   | "proxy"
   | "jumpHosts"
-  | "quickActions"
   | "featureFlags"
   | "advanced";
 
@@ -37,10 +36,14 @@ const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "socks5ProxyChain",
   ],
   jumpHosts: ["jumpHosts"],
-  quickActions: ["quickActions"],
   // Every plugin's host settings, enable switches included.
   featureFlags: ["pluginSettings", "forceKeyboardInteractive"],
-  advanced: ["statusCheckEnabled", "statusCheckInterval", "terminalConfig"],
+  advanced: [
+    "statusCheckEnabled",
+    "statusCheckInterval",
+    "terminalConfig",
+    "sshOptions",
+  ],
 };
 
 export const SECRET_KEYS = [
@@ -62,29 +65,42 @@ const CREDENTIAL_KEYS = [
 
 const TUPLE_KEYS = ["name", "ip", "port", "username", "connectionType"];
 
-const NESTED_SECRETS: { container: string; field: string }[] = [
-  { container: "guacamoleConfig", field: "gateway-password" },
-];
+/**
+ * Keys inside a plugin's JSON host settings that hold secrets, per plugin and
+ * field, from each manifest's `secretKeys`.
+ */
+export type PluginSecretKeys = Record<string, Record<string, string[]>>;
+
+/** Reads the secret keys the plugins declare in their host settings. */
+export function pluginSecretKeys(
+  summaries: Array<{
+    id: string;
+    contributes?: {
+      settings?: {
+        host?: { fields?: Array<{ key: string; secretKeys?: string[] }> };
+      };
+    } | null;
+  }>,
+): PluginSecretKeys {
+  const result: PluginSecretKeys = {};
+  for (const summary of summaries) {
+    for (const field of summary.contributes?.settings?.host?.fields ?? []) {
+      if (!field.secretKeys?.length) continue;
+      (result[summary.id] ??= {})[field.key] = field.secretKeys;
+    }
+  }
+  return result;
+}
 
 const NESTED_SECRET_ARRAYS: { container: string; field: string }[] = [
   { container: "socks5ProxyChain", field: "password" },
 ];
 
-function nestedSecret(
-  host: Record<string, unknown>,
-  container: string,
-  field: string,
-): Record<string, unknown> | null {
-  const blob = host[container];
-  if (!blob || typeof blob !== "object") return null;
-  const record = blob as Record<string, unknown>;
-  return field in record ? record : null;
-}
-
-/** Plugin host settings can carry the same nested secrets as the host. */
-function mapPluginSettings(
+/** Rewrites each declared secret inside a plugin's JSON host settings. */
+function mapPluginSecrets(
   pluginSettings: unknown,
-  apply: (values: Record<string, unknown>) => void,
+  secrets: PluginSecretKeys,
+  replace: (value: unknown) => unknown,
 ): unknown {
   if (!pluginSettings || typeof pluginSettings !== "object") {
     return pluginSettings;
@@ -94,7 +110,15 @@ function mapPluginSettings(
     pluginSettings as Record<string, unknown>,
   )) {
     const copy = { ...(values as Record<string, unknown>) };
-    apply(copy);
+    for (const [field, keys] of Object.entries(secrets[pluginId] ?? {})) {
+      const blob = copy[field];
+      if (!blob || typeof blob !== "object") continue;
+      const record = { ...(blob as Record<string, unknown>) };
+      for (const key of keys) {
+        if (key in record) record[key] = replace(record[key]);
+      }
+      copy[field] = record;
+    }
     perPlugin[pluginId] = copy;
   }
   return perPlugin;
@@ -109,6 +133,7 @@ export function buildExportPayload(
   selected: Set<string> | null,
   groups: Set<FieldGroup>,
   withCredentials: boolean,
+  pluginSecrets: PluginSecretKeys = {},
 ): ExportPayload {
   const allowed = new Set<string>([
     "exportId",
@@ -127,16 +152,10 @@ export function buildExportPayload(
         if (allowed.has(key)) shaped[key] = value;
       }
       if (!withCredentials) {
-        const clearNested = (target: Record<string, unknown>) => {
-          for (const { container, field } of NESTED_SECRETS) {
-            const record = nestedSecret(target, container, field);
-            if (record) target[container] = { ...record, [field]: null };
-          }
-        };
-        clearNested(shaped);
-        shaped.pluginSettings = mapPluginSettings(
+        shaped.pluginSettings = mapPluginSecrets(
           shaped.pluginSettings,
-          clearNested,
+          pluginSecrets,
+          () => null,
         );
         for (const { container, field } of NESTED_SECRET_ARRAYS) {
           const arr = shaped[container];
@@ -166,7 +185,10 @@ export function buildExportPayload(
   return result;
 }
 
-export function maskSecrets(payload: ExportPayload): ExportPayload {
+export function maskSecrets(
+  payload: ExportPayload,
+  pluginSecrets: PluginSecretKeys = {},
+): ExportPayload {
   return {
     ...payload,
     hosts: payload.hosts.map((host) => {
@@ -180,18 +202,10 @@ export function maskSecrets(payload: ExportPayload): ExportPayload {
           masked[key] = "<included>";
         }
       }
-      const maskNested = (target: Record<string, unknown>) => {
-        for (const { container, field } of NESTED_SECRETS) {
-          const record = nestedSecret(target, container, field);
-          if (record && record[field]) {
-            target[container] = { ...record, [field]: "<included>" };
-          }
-        }
-      };
-      maskNested(masked);
-      masked.pluginSettings = mapPluginSettings(
+      masked.pluginSettings = mapPluginSecrets(
         masked.pluginSettings,
-        maskNested,
+        pluginSecrets,
+        (value) => (value ? "<included>" : value),
       );
       for (const { container, field } of NESTED_SECRET_ARRAYS) {
         const arr = masked[container];

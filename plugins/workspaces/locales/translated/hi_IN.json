@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "कार्यस्थानों",
     "workflow_workspaces_desc": "खुले हुए टैबों के एक सेट को सेव करें और बाद में पूरे लेआउट को दोबारा खोलें।"
+  },
+  "hosts": {
+    "docsLink": "दस्तावेज़ देखें"
   }
 }

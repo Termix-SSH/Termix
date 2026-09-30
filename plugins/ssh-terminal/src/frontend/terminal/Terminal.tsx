@@ -27,10 +27,23 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
 import {
   deleteCommandFromHistory,
+  enableHostAutoTmux,
   getClientSettings,
   getCommandHistory,
   hostSetting,
 } from "../terminal-api";
+import { useTerminalSettings } from "../terminal-settings";
+import {
+  DEFAULT_TERMINAL_CONFIG,
+  TERMINAL_FONTS,
+  resolveTerminalFontFamily,
+} from "../look/terminal-themes";
+import { resolveTermixThemeColors } from "../look/terminal-theme";
+import { ensureTerminalFontsLoaded } from "../look/terminal-global-styles";
+import {
+  getNextTerminalFontSize,
+  getTerminalFontZoomDirection,
+} from "../look/terminal-font-zoom";
 import { TmuxSessionPicker } from "./TmuxSessionPicker";
 import { getTerminalBufferText } from "./terminal-buffer-text.ts";
 import { getMacLineNavigationSequence } from "../lib/mac-line-navigation";
@@ -61,7 +74,7 @@ import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { TerminalToolbar } from "./TerminalToolbar.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
-import type { Host, Snippet, TabType } from "../types";
+import type { Host, TabType } from "../types";
 import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
@@ -72,6 +85,7 @@ import {
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
 import {
   dispatchKeybindingAction,
+  isTerminalKeybindingAction,
   sendRawToSocket,
 } from "../lib/keybinding-dispatch";
 import {
@@ -90,10 +104,6 @@ import {
   PassphraseDialog,
   BrowserSignInDialog,
   HostKeyVerificationDialog,
-  DEFAULT_TERMINAL_CONFIG,
-  TERMINAL_FONTS,
-  resolveTerminalFontFamily,
-  ensureTerminalFontsLoaded,
   useAppTheme as useTheme,
   globalShortcutHandler,
   isTabJumpHotkey,
@@ -103,27 +113,24 @@ import {
   useConnectionLog,
   ConnectionScreen,
   Button,
-  resolveTermixThemeColors,
-  getNextTerminalFontSize,
-  getTerminalFontZoomDirection,
   hydrateLocalSharedHostAuth,
   findMatchingKeybinding,
-  SnippetVariablesDialog,
   type CustomKeybinding,
-  useConnectionDefaults,
   isElectron,
 } from "@termix/plugin-sdk/ui";
 import {
+  notifyHostsChanged,
   useTranslation,
   invokeAction,
   usePluginApi,
   useSlotContributions,
   getCustomKeybindings,
+  runKeybindingAction,
   getClientPreference,
   logActivity,
   getHostPassword,
   patchOpenTab,
-  setHostAutoTmux,
+  useHost,
 } from "@termix/plugin-sdk/frontend";
 
 type HostKeyVerificationData = Omit<
@@ -205,7 +212,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
     const { addLog } = useConnectionLog();
-    const { terminal: terminalDefaults } = useConnectionDefaults();
+    // An embedded terminal (a widget, another plugin's window) gets only a
+    // connect config; the shell's record for the host carries its settings.
+    const shellHost = useHost(host ? undefined : hostConfig.id);
+    const settingsHost: object = host ?? shellHost ?? hostConfig;
+    const { config: termSettings, user: termUser } =
+      useTerminalSettings(settingsHost);
+    // Callbacks bound once (socket handlers, xterm hooks) read these.
+    const termSettingsRef = useRef(termSettings);
+    termSettingsRef.current = termSettings;
+    const termUserRef = useRef(termUser);
+    termUserRef.current = termUser;
     const showToolbar = hostSetting(host, "enableTerminalToolbar", true);
     const outputListenersRef = useRef(new Set<(data: string) => void>());
 
@@ -213,14 +230,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       `terminal_theme_host_${hostConfig.id}`,
     );
     const config = {
-      ...DEFAULT_TERMINAL_CONFIG,
-      ...terminalDefaults,
-      ...hostConfig.terminalConfig,
-      theme:
-        savedTheme ||
-        hostConfig.terminalConfig?.theme ||
-        terminalDefaults.theme ||
-        DEFAULT_TERMINAL_CONFIG.theme,
+      ...termSettings,
+      theme: savedTheme || termSettings.theme || DEFAULT_TERMINAL_CONFIG.theme,
     };
 
     // Ctrl+/- / Ctrl+wheel terminal zoom is persisted per-host and takes
@@ -271,11 +282,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
     const localEchoRef = useRef<TerminalLocalEcho | null>(null);
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
-    const [pendingKeybindingSnippet, setPendingKeybindingSnippet] = useState<{
-      id: string;
-      content: string;
-      appendEnter: boolean;
-    } | null>(null);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -406,7 +412,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isAttachingSessionRef.current = false;
 
       return () => {};
-    }, [hostConfig.id]);
+    }, [hostConfig.id, hostConfig.instanceId]);
     const connectionAttemptIdRef = useRef(0);
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -530,8 +536,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [showHistoryDialog, hostConfig.id]);
 
     useEffect(() => {
-      const autocompleteEnabled =
-        localStorage.getItem("commandAutocomplete") === "true";
+      const autocompleteEnabled = termUser.commandAutocomplete;
 
       if (hostConfig.id && autocompleteEnabled) {
         getCommandHistory(api, hostConfig.id!)
@@ -545,7 +550,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       } else {
         autocompleteHistory.current = [];
       }
-    }, [hostConfig.id]);
+    }, [hostConfig.id, termUser.commandAutocomplete]);
 
     useEffect(() => {
       showAutocompleteRef.current = showAutocomplete;
@@ -591,7 +596,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [autosuggestion]);
 
     const isAutocompleteEnabled = useCallback(
-      () => localStorage.getItem("commandAutocomplete") === "true",
+      () => termUserRef.current.commandAutocomplete,
       [],
     );
 
@@ -905,6 +910,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }
 
+    const sharedSizeRef = useRef<{ cols: number; rows: number } | null>(null);
+
+    function applySharedSize(msg: { cols?: unknown; rows?: unknown }) {
+      if (!hostConfig.joinShareId || !terminal) return;
+      const { cols, rows } = msg;
+      if (
+        typeof cols !== "number" ||
+        typeof rows !== "number" ||
+        !Number.isInteger(cols) ||
+        !Number.isInteger(rows) ||
+        cols < 1 ||
+        rows < 1
+      )
+        return;
+      sharedSizeRef.current = { cols, rows };
+      terminal.resize(cols, rows);
+    }
+
+    function fitTerminal() {
+      const size = sharedSizeRef.current;
+      if (hostConfig.joinShareId && size) {
+        terminal?.resize(size.cols, size.rows);
+      } else {
+        fitAddonRef.current?.fit();
+      }
+    }
+
     function performFit() {
       if (
         !fitAddonRef.current ||
@@ -918,7 +950,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isFittingRef.current = true;
 
       try {
-        fitAddonRef.current.fit();
+        fitTerminal();
         if (terminal && terminal.cols > 0 && terminal.rows > 0) {
           const lastSize = lastFittedSizeRef.current;
           if (
@@ -1175,6 +1207,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function scheduleNotify(cols: number, rows: number) {
+      if (hostConfig.joinShareId) return;
       if (!(cols > 0 && rows > 0)) return;
       pendingSizeRef.current = { cols, rows };
       if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
@@ -1208,7 +1241,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       controlStringModeRef.current = controlString.isActive;
 
       const syntaxHighlightingEnabled =
-        hostConfig.terminalConfig?.syntaxHighlighting !== false;
+        termSettingsRef.current.syntaxHighlighting !== false;
       if (
         !syntaxHighlightingEnabled ||
         alternateScreen.sawSequence ||
@@ -1221,7 +1254,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       return highlightTerminalOutput(
         output,
-        hostConfig.terminalConfig?.syntaxHighlightingOptions,
+        termSettingsRef.current.syntaxHighlightingOptions,
       );
     }
 
@@ -1244,9 +1277,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
+      const sudoPassword = hostConfig.sudoPassword as string | undefined;
       let passwordToFill = isSudoPrompt
-        ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
-        : hostConfig.password || hostConfig.terminalConfig?.sudoPassword;
+        ? sudoPassword || hostConfig.password
+        : hostConfig.password || sudoPassword;
 
       if (!passwordToFill && hostConfig.id) {
         passwordToFill = isSudoPrompt
@@ -1262,7 +1296,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function maybeOfferPasswordFill(strippedData: string) {
-      if (hostConfig.terminalConfig?.passwordPromptAutoFill === false) return;
+      if (termSettingsRef.current.passwordPromptAutoFill === false) return;
 
       // PTY output can split a short prompt like "[sudo] password for user: "
       // across multiple WebSocket chunks, so match against a rolling buffer
@@ -1280,12 +1314,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Sudo autofill is opt-in: the saved sudo password must not be sent
       // to a privilege-escalation prompt unless the host explicitly enables it.
-      if (isSudoPrompt && !hostConfig.terminalConfig?.sudoPasswordAutoFill) {
+      if (isSudoPrompt && !termSettingsRef.current.sudoPasswordAutoFill) {
         return;
       }
 
       const hasStoredPassword =
-        hostConfig.terminalConfig?.sudoPassword ||
+        hostConfig.sudoPassword ||
         hostConfig.password ||
         hostConfig.hasSudoPassword ||
         hostConfig.hasPassword;
@@ -1321,6 +1355,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       setTimeout(() => {
         passwordPromptShownRef.current = false;
       }, 15000);
+    }
+
+    function reconnectTerminal() {
+      isUnmountingRef.current = false;
+      shouldNotReconnectRef.current = false;
+      isReconnectingRef.current = false;
+      isConnectingRef.current = false;
+      reconnectAttempts.current = 0;
+      wasDisconnectedBySSH.current = false;
+      wasConnectedRef.current = false;
+      updateConnectionError(null);
+      setShowDisconnectedOverlay(false);
+      if (terminal) {
+        terminal.clear();
+        const cols = terminal.cols;
+        const rows = terminal.rows;
+        connectToHost(cols, rows);
+      }
     }
 
     useImperativeHandle(
@@ -1362,29 +1414,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnected(false);
           setIsConnecting(false);
         },
-        reconnect: () => {
-          isUnmountingRef.current = false;
-          shouldNotReconnectRef.current = false;
-          isReconnectingRef.current = false;
-          isConnectingRef.current = false;
-          reconnectAttempts.current = 0;
-          wasDisconnectedBySSH.current = false;
-          wasConnectedRef.current = false;
-          updateConnectionError(null);
-          setShowDisconnectedOverlay(false);
-          if (terminal) {
-            terminal.clear();
-            const cols = terminal.cols;
-            const rows = terminal.rows;
-            connectToHost(cols, rows);
-          }
+        reconnect: reconnectTerminal,
+        reconnectIfDisconnected: () => {
+          if (
+            !terminal ||
+            isConnected ||
+            isUnmountingRef.current ||
+            isConnectingRef.current ||
+            isReconnectingRef.current ||
+            reconnectTimeoutRef.current !== null
+          )
+            return false;
+          reconnectTerminal();
+          return true;
         },
         isConnected: () => isConnected,
         fit: () => {
           if (!fitAddonRef.current || !terminal || isFittingRef.current) return;
           isFittingRef.current = true;
           try {
-            fitAddonRef.current.fit();
+            fitTerminal();
             if (terminal.cols > 0 && terminal.rows > 0) {
               const lastSize = lastFittedSizeRef.current;
               if (
@@ -1542,7 +1591,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const canEnable =
         typeof hostConfig.id === "number" &&
-        !hostConfig.terminalConfig?.autoTmux &&
+        !termSettingsRef.current.autoTmux &&
         !hostConfig.joinShareId;
       toast.warning(notice, {
         duration: 15000,
@@ -1551,11 +1600,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               action: {
                 label: t("terminal.enableAutoTmuxAction"),
                 onClick: () => {
-                  void setHostAutoTmux(hostConfig.id as number, true)
+                  void enableHostAutoTmux(api, hostConfig.id as number)
                     .then(() => {
-                      window.dispatchEvent(
-                        new CustomEvent("termix:hosts-changed"),
-                      );
+                      notifyHostsChanged();
                       toast.success(
                         t("terminal.autoTmuxEnabled", { host: hostLabel }),
                       );
@@ -1746,8 +1793,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         terminalInputDisposableRef.current?.dispose();
         localEchoRef.current = new TerminalLocalEcho(
           resolveLocalEchoMode(
-            hostConfig.terminalConfig?.localEcho,
-            localStorage.getItem("terminalLocalEchoMode"),
+            termSettingsRef.current.localEcho,
+            termUserRef.current.localEcho,
           ),
         );
         terminalInputDisposableRef.current = terminal.onData((data) => {
@@ -1835,7 +1882,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             pongReceivedRef.current = true;
             return;
           }
-          if (msg.type === "data") {
+          if (msg.type === "resized") {
+            applySharedSize(msg);
+          } else if (msg.type === "data") {
             if (typeof msg.data === "string") {
               outputListenersRef.current.forEach((listener) =>
                 listener(msg.data),
@@ -1936,17 +1985,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             logTerminalActivity();
 
             setTimeout(async () => {
-              const terminalConfig = {
-                ...DEFAULT_TERMINAL_CONFIG,
-                ...terminalDefaults,
-                ...hostConfig.terminalConfig,
-              };
+              const settings = termSettingsRef.current;
+              const environmentVariables =
+                (
+                  hostConfig.sshOptions as
+                    | {
+                        environmentVariables?: { key: string; value: string }[];
+                      }
+                    | null
+                    | undefined
+                )?.environmentVariables ?? [];
 
-              if (
-                terminalConfig.environmentVariables &&
-                terminalConfig.environmentVariables.length > 0
-              ) {
-                for (const envVar of terminalConfig.environmentVariables) {
+              if (environmentVariables.length > 0) {
+                for (const envVar of environmentVariables) {
                   if (envVar.key && envVar.value && ws.readyState === 1) {
                     ws.send(
                       JSON.stringify({
@@ -1958,43 +2009,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              if (terminalConfig.startupSnippetId) {
-                try {
-                  const resolved = (await invokeAction(
-                    "snippets.resolveForTerminal",
-                    terminalConfig.startupSnippetId,
-                    {
-                      ip: hostConfig.ip,
-                      username: hostConfig.username,
-                      port: hostConfig.port,
-                      name: hostConfig.name,
-                    },
-                  )) as
-                    | { needsInputs: boolean; content: string }
-                    | null
-                    | undefined;
-                  if (
-                    resolved &&
-                    !resolved.needsInputs &&
-                    ws.readyState === 1
-                  ) {
-                    ws.send(
-                      JSON.stringify({
-                        type: "input",
-                        data: resolved.content + "\n",
-                      }),
-                    );
-                  }
-                } catch (err) {
-                  console.warn("Failed to execute startup snippet:", err);
+              // The snippets plugin owns a host's startup command; while it
+              // is off nothing runs.
+              try {
+                const startup = await invokeAction(
+                  "snippets.startupCommand",
+                  settingsHost,
+                  {
+                    ip: hostConfig.ip,
+                    username: hostConfig.username,
+                    port: hostConfig.port,
+                    name: hostConfig.name,
+                  },
+                );
+                if (typeof startup === "string" && ws.readyState === 1) {
+                  ws.send(
+                    JSON.stringify({ type: "input", data: startup + "\n" }),
+                  );
                 }
+              } catch (err) {
+                console.warn("Failed to run the startup command:", err);
               }
 
-              if (terminalConfig.autoMosh && ws.readyState === 1) {
+              if (settings.autoMosh && ws.readyState === 1) {
                 ws.send(
                   JSON.stringify({
                     type: "input",
-                    data: terminalConfig.moshCommand + "\n",
+                    data: settings.moshCommand + "\n",
                   }),
                 );
               }
@@ -2491,11 +2532,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       if (!terminal) return;
 
-      const config = {
-        ...DEFAULT_TERMINAL_CONFIG,
-        ...terminalDefaults,
-        ...hostConfig.terminalConfig,
-      };
+      const config = termSettingsRef.current;
 
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(
@@ -2560,23 +2597,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [
-      terminal,
-      terminalDefaults,
-      hostConfig.terminalConfig,
-      previewTheme,
-      appTheme,
-      isFitted,
-    ]);
+    }, [terminal, termSettings, previewTheme, appTheme, isFitted]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
 
-      const config = {
-        ...DEFAULT_TERMINAL_CONFIG,
-        ...terminalDefaults,
-        ...hostConfig.terminalConfig,
-      };
+      const config = termSettingsRef.current;
 
       const fontFamily = resolveTerminalFontFamily(config.fontFamily);
       ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
@@ -2647,10 +2673,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             ? uri
             : `https://${uri}`;
 
-        const hostBehavior = hostConfig.terminalConfig?.linkClickBehavior;
-        const globalBehavior =
-          localStorage.getItem("terminalLinkClickBehavior") ?? "confirm";
-        const behavior = hostBehavior ?? globalBehavior;
+        const hostBehavior = termSettingsRef.current.linkClickBehavior;
+        const behavior =
+          hostBehavior && hostBehavior !== "default"
+            ? hostBehavior
+            : termUserRef.current.linkClickBehavior;
 
         if (behavior === "direct") {
           window.open(url, "_blank");
@@ -2692,7 +2719,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
       document.fonts.ready.then(() => {
         terminal.refresh(0, terminal.rows - 1);
-        fitAddon.fit();
+        fitTerminal();
       });
 
       terminal.attachCustomWheelEventHandler((ev) => {
@@ -2701,11 +2728,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return false;
         }
 
-        const cfg = {
-          ...DEFAULT_TERMINAL_CONFIG,
-          ...terminalDefaults,
-          ...hostConfig.terminalConfig,
-        };
+        const cfg = termSettingsRef.current;
         const mod = cfg.fastScrollModifier;
         const modHeld =
           (mod === "alt" && ev.altKey) ||
@@ -2721,12 +2744,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return true;
       });
 
-      fitAddonRef.current?.fit();
+      fitTerminal();
       // Double-rAF ensures layout is fully settled (fonts, flexbox, etc.) before
       // committing the fitted size, preventing the "terminal too short" glitch.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          fitTerminal();
           setIsFitted(true);
         });
       });
@@ -2835,12 +2858,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-        const config = {
-          ...DEFAULT_TERMINAL_CONFIG,
-          ...terminalDefaults,
-          ...hostConfig.terminalConfig,
-        };
-        if (config.backspaceMode !== "control-h") return;
+        if (termSettingsRef.current.backspaceMode !== "control-h") return;
 
         e.preventDefault();
         e.stopPropagation();
@@ -2913,40 +2931,34 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       isMountedRef.current = true;
 
-      const currentHostId = hostConfig.id;
       return () => {
         if (!isMountedRef.current) {
           return;
         }
 
-        if (
-          currentHostIdRef.current !== currentHostId &&
-          currentHostIdRef.current !== null
-        ) {
-          isUnmountingRef.current = true;
-          shouldNotReconnectRef.current = true;
-          isReconnectingRef.current = false;
-          setIsConnecting(false);
-          if (reconnectTimeoutRef.current)
-            clearTimeout(reconnectTimeoutRef.current);
-          if (connectionTimeoutRef.current)
-            clearTimeout(connectionTimeoutRef.current);
-          if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
-          if (pingIntervalRef.current) {
-            clearInterval(pingIntervalRef.current);
-            pingIntervalRef.current = null;
-          }
-          if (pongTimeoutRef.current) {
-            clearTimeout(pongTimeoutRef.current);
-            pongTimeoutRef.current = null;
-          }
-
-          if (webSocketRef.current) {
-            webSocketRef.current.close();
-          }
-
-          isMountedRef.current = false;
+        isUnmountingRef.current = true;
+        shouldNotReconnectRef.current = true;
+        isReconnectingRef.current = false;
+        setIsConnecting(false);
+        if (reconnectTimeoutRef.current)
+          clearTimeout(reconnectTimeoutRef.current);
+        if (connectionTimeoutRef.current)
+          clearTimeout(connectionTimeoutRef.current);
+        if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
         }
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
+        }
+
+        if (webSocketRef.current) {
+          webSocketRef.current.close();
+        }
+
+        isMountedRef.current = false;
       };
     }, [hostConfig.id, hostConfig.instanceId]);
 
@@ -2988,26 +3000,30 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             e,
             customKeybindingsRef.current,
           );
-          if (matched) {
+          // The terminal's own actions run here; anything else goes to
+          // whoever registered it (the shell, or another plugin), and the key
+          // passes through while nothing does.
+          const handled =
+            !!matched &&
+            (isTerminalKeybindingAction(matched.action.type)
+              ? dispatchKeybindingAction(matched.action, {
+                  terminal,
+                  webSocketRef,
+                  writeTextToClipboard,
+                  readTextFromClipboard,
+                })
+              : runKeybindingAction(matched.action, {
+                  host: {
+                    ip: hostConfig.ip,
+                    username: hostConfig.username,
+                    port: hostConfig.port,
+                    name: hostConfig.name,
+                  },
+                  send: (data) => sendRawToSocket(webSocketRef, data),
+                }));
+          if (handled) {
             e.preventDefault();
             e.stopPropagation();
-            dispatchKeybindingAction(matched.action, {
-              terminal,
-              webSocketRef,
-              writeTextToClipboard,
-              readTextFromClipboard,
-              hostContext: {
-                ip: hostConfig.ip,
-                username: hostConfig.username,
-                port: hostConfig.port,
-                name: hostConfig.name,
-              },
-              onSnippetNeedsInputs: (snippet) =>
-                setPendingKeybindingSnippet({
-                  ...snippet,
-                  appendEnter: matched.action.appendEnter !== false,
-                }),
-            });
             return false;
           }
         }
@@ -3042,7 +3058,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           const sequence = getAndroidHardwareKeySequence(
             e,
             terminal.modes.applicationCursorKeysMode,
-            hostConfig.terminalConfig?.backspaceMode,
+            termSettingsRef.current.backspaceMode,
           );
           if (sequence) {
             e.preventDefault();
@@ -3300,8 +3316,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           };
 
-          const autocompleteEnabled =
-            localStorage.getItem("commandAutocomplete") === "true";
+          const autocompleteEnabled = termUserRef.current.commandAutocomplete;
 
           if (!autocompleteEnabled) {
             clearAutosuggestion();
@@ -3413,10 +3428,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       setIsConnecting(true);
-      fitAddonRef.current?.fit();
+      fitTerminal();
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          fitTerminal();
           if (terminal.cols > 0 && terminal.rows > 0) {
             scheduleNotify(terminal.cols, terminal.rows);
             connectToHost(terminal.cols, terminal.rows);
@@ -3832,51 +3847,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               updateConnectionError(t("terminal.hostKeyRejected"));
             }}
             backgroundColor={backgroundColor}
-          />
-        )}
-
-        {pendingKeybindingSnippet && (
-          <SnippetVariablesDialog
-            snippet={
-              {
-                id: 0,
-                name: t("newUi.sidebar.keybindings.actionRunSnippet"),
-                content: pendingKeybindingSnippet.content,
-                folder: null,
-                order: 0,
-              } as Snippet as never
-            }
-            host={{
-              ip: hostConfig.ip,
-              username: hostConfig.username,
-              port: hostConfig.port,
-              name: hostConfig.name,
-            }}
-            onCancel={() => setPendingKeybindingSnippet(null)}
-            onConfirm={(resolvedContent) => {
-              const appendEnter = pendingKeybindingSnippet.appendEnter;
-              setPendingKeybindingSnippet(null);
-              const send = () =>
-                sendRawToSocket(
-                  webSocketRef,
-                  resolvedContent + (appendEnter ? "\r" : ""),
-                );
-              const shouldConfirm =
-                localStorage.getItem("confirmSnippetExecution") === "true";
-              if (shouldConfirm) {
-                confirmWithToast(
-                  t("newUi.sidebar.snippets.confirmRunMessage", {
-                    name: t("newUi.sidebar.keybindings.actionRunSnippet"),
-                  }),
-                  send,
-                  t("newUi.sidebar.snippets.confirmRunButton"),
-                  t("newUi.sidebar.snippets.cancel"),
-                  { confirmOnEnter: true, duration: 6000 },
-                );
-              } else {
-                send();
-              }
-            }}
           />
         )}
 

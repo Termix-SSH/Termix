@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "रन \"{{name}}\"",
+  "variablesDialogDescription": "इस कोड स्निपेट को चलाने से पहले इसमें आवश्यक मान भरें।",
+  "variablesPreviewLabel": "पूर्व दर्शन",
+  "variablesConfirmButton": "दौड़ना",
+  "keybindings": {
+    "runSnippet": "मौजूदा स्निपेट चलाएँ",
+    "snippetLabel": "टुकड़ा",
+    "selectSnippet": "एक अंश का चयन करें",
+    "snippetMissing": "अंश नहीं मिला",
+    "snippetRequired": "एक अंश का चयन करें"
+  },
+  "paletteHintRun": "सक्रिय टर्मिनल टैब में चलाएँ",
+  "host": {
+    "startupTitle": "स्टार्टअप स्निपेट",
+    "quickActionsTitle": "त्वरित कार्रवाइयाँ",
+    "quickActionsDescription": "त्वरित कार्रवाइयाँ एक-क्लिक कमांड निष्पादन के लिए होस्ट मेट्रिक्स टूलबार में बटन के रूप में दिखाई देती हैं।",
+    "noQuickActions": "अभी तक कोई त्वरित कार्रवाई नहीं।",
+    "buttonLabel": "बटन लेबल",
+    "selectSnippet": "स्निपेट चुनें...",
+    "addQuickAction": "कार्रवाई जोड़ें"
+  },
+  "quickActions": {
+    "running": "{{name}} निष्पादित हो रहा है...",
+    "succeeded": "{{name}} सफलतापूर्वक पूर्ण हुआ",
+    "failed": "{{name}} विफल रहा",
+    "error": "{{name}} निष्पादित करने में विफल"
+  }
+}

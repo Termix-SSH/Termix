@@ -9,6 +9,10 @@ import {
   type TerminalImageStorageSettings,
 } from "./images/image-storage-settings.js";
 import { DEFAULT_TIMEOUT_MINUTES } from "./session-manager.js";
+import {
+  readUserSettings,
+  type TerminalUserSettings,
+} from "../shared/terminal-settings.js";
 
 /**
  * Admin setting keys, as declared in manifest.json. The image storage fields
@@ -37,7 +41,15 @@ export const HOST_KEYS = {
   terminalToolbarShowStatus: "terminalToolbarShowStatus",
   terminalToolbarFade: "terminalToolbarFade",
   enableCommandHistory: "enableCommandHistory",
+  autoTmux: "autoTmux",
 } as const;
+
+/** User settings a browser kept in localStorage before 2.9.0. */
+export const MOVABLE_USER_KEYS = [
+  "localEcho",
+  "linkClickBehavior",
+  "commandAutocomplete",
+] as const;
 
 const IMAGE_FIELD_BY_LEGACY_KEY: Record<string, string> = {
   [TERMINAL_IMAGE_STORAGE_KEYS.mode]: ADMIN_KEYS.imageStorageMode,
@@ -68,6 +80,8 @@ export interface ClientSettings {
   sessionPersistence: boolean;
   commandHistoryEnabled: boolean;
   touchInput: TouchInputSettings;
+  /** The caller's own terminal settings. */
+  user: TerminalUserSettings;
 }
 
 /** What every signed-in user's terminal needs, whether or not they are an admin. */
@@ -84,6 +98,8 @@ export async function readClientSettings(
       touch = null;
     }
   }
+  const actor = ctx.currentActor();
+  const user = actor ? await ctx.settings.getAll("user", actor) : {};
   return {
     sessionTimeoutMinutes:
       Number.isFinite(timeout) && timeout > 0
@@ -92,5 +108,6 @@ export async function readClientSettings(
     sessionPersistence: all[ADMIN_KEYS.sessionPersistence] !== false,
     commandHistoryEnabled: all[ADMIN_KEYS.commandHistoryEnabled] !== false,
     touchInput: normalizeTouchInputSettings(touch),
+    user: readUserSettings(user),
   };
 }

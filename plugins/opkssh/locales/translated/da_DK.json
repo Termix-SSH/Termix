@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Godkendelse mislykkedes. Tjek dine loginoplysninger, og prøv igen.",
     "timeout": "Godkendelsen udløb. Prøv igen."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

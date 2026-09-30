@@ -25,5 +25,8 @@
       "label": "Use the old redirect URI",
       "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
     }
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

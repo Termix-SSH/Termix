@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Hạm đội"
+  },
+  "hosts": {
+    "docsLink": "Xem tài liệu",
+    "sharing": {
+      "customHoursPlaceholder": "Số giờ cho đến khi hết hạn truy cập",
+      "expiry": {
+        "never": "Không bao giờ",
+        "oneHour": "1 giờ",
+        "oneDay": "24 giờ",
+        "sevenDays": "7 ngày",
+        "thirtyDays": "30 ngày",
+        "custom": "Tùy chỉnh"
+      },
+      "expiryLabel": "Hết hạn truy cập",
+      "levels": {
+        "connect": {
+          "label": "Kết nối",
+          "description": "Chỉ mở phiên: terminal, remote desktop, trình quản lý file, tunnel và Docker. Không truy cập cấu hình máy chủ."
+        },
+        "view": {
+          "label": "Xem",
+          "description": "Kết nối, cùng xem cấu hình máy chủ. Bí mật không bao giờ được hiển thị."
+        },
+        "edit": {
+          "label": "Chỉnh sửa",
+          "description": "Xem và chỉnh sửa cài đặt máy chủ không yêu cầu xác thực. Thông tin xác thực SSH của chủ sở hữu vẫn được giữ kín và chỉ dành riêng cho chủ sở hữu."
+        },
+        "manage": {
+          "label": "Quản lý",
+          "description": "Chỉnh sửa, và chia sẻ máy chủ với người khác, thay đổi cấp độ quyền và thu hồi quyền truy cập."
+        }
+      },
+      "noMatches": "Không tìm thấy kết quả phù hợp",
+      "permissionLevelLabel": "Cấp độ quyền",
+      "rolesTab": "Vai trò",
+      "searchPlaceholder": "Tìm kiếm người dùng hoặc vai trò...",
+      "shareButton": "Chia sẻ",
+      "shareWithCount": "Chia sẻ ({{count}})",
+      "usersTab": "Người dùng"
+    }
   }
 }

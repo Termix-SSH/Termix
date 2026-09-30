@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Xarxa virtual",
-    "unencryptedShell": "Shell sense xifrar"
+    "unencryptedShell": "Shell sense xifrar",
+    "docsLink": "Veure documents"
   },
   "onboarding": {
     "feature_desktop": "Escriptori remot",
@@ -274,5 +275,8 @@
         "label": "URL de guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Cal un servidor remot. Connecteu un servidor remot a Configuració per utilitzar aquest tipus de connexió."
   }
 }

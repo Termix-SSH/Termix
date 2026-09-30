@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} düğüm"
+  },
+  "hosts": {
+    "docsLink": "Dokümanları görüntüle"
   }
 }

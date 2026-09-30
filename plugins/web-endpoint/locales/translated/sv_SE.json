@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Tillåt ogiltigt certifikat",
     "webUiIgnoreCertDesc": "Endast direkta slutpunkter. Loopback är redan undantaget, så detta har ingen effekt på tunnelslutpunkter.",
     "webUiRemoveEndpoint": "Ta bort slutpunkten",
-    "webUiOpenFailed": "Misslyckades med att öppna webbslutpunkten"
+    "webUiOpenFailed": "Misslyckades med att öppna webbslutpunkten",
+    "bindHost": "Bind värd"
   }
 }

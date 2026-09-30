@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "打开浏览器进行身份验证",
     "tailscaleCheckWaiting": "正在等待 Tailscale 身份验证……",
     "tailscaleCheckTimeout": "Tailscale 身份验证超时，请重试。"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "连接到终端",
+        "usernameLabel": "用户名"
+      }
+    }
   }
 }

@@ -1,12 +1,18 @@
-import { and, eq, inArray, or } from "drizzle-orm";
-import { hostAccess, hosts, sharedHostSecrets } from "../db/schema.js";
+import { and, eq, inArray } from "drizzle-orm";
+import {
+  hostAccess,
+  hostProtocolAuth,
+  hosts,
+  sharedHostSecrets,
+} from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
 
 export type SharedHostSecretRecord = typeof sharedHostSecrets.$inferSelect;
 export type NewSharedHostSecretRecord = typeof sharedHostSecrets.$inferInsert;
 
-export type ShareProtocol = "ssh" | "rdp" | "vnc" | "telnet";
+/** "ssh", or a protocol id a plugin declares. */
+export type ShareProtocol = string;
 
 export class SharedHostSecretsRepository {
   constructor(
@@ -179,18 +185,19 @@ export class SharedHostSecretsRepository {
       .select({ id: hosts.id })
       .from(hosts)
       .where(
+        and(eq(hosts.userId, ownerId), eq(hosts.credentialId, credentialId)),
+      );
+    const protocolRows = await this.context.drizzle
+      .select({ id: hostProtocolAuth.hostId })
+      .from(hostProtocolAuth)
+      .where(
         and(
-          eq(hosts.userId, ownerId),
-          or(
-            eq(hosts.credentialId, credentialId),
-            eq(hosts.rdpCredentialId, credentialId),
-            eq(hosts.vncCredentialId, credentialId),
-            eq(hosts.telnetCredentialId, credentialId),
-          ),
+          eq(hostProtocolAuth.userId, ownerId),
+          eq(hostProtocolAuth.credentialId, credentialId),
         ),
       );
 
-    return rows.map((row) => row.id);
+    return Array.from(new Set([...rows, ...protocolRows].map((row) => row.id)));
   }
 
   private async afterWrite(): Promise<void> {

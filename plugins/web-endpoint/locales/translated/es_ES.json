@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Permitir certificado no válido",
     "webUiIgnoreCertDesc": "Solo se aplican puntos finales directos. Loopback ya está exento, por lo que esto no afecta a los puntos finales de túnel.",
     "webUiRemoveEndpoint": "Eliminar punto final",
-    "webUiOpenFailed": "No se pudo abrir el punto final web."
+    "webUiOpenFailed": "No se pudo abrir el punto final web.",
+    "bindHost": "Host de enlace"
   }
 }

@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} 個節點"
+  },
+  "hosts": {
+    "docsLink": "檢視文件"
   }
 }

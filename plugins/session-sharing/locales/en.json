@@ -156,5 +156,23 @@
       "title": "Share sessions and join rooms",
       "description": "Share live sessions by link or with other users, and create and join collaboration rooms."
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Never",
+        "oneHour": "1 hour",
+        "oneDay": "24 hours",
+        "sevenDays": "7 days",
+        "thirtyDays": "30 days",
+        "custom": "Custom"
+      }
+    }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Shared with me",
+    "sharedBy": "Shared by {{username}}",
+    "join": "Join",
+    "sharedSessionLabel": "{{hostName}} (shared)"
   }
 }

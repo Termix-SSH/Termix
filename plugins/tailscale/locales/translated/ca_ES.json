@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Obre el navegador per autenticar-te",
     "tailscaleCheckWaiting": "Esperant l'autenticació de Tailscale...",
     "tailscaleCheckTimeout": "S'ha esgotat el temps d'espera de l'autenticació a escala final. Torna-ho a provar."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Connecta't al terminal",
+        "usernameLabel": "Nom d'usuari"
+      }
+    }
   }
 }

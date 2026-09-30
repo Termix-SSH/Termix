@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "วิ่ง \"{{name}}\"",
+  "variablesDialogDescription": "กรอกค่าที่จำเป็นสำหรับโค้ดส่วนนี้ก่อนที่จะเรียกใช้งาน",
+  "variablesPreviewLabel": "ตัวอย่าง",
+  "variablesConfirmButton": "วิ่ง",
+  "keybindings": {
+    "runSnippet": "เรียกใช้โค้ดตัวอย่างที่มีอยู่",
+    "snippetLabel": "ส่วนหนึ่ง",
+    "selectSnippet": "เลือกส่วนย่อย",
+    "snippetMissing": "ไม่พบส่วนย่อย",
+    "snippetRequired": "เลือกส่วนย่อย"
+  },
+  "paletteHintRun": "เรียกใช้ในแท็บเทอร์มินัลที่ใช้งานอยู่",
+  "host": {
+    "startupTitle": "ตัวอย่างโค้ดสำหรับเริ่มต้น",
+    "quickActionsTitle": "การดำเนินการด่วน",
+    "quickActionsDescription": "การดำเนินการด่วนจะปรากฏเป็นปุ่มในแถบเครื่องมือ Host Metrics เพื่อให้สามารถเรียกใช้คำสั่งได้ด้วยการคลิกเพียงครั้งเดียว",
+    "noQuickActions": "ยังไม่มีการดำเนินการใดๆ อย่างเร่งด่วนในขณะนี้",
+    "buttonLabel": "ป้ายกำกับปุ่ม",
+    "selectSnippet": "เลือกส่วนย่อย...",
+    "addQuickAction": "เพิ่มการดำเนินการ"
+  },
+  "quickActions": {
+    "running": "กำลังดำเนินการ {{name}}...",
+    "succeeded": "{{name}} เสร็จสมบูรณ์เรียบร้อยแล้ว",
+    "failed": "{{name}} ล้มเหลว",
+    "error": "ไม่สามารถดำเนินการ {{name}} ได้"
+  }
+}

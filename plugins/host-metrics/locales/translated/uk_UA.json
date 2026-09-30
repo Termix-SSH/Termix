@@ -51,10 +51,6 @@
     "processesRunning": "біг",
     "loginStats": "Статистика входу SSH",
     "noRecentLoginData": "Немає останніх даних для входу",
-    "executingQuickAction": "Виконання {{name}}...",
-    "quickActionSuccess": "{{name}} успішно завершено",
-    "quickActionFailed": "{{name}} не вдалося",
-    "quickActionError": "Не вдалося виконати {{name}}",
     "ports": {
       "title": "Порти прослуховування",
       "protocol": "Протокол",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Додати",
     "visibleWidgets": "Видимі віджети",
     "widgetsMovedToHostMetrics": "Тепер картки додаються, упорядковуються та змінюються за розміром безпосередньо на вкладці «Метрики хоста». Відкрийте «Метрики хоста» для цього хоста та скористайтеся функцією «Налаштувати», щоб вибрати, які картки відображатимуться.",
-    "quickActionsLabel": "Швидкі дії",
-    "quickActionsToolbar": "Швидкі дії відображаються як кнопки на панелі інструментів «Метрики хоста» для виконання команд одним клацанням миші.",
-    "noQuickActions": "Поки що жодних швидких дій.",
-    "buttonLabel": "Мітка кнопки",
-    "selectSnippetPlaceholder": "Вибрати фрагмент...",
-    "addActionBtn": "Додати дію",
     "hostNotFound": "Хост не знайдено",
     "loadingHost": "Завантаження хоста..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Диск"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Скасувати",
-        "confirmRunButton": "Бігти",
-        "confirmRunMessage": "Запустити \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Підключено"

@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "הפעל את צג Tmux",
-    "enableTmuxMonitorDesc": "הצג מארח זה בצג Tmux והוסף את פעולות ה-tmux שלו לסרגל הצד"
+    "enableTmuxMonitorDesc": "הצג מארח זה בצג Tmux והוסף את פעולות ה-tmux שלו לסרגל הצד",
+    "docsLink": "הצג מסמכים"
   },
   "tmuxMonitor": {
     "title": "צג Tmux",

@@ -22,7 +22,6 @@ import type { FontSizeId, UiFontId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
-import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import {
   fetchGuestViews,
@@ -334,9 +333,7 @@ function App() {
         >
           <Suspense fallback={null}>
             <UiPreferencesProvider>
-              <ConnectionDefaultsProvider>
-                <AppShell username={authUsername} onLogout={handleLogout} />
-              </ConnectionDefaultsProvider>
+              <AppShell username={authUsername} onLogout={handleLogout} />
             </UiPreferencesProvider>
           </Suspense>
         </div>
@@ -398,9 +395,7 @@ function ViewRouter({ view }: { view: string }) {
   if (guestViews.includes(view)) return <GuestView view={view} />;
   return (
     <UiPreferencesProvider>
-      <ConnectionDefaultsProvider>
-        <FullscreenAppGate />
-      </ConnectionDefaultsProvider>
+      <FullscreenAppGate />
     </UiPreferencesProvider>
   );
 }

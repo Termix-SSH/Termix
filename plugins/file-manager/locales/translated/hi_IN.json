@@ -382,7 +382,10 @@
     "defaultPathLabel": "डिफ़ॉल्ट पथ",
     "fileManagerPathHint": "जब इस होस्ट के लिए फ़ाइल प्रबंधक लॉन्च होता है तो खोलने के लिए निर्देशिका।",
     "fileManagerUrlCopied": "फ़ाइल प्रबंधक URL कॉपी किया गया",
-    "copyFileManagerUrlAction": "फ़ाइल प्रबंधक URL कॉपी करें"
+    "copyFileManagerUrlAction": "फ़ाइल प्रबंधक URL कॉपी करें",
+    "docsLink": "दस्तावेज़ देखें",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "loadingHost": "होस्ट लोड हो रहा है..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP लीगेसी मोड"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "एक साथ फ़ाइल स्थानांतरण",
+        "description": "साइड-बाय-साइड लोकल/रिमोट मैनेजर एक ही समय में कितनी फाइलें अपलोड या डाउनलोड कर सकता है। यदि आपका सर्वर SFTP चैनलों को सीमित करता है तो इसे कम करें।"
+      }
     }
   },
   "nav": {
     "sftp": "एसएफटीपी",
     "files": "फ़ाइलें"
+  },
+  "onboarding": {
+    "feature_files": "फ़ाइल मैनेजर",
+    "feature_files_desc": "ऐप छोड़े बिना SFTP के माध्यम से फाइलों को ब्राउज़ करें, अपलोड करें, डाउनलोड करें और संपादित करें।"
+  },
+  "terminal": {
+    "runTitle": "{{command}} चल रहा है - {{host}}",
+    "terminalTitle": "टर्मिनल - {{host}}",
+    "terminalWithPath": "टर्मिनल - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "गंतव्य फ़ोल्डर ब्राउज़ करें",
+    "browsePathError": "गंतव्य होस्ट पर यह पथ नहीं खोला जा सका।",
+    "browsePathWillBeCreated": "यह फ़ोल्डर अभी मौजूद नहीं है। स्थानांतरण शुरू होने पर इसे बनाया जाएगा।",
+    "cancel": "रद्द करें",
+    "cleanupDestFiles": "गंतव्य साफ करें",
+    "cleanupDestFilesError": "सफाई विफल रही।",
+    "cleanupDestFilesNothing": "गंतव्य पर साफ करने के लिए कुछ नहीं।",
+    "cleanupDestFilesPartial": "कुछ आंशिक फ़ाइलें नहीं हटाई जा सकीं।",
+    "cleanupDestFilesSuccess": "गंतव्य से आंशिक फ़ाइलें हटा दी गईं।",
+    "confirmCopy": "कॉपी करें",
+    "confirmMove": "स्थानांतरित करें",
+    "copyFolderToHost": "फ़ोल्डर होस्ट पर कॉपी करें…",
+    "copyItemsToHost": "{{count}} आइटम होस्ट पर कॉपी करें…",
+    "copyToHost": "होस्ट पर कॉपी करें…",
+    "destinationPath": "गंतव्य पथ",
+    "destMustBeDirectory": "कई आइटम स्थानांतरण के लिए गंतव्य एक निर्देशिका होना चाहिए",
+    "goUp": "ऊपर जाएं",
+    "hostAuthRequired": "प्रमाणीकरण आवश्यक है — पहले इस होस्ट पर फ़ाइल प्रबंधक खोलें",
+    "hostConnecting": "कनेक्ट हो रहा है…",
+    "hostConnectionFailed": "कनेक्शन विफल",
+    "hostDisconnected": "कनेक्ट नहीं है",
+    "hostReady": "तैयार",
+    "itemsSummary": "{{count}} आइटम",
+    "jumpHostLimitation": "दोनों होस्ट Termix सर्वर से पहुँच योग्य होने चाहिए। सीधा होस्ट-से-होस्ट रूटिंग समर्थित नहीं है।",
+    "methodAuto": "स्वचालित",
+    "methodAutoHint": "फ़ाइलों की संख्या, आकार और संपीड़न क्षमता के आधार पर tar या प्रति-फ़ाइल SFTP चुनता है। एकल फ़ाइलें हमेशा स्ट्रीमिंग SFTP का उपयोग करती हैं।",
+    "methodItemSftp": "प्रति-फ़ाइल SFTP",
+    "methodItemSftpHint": "प्रत्येक फ़ाइल को SFTP पर अलग-अलग स्थानांतरित करें। विंडोज़ सहित सभी होस्ट पर काम करता है।",
+    "methodItemSftpLimitation": "प्रत्येक फ़ाइल एक-एक करके एकल-फ़ाइल प्रतिलिपि के रूप में समान SFTP स्ट्रीम का उपयोग करती है। सभी फ़ाइलों में प्रगति संयुक्त होती है, इसलिए बड़ी फ़ाइलों के दौरान बार धीरे-धीरे चलता है।",
+    "methodLabel": "स्थानांतरण विधि",
+    "methodPreviewError": "स्थानांतरण विधि का पूर्वावलोकन नहीं किया जा सका। प्रारंभ करने पर सर्वर फिर भी एक विधि चुनेगा।",
+    "methodPreviewLoading": "स्थानांतरण विधि की गणना कर रहा है…",
+    "methodPreviewScanSummary": "{{fileCount}} फ़ाइलें, कुल {{totalSize}} (स्रोत होस्ट पर स्कैन किया गया)।",
+    "methodPreviewWillUseItemSftp": "उपयोग करेगा: प्रति-फ़ाइल SFTP",
+    "methodPreviewWillUseTar": "उपयोग करेगा: Tar संग्रह",
+    "methodReason": {
+      "user_item_sftp": "आपने प्रति-फ़ाइल SFTP चुना।",
+      "user_tar": "आपने tar संग्रह चुना।",
+      "tar_unavailable": "Tar एक या दोनों होस्ट पर उपलब्ध नहीं है — इसके बजाय प्रति-फ़ाइल SFTP का उपयोग किया जाएगा।",
+      "windows_host": "कोई Windows होस्ट शामिल है — tar का उपयोग नहीं होता।",
+      "auto_multi_large": "ऑटो: संपीड़न योग्य डेटा वाली एक बड़ी फ़ाइल ({{largestSize}}) सहित अनेक फ़ाइलें — tar एकल स्थानांतरण में बंडल करता है।",
+      "auto_single_large_in_archive": "ऑटो: इस सेट में एक बड़ी फ़ाइल ({{largestSize}}) — प्रति-फ़ाइल SFTP।",
+      "auto_many_incompressible": "ऑटो: अधिकतर असंपीड़नीय डेटा — प्रति-फ़ाइल SFTP।",
+      "auto_many_files": "ऑटो: बहुत सारी फ़ाइलें ({{fileCount}}) — tar प्रति-फ़ाइल ओवरहेड कम करता है।",
+      "auto_default": "ऑटो: इस सेट के लिए प्रति-फ़ाइल SFTP।"
+    },
+    "methodTar": "Tar संग्रह",
+    "methodTarHint": "स्रोत पर संपीड़ित करें, एक संग्रह स्थानांतरित करें, गंतव्य पर निष्कर्षण करें। दोनों यूनिक्स होस्ट पर tar आवश्यक है।",
+    "metricsCompress": "स्रोत पर संपीड़न: {{duration}}",
+    "metricsExtract": "गंतव्य पर निष्कर्षण: {{duration}}",
+    "metricsPrepare": "गंतव्य तैयारी: {{duration}}",
+    "metricsRouteBenchmark": "रूट प्रोब — डायरेक्ट: {{direct}}, रिले: {{relay}}",
+    "metricsSourceDelete": "स्रोत से हटाना: {{duration}}",
+    "metricsTotal": "कुल: {{duration}}",
+    "metricsTransfer": "एंड-टू-एंड: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 सत्यापित: {{duration}}",
+    "moveFolderToHost": "फ़ोल्डर होस्ट पर स्थानांतरित करें…",
+    "moveItemsToHost": "{{count}} आइटम होस्ट पर स्थानांतरित करें…",
+    "moveToHost": "होस्ट पर ले जाएँ…",
+    "noHostsConnected": "कोई अन्य फ़ाइल प्रबंधक होस्ट उपलब्ध नहीं है।",
+    "noHostsConnectedHint": "होस्ट प्रबंधक में फ़ाइल प्रबंधक सक्षम किए हुए एक और SSH होस्ट जोड़ें।",
+    "parallelSegmentsHint": "बड़ी फ़ाइलें 256 MB टुकड़ों में विभाजित होती हैं। एकाधिक लेन उच्च कुल थ्रूपुट के लिए अलग-अलग कनेक्शन का उपयोग करती हैं (जैसे कई स्थानांतरण प्रारंभ करना)।",
+    "parallelSegmentsLabel": "समानांतर स्थानांतरण लेन",
+    "parallelSegmentsOption": "{{count}} लेन",
+    "progressBenchmarking": "सबसे तेज़ स्थानांतरण मार्ग का चयन करना…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "रद्द करें",
+    "progressCancelling": "रद्द कर रहा है…",
+    "progressCompressing": "स्रोत होस्ट पर संपीड़ित कर रहा है…",
+    "progressExtracting": "गंतव्य पर निष्कर्षण कर रहा है…",
+    "progressItems": "{{current}} / {{total}} फ़ाइलें",
+    "progressReconnecting": "पुनः कनेक्ट हो रहा है…",
+    "progressStalled": "रुका हुआ",
+    "progressTotalSpeed": "{{speed}} कुल ({{lanes}} लेन)",
+    "progressTransferring": "डेटा स्थानांतरित कर रहा है…",
+    "progressTransferringItems": "फ़ाइलें स्थानांतरित कर रहा है ({{current}} / {{total}})…",
+    "progressVerifying": "फ़ाइल की अखंडता का सत्यापन…",
+    "recentDestinations": "हाल के गंतव्य",
+    "resumedHint": "किसी अन्य विंडो में शुरू हुए सक्रिय स्थानांतरण से पुनः जुड़ा।",
+    "retryTransfer": "पुनः प्रयास करें",
+    "retryTransferError": "पुनः प्रयास विफल रहा।",
+    "selectDestinationHost": "गंतव्य होस्ट चुनें",
+    "transferCancelled": "स्थानांतरण रद्द किया गया।",
+    "transferCancelledCopyHint": "आंशिक फ़ाइलें गंतव्य पर रह सकती हैं।",
+    "transferCancelledMoveHint": "आंशिक फ़ाइलें गंतव्य पर रह सकती हैं। स्रोत फ़ाइलें नहीं हटाई गईं।",
+    "transferError": "स्थानांतरण विफल",
+    "transferFailedRetryHint": "आंशिक डेटा गंतव्य पर रखा गया था। कनेक्शन वापस आने पर पुनः प्रयास फिर से शुरू होगा।",
+    "transferPartialHint": "स्थानांतरित नहीं किया जा सका: {{paths}}",
+    "transferSuccess": "स्थानांतरण पूर्ण"
   }
 }

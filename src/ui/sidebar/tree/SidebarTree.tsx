@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { updatePluginHostSettings } from "@/api/plugins-api";
+import { resetHostToDefaults } from "@/api/host-defaults-api";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { usePluginHostSections } from "@/settings/HostPluginSections";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ import {
   FolderOpen,
   Loader2,
   Plus,
+  RotateCcw,
   Server,
   Terminal,
 } from "lucide-react";
@@ -117,7 +119,8 @@ export function SidebarTree({
   hostClickBehavior?: HostClickBehavior;
 }) {
   const { t } = useTranslation();
-  const hostSwitchPlugins = usePluginHostSections().filter(
+  const hostSettingPlugins = usePluginHostSections();
+  const hostSwitchPlugins = hostSettingPlugins.filter(
     (plugin) => !!plugin.contributes?.settings?.host?.enableKey,
   );
   // Knobs with no other owner come straight from the interface preset; the
@@ -614,17 +617,18 @@ export function SidebarTree({
         overrideCredentialUsername: host.overrideCredentialUsername ?? false,
         enableSsh: host.enableSsh,
         sshPort: host.sshPort,
-        rdpUser: host.rdpUser ?? null,
-        rdpPassword: host.rdpPassword ?? null,
-        rdpDomain: host.domain ?? null,
-        vncAuthType: host.vncAuthType ?? null,
-        vncCredentialId: host.vncCredentialId
-          ? Number(host.vncCredentialId)
-          : null,
-        vncPassword: host.vncPassword ?? null,
-        vncUser: host.vncUser ?? null,
-        telnetUser: host.telnetUser ?? null,
-        telnetPassword: host.telnetPassword ?? null,
+        // Saved passwords never reach the browser, so a copy starts without them.
+        protocolAuth: Object.fromEntries(
+          Object.entries(host.protocolAuth ?? {}).map(([protocol, login]) => [
+            protocol,
+            {
+              authType: login.authType,
+              credentialId: login.credentialId ?? null,
+              username: login.username ?? null,
+              fields: login.fields ?? {},
+            },
+          ]),
+        ),
         forceKeyboardInteractive: host.forceKeyboardInteractive ?? false,
         useSocks5: host.useSocks5,
         socks5Host: host.socks5Host ?? null,
@@ -636,13 +640,9 @@ export function SidebarTree({
           hostId: Number(j.hostId),
         })),
         portKnockSequence: host.portKnockSequence ?? [],
-        quickActions: (host.quickActions ?? []).map((a) => ({
-          name: a.name,
-          snippetId: Number(a.snippetId),
-        })),
         statusCheckEnabled: host.statusCheckEnabled,
         statusCheckInterval: host.statusCheckInterval,
-        terminalConfig: host.terminalConfig ?? null,
+        sshOptions: host.sshOptions ?? null,
       };
       const created = await createSSHHost(duplicateHost);
       // Plugin host settings live outside the host row. Secrets come back
@@ -1186,6 +1186,53 @@ export function SidebarTree({
                     </DropdownMenuItem>
                   )),
                 )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+                  disabled={selectedHostIds.size === 0}
+                >
+                  {t("hostDefaults.resetMenu")}{" "}
+                  <ChevronDown className="size-2.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs">
+                {[
+                  { id: "all", label: t("hostDefaults.resetAll") },
+                  { id: "core", label: t("hostDefaults.resetCore") },
+                  ...hostSettingPlugins.map((plugin) => ({
+                    id: plugin.id,
+                    label: plugin.name,
+                  })),
+                ].map((option) => (
+                  <DropdownMenuItem
+                    key={option.id}
+                    onClick={async () => {
+                      const ids = Array.from(selectedHostIds).map(Number);
+                      try {
+                        await resetHostToDefaults(
+                          ids,
+                          option.id === "all"
+                            ? { all: true }
+                            : { namespaces: [option.id] },
+                        );
+                        window.dispatchEvent(
+                          new CustomEvent("termix:hosts-changed"),
+                        );
+                        toast.success(
+                          t("hostDefaults.resetDone", { count: ids.length }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.bulkUpdateFailed"));
+                      }
+                    }}
+                  >
+                    <RotateCcw className="size-3.5 mr-2" />
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>

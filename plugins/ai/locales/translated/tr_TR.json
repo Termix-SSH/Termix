@@ -83,5 +83,8 @@
         "description": "Bu sunucunun terminalinde yapay zeka asistanının yardımcı olmasına izin verin. Varsayılan olarak kapalıdır ve hesabınız için yapay zekanın etkinleştirilmiş olması gerekir."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Dokümanları görüntüle"
   }
 }

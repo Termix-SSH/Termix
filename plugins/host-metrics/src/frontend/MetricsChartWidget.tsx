@@ -236,8 +236,7 @@ export const metricsChartWidget: WidgetDefinition<MetricsChartConfig> = {
   },
   defaultSize: { w: GRID_SIZE * 12, h: GRID_SIZE * 6 },
   minSize: { w: GRID_SIZE * 6, h: GRID_SIZE * 4 },
-  component: MetricsChartWidget,
-  editFormComponent: MetricsChartEditForm,
+  components: { view: MetricsChartWidget, editForm: MetricsChartEditForm },
 };
 
 export { MetricsChartWidget };

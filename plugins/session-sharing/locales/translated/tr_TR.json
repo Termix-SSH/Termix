@@ -148,5 +148,17 @@
         "description": "Bu sunucudaki canlı oturumların bağlantı yoluyla veya diğer kullanıcılarla paylaşılmasına izin verin."
       }
     }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Süresiz",
+        "oneHour": "1 saat",
+        "oneDay": "24 saat",
+        "sevenDays": "7 gün",
+        "thirtyDays": "30 gün",
+        "custom": "Özel"
+      }
+    }
   }
 }

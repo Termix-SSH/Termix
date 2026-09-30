@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Προωθήστε μια θύρα στον απομακρυσμένο διακομιστή πίσω σε μια τοπική θύρα στο μηχάνημά σας.",
     "tunnelRequirementsText": "Ο διακομιστής SSH πρέπει να έχει ορίσει τις τιμές GatewayPorts yes, AllowTcpForwarding yes και PermitRootLogin yes στο /etc/ssh/sshd_config.",
     "tunnelSettings": "Ρυθμίσεις σήραγγας",
-    "tunnelType": "Τύπος σήραγγας"
+    "tunnelType": "Τύπος σήραγγας",
+    "bindHost": "Bind Host",
+    "docsLink": "Προβολή εγγράφων",
+    "hostNotFound": "Δεν βρέθηκε κεντρικός υπολογιστής",
+    "loadingHost": "Φόρτωση κεντρικού υπολογιστή..."
   },
   "nav": {
     "portForwarding": "Προώθηση",
@@ -134,6 +138,12 @@
     "typeDynamic": "Δυναμικό (-D)",
     "typeLocal": "Τοπικό (-L)",
     "typeRemote": "Τηλεχειριστήριο (-R)",
-    "working": "Εργαζόμενος..."
+    "working": "Εργαζόμενος...",
+    "start": "Αρχή",
+    "stop": "Στάση"
+  },
+  "onboarding": {
+    "feature_tunnels": "Σήραγγες",
+    "feature_tunnels_desc": "Προώθηση θυρών μέσω ενός διακομιστή για πρόσβαση σε υπηρεσίες που δεν είναι εκτεθειμένες."
   }
 }

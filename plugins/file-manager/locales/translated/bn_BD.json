@@ -382,7 +382,10 @@
     "defaultPathLabel": "ডিফল্ট পথ",
     "fileManagerPathHint": "এই হোস্টের জন্য ফাইল ম্যানেজার চালু হলে যে ডিরেক্টরিটি খুলবে।",
     "fileManagerUrlCopied": "ফাইল ম্যানেজার ইউআরএল কপি করা হয়েছে",
-    "copyFileManagerUrlAction": "ফাইল ম্যানেজার ইউআরএল কপি করুন"
+    "copyFileManagerUrlAction": "ফাইল ম্যানেজার ইউআরএল কপি করুন",
+    "docsLink": "নথি দেখুন",
+    "hostNotFound": "হোস্ট খুঁজে পাওয়া যায়নি",
+    "loadingHost": "হোস্ট লোড হচ্ছে..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP লিগ্যাসি মোড"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "একযোগে ফাইল স্থানান্তর",
+        "description": "সাইড বাই সাইড লোকাল/রিমোট ম্যানেজার একই সময়ে কতগুলো ফাইল আপলোড বা ডাউনলোড করে। আপনার সার্ভার যদি SFTP চ্যানেল সীমিত করে, তবে এই সংখ্যাটি কমিয়ে দিন।"
+      }
     }
   },
   "nav": {
     "sftp": "এসএফটিপি",
     "files": "ফাইল"
+  },
+  "onboarding": {
+    "feature_files": "ফাইল ম্যানেজার",
+    "feature_files_desc": "অ্যাপ থেকে বের না হয়েই SFTP-এর মাধ্যমে ফাইল ব্রাউজ, আপলোড, ডাউনলোড এবং সম্পাদনা করুন।"
+  },
+  "terminal": {
+    "runTitle": "দৌড়ানো {{command}} - {{host}}",
+    "terminalTitle": "টার্মিনাল - {{host}}",
+    "terminalWithPath": "টার্মিনাল - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "গন্তব্য ফোল্ডারগুলি ব্রাউজ করুন",
+    "browsePathError": "গন্তব্য হোস্টে এই পাথটি খোলা সম্ভব হয়নি।",
+    "browsePathWillBeCreated": "এই ফোল্ডারটি এখনও তৈরি হয়নি। স্থানান্তর শুরু হলে এটি তৈরি হয়ে যাবে।",
+    "cancel": "বাতিল করুন",
+    "cleanupDestFiles": "পরিষ্কার করার গন্তব্য",
+    "cleanupDestFilesError": "পরিষ্কার করা ব্যর্থ হয়েছে",
+    "cleanupDestFilesNothing": "গন্তব্যে পরিষ্কার করার কিছু নেই।",
+    "cleanupDestFilesPartial": "কিছু আংশিক ফাইল সরানো যায়নি",
+    "cleanupDestFilesSuccess": "গন্তব্য থেকে আংশিক ফাইল সরানো হয়েছে",
+    "confirmCopy": "অনুলিপি",
+    "confirmMove": "স্থানান্তর",
+    "copyFolderToHost": "ফোল্ডারটি হোস্টে কপি করুন…",
+    "copyItemsToHost": "{{count}} টি আইটেম হোস্টে কপি করুন…",
+    "copyToHost": "হোস্টে কপি করুন…",
+    "destinationPath": "গন্তব্য পথ",
+    "destMustBeDirectory": "একাধিক আইটেম স্থানান্তরের জন্য গন্তব্য অবশ্যই একটি ডিরেক্টরি হতে হবে।",
+    "goUp": "উপরে যান",
+    "hostAuthRequired": "প্রমাণীকরণ আবশ্যক — প্রথমে এই হোস্টে ফাইল ম্যানেজার খুলুন।",
+    "hostConnecting": "… সংযোগ করা হচ্ছে",
+    "hostConnectionFailed": "সংযোগ ব্যর্থ হয়েছে",
+    "hostDisconnected": "সংযুক্ত নয়",
+    "hostReady": "প্রস্তুত",
+    "itemsSummary": "{{count}} আইটেম",
+    "jumpHostLimitation": "উভয় হোস্টকেই টারমিক্স সার্ভার থেকে পৌঁছানো সম্ভব হতে হবে। সরাসরি হোস্ট-টু-হোস্ট রাউটিং সমর্থিত নয়।",
+    "methodAuto": "অটো",
+    "methodAutoHint": "ফাইলের সংখ্যা, আকার এবং সংকোচনযোগ্যতার উপর ভিত্তি করে tar অথবা ফাইল-ভিত্তিক SFTP নির্বাচন করে। একক ফাইলের ক্ষেত্রে সর্বদা স্ট্রিমিং SFTP ব্যবহৃত হয়।",
+    "methodItemSftp": "প্রতি-ফাইল এসএফটিপি",
+    "methodItemSftpHint": "SFTP-এর মাধ্যমে প্রতিটি ফাইল আলাদাভাবে স্থানান্তর করুন। উইন্ডোজ সহ সকল হোস্টে কাজ করে।",
+    "methodItemSftpLimitation": "প্রতিটি ফাইল একই SFTP স্ট্রিম ব্যবহার করে একটির পর একটি একক-ফাইল কপি হিসেবে তৈরি হয়। সমস্ত ফাইলের অগ্রগতি একত্রিত করা হয়, তাই বড় ফাইলের ক্ষেত্রে বারটি ধীরে চলে।",
+    "methodLabel": "স্থানান্তর পদ্ধতি",
+    "methodPreviewError": "স্থানান্তর পদ্ধতির প্রিভিউ দেখা সম্ভব হয়নি। আপনি চালু করার সময় সার্ভার নিজেই একটি পদ্ধতি বেছে নেবে।",
+    "methodPreviewLoading": "স্থানান্তর পদ্ধতি গণনা করা হচ্ছে…",
+    "methodPreviewScanSummary": "{{fileCount}} টি ফাইল, {{totalSize}} টি মোট (উৎস হোস্টে স্ক্যান করা হয়েছে)।",
+    "methodPreviewWillUseItemSftp": "ব্যবহার করা হবে: প্রতি-ফাইল এসএফটিপি",
+    "methodPreviewWillUseTar": "ব্যবহৃত হবে: টার আর্কাইভ",
+    "methodReason": {
+      "user_item_sftp": "আপনি ফাইল-ভিত্তিক এসএফটিপি বেছে নিয়েছেন।",
+      "user_tar": "আপনি tar আর্কাইভটি বেছে নিয়েছেন।",
+      "tar_unavailable": "এক বা উভয় হোস্টে Tar উপলব্ধ না থাকায়, এর পরিবর্তে ফাইল-ভিত্তিক SFTP ব্যবহার করা হবে।",
+      "windows_host": "এখানে একটি উইন্ডোজ হোস্ট জড়িত — tar ব্যবহৃত হয় না।",
+      "auto_multi_large": "স্বয়ংক্রিয়: সংকোচনযোগ্য ডেটা সহ একটি বড় ফাইল ({{largestSize}}) সহ একাধিক ফাইল — tar বান্ডেল করে একটি একক স্থানান্তরে পাঠানো হয়।",
+      "auto_single_large_in_archive": "স্বয়ংক্রিয়: এই সেটে একটি বড় ফাইল ({{largestSize}}) — ফাইল-ভিত্তিক SFTP।",
+      "auto_many_incompressible": "স্বয়ংক্রিয়: প্রধানত অসংকোচনযোগ্য ডেটা — ফাইল-ভিত্তিক এসএফটিপি।",
+      "auto_many_files": "স্বয়ংক্রিয়: একাধিক ফাইল ({{fileCount}}) — tar প্রতি-ফাইল ওভারহেড কমায়।",
+      "auto_default": "স্বয়ংক্রিয়: এই সেটের জন্য প্রতি-ফাইল এসএফটিপি।"
+    },
+    "methodTar": "টার আর্কাইভ",
+    "methodTarHint": "উৎসস্থলে কম্প্রেস করুন, একটি আর্কাইভ স্থানান্তর করুন, এবং গন্তব্যে এক্সট্র্যাক্ট করুন। উভয় ইউনিক্স হোস্টে tar প্রয়োজন।",
+    "metricsCompress": "উৎস থেকে সংকুচিত করুন: {{duration}}",
+    "metricsExtract": "গন্তব্যে নিষ্কাশন: {{duration}}",
+    "metricsPrepare": "গন্তব্য প্রস্তুত করুন: {{duration}}",
+    "metricsRouteBenchmark": "রুট প্রোব — সরাসরি: {{direct}}, রিলে: {{relay}}",
+    "metricsSourceDelete": "উৎস থেকে সরান: {{duration}}",
+    "metricsTotal": "মোট: {{duration}}",
+    "metricsTransfer": "প্রান্ত থেকে প্রান্ত: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 দ্বারা যাচাইকৃত: {{duration}}",
+    "moveFolderToHost": "ফোল্ডারটি হোস্টে সরান…",
+    "moveItemsToHost": "{{count}} টি আইটেম… টি হোস্টে সরান",
+    "moveToHost": "হোস্টে যান…",
+    "noHostsConnected": "অন্য কোনো ফাইল-ম্যানেজার হোস্ট উপলব্ধ নেই।",
+    "noHostsConnectedHint": "হোস্ট ম্যানেজারে ফাইল ম্যানেজার সক্রিয় করা আছে এমন আরেকটি SSH হোস্ট যোগ করুন।",
+    "parallelSegmentsHint": "বড় ফাইলগুলোকে ২৫৬ মেগাবাইটের খণ্ডে ভাগ করা হয়। মোট থ্রুপুট বাড়ানোর জন্য একাধিক লেন আলাদা সংযোগ ব্যবহার করে (যেমন কয়েকটি ট্রান্সফার শুরু করা)।",
+    "parallelSegmentsLabel": "সমান্তরাল স্থানান্তর লেন",
+    "parallelSegmentsOption": "{{count}} লেন",
+    "progressBenchmarking": "দ্রুততম স্থানান্তর পথ নির্বাচন করা হচ্ছে…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "বাতিল করুন",
+    "progressCancelling": "বাতিল করা হচ্ছে…",
+    "progressCompressing": "উৎস হোস্টে সংকুচিত করা হচ্ছে…",
+    "progressExtracting": "গন্তব্য… থেকে নিষ্কাশন করা হচ্ছে",
+    "progressItems": "{{current}} / {{total}} ফাইল",
+    "progressReconnecting": "পুনরায় সংযোগ স্থাপন…",
+    "progressStalled": "স্থবির",
+    "progressTotalSpeed": "{{speed}} মোট ({{lanes}} লেন)",
+    "progressTransferring": "ডেটা স্থানান্তর করা হচ্ছে…",
+    "progressTransferringItems": "ফাইল স্থানান্তর করা হচ্ছে ({{current}} {{total}})…",
+    "progressVerifying": "ফাইলের অখণ্ডতা যাচাই করা হচ্ছে…",
+    "recentDestinations": "সাম্প্রতিক গন্তব্যস্থল",
+    "resumedHint": "অন্য একটি উইন্ডোতে শুরু হওয়া একটি সক্রিয় ট্রান্সফারের সাথে পুনরায় সংযুক্ত হওয়া গেছে।",
+    "retryTransfer": "পুনরায় চেষ্টা করুন",
+    "retryTransferError": "পুনরায় চেষ্টা ব্যর্থ হয়েছে",
+    "selectDestinationHost": "গন্তব্য হোস্ট নির্বাচন করুন",
+    "transferCancelled": "স্থানান্তর বাতিল করা হয়েছে",
+    "transferCancelledCopyHint": "গন্তব্যে আংশিক ফাইল থেকে যেতে পারে।",
+    "transferCancelledMoveHint": "গন্তব্যে আংশিক ফাইল থেকে যেতে পারে। মূল ফাইলগুলো সরানো হয়নি।",
+    "transferError": "স্থানান্তর ব্যর্থ হয়েছে",
+    "transferFailedRetryHint": "গন্তব্যে আংশিক ডেটা সংরক্ষিত হয়েছে। সংযোগ ফিরে এলে পুনরায় চেষ্টা শুরু হবে।",
+    "transferPartialHint": "স্থানান্তর করা যায়নি: {{paths}}",
+    "transferSuccess": "স্থানান্তর সম্পন্ন হয়েছে"
   }
 }

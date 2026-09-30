@@ -85,5 +85,45 @@
   },
   "nav": {
     "fleets": "Laivastot"
+  },
+  "hosts": {
+    "docsLink": "Näytä dokumentit",
+    "sharing": {
+      "customHoursPlaceholder": "Tuntia käyttöoikeuden vanhenemiseen",
+      "expiry": {
+        "never": "Ei koskaan",
+        "oneHour": "1 tunti",
+        "oneDay": "24 tuntia",
+        "sevenDays": "7 päivää",
+        "thirtyDays": "30 päivää",
+        "custom": "Mukautettu"
+      },
+      "expiryLabel": "Käyttöoikeuden päättyminen",
+      "levels": {
+        "connect": {
+          "label": "Yhdistä",
+          "description": "Vain avoimet istunnot: pääte, etätyöpöytä, tiedostonhallinta, tunnelit ja Docker. Ei pääsyä isäntäkokoonpanoon."
+        },
+        "view": {
+          "label": "Näytä",
+          "description": "Yhdistä ja katso isäntäkokoonpano. Salaisuuksia ei koskaan näytetä."
+        },
+        "edit": {
+          "label": "Muokata",
+          "description": "Näytä ja muokkaa ei-todennukseen perustuvia isäntäasetuksia. Omistajan SSH-todennus pysyy yksityisenä ja vain omistajalle tarkoitettuna."
+        },
+        "manage": {
+          "label": "Hallitse",
+          "description": "Muokkaa ja jaa isäntä muiden kanssa, muuta käyttöoikeustasoja ja peruuta käyttöoikeuksia."
+        }
+      },
+      "noMatches": "Ei osumia",
+      "permissionLevelLabel": "Käyttöoikeustaso",
+      "rolesTab": "Roolit",
+      "searchPlaceholder": "Hae käyttäjiä tai rooleja...",
+      "shareButton": "Jakaa",
+      "shareWithCount": "Jaa ({{count}})",
+      "usersTab": "Käyttäjät"
+    }
   }
 }

@@ -16,5 +16,13 @@
     "tailscaleCheckOpenBrowser": "Open de browser om te authenticeren.",
     "tailscaleCheckWaiting": "Wachten op Tailscale-authenticatie...",
     "tailscaleCheckTimeout": "De authenticatie bij Tailscale is mislukt vanwege een time-out. Probeer het opnieuw."
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Verbinden met de terminal",
+        "usernameLabel": "Gebruikersnaam"
+      }
+    }
   }
 }

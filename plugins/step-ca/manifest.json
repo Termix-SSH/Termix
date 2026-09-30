@@ -78,7 +78,8 @@
           "to": "/callback"
         }
       ]
-    }
+    },
+    "uses": ["terminal.overlay"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

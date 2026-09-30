@@ -382,7 +382,10 @@
     "defaultPathLabel": "Standardpfad",
     "fileManagerPathHint": "Das Verzeichnis, das geöffnet wird, wenn der Dateimanager für diesen Host gestartet wird.",
     "fileManagerUrlCopied": "Dateimanager-URL kopiert",
-    "copyFileManagerUrlAction": "Dateimanager-URL kopieren"
+    "copyFileManagerUrlAction": "Dateimanager-URL kopieren",
+    "docsLink": "Dokumentation anzeigen",
+    "hostNotFound": "Host nicht gefunden",
+    "loadingHost": "Host wird geladen..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP-Legacy-Modus"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Gleichzeitige Dateiübertragungen",
+        "description": "Wie viele Dateien der lokale/Remote-Manager gleichzeitig hoch- oder herunterlädt. Verringern Sie diesen Wert, wenn Ihr Server die Anzahl der SFTP-Kanäle begrenzt."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Dateien"
+  },
+  "onboarding": {
+    "feature_files": "Dateimanager",
+    "feature_files_desc": "Durchsuchen, hochladen, herunterladen und bearbeiten Sie Dateien über SFTP, ohne die App zu verlassen."
+  },
+  "terminal": {
+    "runTitle": "Ausführung: {{command}} - {{host}}",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Zielordner durchsuchen",
+    "browsePathError": "Dieser Pfad konnte auf dem Zielhost nicht geöffnet werden.",
+    "browsePathWillBeCreated": "Dieser Ordner existiert noch nicht. Er wird beim Start der Übertragung erstellt.",
+    "cancel": "Abbrechen",
+    "cleanupDestFiles": "Ziel bereinigen",
+    "cleanupDestFilesError": "Bereinigung fehlgeschlagen.",
+    "cleanupDestFilesNothing": "Nichts zum Bereinigen am Ziel.",
+    "cleanupDestFilesPartial": "Einige unvollständige Dateien konnten nicht entfernt werden.",
+    "cleanupDestFilesSuccess": "Unvollständige Dateien vom Ziel entfernt.",
+    "confirmCopy": "Kopieren",
+    "confirmMove": "Verschieben",
+    "copyFolderToHost": "Ordner zum Host kopieren …",
+    "copyItemsToHost": "{{count}} Elemente auf Host kopieren…",
+    "copyToHost": "Auf Host kopieren…",
+    "destinationPath": "Zielpfad",
+    "destMustBeDirectory": "Bei Übertragung mehrerer Elemente muss das Ziel ein Verzeichnis sein.",
+    "goUp": "Nach oben",
+    "hostAuthRequired": "Authentifizierung erforderlich — öffnen Sie zuerst den Dateimanager auf diesem Host",
+    "hostConnecting": "Verbinden …",
+    "hostConnectionFailed": "Verbindung fehlgeschlagen",
+    "hostDisconnected": "Nicht verbunden",
+    "hostReady": "Bereit",
+    "itemsSummary": "{{count}} Elemente",
+    "jumpHostLimitation": "Beide Hosts müssen vom Termix-Server aus erreichbar sein. Direktes Host-zu-Host-Routing wird nicht unterstützt.",
+    "methodAuto": "Automatisch",
+    "methodAutoHint": "Wählt Tar-Archiv oder dateiweise SFTP basierend auf Dateianzahl, Größe und Komprimierbarkeit. Einzelne Dateien verwenden immer Streaming-SFTP.",
+    "methodItemSftp": "Dateiweise SFTP",
+    "methodItemSftpHint": "Jede Datei einzeln per SFTP übertragen. Funktioniert auf allen Hosts einschließlich Windows.",
+    "methodItemSftpLimitation": "Jede Datei verwendet denselben SFTP-Stream wie bei einer Einzeldatei-Kopie, eine nach der anderen. Der Fortschritt wird über alle Dateien kombiniert, sodass der Balken bei großen Dateien nur langsam voranschreitet.",
+    "methodLabel": "Übertragungsmethode",
+    "methodPreviewError": "Vorschau der Übertragungsmethode nicht möglich. Der Server wählt beim Start trotzdem eine Methode.",
+    "methodPreviewLoading": "Übertragungsmethode wird berechnet…",
+    "methodPreviewScanSummary": "{{fileCount}} Dateien, {{totalSize}} gesamt (auf Quellhost gescannt).",
+    "methodPreviewWillUseItemSftp": "Verwendet: Dateiweise SFTP",
+    "methodPreviewWillUseTar": "Verwendet: Tar-Archiv",
+    "methodReason": {
+      "user_item_sftp": "Sie haben dateiweises SFTP ausgewählt.",
+      "user_tar": "Sie haben tar-Archiv ausgewählt.",
+      "tar_unavailable": "Tar ist auf einem oder beiden Hosts nicht verfügbar – stattdessen wird dateiweises SFTP verwendet.",
+      "windows_host": "Ein Windows-Host ist beteiligt – tar wird nicht verwendet.",
+      "auto_multi_large": "Automatisch: mehrere Dateien, darunter eine große Datei ({{largestSize}}) mit komprimierbaren Daten – tar bündelt sie in eine Übertragung.",
+      "auto_single_large_in_archive": "Automatisch: eine große Datei ({{largestSize}}) in diesem Satz – dateiweises SFTP.",
+      "auto_many_incompressible": "Automatisch: überwiegend nicht komprimierbare Daten – dateiweises SFTP.",
+      "auto_many_files": "Automatisch: viele Dateien ({{fileCount}}) – tar reduziert den Overhead pro Datei.",
+      "auto_default": "Automatisch: dateiweises SFTP für diesen Satz."
+    },
+    "methodTar": "Tar-Archiv",
+    "methodTarHint": "Komprimieren auf der Quelle, ein Archiv übertragen, auf dem Ziel entpacken. Erfordert tar auf beiden Unix-Hosts.",
+    "metricsCompress": "Komprimieren auf der Quelle: {{duration}}",
+    "metricsExtract": "Entpacken auf dem Ziel: {{duration}}",
+    "metricsPrepare": "Ziel vorbereiten: {{duration}}",
+    "metricsRouteBenchmark": "Routenprüfung — direkt: {{direct}}, Relay: {{relay}}",
+    "metricsSourceDelete": "Löschen von der Quelle: {{duration}}",
+    "metricsTotal": "Gesamt: {{duration}}",
+    "metricsTransfer": "Ende-zu-Ende: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 verifiziert: {{duration}}",
+    "moveFolderToHost": "Ordner zum Host verschieben …",
+    "moveItemsToHost": "{{count}} Elemente zum Host verschieben…",
+    "moveToHost": "Auf Host verschieben…",
+    "noHostsConnected": "Keine weiteren Dateimanager-Hosts verfügbar.",
+    "noHostsConnectedHint": "Fügen Sie einen weiteren SSH-Host mit aktiviertem Dateimanager im Host-Manager hinzu.",
+    "parallelSegmentsHint": "Große Dateien werden in 256-MB-Blöcke aufgeteilt. Mehrere Kanäle verwenden eigene Verbindungen (ähnlich wie mehrere gleichzeitige Übertragungen) für einen höheren Gesamtdurchsatz.",
+    "parallelSegmentsLabel": "Parallele Übertragungskanäle",
+    "parallelSegmentsOption": "{{count}} Kanäle",
+    "progressBenchmarking": "Auswahl der schnellsten Transferroute…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Abbrechen",
+    "progressCancelling": "Wird abgebrochen…",
+    "progressCompressing": "Komprimieren auf dem Quellhost…",
+    "progressExtracting": "Entpacken auf dem Zielhost…",
+    "progressItems": "{{current}} / {{total}} Dateien",
+    "progressReconnecting": "Neu verbinden…",
+    "progressStalled": "Stockt",
+    "progressTotalSpeed": "{{speed}} gesamt ({{lanes}} Kanäle)",
+    "progressTransferring": "Daten übertragen…",
+    "progressTransferringItems": "Übertragen von Dateien ({{current}} von {{total}})…",
+    "progressVerifying": "Dateiintegrität wird überprüft…",
+    "recentDestinations": "Letzte Ziele",
+    "resumedHint": "Erneut mit einer aktiven Übertragung verbunden, die in einem anderen Fenster gestartet wurde.",
+    "retryTransfer": "Wiederholen",
+    "retryTransferError": "Wiederholung fehlgeschlagen.",
+    "selectDestinationHost": "Zielhost auswählen",
+    "transferCancelled": "Übertragung abgebrochen",
+    "transferCancelledCopyHint": "Unvollständige Dateien können am Zielort verbleiben.",
+    "transferCancelledMoveHint": "Unvollständige Dateien können am Zielort verbleiben. Quelldateien wurden nicht entfernt.",
+    "transferError": "Übertragung fehlgeschlagen",
+    "transferFailedRetryHint": "Unvollständige Daten wurden am Ziel beibehalten. Die Wiederholung wird fortgesetzt, sobald die Verbindung wiederhergestellt ist.",
+    "transferPartialHint": "Konnte nicht übertragen werden: {{paths}}",
+    "transferSuccess": "Übertragung abgeschlossen"
   }
 }

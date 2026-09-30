@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Arbejdsområder",
     "workflow_workspaces_desc": "Gem et sæt åbne faner, og åbn hele layoutet igen senere."
+  },
+  "hosts": {
+    "docsLink": "Se dokumenter"
   }
 }

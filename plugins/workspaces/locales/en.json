@@ -63,5 +63,8 @@
       "title": "Use workspaces",
       "description": "Save, apply and manage saved tab layouts."
     }
+  },
+  "hosts": {
+    "docsLink": "View docs"
   }
 }

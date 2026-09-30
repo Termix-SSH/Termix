@@ -1,7 +1,10 @@
 import {
+  createCurrentHostProtocolAuthRepository,
   createCurrentUserDataExportRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
+import { decryptProtocolLogin } from "../database/repositories/host-protocol-auth-repository.js";
+import { toPortableLogins } from "../hosts/protocol-auth/protocol-auth.js";
 import { readUserPluginRows } from "../plugins/user-data.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -59,12 +62,28 @@ class UserDataExport {
 
       const exportRepository = createCurrentUserDataExportRepository();
       const sshHosts = await exportRepository.listHostsByUserId(userId);
-      const processedSshHosts =
+      // Each host's plugin protocol logins ride on it, sealed like the
+      // host's own secrets unless the export is plaintext.
+      const logins = new Map<number, Record<string, unknown>>();
+      for (const row of await createCurrentHostProtocolAuthRepository().listRowsForUser(
+        userId,
+      )) {
+        const own = logins.get(row.hostId) ?? {};
+        own[row.protocol] =
+          format === "plaintext" && userDataKey
+            ? toPortableLogins([decryptProtocolLogin(row, userDataKey)])[
+                row.protocol
+              ]
+            : row;
+        logins.set(row.hostId, own);
+      }
+      const processedSshHosts = (
         format === "plaintext" && userDataKey
           ? sshHosts.map((host) =>
               DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey!),
             )
-          : sshHosts;
+          : sshHosts
+      ).map((host) => ({ ...host, protocolAuth: logins.get(host.id) ?? {} }));
 
       let sshCredentialsData: unknown[] = [];
       if (includeCredentials) {

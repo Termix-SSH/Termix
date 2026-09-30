@@ -12,9 +12,19 @@ const state = vi.hoisted(() => ({
   accessToHost: new Map<number, number>(),
   grants: [] as Array<Record<string, unknown>>,
   roleMembers: new Map<number, string[]>(),
+  // hostId -> that host's plugin protocol logins, decrypted
+  logins: new Map<number, Array<Record<string, unknown>>>(),
+}));
+
+vi.mock("../../hosts/usable-credential.js", () => ({
+  findUsableCredential: async (credentialId: number) =>
+    state.credentials.get(credentialId) ?? null,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentHostProtocolAuthRepository: () => ({
+    listForHost: async (hostId: number) => state.logins.get(hostId) ?? [],
+  }),
   createCurrentHostResolutionRepository: () => ({
     findHostById: async (hostId: number) => state.hosts.get(hostId) ?? null,
     findHostOwnerId: async (hostId: number) =>
@@ -137,22 +147,20 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     credentialId: null,
     shareSshAuth: false,
     enableSsh: true,
-    enableRdp: false,
-    enableVnc: false,
-    enableTelnet: false,
-    rdpAuthType: null,
-    vncAuthType: null,
-    telnetAuthType: null,
-    rdpCredentialId: null,
-    vncCredentialId: null,
-    telnetCredentialId: null,
-    rdpUser: null,
-    rdpPassword: null,
-    rdpDomain: null,
-    vncUser: null,
-    vncPassword: null,
-    telnetUser: null,
-    telnetPassword: null,
+    ...overrides,
+  };
+}
+
+/** A plugin protocol login as the repository hands it back, decrypted. */
+function login(protocol: string, overrides: Record<string, unknown> = {}) {
+  return {
+    protocol,
+    authType: "direct",
+    credentialId: null,
+    username: null,
+    password: null,
+    fields: {},
+    secretFields: {},
     ...overrides,
   };
 }
@@ -164,6 +172,7 @@ beforeEach(() => {
   state.accessToHost = new Map([[7, 42]]);
   state.grants = [];
   state.roleMembers.clear();
+  state.logins.clear();
 });
 
 describe("SharedHostSecretsManager", () => {
@@ -189,7 +198,7 @@ describe("SharedHostSecretsManager", () => {
     });
   });
 
-  it("snapshots opted-in SSH credential auth alongside enabled non-SSH protocols", async () => {
+  it("snapshots opted-in SSH credential auth alongside plugin protocol logins", async () => {
     state.credentials.set(123, {
       id: 123,
       userId: "owner",
@@ -208,22 +217,24 @@ describe("SharedHostSecretsManager", () => {
         credentialId: 123,
         shareSshAuth: true,
         password: null,
-        enableRdp: true,
-        rdpUser: "rdp-admin",
-        rdpPassword: "rdp-pass",
-        rdpDomain: "CORP",
-        enableTelnet: true,
-        telnetUser: "tel-user",
-        telnetPassword: "tel-pass",
       }),
     );
+    state.logins.set(42, [
+      login("spice", {
+        username: "spice-admin",
+        password: "spice-pass",
+        fields: { display: "2" },
+        secretFields: { ticket: "t-1" },
+      }),
+      login("x2go", { username: "x-user", password: "x-pass" }),
+    ]);
 
     await manager.snapshotForUser(7, 42, "target", "owner");
 
     expect(state.secretRows.map((row) => row.protocol).sort()).toEqual([
-      "rdp",
+      "spice",
       "ssh",
-      "telnet",
+      "x2go",
     ]);
 
     expect(await manager.getSecretForUser(42, "target", "ssh")).toMatchObject({
@@ -234,19 +245,99 @@ describe("SharedHostSecretsManager", () => {
       keyType: "ssh-ed25519",
     });
 
-    const rdp = await manager.getSecretForUser(42, "target", "rdp");
-    expect(rdp).toMatchObject({
-      username: "rdp-admin",
-      password: "rdp-pass",
-      domain: "CORP",
+    const spice = await manager.getSecretForUser(42, "target", "spice");
+    expect(spice).toMatchObject({
+      username: "spice-admin",
+      password: "spice-pass",
+      fields: { display: "2", ticket: "t-1" },
       authType: "direct",
     });
 
-    const telnet = await manager.getSecretForUser(42, "target", "telnet");
-    expect(telnet).toMatchObject({
-      username: "tel-user",
-      password: "tel-pass",
+    const x2go = await manager.getSecretForUser(42, "target", "x2go");
+    expect(x2go).toMatchObject({
+      username: "x-user",
+      password: "x-pass",
     });
+  });
+
+  it("snapshots a credential-backed protocol login from the credential", async () => {
+    state.credentials.set(55, {
+      id: 55,
+      userId: "owner",
+      username: "cred-viewer",
+      password: "cred-pass",
+    });
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [
+      login("spice", {
+        authType: "credential",
+        credentialId: 55,
+        fields: { display: "1" },
+      }),
+    ]);
+
+    await manager.snapshotForUser(7, 42, "target", "owner");
+
+    expect(state.secretRows[0]).toMatchObject({
+      protocol: "spice",
+      sourceType: "credential",
+      originalCredentialId: 55,
+    });
+    expect(await manager.getSecretForUser(42, "target", "spice")).toMatchObject(
+      {
+        authType: "credential",
+        username: "cred-viewer",
+        password: "cred-pass",
+        fields: { display: "1" },
+      },
+    );
+  });
+
+  it("takes no snapshot of a login that asks at connect time", async () => {
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [login("spice", { authType: "none" })]);
+
+    await manager.snapshotForUser(7, 42, "target", "owner");
+
+    expect(state.secretRows).toHaveLength(0);
+  });
+
+  it("reads a snapshot taken before 2.9.0 with its domain column", async () => {
+    const recordId = "shared-7-target-legacy";
+    state.secretRows.push({
+      id: 1,
+      hostAccessId: 7,
+      targetUserId: "target",
+      protocol: "legacy",
+      encryptedUsername: FieldCrypto.encryptField(
+        "admin",
+        targetDEK,
+        recordId,
+        "username",
+      ),
+      encryptedAuthType: "direct",
+      encryptedDomain: FieldCrypto.encryptField(
+        "CORP",
+        targetDEK,
+        recordId,
+        "domain",
+      ),
+    });
+
+    expect(
+      await manager.getSecretForUser(42, "target", "legacy"),
+    ).toMatchObject({ username: "admin", fields: { domain: "CORP" } });
+  });
+
+  it("drops a protocol's snapshot once its login is gone", async () => {
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [login("spice", { username: "u", password: "p" })]);
+    await manager.snapshotForUser(7, 42, "target", "owner");
+    expect(state.secretRows).toHaveLength(1);
+
+    state.logins.set(42, []);
+    await manager.snapshotForUser(7, 42, "target", "owner");
+    expect(state.secretRows).toHaveLength(0);
   });
 
   it("produces no snapshot rows for secret-less auth types", async () => {
@@ -283,36 +374,54 @@ describe("SharedHostSecretsManager", () => {
   });
 
   it("cannot be decrypted with the wrong DEK", async () => {
-    state.hosts.set(
-      42,
-      baseHost({
-        enableRdp: true,
-        rdpUser: "rdp-admin",
-        rdpPassword: "rdp-pass",
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [
+      login("spice", {
+        username: "spice-admin",
+        password: "spice-pass",
+        secretFields: { ticket: "t-1" },
       }),
-    );
+    ]);
     await manager.snapshotForUser(7, 42, "target", "owner");
 
     const row = state.secretRows[0];
-    expect(() =>
-      FieldCrypto.decryptField(
-        row.encryptedPassword as string,
-        ownerDEK,
-        "shared-7-target-rdp",
-        "password",
-      ),
-    ).toThrow();
+    for (const [column, field] of [
+      ["encryptedPassword", "password"],
+      ["encryptedFields", "fields"],
+    ]) {
+      expect(() =>
+        FieldCrypto.decryptField(
+          row[column] as string,
+          ownerDEK,
+          "shared-7-target-spice",
+          field,
+        ),
+      ).toThrow();
+    }
+  });
+
+  it("refuses a tampered snapshot rather than handing it out", async () => {
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [login("spice", { password: "spice-pass" })]);
+    await manager.snapshotForUser(7, 42, "target", "owner");
+
+    const row = state.secretRows[0];
+    const envelope = JSON.parse(row.encryptedPassword as string);
+    envelope.data = envelope.data.replace(/^./, (c: string) =>
+      c === "0" ? "1" : "0",
+    );
+    row.encryptedPassword = JSON.stringify(envelope);
+
+    await expect(
+      manager.getSecretForUser(42, "target", "spice"),
+    ).rejects.toThrow();
   });
 
   it("resyncHost re-snapshots direct grants and role members", async () => {
-    state.hosts.set(
-      42,
-      baseHost({
-        enableRdp: true,
-        rdpUser: "rdp-admin",
-        rdpPassword: "rdp-pass",
-      }),
-    );
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [
+      login("spice", { username: "spice-admin", password: "spice-pass" }),
+    ]);
     state.accessToHost = new Map([
       [1, 42],
       [2, 42],
@@ -334,29 +443,20 @@ describe("SharedHostSecretsManager", () => {
     ]);
 
     // Owner rotates the non-SSH password; resync updates those copies.
-    state.hosts.set(
-      42,
-      baseHost({
-        enableRdp: true,
-        rdpUser: "rdp-admin",
-        rdpPassword: "rotated",
-      }),
-    );
+    state.logins.set(42, [
+      login("spice", { username: "spice-admin", password: "rotated" }),
+    ]);
     await manager.resyncHost(42);
 
-    const secret = await manager.getSecretForUser(42, "target", "rdp");
+    const secret = await manager.getSecretForUser(42, "target", "spice");
     expect(secret?.password).toBe("rotated");
   });
 
   it("snapshotForRoleMember fans out from role grants", async () => {
-    state.hosts.set(
-      42,
-      baseHost({
-        enableRdp: true,
-        rdpUser: "rdp-admin",
-        rdpPassword: "rdp-pass",
-      }),
-    );
+    state.hosts.set(42, baseHost());
+    state.logins.set(42, [
+      login("spice", { username: "spice-admin", password: "spice-pass" }),
+    ]);
     state.accessToHost = new Map([[2, 42]]);
     state.grants = [{ id: 2, hostId: 42, userId: null, roleId: 9 }];
 
@@ -366,7 +466,7 @@ describe("SharedHostSecretsManager", () => {
     expect(state.secretRows[0]).toMatchObject({
       hostAccessId: 2,
       targetUserId: "member-1",
-      protocol: "rdp",
+      protocol: "spice",
     });
   });
 });

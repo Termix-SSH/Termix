@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Minimal 15 detik. Seberapa sering statistik node Proxmox diperbarui.",
     "proxmoxStatsNodeOverride": "Penggantian nama node",
     "proxmoxStatsNodeOverrideDesc": "Ganti deteksi otomatis nama node Proxmox (yang secara default dideteksi melalui nama host).",
-    "proxmoxStatsNodeOverridePlaceholder": "Terdeteksi secara otomatis dari nama host"
+    "proxmoxStatsNodeOverridePlaceholder": "Terdeteksi secara otomatis dari nama host",
+    "docsLink": "Lihat dokumen",
+    "hostNotFound": "Host tidak ditemukan",
+    "loadingHost": "Memuat host...",
+    "none": "Tidak ada",
+    "proxmoxGuestsSelected_one": "{{count}} tamu — {{selected}} terpilih",
+    "proxmoxGuestsSelected_other": "{{count}} tamu — {{selected}} terpilih",
+    "proxmoxImportButton_one": "Impor {{count}} host",
+    "proxmoxImportButton_other": "Impor {{count}} host"
   },
   "proxmoxStats": {
     "tabTitle": "Statistik Proxmox",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Tidak ditemukan VM atau kontainer LXC pada node ini.",
     "noGuestsMatch": "Tidak ada tamu yang sesuai dengan filter saat ini."
+  },
+  "terminal": {
+    "connected": "Terhubung"
   }
 }

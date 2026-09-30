@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isElectron } from "@/lib/electron";
+import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useHostActions } from "@/sidebar/host-contributions";
 import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
-import {
-  getHomepageWidgetType,
-  useHomepageWidgetTypes,
-} from "./homepage-widget-registry";
+import { getExtension, useExtensions } from "./extension-registry";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   __setPluginHost,
-  type HomepageWidgetContribution,
+  type ExtensionContribution,
   type HostActionContribution,
   type PluginHostBridge,
   type PluginHostRecord,
@@ -28,7 +27,7 @@ import {
   updatePluginHostSettings,
   updatePluginUserSettings,
 } from "@/api/plugins-api";
-import { getCookie, getUserInfo } from "@/main-axios";
+import { getCookie, getUserInfo, setCookie } from "@/main-axios";
 import { logActivity } from "@/api/dashboard-api";
 import { getCredentials, getHostPassword } from "@/api/credentials-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
@@ -37,7 +36,7 @@ import {
   parseCustomKeybindings,
   patchOpenTab,
 } from "@/api/open-tabs-api";
-import { setHostAutoTmux } from "@/api/host-terminal-config-api";
+import { runKeybindingAction } from "@/shell/keybinding-registry";
 import { usePluginScope } from "./scope";
 import { knownPluginIds, usePluginStore } from "./plugin-store";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
@@ -143,8 +142,66 @@ const SETTINGS_WRITERS: Record<
     updatePluginHostSettings(pluginId, hostId!, values),
 };
 
-function toHostRecord(host: unknown): PluginHostRecord {
-  return host as PluginHostRecord;
+/** Both host shapes the shell holds: its own list and the API's. */
+type ShellHost = Omit<Partial<PluginHostRecord>, "id" | "parentHostId"> & {
+  id: string | number;
+  parentHostId?: string | number | null;
+};
+
+/**
+ * The shell's host as the SDK types it. Copied field by field, so a core
+ * field reaches plugins only once it is part of PluginHostRecord.
+ */
+export function toHostRecord(host: ShellHost): PluginHostRecord {
+  return {
+    id: String(host.id),
+    name: host.name ?? "",
+    ip: host.ip ?? "",
+    port: host.port,
+    username: host.username,
+    folder: host.folder,
+    tags: host.tags,
+    pin: host.pin,
+    notes: host.notes,
+    syncId: host.syncId,
+    parentHostId: host.parentHostId == null ? null : String(host.parentHostId),
+    authType: host.authType,
+    credentialId: host.credentialId,
+    overrideCredentialUsername: host.overrideCredentialUsername,
+    connectionType: host.connectionType,
+    connectionOrigin: host.connectionOrigin,
+    enableSsh: host.enableSsh,
+    sshPort: host.sshPort,
+    jumpHosts: host.jumpHosts?.map((jump) => ({ hostId: jump.hostId })),
+    statusCheckEnabled: host.statusCheckEnabled,
+    statusCheckInterval: host.statusCheckInterval,
+    sshOptions: host.sshOptions,
+    pluginSettings: host.pluginSettings,
+    protocolAuth: host.protocolAuth,
+    quickConnectLogin: host.quickConnectLogin,
+    quickConnectSavable: host.quickConnectSavable,
+    instanceId: host.instanceId,
+    status: host.status,
+    online: host.online,
+    isShared: host.isShared,
+    permissionLevel: host.permissionLevel,
+    sharedExpiresAt: host.sharedExpiresAt,
+    ownerUsername: host.ownerUsername,
+    authOverrides: host.authOverrides,
+    sharedCopy: host.sharedCopy,
+    localOnly: host.localOnly,
+  };
+}
+
+/** The host as one plugin sees it: only that plugin's settings. */
+export function toPluginHostRecord(
+  host: ShellHost,
+  pluginId: string | null,
+): PluginHostRecord {
+  const record = toHostRecord(host);
+  const own = pluginId ? host.pluginSettings?.[pluginId] : undefined;
+  record.pluginSettings = own && pluginId ? { [pluginId]: own } : {};
+  return record;
 }
 
 export const pluginHostBridge: PluginHostBridge = {
@@ -213,19 +270,24 @@ export const pluginHostBridge: PluginHostBridge = {
   },
 
   useHost(hostId) {
+    const pluginId = usePluginScope();
     const { hosts } = useShellHosts();
     return useMemo(() => {
       if (hostId === undefined || hostId === null) return null;
       const found = hosts.find((host) => host.id === String(hostId));
-      return found ? toHostRecord(found) : null;
-    }, [hosts, hostId]);
+      return found ? toPluginHostRecord(found, pluginId) : null;
+    }, [hosts, hostId, pluginId]);
   },
 
   useHosts() {
+    const pluginId = usePluginScope();
     const { hosts, loaded } = useShellHosts();
     return useMemo(
-      () => ({ hosts: hosts.map(toHostRecord), loaded }),
-      [hosts, loaded],
+      () => ({
+        hosts: hosts.map((host) => toPluginHostRecord(host, pluginId)),
+        loaded,
+      }),
+      [hosts, loaded, pluginId],
     );
   },
 
@@ -333,11 +395,9 @@ export const pluginHostBridge: PluginHostBridge = {
     return { icon: def.icon, tab: def.id, titleKey: def.titleKey };
   },
 
-  useHomepageWidgetTypes: () =>
-    useHomepageWidgetTypes() as unknown as HomepageWidgetContribution[],
-  homepageWidgetType: (id) =>
-    getHomepageWidgetType(id) as unknown as
-      HomepageWidgetContribution | undefined,
+  useExtensions: (pointId) => useExtensions(pointId) as ExtensionContribution[],
+  getExtension: (pointId, id) =>
+    getExtension(pointId, id) as ExtensionContribution | undefined,
 
   usePluginUiPreferences: (pluginId) => {
     const ctx = useUiPreferencesContext();
@@ -362,10 +422,28 @@ export const pluginHostBridge: PluginHostBridge = {
     patchOpenTab: (instanceId, updates) => patchOpenTab(instanceId, updates),
     getCustomKeybindings: async () =>
       parseCustomKeybindings((await getUserPreferences()).customKeybindings),
-    setHostAutoTmux: (hostId, autoTmux) => setHostAutoTmux(hostId, autoTmux),
+    runKeybindingAction: (action, context) =>
+      runKeybindingAction(action, context),
     getClientPreference: (name) => getCookie(name),
-    listHosts: async () =>
-      (await getSSHHosts({ includeStatus: false })).map(toHostRecord),
+    setClientPreference: (name, value) => {
+      void setCookie(name, value, 365);
+    },
+    listHosts: async (pluginId) =>
+      (await getSSHHosts({ includeStatus: false })).map((host) =>
+        toPluginHostRecord(host, pluginId ?? null),
+      ),
+    notifyHostsChanged: () => {
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+    },
+    getHostStatusColorScheme: () => readStatusColorScheme(),
+    getLocalAuthToken: () => {
+      if (!isElectron()) return null;
+      try {
+        return localStorage.getItem("jwt");
+      } catch {
+        return null;
+      }
+    },
     listCredentials: async () => {
       const raw = await getCredentials();
       const list = Array.isArray(raw)

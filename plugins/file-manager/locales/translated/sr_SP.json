@@ -382,7 +382,10 @@
     "defaultPathLabel": "Подразумевана путања",
     "fileManagerPathHint": "Директоријум који треба отворити када се покрене менаџер датотека за овај хост.",
     "fileManagerUrlCopied": "URL менаџера датотека је копиран",
-    "copyFileManagerUrlAction": "Копирај URL менаџера датотека"
+    "copyFileManagerUrlAction": "Копирај URL менаџера датотека",
+    "docsLink": "Прикажи документе",
+    "hostNotFound": "Хост није пронађен",
+    "loadingHost": "Учитавање хоста..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP Legacy Mode"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Истовремени пренос датотека",
+        "description": "Колико датотека локални/удаљени менаџер истовремено отпрема или преузима. Смањите ово ако ваш сервер ограничава SFTP канале."
+      }
     }
   },
   "nav": {
     "sftp": "СФТП",
     "files": "Датотеке"
+  },
+  "onboarding": {
+    "feature_files": "Менаџер датотека",
+    "feature_files_desc": "Прегледајте, отпремајте, преузимајте и уређујте датотеке преко SFTP-а без напуштања апликације."
+  },
+  "terminal": {
+    "runTitle": "Покреће се {{command}} - {{host}}",
+    "terminalTitle": "Терминал - {{host}}",
+    "terminalWithPath": "Терминал - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Прегледајте одредишне фасцикле",
+    "browsePathError": "Није могуће отворити ову путању на одредишном хосту.",
+    "browsePathWillBeCreated": "Ова фасцикла још увек не постоји. Биће креирана када пренос почне.",
+    "cancel": "Откажи",
+    "cleanupDestFiles": "Очистите одредиште",
+    "cleanupDestFilesError": "Чишћење није успело",
+    "cleanupDestFilesNothing": "Нема ништа за чишћење на одредишту",
+    "cleanupDestFilesPartial": "Неке делимичне датотеке нису могле бити уклоњене",
+    "cleanupDestFilesSuccess": "Уклоњене су делимичне датотеке са одредишта",
+    "confirmCopy": "Копија",
+    "confirmMove": "Помери",
+    "copyFolderToHost": "Копирај фасциклу на хост…",
+    "copyItemsToHost": "Копирај {{count}} ставке за хостовање…",
+    "copyToHost": "Копирај на хост…",
+    "destinationPath": "Путања одредишта",
+    "destMustBeDirectory": "Одредиште мора бити директоријум за преносе више ставки",
+    "goUp": "Иди горе",
+    "hostAuthRequired": "Потребна је аутентификација — прво отворите File Manager на овом хосту",
+    "hostConnecting": "Повезивање…",
+    "hostConnectionFailed": "Повезивање није успело",
+    "hostDisconnected": "Није повезано",
+    "hostReady": "Спреман",
+    "itemsSummary": "{{count}} ставке",
+    "jumpHostLimitation": "Оба хоста морају бити доступна са Termix сервера. Директно рутирање од хоста до хоста није подржано.",
+    "methodAuto": "Аутоматски",
+    "methodAutoHint": "Бира tar или SFTP за сваку датотеку на основу броја датотека, величине и компресибилности. Појединачне датотеке увек користе SFTP за стримовање.",
+    "methodItemSftp": "SFTP по датотеци",
+    "methodItemSftpHint": "Пренесите сваку датотеку појединачно преко SFTP-а. Ради на свим хостовима, укључујући Windows.",
+    "methodItemSftpLimitation": "Свака датотека користи исти SFTP ток као и копија појединачних датотека, једна за другом. Напредак се комбинује за све датотеке, тако да се трака помера споро током великих датотека.",
+    "methodLabel": "Метод преноса",
+    "methodPreviewError": "Није могуће прегледати метод преноса. Сервер ће ипак изабрати метод када покренете.",
+    "methodPreviewLoading": "Израчунавање методе преноса…",
+    "methodPreviewScanSummary": "{{fileCount}} датотека, {{totalSize}} укупно (скенирано на изворном хосту).",
+    "methodPreviewWillUseItemSftp": "Користиће се: SFTP за сваку датотеку",
+    "methodPreviewWillUseTar": "Користиће се: Тар архива",
+    "methodReason": {
+      "user_item_sftp": "Изабрали сте SFTP за сваку датотеку.",
+      "user_tar": "Изабрали сте tar архиву.",
+      "tar_unavailable": "Тар није доступан на једном или оба хоста — уместо тога ће се користити SFTP протокол за сваку датотеку.",
+      "windows_host": "Укључен је Windows хост — tar се не користи.",
+      "auto_multi_large": "Аутоматски: више датотека укључујући велику датотеку ({{largestSize}}) са компресибилним подацима — tar пакети у један пренос.",
+      "auto_single_large_in_archive": "Аутоматски: једна велика датотека ({{largestSize}}) у овом скупу — SFTP за сваку датотеку.",
+      "auto_many_incompressible": "Аутоматски: углавном несемпљиви подаци — SFTP по датотеци.",
+      "auto_many_files": "Аутоматски: много датотека ({{fileCount}}) — tar смањује оптерећење по датотеци.",
+      "auto_default": "Аутоматски: SFTP за сваку датотеку за овај скуп."
+    },
+    "methodTar": "Тар архива",
+    "methodTarHint": "Компресуј на изворном нивоу, пренеси једну архиву, распакуј на одредишту. Потребан је tar на оба Unix хоста.",
+    "metricsCompress": "Компресуј на изворном коду: {{duration}}",
+    "metricsExtract": "Издвајање на одредишту: {{duration}}",
+    "metricsPrepare": "Припреми одредиште: {{duration}}",
+    "metricsRouteBenchmark": "Сонда руте — директна: {{direct}}, релеј: {{relay}}",
+    "metricsSourceDelete": "Уклони из извора: {{duration}}",
+    "metricsTotal": "Укупно: {{duration}}",
+    "metricsTransfer": "Од краја до краја: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 верификован: {{duration}}",
+    "moveFolderToHost": "Премести фасциклу на хост…",
+    "moveItemsToHost": "Премести {{count}} ставке на хост…",
+    "moveToHost": "Премести на хост…",
+    "noHostsConnected": "Нема других доступних хостова за управљање датотекама.",
+    "noHostsConnectedHint": "Додајте још један SSH хост са омогућеним File Manager-ом у Host Manager-у.",
+    "parallelSegmentsHint": "Велике датотеке су подељене на делове од 256 MB. Вишеструке траке користе одвојене везе (као што је покретање неколико преноса) за већи укупни проток.",
+    "parallelSegmentsLabel": "Паралелне траке за прелазак",
+    "parallelSegmentsOption": "{{count}} траке",
+    "progressBenchmarking": "Избор најбрже руте за трансфер…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Откажи",
+    "progressCancelling": "Отказивање…",
+    "progressCompressing": "Компресија на изворном хосту…",
+    "progressExtracting": "Распакује се на одредишту…",
+    "progressItems": "{{current}} / {{total}} датотеке",
+    "progressReconnecting": "Поновно повезивање…",
+    "progressStalled": "Заустављено",
+    "progressTotalSpeed": "{{speed}} укупно ({{lanes}} трака)",
+    "progressTransferring": "Пренос података…",
+    "progressTransferringItems": "Пренос датотека ({{current}} од {{total}})…",
+    "progressVerifying": "Провера интегритета датотеке…",
+    "recentDestinations": "Недавне дестинације",
+    "resumedHint": "Поново повезано са активним преносом започетим у другом прозору.",
+    "retryTransfer": "Покушај поново",
+    "retryTransferError": "Поновни покушај није успео",
+    "selectDestinationHost": "Изаберите одредишни хост",
+    "transferCancelled": "Трансфер отказан",
+    "transferCancelledCopyHint": "Делимични фајлови могу остати на одредишту.",
+    "transferCancelledMoveHint": "Делимични фајлови могу остати на одредишту. Изворни фајлови нису уклоњени.",
+    "transferError": "Пренос није успео",
+    "transferFailedRetryHint": "Делимични подаци су сачувани на одредишту. Покушај ће бити настављен када се веза поново успостави.",
+    "transferPartialHint": "Није могуће пренети: {{paths}}",
+    "transferSuccess": "Пренос завршен"
   }
 }

@@ -435,6 +435,34 @@
       "when": 1790447309827,
       "tag": "0061_plugin_settings_scope_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "5",
+      "when": 1790651054515,
+      "tag": "0062_smooth_speed",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "5",
+      "when": 1790700739900,
+      "tag": "0063_needy_radioactive_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "5",
+      "when": 1790704531888,
+      "tag": "0064_flippant_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "5",
+      "when": 1790742086934,
+      "tag": "0065_ambiguous_agent_zero",
+      "breakpoints": true
     }
   ]
 }

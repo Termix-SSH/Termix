@@ -51,10 +51,6 @@
     "processesRunning": "đang chạy",
     "loginStats": "Thống kê đăng nhập SSH",
     "noRecentLoginData": "Không có dữ liệu đăng nhập gần đây",
-    "executingQuickAction": "Đang thực thi {{name}}...",
-    "quickActionSuccess": "{{name}} đã hoàn tất thành công",
-    "quickActionFailed": "{{name}} thất bại",
-    "quickActionError": "Thực thi {{name}} thất bại",
     "ports": {
       "title": "Cổng đang lắng nghe",
       "protocol": "Giao thức",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Thêm vào",
     "visibleWidgets": "Widget hiển thị",
     "widgetsMovedToHostMetrics": "Các thẻ hiện được thêm, sắp xếp và thay đổi kích thước trực tiếp trong tab Số liệu máy. Mở Số liệu máy cho máy này và dùng Tùy chỉnh để chọn thẻ hiển thị.",
-    "quickActionsLabel": "Hành động nhanh",
-    "quickActionsToolbar": "Hành động nhanh xuất hiện dưới dạng nút trên thanh công cụ Chỉ số máy để thực thi lệnh một lần nhấp.",
-    "noQuickActions": "Chưa có hành động nhanh nào.",
-    "buttonLabel": "Nhãn nút",
-    "selectSnippetPlaceholder": "Chọn đoạn mã...",
-    "addActionBtn": "Thêm hành động",
     "hostNotFound": "Không tìm thấy máy chủ",
     "loadingHost": "Đang tải máy chủ..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Ổ đĩa"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Hủy",
-        "confirmRunButton": "Chạy",
-        "confirmRunMessage": "Chạy \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Đã kết nối"

@@ -382,7 +382,10 @@
     "defaultPathLabel": "Προεπιλεγμένη διαδρομή",
     "fileManagerPathHint": "Ο κατάλογος που θα ανοίξει κατά την εκκίνηση του διαχειριστή αρχείων για αυτόν τον κεντρικό υπολογιστή.",
     "fileManagerUrlCopied": "Η διεύθυνση URL του διαχειριστή αρχείων αντιγράφηκε",
-    "copyFileManagerUrlAction": "Αντιγραφή URL Διαχείρισης Αρχείων"
+    "copyFileManagerUrlAction": "Αντιγραφή URL Διαχείρισης Αρχείων",
+    "docsLink": "Προβολή εγγράφων",
+    "hostNotFound": "Δεν βρέθηκε κεντρικός υπολογιστής",
+    "loadingHost": "Φόρτωση κεντρικού υπολογιστή..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "Λειτουργία παλαιού τύπου SCP"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Ταυτόχρονες μεταφορές αρχείων",
+        "description": "Πόσα αρχεία ανεβάζει ή κατεβάζει ο τοπικός/απομακρυσμένος διαχειριστής παράλληλων λήψεων ταυτόχρονα. Μειώστε αυτό το ποσό εάν ο διακομιστής σας περιορίζει τα κανάλια SFTP."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Αρχεία"
+  },
+  "onboarding": {
+    "feature_files": "Διαχειριστής αρχείων",
+    "feature_files_desc": "Περιηγηθείτε, ανεβάστε, κατεβάστε και επεξεργαστείτε αρχεία μέσω SFTP χωρίς να φύγετε από την εφαρμογή."
+  },
+  "terminal": {
+    "runTitle": "Εκτέλεση {{command}} - {{host}}",
+    "terminalTitle": "Τερματικό - {{host}}",
+    "terminalWithPath": "Τερματικό - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Αναζήτηση φακέλων προορισμού",
+    "browsePathError": "Δεν ήταν δυνατό το άνοιγμα αυτής της διαδρομής στον κεντρικό υπολογιστή προορισμού.",
+    "browsePathWillBeCreated": "Αυτός ο φάκελος δεν υπάρχει ακόμη. Θα δημιουργηθεί όταν ξεκινήσει η μεταφορά.",
+    "cancel": "Ματαίωση",
+    "cleanupDestFiles": "Καθαρισμός προορισμού",
+    "cleanupDestFilesError": "Ο καθαρισμός απέτυχε",
+    "cleanupDestFilesNothing": "Δεν υπάρχει τίποτα προς διόρθωση στον προορισμό",
+    "cleanupDestFilesPartial": "Δεν ήταν δυνατή η κατάργηση ορισμένων τμηματικών αρχείων",
+    "cleanupDestFilesSuccess": "Αφαιρέθηκαν μερικά αρχεία από τον προορισμό",
+    "confirmCopy": "Αντίγραφο",
+    "confirmMove": "Κίνηση",
+    "copyFolderToHost": "Αντιγραφή φακέλου στον κεντρικό υπολογιστή…",
+    "copyItemsToHost": "Αντιγραφή στοιχείων {{count}} για φιλοξενία…",
+    "copyToHost": "Αντιγραφή στον κεντρικό υπολογιστή…",
+    "destinationPath": "Διαδρομή προορισμού",
+    "destMustBeDirectory": "Ο προορισμός πρέπει να είναι ένας κατάλογος για μεταφορές πολλαπλών στοιχείων",
+    "goUp": "Ανεβαίνω",
+    "hostAuthRequired": "Απαιτείται έλεγχος ταυτότητας — ανοίξτε πρώτα τη Διαχείριση αρχείων σε αυτόν τον κεντρικό υπολογιστή",
+    "hostConnecting": "Σύνδεση…",
+    "hostConnectionFailed": "Η σύνδεση απέτυχε",
+    "hostDisconnected": "Δεν είναι συνδεδεμένο",
+    "hostReady": "Ετοιμος",
+    "itemsSummary": "{{count}} στοιχεία",
+    "jumpHostLimitation": "Και οι δύο κεντρικοί υπολογιστές πρέπει να είναι προσβάσιμοι από τον διακομιστή Termix. Δεν υποστηρίζεται η άμεση δρομολόγηση από κεντρικό υπολογιστή σε κεντρικό υπολογιστή.",
+    "methodAuto": "Αυτο",
+    "methodAutoHint": "Επιλέγει SFTP tar ή ανά αρχείο με βάση τον αριθμό αρχείων, το μέγεθος και τη συμπιεστότητα. Τα μεμονωμένα αρχεία χρησιμοποιούν πάντα SFTP ροής.",
+    "methodItemSftp": "SFTP ανά αρχείο",
+    "methodItemSftpHint": "Μεταφέρετε κάθε αρχείο ξεχωριστά μέσω SFTP. Λειτουργεί σε όλους τους κεντρικούς υπολογιστές, συμπεριλαμβανομένων των Windows.",
+    "methodItemSftpLimitation": "Κάθε αρχείο χρησιμοποιεί την ίδια ροή SFTP ως αντίγραφο ενός μόνο αρχείου, το ένα μετά το άλλο. Η πρόοδος συνδυάζεται σε όλα τα αρχεία, επομένως η γραμμή κινείται αργά κατά τη διάρκεια μεγάλων αρχείων.",
+    "methodLabel": "Μέθοδος μεταφοράς",
+    "methodPreviewError": "Δεν ήταν δυνατή η προεπισκόπηση της μεθόδου μεταφοράς. Ο διακομιστής θα επιλέξει μια μέθοδο κατά την εκκίνηση.",
+    "methodPreviewLoading": "Υπολογισμός μεθόδου μεταφοράς…",
+    "methodPreviewScanSummary": "{{fileCount}} αρχεία, {{totalSize}} συνολικά (σαρωμένα στον κεντρικό υπολογιστή προέλευσης).",
+    "methodPreviewWillUseItemSftp": "Θα χρησιμοποιηθεί: SFTP ανά αρχείο",
+    "methodPreviewWillUseTar": "Θα χρησιμοποιηθεί: Αρχείο Tar",
+    "methodReason": {
+      "user_item_sftp": "Επιλέξατε SFTP ανά αρχείο.",
+      "user_tar": "Επιλέξατε το αρχείο tar.",
+      "tar_unavailable": "Το Tar δεν είναι διαθέσιμο σε έναν ή και στους δύο κεντρικούς υπολογιστές — θα χρησιμοποιηθεί αντ' αυτού το SFTP ανά αρχείο.",
+      "windows_host": "Εμπλέκεται ένας κεντρικός υπολογιστής των Windows — δεν χρησιμοποιείται το tar.",
+      "auto_multi_large": "Αυτόματα: πολλά αρχεία, συμπεριλαμβανομένου ενός μεγάλου αρχείου ({{largestSize}}) με συμπιέσιμα δεδομένα — tar ομαδοποιεί σε μία μεταφορά.",
+      "auto_single_large_in_archive": "Αυτόματα: ένα μεγάλο αρχείο ({{largestSize}}) σε αυτό το σύνολο — ανά αρχείο SFTP.",
+      "auto_many_incompressible": "Αυτόματα: ως επί το πλείστον ασυμπίεστα δεδομένα — SFTP ανά αρχείο.",
+      "auto_many_files": "Αυτόματα: πολλά αρχεία ({{fileCount}}) — το tar μειώνει την επιβάρυνση ανά αρχείο.",
+      "auto_default": "Αυτόματα: SFTP ανά αρχείο για αυτό το σύνολο."
+    },
+    "methodTar": "Αρχείο Tar",
+    "methodTarHint": "Συμπίεση στην πηγή, μεταφορά ενός αρχείου, εξαγωγή στον προορισμό. Απαιτείται tar και στους δύο κεντρικούς υπολογιστές Unix.",
+    "metricsCompress": "Συμπίεση στην πηγή: {{duration}}",
+    "metricsExtract": "Εξαγωγή στον προορισμό: {{duration}}",
+    "metricsPrepare": "Προετοιμασία προορισμού: {{duration}}",
+    "metricsRouteBenchmark": "Δρομολόγηση ανιχνευτή — άμεση: {{direct}}, αναμετάδοση: {{relay}}",
+    "metricsSourceDelete": "Αφαίρεση από την πηγή: {{duration}}",
+    "metricsTotal": "Σύνολο: {{duration}}",
+    "metricsTransfer": "Από άκρο σε άκρο: {{throughput}} ({{duration}})",
+    "metricsVerify": "Επαληθεύτηκε το SHA-256: {{duration}}",
+    "moveFolderToHost": "Μετακίνηση φακέλου στον κεντρικό υπολογιστή…",
+    "moveItemsToHost": "Μετακίνηση στοιχείων {{count}} για να φιλοξενήσει το…",
+    "moveToHost": "Μετακίνηση στον κεντρικό υπολογιστή…",
+    "noHostsConnected": "Δεν υπάρχουν άλλοι διαθέσιμοι κεντρικοί υπολογιστές διαχείρισης αρχείων.",
+    "noHostsConnectedHint": "Προσθέστε έναν άλλο κεντρικό υπολογιστή SSH με ενεργοποιημένο το File Manager στο Host Manager.",
+    "parallelSegmentsHint": "Τα μεγάλα αρχεία χωρίζονται σε κομμάτια των 256 MB. Πολλαπλές λωρίδες χρησιμοποιούν ξεχωριστές συνδέσεις (όπως η έναρξη αρκετών μεταφορών) για υψηλότερη συνολική απόδοση.",
+    "parallelSegmentsLabel": "Παράλληλες λωρίδες μετεπιβίβασης",
+    "parallelSegmentsOption": "{{count}} λωρίδες",
+    "progressBenchmarking": "Επιλογή της ταχύτερης διαδρομής μεταφοράς…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Ματαίωση",
+    "progressCancelling": "Ακύρωση…",
+    "progressCompressing": "Συμπίεση στον κεντρικό υπολογιστή προέλευσης…",
+    "progressExtracting": "Εξαγωγή στον προορισμό…",
+    "progressItems": "{{current}} / {{total}} αρχεία",
+    "progressReconnecting": "Επανασύνδεση…",
+    "progressStalled": "Σταματημένο",
+    "progressTotalSpeed": "{{speed}} σύνολο ({{lanes}} λωρίδες)",
+    "progressTransferring": "Μεταφορά δεδομένων…",
+    "progressTransferringItems": "Μεταφορά αρχείων ({{current}} από {{total}})…",
+    "progressVerifying": "Επαλήθευση ακεραιότητας αρχείου…",
+    "recentDestinations": "Πρόσφατοι προορισμοί",
+    "resumedHint": "Επανασύνδεση με μια ενεργή μεταφορά που ξεκίνησε σε άλλο παράθυρο.",
+    "retryTransfer": "Δοκιμάζω πάλι",
+    "retryTransferError": "Η επανάληψη απέτυχε",
+    "selectDestinationHost": "Επιλέξτε κεντρικό υπολογιστή προορισμού",
+    "transferCancelled": "Η μεταφορά ακυρώθηκε.",
+    "transferCancelledCopyHint": "Ενδέχεται να παραμείνουν μερικά αρχεία στον προορισμό.",
+    "transferCancelledMoveHint": "Ενδέχεται να παραμείνουν μερικά αρχεία στον προορισμό. Τα αρχεία προέλευσης δεν καταργήθηκαν.",
+    "transferError": "Η μεταφορά απέτυχε",
+    "transferFailedRetryHint": "Μερικά δεδομένα διατηρήθηκαν στον προορισμό. Η επανάληψη θα συνεχιστεί όταν αποκατασταθεί η σύνδεση.",
+    "transferPartialHint": "Δεν ήταν δυνατή η μεταφορά: {{paths}}",
+    "transferSuccess": "Η μεταφορά ολοκληρώθηκε"
   }
 }

@@ -1,13 +1,16 @@
 import { lazy, Suspense } from "react";
+import { useThemePreview } from "../look/theme-preview";
 import { TerminalSquare } from "lucide-react";
 import type { TerminalHandle, TerminalHostConfig } from "./Terminal";
-import { useIsMobile, useTabsSafe } from "@termix/plugin-sdk/ui";
+import { useIsMobile } from "@termix/plugin-sdk/ui";
 import {
   useTranslation,
   invokeAction,
   type TabProps,
 } from "@termix/plugin-sdk/frontend";
 import type { Host } from "../types";
+import { hostTerminalValues } from "../terminal-settings";
+import { readHostTerminalSettings } from "../../shared/terminal-settings";
 
 /** The session fields the shell keeps on a terminal tab. */
 interface TerminalTabRecord {
@@ -61,8 +64,11 @@ export function TerminalTabContent({
   const tab = tabRecord as unknown as TerminalTabRecord;
   const host = hostRecord as unknown as Host | undefined;
   const { t } = useTranslation();
-  const { previewTerminalTheme } = useTabsSafe();
+  const previewTerminalTheme = useThemePreview();
   const isMobile = useIsMobile();
+  const useSshTitle = readHostTerminalSettings(
+    hostTerminalValues(host),
+  ).useSSHTitle;
 
   if (!host) {
     return (
@@ -102,7 +108,7 @@ export function TerminalTabContent({
               splitScreen={inSplit}
               onClose={() => shell.closeTab(tab.id)}
               onTitleChange={
-                host.terminalConfig?.useSSHTitle
+                useSshTitle
                   ? (title) => shell.renameTab(tab.id, title)
                   : undefined
               }

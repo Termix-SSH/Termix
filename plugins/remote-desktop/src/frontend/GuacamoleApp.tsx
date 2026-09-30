@@ -44,6 +44,7 @@ import {
   errorMessage,
   hostRemoteOptions,
   type Protocol,
+  rdpDomain,
   type RemoteHostLogin,
 } from "./host-remote";
 import { GuacamoleToolbar } from "./GuacamoleToolbar.tsx";
@@ -94,9 +95,9 @@ function savedHostConfig(
     connectionType:
       protocol ??
       (options.enableRdp ? "rdp" : options.enableVnc ? "vnc" : "telnet"),
-    domain: host.domain,
+    domain: rdpDomain(host),
     guacamoleConfig: options.guacamoleConfig,
-    rdpAuthType: host.rdpAuthType,
+    rdpAuthType: host.protocolAuth?.rdp?.authType,
     authOverrides: host.authOverrides,
     syncId: host.syncId,
     connectionOrigin: host.connectionOrigin,

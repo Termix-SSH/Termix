@@ -46,15 +46,3 @@ export function getActorSessionId(): string | undefined {
 export function getActor(): string | undefined {
   return storage.getStore()?.userId;
 }
-
-class PluginActorError extends Error {
-  readonly code = "EPLUGINACTOR";
-
-  constructor(pluginId: string, operation: string) {
-    super(
-      `Plugin "${pluginId}" called ${operation} with no acting user. ` +
-        `Wrap background work in ctx.asUser(userId, fn).`,
-    );
-    this.name = "PluginActorError";
-  }
-}

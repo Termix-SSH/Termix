@@ -1,6 +1,6 @@
 import { fileManagerHostSetting } from "./host-settings";
 import type { ComponentType } from "react";
-import { FolderSearch, ArrowLeftRight } from "lucide-react";
+import { FolderOpen, FolderSearch, ArrowLeftRight } from "lucide-react";
 import {
   invokeAction,
   type PluginHostRecord,
@@ -8,7 +8,11 @@ import {
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { GRID_SIZE } from "./homepage/homepage.js";
+import {
+  GRID_SIZE,
+  type FileManagerWidgetConfig,
+  type WidgetDefinition,
+} from "./homepage/homepage.js";
 import { FileManager } from "./FileManager.tsx";
 import FileManagerApp from "./FileManagerApp.tsx";
 import { SftpTransferTab } from "./SftpTransferTab.tsx";
@@ -66,8 +70,14 @@ function openEditorAction(
   app.tabs.openTab(host, "files", { data: { initialFilePath: filePath } });
 }
 
+/** Where this plugin serves the streaming routes the desktop app calls. */
+const TRANSFER_API_PATH = "/plugin-api/file-manager";
+
 export function activate(app: TermixApp): void {
   setFileManagerApp(app);
+  if (typeof window !== "undefined") {
+    void window.electronAPI?.localTransfer?.setApiPath?.(TRANSFER_API_PATH);
+  }
   app.onDispose(() => setFileManagerApp(null));
   app.registerTab("files", FilesTab as unknown as ComponentType<TabProps>, {
     icon: FolderSearch,
@@ -113,7 +123,7 @@ export function activate(app: TermixApp): void {
       fileManagerHostSetting(host, "enableFileManager", true),
   });
 
-  app.registerHomepageWidget({
+  app.registerExtension("homepage.widgets", {
     id: "file_manager_widget",
     name: "File Manager",
     description: "Embedded SFTP file manager for a configured host",
@@ -122,15 +132,30 @@ export function activate(app: TermixApp): void {
     defaultConfig: { hostId: 0 },
     defaultSize: { w: GRID_SIZE * 20, h: GRID_SIZE * 14 },
     minSize: { w: GRID_SIZE * 10, h: GRID_SIZE * 8 },
-    component: FileManagerWidget as never,
-    editFormComponent: FileManagerWidgetEditForm as never,
-  });
+    components: {
+      view: FileManagerWidget,
+      editForm: FileManagerWidgetEditForm,
+    },
+  } satisfies WidgetDefinition<FileManagerWidgetConfig>);
 
   const openHost = ((host: PluginHostRecord | null, path?: string) =>
     openHostAction(app, host, path)) as never;
   app.registerAction("files.openHost", openHost);
-  // The shell's "open in file manager" tab button asks for this.
-  app.registerAction("host.openFiles", openHost);
+  // "Open File Manager" in the tab bar's menu, for a terminal tab. The
+  // terminal answers with its working directory and opens the files tab.
+  app.registerAction("file-manager.openFromTab", ((handle: unknown) =>
+    (
+      handle as { openFileManager?: () => void } | null
+    )?.openFileManager?.()) as never);
+  app.registerSlotContribution("tab.menu", {
+    actionId: "file-manager.openFromTab",
+    titleKey: "nav.openFileManager",
+    icon: FolderOpen,
+    kind: "button",
+    when: (context) =>
+      typeof (context.handle as { openFileManager?: unknown } | null)
+        ?.openFileManager === "function",
+  });
   app.registerAction("files.openEditor", ((
     host: PluginHostRecord | null,
     filePath: string,

@@ -1,19 +1,11 @@
 /**
- * A small main-thread service registry.
+ * A small in-process key/value registry for live objects plugins hand each
+ * other (a guest-link resolver, a host import normalizer). Services with
+ * versions and permissions go through service-registry.ts instead.
  *
- * This exists so a module can depend on a capability without depending on
- * whichever module happens to provide it. Two uses today:
- *
- *   - core registers the SSH connection pool as "ssh.transport" at boot, so
- *     everything that needs a pooled connection resolves a provider rather
- *     than importing the pool directly.
- *   - the session-sharing plugin publishes "sessions.sharing.guests", guest
- *     link resolution for the terminal, keyed by a token rather than a user.
- *
- * Deliberately NOT reachable from a worker plugin's ctx. Values here are live
- * objects -- pools, session managers, sockets -- and handing one across the
- * postMessage boundary is exactly what that boundary exists to prevent. Only
- * in-process first-party plugins get a reference to this.
+ * ctx.registry only lets a plugin provide or revoke keys under its own id
+ * ("<pluginId>.something"); anyone may consume. Core also reads a few
+ * well-known per-plugin keys, such as "<pluginId>.hostImportNormalizer".
  *
  * `consume` returns undefined rather than throwing when nothing is registered.
  * A provider can disappear when its plugin is disabled, and callers are

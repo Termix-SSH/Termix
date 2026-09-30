@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Spații de lucru",
     "workflow_workspaces_desc": "Salvați un set de file deschise și redeschideți întregul aspect mai târziu."
+  },
+  "hosts": {
+    "docsLink": "Vizualizați documentele"
   }
 }

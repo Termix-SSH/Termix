@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "রিমোট সার্ভারের একটি পোর্ট আপনার মেশিনের লোকাল পোর্টে ফরওয়ার্ড করুন।",
     "tunnelRequirementsText": "SSH সার্ভারের /etc/ssh/sshd_config ফাইলে GatewayPorts yes, AllowTcpForwarding yes, এবং PermitRootLogin yes সেট করা থাকতে হবে।",
     "tunnelSettings": "টানেল সেটিংস",
-    "tunnelType": "টানেল টাইপ"
+    "tunnelType": "টানেল টাইপ",
+    "bindHost": "হোস্টকে বাঁধুন",
+    "docsLink": "নথি দেখুন",
+    "hostNotFound": "হোস্ট খুঁজে পাওয়া যায়নি",
+    "loadingHost": "হোস্ট লোড হচ্ছে..."
   },
   "nav": {
     "portForwarding": "ফরোয়ার্ডিং",
@@ -134,6 +138,12 @@
     "typeDynamic": "গতিশীল (-D)",
     "typeLocal": "স্থানীয় (-L)",
     "typeRemote": "রিমোট (-R)",
-    "working": "কাজ চলছে..."
+    "working": "কাজ চলছে...",
+    "start": "শুরু করুন",
+    "stop": "থামুন"
+  },
+  "onboarding": {
+    "feature_tunnels": "টানেল",
+    "feature_tunnels_desc": "যেসব পরিষেবা উন্মুক্ত নয়, সেগুলোতে পৌঁছানোর জন্য পোর্টগুলো একটি সার্ভারের মাধ্যমে ফরওয়ার্ড করুন।"
   }
 }

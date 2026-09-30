@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Werkruimtes",
     "workflow_workspaces_desc": "Stoor 'n stel oop oortjies en heropen die hele uitleg later."
+  },
+  "hosts": {
+    "docsLink": "Bekyk dokumente"
   }
 }

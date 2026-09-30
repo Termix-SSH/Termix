@@ -31,12 +31,6 @@ function secretHost(id: number): Record<string, unknown> {
     keyPassword: "s3cret-value",
     sudoPassword: "s3cret-value",
     socks5Password: "s3cret-value",
-    rdpPassword: "s3cret-value",
-    vncPassword: "s3cret-value",
-    telnetPassword: "s3cret-value",
-    autostartPassword: "s3cret-value",
-    autostartKey: "s3cret-value",
-    autostartKeyPassword: "s3cret-value",
     terminalConfig: { sudoPassword: "s3cret-value", fontSize: 14 },
     socks5ProxyChain: [{ host: "p", password: "s3cret-value" }],
   };
@@ -83,7 +77,14 @@ vi.mock("../../../utils/permission-manager.js", () => ({
     }),
   },
 }));
+vi.mock("../../../hosts/defaults/index.js", () => ({
+  applyHostDefaultsToWrite: async () => ({ core: [] }),
+  applyDefaultsAfterHostWrite: async () => {},
+}));
 vi.mock("../../../database/repositories/factory.js", () => ({
+  createCurrentHostDefaultsRepository: () => ({
+    listHosts: async () => [],
+  }),
   createCurrentHostRepository: () => ({
     createEncryptedForUser: async () => secretHost(1),
     updateEncryptedForUser: async () => secretHost(1),
@@ -101,7 +102,7 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 vi.mock("../../../database/routes/host-plugin-settings.js", () => ({
-  applyPluginHostImportSettings: async () => {},
+  loadHostPluginSettings: async () => new Map(),
 }));
 vi.mock("../../../hosts/host-resolver.js", () => ({
   resolveHostById: async (id: number) => secretHost(id),

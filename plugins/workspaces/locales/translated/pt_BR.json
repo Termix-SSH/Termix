@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Espaços de trabalho",
     "workflow_workspaces_desc": "Salve um conjunto de abas abertas e reabra todo o layout mais tarde."
+  },
+  "hosts": {
+    "docsLink": "Ver documentos"
   }
 }

@@ -382,7 +382,10 @@
     "defaultPathLabel": "默认路径",
     "fileManagerPathHint": "为此主机启动文件管理器时要打开的目录。",
     "fileManagerUrlCopied": "文件管理器 URL 已复制",
-    "copyFileManagerUrlAction": "复制文件管理器 URL"
+    "copyFileManagerUrlAction": "复制文件管理器 URL",
+    "docsLink": "查看文档",
+    "hostNotFound": "未找到主机",
+    "loadingHost": "正在加载主机..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP 传统模式"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "同时文件传输",
+        "description": "本地/远程并排管理器同时上传或下载的文件数量。如果您的服务器限制 SFTP 通道，请降低此值。"
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "文件"
+  },
+  "onboarding": {
+    "feature_files": "文件管理器",
+    "feature_files_desc": "无需离开应用，即可通过 SFTP 浏览、上传、下载及编辑文件。"
+  },
+  "terminal": {
+    "runTitle": "运行 {{command}} - {{host}}",
+    "terminalTitle": "终端 - {{host}}",
+    "terminalWithPath": "终端 - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "浏览目标文件夹",
+    "browsePathError": "无法在目标主机上打开此路径。",
+    "browsePathWillBeCreated": "此文件夹尚不存在，将在传输开始时创建。",
+    "cancel": "取消",
+    "cleanupDestFiles": "清理目标位置",
+    "cleanupDestFilesError": "清理失败",
+    "cleanupDestFilesNothing": "目标位置无需清理",
+    "cleanupDestFilesPartial": "部分文件无法删除",
+    "cleanupDestFilesSuccess": "已从目标位置删除部分文件",
+    "confirmCopy": "复制",
+    "confirmMove": "移动",
+    "copyFolderToHost": "复制文件夹到主机…",
+    "copyItemsToHost": "复制 {{count}} 个项目到主机…",
+    "copyToHost": "复制到主机…",
+    "destinationPath": "目标路径",
+    "destMustBeDirectory": "对于多项目传输，目标必须是一个目录",
+    "goUp": "向上",
+    "hostAuthRequired": "需要身份验证 — 请先在此主机上打开文件管理器",
+    "hostConnecting": "连接中…",
+    "hostConnectionFailed": "连接失败",
+    "hostDisconnected": "未连接",
+    "hostReady": "就绪",
+    "itemsSummary": "{{count}} 个项目",
+    "jumpHostLimitation": "两个主机都必须能从 Termix 服务器访问。不支持直接的主机到主机路由。",
+    "methodAuto": "自动",
+    "methodAutoHint": "根据文件数量、大小和可压缩性选择 tar 或逐文件 SFTP。单个文件始终使用流式 SFTP。",
+    "methodItemSftp": "逐文件 SFTP",
+    "methodItemSftpHint": "通过 SFTP 逐个传输文件。适用于包括 Windows 在内的所有主机。",
+    "methodItemSftpLimitation": "每个文件使用相同的 SFTP 流（与单文件拷贝一样），一个接一个传输。所有文件的进度合并显示，因此大文件传输时进度条移动缓慢。",
+    "methodLabel": "传输方式",
+    "methodPreviewError": "无法预览传输方式。启动时服务器仍会选择方式。",
+    "methodPreviewLoading": "正在计算传输方式…",
+    "methodPreviewScanSummary": "{{fileCount}} 个文件，总计 {{totalSize}}（已在源主机上扫描）。",
+    "methodPreviewWillUseItemSftp": "将使用：逐文件 SFTP",
+    "methodPreviewWillUseTar": "将使用：Tar 归档",
+    "methodReason": {
+      "user_item_sftp": "您选择了逐文件 SFTP。",
+      "user_tar": "您选择了 Tar 归档。",
+      "tar_unavailable": "一个或多个主机上不可用 tar — 将转而使用逐文件 SFTP。",
+      "windows_host": "涉及 Windows 主机 — 不使用 tar。",
+      "auto_multi_large": "自动：多个文件，其中包括一个包含可压缩数据的大文件（{{largestSize}}）— tar 将其打包成一次传输。",
+      "auto_single_large_in_archive": "自动：此集合中有一个大文件（{{largestSize}}）— 使用逐文件 SFTP。",
+      "auto_many_incompressible": "自动：大部分为不可压缩数据 — 使用逐文件 SFTP。",
+      "auto_many_files": "自动：文件众多（{{fileCount}}）— tar 可减少逐文件开销。",
+      "auto_default": "自动：此集合使用逐文件 SFTP。"
+    },
+    "methodTar": "Tar 归档",
+    "methodTarHint": "在源端压缩，传输单个归档文件，在目标端解压。要求两个 Unix 主机都有 tar。",
+    "metricsCompress": "源端压缩：{{duration}}",
+    "metricsExtract": "目标端解压：{{duration}}",
+    "metricsPrepare": "准备目标：{{duration}}",
+    "metricsRouteBenchmark": "路由探测 — 直接： {{direct}}，中继： {{relay}}",
+    "metricsSourceDelete": "从源端删除：{{duration}}",
+    "metricsTotal": "总计：{{duration}}",
+    "metricsTransfer": "端到端：{{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 已验证： {{duration}}",
+    "moveFolderToHost": "移动文件夹到主机…",
+    "moveItemsToHost": "移动 {{count}} 个项目到主机…",
+    "moveToHost": "移动到主机…",
+    "noHostsConnected": "没有其他可用的文件管理器主机。",
+    "noHostsConnectedHint": "在主机管理器中添加启用文件管理器的其他 SSH 主机。",
+    "parallelSegmentsHint": "大文件会被拆分为 256 MB 的块。多个通道使用独立连接（如同同时进行多个传输），以获得更高的总吞吐量。",
+    "parallelSegmentsLabel": "并行传输通道",
+    "parallelSegmentsOption": "{{count}} 个通道",
+    "progressBenchmarking": "选择最快的传输路线…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "取消",
+    "progressCancelling": "正在取消…",
+    "progressCompressing": "正在源主机上压缩…",
+    "progressExtracting": "正在目标端解压…",
+    "progressItems": "{{current}} / {{total}} 个文件",
+    "progressReconnecting": "重新连接中…",
+    "progressStalled": "已停滞",
+    "progressTotalSpeed": "{{speed}} 总计（{{lanes}} 通道）",
+    "progressTransferring": "正在传输数据…",
+    "progressTransferringItems": "正在传输文件（{{current}}/{{total}}）…",
+    "progressVerifying": "正在验证文件完整性…",
+    "recentDestinations": "最近目标",
+    "resumedHint": "已重新连接到在另一个窗口中启动的进行中的传输。",
+    "retryTransfer": "重试",
+    "retryTransferError": "重试失败",
+    "selectDestinationHost": "选择目标主机",
+    "transferCancelled": "传输已取消",
+    "transferCancelledCopyHint": "目标位置可能残留部分文件。",
+    "transferCancelledMoveHint": "目标位置可能残留部分文件。源文件未被删除。",
+    "transferError": "传输失败",
+    "transferFailedRetryHint": "部分数据已保留在目标位置。连接恢复后重试将继续。",
+    "transferPartialHint": "无法传输：{{paths}}",
+    "transferSuccess": "传输完成"
   }
 }

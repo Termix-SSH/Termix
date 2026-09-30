@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "الشبكة الافتراضية",
-    "unencryptedShell": "shell غير مشفر"
+    "unencryptedShell": "shell غير مشفر",
+    "docsLink": "عرض المستندات"
   },
   "onboarding": {
     "feature_desktop": "سطح المكتب البعيد",
@@ -274,5 +275,8 @@
         "label": "رابط guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "يلزم وجود خادم بعيد. قم بتوصيل خادم بعيد في الإعدادات لاستخدام نوع الاتصال هذا."
   }
 }

@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Stuur 'n poort op die afgeleë bediener terug na 'n plaaslike poort op jou masjien.",
     "tunnelRequirementsText": "Die SSH-bediener moet GatewayPorts ja, AllowTcpForwarding ja, en PermitRootLogin ja gestel hê in /etc/ssh/sshd_config.",
     "tunnelSettings": "Tonnelinstellings",
-    "tunnelType": "Tonnel Tipe"
+    "tunnelType": "Tonnel Tipe",
+    "bindHost": "Bind gasheer",
+    "docsLink": "Bekyk dokumente",
+    "hostNotFound": "Gasheer nie gevind nie",
+    "loadingHost": "Laai gasheer..."
   },
   "nav": {
     "portForwarding": "Aanstuur",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinamiese (-D)",
     "typeLocal": "Plaaslik (-L)",
     "typeRemote": "Afstandbeheer (-R)",
-    "working": "Werk..."
+    "working": "Werk...",
+    "start": "Begin",
+    "stop": "Stop"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tonnels",
+    "feature_tunnels_desc": "Stuur poorte deur 'n bediener aan om dienste te bereik wat nie blootgestel is nie."
   }
 }

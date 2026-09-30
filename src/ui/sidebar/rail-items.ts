@@ -1,7 +1,5 @@
 import {
-  Braces,
   Cloud,
-  Hammer,
   KeyRound,
   Plug,
   Server,
@@ -93,23 +91,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.quickConnect",
     separatorAfter: true,
     mobilePrimary: true,
-  },
-  {
-    id: "ssh-tools",
-    icon: Hammer,
-    labelKey: "nav.sshTools",
-    separatorAfter: true,
-    mobilePrimary: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  {
-    id: "macros",
-    icon: Braces,
-    labelKey: "nav.macros",
-    separatorAfter: true,
-    promotable: true,
-    rightDockable: true,
   },
   {
     id: "sync",

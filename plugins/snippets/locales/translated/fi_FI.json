@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Suorita \"{{name}}\"",
+  "variablesDialogDescription": "Täytä tämän koodinpätkän tarvitsemat arvot ennen sen suorittamista.",
+  "variablesPreviewLabel": "Esikatselu",
+  "variablesConfirmButton": "Juokse",
+  "keybindings": {
+    "runSnippet": "Suorita olemassa oleva koodinpätkä",
+    "snippetLabel": "Katkelma",
+    "selectSnippet": "Valitse katkelma",
+    "snippetMissing": "katkelmaa ei löytynyt",
+    "snippetRequired": "Valitse katkelma"
+  },
+  "paletteHintRun": "Suorita aktiivisessa päätevälilehdessä",
+  "host": {
+    "startupTitle": "Käynnistyskoodinpätkä",
+    "quickActionsTitle": "Pikatoiminnot",
+    "quickActionsDescription": "Pikatoiminnot näkyvät painikkeina isäntämetriikkatyökalurivillä komentojen suorittamista varten yhdellä napsautuksella.",
+    "noQuickActions": "Ei vielä nopeita toimia.",
+    "buttonLabel": "Painikkeen nimi",
+    "selectSnippet": "Valitse katkelma...",
+    "addQuickAction": "Lisää toiminto"
+  },
+  "quickActions": {
+    "running": "Suoritetaan {{name}}...",
+    "succeeded": "{{name}} suoritettu onnistuneesti",
+    "failed": "{{name}} epäonnistui",
+    "error": "Suoritus epäonnistui {{name}}"
+  }
+}

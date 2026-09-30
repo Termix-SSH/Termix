@@ -63,6 +63,17 @@ describe("describePluginFrontend", () => {
     expect(info.locales).toEqual(["de_DE", "en"]);
   });
 
+  it("changes the version when only the stylesheet changes", () => {
+    const before = describePluginFrontend(plugin).assetVersion;
+    const css = path.join(root, "gizmo", "dist", "frontend.css");
+    fs.writeFileSync(css, ".gizmo{color:red}");
+    try {
+      expect(describePluginFrontend(plugin).assetVersion).not.toBe(before);
+    } finally {
+      fs.writeFileSync(css, ".gizmo{}");
+    }
+  });
+
   it("reports nothing for an unknown plugin", () => {
     expect(describePluginFrontend(undefined)).toEqual({
       frontend: false,

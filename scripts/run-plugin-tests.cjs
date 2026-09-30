@@ -23,6 +23,24 @@ const pluginIds = fs
   .map((entry) => entry.name);
 
 const failed = [];
+const skipped = [];
+let ran = 0;
+
+// A vitest fork that dies mid-run (seen on Windows under memory pressure)
+// fails the suite without any test failing. That is retried once; a real
+// test failure is not.
+const WORKER_CRASH = /Worker exited unexpectedly|Worker forks emitted error/;
+
+function runSuite(pluginDir) {
+  const result = spawnSync(process.execPath, [cli, "test"], {
+    cwd: pluginDir,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  process.stdout.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+  return result;
+}
 
 for (const id of pluginIds) {
   const pluginDir = path.join(source, id);
@@ -40,13 +58,23 @@ for (const id of pluginIds) {
         )
     );
   });
-  if (!hasTests) continue;
+  if (!hasTests) {
+    skipped.push(id);
+    continue;
+  }
 
-  const result = spawnSync(process.execPath, [cli, "test"], {
-    cwd: pluginDir,
-    stdio: "inherit",
-  });
+  ran++;
+  let result = runSuite(pluginDir);
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (result.status !== 0 && WORKER_CRASH.test(output)) {
+    console.warn(`\n${id}: a test worker crashed, running the suite again`);
+    result = runSuite(pluginDir);
+  }
   if (result.status !== 0) failed.push(id);
+}
+
+if (skipped.length > 0) {
+  console.warn(`\nNo tests found for: ${skipped.join(", ")}`);
 }
 
 if (failed.length > 0) {
@@ -54,4 +82,4 @@ if (failed.length > 0) {
   process.exit(1);
 }
 
-console.log(`\nPlugin tests passed for ${pluginIds.length} plugin(s).`);
+console.log(`\nPlugin tests passed for ${ran} plugin(s).`);

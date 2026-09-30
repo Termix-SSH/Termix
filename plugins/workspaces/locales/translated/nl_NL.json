@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Werkruimtes",
     "workflow_workspaces_desc": "Sla een set geopende tabbladen op en open de volledige lay-out later opnieuw."
+  },
+  "hosts": {
+    "docsLink": "Documenten bekijken"
   }
 }

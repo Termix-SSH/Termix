@@ -584,7 +584,7 @@ export async function activate(ctx: PluginContext) {
     let resolvedIp = ip;
     let resolvedPort = port;
     let resolvedUsername = username;
-    let resolvedTerminalConfig: Record<string, unknown> | undefined;
+    let resolvedSshOptions: PluginSshHost["sshOptions"];
     let resolvedJumpHosts = jumpHosts;
     let resolvedScpLegacy = false;
     let resolvedUseSocks5 = useSocks5;
@@ -612,8 +612,8 @@ export async function activate(ctx: PluginContext) {
         certPublicKey: (resolvedHost as { certPublicKey?: string })
           .certPublicKey,
       };
-      resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
-        Record<string, unknown> | undefined;
+      resolvedSshOptions =
+        resolvedHost.sshOptions as PluginSshHost["sshOptions"];
       resolvedScpLegacy =
         (await ctx.settings.getHost<boolean>(
           Number(resolvedHost.id),
@@ -728,7 +728,7 @@ export async function activate(ctx: PluginContext) {
       key: resolvedCredentials.sshKey,
       keyPassword: resolvedCredentials.keyPassword,
       certPublicKey: resolvedCredentials.certPublicKey,
-      terminalConfig: resolvedTerminalConfig ?? null,
+      sshOptions: resolvedSshOptions ?? null,
       jumpHosts: resolvedJumpHosts,
       useSocks5: resolvedUseSocks5,
       socks5Host: resolvedSocks5Host,

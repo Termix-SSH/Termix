@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Przekieruj port na serwerze zdalnym z powrotem do portu lokalnego na swoim komputerze.",
     "tunnelRequirementsText": "Serwer SSH musi mieć w /etc/ssh/sshd_config ustawione GatewayPorts yes, AllowTcpForwarding yes i PermitRootLogin yes.",
     "tunnelSettings": "Ustawienia tunelu",
-    "tunnelType": "Typ tunelu"
+    "tunnelType": "Typ tunelu",
+    "bindHost": "Host nasłuchu",
+    "docsLink": "Zobacz dokumentację",
+    "hostNotFound": "Nie znaleziono hosta",
+    "loadingHost": "Ładowanie hosta..."
   },
   "nav": {
     "portForwarding": "Przekierowanie",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynamiczny (-D)",
     "typeLocal": "Lokalny (-L)",
     "typeRemote": "Zdalny (-R)",
-    "working": "Przetwarzanie..."
+    "working": "Przetwarzanie...",
+    "start": "Start",
+    "stop": "Zatrzymaj"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunele",
+    "feature_tunnels_desc": "Przekierowuj porty przez serwer, aby dotrzeć do usług niewystawionych na zewnątrz."
   }
 }

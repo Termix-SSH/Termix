@@ -8,7 +8,7 @@ import type {
   LocalFsResult,
   LocalTrashResult,
   LocalWalkResult,
-} from "@termix/plugin-sdk/ui";
+} from "@termix/plugin-sdk/frontend";
 import { isElectron } from "@termix/plugin-sdk/ui";
 
 export function isLocalFileBrowserAvailable(): boolean {

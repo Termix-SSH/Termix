@@ -264,7 +264,7 @@ describe("storeImageViaSftp", () => {
           stream.destroyed = true;
         };
         streams.push(stream);
-        stream.end = (data: Buffer) => {
+        (stream as { end: unknown }).end = (data: Buffer) => {
           if (behavior.stallWrite) return;
           queueMicrotask(() => {
             if (behavior.writeError) {

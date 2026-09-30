@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} solmut"
+  },
+  "hosts": {
+    "docsLink": "Näytä dokumentit"
   }
 }

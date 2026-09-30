@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuális hálózat",
-    "unencryptedShell": "Titkosítatlan shell"
+    "unencryptedShell": "Titkosítatlan shell",
+    "docsLink": "Dokumentumok megtekintése"
   },
   "onboarding": {
     "feature_desktop": "Távoli asztal",
@@ -274,5 +275,8 @@
         "label": "guacd URL"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Távoli szerver szükséges. Csatlakoztasson egy távoli szervert a Beállításokban a kapcsolattípus használatához."
   }
 }

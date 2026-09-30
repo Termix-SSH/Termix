@@ -382,7 +382,10 @@
     "defaultPathLabel": "Alapértelmezett elérési út",
     "fileManagerPathHint": "A könyvtár, amely megnyílik, amikor a fájlkezelő elindul ehhez a gazdagéphez.",
     "fileManagerUrlCopied": "Fájlkezelő URL-címe másolva",
-    "copyFileManagerUrlAction": "Fájlkezelő URL-címének másolása"
+    "copyFileManagerUrlAction": "Fájlkezelő URL-címének másolása",
+    "docsLink": "Dokumentumok megtekintése",
+    "hostNotFound": "Nem található gazdagép",
+    "loadingHost": "Gazdagép betöltése..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP örökölt mód"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Egyidejű fájlátvitel",
+        "description": "Hány fájlt tölt fel vagy tölt le egyszerre az egymás melletti helyi/távoli kezelő. Csökkentse ezt az értéket, ha a szerver korlátozza az SFTP csatornákat."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Fájlok"
+  },
+  "onboarding": {
+    "feature_files": "Fájlkezelő",
+    "feature_files_desc": "Böngésszen, töltsön fel, töltsön le és szerkeszthessen fájlokat SFTP-n keresztül az alkalmazás elhagyása nélkül."
+  },
+  "terminal": {
+    "runTitle": "Futás {{command}} - {{host}}",
+    "terminalTitle": "Terminál - {{host}}",
+    "terminalWithPath": "Terminál - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Célmappák böngészése",
+    "browsePathError": "Nem sikerült megnyitni ezt az elérési utat a célgépen.",
+    "browsePathWillBeCreated": "Ez a mappa még nem létezik. Létrejön, amikor az átvitel megkezdődik.",
+    "cancel": "Mégsem",
+    "cleanupDestFiles": "Takarítási célpont",
+    "cleanupDestFilesError": "A tisztítás sikertelen",
+    "cleanupDestFilesNothing": "Nincs mit takarítani a célállomáson",
+    "cleanupDestFilesPartial": "Néhány részleges fájlt nem sikerült eltávolítani",
+    "cleanupDestFilesSuccess": "Részleges fájlok eltávolítva a célhelyről",
+    "confirmCopy": "Másolat",
+    "confirmMove": "Mozog",
+    "copyFolderToHost": "Mappa másolása a… gazdagépre",
+    "copyItemsToHost": "Másolja a {{count}} elemet a… hosztba",
+    "copyToHost": "Másolás a… gazdagépre",
+    "destinationPath": "Célútvonal",
+    "destMustBeDirectory": "Több elem átviteléhez a célnak egy könyvtárnak kell lennie",
+    "goUp": "Felmegy",
+    "hostAuthRequired": "Hitelesítés szükséges — először nyissa meg a Fájlkezelőt ezen a gépen",
+    "hostConnecting": "… csatlakoztatása",
+    "hostConnectionFailed": "Kapcsolódás sikertelen",
+    "hostDisconnected": "Nincs csatlakoztatva",
+    "hostReady": "Kész",
+    "itemsSummary": "{{count}} elem",
+    "jumpHostLimitation": "Mindkét gépnek elérhetőnek kell lennie a Termix szerverről. A közvetlen gépközi útvonalválasztás nem támogatott.",
+    "methodAuto": "Autó",
+    "methodAutoHint": "A fájlok száma, mérete és tömöríthetősége alapján választja ki a tar vagy a fájlonkénti SFTP protokollt. Az egyes fájlok mindig folyamatos SFTP-t használnak.",
+    "methodItemSftp": "Fájlonkénti SFTP",
+    "methodItemSftpHint": "Minden fájlt külön-külön átvihet SFTP-n keresztül. Minden gazdagépen működik, beleértve a Windowst is.",
+    "methodItemSftpLimitation": "Minden fájl ugyanazt az SFTP-folyamot használja, mint egyetlen fájl másolata, egymás után. A folyamat az összes fájlban összevonódik, így a sáv lassan mozog nagy fájlok esetén.",
+    "methodLabel": "Átviteli módszer",
+    "methodPreviewError": "Nem sikerült megtekinteni az átviteli módot. A szerver továbbra is kiválaszt egy módszert az indításkor.",
+    "methodPreviewLoading": "Átviteli módszer kiszámítása…",
+    "methodPreviewScanSummary": "{{fileCount}} fájl, {{totalSize}} összesen (a forrásgépen beolvasva).",
+    "methodPreviewWillUseItemSftp": "Használat: Fájlonkénti SFTP",
+    "methodPreviewWillUseTar": "Felhasználás: Tar archívum",
+    "methodReason": {
+      "user_item_sftp": "Fájlonkénti SFTP-t választottál.",
+      "user_tar": "A tar archívumot választottad.",
+      "tar_unavailable": "A Tar nem érhető el az egyik vagy mindkét hoszton – helyette fájlonkénti SFTP-t fog használni.",
+      "windows_host": "Egy Windows gazdagép érintett – tar-t nem használunk.",
+      "auto_multi_large": "Automatikus: több fájl, beleértve egy nagy fájlt ({{largestSize}}) tömöríthető adatokkal — a tar egyetlen átvitelbe csomagolja.",
+      "auto_single_large_in_archive": "Automatikus: egy nagy fájl ({{largestSize}}) ebben a készletben — fájlonként SFTP.",
+      "auto_many_incompressible": "Automatikus: többnyire tömöríthetetlen adatok — fájlonkénti SFTP.",
+      "auto_many_files": "Auto: sok fájl ({{fileCount}}) — a tar csökkenti a fájlonkénti terhelést.",
+      "auto_default": "Automatikus: fájlonkénti SFTP ehhez a készlethez."
+    },
+    "methodTar": "Tar archívum",
+    "methodTarHint": "Tömörítés a forráskódban, egy archívum átvitele, kibontás a célkódban. Tar fájlt igényel mindkét Unix gépen.",
+    "metricsCompress": "Tömörítés forráskód szerint: {{duration}}",
+    "metricsExtract": "Kivonat a rendeltetési helyen: {{duration}}",
+    "metricsPrepare": "Célhely előkészítése: {{duration}}",
+    "metricsRouteBenchmark": "Útvonalszonda — közvetlen: {{direct}}, relé: {{relay}}",
+    "metricsSourceDelete": "Eltávolítás a forrásból: {{duration}}",
+    "metricsTotal": "Összesen: {{duration}}",
+    "metricsTransfer": "Végtől végig: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 ellenőrizve: {{duration}}",
+    "moveFolderToHost": "Mappa áthelyezése a… gazdagépre",
+    "moveItemsToHost": "Áthelyez {{count}} elemet a… tárhelyre",
+    "moveToHost": "Áthelyezés a… gazdagépre",
+    "noHostsConnected": "Nincsenek más elérhető fájlkezelő gazdagépek.",
+    "noHostsConnectedHint": "Adjon hozzá egy másik SSH-hosztot, amelynél a Fájlkezelő engedélyezve van a Host Managerben.",
+    "parallelSegmentsHint": "A nagy fájlokat 256 MB-os darabokra osztja a rendszer. Több sáv külön kapcsolatokat használ (például több átvitel indítása) a nagyobb összátviteli sebesség érdekében.",
+    "parallelSegmentsLabel": "Párhuzamos átszállósávok",
+    "parallelSegmentsOption": "{{count}} sávok",
+    "progressBenchmarking": "A leggyorsabb átszállási útvonal kiválasztása…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Mégsem",
+    "progressCancelling": "Törlés…",
+    "progressCompressing": "Tömörítés a forrásgépen…",
+    "progressExtracting": "Kibontás a célállomáson…",
+    "progressItems": "{{current}} / {{total}} fájlok",
+    "progressReconnecting": "Újracsatlakozás…",
+    "progressStalled": "Elakadt",
+    "progressTotalSpeed": "{{speed}} összesen ({{lanes}} sávok)",
+    "progressTransferring": "Adatátvitel…",
+    "progressTransferringItems": "Fájlok átvitele ({{current}} / {{total}})…",
+    "progressVerifying": "Fájl integritásának ellenőrzése…",
+    "recentDestinations": "Legutóbbi úti célok",
+    "resumedHint": "Újracsatlakozva egy másik ablakban indított aktív átvitelhez.",
+    "retryTransfer": "Újrapróbálkozás",
+    "retryTransferError": "Újrapróbálkozás sikertelen",
+    "selectDestinationHost": "Célállomás kiválasztása",
+    "transferCancelled": "Átutalás törölve",
+    "transferCancelledCopyHint": "Részleges fájlok maradhatnak a célhelyen.",
+    "transferCancelledMoveHint": "Részleges fájlok maradhatnak a célhelyen. A forrásfájlok nem lettek eltávolítva.",
+    "transferError": "Átvitel sikertelen",
+    "transferFailedRetryHint": "Részleges adatok maradtak a célállomáson. Az újrapróbálkozás a kapcsolat helyreállásakor folytatódik.",
+    "transferPartialHint": "Nem sikerült átvinni: {{paths}}",
+    "transferSuccess": "Átvitel befejezve"
   }
 }

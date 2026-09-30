@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "最短間隔 15 秒。 Proxmox 節點統計資訊刷新頻率。",
     "proxmoxStatsNodeOverride": "節點名稱覆蓋",
     "proxmoxStatsNodeOverrideDesc": "覆蓋 Proxmox 節點名稱的自動偵測（預設透過主機名稱偵測）。",
-    "proxmoxStatsNodeOverridePlaceholder": "從主機名稱自動偵測"
+    "proxmoxStatsNodeOverridePlaceholder": "從主機名稱自動偵測",
+    "docsLink": "檢視文件",
+    "hostNotFound": "找不到主機",
+    "loadingHost": "正在載入主機...",
+    "none": "無",
+    "proxmoxGuestsSelected_one": "{{count}} 個訪客主機 — 已選取 {{selected}}",
+    "proxmoxGuestsSelected_other": "{{count}} 個訪客主機 — 已選取 {{selected}}",
+    "proxmoxImportButton_one": "匯入 {{count}} 台主機",
+    "proxmoxImportButton_other": "匯入 {{count}} 台主機"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox 統計數據",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "此節點上未發現虛擬機器或 LXC 容器。",
     "noGuestsMatch": "沒有符合目前篩選條件的客人。"
+  },
+  "terminal": {
+    "connected": "已連線"
   }
 }

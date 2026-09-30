@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "מינימום 15 שניות. באיזו תדירות לרענן את סטטיסטיקות הצומת של Proxmox.",
     "proxmoxStatsNodeOverride": "עקיפת שם הצומת",
     "proxmoxStatsNodeOverrideDesc": "עקיפת זיהוי אוטומטי של שם הצומת Proxmox (מזוהה דרך שם המארח כברירת מחדל).",
-    "proxmoxStatsNodeOverridePlaceholder": "זוהה אוטומטית משם המארח"
+    "proxmoxStatsNodeOverridePlaceholder": "זוהה אוטומטית משם המארח",
+    "docsLink": "הצג מסמכים",
+    "hostNotFound": "המארח לא נמצא",
+    "loadingHost": "טוען מארח...",
+    "none": "אַף לֹא אֶחָד",
+    "proxmoxGuestsSelected_one": "{{count}} אורח — {{selected}} נבחר",
+    "proxmoxGuestsSelected_other": "{{count}} אורחים — {{selected}} נבחרו",
+    "proxmoxImportButton_one": "ייבוא מארח {{count}}",
+    "proxmoxImportButton_other": "ייבוא מארחים {{count}}"
   },
   "proxmoxStats": {
     "tabTitle": "סטטיסטיקות פרוקסמוקס",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "לא נמצאו מכונות וירטואליות או מכולות LXC בצומת זה.",
     "noGuestsMatch": "אין אורחים התואמים את המסננים הנוכחיים."
+  },
+  "terminal": {
+    "connected": "מְחוּבָּר"
   }
 }

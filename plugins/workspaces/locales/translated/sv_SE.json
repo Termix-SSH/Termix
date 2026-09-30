@@ -51,5 +51,8 @@
   "onboarding": {
     "workflow_workspaces": "Arbetsytor",
     "workflow_workspaces_desc": "Spara en uppsättning öppna flikar och öppna hela layouten igen senare."
+  },
+  "hosts": {
+    "docsLink": "Visa dokument"
   }
 }

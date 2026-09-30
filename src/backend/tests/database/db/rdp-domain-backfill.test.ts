@@ -4,7 +4,7 @@ import path from "path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("RDP domain startup backfill", () => {
+describe("RDP domain across database boots", () => {
   let dataDir: string;
 
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe("RDP domain startup backfill", () => {
     { saved: "CORP", legacy: null, expected: "CORP" },
     { saved: "CORP", legacy: "OLD", expected: "CORP" },
     { saved: "", legacy: "OLD", expected: "" },
-    { saved: null, legacy: "LEGACY", expected: "LEGACY" },
+    { saved: null, legacy: "LEGACY", expected: null },
   ])("preserves $saved with legacy domain $legacy across boots", async ({
     saved,
     legacy,

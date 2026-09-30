@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Пренасочете порт на отдалечения сървър обратно към локален порт на вашата машина.",
     "tunnelRequirementsText": "SSH сървърът трябва да има зададени стойности за GatewayPorts (да), AllowTcpForwarding (да) и PermitRootLogin (да) в /etc/ssh/sshd_config.",
     "tunnelSettings": "Настройки на тунела",
-    "tunnelType": "Тип тунел"
+    "tunnelType": "Тип тунел",
+    "bindHost": "Свързване на хост",
+    "docsLink": "Преглед на документи",
+    "hostNotFound": "Хостът не е намерен",
+    "loadingHost": "Зареждане на хоста..."
   },
   "nav": {
     "portForwarding": "Препращане",
@@ -134,6 +138,12 @@
     "typeDynamic": "Динамичен (-D)",
     "typeLocal": "Местен (-L)",
     "typeRemote": "Дистанционно (-R)",
-    "working": "Работа..."
+    "working": "Работа...",
+    "start": "Старт",
+    "stop": "Спри"
+  },
+  "onboarding": {
+    "feature_tunnels": "Тунели",
+    "feature_tunnels_desc": "Пренасочване на портове през сървър, за да се достигне до услуги, които не са изложени на риск."
   }
 }

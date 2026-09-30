@@ -382,7 +382,10 @@
     "defaultPathLabel": "Standardsti",
     "fileManagerPathHint": "Den mappe, der skal åbnes, når filhåndteringen starter for denne vært.",
     "fileManagerUrlCopied": "URL'en til filhåndtering er kopieret",
-    "copyFileManagerUrlAction": "Kopiér URL til filhåndtering"
+    "copyFileManagerUrlAction": "Kopiér URL til filhåndtering",
+    "docsLink": "Se dokumenter",
+    "hostNotFound": "Værten blev ikke fundet",
+    "loadingHost": "Indlæser vært..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP Legacy-tilstand"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Samtidige filoverførsler",
+        "description": "Hvor mange filer den side om side lokale/fjernstyrede administrator uploader eller downloader på samme tid. Sænk dette, hvis din server begrænser SFTP-kanaler."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "Filer"
+  },
+  "onboarding": {
+    "feature_files": "Filhåndtering",
+    "feature_files_desc": "Gennemse, upload, download og rediger filer via SFTP uden at forlade appen."
+  },
+  "terminal": {
+    "runTitle": "Kører {{command}} - {{host}}",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Gennemse destinationsmapper",
+    "browsePathError": "Kunne ikke åbne denne sti på destinationsværten.",
+    "browsePathWillBeCreated": "Denne mappe findes ikke endnu. Den vil blive oprettet, når overførslen starter.",
+    "cancel": "Ophæve",
+    "cleanupDestFiles": "Oprydningsdestination",
+    "cleanupDestFilesError": "Oprydning mislykkedes",
+    "cleanupDestFilesNothing": "Intet at rydde op på destinationen",
+    "cleanupDestFilesPartial": "Nogle delvise filer kunne ikke fjernes",
+    "cleanupDestFilesSuccess": "Fjernede delvise filer fra destinationen",
+    "confirmCopy": "Kopi",
+    "confirmMove": "Flytte",
+    "copyFolderToHost": "Kopiér mappe til vært…",
+    "copyItemsToHost": "Kopiér {{count}} elementer til at være vært for…",
+    "copyToHost": "Kopiér til vært…",
+    "destinationPath": "Destinationssti",
+    "destMustBeDirectory": "Destinationen skal være en mappe for overførsler af flere elementer",
+    "goUp": "Gå op",
+    "hostAuthRequired": "Godkendelse kræves — åbn først Filhåndtering på denne vært",
+    "hostConnecting": "Forbinder…",
+    "hostConnectionFailed": "Forbindelsen mislykkedes",
+    "hostDisconnected": "Ikke forbundet",
+    "hostReady": "Parat",
+    "itemsSummary": "{{count}} elementer",
+    "jumpHostLimitation": "Begge værter skal kunne nås fra Termix-serveren. Direkte vært-til-vært-routing understøttes ikke.",
+    "methodAuto": "Bil",
+    "methodAutoHint": "Vælger tar eller SFTP pr. fil baseret på antal filer, størrelse og komprimerbarhed. Enkeltfiler bruger altid streaming SFTP.",
+    "methodItemSftp": "SFTP pr. fil",
+    "methodItemSftpHint": "Overfør hver fil individuelt via SFTP. Fungerer på alle værter, inklusive Windows.",
+    "methodItemSftpLimitation": "Hver fil bruger den samme SFTP-strøm som en enkelt filkopi, én efter én. Status kombineres på tværs af alle filer, så bjælken bevæger sig langsomt under store filer.",
+    "methodLabel": "Overførselsmetode",
+    "methodPreviewError": "Kunne ikke forhåndsvise overførselsmetoden. Serveren vil stadig vælge en metode, når du starter.",
+    "methodPreviewLoading": "Beregning af overførselsmetode…",
+    "methodPreviewScanSummary": "{{fileCount}} filer, {{totalSize}} i alt (scannet på kildevært).",
+    "methodPreviewWillUseItemSftp": "Vil bruge: SFTP pr. fil",
+    "methodPreviewWillUseTar": "Vil bruge: Tar-arkiv",
+    "methodReason": {
+      "user_item_sftp": "Du valgte SFTP pr. fil.",
+      "user_tar": "Du valgte tar-arkivet.",
+      "tar_unavailable": "Tar er ikke tilgængelig på en eller begge værter — SFTP pr. fil vil blive brugt i stedet.",
+      "windows_host": "En Windows-vært er involveret — tar bruges ikke.",
+      "auto_multi_large": "Auto: flere filer inklusive en stor fil ({{largestSize}}) med komprimerbare data — tar samler filer i én overførsel.",
+      "auto_single_large_in_archive": "Auto: én stor fil ({{largestSize}}) i dette sæt — SFTP pr. fil.",
+      "auto_many_incompressible": "Auto: for det meste inkomprimerbare data — SFTP pr. fil.",
+      "auto_many_files": "Auto: mange filer ({{fileCount}}) — tar reducerer overhead pr. fil.",
+      "auto_default": "Auto: SFTP pr. fil for dette sæt."
+    },
+    "methodTar": "Tar-arkiv",
+    "methodTarHint": "Komprimer ved kildekode, overfør ét arkiv, udpak ved destination. Kræver tar på begge Unix-værter.",
+    "metricsCompress": "Komprimer på kilde: {{duration}}",
+    "metricsExtract": "Udtræk på destination: {{duration}}",
+    "metricsPrepare": "Forbered destination: {{duration}}",
+    "metricsRouteBenchmark": "Rutesonde — direkte: {{direct}}, relæ: {{relay}}",
+    "metricsSourceDelete": "Fjern fra kilde: {{duration}}",
+    "metricsTotal": "I alt: {{duration}}",
+    "metricsTransfer": "End-to-end: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 verificeret: {{duration}}",
+    "moveFolderToHost": "Flyt mappe til vært…",
+    "moveItemsToHost": "Flyt {{count}} elementer til at være vært for…",
+    "moveToHost": "Flyt til vært…",
+    "noHostsConnected": "Ingen andre filhåndteringsværter tilgængelige.",
+    "noHostsConnectedHint": "Tilføj en anden SSH-vært med Filhåndtering aktiveret i Værtshåndtering.",
+    "parallelSegmentsHint": "Store filer opdeles i bidder på 256 MB. Flere baner bruger separate forbindelser (f.eks. at starte flere overførsler) for at opnå en højere samlet gennemløbshastighed.",
+    "parallelSegmentsLabel": "Parallelle overførselsbaner",
+    "parallelSegmentsOption": "{{count}} baner",
+    "progressBenchmarking": "Valg af den hurtigste overførselsrute…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Ophæve",
+    "progressCancelling": "Annullerer…",
+    "progressCompressing": "Komprimering på kildevært…",
+    "progressExtracting": "Udpakning på destination…",
+    "progressItems": "{{current}} / {{total}} filer",
+    "progressReconnecting": "Genopretter forbindelse…",
+    "progressStalled": "Standset",
+    "progressTotalSpeed": "{{speed}} i alt ({{lanes}} baner)",
+    "progressTransferring": "Overførsel af data…",
+    "progressTransferringItems": "Overførsel af filer ({{current}} af {{total}})…",
+    "progressVerifying": "Bekræfter filintegritet…",
+    "recentDestinations": "Seneste destinationer",
+    "resumedHint": "Genoprettet forbindelse til en aktiv overførsel, der er startet i et andet vindue.",
+    "retryTransfer": "Prøv igen",
+    "retryTransferError": "Genforsøg mislykkedes",
+    "selectDestinationHost": "Vælg destinationsvært",
+    "transferCancelled": "Overførsel annulleret",
+    "transferCancelledCopyHint": "Delvise filer kan forblive på destinationen.",
+    "transferCancelledMoveHint": "Delvise filer kan forblive på destinationen. Kildefilerne blev ikke fjernet.",
+    "transferError": "Overførslen mislykkedes",
+    "transferFailedRetryHint": "Delvise data blev gemt på destinationen. Forsøget genoptages, når forbindelsen er tilbage.",
+    "transferPartialHint": "Kunne ikke overføre: {{paths}}",
+    "transferSuccess": "Overførsel fuldført"
   }
 }

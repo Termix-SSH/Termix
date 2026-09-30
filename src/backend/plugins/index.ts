@@ -19,14 +19,19 @@ import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
+import { setHostProtocolSource } from "../hosts/protocol-auth/registry.js";
 import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 import { recordConflict } from "./conflicts.js";
+import { setPluginImpersonationCheck } from "../utils/auth-manager.js";
+import { setKeybindingActionSource } from "../database/routes/keybinding-validation.js";
 
 let loader: PluginLoader | null = null;
 
 export function getPluginRuntime(): { loader: PluginLoader } {
   if (!loader) {
-    loader = new PluginLoader();
+    loader = new PluginLoader({
+      onFailed: (plugin) => void handlePluginFailed(plugin),
+    });
     // The 503-while-disabled answer comes from here rather than from the
     // router being torn down, so a request that arrives mid-disable gets a
     // truthful status instead of a 404.
@@ -34,6 +39,34 @@ export function getPluginRuntime(): { loader: PluginLoader } {
       (pluginId) => loader?.get(pluginId)?.state === "active",
     );
     setPluginInstalledCheck((pluginId) => !!loader?.get(pluginId));
+    // An admin acting for another user reaches only the plugins that opted in.
+    setPluginImpersonationCheck((pluginId) => {
+      const plugin = loader?.get(pluginId);
+      return (
+        plugin?.state === "active" &&
+        plugin.manifest.contributes?.http?.adminImpersonation === true
+      );
+    });
+    // Saved keybindings are checked against every installed plugin's
+    // declarations, so a binding keeps validating while its plugin is off.
+    setKeybindingActionSource(() =>
+      (loader?.list() ?? []).flatMap((plugin) =>
+        (plugin.manifest.contributes?.keybindingActions ?? []).map(
+          (action) => ({ ...action, pluginId: plugin.id }),
+        ),
+      ),
+    );
+    // Protocol logins stay readable, shareable and syncable while their
+    // plugin is off.
+    setHostProtocolSource(() =>
+      (loader?.list() ?? []).flatMap((plugin) =>
+        (plugin.manifest.contributes?.protocols ?? []).map((protocol) => ({
+          ...protocol,
+          pluginId: plugin.id,
+          pluginName: plugin.manifest.name,
+        })),
+      ),
+    );
     // Lets a host whose auth type belongs to a disabled plugin name it.
     setSshAuthTypeOwnerSource(() =>
       (loader?.list() ?? []).flatMap((plugin) =>
@@ -58,6 +91,29 @@ export function getPluginRuntime(): { loader: PluginLoader } {
     );
   }
   return { loader };
+}
+
+/**
+ * A plugin that tripped the error budget is off until an admin retries it, so
+ * it has to look off everywhere: no routes, greyed permissions, and a failed
+ * row that survives a restart.
+ */
+async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
+  unregisterPluginHttp(plugin.id);
+  try {
+    if (plugin.manifest.contributes?.permissions?.length) {
+      const { markPluginPermissionsDisabled } =
+        await import("../utils/permission-catalog.js");
+      markPluginPermissionsDisabled(plugin.id);
+    }
+    await persistRuntimeState([plugin]);
+  } catch (error) {
+    pluginLogger.error(
+      `Could not record that plugin ${plugin.id} failed`,
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "plugin_runtime" },
+    );
+  }
 }
 
 /**
@@ -502,13 +558,10 @@ export async function installPluginArtifact(
   file: string,
 ): Promise<LoadedPlugin> {
   const { loader: pluginLoader } = getPluginRuntime();
-  const bundledIds = new Set(
-    pluginLoader
-      .list()
-      .filter((plugin) => plugin.source === "bundled")
-      .map((plugin) => plugin.id),
+  const plugin = await pluginLoader.loadArtifact(
+    file,
+    pluginLoader.bundledIds(),
   );
-  const plugin = await pluginLoader.loadArtifact(file, bundledIds);
   await seedPlugins([plugin]);
   await syncCapabilityGrants([plugin]);
   return plugin;

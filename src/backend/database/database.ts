@@ -1,4 +1,14 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { sshOptionsForWrite } from "../hosts/ssh-options.js";
+import {
+  applyDefaultsAfterHostWrite,
+  applyHostDefaultsToWrite,
+} from "../hosts/defaults/index.js";
+import { recompute } from "../hosts/defaults/recompute.js";
+import {
+  importHostDefaults,
+  writeHostDefaultsToExport,
+} from "../hosts/defaults/user-export.js";
 import express from "express";
 import http from "http";
 import https from "https";
@@ -63,6 +73,13 @@ import {
 } from "./repositories/factory.js";
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
+import {
+  keepUsableProtocolCredentials,
+  listProtocolLogins,
+  readProtocolAuthPayload,
+  toPortableLogins,
+  writeProtocolAuth,
+} from "../hosts/protocol-auth/protocol-auth.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import type { GitHubRelease, AuthenticatedRequest } from "../../types/index.js";
 import { DatabaseSaveTrigger } from "./db/index.js";
@@ -617,7 +634,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
     if (!DataCrypto.getUserDataKey(userId)) {
       if (isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(
+        const oidcUnlocked = await authManager.authenticateExternalUser(
           userId,
           deviceInfo.type,
         );
@@ -713,15 +730,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           key_password TEXT,
           key_type TEXT,
           sudo_password TEXT,
-          autostart_password TEXT,
-          autostart_key TEXT,
-          autostart_key_password TEXT,
           credential_id INTEGER,
           override_credential_username INTEGER,
           jump_hosts TEXT,
           status_check_enabled INTEGER NOT NULL DEFAULT 1,
           status_check_interval INTEGER,
           terminal_config TEXT,
+          ssh_options TEXT,
           quick_actions TEXT,
           notes TEXT,
           use_socks5 INTEGER,
@@ -730,7 +745,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           socks5_username TEXT,
           socks5_password TEXT,
           socks5_proxy_chain TEXT,
-          domain TEXT,
           port_knock_sequence TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -741,6 +755,16 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           host_id INTEGER NOT NULL,
           key TEXT NOT NULL,
           value TEXT
+        );
+
+        CREATE TABLE host_protocol_auth (
+          host_id INTEGER NOT NULL,
+          protocol TEXT NOT NULL,
+          auth_type TEXT NOT NULL,
+          credential_id INTEGER,
+          username TEXT,
+          password TEXT,
+          fields TEXT
         );
 
         CREATE TABLE ssh_credentials (
@@ -799,8 +823,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -822,15 +846,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.keyPassword || null,
           decrypted.keyType || null,
           decrypted.sudoPassword || null,
-          decrypted.autostartPassword || null,
-          decrypted.autostartKey || null,
-          decrypted.autostartKeyPassword || null,
           decrypted.credentialId || null,
           decrypted.overrideCredentialUsername ? 1 : 0,
           decrypted.jumpHosts || null,
           decrypted.statusCheckEnabled === false ? 0 : 1,
           decrypted.statusCheckInterval ?? null,
           decrypted.terminalConfig || null,
+          decrypted.sshOptions || null,
           decrypted.quickActions || null,
           decrypted.notes || null,
           decrypted.useSocks5 ? 1 : 0,
@@ -839,7 +861,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.socks5Username || null,
           decrypted.socks5Password || null,
           decrypted.socks5ProxyChain || null,
-          decrypted.domain || null,
           decrypted.portKnockSequence || null,
           decrypted.createdAt,
           decrypted.updatedAt,
@@ -864,6 +885,27 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           row.key,
           row.value,
         );
+      }
+
+      // Plugin protocol logins, decrypted like the host's own secrets.
+      const insertProtocolAuth = exportDb.prepare(
+        "INSERT INTO host_protocol_auth (host_id, protocol, auth_type, credential_id, username, password, fields) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      );
+      for (const host of sshHosts) {
+        const logins = toPortableLogins(
+          await listProtocolLogins(host.id as number, userId),
+        );
+        for (const [protocol, login] of Object.entries(logins)) {
+          insertProtocolAuth.run(
+            host.id,
+            protocol,
+            login.authType,
+            login.credentialId,
+            login.username,
+            login.password,
+            JSON.stringify(login.fields),
+          );
+        }
       }
 
       const credentials =
@@ -918,6 +960,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       }
 
       writeSettingsToExportDatabase(exportDb, await getExportableSettings());
+      await writeHostDefaultsToExport(exportDb, userId);
     } finally {
       exportDb.close();
     }
@@ -1025,7 +1068,7 @@ app.post(
 
       if (!DataCrypto.getUserDataKey(userId)) {
         if (isOidcUser) {
-          const oidcUnlocked = await authManager.authenticateOIDCUser(
+          const oidcUnlocked = await authManager.authenticateExternalUser(
             userId,
             deviceInfo.type,
           );
@@ -1138,9 +1181,6 @@ app.post(
                   keyPassword: host.key_password,
                   keyType: host.key_type,
                   sudoPassword: host.sudo_password,
-                  autostartPassword: host.autostart_password,
-                  autostartKey: host.autostart_key,
-                  autostartKeyPassword: host.autostart_key_password,
                   credentialId: host.credential_id || null,
                   overrideCredentialUsername: Boolean(
                     host.override_credential_username,
@@ -1148,6 +1188,13 @@ app.post(
                   jumpHosts: host.jump_hosts,
                   ...legacyStatusCheck(host),
                   terminalConfig: host.terminal_config,
+                  // Exports from before 2.9.0 carry these in terminal_config.
+                  sshOptions:
+                    host.ssh_options ??
+                    sshOptionsForWrite({
+                      terminalConfig: host.terminal_config,
+                    }) ??
+                    null,
                   quickActions: host.quick_actions,
                   notes: host.notes,
                   useSocks5: Boolean(host.use_socks5),
@@ -1160,6 +1207,15 @@ app.post(
                   updatedAt: new Date().toISOString(),
                 };
 
+                (hostData as Record<string, unknown>).defaultOverrides =
+                  JSON.stringify(
+                    await applyHostDefaultsToWrite({
+                      ownerId: userId,
+                      hostId: null,
+                      columns: hostData as Record<string, unknown>,
+                      body: hostData as Record<string, unknown>,
+                    }),
+                  );
                 const created = await hostRepository.createEncryptedForUser(
                   userId,
                   hostData,
@@ -1167,6 +1223,13 @@ app.post(
                 await applyPluginHostImportSettings(
                   Number(created.id),
                   importedHostPluginSettings(importDb, host),
+                );
+                await applyDefaultsAfterHostWrite(Number(created.id));
+                await importHostProtocolLogins(
+                  importDb,
+                  host,
+                  Number(created.id),
+                  userId,
                 );
                 result.summary.sshHostsImported++;
               } catch (hostError) {
@@ -1241,6 +1304,12 @@ app.post(
           result.summary.pluginItemsImported += pluginRows.imported;
           result.summary.skippedItems += pluginRows.skipped;
           result.summary.errors.push(...pluginRows.errors);
+
+          const hostDefaults = await importHostDefaults(importDb, userId);
+          result.summary.skippedItems += hostDefaults.skipped;
+          if (hostDefaults.imported > 0) {
+            await recompute({ userIds: [userId] });
+          }
 
           const targetUser = await userRepository.findById(userId);
           if (targetUser?.isAdmin) {
@@ -1849,6 +1918,52 @@ function legacyStatusCheck(row: Record<string, unknown>): {
         ? seconds
         : null,
   };
+}
+
+/**
+ * A host's plugin protocol logins from an export. The file's credential ids
+ * belong to the server that wrote it, so a login keeps one only when it is
+ * a credential the importing user can use.
+ */
+async function importHostProtocolLogins(
+  importDb: Database.Database,
+  host: Record<string, unknown>,
+  hostId: number,
+  userId: string,
+): Promise<void> {
+  let rows: Array<Record<string, unknown>>;
+  try {
+    rows = importDb
+      .prepare("SELECT * FROM host_protocol_auth WHERE host_id = ?")
+      .all(host.id) as Array<Record<string, unknown>>;
+  } catch {
+    // An export from before 2.9.0 has no protocol logins.
+    return;
+  }
+  const protocolAuth: Record<string, unknown> = {};
+  for (const row of rows) {
+    let fields: unknown = {};
+    try {
+      fields = JSON.parse(String(row.fields ?? "{}"));
+    } catch {
+      fields = {};
+    }
+    protocolAuth[String(row.protocol)] = {
+      authType: row.auth_type,
+      credentialId: row.credential_id,
+      username: row.username,
+      password: row.password,
+      fields,
+    };
+  }
+  const patch = readProtocolAuthPayload({ protocolAuth });
+  if (!patch) return;
+  await writeProtocolAuth(
+    userId,
+    hostId,
+    await keepUsableProtocolCredentials(patch, userId),
+    { isOwner: true },
+  );
 }
 
 /**

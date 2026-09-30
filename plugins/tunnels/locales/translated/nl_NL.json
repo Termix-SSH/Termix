@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Een poort op de externe server doorsturen naar een lokale poort op uw computer.",
     "tunnelRequirementsText": "De SSH-server moet de volgende instellingen hebben: GatewayPorts yes, AllowTcpForwarding yes en PermitRootLogin yes in /etc/ssh/sshd_config.",
     "tunnelSettings": "Tunnelinstellingen",
-    "tunnelType": "Tunneltype"
+    "tunnelType": "Tunneltype",
+    "bindHost": "Bind Host",
+    "docsLink": "Documenten bekijken",
+    "hostNotFound": "Host niet gevonden",
+    "loadingHost": "Host wordt geladen..."
   },
   "nav": {
     "portForwarding": "Doorsturen",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynamisch (-D)",
     "typeLocal": "Lokaal (-L)",
     "typeRemote": "Afstandsbediening (-R)",
-    "working": "Bezig met verwerken..."
+    "working": "Bezig met verwerken...",
+    "start": "Begin",
+    "stop": "Stop"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunnels",
+    "feature_tunnels_desc": "Poorten doorsturen via een server om toegang te krijgen tot services die niet openbaar toegankelijk zijn."
   }
 }

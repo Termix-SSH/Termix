@@ -13,6 +13,8 @@ import type { HostResolutionHostRecord } from "../database/repositories/host-res
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
+import { findUsableCredential } from "../hosts/usable-credential.js";
+import { listProtocolLogins } from "../hosts/protocol-auth/protocol-auth.js";
 
 export interface SharedSecretData {
   username?: string;
@@ -22,6 +24,8 @@ export interface SharedSecretData {
   keyPassword?: string;
   keyType?: string;
   domain?: string;
+  /** A plugin protocol's declared credential fields. */
+  fields?: Record<string, string>;
 }
 
 interface ProtocolSnapshot {
@@ -39,25 +43,38 @@ function snapshotRecordId(
   return `shared-${hostAccessId}-${targetUserId}-${protocol}`;
 }
 
-// SSH follows its own switch. The remote desktop protocols' switches are the
-// remote-desktop plugin's host settings, and the host editor clears a
-// protocol's login when it is switched off, so a snapshot is taken whenever
-// login data is present (see collectProtocolSnapshots).
-function enabledProtocols(
-  host: HostResolutionHostRecord,
-): Record<ShareProtocol, boolean> {
+// SSH follows its own switch. A plugin protocol's switch is that plugin's
+// host setting, and the editor removes a protocol's login when it is
+// switched off, so a snapshot is taken whenever a login is stored.
+function sshEnabled(host: HostResolutionHostRecord): boolean {
   const ct = host.connectionType;
-  return {
-    ssh: host.enableSsh !== false && (!ct || ct === "ssh"),
-    rdp: true,
-    vnc: true,
-    telnet: true,
-  };
+  return host.enableSsh !== false && (!ct || ct === "ssh");
 }
 
 // Per-recipient copies of connection secrets, re-encrypted under the
 // recipient's DEK. SSH authentication is copied only when the host owner
 // explicitly opts in; recipient-owned credential overrides remain separate.
+/**
+ * A snapshot's protocol fields. Snapshots taken before 2.9.0 kept a domain
+ * in its own column and nothing else.
+ */
+function parseFields(
+  value: string | undefined,
+  legacyDomain: string | undefined,
+): Record<string, string> | undefined {
+  if (value) {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, string>;
+      }
+    } catch {
+      // Unreadable fields are left out.
+    }
+  }
+  return legacyDomain ? { domain: legacyDomain } : undefined;
+}
+
 class SharedHostSecretsManager {
   private static instance: SharedHostSecretsManager;
 
@@ -120,6 +137,10 @@ class SharedHostSecretsManager {
           ),
           encryptedKeyType: snapshot.data.keyType || null,
           encryptedDomain: encrypt(snapshot.data.domain, "domain"),
+          encryptedFields: encrypt(
+            snapshot.data.fields ? JSON.stringify(snapshot.data.fields) : "",
+            "fields",
+          ),
         });
       }
 
@@ -361,10 +382,9 @@ class SharedHostSecretsManager {
     ownerId: string,
   ): Promise<ProtocolSnapshot[]> {
     const repository = createCurrentHostResolutionRepository();
-    const enabled = enabledProtocols(host);
     const snapshots: ProtocolSnapshot[] = [];
 
-    if (enabled.ssh && host.shareSshAuth) {
+    if (sshEnabled(host) && host.shareSshAuth) {
       if (host.credentialId) {
         const credential = await repository.findCredentialByIdForUser(
           host.credentialId,
@@ -405,106 +425,40 @@ class SharedHostSecretsManager {
       }
     }
 
-    if (enabled.rdp) {
-      const rdpAuthType =
-        host.rdpAuthType || (host.rdpCredentialId ? "credential" : "direct");
-      if (rdpAuthType === "credential" && host.rdpCredentialId) {
-        const credential = await repository.findCredentialByIdForUser(
-          host.rdpCredentialId,
+    for (const login of await listProtocolLogins(host.id, ownerId)) {
+      const fields = { ...login.fields, ...login.secretFields };
+      const hasFields = Object.keys(fields).length > 0;
+      if (login.authType === "credential" && login.credentialId) {
+        const credential = await findUsableCredential(
+          login.credentialId,
           ownerId,
         );
         if (credential) {
           snapshots.push({
-            protocol: "rdp",
+            protocol: login.protocol,
             sourceType: "credential",
-            originalCredentialId: host.rdpCredentialId,
+            originalCredentialId: login.credentialId,
             data: {
               username: credential.username || undefined,
               authType: "credential",
               password: credential.password || undefined,
-              domain: host.rdpDomain || undefined,
+              fields: hasFields ? fields : undefined,
             },
           });
         }
-      } else if (host.rdpUser || host.rdpPassword) {
+      } else if (
+        login.authType === "direct" &&
+        (login.username || login.password || hasFields)
+      ) {
         snapshots.push({
-          protocol: "rdp",
+          protocol: login.protocol,
           sourceType: "inline",
           originalCredentialId: null,
           data: {
-            username: host.rdpUser || undefined,
+            username: login.username || undefined,
             authType: "direct",
-            password: host.rdpPassword || undefined,
-            domain: host.rdpDomain || undefined,
-          },
-        });
-      }
-    }
-
-    if (enabled.vnc) {
-      const vncAuthType =
-        host.vncAuthType || (host.vncCredentialId ? "credential" : "direct");
-      if (vncAuthType === "credential" && host.vncCredentialId) {
-        const credential = await repository.findCredentialByIdForUser(
-          host.vncCredentialId,
-          ownerId,
-        );
-        if (credential) {
-          snapshots.push({
-            protocol: "vnc",
-            sourceType: "credential",
-            originalCredentialId: host.vncCredentialId,
-            data: {
-              username: credential.username || undefined,
-              authType: "credential",
-              password: credential.password || undefined,
-            },
-          });
-        }
-      } else if (host.vncUser || host.vncPassword) {
-        snapshots.push({
-          protocol: "vnc",
-          sourceType: "inline",
-          originalCredentialId: null,
-          data: {
-            username: host.vncUser || undefined,
-            authType: "direct",
-            password: host.vncPassword || undefined,
-          },
-        });
-      }
-    }
-
-    if (enabled.telnet) {
-      const telnetAuthType =
-        host.telnetAuthType ||
-        (host.telnetCredentialId ? "credential" : "direct");
-      if (telnetAuthType === "credential" && host.telnetCredentialId) {
-        const credential = await repository.findCredentialByIdForUser(
-          host.telnetCredentialId,
-          ownerId,
-        );
-        if (credential) {
-          snapshots.push({
-            protocol: "telnet",
-            sourceType: "credential",
-            originalCredentialId: host.telnetCredentialId,
-            data: {
-              username: credential.username || undefined,
-              authType: "credential",
-              password: credential.password || undefined,
-            },
-          });
-        }
-      } else if (host.telnetUser || host.telnetPassword) {
-        snapshots.push({
-          protocol: "telnet",
-          sourceType: "inline",
-          originalCredentialId: null,
-          data: {
-            username: host.telnetUser || undefined,
-            authType: "direct",
-            password: host.telnetPassword || undefined,
+            password: login.password || undefined,
+            fields: hasFields ? fields : undefined,
           },
         });
       }
@@ -527,6 +481,7 @@ class SharedHostSecretsManager {
         ? FieldCrypto.decryptField(value, userDEK, recordId, fieldName)
         : undefined;
 
+    const domain = decrypt(secret.encryptedDomain, "domain");
     return {
       username: decrypt(secret.encryptedUsername, "username"),
       authType: secret.encryptedAuthType || "password",
@@ -534,7 +489,8 @@ class SharedHostSecretsManager {
       key: decrypt(secret.encryptedKey, "key"),
       keyPassword: decrypt(secret.encryptedKeyPassword, "key_password"),
       keyType: secret.encryptedKeyType || undefined,
-      domain: decrypt(secret.encryptedDomain, "domain"),
+      domain,
+      fields: parseFields(decrypt(secret.encryptedFields, "fields"), domain),
     };
   }
 }

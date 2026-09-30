@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Lähetä etäpalvelimen portti takaisin oman koneesi paikalliseen porttiin.",
     "tunnelRequirementsText": "SSH-palvelimella on oltava GatewayPorts-, AllowTcpForwarding- ja PermitRootLogin-arvot asetettuina tiedostossa /etc/ssh/sshd_config.",
     "tunnelSettings": "Tunnelin asetukset",
-    "tunnelType": "Tunnelin tyyppi"
+    "tunnelType": "Tunnelin tyyppi",
+    "bindHost": "Sido isäntä",
+    "docsLink": "Näytä dokumentit",
+    "hostNotFound": "Isäntää ei löydy",
+    "loadingHost": "Ladataan isäntää..."
   },
   "nav": {
     "portForwarding": "Edelleenlähetys",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dynaaminen (-D)",
     "typeLocal": "Paikallinen (-L)",
     "typeRemote": "Kauko-ohjain (-R)",
-    "working": "Työskentely..."
+    "working": "Työskentely...",
+    "start": "Aloita",
+    "stop": "Stop"
+  },
+  "onboarding": {
+    "feature_tunnels": "Tunnelit",
+    "feature_tunnels_desc": "Lähetä portteja palvelimen kautta tavoittaaksesi palvelut, jotka eivät ole alttiina."
   }
 }

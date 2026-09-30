@@ -3,7 +3,15 @@ import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { snippetAccess, snippetFolders, snippets } from "./tables.js";
 import { createSnippetRepository } from "./repository.js";
 import { registerSnippetRoutes } from "./routes.js";
-import { resolveSnippetCommand } from "./execution.js";
+import {
+  extractSnippetInputs,
+  resolveSnippetContent,
+} from "../shared/variables.js";
+import {
+  createHostSettingsSync,
+  hostImportNormalizer,
+  hostPayloadLegacy,
+} from "./host-import.js";
 
 /** What other plugins get from ctx.services.get("snippets.access", {userId}). */
 export interface SnippetsService {
@@ -74,8 +82,24 @@ export async function activate(ctx: PluginContext) {
     type: "snippets",
     table: snippetsTable,
     order: 60,
-    // Host quick actions and keybindings in core point at snippets by this.
-    answersTo: ["commandSnippet"],
+  });
+
+  // Host settings that name a snippet by its local id, and the 2.8 host
+  // fields they came from. Keybindings name one through the runSnippet
+  // declaration in the manifest, which core translates over sync.
+  ctx.registry.provide("snippets.hostImportNormalizer", hostImportNormalizer);
+  ctx.registry.provide("snippets.hostPayloadLegacy", hostPayloadLegacy);
+  ctx.registry.provide(
+    "snippets.hostSettingsSync",
+    createHostSettingsSync(repo),
+  );
+
+  // $HOST and $INPUT_n handling for commands other plugins run (fleets). A
+  // pure function, so it goes through the registry rather than a service
+  // gated on snippets.view.
+  ctx.registry.provide("snippets.variables", {
+    resolve: resolveSnippetContent,
+    extractInputs: extractSnippetInputs,
   });
 
   // The user row survives a password-reset data wipe, so it never triggers
@@ -133,7 +157,7 @@ export async function activate(ctx: PluginContext) {
       if (!userId) return null;
       const snippet = await findAccessible(userId, id);
       if (!snippet) return null;
-      return resolveSnippetCommand(snippet.content, vars, inputValues);
+      return resolveSnippetContent(snippet.content, vars, inputValues);
     },
     create: async (input) => {
       const userId = ctx.currentActor();

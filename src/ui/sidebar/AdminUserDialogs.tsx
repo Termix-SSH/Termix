@@ -2,9 +2,9 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import {
   assignRoleToUser,
-  linkOIDCToPasswordAccount,
+  linkExternalToPasswordAccount,
   removeRoleFromUser,
-  unlinkOIDCFromPasswordAccount,
+  unlinkExternalFromPasswordAccount,
 } from "@/main-axios";
 import type { Role, UserRole } from "@/main-axios";
 import { Button } from "@/components/button";
@@ -245,7 +245,7 @@ export function AdminEditUserDialog({
               </span>
               {editUserRolesLoading ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("newUi.sidebar.snippets.loading")}
+                  {t("common.loading")}
                 </span>
               ) : (
                 <>
@@ -412,7 +412,7 @@ export function AdminUnlinkAccountDialog({
     if (!unlinkAccountTarget) return;
     setSubmitting(true);
     try {
-      await unlinkOIDCFromPasswordAccount(unlinkAccountTarget.id);
+      await unlinkExternalFromPasswordAccount(unlinkAccountTarget.id);
       toast.success(t("admin.unlinkAccountSuccess"));
       onSuccess(unlinkAccountTarget.id);
       onOpenChange(false);
@@ -498,7 +498,7 @@ export function AdminLinkAccountDialog({
     setSubmitting(true);
     try {
       if (isOidcInitiator) {
-        await linkOIDCToPasswordAccount(linkAccountTarget.id, trimmed);
+        await linkExternalToPasswordAccount(linkAccountTarget.id, trimmed);
         setUsers((prev) => prev.filter((u) => u.id !== linkAccountTarget.id));
       } else {
         const oidcUser = users.find(
@@ -508,7 +508,7 @@ export function AdminLinkAccountDialog({
           toast.error(t("admin.linkAccountOidcNotFound"));
           return;
         }
-        await linkOIDCToPasswordAccount(
+        await linkExternalToPasswordAccount(
           oidcUser.id,
           linkAccountTarget.username,
         );

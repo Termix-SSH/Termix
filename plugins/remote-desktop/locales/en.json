@@ -218,7 +218,8 @@
     "unencryptedShell": "Unencrypted shell",
     "remoteDesktopNotes": "Notes",
     "userDefaultsNote": "Settings left on their default use your Remote Desktop defaults from Settings.",
-    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy."
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "View docs"
   },
   "onboarding": {
     "feature_desktop": "Remote desktop",
@@ -322,7 +323,9 @@
       "enableToolbar": {
         "label": "Remote desktop toolbar",
         "description": "Show the toolbar in RDP, VNC and Telnet sessions."
-      }
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "Remote Desktop"
     }
   },
   "palette": {
@@ -335,5 +338,8 @@
       "title": "Share remote desktop sessions",
       "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

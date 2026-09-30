@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Esegui \"{{name}}\"",
+  "variablesDialogDescription": "Inserisci i valori richiesti da questo frammento di codice prima di eseguirlo.",
+  "variablesPreviewLabel": "Anteprima",
+  "variablesConfirmButton": "Correre",
+  "keybindings": {
+    "runSnippet": "Esegui il frammento di codice esistente",
+    "snippetLabel": "Frammento",
+    "selectSnippet": "Seleziona un frammento",
+    "snippetMissing": "frammento non trovato",
+    "snippetRequired": "Seleziona un frammento"
+  },
+  "paletteHintRun": "Esegui nella scheda del terminale attiva",
+  "host": {
+    "startupTitle": "Frammento di avvio",
+    "quickActionsTitle": "Azioni Rapide",
+    "quickActionsDescription": "Le azioni rapide appaiono come pulsanti nella barra delle metriche host per l'esecuzione di comandi con un clic.",
+    "noQuickActions": "Nessuna azione rapida ancora.",
+    "buttonLabel": "Etichetta pulsante",
+    "selectSnippet": "Seleziona snippet...",
+    "addQuickAction": "Aggiungi Azione"
+  },
+  "quickActions": {
+    "running": "Esecuzione di {{name}}...",
+    "succeeded": "{{name}} completato con successo",
+    "failed": "{{name}} non riuscito",
+    "error": "Impossibile eseguire {{name}}"
+  }
+}

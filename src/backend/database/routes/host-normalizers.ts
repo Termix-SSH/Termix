@@ -1,4 +1,10 @@
-import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+import { parseDefaultOverrides } from "../../../types/host-defaults.js";
+import {
+  parseSshOptions,
+  type HostSshOptions,
+} from "../../hosts/ssh-options.js";
+import { listHostProtocols } from "../../hosts/protocol-auth/registry.js";
+import { sanitizeProtocolAuthForRecipient } from "../../hosts/protocol-auth/summary.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -37,6 +43,10 @@ export function normalizeProtocolEnableFields(
   );
 }
 
+/**
+ * The owner's SSH authentication, which a shared editor may not change. A
+ * plugin protocol's login is guarded in writeProtocolAuth instead.
+ */
 export const OWNER_PRIVATE_AUTH_FIELDS = {
   ssh: [
     "authType",
@@ -50,30 +60,19 @@ export const OWNER_PRIVATE_AUTH_FIELDS = {
     "keyType",
     "sudoPassword",
   ],
-  rdp: [
-    "rdpAuthType",
-    "rdpCredentialId",
-    "rdpUser",
-    "rdpPassword",
-    "rdpDomain",
-  ],
-  vnc: ["vncAuthType", "vncCredentialId", "vncUser", "vncPassword"],
-  telnet: [
-    "telnetAuthType",
-    "telnetCredentialId",
-    "telnetUser",
-    "telnetPassword",
-  ],
-} as const satisfies Record<AuthOverrideProtocol, readonly string[]>;
+} as const;
 
 export const OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS = [
   "sudoPassword",
   "agentSocketPath",
 ] as const;
 
+/** SSH options only the host's owner may change. */
+export const OWNER_PRIVATE_SSH_OPTION_FIELDS = ["agentSocketPath"] as const;
+
 export function containsOwnerPrivateAuthUpdate(
   hostData: Record<string, unknown>,
-  protocol: AuthOverrideProtocol,
+  protocol: keyof typeof OWNER_PRIVATE_AUTH_FIELDS,
 ): boolean {
   return OWNER_PRIVATE_AUTH_FIELDS[protocol].some((field) =>
     Object.prototype.hasOwnProperty.call(hostData, field),
@@ -172,10 +171,10 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   pin?: unknown;
   sudoPassword?: unknown;
   jumpHosts?: unknown;
-  quickActions?: unknown;
   statusCheckEnabled?: unknown;
   statusCheckInterval?: unknown;
   terminalConfig?: unknown;
+  sshOptions?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
   useSocks5?: unknown;
@@ -186,34 +185,41 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   socks5ProxyChain?: unknown;
   portKnockSequence?: unknown;
   overrideCredentialUsername?: unknown;
-  domain?: unknown;
   enableSsh: boolean;
 };
+
+function legacyPrefix(protocolId: string): string {
+  return protocolId.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+}
+
+function legacyKey(protocolId: string): string {
+  const prefix = legacyPrefix(protocolId);
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+}
 
 export function normalizeImportedHost(
   hostData: Record<string, unknown>,
 ): NormalizedImportedHost {
   const credentialAlias =
     asString(hostData.credentialAlias) || asString(hostData.credentialName);
+  // A row with no connectionType names its protocol the way a 2.8 export
+  // did: an "enable<Protocol>" flag and a "<protocol>Port".
+  const flagged = listHostProtocols().find((protocol) =>
+    asBoolean(hostData[`enable${legacyKey(protocol.id)}`]),
+  );
   const connectionType =
-    asString(hostData.connectionType) ||
-    (asBoolean(hostData.enableRdp)
-      ? "rdp"
-      : asBoolean(hostData.enableVnc)
-        ? "vnc"
-        : asBoolean(hostData.enableTelnet)
-          ? "telnet"
-          : "ssh");
+    asString(hostData.connectionType) || flagged?.id || "ssh";
+  const protocol = listHostProtocols().find(
+    (entry) => entry.id === connectionType,
+  );
 
   const port =
     asPort(hostData.port) ||
-    (connectionType === "rdp"
-      ? asPort(hostData.rdpPort) || 3389
-      : connectionType === "vnc"
-        ? asPort(hostData.vncPort) || 5900
-        : connectionType === "telnet"
-          ? asPort(hostData.telnetPort) || 23
-          : asPort(hostData.sshPort) || 22);
+    (protocol
+      ? asPort(hostData[`${legacyPrefix(protocol.id)}Port`]) ||
+        protocol.defaultPort ||
+        22
+      : asPort(hostData.sshPort) || 22);
 
   return {
     ...hostData,
@@ -248,15 +254,9 @@ export function normalizeImportedHost(
 const SENSITIVE_FIELDS = [
   "key",
   "keyPassword",
-  "autostartKey",
-  "autostartKeyPassword",
   "password",
   "sudoPassword",
   "socks5Password",
-  "rdpPassword",
-  "vncPassword",
-  "telnetPassword",
-  "autostartPassword",
 ];
 
 export function stripSensitiveFields(
@@ -272,11 +272,9 @@ export function stripSensitiveFields(
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
   result.hasPassword = !!host.password;
+  // 2.8 editors kept the sudo password inside terminal_config.
   result.hasSudoPassword =
     !!host.sudoPassword || !!terminalConfigForSudo?.sudoPassword;
-  result.hasRdpPassword = !!host.rdpPassword;
-  result.hasVncPassword = !!host.vncPassword;
-  result.hasTelnetPassword = !!host.telnetPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
@@ -318,7 +316,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "statusCheckInterval",
   "enableSsh",
   "sshPort",
-  "rdpAuthType",
+  "protocolAuth",
   "jumpHosts",
   "createdAt",
   "updatedAt",
@@ -340,16 +338,13 @@ export function sanitizeHostForRecipient(
   // can't see (or share permission on) the parent host row, so a shared
   // host always renders at root rather than leaking another host's id.
   delete stripped.parentHostId;
-  if (
-    stripped.terminalConfig &&
-    typeof stripped.terminalConfig === "object" &&
-    !Array.isArray(stripped.terminalConfig)
-  ) {
-    const terminalConfig = {
-      ...(stripped.terminalConfig as Record<string, unknown>),
-    };
-    delete terminalConfig.agentSocketPath;
-    stripped.terminalConfig = terminalConfig;
+  for (const field of ["terminalConfig", "sshOptions"] as const) {
+    const value = stripped[field];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const copy = { ...(value as Record<string, unknown>) };
+      for (const key of OWNER_PRIVATE_SSH_OPTION_FIELDS) delete copy[key];
+      stripped[field] = copy;
+    }
   }
   const authOverrides =
     stripped.authOverrides &&
@@ -363,6 +358,12 @@ export function sanitizeHostForRecipient(
     !Array.isArray(authOverrides.ssh)
       ? (authOverrides.ssh as Record<string, unknown>)
       : undefined;
+  if (stripped.protocolAuth !== undefined) {
+    stripped.protocolAuth = sanitizeProtocolAuthForRecipient(
+      stripped.protocolAuth,
+      permissionLevel,
+    );
+  }
   if (!sshOverride?.credentialId) {
     stripped.hasPassword = false;
     stripped.hasKey = false;
@@ -396,6 +397,47 @@ export function parseSharedSource(
   }
 }
 
+function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * sshOptions, and terminalConfig in the shape 2.8 clients and exports read:
+ * core's own keys only, the SSH options. Everything else 2.8 kept there now
+ * belongs to plugins' host settings, which they put back through their
+ * hostPayloadLegacy. A sudo password 2.8 kept in terminal_config comes out as
+ * sudoPassword, for the sanitizers to handle.
+ */
+export function hostTerminalExport(host: Record<string, unknown>): {
+  sshOptions: HostSshOptions;
+  terminalConfig?: Record<string, unknown>;
+  sudoPassword?: unknown;
+} {
+  const raw = parseJsonObject(host.terminalConfig);
+  const sshOptions = parseSshOptions(
+    host.sshOptions != null ? host.sshOptions : raw,
+  );
+  const terminalConfig: Record<string, unknown> = { ...sshOptions };
+  const legacySudo = !host.sudoPassword ? raw?.sudoPassword : undefined;
+  return {
+    sshOptions,
+    terminalConfig:
+      Object.keys(terminalConfig).length > 0 ? terminalConfig : undefined,
+    ...(legacySudo ? { sudoPassword: legacySudo } : {}),
+  };
+}
+
 export function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -422,23 +464,17 @@ export function transformHostResponse(
     shareSshAuth: !!host.shareSshAuth,
     enableSsh: !!host.enableSsh,
     sshPort: host.sshPort ?? host.port ?? 22,
-    rdpUser: host.rdpUser || undefined,
-    rdpDomain: host.rdpDomain || undefined,
-    vncUser: host.vncUser || undefined,
-    telnetUser: host.telnetUser || undefined,
     jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
-    quickActions: host.quickActions
-      ? JSON.parse(host.quickActions as string)
-      : [],
+    // Moved into a plugin's host settings; its hostPayloadLegacy puts it
+    // back for 2.8 clients.
+    quickActions: undefined,
     statusCheckEnabled:
       host.statusCheckEnabled !== false && host.statusCheckEnabled !== 0,
     statusCheckInterval:
       typeof host.statusCheckInterval === "number"
         ? host.statusCheckInterval
         : null,
-    terminalConfig: host.terminalConfig
-      ? JSON.parse(host.terminalConfig as string)
-      : undefined,
+    ...hostTerminalExport(host),
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
@@ -446,6 +482,6 @@ export function transformHostResponse(
     portKnockSequence: host.portKnockSequence
       ? JSON.parse(host.portKnockSequence as string)
       : [],
-    domain: host.domain || undefined,
+    defaultOverrides: parseDefaultOverrides(host.defaultOverrides),
   };
 }

@@ -83,5 +83,8 @@
         "description": "Laat die KI-assistent toe om in hierdie gasheer se terminaal te help. Standaard afgeskakel, en KI moet steeds vir jou rekening geaktiveer word."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Bekyk dokumente"
   }
 }

@@ -23,7 +23,8 @@
     "network:serve",
     "ui:surface",
     "events:core",
-    "kv:own"
+    "kv:own",
+    "users:impersonate"
   ],
   "provides": [
     {
@@ -70,6 +71,24 @@
       }
     ],
     "settings": {
+      "user": [
+        {
+          "key": "transferConcurrency",
+          "type": "number",
+          "labelKey": "settings.user.transferConcurrency.label",
+          "descriptionKey": "settings.user.transferConcurrency.description",
+          "min": 1,
+          "max": 8,
+          "default": 4
+        },
+        {
+          "key": "confirmBeforeTrash",
+          "type": "boolean",
+          "labelKey": "settings.user.confirmBeforeTrash.label",
+          "descriptionKey": "settings.user.confirmBeforeTrash.description",
+          "default": true
+        }
+      ],
       "host": {
         "editorGroup": "ssh",
         "editorOrder": 60,
@@ -97,7 +116,19 @@
       "key": "enableFileManager",
       "labelKey": "hostCapability.label",
       "editorTab": "plugins"
-    }
+    },
+    "uiPresets": {
+      "simple": {
+        "viewMode": "grid"
+      },
+      "balanced": {
+        "viewMode": "grid"
+      },
+      "advanced": {
+        "viewMode": "list"
+      }
+    },
+    "uses": ["homepage.widgets", "host-metrics.disk", "terminal.open"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

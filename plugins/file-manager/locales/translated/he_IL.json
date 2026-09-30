@@ -382,7 +382,10 @@
     "defaultPathLabel": "נתיב ברירת מחדל",
     "fileManagerPathHint": "הספרייה שתיפתח כאשר מנהל הקבצים יופעל עבור מארח זה.",
     "fileManagerUrlCopied": "כתובת ה-URL של מנהל הקבצים הועתקה",
-    "copyFileManagerUrlAction": "העתקת כתובת URL של מנהל הקבצים"
+    "copyFileManagerUrlAction": "העתקת כתובת URL של מנהל הקבצים",
+    "docsLink": "הצג מסמכים",
+    "hostNotFound": "המארח לא נמצא",
+    "loadingHost": "טוען מארח..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "מצב SCP Legacy"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "העברות קבצים בו זמנית",
+        "description": "כמה קבצים מעלה או מוריד המנהל המקומי/מרחוק בו זמנית. יש להוריד ערך זה אם השרת שלך מגביל ערוצי SFTP."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "קבצים"
+  },
+  "onboarding": {
+    "feature_files": "מנהל הקבצים",
+    "feature_files_desc": "דפדף, העלה, הורד וערוך קבצים דרך SFTP מבלי לצאת מהאפליקציה."
+  },
+  "terminal": {
+    "runTitle": "ריצה {{command}} - {{host}}",
+    "terminalTitle": "טרמינל - {{host}}",
+    "terminalWithPath": "טרמינל - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "עיון בתיקיות יעד",
+    "browsePathError": "לא ניתן היה לפתוח נתיב זה במארח היעד.",
+    "browsePathWillBeCreated": "תיקייה זו עדיין לא קיימת. היא תיווצר כאשר ההעברה תתחיל.",
+    "cancel": "לְבַטֵל",
+    "cleanupDestFiles": "יעד ניקוי",
+    "cleanupDestFilesError": "הניקוי נכשל",
+    "cleanupDestFilesNothing": "אין מה לנקות ביעד",
+    "cleanupDestFilesPartial": "לא ניתן היה להסיר חלק מהקבצים",
+    "cleanupDestFilesSuccess": "הוסרו קבצים חלקיים מהיעד",
+    "confirmCopy": "לְהַעְתִיק",
+    "confirmMove": "מַהֲלָך",
+    "copyFolderToHost": "העתקת תיקייה למארח…",
+    "copyItemsToHost": "העתק את הפריטים {{count}} לאירוח…",
+    "copyToHost": "העתק למארח…",
+    "destinationPath": "נתיב היעד",
+    "destMustBeDirectory": "היעד חייב להיות ספרייה עבור העברות מרובות פריטים",
+    "goUp": "לַעֲלוֹת",
+    "hostAuthRequired": "נדרש אימות - פתח תחילה את מנהל הקבצים במארח זה",
+    "hostConnecting": "חיבור…",
+    "hostConnectionFailed": "החיבור נכשל",
+    "hostDisconnected": "לא מחובר",
+    "hostReady": "מוּכָן",
+    "itemsSummary": "פריטים {{count}}",
+    "jumpHostLimitation": "שני המארחים חייבים להיות נגישים משרת Termix. ניתוב ישיר ממארח למארח אינו נתמך.",
+    "methodAuto": "אוטומטי",
+    "methodAutoHint": "בוחר SFTP לפי קובץ או tar בהתבסס על ספירת הקבצים, גודלם ויכולת הדחיסה. קבצים בודדים תמיד משתמשים ב-SFTP בסטרימינג.",
+    "methodItemSftp": "SFTP לפי קובץ",
+    "methodItemSftpHint": "העבר כל קובץ בנפרד דרך SFTP. עובד על כל המארחים כולל Windows.",
+    "methodItemSftpLimitation": "כל קובץ משתמש באותו זרם SFTP כעותק של קובץ בודד, אחד אחרי השני. ההתקדמות משולבת על פני כל הקבצים, כך שהסרגל נע לאט במהלך קבצים גדולים.",
+    "methodLabel": "שיטת העברה",
+    "methodPreviewError": "לא ניתן היה להציג תצוגה מקדימה של שיטת ההעברה. השרת עדיין יבחר שיטה כשתתחיל.",
+    "methodPreviewLoading": "חישוב שיטת ההעברה…",
+    "methodPreviewScanSummary": "{{fileCount}} קבצים, {{totalSize}} סה\"כ (נסרק במארח המקור).",
+    "methodPreviewWillUseItemSftp": "ישתמש ב: SFTP לפי קובץ",
+    "methodPreviewWillUseTar": "אשתמש ב: ארכיון Tar",
+    "methodReason": {
+      "user_item_sftp": "בחרת SFTP לפי קובץ.",
+      "user_tar": "בחרת בארכיון tar.",
+      "tar_unavailable": "Tar אינו זמין באחד המארחים או בשניהם - במקום זאת ייעשה שימוש ב-SFTP לפי קובץ.",
+      "windows_host": "מחשב מארח של Windows מעורב - tar אינו בשימוש.",
+      "auto_multi_large": "אוטומטי: קבצים מרובים כולל קובץ גדול ({{largestSize}}) עם נתונים דחוסים - tar מאחד את הנתונים להעברה אחת.",
+      "auto_single_large_in_archive": "אוטומטי: קובץ גדול אחד ({{largestSize}}) בקבוצה זו - SFTP לכל קובץ.",
+      "auto_many_incompressible": "אוטומטי: נתונים לרוב בלתי ניתנים לדחיסה - SFTP לכל קובץ.",
+      "auto_many_files": "אוטומטי: קבצים רבים ({{fileCount}}) — tar מפחית את התקורה של כל קובץ.",
+      "auto_default": "אוטומטי: SFTP לכל קובץ עבור קבוצה זו."
+    },
+    "methodTar": "ארכיון טאר",
+    "methodTarHint": "דחיסה במקור, העברת ארכיון אחד, חילוץ ביעד. דורש tar בשני מארחי יוניקס.",
+    "metricsCompress": "דחיסה במקור: {{duration}}",
+    "metricsExtract": "חילוץ ביעד: {{duration}}",
+    "metricsPrepare": "הכנת יעד: {{duration}}",
+    "metricsRouteBenchmark": "גשש מסלול — ישיר: {{direct}}, ממסר: {{relay}}",
+    "metricsSourceDelete": "הסר מהמקור: {{duration}}",
+    "metricsTotal": "סה\"כ: {{duration}}",
+    "metricsTransfer": "מקצה לקצה: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 אומת: {{duration}}",
+    "moveFolderToHost": "העברת תיקייה למארח…",
+    "moveItemsToHost": "העבר {{count}} פריטים לאירוח…",
+    "moveToHost": "מעבר למארח…",
+    "noHostsConnected": "אין מארחי מנהל קבצים אחרים זמינים.",
+    "noHostsConnectedHint": "הוסף מארח SSH נוסף כאשר מנהל הקבצים מופעל במנהל המארחים.",
+    "parallelSegmentsHint": "קבצים גדולים מחולקים לחתיכות של 256 מגה-בייט. מספר נתיבים משתמשים בחיבורים נפרדים (כמו התחלת מספר העברות) לקבלת תפוקה כוללת גבוהה יותר.",
+    "parallelSegmentsLabel": "נתיבי מעבר מקבילים",
+    "parallelSegmentsOption": "נתיבים {{count}}",
+    "progressBenchmarking": "בחירת נתיב ההעברה המהיר ביותר…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "לְבַטֵל",
+    "progressCancelling": "מבטל…",
+    "progressCompressing": "דחיסה במארח המקור…",
+    "progressExtracting": "מחלץ ביעד…",
+    "progressItems": "קבצים {{current}} / {{total}}",
+    "progressReconnecting": "מתחבר מחדש…",
+    "progressStalled": "אָבוּס",
+    "progressTotalSpeed": "סה\"כ {{speed}} (נתיבים{{lanes}})",
+    "progressTransferring": "העברת נתונים…",
+    "progressTransferringItems": "העברת קבצים ({{current}} מתוך {{total}})…",
+    "progressVerifying": "אימות שלמות הקובץ…",
+    "recentDestinations": "יעדים אחרונים",
+    "resumedHint": "התחבר מחדש להעברה פעילה שהתחילה בחלון אחר.",
+    "retryTransfer": "נסה שוב",
+    "retryTransferError": "ניסיון חוזר נכשל",
+    "selectDestinationHost": "בחר מארח יעד",
+    "transferCancelled": "ההעברה בוטלה",
+    "transferCancelledCopyHint": "ייתכן שיישארו קבצים חלקיים ביעד.",
+    "transferCancelledMoveHint": "ייתכן שיישארו קבצים חלקיים ביעד. קבצי המקור לא הוסרו.",
+    "transferError": "ההעברה נכשלה",
+    "transferFailedRetryHint": "נתונים חלקיים נשמרו ביעד. ניסיון חוזר יחודש כאשר החיבור יחזור.",
+    "transferPartialHint": "לא ניתן היה להעביר: {{paths}}",
+    "transferSuccess": "ההעברה הושלמה"
   }
 }

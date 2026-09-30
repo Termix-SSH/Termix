@@ -6,8 +6,8 @@ import {
 } from "@/sidebar/host-contributions";
 
 /**
- * Which tab a click on a host opens. The ways to connect (SSH terminal, RDP,
- * VNC, Telnet) are host actions that plugins register, so the answer is the
+ * Which tab a click on a host opens. The ways to connect (the SSH terminal,
+ * remote desktop) are host actions that plugins register, so the answer is the
  * highest-priority connect action the host allows, or null when no running
  * plugin can connect to it.
  */

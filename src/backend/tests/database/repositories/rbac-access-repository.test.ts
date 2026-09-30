@@ -36,8 +36,8 @@ describe("RbacAccessRepository", () => {
       INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type) VALUES
         (44, 'admin', 'host-44', '10.0.0.45', 22, 'root', 'password');
       INSERT INTO ssh_data (
-        id, user_id, name, ip, port, username, credential_id, rdp_credential_id, vnc_credential_id, telnet_credential_id, folder, tags, auth_type)
-      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 125, 126, 'servers', 'linux', 'password');
+        id, user_id, name, ip, port, username, credential_id, folder, tags, auth_type)
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 'servers', 'linux', 'password');
       INSERT INTO host_access (
         id, host_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
       )
@@ -138,9 +138,6 @@ describe("RbacAccessRepository", () => {
       {
         hostAccessId: 2,
         credentialId: 123,
-        rdpCredentialId: 124,
-        vncCredentialId: 125,
-        telnetCredentialId: 126,
         hostId: 42,
         hostOwnerId: "owner-1",
       },

@@ -51,10 +51,6 @@
     "processesRunning": "бягане",
     "loginStats": "Статистика за SSH вход",
     "noRecentLoginData": "Няма скорошни данни за вход",
-    "executingQuickAction": "Изпълнява се {{name}}...",
-    "quickActionSuccess": "{{name}} завършено успешно",
-    "quickActionFailed": "{{name}} неуспешно",
-    "quickActionError": "Неуспешно изпълнение на {{name}}",
     "ports": {
       "title": "Портове за слушане",
       "protocol": "Протокол",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Добавяне",
     "visibleWidgets": "Видими джаджи",
     "widgetsMovedToHostMetrics": "Картите вече се добавят, подреждат и преоразмеряват директно в раздела „Показатели за хоста“. Отворете „Показатели за хоста“ за този хост и използвайте „Персонализиране“, за да изберете кои карти да се показват.",
-    "quickActionsLabel": "Бързи действия",
-    "quickActionsToolbar": "Бързите действия се показват като бутони в лентата с инструменти Host Metrics за изпълнение на команди с едно щракване.",
-    "noQuickActions": "Все още няма бързи действия.",
-    "buttonLabel": "Етикет на бутона",
-    "selectSnippetPlaceholder": "Изберете фрагмент...",
-    "addActionBtn": "Добавяне на действие",
     "hostNotFound": "Хостът не е намерен",
     "loadingHost": "Зареждане на хоста..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Диск"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Отказ",
-        "confirmRunButton": "Бягане",
-        "confirmRunMessage": "Изпълни „{{name}}“?"
-      }
-    }
   },
   "terminal": {
     "connected": "Свързан"

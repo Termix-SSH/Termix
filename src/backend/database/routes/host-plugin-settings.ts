@@ -15,9 +15,14 @@ import { createCurrentPluginSettingsRepository } from "../repositories/factory.j
 import type { PluginSettingsRecord } from "../repositories/plugin-settings-repository.js";
 import {
   declaredFields,
+  findField,
   resolveFieldValue,
   setSetting,
 } from "../../plugins/settings.js";
+import {
+  coerceSettingValue,
+  validateSettingValue,
+} from "@termix/plugin-sdk/settings";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { consume } from "../../plugins/registry.js";
 import { sshLogger } from "../../utils/logger.js";
@@ -163,12 +168,18 @@ function visibleHostPluginSettings(
  * clients outside Termix (Termix-Mobile) that have not moved to
  * pluginSettings yet. Registered as ctx.registry.provide(
  * "<id>.hostPayloadLegacy", fn); the function gets the plugin's own host
- * values and the host, and never overwrites a field core already set.
+ * values and the host, and never overwrites a field core already set. When
+ * both are objects the plugin's keys are added to core's, under the same
+ * rule.
  */
 export type PluginHostPayloadLegacy = (
   values: Record<string, unknown>,
   host: Record<string, unknown>,
 ) => Record<string, unknown> | null;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
 
 function applyLegacyFields(
   host: Record<string, unknown>,
@@ -183,7 +194,14 @@ function applyLegacyFields(
     if (!legacy) continue;
     try {
       for (const [key, value] of Object.entries(legacy(own, host) ?? {})) {
-        if (!(key in host)) host[key] = value;
+        const current = host[key];
+        if (current === undefined || current === null) {
+          host[key] = value;
+        } else if (isPlainObject(current) && isPlainObject(value)) {
+          // An object core already sends (terminalConfig) gains the plugin's
+          // keys, still never over one core set.
+          host[key] = { ...value, ...current };
+        }
       }
     } catch {
       // A plugin's compat shape must never break a host read.
@@ -206,14 +224,23 @@ export function attachHostPluginSettings(
   }
 }
 
-/** The single-host convenience wrapper. */
+/**
+ * The single-host convenience wrapper. With a viewer, a shared host's
+ * personal fields come from that viewer's own defaults.
+ */
 export async function withHostPluginSettings(
   host: Record<string, unknown>,
+  viewerId?: string,
 ): Promise<Record<string, unknown>> {
   const hostId = Number(host.id);
   if (!Number.isInteger(hostId)) return host;
 
   const settings = await loadHostPluginSettings([hostId]);
+  if (viewerId) {
+    const { applyPersonalHostValues } =
+      await import("../../hosts/defaults/personal.js");
+    await applyPersonalHostValues(settings, viewerId).catch(() => {});
+  }
   const values = settings.get(hostId);
   if (!values) return host;
   const result: Record<string, unknown> = {
@@ -247,6 +274,49 @@ export async function writeHostPluginSettings(
       });
     }
   }
+}
+
+/**
+ * Checks the host settings a ctx.hosts write carries, keyed by plugin id,
+ * before anything is written. A key the plugin does not declare, or a value
+ * its field refuses, is an error. A plugin that is not running has nowhere to
+ * keep them, so its entry is skipped and named in `skipped`.
+ */
+export function checkHostPluginSettingsInput(
+  input: Record<string, Record<string, unknown>>,
+): {
+  writes: Array<{ manifest: PluginManifest; values: Record<string, unknown> }>;
+  skipped: string[];
+  errors: string[];
+} {
+  const running = new Map(hostSettingsPlugins().map((m) => [m.id, m]));
+  const writes: Array<{
+    manifest: PluginManifest;
+    values: Record<string, unknown>;
+  }> = [];
+  const skipped: string[] = [];
+  const errors: string[] = [];
+  for (const [pluginId, values] of Object.entries(input)) {
+    const manifest = running.get(pluginId);
+    if (!manifest) {
+      skipped.push(pluginId);
+      continue;
+    }
+    for (const [key, value] of Object.entries(values)) {
+      const field = findField(manifest, "host", key);
+      if (!field) {
+        errors.push(`${pluginId}.${key} is not a host setting it declares`);
+        continue;
+      }
+      const error = validateSettingValue(
+        field,
+        coerceSettingValue(field, value),
+      );
+      if (error) errors.push(`${pluginId}.${key}: ${error}`);
+    }
+    writes.push({ manifest, values });
+  }
+  return { writes, skipped, errors };
 }
 
 /**
@@ -330,5 +400,8 @@ export async function setHostPluginEnabled(
     await setSetting(manifest, "host", hostId, enableKey, enabled);
     await touchHost(hostId);
   }
+  const { changeHostOverrides } =
+    await import("../../hosts/defaults/overrides.js");
+  await changeHostOverrides(hostIds, { own: [[pluginId, enableKey]] });
   return true;
 }

@@ -51,10 +51,6 @@
     "processesRunning": "rennen",
     "loginStats": "SSH-aanmeldingsstatistieken",
     "noRecentLoginData": "Geen recente inloggegevens",
-    "executingQuickAction": "Het uitvoeren van {{name}}...",
-    "quickActionSuccess": "{{name}} succesvol voltooid",
-    "quickActionFailed": "{{name}} mislukt",
-    "quickActionError": "Het uitvoeren van {{name}} is mislukt.",
     "ports": {
       "title": "Luisterpoorten",
       "protocol": "Protocol",
@@ -235,12 +231,6 @@
     "addExcludedMount": "Toevoegen",
     "visibleWidgets": "Zichtbare widgets",
     "widgetsMovedToHostMetrics": "Kaarten kunnen nu rechtstreeks in het tabblad Hoststatistieken worden toegevoegd, gerangschikt en van formaat worden veranderd. Open Hoststatistieken voor deze host en gebruik Aanpassen om te kiezen welke kaarten worden weergegeven.",
-    "quickActionsLabel": "Snelle acties",
-    "quickActionsToolbar": "Snelle acties verschijnen als knoppen in de Host Metrics-werkbalk, zodat u opdrachten met één klik kunt uitvoeren.",
-    "noQuickActions": "Nog geen snelle acties ondernomen.",
-    "buttonLabel": "Knoplabel",
-    "selectSnippetPlaceholder": "Selecteer fragment...",
-    "addActionBtn": "Actie toevoegen",
     "hostNotFound": "Host niet gevonden",
     "loadingHost": "Host wordt geladen..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "Schijf"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Annuleren",
-        "confirmRunButton": "Loop",
-        "confirmRunMessage": "Run \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Aangesloten"

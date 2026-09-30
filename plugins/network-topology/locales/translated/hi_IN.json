@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} नोड्स"
+  },
+  "hosts": {
+    "docsLink": "दस्तावेज़ देखें"
   }
 }

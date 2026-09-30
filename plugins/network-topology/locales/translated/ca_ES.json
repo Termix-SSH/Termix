@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "nodes {{count}}"
+  },
+  "hosts": {
+    "docsLink": "Veure documents"
   }
 }

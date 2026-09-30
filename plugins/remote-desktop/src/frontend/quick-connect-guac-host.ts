@@ -11,14 +11,18 @@ export function quickConnectGuacHost(
 ): GuacamoleQuickHost {
   const options = hostRemoteOptions(host);
   const connectionType: Protocol = options.enableVnc ? "vnc" : "rdp";
+  const login =
+    host.quickConnectLogin?.protocol === connectionType
+      ? host.quickConnectLogin
+      : undefined;
   return {
     name: host.name ?? undefined,
     ip: host.ip ?? "",
     connectionType,
-    domain: host.domain,
+    domain: login?.fields?.domain,
     port: connectionType === "vnc" ? options.vncPort : options.rdpPort,
-    rdpAuthType: host.rdpAuthType,
-    username: connectionType === "vnc" ? host.vncUser : host.rdpUser,
-    password: connectionType === "vnc" ? host.vncPassword : host.rdpPassword,
+    rdpAuthType: "direct",
+    username: login?.username,
+    password: login?.password,
   };
 }

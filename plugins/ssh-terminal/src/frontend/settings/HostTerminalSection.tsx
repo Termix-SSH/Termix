@@ -1,12 +1,13 @@
 import type { HostEditorSectionProps } from "@termix/plugin-sdk/frontend";
-import { HostFeatureFields, HostTerminalSettings } from "@termix/plugin-sdk/ui";
+import { HostFeatureFields } from "@termix/plugin-sdk/ui";
+import { HostTerminalSettings } from "./HostTerminalSettings";
 
 /** The host editor's Terminal tab: this plugin's switches, then the look. */
 export function HostTerminalSection({
   form,
   setField,
   updateForm,
-  snippets,
+  host,
 }: HostEditorSectionProps) {
   return (
     <>
@@ -14,7 +15,8 @@ export function HostTerminalSection({
       <HostTerminalSettings
         form={form}
         setField={setField}
-        snippets={snippets}
+        updateForm={updateForm}
+        host={host}
       />
     </>
   );

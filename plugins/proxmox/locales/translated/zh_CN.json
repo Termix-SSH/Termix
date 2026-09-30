@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "最短间隔 15 秒。Proxmox 节点统计信息刷新频率。",
     "proxmoxStatsNodeOverride": "覆盖节点名称",
     "proxmoxStatsNodeOverrideDesc": "覆盖自动检测的 Proxmox 节点名称（默认情况下通过主机名检测）。",
-    "proxmoxStatsNodeOverridePlaceholder": "从主机名自动检测"
+    "proxmoxStatsNodeOverridePlaceholder": "从主机名自动检测",
+    "docsLink": "查看文档",
+    "hostNotFound": "未找到主机",
+    "loadingHost": "正在加载主机...",
+    "none": "无",
+    "proxmoxGuestsSelected_one": "{{count}} 个客户主机 — 已选择 {{selected}} 个",
+    "proxmoxGuestsSelected_other": "{{count}} 个客户主机 — 已选择 {{selected}} 个",
+    "proxmoxImportButton_one": "导入 {{count}} 个主机",
+    "proxmoxImportButton_other": "导入 {{count}} 个主机"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox 统计数据",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "此节点上未找到虚拟机或 LXC 容器。",
     "noGuestsMatch": "没有符合当前筛选条件的客户主机。"
+  },
+  "terminal": {
+    "connected": "已连接"
   }
 }

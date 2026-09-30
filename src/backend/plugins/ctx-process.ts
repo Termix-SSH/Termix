@@ -51,6 +51,34 @@ async function sha256Of(file: string): Promise<string | null> {
   }
 }
 
+/**
+ * Downloads through the SSRF guard, following https redirects by hand
+ * because the guard refuses automatic ones (release assets redirect to a
+ * CDN).
+ */
+async function guardedDownload(
+  url: URL | string,
+  init: RequestInit,
+): Promise<Response> {
+  const { safeOutboundFetch } = await import("../utils/safe-outbound-fetch.js");
+  let current = new URL(url.toString());
+  for (let hop = 0; hop < 5; hop++) {
+    const response = await safeOutboundFetch(current.toString(), {
+      ...init,
+      redirect: "manual",
+    });
+    const location = response.headers.get("location");
+    if (response.status < 300 || response.status >= 400 || !location) {
+      return response;
+    }
+    current = new URL(location, current);
+    if (current.protocol !== "https:") {
+      throw new Error("Binary downloads must stay on https");
+    }
+  }
+  throw new Error("Too many redirects");
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -60,7 +88,7 @@ export function createPluginProcess(deps: Deps): PluginProcess {
   const declared = deps.manifest.capabilities;
   const binDir =
     deps.binDir ?? (() => path.join(getPluginDataDir(pluginId), "bin"));
-  const doFetch = deps.fetch ?? fetch;
+  const doFetch = deps.fetch ?? (guardedDownload as typeof fetch);
 
   const audited = async <T>(
     action: string,

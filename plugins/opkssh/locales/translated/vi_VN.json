@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "Xác thực thất bại. Vui lòng kiểm tra thông tin đăng nhập và thử lại.",
     "timeout": "Xác thực đã hết thời gian chờ. Vui lòng thử lại."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

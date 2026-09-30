@@ -20,13 +20,22 @@ import {
   registerHostBadge,
   registerHostContextMenuItem,
 } from "@/sidebar/host-contributions";
-import { registerPaletteEntry } from "@/shell/palette-registry";
+import {
+  registerPaletteEntry,
+  registerPaletteGroup,
+  type PaletteItemDef,
+} from "@/shell/palette-registry";
+import {
+  registerKeybindingAction,
+  registerKeybindingDefault,
+  type KeybindingEditorProps,
+} from "@/shell/keybinding-registry";
 import { registerHostProtocol } from "@/sidebar/host-protocols";
 import {
   registerDashboardCard,
   type DashboardCardRenderProps,
 } from "@/dashboard/dashboard-cards-registry";
-import { registerHomepageWidgetType } from "./homepage-widget-registry";
+import { registerExtension } from "./extension-registry";
 import { registerSettingsComponent } from "@/settings/settings-components";
 import {
   declareActionSlot,
@@ -36,18 +45,26 @@ import {
 } from "@/shell/action-registry";
 import { pluginApiFor, pluginFetch, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
-import type { RegisteredHomepageWidget } from "./homepage-widget-registry";
 import type { LucideIcon } from "lucide-react";
 import {
   registerLoginMethod,
   registerSecondFactor,
   registerSshAuthEditor,
 } from "./auth-registry";
-import { pluginHostBridge, resolvePluginPermission } from "./bridge";
-import { shell, tabsApi } from "./shell-bridge";
+import {
+  pluginHostBridge,
+  resolvePluginPermission,
+  toPluginHostRecord,
+} from "./bridge";
+import { shell, shellHost, tabsApi } from "./shell-bridge";
 import { onRemoteServerChange, remoteServerUrl } from "./desktop";
 import { isElectron } from "@/lib/electron";
 import { withPluginScope, withIconBoundary, guardCallback } from "./scope";
+import {
+  scopeHostArgs,
+  scopeHostCallback,
+  scopeHostFields,
+} from "./host-scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { hasPermission } from "@/hooks/use-permissions";
@@ -77,6 +94,16 @@ export function createPluginApp(
   let disposed = false;
 
   const track = (disposer: Disposer): Disposer => {
+    // An activate that outlived its timeout, or ran on after a disable, still
+    // registers things. Nothing will dispose them later, so undo them now.
+    if (disposed) {
+      try {
+        disposer();
+      } catch {
+        // A failing disposer must not throw into the plugin's activate.
+      }
+      return () => {};
+    }
     bag.push(disposer);
     return () => {
       const index = bag.indexOf(disposer);
@@ -89,6 +116,11 @@ export function createPluginApp(
     withPluginScope(pluginId, component);
 
   const key = (value: string) => pluginKey(pluginId, value);
+
+  // Every host a plugin callback receives carries only this plugin's settings.
+  const hostCallback = <F extends (...args: never[]) => unknown>(
+    fn: F | undefined,
+  ): F | undefined => scopeHostCallback(fn, pluginId);
 
   const requireDeclared = (kind: ViewKind, id: string, what: string) => {
     if (!manifestDeclares(contributes, kind, id)) {
@@ -199,6 +231,7 @@ export function createPluginApp(
           icon: withIconBoundary(pluginId, section.icon as never) as never,
           order: section.order,
           visible: section.visible,
+          defaults: section.defaults,
           component: scoped(
             section.component as unknown as ComponentType<HostEditorSectionRenderProps>,
           ),
@@ -213,17 +246,29 @@ export function createPluginApp(
           titleKey: key(action.titleKey),
           pluginId,
           icon: withIconBoundary(pluginId, action.icon as never) as never,
-          when: action.when as never,
-          run: action.run as never,
+          when: hostCallback(action.when) as never,
+          run: hostCallback(action.run) as never,
           // Called while the host list renders, so a throw must not escape.
           label: guardCallback(
             pluginId,
-            action.label as ((...args: unknown[]) => unknown) | undefined,
+            hostCallback(
+              action.label as ((...args: unknown[]) => unknown) | undefined,
+            ),
             undefined,
           ) as never,
           items: guardCallback(
             pluginId,
-            action.items as ((...args: unknown[]) => unknown) | undefined,
+            action.items
+              ? (...args: unknown[]) =>
+                  (
+                    action.items as (
+                      ...a: unknown[]
+                    ) => { run: (...a: never[]) => unknown }[]
+                  )(...scopeHostArgs(args, pluginId))?.map((item) => ({
+                    ...item,
+                    run: hostCallback(item.run),
+                  }))
+              : undefined,
             undefined,
           ) as never,
         }),
@@ -248,7 +293,7 @@ export function createPluginApp(
         registerHostBadge({
           id: badge.id,
           pluginId,
-          when: badge.when as never,
+          when: hostCallback(badge.when) as never,
           component: scoped(badge.component) as never,
         }),
       );
@@ -260,8 +305,8 @@ export function createPluginApp(
           ...item,
           titleKey: key(item.titleKey),
           pluginId,
-          when: item.when as never,
-          run: item.run as never,
+          when: hostCallback(item.when) as never,
+          run: hostCallback(item.run) as never,
         }),
       );
     },
@@ -272,8 +317,65 @@ export function createPluginApp(
           ...entry,
           titleKey: key(entry.titleKey),
           pluginId,
-          when: entry.when as never,
-          run: entry.run as never,
+          when: hostCallback(entry.when) as never,
+          run: hostCallback(entry.run) as never,
+        }),
+      );
+    },
+
+    registerPaletteGroup(group) {
+      return track(
+        registerPaletteGroup({
+          id: group.id,
+          pluginId,
+          titleKey: key(group.titleKey),
+          order: group.order,
+          showWhenEmpty: group.showWhenEmpty,
+          load: group.load as unknown as () => Promise<PaletteItemDef[]>,
+        }),
+      );
+    },
+
+    registerKeybindingAction(action) {
+      const declared = (manifest.contributes?.keybindingActions ?? []).some(
+        (entry) => entry.id === action.id,
+      );
+      if (!declared) {
+        throw new Error(
+          `${pluginId}: keybinding action "${action.id}" is not declared in manifest contributes.keybindingActions`,
+        );
+      }
+      const validate = action.validate;
+      return track(
+        registerKeybindingAction({
+          id: action.id,
+          pluginId,
+          labelKey: key(action.titleKey),
+          scope: action.scope ?? "session",
+          editor: action.editor
+            ? (scoped(action.editor) as ComponentType<KeybindingEditorProps>)
+            : undefined,
+          summary: action.summary
+            ? (scoped(action.summary) as ComponentType<KeybindingEditorProps>)
+            : undefined,
+          validate: validate
+            ? (value) => {
+                const problem = validate(value);
+                return problem ? key(problem) : null;
+              }
+            : undefined,
+          run: action.run,
+        }),
+      );
+    },
+
+    registerKeybindingDefault(binding) {
+      return track(
+        registerKeybindingDefault({
+          id: binding.id,
+          pluginId,
+          combo: binding.combo,
+          descriptionKey: key(binding.descriptionKey),
         }),
       );
     },
@@ -294,17 +396,25 @@ export function createPluginApp(
       );
     },
 
-    registerHomepageWidget(widget) {
+    registerExtension(pointId, extension) {
+      const components = extension.components
+        ? Object.fromEntries(
+            Object.entries(extension.components).map(([name, component]) => [
+              name,
+              scoped(component),
+            ]),
+          )
+        : undefined;
       return track(
-        registerHomepageWidgetType({
-          ...widget,
-          pluginId,
-          component: scoped(widget.component),
-          editFormComponent: widget.editFormComponent
-            ? scoped(widget.editFormComponent)
-            : undefined,
-        } as unknown as RegisteredHomepageWidget),
+        registerExtension(pointId, { ...extension, components, pluginId }),
       );
+    },
+
+    listHosts: () => pluginHostBridge.core.listHosts(pluginId),
+
+    getHost(hostId) {
+      const host = shellHost(hostId);
+      return host ? toPluginHostRecord(host, pluginId) : undefined;
     },
 
     registerSettingsComponent(componentId, component) {
@@ -315,7 +425,7 @@ export function createPluginApp(
 
     registerAction(id, handler, options = {}) {
       return track(
-        registerAction(id, handler, {
+        registerAction(id, hostCallback(handler), {
           permission: options.permission
             ? resolvePluginPermission(pluginId, options.permission)
             : undefined,
@@ -338,6 +448,10 @@ export function createPluginApp(
             : undefined,
           component: contribution.component
             ? scoped(contribution.component)
+            : undefined,
+          when: contribution.when
+            ? (context: Record<string, unknown>) =>
+                contribution.when!(scopeHostFields(context, pluginId))
             : undefined,
           pluginId,
         }),
@@ -423,6 +537,7 @@ export function createPluginApp(
       ...tabsApi,
       openTab: shell.openTab as TermixApp["tabs"]["openTab"],
       openSingletonTab: shell.openSingletonTab,
+      connectHost: shell.connectHost as TermixApp["tabs"]["connectHost"],
       closeTab: shell.closeTab,
       onChange: (listener) => track(tabsApi.onChange(listener)),
       onReady: (listener) => track(tabsApi.onReady(listener)),

@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Ota Tmux-monitori käyttöön",
-    "enableTmuxMonitorDesc": "Näytä tämä isäntä Tmux-monitorissa ja lisää sen tmux-toiminnot sivupalkkiin"
+    "enableTmuxMonitorDesc": "Näytä tämä isäntä Tmux-monitorissa ja lisää sen tmux-toiminnot sivupalkkiin",
+    "docsLink": "Näytä dokumentit"
   },
   "tmuxMonitor": {
     "title": "Tmux-näyttö",

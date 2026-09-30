@@ -179,10 +179,7 @@ const agentProvider: SshAuthProvider = {
   quickConnect: true,
   requiresSecret: true,
   prepare: async (config, host, env) => {
-    const result = await applyAgentAuth(
-      config,
-      host.terminalConfig as Record<string, unknown> | undefined,
-    );
+    const result = await applyAgentAuth(config, host.sshOptions);
     if ("error" in result) {
       return { status: "error", code: "failed", message: result.error };
     }

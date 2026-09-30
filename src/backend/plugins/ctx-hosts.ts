@@ -19,13 +19,18 @@ import type {
   PluginShareTarget,
   PluginShareableUser,
   PluginShareableRole,
+  PluginHostJumpHost,
 } from "@termix/plugin-sdk/backend";
+import { PLUGIN_HOST_INPUT_KEYS } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import { assertCapability, capabilityRefused } from "./permissions.js";
 import { hostSessionStatus } from "../hosts/host-session-status.js";
 import { getActor } from "./actor.js";
 import { hostStatusService } from "../hosts/status/host-status-service.js";
+import { parseSshOptions } from "../hosts/ssh-options.js";
+import { hostTerminalExport } from "../database/routes/host-normalizers.js";
 import type { DisposableBag } from "./disposables.js";
+import { pluginLogger } from "../utils/logger.js";
 
 type AuditFn = (
   action: string,
@@ -76,13 +81,6 @@ export const HOST_SECRET_FIELDS = [
   "passphrase",
   "sudoPassword",
   "socks5Password",
-  "rdpPassword",
-  "vncPassword",
-  "telnetPassword",
-  "autostartPassword",
-  "autostartKey",
-  "autostartKeyPassword",
-  "vaultToken",
 ] as const;
 
 /** A copy of a host with every secret field removed, nested ones included. */
@@ -109,30 +107,184 @@ export function redactHostSecrets<T extends Record<string, unknown>>(
   return copy as T;
 }
 
-/** Columns that say who a host belongs to. ctx.hosts.update never moves them. */
-const PROTECTED_HOST_FIELDS = new Set(["id", "userId", "syncId"]);
+function asNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
-function toRecord(host: Record<string, unknown>): PluginHostRecord {
-  return redactHostSecrets({
-    id: host.id as number,
-    userId: host.userId as string,
+function asFlag(value: unknown, fallback: boolean): boolean {
+  if (value === null || value === undefined) return fallback;
+  return value === true || value === 1 || value === "1" || value === "true";
+}
+
+function parseJumpHosts(value: unknown): PluginHostJumpHost[] {
+  let list = value;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((entry) => asNumber((entry as { hostId?: unknown })?.hostId))
+    .filter((hostId): hostId is number => hostId !== null)
+    .map((hostId) => ({ hostId }));
+}
+
+/**
+ * A decrypted ssh_data row as PluginHostRecord. Built field by field: a
+ * column reaches plugins only once the SDK types it, and no secret column is
+ * ever copied.
+ */
+export function toRecord(
+  host: Record<string, unknown>,
+  pluginSettings: Record<string, unknown>,
+): PluginHostRecord {
+  const id = Number(host.id);
+  const origin = host.connectionOrigin;
+  return {
+    id,
+    userId: String(host.userId),
+    syncId: (host.syncId as string | null) ?? null,
     name: (host.name as string | null) ?? null,
-    ip: host.ip as string,
-    port: host.port as number,
-    username: host.username as string,
-    authType: host.authType as string,
-    credentialId: (host.credentialId as number | null) ?? null,
-    overrideCredentialUsername:
-      (host.overrideCredentialUsername as boolean | null) ?? null,
-    connectionType: (host.connectionType as string | null) ?? null,
+    ip: String(host.ip ?? ""),
+    port: asNumber(host.port) ?? 22,
+    username: String(host.username ?? ""),
+    authType: String(host.authType ?? ""),
+    credentialId: asNumber(host.credentialId),
+    overrideCredentialUsername: asFlag(host.overrideCredentialUsername, false),
+    connectionType: (host.connectionType as string | null) || "ssh",
     tags: (host.tags as string | null) ?? null,
     folder: (host.folder as string | null) ?? null,
-    jumpHosts: host.jumpHosts,
-    enableSsh: (host.enableSsh as boolean | null) ?? null,
+    parentHostId: asNumber(host.parentHostId),
+    pin: asFlag(host.pin, false),
+    notes: (host.notes as string | null) ?? null,
+    jumpHosts: parseJumpHosts(host.jumpHosts),
+    enableSsh: asFlag(host.enableSsh, true),
+    sshPort: asNumber(host.sshPort),
+    statusCheckEnabled: asFlag(host.statusCheckEnabled, true),
+    statusCheckInterval: asNumber(host.statusCheckInterval),
+    connectionOrigin: origin === "local" || origin === "remote" ? origin : null,
+    sshOptions: hostTerminalExport(host).sshOptions,
+    pluginSettings,
+    status: Number.isInteger(id) ? hostStatusService.get(id) : null,
+    localOnly: asFlag(host.localOnly, false),
     createdAt: (host.createdAt as string | null) ?? null,
     updatedAt: (host.updatedAt as string | null) ?? null,
-    ...host,
-  });
+  };
+}
+
+/** Thrown when a plugin's host write names a field the SDK does not take. */
+export class PluginHostInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PluginHostInputError";
+  }
+}
+
+const INPUT_KEYS = new Set<string>(PLUGIN_HOST_INPUT_KEYS);
+
+// Stops compiling when PluginHostCreateInput gains a key the list misses.
+const inputKeysComplete: [
+  Exclude<keyof PluginHostCreateInput, (typeof PLUGIN_HOST_INPUT_KEYS)[number]>,
+] extends [never]
+  ? true
+  : never = true;
+void inputKeysComplete;
+
+/**
+ * The ssh_data columns for a create or update, plus the host settings to
+ * write afterwards. Refuses any key PluginHostCreateInput does not list, so a
+ * field that moved into a plugin cannot be written into nothing.
+ */
+export function toHostWrite(input: PluginHostUpdateInput): {
+  row: Record<string, unknown>;
+  settings: Record<string, Record<string, unknown>>;
+} {
+  const unknown = Object.keys(input ?? {}).filter(
+    (key) => !INPUT_KEYS.has(key),
+  );
+  if (unknown.length > 0) {
+    throw new PluginHostInputError(
+      `ctx.hosts does not take ${unknown.join(", ")}; host settings go in pluginSettings, keyed by the plugin that declares them`,
+    );
+  }
+  const row: Record<string, unknown> = {};
+  const set = (key: string, value: unknown) => {
+    if (value !== undefined) row[key] = value;
+  };
+  set("name", input.name);
+  set("ip", input.ip);
+  set("port", input.port);
+  set("username", input.username);
+  set("authType", input.authType);
+  set("credentialId", input.credentialId);
+  set("overrideCredentialUsername", input.overrideCredentialUsername);
+  set("connectionType", input.connectionType);
+  set(
+    "tags",
+    Array.isArray(input.tags)
+      ? input.tags
+          .map((tag) => String(tag).trim())
+          .filter(Boolean)
+          .join(",")
+      : input.tags,
+  );
+  set("folder", input.folder);
+  set("pin", input.pin);
+  set("notes", input.notes);
+  set(
+    "jumpHosts",
+    input.jumpHosts === undefined
+      ? undefined
+      : input.jumpHosts === null
+        ? null
+        : JSON.stringify(parseJumpHosts(input.jumpHosts)),
+  );
+  set("enableSsh", input.enableSsh);
+  set("sshPort", input.sshPort);
+  set("statusCheckEnabled", input.statusCheckEnabled);
+  set("statusCheckInterval", input.statusCheckInterval);
+  set(
+    "forceKeyboardInteractive",
+    input.forceKeyboardInteractive === undefined
+      ? undefined
+      : input.forceKeyboardInteractive
+        ? "true"
+        : "false",
+  );
+  set(
+    "sshOptions",
+    input.sshOptions === undefined
+      ? undefined
+      : input.sshOptions === null
+        ? null
+        : JSON.stringify(parseSshOptions(input.sshOptions)),
+  );
+
+  const settings: Record<string, Record<string, unknown>> = {};
+  if (input.pluginSettings !== undefined && input.pluginSettings !== null) {
+    if (
+      typeof input.pluginSettings !== "object" ||
+      Array.isArray(input.pluginSettings)
+    ) {
+      throw new PluginHostInputError(
+        "pluginSettings must map plugin ids to their host settings",
+      );
+    }
+    for (const [pluginId, values] of Object.entries(input.pluginSettings)) {
+      if (!values || typeof values !== "object" || Array.isArray(values)) {
+        throw new PluginHostInputError(
+          `pluginSettings.${pluginId} must be an object`,
+        );
+      }
+      settings[pluginId] = values;
+    }
+  }
+  return { row, settings };
 }
 
 function actingUser(): string {
@@ -171,6 +323,68 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       "connect",
     );
     return access.hasAccess;
+  };
+
+  // The calling plugin's own host settings, one query for the whole list.
+  const toRecords = async (
+    rows: Record<string, unknown>[],
+  ): Promise<PluginHostRecord[]> => {
+    const { loadHostPluginSettings } =
+      await import("../database/routes/host-plugin-settings.js");
+    const settings = await loadHostPluginSettings(
+      rows.map((row) => Number(row.id)),
+    );
+    return rows.map((row) =>
+      toRecord(row, settings.get(Number(row.id))?.[pluginId] ?? {}),
+    );
+  };
+
+  const checkSettings = async (
+    settings: Record<string, Record<string, unknown>>,
+  ) => {
+    if (Object.keys(settings).length === 0) return [];
+    const { checkHostPluginSettingsInput } =
+      await import("../database/routes/host-plugin-settings.js");
+    const { writes, skipped, errors } = checkHostPluginSettingsInput(settings);
+    if (errors.length > 0) throw new PluginHostInputError(errors.join("; "));
+    if (skipped.length > 0) {
+      pluginLogger.warn(
+        "Host settings for plugins that are not running were skipped",
+        {
+          operation: "plugin_hosts_write",
+          pluginId,
+          skipped,
+        },
+      );
+    }
+    return writes;
+  };
+
+  const writeSettings = async (
+    hostId: number,
+    writes: Awaited<ReturnType<typeof checkSettings>>,
+  ) => {
+    if (writes.length === 0) return;
+    const { writeHostPluginSettings } =
+      await import("../database/routes/host-plugin-settings.js");
+    for (const { manifest: owner, values } of writes) {
+      await writeHostPluginSettings(owner, hostId, values);
+    }
+  };
+
+  /** Host settings a plugin writes are the host's own, not its defaults. */
+  const markSettingsOwn = async (
+    hostId: number,
+    writes: Awaited<ReturnType<typeof checkSettings>>,
+  ) => {
+    if (writes.length === 0) return;
+    const { changeHostOverrides } =
+      await import("../hosts/defaults/overrides.js");
+    await changeHostOverrides([hostId], {
+      own: writes.flatMap(({ manifest: owner, values }) =>
+        Object.keys(values).map((key): [string, string] => [owner.id, key]),
+      ),
+    });
   };
 
   return {
@@ -257,30 +471,40 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       try {
         await requireWrite();
       } catch (error) {
-        await audit("hosts_create", host.name ?? host.ip, {
+        await audit("hosts_create", host?.name ?? host?.ip ?? "host", {
           success: false,
           errorMessage: error instanceof Error ? error.message : String(error),
         });
         throw error;
       }
       const userId = actingUser();
+      const { row, settings } = toHostWrite(host);
+      const writes = await checkSettings(settings);
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
-      const created =
-        await createCurrentHostRepository().createEncryptedForUser(userId, {
-          ...host,
-          userId,
-        });
-      // Fields another plugin owns (a remote desktop switch) go to that
-      // plugin's host settings, the same way a bulk import row's do.
-      const { applyPluginHostImportSettings } =
-        await import("../database/routes/host-plugin-settings.js");
-      await applyPluginHostImportSettings(
-        created.id,
-        host as Record<string, unknown>,
+      const { applyHostDefaultsToWrite, applyDefaultsAfterHostWrite } =
+        await import("../hosts/defaults/index.js");
+      const columns: Record<string, unknown> = { ...row, userId };
+      columns.defaultOverrides = JSON.stringify(
+        await applyHostDefaultsToWrite({
+          ownerId: userId,
+          hostId: null,
+          columns,
+          body: host as unknown as Record<string, unknown>,
+        }),
       );
+      const created =
+        await createCurrentHostRepository().createEncryptedForUser(
+          userId,
+          columns,
+        );
+      await applyDefaultsAfterHostWrite(created.id);
+      await writeSettings(created.id, writes);
+      await markSettingsOwn(created.id, writes);
       await audit("hosts_create", `host ${created.id}`, { success: true });
-      return toRecord(created as unknown as Record<string, unknown>);
+      return (
+        await toRecords([created as unknown as Record<string, unknown>])
+      )[0];
     },
 
     update: async (
@@ -297,24 +521,56 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         throw error;
       }
       const userId = actingUser();
-      const allowed = Object.fromEntries(
-        Object.entries(patch as Record<string, unknown>).filter(
-          ([field]) => !PROTECTED_HOST_FIELDS.has(field),
-        ),
-      ) as PluginHostUpdateInput;
+      const { row, settings } = toHostWrite(patch);
+      const writes = await checkSettings(settings);
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
+      const { applyHostDefaultsToWrite, applyDefaultsAfterHostWrite } =
+        await import("../hosts/defaults/index.js");
+      const { createCurrentHostDefaultsRepository } =
+        await import("../database/repositories/factory.js");
+      const stored = (
+        await createCurrentHostDefaultsRepository().listHosts({
+          hostIds: [hostId],
+        })
+      )[0];
+      const columns: Record<string, unknown> = { ...row };
+      if (stored && stored.userId === userId) {
+        columns.defaultOverrides = JSON.stringify(
+          await applyHostDefaultsToWrite({
+            ownerId: userId,
+            hostId,
+            columns,
+            body: patch as unknown as Record<string, unknown>,
+            stored,
+          }),
+        );
+      }
       const updated =
         await createCurrentHostRepository().updateEncryptedForUser(
           userId,
           hostId,
-          allowed,
+          columns,
         );
+      if (updated) {
+        await writeSettings(hostId, writes);
+        await markSettingsOwn(hostId, writes);
+        await applyDefaultsAfterHostWrite(hostId, {
+          moved:
+            !!stored &&
+            ((columns.folder !== undefined &&
+              (columns.folder ?? null) !== (stored.folder ?? null)) ||
+              (columns.parentHostId !== undefined &&
+                (columns.parentHostId ?? null) !==
+                  (stored.parentHostId ?? null))),
+          ownerId: userId,
+        });
+      }
       await audit("hosts_update", `host ${hostId}`, {
         success: updated !== null,
       });
       return updated
-        ? toRecord(updated as unknown as Record<string, unknown>)
+        ? (await toRecords([updated as unknown as Record<string, unknown>]))[0]
         : null;
     },
 
@@ -357,9 +613,7 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       await audit("hosts_list_owned", `${rows.length} host(s)`, {
         success: true,
       });
-      return rows.map((row) =>
-        toRecord(row as unknown as Record<string, unknown>),
-      );
+      return toRecords(rows as unknown as Record<string, unknown>[]);
     },
 
     share: async (

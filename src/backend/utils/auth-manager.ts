@@ -70,13 +70,30 @@ interface RequestWithHeaders extends Request {
 
 const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
 
-// Data-plane routes an admin may hit on behalf of another user. Everything
-// else (TOTP, sessions, tunnels, file manager, ...) rejects the header.
-const IMPERSONATION_PATH_ALLOWLIST = [
-  /^\/host\/db\//,
-  /^\/credentials(\/|$)/,
-  /^\/plugin-api\/snippets(\/|$)/,
-];
+// Core data-plane routes an admin may hit on behalf of another user.
+// Everything else (TOTP, sessions, ...) rejects the header, and so does every
+// plugin route unless its manifest sets contributes.http.adminImpersonation.
+const IMPERSONATION_PATH_ALLOWLIST = [/^\/host\/db\//, /^\/credentials(\/|$)/];
+
+const PLUGIN_API_PATH = /^\/plugin-api\/([a-z][a-z0-9-]*)(\/|$)/;
+
+let pluginAllowsImpersonation: (pluginId: string) => boolean = () => false;
+
+/** Set by the plugin runtime: whether a running plugin opted in. */
+export function setPluginImpersonationCheck(
+  check: (pluginId: string) => boolean,
+): void {
+  pluginAllowsImpersonation = check;
+}
+
+/** Whether an admin may send X-Admin-Target-User to this path. */
+export function allowsAdminImpersonation(path: string): boolean {
+  if (IMPERSONATION_PATH_ALLOWLIST.some((pattern) => pattern.test(path))) {
+    return true;
+  }
+  const plugin = PLUGIN_API_PATH.exec(path);
+  return !!plugin && pluginAllowsImpersonation(plugin[1]);
+}
 
 class AuthManager {
   private static instance: AuthManager;
@@ -120,7 +137,7 @@ class AuthManager {
     }
   }
 
-  async registerOIDCUser(
+  async registerExternalUser(
     userId: string,
     _sessionDurationMs?: number,
   ): Promise<void> {
@@ -137,7 +154,7 @@ class AuthManager {
     return false;
   }
 
-  async authenticateOIDCUser(
+  async authenticateExternalUser(
     userId: string,
     _deviceType?: DeviceType,
   ): Promise<boolean> {
@@ -488,7 +505,7 @@ class AuthManager {
     }
   }
 
-  async revokeSessionsByOidc(params: {
+  async revokeSessionsByExternalSession(params: {
     ssoProviderId?: number | null;
     sub?: string | null;
     sid?: string | null;
@@ -512,7 +529,6 @@ class AuthManager {
       if (matched.length === 0) return 0;
 
       const matchedIds = matched.map((s) => s.id);
-      const affectedUsers = new Set(matched.map((s) => s.userId));
 
       await db.delete(sessions).where(inArray(sessions.id, matchedIds));
 
@@ -836,10 +852,7 @@ class AuthManager {
     }
 
     const path = (req.originalUrl || req.url || "").split("?")[0];
-    const allowed = IMPERSONATION_PATH_ALLOWLIST.some((pattern) =>
-      pattern.test(path),
-    );
-    if (!allowed) {
+    if (!allowsAdminImpersonation(path)) {
       res.status(403).json({
         error: "Impersonation is not allowed for this route",
         code: "IMPERSONATION_NOT_ALLOWED",

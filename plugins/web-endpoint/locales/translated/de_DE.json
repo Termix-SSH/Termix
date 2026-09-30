@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "Ungültiges Zertifikat zulassen",
     "webUiIgnoreCertDesc": "Nur direkte Endpunkte. Loopback ist bereits ausgenommen, daher hat dies keine Auswirkungen auf Tunnelendpunkte.",
     "webUiRemoveEndpoint": "Endpunkt entfernen",
-    "webUiOpenFailed": "Der Web-Endpunkt konnte nicht geöffnet werden."
+    "webUiOpenFailed": "Der Web-Endpunkt konnte nicht geöffnet werden.",
+    "bindHost": "Bind-Host"
   }
 }

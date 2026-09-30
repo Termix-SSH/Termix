@@ -47,6 +47,7 @@
     "webUiIgnoreCert": "無効な証明書を許可する",
     "webUiIgnoreCertDesc": "直接エンドポイントのみが対象です。ループバックは既に対象外となっているため、トンネルエンドポイントには影響しません。",
     "webUiRemoveEndpoint": "エンドポイントを削除",
-    "webUiOpenFailed": "ウェブエンドポイントを開くのに失敗しました"
+    "webUiOpenFailed": "ウェブエンドポイントを開くのに失敗しました",
+    "bindHost": "バインドホスト"
   }
 }

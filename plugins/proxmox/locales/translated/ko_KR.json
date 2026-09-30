@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "최소 15초. Proxmox 노드 통계를 새로 고치는 빈도.",
     "proxmoxStatsNodeOverride": "노드 이름 재정의",
     "proxmoxStatsNodeOverrideDesc": "Proxmox 노드 이름 자동 감지 기능을 재정의합니다(기본적으로 호스트 이름을 통해 감지됨).",
-    "proxmoxStatsNodeOverridePlaceholder": "호스트 이름에서 자동 감지됨"
+    "proxmoxStatsNodeOverridePlaceholder": "호스트 이름에서 자동 감지됨",
+    "docsLink": "문서 보기",
+    "hostNotFound": "호스트를 찾을 수 없습니다",
+    "loadingHost": "호스트 로드 중...",
+    "none": "없음",
+    "proxmoxGuestsSelected_one": "게스트 {{count}}개 — {{selected}}개 선택됨",
+    "proxmoxGuestsSelected_other": "게스트 {{count}}개 — {{selected}}개 선택됨",
+    "proxmoxImportButton_one": "호스트 {{count}}개 가져오기",
+    "proxmoxImportButton_other": "{{count}}개 호스트 가져오기"
   },
   "proxmoxStats": {
     "tabTitle": "프록스목스 통계",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "이 노드에서 VM 또는 LXC 컨테이너를 찾을 수 없습니다.",
     "noGuestsMatch": "현재 필터 조건에 맞는 투숙객이 없습니다."
+  },
+  "terminal": {
+    "connected": "연결됨"
   }
 }

@@ -74,7 +74,6 @@ function SshTerminalWidget({
     port: (host.sshPort as number | undefined) ?? host.port ?? 22,
     username: host.username,
     authType: host.authType,
-    terminalConfig: host.terminalConfig,
   };
 
   if (!started) {

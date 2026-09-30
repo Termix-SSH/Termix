@@ -382,7 +382,10 @@
     "defaultPathLabel": "기본 경로",
     "fileManagerPathHint": "이 호스트의 파일 관리자 실행 시 열리는 디렉터리입니다.",
     "fileManagerUrlCopied": "파일 관리자 URL 복사됨",
-    "copyFileManagerUrlAction": "파일 관리자 URL 복사"
+    "copyFileManagerUrlAction": "파일 관리자 URL 복사",
+    "docsLink": "문서 보기",
+    "hostNotFound": "호스트를 찾을 수 없습니다",
+    "loadingHost": "호스트 로드 중..."
   },
   "settings": {
     "host": {
@@ -395,10 +398,116 @@
       "scpLegacy": {
         "label": "SCP 레거시 모드"
       }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "동시 파일 전송",
+        "description": "로컬/원격 파일 관리자가 동시에 업로드 또는 다운로드할 수 있는 파일 수를 지정합니다. 서버에서 SFTP 채널 수를 제한하는 경우 이 값을 낮추십시오."
+      }
     }
   },
   "nav": {
     "sftp": "SFTP",
     "files": "파일"
+  },
+  "onboarding": {
+    "feature_files": "파일 관리자",
+    "feature_files_desc": "앱을 종료하지 않고 SFTP를 통해 파일을 검색, 업로드, 다운로드 및 편집할 수 있습니다."
+  },
+  "terminal": {
+    "runTitle": "{{command}} 실행 중 - {{host}}",
+    "terminalTitle": "터미널 - {{host}}",
+    "terminalWithPath": "터미널 - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "대상 폴더 찾아보기",
+    "browsePathError": "대상 호스트에서 이 경로를 열 수 없습니다.",
+    "browsePathWillBeCreated": "이 폴더가 아직 존재하지 않습니다. 전송 시작 시 생성됩니다.",
+    "cancel": "취소",
+    "cleanupDestFiles": "대상 정리",
+    "cleanupDestFilesError": "정리 실패",
+    "cleanupDestFilesNothing": "대상에 정리할 항목이 없습니다.",
+    "cleanupDestFilesPartial": "일부 부분 파일을 제거할 수 없었습니다.",
+    "cleanupDestFilesSuccess": "대상에서 부분 파일을 제거했습니다.",
+    "confirmCopy": "복사",
+    "confirmMove": "이동",
+    "copyFolderToHost": "폴더를 호스트로 복사…",
+    "copyItemsToHost": "{{count}}개 항목을 호스트로 복사…",
+    "copyToHost": "호스트로 복사…",
+    "destinationPath": "대상 경로",
+    "destMustBeDirectory": "여러 항목 전송 시 대상은 디렉터리여야 합니다.",
+    "goUp": "위로",
+    "hostAuthRequired": "인증 필요 — 먼저 이 호스트에서 파일 관리자를 여십시오.",
+    "hostConnecting": "연결 중…",
+    "hostConnectionFailed": "연결 실패",
+    "hostDisconnected": "연결되지 않음",
+    "hostReady": "준비됨",
+    "itemsSummary": "{{count}}개 항목",
+    "jumpHostLimitation": "두 호스트 모두 Termix 서버에서 접근 가능해야 합니다. 호스트 간 직접 라우팅은 지원되지 않습니다.",
+    "methodAuto": "자동",
+    "methodAutoHint": "파일 수, 크기 및 압축 가능성을 기준으로 tar 또는 파일별 SFTP를 선택합니다. 단일 파일은 항상 스트리밍 SFTP를 사용합니다.",
+    "methodItemSftp": "파일별 SFTP",
+    "methodItemSftpHint": "SFTP를 통해 각 파일을 개별적으로 전송합니다. Windows를 포함한 모든 호스트에서 작동합니다.",
+    "methodItemSftpLimitation": "각 파일은 단일 파일 복사와 동일한 SFTP 스트림을 순차적으로 사용합니다. 진행률이 모든 파일에 걸쳐 결합되므로 대용량 파일에서는 진행 막대가 느리게 움직입니다.",
+    "methodLabel": "전송 방법",
+    "methodPreviewError": "전송 방법을 미리 볼 수 없습니다. 시작 시 서버가 방법을 선택합니다.",
+    "methodPreviewLoading": "전송 방법 계산 중…",
+    "methodPreviewScanSummary": "{{fileCount}}개 파일, 총 {{totalSize}} (소스 호스트에서 스캔됨).",
+    "methodPreviewWillUseItemSftp": "사용 예정: 파일별 SFTP",
+    "methodPreviewWillUseTar": "사용 예정: Tar 아카이브",
+    "methodReason": {
+      "user_item_sftp": "파일별 SFTP를 선택하셨습니다.",
+      "user_tar": "tar 아카이브를 선택하셨습니다.",
+      "tar_unavailable": "한쪽 또는 양쪽 호스트에서 tar를 사용할 수 없어 대신 파일별 SFTP를 사용합니다.",
+      "windows_host": "Windows 호스트가 포함되어 tar를 사용하지 않습니다.",
+      "auto_multi_large": "자동: 압축 가능한 대용량 파일({{largestSize}})을 포함한 여러 파일 — tar로 하나의 전송으로 묶습니다.",
+      "auto_single_large_in_archive": "자동: 이 세트에 대용량 파일({{largestSize}}) 하나 — 파일별 SFTP.",
+      "auto_many_incompressible": "자동: 대부분 압축 불가능한 데이터 — 파일별 SFTP.",
+      "auto_many_files": "자동: 다수의 파일({{fileCount}}) — tar로 파일별 오버헤드를 줄입니다.",
+      "auto_default": "자동: 이 세트에 대해 파일별 SFTP."
+    },
+    "methodTar": "Tar 아카이브",
+    "methodTarHint": "소스에서 압축, 하나의 아카이브 전송, 목적지에서 추출. 두 Unix 호스트에 tar가 필요합니다.",
+    "metricsCompress": "소스에서 압축: {{duration}}",
+    "metricsExtract": "목적지에서 추출: {{duration}}",
+    "metricsPrepare": "대상 준비: {{duration}}",
+    "metricsRouteBenchmark": "경로 탐색 — 직접: {{direct}}, 중계: {{relay}}",
+    "metricsSourceDelete": "소스에서 제거: {{duration}}",
+    "metricsTotal": "총 시간: {{duration}}",
+    "metricsTransfer": "엔드 투 엔드: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 검증 완료: {{duration}}",
+    "moveFolderToHost": "폴더를 호스트로 이동…",
+    "moveItemsToHost": "{{count}}개 항목을 호스트로 이동…",
+    "moveToHost": "호스트로 이동…",
+    "noHostsConnected": "사용 가능한 다른 파일 관리자 호스트가 없습니다.",
+    "noHostsConnectedHint": "호스트 관리자에서 파일 관리자가 활성화된 다른 SSH 호스트를 추가하세요.",
+    "parallelSegmentsHint": "대용량 파일은 256 MB 청크로 분할됩니다. 여러 레인은 별도 연결을 사용하여 (여러 전송을 시작하는 것처럼) 총 처리량을 높입니다.",
+    "parallelSegmentsLabel": "병렬 전송 레인",
+    "parallelSegmentsOption": "{{count}}개 레인",
+    "progressBenchmarking": "가장 빠른 이동 경로 선택…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "취소",
+    "progressCancelling": "취소 중…",
+    "progressCompressing": "소스 호스트에서 압축 중…",
+    "progressExtracting": "목적지에서 추출 중…",
+    "progressItems": "{{current}} / {{total}} 파일",
+    "progressReconnecting": "재연결 중…",
+    "progressStalled": "지연됨",
+    "progressTotalSpeed": "총 {{speed}} ({{lanes}}개 레인)",
+    "progressTransferring": "데이터 전송 중…",
+    "progressTransferringItems": "파일 전송 중 ({{current}}/{{total}})…",
+    "progressVerifying": "파일 무결성 확인 중…",
+    "recentDestinations": "최근 대상",
+    "resumedHint": "다른 창에서 시작된 활성 전송에 다시 연결되었습니다.",
+    "retryTransfer": "재시도",
+    "retryTransferError": "재시도 실패",
+    "selectDestinationHost": "대상 호스트 선택",
+    "transferCancelled": "전송 취소됨",
+    "transferCancelledCopyHint": "대상에 부분 파일이 남아 있을 수 있습니다.",
+    "transferCancelledMoveHint": "대상에 부분 파일이 남아 있을 수 있습니다. 원본 파일은 제거되지 않았습니다.",
+    "transferError": "전송 실패",
+    "transferFailedRetryHint": "대상에 부분 데이터가 유지되었습니다. 연결이 복구되면 다시 시도하면 이어서 전송됩니다.",
+    "transferPartialHint": "전송할 수 없습니다: {{paths}}",
+    "transferSuccess": "전송 완료"
   }
 }

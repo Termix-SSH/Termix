@@ -114,5 +114,17 @@
         "podman": "Podman"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
+  },
+  "hosts": {
+    "docsLink": "Xem tài liệu",
+    "hostNotFound": "Không tìm thấy máy chủ",
+    "loadingHost": "Đang tải máy chủ..."
+  },
+  "terminal": {
+    "clipboardReadFailed": "Đọc từ clipboard thất bại. Đảm bảo quyền truy cập clipboard đã được cấp.",
+    "clipboardWriteFailed": "Sao chép vào clipboard thất bại. Đảm bảo trang được phục vụ qua HTTPS hoặc localhost."
   }
 }

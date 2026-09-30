@@ -15,5 +15,8 @@
   "errors": {
     "authFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
     "timeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar."
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
   }
 }

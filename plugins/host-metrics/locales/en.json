@@ -54,10 +54,6 @@
     "processesRunning": "running",
     "loginStats": "SSH Login Statistics",
     "noRecentLoginData": "No recent login data",
-    "executingQuickAction": "Executing {{name}}...",
-    "quickActionSuccess": "{{name}} completed successfully",
-    "quickActionFailed": "{{name}} failed",
-    "quickActionError": "Failed to execute {{name}}",
     "ports": {
       "title": "Listening Ports",
       "protocol": "Protocol",
@@ -182,8 +178,7 @@
       "wgLastHandshake": "Last handshake",
       "wgHandshakeNever": "Never",
       "wgTransfer": "Transfer"
-    },
-    "snippetsUnavailable": "Snippets are turned off, so quick actions cannot run."
+    }
   },
   "metricsHistory": {
     "title": "Metrics History",
@@ -219,12 +214,6 @@
     "addExcludedMount": "Add",
     "visibleWidgets": "Visible Widgets",
     "widgetsMovedToHostMetrics": "Cards are now added, arranged, and resized directly in the Host Metrics tab. Open Host Metrics for this host and use Customize to choose which cards are shown.",
-    "quickActionsLabel": "Quick Actions",
-    "quickActionsToolbar": "Quick actions appear as buttons in the Host Metrics toolbar for one-click command execution.",
-    "noQuickActions": "No quick actions yet.",
-    "buttonLabel": "Button label",
-    "selectSnippetPlaceholder": "Select snippet...",
-    "addActionBtn": "Add Action",
     "hostNotFound": "Host not found",
     "loadingHost": "Loading host..."
   },
@@ -268,15 +257,6 @@
   },
   "dashboardTab": {
     "disk": "Disk"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "Cancel",
-        "confirmRunButton": "Run",
-        "confirmRunMessage": "Run \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "Connected"

@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Executa \"{{name}}\"",
+  "variablesDialogDescription": "Empleneu els valors que necessita aquest fragment abans d'executar-lo.",
+  "variablesPreviewLabel": "Vista prèvia",
+  "variablesConfirmButton": "Corre",
+  "keybindings": {
+    "runSnippet": "Executa el fragment existent",
+    "snippetLabel": "Fragment",
+    "selectSnippet": "Selecciona un fragment",
+    "snippetMissing": "fragment no trobat",
+    "snippetRequired": "Selecciona un fragment"
+  },
+  "paletteHintRun": "Executar a la pestanya activa del terminal",
+  "host": {
+    "startupTitle": "Fragment d'inici",
+    "quickActionsTitle": "Accions ràpides",
+    "quickActionsDescription": "Les accions ràpides apareixen com a botons a la barra d'eines de mètriques de l'amfitrió per executar ordres amb un sol clic.",
+    "noQuickActions": "Encara no hi ha accions ràpides.",
+    "buttonLabel": "Etiqueta del botó",
+    "selectSnippet": "Selecciona un fragment...",
+    "addQuickAction": "Afegeix una acció"
+  },
+  "quickActions": {
+    "running": "Executant {{name}}...",
+    "succeeded": "{{name}} s'ha completat correctament",
+    "failed": "{{name}} ha fallat",
+    "error": "No s'ha pogut executar {{name}}"
+  }
+}

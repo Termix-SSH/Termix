@@ -55,7 +55,15 @@
     "proxmoxStatsPollIntervalDesc": "Vähintään 15 sekuntia. Kuinka usein Proxmox-solmun tilastot päivitetään.",
     "proxmoxStatsNodeOverride": "Solmun nimen ohitus",
     "proxmoxStatsNodeOverrideDesc": "Ohita Proxmox-solmun nimen automaattinen tunnistus (tunnistetaan oletusarvoisesti isäntänimen kautta).",
-    "proxmoxStatsNodeOverridePlaceholder": "Automaattisesti tunnistettu isäntänimestä"
+    "proxmoxStatsNodeOverridePlaceholder": "Automaattisesti tunnistettu isäntänimestä",
+    "docsLink": "Näytä dokumentit",
+    "hostNotFound": "Isäntää ei löydy",
+    "loadingHost": "Ladataan isäntää...",
+    "none": "Ei mitään",
+    "proxmoxGuestsSelected_one": "{{count}} vieras — {{selected}} valittu",
+    "proxmoxGuestsSelected_other": "{{count}} vieraat — {{selected}} valittu",
+    "proxmoxImportButton_one": "Tuo {{count}} isäntä",
+    "proxmoxImportButton_other": "Tuo {{count}} isäntiä"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox-tilastot",
@@ -102,5 +110,8 @@
     "filterLxc": "LXC",
     "noGuests": "Tältä solmulta ei löytynyt virtuaalikoneita tai LXC-säilöjä.",
     "noGuestsMatch": "Yksikään vieras ei vastaa nykyisiä suodattimia."
+  },
+  "terminal": {
+    "connected": "Yhdistetty"
   }
 }

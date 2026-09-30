@@ -16,6 +16,7 @@ import { OpenTabRepository } from "./open-tab-repository.js";
 import { PluginRepository } from "./plugin-repository.js";
 import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginSettingsRepository } from "./plugin-settings-repository.js";
+import { HostDefaultsRepository } from "./host-defaults-repository.js";
 import { PluginMigrationRepository } from "./plugin-migration-repository.js";
 import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
 import { UserAuthRepository } from "./user-auth-repository.js";
@@ -28,6 +29,7 @@ import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
 import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
+import { HostProtocolAuthRepository } from "./host-protocol-auth-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
@@ -223,6 +225,13 @@ export function createCurrentPluginStorageRepository(): PluginStorageRepository 
   );
 }
 
+export function createCurrentHostDefaultsRepository(): HostDefaultsRepository {
+  return new HostDefaultsRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("host_defaults_repository_write"),
+  );
+}
+
 export function createCurrentPluginSettingsRepository(): PluginSettingsRepository {
   return new PluginSettingsRepository(
     createCurrentRepositoryContext(),
@@ -283,6 +292,13 @@ export function createCurrentSharedHostSecretsRepository(): SharedHostSecretsRep
   return new SharedHostSecretsRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("shared_host_secrets_repository_write"),
+  );
+}
+
+export function createCurrentHostProtocolAuthRepository(): HostProtocolAuthRepository {
+  return new HostProtocolAuthRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("host_protocol_auth_repository_write"),
   );
 }
 

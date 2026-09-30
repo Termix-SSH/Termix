@@ -4,7 +4,8 @@
   },
   "hosts": {
     "enableTmuxMonitor": "Tmux 모니터 활성화",
-    "enableTmuxMonitorDesc": "Tmux 모니터에 이 호스트를 표시하고 tmux 작업을 사이드바에 추가합니다."
+    "enableTmuxMonitorDesc": "Tmux 모니터에 이 호스트를 표시하고 tmux 작업을 사이드바에 추가합니다.",
+    "docsLink": "문서 보기"
   },
   "tmuxMonitor": {
     "title": "Tmux 모니터",

@@ -195,5 +195,37 @@
   "shareFolderHint": "Shares every snippet in this folder. Snippets added later are not shared automatically.",
   "shareFolderSummary": "Shared {{count}} snippet(s) in this folder",
   "grantedBy": "Granted by",
-  "expired": "Expired"
+  "expired": "Expired",
+  "variablesDialogTitle": "Run \"{{name}}\"",
+  "variablesDialogDescription": "Fill in the values this snippet needs before running it.",
+  "variablesPreviewLabel": "Preview",
+  "variablesConfirmButton": "Run",
+  "keybindings": {
+    "runSnippet": "Run existing snippet",
+    "snippetLabel": "Snippet",
+    "selectSnippet": "Select a snippet",
+    "snippetMissing": "snippet not found",
+    "snippetRequired": "Select a snippet"
+  },
+  "paletteHintRun": "Run in the active terminal tab",
+  "host": {
+    "startupTitle": "Startup Snippet",
+    "quickActionsTitle": "Quick Actions",
+    "quickActionsDescription": "Quick actions appear as buttons in the Host Metrics toolbar for one-click command execution.",
+    "noQuickActions": "No quick actions yet.",
+    "buttonLabel": "Button label",
+    "selectSnippet": "Select snippet...",
+    "addQuickAction": "Add Action",
+    "tabTitle": "Snippets",
+    "startupDescription": "Runs in the terminal each time it connects to this host. Variables like $HOST are filled in; a snippet that asks for inputs is skipped.",
+    "none": "None",
+    "removeQuickAction": "Remove quick action"
+  },
+  "quickActions": {
+    "running": "Executing {{name}}...",
+    "succeeded": "{{name}} completed successfully",
+    "failed": "{{name}} failed",
+    "error": "Failed to execute {{name}}"
+  },
+  "paletteHintPaste": "Paste in the active terminal tab"
 }

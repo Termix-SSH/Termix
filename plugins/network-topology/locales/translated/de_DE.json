@@ -56,5 +56,8 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} Knoten"
+  },
+  "hosts": {
+    "docsLink": "Dokumentation anzeigen"
   }
 }

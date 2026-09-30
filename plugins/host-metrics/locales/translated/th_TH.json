@@ -51,10 +51,6 @@
     "processesRunning": "วิ่ง",
     "loginStats": "สถิติการเข้าสู่ระบบ SSH",
     "noRecentLoginData": "ไม่มีข้อมูลการเข้าสู่ระบบล่าสุด",
-    "executingQuickAction": "กำลังดำเนินการ {{name}}...",
-    "quickActionSuccess": "{{name}} เสร็จสมบูรณ์เรียบร้อยแล้ว",
-    "quickActionFailed": "{{name}} ล้มเหลว",
-    "quickActionError": "ไม่สามารถดำเนินการ {{name}} ได้",
     "ports": {
       "title": "พอร์ตรับฟัง",
       "protocol": "โปรโตคอล",
@@ -235,12 +231,6 @@
     "addExcludedMount": "เพิ่ม",
     "visibleWidgets": "วิดเจ็ตที่มองเห็นได้",
     "widgetsMovedToHostMetrics": "ขณะนี้สามารถเพิ่ม จัดเรียง และปรับขนาดการ์ดได้โดยตรงในแท็บเมตริกโฮสต์ เปิดเมตริกโฮสต์สำหรับโฮสต์นี้แล้วใช้ ปรับแต่ง เพื่อเลือกการ์ดที่จะแสดง",
-    "quickActionsLabel": "การดำเนินการด่วน",
-    "quickActionsToolbar": "การดำเนินการด่วนจะปรากฏเป็นปุ่มในแถบเครื่องมือ Host Metrics เพื่อให้สามารถเรียกใช้คำสั่งได้ด้วยการคลิกเพียงครั้งเดียว",
-    "noQuickActions": "ยังไม่มีการดำเนินการใดๆ อย่างเร่งด่วนในขณะนี้",
-    "buttonLabel": "ป้ายกำกับปุ่ม",
-    "selectSnippetPlaceholder": "เลือกส่วนย่อย...",
-    "addActionBtn": "เพิ่มการดำเนินการ",
     "hostNotFound": "ไม่พบโฮสต์",
     "loadingHost": "กำลังโหลดโฮสต์..."
   },
@@ -281,15 +271,6 @@
   },
   "dashboardTab": {
     "disk": "ดิสก์"
-  },
-  "newUi": {
-    "sidebar": {
-      "snippets": {
-        "cancel": "ยกเลิก",
-        "confirmRunButton": "วิ่ง",
-        "confirmRunMessage": "เรียกใช้ \"{{name}}\"?"
-      }
-    }
   },
   "terminal": {
     "connected": "เชื่อมต่อแล้ว"

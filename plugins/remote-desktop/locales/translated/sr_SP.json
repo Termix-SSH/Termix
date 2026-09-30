@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Телнет",
     "virtualNetwork": "Виртуелна мрежа",
-    "unencryptedShell": "Нешифрована љуска"
+    "unencryptedShell": "Нешифрована љуска",
+    "docsLink": "Прикажи документе"
   },
   "onboarding": {
     "feature_desktop": "Удаљена радна површина",
@@ -274,5 +275,8 @@
         "label": "URL адреса guacd-а"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Потребан је удаљени сервер. Повежите се са удаљеним сервером у Подешавањима да бисте користили овај тип везе."
   }
 }

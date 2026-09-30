@@ -17,8 +17,8 @@ import { GuacamoleTokenService } from "../../src/backend/token-service.js";
 
 const manifest = manifestJson as unknown as PluginManifest;
 
-// The token key comes from JWT_SECRET; without one each service picks its own.
-process.env.JWT_SECRET = "remote-desktop-test-secret";
+// Without a fixed key each token service picks its own.
+process.env.GUACAMOLE_ENCRYPTION_KEY = "ab".repeat(32);
 
 function target(
   overrides: Partial<PluginProtocolTarget["auth"]> = {},
@@ -37,7 +37,7 @@ function target(
       authType: "direct",
       username: "admin",
       password: "secret",
-      domain: "CORP",
+      fields: { domain: "CORP" },
       ...overrides,
     },
   };
@@ -149,14 +149,15 @@ describe("POST /connect-host/:hostId", () => {
     });
   });
 
-  it("puts the user's RDP defaults under the host's own values", async () => {
+  it("puts the host's display settings under its own guacd settings", async () => {
     server = await start({ protocolTargets: { "7:rdp": target() } });
     await server.mock.ctx.settings.setHost(7, "enableRdp", true);
     await server.mock.ctx.settings.setHost(7, "guacamoleConfig", {
       "color-depth": 32,
     });
-    await server.mock.ctx.settings.setUser("user-1", "colorDepth", "16");
-    await server.mock.ctx.settings.setUser("user-1", "disableCopy", "on");
+    // What the host follows from its defaults.
+    await server.mock.ctx.settings.setHost(7, "colorDepth", "16");
+    await server.mock.ctx.settings.setHost(7, "disableCopy", "on");
 
     const response = await server.request("POST", "/connect-host/7", {
       protocol: "rdp",

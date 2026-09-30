@@ -12,44 +12,127 @@
  */
 
 // Primitives
-export * from "@/components/alert";
-export * from "@/components/alert-dialog";
-export * from "@/components/badge";
-export * from "@/components/button";
-export * from "@/components/card";
-export * from "@/components/checkbox";
-export * from "@/components/dialog";
-export * from "@/components/dropdown-menu";
-export * from "@/components/input";
-export * from "@/components/label";
-export * from "@/components/password-input";
-export * from "@/components/popover";
-export * from "@/components/scroll-area";
-export * from "@/components/select";
-export * from "@/components/select2";
-export * from "@/components/separator";
-export * from "@/components/skeleton";
-export * from "@/components/switch";
-export * from "@/components/textarea";
-export * from "@/components/tooltip";
+export { Alert, AlertDescription, AlertTitle } from "@/components/alert";
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/alert-dialog";
+export { Badge } from "@/components/badge";
+export { Button, type ButtonProps } from "@/components/button";
+export {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/card";
+export { Checkbox } from "@/components/checkbox";
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/dialog";
+export {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
+export { Input } from "@/components/input";
+export { Label } from "@/components/label";
+export { PasswordInput } from "@/components/password-input";
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/popover";
+export { ScrollArea, ScrollBar } from "@/components/scroll-area";
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
+export { Select2 } from "@/components/select2";
+export { Separator } from "@/components/separator";
+export { Skeleton } from "@/components/skeleton";
+export { Slider } from "@/components/slider";
+export { Switch } from "@/components/switch";
+export { Textarea, type TextareaProps } from "@/components/textarea";
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
 
 // Composites
-export * from "@/components/section-card";
-export * from "@/components/metric-card";
-export * from "@/components/charts";
+export { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
+export { MetricCard } from "@/components/metric-card";
+export {
+  BarSeries,
+  MiniStat,
+  RadialGauge,
+  Sparkline,
+  StatRow,
+  type BarSeriesItem,
+  type BarSeriesProps,
+  type RadialGaugeProps,
+  type SparklineProps,
+} from "@/components/charts";
 export { LineChart, type LineChartSeries } from "@/components/charts/LineChart";
 export {
   CardGridCanvas,
   ColumnCountStepper,
 } from "@/components/card-grid/CardGridCanvas";
-export type * from "@/components/card-grid/types";
+export {
+  type GridCardCatalogEntry,
+  type GridColSpan,
+  type GridLayout,
+  type GridSlot,
+} from "@/components/card-grid/types";
 export { ConnectionScreen } from "@/components/connection/ConnectionScreen";
-export * from "@/components/connection/connection-status";
-export { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
+export { type ConnectionStatus } from "@/components/connection/connection-status";
 export {
   FullScreenAppWrapper,
   type FullScreenAppPhase,
-} from "@/features/FullScreenAppWrapper";
+} from "@/components/FullScreenAppWrapper";
 
 // Connection surfaces
 export {
@@ -76,6 +159,14 @@ export {
   type HostFeatureFieldsProps,
 } from "@/settings/HostPluginSections";
 
+// Host defaults in a host editor section: where a field's value comes from,
+// and whether the section is editing a level of defaults rather than a host.
+export {
+  HostDefaultBadge,
+  DefaultsOnly as HostDefaultField,
+  useIsDefaultsEditor,
+} from "@/lib/host-defaults-context";
+
 // Components other plugins offer by id (app.registerComponent), rendered with
 // a fallback while their plugin is off.
 export { PluginComponent } from "@/plugin-host/component-registry";
@@ -87,7 +178,16 @@ export {
   runAdaptivePolling,
   getPollingEnvironmentMultiplier,
 } from "@/lib/adaptive-polling";
-export * from "@/components/sheet";
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/sheet";
 // The frame and filter box every host manager card uses.
 export {
   ManagerCardShell,
@@ -100,20 +200,13 @@ export { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 export { WidgetTitle } from "@/lib/widget-title";
 export { runVisibleInterval } from "@/lib/visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
+export { EmptyState } from "@/components/empty-state";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
 
-// Terminal look: themes, fonts and clipboard, shared by every terminal-like
-// surface (the SSH and local terminals, the docker console, serial).
-export * from "@/lib/terminal-themes";
-export { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
-export { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
-export * from "@/lib/terminal-look/terminal-font-zoom";
-export { TerminalPreview } from "@/components/terminal-preview/TerminalPreview";
-export {
-  HostTerminalSettings,
-  type HostTerminalSettingsProps,
-} from "@/sidebar/HostTerminalSettings";
+// Clipboard helpers and the app theme, shared by every terminal-like surface.
+// The terminal look itself (themes, fonts, the preview) is the ssh-terminal
+// plugin's, offered through its "terminal.*" actions and components.
 export { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 export { RobustClipboardProvider } from "@/lib/clipboard-provider";
 export { useTheme as useAppTheme } from "@/components/theme-provider";
@@ -123,7 +216,12 @@ export { useTheme as useAppTheme } from "@/components/theme-provider";
 export { findMatchingKeybinding } from "@/lib/keybinding-match";
 export { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 export { isMacPlatform, isTabJumpHotkey } from "@/lib/tab-jump-hotkey";
-export type * from "@/types/keybindings";
+export {
+  type CustomKeybinding,
+  type KeyCombo,
+  type KeybindingAction,
+  type KeybindingActionType,
+} from "@/types/keybindings";
 
 // Connection helpers: which backend a host's session dials, and the pieces
 // the desktop app needs to reach it.
@@ -144,10 +242,9 @@ export {
   resolveRemoteHostId,
 } from "@/lib/remote-server-api";
 export { remoteServerUrl as linkedServerUrl } from "@/plugin-host/desktop";
-export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 
 // Dashboard reads. The calls a plugin makes on the user's behalf (recent
-// activity, sudo autofill, open tabs, keybindings, auto tmux) are typed in
+// activity, sudo autofill, open tabs, keybindings) are typed in
 // @termix/plugin-sdk/frontend instead.
 export {
   getRecentActivity,
@@ -178,22 +275,4 @@ export {
 export { getDeviceId } from "@/lib/device-id";
 
 // A host that is never saved, for connecting to an address straight away.
-export {
-  createQuickConnectHost,
-  isQuickConnectHost,
-} from "@/sidebar/quick-connect-host";
-
-// The desktop app's local file bridge (window.electronAPI.localFs and
-// localTransfer), for plugins that browse or transfer local files.
-export type {
-  LocalCollectedFile,
-  LocalDirectoryListing,
-  LocalFileEntry,
-  LocalFsHomeInfo,
-  LocalFsResult,
-  LocalTransferOrigin,
-  LocalTransferProgress,
-  LocalTrashResult,
-  LocalWalkFile,
-  LocalWalkResult,
-} from "@/types/electron";
+export { createQuickConnectHost } from "@/sidebar/quick-connect-host";

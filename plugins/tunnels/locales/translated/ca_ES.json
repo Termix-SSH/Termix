@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Reenvia un port del servidor remot a un port local de la teva màquina.",
     "tunnelRequirementsText": "El servidor SSH ha de tenir definits GatewayPorts sí, AllowTcpForwarding sí i PermitRootLogin sí a /etc/ssh/sshd_config.",
     "tunnelSettings": "Configuració del túnel",
-    "tunnelType": "Tipus de túnel"
+    "tunnelType": "Tipus de túnel",
+    "bindHost": "Vincula l'amfitrió",
+    "docsLink": "Veure documents",
+    "hostNotFound": "No s'ha trobat l'amfitrió",
+    "loadingHost": "S'està carregant l'amfitrió..."
   },
   "nav": {
     "portForwarding": "Reenviament",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinàmic (-D)",
     "typeLocal": "Local (-L)",
     "typeRemote": "Comandament a distància (-R)",
-    "working": "Treballant..."
+    "working": "Treballant...",
+    "start": "Inici",
+    "stop": "Atura"
+  },
+  "onboarding": {
+    "feature_tunnels": "Túnels",
+    "feature_tunnels_desc": "Reenvia ports a través d'un servidor per arribar a serveis que no estan exposats."
   }
 }

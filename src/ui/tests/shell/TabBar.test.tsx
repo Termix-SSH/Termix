@@ -159,3 +159,23 @@ describe("TabBar split menu", () => {
     });
   });
 });
+
+describe("bulk reconnect menu", () => {
+  it("offers the workspace action from a non-session tab and closes the menu", () => {
+    const onReconnectDisconnected = vi.fn();
+    const filesTab = {
+      id: "files",
+      type: "file_manager",
+      label: "Files",
+    } as Tab;
+    const view = render(
+      <TabBar
+        {...props({ tabs: [...tabs, filesTab], onReconnectDisconnected })}
+      />,
+    );
+    fireEvent.contextMenu(view.getByText("Files"));
+    fireEvent.click(view.getByText("nav.reconnectDisconnectedTerminals"));
+    expect(onReconnectDisconnected).toHaveBeenCalledOnce();
+    expect(view.queryByText("nav.reconnectDisconnectedTerminals")).toBeNull();
+  });
+});

@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "リモートサーバーのポートをローカルマシンのポートに転送します。",
     "tunnelRequirementsText": "SSHサーバーの/etc/ssh/sshd_configに、GatewayPorts yes、AllowTcpForwarding yes、PermitRootLogin yesが設定されている必要があります。",
     "tunnelSettings": "トンネル設定",
-    "tunnelType": "トンネルの種類"
+    "tunnelType": "トンネルの種類",
+    "bindHost": "バインドホスト",
+    "docsLink": "ドキュメントを表示",
+    "hostNotFound": "ホストが見つかりません",
+    "loadingHost": "ホストを読み込み中..."
   },
   "nav": {
     "portForwarding": "転送",
@@ -134,6 +138,12 @@
     "typeDynamic": "ダイナミック (-D)",
     "typeLocal": "ローカル (-L)",
     "typeRemote": "リモート (-R)",
-    "working": "処理中..."
+    "working": "処理中...",
+    "start": "開始",
+    "stop": "停止"
+  },
+  "onboarding": {
+    "feature_tunnels": "トンネル",
+    "feature_tunnels_desc": "公開されていないサービスにアクセスできるように、サーバー経由でポートを転送します。"
   }
 }

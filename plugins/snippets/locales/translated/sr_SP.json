@@ -1,0 +1,29 @@
+{
+  "variablesDialogTitle": "Покрени „{{name}}“",
+  "variablesDialogDescription": "Унесите вредности које су потребне овом фрагменту пре него што га покренете.",
+  "variablesPreviewLabel": "Преглед",
+  "variablesConfirmButton": "Трчи",
+  "keybindings": {
+    "runSnippet": "Покрени постојећи исечак кода",
+    "snippetLabel": "Исечак",
+    "selectSnippet": "Изаберите исечак",
+    "snippetMissing": "фрагмент није пронађен",
+    "snippetRequired": "Изаберите исечак"
+  },
+  "paletteHintRun": "Покрени у активној картици терминала",
+  "host": {
+    "startupTitle": "Исечак за покретање",
+    "quickActionsTitle": "Брзе акције",
+    "quickActionsDescription": "Брзе акције се појављују као дугмад у траци са алаткама Host Metrics за извршавање команди једним кликом.",
+    "noQuickActions": "Још нема брзих акција.",
+    "buttonLabel": "Ознака дугмета",
+    "selectSnippet": "Изаберите исечак...",
+    "addQuickAction": "Додај акцију"
+  },
+  "quickActions": {
+    "running": "Извршава се {{name}}...",
+    "succeeded": "{{name}} успешно завршено",
+    "failed": "{{name}} није успело",
+    "error": "Није успело извршавање {{name}}"
+  }
+}

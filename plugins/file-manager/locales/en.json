@@ -1,7 +1,8 @@
 {
   "nav": {
     "files": "Files",
-    "sftp": "SFTP"
+    "sftp": "SFTP",
+    "openFileManager": "Open File Manager"
   },
   "permissions": {
     "use": {
@@ -20,6 +21,16 @@
       },
       "scpLegacy": {
         "label": "SCP Legacy Mode"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Simultaneous File Transfers",
+        "description": "How many files the side by side local/remote manager uploads or downloads at the same time. Lower this if your server limits SFTP channels."
+      },
+      "confirmBeforeTrash": {
+        "label": "Confirm before moving files to trash",
+        "description": "Ask before moving remote files to trash. Permanent deletion still requires confirmation."
       }
     }
   },
@@ -354,7 +365,15 @@
     "cannotLoadPdf": "Cannot load PDF",
     "pdfLoadError": "There was an error loading this PDF file.",
     "loadingPdf": "Loading PDF...",
-    "loadingPage": "Loading page..."
+    "loadingPage": "Loading page...",
+    "cancel": "Cancel",
+    "copiedItems_one": "Copied {{count}} item",
+    "copiedItems_other": "Copied {{count}} items",
+    "deleteCopiedFileFailed": "Could not delete the copy of {{name}}: {{error}}",
+    "dragMovedItems_one": "Moved {{count}} item to {{target}}",
+    "dragMovedItems_other": "Moved {{count}} items to {{target}}",
+    "moveBackFileFailed": "Could not move {{name}} back: {{error}}",
+    "terminal": "Terminal: {{host}} ({{path}})"
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -403,6 +422,112 @@
   "hosts": {
     "fileManager": "File Manager",
     "fileManagerUrlCopied": "File Manager URL copied",
-    "copyFileManagerUrlAction": "Copy File Manager URL"
+    "copyFileManagerUrlAction": "Copy File Manager URL",
+    "docsLink": "View docs",
+    "hostNotFound": "Host not found",
+    "loadingHost": "Loading host..."
+  },
+  "onboarding": {
+    "feature_files": "File manager",
+    "feature_files_desc": "Browse, upload, download and edit files over SFTP without leaving the app."
+  },
+  "terminal": {
+    "runTitle": "Running {{command}} - {{host}}",
+    "terminalTitle": "Terminal - {{host}}",
+    "terminalWithPath": "Terminal - {{host}}:{{path}}"
+  },
+  "transfer": {
+    "browseFolders": "Browse destination folders",
+    "browsePathError": "Could not open this path on the destination host.",
+    "browsePathWillBeCreated": "This folder does not exist yet. It will be created when the transfer starts.",
+    "cancel": "Cancel",
+    "cleanupDestFiles": "Clean up destination",
+    "cleanupDestFilesError": "Cleanup failed",
+    "cleanupDestFilesNothing": "Nothing to clean up on the destination",
+    "cleanupDestFilesPartial": "Some partial files could not be removed",
+    "cleanupDestFilesSuccess": "Removed partial files from the destination",
+    "confirmCopy": "Copy",
+    "confirmMove": "Move",
+    "copyFolderToHost": "Copy folder to host…",
+    "copyItemsToHost": "Copy {{count}} items to host…",
+    "copyToHost": "Copy to host…",
+    "destinationPath": "Destination path",
+    "destMustBeDirectory": "Destination must be a directory for multi-item transfers",
+    "goUp": "Go up",
+    "hostAuthRequired": "Authentication required — open File Manager on this host first",
+    "hostConnecting": "Connecting…",
+    "hostConnectionFailed": "Connection failed",
+    "hostDisconnected": "Not connected",
+    "hostReady": "Ready",
+    "itemsSummary": "{{count}} items",
+    "jumpHostLimitation": "Both hosts must be reachable from the Termix server. Direct host-to-host routing is not supported.",
+    "methodAuto": "Auto",
+    "methodAutoHint": "Picks tar or per-file SFTP based on file count, size, and compressibility. Single files always use streaming SFTP.",
+    "methodItemSftp": "Per-file SFTP",
+    "methodItemSftpHint": "Transfer each file individually over SFTP. Works on all hosts including Windows.",
+    "methodItemSftpLimitation": "Each file uses the same SFTP stream as a single-file copy, one after another. Progress is combined across all files, so the bar moves slowly during large files.",
+    "methodLabel": "Transfer method",
+    "methodPreviewError": "Could not preview transfer method. The server will still pick a method when you start.",
+    "methodPreviewLoading": "Calculating transfer method…",
+    "methodPreviewScanSummary": "{{fileCount}} files, {{totalSize}} total (scanned on source host).",
+    "methodPreviewWillUseItemSftp": "Will use: Per-file SFTP",
+    "methodPreviewWillUseTar": "Will use: Tar archive",
+    "methodReason": {
+      "user_item_sftp": "You chose per-file SFTP.",
+      "user_tar": "You chose tar archive.",
+      "tar_unavailable": "Tar is not available on one or both hosts — per-file SFTP will be used instead.",
+      "windows_host": "A Windows host is involved — tar is not used.",
+      "auto_multi_large": "Auto: multiple files including a large file ({{largestSize}}) with compressible data — tar bundles into one transfer.",
+      "auto_single_large_in_archive": "Auto: one large file ({{largestSize}}) in this set — per-file SFTP.",
+      "auto_many_incompressible": "Auto: mostly incompressible data — per-file SFTP.",
+      "auto_many_files": "Auto: many files ({{fileCount}}) — tar reduces per-file overhead.",
+      "auto_default": "Auto: per-file SFTP for this set."
+    },
+    "methodTar": "Tar archive",
+    "methodTarHint": "Compress on source, transfer one archive, extract on destination. Requires tar on both Unix hosts.",
+    "metricsCompress": "Compress on source: {{duration}}",
+    "metricsExtract": "Extract on destination: {{duration}}",
+    "metricsPrepare": "Prepare destination: {{duration}}",
+    "metricsRouteBenchmark": "Route probe — direct: {{direct}}, relay: {{relay}}",
+    "metricsSourceDelete": "Remove from source: {{duration}}",
+    "metricsTotal": "Total: {{duration}}",
+    "metricsTransfer": "End-to-end: {{throughput}} ({{duration}})",
+    "metricsVerify": "SHA-256 verified: {{duration}}",
+    "moveFolderToHost": "Move folder to host…",
+    "moveItemsToHost": "Move {{count}} items to host…",
+    "moveToHost": "Move to host…",
+    "noHostsConnected": "No other file-manager hosts available.",
+    "noHostsConnectedHint": "Add another SSH host with File Manager enabled in Host Manager.",
+    "parallelSegmentsHint": "Large files are split into 256 MB chunks. Multiple lanes use separate connections (like starting several transfers) for higher total throughput.",
+    "parallelSegmentsLabel": "Parallel transfer lanes",
+    "parallelSegmentsOption": "{{count}} lanes",
+    "progressBenchmarking": "Selecting the fastest transfer route…",
+    "progressBytes": "{{transferred}} / {{total}}",
+    "progressCancel": "Cancel",
+    "progressCancelling": "Cancelling…",
+    "progressCompressing": "Compressing on source host…",
+    "progressExtracting": "Extracting on destination…",
+    "progressItems": "{{current}} / {{total}} files",
+    "progressReconnecting": "Reconnecting…",
+    "progressStalled": "Stalled",
+    "progressTotalSpeed": "{{speed}} total ({{lanes}} lanes)",
+    "progressTransferring": "Transferring data…",
+    "progressTransferringItems": "Transferring files ({{current}} of {{total}})…",
+    "progressVerifying": "Verifying file integrity…",
+    "recentDestinations": "Recent destinations",
+    "resumedHint": "Reconnected to an active transfer started in another window.",
+    "retryTransfer": "Retry",
+    "retryTransferError": "Retry failed",
+    "selectDestinationHost": "Select destination host",
+    "transferCancelled": "Transfer cancelled",
+    "transferCancelledCopyHint": "Partial files may remain on the destination.",
+    "transferCancelledMoveHint": "Partial files may remain on the destination. Source files were not removed.",
+    "transferError": "Transfer failed",
+    "transferFailedRetryHint": "Partial data was kept on the destination. Retry will resume when the connection is back.",
+    "transferPartialHint": "Could not transfer: {{paths}}",
+    "transferSuccess": "Transfer complete",
+    "metricsHopSourceRead": "Source → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → dest (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → dest (local): {{throughput}}"
   }
 }

@@ -141,7 +141,7 @@ export async function startServer(
     live,
     sharing: mock.services.get("sessions.sharing") as SessionSharingV1,
     guests: mock.ctx.registry.consume<SessionGuestsV1>(
-      "sessions.sharing.guests",
+      "session-sharing.guests",
     )!,
     async request(method, path, { user = "alice", body: given } = {}) {
       const body = method === "GET" ? undefined : given;

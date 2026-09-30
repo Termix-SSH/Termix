@@ -304,9 +304,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         key TEXT,
         key_password TEXT,
         key_type TEXT,
-        autostart_password TEXT,
-        autostart_key TEXT,
-        autostart_key_password TEXT,
         force_keyboard_interactive TEXT,
         status_check_enabled INTEGER NOT NULL DEFAULT 1,
         status_check_interval INTEGER,
@@ -910,9 +907,6 @@ const migrateSchema = () => {
     "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
   );
   addColumnIfNotExists("ssh_data", "force_keyboard_interactive", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "credential_id",
@@ -924,9 +918,6 @@ const migrateSchema = () => {
     "INTEGER",
   );
 
-  addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
-  addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "status_check_enabled",
@@ -1185,7 +1176,6 @@ const migrateSchema = () => {
     { column: "share_ssh_auth", sql: "ALTER TABLE ssh_data ADD COLUMN share_ssh_auth INTEGER NOT NULL DEFAULT 0" },
     { column: "jump_hosts", sql: "ALTER TABLE ssh_data ADD COLUMN jump_hosts TEXT" },
     { column: "quick_actions", sql: "ALTER TABLE ssh_data ADD COLUMN quick_actions TEXT" },
-    { column: "domain", sql: "ALTER TABLE ssh_data ADD COLUMN domain TEXT" },
     { column: "socks5_proxy_chain", sql: "ALTER TABLE ssh_data ADD COLUMN socks5_proxy_chain TEXT" },
     { column: "host_key_fingerprint", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_fingerprint TEXT" },
     { column: "host_key_type", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_type TEXT" },
@@ -1196,19 +1186,6 @@ const migrateSchema = () => {
     { column: "port_knock_sequence", sql: "ALTER TABLE ssh_data ADD COLUMN port_knock_sequence TEXT" },
     { column: "enable_ssh", sql: "ALTER TABLE ssh_data ADD COLUMN enable_ssh INTEGER NOT NULL DEFAULT 1" },
     { column: "ssh_port", sql: "ALTER TABLE ssh_data ADD COLUMN ssh_port INTEGER DEFAULT 22" },
-    { column: "rdp_user", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_user TEXT" },
-    { column: "rdp_password", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_password TEXT" },
-    { column: "rdp_domain", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_domain TEXT" },
-    { column: "vnc_password", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_password TEXT" },
-    { column: "vnc_user", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_user TEXT" },
-    { column: "telnet_user", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_user TEXT" },
-    { column: "telnet_password", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_password TEXT" },
-    { column: "rdp_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
-    { column: "vnc_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
-    { column: "telnet_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
-    { column: "rdp_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_auth_type TEXT" },
-    { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
-    { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
     { column: "connection_origin", sql: "ALTER TABLE ssh_data ADD COLUMN connection_origin TEXT" },
     { column: "parent_host_id", sql: "ALTER TABLE ssh_data ADD COLUMN parent_host_id INTEGER REFERENCES ssh_data(id) ON DELETE SET NULL" },
   ];
@@ -1262,40 +1239,6 @@ const migrateSchema = () => {
     });
   }
 
-  // Copy unencrypted username/domain into protocol-specific columns for old guac hosts.
-  // Passwords are handled via the legacy field name fallback in lazy-field-encryption.ts.
-  // Credential-backed hosts can still match on later boots; keep their saved domain.
-  const usernameDomainBackfills = [
-    {
-      protocol: "rdp",
-      sql: "UPDATE ssh_data SET rdp_user = username, rdp_password = password, rdp_domain = COALESCE(rdp_domain, domain) WHERE connection_type = 'rdp' AND rdp_user IS NULL AND rdp_password IS NULL",
-    },
-    {
-      protocol: "vnc",
-      sql: "UPDATE ssh_data SET vnc_user = username, vnc_password = password WHERE connection_type = 'vnc' AND vnc_user IS NULL AND vnc_password IS NULL",
-    },
-    {
-      protocol: "telnet",
-      sql: "UPDATE ssh_data SET telnet_user = username, telnet_password = password WHERE connection_type = 'telnet' AND telnet_user IS NULL AND telnet_password IS NULL",
-    },
-  ];
-  for (const backfill of usernameDomainBackfills) {
-    try {
-      const result = sqlite.prepare(backfill.sql).run();
-      if (result.changes > 0) {
-        databaseLogger.info(
-          `Backfilled ${result.changes} ${backfill.protocol} host credential(s)`,
-          { operation: "guac_credential_backfill" },
-        );
-      }
-    } catch (e) {
-      databaseLogger.warn(`Failed to backfill ${backfill.protocol} host credentials`, {
-        operation: "guac_credential_backfill",
-        error: e,
-      });
-    }
-  }
-
   try {
     sqlite.prepare("SELECT id FROM shared_host_secrets LIMIT 1").get();
   } catch {
@@ -1329,6 +1272,66 @@ const migrateSchema = () => {
         error: createError,
       });
     }
+  }
+
+  addColumnIfNotExists("shared_host_secrets", "encrypted_fields", "TEXT");
+
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS host_protocol_auth (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        protocol TEXT NOT NULL,
+        auth_type TEXT NOT NULL DEFAULT 'direct',
+        credential_id INTEGER,
+        username TEXT,
+        password TEXT,
+        fields TEXT,
+        secret_fields TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE SET NULL
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_host_protocol_auth_host_protocol ON host_protocol_auth (host_id, protocol);
+      CREATE INDEX IF NOT EXISTS idx_host_protocol_auth_user ON host_protocol_auth (user_id);
+      CREATE INDEX IF NOT EXISTS idx_host_protocol_auth_credential ON host_protocol_auth (credential_id);
+    `);
+  } catch (createError) {
+    databaseLogger.warn("Failed to create host_protocol_auth table", {
+      operation: "schema_migration",
+      error: createError,
+    });
+  }
+
+  addColumnIfNotExists("ssh_data", "default_overrides", "TEXT");
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS host_defaults (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        level TEXT NOT NULL,
+        scope_key TEXT NOT NULL,
+        user_id TEXT,
+        folder_id INTEGER,
+        namespace TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT,
+        updated_by TEXT,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (folder_id) REFERENCES ssh_folders (id) ON DELETE CASCADE
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_host_defaults_scope_key ON host_defaults (scope_key, namespace, key);
+      CREATE INDEX IF NOT EXISTS idx_host_defaults_user ON host_defaults (user_id);
+      CREATE INDEX IF NOT EXISTS idx_host_defaults_folder ON host_defaults (folder_id);
+    `);
+  } catch (createError) {
+    databaseLogger.warn("Failed to create host_defaults table", {
+      operation: "schema_migration",
+      error: createError,
+    });
   }
 
   try {
@@ -1605,6 +1608,7 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "shared_source", "TEXT");
+  addColumnIfNotExists("ssh_data", "ssh_options", "TEXT");
   addColumnIfNotExists("ssh_credentials", "shared_source", "TEXT");
   addColumnIfNotExists(
     "ssh_folders",

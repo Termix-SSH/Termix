@@ -83,5 +83,8 @@
         "description": "Consenti all'assistente IA di fornire assistenza nel terminale di questo host. Disattivato per impostazione predefinita, ma è necessario abilitare l'IA per il tuo account."
       }
     }
+  },
+  "hosts": {
+    "docsLink": "Visualizza documentazione"
   }
 }

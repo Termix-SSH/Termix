@@ -213,7 +213,8 @@
     "tabVnc": "VNC",
     "tabTelnet": "Telnet",
     "virtualNetwork": "Rețea virtuală",
-    "unencryptedShell": "Shell necriptat"
+    "unencryptedShell": "Shell necriptat",
+    "docsLink": "Vizualizați documentele"
   },
   "onboarding": {
     "feature_desktop": "Desktop la distanță",
@@ -274,5 +275,8 @@
         "label": "URL-ul guacd"
       }
     }
+  },
+  "errors": {
+    "remoteServerRequired": "Este necesar un server la distanță. Conectați un server la distanță în Setări pentru a utiliza acest tip de conexiune."
   }
 }

@@ -26,7 +26,11 @@
     "tunnelModeRemoteDesc": "Reencaminhar uma porta no servidor remoto de volta para uma porta local na sua máquina.",
     "tunnelRequirementsText": "O servidor SSH deve ter GatewayPorts yes, AllowTcpForwarding yes e PermitRootLogin yes definidos em /etc/ssh/sshd_config.",
     "tunnelSettings": "Definições de túnel",
-    "tunnelType": "Tipo de túnel"
+    "tunnelType": "Tipo de túnel",
+    "bindHost": "Host de Ligação",
+    "docsLink": "Ver documentação",
+    "hostNotFound": "Host não encontrado",
+    "loadingHost": "A carregar o host..."
   },
   "nav": {
     "portForwarding": "Encaminhamento",
@@ -134,6 +138,12 @@
     "typeDynamic": "Dinâmico (-D)",
     "typeLocal": "Local (-L)",
     "typeRemote": "Remoto (-R)",
-    "working": "A trabalhar..."
+    "working": "A trabalhar...",
+    "start": "Iniciar",
+    "stop": "Parar"
+  },
+  "onboarding": {
+    "feature_tunnels": "Túneis",
+    "feature_tunnels_desc": "Encaminhar portas através de um servidor para chegar a serviços que não estão expostos."
   }
 }

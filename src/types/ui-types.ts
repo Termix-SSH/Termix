@@ -1,5 +1,12 @@
-import type { SSHAuthType, TerminalConfig } from "./index.js";
+import type {
+  HostProtocolAuthSummary,
+  HostSshOptions,
+  HostTerminalConfig,
+  SSHAuthType,
+} from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
+import type { DefaultOverrides } from "./host-defaults.js";
+import type { QuickConnectLogin } from "@termix/plugin-sdk/frontend";
 
 export type Host = {
   id: string;
@@ -40,11 +47,14 @@ export type Host = {
   pin?: boolean;
   /** Quick connect only: core can save this host as-is. */
   quickConnectSavable?: boolean;
+  /** A Quick Connect host's plugin protocol login, never saved. */
+  quickConnectLogin?: QuickConnectLogin;
   sortOrder?: number | null;
 
   /** Stable identity across a desktop/server sync pair. */
   syncId?: string | null;
-  terminalConfig?: Partial<TerminalConfig>;
+  terminalConfig?: HostTerminalConfig;
+  sshOptions?: HostSshOptions;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -70,33 +80,18 @@ export type Host = {
   statusCheckEnabled?: boolean;
   /** Seconds between status checks; null follows the global setting. */
   statusCheckInterval?: number | null;
-  quickActions: { name: string; snippetId: string }[];
 
   enableSsh: boolean;
 
   sshPort: number;
 
-  rdpAuthType?: "direct" | "credential" | "none";
-  rdpCredentialId?: string;
-  rdpUser?: string;
-  rdpPassword?: string;
-  hasRdpPassword?: boolean;
-  domain?: string;
-
-  vncAuthType?: "direct" | "credential";
-  vncCredentialId?: string;
-  vncPassword?: string;
-  hasVncPassword?: boolean;
-  vncUser?: string;
-
-  telnetAuthType?: "direct" | "credential";
-  telnetCredentialId?: string;
-  telnetUser?: string;
-  telnetPassword?: string;
-  hasTelnetPassword?: boolean;
+  /** Each plugin protocol's login, secrets left out. */
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
 
   /** Host-scope plugin settings, keyed by plugin id. Secrets are redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Host default keys this host sets itself, per namespace. */
+  defaultOverrides?: DefaultOverrides | null;
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;
@@ -153,9 +148,6 @@ type KnownTabType =
   | "host-manager"
   | "user-profile"
   | "admin-settings"
-  // Rail panels that can also open full-width in the main area.
-  | "macros"
-  | "ssh-tools"
   | "split-screen";
 
 /**
@@ -177,12 +169,6 @@ export type Tab = {
   host?: Host;
   openedAt: number;
   restoredSessionId?: string | null;
-  /** Set when this tab joins someone else's live shared session instead of connecting/attaching its own. */
-  joinSharedSessionId?: string | null;
-  joinShareId?: string | null;
-  initialFilePath?: string;
-  /** Directory to open a Files tab into, distinct from initialFilePath (a specific file to open in an editor window). */
-  initialPath?: string;
   /** Payload owned by the tab's plugin, e.g. which fleet or endpoint it shows. */
   data?: Record<string, unknown>;
   /** Present only on a split-screen container tab. Pane tab ids reference live child tabs. */
@@ -196,11 +182,12 @@ export type Tab = {
     subscribeOutput?: (listener: (data: string) => void) => () => void;
     paste?: (text: string) => void;
     reconnect?: () => void;
+    /** Start a manual reconnect only when disconnected and idle; return whether it started. */
+    reconnectIfDisconnected?: () => boolean;
     fit?: () => void;
     notifyResize?: () => void;
     refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
-    openFileManager?: () => void;
     focus?: () => void;
   } | null>;
 };
@@ -251,8 +238,8 @@ export type UiFontId =
   | "source-code-pro"
   | "caskaydia-cove";
 
-/** A tools panel view: core's own, or a rail panel a plugin registered. */
-export type ToolsTab = "ssh-tools" | "macros" | (string & {});
+/** A tools panel view: a rail panel a plugin registered. */
+export type ToolsTab = string & {};
 
 /** "row" lays children side by side, "column" stacks them. */
 export type SplitDirection = "row" | "column";
@@ -292,9 +279,9 @@ export type WorkspaceTabSnapshot = {
   hostNameSnapshot?: string | null;
   label: string;
   customLabel?: string;
+  /** Read from payloads saved before tabs carried `data`. */
   initialFilePath?: string;
   initialPath?: string;
-  /** Read from payloads saved before tabs carried `data`. */
   fleetId?: number;
   /** The tab's plugin payload. */
   data?: Record<string, unknown>;
@@ -334,28 +321,3 @@ export type WorkspacePayload = {
     right: WorkspaceDockState;
   };
 };
-
-export type Snippet = {
-  id: number;
-  name: string;
-  description?: string;
-  content: string;
-  folder: string | null;
-  order: number;
-  hostIds?: number[];
-  isNote?: boolean;
-};
-
-const FOLDER_ICONS = [
-  "folder",
-  "server",
-  "cloud",
-  "database",
-  "box",
-  "network",
-  "copy",
-  "settings",
-  "cpu",
-  "globe",
-] as const;
-type FolderIconId = (typeof FOLDER_ICONS)[number];

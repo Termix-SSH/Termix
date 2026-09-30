@@ -11,7 +11,7 @@ export interface PublicLoginMethod {
   kind: "redirect" | "form";
   labelKey: string;
   icon?: string;
-  instances: Array<{ id: string; label: string }>;
+  instances: Array<{ id: string; label: string; autoStart?: boolean }>;
 }
 
 export interface SecondFactorRef {
