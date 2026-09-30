@@ -1514,6 +1514,18 @@
         "title": "Keyboard Shortcuts",
         "description": "Bind keys to actions in the terminal and the app, or change the built-in shortcuts.",
         "defaultsHeading": "Built-in Shortcuts",
+        "fixedHeading": "App Shortcuts",
+        "fixed": {
+          "splitRight": "Split right",
+          "splitDown": "Split down",
+          "zoomPane": "Zoom the focused pane",
+          "navigatePane": "Move between panes",
+          "nextTab": "Next tab",
+          "previousTab": "Previous tab",
+          "jumpTab": "Jump to tab",
+          "previousView": "Back to the previous sidebar view",
+          "fullscreen": "Toggle fullscreen"
+        },
         "customHeading": "Custom Shortcuts",
         "addBinding": "Add Shortcut",
         "addBindingTitle": "Add Shortcut",

@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { FixedShortcutsList } from "./FixedShortcutsList";
 
 function formatCombo(combo: KeyCombo): string {
   const parts: string[] = [];
@@ -395,6 +396,7 @@ export function KeybindingsDialog({
                 })
               )}
             </div>
+            <FixedShortcutsList />
           </div>
 
           <div className="flex items-center justify-between gap-2 mt-2">
