@@ -492,6 +492,8 @@ export interface HostProtocolContribution {
   defaultPort: number;
   titleKey: string;
   descriptionKey?: string;
+  /** Added to the host editor's connection origin help while the protocol is on. */
+  connectionOriginNoteKey?: string;
   icon: IconComponent;
   order?: number;
   /** Offer it in Quick Connect, optionally with a domain field. */

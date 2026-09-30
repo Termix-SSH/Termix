@@ -737,7 +737,18 @@ export function HostEditorGeneralTab({
             <HostOnly>
               <SettingRow
                 label={t("hosts.connectionOrigin")}
-                description={t("hosts.connectionOriginDesc")}
+                description={[
+                  t("hosts.connectionOriginDesc"),
+                  ...new Set(
+                    pluginProtocols
+                      .filter(
+                        (protocol) =>
+                          protocols[protocol.settingKey] &&
+                          protocol.connectionOriginNoteKey,
+                      )
+                      .map((protocol) => t(protocol.connectionOriginNoteKey!)),
+                  ),
+                ].join(" ")}
               >
                 <select
                   className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"

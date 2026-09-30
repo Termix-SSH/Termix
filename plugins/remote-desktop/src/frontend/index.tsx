@@ -328,6 +328,7 @@ function registerHostSurfaces(app: TermixApp): void {
       defaultPort: DEFAULT_PORT[protocol.id],
       titleKey: protocol.titleKey,
       descriptionKey: protocol.descriptionKey,
+      connectionOriginNoteKey: "hosts.connectionOriginGuacamoleNote",
       icon: protocol.icon,
       order: protocol.order,
       quickConnect: protocol.quickConnect,

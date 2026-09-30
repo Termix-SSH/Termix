@@ -18,6 +18,7 @@ export interface HostProtocolDef {
   defaultPort: number;
   titleKey: string;
   descriptionKey?: string;
+  connectionOriginNoteKey?: string;
   icon: Icon;
   order?: number;
   /** Offer it in Quick Connect, optionally with a domain field. */

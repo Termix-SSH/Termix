@@ -284,6 +284,9 @@ export function createPluginApp(
           descriptionKey: protocol.descriptionKey
             ? key(protocol.descriptionKey)
             : undefined,
+          connectionOriginNoteKey: protocol.connectionOriginNoteKey
+            ? key(protocol.connectionOriginNoteKey)
+            : undefined,
         }),
       );
     },
