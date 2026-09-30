@@ -27,7 +27,7 @@ import {
   removeFolderShortcut,
 } from "./api/file-manager-data-api";
 import { listSSHFiles } from "./api/ssh-file-operations-api";
-import type { DiskFilesystem } from "./disk-info";
+import { mountForPath, type DiskFilesystem } from "./disk-info";
 import { toast } from "sonner";
 import FolderTree from "./components/FolderTree";
 import {
@@ -702,11 +702,13 @@ export function FileManagerSidebar({
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   const storageFilesystems = diskInfo?.filesystems ?? [];
-  const activeStorageMount = selectedMount ?? diskInfo?.mount ?? null;
+  const pathFs = mountForPath(storageFilesystems, currentPath);
+  const activeStorageMount =
+    selectedMount ?? pathFs?.mount ?? diskInfo?.mount ?? null;
   const selectedFs =
     selectedMount !== null
       ? (storageFilesystems.find((fs) => fs.mount === selectedMount) ?? null)
-      : null;
+      : pathFs;
 
   const storage =
     selectedFs && selectedFs.percent !== null
