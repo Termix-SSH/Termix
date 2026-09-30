@@ -67,7 +67,8 @@
   },
   "msi": {
     "artifactName": "termix_windows_${arch}_msi.${ext}",
-    "oneClick": false
+    "oneClick": false,
+    "additionalLightArgs": ["-sice:ICE57"]
   },
   "linux": {
     "artifactName": "termix_linux_${arch}_portable.${ext}",

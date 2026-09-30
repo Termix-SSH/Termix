@@ -17,7 +17,7 @@ afterEach(async () => {
 const project = `<Wix><Product>
 <UIRef Id="WixUI_InstallDir"/>
 <UI><Publish Dialog="InstallScopeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
-<Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+<Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
 <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallScopeDlg">1</Publish></UI>
 <Feature><ComponentGroupRef Id="ProductComponents"/></Feature>
 <ComponentGroup><Component><File Id="mainExecutable">
@@ -57,6 +57,16 @@ describe("MSI desktop shortcut option", () => {
         (node) => node.getAttribute("Value") === "TermixShortcutDlg",
       ),
     ).toHaveLength(3);
+    const installDir = elements("Publish").find(
+      (node) =>
+        node.getAttribute("Dialog") === "InstallDirDlg" &&
+        node.getAttribute("Value") === "TermixShortcutDlg",
+    )!;
+    // Must run after WixUI_InstallDir's own VerifyReadyDlg event (Order 4).
+    expect(Number(installDir.getAttribute("Order"))).toBeGreaterThan(4);
+    expect(installDir.textContent).toBe(
+      'WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID="1"',
+    );
     expect(
       elements("Control")
         .find((node) => node.getAttribute("Type") === "CheckBox")!

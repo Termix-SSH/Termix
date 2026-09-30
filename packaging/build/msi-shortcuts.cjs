@@ -51,8 +51,14 @@ module.exports = async function msiShortcuts(projectFile) {
   </Product>`,
   );
   xml = xml.replace(
-    /(<Publish Dialog="(?:InstallScopeDlg|InstallDirDlg)" Control="Next" Event="NewDialog" Value=")VerifyReadyDlg/g,
+    /(<Publish Dialog="InstallScopeDlg" Control="Next" Event="NewDialog" Value=")VerifyReadyDlg/g,
     "$1TermixShortcutDlg",
+  );
+  // WixUI_InstallDir also goes to VerifyReadyDlg at Order 4 once the folder
+  // is valid, and the last true NewDialog wins, so route after it.
+  xml = xml.replace(
+    /<Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="\d+">1<\/Publish>/g,
+    '<Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="TermixShortcutDlg" Order="5">WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID="1"</Publish>',
   );
   xml = xml.replace(
     /(<Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value=")InstallScopeDlg/g,
