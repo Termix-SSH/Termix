@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Bookmark, ExternalLink } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
 import type { BookmarkListConfig, WidgetComponentProps } from "../types.js";
@@ -8,6 +9,7 @@ function BookmarkListWidget({
   widget,
   isReadOnly,
 }: WidgetComponentProps<BookmarkListConfig>) {
+  const { t } = useTranslation();
   const { links } = config;
 
   return (
@@ -23,7 +25,7 @@ function BookmarkListWidget({
       <div className="flex-1 overflow-auto p-3 gap-1 flex flex-col">
         {links.length === 0 && (
           <span className="text-xs text-muted-foreground italic">
-            No bookmarks
+            {t("homepage.noBookmarks")}
           </span>
         )}
         {links.map((link, i) =>

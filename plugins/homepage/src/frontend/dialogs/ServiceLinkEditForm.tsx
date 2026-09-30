@@ -39,7 +39,7 @@ export function ServiceLinkEditForm({
         <Input
           value={config.description ?? ""}
           onChange={(e) => onChange({ ...config, description: e.target.value })}
-          placeholder="My service"
+          placeholder={t("homepage.serviceNamePlaceholder")}
           className="h-8 text-sm"
         />
       </div>

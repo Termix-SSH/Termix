@@ -208,7 +208,8 @@
       "colorScheme": "Color Scheme",
       "backspaceKey": "Backspace Key",
       "colorDepth": "Color Depth",
-      "resizeMethod": "Resize Method"
+      "resizeMethod": "Resize Method",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Remote Desktop",
     "tabRdp": "RDP",

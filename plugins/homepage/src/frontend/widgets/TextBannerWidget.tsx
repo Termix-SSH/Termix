@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Type } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
 import type { TextBannerConfig, WidgetComponentProps } from "../types.js";
@@ -23,6 +24,7 @@ const TEXT_ALIGN_MAP = {
 };
 
 function TextBannerWidget({ config }: WidgetComponentProps<TextBannerConfig>) {
+  const { t } = useTranslation();
   const { text, fontSize, textAlign, fontWeight, backgroundColor } = config;
 
   return (
@@ -31,7 +33,7 @@ function TextBannerWidget({ config }: WidgetComponentProps<TextBannerConfig>) {
       style={backgroundColor ? { background: backgroundColor } : undefined}
     >
       <span className="whitespace-pre-wrap break-words w-full text-foreground leading-tight">
-        {text || "Banner text"}
+        {text || t("homepage.bannerTextPlaceholder")}
       </span>
     </div>
   );

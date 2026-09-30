@@ -94,7 +94,7 @@ export function AdminCreateUserDialog({
             <div className="relative">
               <Input
                 type={showNewPassword ? "text" : "password"}
-                placeholder="Enter password"
+                placeholder={t("placeholders.enterPassword")}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateUser()}

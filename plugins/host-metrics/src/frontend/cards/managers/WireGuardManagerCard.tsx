@@ -162,7 +162,7 @@ export function WireGuardManagerCard({ hostId }: { hostId: number | null }) {
               <div className="mb-1 ml-5 flex flex-col border-l border-border/50">
                 {iface.peers.length === 0 ? (
                   <span className="px-3 py-1 text-[10px] text-muted-foreground/50">
-                    No peers
+                    {t("hostMetrics.managers.wgNoPeers")}
                   </span>
                 ) : (
                   iface.peers.map((peer) => (

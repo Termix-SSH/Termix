@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
@@ -36,6 +37,7 @@ function PlaybackControls({
   onSeek: (position: number) => void;
   onSpeed: (speed: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 border-t border-border/60 bg-muted/20 px-3 py-2">
       <button
@@ -61,7 +63,7 @@ function PlaybackControls({
         value={Math.min(position, duration)}
         onChange={(event) => onSeek(Number(event.target.value))}
         className="min-w-0 flex-1 accent-primary"
-        aria-label="Recording timeline"
+        aria-label={t("player.timeline")}
       />
       <span className="w-10 text-right text-[10px] tabular-nums text-muted-foreground">
         {formatPosition(duration)}
@@ -70,7 +72,7 @@ function PlaybackControls({
         value={speed}
         onChange={(event) => onSpeed(Number(event.target.value))}
         className="h-7 border border-border bg-background px-1 text-[10px]"
-        aria-label="Playback speed"
+        aria-label={t("player.speed")}
       >
         {SPEEDS.map((value) => (
           <option key={value} value={value}>

@@ -85,7 +85,8 @@
     "imageChooseFile": "Choose an image file",
     "imageUploaded": "Image uploaded: {{path}}",
     "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard"
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell"
   },
   "terminalToolbar": {
     "detachTmux": "Detach tmux",

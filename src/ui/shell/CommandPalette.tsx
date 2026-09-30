@@ -570,7 +570,7 @@ export function CommandPalette({
                               <>
                                 <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
                                 <button
-                                  title="Edit Host"
+                                  title={t("hosts.editHost")}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setIsOpen(false);

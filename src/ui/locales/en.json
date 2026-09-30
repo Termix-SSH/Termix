@@ -185,7 +185,8 @@
     "required": "Required",
     "remove": "Remove",
     "add": "Add",
-    "update": "Update"
+    "update": "Update",
+    "noResults": "No results found"
   },
   "onboarding": {
     "stepCounter": "Step {{current}} of {{total}}",
@@ -301,7 +302,10 @@
     "reconnectTerminalsFailed_one": "Could not start reconnecting {{count}} terminal",
     "reconnectTerminalsFailed_other": "Could not start reconnecting {{count}} terminals",
     "fullscreenUnsupported": "Fullscreen is not supported by this browser",
-    "fullscreenFailed": "Could not toggle fullscreen"
+    "fullscreenFailed": "Could not toggle fullscreen",
+    "resetSidebarWidth": "Reset width",
+    "collapseSidebar": "Collapse sidebar",
+    "openSidebar": "Open sidebar"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -1048,7 +1052,8 @@
     "confirmResetDataWipe": "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets. Continue?",
     "password": "Password",
     "secondFactorUnavailable": "Your account uses a second factor that is not available right now. Contact an admin to reset it.",
-    "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin."
+    "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin.",
+    "serverAuthentication": "Server sign-in"
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",
@@ -1181,7 +1186,8 @@
     "editModeInstructions": "Drag cards to reorder · Drag the column divider to resize columns · Drag the bottom edge of a card to resize its height · Trash to remove",
     "empty": "Empty",
     "clear": "Clear",
-    "viewServerDetails": "View server details"
+    "viewServerDetails": "View server details",
+    "dragToResizeColumns": "Drag to resize columns"
   },
   "admin": {
     "sectionGeneral": "General",

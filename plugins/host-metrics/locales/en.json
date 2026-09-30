@@ -177,7 +177,8 @@
       "wgAllowedIPs": "Allowed IPs",
       "wgLastHandshake": "Last handshake",
       "wgHandshakeNever": "Never",
-      "wgTransfer": "Transfer"
+      "wgTransfer": "Transfer",
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {

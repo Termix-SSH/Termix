@@ -185,7 +185,7 @@ export function LocalTerminal({
       {isWindows && (
         <div className="flex justify-end border-b border-border px-2 py-1">
           <select
-            aria-label="Local terminal shell"
+            aria-label={t("terminal.localShell")}
             className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
             value={shell}
             onChange={(event) =>

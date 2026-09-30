@@ -379,7 +379,11 @@
     "dragFilesToDesktop": "Dragging {{count}} files to the desktop",
     "folderDragUnsupported": "Dragging folders to the desktop is not supported yet",
     "saveToDesktopFailed": "Save failed: {{error}}",
-    "dragFailedDetail": "Drag failed: {{error}}"
+    "dragFailedDetail": "Drag failed: {{error}}",
+    "videoUnsupported": "Your browser cannot play this video format.",
+    "downloadToPlay": "Download to play it elsewhere",
+    "cannotPreviewType": "Cannot preview this file type",
+    "cannotPreviewTypeHint": "This file type has no preview. Download it to open it in another app."
   },
   "sftpTransfer": {
     "title": "SFTP",

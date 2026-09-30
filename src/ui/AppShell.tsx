@@ -2874,7 +2874,7 @@ export function AppShell({
             variant="ghost"
             size="icon"
             className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
-            title="Reset width"
+            title={t("nav.resetSidebarWidth")}
             onClick={() => setSidebarWidth(291)}
           >
             <RotateCcw className="size-3.5" />
@@ -2913,7 +2913,7 @@ export function AppShell({
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-        title="Collapse sidebar"
+        title={t("nav.collapseSidebar")}
         onClick={() => {
           setSettingsFullscreen(false);
           setSidebarOpen(false);
@@ -3005,7 +3005,7 @@ export function AppShell({
             {!isMobile && !sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                title="Open Sidebar"
+                title={t("nav.openSidebar")}
                 className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-sidebar border-r border-border text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/5 transition-colors"
               >
                 <ChevronRight className="size-3.5" />

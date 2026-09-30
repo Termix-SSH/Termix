@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Globe } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
 import type { IframeConfig, WidgetComponentProps } from "../types.js";
@@ -9,13 +10,14 @@ function IframeWidget({
   config,
   isReadOnly,
 }: WidgetComponentProps<IframeConfig>) {
+  const { t } = useTranslation();
   const { url, scrolling } = config;
 
   if (!url) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full gap-2 text-muted-foreground/50">
         <Globe size={24} />
-        <span className="text-xs">Configure a URL in widget settings</span>
+        <span className="text-xs">{t("homepage.configureUrl")}</span>
       </div>
     );
   }
@@ -29,7 +31,7 @@ function IframeWidget({
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           scrolling={scrolling ? "yes" : "no"}
           className="w-full h-full border-0"
-          title="Embedded content"
+          title={t("homepage.embeddedContent")}
         />
         {/* Block interaction in read-only mode so the canvas can still pan */}
         {isReadOnly && <div className="absolute inset-0 pointer-events-none" />}

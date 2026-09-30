@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useRef, useState, useEffect } from "react";
 import { Grid3x3, ExternalLink } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
@@ -107,12 +108,13 @@ function ServiceGridWidget({
   config,
   isReadOnly,
 }: WidgetComponentProps<ServiceGridConfig>) {
+  const { t } = useTranslation();
   const { services, columns, showLabels, iconSize } = config;
 
   if (services.length === 0) {
     return (
       <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">
-        No services configured
+        {t("homepage.noServices")}
       </div>
     );
   }

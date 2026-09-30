@@ -790,10 +790,7 @@ export function FileViewer({
                       <source src={videoUrl} type={mimeType} />
                       <div className="text-center text-muted-foreground p-4">
                         <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                        <p>
-                          Your browser does not support video playback for this
-                          format.
-                        </p>
+                        <p>{t("fileManager.videoUnsupported")}</p>
                         {onDownload && (
                           <Button
                             variant="outline"
@@ -801,7 +798,7 @@ export function FileViewer({
                             className="mt-2 flex items-center gap-2 mx-auto"
                           >
                             <Download className="w-4 h-4" />
-                            Download to play externally
+                            {t("fileManager.downloadToPlay")}
                           </Button>
                         )}
                       </div>
@@ -918,11 +915,10 @@ export function FileViewer({
               <div className="text-center text-muted-foreground">
                 <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
                 <h3 className="text-lg font-medium mb-2">
-                  Cannot preview this file type
+                  {t("fileManager.cannotPreviewType")}
                 </h3>
                 <p className="text-sm mb-4">
-                  This file type is not supported for preview. You can download
-                  it to view in an external application.
+                  {t("fileManager.cannotPreviewTypeHint")}
                 </p>
                 {onDownload && (
                   <Button

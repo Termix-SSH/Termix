@@ -161,7 +161,15 @@
     "compactMode": "Compact Mode",
     "selectHosts": "Select Hosts",
     "listLayout": "List",
-    "gridLayout": "Grid"
+    "gridLayout": "Grid",
+    "configureUrl": "Set a URL in the widget settings",
+    "embeddedContent": "Embedded content",
+    "noBookmarks": "No bookmarks",
+    "noSections": "No sections set up",
+    "noServices": "No services set up",
+    "configureLocation": "Set a location in the widget settings",
+    "bannerTextPlaceholder": "Banner text",
+    "serviceNamePlaceholder": "My service"
   },
   "permissions": {
     "use": {

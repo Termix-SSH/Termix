@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useEffect, useState } from "react";
 import {
   Cloud,
@@ -54,6 +55,7 @@ function WeatherWidget({
   widget,
   config,
 }: WidgetComponentProps<WeatherConfig>) {
+  const { t } = useTranslation();
   const { location, unit, showForecast } = config;
   const [data, setData] = useState<WttrResponse | null>(null);
   const [error, setError] = useState(false);
@@ -90,7 +92,7 @@ function WeatherWidget({
   if (!location) {
     return (
       <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground/60 p-3 text-center">
-        Configure a location in widget settings
+        {t("homepage.configureLocation")}
       </div>
     );
   }

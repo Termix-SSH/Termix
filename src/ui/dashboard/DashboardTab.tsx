@@ -657,6 +657,7 @@ function CardItem({
   statusLoading?: boolean;
   isVisible?: boolean;
 }) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const onResizeMouseDown = useCallback(
@@ -760,7 +761,7 @@ function CardItem({
         <div
           onMouseDown={onResizeMouseDown}
           className="absolute bottom-0 left-0 right-0 h-2 z-20 flex items-center justify-center cursor-row-resize group/resize"
-          title="Drag to resize"
+          title={t("cardGrid.dragToResize")}
         >
           <div className="w-12 h-0.5 bg-border group-hover/resize:bg-accent-brand/60 transition-colors rounded-full" />
         </div>
@@ -979,11 +980,12 @@ function ColumnDivider({
 }: {
   onMouseDown: (e: React.MouseEvent) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       onMouseDown={onMouseDown}
       className="w-3 shrink-0 flex items-center justify-center cursor-col-resize group/divider self-stretch z-10"
-      title="Drag to resize columns"
+      title={t("dashboardTab.dragToResizeColumns")}
     >
       <div className="w-px h-full bg-border group-hover/divider:bg-accent-brand/50 transition-colors" />
       <div className="absolute size-4 flex items-center justify-center opacity-0 group-hover/divider:opacity-100 transition-opacity">

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import * as React from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 
@@ -95,6 +96,7 @@ function Select2({
   "aria-label": ariaLabel,
   ...props
 }: Select2Props) {
+  const { t } = useTranslation();
   const options = React.useMemo(() => getOptions(children), [children]);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -197,7 +199,7 @@ function Select2({
         >
           {filteredOptions.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              No results found
+              {t("common.noResults")}
             </div>
           ) : (
             filteredOptions.map((option, index) => {

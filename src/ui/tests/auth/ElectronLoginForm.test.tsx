@@ -17,7 +17,7 @@ describe("ElectronLoginForm", () => {
     );
 
     const permissions = screen
-      .getByTitle("Server Authentication")
+      .getByTitle("auth.serverAuthentication")
       .getAttribute("allow");
 
     expect(permissions).toContain("publickey-credentials-get");
@@ -38,7 +38,7 @@ describe("ElectronLoginForm", () => {
       />,
     );
     const frame = screen.getByTitle(
-      "Server Authentication",
+      "auth.serverAuthentication",
     ) as HTMLIFrameElement;
     window.dispatchEvent(
       new MessageEvent("message", {

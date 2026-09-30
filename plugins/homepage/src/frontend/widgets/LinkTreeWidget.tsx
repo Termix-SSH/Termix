@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useRef } from "react";
 import { List, ExternalLink } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
@@ -72,12 +73,13 @@ function LinkTreeWidget({
   config,
   isReadOnly,
 }: WidgetComponentProps<LinkTreeConfig>) {
+  const { t } = useTranslation();
   const { sections, compact } = config;
 
   if (sections.length === 0) {
     return (
       <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">
-        No sections configured
+        {t("homepage.noSections")}
       </div>
     );
   }
