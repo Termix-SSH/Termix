@@ -320,6 +320,17 @@ export function activate(app: TermixApp): void {
     },
   });
 
+  // A small share button on the tab itself, as in 2.8.
+  app.registerSlotContribution("tab.inline", {
+    actionId: SHARE_ACTION,
+    titleKey: "sessionSharing.shareButton",
+    icon: Share2,
+    kind: "button",
+    when: (context) =>
+      typeof (context.handle as { getShareTarget?: unknown } | null | undefined)
+        ?.getShareTarget === "function",
+  });
+
   app.registerSlotContribution("terminal.overlay", {
     actionId: "session-sharing.participants",
     titleKey: "collab.members",

@@ -66,6 +66,9 @@ describe("session-sharing activate", () => {
     expect(rendered.registered.slot("remote-desktop.toolbar")).toEqual([
       "session-sharing.share",
     ]);
+    expect(rendered.registered.slot("tab.inline")).toEqual([
+      "session-sharing.share",
+    ]);
     expect(rendered.registered.slot("shell.overlay")).toHaveLength(2);
     expect(rendered.registered.actions().sort()).toEqual([
       "session-sharing.share",

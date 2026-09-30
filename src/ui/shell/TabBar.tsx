@@ -489,6 +489,27 @@ export function TabBar({
                         <RefreshCw className="size-3" />
                       </button>
                     )}
+                    {/* Plugins add small buttons here, invoked with the tab's surface handle. */}
+                    <ActionSlot
+                      slotId="tab.inline"
+                      when={{ tab, handle: tab.terminalRef?.current }}
+                      context={() => [tab.terminalRef?.current, tab]}
+                      renderItem={(contribution, invoke) => (
+                        <button
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            invoke();
+                          }}
+                          title={t(contribution.titleKey)}
+                          className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+                        >
+                          {contribution.icon && (
+                            <contribution.icon className="size-3" />
+                          )}
+                        </button>
+                      )}
+                    />
                     <button
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
