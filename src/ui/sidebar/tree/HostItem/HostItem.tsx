@@ -389,8 +389,7 @@ export function HostItem({
   const depthStyle =
     depth > 0 ? ({ paddingLeft: rem(depth * 12) } as const) : undefined;
 
-  const trayButtonClass =
-    "flex items-center justify-center size-[22.75px] text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
+  const trayButtonClass = `flex items-center justify-center ${isCompact ? "size-[19px]" : "size-[22.75px]"} text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors`;
 
   const availableActions: TabType[] = pluginActions.flatMap((action) =>
     action.tabType ? [action.tabType] : [],
@@ -1167,6 +1166,22 @@ export function HostItem({
               </Tooltip>
             </TooltipProvider>
           )}
+          {isCompact &&
+            showTags &&
+            host.tags?.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                data-testid="host-inline-tag"
+                className="text-[9px] px-1 py-px bg-muted/60 text-muted-foreground/70 lowercase leading-none truncate max-w-[5rem] min-w-0"
+              >
+                {tag}
+              </span>
+            ))}
+          {isCompact && showTags && (host.tags?.length ?? 0) > 2 && (
+            <span className="text-[9px] text-muted-foreground/40 shrink-0 leading-none">
+              +{host.tags!.length - 2}
+            </span>
+          )}
           {isCompact && (
             <span
               className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto max-w-[50%] shrink-0"
@@ -1203,7 +1218,7 @@ export function HostItem({
         )}
 
         {/* Tag pills */}
-        {showTags && host.tags && host.tags.length > 0 && (
+        {showTags && !isCompact && host.tags && host.tags.length > 0 && (
           <div
             className={`flex items-center gap-1 min-w-0 overflow-hidden ${tokens.showTagsRow ? "" : "-mt-0.5"}`}
           >
@@ -1228,7 +1243,9 @@ export function HostItem({
           (alwaysShowTray ||
             actionsOnly ||
             (shouldUseClickTray && isTrayOpen)) && (
-            <div className="flex items-center flex-wrap gap-[3.5px]">
+            <div
+              className={`flex items-center flex-wrap ${isCompact ? "gap-[2px] pt-[3px]" : "gap-[3.5px]"}`}
+            >
               {connectionButtons}
             </div>
           )}

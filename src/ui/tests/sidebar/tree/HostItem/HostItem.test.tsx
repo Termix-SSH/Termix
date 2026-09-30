@@ -219,6 +219,13 @@ describe("HostItem density parity", () => {
     expect(screen.getByText("prod")).toBeTruthy();
   });
 
+  it("puts compact tags on the name row instead of their own line", () => {
+    renderHostItem("compact");
+    const tag = screen.getByText("prod");
+    expect(tag.dataset.testid).toBe("host-inline-tag");
+    expect(tag.closest("[data-drag-label]")).toBeTruthy();
+  });
+
   it("hides tags in both densities when showTags is false", () => {
     render(
       <HostItem
