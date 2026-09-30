@@ -102,7 +102,7 @@ function formatByteSize(bytes: number): string {
 function formatTruncatedDestination(hostLabel: string, path: string): string {
   const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "") || "/";
   if (normalized === "/") {
-    return `${hostLabel} — /`;
+    return `${hostLabel}: /`;
   }
 
   const segments = normalized.split("/").filter(Boolean);
@@ -111,7 +111,7 @@ function formatTruncatedDestination(hostLabel: string, path: string): string {
       ? `/${segments.join("/")}`
       : `.../${segments.slice(-2).join("/")}`;
 
-  return `${hostLabel} — ${pathPart}`;
+  return `${hostLabel}: ${pathPart}`;
 }
 
 function longestCommonPrefix(strings: string[]): string {

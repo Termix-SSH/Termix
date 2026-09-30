@@ -455,11 +455,11 @@ export function HostsPanel({
                     ? parsed.credentials
                     : undefined;
                 if (!Array.isArray(hostsArray) || hostsArray.length === 0) {
-                  toast.error("No hosts found in file");
+                  toast.error(t("hosts.importNoHosts"));
                   return;
                 }
                 if (hostsArray.length > 100) {
-                  toast.error("Cannot import more than 100 hosts at once");
+                  toast.error(t("hosts.importTooMany", { max: 100 }));
                   return;
                 }
                 const normalized = hostsArray.map(
@@ -477,16 +477,15 @@ export function HostsPanel({
                 const hosts = await getSSHHosts();
                 setRawHosts(hosts);
                 window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-                const msg = [
-                  result.success ? `${result.success} imported` : null,
-                  result.updated ? `${result.updated} updated` : null,
-                  result.failed ? `${result.failed} failed` : null,
-                ]
-                  .filter(Boolean)
-                  .join(", ");
-                toast.success(`Import complete: ${msg}`);
+                toast.success(
+                  t("hosts.importSummary", {
+                    imported: result.success ?? 0,
+                    updated: result.updated ?? 0,
+                    failed: result.failed ?? 0,
+                  }),
+                );
               } catch (err: unknown) {
-                toast.error(getErrorMessage(err, "Failed to import hosts"));
+                toast.error(getErrorMessage(err, t("hosts.importHostsFailed")));
               }
             }}
           />

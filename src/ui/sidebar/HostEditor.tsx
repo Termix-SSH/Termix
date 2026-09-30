@@ -983,7 +983,7 @@ export function HostEditor({
                               <div className="flex flex-col gap-1.5">
                                 {form.key === "existing_key" && (
                                   <div className="px-3 py-2 text-[10px] border border-accent-brand/30 bg-accent-brand/5 text-accent-brand">
-                                    {t("hosts.keySaved")} —{" "}
+                                    {t("hosts.keySaved")}.{" "}
                                     {t("hosts.keyReplaceNotice")}
                                   </div>
                                 )}

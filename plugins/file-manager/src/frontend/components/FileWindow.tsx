@@ -216,9 +216,12 @@ export function FileWindow({
         };
         const errorData = err?.response?.data;
         if (errorData?.tooLarge) {
-          toast.error(`File too large: ${errorData.error}`, {
-            duration: 10000,
-          });
+          toast.error(
+            t("fileManager.fileTooLarge", { error: errorData.error }),
+            {
+              duration: 10000,
+            },
+          );
         } else if (
           err.message?.includes("connection") ||
           err.message?.includes("established")

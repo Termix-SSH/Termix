@@ -110,8 +110,8 @@
     "hostNotFound": "Host not found",
     "loadingHost": "Loading host...",
     "none": "None",
-    "proxmoxGuestsSelected_one": "{{count}} guest — {{selected}} selected",
-    "proxmoxGuestsSelected_other": "{{count}} guests — {{selected}} selected",
+    "proxmoxGuestsSelected_one": "{{count}} guest, {{selected}} selected",
+    "proxmoxGuestsSelected_other": "{{count}} guests, {{selected}} selected",
     "proxmoxImportButton_one": "Import {{count}} host",
     "proxmoxImportButton_other": "Import {{count}} hosts"
   },

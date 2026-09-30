@@ -12,7 +12,7 @@ export class TransferStalledError extends Error {
   constructor(byteOffset?: number, segmentIndex?: number) {
     const pos = byteOffset !== undefined ? ` at byte offset ${byteOffset}` : "";
     const seg = segmentIndex !== undefined ? ` (segment ${segmentIndex})` : "";
-    super(`Transfer stalled — no data moved for 45 seconds${pos}${seg}`);
+    super(`Transfer stalled: no data moved for 45 seconds${pos}${seg}`);
     this.name = "TransferStalledError";
     this.byteOffset = byteOffset;
     this.segmentIndex = segmentIndex;

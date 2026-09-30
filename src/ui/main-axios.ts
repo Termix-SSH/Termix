@@ -6,6 +6,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { toast } from "sonner";
+import i18n from "i18next";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
@@ -534,7 +535,7 @@ function createApiInstance(
 
             if (typeof window !== "undefined") {
               console.warn("Session expired - please log in again");
-              toast.warning("Session expired. Please log in again.");
+              toast.warning(i18n.t("errors.sessionExpiredLogin"));
               window.dispatchEvent(new Event("termix:logout"));
             }
 

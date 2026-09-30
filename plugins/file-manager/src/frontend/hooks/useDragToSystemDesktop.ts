@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { downloadSSHFile } from "../api/ssh-file-operations-api";
 import type { FileItem, SSHHost } from "../host-types";
 
@@ -23,6 +24,7 @@ interface DragToSystemOptions {
 }
 
 export function useDragToSystemDesktop({ sshSessionId }: UseDragToSystemProps) {
+  const { t } = useTranslation();
   const [state, setState] = useState<DragToSystemState>({
     isDragging: false,
     isDownloading: false,
@@ -250,7 +252,9 @@ export function useDragToSystemDesktop({ sshSessionId }: UseDragToSystemProps) {
         }));
 
         if (enableToast) {
-          toast.error(`Save failed: ${errorMessage}`);
+          toast.error(
+            t("fileManager.saveToDesktopFailed", { error: errorMessage }),
+          );
         }
 
         onError?.(errorMessage);

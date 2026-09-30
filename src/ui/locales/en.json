@@ -299,7 +299,9 @@
     "reconnectingTerminals_other": "Reconnecting {{count}} terminals",
     "noDisconnectedTerminals": "No disconnected terminals are ready to reconnect",
     "reconnectTerminalsFailed_one": "Could not start reconnecting {{count}} terminal",
-    "reconnectTerminalsFailed_other": "Could not start reconnecting {{count}} terminals"
+    "reconnectTerminalsFailed_other": "Could not start reconnecting {{count}} terminals",
+    "fullscreenUnsupported": "Fullscreen is not supported by this browser",
+    "fullscreenFailed": "Could not toggle fullscreen"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -859,7 +861,11 @@
     "editorUpdate": "Update Host",
     "editorAdd": "Add Host",
     "speedSearch": "Search hosts. Arrow keys to select, Enter to connect, Esc to close",
-    "speedSearchList": "Host list. Type or press / to search."
+    "speedSearchList": "Host list. Type or press / to search.",
+    "importNoHosts": "No hosts found in the file",
+    "importTooMany": "You can import up to {{max}} hosts at once",
+    "importSummary": "Import done: {{imported}} imported, {{updated}} updated, {{failed}} failed",
+    "importHostsFailed": "Failed to import hosts"
   },
   "commandPalette": {
     "searchPlaceholder": "Search hosts, commands, or settings...",
@@ -1083,7 +1089,8 @@
     "resetCodeRateLimitedWithTime": "Rate limited: Too many verification attempts. Please wait {{time}} seconds before trying again.",
     "authTokenSaveFailed": "Failed to save authentication token",
     "authTokenMissing": "The server did not return a new authentication token. Please sign in again.",
-    "failedToLoadServer": "Failed to load server"
+    "failedToLoadServer": "Failed to load server",
+    "sessionExpiredLogin": "Session expired. Please log in again."
   },
   "messages": {
     "registrationDisabled": "New account registration is currently disabled by an admin. Please log in or contact an administrator.",
@@ -1434,7 +1441,7 @@
     "noSessionsForUser": "No active sessions",
     "deleteSuccessorLabel": "Hand over hosts and credentials to",
     "deleteSuccessorMe": "Me (the deleting admin)",
-    "deleteSuccessorNone": "Nobody — delete them",
+    "deleteSuccessorNone": "Nobody, delete them",
     "deleteSuccessorDesc": "Everything this user shared keeps working under the new owner; choosing nobody removes their hosts, credentials and shares.",
     "deleteUserDangerDesc": "Permanently delete {{username}} and all of their data (hosts, credentials, snippets, history). This cannot be undone.",
     "deleteUserConfirm": "Permanently delete {{username}} and all of their data?",

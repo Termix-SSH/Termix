@@ -393,7 +393,7 @@ export function CredentialEditorView({
                 />
                 {credForm.value === "existing_key" && (
                   <div className="px-3 py-2 text-[10px] border border-accent-brand/30 bg-accent-brand/5 text-accent-brand">
-                    {t("hosts.keySaved")} — {t("hosts.keyReplaceNotice")}
+                    {t("hosts.keySaved")}. {t("hosts.keyReplaceNotice")}
                   </div>
                 )}
                 <textarea

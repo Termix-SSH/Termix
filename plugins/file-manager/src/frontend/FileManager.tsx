@@ -1345,7 +1345,12 @@ function FileManagerContent({
         Math.round((p.bytesSent / p.totalBytes) * 100),
       );
       toast.loading(
-        `Uploading ${file.name} — ${percent}% (chunk ${p.chunkIndex + 1}/${p.totalChunks})`,
+        t("fileManager.uploadingChunk", {
+          name: file.name,
+          percent,
+          chunk: p.chunkIndex + 1,
+          total: p.totalChunks,
+        }),
         { id: progressToast, duration: Infinity, cancel },
       );
     };

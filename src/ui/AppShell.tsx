@@ -461,13 +461,13 @@ export function AppShell({
       }
 
       if (!document.fullscreenEnabled) {
-        toast.error("Fullscreen is not supported by this browser");
+        toast.error(t("nav.fullscreenUnsupported"));
         return;
       }
 
       await document.documentElement.requestFullscreen();
     } catch {
-      toast.error("Unable to toggle fullscreen mode");
+      toast.error(t("nav.fullscreenFailed"));
     }
   }, []);
 

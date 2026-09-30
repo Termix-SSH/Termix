@@ -3523,7 +3523,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       source: TerminalImageUploadSource,
     ) {
       if (file.type && !file.type.startsWith("image/")) {
-        toast.error("Choose an image file");
+        toast.error(t("terminal.imageChooseFile"));
         return;
       }
       setIsImageUploading(true);
@@ -3548,7 +3548,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               data: quoteTerminalImagePath(shellPath),
             }),
           );
-          toast.success(`Image uploaded: ${shellPath}`);
+          toast.success(t("terminal.imageUploaded", { path: shellPath }));
         } else {
           toast.warning(
             `Image uploaded, but the terminal was not available to paste it: ${shellPath}`,
@@ -3567,7 +3567,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     async function handleClipboardImage() {
       if (!navigator.clipboard?.read) {
-        toast.error("Clipboard image access is not available in this browser");
+        toast.error(t("terminal.imageClipboardUnavailable"));
         return;
       }
       setIsImageUploading(true);
@@ -3619,7 +3619,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           await handleImageUpload(clipboardFile, "clipboard");
           return;
         }
-        toast.error("No image found in the clipboard");
+        toast.error(t("terminal.imageClipboardEmpty"));
       } catch (error) {
         toast.error(getErrorMessage(error, "Clipboard read failed"));
       } finally {

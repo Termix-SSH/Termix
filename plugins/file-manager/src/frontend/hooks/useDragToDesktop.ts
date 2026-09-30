@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { downloadSSHFile } from "../api/ssh-file-operations-api";
 import type { FileItem, SSHHost } from "../host-types";
 
@@ -22,6 +23,7 @@ interface DragToDesktopOptions {
 }
 
 export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
+  const { t } = useTranslation();
   const [state, setState] = useState<DragToDesktopState>({
     isDragging: false,
     isDownloading: false,
@@ -98,7 +100,7 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
         setState((prev) => ({ ...prev, progress: 100 }));
 
         if (enableToast) {
-          toast.success(`Dragging ${file.name} to desktop`);
+          toast.success(t("fileManager.dragToDesktop", { name: file.name }));
         }
 
         onSuccess?.();
@@ -128,7 +130,9 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
         }));
 
         if (enableToast) {
-          toast.error(`Drag failed: ${errorMessage}`);
+          toast.error(
+            t("fileManager.dragFailedDetail", { error: errorMessage }),
+          );
         }
 
         onError?.(errorMessage);
@@ -209,7 +213,9 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
         setState((prev) => ({ ...prev, progress: 100 }));
 
         if (enableToast) {
-          toast.success(`Dragging ${fileList.length} files to desktop`);
+          toast.success(
+            t("fileManager.dragFilesToDesktop", { count: fileList.length }),
+          );
         }
 
         onSuccess?.();
@@ -238,7 +244,9 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
         }));
 
         if (enableToast) {
-          toast.error(`Batch drag failed: ${errorMessage}`);
+          toast.error(
+            t("fileManager.dragFailedDetail", { error: errorMessage }),
+          );
         }
 
         onError?.(errorMessage);
@@ -268,7 +276,7 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
       }
 
       if (enableToast) {
-        toast.info("Folder drag functionality is under development...");
+        toast.info(t("fileManager.folderDragUnsupported"));
       }
 
       return false;
