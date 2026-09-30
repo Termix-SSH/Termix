@@ -93,11 +93,16 @@ export function describePluginFrontend(
   const entry = frontendEntry(plugin);
   if (!entry || !fileExists(entry.file)) return { ...none, locales };
 
-  const assetVersion = contentVersion(entry.file, plugin.manifest.version);
+  const cssFile = path.join(entry.dir, "frontend.css");
+  const css = fileExists(cssFile);
+  const assetVersion = contentVersion(
+    css ? [entry.file, cssFile] : [entry.file],
+    plugin.manifest.version,
+  );
 
   return {
     frontend: true,
-    css: fileExists(path.join(entry.dir, "frontend.css")),
+    css,
     assetVersion,
     locales: locales.sort(),
   };
@@ -108,21 +113,25 @@ const versionCache = new Map<string, { stamp: string; version: string }>();
 /**
  * A hash of the bundle's bytes, not its mtime: assets are cached as immutable
  * for a year, and a rebuilt .tmxplug has a fixed mtime, so a same-size rebuild
- * would otherwise keep serving the stale copy.
+ * would otherwise keep serving the stale copy. The CSS is hashed with the JS
+ * because both are served under the same version.
  */
-function contentVersion(file: string, version: string): string {
-  const stat = fs.statSync(file);
+function contentVersion(files: string[], version: string): string {
   // ctime, unlike mtime, cannot be set by tar, so an unpack always changes it.
-  const stamp = `${version}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
-  const cached = versionCache.get(file);
+  const stamp = [
+    version,
+    ...files.map((file) => {
+      const stat = fs.statSync(file);
+      return `${file}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+    }),
+  ].join("|");
+  const key = files.join("|");
+  const cached = versionCache.get(key);
   if (cached?.stamp === stamp) return cached.version;
-  const hashed = crypto
-    .createHash("sha256")
-    .update(version)
-    .update(fs.readFileSync(file))
-    .digest("hex")
-    .slice(0, 12);
-  versionCache.set(file, { stamp, version: hashed });
+  const hash = crypto.createHash("sha256").update(version);
+  for (const file of files) hash.update(fs.readFileSync(file));
+  const hashed = hash.digest("hex").slice(0, 12);
+  versionCache.set(key, { stamp, version: hashed });
   return hashed;
 }
 
