@@ -412,7 +412,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isAttachingSessionRef.current = false;
 
       return () => {};
-    }, [hostConfig.id]);
+    }, [hostConfig.id, hostConfig.instanceId]);
     const connectionAttemptIdRef = useRef(0);
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -910,6 +910,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }
 
+    const sharedSizeRef = useRef<{ cols: number; rows: number } | null>(null);
+
+    function applySharedSize(msg: { cols?: unknown; rows?: unknown }) {
+      if (!hostConfig.joinShareId || !terminal) return;
+      const { cols, rows } = msg;
+      if (
+        typeof cols !== "number" ||
+        typeof rows !== "number" ||
+        !Number.isInteger(cols) ||
+        !Number.isInteger(rows) ||
+        cols < 1 ||
+        rows < 1
+      )
+        return;
+      sharedSizeRef.current = { cols, rows };
+      terminal.resize(cols, rows);
+    }
+
+    function fitTerminal() {
+      const size = sharedSizeRef.current;
+      if (hostConfig.joinShareId && size) {
+        terminal?.resize(size.cols, size.rows);
+      } else {
+        fitAddonRef.current?.fit();
+      }
+    }
+
     function performFit() {
       if (
         !fitAddonRef.current ||
@@ -923,7 +950,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isFittingRef.current = true;
 
       try {
-        fitAddonRef.current.fit();
+        fitTerminal();
         if (terminal && terminal.cols > 0 && terminal.rows > 0) {
           const lastSize = lastFittedSizeRef.current;
           if (
@@ -1180,6 +1207,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function scheduleNotify(cols: number, rows: number) {
+      if (hostConfig.joinShareId) return;
       if (!(cols > 0 && rows > 0)) return;
       pendingSizeRef.current = { cols, rows };
       if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
@@ -1405,7 +1433,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (!fitAddonRef.current || !terminal || isFittingRef.current) return;
           isFittingRef.current = true;
           try {
-            fitAddonRef.current.fit();
+            fitTerminal();
             if (terminal.cols > 0 && terminal.rows > 0) {
               const lastSize = lastFittedSizeRef.current;
               if (
@@ -1854,7 +1882,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             pongReceivedRef.current = true;
             return;
           }
-          if (msg.type === "data") {
+          if (msg.type === "resized") {
+            applySharedSize(msg);
+          } else if (msg.type === "data") {
             if (typeof msg.data === "string") {
               outputListenersRef.current.forEach((listener) =>
                 listener(msg.data),
@@ -2689,7 +2719,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
       document.fonts.ready.then(() => {
         terminal.refresh(0, terminal.rows - 1);
-        fitAddon.fit();
+        fitTerminal();
       });
 
       terminal.attachCustomWheelEventHandler((ev) => {
@@ -2714,12 +2744,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return true;
       });
 
-      fitAddonRef.current?.fit();
+      fitTerminal();
       // Double-rAF ensures layout is fully settled (fonts, flexbox, etc.) before
       // committing the fitted size, preventing the "terminal too short" glitch.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          fitTerminal();
           setIsFitted(true);
         });
       });
@@ -2901,40 +2931,34 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       isMountedRef.current = true;
 
-      const currentHostId = hostConfig.id;
       return () => {
         if (!isMountedRef.current) {
           return;
         }
 
-        if (
-          currentHostIdRef.current !== currentHostId &&
-          currentHostIdRef.current !== null
-        ) {
-          isUnmountingRef.current = true;
-          shouldNotReconnectRef.current = true;
-          isReconnectingRef.current = false;
-          setIsConnecting(false);
-          if (reconnectTimeoutRef.current)
-            clearTimeout(reconnectTimeoutRef.current);
-          if (connectionTimeoutRef.current)
-            clearTimeout(connectionTimeoutRef.current);
-          if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
-          if (pingIntervalRef.current) {
-            clearInterval(pingIntervalRef.current);
-            pingIntervalRef.current = null;
-          }
-          if (pongTimeoutRef.current) {
-            clearTimeout(pongTimeoutRef.current);
-            pongTimeoutRef.current = null;
-          }
-
-          if (webSocketRef.current) {
-            webSocketRef.current.close();
-          }
-
-          isMountedRef.current = false;
+        isUnmountingRef.current = true;
+        shouldNotReconnectRef.current = true;
+        isReconnectingRef.current = false;
+        setIsConnecting(false);
+        if (reconnectTimeoutRef.current)
+          clearTimeout(reconnectTimeoutRef.current);
+        if (connectionTimeoutRef.current)
+          clearTimeout(connectionTimeoutRef.current);
+        if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
         }
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
+        }
+
+        if (webSocketRef.current) {
+          webSocketRef.current.close();
+        }
+
+        isMountedRef.current = false;
       };
     }, [hostConfig.id, hostConfig.instanceId]);
 
@@ -3404,10 +3428,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       setIsConnecting(true);
-      fitAddonRef.current?.fit();
+      fitTerminal();
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
+          fitTerminal();
           if (terminal.cols > 0 && terminal.rows > 0) {
             scheduleNotify(terminal.cols, terminal.rows);
             connectToHost(terminal.cols, terminal.rows);

@@ -5,6 +5,7 @@ import type {
   SSHAuthType,
 } from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
+import type { DefaultOverrides } from "./host-defaults.js";
 import type { QuickConnectLogin } from "@termix/plugin-sdk/frontend";
 
 export type Host = {
@@ -89,6 +90,8 @@ export type Host = {
 
   /** Host-scope plugin settings, keyed by plugin id. Secrets are redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Host default keys this host sets itself, per namespace. */
+  defaultOverrides?: DefaultOverrides | null;
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;

@@ -19,6 +19,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings2,
   SlidersHorizontal,
   Upload,
   X,
@@ -926,6 +927,18 @@ export function HostsPanel({
                     {selectionMode
                       ? t("hosts.exitSelectionTitle")
                       : t("hosts.selectHosts")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent("host-manager:edit-defaults", {
+                          detail: { level: "user" },
+                        }),
+                      )
+                    }
+                  >
+                    <Settings2 className="size-3.5 mr-2" />
+                    {t("hostDefaults.menuMyDefaults")}
                   </DropdownMenuItem>
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger className="flex items-center gap-2">

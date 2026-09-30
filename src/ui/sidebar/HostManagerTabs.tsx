@@ -32,6 +32,8 @@ export interface HostEditorSectionRenderProps {
   credentials?: unknown[];
   adminTargetUserId?: string;
   protocols: Record<string, boolean>;
+  /** "defaults" in the host defaults editor. */
+  mode?: "host" | "defaults";
 }
 
 /**
@@ -50,6 +52,8 @@ export interface HostEditorSectionDef {
   order?: number;
   /** Whether to offer the tab for these protocols. Defaults to always. */
   visible?: (protocols: Record<string, boolean>) => boolean;
+  /** Also offered in the host defaults editor; "only" for nowhere else. */
+  defaults?: boolean | "only";
   component: ComponentType<HostEditorSectionRenderProps>;
 }
 
@@ -86,13 +90,15 @@ function mergeByOrder(
   group: "top" | "ssh",
   t: (key: string) => string,
   protocols: Record<string, boolean> | undefined,
+  defaultsMode = false,
 ): HostTab[] {
   const registered = sections
     .list()
     .filter(
       (section) =>
         section.group === group &&
-        (!protocols || sectionVisible(section, protocols)),
+        (defaultsMode ? !!section.defaults : section.defaults !== "only") &&
+        (defaultsMode || !protocols || sectionVisible(section, protocols)),
     )
     .map((section) => {
       const Icon = section.icon;
@@ -115,6 +121,7 @@ function mergeByOrder(
 export function makeHostTabs(
   t: (key: string) => string,
   protocols?: Record<string, boolean>,
+  defaultsMode = false,
 ): HostTab[] {
   return mergeByOrder(
     [
@@ -134,12 +141,14 @@ export function makeHostTabs(
     "top",
     t,
     protocols,
+    defaultsMode,
   );
 }
 
 export function makeHostSshSubTabs(
   t: (key: string) => string,
   protocols?: Record<string, boolean>,
+  defaultsMode = false,
 ): HostTab[] {
   return mergeByOrder(
     [
@@ -153,6 +162,7 @@ export function makeHostSshSubTabs(
     "ssh",
     t,
     protocols,
+    defaultsMode,
   );
 }
 

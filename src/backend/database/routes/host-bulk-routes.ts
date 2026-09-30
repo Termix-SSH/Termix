@@ -4,6 +4,16 @@ import {
 } from "./host-import-order.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
 import {
+  applyDefaultsAfterHostWrite,
+  applyHostDefaultsToWrite,
+} from "../../hosts/defaults/index.js";
+import {
+  changeHostOverrides,
+  type OverrideChange,
+} from "../../hosts/defaults/overrides.js";
+import { recompute } from "../../hosts/defaults/recompute.js";
+import { splitDefaultKey } from "../../../types/host-defaults.js";
+import {
   keepUsableProtocolCredentials,
   readProtocolAuthPayload,
   writeProtocolAuth,
@@ -16,6 +26,7 @@ import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
+  createCurrentHostDefaultsRepository,
 } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import {
@@ -203,6 +214,20 @@ export function registerHostBulkRoutes(
    *                     description: Plugin id to on or off, for each plugin that declares a host enable switch.
    *                     additionalProperties:
    *                       type: boolean
+   *                   resetDefaults:
+   *                     type: object
+   *                     description: Hands keys back to the host defaults. `all`, or `namespaces` ("core" or a plugin id), or `keys` as "namespace.key".
+   *                     properties:
+   *                       all:
+   *                         type: boolean
+   *                       namespaces:
+   *                         type: array
+   *                         items:
+   *                           type: string
+   *                       keys:
+   *                         type: array
+   *                         items:
+   *                           type: string
    *     responses:
    *       200:
    *         description: Bulk update completed.
@@ -309,6 +334,14 @@ export function registerHostBulkRoutes(
             simpleUpdates,
           );
         }
+        if (typeof updates.statusCheckEnabled === "boolean") {
+          await changeHostOverrides(ownedIds, {
+            own: [["core", "statusCheckEnabled"]],
+          });
+        }
+        if ("folder" in simpleUpdates || "parentHostId" in simpleUpdates) {
+          void recompute({ userIds: [userId] }).catch(() => {});
+        }
 
         // Each plugin's own host switch, by plugin id: the field its manifest
         // names in contributes.settings.host.enableKey.
@@ -322,6 +355,9 @@ export function registerHostBulkRoutes(
             }
           }
         }
+
+        const reset = readDefaultsReset(updates.resetDefaults);
+        if (reset) await changeHostOverrides(ownedIds, reset);
 
         return res.json({
           updated: ownedIds.length,
@@ -727,6 +763,12 @@ export function registerHostBulkRoutes(
 
           const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
           const existing = existingHostMap?.get(lookupKey);
+          await withHostDefaults(
+            userId,
+            existing?.id ?? null,
+            sshDataObj,
+            hostData as Record<string, unknown>,
+          );
 
           let savedHostId: number;
           if (existing) {
@@ -770,6 +812,7 @@ export function registerHostBulkRoutes(
             savedHostId,
             hostData as Record<string, unknown>,
           );
+          await applyDefaultsAfterHostWrite(savedHostId);
         } catch (error) {
           results.failed++;
           results.errors.push(`Host ${i + 1}: ${getErrorMessage(error)}`);
@@ -947,6 +990,12 @@ export function registerHostBulkRoutes(
 
           const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
           const existing = existingHostMap?.get(lookupKey);
+          await withHostDefaults(
+            userId,
+            existing?.id ?? null,
+            sshDataObj,
+            hostData as unknown as Record<string, unknown>,
+          );
 
           if (existing) {
             await hostRepository.updateEncryptedForUser(
@@ -954,10 +1003,15 @@ export function registerHostBulkRoutes(
               existing.id,
               sshDataObj,
             );
+            await applyDefaultsAfterHostWrite(existing.id);
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await hostRepository.createEncryptedForUser(userId, sshDataObj);
+            const saved = await hostRepository.createEncryptedForUser(
+              userId,
+              sshDataObj,
+            );
+            await applyDefaultsAfterHostWrite(saved.id);
             results.success++;
           }
         } catch (error) {
@@ -1021,4 +1075,50 @@ function listKnownAuthTypes(): Set<string> {
     ...listSshAuthProviders().map((provider) => provider.type),
     ...listSshAuthTypeOwners().map((owner) => owner.type),
   ]);
+}
+
+/** Fills an imported host's inherited keys and records what it sets itself. */
+async function withHostDefaults(
+  userId: string,
+  hostId: number | null,
+  columns: Record<string, unknown>,
+  body: Record<string, unknown>,
+): Promise<void> {
+  const stored =
+    hostId === null
+      ? null
+      : ((
+          await createCurrentHostDefaultsRepository().listHosts({
+            hostIds: [hostId],
+          })
+        )[0] ?? null);
+  columns.defaultOverrides = JSON.stringify(
+    await applyHostDefaultsToWrite({
+      ownerId: userId,
+      hostId,
+      columns,
+      body,
+      stored,
+    }),
+  );
+}
+
+/** A resetDefaults body as an override change, or null when there is none. */
+export function readDefaultsReset(raw: unknown): OverrideChange | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const source = raw as Record<string, unknown>;
+  const strings = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string")
+      : [];
+  const change: OverrideChange = {
+    inheritAll: source.all === true,
+    inheritNamespaces: strings(source.namespaces),
+    inherit: strings(source.keys).map(splitDefaultKey),
+  };
+  return change.inheritAll ||
+    change.inheritNamespaces!.length > 0 ||
+    change.inherit!.length > 0
+    ? change
+    : null;
 }

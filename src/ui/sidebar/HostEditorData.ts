@@ -6,7 +6,7 @@ import {
   type HostProtocolAuthForm,
   type HostProtocolAuthSummary,
 } from "@termix/plugin-sdk/frontend";
-import type { HostDefaults } from "@/api/settings-api";
+import type { DefaultOverrides } from "@/types/host-defaults";
 import {
   listHostProtocols,
   protocolPort,
@@ -109,11 +109,7 @@ export function protocolAuthPayload(
   return payload;
 }
 
-export function createHostEditorForm(
-  host: Host | null,
-  defaults?: HostDefaults,
-) {
-  const d = host ? undefined : defaults;
+export function createHostEditorForm(host: Host | null) {
   const sshOptions = host?.sshOptions ?? {};
 
   return {
@@ -130,12 +126,7 @@ export function createHostEditorForm(
       : (host?.keyPassword ?? ""),
     keyType: host?.keyType ?? "auto",
     keySubTab: "paste" as "paste" | "upload",
-    credentialId:
-      host?.credentialId != null
-        ? String(host.credentialId)
-        : d?.credentialId != null
-          ? String(d.credentialId)
-          : "",
+    credentialId: host?.credentialId != null ? String(host.credentialId) : "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
     parentHostId: host?.parentHostId ?? "",
@@ -143,11 +134,11 @@ export function createHostEditorForm(
     tagInput: "",
     notes: host?.notes ?? "",
     pin: host?.pin ?? false,
-    useSocks5: host?.useSocks5 ?? d?.useSocks5 ?? false,
-    socks5Host: host?.socks5Host ?? d?.socks5Host ?? "",
-    socks5Port: host?.socks5Port ?? d?.socks5Port ?? 1080,
-    socks5Username: host?.socks5Username ?? d?.socks5Username ?? "",
-    socks5Password: host?.socks5Password ?? d?.socks5Password ?? "",
+    useSocks5: host?.useSocks5 ?? false,
+    socks5Host: host?.socks5Host ?? "",
+    socks5Port: host?.socks5Port ?? 1080,
+    socks5Username: host?.socks5Username ?? "",
+    socks5Password: host?.socks5Password ?? "",
     socks5ProxyMode: ((host?.socks5ProxyChain ?? []).length > 0
       ? "chain"
       : "single") as "single" | "chain",
@@ -174,8 +165,7 @@ export function createHostEditorForm(
       ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
     // Each plugin protocol's login, edited by that plugin's host editor tab.
     protocolAuth: protocolAuthForm(host?.protocolAuth),
-    statusCheckEnabled:
-      host?.statusCheckEnabled ?? d?.statusCheckEnabled ?? true,
+    statusCheckEnabled: host?.statusCheckEnabled ?? true,
     statusCheckInterval: (host?.statusCheckInterval ?? null) as number | null,
 
     // Host-scope plugin settings, keyed by plugin id. Loaded with the host and
@@ -184,6 +174,12 @@ export function createHostEditorForm(
       string,
       Record<string, unknown>
     >,
+
+    // Host default keys the host sets itself; the rest follow its defaults.
+    // Null until known, for a host saved before host defaults.
+    defaultOverrides: (host
+      ? (host.defaultOverrides ?? null)
+      : {}) as DefaultOverrides | null,
   };
 }
 
@@ -290,6 +286,9 @@ export function buildHostEditorPayload(
     portKnockSequence: form.portKnockSequence,
     statusCheckEnabled: form.statusCheckEnabled,
     statusCheckInterval: form.statusCheckInterval,
+    ...(form.defaultOverrides
+      ? { defaultOverrides: form.defaultOverrides }
+      : {}),
     // Left out with SSH off, so the stored values stay as they are.
     ...(protocols.enableSsh
       ? {

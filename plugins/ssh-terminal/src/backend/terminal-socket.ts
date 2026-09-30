@@ -568,8 +568,11 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                     attachRows,
                     attachCols,
                   );
-                  session.cols = attachCols;
-                  session.rows = attachRows;
+                  sessionManager.resizeSession(
+                    session.id,
+                    attachCols,
+                    attachRows,
+                  );
                 }
 
                 ws.send(
@@ -2871,11 +2874,8 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         resizeStream.setWindow(rows, cols, rows, cols);
         const session = sessionManager.getSession(currentSessionId);
         if (session) {
-          session.cols = cols;
-          session.rows = rows;
-          sessionManager.bufferResize(session.id, cols, rows);
+          sessionManager.resizeSession(session.id, cols, rows);
         }
-        ws.send(JSON.stringify({ type: "resized", cols, rows }));
       }
     }
 

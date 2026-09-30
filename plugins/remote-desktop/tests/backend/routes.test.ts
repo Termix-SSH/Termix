@@ -149,14 +149,15 @@ describe("POST /connect-host/:hostId", () => {
     });
   });
 
-  it("puts the user's RDP defaults under the host's own values", async () => {
+  it("puts the host's display settings under its own guacd settings", async () => {
     server = await start({ protocolTargets: { "7:rdp": target() } });
     await server.mock.ctx.settings.setHost(7, "enableRdp", true);
     await server.mock.ctx.settings.setHost(7, "guacamoleConfig", {
       "color-depth": 32,
     });
-    await server.mock.ctx.settings.setUser("user-1", "colorDepth", "16");
-    await server.mock.ctx.settings.setUser("user-1", "disableCopy", "on");
+    // What the host follows from its defaults.
+    await server.mock.ctx.settings.setHost(7, "colorDepth", "16");
+    await server.mock.ctx.settings.setHost(7, "disableCopy", "on");
 
     const response = await server.request("POST", "/connect-host/7", {
       protocol: "rdp",

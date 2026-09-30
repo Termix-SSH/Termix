@@ -177,7 +177,7 @@ export function hostPayloadLegacy(
   return Object.keys(out).length > 0 ? out : null;
 }
 
-/** User setting key to the guacd parameter it sets. */
+/** Display field key to the guacd parameter it sets. */
 const USER_DEFAULT_PARAMS: Record<string, string> = {
   colorDepth: "color-depth",
   resizeMethod: "resize-method",
@@ -193,8 +193,8 @@ const USER_DEFAULT_PARAMS: Record<string, string> = {
 };
 
 /**
- * The user's RDP defaults as guacd parameters. "inherit" leaves a parameter
- * to the host and guacd; on and off become booleans.
+ * Display settings as guacd parameters. "inherit" leaves a parameter to the
+ * host and guacd; on and off become booleans.
  */
 export function userDefaultParams(
   values: Record<string, unknown>,
@@ -215,9 +215,22 @@ export function userDefaultParams(
   return params;
 }
 
-export async function readUserDefaults(
+/**
+ * The display settings a session runs with, as guacd parameters: the host's
+ * as this user sees them (their own defaults while the host follows its
+ * defaults), or with no host, this user's defaults.
+ */
+export async function readDisplayDefaults(
   ctx: PluginContext,
   userId: string,
+  hostId?: number,
 ): Promise<Record<string, unknown>> {
-  return userDefaultParams(await ctx.settings.getAll("user", userId));
+  const values: Record<string, unknown> = {};
+  for (const key of Object.keys(USER_DEFAULT_PARAMS)) {
+    values[key] =
+      hostId === undefined
+        ? await ctx.settings.getHostDefault(userId, key)
+        : await ctx.settings.getHostFor(hostId, userId, key);
+  }
+  return userDefaultParams(values);
 }

@@ -63,6 +63,36 @@ describe(`${manifest.id} activate`, () => {
     );
   });
 
+  it("duplicates only the SSH connection configuration into a fresh tab", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    const host = { id: 7, name: "server", ip: "192.0.2.1", port: 22 };
+    expect(rendered.registered.slot("tab.menu")).toContain(
+      "terminal.duplicateTab",
+    );
+    await rendered.app.invokeAction("terminal.duplicateTab", undefined, {
+      id: "old-tab",
+      type: "terminal",
+      host,
+      instanceId: "old-instance",
+      data: { initialPath: "/tmp", joinSharedSessionId: "shared-session" },
+    });
+    expect(rendered.shellCalls).toEqual([
+      {
+        method: "openTab",
+        args: [
+          { ...host, pluginSettings: {} },
+          "terminal",
+          { forceNewTab: true },
+        ],
+      },
+    ]);
+    await rendered.app.invokeAction("terminal.duplicateTab", undefined, {
+      id: "local",
+      type: "local-terminal",
+    });
+    expect(rendered.shellCalls).toHaveLength(1);
+  });
+
   it("owns the host editor's Terminal tab in the SSH group", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.hostEditorSections()).toEqual(["terminal"]);
@@ -116,11 +146,11 @@ describe(`${manifest.id} activate`, () => {
   it("registers its settings components", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.settingsComponents()).toEqual(
-      expect.arrayContaining([
-        "terminalDefaults",
-        "newHostTheme",
-        "newHostFontFamily",
-      ]),
+      expect.arrayContaining(["touchInput", "imageStorageTest"]),
+    );
+    // Terminal defaults are host defaults now, set in the host editor.
+    expect(rendered.registered.settingsComponents()).not.toContain(
+      "terminalDefaults",
     );
   });
 

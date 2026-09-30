@@ -418,14 +418,62 @@ describe("host field options", () => {
     ).toEqual([]);
   });
 
-  it("rejects a defaultFrom that names a secret or unknown admin field", () => {
-    for (const defaultFrom of ["token", "missing"]) {
-      expect(
-        validateManifest(
-          host([{ key: "mode", type: "boolean", labelKey: "k", defaultFrom }]),
-        ).join(),
-      ).toMatch(/defaultFrom/);
-    }
+  it("still accepts an old defaultFrom, but only as a string", () => {
+    expect(
+      validateManifest(
+        host([
+          {
+            key: "mode",
+            type: "boolean",
+            labelKey: "k",
+            defaultFrom: "missing",
+          },
+        ]),
+      ),
+    ).toEqual([]);
+    expect(
+      validateManifest(
+        host([{ key: "mode", type: "boolean", labelKey: "k", defaultFrom: 1 }]),
+      ).join(),
+    ).toMatch(/defaultFrom/);
+  });
+
+  it("accepts defaultable, defaultLevels and personal on host fields", () => {
+    expect(
+      validateManifest(
+        host([
+          {
+            key: "mode",
+            type: "boolean",
+            labelKey: "k",
+            defaultable: false,
+            defaultLevels: ["user", "folder"],
+            personal: true,
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects bad default options and a defaultable secret", () => {
+    const errors = (field: Record<string, unknown>) =>
+      validateManifest(
+        host([{ key: "mode", type: "boolean", labelKey: "k", ...field }]),
+      ).join();
+    expect(errors({ defaultable: "yes" })).toMatch(/defaultable/);
+    expect(errors({ personal: 1 })).toMatch(/personal/);
+    expect(errors({ defaultLevels: [] })).toMatch(/defaultLevels/);
+    expect(errors({ defaultLevels: ["host"] })).toMatch(/defaultLevels/);
+    expect(errors({ type: "secret", defaultable: true })).toMatch(
+      /cannot be defaultable/,
+    );
+    expect(
+      validateManifest(
+        withSettings({
+          user: [{ key: "a", type: "boolean", labelKey: "k", personal: true }],
+        }),
+      ).join(),
+    ).toMatch(/only valid on host fields/);
   });
 
   it("rejects an unknown shareRead level and host options on admin fields", () => {

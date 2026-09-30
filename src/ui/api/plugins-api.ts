@@ -33,7 +33,10 @@ export interface PluginSettingsField {
   group?: string;
   component?: string;
   hidden?: boolean;
-  defaultFrom?: string;
+  defaultable?: boolean;
+  defaultLevels?: Array<"admin" | "user" | "folder">;
+  personal?: boolean;
+  secretKeys?: string[];
   shareRead?: "connect" | "view" | "edit" | "manage";
   ownerOnly?: boolean;
 }

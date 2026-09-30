@@ -62,7 +62,8 @@
             "type": "number",
             "labelKey": "settings.host.profileId.label",
             "hidden": true,
-            "ownerOnly": true
+            "ownerOnly": true,
+            "defaultLevels": ["user", "folder"]
           }
         ]
       }

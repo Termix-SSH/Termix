@@ -405,6 +405,13 @@ export interface HostEditorSectionProps {
   adminTargetUserId?: string;
   /** Which connection protocols are switched on for this host. */
   protocols: Record<string, boolean>;
+  /**
+   * "defaults" while the editor sets a level of host defaults (server, user
+   * or folder) rather than one host. There is no `host` then, and the form
+   * holds the defaults. Only a section registered with `defaults: true` is
+   * shown in that mode.
+   */
+  mode?: "host" | "defaults";
 }
 
 export interface HostEditorSectionContribution {
@@ -420,6 +427,13 @@ export interface HostEditorSectionContribution {
   order?: number;
   /** Whether to offer the tab, from the host's enabled protocols. */
   visible?: (protocols: Record<string, boolean>) => boolean;
+  /**
+   * Also shown in the host defaults editor. Only for a section whose fields
+   * are this plugin's host settings kept on the form, and that makes no
+   * calls about one particular host. Off by default. "only" shows it in the
+   * defaults editor and never for a host.
+   */
+  defaults?: boolean | "only";
   component: ComponentType<HostEditorSectionProps>;
 }
 

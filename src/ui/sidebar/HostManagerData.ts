@@ -79,6 +79,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       h.sshPort ??
       (h.connectionType === "ssh" || !h.connectionType ? h.port : 22),
     protocolAuth: h.protocolAuth ?? {},
+    pluginSettings: h.pluginSettings ?? {},
+    defaultOverrides: h.defaultOverrides ?? null,
     jumpHosts: (parseJson<HostJumpHost[]>(h.jumpHosts) ?? []).map((j) => ({
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),
@@ -89,6 +91,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     statusCheckEnabled: h.statusCheckEnabled !== false,
     statusCheckInterval: h.statusCheckInterval ?? null,
     forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,
+    pluginSettings: h.pluginSettings,
     useSocks5: h.useSocks5,
     socks5Host: h.socks5Host,
     socks5Port: h.socks5Port,

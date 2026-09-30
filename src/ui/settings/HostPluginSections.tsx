@@ -63,29 +63,6 @@ function hostFieldDefaults(plugin: PluginSummary): Record<string, unknown> {
   return defaults;
 }
 
-/**
- * A new host saves the fields whose default comes from an admin setting,
- * since the server only knows the manifest default for a host with no value.
- */
-export function withNewHostDefaults(
-  values: HostPluginSettings,
-  plugins: PluginSummary[],
-): HostPluginSettings {
-  const next: HostPluginSettings = { ...values };
-  for (const plugin of plugins) {
-    const fields = plugin.contributes?.settings?.host?.fields ?? [];
-    for (const field of fields) {
-      if (!field.defaultFrom || field.default === undefined) continue;
-      if (next[plugin.id] && field.key in next[plugin.id]) continue;
-      next[plugin.id] = {
-        ...(next[plugin.id] ?? {}),
-        [field.key]: field.default,
-      };
-    }
-  }
-  return next;
-}
-
 export interface HostPluginSectionsProps {
   plugins: PluginSummary[];
   values: HostPluginSettings;
@@ -197,6 +174,7 @@ function HostPluginSection({
           values={shown}
           setValue={setValue}
           running={running}
+          defaultKey={`${plugin.id}.${enableKey}`}
         />
       )}
 
@@ -211,6 +189,7 @@ function HostPluginSection({
               values={shown}
               setValue={setValue}
               running={running}
+              defaultKey={`${plugin.id}.${field.key}`}
             />
           ))}
     </SectionCard>

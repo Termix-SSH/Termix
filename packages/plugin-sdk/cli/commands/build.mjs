@@ -112,6 +112,19 @@ const THEME_CSS = path.join(
  * otherwise have no CSS at all. Appended to whatever CSS the bundle already
  * produced (a library's stylesheet the plugin imports).
  */
+/**
+ * Moves a plugin's Tailwind layers under their own names. Core orders
+ * termix-plugin-utilities above its base styles and below its own utilities,
+ * so a plugin's copy of `.hidden` can never beat core's `md:flex` just
+ * because the plugin's file loaded later.
+ */
+export function lowerPluginLayers(css) {
+  return css.replace(
+    /@layer (properties|utilities)(?=[\s{;,])/g,
+    "@layer termix-plugin-$1",
+  );
+}
+
 export async function buildTailwind(cwd, outDir) {
   const { compile, optimize } = await import("@tailwindcss/node");
   const { Scanner } = await import("@tailwindcss/oxide");
@@ -138,9 +151,9 @@ export async function buildTailwind(cwd, outDir) {
   });
   // Flattened and minified the way core's own CSS is, so it does not rely
   // on native CSS nesting.
-  const css = optimize(compiler.build(scanner.scan()), {
-    minify: true,
-  }).code.trim();
+  const css = lowerPluginLayers(
+    optimize(compiler.build(scanner.scan()), { minify: true }).code.trim(),
+  );
   if (!css) return;
   const target = path.join(outDir, "frontend.css");
   const existing = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
