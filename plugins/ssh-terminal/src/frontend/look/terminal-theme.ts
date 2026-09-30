@@ -41,7 +41,10 @@ export function resolveTermixThemeColors(
   }
   const uiColors =
     TERMIX_DEFAULT_COLORS[resolvedUiTheme] ?? TERMIX_DEFAULT_COLORS.dark;
-  const base = TERMINAL_THEMES.termixDark.colors;
+  const base =
+    resolvedUiTheme === "light"
+      ? TERMINAL_THEMES.termixLight.colors
+      : TERMINAL_THEMES.termixDark.colors;
   return {
     ...base,
     background: uiColors.background,
