@@ -3316,11 +3316,17 @@ function FileManagerContent({
   }, [currentPath]);
 
   useEffect(() => {
+    if (currentHost?.id) loadPinnedFiles();
+  }, [currentHost?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDiskInfo(null);
     if (currentHost?.id) {
-      loadPinnedFiles();
       // Undefined while the host-metrics plugin is off: no disk bar then.
       invokeAction("host-metrics.disk", currentHost.id)
         .then((result) => {
+          if (cancelled) return;
           const disk = result as HostDiskInfo | null | undefined;
           if (disk?.percent != null && disk.usedHuman && disk.totalHuman) {
             setDiskInfo({
@@ -3334,7 +3340,10 @@ function FileManagerContent({
         })
         .catch(() => {});
     }
-  }, [currentHost?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentHost?.id, lastRefreshTime]);
 
   useEffect(() => {
     localStorage.setItem("fileManagerDensity", density);
