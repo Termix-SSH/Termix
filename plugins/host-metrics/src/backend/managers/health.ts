@@ -149,6 +149,23 @@ export function registerHealthRoutes(
       });
     }
   };
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/health/{id}:
+   *   get:
+   *     summary: Get the host's health checks and their last results
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The configured checks and results. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/health/:id",
     validateHostId,
@@ -162,6 +179,33 @@ export function registerHealthRoutes(
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/health/{id}/config:
+   *   post:
+   *     summary: Save the host's health checks
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [checks]
+   *             properties:
+   *               checks: { type: array, items: { type: object, properties: { id: { type: string }, name: { type: string }, type: { type: string }, target: { type: string }, port: { type: integer }, path: { type: string } } } }
+   *               intervalSeconds: { type: integer }
+   *     responses:
+   *       200: { description: The saved checks. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/health/:id/config",
     validateHostId,
@@ -195,6 +239,23 @@ export function registerHealthRoutes(
     ),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/health/{id}/run:
+   *   post:
+   *     summary: Run the host's health checks now
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The result of each check. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/health/:id/run",
     validateHostId,

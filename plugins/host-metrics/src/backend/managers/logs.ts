@@ -43,6 +43,23 @@ export function buildJournalCommand(unit: string, lines: number): string {
 
 export function registerLogRoutes(app: Router, deps: ManagerRoutesDeps): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/logs/{id}/files:
+   *   get:
+   *     summary: List readable log files under /var/log
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: Common logs and the files found. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/logs/:id/files",
     validateHostId,
@@ -57,6 +74,34 @@ export function registerLogRoutes(app: Router, deps: ManagerRoutesDeps): void {
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/logs/{id}:
+   *   get:
+   *     summary: Tail a log file or a systemd unit's journal
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *       - in: query
+   *         name: path
+   *         schema: { type: string }
+   *         description: A log file under an allowed directory.
+   *       - in: query
+   *         name: unit
+   *         schema: { type: string }
+   *         description: A systemd unit. Used instead of path when given.
+   *       - in: query
+   *         name: lines
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The last lines of the log. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/logs/:id",
     validateHostId,

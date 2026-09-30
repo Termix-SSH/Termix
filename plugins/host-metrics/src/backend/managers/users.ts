@@ -73,6 +73,23 @@ export type UserAction = "create" | "delete" | "addToGroup" | "removeFromGroup";
 
 export function registerUserRoutes(app: Router, deps: ManagerRoutesDeps): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/users/{id}:
+   *   get:
+   *     summary: List local users and groups
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The users and groups. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/users/:id",
     validateHostId,
@@ -90,6 +107,34 @@ export function registerUserRoutes(app: Router, deps: ManagerRoutesDeps): void {
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/users/{id}/action:
+   *   post:
+   *     summary: Create or delete a user, or change a user's groups
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [action, username]
+   *             properties:
+   *               action: { type: string, enum: [create, delete, addToGroup, removeFromGroup] }
+   *               username: { type: string }
+   *               group: { type: string, description: Needed for the group actions. }
+   *     responses:
+   *       200: { description: The command result. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/users/:id/action",
     validateHostId,

@@ -48,6 +48,23 @@ export function registerFirewallRoutes(
   deps: ManagerRoutesDeps,
 ): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/firewall/{id}:
+   *   get:
+   *     summary: Read the host firewall (iptables, nftables or ufw)
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The firewall type, status and rules. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/firewall/:id",
     validateHostId,
@@ -56,6 +73,35 @@ export function registerFirewallRoutes(
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/firewall/{id}/rule:
+   *   post:
+   *     summary: Add or delete an input rule
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [op, protocol, port, target]
+   *             properties:
+   *               op: { type: string, enum: [add, delete] }
+   *               protocol: { type: string, enum: [tcp, udp] }
+   *               port: { type: integer }
+   *               target: { type: string, description: ACCEPT, DROP or REJECT }
+   *     responses:
+   *       200: { description: The command result and firewall backend used. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/firewall/:id/rule",
     validateHostId,
@@ -101,6 +147,23 @@ export function registerFirewallRoutes(
     ),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/firewall/{id}/persist:
+   *   post:
+   *     summary: Save the current firewall rules so they survive a reboot
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The save result. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/firewall/:id/persist",
     validateHostId,

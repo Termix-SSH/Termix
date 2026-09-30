@@ -110,6 +110,23 @@ export function registerSimpleReadRoutes(
   deps: ManagerRoutesDeps,
 ): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/top-memory/{id}:
+   *   get:
+   *     summary: List the processes using the most memory
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The top processes by memory. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/top-memory/:id",
     validateHostId,
@@ -119,6 +136,23 @@ export function registerSimpleReadRoutes(
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/timers/{id}:
+   *   get:
+   *     summary: List systemd timers
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The timers with their next and last runs. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/timers/:id",
     validateHostId,
@@ -128,6 +162,23 @@ export function registerSimpleReadRoutes(
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/disk-breakdown/{id}:
+   *   get:
+   *     summary: List mounted filesystems and their usage
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: Size, used and free space per mount. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/disk-breakdown/:id",
     validateHostId,

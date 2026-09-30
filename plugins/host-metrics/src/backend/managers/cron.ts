@@ -82,6 +82,23 @@ export function buildApplyCrontabCommand(body: string): string {
 
 export function registerCronRoutes(app: Router, deps: ManagerRoutesDeps): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/cron/{id}:
+   *   get:
+   *     summary: List the SSH user's crontab entries
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The parsed crontab entries. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/cron/:id",
     validateHostId,
@@ -91,6 +108,32 @@ export function registerCronRoutes(app: Router, deps: ManagerRoutesDeps): void {
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/cron/{id}:
+   *   post:
+   *     summary: Replace the SSH user's crontab
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [entries]
+   *             properties:
+   *               entries: { type: array, items: { type: object, properties: { schedule: { type: string }, command: { type: string }, enabled: { type: boolean } } } }
+   *     responses:
+   *       200: { description: The crontab was written. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/cron/:id",
     validateHostId,

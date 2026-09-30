@@ -151,6 +151,23 @@ export function buildRevokeCommand(client: AcmeClient, name: string): string {
 
 export function registerSslRoutes(app: Router, deps: ManagerRoutesDeps): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/ssl/{id}:
+   *   get:
+   *     summary: List certificates from certbot and acme.sh
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The installed ACME clients and certificates. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/ssl/:id",
     validateHostId,
@@ -183,6 +200,36 @@ export function registerSslRoutes(app: Router, deps: ManagerRoutesDeps): void {
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/ssl/{id}/issue:
+   *   post:
+   *     summary: Issue a certificate with certbot or acme.sh
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [client, domains, challenge]
+   *             properties:
+   *               client: { type: string, enum: [certbot, acme.sh] }
+   *               domains: { type: array, items: { type: string } }
+   *               challenge: { type: string, enum: [http-standalone, http-webroot, dns] }
+   *               webroot: { type: string }
+   *               dnsProvider: { type: string }
+   *     responses:
+   *       200: { description: The issue result. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/ssl/:id/issue",
     validateHostId,
@@ -227,6 +274,33 @@ export function registerSslRoutes(app: Router, deps: ManagerRoutesDeps): void {
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/ssl/{id}/renew:
+   *   post:
+   *     summary: Renew certificates
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [client]
+   *             properties:
+   *               client: { type: string, enum: [certbot, acme.sh] }
+   *               dryRun: { type: boolean }
+   *     responses:
+   *       200: { description: The renew result. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/ssl/:id/renew",
     validateHostId,

@@ -17,6 +17,23 @@ export function registerPackageRoutes(
   deps: ManagerRoutesDeps,
 ): void {
   const { validateHostId } = deps;
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/packages/{id}:
+   *   get:
+   *     summary: List upgradable packages and the package manager
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     responses:
+   *       200: { description: The package manager and upgradable packages. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.get(
     "/host-metrics/managers/packages/:id",
     validateHostId,
@@ -32,6 +49,33 @@ export function registerPackageRoutes(
     }),
   );
 
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/managers/packages/{id}/action:
+   *   post:
+   *     summary: Install or upgrade a package, or upgrade everything
+   *     tags: [Host Metrics]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: integer }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [action]
+   *             properties:
+   *               action: { type: string, enum: [install, upgrade, upgrade-all] }
+   *               pkg: { type: string, description: The package name. Not needed for upgrade-all. }
+   *     responses:
+   *       200: { description: The command output. }
+   *       400: { description: Invalid input. }
+   *       403: { description: No access to the host, or elevation denied. }
+   *       500: { description: The command failed on the host. }
+   */
   app.post(
     "/host-metrics/managers/packages/:id/action",
     validateHostId,
