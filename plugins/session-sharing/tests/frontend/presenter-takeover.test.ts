@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import ts from "typescript";
 import { describe, expect, it, vi } from "vitest";
 import roomSource from "../../src/frontend/CollabRoomTab.tsx?raw";

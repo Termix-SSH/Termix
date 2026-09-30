@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import ts from "typescript";
 import Guacamole from "guacamole-common-js";
 import { afterEach, describe, expect, it, vi } from "vitest";

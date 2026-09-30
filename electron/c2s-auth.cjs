@@ -33,7 +33,7 @@ function createC2SAuthBridge(ipcMain, getWindow) {
         window.isDestroyed() ||
         active.size ||
         typeof message.requestId !== "string" ||
-        !["totp", "input", "browser"].includes(message.request?.kind)
+        !["totp", "input", "browser"].includes(message.request?.kind) // plugin-id-ok: SSH prompt kind, not the plugin
       ) {
         ws.close();
         return;

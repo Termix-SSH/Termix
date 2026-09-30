@@ -92,14 +92,13 @@ export async function startServer(
     },
   });
   const refs = await db.database.refs();
-  db.database.refs = async () =>
-    ({
-      ...refs,
-      hosts: sqliteTable("ssh_data", {
-        id: integer("id").primaryKey(),
-        syncId: text("sync_id"),
-      }),
-    }) as Awaited<ReturnType<typeof db.database.refs>>;
+  db.database.refs = (async () => ({
+    ...(refs as object),
+    hosts: sqliteTable("ssh_data", {
+      id: integer("id").primaryKey(),
+      syncId: text("sync_id"),
+    }),
+  })) as typeof db.database.refs;
   for (const user of options.users ?? ["alice", "bob", "carol"]) {
     db.sqlite
       .prepare("INSERT INTO users (id, username, is_admin) VALUES (?, ?, ?)")

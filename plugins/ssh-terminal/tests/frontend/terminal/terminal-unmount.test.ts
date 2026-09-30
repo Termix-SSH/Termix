@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sourceText from "../../../src/frontend/terminal/Terminal.tsx?raw";

@@ -52,7 +52,7 @@ describe("interactive client relay", () => {
         return { client, dispose, host: host(), jumpClient: null };
       },
     );
-    mock.ctx.ssh.connect = connect as typeof mock.ctx.ssh.connect;
+    mock.ctx.ssh.connect = connect as unknown as typeof mock.ctx.ssh.connect;
     const handle = createC2SRelay(mock.ctx);
     const anchor = new Socket();
     const socket = new Socket();

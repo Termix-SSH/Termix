@@ -104,7 +104,7 @@
         ]
       }
     },
-    "uses": ["session.remoteDisplay.token", "terminal.open"]
+    "uses": ["session.remoteDisplay.token", "terminal.open", "terminal.overlay"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]
