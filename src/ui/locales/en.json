@@ -857,7 +857,9 @@
     "editorCancel": "Cancel",
     "editorSaving": "Saving...",
     "editorUpdate": "Update Host",
-    "editorAdd": "Add Host"
+    "editorAdd": "Add Host",
+    "speedSearch": "Search hosts. Arrow keys to select, Enter to connect, Esc to close",
+    "speedSearchList": "Host list. Type or press / to search."
   },
   "commandPalette": {
     "searchPlaceholder": "Search hosts, commands, or settings...",
