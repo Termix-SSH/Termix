@@ -30,6 +30,7 @@ export const providers = adoptLegacyTable(
     "providers",
     {
       id: id(),
+      syncId: varchar().unique(),
       userId: refUser(),
       // ollama | anthropic | openai | gemini | openai_compatible
       providerType: text().notNull(),
