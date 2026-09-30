@@ -12,17 +12,26 @@ const shell = fs.readFileSync(
   "utf8",
 );
 
-function harness(active = true, hasTray = true) {
+function harness(
+  active = true,
+  hasTray = true,
+  platform: { platform: string; env: Record<string, string> } = {
+    platform: "win32",
+    env: {},
+  },
+) {
   const app = new EventEmitter();
   const window = Object.assign(new EventEmitter(), {
     webContents: new EventEmitter(),
     hide: vi.fn(),
+    minimize: vi.fn(),
   });
   const context = vm.createContext({
     isQuitting: false,
     app,
     mainWindow: window,
     console,
+    process: platform,
     tray: hasTray ? { isDestroyed: () => false } : null,
     hasActiveConnection: () => active,
   });
@@ -90,6 +99,17 @@ describe("desktop quit with active connections", () => {
     app.window.emit("close", event);
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(app.window.hide).toHaveBeenCalledOnce();
+  });
+  it("minimizes instead of hiding on GNOME, which has no tray by default", () => {
+    const app = harness(true, true, {
+      platform: "linux",
+      env: { XDG_CURRENT_DESKTOP: "ubuntu:GNOME" },
+    });
+    const event = { preventDefault: vi.fn() };
+    app.window.emit("close", event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(app.window.minimize).toHaveBeenCalledOnce();
+    expect(app.window.hide).not.toHaveBeenCalled();
   });
   it("quits normally when no connection blocks unloading", () => {
     expect(harness(false).attemptQuit()).toBe(true);
