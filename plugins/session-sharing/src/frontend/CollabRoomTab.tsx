@@ -145,6 +145,7 @@ export function CollabRoomTab({
   const draftRef = useRef<PresentDraft | null>(null);
   draftRef.current = draft;
   const stageKeyRef = useRef<string | null>(null);
+  const presenterRef = useRef<string | null>(null);
   const refreshSequence = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -153,6 +154,14 @@ export function CollabRoomTab({
     try {
       const nextDetail = await getCollabRoom(roomId);
       if (sequence !== refreshSequence.current) return;
+      // Only discard a confirmed presentation that another member took over.
+      if (
+        presenterRef.current === nextDetail.me &&
+        nextDetail.stage.presenterUserId !== nextDetail.me
+      ) {
+        setDraft(null);
+      }
+      presenterRef.current = nextDetail.stage.presenterUserId;
       setDetail(nextDetail);
       setLoadError(null);
       // Presenting locally? The local session is the stage - don't join it.

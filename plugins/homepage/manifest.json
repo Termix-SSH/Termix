@@ -34,8 +34,14 @@
       }
     ],
     "dashboardCards": [
-      { "id": "service_links", "titleKey": "dashboard.serviceLinks" },
-      { "id": "homepage_preview", "titleKey": "dashboard.homepagePreview" }
+      {
+        "id": "service_links",
+        "titleKey": "dashboard.serviceLinks"
+      },
+      {
+        "id": "homepage_preview",
+        "titleKey": "dashboard.homepagePreview"
+      }
     ],
     "permissions": [
       {
@@ -46,9 +52,16 @@
       }
     ],
     "actionSlots": [
-      { "id": "dashboard.secondaryView", "accepts": ["component"] }
+      {
+        "id": "dashboard.secondaryView",
+        "accepts": ["component"]
+      }
     ],
-    "syncEntities": ["dashboardServiceLinks", "homepageItems"],
+    "syncEntities": [
+      "dashboardServiceLinks",
+      "homepageItems",
+      "homepageLayouts"
+    ],
     "settings": {
       "admin": [
         {

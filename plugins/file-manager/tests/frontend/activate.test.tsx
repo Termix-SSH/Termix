@@ -57,12 +57,15 @@ describe(`${manifest.id} activate`, () => {
     expect(rendered.registered.hostEditorSections()).toEqual([]);
   });
 
-  it("registers its open actions, including the shell's host.openFiles", async () => {
+  it("registers its open actions and the tab menu entry", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.actions().sort()).toEqual([
+      "file-manager.openFromTab",
       "files.openEditor",
       "files.openHost",
-      "host.openFiles",
+    ]);
+    expect(rendered.registered.slot("tab.menu")).toEqual([
+      "file-manager.openFromTab",
     ]);
   });
 

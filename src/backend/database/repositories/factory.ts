@@ -16,6 +16,7 @@ import { OpenTabRepository } from "./open-tab-repository.js";
 import { PluginRepository } from "./plugin-repository.js";
 import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginSettingsRepository } from "./plugin-settings-repository.js";
+import { HostDefaultsRepository } from "./host-defaults-repository.js";
 import { PluginMigrationRepository } from "./plugin-migration-repository.js";
 import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
 import { UserAuthRepository } from "./user-auth-repository.js";
@@ -221,6 +222,13 @@ export function createCurrentPluginStorageRepository(): PluginStorageRepository 
   return new PluginStorageRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("plugin_storage_repository_write"),
+  );
+}
+
+export function createCurrentHostDefaultsRepository(): HostDefaultsRepository {
+  return new HostDefaultsRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("host_defaults_repository_write"),
   );
 }
 

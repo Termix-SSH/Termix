@@ -56,7 +56,21 @@ vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
     slotId === "terminal.toolbar" ? slots.toolbar : [],
   useHostActions: () => slots.hostActions,
   useTabs: () => slots.tabs,
+  usePluginUiPreferences: () => ({
+    values: uiPrefs.values,
+    set: uiPrefs.set,
+  }),
 }));
+
+const uiPrefs = vi.hoisted(() => {
+  const values: Record<string, unknown> = {};
+  return {
+    values,
+    set: vi.fn((key: string, value: unknown) => {
+      values[key] = value;
+    }),
+  };
+});
 
 vi.mock("@termix/plugin-sdk/ui", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -111,6 +125,8 @@ function renderToolbar(
 
 // jsdom lacks the pointer APIs Radix Select needs to open its popup.
 beforeEach(() => {
+  for (const key of Object.keys(uiPrefs.values)) delete uiPrefs.values[key];
+  uiPrefs.set.mockClear();
   Element.prototype.hasPointerCapture ??= () => false;
   Element.prototype.setPointerCapture ??= () => {};
   Element.prototype.releasePointerCapture ??= () => {};
@@ -406,9 +422,7 @@ describe("TerminalToolbar Phase 1", () => {
       screen.getByRole("option", { name: "Expanded with metrics" }),
     );
     await waitFor(() =>
-      expect(localStorage.getItem("termix-terminal-toolbar-density")).toBe(
-        "expanded",
-      ),
+      expect(uiPrefs.set).toHaveBeenCalledWith("toolbarDensity", "expanded"),
     );
   });
 
@@ -561,7 +575,7 @@ describe("TerminalToolbar Phase 1", () => {
     });
     expect(collapsedMover).toBeVisible();
     expect(
-      container.querySelector(".terminal-toolbar-collapsed-shell"),
+      container.querySelector("[data-toolbar-collapsed]"),
     ).toBeInTheDocument();
     collapsedMover.focus();
     expect(toolbar).toHaveClass("focus-within:opacity-100");
@@ -1018,12 +1032,21 @@ describe("TerminalToolbar Phase 1", () => {
     });
 
     it("uses the host display mode without overwriting the saved one", () => {
-      localStorage.setItem("termix-terminal-toolbar-density", "labeled");
+      uiPrefs.values.toolbarDensity = "labeled";
+      uiPrefs.set.mockClear();
       renderToolbar({ host: withSettings({ terminalToolbarDisplay: "icon" }) });
       expect(screen.queryByText("Upload image")).toBeNull();
-      expect(localStorage.getItem("termix-terminal-toolbar-density")).toBe(
-        "labeled",
-      );
+      expect(uiPrefs.set).not.toHaveBeenCalled();
+    });
+
+    it("moves a density saved in this browser into the plugin preferences", () => {
+      localStorage.setItem("termix-terminal-toolbar-density", "icon");
+      uiPrefs.set.mockClear();
+      renderToolbar();
+      expect(uiPrefs.set).toHaveBeenCalledWith("toolbarDensity", "icon");
+      expect(
+        localStorage.getItem("termix-terminal-toolbar-density"),
+      ).toBeNull();
     });
 
     it("stays fully visible when fading is off", () => {

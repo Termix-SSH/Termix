@@ -27,7 +27,6 @@ import {
   completePasswordReset,
   isElectron,
   getCurrentToken,
-  getOidcSilentLoginDefault,
   requestDesktopAutoSession,
   requestTrustedProxyLogin,
 } from "@/main-axios";
@@ -343,9 +342,6 @@ export function Auth({ onLogin }: AuthProps) {
   );
   const silentSigninHandledRef = useRef(false);
   const proxySigninHandledRef = useRef(false);
-  const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
-  const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
-    useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(
@@ -401,7 +397,7 @@ export function Auth({ onLogin }: AuthProps) {
   useEffect(() => {
     if (!isInElectronWebView()) return;
 
-    const handleOIDCSystemBrowserResult = (event: MessageEvent) => {
+    const handleExternalBrowserResult = (event: MessageEvent) => {
       if (event.source !== window.parent) return;
       if (!event.data || typeof event.data !== "object") return;
       if (event.data.type !== "OIDC_SYSTEM_BROWSER_AUTH_RESULT") return;
@@ -418,15 +414,14 @@ export function Auth({ onLogin }: AuthProps) {
       toast.error(event.data.error || t("errors.failedOidcLogin"));
     };
 
-    window.addEventListener("message", handleOIDCSystemBrowserResult);
+    window.addEventListener("message", handleExternalBrowserResult);
     return () =>
-      window.removeEventListener("message", handleOIDCSystemBrowserResult);
+      window.removeEventListener("message", handleExternalBrowserResult);
   }, [t]);
 
   useEffect(() => {
     if (localDesktopAuth) {
       setAuthMethodsLoaded(true);
-      setOidcSilentLoginDefaultLoaded(true);
       return;
     }
     getRegistrationAllowed()
@@ -444,10 +439,6 @@ export function Auth({ onLogin }: AuthProps) {
       .then((methods) => setAuthMethods(methods))
       .catch(() => setAuthMethods([]))
       .finally(() => setAuthMethodsLoaded(true));
-    getOidcSilentLoginDefault()
-      .then((res) => setOidcSilentLoginDefault(res.enabled))
-      .catch(() => {})
-      .finally(() => setOidcSilentLoginDefaultLoaded(true));
   }, [localDesktopAuth]);
 
   useEffect(() => {
@@ -997,7 +988,7 @@ export function Auth({ onLogin }: AuthProps) {
           const electronAPI = (
             window as unknown as {
               electronAPI?: {
-                oidcSystemBrowserAuth?: (
+                externalBrowserLogin?: (
                   authUrl: string,
                   port: number,
                 ) => Promise<{
@@ -1011,14 +1002,14 @@ export function Auth({ onLogin }: AuthProps) {
               };
             }
           ).electronAPI;
-          if (electronAPI?.oidcSystemBrowserAuth) {
+          if (electronAPI?.externalBrowserLogin) {
             const authUrl = await startLoginRedirect(methodId, {
               instanceId,
               rememberMe,
               desktopCallbackPort: callbackPort,
             });
             if (!authUrl) throw new Error(t("errors.invalidAuthUrl"));
-            const result = await electronAPI.oidcSystemBrowserAuth(
+            const result = await electronAPI.externalBrowserLogin(
               authUrl,
               callbackPort,
             );
@@ -1093,10 +1084,18 @@ export function Auth({ onLogin }: AuthProps) {
 
   useEffect(() => {
     if (!authMethodsLoaded || silentSigninHandledRef.current) return;
-    if (!oidcSilentLoginDefaultLoaded) return;
 
+    // A login method may ask to start without a click (the sso plugin's
+    // silent sign-in setting); ?silent_signin asks for it once.
+    const autoStart = externalMethods
+      .filter((method) => method.kind === "redirect")
+      .flatMap((method) =>
+        method.instances
+          .filter((instance) => instance.autoStart)
+          .map((instance) => ({ method, instance })),
+      )[0];
     const urlTriggered = shouldTriggerSilentSignin(window.location.search);
-    if (!urlTriggered && !oidcSilentLoginDefault) return;
+    if (!urlTriggered && !autoStart) return;
 
     if (urlTriggered) {
       const nextSearch = removeSilentSigninFromSearch(window.location.search);
@@ -1112,22 +1111,20 @@ export function Auth({ onLogin }: AuthProps) {
     const redirectMethod = externalMethods.find(
       (method) => method.kind === "redirect" && method.instances.length > 0,
     );
-    if (redirectMethod && !isElectron()) {
-      void startRedirect(redirectMethod.id, redirectMethod.instances[0].id);
+    const target =
+      autoStart ??
+      (redirectMethod
+        ? { method: redirectMethod, instance: redirectMethod.instances[0] }
+        : null);
+    if (target && !isElectron()) {
+      void startRedirect(target.method.id, target.instance.id);
       return;
     }
 
     if (urlTriggered) {
       toast.info(t("errors.silentSigninOidcUnavailable"));
     }
-  }, [
-    startRedirect,
-    authMethodsLoaded,
-    externalMethods,
-    t,
-    oidcSilentLoginDefault,
-    oidcSilentLoginDefaultLoaded,
-  ]);
+  }, [startRedirect, authMethodsLoaded, externalMethods, t]);
 
   // Electron, non-iframed: wait for the auto-session probe before rendering
   // anything, so a standalone desktop install never flashes a login form

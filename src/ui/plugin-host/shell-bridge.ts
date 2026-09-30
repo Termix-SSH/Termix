@@ -107,6 +107,8 @@ export function shellHost(id: string | number | undefined): Host | undefined {
 export const shell: TabShellCallbacks = {
   openTab: (host, ...rest) => callbacks?.openTab(withShellHost(host), ...rest),
   openSingletonTab: (...args) => callbacks?.openSingletonTab(...args),
+  connectHost: (host, ...rest) =>
+    callbacks?.connectHost(withShellHost(host), ...rest),
   closeTab: (...args) => callbacks?.closeTab(...args),
   renameTab: (...args) => callbacks?.renameTab(...args),
   openRailView: (...args) => callbacks?.openRailView(...args),
@@ -119,6 +121,7 @@ export const shell: TabShellCallbacks = {
 export const tabsApi = {
   openTab: shell.openTab,
   openSingletonTab: shell.openSingletonTab,
+  connectHost: shell.connectHost,
   closeTab: shell.closeTab,
   openRailView: shell.openRailView,
   getLayout: () => layoutProvider?.getLayout() ?? null,

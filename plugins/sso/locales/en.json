@@ -55,5 +55,11 @@
     "adminGroupDesc": "Users in this group are granted admin. Leave empty to disable group sync.",
     "caCert": "Custom CA Certificate",
     "caCertDesc": "Optional. PEM-encoded CA certificate for OIDC providers using a private or self-signed CA. Leave empty to use the system trust store."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
   }
 }

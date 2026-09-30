@@ -35,6 +35,7 @@ vi.mock("../../utils/data-crypto.js", () => ({
 
 import {
   copiedMarker,
+  legacyLogin,
   runProtocolAuthMigration,
 } from "../../upgrade/protocol-auth-migration.js";
 import { createCurrentHostProtocolAuthRepository } from "../../database/repositories/factory.js";
@@ -220,4 +221,44 @@ describe("runProtocolAuthMigration", () => {
     expect((await logins())["1:rdp"]).toMatchObject({ username: "edited" });
     expect(await logins()).toHaveProperty("3:telnet");
   });
+});
+
+describe("legacyLogin rdp domain", () => {
+  const rdp = {
+    id: "rdp",
+    user: "rdp_user",
+    password: "rdp_password",
+    passwordField: "rdpPassword",
+    credential: "rdp_credential_id",
+    authType: "rdp_auth_type",
+    domain: "rdp_domain",
+  };
+
+  it.each([
+    { saved: "CORP", legacy: null, expected: { domain: "CORP" } },
+    { saved: "CORP", legacy: "OLD", expected: { domain: "CORP" } },
+    { saved: "", legacy: "OLD", expected: {} },
+    { saved: null, legacy: "LEGACY", expected: { domain: "LEGACY" } },
+  ])(
+    "keeps saved domain $saved over legacy $legacy for a credential host",
+    ({ saved, legacy, expected }) => {
+      const login = legacyLogin(
+        {
+          id: 1,
+          user_id: "owner",
+          connection_type: "rdp",
+          rdp_auth_type: "credential",
+          rdp_credential_id: 5,
+          rdp_user: null,
+          rdp_password: null,
+          rdp_domain: saved,
+          domain: legacy,
+        },
+        rdp,
+        ownerKey,
+        () => true,
+      );
+      expect(login?.fields).toEqual(expected);
+    },
+  );
 });

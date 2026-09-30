@@ -45,7 +45,7 @@ describe("MemoryAgent", () => {
     expect((parsed as ParsedKey).verify(data, signature)).toBe(true);
 
     client.destroy();
-    stream.destroy();
+    (stream as unknown as { destroy: () => void }).destroy();
   });
 });
 
@@ -98,7 +98,7 @@ describe("MemoryAgent unsupported extension framing", () => {
         expect(replies[1][0]).toBe(12); // The following identities request succeeds.
         expect(replies[1].readUInt32BE(1)).toBe(1);
       } finally {
-        stream.destroy();
+        (stream as unknown as { destroy: () => void }).destroy();
       }
     },
   );

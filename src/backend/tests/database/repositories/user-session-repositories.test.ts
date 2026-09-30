@@ -67,7 +67,7 @@ describe("UserRepository and SessionRepository", () => {
       oidcIdentifier: "oidc:admin",
     });
     expect(updated?.oidcIdentifier).toBe("oidc:admin");
-    expect((await repo.users.findByOidcIdentifier("oidc:admin"))?.id).toBe(
+    expect((await repo.users.findByExternalIdentifier("oidc:admin"))?.id).toBe(
       "user-1",
     );
 

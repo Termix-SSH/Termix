@@ -29,23 +29,18 @@ import {
   updateStatusCheckSettings,
   getLogLevel,
   updateLogLevel,
-  getOidcAutoProvision,
-  updateOidcAutoProvision,
+  getExternalAutoProvision,
+  updateExternalAutoProvision,
   getSecondFactorAfterExternalLogin,
   updateSecondFactorAfterExternalLogin,
-  getOidcSilentLoginDefault,
-  updateOidcSilentLoginDefault,
   isElectron,
   getUserRoles,
 } from "@/main-axios";
 import {
-  getHostDefaults,
-  updateHostDefaults,
   getAnalyticsEnabled,
   updateAnalyticsEnabled,
   getBranding,
   updateBranding,
-  type HostDefaults,
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
@@ -128,14 +123,8 @@ export function AdminSettingsPanel({
   const [logLevel, setLogLevel] = useState("info");
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
-  const [oidcSilentLoginDefaultLocked, setOidcSilentLoginDefaultLocked] =
-    useState(false);
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
-  const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
-
-  // Terminal image storage state. localDir stays a draft: the API never
-  // returns the configured backend path, so it is only sent when changed.
 
   const [brandingSettings, setBrandingSettings] =
     useState<BrandingSettings | null>(null);
@@ -143,10 +132,9 @@ export function AdminSettingsPanel({
   const { applyBranding } = useBranding();
 
   // External login state
-  const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
+  const [externalAutoProvision, setExternalAutoProvision] = useState(false);
   const [secondFactorAfterExternalLogin, setSecondFactorAfterExternalLogin] =
     useState(false);
-  const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
 
   // Create user dialog
   const [createUserOpen, setCreateUserOpen] = useState(false);
@@ -258,7 +246,7 @@ export function AdminSettingsPanel({
             id: user.userId,
             username: user.username,
             isAdmin: user.is_admin,
-            isOidc: user.is_oidc,
+            isOidc: user.is_external ?? user.is_oidc,
             passwordHash: user.password_hash,
             dataUnlocked: user.data_unlocked,
             secondFactorEnabled: user.second_factor_enabled,
@@ -298,7 +286,6 @@ export function AdminSettingsPanel({
         level,
         oidcProv,
         secondFactorExternal,
-        oidcSilent,
         analytics,
         notificationEndpoints,
         branding,
@@ -309,9 +296,8 @@ export function AdminSettingsPanel({
         getSessionTimeout(),
         getStatusCheckSettings(),
         getLogLevel(),
-        getOidcAutoProvision(),
+        getExternalAutoProvision(),
         getSecondFactorAfterExternalLogin(),
-        getOidcSilentLoginDefault(),
         getAnalyticsEnabled(),
         getNotificationPrivateEndpoints(),
         getBranding(),
@@ -326,13 +312,9 @@ export function AdminSettingsPanel({
         );
       }
       if (oidcProv.status === "fulfilled")
-        setOidcAutoProvision(oidcProv.value.enabled);
+        setExternalAutoProvision(oidcProv.value.enabled);
       if (secondFactorExternal.status === "fulfilled")
         setSecondFactorAfterExternalLogin(secondFactorExternal.value.enabled);
-      if (oidcSilent.status === "fulfilled") {
-        setOidcSilentLoginDefault(oidcSilent.value.enabled);
-        setOidcSilentLoginDefaultLocked(oidcSilent.value.locked ?? false);
-      }
       if (pwReset.status === "fulfilled") setAllowPasswordReset(pwReset.value);
       if (timeout.status === "fulfilled")
         setSessionTimeout(String(timeout.value.timeoutHours));
@@ -355,10 +337,6 @@ export function AdminSettingsPanel({
       // non-fatal
     }
 
-    getHostDefaults()
-      .then((d) => setHostDefaults(d))
-      .catch(() => {});
-
     getTlsStatus()
       .then((s) => setTlsStatus(s))
       .catch(() => {});
@@ -371,15 +349,6 @@ export function AdminSettingsPanel({
       else next.add(id);
       return next;
     });
-  }
-
-  async function handleSaveHostDefaults() {
-    try {
-      await updateHostDefaults(hostDefaults);
-      toast.success(t("admin.hostDefaultsSaved"));
-    } catch {
-      toast.error(t("admin.hostDefaultsSaveFailed"));
-    }
   }
 
   async function handleToggleRegistration() {
@@ -405,14 +374,14 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleToggleOidcAutoProvision() {
-    const newVal = !oidcAutoProvision;
-    setOidcAutoProvision(newVal);
+  async function handleToggleExternalAutoProvision() {
+    const newVal = !externalAutoProvision;
+    setExternalAutoProvision(newVal);
     try {
-      await updateOidcAutoProvision(newVal);
+      await updateExternalAutoProvision(newVal);
     } catch {
-      setOidcAutoProvision(!newVal);
-      toast.error(t("admin.updateOidcAutoProvisionFailed"));
+      setExternalAutoProvision(!newVal);
+      toast.error(t("admin.updateExternalAutoProvisionFailed"));
     }
   }
 
@@ -424,18 +393,6 @@ export function AdminSettingsPanel({
     } catch {
       setSecondFactorAfterExternalLogin(!newVal);
       toast.error(t("admin.updateSecondFactorAfterExternalLoginFailed"));
-    }
-  }
-
-  async function handleToggleOidcSilentLoginDefault() {
-    if (oidcSilentLoginDefaultLocked) return;
-    const newVal = !oidcSilentLoginDefault;
-    setOidcSilentLoginDefault(newVal);
-    try {
-      await updateOidcSilentLoginDefault(newVal);
-    } catch {
-      setOidcSilentLoginDefault(!newVal);
-      toast.error(t("admin.updateOidcSilentLoginDefaultFailed"));
     }
   }
 
@@ -839,15 +796,12 @@ export function AdminSettingsPanel({
         allowPasswordLogin={allowPasswordLogin}
         passwordLoginForced={passwordLoginForced && !allowPasswordLogin}
         handleTogglePasswordLogin={handleTogglePasswordLogin}
-        oidcAutoProvision={oidcAutoProvision}
-        handleToggleOidcAutoProvision={handleToggleOidcAutoProvision}
+        externalAutoProvision={externalAutoProvision}
+        handleToggleExternalAutoProvision={handleToggleExternalAutoProvision}
         secondFactorAfterExternalLogin={secondFactorAfterExternalLogin}
         handleToggleSecondFactorAfterExternalLogin={
           handleToggleSecondFactorAfterExternalLogin
         }
-        oidcSilentLoginDefault={oidcSilentLoginDefault}
-        oidcSilentLoginDefaultLocked={oidcSilentLoginDefaultLocked}
-        handleToggleOidcSilentLoginDefault={handleToggleOidcSilentLoginDefault}
         allowPasswordReset={allowPasswordReset}
         handleTogglePasswordReset={handleTogglePasswordReset}
         sessionTimeout={sessionTimeout}
@@ -910,9 +864,6 @@ export function AdminSettingsPanel({
       <AdminHostDefaultsSection
         open={openSections.has("host-defaults")}
         onToggle={() => toggle("host-defaults")}
-        defaults={hostDefaults}
-        setDefaults={setHostDefaults}
-        handleSaveDefaults={handleSaveHostDefaults}
       />
 
       <AdminBrandingSection

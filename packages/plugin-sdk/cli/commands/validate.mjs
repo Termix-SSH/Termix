@@ -2,8 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifest } from "../lib/plugin-dir.mjs";
-import { LEGACY_TABLE_OWNERS as LEGACY_TABLES } from "../../dist/db.js";
-import { findUnownedTableWrites } from "../../dist/ddl.js";
 
 /**
  * The manifest rules live in src/manifest.ts, which the server uses too, so
@@ -37,8 +35,11 @@ export async function validate({ cwd }) {
     }
   }
 
-  problems.push(...validateMigrations(cwd, raw.id ?? path.basename(cwd)));
+  problems.push(
+    ...(await validateMigrations(cwd, raw.id ?? path.basename(cwd))),
+  );
   problems.push(...validateNativeDependencies(cwd, raw));
+  problems.push(...validatePackage(cwd, raw));
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -46,6 +47,36 @@ export async function validate({ cwd }) {
   }
 
   console.log(`ok  ${raw.id ?? path.basename(cwd)}`);
+}
+
+/**
+ * package.json has to agree with the manifest: the same version, and a real
+ * SDK range rather than "*", so a plugin built against a newer SDK says so.
+ */
+function validatePackage(cwd, raw) {
+  const problems = [];
+  const pkgPath = path.join(cwd, "package.json");
+  if (!fs.existsSync(pkgPath)) return problems;
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+
+  if (pkg.version && raw.version && pkg.version !== raw.version) {
+    problems.push(
+      `package.json version ${pkg.version} does not match manifest version ${raw.version}`,
+    );
+  }
+
+  const sdkRange =
+    pkg.peerDependencies?.["@termix/plugin-sdk"] ??
+    pkg.dependencies?.["@termix/plugin-sdk"] ??
+    pkg.devDependencies?.["@termix/plugin-sdk"];
+  if (!sdkRange) {
+    problems.push("package.json does not depend on @termix/plugin-sdk");
+  } else if (sdkRange === "*" || sdkRange === "latest") {
+    problems.push(
+      `@termix/plugin-sdk is "${sdkRange}"; pin a range such as "^1.0.0"`,
+    );
+  }
+  return problems;
 }
 
 /**
@@ -84,7 +115,12 @@ const DIALECTS = ["sqlite", "postgres", "mysql"];
  * never ran this command. Here it is a build-time error with a file name
  * attached, rather than a plugin that fails to activate later.
  */
-function validateMigrations(cwd, pluginId) {
+async function validateMigrations(cwd, pluginId) {
+  const { LEGACY_TABLE_OWNERS: LEGACY_TABLES } =
+    await import("../../dist/db.js");
+  const { collectOwnedIndexes, findUnownedTableWrites } =
+    await import("../../dist/ddl.js");
+
   const problems = [];
   const legacy = new Set(
     Object.entries(LEGACY_TABLES)
@@ -106,16 +142,25 @@ function validateMigrations(cwd, pluginId) {
       .filter((file) => file.endsWith(".sql"))
       .sort();
     byDialect.set(dialect, files);
+    const sqls = files.map((file) =>
+      fs.readFileSync(path.join(dir, file), "utf8"),
+    );
+    const indexes = collectOwnedIndexes(pluginId, sqls, legacy);
 
-    for (const file of files) {
+    for (const [index, file] of files.entries()) {
       if (!/^\d{4}_[a-z0-9_]+\.sql$/.test(file)) {
         problems.push(
           `migrations/${dialect}/${file} must be named NNNN_name.sql, lower snake_case`,
         );
       }
 
-      const sql = fs.readFileSync(path.join(dir, file), "utf8");
-      for (const problem of findUnownedTableWrites(pluginId, sql, legacy)) {
+      const sql = sqls[index];
+      for (const problem of findUnownedTableWrites(
+        pluginId,
+        sql,
+        legacy,
+        indexes,
+      )) {
         problems.push(`migrations/${dialect}/${file} ${problem}`);
       }
     }

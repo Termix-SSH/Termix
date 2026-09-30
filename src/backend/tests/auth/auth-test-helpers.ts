@@ -43,7 +43,7 @@ export function fakeFactory(state: AuthState) {
       findById: async (id: string) => state.users.get(id) ?? null,
       findByUsername: async (username: string) =>
         [...state.users.values()].find((u) => u.username === username) ?? null,
-      findByOidcIdentifier: async (identifier: string) =>
+      findByExternalIdentifier: async (identifier: string) =>
         [...state.users.values()].find(
           (u) => u.oidcIdentifier === identifier,
         ) ?? null,
@@ -206,10 +206,10 @@ export function fakeAuthManager(state: AuthState) {
       return userId ? { userId, pendingTOTP: true } : null;
     }),
     authenticateUser: vi.fn(async () => true),
-    authenticateOIDCUser: vi.fn(async () => true),
-    revokeSessionsByOidc: vi.fn(async () => 1),
+    authenticateExternalUser: vi.fn(async () => true),
+    revokeSessionsByExternalSession: vi.fn(async () => 1),
     unlockWithSystemKey: vi.fn(async () => true),
-    registerOIDCUser: vi.fn(async () => {}),
+    registerExternalUser: vi.fn(async () => {}),
     isTrustedDevice: vi.fn(async (userId: string, fingerprint: string) =>
       state.trusted.has(`${userId}:${fingerprint}`),
     ),

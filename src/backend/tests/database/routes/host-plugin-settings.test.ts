@@ -52,6 +52,9 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentPluginSettingsRepository: () => ({ getAllForScopeIds, set }),
 }));
 
+vi.mock("../../../hosts/defaults/overrides.js", () => ({
+  changeHostOverrides: async () => {},
+}));
 vi.mock("../../../plugins/index.js", () => ({
   getPluginRuntime: () => ({ loader: { list: () => loaded } }),
 }));

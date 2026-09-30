@@ -14,7 +14,6 @@ import {
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { describePluginFrontend } from "../../plugins/assets.js";
-import { getSetting } from "../../plugins/settings.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { getPluginPublicHttpRoutes } from "../../plugins/http.js";
 import { getPluginPublicWsRoutes } from "../../plugins/ws.js";
@@ -254,7 +253,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
             dependencies?: Record<string, string>;
             optionalDependencies?: Record<string, string>;
           };
-          contributes = await withHostFieldDefaults(manifest as PluginManifest);
+          contributes = manifest?.contributes ?? null;
           capabilities = Array.isArray(manifest?.capabilities)
             ? (manifest.capabilities as string[])
             : [];
@@ -1189,7 +1188,7 @@ router.get(
  * /plugins/{id}/settings/host/{hostId}:
  *   put:
  *     summary: Update a plugin's settings for one host
- *     description: Writes host-scope values. Requires edit access to the host, so a user who may only connect to a shared host cannot change how a plugin treats it.
+ *     description: Writes host-scope values. Requires edit access to the host, so a user who may only connect to a shared host cannot change how a plugin treats it. A value written here becomes the host's own rather than following the host defaults; list keys in `_inherit` to hand them back to the defaults.
  *     tags:
  *       - Plugins
  *     parameters:
@@ -1253,12 +1252,19 @@ router.put(
         return;
       }
 
+      const { _inherit: inheritRaw, ...written } = req.body as Record<
+        string,
+        unknown
+      >;
+      const inherit = Array.isArray(inheritRaw)
+        ? inheritRaw.filter((key): key is string => typeof key === "string")
+        : [];
       const errors = await applySettings(
         userId,
         manifest,
         "host",
         String(hostId),
-        req.body,
+        written,
         { isHostOwner: access.isOwner === true },
       );
       if (Object.keys(errors).length > 0) {
@@ -1267,6 +1273,14 @@ router.put(
       }
       const { touchHost } = await import("./host-plugin-settings.js");
       await touchHost(hostId);
+      // A value set here is the host's own; a key in _inherit follows the
+      // host defaults again.
+      const { changeHostOverrides } =
+        await import("../../hosts/defaults/overrides.js");
+      await changeHostOverrides([hostId], {
+        own: Object.keys(written).map((key) => [pluginId, key]),
+        inherit: inherit.map((key) => [pluginId, key]),
+      });
 
       const values = await getAllSettings(manifest, "host", hostId, {
         redactSecrets: true,
@@ -1284,37 +1298,3 @@ router.put(
 );
 
 export default router;
-
-/**
- * A host field with defaultFrom starts new hosts at an admin setting's value,
- * so the host editor gets that value as the field's default.
- */
-async function withHostFieldDefaults(
-  manifest: PluginManifest,
-): Promise<unknown> {
-  const contributes = manifest?.contributes;
-  const host = contributes?.settings?.host;
-  if (!host?.fields.some((field) => field.defaultFrom)) {
-    return contributes ?? null;
-  }
-  const fields: PluginSettingsField[] = await Promise.all(
-    host.fields.map(async (field) => {
-      if (!field.defaultFrom) return field;
-      try {
-        const value = await getSetting(
-          manifest,
-          "admin",
-          null,
-          field.defaultFrom,
-        );
-        return value === undefined ? field : { ...field, default: value };
-      } catch {
-        return field;
-      }
-    }),
-  );
-  return {
-    ...contributes,
-    settings: { ...contributes.settings, host: { ...host, fields } },
-  };
-}

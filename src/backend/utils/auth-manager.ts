@@ -137,7 +137,7 @@ class AuthManager {
     }
   }
 
-  async registerOIDCUser(
+  async registerExternalUser(
     userId: string,
     _sessionDurationMs?: number,
   ): Promise<void> {
@@ -154,7 +154,7 @@ class AuthManager {
     return false;
   }
 
-  async authenticateOIDCUser(
+  async authenticateExternalUser(
     userId: string,
     _deviceType?: DeviceType,
   ): Promise<boolean> {
@@ -505,7 +505,7 @@ class AuthManager {
     }
   }
 
-  async revokeSessionsByOidc(params: {
+  async revokeSessionsByExternalSession(params: {
     ssoProviderId?: number | null;
     sub?: string | null;
     sid?: string | null;
@@ -529,7 +529,6 @@ class AuthManager {
       if (matched.length === 0) return 0;
 
       const matchedIds = matched.map((s) => s.id);
-      const affectedUsers = new Set(matched.map((s) => s.userId));
 
       await db.delete(sessions).where(inArray(sessions.id, matchedIds));
 

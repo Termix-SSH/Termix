@@ -1,3 +1,4 @@
+import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -121,6 +122,7 @@ export function registerUserAdminRoutes(
           userId: u.id,
           username: u.username,
           is_admin: u.isAdmin,
+          is_external: isExternalAccount(u),
           is_oidc: u.isOidc,
           password_hash: u.passwordHash ? "set" : null,
           // Management-only details stay admin-eyes-only; regular users hit

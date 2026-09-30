@@ -69,10 +69,11 @@ async function writeArtifact(
   dir: string,
   id: string,
   sig: "valid" | "wrong-key" | "none",
+  version = "1.0.0",
 ): Promise<string> {
   const build = tempRoot("termix-build-");
-  createFixturePlugin({ id, root: build });
-  const file = path.join(dir, `${id}-1.0.0.tmxplug`);
+  createFixturePlugin({ id, root: build, manifestOverrides: { version } });
+  const file = path.join(dir, `${id}-${version}.tmxplug`);
   await tar.c({ gzip: true, file, cwd: path.join(build, id) }, [
     "manifest.json",
     "backend",
@@ -146,13 +147,57 @@ describe("signed plugins gate on", () => {
     expect(await loadedIds()).toEqual(["bundled-one", "signed-one"]);
   });
 
-  it("refuses a signed archive that takes a bundled plugin's id", async () => {
+  it("refuses a signed archive of a bundled id that is not newer", async () => {
     const { userDir } = setup();
     process.env.TERMIX_REQUIRE_SIGNED_PLUGINS = "true";
     await writeArtifact(userDir, "bundled-one", "valid");
     const loader = new PluginLoader();
     const loaded = await loader.loadAll();
     expect(loaded.map((plugin) => plugin.id)).toEqual(["bundled-one"]);
-    expect(loader.get("bundled-one")?.source).toBe("bundled");
+    expect(loader.get("bundled-one")?.artifact).toBeUndefined();
+  });
+});
+
+describe("updating a bundled plugin", () => {
+  it("loads a signed, newer archive in place of the bundled copy", async () => {
+    const { userDir } = setup();
+    const file = await writeArtifact(userDir, "bundled-one", "valid", "1.0.1");
+    const loader = new PluginLoader();
+    const loaded = await loader.loadAll();
+
+    expect(loaded.map((plugin) => plugin.id)).toEqual(["bundled-one"]);
+    const plugin = loader.get("bundled-one");
+    expect(plugin?.manifest.version).toBe("1.0.1");
+    expect(plugin?.source).toBe("bundled");
+    expect(plugin?.artifact).toBe(file);
+    expect(plugin?.signedBy).toBe("test");
+  });
+
+  it("keeps the bundled copy for an unsigned newer archive", async () => {
+    const { userDir } = setup();
+    await writeArtifact(userDir, "bundled-one", "none", "2.0.0");
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    expect(loader.get("bundled-one")?.manifest.version).toBe("1.0.0");
+  });
+
+  it("keeps the bundled copy for a signed older archive", async () => {
+    const { userDir } = setup();
+    await writeArtifact(userDir, "bundled-one", "valid", "0.9.0");
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    expect(loader.get("bundled-one")?.manifest.version).toBe("1.0.0");
+  });
+
+  it("refuses a downgrade after the bundled copy was unloaded", async () => {
+    const { userDir } = setup();
+    const loader = new PluginLoader();
+    await loader.loadAll();
+    loader.forget("bundled-one");
+    const file = await writeArtifact(userDir, "bundled-one", "valid", "0.5.0");
+
+    await expect(
+      loader.loadArtifact(file, loader.bundledIds()),
+    ).rejects.toThrow(/not newer than the bundled 1\.0\.0/);
   });
 });

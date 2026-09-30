@@ -11,6 +11,7 @@ import {
   parseManifest,
   validateManifest,
   SUPPORTED_PLUGIN_API_VERSION,
+  isTermixCompatible,
 } from "../../plugins/manifest.js";
 
 function base(overrides: Record<string, unknown> = {}) {
@@ -91,7 +92,35 @@ describe("manifest v2 validation", () => {
     );
 
     expect(manifest).toBeUndefined();
-    expect(errors.join()).toMatch(/SDK API version/);
+    expect(errors.join()).toMatch(/needs plugin API 2/);
+  });
+
+  it("accepts an api range this build satisfies", () => {
+    for (const api of ["1", "^1.0.0", ">=1.0.0 <2", "1.x"]) {
+      expect(
+        parseManifest(base({ engine: { termix: ">=2.9.0", api } })).errors,
+      ).toEqual([]);
+    }
+  });
+
+  it("refuses an api range needing a newer minor", () => {
+    const { errors } = parseManifest(
+      base({ engine: { termix: ">=2.9.0", api: "^1.99" } }),
+    );
+    expect(errors.join()).toMatch(/needs plugin API \^1\.99/);
+  });
+
+  it("refuses an engine that is not a semver range", () => {
+    expect(
+      validateManifest(base({ engine: { termix: "soon", api: "one" } })).join(),
+    ).toMatch(/engine.termix.*semver[\s\S]*engine.api.*semver/);
+  });
+
+  it("checks engine.termix against the core version", () => {
+    expect(isTermixCompatible(">=2.9.0", "2.9.0")).toBe(true);
+    expect(isTermixCompatible(">=2.9.0", "2.9.0-beta.3")).toBe(true);
+    expect(isTermixCompatible(">=3.0.0", "2.9.1")).toBe(false);
+    expect(isTermixCompatible(">=3.0.0", null)).toBe(true);
   });
 
   it("fills in the entry point defaults", () => {

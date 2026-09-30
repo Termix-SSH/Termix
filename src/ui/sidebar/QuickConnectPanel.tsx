@@ -6,6 +6,11 @@ import { Input } from "@/components/input";
 import type { Host } from "@/types/ui-types";
 import { getCredentials } from "@/api/credentials-api";
 import { mapCredentials } from "./HostManagerData";
+import { resolveHostDefaults } from "@/api/host-defaults-api";
+import {
+  pluginSettingsFrom,
+  withDefaultPluginSettings,
+} from "./host-defaults/quick-connect-defaults";
 import {
   createQuickConnectHost,
   quickConnectTargets,
@@ -88,19 +93,32 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
     setProtocol(next);
   };
 
+  // A host that is never saved still follows the user's host defaults.
+  const [defaultPluginSettings, setDefaultPluginSettings] = useState<
+    Record<string, Record<string, unknown>>
+  >({});
+  useEffect(() => {
+    resolveHostDefaults({ folder: null })
+      .then((values) => setDefaultPluginSettings(pluginSettingsFrom(values)))
+      .catch(() => {});
+  }, []);
+
   const buildHost = () =>
-    createQuickConnectHost({
-      ip: host.trim(),
-      port: parseInt(port) || parseInt(defaultPort(protocol)),
-      username,
-      authType: isDesktop ? "password" : authType,
-      password,
-      key: privateKey,
-      credentialId,
-      protocol: selected,
-      domain: domain || undefined,
-      authFields: INLINE_AUTH_TYPES.has(authType) ? undefined : authFields,
-    });
+    withDefaultPluginSettings(
+      createQuickConnectHost({
+        ip: host.trim(),
+        port: parseInt(port) || parseInt(defaultPort(protocol)),
+        username,
+        authType: isDesktop ? "password" : authType,
+        password,
+        key: privateKey,
+        credentialId,
+        protocol: selected,
+        domain: domain || undefined,
+        authFields: INLINE_AUTH_TYPES.has(authType) ? undefined : authFields,
+      }),
+      defaultPluginSettings,
+    );
 
   const targets = quickConnectTargets(allActions, buildHost());
 

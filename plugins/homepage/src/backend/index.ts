@@ -1,3 +1,4 @@
+import { mapLayoutItemIds } from "./layout-item-ids.js";
 import type { Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import {
@@ -43,6 +44,27 @@ export async function activate(ctx: PluginContext) {
     type: "dashboardServiceLinks",
     table: serviceLinks,
     order: 70,
+  });
+
+  ctx.sync.registerEntity({
+    type: "homepageLayouts",
+    table: layouts,
+    order: 81,
+    singleton: true,
+    serialize: async (row, resolveSyncId) => ({
+      ...row,
+      layout: await mapLayoutItemIds(row.layout as string, async (id) =>
+        typeof id === "number" && Number.isInteger(id)
+          ? resolveSyncId("homepageItems", id)
+          : null,
+      ),
+    }),
+    deserialize: async (row, resolveId) => ({
+      ...row,
+      layout: await mapLayoutItemIds(row.layout as string, async (id) =>
+        typeof id === "string" ? resolveId("homepageItems", id) : null,
+      ),
+    }),
   });
 
   ctx.services.provide("homepage.items", createHomepageItemsService(ctx, repo));

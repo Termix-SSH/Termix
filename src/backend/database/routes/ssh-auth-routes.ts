@@ -25,13 +25,25 @@ export interface SshAuthProviderSummary {
   missingPlugin?: { id: string; name: string };
 }
 
+/**
+ * A plugin names its keys relative to its own locales, so they are sent
+ * qualified with its namespace. Core never has to hold a plugin's strings.
+ */
+function qualifyKey(
+  pluginId: string,
+  key: string | undefined,
+): string | undefined {
+  if (!key || pluginId === "core" || key.includes(":")) return key;
+  return `${pluginId}:${key}`;
+}
+
 function summarizeSshAuthProviders(): SshAuthProviderSummary[] {
   ensureCoreSshAuthProviders();
   const summaries: SshAuthProviderSummary[] = listSshAuthProviders().map(
     (provider) => ({
       type: provider.type,
-      labelKey: provider.labelKey,
-      descriptionKey: provider.descriptionKey,
+      labelKey: qualifyKey(provider.pluginId, provider.labelKey) ?? "",
+      descriptionKey: qualifyKey(provider.pluginId, provider.descriptionKey),
       pluginId: provider.pluginId,
       fields: provider.fields ?? [],
       credentialType: !!provider.credentialType,

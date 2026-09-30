@@ -4,7 +4,7 @@ import {
   useHostActions,
   useHostStatus,
   useHosts,
-  type PluginHostRecord,
+  useTabs,
 } from "@termix/plugin-sdk/frontend";
 
 import { registerWidget } from "./WidgetRegistry";
@@ -17,14 +17,6 @@ import { GRID_SIZE } from "../types.js";
 
 import { quickConnectTargets } from "../quick-connect-targets.js";
 import { WidgetTitle } from "@termix/plugin-sdk/ui";
-
-function openTab(host: PluginHostRecord, type: QuickConnectType) {
-  window.dispatchEvent(
-    new CustomEvent("termix:open-tab", {
-      detail: { hostId: String(host.id), type },
-    }),
-  );
-}
 
 function StatusDot({ hostId }: { hostId: number }) {
   const status = useHostStatus(hostId);
@@ -43,6 +35,7 @@ function QuickConnectWidget({
 }: WidgetComponentProps<QuickConnectConfig>) {
   const { t } = useTranslation();
   const { hosts: allHosts, loaded } = useHosts();
+  const tabs = useTabs();
   const targets = quickConnectTargets(useHostActions());
 
   const hosts =
@@ -104,7 +97,7 @@ function QuickConnectWidget({
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
-                      openTab(host, target.type);
+                      tabs.connectHost(host, target.type);
                     }}
                     className="p-1.5 text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/10 transition-colors border border-transparent hover:border-accent-brand/20"
                   >

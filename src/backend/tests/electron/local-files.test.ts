@@ -165,6 +165,7 @@ function startBackend(
 describe("local-files transfer target resolution", () => {
   const resolve = localFiles.createTargetResolver({
     localBaseUrl: "http://127.0.0.1:30001/plugin-api/file-manager",
+    apiPath: "/plugin-api/file-manager",
     getLinkedServer: () => ({
       serverUrl: "https://termix.example.com/",
       token: "remote-jwt",
@@ -1147,5 +1148,19 @@ describe("local-files upload boundary", () => {
     });
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Unknown transfer origin/);
+  });
+});
+
+describe("local-files transfer API path", () => {
+  it("accepts only a /plugin-api/<id> path from the plugin", () => {
+    const set = (
+      localFiles as unknown as {
+        setTransferApiPath: (path: unknown) => void;
+      }
+    ).setTransferApiPath;
+    expect(() => set("/plugin-api/file-manager")).not.toThrow();
+    for (const bad of ["/users", "/plugin-api/../users", "https://x", 3]) {
+      expect(() => set(bad)).toThrow(/Invalid transfer API path/);
+    }
   });
 });

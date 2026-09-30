@@ -30,19 +30,25 @@ describe("hostSettingsFromTerminalConfig", () => {
 });
 
 describe("resolveTerminalSettings", () => {
-  it("uses the user's defaults while the host follows them", () => {
+  it("runs with the host's values, which already follow its defaults", () => {
     const host = readHostTerminalSettings({ fontSize: 30, autoTmux: true });
-    const resolved = resolveTerminalSettings(host, { fontSize: 18 });
-    expect(resolved.fontSize).toBe(18);
+    const resolved = resolveTerminalSettings(host);
+    expect(resolved.fontSize).toBe(30);
     expect(resolved.autoTmux).toBe(true);
   });
 
-  it("uses the host's own look once it opts out", () => {
+  it("ignores the old follow-the-user switch", () => {
     const host = readHostTerminalSettings({
-      inheritAppearance: false,
-      fontSize: 30,
+      inheritAppearance: true,
+      fontSize: 22,
     });
-    expect(resolveTerminalSettings(host, { fontSize: 18 }).fontSize).toBe(30);
+    expect(resolveTerminalSettings(host).fontSize).toBe(22);
+  });
+
+  it("defaults echo and link clicks to concrete modes", () => {
+    const resolved = resolveTerminalSettings(readHostTerminalSettings({}));
+    expect(resolved.localEcho).toBe("auto");
+    expect(resolved.linkClickBehavior).toBe("confirm");
   });
 
   it("falls back to the built-in defaults", () => {
@@ -62,7 +68,6 @@ describe("readUserSettings", () => {
         linkClickBehavior: "direct",
       }),
     ).toEqual({
-      terminalDefaults: { fontSize: 16 },
       customThemes: [{ id: "a", name: "A", colors: {} }],
       commandAutocomplete: false,
       localEcho: "auto",

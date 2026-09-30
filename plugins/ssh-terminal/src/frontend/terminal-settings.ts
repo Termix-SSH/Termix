@@ -105,11 +105,9 @@ export function hostTerminalValues(
 
 export function resolveForHost(
   host: object | null | undefined,
-  user: TerminalUserSettings = DEFAULT_USER_SETTINGS,
 ): ResolvedTerminalConfig {
   const resolved = resolveTerminalSettings(
     readHostTerminalSettings(hostTerminalValues(host)),
-    user.terminalDefaults,
   );
   return {
     ...resolved,
@@ -126,7 +124,7 @@ export function useTerminalSettings(
   const ownKey = own ? JSON.stringify(own) : "";
   return useMemo(() => {
     const user = client?.user ?? DEFAULT_USER_SETTINGS;
-    return { config: resolveForHost(host, user), user };
+    return { config: resolveForHost(host), user };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownKey, client]);
 }

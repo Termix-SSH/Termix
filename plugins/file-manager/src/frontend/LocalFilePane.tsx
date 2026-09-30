@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@termix/plugin-sdk/ui";
 import { Button, Input } from "@termix/plugin-sdk/ui";
-import type { LocalFileEntry } from "@termix/plugin-sdk/ui";
+import type { LocalFileEntry } from "@termix/plugin-sdk/frontend";
 import {
   createLocalFile,
   createLocalFolder,

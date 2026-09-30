@@ -190,9 +190,16 @@ describe("ctx.db capability", () => {
     });
   });
 
-  it("hands back read-only refs to the core tables a plugin may join", async () => {
+  it("refuses core refs with only db:own", async () => {
     grants.set("demo", ["db:own"]);
     const { ctx } = contextFor("demo", ["db:own"]);
+
+    await expect(ctx.db.refs()).rejects.toThrow(/db:core-refs/);
+  });
+
+  it("hands back refs to the core tables a plugin may join", async () => {
+    grants.set("demo", ["db:core-refs"]);
+    const { ctx } = contextFor("demo", ["db:core-refs"]);
 
     const refs = (await ctx.db.refs()) as Record<string, unknown>;
 

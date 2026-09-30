@@ -1,5 +1,8 @@
 import { useRef, useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  notifyHostsChanged,
+  useTranslation,
+} from "@termix/plugin-sdk/frontend";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@termix/plugin-sdk/ui";
@@ -201,7 +204,7 @@ export function ProxmoxDiscoverDialog({
       if (toImport.length) {
         const updated = await listHosts();
         onHostsChanged(updated);
-        window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+        notifyHostsChanged();
       }
 
       const msg = [

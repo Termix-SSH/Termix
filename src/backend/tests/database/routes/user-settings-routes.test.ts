@@ -1,7 +1,7 @@
 /**
- * The admin host defaults. The terminal half moved to the ssh-terminal
- * plugin's new-host settings; its keys stay in the stored row for the boot
- * copy and a downgrade, but are never served or overwritten here.
+ * The old admin host defaults routes are gone: host defaults live under
+ * /host/defaults now. The GET used to hand the admin's proxy password to any
+ * signed-in user.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -65,40 +65,18 @@ beforeEach(() => {
 });
 
 describe("/users/host-defaults", () => {
-  it("serves core's defaults without the terminal keys the plugin took over", async () => {
+  it("is no longer served, so the stored row never leaves the server", async () => {
     state.settings.host_defaults = JSON.stringify({
       useSocks5: true,
-      fontSize: 18,
-      autoTmux: true,
+      socks5Password: "secret",
     });
-    const response = await request(app()).get("/users/host-defaults");
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ useSocks5: true });
-  });
-
-  it("keeps the stored terminal keys when an admin saves core's defaults", async () => {
-    state.settings.host_defaults = JSON.stringify({
-      useSocks5: true,
-      fontSize: 18,
-      enableCommandHistory: false,
-    });
-    const response = await request(app())
+    const read = await request(app()).get("/users/host-defaults");
+    expect(read.status).toBe(404);
+    expect(JSON.stringify(read.body)).not.toContain("secret");
+    const write = await request(app())
       .patch("/users/host-defaults")
-      .send({ useSocks5: false, statusCheckEnabled: false, autoTmux: true });
-    expect(response.status).toBe(200);
-    expect(JSON.parse(state.settings.host_defaults)).toEqual({
-      fontSize: 18,
-      enableCommandHistory: false,
-      useSocks5: false,
-      statusCheckEnabled: false,
-    });
-  });
-
-  it("refuses a user who is not an admin", async () => {
-    state.admin = false;
-    const response = await request(app())
-      .patch("/users/host-defaults")
-      .send({ useSocks5: true });
-    expect(response.status).toBe(403);
+      .send({ useSocks5: false });
+    expect(write.status).toBe(404);
+    expect(JSON.parse(state.settings.host_defaults).useSocks5).toBe(true);
   });
 });
