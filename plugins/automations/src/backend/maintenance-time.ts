@@ -107,7 +107,7 @@ export function parsePlan(
   const grace = value.graceMinutes;
   const recurrence = immediate ? "once" : value.recurrence;
   if (!reason || reason.length > 200)
-    throw new MaintenanceInputError("Reason must contain 1–200 characters");
+    throw new MaintenanceInputError("Reason must contain 1 to 200 characters");
   if (
     !Number.isFinite(start) ||
     (!immediate && start <= now) ||
@@ -124,7 +124,7 @@ export function parsePlan(
     duration > 10080
   ) {
     throw new MaintenanceInputError(
-      "Estimated duration must be 1–10080 minutes",
+      "Estimated duration must be 1 to 10080 minutes",
     );
   }
   if (
@@ -133,7 +133,7 @@ export function parsePlan(
     grace < 0 ||
     grace > 1440
   ) {
-    throw new MaintenanceInputError("Grace period must be 0–1440 minutes");
+    throw new MaintenanceInputError("Grace period must be 0 to 1440 minutes");
   }
   if (!["once", "weekly", "monthly"].includes(String(recurrence)))
     throw new MaintenanceInputError("Invalid recurrence");

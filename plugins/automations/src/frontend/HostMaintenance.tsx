@@ -117,7 +117,7 @@ function MaintenanceEditor({
       notifyOverdue: notify,
     });
   }
-  const fieldClass = "h-9 rounded-md border bg-background px-3 text-sm";
+  const fieldClass = "h-9 border bg-background px-3 text-sm";
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 overflow-auto p-6">
       <div>
@@ -140,7 +140,7 @@ function MaintenanceEditor({
         </p>
       )}
       {state?.active && (
-        <section className="space-y-3 rounded-lg border p-4">
+        <section className="space-y-3 border p-4">
           <Badge>{t("maintenance.active")}</Badge>
           <p className="break-words">{state.active.reasons.join("; ")}</p>
           <p>
@@ -176,7 +176,7 @@ function MaintenanceEditor({
         </section>
       )}
       {canEdit && (
-        <form onSubmit={submit} className="space-y-4 rounded-lg border p-4">
+        <form onSubmit={submit} className="space-y-4 border p-4">
           <div className="flex flex-wrap gap-3">
             <Label htmlFor="maintenance-mode">{t("maintenance.action")}</Label>
             <select
@@ -304,7 +304,7 @@ function MaintenanceEditor({
         {state?.plans.map((plan) => (
           <div
             key={plan.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+            className="flex flex-wrap items-center justify-between gap-3 border p-3"
           >
             <div className="min-w-0 space-y-1">
               <p className="break-words">{plan.reason}</p>
