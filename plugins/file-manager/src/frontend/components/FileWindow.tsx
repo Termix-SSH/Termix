@@ -9,7 +9,9 @@ import {
   writeSSHFile,
   getSSHStatus,
   connectSSH,
+  setSudoPassword,
 } from "../api/ssh-file-operations-api";
+import { SudoPasswordDialog } from "../SudoPasswordDialog.tsx";
 import { toast } from "sonner";
 import { DownloadProgressToast } from "./DownloadProgressToast";
 import type { SSHHost } from "../host-types";
@@ -298,6 +300,21 @@ export function FileWindow({
     loadFileContent();
   };
 
+  const [sudoSaveContent, setSudoSaveContent] = useState<string | null>(null);
+
+  const handleSudoSave = async (password: string) => {
+    const pending = sudoSaveContent;
+    setSudoSaveContent(null);
+    if (pending === null) return;
+    try {
+      await setSudoPassword(sshSessionId, password);
+    } catch {
+      toast.error(t("fileManager.sudoAuthFailed"));
+      return;
+    }
+    await handleSave(pending);
+  };
+
   const handleSave = async (newContent: string) => {
     try {
       setIsSaving(true);
@@ -317,13 +334,22 @@ export function FileWindow({
     } catch (error: unknown) {
       console.error("Failed to save file:", error);
 
-      const err = error as { message?: string };
-      if (
+      const err = error as {
+        message?: string;
+        response?: { data?: { needsSudo?: boolean } };
+      };
+      if (err.response?.data?.needsSudo) {
+        setSudoSaveContent(newContent);
+      } else if (
         err.message?.includes("connection") ||
         err.message?.includes("established")
       ) {
         toast.error(
-          `SSH connection failed. Please check your connection to ${sshHost.name} (${sshHost.ip}:${sshHost.port})`,
+          t("fileManager.sshConnectionFailed", {
+            name: sshHost.name,
+            ip: sshHost.ip,
+            port: sshHost.port,
+          }),
         );
       } else {
         toast.error(
@@ -562,6 +588,13 @@ export function FileWindow({
             : undefined
         }
         onMediaDimensionsChange={handleMediaDimensionsChange}
+      />
+      <SudoPasswordDialog
+        open={sudoSaveContent !== null}
+        onOpenChange={(open) => {
+          if (!open) setSudoSaveContent(null);
+        }}
+        onSubmit={(password) => void handleSudoSave(password)}
       />
     </DraggableWindow>
   );

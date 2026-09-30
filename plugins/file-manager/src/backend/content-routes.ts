@@ -31,6 +31,21 @@ const parseByteOffset = (value: string | undefined): number | null => {
   return parsed;
 };
 
+/**
+ * The editor sends text. Binary callers say so with encoding "base64";
+ * guessing breaks text that happens to be valid base64.
+ */
+export function decodeWriteContent(
+  content: unknown,
+  encoding?: unknown,
+): Buffer {
+  if (Buffer.isBuffer(content)) return content;
+  if (typeof content === "string") {
+    return Buffer.from(content, encoding === "base64" ? "base64" : "utf8");
+  }
+  return Buffer.from(content as ArrayLike<number>);
+}
+
 export function registerFileContentRoutes(
   app: Express,
   { ctx, sshSessions, verifySessionOwnership }: FileContentRoutesDeps,
@@ -435,16 +450,22 @@ export function registerFileContentRoutes(
    *                 type: string
    *               content:
    *                 type: string
+   *               encoding:
+   *                 type: string
+   *                 enum: [utf8, base64]
+   *                 description: How content is encoded. Defaults to utf8.
    *     responses:
    *       200:
    *         description: File written successfully.
+   *       403:
+   *         description: Permission denied; needsSudo is set when a sudo password would help.
    *       400:
    *         description: Missing required parameters or SSH connection not established.
    *       500:
    *         description: Failed to write file.
    */
   app.post("/writeFile", async (req, res) => {
-    const { sessionId, path: filePath, content } = req.body;
+    const { sessionId, path: filePath, content, encoding } = req.body;
     const sshConn = sshSessions[sessionId];
     const userId = ctx.currentActor()!;
 
@@ -558,24 +579,9 @@ export function registerFileContentRoutes(
         );
         getSessionSftp(sshConn)
           .then((sftp) => {
-            let fileBuffer;
+            let fileBuffer: Buffer;
             try {
-              if (typeof content === "string") {
-                try {
-                  const testBuffer = Buffer.from(content, "base64");
-                  if (testBuffer.toString("base64") === content) {
-                    fileBuffer = testBuffer;
-                  } else {
-                    fileBuffer = Buffer.from(content, "utf8");
-                  }
-                } catch {
-                  fileBuffer = Buffer.from(content, "utf8");
-                }
-              } else if (Buffer.isBuffer(content)) {
-                fileBuffer = content;
-              } else {
-                fileBuffer = Buffer.from(content);
-              }
+              fileBuffer = decodeWriteContent(content, encoding);
             } catch (bufferErr) {
               ctx.log.error("Buffer conversion error:", bufferErr as Error);
               if (!res.headersSent) {
@@ -685,25 +691,12 @@ export function registerFileContentRoutes(
         return;
       }
       try {
-        let contentBuffer: Buffer;
-        if (typeof content === "string") {
-          try {
-            contentBuffer = Buffer.from(content, "base64");
-            if (contentBuffer.toString("base64") !== content) {
-              contentBuffer = Buffer.from(content, "utf8");
-            }
-          } catch {
-            contentBuffer = Buffer.from(content, "utf8");
-          }
-        } else if (Buffer.isBuffer(content)) {
-          contentBuffer = content;
-        } else {
-          contentBuffer = Buffer.from(content);
-        }
+        const contentBuffer = decodeWriteContent(content, encoding);
         const base64Content = contentBuffer.toString("base64");
         const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
-        const writeCommand = `echo '${base64Content}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
+        // Content goes through stdin; a command line argument caps it at 128 KB.
+        const writeCommand = `cat > '${escapedPath}' && echo "SUCCESS"`;
 
         execChannel(sshConn, writeCommand, (err, stream) => {
           if (err) {
@@ -734,6 +727,8 @@ export function registerFileContentRoutes(
           stream.stderr.on("error", (stderrErr) => {
             ctx.log.error("Fallback write stderr error:", stderrErr);
           });
+
+          stream.end(contentBuffer);
 
           stream.on("close", (code) => {
             if (outputData.includes("SUCCESS")) {
@@ -788,7 +783,7 @@ export function registerFileContentRoutes(
                 `Fallback write failed with code ${code}: ${errorData}`,
               );
               if (!res.headersSent) {
-                res.status(500).json({
+                res.status(isPermDenied ? 403 : 500).json({
                   error: `Write failed: ${errorData}`,
                   needsSudo: isPermDenied,
                   toast: {
