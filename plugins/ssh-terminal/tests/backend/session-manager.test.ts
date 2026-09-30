@@ -182,6 +182,46 @@ describe("TerminalSessionManager - multiplayer participants", () => {
     return id;
   }
 
+  it("sends the presenter dimensions before a participant replays output", () => {
+    const id = createConnectedSession();
+    const session = sessionManager.getSession(id)!;
+    session.cols = 132;
+    session.rows = 40;
+    const ws = makeFakeWs();
+    sessionManager.joinAsParticipant(id, ws, {
+      userId: "viewer",
+      permissionLevel: "read-only",
+    });
+    expect(JSON.parse(vi.mocked(ws.send).mock.calls[0][0] as string)).toEqual({
+      type: "resized",
+      cols: 132,
+      rows: 40,
+    });
+    sessionManager.destroySession(id);
+  });
+
+  it("broadcasts later size changes and retains them for new participants", () => {
+    const id = createConnectedSession();
+    const owner = makeFakeWs();
+    const viewer = makeFakeWs();
+    sessionManager.attachWs(id, "owner-1", owner);
+    sessionManager.joinAsParticipant(id, viewer, {
+      userId: "viewer",
+      permissionLevel: "read-only",
+    });
+    sessionManager.resizeSession(id, 100, 35);
+    const message = JSON.stringify({ type: "resized", cols: 100, rows: 35 });
+    expect(owner.send).toHaveBeenCalledWith(message);
+    expect(viewer.send).toHaveBeenCalledWith(message);
+    const newcomer = makeFakeWs();
+    sessionManager.joinAsParticipant(id, newcomer, {
+      userId: null,
+      permissionLevel: "read-only",
+    });
+    expect(vi.mocked(newcomer.send).mock.calls[0][0]).toBe(message);
+    sessionManager.destroySession(id);
+  });
+
   it("joinAsParticipant adds a participant without evicting the owner", () => {
     const id = createConnectedSession();
     const ownerWs = makeFakeWs();

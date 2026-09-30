@@ -444,6 +444,15 @@ export class TerminalSessionManager {
       tabInstanceId: opts.tabInstanceId,
       joinedViaShareId: opts.shareId,
     });
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          type: "resized",
+          cols: session.cols,
+          rows: session.rows,
+        }),
+      );
+    }
     this.broadcastParticipants(sessionId);
 
     this.log.info("Participant joined shared session", {
@@ -810,6 +819,15 @@ export class TerminalSessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     this.recordSessionEvent(session, "i", data);
+  }
+
+  resizeSession(sessionId: string, cols: number, rows: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    session.cols = cols;
+    session.rows = rows;
+    this.broadcast(sessionId, { type: "resized", cols, rows });
+    this.bufferResize(sessionId, cols, rows);
   }
 
   bufferResize(sessionId: string, cols: number, rows: number): void {
