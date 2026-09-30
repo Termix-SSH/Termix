@@ -35,19 +35,6 @@ describe("permissions", () => {
   );
 });
 
-describe("defaults", () => {
-  it("tells any user whether new hosts start with metrics on", async () => {
-    server = await startServer();
-    expect((await server.request("GET", "/defaults")).body).toEqual({
-      enabledForNewHosts: true,
-    });
-    await server.mock.ctx.settings.set("enabledForNewHosts", false);
-    expect((await server.request("GET", "/defaults")).body).toEqual({
-      enabledForNewHosts: false,
-    });
-  });
-});
-
 describe("metrics", () => {
   it("answers 404 until a sample exists", async () => {
     server = await startServer();

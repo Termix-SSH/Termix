@@ -187,6 +187,30 @@ describe("HostItem density parity", () => {
     },
   );
 
+  it.each(["hover", "click", "always", "actionsOnly"] as const)(
+    "keeps the compact host address visible with %s actions",
+    (trayTrigger) => {
+      const props = {
+        host: baseHost,
+        onOpenTab: noop,
+        onDelete: noop,
+        onDuplicate: noop,
+        density: "compact" as const,
+        trayTrigger,
+      };
+      const { rerender } = render(<HostItem {...props} />);
+      expect(screen.getByText(baseHost.ip).classList.contains("hidden")).toBe(
+        false,
+      );
+      rerender(<HostItem {...props} isHovered />);
+      expect(screen.getByText(baseHost.ip).classList.contains("hidden")).toBe(
+        false,
+      );
+      rerender(<HostItem {...props} isTrayOpen selectionMode />);
+      expect(screen.getAllByText(baseHost.ip)).toHaveLength(1);
+    },
+  );
+
   it("shows tags in both densities when showTags is true", () => {
     renderHostItem("comfortable");
     expect(screen.getByText("prod")).toBeTruthy();

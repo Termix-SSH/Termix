@@ -22,43 +22,6 @@ import {
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
-export type HostDefaults = {
-  useSocks5?: boolean;
-  socks5Host?: string;
-  socks5Port?: number;
-  socks5Username?: string;
-  socks5Password?: string;
-  credentialId?: number | null;
-  statusCheckEnabled?: boolean;
-};
-
-/**
- * Keys host_defaults held before the terminal's new-host defaults became the
- * ssh-terminal plugin's admin settings. Kept in the stored row for the boot
- * copy and a downgrade, never served or overwritten here.
- */
-const LEGACY_TERMINAL_HOST_DEFAULTS = [
-  "fontSize",
-  "fontFamily",
-  "theme",
-  "cursorStyle",
-  "cursorBlink",
-  "autoTmux",
-  "enableCommandHistory",
-];
-
-function parseHostDefaults(value: string | null): Record<string, unknown> {
-  if (!value) return {};
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
-}
-
 async function getAdminActor(
   userId: string | undefined,
 ): Promise<UserRecord | null> {
@@ -343,25 +306,6 @@ export function registerUserSettingsRoutes(
 
   /**
    * @openapi
-   * /users/session-sharing-enabled:
-   *   get:
-   *     summary: Get session sharing globally enabled setting
-   *     description: Returns whether live session sharing (terminal and remote desktop share links and in-app joins) is allowed instance-wide. Overrides every per-host toggle when false.
-   *     tags:
-   *       - Users
-   *     responses:
-   *       200:
-   *         description: Session sharing enabled status.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 enabled:
-   *                   type: boolean
-   */
-  /**
-   * @openapi
    * /users/audit-forwarding:
    *   get:
    *     summary: Get audit log forwarding settings (admin only)
@@ -578,95 +522,4 @@ export function registerUserSettingsRoutes(
     "update_notification_private_endpoints",
     "notification endpoint",
   );
-
-  /**
-   * @openapi
-   * /users/host-defaults:
-   *   get:
-   *     summary: Get host creation defaults
-   *     description: Returns the global default settings applied when creating a new host.
-   *     tags:
-   *       - Users
-   *     responses:
-   *       200:
-   *         description: Host defaults object.
-   *       500:
-   *         description: Failed to get host defaults.
-   */
-  router.get("/host-defaults", authenticateJWT, async (_req, res) => {
-    try {
-      const stored = parseHostDefaults(
-        await createCurrentSettingsRepository().get("host_defaults"),
-      );
-      for (const key of LEGACY_TERMINAL_HOST_DEFAULTS) delete stored[key];
-      res.json(stored as HostDefaults);
-    } catch (err) {
-      authLogger.error("Failed to get host defaults", err);
-      res.status(500).json({ error: "Failed to get host defaults" });
-    }
-  });
-
-  /**
-   * @openapi
-   * /users/host-defaults:
-   *   patch:
-   *     summary: Update host creation defaults (admin only)
-   *     description: Sets global default settings applied when a new host is created.
-   *     tags:
-   *       - Users
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *     responses:
-   *       200:
-   *         description: Host defaults updated.
-   *       403:
-   *         description: Not authorized.
-   *       500:
-   *         description: Failed to update host defaults.
-   */
-  router.patch("/host-defaults", authenticateJWT, async (req, res) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    try {
-      const actor = await getAdminActor(userId);
-      if (!actor) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-      const defaults: HostDefaults = { ...(req.body ?? {}) };
-      for (const key of LEGACY_TERMINAL_HOST_DEFAULTS) {
-        delete (defaults as Record<string, unknown>)[key];
-      }
-      const settings = createCurrentSettingsRepository();
-      const stored = parseHostDefaults(await settings.get("host_defaults"));
-      const legacy = Object.fromEntries(
-        LEGACY_TERMINAL_HOST_DEFAULTS.filter((key) => key in stored).map(
-          (key) => [key, stored[key]],
-        ),
-      );
-      await settings.set(
-        "host_defaults",
-        JSON.stringify({ ...legacy, ...defaults }),
-      );
-
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId,
-        username: actor.username ?? userId,
-        action: "update_host_defaults",
-        resourceType: "setting",
-        details: JSON.stringify(defaults),
-        ipAddress,
-        userAgent,
-        success: true,
-      });
-
-      res.json(defaults);
-    } catch (err) {
-      authLogger.error("Failed to update host defaults", err);
-      res.status(500).json({ error: "Failed to update host defaults" });
-    }
-  });
 }

@@ -33,7 +33,8 @@
         "titleKey": "nav.serial",
         "icon": "Usb"
       }
-    ]
+    ],
+    "uses": ["terminal.resolveTheme"]
   },
   "desktop": "local"
 }

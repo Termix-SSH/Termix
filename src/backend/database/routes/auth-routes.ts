@@ -7,7 +7,7 @@
 
 import type { Request, Response, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
-import { isOidcTokenCallback } from "../../utils/oidc-desktop-callback.js";
+import { isExternalTokenCallback } from "../../utils/external-login-callback.js";
 import { ensureCoreLoginProviders } from "../../auth/core-auth.js";
 import {
   readPendingLogin,
@@ -32,7 +32,7 @@ export interface PublicLoginMethod {
   kind: "redirect" | "form";
   labelKey: string;
   icon?: string;
-  instances: Array<{ id: string; label: string }>;
+  instances: Array<{ id: string; label: string; autoStart?: boolean }>;
 }
 
 async function enabledInstances(method: LoginMethod) {
@@ -93,12 +93,18 @@ export async function listPublicLoginMethods(): Promise<PublicLoginMethod[]> {
   ensureCoreLoginProviders();
   const methods: PublicLoginMethod[] = [];
   for (const method of listLoginMethods()) {
-    let instances: Array<{ id: string; label: string }> = [];
+    let instances: PublicLoginMethod["instances"] = [];
     if (method.describe) {
       try {
         instances = (await method.describe())
           .filter((instance) => instance.enabled)
-          .map((instance) => ({ id: instance.id, label: instance.label }));
+          .map((instance) => ({
+            id: instance.id,
+            label: instance.label,
+            ...(instance.autoStart && method.kind === "redirect"
+              ? { autoStart: true }
+              : {}),
+          }));
       } catch (error) {
         authLogger.warn("Login method could not describe itself", {
           operation: "login_method_describe",
@@ -178,7 +184,7 @@ export async function handleRedirectCallback(
     res,
     identity,
     { methodId: method.id, rememberMe: !!identity.rememberMe },
-    isOidcTokenCallback,
+    isExternalTokenCallback,
   );
 }
 

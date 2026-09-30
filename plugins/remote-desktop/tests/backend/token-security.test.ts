@@ -10,7 +10,7 @@ import {
   isServerOwnedSetting,
 } from "../../src/backend/token-service.js";
 
-process.env.JWT_SECRET = "remote-desktop-test-secret";
+process.env.GUACAMOLE_ENCRYPTION_KEY = "ab".repeat(32);
 
 function decode(token: string) {
   return JSON.parse(Buffer.from(token, "base64").toString("utf8")) as {

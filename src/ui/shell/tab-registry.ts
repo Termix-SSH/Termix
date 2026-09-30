@@ -22,6 +22,8 @@ export interface TabShellCallbacks {
     type: string,
     options?: { label?: string; data?: Record<string, unknown> },
   ) => void;
+  /** Connects the way clicking the host in the host list does. */
+  connectHost: (host: Host, type?: string) => void;
   closeTab: (tabId: string) => void;
   renameTab: (tabId: string, label: string) => void;
 

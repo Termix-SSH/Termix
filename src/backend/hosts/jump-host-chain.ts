@@ -4,8 +4,11 @@ import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { getErrorMessage } from "../utils/error-message.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
 import { buildConnectConfig } from "./connect/build-connect-config.js";
-import { createAutoKeyboardInteractiveHandler } from "./connect/keyboard-interactive.js";
-import type { SshConnectHost } from "./connect/types.js";
+import {
+  createAutoKeyboardInteractiveHandler,
+  createPromptKeyboardInteractiveHandler,
+} from "./connect/keyboard-interactive.js";
+import type { SshConnectHost, SshPromptChannel } from "./connect/types.js";
 import { resolveHostById } from "./host-resolver.js";
 
 type JumpHostConfig = {
@@ -61,6 +64,7 @@ class JumpHostChainError extends Error {
 export async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
+  prompt?: SshPromptChannel,
 ): Promise<SSHClient | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -68,6 +72,12 @@ export async function createJumpHostChain(
 
   let currentClient: SSHClient | null = null;
   const clients: SSHClient[] = [];
+  let closed = false;
+  const closeChain = () => {
+    if (closed) return;
+    closed = true;
+    for (const client of clients) client.end();
+  };
 
   try {
     const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> =
@@ -87,7 +97,7 @@ export async function createJumpHostChain(
           hopIndex: i,
           totalHops,
         });
-        clients.forEach((c) => c.end());
+        closeChain();
         throw new JumpHostChainError(
           `Jump host ${i + 1} of ${totalHops} was not found`,
           i,
@@ -108,10 +118,12 @@ export async function createJumpHostChain(
     }
 
     for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (closed) throw new Error("Jump host chain closed");
       const jumpHostConfig = jumpHostConfigs[i]!;
 
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
+      jumpClient.once("close", closeChain);
 
       let lastError: Error | null = null;
 
@@ -128,6 +140,11 @@ export async function createJumpHostChain(
           jumpClient.end();
         }, readyTimeoutMs + 5000);
 
+        jumpClient.once("close", () => {
+          clearTimeout(timeout);
+          lastError = new Error("Jump host connection closed");
+          resolve(false);
+        });
         jumpClient.on("ready", () => {
           clearTimeout(timeout);
           resolve(true);
@@ -161,8 +178,20 @@ export async function createJumpHostChain(
         // every auth type, not just password, key and agent.
         const built = await buildConnectConfig(
           jumpHostConfig as unknown as SshConnectHost,
-          { userId, purpose: "jump-host", profile: "jump", client: jumpClient },
+          {
+            userId,
+            purpose: "jump-host",
+            profile: "jump",
+            client: jumpClient,
+            interactive: !!prompt,
+            hostKeySocket: prompt?.hostKeySocket ?? null,
+          },
         );
+        if (closed) {
+          clearTimeout(timeout);
+          resolve(false);
+          return;
+        }
         if (built.outcome.status !== "ready") {
           clearTimeout(timeout);
           lastError = new Error(
@@ -176,9 +205,28 @@ export async function createJumpHostChain(
 
         jumpClient.on(
           "keyboard-interactive",
-          createAutoKeyboardInteractiveHandler(
-            jumpHostConfig as unknown as SshConnectHost,
-          ),
+          prompt
+            ? createPromptKeyboardInteractiveHandler(
+                jumpHostConfig as unknown as SshConnectHost,
+                {
+                  ...prompt,
+                  ask: (request) =>
+                    prompt.ask(
+                      request.kind === "browser"
+                        ? {
+                            ...request,
+                            instructions: `Jump host ${i + 1}/${totalHops} (${jumpHostConfig.ip}): ${request.instructions}`,
+                          }
+                        : {
+                            ...request,
+                            prompt: `Jump host ${i + 1}/${totalHops} (${jumpHostConfig.ip}): ${request.prompt}`,
+                          },
+                    ),
+                },
+              )
+            : createAutoKeyboardInteractiveHandler(
+                jumpHostConfig as unknown as SshConnectHost,
+              ),
         );
 
         if (currentClient) {
@@ -207,7 +255,7 @@ export async function createJumpHostChain(
       });
 
       if (!connected) {
-        clients.forEach((c) => c.end());
+        closeChain();
         throw new JumpHostChainError(
           getErrorMessage(
             lastError,
@@ -227,7 +275,7 @@ export async function createJumpHostChain(
     fileLogger.error("Failed to create jump host chain", error, {
       operation: "jump_host_chain",
     });
-    clients.forEach((c) => c.end());
+    closeChain();
     return null;
   }
 }

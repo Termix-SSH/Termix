@@ -1,4 +1,4 @@
-import { Workflow } from "lucide-react";
+import { Workflow, Wrench } from "lucide-react";
 import type {
   PanelProps,
   TabProps,
@@ -6,6 +6,9 @@ import type {
 } from "@termix/plugin-sdk/frontend";
 import { AutomationsPanel } from "./AutomationsPanel";
 import { createAutomationsApi } from "./automations-api";
+
+import { createMaintenanceStore } from "./maintenance-store";
+import { HostMaintenance, MaintenanceBadge } from "./HostMaintenance";
 
 const VIEW_ID = "automations";
 
@@ -22,6 +25,35 @@ function AutomationsTab({ isVisible }: TabProps) {
 }
 
 export function activate(app: TermixApp): void {
+  const maintenance = createMaintenanceStore(app.api);
+  app.onDispose(() => maintenance.dispose());
+  app.registerTab(
+    "host_maintenance",
+    ({ host, isVisible }) =>
+      host ? (
+        <HostMaintenance host={host} store={maintenance} visible={isVisible} />
+      ) : null,
+    {
+      icon: Wrench,
+      titleKey: "maintenance.title",
+    },
+  );
+  app.registerHostAction({
+    id: "maintenance",
+    titleKey: "maintenance.title",
+    icon: Wrench,
+    kind: "open",
+    tabType: "host_maintenance",
+    tray: false,
+    when: (host) => Number(host.id) > 0,
+  });
+  app.registerHostBadge({
+    id: "maintenance",
+    when: (host) => Number(host.id) > 0,
+    component: ({ host }) => (
+      <MaintenanceBadge host={host} store={maintenance} />
+    ),
+  });
   app.registerRailItem({
     id: VIEW_ID,
     icon: Workflow,

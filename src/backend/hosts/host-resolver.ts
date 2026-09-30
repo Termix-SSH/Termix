@@ -13,7 +13,7 @@ import { resolveRecipientSharedHostAuthentication } from "../utils/shared-host-a
 import {
   pickResolvedPassword,
   pickResolvedUsername,
-  expandOidcUsername,
+  expandExternalUsername,
 } from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
 
@@ -210,7 +210,7 @@ export async function resolveHostById(
     }
   }
 
-  host.username = await expandOidcUsername(
+  host.username = await expandExternalUsername(
     host.username as string | undefined,
     ownerEquivalent ? ownerId : userId,
   );

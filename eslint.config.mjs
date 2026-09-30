@@ -43,6 +43,21 @@ const pluginBoundary = {
           ExportNamedDeclaration: (node) => check(node, node.source?.value),
           ExportAllDeclaration: (node) => check(node, node.source.value),
           ImportExpression: (node) => check(node, node.source.value),
+          // vi.mock("@/x") and require("../../x") name a module too.
+          CallExpression: (node) => {
+            const callee = node.callee;
+            const named =
+              (callee.type === "Identifier" && callee.name === "require") ||
+              (callee.type === "MemberExpression" &&
+                callee.object.type === "Identifier" &&
+                callee.object.name === "vi" &&
+                callee.property.type === "Identifier" &&
+                ["mock", "doMock", "importActual", "unmock"].includes(
+                  callee.property.name,
+                ));
+            const first = node.arguments[0];
+            if (named && first?.type === "Literal") check(node, first.value);
+          },
         };
       },
     },

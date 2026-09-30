@@ -93,10 +93,6 @@ export function activate(app: TermixApp): void {
     component: HomepagePreviewCard,
   });
 
-  app.declareActionSlot({
-    id: "dashboard.secondaryView",
-    accepts: ["component"],
-  });
   app.registerSlotContribution("dashboard.secondaryView", {
     actionId: "homepage",
     titleKey: "nav.homepage",

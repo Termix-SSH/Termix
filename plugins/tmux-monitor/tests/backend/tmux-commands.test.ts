@@ -1,8 +1,12 @@
 import { EventEmitter } from "node:events";
 import { execFileSync } from "node:child_process";
-import type { Client } from "ssh2";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Client, ClientChannel } from "ssh2";
 import { describe, expect, it } from "vitest";
 import {
+  attachOrCreateTmuxSession,
   detectTmux,
   tmuxCommand,
   withTmuxPath,
@@ -74,5 +78,83 @@ describe("tmux command path handling", () => {
       `/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:"$PATH"; export PATH; tmux -u -V'`,
       `/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:"$PATH"; export PATH; tmux -u list-sessions -F "#{session_name}|#{session_created}|#{session_activity}|#{session_windows}|#{session_attached}" 2>/dev/null'`,
     ]);
+  });
+});
+
+describe("session-scoped tmux mouse", () => {
+  it.skipIf(process.platform === "win32")(
+    "passes an exact session target and literal separator through both shells",
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "termix-tmux-"));
+      try {
+        writeFileSync(join(dir, "tmux"), '#!/bin/sh\nprintf "%s\\n" "$@"\n', {
+          mode: 0o755,
+        });
+        let command = "";
+        const stream = {
+          write: (value: string) => {
+            command = value;
+          },
+        };
+        const name = "qa's $(echo injected)";
+        attachOrCreateTmuxSession(
+          stream as unknown as ClientChannel,
+          name,
+          undefined,
+          false,
+        );
+        expect(command.endsWith("\r")).toBe(true);
+        const args = execFileSync("/bin/sh", ["-c", command.trim()], {
+          encoding: "utf8",
+          env: { ...process.env, PATH: `${dir}:/usr/bin:/bin` },
+        })
+          .trim()
+          .split("\n");
+        expect(args).toEqual([
+          "-u",
+          "set-option",
+          "-q",
+          "-t",
+          `=${name}`,
+          "mouse",
+          "off",
+          ";",
+          "set-option",
+          "-q",
+          "-t",
+          `=${name}`,
+          "history-limit",
+          "50000",
+          ";",
+          "attach-session",
+          "-t",
+          `=${name}`,
+        ]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("creates the named session before configuring and attaching it", () => {
+    let command = "";
+    attachOrCreateTmuxSession(
+      {
+        write: (value: string) => {
+          command = value;
+        },
+      } as unknown as ClientChannel,
+      undefined,
+      "work",
+    );
+    expect(command.indexOf("new-session")).toBeLessThan(
+      command.indexOf("set-option"),
+    );
+    expect(command.indexOf("set-option")).toBeLessThan(
+      command.indexOf("attach-session"),
+    );
+    expect(command).toContain("mouse on");
+    expect(command).toContain("history-limit 50000");
+    expect(command).not.toMatch(/set -g|set-hook|bind-key|set-clipboard/);
   });
 });

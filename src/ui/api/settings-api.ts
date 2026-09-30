@@ -76,7 +76,7 @@ export async function updateAnalyticsEnabled(
 }
 
 // ============================================================================
-// TERMINAL IMAGE STORAGE SETTINGS
+// BRANDING SETTINGS
 // ============================================================================
 
 export interface BrandingSettings {
@@ -110,39 +110,5 @@ export async function updateBranding(
     return response.data;
   } catch (error) {
     handleApiError(error, "update branding settings");
-  }
-}
-
-// ============================================================================
-// HOST DEFAULTS SETTINGS
-// ============================================================================
-
-export type HostDefaults = {
-  useSocks5?: boolean;
-  socks5Host?: string;
-  socks5Port?: number;
-  socks5Username?: string;
-  socks5Password?: string;
-  credentialId?: number | null;
-  statusCheckEnabled?: boolean;
-};
-
-export async function getHostDefaults(): Promise<HostDefaults> {
-  try {
-    const response = await authApi.get("/users/host-defaults");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch host defaults");
-  }
-}
-
-export async function updateHostDefaults(
-  defaults: HostDefaults,
-): Promise<HostDefaults> {
-  try {
-    const response = await authApi.patch("/users/host-defaults", defaults);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update host defaults");
   }
 }

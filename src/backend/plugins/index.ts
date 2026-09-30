@@ -29,7 +29,9 @@ let loader: PluginLoader | null = null;
 
 export function getPluginRuntime(): { loader: PluginLoader } {
   if (!loader) {
-    loader = new PluginLoader();
+    loader = new PluginLoader({
+      onFailed: (plugin) => void handlePluginFailed(plugin),
+    });
     // The 503-while-disabled answer comes from here rather than from the
     // router being torn down, so a request that arrives mid-disable gets a
     // truthful status instead of a 404.
@@ -89,6 +91,29 @@ export function getPluginRuntime(): { loader: PluginLoader } {
     );
   }
   return { loader };
+}
+
+/**
+ * A plugin that tripped the error budget is off until an admin retries it, so
+ * it has to look off everywhere: no routes, greyed permissions, and a failed
+ * row that survives a restart.
+ */
+async function handlePluginFailed(plugin: LoadedPlugin): Promise<void> {
+  unregisterPluginHttp(plugin.id);
+  try {
+    if (plugin.manifest.contributes?.permissions?.length) {
+      const { markPluginPermissionsDisabled } =
+        await import("../utils/permission-catalog.js");
+      markPluginPermissionsDisabled(plugin.id);
+    }
+    await persistRuntimeState([plugin]);
+  } catch (error) {
+    pluginLogger.error(
+      `Could not record that plugin ${plugin.id} failed`,
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "plugin_runtime" },
+    );
+  }
 }
 
 /**
@@ -533,13 +558,10 @@ export async function installPluginArtifact(
   file: string,
 ): Promise<LoadedPlugin> {
   const { loader: pluginLoader } = getPluginRuntime();
-  const bundledIds = new Set(
-    pluginLoader
-      .list()
-      .filter((plugin) => plugin.source === "bundled")
-      .map((plugin) => plugin.id),
+  const plugin = await pluginLoader.loadArtifact(
+    file,
+    pluginLoader.bundledIds(),
   );
-  const plugin = await pluginLoader.loadArtifact(file, bundledIds);
   await seedPlugins([plugin]);
   await syncCapabilityGrants([plugin]);
   return plugin;

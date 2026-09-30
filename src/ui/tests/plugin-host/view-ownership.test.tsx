@@ -29,8 +29,7 @@ const shell = {
   openSingletonTab: () => {},
   closeTab: () => {},
   renameTab: () => {},
-  openFileInEditor: () => {},
-  openFileManager: () => {},
+  connectHost: () => {},
   openRailView: () => {},
   closeRailView: () => {},
 };

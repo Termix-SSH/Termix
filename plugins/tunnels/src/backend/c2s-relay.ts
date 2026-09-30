@@ -1,10 +1,8 @@
 import type { Duplex } from "node:stream";
-import type { Client, ClientChannel } from "ssh2";
+import type { ClientChannel } from "ssh2";
 import type { WebSocket } from "ws";
-import type {
-  PluginContext,
-  PluginSshConnection,
-} from "@termix/plugin-sdk/backend";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
+import { createC2SConnections } from "./c2s-connections.js";
 import type { TunnelMode } from "./types.js";
 import {
   bindForwardIn,
@@ -16,6 +14,7 @@ import { getTunnelMode } from "./utils.js";
 /** What the desktop app sends in the first message on the relay socket. */
 export interface C2SRelayTunnel {
   name?: string;
+  sessionId?: string;
   mode?: TunnelMode;
   tunnelType?: "local" | "remote";
   localAddress?: string;
@@ -30,6 +29,7 @@ export interface C2SRelayTunnel {
 
 export interface C2SOpenMessage {
   type: "open" | "test";
+  keepAlive?: boolean;
   tunnelConfig?: C2SRelayTunnel;
   targetHost?: string;
   targetPort?: number;
@@ -151,6 +151,7 @@ function address(value: unknown, fallback: string): string {
 
 interface ResolvedRelay {
   name: string;
+  sessionId?: string;
   hostId: number;
   mode: TunnelMode;
   remoteAddress: string;
@@ -165,6 +166,7 @@ interface ResolvedRelay {
  */
 export function createC2SRelay(ctx: PluginContext) {
   let streamCounter = 0;
+  const connectSource = createC2SConnections(ctx);
 
   async function findHostIdBySyncId(syncId: string): Promise<number | null> {
     /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -188,6 +190,7 @@ export function createC2SRelay(ctx: PluginContext) {
     return {
       name: tunnel.name || `c2s:${hostId}`,
       hostId,
+      sessionId: tunnel.sessionId,
       mode: getTunnelMode({
         mode: tunnel.mode,
         tunnelType: tunnel.tunnelType,
@@ -201,14 +204,6 @@ export function createC2SRelay(ctx: PluginContext) {
     };
   }
 
-  function connectSource(hostId: number): Promise<PluginSshConnection<Client>> {
-    return ctx.ssh.connect<Client>(hostId, {
-      purpose: "tunnel",
-      profile: "forward",
-      timeoutMs: 60_000,
-    });
-  }
-
   async function openRemote(ws: WebSocket, relay: ResolvedRelay) {
     const bindHost = relay.remoteAddress;
     const bindPort = relay.sourcePort;
@@ -216,7 +211,7 @@ export function createC2SRelay(ctx: PluginContext) {
       throw new Error("Invalid remote port");
     }
 
-    const source = await connectSource(relay.hostId);
+    const source = await connectSource(ws, relay.hostId, relay.sessionId);
     const sourceClient = source.client;
     let actualPort: number;
     try {
@@ -226,6 +221,11 @@ export function createC2SRelay(ctx: PluginContext) {
       throw error;
     }
 
+    if (ws.readyState !== 1) {
+      unbindForwardIn(sourceClient, bindHost, actualPort, ctx.log);
+      source.dispose();
+      return;
+    }
     const streams = new Map<string, ClientChannel>();
     let closed = false;
 
@@ -340,7 +340,7 @@ export function createC2SRelay(ctx: PluginContext) {
       throw new Error("Invalid client tunnel target");
     }
 
-    const source = await connectSource(relay.hostId);
+    const source = await connectSource(ws, relay.hostId, relay.sessionId);
     let outbound: ClientChannel;
     try {
       outbound = await forwardOut(source.client, targetHost, targetPort);
@@ -349,6 +349,11 @@ export function createC2SRelay(ctx: PluginContext) {
       throw error;
     }
 
+    if (ws.readyState !== 1) {
+      outbound.destroy();
+      source.dispose();
+      return;
+    }
     const close = () => {
       try {
         outbound.destroy();
@@ -384,7 +389,7 @@ export function createC2SRelay(ctx: PluginContext) {
 
   async function test(ws: WebSocket, message: C2SOpenMessage): Promise<void> {
     const relay = await resolve(message.tunnelConfig ?? {});
-    const source = await connectSource(relay.hostId);
+    const source = await connectSource(ws, relay.hostId, relay.sessionId);
     try {
       if (relay.mode === "remote") {
         const bindPort = relay.sourcePort;
@@ -410,7 +415,7 @@ export function createC2SRelay(ctx: PluginContext) {
       }
       sendMessage(ws, { type: "ready" });
     } finally {
-      source.dispose();
+      if (!message.keepAlive) source.dispose();
     }
   }
 

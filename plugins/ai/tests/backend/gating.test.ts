@@ -113,7 +113,7 @@ describe("createAiGate", () => {
 
   it("passes an opted-in user through with their access attached", async () => {
     const next = vi.fn();
-    const req: { aiAccess?: unknown } = {};
+    const req: Parameters<ReturnType<typeof createAiGate>>[0] = {};
     await createAiGate(
       settings({ globallyEnabled: true }, { enabled: true }),
       () => "user-1",

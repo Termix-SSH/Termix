@@ -139,7 +139,8 @@ export function legacyLogin(
     password = openLegacySecret(row.password, dek, recordId, ["password"]);
     domain = protocol.domain ? text(row.domain) : "";
     if (!username && !password && !domain) return null;
-  } else if (protocol.domain && !domain) {
+  } else if (protocol.domain && row[protocol.domain] == null) {
+    // A saved empty domain was cleared on purpose, so only fill a missing one.
     domain = text(row.domain);
   }
 

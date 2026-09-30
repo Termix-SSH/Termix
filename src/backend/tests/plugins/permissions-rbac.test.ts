@@ -7,6 +7,7 @@
  * group was declared twice.
  */
 
+import type { PluginLoader } from "../../plugins/loader.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
@@ -113,7 +114,6 @@ vi.mock("../../database/repositories/factory.js", () => ({
   }),
 }));
 
-const { PluginLoader } = await import("../../plugins/loader.js");
 const { createFixturePlugin } = await import("./fixture-plugin.js");
 const {
   getPermissionCatalog,
@@ -433,7 +433,7 @@ describe("shipped manifests keep their permission ids", () => {
 
 describe("role defaults apply exactly once", () => {
   let fixture: Fixture;
-  let loader: InstanceType<typeof PluginLoader>;
+  let loader: PluginLoader;
 
   beforeEach(() => {
     state.roles.set("user", { id: 2, permissions: ["hosts.*"] });

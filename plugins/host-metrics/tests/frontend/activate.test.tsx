@@ -40,7 +40,7 @@ describe(`${manifest.id} activate`, () => {
 
   it("fills core's metric slots and offers disk usage to other plugins", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
-    expect(rendered.registered.slot("dashboard.hostMetrics")).toEqual([
+    expect(rendered.registered.slot("dashboard.hostRow")).toEqual([
       "host-metrics.dashboardHost",
     ]);
     expect(rendered.registered.slot("homepage.hostMetrics")).toEqual([

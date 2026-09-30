@@ -167,7 +167,9 @@ async function findLinkedUser(
   // not scoped to a provider, so only an SSO account that has no link yet,
   // from the same provider when both say which, can be claimed this way.
   if (identity.legacyIdentifier) {
-    const legacy = await users.findByOidcIdentifier(identity.legacyIdentifier);
+    const legacy = await users.findByExternalIdentifier(
+      identity.legacyIdentifier,
+    );
     if (legacy && (await mayClaimLegacyAccount(legacy, identity))) {
       await identities.linkIdentity({
         userId: legacy.id,
@@ -258,7 +260,7 @@ async function createUser(
       deviceType === "desktop" || deviceType === "mobile"
         ? THIRTY_DAYS_MS
         : ONE_DAY_MS;
-    await AuthManager.getInstance().registerOIDCUser(id, sessionDurationMs);
+    await AuthManager.getInstance().registerExternalUser(id, sessionDurationMs);
   } catch (encryptionError) {
     await users.delete(id);
     authLogger.error(

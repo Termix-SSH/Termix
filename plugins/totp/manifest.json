@@ -19,7 +19,8 @@
     "secrets:own",
     "network:serve",
     "auth:provide",
-    "ui:surface"
+    "ui:surface",
+    "db:core-refs"
   ],
   "contributes": {
     "auth": {

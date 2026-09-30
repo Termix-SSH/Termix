@@ -11,6 +11,8 @@ import {
   createCurrentSshCredentialUsageRepository,
 } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
+import { recompute } from "../../hosts/defaults/recompute.js";
+import { setFolderCredentialDefault } from "../../hosts/defaults/service.js";
 
 type HostFolderRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -92,6 +94,8 @@ export function registerHostFolderRoutes(
           oldName,
           newName,
         );
+        // Subfolders change parents with a rename, so their chains do too.
+        void recompute({ userIds: [userId] }).catch(() => {});
 
         res.json({
           message: "Folder renamed successfully",
@@ -242,6 +246,14 @@ export function registerHostFolderRoutes(
             name,
             localOnly,
           );
+        }
+        if (normalizedCredentialId !== undefined) {
+          await setFolderCredentialDefault(
+            userId,
+            folder.id,
+            normalizedCredentialId,
+          );
+          void recompute({ userIds: [userId] }).catch(() => {});
         }
 
         if (!created) {

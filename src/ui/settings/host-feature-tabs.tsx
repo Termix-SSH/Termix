@@ -32,16 +32,20 @@ interface HostFormLike {
 /** Adds, updates and removes generated tabs to match the plugin list. */
 export function syncHostFeatureTabs(plugins: PluginSummary[]): string[] {
   const existing = hostEditorSectionList();
-  const ownSections = new Set(
-    existing
-      .filter(
-        (section) => section.pluginId && !section.id.startsWith(TAB_PREFIX),
-      )
+  const own = existing.filter(
+    (section) => section.pluginId && !section.id.startsWith(TAB_PREFIX),
+  );
+  const ownSections = new Set(own.map((section) => section.pluginId));
+  // A plugin whose own sections are all about one host still gets its
+  // switches in the defaults editor, through a generated tab shown only there.
+  const ownDefaultsSections = new Set(
+    own
+      .filter((section) => section.defaults)
       .map((section) => section.pluginId),
   );
 
   const contributors = plugins.filter((plugin) => {
-    if (!plugin.enabled || ownSections.has(plugin.id)) return false;
+    if (!plugin.enabled || ownDefaultsSections.has(plugin.id)) return false;
     const host = plugin.contributes?.settings?.host;
     return !!host && (hasVisibleFields(host.fields) || !!host.enableKey);
   });
@@ -65,6 +69,8 @@ export function syncHostFeatureTabs(plugins: PluginSummary[]): string[] {
       order: host.editorOrder ?? 100,
       labelKey: plugin.name,
       label: plugin.name,
+      // Nothing but the plugin's host settings, so it works for defaults too.
+      defaults: ownSections.has(plugin.id) ? "only" : true,
       icon: icon
         ? ({ className }: { className?: string }) => (
             <PluginIcon name={icon} className={className} />

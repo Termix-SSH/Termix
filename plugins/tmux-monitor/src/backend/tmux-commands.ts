@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Client, ClientChannel } from "ssh2";
 
 const TMUX_PATH_DIRS = [
@@ -104,30 +105,6 @@ export async function detectTmux(conn: Client): Promise<TmuxDetectionResult> {
   return { available: true, sessions };
 }
 
-// tmux options applied on every attach/create:
-// - mouse on: enables mouse wheel / touch scrollback through tmux history
-// - history-limit: deep scrollback buffer on the remote host
-// - set-clipboard on: use OSC 52 to sync tmux selections to the client clipboard
-// - mode-keys vi: use vi-style keys in copy mode
-// - MouseDragEnd: stop the selection but keep it highlighted so the user can
-//   adjust and press Enter to copy (or drag again)
-// - Enter: copy the (possibly adjusted) selection and exit copy mode
-// - pane-mode-changed hook: on copy-mode entry, show a brief hint so users
-//   know to press Enter to copy the selection
-// Using -q on set/set-hook to suppress errors on older tmux versions that don't support
-// a particular option (e.g. set-clipboard on tmux < 2.5). Note: set-hook doesn't support -q.
-const TMUX_OPTS =
-  `set -gq mouse on` +
-  ` \\; set -gq history-limit 50000` +
-  ` \\; set -gq set-clipboard on` +
-  ` \\; set -gq aggressive-resize on` +
-  ` \\; set -gq mode-keys vi` +
-  ` \\; bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X stop-selection` +
-  ` \\; bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel` +
-  ` \\; set-hook -g pane-mode-changed` +
-  ` 'if -F "#{pane_in_mode}"` +
-  ` "display-message -d 2500 \\"Adjust selection and press Enter to copy\\""'`;
-
 /**
  * Wait for a tmux session to appear by polling via exec channel.
  * Returns the session name once found, or null on timeout.
@@ -157,20 +134,29 @@ export async function waitForTmuxSession(
 /**
  * Write tmux attach or new-session command to the interactive shell stream.
  * Uses && exit so the shell only closes if tmux started successfully.
+ *
+ * Options are set on this session only so the user's own tmux config stays
+ * untouched. -q keeps an older tmux that lacks an option from aborting the
+ * attach.
  */
 export function attachOrCreateTmuxSession(
   stream: ClientChannel,
   existingSessionName?: string,
   newSessionName?: string,
+  mouseEnabled = true,
 ): void {
-  let command: string;
-  if (existingSessionName) {
-    command = `${tmuxCommand(`${TMUX_OPTS} \\; attach-session -t ${shellEscape(existingSessionName)}`)} && exit\r`;
-  } else {
-    const nameFlag = newSessionName ? ` -s ${shellEscape(newSessionName)}` : "";
-    command = `${tmuxCommand(`${TMUX_OPTS} \\; new-session${nameFlag}`)} && exit\r`;
-  }
-  stream.write(command);
+  const name =
+    existingSessionName || newSessionName || `termix-${randomUUID()}`;
+  const target = shellEscape(`=${name}`);
+  const commands = existingSessionName
+    ? []
+    : [`new-session -d -s ${shellEscape(name)}`];
+  commands.push(
+    `set-option -q -t ${target} mouse ${mouseEnabled ? "on" : "off"}`,
+    `set-option -q -t ${target} history-limit 50000`,
+    `attach-session -t ${target}`,
+  );
+  stream.write(`${tmuxCommand(commands.join(" \\; "))} && exit\r`);
 }
 
 export function shellEscape(s: string): string {

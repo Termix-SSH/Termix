@@ -81,3 +81,34 @@ describe("scan", () => {
     });
   });
 });
+
+describe("scan beyond src with plugins elsewhere", () => {
+  it("knows the bundled ids even when plugins/ is empty", () => {
+    const dir = fixture({
+      "docker/bundled-plugins.json": JSON.stringify({
+        plugins: [{ id: "tunnels", source: "workspace" }],
+      }),
+      "src/ui/x.ts": 'const route = "/plugin-ws/tunnels/c2s";\n',
+    });
+    fs.rmSync(path.join(dir, "plugins"), { recursive: true, force: true });
+    expect(scan(dir)["src/ui/x.ts"]).toContain("/plugin-ws/tunnels");
+  });
+
+  it("reads electron and catches an action a plugin owns", () => {
+    const dir = fixture({
+      "plugins/docker/src/frontend/index.tsx":
+        'app.registerAction("terminal.open", fn);\n',
+      "electron/main.cjs": 'invoke("terminal.open");\n',
+    });
+    expect(scan(dir)["electron/main.cjs"]).toEqual([
+      "terminal.open (owned by docker)",
+    ]);
+  });
+
+  it("skips a line marked plugin-id-ok with a reason", () => {
+    const dir = fixture({
+      "src/types/a.ts": 'const legacy = "docker"; // plugin-id-ok: 2.8 key\n',
+    });
+    expect(scan(dir)).toEqual({});
+  });
+});

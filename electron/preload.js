@@ -32,6 +32,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
+  answerC2SAuth: (id, answer) =>
+    ipcRenderer.invoke("answer-c2s-auth", id, answer),
+  onC2SAuthPrompt: (callback) => {
+    const listener = (_event, prompt) => callback(prompt);
+    ipcRenderer.on("c2s-auth-prompt", listener);
+    return () => ipcRenderer.removeListener("c2s-auth-prompt", listener);
+  },
   getC2STunnelConfig: () => ipcRenderer.invoke("get-c2s-tunnel-config"),
   saveC2STunnelConfig: (config) =>
     ipcRenderer.invoke("save-c2s-tunnel-config", config),
@@ -53,6 +60,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   startC2SAutoStartTunnels: () =>
     ipcRenderer.invoke("start-c2s-autostart-tunnels"),
+  setC2SRelayPath: (relayPath) =>
+    ipcRenderer.invoke("set-c2s-relay-path", relayPath),
 
   onCloseActiveTab: (callback) => {
     const listener = () => callback();
@@ -72,8 +81,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
       timeoutMs,
     ),
 
+  externalBrowserLogin: (authUrl, callbackPort) =>
+    ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
+  // 2.8 name, read by older server login pages. Remove in 3.0.0.
   oidcSystemBrowserAuth: (authUrl, callbackPort) =>
-    ipcRenderer.invoke("oidc-system-browser-auth", authUrl, callbackPort),
+    ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
 
   openExternalEditor: (fileData) =>
     ipcRenderer.invoke("open-external-editor", fileData),
@@ -151,6 +163,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     open: (targetPath) => ipcRenderer.invoke("local-fs:open", targetPath),
   },
   localTransfer: {
+    setApiPath: (apiPath) =>
+      ipcRenderer.invoke("local-transfer:set-api", apiPath),
     upload: (options) => ipcRenderer.invoke("local-transfer:upload", options),
     download: (options) =>
       ipcRenderer.invoke("local-transfer:download", options),

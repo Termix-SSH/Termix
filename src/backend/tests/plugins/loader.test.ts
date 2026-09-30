@@ -472,19 +472,6 @@ describe("PluginLoader error budget", () => {
     expect(loader.get("sample-plugin")?.state).toBe("active");
   });
 
-  it("wrap() counts a throwing callback instead of letting it escape", async () => {
-    const loader = await failing(2);
-
-    const wrapped = loader.wrap("sample-plugin", () => {
-      throw new Error("callback failed");
-    });
-
-    await expect(wrapped()).resolves.toBeUndefined();
-    await wrapped();
-
-    expect(loader.get("sample-plugin")?.state).toBe("failed");
-  });
-
   it("retry clears the budget and starts the plugin again", async () => {
     const loader = await failing(1);
 

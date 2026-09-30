@@ -14,6 +14,37 @@ const mainAxios = vi.hoisted(() => ({
 
 vi.mock("@/main-axios", () => mainAxios);
 
+// The remote-desktop plugin declares its gateway password as a secret key.
+vi.mock("@/plugin-host/plugin-store", () => ({
+  usePluginStore: () => ({
+    loaded: true,
+    settled: true,
+    records: new Map([
+      [
+        "remote-desktop",
+        {
+          frontend: "active",
+          summary: {
+            id: "remote-desktop",
+            contributes: {
+              settings: {
+                host: {
+                  fields: [
+                    {
+                      key: "guacamoleConfig",
+                      secretKeys: ["gateway-password"],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      ],
+    ]),
+  }),
+}));
+
 const i18n = vi.hoisted(() => ({
   t: (key: string, opts?: Record<string, unknown>) =>
     opts ? `${key}:${JSON.stringify(opts)}` : key,

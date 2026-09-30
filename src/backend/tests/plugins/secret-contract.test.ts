@@ -128,7 +128,7 @@ function consumerFixture(
 ): Fixture {
   return createFixturePlugin({
     id: CONSUMER_ID,
-    capabilities: ["kv:own"],
+    capabilities: ["kv:own", "users:impersonate"],
     backendSource: CONSUMER_SOURCE,
     manifestOverrides: { category: "Infrastructure", requiresSecret },
   });

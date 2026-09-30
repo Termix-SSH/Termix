@@ -54,8 +54,9 @@ describe("hostPayloadLegacy", () => {
       fontSize: 20,
     }) as { terminalConfig: Record<string, unknown> };
     expect(terminalConfig.autoTmux).toBe(true);
-    expect(terminalConfig).not.toHaveProperty("fontSize");
-    expect(terminalConfig).not.toHaveProperty("localEcho");
+    // The values already follow the host defaults, so the look is included.
+    expect(terminalConfig.fontSize).toBe(20);
+    expect(terminalConfig.localEcho).toBe("auto");
   });
 
   it("includes the look of a host that has its own", () => {

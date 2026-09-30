@@ -14,7 +14,14 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": ["hosts:read", "db:own", "network:serve", "ui:surface"],
+  "capabilities": [
+    "hosts:read",
+    "db:own",
+    "network:serve",
+    "ui:surface",
+    "users:impersonate",
+    "db:core-refs"
+  ],
   "dependencies": {
     "ssh-terminal": "^1.0.0"
   },
@@ -96,7 +103,8 @@
           }
         ]
       }
-    }
+    },
+    "uses": ["session.remoteDisplay.token", "terminal.open", "terminal.overlay"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

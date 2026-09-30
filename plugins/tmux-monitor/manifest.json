@@ -51,7 +51,15 @@
         "enableKey": "enableTmuxMonitor",
         "enableLabelKey": "settings.host.enable.label",
         "enableDescriptionKey": "settings.host.enable.description",
-        "fields": []
+        "fields": [
+          {
+            "key": "mouseEnabled",
+            "type": "boolean",
+            "labelKey": "settings.host.mouseEnabled.label",
+            "descriptionKey": "settings.host.mouseEnabled.description",
+            "default": true
+          }
+        ]
       }
     },
     "hostCapability": {

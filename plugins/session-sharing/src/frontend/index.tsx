@@ -1,4 +1,12 @@
-import { useEffect, type ComponentType } from "react";
+// The terminal surfaces need xterm's own stylesheet.
+import "@xterm/xterm/css/xterm.css";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type ComponentType,
+} from "react";
 import { Presentation, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -9,11 +17,13 @@ import {
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { bindApi, getSharedWithMe, listCollabRooms } from "./api";
+import { bindApi } from "./api";
+import { SharedWithMeSection } from "./SharedWithMeSection";
 import CollabGuestView from "./CollabGuestView";
 import { CollabPanel } from "./CollabPanel";
 import { CollabRoomTab } from "./CollabRoomTab";
 import SharedSessionView from "./SharedSessionView";
+import { ParticipantsOverlay } from "./ParticipantsOverlay";
 import {
   ShareDialogHost,
   closeShareDialog,
@@ -22,9 +32,75 @@ import {
 } from "./share-dialog";
 import { REMOTE_DISPLAY_SLOT } from "./shared";
 
+import { connectMeetings, type MeetingBackend } from "./meeting-backend";
+
+let meetingApp: TermixApp;
+
+function MeetingScope({
+  children,
+  serverKey,
+  pin = false,
+}: {
+  children: (backend: MeetingBackend) => ReactNode;
+  serverKey?: string;
+  pin?: boolean;
+}) {
+  const [backend, setBackend] = useState<MeetingBackend | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const pinned = useRef(serverKey);
+  useEffect(() => {
+    let cancelled = false;
+    let sequence = 0;
+    const refresh = async () => {
+      const request = ++sequence;
+      try {
+        const next = await connectMeetings(meetingApp);
+        if (cancelled || request !== sequence) return;
+        if (
+          pin &&
+          pinned.current !== undefined &&
+          pinned.current !== next.key
+        ) {
+          setBackend(null);
+          setError(meetingApp.t("collab.serverChanged"));
+          return;
+        }
+        if (pin) pinned.current ??= next.key;
+        setError(null);
+        setBackend((previous) =>
+          previous?.key === next.key ? previous : next,
+        );
+      } catch (failure) {
+        if (!cancelled) {
+          setBackend(null);
+          setError(String(failure));
+        }
+      }
+    };
+    void refresh();
+    const dispose = meetingApp.desktop.onRemoteServerChange(() => {
+      void refresh();
+    });
+    return () => {
+      cancelled = true;
+      dispose();
+    };
+  }, [serverKey, pin]);
+  if (error)
+    return (
+      <p role="alert" className="p-3 text-sm">
+        {error}
+      </p>
+    );
+  return backend ? (
+    <div key={backend.key} className="contents">
+      {children(backend)}
+    </div>
+  ) : null;
+}
+
 const COLLAB = "collab";
 const SHARE_ACTION = "session-sharing.share";
-const SHARED_WITH_ME_ACTION = "sessions.sharedWithMe";
 const SEEN_ROOMS_KEY = "termix:collab-rooms-seen";
 const INVITE_POLL_MS = 60_000;
 
@@ -35,25 +111,39 @@ function GuestView({ view }: StandaloneViewProps) {
 
 function CollabRoomTabView({ tab, isVisible }: TabProps) {
   const roomId = tab.data?.roomId;
+  const serverKey =
+    typeof tab.data?.meetingServerKey === "string"
+      ? tab.data.meetingServerKey
+      : undefined;
   return (
-    <CollabRoomTab
-      roomId={typeof roomId === "string" ? roomId : undefined}
-      isVisible={isVisible}
-    />
+    <MeetingScope serverKey={serverKey} pin>
+      {(backend) => (
+        <CollabRoomTab
+          roomId={typeof roomId === "string" ? roomId : undefined}
+          isVisible={isVisible}
+          backend={backend}
+        />
+      )}
+    </MeetingScope>
   );
 }
 
 function CollabPanelView({ shell }: PanelProps) {
   return (
-    <CollabPanel
-      onOpenRoom={(room) =>
-        shell.openTab(null, COLLAB, {
-          label: room.name,
-          forceNewTab: true,
-          data: { roomId: room.id },
-        })
-      }
-    />
+    <MeetingScope>
+      {(backend) => (
+        <CollabPanel
+          backend={backend}
+          onOpenRoom={(room) =>
+            shell.openTab(null, COLLAB, {
+              label: room.name,
+              forceNewTab: true,
+              data: { roomId: room.id, meetingServerKey: backend.key },
+            })
+          }
+        />
+      )}
+    </MeetingScope>
   );
 }
 
@@ -73,7 +163,9 @@ function createInviteWatcher(app: TermixApp): ComponentType {
       let cancelled = false;
       const check = async () => {
         try {
-          const { rooms = [] } = await listCollabRooms();
+          const { rooms = [] } = await (
+            await connectMeetings(app)
+          ).api.listCollabRooms();
           if (cancelled) return;
           let seen: string[] = [];
           try {
@@ -139,6 +231,7 @@ function isRemoteDesktopContext(
 }
 
 export function activate(app: TermixApp): void {
+  meetingApp = app;
   bindApi(app.api);
   app.onDispose(() => {
     closeShareDialog();
@@ -222,6 +315,15 @@ export function activate(app: TermixApp): void {
     },
   });
 
+  app.registerSlotContribution("terminal.overlay", {
+    actionId: "session-sharing.participants",
+    titleKey: "collab.members",
+    kind: "component",
+    component: ParticipantsOverlay as unknown as ComponentType<
+      Record<string, unknown>
+    >,
+  });
+
   app.registerSlotContribution("shell.overlay", {
     actionId: "session-sharing.shareDialog",
     titleKey: "sessionSharing.shareButton",
@@ -237,9 +339,12 @@ export function activate(app: TermixApp): void {
     >,
   });
 
-  // Core's active connections list asks for sessions shared with the user.
-  app.registerAction(SHARED_WITH_ME_ACTION, () => getSharedWithMe(), {
-    permission: "use",
+  // The "Shared with me" section of the active connections list.
+  app.registerSlotContribution("connections.sections", {
+    actionId: "session-sharing.sharedWithMe",
+    titleKey: "connections.sectionSharedWithMe",
+    kind: "component",
+    component: SharedWithMeSection as ComponentType<Record<string, unknown>>,
   });
 }
 

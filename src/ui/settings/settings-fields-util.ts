@@ -1,3 +1,4 @@
+import { isFieldActive } from "@termix/plugin-sdk/settings";
 import type { PluginSettingsField } from "@/api/plugins-api";
 
 /**
@@ -7,13 +8,11 @@ import type { PluginSettingsField } from "@/api/plugins-api";
  * Kept out of the component file so both the settings page and the host editor
  * section can import it without dragging a component along.
  */
-export function isFieldActive(
+export function isFieldShown(
   field: PluginSettingsField,
   values: Record<string, unknown>,
 ): boolean {
-  if (field.hidden) return false;
-  if (!field.requires) return true;
-  return values[field.requires] === true;
+  return !field.hidden && isFieldActive(field, values);
 }
 
 /** Whether a plugin has any field the generic form would ever draw. */
