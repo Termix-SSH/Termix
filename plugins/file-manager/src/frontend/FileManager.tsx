@@ -155,19 +155,19 @@ function FileManagerContent({
   const [currentPath, setCurrentPath] = useState(
     initialPath ||
       fileManagerHostSetting(initialHost, "defaultPath", "") ||
-      "/",
+      ".",
   );
   const currentPathRef = useRef(currentPath);
   currentPathRef.current = currentPath;
   const lastSuccessfulPathRef = useRef(
     initialPath ||
       fileManagerHostSetting(initialHost, "defaultPath", "") ||
-      "/",
+      ".",
   );
   const [navHistory, setNavHistory] = useState<string[]>([
     initialPath ||
       fileManagerHostSetting(initialHost, "defaultPath", "") ||
-      "/",
+      ".",
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -689,7 +689,12 @@ function FileManagerContent({
           ? response
           : response?.files || [];
         setFiles(files);
-        lastSuccessfulPathRef.current = currentPath;
+        const listedPath = response.path || currentPath;
+        setCurrentPath(listedPath);
+        setNavHistory((history) =>
+          history.map((path) => (path === "." ? listedPath : path)),
+        );
+        lastSuccessfulPathRef.current = listedPath;
         clearSelection();
         initialLoadDoneRef.current = true;
 
@@ -799,7 +804,14 @@ function FileManagerContent({
           : response?.files || [];
 
         setFiles(files);
-        lastSuccessfulPathRef.current = resolvedPath;
+        const listedPath = response.path || resolvedPath;
+        if (listedPath !== resolvedPath) {
+          setCurrentPath(listedPath);
+          setNavHistory((history) =>
+            history.map((entry) => (entry === path ? listedPath : entry)),
+          );
+        }
+        lastSuccessfulPathRef.current = listedPath;
         clearSelection();
         return true;
       } catch (error: unknown) {
