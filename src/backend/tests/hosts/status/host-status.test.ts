@@ -21,12 +21,13 @@ describe("isHostKeyVerificationError", () => {
 });
 
 describe("host availability status", () => {
-  it("does not call a TCP-reachable host online before authentication", () => {
-    expect(statusAfterReachabilityCheck(true, false)).toBe("reachable");
+  it("calls a host whose port answers online", () => {
+    expect(statusAfterReachabilityCheck(true, false)).toBe("online");
+    expect(statusAfterReachabilityCheck(false, false)).toBe("offline");
   });
 
-  it("keeps a recently verified host online across reachability checks", () => {
-    expect(statusAfterReachabilityCheck(true, true)).toBe("online");
+  it("warns about a reachable host whose last login failed", () => {
+    expect(statusAfterReachabilityCheck(true, true)).toBe("reachable");
     expect(statusAfterReachabilityCheck(false, true)).toBe("offline");
   });
 

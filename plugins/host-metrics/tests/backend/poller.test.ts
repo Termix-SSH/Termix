@@ -154,6 +154,19 @@ describe("MetricsPoller", () => {
     });
   });
 
+  it("does not report a login for a connection that timed out", async () => {
+    collectMetrics.mockRejectedValue(new Error("Timed out while waiting"));
+    const { fake, poller } = setup();
+
+    poller.registerViewer(7, "viewer-a", "user-1");
+    await flush();
+
+    expect(fake.statusReports).toEqual([]);
+    expect(fake.emitted.at(-1)?.payload).toMatchObject({
+      state: "unreachable",
+    });
+  });
+
   it("marks a changed host key", async () => {
     collectMetrics.mockRejectedValue(new Error("Host key changed"));
     const { fake, poller, state } = setup();

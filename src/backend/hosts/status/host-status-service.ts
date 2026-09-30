@@ -2,12 +2,13 @@
  * The host list's status dot.
  *
  * Every host with status checks on gets a TCP connection to its port on a
- * timer. That alone says "reachable". A host becomes "online" when a login
- * worked: an open terminal session, any plugin connection through ctx.ssh, or
- * a plugin reporting one through ctx.hosts.status.reportLogin. It stays online
- * for LOGIN_FRESH_MS after the last login while the port still answers.
- * Probing never logs in: on RADIUS or Duo backed devices a login fires a real
- * 2FA push, every interval.
+ * timer. A port that answers is "online", one that does not is "offline".
+ * "reachable" is the warning in between: the port answers but the last login
+ * failed (a session, a ctx.ssh connection or a plugin's
+ * ctx.hosts.status.reportLogin said so). It clears on the next working login,
+ * when the host is edited, or when a changed host key is accepted. Probing
+ * never logs in: on RADIUS or Duo backed devices a login fires a real 2FA
+ * push, every interval.
  *
  * Polling is demand driven. A user asking for statuses starts polling their
  * own hosts; nothing is probed for a user who never opened the app.
@@ -33,8 +34,6 @@ export const GLOBAL_STATUS_INTERVAL_KEY = "global_status_check_interval";
 export const DEFAULT_STATUS_INTERVAL = 60;
 /** A status younger than this is fresh enough for check(). */
 const FRESH_MS = 30_000;
-/** How long a successful login keeps a reachable host online. */
-export const LOGIN_FRESH_MS = 60 * 60_000;
 
 export interface HostStatusEntry {
   status: HostStatus;
@@ -81,7 +80,6 @@ export interface HostStatusDeps {
   ) => Promise<boolean>;
   globalInterval: () => number;
   emit: (payload: HostStatusPayload) => void;
-  now?: () => number;
 }
 
 function parseJumpHosts(raw: string | null): Array<{ hostId: number }> {
@@ -158,8 +156,7 @@ export class HostStatusService {
   private readonly store = new Map<number, HostStatusEntry>();
   private readonly owners = new Map<number, string>();
   private readonly inFlight = new Map<number, Promise<void>>();
-  private readonly sessionOnline = new Set<number>();
-  private readonly lastLogin = new Map<number, number>();
+  private readonly loginFailed = new Set<number>();
   private readonly startedUsers = new Set<string>();
   private readonly portResolvers = new Map<string, Set<PortResolver>>();
   private readonly limiter = new ConcurrentLimiter(20);
@@ -171,12 +168,15 @@ export class HostStatusService {
   start(): void {
     if (this.unsubscribers.length > 0) return;
     this.unsubscribers = [
-      hostSessionStatus.subscribe((hostId, online) =>
-        this.setSessionOnline(hostId, online),
-      ),
+      hostSessionStatus.subscribe((hostId, online) => {
+        if (online) this.reportLogin(hostId, { ok: true });
+      }),
       pluginEvents.on(TOPICS.hostUpdated, (payload) => {
         const { hostId } = payload as { hostId?: number };
-        if (hostId) void this.reload(hostId);
+        if (!hostId) return;
+        // An edit may have fixed the login, so the next attempt decides.
+        this.loginFailed.delete(hostId);
+        void this.reload(hostId);
       }),
       pluginEvents.on(TOPICS.hostDeleted, (payload) => {
         const { hostId } = payload as { hostId?: number };
@@ -252,15 +252,13 @@ export class HostStatusService {
     outcome: { ok: boolean; hostKeyChanged?: boolean },
   ): void {
     if (outcome.ok) {
-      this.lastLogin.set(hostId, this.now());
+      this.loginFailed.delete(hostId);
       this.set(hostId, { status: statusAfterAuthentication(true) });
       return;
     }
-    this.lastLogin.delete(hostId);
+    this.loginFailed.add(hostId);
     this.set(hostId, {
-      status: this.sessionOnline.has(hostId)
-        ? "online"
-        : statusAfterAuthentication(false, this.store.get(hostId)?.status),
+      status: statusAfterAuthentication(false, this.store.get(hostId)?.status),
       ...(outcome.hostKeyChanged ? { reason: "host_key_changed" } : {}),
     });
   }
@@ -351,42 +349,16 @@ export class HostStatusService {
     this.stopPolling(hostId);
     this.store.delete(hostId);
     this.owners.delete(hostId);
-    this.lastLogin.delete(hostId);
+    this.loginFailed.delete(hostId);
   }
 
   private clearHostKeyReason(hostId: number): void {
     const current = this.store.get(hostId);
     if (current?.reason !== "host_key_changed") return;
-    this.store.set(hostId, {
-      status: current.status,
-      lastChecked: current.lastChecked,
+    this.loginFailed.delete(hostId);
+    this.set(hostId, {
+      status: current.status === "offline" ? "offline" : "online",
     });
-  }
-
-  private setSessionOnline(hostId: number, online: boolean): void {
-    if (online) {
-      this.sessionOnline.add(hostId);
-      this.lastLogin.set(hostId, this.now());
-      if (this.polled.has(hostId)) this.set(hostId, { status: "online" });
-      return;
-    }
-    this.sessionOnline.delete(hostId);
-    if (
-      !this.isLoggedIn(hostId) &&
-      this.store.get(hostId)?.status === "online"
-    ) {
-      this.set(hostId, { status: "reachable" });
-    }
-  }
-
-  private now(): number {
-    return this.deps.now?.() ?? Date.now();
-  }
-
-  private isLoggedIn(hostId: number): boolean {
-    if (this.sessionOnline.has(hostId)) return true;
-    const at = this.lastLogin.get(hostId);
-    return at !== undefined && this.now() - at < LOGIN_FRESH_MS;
   }
 
   private intervalMs(target: StatusTarget): number {
@@ -470,7 +442,7 @@ export class HostStatusService {
     this.set(target.id, {
       status: statusAfterReachabilityCheck(
         reachable,
-        this.isLoggedIn(target.id),
+        this.loginFailed.has(target.id),
       ),
       ...(reachable && current?.reason === "host_key_changed"
         ? { reason: "host_key_changed" as const }

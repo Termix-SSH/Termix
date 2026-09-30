@@ -368,7 +368,8 @@ export class MetricsPoller {
       const message = error instanceof Error ? error.message : "";
       const isAuthError = /authentication|permission denied/i.test(message);
 
-      if (!authenticated) {
+      // A timeout or a dropped connection says nothing about the login.
+      if (!authenticated && (isAuthError || hostKeyChanged)) {
         this.ctx.hosts.status.reportLogin(host.id, {
           ok: false,
           hostKeyChanged,

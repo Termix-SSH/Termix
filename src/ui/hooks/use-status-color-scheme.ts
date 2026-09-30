@@ -65,17 +65,10 @@ export function getStatusClasses(
     if (variant === "stripe") return "bg-muted-foreground/20 animate-pulse";
     return "border-border/50 text-muted-foreground/50 bg-muted/20 animate-pulse";
   }
-  // Reachable is a faded online, not a warning: the port answers, nobody has
-  // logged in lately.
   if (reachable) {
-    if (scheme === "status") {
-      if (variant === "dot") return "bg-emerald-500/40";
-      if (variant === "stripe") return "bg-emerald-500/30";
-      return "border-emerald-500/30 text-emerald-500/70 bg-emerald-500/5";
-    }
-    if (variant === "dot") return "bg-accent-brand/40";
-    if (variant === "stripe") return "bg-accent-brand/30";
-    return "border-accent-brand/30 text-accent-brand/70 bg-accent-brand/5";
+    if (variant === "dot") return "bg-amber-400";
+    if (variant === "stripe") return "bg-amber-400/50";
+    return "border-amber-400/40 text-amber-400 bg-amber-400/10";
   }
   if (scheme === "status") {
     if (variant === "dot") return online ? "bg-emerald-500" : "bg-red-500";

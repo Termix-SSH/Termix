@@ -9,7 +9,7 @@ vi.mock("../../../utils/logger.js", () => ({
   pluginLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-const { HostStatusService, toStatusTarget, LOGIN_FRESH_MS } =
+const { HostStatusService, toStatusTarget } =
   await import("../../../hosts/status/host-status-service.js");
 const { hostSessionStatus } =
   await import("../../../hosts/host-session-status.js");
@@ -35,7 +35,6 @@ function setup(
   targets: Target[],
   reachable = true,
   shared: Record<string, number[]> = {},
-  clock = { now: 1_000_000 },
 ) {
   const emitted: unknown[] = [];
   const ping = vi.fn(async () => reachable);
@@ -55,7 +54,6 @@ function setup(
     pingThroughJumpHosts,
     globalInterval: () => 60,
     emit: (payload) => emitted.push(payload),
-    now: () => clock.now,
   });
   return { service, emitted, ping, pingThroughJumpHosts, loadTargets };
 }
@@ -76,7 +74,7 @@ afterEach(() => {
 });
 
 describe("HostStatusService", () => {
-  it("starts a user's own hosts and reports them reachable", async () => {
+  it("starts a user's own hosts and reports them online", async () => {
     const { service, emitted, ping } = setup([target(1), target(2)]);
     active = service;
 
@@ -84,11 +82,11 @@ describe("HostStatusService", () => {
     await flush();
 
     expect(ping).toHaveBeenCalledWith("10.0.0.1", 22);
-    expect(service.get(1)?.status).toBe("reachable");
+    expect(service.get(1)?.status).toBe("online");
     expect(emitted).toContainEqual({
       hostId: 1,
       ownerUserId: "owner",
-      status: "reachable",
+      status: "online",
       previous: null,
       online: true,
     });
@@ -102,7 +100,7 @@ describe("HostStatusService", () => {
     await flush();
 
     expect(ping).toHaveBeenCalledWith("10.0.0.5", 22);
-    expect(service.get(5)?.status).toBe("reachable");
+    expect(service.get(5)?.status).toBe("online");
   });
 
   it("only starts the shared hosts a desktop request names", async () => {
@@ -165,90 +163,82 @@ describe("HostStatusService", () => {
     expect(ping).toHaveBeenCalledWith("10.0.0.1", 3389);
   });
 
-  it("turns reachable into online when a plugin reports a login", async () => {
+  it("warns about a failed login until a login works again", async () => {
     const { service, emitted } = setup([target(1)]);
     active = service;
     await service.statusesFor("owner", null);
     await flush();
 
-    service.reportLogin(1, { ok: true });
-    await flush();
-    expect(service.get(1)?.status).toBe("online");
+    service.reportLogin(1, { ok: false });
+    expect(service.get(1)?.status).toBe("reachable");
     expect(emitted.at(-1)).toMatchObject({
-      status: "online",
-      previous: "reachable",
+      status: "reachable",
+      previous: "online",
     });
 
+    vi.advanceTimersByTime(75_000);
+    await flush();
+    expect(service.get(1)?.status).toBe("reachable");
+
+    service.reportLogin(1, { ok: true });
+    expect(service.get(1)?.status).toBe("online");
+    vi.advanceTimersByTime(75_000);
+    await flush();
+    expect(service.get(1)?.status).toBe("online");
+  });
+
+  it("marks a changed host key and clears it once the new key is accepted", async () => {
+    const { service } = setup([target(1)]);
+    active = service;
+    service.start();
+    await service.statusesFor("owner", null);
+    await flush();
     service.reportLogin(1, { ok: false, hostKeyChanged: true });
     expect(service.get(1)).toMatchObject({
       status: "reachable",
       reason: "host_key_changed",
     });
-  });
-
-  it("clears the host key reason once the new key is accepted", async () => {
-    const { service } = setup([target(1)]);
-    active = service;
-    service.start();
-    await service.statusesFor("owner", null);
-    await flush();
-    service.reportLogin(1, { ok: false, hostKeyChanged: true });
 
     pluginEvents.emit(TOPICS.hostKeyUpdated, { hostId: 1 });
     expect(service.get(1)?.reason).toBeUndefined();
+    expect(service.get(1)?.status).toBe("online");
   });
 
-  it("shows a host with an open terminal session as online", async () => {
+  it("clears a failed login when the host is edited", async () => {
     const { service } = setup([target(1)]);
     active = service;
     service.start();
     await service.statusesFor("owner", null);
     await flush();
+    service.reportLogin(1, { ok: false });
 
-    const release = hostSessionStatus.register(1);
-    expect(service.get(1)?.status).toBe("online");
-    release();
+    pluginEvents.emit(TOPICS.hostUpdated, { hostId: 1 });
+    await flush();
+    await flush();
     expect(service.get(1)?.status).toBe("online");
   });
 
-  it("keeps a host online for a while after its last login", async () => {
-    const clock = { now: 1_000_000 };
-    const { service } = setup([target(1)], true, {}, clock);
-    active = service;
-    await service.statusesFor("owner", null);
-    await flush();
-
-    service.reportLogin(1, { ok: true });
-    clock.now += LOGIN_FRESH_MS - 1;
-    vi.advanceTimersByTime(75_000);
-    await flush();
-    expect(service.get(1)?.status).toBe("online");
-
-    clock.now += 2;
-    vi.advanceTimersByTime(75_000);
-    await flush();
-    expect(service.get(1)?.status).toBe("reachable");
-  });
-
-  it("drops an ended session back to reachable once the login is stale", async () => {
-    const clock = { now: 1_000_000 };
-    const { service } = setup([target(1)], true, {}, clock);
+  it("clears a failed login when a terminal session opens", async () => {
+    const { service } = setup([target(1)]);
     active = service;
     service.start();
     await service.statusesFor("owner", null);
     await flush();
+    service.reportLogin(1, { ok: false });
 
     const release = hostSessionStatus.register(1);
-    clock.now += LOGIN_FRESH_MS;
+    expect(service.get(1)?.status).toBe("online");
     release();
-    expect(service.get(1)?.status).toBe("reachable");
+    expect(service.get(1)?.status).toBe("online");
   });
 
-  it("shows an offline host as offline even after a login", async () => {
+  it("shows an offline host as offline whatever the login said", async () => {
     const { service } = setup([target(1)], false);
     active = service;
     await service.statusesFor("owner", null);
     await flush();
+    service.reportLogin(1, { ok: false });
+    expect(service.get(1)?.status).toBe("offline");
     service.reportLogin(1, { ok: true });
     vi.advanceTimersByTime(75_000);
     await flush();
@@ -279,8 +269,8 @@ describe("HostStatusService", () => {
   it("checks a host on demand unless the last result is fresh", async () => {
     const { service, ping } = setup([target(1)]);
     active = service;
-    expect(await service.check(1)).toMatchObject({ status: "reachable" });
-    expect(await service.check(1)).toMatchObject({ status: "reachable" });
+    expect(await service.check(1)).toMatchObject({ status: "online" });
+    expect(await service.check(1)).toMatchObject({ status: "online" });
     expect(ping).toHaveBeenCalledTimes(1);
   });
 

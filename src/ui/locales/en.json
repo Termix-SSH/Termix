@@ -120,6 +120,7 @@
     "minimize": "Minimize",
     "online": "Online",
     "offline": "Offline",
+    "signInFailed": "Sign in failed",
     "unknown": "Unknown",
     "continue": "Continue",
     "maintenance": "Maintenance",
@@ -349,7 +350,7 @@
     "serverStats": "Host Metrics",
     "status": {
       "available": "Available",
-      "reachable": "Up, not signed in lately",
+      "reachable": "Up, but the last sign in failed",
       "offline": "Offline",
       "monitoringDisabled": "Monitoring disabled",
       "label": "Status"

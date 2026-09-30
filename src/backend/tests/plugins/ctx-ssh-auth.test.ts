@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   trustedCleared: [] as string[],
   policyError: null as Error | null,
   logins: [] as Array<{ hostId: number; outcome: unknown }>,
+  connectError: null as Error | null,
 }));
 
 vi.mock("../../utils/logger.js", () => {
@@ -85,6 +86,7 @@ vi.mock("../../hosts/connect/connect-host.js", () => ({
       : target,
   connectHost: async (target: unknown, options: Record<string, unknown>) => {
     h.connects.push({ target, options });
+    if (h.connectError) throw h.connectError;
     const client = Object.assign(new EventEmitter(), { end: vi.fn() });
     return { client, jumpClient: null, dispose: vi.fn(() => client.end()) };
   },
@@ -149,6 +151,7 @@ beforeEach(() => {
   h.clearedAll = 0;
   h.pooled = [];
   h.logins = [];
+  h.connectError = null;
 });
 
 describe("ctx.ssh", () => {
@@ -203,6 +206,26 @@ describe("ctx.ssh", () => {
     await ssh.connect({ id: 9, ip: "h", port: 22, username: "u" } as never);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(h.logins).toEqual([{ hostId: 7, outcome: { ok: true } }]);
+  });
+
+  it("reports an auth or host key failure, but not a timeout", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const ssh = createPluginSsh({
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    h.connectError = new Error("Timed out while waiting for handshake");
+    await expect(ssh.connect(7)).rejects.toThrow();
+    h.connectError = new Error("All configured authentication methods failed");
+    await expect(ssh.connect(7)).rejects.toThrow();
+    h.connectError = new Error("Host key changed");
+    await expect(ssh.connect(8)).rejects.toThrow();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.logins).toEqual([
+      { hostId: 7, outcome: { ok: false, hostKeyChanged: false } },
+      { hostId: 8, outcome: { ok: false, hostKeyChanged: true } },
+    ]);
   });
 
   it("never believes a host object's own userId", async () => {

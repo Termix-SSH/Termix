@@ -66,15 +66,8 @@ describe("getStatusClasses", () => {
     expect(getStatusClasses(true, "accent", "dot")).toContain("accent-brand");
   });
 
-  it("draws reachable as a faded online, never a warning color", () => {
-    expect(getStatusClasses("reachable", "accent", "dot")).toBe(
-      "bg-accent-brand/40",
-    );
-    expect(getStatusClasses("reachable", "status", "dot")).toBe(
-      "bg-emerald-500/40",
-    );
-    expect(getStatusClasses("reachable", "status", "badge")).not.toMatch(
-      /amber|yellow|red/,
-    );
+  it("draws reachable as a warning in both schemes", () => {
+    expect(getStatusClasses("reachable", "accent", "dot")).toContain("amber");
+    expect(getStatusClasses("reachable", "status", "dot")).toContain("amber");
   });
 });
