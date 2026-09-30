@@ -26,6 +26,7 @@ import SharedSessionView from "./SharedSessionView";
 import { ParticipantsOverlay } from "./ParticipantsOverlay";
 import {
   ShareDialogHost,
+  bindShareApp,
   closeShareDialog,
   openShareDialog,
   type ShareTarget,
@@ -217,6 +218,7 @@ interface RemoteDesktopToolbarContext {
   sessionId: string | null;
   protocol: "rdp" | "vnc" | "telnet";
   tabInstanceId?: string;
+  origin?: "local" | "remote";
 }
 
 function isRemoteDesktopContext(
@@ -232,10 +234,12 @@ function isRemoteDesktopContext(
 
 export function activate(app: TermixApp): void {
   meetingApp = app;
-  bindApi(app.api);
+  bindApi(app.api, app.apiFor);
+  bindShareApp(app);
   app.onDispose(() => {
     closeShareDialog();
     bindApi(null);
+    bindShareApp(null);
   });
 
   // Rooms and share links draw remote desktop streams through this slot.
@@ -281,6 +285,7 @@ export function activate(app: TermixApp): void {
               sessionId: context.sessionId,
               protocol: context.protocol,
               tabInstanceId: context.tabInstanceId,
+              origin: context.origin,
             }
           : null;
       } else {

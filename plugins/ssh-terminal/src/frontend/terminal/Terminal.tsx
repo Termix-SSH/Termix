@@ -281,6 +281,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const webSocketRef = useRef<WebSocket | null>(null);
     const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
     const localEchoRef = useRef<TerminalLocalEcho | null>(null);
+    const sessionOriginRef = useRef<"local" | "remote">("local");
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
@@ -785,6 +786,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 sessionId: sessionIdRef.current,
                 protocol: "ssh" as const,
                 tabInstanceId: hostConfig.instanceId,
+                origin: sessionOriginRef.current,
               }
             : null,
       }),
@@ -1642,6 +1644,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 "local" | "remote" | null | undefined,
             })
           : "local";
+        sessionOriginRef.current = origin === "remote" ? "remote" : "local";
         const resolvedUrl = await pluginWsUrl("ssh-terminal", "/terminal", {
           origin,
         });

@@ -64,6 +64,8 @@ export interface RemoteDesktopToolbarContext {
   sessionId: string | null;
   protocol: "rdp" | "vnc" | "telnet";
   tabInstanceId?: string;
+  /** The backend the session runs on. */
+  origin?: "local" | "remote";
 }
 
 const MODIFIER_KEYSYMS = {

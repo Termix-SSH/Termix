@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Search users...",
     "noUsersFound": "No users found",
     "linkCreated": "Share link created",
+    "linkNeedsServer": "Share links only work for sessions on a Termix server. Connect this host through your linked server to share it with a link.",
     "linkCopied": "Link copied to clipboard",
     "copyLink": "Copy link",
     "shareCreated": "Session shared. It will appear in their Connections tab.",

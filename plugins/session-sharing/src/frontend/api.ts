@@ -5,15 +5,23 @@ import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
  * Guest pages use it too: the two guest routes are public.
  */
 let client: PluginApiClient | null = null;
+let clientFor: ((origin?: unknown) => PluginApiClient) | null = null;
 
-export function bindApi(api: PluginApiClient | null): void {
+export function bindApi(
+  api: PluginApiClient | null,
+  apiFor?: (origin?: unknown) => PluginApiClient,
+): void {
   client = api;
+  clientFor = api ? (apiFor ?? null) : null;
 }
 
-function api(): PluginApiClient {
+/** The session lives on the backend its tab connected through. */
+function api(origin?: SessionOrigin): PluginApiClient {
   if (!client) throw new Error("Session sharing is not running");
-  return client;
+  return origin && clientFor ? clientFor(origin) : client;
 }
+
+export type SessionOrigin = "local" | "remote";
 
 interface HttpError {
   response?: { status?: number; data?: { error?: string } };
@@ -134,25 +142,33 @@ export interface CreateSessionShareResponse {
 
 export function createSessionShare(
   request: CreateSessionShareRequest,
+  origin?: SessionOrigin,
 ): Promise<CreateSessionShareResponse> {
   return call(
-    () => api().post<CreateSessionShareResponse>("/create", request),
+    () => api(origin).post<CreateSessionShareResponse>("/create", request),
     "Failed to create session share",
   );
 }
 
 export function getActiveSessionShares(
   hostId: number,
+  origin?: SessionOrigin,
 ): Promise<{ shares: SessionShareRecord[] }> {
   return call(
-    () => api().get<{ shares: SessionShareRecord[] }>(`/host/${hostId}/active`),
+    () =>
+      api(origin).get<{ shares: SessionShareRecord[] }>(
+        `/host/${hostId}/active`,
+      ),
     "Failed to fetch active session shares",
   );
 }
 
-export function revokeSessionShare(shareId: string): Promise<unknown> {
+export function revokeSessionShare(
+  shareId: string,
+  origin?: SessionOrigin,
+): Promise<unknown> {
   return call(
-    () => api().delete(`/${encodeURIComponent(shareId)}`),
+    () => api(origin).delete(`/${encodeURIComponent(shareId)}`),
     "Failed to revoke session share",
   );
 }
@@ -169,13 +185,13 @@ export interface DirectoryRole {
 }
 
 /** Users and roles to share with or invite. */
-export function getDirectory(): Promise<{
+export function getDirectory(origin?: SessionOrigin): Promise<{
   users: DirectoryUser[];
   roles: DirectoryRole[];
 }> {
   return call(
     () =>
-      api().get<{ users: DirectoryUser[]; roles: DirectoryRole[] }>(
+      api(origin).get<{ users: DirectoryUser[]; roles: DirectoryRole[] }>(
         "/directory",
       ),
     "Failed to list users and roles",

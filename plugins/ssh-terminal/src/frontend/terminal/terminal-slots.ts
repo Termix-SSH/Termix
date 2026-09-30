@@ -38,6 +38,7 @@ export interface TerminalSlotApi {
     sessionId: string;
     protocol: "ssh";
     tabInstanceId?: string;
+    origin?: "local" | "remote";
   } | null;
 }
 

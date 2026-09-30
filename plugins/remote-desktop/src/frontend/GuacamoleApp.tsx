@@ -639,6 +639,8 @@ const GuacamoleAppInner = React.forwardRef<
                   sessionId: guacamoleConnectionId,
                   protocol: resolvedProtocol,
                   tabInstanceId: tabId,
+                  origin:
+                    sessionLookup?.origin === "remote" ? "remote" : "local",
                 }
               : undefined
           }

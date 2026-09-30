@@ -1,6 +1,21 @@
 import { useSyncExternalStore } from "react";
+import type { TermixApp } from "@termix/plugin-sdk/frontend";
 import { ShareSessionModal } from "./ShareSessionModal";
 import type { SessionShareProtocol } from "./api";
+import { sessionPublicUrl } from "./meeting-backend";
+
+let shareApp: TermixApp | null = null;
+
+export function bindShareApp(app: TermixApp | null): void {
+  shareApp = app;
+}
+
+function resolveShareBase(
+  origin: "local" | "remote" | undefined,
+): Promise<string | null> {
+  if (!shareApp) return Promise.resolve(window.location.href);
+  return sessionPublicUrl(shareApp, origin);
+}
 
 /** What the share dialog needs to share one live session. */
 export interface ShareTarget {
@@ -8,6 +23,8 @@ export interface ShareTarget {
   sessionId: string;
   protocol: SessionShareProtocol;
   tabInstanceId?: string;
+  /** The backend the session runs on; a desktop can be on either. */
+  origin?: "local" | "remote";
 }
 
 let current: ShareTarget | null = null;
@@ -45,6 +62,8 @@ export function ShareDialogHost() {
       sessionId={target.sessionId}
       protocol={target.protocol}
       tabInstanceId={target.tabInstanceId}
+      origin={target.origin}
+      resolvePublicUrl={resolveShareBase}
     />
   );
 }

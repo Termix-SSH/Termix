@@ -33,12 +33,31 @@ export function meetingGuestUrl(
   publicUrl: string | null,
   token: string,
 ): string | null {
+  return guestViewUrl(publicUrl, "collab-guest", token);
+}
+
+/** A guest link on a server others can open, never a file:// desktop page. */
+export function guestViewUrl(
+  publicUrl: string | null,
+  view: string,
+  token: string,
+): string | null {
   if (!publicUrl) return null;
   const url = new URL(publicUrl);
   if (url.protocol !== "http:" && url.protocol !== "https:") return null;
   url.search = "";
   url.hash = "";
-  url.searchParams.set("view", "collab-guest");
+  url.searchParams.set("view", view);
   url.searchParams.set("token", token);
   return url.toString();
+}
+
+/** Where guests reach a session that runs on the given backend. */
+export async function sessionPublicUrl(
+  app: TermixApp,
+  origin: "local" | "remote" | undefined,
+): Promise<string | null> {
+  if (!app.desktop.available) return window.location.href;
+  if (origin !== "remote") return null;
+  return (await app.desktop.remoteServerUrl()) || null;
 }

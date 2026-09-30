@@ -25,7 +25,9 @@ import {
   type SessionSharePermissionLevel,
   type SessionShareRecord,
   getDirectory,
+  type SessionOrigin,
 } from "./api";
+import { guestViewUrl } from "./meeting-backend";
 
 const EXPIRY_PRESETS = [
   { key: "oneHour", hours: 1 },
@@ -44,6 +46,8 @@ export function ShareSessionModal({
   sessionId,
   protocol,
   tabInstanceId,
+  origin,
+  resolvePublicUrl,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,6 +55,8 @@ export function ShareSessionModal({
   sessionId: string | null;
   protocol: SessionShareProtocol;
   tabInstanceId?: string;
+  origin?: SessionOrigin;
+  resolvePublicUrl?: (origin?: SessionOrigin) => Promise<string | null>;
 }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"link" | "user">("link");
@@ -83,8 +89,8 @@ export function ShareSessionModal({
     if (!open || sharesLoaded) return;
     setSharesLoaded(true);
     Promise.all([
-      getDirectory().catch(() => ({ users: [] })),
-      getActiveSessionShares(hostId).catch(() => ({ shares: [] })),
+      getDirectory(origin).catch(() => ({ users: [] })),
+      getActiveSessionShares(hostId, origin).catch(() => ({ shares: [] })),
     ]).then(([usersRes, sharesRes]) => {
       setUsers(
         (usersRes.users ?? []).map((u) => ({
@@ -94,7 +100,7 @@ export function ShareSessionModal({
       );
       setShares(sharesRes.shares ?? []);
     });
-  }, [open, hostId, sharesLoaded]);
+  }, [open, hostId, origin, sharesLoaded]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -113,7 +119,7 @@ export function ShareSessionModal({
 
   async function refreshShares() {
     try {
-      const res = await getActiveSessionShares(hostId);
+      const res = await getActiveSessionShares(hostId, origin);
       setShares(res.shares ?? []);
     } catch {
       // silently ignore
@@ -127,21 +133,33 @@ export function ShareSessionModal({
 
     setSubmitting(true);
     try {
-      const result = await createSessionShare({
-        hostId,
-        sessionId,
-        tabInstanceId,
-        protocol,
-        shareType: mode,
-        targetUserId:
-          mode === "user" ? (selectedUserId ?? undefined) : undefined,
-        permissionLevel,
-        expiryHours,
-      });
+      const base =
+        mode === "link"
+          ? resolvePublicUrl
+            ? await resolvePublicUrl(origin)
+            : window.location.href
+          : null;
+      if (mode === "link" && !guestViewUrl(base, "shared", "check")) {
+        toast.error(t("sessionSharing.linkNeedsServer"));
+        return;
+      }
+      const result = await createSessionShare(
+        {
+          hostId,
+          sessionId,
+          tabInstanceId,
+          protocol,
+          shareType: mode,
+          targetUserId:
+            mode === "user" ? (selectedUserId ?? undefined) : undefined,
+          permissionLevel,
+          expiryHours,
+        },
+        origin,
+      );
 
       if (mode === "link" && result.linkToken) {
-        const url = `${window.location.origin}${window.location.pathname}?view=shared&token=${result.linkToken}`;
-        setCreatedLink(url);
+        setCreatedLink(guestViewUrl(base, "shared", result.linkToken));
         toast.success(t("sessionSharing.linkCreated"));
       } else {
         toast.success(t("sessionSharing.shareCreated"));
@@ -172,7 +190,7 @@ export function ShareSessionModal({
 
   async function handleRevoke(shareId: string) {
     try {
-      await revokeSessionShare(shareId);
+      await revokeSessionShare(shareId, origin);
       setShares((prev) => prev.filter((s) => s.id !== shareId));
       toast.success(t("sessionSharing.revoked"));
     } catch {
