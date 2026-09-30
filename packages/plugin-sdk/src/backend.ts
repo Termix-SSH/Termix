@@ -1084,6 +1084,8 @@ export interface PluginSsh {
     options?: {
       /** Background work: resolve the hops as this host's owner. */
       forHost?: PluginSshHost;
+      /** Answers a hop asking for TOTP or other input. */
+      prompt?: PluginSshPromptChannel;
     },
   ) => Promise<PluginSshConnection<Client>>;
 
@@ -1140,6 +1142,8 @@ export interface PluginSsh {
       /** False when the caller already resolved DNS, or a jump host will. */
       resolveDns?: boolean;
       log?: (level: "info" | "warning" | "error", message: string) => void;
+      /** Answers a jump host asking for TOTP or other input. */
+      prompt?: PluginSshPromptChannel;
     },
   ) => Promise<{ jumpClient: unknown | null; via: string }>;
 

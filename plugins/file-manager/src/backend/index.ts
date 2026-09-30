@@ -1,7 +1,11 @@
 import express, { type Router } from "express";
 import cookieParser from "cookie-parser";
 import { Client as SSHClient } from "ssh2";
-import type { PluginContext, PluginSshHost } from "@termix/plugin-sdk/backend";
+import type {
+  PluginContext,
+  PluginSshHost,
+  PluginSshPromptChannel,
+} from "@termix/plugin-sdk/backend";
 import { getErrorMessage } from "./error-message.js";
 import { setPluginSsh, pluginSsh } from "./ssh.js";
 import { setPluginCtx } from "./plugin-ctx.js";
@@ -1141,8 +1145,45 @@ export async function activate(ctx: PluginContext) {
       );
     }
 
+    // A jump host asking for TOTP answers through /connect-totp like the host.
+    const jumpHostPrompt: PluginSshPromptChannel = {
+      ask: (request) =>
+        new Promise((resolve) => {
+          if (
+            (request.kind !== "totp" && request.kind !== "input") ||
+            responseSent ||
+            pendingTOTPSessions[sessionId]
+          ) {
+            resolve(null);
+            return;
+          }
+          responseSent = true;
+          parkForAnswer(
+            (answers) => resolve(answers[0] ?? null),
+            [
+              {
+                prompt: request.prompt,
+                echo: request.kind === "input" ? request.echo : false,
+              },
+            ],
+            0,
+          );
+          res.json({
+            requires_totp: true,
+            sessionId,
+            prompt: request.prompt,
+            ...(request.kind === "input" && !request.isPush
+              ? { isPassword: true }
+              : {}),
+            connectionLogs,
+          });
+        }),
+    };
+
     try {
-      const transport = await ssh.openTransport(connectTarget, config);
+      const transport = await ssh.openTransport(connectTarget, config, {
+        prompt: jumpHostPrompt,
+      });
       if (transport.via === "proxy") {
         connectionLogs.push(
           createConnectionLog(
@@ -1162,6 +1203,11 @@ export async function activate(ctx: PluginContext) {
         sessionId,
         hostId,
       });
+      // Already answered with a jump host prompt: fail the pending verify.
+      if (responseSent) {
+        client.emit("error", error);
+        return;
+      }
       const stage =
         isJumpHostChainError(error) || jumpHostCount > 0 ? "jump" : "proxy";
       connectionLogs.push(

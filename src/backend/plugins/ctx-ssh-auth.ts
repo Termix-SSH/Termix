@@ -265,7 +265,11 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       const userId = userFor(chainOptions?.forHost);
       const { createJumpHostChain } =
         await import("../hosts/jump-host-chain.js");
-      const client = await createJumpHostChain(jumpHosts, userId);
+      const client = await createJumpHostChain(
+        jumpHosts,
+        userId,
+        chainOptions?.prompt as Parameters<typeof createJumpHostChain>[2],
+      );
       const details = `jump chain of ${jumpHosts.length} hop(s)`;
       if (!client) {
         await audit("ssh_jump_chain", details, {

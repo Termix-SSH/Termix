@@ -12,6 +12,7 @@ import {
   type PluginContext,
   type PluginSshHost,
   type PluginSshPrepared,
+  type PluginSshPromptChannel,
   type PluginWebSocketConnection,
 } from "@termix/plugin-sdk/backend";
 import {
@@ -2816,12 +2817,55 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         !!connectTarget.useSocks5 &&
         (!!connectTarget.socks5Host || proxyChain.length > 0);
 
+      // A jump host asking for TOTP or input uses the same messages as the
+      // target host, answered through totp_response / password_response.
+      const jumpHostPrompt: PluginSshPromptChannel = {
+        ask: (request) =>
+          new Promise((resolve) => {
+            if (
+              (request.kind !== "totp" && request.kind !== "input") ||
+              ws.readyState !== WebSocket.OPEN
+            ) {
+              resolve(null);
+              return;
+            }
+            if (totpTimeout) clearTimeout(totpTimeout);
+            totpTimeout = setTimeout(() => {
+              keyboardInteractiveFinish = null;
+              totpPromptSent = false;
+              resolve(null);
+            }, 180000);
+            keyboardInteractiveFinish = (answers) =>
+              resolve((answers[0] ?? "").trim());
+            if (request.kind === "totp") {
+              totpPromptSent = true;
+              sendLog("auth", "info", "Jump host TOTP verification required");
+              ws.send(
+                JSON.stringify(
+                  request.retry
+                    ? { type: "totp_retry" }
+                    : { type: "totp_required", prompt: request.prompt },
+                ),
+              );
+            } else {
+              ws.send(
+                JSON.stringify({
+                  type: "password_required",
+                  prompt: request.prompt,
+                  echo: request.echo,
+                }),
+              );
+            }
+          }),
+      };
+
       let transport: Awaited<ReturnType<typeof ctx.ssh.openTransport>>;
       try {
         transport = await ctx.ssh.openTransport(connectTarget, connectConfig, {
           // Resolved above, or deliberately left to the jump host.
           resolveDns: false,
           log: (level, message) => sendLog("handshake", level, message),
+          prompt: jumpHostPrompt,
         });
       } catch (error) {
         sshLogger.error("SSH transport failed", error, {

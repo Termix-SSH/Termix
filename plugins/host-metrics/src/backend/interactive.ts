@@ -1,5 +1,8 @@
 import { Client, type ConnectConfig } from "ssh2";
-import type { PluginSsh } from "@termix/plugin-sdk/backend";
+import type {
+  PluginSsh,
+  PluginSshPromptChannel,
+} from "@termix/plugin-sdk/backend";
 import {
   connectionLog,
   newSessionId,
@@ -217,8 +220,48 @@ export async function startInteractive(
             connectionLog("info", "proxy", "Connecting via jump host chain"),
           );
         }
+        const jumpHostPrompt: PluginSshPromptChannel = {
+          ask: (request) =>
+            new Promise((answer) => {
+              if (request.kind !== "totp" || settled) {
+                answer(null);
+                return;
+              }
+              const sessionId = newSessionId("totp");
+              sessions.addPending({
+                client,
+                finish: (responses) => answer(responses[0] ?? null),
+                config,
+                createdAt: Date.now(),
+                sessionId,
+                hostId: host.id,
+                userId,
+                prompts: [{ prompt: request.prompt, echo: false }],
+                totpPromptIndex: 0,
+                resolvedPassword: host.password ?? undefined,
+                totpAttempts: 0,
+              });
+              logs.push(
+                connectionLog(
+                  "info",
+                  "stats_totp",
+                  "Jump host TOTP verification required",
+                ),
+              );
+              settle(() =>
+                resolve({
+                  success: false,
+                  requires_totp: true,
+                  sessionId,
+                  prompt: request.prompt,
+                }),
+              );
+            }),
+        };
         ssh
-          .openTransport(host, config as Record<string, unknown>)
+          .openTransport(host, config as Record<string, unknown>, {
+            prompt: jumpHostPrompt,
+          })
           .then((transport) => {
             if (transport.jumpClient) {
               const jumpClient = transport.jumpClient as Client;
@@ -226,7 +269,9 @@ export async function startInteractive(
             }
             client.connect(config);
           })
-          .catch((error) =>
+          .catch((error) => {
+            // Already answered with a jump host prompt: fail the pending submit.
+            if (settled) client.emit("error", error);
             settle(() => {
               logs.push(
                 connectionLog(
@@ -236,8 +281,8 @@ export async function startInteractive(
                 ),
               );
               reject(error);
-            }),
-          );
+            });
+          });
       },
     );
     return { status: 200, body: { ...result, connectionLogs: logs } };
