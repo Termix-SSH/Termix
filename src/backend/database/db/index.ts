@@ -1306,6 +1306,34 @@ const migrateSchema = () => {
     });
   }
 
+  addColumnIfNotExists("ssh_data", "default_overrides", "TEXT");
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS host_defaults (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        level TEXT NOT NULL,
+        scope_key TEXT NOT NULL,
+        user_id TEXT,
+        folder_id INTEGER,
+        namespace TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT,
+        updated_by TEXT,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (folder_id) REFERENCES ssh_folders (id) ON DELETE CASCADE
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_host_defaults_scope_key ON host_defaults (scope_key, namespace, key);
+      CREATE INDEX IF NOT EXISTS idx_host_defaults_user ON host_defaults (user_id);
+      CREATE INDEX IF NOT EXISTS idx_host_defaults_folder ON host_defaults (folder_id);
+    `);
+  } catch (createError) {
+    databaseLogger.warn("Failed to create host_defaults table", {
+      operation: "schema_migration",
+      error: createError,
+    });
+  }
+
   try {
     if (getRawSettingValue("rbac_permission_levels_v2") === null) {
       sqlite.exec(

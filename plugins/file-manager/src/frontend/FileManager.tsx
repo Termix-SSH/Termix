@@ -48,6 +48,7 @@ import { ConnectionLogPanel } from "@termix/plugin-sdk/ui";
 import {
   usePluginUiPreferences,
   invokeAction,
+  useSettings,
   useConnectionRetry,
   logActivity,
 } from "@termix/plugin-sdk/frontend";
@@ -146,25 +147,27 @@ function FileManagerContent({
     [t],
   );
   const { confirmWithToast } = useConfirmation();
+  const confirmBeforeTrash =
+    useSettings("user").values.confirmBeforeTrash !== false;
   const { addLog, clearLogs } = useConnectionLog();
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
     initialPath ||
       fileManagerHostSetting(initialHost, "defaultPath", "") ||
-      "/",
+      ".",
   );
   const currentPathRef = useRef(currentPath);
   currentPathRef.current = currentPath;
   const lastSuccessfulPathRef = useRef(
     initialPath ||
       fileManagerHostSetting(initialHost, "defaultPath", "") ||
-      "/",
+      ".",
   );
   const [navHistory, setNavHistory] = useState<string[]>([
     initialPath ||
       fileManagerHostSetting(initialHost, "defaultPath", "") ||
-      "/",
+      ".",
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -686,7 +689,12 @@ function FileManagerContent({
           ? response
           : response?.files || [];
         setFiles(files);
-        lastSuccessfulPathRef.current = currentPath;
+        const listedPath = response.path || currentPath;
+        setCurrentPath(listedPath);
+        setNavHistory((history) =>
+          history.map((path) => (path === "." ? listedPath : path)),
+        );
+        lastSuccessfulPathRef.current = listedPath;
         clearSelection();
         initialLoadDoneRef.current = true;
 
@@ -796,7 +804,14 @@ function FileManagerContent({
           : response?.files || [];
 
         setFiles(files);
-        lastSuccessfulPathRef.current = resolvedPath;
+        const listedPath = response.path || resolvedPath;
+        if (listedPath !== resolvedPath) {
+          setCurrentPath(listedPath);
+          setNavHistory((history) =>
+            history.map((entry) => (entry === path ? listedPath : entry)),
+          );
+        }
+        lastSuccessfulPathRef.current = listedPath;
         clearSelection();
         return true;
       } catch (error: unknown) {
@@ -1484,120 +1499,121 @@ function FileManagerContent({
 
     const fullMessage = `${confirmMessage}\n\n${t("fileManager.moveToTrashWarning")}`;
 
-    confirmWithToast(
-      fullMessage,
-      async () => {
-        const operationPath = currentPath;
-        const operationSession = sshSessionId;
-        const deletedPaths = new Set(files.map((file) => file.path));
+    const moveToTrash = async () => {
+      const operationPath = currentPath;
+      const operationSession = sshSessionId;
+      const deletedPaths = new Set(files.map((file) => file.path));
+      commitFilesForPath(
+        operationSession,
+        operationPath,
+        removePaths(
+          filesForPath(operationSession, operationPath),
+          deletedPaths,
+        ),
+      );
+      clearSelection();
+      let completed = 0;
+      try {
+        await ensureSSHConnection();
+
+        for (const file of files) {
+          await deleteSSHItem(
+            sshSessionId,
+            file.path,
+            file.type === "directory",
+            currentHost?.id,
+            currentHost?.userId?.toString(),
+          );
+          completed += 1;
+        }
+
+        toast.success(
+          t("fileManager.itemsMovedToTrash", { count: files.length }),
+        );
+        if (
+          sshSessionIdRef.current === operationSession &&
+          currentPathRef.current === operationPath
+        ) {
+          handleRefreshDirectory();
+        } else {
+          invalidateCachedFileList(operationSession, operationPath);
+        }
+      } catch (error: unknown) {
         commitFilesForPath(
           operationSession,
           operationPath,
-          removePaths(
+          restoreItems(
             filesForPath(operationSession, operationPath),
-            deletedPaths,
+            files.slice(completed),
           ),
         );
-        clearSelection();
-        let completed = 0;
-        try {
-          await ensureSSHConnection();
-
-          for (const file of files) {
+        const axiosError = error as {
+          response?: {
+            data?: { needsSudo?: boolean; error?: string };
+            status?: number;
+          };
+          message?: string;
+        };
+        if (axiosError.response?.data?.needsSudo) {
+          setPendingSudoOperation({
+            type: "delete",
+            files: files.slice(completed),
+          });
+          setSudoDialogOpen(true);
+          return;
+        }
+        if (
+          (axiosError.response?.data as { trashUnavailable?: boolean })
+            ?.trashUnavailable &&
+          window.confirm(t("fileManager.trashUnavailableConfirm"))
+        ) {
+          for (const file of files.slice(completed)) {
             await deleteSSHItem(
               sshSessionId,
               file.path,
               file.type === "directory",
               currentHost?.id,
               currentHost?.userId?.toString(),
+              true,
             );
-            completed += 1;
           }
-
           toast.success(
-            t("fileManager.itemsMovedToTrash", { count: files.length }),
+            t("fileManager.itemsDeletedSuccessfully", {
+              count: files.length - completed,
+            }),
           );
-          if (
-            sshSessionIdRef.current === operationSession &&
-            currentPathRef.current === operationPath
-          ) {
-            handleRefreshDirectory();
-          } else {
-            invalidateCachedFileList(operationSession, operationPath);
-          }
-        } catch (error: unknown) {
-          commitFilesForPath(
-            operationSession,
-            operationPath,
-            restoreItems(
-              filesForPath(operationSession, operationPath),
-              files.slice(completed),
-            ),
-          );
-          const axiosError = error as {
-            response?: {
-              data?: { needsSudo?: boolean; error?: string };
-              status?: number;
-            };
-            message?: string;
-          };
-          if (axiosError.response?.data?.needsSudo) {
-            setPendingSudoOperation({
-              type: "delete",
-              files: files.slice(completed),
-            });
-            setSudoDialogOpen(true);
-            return;
-          }
-          if (
-            (axiosError.response?.data as { trashUnavailable?: boolean })
-              ?.trashUnavailable &&
-            window.confirm(t("fileManager.trashUnavailableConfirm"))
-          ) {
-            for (const file of files.slice(completed)) {
-              await deleteSSHItem(
-                sshSessionId,
-                file.path,
-                file.type === "directory",
-                currentHost?.id,
-                currentHost?.userId?.toString(),
-                true,
-              );
-            }
-            toast.success(
-              t("fileManager.itemsDeletedSuccessfully", {
-                count: files.length - completed,
-              }),
-            );
-            handleRefreshDirectory();
-            return;
-          }
-          if (
-            axiosError.response?.status === 403 ||
-            axiosError.response?.data?.error
-              ?.toLowerCase()
-              .includes("permission denied")
-          ) {
-            toast.error(t("fileManager.permissionDenied"));
-          } else if (
-            axiosError.message?.includes("connection") ||
-            axiosError.message?.includes("established")
-          ) {
-            toast.error(
-              t("fileManager.sshConnectionFailed", {
-                name: currentHost?.name,
-                ip: currentHost?.ip,
-                port: currentHost?.port,
-              }),
-            );
-          } else {
-            toast.error(t("fileManager.failedToDeleteItems"));
-          }
-          console.error("Delete failed:", error);
+          handleRefreshDirectory();
+          return;
         }
-      },
-      "destructive",
-    );
+        if (
+          axiosError.response?.status === 403 ||
+          axiosError.response?.data?.error
+            ?.toLowerCase()
+            .includes("permission denied")
+        ) {
+          toast.error(t("fileManager.permissionDenied"));
+        } else if (
+          axiosError.message?.includes("connection") ||
+          axiosError.message?.includes("established")
+        ) {
+          toast.error(
+            t("fileManager.sshConnectionFailed", {
+              name: currentHost?.name,
+              ip: currentHost?.ip,
+              port: currentHost?.port,
+            }),
+          );
+        } else {
+          toast.error(t("fileManager.failedToDeleteItems"));
+        }
+        console.error("Delete failed:", error);
+      }
+    };
+    if (confirmBeforeTrash) {
+      confirmWithToast(fullMessage, moveToTrash, "destructive");
+    } else {
+      await moveToTrash();
+    }
   }
 
   async function handleSudoPasswordSubmit(password: string) {
@@ -3316,11 +3332,17 @@ function FileManagerContent({
   }, [currentPath]);
 
   useEffect(() => {
+    if (currentHost?.id) loadPinnedFiles();
+  }, [currentHost?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDiskInfo(null);
     if (currentHost?.id) {
-      loadPinnedFiles();
       // Undefined while the host-metrics plugin is off: no disk bar then.
       invokeAction("host-metrics.disk", currentHost.id)
         .then((result) => {
+          if (cancelled) return;
           const disk = result as HostDiskInfo | null | undefined;
           if (disk?.percent != null && disk.usedHuman && disk.totalHuman) {
             setDiskInfo({
@@ -3334,7 +3356,10 @@ function FileManagerContent({
         })
         .catch(() => {});
     }
-  }, [currentHost?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentHost?.id, lastRefreshTime]);
 
   useEffect(() => {
     localStorage.setItem("fileManagerDensity", density);

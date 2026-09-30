@@ -1,3 +1,6 @@
+/* Plugin utilities (termix-plugin build) rank above base, below core's own. */
+@layer properties, termix-plugin-properties, theme, base, components,
+  termix-plugin-utilities, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./theme.css";
@@ -12,9 +15,6 @@
 @import "@fontsource/source-code-pro/400-italic.css";
 @import "@fontsource/source-code-pro/700.css";
 @import "@fontsource/source-code-pro/700-italic.css";
-
-/* Plugins compile their own classes (termix-plugin build). */
-@source not "../../plugins";
 
 @font-face {
   font-family: "Caskaydia Cove Nerd Font Mono";

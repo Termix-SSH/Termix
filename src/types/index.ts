@@ -6,6 +6,7 @@ import type {
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
+import type { DefaultOverrides } from "./host-defaults.js";
 
 export type {
   AuthOverrideProtocol,
@@ -120,6 +121,8 @@ export type Host = {
 
   /** Enabled plugins' host-scope settings, keyed by plugin id. Secrets redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Host default keys this host sets itself, per namespace. */
+  defaultOverrides?: DefaultOverrides | null;
 };
 
 export interface JumpHostData {
@@ -141,6 +144,8 @@ export interface ProxyNode {
 }
 
 export interface HostData {
+  /** Host default keys the host sets itself, per namespace. Every other key follows its defaults. */
+  defaultOverrides?: DefaultOverrides | null;
   name?: string;
   ip: string;
   port: number;

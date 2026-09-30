@@ -108,7 +108,8 @@
             "descriptionKey": "host.startupDescription",
             "hidden": true,
             "min": 1,
-            "shareRead": "view"
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
           },
           {
             "key": "quickActions",
@@ -117,7 +118,8 @@
             "descriptionKey": "host.quickActionsDescription",
             "hidden": true,
             "default": [],
-            "shareRead": "view"
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
           }
         ]
       }

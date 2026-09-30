@@ -826,8 +826,16 @@ export function createFakeContext(
 
       getHost: async (hostId, key) =>
         settings.get(settingsKey("host", String(hostId), key)) as never,
-      setHost: async (hostId, key, value) =>
-        writeSetting("host", String(hostId), key, value),
+      getHostFor: async (hostId, _userId, key) =>
+        settings.get(settingsKey("host", String(hostId), key)) as never,
+      // Host defaults live in core; the mock stands in the user's own
+      // setting of the same key, so a test can set one with setUser.
+      getHostDefault: async (userId, key) =>
+        settings.get(settingsKey("user", userId, key)) as never,
+      setHost: async (hostId, key, value, options) =>
+        options?.inherit
+          ? void settings.delete(settingsKey("host", String(hostId), key))
+          : writeSetting("host", String(hostId), key, value),
 
       listHostValues: async (key) => {
         const found: Array<{ hostId: number; userId: string; value: never }> =

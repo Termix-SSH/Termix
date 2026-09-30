@@ -237,6 +237,11 @@ export const hosts = mysqlTable(
     // Desktop only: set on the read-only copy of a host someone shared with
     // the linked account. JSON with the share's owner and permission level.
     sharedSource: text("shared_source"),
+    // Which host default keys this host sets itself, per namespace, as JSON:
+    // {"core":["sshPort"],"<pluginId>":["key"]}. Null, or a missing
+    // namespace, means not classified yet. Every other key follows the
+    // defaults and its column holds the resolved value.
+    defaultOverrides: text("default_overrides"),
 
     createdAt: text("created_at")
       .notNull()
@@ -388,6 +393,41 @@ export const sshFolders = mysqlTable(
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
   (table) => [index("idx_ssh_folders_user_id").on(table.userId)],
+);
+
+/**
+ * Host defaults at one level. A host follows the deepest level that sets a
+ * key: its folders (deepest first), then its owner, then the server, then the
+ * built-in value. `scope_key` is "admin", "u:<userId>" or "f:<folderId>", so
+ * the unique index holds for the admin level too.
+ */
+export const hostDefaults = mysqlTable(
+  "host_defaults",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    level: mysqlEnum("level", ["admin", "user", "folder"]).notNull(),
+    scopeKey: varchar("scope_key", { length: 255 }).notNull(),
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    folderId: int("folder_id").references(() => sshFolders.id, {
+      onDelete: "cascade",
+    }),
+    namespace: varchar("namespace", { length: 255 }).notNull(),
+    key: varchar("key", { length: 255 }).notNull(),
+    value: text("value"),
+    updatedBy: text("updated_by"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_host_defaults_scope_key").on(
+      table.scopeKey,
+      table.namespace,
+      table.key,
+    ),
+    index("idx_host_defaults_user").on(table.userId),
+    index("idx_host_defaults_folder").on(table.folderId),
+  ],
 );
 
 export const recentActivity = mysqlTable(

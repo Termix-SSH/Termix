@@ -79,7 +79,8 @@
             "key": "tunnelConnections",
             "type": "custom",
             "component": "tunnelConnections",
-            "requires": "enableTunnel"
+            "requires": "enableTunnel",
+            "defaultable": false
           }
         ]
       }

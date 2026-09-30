@@ -231,6 +231,7 @@ export function createPluginApp(
           icon: withIconBoundary(pluginId, section.icon as never) as never,
           order: section.order,
           visible: section.visible,
+          defaults: section.defaults,
           component: scoped(
             section.component as unknown as ComponentType<HostEditorSectionRenderProps>,
           ),

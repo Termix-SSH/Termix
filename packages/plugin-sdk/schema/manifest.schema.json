@@ -903,7 +903,21 @@
                       "defaultFrom": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A non-secret admin field whose value a new host starts with."
+                        "description": "Deprecated and ignored. Host defaults cover every host field."
+                      },
+                      "defaultable": {
+                        "type": "boolean",
+                        "description": "Whether the field can have a host default. On by default for non-secret fields."
+                      },
+                      "defaultLevels": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": { "enum": ["admin", "user", "folder"] },
+                        "description": "Levels that may set a default for the field. All three by default."
+                      },
+                      "personal": {
+                        "type": "boolean",
+                        "description": "A look-and-feel value: a user a host is shared with gets their own default for it."
                       },
                       "shareRead": {
                         "type": "string",

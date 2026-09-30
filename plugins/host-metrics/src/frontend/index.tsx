@@ -96,6 +96,7 @@ export async function activate(app: TermixApp): Promise<void> {
     titleKey: "hosts.tabHostMetrics",
     icon: Activity,
     order: 70,
+    defaults: true,
     component: MetricsHostSection,
   });
 

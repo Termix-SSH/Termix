@@ -53,7 +53,12 @@ import {
 } from "@/shell/split/EmptyPanePicker";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
-import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
+import { reconnectDisconnectedTabs } from "@/shell/reconnect-tabs";
+import {
+  dispatchCtrlW,
+  createCommandPaletteShortcutMatcher,
+  isShiftKey,
+} from "@/lib/app-keyboard-shortcuts";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
 import type {
@@ -333,6 +338,24 @@ export function AppShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
+
+  // Host defaults open in the host manager, from anywhere (the admin panel,
+  // a folder's menu).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setSidebarOpen(true);
+      setRailView("hosts");
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("host-manager:edit-defaults", { detail }),
+        );
+      }, 0);
+    };
+    window.addEventListener("termix:open-host-defaults", handler);
+    return () =>
+      window.removeEventListener("termix:open-host-defaults", handler);
+  }, []);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -458,7 +481,6 @@ export function AppShell({
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  const lastShiftTime = useRef(0);
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const closeActiveTabRef = useRef<() => void>(() => {});
@@ -744,26 +766,21 @@ export function AppShell({
   // Double-shift or Ctrl+K opens the command palette. Double-shift alone was
   // hard to discover.
   useEffect(() => {
+    if (!commandPaletteShortcutEnabled) return;
+    const shortcut = createCommandPaletteShortcutMatcher();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isShiftKey(e) && !e.repeat) {
-        const now = Date.now();
-        if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
-          setCommandPaletteOpen((prev) => !prev);
-        lastShiftTime.current = now;
-      }
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        !e.shiftKey &&
-        !e.altKey &&
-        e.code === "KeyK" &&
-        commandPaletteShortcutEnabled
-      ) {
-        e.preventDefault();
-        setCommandPaletteOpen((prev) => !prev);
-      }
+      if (!shortcut.matches(e)) return;
+      if (!isShiftKey(e)) e.preventDefault();
+      setCommandPaletteOpen((prev) => !prev);
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", shortcut.reset);
+    window.addEventListener("compositionstart", shortcut.reset);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", shortcut.reset);
+      window.removeEventListener("compositionstart", shortcut.reset);
+    };
   }, [commandPaletteShortcutEnabled]);
 
   // Ctrl+Shift+E toggles between the two most recent sidebar panels.
@@ -1780,6 +1797,24 @@ export function AppShell({
     });
   }
 
+  const reconnectAllRef = useRef<() => void>(() => {});
+  function reconnectAllDisconnected() {
+    const { reconnected, failed } = reconnectDisconnectedTabs(tabsRef.current);
+    if (reconnected || !failed)
+      toast(
+        t(
+          reconnected
+            ? "nav.reconnectingTerminals"
+            : "nav.noDisconnectedTerminals",
+          { count: reconnected },
+        ),
+      );
+    if (failed)
+      toast.error(t("nav.reconnectTerminalsFailed", { count: failed }));
+  }
+
+  reconnectAllRef.current = reconnectAllDisconnected;
+
   function refreshTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
     const handle = tab?.terminalRef?.current;
@@ -2142,6 +2177,14 @@ export function AppShell({
         tabsRef.current.find((tab) => tab.id === activeTabIdRef.current),
       );
     const entries = [
+      registerPaletteEntry({
+        id: "core.reconnectDisconnected",
+        titleKey: "nav.reconnectDisconnectedTerminals",
+        icon: RotateCcw,
+        keywords: ["reconnect", "disconnected", "ssh", "all", "network"],
+        scope: "global",
+        run: () => reconnectAllRef.current(),
+      }),
       registerPaletteEntry({
         id: "core.split.right",
         titleKey: "splitScreen.splitRight",
@@ -2979,6 +3022,7 @@ export function AppShell({
                 onSetActiveTab={setActiveTabId}
                 onCloseTab={closeTab}
                 onRefreshTab={refreshTab}
+                onReconnectDisconnected={reconnectAllDisconnected}
                 onReorderTabs={reorderTopLevelTabs}
                 onSplitAction={handleTabSplitAction}
                 onRenameTab={renameTab}

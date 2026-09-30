@@ -1546,6 +1546,12 @@ function createWindow() {
     console.log("Frontend loaded successfully");
   });
 
+  mainWindow.webContents.on("will-prevent-unload", (event) => {
+    // Explicit Quit must not be vetoed by the renderer's connection guard.
+    // In this Electron event, preventDefault allows the unload to proceed.
+    if (isQuitting) event.preventDefault();
+  });
+
   mainWindow.on("close", (event) => {
     if (!isQuitting && tray && !tray.isDestroyed()) {
       event.preventDefault();

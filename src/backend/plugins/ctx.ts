@@ -816,7 +816,40 @@ export function createPluginContext(
 
       getHost: (hostId, key) =>
         pluginSettings.getSetting(manifest, "host", hostId, key) as never,
-      setHost: async (hostId, key, value) => {
+      getHostFor: async (hostId, userId, key) => {
+        const { personalHostValue } =
+          await import("../hosts/defaults/personal.js");
+        const personal = await personalHostValue(
+          manifest,
+          Number(hostId),
+          userId,
+          key,
+        );
+        return (
+          personal.applies
+            ? personal.value
+            : await pluginSettings.getSetting(manifest, "host", hostId, key)
+        ) as never;
+      },
+      getHostDefault: async (userId, key) => {
+        const { userHostDefault } =
+          await import("../hosts/defaults/personal.js");
+        return (await userHostDefault(manifest, userId, key)) as never;
+      },
+      setHost: async (hostId, key, value, options) => {
+        const { changeHostOverrides } =
+          await import("../hosts/defaults/overrides.js");
+        if (options?.inherit) {
+          if (!pluginSettings.findField(manifest, "host", key)) {
+            throw new Error(
+              `"${key}" is not a host setting this plugin declares`,
+            );
+          }
+          await changeHostOverrides([Number(hostId)], {
+            inherit: [[pluginId, key]],
+          });
+          return;
+        }
         const error = await pluginSettings.setSetting(
           manifest,
           "host",
@@ -825,6 +858,7 @@ export function createPluginContext(
           value,
         );
         if (error) throw new Error(error);
+        await changeHostOverrides([Number(hostId)], { own: [[pluginId, key]] });
       },
 
       listHostValues: async (key) => {

@@ -10,7 +10,6 @@ import { resolveForHost } from "../terminal-settings";
 import type {
   CursorStyle,
   TerminalThemeColors,
-  TerminalUserSettings,
 } from "../../shared/terminal-settings";
 
 /**
@@ -45,9 +44,8 @@ export interface ResolveLookRequest {
 
 export function resolveTerminalLook(
   request: ResolveLookRequest,
-  user: TerminalUserSettings | undefined,
 ): ResolvedTerminalLook {
-  const config = resolveForHost(request.host ?? null, user);
+  const config = resolveForHost(request.host ?? null);
   const themeId = request.theme || config.theme;
   ensureTerminalFontsLoaded(config.fontFamily);
   return {

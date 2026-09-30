@@ -37,13 +37,10 @@ import {
   getUserRoles,
 } from "@/main-axios";
 import {
-  getHostDefaults,
-  updateHostDefaults,
   getAnalyticsEnabled,
   updateAnalyticsEnabled,
   getBranding,
   updateBranding,
-  type HostDefaults,
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
@@ -128,7 +125,6 @@ export function AdminSettingsPanel({
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
-  const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
 
   const [brandingSettings, setBrandingSettings] =
     useState<BrandingSettings | null>(null);
@@ -341,10 +337,6 @@ export function AdminSettingsPanel({
       // non-fatal
     }
 
-    getHostDefaults()
-      .then((d) => setHostDefaults(d))
-      .catch(() => {});
-
     getTlsStatus()
       .then((s) => setTlsStatus(s))
       .catch(() => {});
@@ -357,15 +349,6 @@ export function AdminSettingsPanel({
       else next.add(id);
       return next;
     });
-  }
-
-  async function handleSaveHostDefaults() {
-    try {
-      await updateHostDefaults(hostDefaults);
-      toast.success(t("admin.hostDefaultsSaved"));
-    } catch {
-      toast.error(t("admin.hostDefaultsSaveFailed"));
-    }
   }
 
   async function handleToggleRegistration() {
@@ -881,9 +864,6 @@ export function AdminSettingsPanel({
       <AdminHostDefaultsSection
         open={openSections.has("host-defaults")}
         onToggle={() => toggle("host-defaults")}
-        defaults={hostDefaults}
-        setDefaults={setHostDefaults}
-        handleSaveDefaults={handleSaveHostDefaults}
       />
 
       <AdminBrandingSection

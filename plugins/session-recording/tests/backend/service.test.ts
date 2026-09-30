@@ -96,6 +96,52 @@ describe("recordings.writer", () => {
     });
 
     expect(sink).toBeNull();
+    expect(await writer.enabledFor(7)).toBe(false);
+    expect(await fs.readdir(dataDir)).toEqual([]);
+    expect(
+      db!.sqlite
+        .prepare(
+          "SELECT COUNT(*) AS count FROM p_session_recording_session_recordings",
+        )
+        .get(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("keeps a saved off switch after recreating the writer without affecting another host", async () => {
+    const { mock } = await setup();
+    db!.sqlite.prepare("INSERT INTO ssh_data (id) VALUES (?)").run(8);
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", false);
+    await mock.ctx.settings.setHost(8, "enableSessionRecording", true);
+    const table = await db!.database.define(sessionRecordings);
+    const repository = createSessionRecordingRepository(
+      db!.database,
+      table,
+      mock.ctx.hosts,
+    );
+    const reopened = createRecordingsWriter(mock.ctx, repository);
+    for (const hostId of [7, 8]) {
+      const sink = await reopened.open({
+        sessionId: `host-${hostId}`,
+        hostId,
+        userId: "user-1",
+        protocol: "ssh",
+        format: "asciicast",
+        startedAt: Date.now(),
+      });
+      if (hostId === 7) expect(sink).toBeNull();
+      else {
+        expect(sink).not.toBeNull();
+        await sink!.append("marker\n");
+      }
+    }
+    expect(
+      await fs.readdir(path.join(dataDir, "session_logs", "user-1")),
+    ).toEqual(["host-8.cast"]);
+    expect(
+      db!.sqlite
+        .prepare("SELECT host_id FROM p_session_recording_session_recordings")
+        .all(),
+    ).toEqual([{ host_id: 8 }]);
   });
 
   it("writes the first append with writeFile and later ones with appendFile", async () => {

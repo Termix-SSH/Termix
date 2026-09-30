@@ -127,11 +127,13 @@ describe("core sync entities", () => {
   it("registers what core syncs, under the wire names 2.8 used", () => {
     expect(listEntityTypes()).toEqual([
       "accountProfile",
+      "hostDefaultsAdmin",
       "sshCredentials",
       "sharedCredentials",
       "sshFolders",
       "hosts",
       "sharedHosts",
+      "hostDefaults",
       "userPreferences",
       "pluginUserSettings",
     ]);
@@ -168,7 +170,11 @@ describe("core sync entities", () => {
       .filter((entity) => entity.singleton)
       .map((entity) => entity.type);
 
-    expect(singletons.sort()).toEqual(["accountProfile", "userPreferences"]);
+    expect(singletons.sort()).toEqual([
+      "accountProfile",
+      "hostDefaultsAdmin",
+      "userPreferences",
+    ]);
   });
 
   it("only sends shared copies and the account one way", () => {
@@ -178,6 +184,7 @@ describe("core sync entities", () => {
 
     expect(readOnly.sort()).toEqual([
       "accountProfile",
+      "hostDefaultsAdmin",
       "sharedCredentials",
       "sharedHosts",
     ]);

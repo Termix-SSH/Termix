@@ -3,7 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { build } from "../packages/plugin-sdk/cli/commands/build.mjs";
+import {
+  build,
+  lowerPluginLayers,
+} from "../packages/plugin-sdk/cli/commands/build.mjs";
 
 const cleanups: Array<() => void> = [];
 
@@ -82,5 +85,40 @@ describe("termix-plugin build", () => {
     expect(mod.rendered).toEqual({ type: "div" });
     expect(mod.dev).toBe(false);
     expect(mod.mode).toBe("production");
+  });
+});
+
+describe("plugin CSS layers", () => {
+  it("renames the Tailwind layers so core's utilities always win", () => {
+    expect(
+      lowerPluginLayers(
+        "@layer properties{a{b:c}}@layer utilities{.flex{display:flex}}",
+      ),
+    ).toBe(
+      "@layer termix-plugin-properties{a{b:c}}@layer termix-plugin-utilities{.flex{display:flex}}",
+    );
+    expect(lowerPluginLayers("@layer utilities-extra{}")).toBe(
+      "@layer utilities-extra{}",
+    );
+  });
+
+  it("is ordered in core's CSS between base and core's utilities", () => {
+    const css = fs.readFileSync(
+      path.join(__dirname, "..", "src", "ui", "index.css"),
+      "utf8",
+    );
+    const order = /@layer ([^;{]+);/.exec(css)?.[1].split(/[\s,]+/);
+    expect(order).toEqual([
+      "properties",
+      "termix-plugin-properties",
+      "theme",
+      "base",
+      "components",
+      "termix-plugin-utilities",
+      "utilities",
+    ]);
+    expect(css.indexOf("@layer properties,")).toBeLessThan(
+      css.indexOf('@import "tailwindcss"'),
+    );
   });
 });

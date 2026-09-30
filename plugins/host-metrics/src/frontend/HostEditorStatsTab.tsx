@@ -1,13 +1,14 @@
 import {
   Button,
+  HostDefaultBadge,
   Input,
   SectionCard,
   SettingRow,
   FakeSwitch,
+  useIsDefaultsEditor,
 } from "@termix/plugin-sdk/ui";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  usePluginApi,
   useTranslation,
   type HostEditorSectionProps,
 } from "@termix/plugin-sdk/frontend";
@@ -24,11 +25,7 @@ type PluginSettingsBag = Record<string, Record<string, unknown>>;
  * host settings, carried on form.pluginSettings and saved by the editor after
  * the host itself.
  */
-export function HostStatsTab({
-  form,
-  updateForm,
-  host,
-}: HostEditorSectionProps) {
+export function HostStatsTab({ form, updateForm }: HostEditorSectionProps) {
   const { t } = useTranslation();
   const [newMount, setNewMount] = useState("");
   const [newMonitoredPath, setNewMonitoredPath] = useState("");
@@ -38,7 +35,7 @@ export function HostStatsTab({
   ];
   const settings = readHostMetricsSettings(bag);
   const { excludedMounts, monitoredMounts } = settings;
-  const api = usePluginApi();
+  const defaultsEditor = useIsDefaultsEditor();
 
   const patch = (values: Record<string, unknown>) =>
     updateForm((current) => {
@@ -51,23 +48,6 @@ export function HostStatsTab({
         },
       };
     });
-
-  // A new host starts with the admin's default for metrics.
-  useEffect(() => {
-    if (host || bag?.metricsEnabled !== undefined) return;
-    let cancelled = false;
-    api
-      .get<{ enabledForNewHosts: boolean }>("/defaults")
-      .then(({ data }) => {
-        if (!cancelled && data.enabledForNewHosts === false) {
-          patch({ metricsEnabled: false });
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [host]);
 
   const addExcludedMount = () => {
     const value = newMount.trim();
@@ -102,6 +82,7 @@ export function HostStatsTab({
           <SettingRow
             label={t("hosts.enableMetricsLabel")}
             description={t("hosts.enableMetricsDesc")}
+            defaultKey="metricsEnabled"
           >
             <FakeSwitch
               checked={settings.metricsEnabled}
@@ -112,6 +93,7 @@ export function HostStatsTab({
             <SettingRow
               label={t("hosts.useGlobalMetrics")}
               description={t("hosts.useGlobalMetricsDesc")}
+              defaultKey="metricsInterval"
             >
               <FakeSwitch
                 checked={settings.metricsInterval === null}
@@ -141,8 +123,9 @@ export function HostStatsTab({
         icon={<HardDrive className="size-3.5" />}
       >
         <div className="flex flex-col gap-3 py-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {t("hosts.monitoredMountsDesc")}
+            <HostDefaultBadge settingKey="monitoredMounts" />
           </p>
           <div className="grid grid-cols-[1fr_0.7fr_auto] gap-2">
             <Input
@@ -212,8 +195,9 @@ export function HostStatsTab({
         icon={<HardDrive className="size-3.5" />}
       >
         <div className="flex flex-col gap-3 py-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {t("hosts.excludedMountsDesc")}
+            <HostDefaultBadge settingKey="excludedMounts" />
           </p>
           <div className="flex items-center gap-2">
             <Input
@@ -265,16 +249,18 @@ export function HostStatsTab({
           ))}
         </div>
       </SectionCard>
-      <SectionCard
-        title={t("hosts.visibleWidgets")}
-        icon={<LayoutDashboard className="size-3.5" />}
-      >
-        <div className="flex flex-col gap-2 py-3">
-          <p className="text-xs text-muted-foreground">
-            {t("hosts.widgetsMovedToHostMetrics")}
-          </p>
-        </div>
-      </SectionCard>
+      {!defaultsEditor && (
+        <SectionCard
+          title={t("hosts.visibleWidgets")}
+          icon={<LayoutDashboard className="size-3.5" />}
+        >
+          <div className="flex flex-col gap-2 py-3">
+            <p className="text-xs text-muted-foreground">
+              {t("hosts.widgetsMovedToHostMetrics")}
+            </p>
+          </div>
+        </SectionCard>
+      )}
     </>
   );
 }

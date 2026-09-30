@@ -3,6 +3,7 @@ import "@xterm/xterm/css/xterm.css";
 import { lazy, Suspense, type ComponentType } from "react";
 import {
   Braces,
+  Copy,
   Hammer,
   History,
   Laptop,
@@ -12,6 +13,7 @@ import {
 import type {
   PanelProps,
   PluginHostRecord,
+  PluginTabRecord,
   StandaloneViewProps,
   TabProps,
   TermixApp,
@@ -46,11 +48,6 @@ import {
   SendControlCodeEditor,
   SendTextEditor,
 } from "./lib/keybinding-editors";
-import { TerminalDefaultsSettings } from "./settings/TerminalDefaultsSettings";
-import {
-  NewHostFontSetting,
-  NewHostThemeSetting,
-} from "./settings/NewHostLookSettings";
 import { TerminalPreview } from "./look/TerminalPreview";
 import { installTerminalGlobalStyles } from "./look/terminal-global-styles";
 import {
@@ -60,7 +57,6 @@ import {
 } from "./look/look-actions";
 import {
   invalidateTerminalClientSettings,
-  loadTerminalClientSettings,
   resetTerminalClientSettings,
 } from "./terminal-settings";
 import { moveLocalTerminalPreferences } from "./settings/local-preferences-migration";
@@ -123,6 +119,26 @@ export function activate(app: TermixApp): void {
     },
   );
 
+  app.registerAction(
+    "terminal.duplicateTab",
+    ((_handle: unknown, tab?: PluginTabRecord) => {
+      if (tab?.type === "terminal" && tab.host) {
+        app.tabs.openTab(tab.host, "terminal", { forceNewTab: true });
+      }
+    }) as never,
+    { permission: "use" },
+  );
+  app.registerSlotContribution("tab.menu", {
+    actionId: "terminal.duplicateTab",
+    titleKey: "terminal.duplicateTab",
+    icon: Copy,
+    kind: "button",
+    when: ({ tab }) => {
+      const target = tab as PluginTabRecord | undefined;
+      return target?.type === "terminal" && !!target.host;
+    },
+  });
+
   app.registerHostAction({
     id: "terminal",
     titleKey: "nav.terminal",
@@ -142,6 +158,7 @@ export function activate(app: TermixApp): void {
     titleKey: "hosts.tabTerminal",
     icon: SquareTerminal,
     order: 10,
+    defaults: true,
     component: HostTerminalSection,
   });
 
@@ -305,9 +322,6 @@ export function activate(app: TermixApp): void {
   app.registerAction("terminal.resolveTheme", (async (
     request: ResolveLookRequest & { hostId?: number | string } = {},
   ) => {
-    const settings = await loadTerminalClientSettings(app.api).catch(
-      () => null,
-    );
     let host: PluginHostRecord | null | undefined = request.host;
     if (!host && request.hostId !== undefined) {
       host =
@@ -316,15 +330,12 @@ export function activate(app: TermixApp): void {
           (entry) => String(entry.id) === String(request.hostId),
         );
     }
-    return resolveTerminalLook({ ...request, host }, settings?.user);
+    return resolveTerminalLook({ ...request, host });
   }) as never);
   app.registerAction("terminal.themes", () => listTerminalThemes());
 
   app.registerSettingsComponent("touchInput", TouchInputSettings);
   app.registerSettingsComponent("imageStorageTest", ImageStorageTest);
-  app.registerSettingsComponent("terminalDefaults", TerminalDefaultsSettings);
-  app.registerSettingsComponent("newHostTheme", NewHostThemeSetting);
-  app.registerSettingsComponent("newHostFontFamily", NewHostFontSetting);
 
   app.onSettingsChanged(() => invalidateTerminalClientSettings());
   if (!app.guest) void moveLocalTerminalPreferences(app);
