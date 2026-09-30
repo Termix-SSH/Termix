@@ -1310,7 +1310,16 @@ function createTray() {
     } else if (process.platform === "win32") {
       trayIcon = path.join(publicRoot, "icon.ico");
     } else {
-      trayIcon = path.join(publicRoot, "icons", "32x32.png");
+      trayIcon = loadLinuxTrayIcon(nativeImage, publicRoot);
+      if (!trayIcon) {
+        logToFile("Tray icon not found, skipping the system tray");
+        return;
+      }
+      if (/gnome/i.test(process.env.XDG_CURRENT_DESKTOP || "")) {
+        logToFile(
+          "GNOME shows tray icons only with the AppIndicator extension installed",
+        );
+      }
     }
 
     tray = new Tray(trayIcon);
@@ -1348,10 +1357,27 @@ function createTray() {
       }
     });
 
-    console.log("System tray created successfully");
+    logToFile("System tray created");
   } catch (err) {
-    console.error("Failed to create system tray:", err);
+    tray = null;
+    logToFile("Failed to create system tray:", err?.message || String(err));
   }
+}
+
+function loadLinuxTrayIcon(nativeImage, publicRoot) {
+  const roots = [
+    publicRoot,
+    path.join(process.resourcesPath || "", "app.asar.unpacked", "public"),
+  ];
+  for (const root of roots) {
+    for (const size of ["32x32", "24x24", "48x48"]) {
+      const image = nativeImage.createFromPath(
+        path.join(root, "icons", `${size}.png`),
+      );
+      if (!image.isEmpty()) return image;
+    }
+  }
+  return null;
 }
 
 function createWindow() {
@@ -1555,7 +1581,15 @@ function createWindow() {
   mainWindow.on("close", (event) => {
     if (!isQuitting && tray && !tray.isDestroyed()) {
       event.preventDefault();
-      mainWindow.hide();
+      // Stock GNOME has no tray to bring a hidden window back from.
+      if (
+        process.platform === "linux" &&
+        /gnome/i.test(process.env.XDG_CURRENT_DESKTOP || "")
+      ) {
+        mainWindow.minimize();
+      } else {
+        mainWindow.hide();
+      }
     }
   });
 
