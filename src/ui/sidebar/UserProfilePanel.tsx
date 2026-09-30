@@ -647,7 +647,7 @@ export function UserProfilePanel({
     getUserInfo()
       .then((info) => {
         setUserId(info.userId);
-        setIsOidc(info.is_oidc ?? false);
+        setIsOidc(info.is_external ?? info.is_oidc ?? false);
         setIsDualAuth(info.is_dual_auth ?? false);
         const linked = info.linked ?? null;
         setLinkedAccount(linked);
@@ -661,7 +661,7 @@ export function UserProfilePanel({
         );
         if (info.is_dual_auth) {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodDual"));
-        } else if (info.is_oidc) {
+        } else if (info.is_external ?? info.is_oidc) {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodOidc"));
         } else {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
@@ -764,8 +764,6 @@ export function UserProfilePanel({
         // and back silently reset them.
         "dashboardTab.slots",
         "dashboardTab.mainWidthPct",
-        "termix-terminal-toolbar-density",
-        "fileManagerViewMode",
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);

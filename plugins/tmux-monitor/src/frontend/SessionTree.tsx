@@ -57,6 +57,7 @@ interface SessionTreeProps {
   onEditTags: (sessionName: string) => void;
   /** Open a terminal attached to the session (the ▷ hover action). */
   onAttachSession: (sessionName: string) => void;
+  onSelectSession?: (sessionName: string) => void;
   /** Create a new window in the session (the + hover action). */
   onNewWindow: (sessionName: string) => void;
   /** Open the rename dialog for a session (… menu). */
@@ -87,6 +88,7 @@ export function SessionTree({
   metricsBySession,
   onEditTags,
   onAttachSession,
+  onSelectSession,
   onNewWindow,
   onRenameSession,
   onKillSession,
@@ -137,13 +139,28 @@ export function SessionTree({
           <div key={session.name} className="mb-0.5">
             <div
               className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 hover:bg-muted/40"
-              onClick={() => onToggleSession(session.name)}
+              onClick={() =>
+                onSelectSession
+                  ? onSelectSession(session.name)
+                  : onToggleSession(session.name)
+              }
             >
-              {expanded ? (
-                <ChevronDown className="size-3.5 shrink-0" />
-              ) : (
-                <ChevronRight className="size-3.5 shrink-0" />
-              )}
+              <button
+                aria-label={t("tmuxMonitor.toggleSession", {
+                  session: session.name,
+                })}
+                aria-expanded={expanded}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleSession(session.name);
+                }}
+              >
+                {expanded ? (
+                  <ChevronDown className="size-3.5 shrink-0" />
+                ) : (
+                  <ChevronRight className="size-3.5 shrink-0" />
+                )}
+              </button>
               <span
                 className={`size-2 shrink-0 rounded-full ${session.attachedClients > 0 ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
                 title={

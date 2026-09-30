@@ -14,7 +14,7 @@ export const DASHBOARD_CARDS: DashboardCardConfig[] = [
   {
     id: "counters_bar",
     label: "Counters Bar",
-    description: "Total hosts, credentials, and tunnels count",
+    description: "Host and credential totals, plus any counters plugins add",
     defaultEnabled: true,
   },
   {

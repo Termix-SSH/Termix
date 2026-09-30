@@ -385,7 +385,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               </>
             )}
 
-            {protocol === "vnc" && (
+            {isRdpVnc && (
               <>
                 <div className={SEP} />
                 <TipIconBtn

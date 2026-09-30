@@ -75,7 +75,11 @@ export function onSettingsChange(
   };
 }
 
-function notify(pluginId: string, key: string, value: unknown): void {
+export function notifySettingChange(
+  pluginId: string,
+  key: string,
+  value: unknown,
+): void {
   for (const listener of listeners.get(pluginId)?.get(key) ?? []) {
     try {
       listener(value);
@@ -92,7 +96,10 @@ function notify(pluginId: string, key: string, value: unknown): void {
 
 export type SettingsValidator = (
   values: Record<string, unknown>,
-  context: { hostId?: number },
+  context: {
+    hostId?: number;
+    defaults?: { level: "admin" | "user" | "folder" };
+  },
 ) =>
   | Record<string, string>
   | void
@@ -131,6 +138,7 @@ export async function validateSettingsSave(
   scope: PluginSettingsScope,
   scopeId: string | null,
   values: Record<string, unknown>,
+  defaults?: { level: "admin" | "user" | "folder" },
 ): Promise<Record<string, string>> {
   const errors: Record<string, string> = {};
   for (const entry of validators.get(pluginId) ?? []) {
@@ -138,6 +146,7 @@ export async function validateSettingsSave(
     try {
       const result = await entry.run(values, {
         hostId: scope === "host" && scopeId ? Number(scopeId) : undefined,
+        ...(defaults ? { defaults } : {}),
       });
       Object.assign(errors, result ?? {});
     } catch (error) {
@@ -299,7 +308,7 @@ export async function setSetting(
     shouldEncrypt,
   );
 
-  notify(manifest.id, key, coerced);
+  notifySettingChange(manifest.id, key, coerced);
   return null;
 }
 

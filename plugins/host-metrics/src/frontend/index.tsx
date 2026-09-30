@@ -96,6 +96,7 @@ export async function activate(app: TermixApp): Promise<void> {
     titleKey: "hosts.tabHostMetrics",
     icon: Activity,
     order: 70,
+    defaults: true,
     component: MetricsHostSection,
   });
 
@@ -111,7 +112,7 @@ export async function activate(app: TermixApp): Promise<void> {
   });
 
   // The usage bars in the dashboard's host status card.
-  app.registerSlotContribution("dashboard.hostMetrics", {
+  app.registerSlotContribution("dashboard.hostRow", {
     actionId: "host-metrics.dashboardHost",
     titleKey: "nav.hostMetrics",
     kind: "component",

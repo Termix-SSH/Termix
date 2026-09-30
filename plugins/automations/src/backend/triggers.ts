@@ -69,6 +69,10 @@ export function createTriggers(
   repository: AutomationRepository,
   engine: Pick<AutomationEngine, "run">,
   log: PluginLogger,
+  isMaintaining: (
+    userId: string,
+    hostId: number,
+  ) => Promise<boolean> = async () => false,
 ) {
   async function loadEnabledFor(userId: string): Promise<LoadedAutomation[]> {
     try {
@@ -120,6 +124,12 @@ export function createTriggers(
     triggerContext: Record<string, unknown>,
     hostId?: number,
   ): Promise<void> {
+    if (
+      hostId !== undefined &&
+      triggerType !== "internal_event" &&
+      (await isMaintaining(automation.userId, hostId))
+    )
+      return;
     await repository.upsertTriggerState({
       automationId: automation.id,
       stateKey,
@@ -149,6 +159,7 @@ export function createTriggers(
   async function onMetrics(event: MetricEvent): Promise<void> {
     const automations = await loadEnabledFor(event.ownerUserId);
     const now = Date.now();
+    const maintaining = await isMaintaining(event.ownerUserId, event.hostId);
 
     for (const { row, definition } of automations) {
       const trigger = definition.trigger;
@@ -162,7 +173,7 @@ export function createTriggers(
       const state = await repository.getTriggerState(row.id, stateKey);
       const breaching = compare(value, trigger.operator, trigger.value);
 
-      if (!breaching) {
+      if (maintaining || !breaching) {
         if (state?.breachStartedAt) {
           await repository.clearBreach(row.id, stateKey);
         }
@@ -228,6 +239,7 @@ export function createTriggers(
 
       // The first observation establishes a baseline rather than firing, so a
       // restart does not announce every host as though it just changed.
+      if (await isMaintaining(row.userId, event.hostId)) continue;
       if (!state?.lastObservedState) continue;
       if (trigger.to !== observed) continue;
       if (isCoolingDown(state?.lastFiredAt, trigger.cooldownMinutes, now))
@@ -265,6 +277,7 @@ export function createTriggers(
         lastObservedState: observed,
       });
 
+      if (await isMaintaining(row.userId, event.hostId)) continue;
       if (!state?.lastObservedState) continue;
       if (trigger.to !== observed) continue;
       if (isCoolingDown(state?.lastFiredAt, trigger.cooldownMinutes, now))
@@ -286,6 +299,7 @@ export function createTriggers(
   }
 
   async function onDockerEvent(event: DockerEvent): Promise<void> {
+    if (await isMaintaining(event.ownerUserId, event.hostId)) return;
     const automations = await loadEnabledFor(event.ownerUserId);
     const now = Date.now();
 
@@ -316,6 +330,12 @@ export function createTriggers(
   }
 
   async function onInternalEvent(event: InternalEvent): Promise<void> {
+    if (
+      event.event === "tunnel_disconnected" &&
+      event.hostId !== undefined &&
+      (await isMaintaining(event.userId, event.hostId))
+    )
+      return;
     const automations = await loadEnabledFor(event.userId);
     const now = Date.now();
 

@@ -6,6 +6,7 @@ import {
   integer,
   real,
   refUser,
+  refHost,
   text,
   timestamp,
   varchar,
@@ -187,7 +188,23 @@ export const channels = adoptLegacyTable(
   ),
 );
 
+export const maintenanceTable = defineTable(
+  "host_maintenance",
+  {
+    id: id(),
+    userId: refUser(),
+    hostId: refHost(),
+    state: text().notNull(),
+  },
+  {
+    uniques: [
+      { name: "maintenance_host_owner", columns: ["userId", "hostId"] },
+    ],
+  },
+);
+
 export const tables = [
+  maintenanceTable,
   automations,
   triggerState,
   schedules,

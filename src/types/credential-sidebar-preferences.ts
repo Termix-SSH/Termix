@@ -85,14 +85,6 @@ function sanitizeStringArray(input: unknown): string[] {
   return input.filter((v): v is string => typeof v === "string");
 }
 
-function sanitizeEnumArray<T extends string>(
-  input: unknown,
-  allowed: readonly T[],
-): T[] {
-  if (!Array.isArray(input)) return [];
-  return input.filter((v): v is T => allowed.includes(v as T));
-}
-
 export function sanitizeCredentialSidebarPreferences(
   input: unknown,
 ): CredentialSidebarPreferences {

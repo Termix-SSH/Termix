@@ -323,7 +323,9 @@
       "enableToolbar": {
         "label": "Remote desktop toolbar",
         "description": "Show the toolbar in RDP, VNC and Telnet sessions."
-      }
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "Remote Desktop"
     }
   },
   "palette": {

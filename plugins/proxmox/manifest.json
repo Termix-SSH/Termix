@@ -21,7 +21,8 @@
     "ssh:connect",
     "db:own",
     "network:serve",
-    "ui:surface"
+    "ui:surface",
+    "users:impersonate"
   ],
   "contributes": {
     "tabs": [
@@ -38,22 +39,26 @@
           {
             "key": "enableProxmox",
             "type": "custom",
-            "component": "proxmoxHostSettings"
+            "component": "proxmoxHostSettings",
+            "defaultable": false
           },
           {
             "key": "proxmoxConfig",
             "type": "custom",
-            "component": "proxmoxHostSettings"
+            "component": "proxmoxHostSettings",
+            "defaultable": false
           },
           {
             "key": "enableProxmoxStats",
             "type": "custom",
-            "component": "proxmoxHostSettings"
+            "component": "proxmoxHostSettings",
+            "defaultable": false
           },
           {
             "key": "proxmoxStatsConfig",
             "type": "custom",
-            "component": "proxmoxHostSettings"
+            "component": "proxmoxHostSettings",
+            "defaultable": false
           }
         ]
       }

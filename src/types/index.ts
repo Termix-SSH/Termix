@@ -6,6 +6,7 @@ import type {
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
+import type { DefaultOverrides } from "./host-defaults.js";
 
 export type {
   AuthOverrideProtocol,
@@ -30,48 +31,6 @@ export interface HostProtocolAuthInput {
   password?: string | null;
   /** Declared credential fields; one left out keeps its value. */
   fields?: Record<string, string | null>;
-}
-
-export type WebEndpointAccess = "direct" | "tunnel";
-export type WebEndpointRender = "external" | "embedded";
-
-/** One web UI a host serves, declared in the host's settings. */
-export interface WebEndpoint {
-  /**
-   * Stable identifier. Must NOT be derived from the port: it keys both the
-   * tunnel name and the tab identity, so editing a port has to leave a live
-   * tunnel findable under the same name.
-   */
-  id: string;
-  label: string;
-  scheme: "http" | "https";
-  port: number;
-  /** Defaults to "/". Normalized at the storage boundary, never here. */
-  path?: string;
-  access: WebEndpointAccess;
-  render: WebEndpointRender;
-  /**
-   * Direct endpoints only. Allows an invalid TLS certificate for this
-   * endpoint's exact origin. A no-op for tunnel access, whose host component
-   * is loopback and therefore already exempt.
-   */
-  ignoreCert?: boolean;
-  /**
-   * Tunnel endpoints only. Where the backend binds the forward, exactly as
-   * the server tunnels feature exposes it. Defaults to 127.0.0.1, reachable
-   * only from the machine running the backend. A web deployment runs the
-   * backend on a server, so reaching the forward from a browser needs an
-   * address that machine answers on -- which also exposes the target's web UI
-   * to anyone who can reach the port, with no login in front of it.
-   */
-  bindHost?: string;
-  /**
-   * Tunnel endpoints only. Which port the forward listens on, as the server
-   * tunnels feature's Source Port does. Left unset the kernel picks a free
-   * one, which is fine when backend and browser share a machine -- but a
-   * container can only publish ports it knows in advance.
-   */
-  localPort?: number;
 }
 
 export interface JumpHost {
@@ -162,6 +121,8 @@ export type Host = {
 
   /** Enabled plugins' host-scope settings, keyed by plugin id. Secrets redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Host default keys this host sets itself, per namespace. */
+  defaultOverrides?: DefaultOverrides | null;
 };
 
 export interface JumpHostData {
@@ -183,6 +144,8 @@ export interface ProxyNode {
 }
 
 export interface HostData {
+  /** Host default keys the host sets itself, per namespace. Every other key follows its defaults. */
+  defaultOverrides?: DefaultOverrides | null;
   name?: string;
   ip: string;
   port: number;
@@ -307,29 +270,6 @@ export interface CredentialBackend {
 }
 
 // ============================================================================
-// TUNNEL TYPES
-// ============================================================================
-
-export type TunnelScope = "s2s" | "c2s";
-export type TunnelMode = "local" | "remote" | "dynamic";
-
-// ============================================================================
-// FILE MANAGER TYPES
-// ============================================================================
-
-export interface Tab {
-  id: string | number;
-  title: string;
-  fileName: string;
-  content: string;
-  isSSH?: boolean;
-  sshSessionId?: string;
-  filePath?: string;
-  loading?: boolean;
-  dirty?: boolean;
-}
-
-// ============================================================================
 // TERMINAL CONFIGURATION TYPES
 // ============================================================================
 
@@ -368,7 +308,6 @@ export interface TerminalRefHandle {
   subscribeOutput?: (listener: (data: string) => void) => () => void;
   notifyResize?: () => void;
   refresh?: () => void;
-  openFileManager?: () => void;
 }
 
 // ============================================================================
@@ -427,21 +366,3 @@ export interface CacheEntry<T = unknown> {
   timestamp: number;
   expiresAt: number;
 }
-
-// ============================================================================
-// DATABASE EXPORT/IMPORT TYPES
-// ============================================================================
-
-export interface ExportSummary {
-  sshHostsImported: number;
-  sshCredentialsImported: number;
-  pluginItemsImported: number;
-  credentialUsageImported: number;
-  settingsImported: number;
-  skippedItems: number;
-  errors: string[];
-}
-
-// ============================================================================
-// DOCKER TYPES
-// ============================================================================

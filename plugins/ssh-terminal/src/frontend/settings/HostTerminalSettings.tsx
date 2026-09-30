@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { setThemePreview } from "../look/theme-preview";
 import { Info, Palette, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import {
   Button,
   FakeSwitch,
+  HostDefaultBadge,
   Input,
   SectionCard,
   Select2,
@@ -13,7 +15,6 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  useTabsSafe,
 } from "@termix/plugin-sdk/ui";
 import {
   useSettings,
@@ -33,9 +34,6 @@ import {
   TERMINAL_FONT_ZOOM_MAX,
 } from "../look/terminal-font-zoom";
 import {
-  APPEARANCE_KEYS,
-  INHERIT_APPEARANCE_KEY,
-  pickTerminalValues,
   readHostTerminalSettings,
   readUserSettings,
   type BackspaceMode,
@@ -45,14 +43,10 @@ import {
   type HostTerminalSettings as HostTerminalValues,
   type SavedCustomTheme,
 } from "../../shared/terminal-settings";
-import {
-  invalidateTerminalClientSettings,
-  useTerminalClientSettings,
-} from "../terminal-settings";
+import { invalidateTerminalClientSettings } from "../terminal-settings";
 
 const PLUGIN_ID = "ssh-terminal";
 const CUSTOM_FONT_OPTION = "__custom__";
-const APPEARANCE = new Set<string>(APPEARANCE_KEYS);
 
 type HostPluginSettings = Record<string, Record<string, unknown>>;
 
@@ -64,28 +58,17 @@ type HostPluginSettings = Record<string, Record<string, unknown>>;
 export function HostTerminalSettings({
   form: editorForm,
   updateForm,
-  host,
 }: Pick<HostEditorSectionProps, "form" | "setField" | "updateForm" | "host">) {
   const { t } = useTranslation();
-  const client = useTerminalClientSettings();
   const userSettings = useSettings("user");
-  const { setPreviewTerminalTheme } = useTabsSafe();
+  // The preview ends when the editor section goes away.
+  useEffect(() => () => setThemePreview(null), []);
 
   const stored = ((editorForm?.pluginSettings as HostPluginSettings)?.[
     PLUGIN_ID
   ] ?? {}) as Record<string, unknown>;
-  // A new host starts from the admin's new-host defaults.
-  const seed = host ? {} : (client?.newHostDefaults ?? {});
-  const own = readHostTerminalSettings({ ...seed, ...stored });
-  const userDefaults = pickTerminalValues(
-    client?.user.terminalDefaults ?? {},
-    APPEARANCE_KEYS,
-  );
-  // While the host follows the user, show the look it will actually get.
-  const form = {
-    ...own,
-    ...(own.inheritAppearance ? userDefaults : {}),
-  } as HostTerminalValues;
+  // The form holds what the host follows, so this is what it will look like.
+  const form = readHostTerminalSettings(stored) as HostTerminalValues;
 
   const writeValues = (values: Record<string, unknown>) =>
     updateForm((current) => {
@@ -102,23 +85,7 @@ export function HostTerminalSettings({
   const setField = <K extends keyof HostTerminalValues>(
     key: K,
     value: HostTerminalValues[K],
-  ) =>
-    writeValues({
-      [key]: value,
-      // Touching the look takes the host off the user's defaults.
-      ...(APPEARANCE.has(key) ? { [INHERIT_APPEARANCE_KEY]: false } : {}),
-    });
-
-  const setInheritAppearance = (inherit: boolean) => {
-    if (inherit) {
-      writeValues({ [INHERIT_APPEARANCE_KEY]: true });
-      return;
-    }
-    // Keep what was shown, so switching off does not change the look.
-    const shown: Record<string, unknown> = {};
-    for (const key of APPEARANCE_KEYS) shown[key] = form[key];
-    writeValues({ ...shown, [INHERIT_APPEARANCE_KEY]: false });
-  };
+  ) => writeValues({ [key]: value });
 
   const [isCustomFont, setIsCustomFont] = useState(
     () => !TERMINAL_FONTS.some((f) => f.value === form.fontFamily),
@@ -182,21 +149,7 @@ export function HostTerminalSettings({
         icon={<Palette className="size-3.5" />}
       >
         <div className="flex flex-col gap-4 py-3">
-          <SettingRow
-            label={t("hosts.useUserDefaults")}
-            description={t("hosts.useUserTerminalDefaultsDesc")}
-          >
-            <FakeSwitch
-              checked={form.inheritAppearance}
-              onChange={setInheritAppearance}
-            />
-          </SettingRow>
-          <fieldset
-            disabled={form.inheritAppearance}
-            className={
-              form.inheritAppearance ? "contents opacity-60" : "contents"
-            }
-          >
+          <>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.themePreview")}
@@ -214,15 +167,16 @@ export function HostTerminalSettings({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.colorTheme")}
+                  <HostDefaultBadge settingKey="theme" />
                 </label>
                 <Select2
                   value={form.theme}
                   onChange={(e) => {
                     const newTheme = e.target.value;
                     setField("theme", newTheme);
-                    setPreviewTerminalTheme(newTheme);
+                    setThemePreview(newTheme);
                     if (newTheme === "custom" && !form.customThemeColors) {
                       setField("customThemeColors", {
                         ...TERMINAL_THEMES.termixDark.colors,
@@ -244,8 +198,9 @@ export function HostTerminalSettings({
               </div>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.fontFamilyLabel")}
+                    <HostDefaultBadge settingKey="fontFamily" />
                   </label>
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
@@ -291,8 +246,9 @@ export function HostTerminalSettings({
               </div>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.fontSizeLabel")}
+                    <HostDefaultBadge settingKey="fontSize" />
                   </label>
                   <span className="text-[10px] text-muted-foreground tabular-nums">
                     {form.fontSize}px
@@ -307,8 +263,9 @@ export function HostTerminalSettings({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.cursorStyleLabel")}
+                  <HostDefaultBadge settingKey="cursorStyle" />
                 </label>
                 <Select2
                   value={form.cursorStyle}
@@ -326,8 +283,9 @@ export function HostTerminalSettings({
               </div>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.letterSpacingPx")}
+                    <HostDefaultBadge settingKey="letterSpacing" />
                   </label>
                   <span className="text-[10px] text-muted-foreground tabular-nums">
                     {form.letterSpacing}px
@@ -343,8 +301,9 @@ export function HostTerminalSettings({
               </div>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.lineHeightLabel")}
+                    <HostDefaultBadge settingKey="lineHeight" />
                   </label>
                   <span className="text-[10px] text-muted-foreground tabular-nums">
                     {form.lineHeight.toFixed(1)}
@@ -359,8 +318,9 @@ export function HostTerminalSettings({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.bellStyleLabel")}
+                  <HostDefaultBadge settingKey="bellStyle" />
                 </label>
                 <Select2
                   value={form.bellStyle}
@@ -377,8 +337,9 @@ export function HostTerminalSettings({
                 </Select2>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.backspaceModeLabel")}
+                  <HostDefaultBadge settingKey="backspaceMode" />
                 </label>
                 <Select2
                   value={form.backspaceMode}
@@ -396,7 +357,7 @@ export function HostTerminalSettings({
                 </Select2>
               </div>
             </div>
-          </fieldset>
+          </>
           {form.theme === "custom" && (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
@@ -454,8 +415,9 @@ export function HostTerminalSettings({
                 )}
               </div>
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.customThemeColors")}
+                  <HostDefaultBadge settingKey="customThemeColors" />
                 </label>
                 <button
                   type="button"
@@ -568,6 +530,7 @@ export function HostTerminalSettings({
           )}
           <SettingRow
             label={t("hosts.cursorBlinking")}
+            defaultKey="cursorBlink"
             description={t("hosts.cursorBlinkingDesc")}
           >
             <FakeSwitch
@@ -577,6 +540,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.rightClickSelectsWordLabel")}
+            defaultKey="rightClickSelectsWord"
             description={t("hosts.rightClickSelectsWordShortDesc")}
           >
             <FakeSwitch
@@ -586,6 +550,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.macOptionIsMetaLabel")}
+            defaultKey="macOptionIsMeta"
             description={t("hosts.macOptionIsMetaShortDesc")}
           >
             <FakeSwitch
@@ -595,6 +560,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.syntaxHighlightingLabel")}
+            defaultKey="syntaxHighlighting"
             description={t("hosts.syntaxHighlightingDesc")}
           >
             <FakeSwitch
@@ -632,6 +598,7 @@ export function HostTerminalSettings({
               ).map(([key, labelKey, descKey]) => (
                 <SettingRow
                   key={key}
+                  defaultKey="syntaxHighlightingOptions"
                   label={t(`hosts.${labelKey}`)}
                   description={t(`hosts.${descKey}`)}
                 >
@@ -649,8 +616,9 @@ export function HostTerminalSettings({
             </div>
           )}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.backgroundImageLabel")}
+              <HostDefaultBadge settingKey="backgroundImage" />
             </label>
             <p className="text-[10px] text-muted-foreground">
               {t("hosts.backgroundImageDesc")}
@@ -666,8 +634,9 @@ export function HostTerminalSettings({
           {form.backgroundImage && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.backgroundImageOpacityLabel")}
+                  <HostDefaultBadge settingKey="backgroundImageOpacity" />
                 </label>
                 <span className="text-[10px] text-muted-foreground tabular-nums">
                   {Math.round(form.backgroundImageOpacity * 100)}%
@@ -692,8 +661,9 @@ export function HostTerminalSettings({
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.scrollbackBufferLabel")}
+                <HostDefaultBadge settingKey="scrollback" />
               </label>
               <span className="text-[10px] text-muted-foreground tabular-nums">
                 {form.scrollback.toLocaleString()}{" "}
@@ -710,6 +680,7 @@ export function HostTerminalSettings({
           </div>
           <SettingRow
             label={t("hosts.enableAutoTmux")}
+            defaultKey="autoTmux"
             description={
               <>
                 {t("hosts.enableAutoTmuxDesc")}{" "}
@@ -731,6 +702,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.useSSHTitleLabel")}
+            defaultKey="useSSHTitle"
             description={t("hosts.useSSHTitleDesc")}
           >
             <FakeSwitch
@@ -740,6 +712,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.enableAutoMosh")}
+            defaultKey="autoMosh"
             description={t("hosts.enableAutoMoshDesc")}
           >
             <FakeSwitch
@@ -749,6 +722,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.passwordPromptAutoFillLabel")}
+            defaultKey="passwordPromptAutoFill"
             description={t("hosts.passwordPromptAutoFillDesc")}
           >
             <FakeSwitch
@@ -758,6 +732,7 @@ export function HostTerminalSettings({
           </SettingRow>
           <SettingRow
             label={t("hosts.sudoPasswordAutoFillLabel")}
+            defaultKey="sudoPasswordAutoFill"
             description={t("hosts.sudoPasswordAutoFillDesc")}
           >
             <FakeSwitch
@@ -766,20 +741,17 @@ export function HostTerminalSettings({
             />
           </SettingRow>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.localEchoLabel")}
+              <HostDefaultBadge settingKey="localEcho" />
             </label>
             <Select2
               value={form.localEcho}
               onChange={(e) =>
-                setField(
-                  "localEcho",
-                  e.target.value as "default" | "off" | "auto" | "on",
-                )
+                setField("localEcho", e.target.value as "off" | "auto" | "on")
               }
               className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="default">{t("hosts.localEchoDefault")}</option>
               <option value="off">{t("hosts.localEchoOff")}</option>
               <option value="auto">{t("hosts.localEchoAuto")}</option>
               <option value="on">{t("hosts.localEchoOn")}</option>
@@ -797,22 +769,20 @@ export function HostTerminalSettings({
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.linkClickBehaviorLabel")}
+              <HostDefaultBadge settingKey="linkClickBehavior" />
             </label>
             <Select2
               value={form.linkClickBehavior}
               onChange={(e) =>
                 setField(
                   "linkClickBehavior",
-                  e.target.value as "default" | "confirm" | "direct",
+                  e.target.value as "confirm" | "direct",
                 )
               }
               className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="default">
-                {t("hosts.linkClickBehaviorDefault")}
-              </option>
               <option value="confirm">
                 {t("hosts.linkClickBehaviorConfirm")}
               </option>
@@ -826,8 +796,9 @@ export function HostTerminalSettings({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.fastScrollModifierLabel")}
+                <HostDefaultBadge settingKey="fastScrollModifier" />
               </label>
               <Select2
                 value={form.fastScrollModifier}
@@ -848,8 +819,9 @@ export function HostTerminalSettings({
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.fastScrollSensitivityLabel")}
+                  <HostDefaultBadge settingKey="fastScrollSensitivity" />
                 </label>
                 <span className="text-[10px] text-muted-foreground tabular-nums">
                   {form.fastScrollSensitivity}
@@ -866,8 +838,9 @@ export function HostTerminalSettings({
           </div>
           {form.autoMosh && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.moshCommandLabel")}
+                <HostDefaultBadge settingKey="moshCommand" />
               </label>
               <Input
                 placeholder="mosh"

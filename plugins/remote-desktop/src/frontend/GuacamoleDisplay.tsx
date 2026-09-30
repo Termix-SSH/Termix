@@ -15,13 +15,13 @@ import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
 import {
   buildOriginWsUrl,
   getBasePath,
-  guacStateToStage,
   isElectron,
   resolveConnectionOrigin,
   type ConnectionOrigin,
   type ConnectionStage,
 } from "@termix/plugin-sdk/ui";
 import { errorMessage } from "./host-remote";
+import { guacStateToStage } from "./guacamole-state.ts";
 import { isPasteShortcut, pasteTextToRemote } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 import { bindPointerInput } from "./guacamole-pointer.ts";
@@ -87,8 +87,6 @@ interface GuacamoleDisplayProps {
   onStageChange?: (stage: ConnectionStage) => void;
   onZoomChange?: (zoom: number) => void;
 }
-
-const isDev = import.meta.env.DEV;
 
 export const GuacamoleDisplay = forwardRef<
   GuacamoleDisplayHandle,
@@ -347,9 +345,9 @@ export const GuacamoleDisplay = forwardRef<
       (hasKeyboardFocusRef.current || displayIsFocused);
 
     if (!shouldCaptureInput) {
+      keyboard.reset();
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
-      keyboard.reset();
       return;
     }
 
@@ -368,17 +366,8 @@ export const GuacamoleDisplay = forwardRef<
     };
 
     keyboard.onkeyup = (keysym: number) => {
-      if (!clientRef.current) return;
-      if (!isVisible || !windowFocusedRef.current) return;
-
-      const activeDisplay = displayElementRef.current;
-      const stillFocused =
-        !!activeDisplay &&
-        typeof document !== "undefined" &&
-        document.activeElement === activeDisplay;
-
-      if (!hasKeyboardFocusRef.current && !stillFocused) return;
-      clientRef.current.sendKeyEvent(0, keysym);
+      // Focus loss must still release keys already sent to the remote host.
+      clientRef.current?.sendKeyEvent(0, keysym);
     };
   }, [isVisible]);
 

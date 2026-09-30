@@ -35,6 +35,7 @@ const IPC = {
   DOWNLOAD: "local-transfer:download",
   CANCEL: "local-transfer:cancel",
   PROGRESS: "local-transfer:progress",
+  SET_API: "local-transfer:set-api",
 };
 
 const READ_CHUNK_BYTES = 1024 * 1024;
@@ -325,10 +326,19 @@ const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 // A compact JWT (base64url segments joined by dots); anything else is refused.
 const AUTH_TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
-// The file-manager plugin serves both routes under /plugin-api/file-manager
-// on the main backend.
-const FILE_MANAGER_API = "/plugin-api/file-manager";
-const DEFAULT_LOCAL_FILE_MANAGER_BASE = `http://localhost:30001${FILE_MANAGER_API}`;
+// The plugin that serves the two streaming routes tells us its /plugin-api/
+// path, so nothing here names it. Only a /plugin-api/<id> path is accepted,
+// which keeps every transfer on the backend's plugin routes.
+const API_PATH_PATTERN = /^\/plugin-api\/[a-z0-9][a-z0-9-]*$/;
+const LOCAL_BACKEND = "http://localhost:30001";
+let registeredApiPath = null;
+
+function setTransferApiPath(apiPath) {
+  if (typeof apiPath !== "string" || !API_PATH_PATTERN.test(apiPath)) {
+    throw new Error("Invalid transfer API path");
+  }
+  registeredApiPath = apiPath;
+}
 
 function normalizeHttpBase(candidate, what) {
   let parsed;
@@ -346,10 +356,13 @@ function normalizeHttpBase(candidate, what) {
 // Resolves where a transfer may go. Only the two file-manager streaming
 // routes are reachable, and only on the embedded backend or the linked
 // server; credentials come from the main process, not the caller.
-function createTargetResolver({
-  localBaseUrl = DEFAULT_LOCAL_FILE_MANAGER_BASE,
-  getLinkedServer,
-}) {
+function createTargetResolver({ localBaseUrl, getLinkedServer, apiPath }) {
+  const resolveApiPath = () => {
+    const resolved = apiPath ?? registeredApiPath;
+    if (!resolved)
+      throw new Error("Local file transfers are not available yet");
+    return resolved;
+  };
   return function resolveTransferTarget({
     origin,
     route,
@@ -389,7 +402,10 @@ function createTargetResolver({
         headers.Authorization = `Bearer ${authToken}`;
       }
       return {
-        url: `${normalizeHttpBase(localBaseUrl, "Local backend URL")}${routePath}`,
+        url: `${normalizeHttpBase(
+          localBaseUrl ?? `${LOCAL_BACKEND}${resolveApiPath()}`,
+          "Local backend URL",
+        )}${routePath}`,
         headers,
       };
     }
@@ -402,7 +418,7 @@ function createTargetResolver({
       }
       const base = normalizeHttpBase(linked.serverUrl, "Linked server URL");
       if (linked.token) headers.Authorization = `Bearer ${linked.token}`;
-      return { url: `${base}${FILE_MANAGER_API}${routePath}`, headers };
+      return { url: `${base}${resolveApiPath()}${routePath}`, headers };
     }
 
     throw new Error(`Unknown transfer origin: ${String(origin)}`);
@@ -890,6 +906,11 @@ function createLocalFileHandlers({
   };
 
   return {
+    [IPC.SET_API]: wrap(async (_event, apiPath) => {
+      setTransferApiPath(apiPath);
+      return {};
+    }),
+
     [IPC.HOME]: wrap(async () => ({
       home: os.homedir(),
       separator: path.sep,
@@ -1028,6 +1049,7 @@ module.exports = {
   // exported for tests / reuse
   createLocalFileHandlers,
   createTargetResolver,
+  setTransferApiPath,
   publishDownload,
   defaultPublishFs,
   assertWithinRoot,

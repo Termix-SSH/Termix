@@ -224,14 +224,23 @@ export function attachHostPluginSettings(
   }
 }
 
-/** The single-host convenience wrapper. */
+/**
+ * The single-host convenience wrapper. With a viewer, a shared host's
+ * personal fields come from that viewer's own defaults.
+ */
 export async function withHostPluginSettings(
   host: Record<string, unknown>,
+  viewerId?: string,
 ): Promise<Record<string, unknown>> {
   const hostId = Number(host.id);
   if (!Number.isInteger(hostId)) return host;
 
   const settings = await loadHostPluginSettings([hostId]);
+  if (viewerId) {
+    const { applyPersonalHostValues } =
+      await import("../../hosts/defaults/personal.js");
+    await applyPersonalHostValues(settings, viewerId).catch(() => {});
+  }
   const values = settings.get(hostId);
   if (!values) return host;
   const result: Record<string, unknown> = {
@@ -391,5 +400,8 @@ export async function setHostPluginEnabled(
     await setSetting(manifest, "host", hostId, enableKey, enabled);
     await touchHost(hostId);
   }
+  const { changeHostOverrides } =
+    await import("../../hosts/defaults/overrides.js");
+  await changeHostOverrides(hostIds, { own: [[pluginId, enableKey]] });
   return true;
 }

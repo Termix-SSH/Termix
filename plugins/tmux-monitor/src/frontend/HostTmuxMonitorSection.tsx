@@ -43,6 +43,7 @@ export function HostTmuxMonitorSection({
       <div className="flex flex-col gap-4 py-3">
         <SettingRow
           label={t("hosts.enableTmuxMonitor")}
+          defaultKey="enableTmuxMonitor"
           description={
             <>
               {t("hosts.enableTmuxMonitorDesc")}{" "}

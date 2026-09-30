@@ -121,7 +121,7 @@ export function ElectronLoginForm({
           const electronAPI = (
             window as unknown as {
               electronAPI?: {
-                oidcSystemBrowserAuth?: (
+                externalBrowserLogin?: (
                   url: string,
                   port: number,
                 ) => Promise<{
@@ -135,14 +135,14 @@ export function ElectronLoginForm({
               };
             }
           ).electronAPI;
-          if (!electronAPI?.oidcSystemBrowserAuth) {
+          if (!electronAPI?.externalBrowserLogin) {
             sendResultToIframe({
               success: false,
               error: t("errors.failedOidcLogin"),
             });
             return;
           }
-          const result = await electronAPI.oidcSystemBrowserAuth(
+          const result = await electronAPI.externalBrowserLogin(
             authUrl,
             callbackPort,
           );

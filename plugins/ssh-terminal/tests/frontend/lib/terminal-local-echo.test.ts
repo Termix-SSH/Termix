@@ -62,6 +62,37 @@ describe("TerminalLocalEcho", () => {
     expect(echo.handleInput("c")).toBe("c");
   });
 
+  it("waits for outstanding unpredicted input before enabling auto prediction", () => {
+    let now = 0;
+    const echo = new TerminalLocalEcho("auto", () => now, 100);
+    expect(echo.handleInput("d")).toBe("");
+    now = 150;
+    expect(echo.handleOutput("d")).toBe("d");
+    expect(echo.handleInput("o")).toBe("");
+    expect(echo.handleInput("c")).toBe("");
+    now = 300;
+    expect(echo.handleOutput("o")).toBe("o");
+    expect(echo.handleInput("k")).toBe("");
+    expect(echo.handleOutput("ck")).toBe("ck");
+    expect(echo.handleInput("e")).toBe("e");
+    expect(echo.handleInput("r")).toBe("r");
+    expect(echo.handleOutput("er")).toBe("");
+  });
+
+  it("rolls back the unmatched suffix after a partially matching output chunk", () => {
+    const echo = new TerminalLocalEcho("on");
+    for (const character of "abc") echo.handleInput(character);
+    expect(echo.handleOutput("abZ")).toBe("\x1b[1D\x1b[1XZ");
+    expect(echo.handleOutput("c")).toBe("c");
+  });
+
+  it("keeps pending predictions across an empty output chunk", () => {
+    const echo = new TerminalLocalEcho("on");
+    expect(echo.handleInput("a")).toBe("a");
+    expect(echo.handleOutput("")).toBe("");
+    expect(echo.handleOutput("a")).toBe("");
+  });
+
   it("uses an explicit host mode before the global mode", () => {
     expect(resolveLocalEchoMode("off", "on")).toBe("off");
     expect(resolveLocalEchoMode("default", "on")).toBe("on");

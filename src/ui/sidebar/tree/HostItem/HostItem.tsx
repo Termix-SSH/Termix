@@ -1167,18 +1167,11 @@ export function HostItem({
               </Tooltip>
             </TooltipProvider>
           )}
-          {isCompact &&
-            !selectionMode &&
-            !shouldUseClickTray &&
-            !actionsOnly && (
-              <span
-                className={`text-[11px] text-muted-foreground/70 truncate leading-none ml-auto shrink-0 ${hoverTrayOpen ? "hidden" : ""}`}
-              >
-                {host.ip}
-              </span>
-            )}
-          {isCompact && selectionMode && (
-            <span className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto shrink-0">
+          {isCompact && (
+            <span
+              className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto max-w-[50%] shrink-0"
+              title={host.ip}
+            >
               {host.ip}
             </span>
           )}

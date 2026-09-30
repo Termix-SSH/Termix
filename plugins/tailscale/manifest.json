@@ -73,7 +73,8 @@
           "group": "settings.group.devices"
         }
       ]
-    }
+    },
+    "uses": ["host-metrics.managers", "terminal.overlay"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

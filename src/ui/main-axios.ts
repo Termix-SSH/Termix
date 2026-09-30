@@ -55,7 +55,6 @@ import {
   authLogger,
   sshLogger,
   fileLogger,
-  statsLogger,
   dashboardLogger,
   type LogContext,
 } from "@/lib/frontend-logger";
@@ -77,6 +76,8 @@ export interface AuthResponse {
   is_admin?: boolean;
   username?: string;
   userId?: string;
+  is_external?: boolean;
+  /** 2.8 name for is_external. */
   is_oidc?: boolean;
   totp_enabled?: boolean;
   requires_totp?: boolean;
@@ -93,6 +94,9 @@ export interface UserInfo {
   userId: string;
   username: string;
   is_admin: boolean;
+  /** Signs in through an external login such as SSO or LDAP. */
+  is_external?: boolean;
+  /** 2.8 name for is_external. */
   is_oidc: boolean;
   is_dual_auth?: boolean;
   password_hash?: string;
@@ -140,8 +144,6 @@ function getLoggerForService(serviceName: string) {
     return sshLogger;
   } else if (serviceName.includes("FILE") || serviceName.includes("file")) {
     return fileLogger;
-  } else if (serviceName.includes("STATS") || serviceName.includes("stats")) {
-    return statsLogger;
   } else if (serviceName.includes("AUTH") || serviceName.includes("auth")) {
     return authLogger;
   } else if (
@@ -958,6 +960,7 @@ export async function loginUser(
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
       rememberMe: response.data.rememberMe,
+      is_external: response.data.is_external ?? response.data.is_oidc,
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
       token: response.data.token,
@@ -1209,12 +1212,10 @@ export {
   deleteUser,
   deleteAccount,
   updateRegistrationAllowed,
-  getOidcAutoProvision,
-  updateOidcAutoProvision,
+  getExternalAutoProvision,
+  updateExternalAutoProvision,
   getSecondFactorAfterExternalLogin,
   updateSecondFactorAfterExternalLogin,
-  getOidcSilentLoginDefault,
-  updateOidcSilentLoginDefault,
   updatePasswordLoginAllowed,
   getPasswordResetAllowed,
   updatePasswordResetAllowed,
@@ -1291,9 +1292,9 @@ export {
 
 // ============================================================================
 export {
-  linkOIDCToPasswordAccount,
-  unlinkOIDCFromPasswordAccount,
-} from "@/api/oidc-account-api";
+  linkExternalToPasswordAccount,
+  unlinkExternalFromPasswordAccount,
+} from "@/api/external-account-api";
 
 // ============================================================================
 // RBAC MANAGEMENT

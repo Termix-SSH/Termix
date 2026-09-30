@@ -34,16 +34,20 @@ export function pickResolvedPassword(
   return undefined;
 }
 
+const USERNAME_PLACEHOLDER =
+  /\$(?:external\.username|oidc\.preferred_username)/g;
+
 /**
- * Expands the `$oidc.preferred_username` placeholder in an SSH username to the
- * connecting user's OIDC identifier. Returns the username unchanged if it does
- * not contain the placeholder or the user has no OIDC identifier.
+ * Expands `$external.username` (or its 2.8 spelling `$oidc.preferred_username`)
+ * in an SSH username to the name the connecting user signed in with through
+ * SSO or LDAP. Returns the username unchanged if it has no placeholder or the
+ * user has no external sign-in.
  */
-export async function expandOidcUsername(
+export async function expandExternalUsername(
   username: string | undefined,
   userId: string,
 ): Promise<string | undefined> {
-  if (!username || !username.includes("$oidc.preferred_username")) {
+  if (!username || !new RegExp(USERNAME_PLACEHOLDER.source).test(username)) {
     return username;
   }
 
@@ -51,10 +55,10 @@ export async function expandOidcUsername(
     const { createCurrentUserRepository } =
       await import("../database/repositories/factory.js");
     const user = await createCurrentUserRepository().findById(userId);
-    let oidcIdentifier = user?.oidcIdentifier;
-    if (!oidcIdentifier) return username;
+    let externalName = user?.oidcIdentifier;
+    if (!externalName) return username;
 
-    const match = /^ldap:(\d+):(.+)$/.exec(oidcIdentifier);
+    const match = /^ldap:(\d+):(.+)$/.exec(externalName);
     if (match) {
       // Only strip the prefix for a real LDAP identity, to prevent spoofing
       // through an SSO subject that happens to look like one.
@@ -69,11 +73,11 @@ export async function expandOidcUsername(
             identity.subject === match[2],
         )
       ) {
-        oidcIdentifier = match[2];
+        externalName = match[2];
       }
     }
 
-    return username.replace(/\$oidc\.preferred_username/g, oidcIdentifier);
+    return username.replace(USERNAME_PLACEHOLDER, () => externalName);
   } catch {
     return username;
   }

@@ -1,5 +1,10 @@
+import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express, { type Request, type Response } from "express";
+import express, {
+  type Request,
+  type RequestHandler,
+  type Response,
+} from "express";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
@@ -21,7 +26,7 @@ import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerTlsRoutes } from "./tls-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
-import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
+import { registerUserExternalAccountRoutes } from "./user-external-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
@@ -88,12 +93,6 @@ function isPasswordResetAllowed(): boolean {
   } catch {
     return true;
   }
-}
-
-function getOidcSilentLoginDefaultFromEnv(): boolean | undefined {
-  const envVal = process.env.OIDC_SILENT_LOGIN_DEFAULT;
-  if (envVal === undefined) return undefined;
-  return envVal.trim().toLowerCase() === "true";
 }
 
 async function findCurrentUser(userId: string): Promise<UserRecord | null> {
@@ -601,8 +600,8 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     }
 
     const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
-    const hasOidc = user.isOidc && user.oidcIdentifier;
-    const isDualAuth = hasPassword && hasOidc;
+    const isDualAuth =
+      hasPassword && isExternalAccount(user) && !!user.oidcIdentifier;
 
     const showDonationModal = shouldShowDonationModal(
       user.registeredAt,
@@ -613,6 +612,8 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       userId: user.id,
       username: user.username,
       is_admin: !!user.isAdmin,
+      is_external: isExternalAccount(user),
+      // 2.8 name, kept until 3.0.0.
       is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
       // Any second factor; the name is what 2.8 clients read.
@@ -940,17 +941,17 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
 
 /**
  * @openapi
- * /users/oidc-auto-provision:
+ * /users/external-auto-provision:
  *   get:
- *     summary: Get OIDC auto-provision status
- *     description: Whether a new user account is created automatically on first SSO sign-in.
+ *     summary: Get the external account auto-create setting
+ *     description: Whether a new account is created the first time someone signs in through an external login (SSO, LDAP or any login plugin). The 2.8 path /users/oidc-auto-provision is accepted too.
  *     tags:
  *       - Users
  *     responses:
  *       200:
- *         description: OIDC auto-provision status.
+ *         description: Auto-create setting.
  */
-router.get("/oidc-auto-provision", async (_req, res) => {
+const getExternalAutoProvision: RequestHandler = async (_req, res) => {
   try {
     res.json({
       enabled: await createCurrentSettingsRepository().getBoolean(
@@ -959,19 +960,19 @@ router.get("/oidc-auto-provision", async (_req, res) => {
       ),
     });
   } catch (err) {
-    authLogger.error("Failed to get OIDC auto-provision setting", err);
+    authLogger.error("Failed to get external auto-provision setting", err);
     res
       .status(500)
-      .json({ error: "Failed to get OIDC auto-provision setting" });
+      .json({ error: "Failed to get external auto-provision setting" });
   }
-});
+};
 
 /**
  * @openapi
- * /users/oidc-auto-provision:
+ * /users/external-auto-provision:
  *   patch:
- *     summary: Set OIDC auto-provision status
- *     description: Enables or disables automatic account creation on first SSO sign-in.
+ *     summary: Set the external account auto-create setting
+ *     description: Enables or disables creating an account on first external sign-in. The 2.8 path /users/oidc-auto-provision is accepted too.
  *     tags:
  *       - Users
  *     requestBody:
@@ -985,15 +986,15 @@ router.get("/oidc-auto-provision", async (_req, res) => {
  *                 type: boolean
  *     responses:
  *       200:
- *         description: OIDC auto-provision status updated.
+ *         description: Setting updated.
  *       400:
  *         description: Invalid value for enabled.
  *       403:
  *         description: Not authorized.
  *       500:
- *         description: Failed to set OIDC auto-provision setting.
+ *         description: Failed to save the setting.
  */
-router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
+const setExternalAutoProvision: RequestHandler = async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await requireCurrentAdmin(userId);
@@ -1010,10 +1011,20 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
     );
     res.json({ enabled });
   } catch (err) {
-    authLogger.error("Failed to set OIDC auto-provision", err);
-    res.status(500).json({ error: "Failed to set OIDC auto-provision" });
+    authLogger.error("Failed to set external auto-provision", err);
+    res.status(500).json({ error: "Failed to set external auto-provision" });
   }
-});
+};
+
+router.get("/external-auto-provision", getExternalAutoProvision);
+router.patch(
+  "/external-auto-provision",
+  authenticateJWT,
+  setExternalAutoProvision,
+);
+// 2.8 paths, kept until 3.0.0.
+router.get("/oidc-auto-provision", getExternalAutoProvision);
+router.patch("/oidc-auto-provision", authenticateJWT, setExternalAutoProvision);
 
 /**
  * @openapi
@@ -1100,103 +1111,6 @@ router.patch(
       res.status(500).json({
         error: "Failed to set second-factor-after-external-login setting",
       });
-    }
-  },
-);
-
-/**
- * @openapi
- * /users/oidc-silent-login-default:
- *   get:
- *     summary: Get OIDC silent login default setting
- *     description: Returns whether silent OIDC login is enabled as the default behavior. Can be pinned via the OIDC_SILENT_LOGIN_DEFAULT env var.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: Silent login default setting.
- *       500:
- *         description: Failed to get setting.
- */
-router.get("/oidc-silent-login-default", async (_req, res) => {
-  try {
-    const envVal = getOidcSilentLoginDefaultFromEnv();
-    if (envVal !== undefined) {
-      res.json({ enabled: envVal, locked: true });
-      return;
-    }
-    res.json({
-      enabled: await createCurrentSettingsRepository().getBoolean(
-        "oidc_silent_login_default",
-        false,
-      ),
-      locked: false,
-    });
-  } catch (err) {
-    authLogger.error("Failed to get OIDC silent login default", err);
-    res.status(500).json({ error: "Failed to get OIDC silent login default" });
-  }
-});
-
-/**
- * @openapi
- * /users/oidc-silent-login-default:
- *   patch:
- *     summary: Set OIDC silent login default setting
- *     description: Enables or disables silent OIDC login as the default behavior on the login page.
- *     tags:
- *       - Users
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               enabled:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Setting updated.
- *       400:
- *         description: Invalid value.
- *       403:
- *         description: Not authorized.
- *       409:
- *         description: Setting is pinned by the OIDC_SILENT_LOGIN_DEFAULT env var.
- *       500:
- *         description: Failed to update setting.
- */
-router.patch(
-  "/oidc-silent-login-default",
-  authenticateJWT,
-  async (req, res) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    try {
-      const user = await requireCurrentAdmin(userId);
-      if (!user) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-      if (getOidcSilentLoginDefaultFromEnv() !== undefined) {
-        return res.status(409).json({
-          error:
-            "OIDC silent login default is set via the OIDC_SILENT_LOGIN_DEFAULT env var and cannot be changed here",
-        });
-      }
-      const { enabled } = req.body;
-      if (typeof enabled !== "boolean") {
-        return res.status(400).json({ error: "Invalid value for enabled" });
-      }
-      await createCurrentSettingsRepository().set(
-        "oidc_silent_login_default",
-        enabled ? "true" : "false",
-      );
-      res.json({ enabled });
-    } catch (err) {
-      authLogger.error("Failed to set OIDC silent login default", err);
-      res
-        .status(500)
-        .json({ error: "Failed to set OIDC silent login default" });
     }
   },
 );
@@ -1668,7 +1582,7 @@ registerUserSessionRoutes(router, {
   authManager,
 });
 
-registerUserOidcAccountRoutes(router, {
+registerUserExternalAccountRoutes(router, {
   authenticateJWT,
   authManager,
 });

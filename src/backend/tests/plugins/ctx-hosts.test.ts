@@ -65,6 +65,9 @@ vi.mock("../../utils/permission-manager.js", () => ({
   },
 }));
 vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentHostDefaultsRepository: () => ({
+    listHosts: async () => [],
+  }),
   createCurrentHostResolutionRepository: () => ({
     findHostsByUserId: async () => h.ownedHosts,
     listHostRowsForAccessList: async () => h.sharedRows,
@@ -183,6 +186,14 @@ vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
       snapshotForRole: async () => {},
     }),
   },
+}));
+
+vi.mock("../../hosts/defaults/index.js", () => ({
+  applyHostDefaultsToWrite: async () => ({ core: [] }),
+  applyDefaultsAfterHostWrite: async () => {},
+}));
+vi.mock("../../hosts/defaults/overrides.js", () => ({
+  changeHostOverrides: async () => {},
 }));
 
 vi.mock("../../hosts/delete-host.js", () => ({

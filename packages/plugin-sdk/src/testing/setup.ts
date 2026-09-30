@@ -98,6 +98,7 @@ const offline = () =>
   useTabs: () => ({
     openTab: noop,
     openSingletonTab: noop,
+    connectHost: noop,
     closeTab: noop,
     getLayout: () => null,
     applyLayout: async () => ({ skipped: [] }),
@@ -142,6 +143,9 @@ const offline = () =>
     setClientPreference: () => {},
     listHosts: async () => [],
     listCredentials: async () => [],
+    notifyHostsChanged: () => {},
+    getHostStatusColorScheme: () => "accent",
+    getLocalAuthToken: () => null,
   },
 };
 

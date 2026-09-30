@@ -54,35 +54,42 @@ describe("GuacamoleToolbar Windows key", () => {
     expect(sendKey).toHaveBeenCalledWith(0xffeb, true);
   });
 
-  it("exposes VNC zoom controls without showing them for RDP", () => {
-    const zoomIn = vi.fn(() => 1.25);
-    const zoomOut = vi.fn(() => 0.75);
-    const resetZoom = vi.fn(() => 1);
-    const displayRef = {
-      current: {
-        disconnect: vi.fn(),
-        isConnected: () => true,
-        sendKey: vi.fn(),
-        sendMouse: vi.fn(),
-        setClipboard: vi.fn(),
-        getFilesystem: () => null,
-        uploadFile: async () => {},
-        zoomIn,
-        zoomOut,
-        resetZoom,
-      } satisfies GuacamoleDisplayHandle,
-    } as React.RefObject<GuacamoleDisplayHandle>;
-    const { getByLabelText, getByText } = render(
-      <GuacamoleToolbar displayRef={displayRef} protocol="vnc" zoom={1.25} />,
-    );
+  it.each(["vnc", "rdp"] as const)(
+    "exposes working zoom controls for %s",
+    (protocol) => {
+      const zoomIn = vi.fn(() => 1.25);
+      const zoomOut = vi.fn(() => 0.75);
+      const resetZoom = vi.fn(() => 1);
+      const displayRef = {
+        current: {
+          disconnect: vi.fn(),
+          isConnected: () => true,
+          sendKey: vi.fn(),
+          sendMouse: vi.fn(),
+          setClipboard: vi.fn(),
+          getFilesystem: () => null,
+          uploadFile: async () => {},
+          zoomIn,
+          zoomOut,
+          resetZoom,
+        } satisfies GuacamoleDisplayHandle,
+      } as React.RefObject<GuacamoleDisplayHandle>;
+      const { getByLabelText, getByText } = render(
+        <GuacamoleToolbar
+          displayRef={displayRef}
+          protocol={protocol}
+          zoom={1.25}
+        />,
+      );
 
-    fireEvent.click(getByLabelText("remoteDesktop.toolbar.zoomOut"));
-    fireEvent.click(getByLabelText("remoteDesktop.toolbar.zoomIn"));
-    fireEvent.click(getByText("125%"));
-    expect(zoomOut).toHaveBeenCalledOnce();
-    expect(zoomIn).toHaveBeenCalledOnce();
-    expect(resetZoom).toHaveBeenCalledOnce();
-  });
+      fireEvent.click(getByLabelText("remoteDesktop.toolbar.zoomOut"));
+      fireEvent.click(getByLabelText("remoteDesktop.toolbar.zoomIn"));
+      fireEvent.click(getByText("125%"));
+      expect(zoomOut).toHaveBeenCalledOnce();
+      expect(zoomIn).toHaveBeenCalledOnce();
+      expect(resetZoom).toHaveBeenCalledOnce();
+    },
+  );
 
   it("offers an explicit session-only hide action", () => {
     const onHide = vi.fn();

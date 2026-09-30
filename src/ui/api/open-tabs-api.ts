@@ -1,9 +1,6 @@
 import { authApi } from "@/main-axios";
 import { createTtlRequestCache } from "@/lib/ttl-request-cache";
 import type { CustomKeybinding } from "@/types/keybindings";
-import { invokeAction, isActionRegistered } from "@/shell/action-registry";
-
-const SHARED_WITH_ME_ACTION = "sessions.sharedWithMe";
 
 // OPEN TABS API
 // ============================================================================
@@ -45,10 +42,6 @@ export interface ActiveSessionInfo {
   tabInstanceId: string | null;
   isConnected: boolean;
   createdAt: number;
-  isOwnSession: boolean;
-  sharedByUsername: string | null;
-  permissionLevel: string | null;
-  shareId: string | null;
 }
 
 // Negative IDs identify remote-only shared hosts, absent from the local DB.
@@ -86,21 +79,11 @@ export async function addOpenTab(tab: OpenTabUpsertPayload): Promise<void> {
   await authApi.post("/open-tabs", tab);
 }
 
-/**
- * The caller's live sessions, plus sessions other users shared with them,
- * which the session sharing plugin answers through an action (none while it
- * is off).
- */
+/** The caller's own live sessions. */
 export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
   return activeSessionsCache.get(async () => {
-    const [response, shared] = await Promise.all([
-      authApi.get("/open-tabs/active-sessions"),
-      isActionRegistered(SHARED_WITH_ME_ACTION)
-        ? invokeAction(SHARED_WITH_ME_ACTION).catch(() => [])
-        : Promise.resolve([]),
-    ]);
-    const own = Array.isArray(response.data) ? response.data : [];
-    return Array.isArray(shared) ? [...own, ...shared] : own;
+    const response = await authApi.get("/open-tabs/active-sessions");
+    return Array.isArray(response.data) ? response.data : [];
   });
 }
 

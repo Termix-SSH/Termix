@@ -59,8 +59,10 @@ describe("GuacamoleTokenService", () => {
     const termixMeta = {
       termixConnectId: "connect-1",
       hostId: 7,
+      hostName: "windows",
       ownerUserId: "user-1",
       protocol: "rdp" as const,
+      tabInstanceId: null,
     };
     const token = tokenService.createRdpToken(
       "windows.example.test",

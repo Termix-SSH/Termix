@@ -11,6 +11,12 @@ import React, {
   type MutableRefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
+import type { HostDefaultsLevel } from "@/types/host-defaults";
+import { getFolderDefaultsId } from "@/api/host-defaults-api";
+import {
+  HostDefaultsEditorView,
+  type HostDefaultsEditorTarget,
+} from "./host-defaults/HostDefaultsEditorView";
 import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import { CredentialShareModal } from "./CredentialShareModal";
 
@@ -83,6 +89,9 @@ export function HostManager({
   useHostEditorSections();
   const { t } = useTranslation();
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
+  // A level of host defaults open in the editor instead of a host.
+  const [editingDefaults, setEditingDefaults] =
+    useState<HostDefaultsEditorTarget | null>(null);
   // Fields a plugin filled in for a new host, keyed so a second draft remounts
   // the editor.
   const [hostDraft, setHostDraft] = useState<{
@@ -223,6 +232,25 @@ export function HostManager({
       setEditingHost(null);
       setActiveCredentialTab("general");
     };
+    const handleEditDefaults = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ level: HostDefaultsLevel; folderName?: string }>
+      ).detail;
+      if (!detail) return;
+      const open = (target: HostDefaultsEditorTarget) => {
+        setEditingHost(null);
+        setEditingCredential(null);
+        setEditingDefaults(target);
+      };
+      if (detail.level === "folder" && detail.folderName) {
+        const folderName = detail.folderName;
+        getFolderDefaultsId(folderName)
+          .then((folderId) => open({ level: "folder", folderId, folderName }))
+          .catch(() => toast.error(t("hostDefaults.loadFailed")));
+      } else if (detail.level !== "folder") {
+        open({ level: detail.level });
+      }
+    };
     const handleEditHost = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
       const host = hostsRef.current.find((h) => h.id === id);
@@ -236,7 +264,12 @@ export function HostManager({
     window.addEventListener("host-manager:add-host", handleAddHost);
     window.addEventListener("host-manager:add-credential", handleAddCredential);
     window.addEventListener("host-manager:edit-host", handleEditHost);
+    window.addEventListener("host-manager:edit-defaults", handleEditDefaults);
     return () => {
+      window.removeEventListener(
+        "host-manager:edit-defaults",
+        handleEditDefaults,
+      );
       window.removeEventListener("host-manager:add-host", handleAddHost);
       window.removeEventListener(
         "host-manager:add-credential",
@@ -386,6 +419,7 @@ export function HostManager({
     setHostEditorDirty(false);
     setShowUnsavedHostDialog(false);
     setEditingHost(null);
+    setEditingDefaults(null);
     setActiveHostTab("general");
   };
 
@@ -398,6 +432,17 @@ export function HostManager({
   };
 
   const renderEditorView = () => {
+    if (editingDefaults) {
+      return (
+        <HostDefaultsEditorView
+          target={editingDefaults}
+          onClose={requestCloseHostEditor}
+          onDirtyChange={setHostEditorDirty}
+          hosts={hosts}
+          credentials={credentials}
+        />
+      );
+    }
     const isHost = !!editingHost;
     // Simple mode keeps General and SSH -- between them they hold everything
     // needed to reach a host (name, address, username, auth) -- and hides the
@@ -657,7 +702,7 @@ export function HostManager({
     );
   };
 
-  const isEditing = !!editingHost || !!editingCredential;
+  const isEditing = !!editingHost || !!editingCredential || !!editingDefaults;
 
   useEffect(() => {
     if (active) onEditingChange?.(isEditing);

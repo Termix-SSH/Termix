@@ -149,7 +149,7 @@ describe("capability gate", () => {
 describe("ctx.asUser", () => {
   it("makes the named user the actor and audits the switch", async () => {
     grants.set("sample-plugin", ["kv:own"]);
-    const ctx = context(["kv:own"]);
+    const ctx = context(["kv:own", "users:impersonate"]);
 
     let seen: string | undefined;
     await ctx.asUser("user-7", async () => {
@@ -169,7 +169,7 @@ describe("ctx.asUser", () => {
   });
 
   it("restores the previous actor afterwards", async () => {
-    const ctx = context([]);
+    const ctx = context(["users:impersonate"]);
 
     await runAsActor("outer-user", "request", async () => {
       await ctx.asUser("inner-user", async () => {
@@ -184,6 +184,46 @@ describe("ctx.asUser", () => {
 
     await expect(ctx.asUser("", async () => {})).rejects.toThrow(
       /without a user id/,
+    );
+  });
+
+  it("refuses without users:impersonate", async () => {
+    const ctx = context(["kv:own"]);
+
+    await expect(ctx.asUser("user-7", async () => {})).rejects.toThrow(
+      /users:impersonate/,
+    );
+  });
+});
+
+describe("ctx.registry namespacing", () => {
+  it("lets a plugin provide and revoke its own keys", () => {
+    const ctx = context([]);
+    const value = { ok: true };
+
+    ctx.registry.provide("sample-plugin.thing", value);
+    expect(ctx.registry.consume("sample-plugin.thing")).toBe(value);
+    expect(ctx.registry.revoke("sample-plugin.thing", value)).toBe(true);
+  });
+
+  it("refuses a key outside the plugin's namespace", () => {
+    const ctx = context([]);
+
+    expect(() => ctx.registry.provide("other.thing", {})).toThrow(
+      /registry keys under "sample-plugin\."/,
+    );
+    expect(() => ctx.registry.revoke("other.thing")).toThrow(
+      /registry keys under/,
+    );
+  });
+});
+
+describe("ctx.services.get", () => {
+  it("refuses a service the manifest does not require", () => {
+    const ctx = context([]);
+
+    expect(() => ctx.services.get("someone.else")).toThrow(
+      /not declared in the manifest's requires/,
     );
   });
 });

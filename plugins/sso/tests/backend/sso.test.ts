@@ -185,6 +185,31 @@ describe("the login method", () => {
     ]);
   });
 
+  it("marks the first provider to start on its own with silent sign-in on", async () => {
+    const s = await startLegacy({ settings: { silentLoginDefault: true } });
+    expect(await s.mock.auth.loginMethods[0].describe!()).toEqual([
+      {
+        id: "3",
+        label: "Keycloak",
+        type: "oidc",
+        enabled: true,
+        autoStart: true,
+      },
+    ]);
+  });
+
+  it("lets OIDC_SILENT_LOGIN_DEFAULT override the setting", async () => {
+    const s = await startLegacy({ settings: { silentLoginDefault: true } });
+    vi.stubEnv("OIDC_SILENT_LOGIN_DEFAULT", "false");
+    const [instance] = await s.mock.auth.loginMethods[0].describe!();
+    expect(instance.autoStart).toBeUndefined();
+    vi.stubEnv("OIDC_SILENT_LOGIN_DEFAULT", "true");
+    s.mock.settings.clear();
+    expect((await s.mock.auth.loginMethods[0].describe!())[0].autoStart).toBe(
+      true,
+    );
+  });
+
   it("falls back to the provider configured through the environment", async () => {
     server = await startServer();
     vi.stubEnv("OIDC_CLIENT_ID", "env-client");

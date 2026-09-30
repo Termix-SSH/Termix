@@ -88,7 +88,8 @@
     "proxmoxLastSyncSummary": "{{created}} created, {{updated}} updated, {{markedMissing}} missing, {{skipped}} skipped",
     "proxmoxLastSyncStatus": {
       "error": "Failed",
-      "pending": "Pending"
+      "pending": "Pending",
+      "success": "Success"
     },
     "proxmoxDiscoverAction": "Discover & import Proxmox guests",
     "proxmoxImportTitle": "Import from Proxmox",

@@ -38,7 +38,7 @@ describe("network-topology activate", () => {
     const service = server.mock.services.get("network-topology.graph") as {
       get: () => Promise<unknown>;
     };
-    const result = await server.mock.ctx.asUser("user-1", () => service.get());
+    const result = await server.mock.actAs("user-1", () => service.get());
     expect(result).toEqual({ nodes: [{ data: { id: "1" } }], edges: [] });
   });
 
@@ -47,7 +47,7 @@ describe("network-topology activate", () => {
     const service = server.mock.services.get("network-topology.graph") as {
       get: () => Promise<unknown>;
     };
-    const result = await server.mock.ctx.asUser("user-1", () => service.get());
+    const result = await server.mock.actAs("user-1", () => service.get());
     expect(result).toBeNull();
   });
 

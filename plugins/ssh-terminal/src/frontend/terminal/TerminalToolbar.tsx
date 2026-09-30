@@ -48,6 +48,7 @@ import {
   useIsMobile,
 } from "@termix/plugin-sdk/ui";
 import {
+  usePluginUiPreferences,
   useHostActions,
   useTabs,
   useTranslation,
@@ -56,8 +57,6 @@ import {
   type ShellApi,
 } from "@termix/plugin-sdk/frontend";
 type SelectedToolbarDensity = ToolbarDensity;
-
-const DENSITY_STORAGE_KEY = "termix-terminal-toolbar-density";
 
 /** Plugins contribute toolbar buttons here. Declared by the ssh-terminal plugin. */
 const TOOLBAR_SLOT_ID = TERMINAL_TOOLBAR_SLOT;
@@ -69,16 +68,12 @@ const DENSITY_OPTIONS: { value: ToolbarDensity }[] = [
 ];
 const DENSITIES = DENSITY_OPTIONS.map((option) => option.value);
 
-function readStoredDensity(): ToolbarDensity {
-  if (typeof window === "undefined") return "labeled";
-  try {
-    const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
-    return DENSITIES.includes(stored as ToolbarDensity)
-      ? (stored as ToolbarDensity)
-      : "labeled";
-  } catch {
-    return "labeled";
-  }
+const LEGACY_DENSITY_KEY = "termix-terminal-toolbar-density";
+
+function asDensity(value: unknown): ToolbarDensity {
+  return DENSITIES.includes(value as ToolbarDensity)
+    ? (value as ToolbarDensity)
+    : "labeled";
 }
 
 const CONTROL =
@@ -151,8 +146,28 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   const settings = useMemo(() => readToolbarSettings(host), [host]);
   const { anchor } = settings;
   const rememberDensity = settings.density === null;
+  // The remembered density is this plugin's UI preference, so an interface
+  // preset sets it too.
+  const { values: uiPrefs, set: setUiPref } = usePluginUiPreferences<{
+    toolbarDensity: ToolbarDensity;
+  }>();
+  const preferredDensity = asDensity(uiPrefs.toolbarDensity);
+  useEffect(() => {
+    // Before 2.9 the density lived in this browser's localStorage.
+    try {
+      const legacy = window.localStorage.getItem(LEGACY_DENSITY_KEY);
+      if (legacy === null) return;
+      window.localStorage.removeItem(LEGACY_DENSITY_KEY);
+      if (DENSITIES.includes(legacy as ToolbarDensity)) {
+        setUiPref("toolbarDensity", legacy as ToolbarDensity);
+      }
+    } catch {
+      // Storage can be unavailable in hardened browser contexts.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [density, setDensity] = useState<SelectedToolbarDensity>(
-    () => settings.density ?? readStoredDensity(),
+    () => settings.density ?? preferredDensity,
   );
   const [responsiveDensity, setResponsiveDensity] =
     useState<SelectedToolbarDensity>(() => density);
@@ -217,26 +232,12 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     setPosition(next);
   }, [anchor]);
 
+  // A preset (or another tab) changing the saved density applies here too.
   useEffect(() => {
     if (!rememberDensity) return;
     if (desktopViewportReady !== true || isMobile !== false) return;
-    try {
-      window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
-    } catch {
-      // Storage can be unavailable in hardened browser contexts.
-    }
-  }, [density, desktopViewportReady, isMobile, rememberDensity]);
-
-  // Picking an interface preset seeds this key, so pick the new value up
-  // without needing the tab to remount.
-  useEffect(() => {
-    if (!rememberDensity) return;
-    if (desktopViewportReady !== true || isMobile !== false) return;
-    const handler = () => setDensity(readStoredDensity());
-    window.addEventListener("terminalToolbarDensityChanged", handler);
-    return () =>
-      window.removeEventListener("terminalToolbarDensityChanged", handler);
-  }, [desktopViewportReady, isMobile, rememberDensity]);
+    setDensity(preferredDensity);
+  }, [preferredDensity, desktopViewportReady, isMobile, rememberDensity]);
   useEffect(() => {
     if (desktopViewportReady !== true || isMobile !== false) return;
     const measurement = measurementRef.current;
@@ -375,6 +376,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
 
   const setAndStoreDensity = (next: ToolbarDensity) => {
     setDensity(next);
+    if (rememberDensity) setUiPref("toolbarDensity", next);
   };
   const reportImageResult = (
     action: () => void | Promise<void>,
@@ -692,7 +694,10 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
           }}
         >
           {collapsed ? (
-            <div className="terminal-toolbar-collapsed-shell flex rounded-sm border border-border bg-background/90 p-0.5 shadow-lg backdrop-blur-sm">
+            <div
+              data-toolbar-collapsed
+              className="relative flex rounded-sm border border-border bg-background/90 p-0.5 shadow-lg backdrop-blur-sm"
+            >
               {expandButton}
               {grabButton()}
             </div>

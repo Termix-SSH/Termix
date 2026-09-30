@@ -24,13 +24,16 @@ export class TerminalLocalEcho {
     }
     if (this.secretInput || !SAFE_INPUT.test(data)) return "";
 
+    // Do not draw newer input ahead of characters still awaiting remote echo.
     const predicted =
-      this.mode === "on" || (this.mode === "auto" && this.slowSamples >= 2);
+      (this.mode === "on" || (this.mode === "auto" && this.slowSamples >= 2)) &&
+      this.pending.every((item) => item.predicted);
     this.pending.push({ value: data, sentAt: this.now(), predicted });
     return predicted ? data : "";
   }
 
   handleOutput(data: string): string {
+    if (!data) return "";
     const plainOutput = this.stripAnsi(data);
     this.outputTail = (this.outputTail + plainOutput).slice(-128);
     if (PASSWORD_PROMPT.test(this.outputTail)) {
@@ -65,7 +68,8 @@ export class TerminalLocalEcho {
     if (consumed > 0) {
       const matched = this.pending.splice(0, consumed);
       const predictedCount = matched.filter((item) => item.predicted).length;
-      return data.slice(predictedCount);
+      const rollback = consumed < data.length ? this.rollback() : "";
+      return rollback + data.slice(predictedCount);
     }
 
     return this.rollback() + data;

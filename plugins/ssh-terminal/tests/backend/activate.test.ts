@@ -48,9 +48,7 @@ describe("ssh-terminal activate", () => {
     const history = server.mock.services.get(
       "terminal.history",
     ) as TerminalHistoryV1;
-    const listed = await server.mock.ctx.asUser("user-1", () =>
-      history.list(1, 10),
-    );
+    const listed = await server.mock.actAs("user-1", () => history.list(1, 10));
     expect(listed.map((entry) => entry.command)).toEqual(["df -h"]);
   });
 
@@ -59,7 +57,7 @@ describe("ssh-terminal activate", () => {
     const live = server.mock.services.get(
       "sessions.live#ssh",
     ) as LiveSessionsV1;
-    const other = await server.mock.ctx.asUser("user-2", async () =>
+    const other = await server.mock.actAs("user-2", async () =>
       live.listForUser("user-1"),
     );
     expect(other).toEqual([]);

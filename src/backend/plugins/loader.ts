@@ -18,7 +18,8 @@ import path from "node:path";
 import semver from "semver";
 import * as tar from "tar";
 import { pluginLogger } from "../utils/logger.js";
-import { parseManifest } from "./manifest.js";
+import { isTermixCompatible, parseManifest } from "./manifest.js";
+import { getLocalVersion } from "../utils/app-version.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import {
   getBundledPluginsDir,
@@ -67,6 +68,13 @@ export interface LoadedPlugin {
   lastError: string | null;
   /** Timestamps of recent runtime errors, trimmed to the window. */
   errorTimestamps: number[];
+  /**
+   * The .tmxplug this copy was unpacked from. Set for user plugins and for a
+   * signed update that replaced a bundled plugin.
+   */
+  artifact?: string;
+  /** Key id that signed the artifact, when a trusted key signed it. */
+  signedBy?: string;
 }
 
 export interface PluginLoaderOptions {
@@ -78,6 +86,8 @@ export interface PluginLoaderOptions {
 
 export class PluginLoader {
   private readonly plugins = new Map<string, LoadedPlugin>();
+  /** Version of each bundled plugin as shipped, the floor for any update. */
+  private readonly bundledVersions = new Map<string, string>();
   /** Activation order, so shutdown can run it backwards. */
   private activationOrder: string[] = [];
 
@@ -89,6 +99,16 @@ export class PluginLoader {
 
   get(pluginId: string): LoadedPlugin | undefined {
     return this.plugins.get(pluginId);
+  }
+
+  /** Ids of the plugins that ship with this install, loaded or replaced. */
+  bundledIds(): Set<string> {
+    return new Set([
+      ...this.bundledVersions.keys(),
+      ...this.list()
+        .filter((plugin) => plugin.source === "bundled")
+        .map((plugin) => plugin.id),
+    ]);
   }
 
   /** Drops a stopped plugin from the list, so a new copy can load in its place. */
@@ -122,6 +142,12 @@ export class PluginLoader {
       );
     }
 
+    if (!isTermixCompatible(manifest.engine.termix, getLocalVersion())) {
+      throw new Error(
+        `Plugin ${manifest.id} needs Termix ${manifest.engine.termix}, but this is ${getLocalVersion()}`,
+      );
+    }
+
     if (path.basename(dir) !== manifest.id) {
       throw new Error(
         `Plugin directory "${path.basename(dir)}" does not match manifest id "${manifest.id}"`,
@@ -139,6 +165,10 @@ export class PluginLoader {
       throw new Error(
         `Plugin ${manifest.id} backend entry resolves outside the plugin directory`,
       );
+    }
+
+    if (this.plugins.has(manifest.id)) {
+      throw new Error(`another plugin already uses the id "${manifest.id}"`);
     }
 
     const overlap = [...this.plugins.values()].find((other) =>
@@ -175,16 +205,16 @@ export class PluginLoader {
   }
 
   /**
-   * Scans both roots. A user-installed plugin can never shadow a bundled one:
-   * the collision is rejected with an error rather than silently skipped, so
-   * dropping a folder with a bundled plugin's id into the data directory is visibly
-   * refused instead of quietly ignored.
+   * Scans both roots. A user plugin folder can never shadow a bundled one: the
+   * collision is rejected with an error rather than silently skipped.
    *
-   * The check is on the directory name, which load() then requires to equal
-   * the manifest id, and it covers bundled folders that failed to load too.
+   * The one way to replace a bundled plugin is a .tmxplug signed by a trusted
+   * key with a higher version (see loadArtifact). That is how one official
+   * plugin ships an update without a core release.
    */
   async loadAll(): Promise<LoadedPlugin[]> {
     this.plugins.clear();
+    this.bundledVersions.clear();
     const loaded: LoadedPlugin[] = [];
     // Every bundled folder name, loaded or not: a bundled plugin that fails
     // to load must not leave its id free for a user plugin to take.
@@ -216,13 +246,16 @@ export class PluginLoader {
         const dir = path.join(root, entry.name);
         try {
           if (isArtifact) {
-            loaded.push(await this.loadArtifact(dir, bundledIds));
+            const plugin = await this.loadArtifact(dir, bundledIds);
+            const index = loaded.findIndex((other) => other.id === plugin.id);
+            if (index >= 0) loaded[index] = plugin;
+            else loaded.push(plugin);
             continue;
           }
 
           if (source === "user" && bundledIds.has(entry.name)) {
             throw new Error(
-              `a bundled plugin already uses the id "${entry.name}"; a plugin in the data directory cannot replace it`,
+              `a bundled plugin already uses the id "${entry.name}"; only a signed .tmxplug with a higher version can replace it`,
             );
           }
 
@@ -236,6 +269,9 @@ export class PluginLoader {
           }
 
           const plugin = await this.load(dir, source);
+          if (source === "bundled") {
+            this.bundledVersions.set(plugin.id, plugin.manifest.version);
+          }
           loaded.push(plugin);
         } catch (error) {
           pluginLogger.error(
@@ -255,6 +291,10 @@ export class PluginLoader {
    * against a pinned key; with TERMIX_REQUIRE_SIGNED_PLUGINS=true it must
    * also exist. The archive is unpacked fresh on every load, so the file
    * stays the only source of truth.
+   *
+   * An artifact with a bundled plugin's id is an update to it. It replaces
+   * the bundled copy only when a trusted key signed it and its version is
+   * higher; if it then fails to load the bundled copy stays.
    */
   async loadArtifact(
     file: string,
@@ -262,6 +302,7 @@ export class PluginLoader {
   ): Promise<LoadedPlugin> {
     const buffer = await fs.promises.readFile(file);
     const sigFile = `${file}.sig`;
+    let signedBy: string | undefined;
 
     if (fs.existsSync(sigFile)) {
       const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
@@ -273,6 +314,7 @@ export class PluginLoader {
       if (result.ok === false) {
         throw new Error(`signature check failed: ${result.reason}`);
       }
+      signedBy = result.keyId;
     } else if (requireSignedPlugins()) {
       throw new Error(
         `TERMIX_REQUIRE_SIGNED_PLUGINS is on and ${path.basename(file)} has no .sig next to it`,
@@ -301,22 +343,47 @@ export class PluginLoader {
         await fs.promises.readFile(getPluginManifestPath(staging), "utf8"),
       );
       const id = typeof raw?.id === "string" ? raw.id : "";
-      if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
+      if (!PLUGIN_ID_PATTERN.test(id)) {
         throw new Error(`${path.basename(file)} has no valid manifest id`);
       }
-      if (bundledIds.has(id)) {
-        throw new Error(
-          `a bundled plugin already uses the id "${id}"; a plugin in the data directory cannot replace it`,
+
+      const isUpdate = bundledIds.has(id);
+      const replaced = isUpdate ? this.plugins.get(id) : undefined;
+      if (isUpdate) {
+        assertBundledUpdate(
+          id,
+          raw?.version,
+          signedBy,
+          this.bundledVersions.get(id) ?? replaced?.manifest.version,
         );
-      }
-      if (this.plugins.has(id)) {
+      } else if (this.plugins.has(id)) {
         throw new Error(`another plugin already uses the id "${id}"`);
+      }
+      if (replaced && replaced.state !== "loaded") {
+        throw new Error(`plugin ${id} is running; stop it before updating`);
       }
 
       const target = path.join(unpackedRoot, id);
       await fs.promises.rm(target, { recursive: true, force: true });
       await fs.promises.rename(staging, target);
-      return await this.load(target, "user");
+
+      if (replaced) this.plugins.delete(id);
+      try {
+        // A signed update keeps the bundled trust it replaces.
+        const plugin = await this.load(target, isUpdate ? "bundled" : "user");
+        plugin.artifact = file;
+        plugin.signedBy = signedBy;
+        if (replaced) {
+          pluginLogger.info(
+            `Plugin ${id} updated from ${replaced.manifest.version} to ${plugin.manifest.version}`,
+            { operation: "plugin_load" },
+          );
+        }
+        return plugin;
+      } catch (error) {
+        if (replaced) this.plugins.set(id, replaced);
+        throw error;
+      }
     } finally {
       await fs.promises.rm(staging, { recursive: true, force: true });
     }
@@ -427,9 +494,12 @@ export class PluginLoader {
     plugin.state = "activating";
     plugin.lastError = null;
 
-    const entry = pathToFileUrlString(
-      getPluginBackendEntry(plugin.dir, plugin.manifest),
-    );
+    const entryPath = getPluginBackendEntry(plugin.dir, plugin.manifest);
+    // Node caches ESM by URL, so a plugin replaced without a restart would
+    // otherwise keep running the old code.
+    const entry = `${pathToFileUrlString(entryPath)}?v=${encodeURIComponent(
+      `${plugin.manifest.version}-${fileStamp(entryPath)}`,
+    )}`;
 
     try {
       const imported = (await import(entry)) as {
@@ -639,27 +709,12 @@ export class PluginLoader {
     this.options.onFailed?.(plugin);
   }
 
-  /**
-   * Wraps a plugin callback so a throw is counted rather than escaping into
-   * whichever core call site invoked it.
-   */
-  wrap<Args extends unknown[], Result>(
-    pluginId: string,
-    fn: (...args: Args) => Result | Promise<Result>,
-  ): (...args: Args) => Promise<Result | undefined> {
-    return async (...args: Args) => {
-      try {
-        return await fn(...args);
-      } catch (error) {
-        await this.reportError(pluginId, error);
-        return undefined;
-      }
-    };
-  }
-
   /** Clears the error budget and starts the plugin again. */
   async retry(pluginId: string): Promise<void> {
     const plugin = this.requirePlugin(pluginId);
+    if (plugin.state === "activating") {
+      throw new Error(`Plugin ${pluginId} is still activating`);
+    }
     plugin.errorTimestamps = [];
     plugin.lastError = null;
     plugin.state = "loaded";
@@ -707,6 +762,43 @@ function withTimeout<T>(
       },
     );
   });
+}
+
+const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * Throws unless an artifact may replace the bundled plugin with the same id:
+ * a trusted key signed it and its version is strictly higher, so an old
+ * signed build can never be replayed as a downgrade.
+ */
+export function assertBundledUpdate(
+  id: string,
+  version: unknown,
+  signedBy: string | undefined,
+  bundledVersion: string | undefined,
+): void {
+  if (!signedBy) {
+    throw new Error(
+      `a bundled plugin already uses the id "${id}"; only a signed update can replace it`,
+    );
+  }
+  if (typeof version !== "string" || !semver.valid(version)) {
+    throw new Error(`update for "${id}" has no valid version`);
+  }
+  if (bundledVersion && !semver.gt(version, bundledVersion)) {
+    throw new Error(
+      `update for "${id}" is ${version}, which is not newer than the bundled ${bundledVersion}`,
+    );
+  }
+}
+
+function fileStamp(filePath: string): string {
+  try {
+    const stat = fs.statSync(filePath);
+    return `${stat.size}-${Math.round(stat.mtimeMs)}`;
+  } catch {
+    return "0";
+  }
 }
 
 function pathToFileUrlString(filePath: string): string {

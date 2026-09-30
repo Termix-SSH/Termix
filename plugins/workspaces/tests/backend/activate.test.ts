@@ -40,7 +40,7 @@ describe("workspaces activate", () => {
     const service = server.mock.services.get("workspaces.saved") as {
       list: () => Promise<unknown>;
     };
-    const listed = await server.mock.ctx.asUser("user-1", () => service.list());
+    const listed = await server.mock.actAs("user-1", () => service.list());
     expect(listed).toEqual([
       { id: expect.any(Number), name: "Prod", isDefault: false },
     ]);

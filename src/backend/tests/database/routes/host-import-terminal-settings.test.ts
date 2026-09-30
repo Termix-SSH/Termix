@@ -11,7 +11,17 @@ vi.mock("../../../database/routes/host-plugin-settings.js", () => ({
   applyPluginHostImportSettings: mocks.applyPluginSettings,
   setHostPluginEnabled: vi.fn(),
 }));
+vi.mock("../../../hosts/defaults/index.js", () => ({
+  applyHostDefaultsToWrite: async () => ({ core: [] }),
+  applyDefaultsAfterHostWrite: async () => {},
+}));
+vi.mock("../../../hosts/defaults/overrides.js", () => ({
+  changeHostOverrides: async () => {},
+}));
 vi.mock("../../../database/repositories/factory.js", () => ({
+  createCurrentHostDefaultsRepository: () => ({
+    listHosts: async () => [],
+  }),
   createCurrentCredentialRepository: () => ({
     listDecryptedByUserId: async () => [],
   }),
