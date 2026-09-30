@@ -1,3 +1,4 @@
+import { DefaultsOnly, HostDefaultBadge } from "@/lib/host-defaults-context";
 import { useState } from "react";
 import type React from "react";
 
@@ -34,34 +35,43 @@ export function SettingRow({
   label,
   badge,
   description,
+  defaultKey,
   children,
 }: {
   label: string;
   badge?: string;
   description?: React.ReactNode;
+  /**
+   * In the host editor, the host default this row edits: a plugin's own
+   * field key, or "core.<key>". Shows where the value comes from.
+   */
+  defaultKey?: string;
   children: React.ReactNode;
 }) {
   return (
-    // In a gap-4 form stack the gap already spaces the row, so its own padding
-    // and divider would double up.
-    <div className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0 [.gap-4>&]:py-0 [.gap-4>&]:border-0">
-      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium leading-snug">{label}</span>
-          {badge && (
-            <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
-              {badge}
+    <DefaultsOnly settingKey={defaultKey ?? ""}>
+      {/* In a gap-4 form stack the gap already spaces the row, so its own
+          padding and divider would double up. */}
+      <div className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0 [.gap-4>&]:py-0 [.gap-4>&]:border-0">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-medium leading-snug">{label}</span>
+            {badge && (
+              <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
+                {badge}
+              </span>
+            )}
+            {defaultKey && <HostDefaultBadge settingKey={defaultKey} />}
+          </div>
+          {description && (
+            <span className="text-xs text-muted-foreground leading-snug">
+              {description}
             </span>
           )}
         </div>
-        {description && (
-          <span className="text-xs text-muted-foreground leading-snug">
-            {description}
-          </span>
-        )}
+        <div className="shrink-0">{children}</div>
       </div>
-      <div className="shrink-0">{children}</div>
-    </div>
+    </DefaultsOnly>
   );
 }
 

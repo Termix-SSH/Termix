@@ -276,11 +276,30 @@ export interface PluginSettingsField {
   /** Registered component id. Required when type is "custom". */
   component?: string;
   /**
-   * Host scope only: the admin field whose value a new host starts with,
-   * instead of `default`. Hosts that never saved the field still read
-   * `default`.
+   * Deprecated and ignored: host defaults cover every host field now. Still
+   * accepted so an older manifest loads. Removed in 3.0.0.
    */
   defaultFrom?: string;
+  /**
+   * Host scope only: whether the field can have a host default (server,
+   * user or folder) that hosts follow until they set their own. On by
+   * default for every field except secrets and json fields with
+   * `secretKeys`. Turn it off for a value that only makes sense per host,
+   * such as a MAC address or an API endpoint.
+   */
+  defaultable?: boolean;
+  /**
+   * Host scope only: the levels that may set a default for it. Defaults to
+   * all three. Leave "admin" out for a value that points at one user's own
+   * rows (a snippet id, a profile id).
+   */
+  defaultLevels?: Array<"admin" | "user" | "folder">;
+  /**
+   * Host scope only: a look-and-feel value. When the host follows its
+   * defaults, a user it is shared with gets their own defaults for it
+   * rather than the owner's.
+   */
+  personal?: boolean;
   /**
    * Host scope only: the lowest share level whose recipients see this value
    * in the host payload. Defaults to "connect", everyone who sees the host.
@@ -626,6 +645,9 @@ const ALLOWED_SETTINGS_FIELD = [
   "component",
   "hidden",
   "defaultFrom",
+  "defaultable",
+  "defaultLevels",
+  "personal",
   "shareRead",
   "ownerOnly",
   "secretKeys",
@@ -1589,20 +1611,33 @@ function validateSettings(settings: unknown, errors: string[]): void {
       typeof host.enableKey === "string" ? host.enableKey : undefined,
     );
 
-    const adminKeys = new Set(
-      (Array.isArray(settings.admin) ? settings.admin : [])
-        .filter(isPlainObject)
-        // A secret never becomes a default the host editor can read.
-        .filter((field) => field.type !== "secret")
-        .map((field) => field.key),
-    );
     host.fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
       const fieldAt = `${at}.fields[${index}]`;
-      if ("defaultFrom" in raw && !adminKeys.has(raw.defaultFrom as string)) {
-        errors.push(
-          `${fieldAt}.defaultFrom must name one of this plugin's non-secret admin fields`,
-        );
+      if ("defaultFrom" in raw && typeof raw.defaultFrom !== "string") {
+        errors.push(`${fieldAt}.defaultFrom must be a string`);
+      }
+      for (const flag of ["defaultable", "personal"]) {
+        if (flag in raw && typeof raw[flag] !== "boolean") {
+          errors.push(`${fieldAt}.${flag} must be a boolean`);
+        }
+      }
+      if ("defaultLevels" in raw) {
+        const levels = raw.defaultLevels;
+        if (
+          !Array.isArray(levels) ||
+          levels.length === 0 ||
+          levels.some(
+            (level) => !["admin", "user", "folder"].includes(level as string),
+          )
+        ) {
+          errors.push(
+            `${fieldAt}.defaultLevels must be a non-empty array of "admin", "user" or "folder"`,
+          );
+        }
+      }
+      if (raw.type === "secret" && raw.defaultable === true) {
+        errors.push(`${fieldAt} is a secret and cannot be defaultable`);
       }
       if (
         "shareRead" in raw &&
@@ -1634,7 +1669,14 @@ function validateSettings(settings: unknown, errors: string[]): void {
     if (!Array.isArray(fields)) continue;
     fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
-      for (const key of ["defaultFrom", "shareRead", "ownerOnly"]) {
+      for (const key of [
+        "defaultFrom",
+        "defaultable",
+        "defaultLevels",
+        "personal",
+        "shareRead",
+        "ownerOnly",
+      ]) {
         if (key in raw) {
           errors.push(
             `${where}.${scope}[${index}].${key} is only valid on host fields`,

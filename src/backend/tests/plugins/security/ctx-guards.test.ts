@@ -58,6 +58,10 @@ const UNGATED: Record<string, string> = {
   "settings.getUser": "the plugin's own user settings",
   "settings.setUser": "the plugin's own user settings",
   "settings.getHost": "the plugin's own host settings",
+  "settings.getHostFor":
+    "the plugin's own host settings, as one user sees them",
+  "settings.getHostDefault":
+    "the plugin's own host settings, as a user's defaults",
   "settings.setHost": "the plugin's own host settings",
   "settings.getAll": "the plugin's own settings",
   "settings.onChange": "the plugin's own settings",

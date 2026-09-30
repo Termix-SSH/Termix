@@ -500,15 +500,44 @@ export interface PluginSettings {
   getUser: <T = unknown>(userId: string, key: string) => Promise<T | undefined>;
   setUser: (userId: string, key: string, value: unknown) => Promise<void>;
 
-  /** Per-host settings. */
+  /**
+   * Per-host settings. A host follows its host defaults (server, user,
+   * folder) for every key it has not set itself, and the value read here is
+   * already the resolved one.
+   */
   getHost: <T = unknown>(
     hostId: number | string,
     key: string,
   ) => Promise<T | undefined>;
+  /**
+   * The value as one user sees it. Only a `personal` field differs from
+   * getHost: on a host shared with that user and following its defaults, it
+   * resolves against the user's own defaults rather than the owner's.
+   */
+  getHostFor: <T = unknown>(
+    hostId: number | string,
+    userId: string,
+    key: string,
+  ) => Promise<T | undefined>;
+  /**
+   * What a user's hosts get for a host field when nothing more specific
+   * sets it: their own defaults, then the server's, then the manifest
+   * default. For something with no host, such as a quick connect.
+   */
+  getHostDefault: <T = unknown>(
+    userId: string,
+    key: string,
+  ) => Promise<T | undefined>;
+  /**
+   * Writes a host value, which makes it the host's own rather than
+   * following its defaults. `{ inherit: true }` hands the key back to the
+   * defaults instead and ignores `value`.
+   */
   setHost: (
     hostId: number | string,
     key: string,
     value: unknown,
+    options?: { inherit?: boolean },
   ) => Promise<void>;
 
   /**
@@ -542,7 +571,14 @@ export interface PluginSettings {
     scope: "admin" | "user" | "host",
     validator: (
       values: Record<string, unknown>,
-      context: { hostId?: number },
+      /**
+       * `defaults` is set when the values are a host defaults level being
+       * saved rather than one host, so there is no hostId.
+       */
+      context: {
+        hostId?: number;
+        defaults?: { level: "admin" | "user" | "folder" };
+      },
     ) => Record<string, string> | void | Promise<Record<string, string> | void>,
   ) => () => void;
 

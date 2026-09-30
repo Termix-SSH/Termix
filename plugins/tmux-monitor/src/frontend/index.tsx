@@ -55,6 +55,7 @@ export function activate(app: TermixApp): void {
     titleKey: "hosts.tabTmuxMonitor",
     icon: Layers,
     order: 45,
+    defaults: true,
     component: HostTmuxMonitorSection,
   });
 }

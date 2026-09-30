@@ -1,5 +1,14 @@
 import { getErrorMessage } from "../utils/error-message.js";
 import { sshOptionsForWrite } from "../hosts/ssh-options.js";
+import {
+  applyDefaultsAfterHostWrite,
+  applyHostDefaultsToWrite,
+} from "../hosts/defaults/index.js";
+import { recompute } from "../hosts/defaults/recompute.js";
+import {
+  importHostDefaults,
+  writeHostDefaultsToExport,
+} from "../hosts/defaults/user-export.js";
 import express from "express";
 import http from "http";
 import https from "https";
@@ -951,6 +960,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       }
 
       writeSettingsToExportDatabase(exportDb, await getExportableSettings());
+      await writeHostDefaultsToExport(exportDb, userId);
     } finally {
       exportDb.close();
     }
@@ -1197,6 +1207,15 @@ app.post(
                   updatedAt: new Date().toISOString(),
                 };
 
+                (hostData as Record<string, unknown>).defaultOverrides =
+                  JSON.stringify(
+                    await applyHostDefaultsToWrite({
+                      ownerId: userId,
+                      hostId: null,
+                      columns: hostData as Record<string, unknown>,
+                      body: hostData as Record<string, unknown>,
+                    }),
+                  );
                 const created = await hostRepository.createEncryptedForUser(
                   userId,
                   hostData,
@@ -1205,6 +1224,7 @@ app.post(
                   Number(created.id),
                   importedHostPluginSettings(importDb, host),
                 );
+                await applyDefaultsAfterHostWrite(Number(created.id));
                 await importHostProtocolLogins(
                   importDb,
                   host,
@@ -1284,6 +1304,12 @@ app.post(
           result.summary.pluginItemsImported += pluginRows.imported;
           result.summary.skippedItems += pluginRows.skipped;
           result.summary.errors.push(...pluginRows.errors);
+
+          const hostDefaults = await importHostDefaults(importDb, userId);
+          result.summary.skippedItems += hostDefaults.skipped;
+          if (hostDefaults.imported > 0) {
+            await recompute({ userIds: [userId] });
+          }
 
           const targetUser = await userRepository.findById(userId);
           if (targetUser?.isAdmin) {

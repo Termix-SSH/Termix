@@ -116,11 +116,11 @@ describe(`${manifest.id} activate`, () => {
   it("registers its settings components", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.settingsComponents()).toEqual(
-      expect.arrayContaining([
-        "terminalDefaults",
-        "newHostTheme",
-        "newHostFontFamily",
-      ]),
+      expect.arrayContaining(["touchInput", "imageStorageTest"]),
+    );
+    // Terminal defaults are host defaults now, set in the host editor.
+    expect(rendered.registered.settingsComponents()).not.toContain(
+      "terminalDefaults",
     );
   });
 

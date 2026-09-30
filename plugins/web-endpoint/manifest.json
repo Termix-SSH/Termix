@@ -47,7 +47,8 @@
             "key": "webUiConfig",
             "type": "json",
             "labelKey": "hosts.webUiEndpointsSection",
-            "requires": "enableWebUi"
+            "requires": "enableWebUi",
+            "defaultable": false
           }
         ]
       }

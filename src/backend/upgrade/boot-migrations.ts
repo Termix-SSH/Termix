@@ -35,6 +35,7 @@ import { runTotpMigration } from "./totp-migration.js";
 import { runNotificationChannelMigration } from "./notification-channel-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 import { runSsoSettingsMigration } from "./sso-settings-migration.js";
+import { runHostDefaultsMigration } from "./host-defaults-migration.js";
 
 const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runTailscaleSettingsMigration", runTailscaleSettingsMigration],
@@ -66,6 +67,8 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runNotificationChannelMigration", runNotificationChannelMigration],
   ["runTermixIdentityCaMigration", runTermixIdentityCaMigration],
   ["runSsoSettingsMigration", runSsoSettingsMigration],
+  // Last: it reads what the moves above wrote.
+  ["runHostDefaultsMigration", runHostDefaultsMigration],
 ];
 
 export async function runPluginDataMigrations(): Promise<void> {
@@ -78,5 +81,26 @@ export async function runPluginDataMigrations(): Promise<void> {
         error: getErrorMessage(error),
       });
     }
+  }
+  await applyHostDefaults();
+}
+
+/**
+ * Classifies hosts nobody classified yet (from an older release, or for a
+ * plugin just started) and brings every host up to date with its defaults.
+ * A linked desktop gets its hosts already resolved from its server.
+ */
+async function applyHostDefaults(): Promise<void> {
+  try {
+    const { getLink } = await import("../sync/client/link-store.js");
+    if (await getLink().catch(() => null)) return;
+    const { recomputeEverything } =
+      await import("../hosts/defaults/recompute.js");
+    recomputeEverything("plugins started");
+  } catch (error) {
+    databaseLogger.warn("Could not apply host defaults", {
+      operation: "plugin_data_migration",
+      error: getErrorMessage(error),
+    });
   }
 }

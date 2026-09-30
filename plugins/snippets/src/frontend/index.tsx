@@ -127,6 +127,7 @@ export function activate(app: TermixApp): void {
     titleKey: "host.tabTitle",
     icon: Play,
     order: 15,
+    defaults: true,
     component: HostSnippetsSection,
   });
 

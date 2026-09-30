@@ -72,6 +72,8 @@ GridCardCatalogEntry (type): GridCardCatalogEntry
 GridColSpan (type): GridColSpan
 GridLayout (type): GridLayout
 GridSlot (type): GridSlot
+HostDefaultBadge (value): ({ settingKey }: { settingKey: string; }) => Element
+HostDefaultField (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 HostFeatureFields (value): ({ form, updateForm, }: HostFeatureFieldsProps) => Element
 HostFeatureFieldsProps (type): HostFeatureFieldsProps
 HostKeyVerificationDialog (value): ({ isOpen, scenario, ip, port, hostname, fingerprint, oldFingerprint, algorithm, onAccept, onReject, backgroundColor, }: HostKeyVerificationDialogProps) => Element
@@ -121,7 +123,7 @@ SelectSeparator (value): ({ className, ...props }: SelectSeparatorProps & RefAtt
 SelectTrigger (value): ({ className, size, children, ...props }: SelectTriggerProps & RefAttributes<HTMLButtonElement> & { size?: "default" | "sm"; }) => Element
 SelectValue (value): ({ ...props }: SelectValueProps & RefAttributes<HTMLSpanElement>) => Element
 Separator (value): ({ className, orientation, decorative, ...props }: SeparatorProps & RefAttributes<HTMLDivElement>) => Element
-SettingRow (value): ({ label, badge, description, children, }: { label: string; badge?: string; description?: ReactNode; children: ReactNode; }) => Element
+SettingRow (value): ({ label, badge, description, defaultKey, children, }: { label: string; badge?: string; description?: ReactNode; defaultKey?: string; children: ReactNode; }) => Element
 Sheet (value): ({ ...props }: DialogProps) => Element
 SheetClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
 SheetContent (value): ({ className, children, side, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
@@ -179,6 +181,7 @@ useAdaptivePolling (value): (poll: () => AdaptivePollResult | Promise<AdaptivePo
 useAppTheme (value): () => ThemeProviderState
 useConfirmation (value): () => { isOpen: boolean; options: ConfirmationOptions; confirm: (opts: ConfirmationOptions, callback: () => void) => void; handleConfirm: () => void; handleCancel: () => void; confirmWithToast: (opts: string | ConfirmationOptions, callback?: () => void, variantOrConfirmLabel?: string, cancelLabel?: string, toastOptions?: ToastConfirmOptions) => Promise<boolean>; }
 useConnectionLog (value): () => ConnectionLogContextType
+useIsDefaultsEditor (value): () => boolean
 useIsMobile (value): () => boolean
 useOptionalConnectionLog (value): () => ConnectionLogContextType
 useTabs (value): () => TabContextType

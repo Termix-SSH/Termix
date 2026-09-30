@@ -80,6 +80,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       (h.connectionType === "ssh" || !h.connectionType ? h.port : 22),
     protocolAuth: h.protocolAuth ?? {},
     pluginSettings: h.pluginSettings ?? {},
+    defaultOverrides: h.defaultOverrides ?? null,
     jumpHosts: (parseJson<HostJumpHost[]>(h.jumpHosts) ?? []).map((j) => ({
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),

@@ -46,11 +46,6 @@ import {
   SendControlCodeEditor,
   SendTextEditor,
 } from "./lib/keybinding-editors";
-import { TerminalDefaultsSettings } from "./settings/TerminalDefaultsSettings";
-import {
-  NewHostFontSetting,
-  NewHostThemeSetting,
-} from "./settings/NewHostLookSettings";
 import { TerminalPreview } from "./look/TerminalPreview";
 import { installTerminalGlobalStyles } from "./look/terminal-global-styles";
 import {
@@ -60,7 +55,6 @@ import {
 } from "./look/look-actions";
 import {
   invalidateTerminalClientSettings,
-  loadTerminalClientSettings,
   resetTerminalClientSettings,
 } from "./terminal-settings";
 import { moveLocalTerminalPreferences } from "./settings/local-preferences-migration";
@@ -142,6 +136,7 @@ export function activate(app: TermixApp): void {
     titleKey: "hosts.tabTerminal",
     icon: SquareTerminal,
     order: 10,
+    defaults: true,
     component: HostTerminalSection,
   });
 
@@ -305,9 +300,6 @@ export function activate(app: TermixApp): void {
   app.registerAction("terminal.resolveTheme", (async (
     request: ResolveLookRequest & { hostId?: number | string } = {},
   ) => {
-    const settings = await loadTerminalClientSettings(app.api).catch(
-      () => null,
-    );
     let host: PluginHostRecord | null | undefined = request.host;
     if (!host && request.hostId !== undefined) {
       host =
@@ -316,15 +308,12 @@ export function activate(app: TermixApp): void {
           (entry) => String(entry.id) === String(request.hostId),
         );
     }
-    return resolveTerminalLook({ ...request, host }, settings?.user);
+    return resolveTerminalLook({ ...request, host });
   }) as never);
   app.registerAction("terminal.themes", () => listTerminalThemes());
 
   app.registerSettingsComponent("touchInput", TouchInputSettings);
   app.registerSettingsComponent("imageStorageTest", ImageStorageTest);
-  app.registerSettingsComponent("terminalDefaults", TerminalDefaultsSettings);
-  app.registerSettingsComponent("newHostTheme", NewHostThemeSetting);
-  app.registerSettingsComponent("newHostFontFamily", NewHostFontSetting);
 
   app.onSettingsChanged(() => invalidateTerminalClientSettings());
   if (!app.guest) void moveLocalTerminalPreferences(app);

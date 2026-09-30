@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/select";
 import { pluginKey } from "@/lib/plugin-i18n";
+import { DefaultsOnly, HostDefaultBadge } from "@/lib/host-defaults-context";
 import { isRedactedSecret, type PluginSettingsField } from "@/api/plugins-api";
 import {
   getSettingsComponent,
@@ -37,6 +38,8 @@ export interface SettingsFieldProps {
   /** Message from a rejected save, shown under the control. */
   error?: string;
   disabled?: boolean;
+  /** In the host editor, the host default this field is ("pluginId.key"). */
+  defaultKey?: string;
 }
 
 export function SettingsFieldRow({
@@ -47,6 +50,7 @@ export function SettingsFieldRow({
   running,
   error,
   disabled = false,
+  defaultKey,
 }: SettingsFieldProps) {
   const { t } = useTranslation();
   // A custom component appears once its plugin's frontend has registered it.
@@ -98,6 +102,7 @@ export function SettingsFieldRow({
         label={label(field.labelKey)}
         description={description}
         badge={error ? t("common.error") : undefined}
+        defaultKey={defaultKey}
       >
         {control}
       </SettingRow>
@@ -105,24 +110,27 @@ export function SettingsFieldRow({
   }
 
   return (
-    <div className="flex flex-col gap-1.5 py-3 border-b border-border last:border-0 min-w-0">
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-sm font-medium leading-snug">
-          {label(field.labelKey)}
-        </span>
-        {error && (
-          <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
-            {t("common.error")}
+    <DefaultsOnly settingKey={defaultKey ?? ""}>
+      <div className="flex flex-col gap-1.5 py-3 border-b border-border last:border-0 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium leading-snug">
+            {label(field.labelKey)}
+          </span>
+          {error && (
+            <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
+              {t("common.error")}
+            </span>
+          )}
+          {defaultKey && <HostDefaultBadge settingKey={defaultKey} />}
+        </div>
+        {description && (
+          <span className="text-xs text-muted-foreground leading-snug">
+            {description}
           </span>
         )}
+        <div className="min-w-0">{control}</div>
       </div>
-      {description && (
-        <span className="text-xs text-muted-foreground leading-snug">
-          {description}
-        </span>
-      )}
-      <div className="min-w-0">{control}</div>
-    </div>
+    </DefaultsOnly>
   );
 }
 

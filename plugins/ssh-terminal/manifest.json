@@ -151,21 +151,24 @@
           "type": "boolean",
           "labelKey": "settings.admin.commandHistoryForNewHosts.label",
           "descriptionKey": "settings.admin.commandHistoryForNewHosts.description",
-          "default": true
+          "default": true,
+          "hidden": true
         },
         {
           "key": "newHostTheme",
           "type": "custom",
           "component": "newHostTheme",
           "group": "settings.admin.group.newHosts",
-          "default": "termix"
+          "default": "termix",
+          "hidden": true
         },
         {
           "key": "newHostFontFamily",
           "type": "custom",
           "component": "newHostFontFamily",
           "group": "settings.admin.group.newHosts",
-          "default": "Caskaydia Cove Nerd Font Mono"
+          "default": "Caskaydia Cove Nerd Font Mono",
+          "hidden": true
         },
         {
           "key": "newHostFontSize",
@@ -175,7 +178,8 @@
           "group": "settings.admin.group.newHosts",
           "min": 8,
           "max": 36,
-          "default": 14
+          "default": 14,
+          "hidden": true
         },
         {
           "key": "newHostCursorStyle",
@@ -196,14 +200,16 @@
               "value": "bar",
               "labelKey": "hosts.cursorStyleBar"
             }
-          ]
+          ],
+          "hidden": true
         },
         {
           "key": "newHostCursorBlink",
           "type": "boolean",
           "labelKey": "settings.admin.newHostCursorBlink.label",
           "group": "settings.admin.group.newHosts",
-          "default": true
+          "default": true,
+          "hidden": true
         },
         {
           "key": "newHostAutoTmux",
@@ -211,7 +217,8 @@
           "labelKey": "settings.admin.newHostAutoTmux.label",
           "descriptionKey": "settings.admin.newHostAutoTmux.description",
           "group": "settings.admin.group.newHosts",
-          "default": false
+          "default": false,
+          "hidden": true
         },
         {
           "key": "touchInput",
@@ -399,15 +406,15 @@
             "type": "boolean",
             "labelKey": "settings.host.enableCommandHistory.label",
             "descriptionKey": "settings.host.enableCommandHistory.description",
-            "default": true,
-            "defaultFrom": "commandHistoryForNewHosts"
+            "default": true
           },
           {
             "key": "inheritAppearance",
             "type": "boolean",
             "labelKey": "settings.host.inheritAppearance.label",
             "hidden": true,
-            "default": true
+            "default": true,
+            "defaultable": false
           },
           {
             "key": "theme",
@@ -415,7 +422,7 @@
             "labelKey": "settings.host.theme.label",
             "hidden": true,
             "default": "termix",
-            "defaultFrom": "newHostTheme"
+            "personal": true
           },
           {
             "key": "cursorBlink",
@@ -423,7 +430,7 @@
             "labelKey": "settings.host.cursorBlink.label",
             "hidden": true,
             "default": true,
-            "defaultFrom": "newHostCursorBlink"
+            "personal": true
           },
           {
             "key": "cursorStyle",
@@ -445,7 +452,7 @@
                 "labelKey": "hosts.cursorStyleBar"
               }
             ],
-            "defaultFrom": "newHostCursorStyle"
+            "personal": true
           },
           {
             "key": "fontSize",
@@ -453,7 +460,7 @@
             "labelKey": "settings.host.fontSize.label",
             "hidden": true,
             "default": 14,
-            "defaultFrom": "newHostFontSize"
+            "personal": true
           },
           {
             "key": "fontFamily",
@@ -461,28 +468,31 @@
             "labelKey": "settings.host.fontFamily.label",
             "hidden": true,
             "default": "Caskaydia Cove Nerd Font Mono",
-            "defaultFrom": "newHostFontFamily"
+            "personal": true
           },
           {
             "key": "scrollback",
             "type": "number",
             "labelKey": "settings.host.scrollback.label",
             "hidden": true,
-            "default": 10000
+            "default": 10000,
+            "personal": true
           },
           {
             "key": "letterSpacing",
             "type": "number",
             "labelKey": "settings.host.letterSpacing.label",
             "hidden": true,
-            "default": 0
+            "default": 0,
+            "personal": true
           },
           {
             "key": "lineHeight",
             "type": "number",
             "labelKey": "settings.host.lineHeight.label",
             "hidden": true,
-            "default": 1
+            "default": 1,
+            "personal": true
           },
           {
             "key": "bellStyle",
@@ -507,34 +517,39 @@
                 "value": "both",
                 "labelKey": "hosts.bellStyleBoth"
               }
-            ]
+            ],
+            "personal": true
           },
           {
             "key": "minimumContrastRatio",
             "type": "number",
             "labelKey": "settings.host.minimumContrastRatio.label",
             "hidden": true,
-            "default": 1
+            "default": 1,
+            "personal": true
           },
           {
             "key": "backgroundImage",
             "type": "string",
             "labelKey": "settings.host.backgroundImage.label",
             "hidden": true,
-            "default": ""
+            "default": "",
+            "personal": true
           },
           {
             "key": "backgroundImageOpacity",
             "type": "number",
             "labelKey": "settings.host.backgroundImageOpacity.label",
             "hidden": true,
-            "default": 0.15
+            "default": 0.15,
+            "personal": true
           },
           {
             "key": "customThemeColors",
             "type": "json",
             "labelKey": "settings.host.customThemeColors.label",
-            "hidden": true
+            "hidden": true,
+            "personal": true
           },
           {
             "key": "rightClickSelectsWord",
@@ -614,8 +629,7 @@
             "type": "boolean",
             "labelKey": "settings.host.autoTmux.label",
             "hidden": true,
-            "default": false,
-            "defaultFrom": "newHostAutoTmux"
+            "default": false
           },
           {
             "key": "useSSHTitle",
@@ -642,12 +656,8 @@
             "type": "select",
             "labelKey": "settings.host.linkClickBehavior.label",
             "hidden": true,
-            "default": "default",
+            "default": "confirm",
             "options": [
-              {
-                "value": "default",
-                "labelKey": "hosts.linkClickBehaviorDefault"
-              },
               {
                 "value": "confirm",
                 "labelKey": "hosts.linkClickBehaviorConfirm"
@@ -663,12 +673,8 @@
             "type": "select",
             "labelKey": "settings.host.localEcho.label",
             "hidden": true,
-            "default": "default",
+            "default": "auto",
             "options": [
-              {
-                "value": "default",
-                "labelKey": "hosts.localEchoDefault"
-              },
               {
                 "value": "off",
                 "labelKey": "hosts.localEchoOff"
@@ -704,7 +710,8 @@
           "key": "terminalDefaults",
           "type": "custom",
           "component": "terminalDefaults",
-          "default": {}
+          "default": {},
+          "hidden": true
         },
         {
           "key": "customThemes",
@@ -739,7 +746,8 @@
               "value": "on",
               "labelKey": "hosts.localEchoOn"
             }
-          ]
+          ],
+          "hidden": true
         },
         {
           "key": "linkClickBehavior",
@@ -756,7 +764,8 @@
               "value": "direct",
               "labelKey": "hosts.linkClickBehaviorDirect"
             }
-          ]
+          ],
+          "hidden": true
         },
         {
           "key": "macros",

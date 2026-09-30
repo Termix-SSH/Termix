@@ -159,6 +159,14 @@ export {
   type HostFeatureFieldsProps,
 } from "@/settings/HostPluginSections";
 
+// Host defaults in a host editor section: where a field's value comes from,
+// and whether the section is editing a level of defaults rather than a host.
+export {
+  HostDefaultBadge,
+  DefaultsOnly as HostDefaultField,
+  useIsDefaultsEditor,
+} from "@/lib/host-defaults-context";
+
 // Components other plugins offer by id (app.registerComponent), rendered with
 // a fallback while their plugin is off.
 export { PluginComponent } from "@/plugin-host/component-registry";

@@ -5,7 +5,6 @@ import {
 } from "../shared/touch-input-settings";
 import {
   readUserSettings,
-  type NewHostTerminalDefaults,
   type TerminalUserSettings,
 } from "../shared/terminal-settings";
 
@@ -16,7 +15,6 @@ export interface TerminalClientSettings {
   sessionPersistence: boolean;
   commandHistoryEnabled: boolean;
   touchInput: TouchInputSettings;
-  newHostDefaults?: NewHostTerminalDefaults;
   user: TerminalUserSettings;
 }
 

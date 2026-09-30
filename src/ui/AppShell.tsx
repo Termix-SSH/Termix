@@ -333,6 +333,24 @@ export function AppShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
+
+  // Host defaults open in the host manager, from anywhere (the admin panel,
+  // a folder's menu).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setSidebarOpen(true);
+      setRailView("hosts");
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("host-manager:edit-defaults", { detail }),
+        );
+      }, 0);
+    };
+    window.addEventListener("termix:open-host-defaults", handler);
+    return () =>
+      window.removeEventListener("termix:open-host-defaults", handler);
+  }, []);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
