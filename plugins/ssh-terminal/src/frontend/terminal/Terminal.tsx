@@ -1487,19 +1487,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           terminal?.modes?.applicationCursorKeysMode ?? false,
         // What the tab menu's share entry needs, read at call time.
         getShareTarget: () => slotApiRef.current?.getShareTarget() ?? null,
-        openFileManager: () => {
-          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
-            webSocketRef.current.send(JSON.stringify({ type: "get_cwd" }));
-          } else {
-            onOpenFileManager?.("/");
-          }
-        },
+        openFileManager: () => openFilesAtCwd(),
       }),
       [isConnected, terminal],
     );
 
     function getCopyOnSelect() {
       return getClientPreference("copyOnSelect") === "true";
+    }
+
+    function openFilesAtCwd() {
+      if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+        webSocketRef.current.send(JSON.stringify({ type: "get_cwd" }));
+      } else {
+        onOpenFileManager?.("/");
+      }
     }
 
     function attemptReconnection() {
@@ -3713,6 +3715,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             onPasteImage={() => void handleClipboardImage()}
             isFocused={isFocusedPane}
             slotApi={slotApi}
+            onOpenFiles={onOpenFileManager ? openFilesAtCwd : undefined}
           />
         )}
 

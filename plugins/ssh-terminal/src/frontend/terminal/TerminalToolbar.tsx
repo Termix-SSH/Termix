@@ -90,6 +90,8 @@ interface TerminalToolbarProps {
   onUploadImage: (file: File) => void | Promise<void>;
   onPasteImage: () => void | Promise<void>;
   isFocused: boolean;
+  /** Opens the file manager at the shell's working directory. */
+  onOpenFiles?: () => void;
   /** Hides every contributed action, e.g. while the toolbar is measuring. */
   actionsEnabled?: boolean;
   /** Handed to contributed actions when they are invoked. */
@@ -108,6 +110,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   isFocused,
   actionsEnabled = true,
   slotApi,
+  onOpenFiles,
 }) => {
   const { t } = useTranslation();
   // Drives both the measurement copy and the separator, so the toolbar sizes
@@ -140,7 +143,9 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   }, [hostActions, host]);
   const openHostLink = (action: (typeof hostLinks)[number]) => {
     const record = host as unknown as PluginHostRecord;
-    if (action.run) action.run(record, tabs as unknown as ShellApi);
+    // The file manager opens where the shell is, as in 2.8.
+    if (action.tabType === "files" && onOpenFiles) onOpenFiles();
+    else if (action.run) action.run(record, tabs as unknown as ShellApi);
     else if (action.tabType) tabs.openTab(record, action.tabType);
   };
   const settings = useMemo(() => readToolbarSettings(host), [host]);

@@ -149,6 +149,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("toolbar host links", () => {
+  it("opens the file manager at the shell directory instead of a plain tab", () => {
+    const run = vi.fn();
+    slots.hostActions = [
+      {
+        id: "files",
+        kind: "open",
+        tabType: "files",
+        titleKey: "Files",
+        icon: () => null,
+        when: () => true,
+        run,
+      },
+    ];
+    const onOpenFiles = vi.fn();
+    renderToolbar({ onOpenFiles });
+    fireEvent.click(screen.getAllByRole("button", { name: "Files" })[0]);
+    expect(onOpenFiles).toHaveBeenCalledOnce();
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
 describe("responsive toolbar density", () => {
   it("enters below 110 percent and restores at 115 percent", () => {
     expect(getResponsiveToolbarDensity("labeled", "labeled", 1099, 1000)).toBe(
