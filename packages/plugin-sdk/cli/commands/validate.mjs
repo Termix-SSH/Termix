@@ -2,8 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifest } from "../lib/plugin-dir.mjs";
-import { LEGACY_TABLE_OWNERS as LEGACY_TABLES } from "../../dist/db.js";
-import { collectOwnedIndexes, findUnownedTableWrites } from "../../dist/ddl.js";
 
 /**
  * The manifest rules live in src/manifest.ts, which the server uses too, so
@@ -37,7 +35,9 @@ export async function validate({ cwd }) {
     }
   }
 
-  problems.push(...validateMigrations(cwd, raw.id ?? path.basename(cwd)));
+  problems.push(
+    ...(await validateMigrations(cwd, raw.id ?? path.basename(cwd))),
+  );
   problems.push(...validateNativeDependencies(cwd, raw));
   problems.push(...validatePackage(cwd, raw));
 
@@ -115,7 +115,12 @@ const DIALECTS = ["sqlite", "postgres", "mysql"];
  * never ran this command. Here it is a build-time error with a file name
  * attached, rather than a plugin that fails to activate later.
  */
-function validateMigrations(cwd, pluginId) {
+async function validateMigrations(cwd, pluginId) {
+  const { LEGACY_TABLE_OWNERS: LEGACY_TABLES } =
+    await import("../../dist/db.js");
+  const { collectOwnedIndexes, findUnownedTableWrites } =
+    await import("../../dist/ddl.js");
+
   const problems = [];
   const legacy = new Set(
     Object.entries(LEGACY_TABLES)
