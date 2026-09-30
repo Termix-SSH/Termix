@@ -105,7 +105,7 @@ describe("syncHostFeatureTabs", () => {
     expect(getHostEditorSection(hostFeatureTabId("docker"))?.group).toBe("top");
   });
 
-  it("skips a plugin that registered its own host editor section", () => {
+  it("gives a plugin with its own section a tab only in the defaults editor", () => {
     registerHostEditorSection({
       id: "docker-own",
       pluginId: "docker",
@@ -113,8 +113,32 @@ describe("syncHostFeatureTabs", () => {
       labelKey: "k",
       component: () => null,
     });
+    expect(syncHostFeatureTabs([plugin()])).toEqual([
+      hostFeatureTabId("docker"),
+    ]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))?.defaults).toBe(
+      "only",
+    );
+  });
+
+  it("skips a plugin whose own section already covers the defaults editor", () => {
+    registerHostEditorSection({
+      id: "docker-own",
+      pluginId: "docker",
+      group: "top",
+      labelKey: "k",
+      defaults: true,
+      component: () => null,
+    });
     expect(syncHostFeatureTabs([plugin()])).toEqual([]);
     expect(getHostEditorSection(hostFeatureTabId("docker"))).toBeUndefined();
+  });
+
+  it("offers a generated tab to both the host and the defaults editor", () => {
+    syncHostFeatureTabs([plugin()]);
+    expect(getHostEditorSection(hostFeatureTabId("docker"))?.defaults).toBe(
+      true,
+    );
   });
 
   it("registers nothing for a plugin whose host fields are all hidden", () => {

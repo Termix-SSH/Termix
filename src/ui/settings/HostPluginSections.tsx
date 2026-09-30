@@ -17,7 +17,7 @@ import { PluginIcon } from "@/lib/plugin-icon";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { usePluginScope } from "@/plugin-host/scope";
 import { SettingsFieldRow } from "./SettingsFields";
-import { hasVisibleFields, isFieldActive } from "./settings-fields-util";
+import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
 
 /** Values for every plugin on one host: { [pluginId]: { [key]: value } }. */
 export type HostPluginSettings = Record<string, Record<string, unknown>>;
@@ -61,29 +61,6 @@ function hostFieldDefaults(plugin: PluginSummary): Record<string, unknown> {
     if (field.default !== undefined) defaults[field.key] = field.default;
   }
   return defaults;
-}
-
-/**
- * A new host saves the fields whose default comes from an admin setting,
- * since the server only knows the manifest default for a host with no value.
- */
-export function withNewHostDefaults(
-  values: HostPluginSettings,
-  plugins: PluginSummary[],
-): HostPluginSettings {
-  const next: HostPluginSettings = { ...values };
-  for (const plugin of plugins) {
-    const fields = plugin.contributes?.settings?.host?.fields ?? [];
-    for (const field of fields) {
-      if (!field.defaultFrom || field.default === undefined) continue;
-      if (next[plugin.id] && field.key in next[plugin.id]) continue;
-      next[plugin.id] = {
-        ...(next[plugin.id] ?? {}),
-        [field.key]: field.default,
-      };
-    }
-  }
-  return next;
 }
 
 export interface HostPluginSectionsProps {
@@ -197,12 +174,13 @@ function HostPluginSection({
           values={shown}
           setValue={setValue}
           running={running}
+          defaultKey={`${plugin.id}.${enableKey}`}
         />
       )}
 
       {enabled &&
         host.fields
-          .filter((field) => isFieldActive(field, shown))
+          .filter((field) => isFieldShown(field, shown))
           .map((field) => (
             <SettingsFieldRow
               key={field.key}
@@ -211,6 +189,7 @@ function HostPluginSection({
               values={shown}
               setValue={setValue}
               running={running}
+              defaultKey={`${plugin.id}.${field.key}`}
             />
           ))}
     </SectionCard>

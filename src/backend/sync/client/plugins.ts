@@ -32,6 +32,8 @@ export interface RemotePlugin {
   name: string;
   version: string;
   source: "bundled" | "user";
+  /** The server can send a signed .tmxplug for it. */
+  artifact?: boolean;
   enabled: boolean;
   active: boolean;
   desktop: PluginDesktopMode;
@@ -51,6 +53,8 @@ async function isEnabledLocally(pluginId: string): Promise<boolean> {
   const record = await createCurrentPluginRepository().findById(pluginId);
   return record?.state === "enabled";
 }
+
+const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 async function download(link: SyncLink, plugin: RemotePlugin): Promise<string> {
   const response = await remoteFetch(
@@ -83,6 +87,9 @@ async function matchGrants(plugin: RemotePlugin): Promise<void> {
   const repository = createCurrentPluginPermissionGrantRepository();
   const local = getPluginRuntime().loader.get(plugin.id);
   if (!local || local.source !== "user") return;
+  // Grants are only copied for code a trusted key signed. Anything else the
+  // desktop's own admin has to review, as with any plugin dropped on disk.
+  if (!local.signedBy) return;
   const declared = new Set(local.manifest.capabilities);
   const wanted = new Set(plugin.granted.filter((cap) => declared.has(cap)));
   const existing = await repository.listByPlugin(plugin.id);
@@ -117,7 +124,25 @@ async function alertOlderDesktop(plugin: RemotePlugin): Promise<void> {
   });
 }
 
+async function alertUnsigned(plugin: RemotePlugin): Promise<void> {
+  const key = `unsigned:${plugin.id}@${plugin.version}`;
+  if (alertedVersions.has(key)) return;
+  alertedVersions.add(key);
+  await sendCoreAlert({
+    title: "Review a feature from your server",
+    body: `${plugin.name} (${plugin.version}) was copied from your server but is not signed, so it stays off here until you turn it on.`,
+    severity: "warning",
+    category: "termix.sync.unsigned_plugin",
+    dedupeKey: `sync:${key}`,
+    audience: "admins",
+  });
+}
+
 async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
+  // The id becomes a file name below, so it must be a real plugin id.
+  if (typeof plugin.id !== "string" || !PLUGIN_ID_PATTERN.test(plugin.id)) {
+    throw new Error("The server sent a plugin with an invalid id");
+  }
   const { loader } = getPluginRuntime();
   let local = loader.get(plugin.id);
   const mode = local?.manifest.desktop ?? plugin.desktop ?? "mirror";
@@ -131,7 +156,20 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
   if (mode !== "mirror") return;
 
   if (plugin.source === "bundled") {
-    if (!local || semver.gt(plugin.version, local.manifest.version)) {
+    const newer = !local || semver.gt(plugin.version, local.manifest.version);
+    if (newer && plugin.artifact && local?.state !== "activating") {
+      // A signed update of a bundled plugin. The loader checks the signature
+      // and that the version really is newer.
+      const wasEnabled = await isEnabledLocally(plugin.id);
+      if (local) await unloadPlugin(plugin.id);
+      try {
+        local = await installPluginArtifact(await download(link, plugin));
+      } catch (error) {
+        await alertOlderDesktop(plugin);
+        throw error;
+      }
+      if (wasEnabled) await setPluginEnabled(plugin.id, true);
+    } else if (newer) {
       await alertOlderDesktop(plugin);
     }
     if (!local) return;
@@ -150,6 +188,16 @@ async function mirrorOne(link: SyncLink, plugin: RemotePlugin): Promise<void> {
       }
     }
     await matchGrants(plugin);
+    // Unsigned code is only ever switched off from here, never on.
+    if (!local.signedBy) {
+      const enabledHere = await isEnabledLocally(plugin.id);
+      if (!plugin.enabled && enabledHere) {
+        await setPluginEnabled(plugin.id, false);
+      } else if (plugin.enabled && !enabledHere) {
+        await alertUnsigned(plugin);
+      }
+      return;
+    }
   }
 
   if (!local) return;

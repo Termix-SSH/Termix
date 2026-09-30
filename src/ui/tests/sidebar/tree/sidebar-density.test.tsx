@@ -1,8 +1,11 @@
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Host, HostFolder } from "@/types/ui-types";
 import { SidebarTree } from "@/sidebar/tree/SidebarTree";
 
+vi.mock("@/lib/host-connection-tabs", () => ({
+  resolveHostTabType: () => "terminal",
+}));
 vi.mock("@/main-axios", () => ({}));
 vi.mock("@/api/plugins-api", () => ({}));
 vi.mock("@/settings/HostPluginSections", () => ({
@@ -126,4 +129,45 @@ it("keeps an unchanged folder's measured height after changing density", () => {
   // Folder height is unchanged, so the browser only reports the host resize.
   resize([rows()[1]]);
   expect((rows()[1] as HTMLElement).style.transform).toBe("translateY(40px)");
+});
+
+it("finds a host inside a closed folder and opens the keyboard-selected match", () => {
+  const alpha = {
+    id: "1",
+    name: "alpha",
+    ip: "192.0.2.1",
+    username: "u",
+  } as Host;
+  const beta = {
+    id: "2",
+    name: "beta",
+    ip: "192.0.2.2",
+    username: "u",
+  } as Host;
+  const onOpenTab = vi.fn();
+  const view = render(
+    <SidebarTree
+      children={[{ name: "closed", path: "closed", children: [alpha, beta] }]}
+      onOpenTab={onOpenTab}
+      onEditHost={vi.fn()}
+      selectionMode={false}
+      onToggleSelectionMode={vi.fn()}
+      hostClickBehavior="focusExisting"
+    />,
+  );
+  const list = view.getByLabelText("hosts.speedSearchList");
+  expect(view.container.querySelectorAll("[data-index]")).toHaveLength(1);
+  fireEvent.keyDown(list, { key: "a" });
+  const search = view.getByLabelText("hosts.speedSearch");
+  expect(document.activeElement).toBe(search);
+  expect(view.container.querySelectorAll("[data-index]")).toHaveLength(3);
+  fireEvent.keyDown(search, { key: "ArrowDown" });
+  fireEvent.keyDown(search, { key: "Enter" });
+  expect(onOpenTab).toHaveBeenCalledWith(beta, "terminal", {
+    forceNewTab: false,
+  });
+  fireEvent.keyDown(search, { key: "Escape" });
+  expect(view.queryByLabelText("hosts.speedSearch")).toBeNull();
+  expect(view.container.querySelectorAll("[data-index]")).toHaveLength(1);
+  expect(document.activeElement).toBe(list);
 });

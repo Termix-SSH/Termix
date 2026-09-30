@@ -81,7 +81,6 @@ export const HOST_SECRET_FIELDS = [
   "passphrase",
   "sudoPassword",
   "socks5Password",
-  "vaultToken",
 ] as const;
 
 /** A copy of a host with every secret field removed, nested ones included. */
@@ -373,6 +372,21 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
     }
   };
 
+  /** Host settings a plugin writes are the host's own, not its defaults. */
+  const markSettingsOwn = async (
+    hostId: number,
+    writes: Awaited<ReturnType<typeof checkSettings>>,
+  ) => {
+    if (writes.length === 0) return;
+    const { changeHostOverrides } =
+      await import("../hosts/defaults/overrides.js");
+    await changeHostOverrides([hostId], {
+      own: writes.flatMap(({ manifest: owner, values }) =>
+        Object.keys(values).map((key): [string, string] => [owner.id, key]),
+      ),
+    });
+  };
+
   return {
     list: async () => {
       await requireRead();
@@ -468,12 +482,25 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       const writes = await checkSettings(settings);
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
+      const { applyHostDefaultsToWrite, applyDefaultsAfterHostWrite } =
+        await import("../hosts/defaults/index.js");
+      const columns: Record<string, unknown> = { ...row, userId };
+      columns.defaultOverrides = JSON.stringify(
+        await applyHostDefaultsToWrite({
+          ownerId: userId,
+          hostId: null,
+          columns,
+          body: host as unknown as Record<string, unknown>,
+        }),
+      );
       const created =
-        await createCurrentHostRepository().createEncryptedForUser(userId, {
-          ...row,
+        await createCurrentHostRepository().createEncryptedForUser(
           userId,
-        });
+          columns,
+        );
+      await applyDefaultsAfterHostWrite(created.id);
       await writeSettings(created.id, writes);
+      await markSettingsOwn(created.id, writes);
       await audit("hosts_create", `host ${created.id}`, { success: true });
       return (
         await toRecords([created as unknown as Record<string, unknown>])
@@ -498,13 +525,47 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
       const writes = await checkSettings(settings);
       const { createCurrentHostRepository } =
         await import("../database/repositories/factory.js");
+      const { applyHostDefaultsToWrite, applyDefaultsAfterHostWrite } =
+        await import("../hosts/defaults/index.js");
+      const { createCurrentHostDefaultsRepository } =
+        await import("../database/repositories/factory.js");
+      const stored = (
+        await createCurrentHostDefaultsRepository().listHosts({
+          hostIds: [hostId],
+        })
+      )[0];
+      const columns: Record<string, unknown> = { ...row };
+      if (stored && stored.userId === userId) {
+        columns.defaultOverrides = JSON.stringify(
+          await applyHostDefaultsToWrite({
+            ownerId: userId,
+            hostId,
+            columns,
+            body: patch as unknown as Record<string, unknown>,
+            stored,
+          }),
+        );
+      }
       const updated =
         await createCurrentHostRepository().updateEncryptedForUser(
           userId,
           hostId,
-          row,
+          columns,
         );
-      if (updated) await writeSettings(hostId, writes);
+      if (updated) {
+        await writeSettings(hostId, writes);
+        await markSettingsOwn(hostId, writes);
+        await applyDefaultsAfterHostWrite(hostId, {
+          moved:
+            !!stored &&
+            ((columns.folder !== undefined &&
+              (columns.folder ?? null) !== (stored.folder ?? null)) ||
+              (columns.parentHostId !== undefined &&
+                (columns.parentHostId ?? null) !==
+                  (stored.parentHostId ?? null))),
+          ownerId: userId,
+        });
+      }
       await audit("hosts_update", `host ${hostId}`, {
         success: updated !== null,
       });

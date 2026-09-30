@@ -1,0 +1,188 @@
+ActionSlot (value): ({ slotId, context, className, enabled, renderItem, hideLabels, when, }: ActionSlotProps) => Element
+Alert (value): ({ className, variant, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) => string>) => Element
+AlertDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+AlertDialog (value): ({ ...props }: AlertDialogProps) => Element
+AlertDialogAction (value): ({ className, ...props }: AlertDialogActionProps & RefAttributes<HTMLButtonElement>) => Element
+AlertDialogCancel (value): ({ className, ...props }: AlertDialogCancelProps & RefAttributes<HTMLButtonElement>) => Element
+AlertDialogContent (value): ({ className, ...props }: AlertDialogContentProps & RefAttributes<HTMLDivElement>) => Element
+AlertDialogDescription (value): ({ className, ...props }: AlertDialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
+AlertDialogFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+AlertDialogHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+AlertDialogOverlay (value): ({ className, ...props }: AlertDialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
+AlertDialogPortal (value): ({ ...props }: AlertDialogPortalProps) => Element
+AlertDialogTitle (value): ({ className, ...props }: AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
+AlertDialogTrigger (value): ({ ...props }: AlertDialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+AlertTitle (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+Badge (value): ({ className, variant, asChild, ...props }: ClassAttributes<HTMLSpanElement> & HTMLAttributes<HTMLSpanElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; secondary: string; destructive: string; outline: string; }; }> & ClassProp) => string> & { asChild?: boolean; }) => Element
+BarSeries (value): ({ items, max, className, colorClassName, }: BarSeriesProps) => Element
+BarSeriesItem (type): BarSeriesItem
+BarSeriesProps (type): BarSeriesProps
+BrowserSignInDialog (value): ({ isOpen, label, url, code, onContinue, onCancel, onOpenUrl, backgroundColor, }: BrowserSignInDialogProps) => Element
+Button (value): ({ className, variant, size, asChild, ...props }: ClassAttributes<HTMLButtonElement> & ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { default: string; xs: string; sm: string; lg: string; icon: string; "icon-xs": string; "icon-sm": string; "icon-lg": string; }; }> & ClassProp) => string> & { asChild?: boolean; }) => Element
+ButtonProps (type): ButtonProps
+Card (value): ({ className, size, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & { size?: "default" | "sm"; }) => Element
+CardAction (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+CardContent (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+CardDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+CardFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+CardGridCanvas (value): ({ slots, columns, editMode, renderCard, cardCatalog, onChange, cardLabel, className, }: CardGridCanvasProps) => Element
+CardHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+CardTitle (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+Checkbox (value): ({ className, ...props }: CheckboxProps & RefAttributes<HTMLButtonElement>) => Element
+ColumnCountStepper (value): ({ columns, onChange, }: { columns: number; onChange: (columns: number) => void; }) => Element
+ComponentSlot (value): ({ slotId, props, when, }: { slotId: string; props?: Record<string, unknown>; when?: Record<string, unknown>; }) => Element
+ConnectionLogPanel (value): ({ isConnecting, isConnected, hasConnectionError, position, className, }: ConnectionLogPanelProps) => Element
+ConnectionLogProvider (value): ({ children, }: { children: ReactNode; }) => Element
+ConnectionOrigin (type): ConnectionOrigin
+ConnectionScreen (value): ({ status, message, backgroundColor, attempt, maxAttempts, nextRetryInMs, onManualRetry, retryLabel, disconnectedMessage, extraActions, logPosition, emptyState, className, }: ConnectionScreenProps) => Element
+ConnectionStage (type): ConnectionStage
+ConnectionStatus (type): ConnectionStatus
+CustomKeybinding (type): CustomKeybinding
+Dialog (value): ({ ...props }: DialogProps) => Element
+DialogClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
+DialogContent (value): ({ className, children, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
+DialogDescription (value): ({ className, ...props }: DialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
+DialogFooter (value): ({ className, showCloseButton, children, ...props }: ClassAttributes<HTMLDivElement> & HTMLAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
+DialogHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+DialogOverlay (value): ({ className, ...props }: DialogOverlayProps & RefAttributes<HTMLDivElement>) => Element
+DialogPortal (value): ({ ...props }: DialogPortalProps) => Element
+DialogTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
+DialogTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+DropdownMenu (value): ({ ...props }: DropdownMenuProps) => Element
+DropdownMenuCheckboxItem (value): ({ className, children, checked, inset, ...props }: DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
+DropdownMenuContent (value): ({ className, align, sideOffset, ...props }: DropdownMenuContentProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuGroup (value): ({ ...props }: DropdownMenuGroupProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuItem (value): ({ className, inset, variant, ...props }: DropdownMenuItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; variant?: "default" | "destructive"; }) => Element
+DropdownMenuLabel (value): ({ className, inset, ...props }: DropdownMenuLabelProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
+DropdownMenuPortal (value): ({ ...props }: DropdownMenuPortalProps) => Element
+DropdownMenuRadioGroup (value): ({ ...props }: DropdownMenuRadioGroupProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuRadioItem (value): ({ className, children, inset, ...props }: DropdownMenuRadioItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
+DropdownMenuSeparator (value): ({ className, ...props }: DropdownMenuSeparatorProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuShortcut (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>) => Element
+DropdownMenuSub (value): ({ ...props }: DropdownMenuSubProps) => Element
+DropdownMenuSubContent (value): ({ className, sideOffset, alignOffset, ...props }: DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>) => Element
+DropdownMenuSubTrigger (value): ({ className, inset, children, ...props }: DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
+DropdownMenuTrigger (value): ({ ...props }: DropdownMenuTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+EmptyState (value): ({ icon: Icon, title, hint, action, className, }: { icon?: LucideIcon; title: string; hint?: string; action?: ReactNode; className?: string; }) => Element
+FOLDER_COLORS (value): string[]
+FakeSwitch (value): ({ defaultChecked, disabled, checked, onChange, }: { defaultChecked?: boolean; disabled?: boolean; checked?: boolean; onChange?: (v: boolean) => void; }) => Element
+FullScreenAppPhase (type): FullScreenAppPhase
+FullScreenAppWrapper (value): FC<FullScreenAppWrapperProps>
+GridCardCatalogEntry (type): GridCardCatalogEntry
+GridColSpan (type): GridColSpan
+GridLayout (type): GridLayout
+GridSlot (type): GridSlot
+HostDefaultBadge (value): ({ settingKey }: { settingKey: string; }) => Element
+HostDefaultField (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
+HostFeatureFields (value): ({ form, updateForm, }: HostFeatureFieldsProps) => Element
+HostFeatureFieldsProps (type): HostFeatureFieldsProps
+HostKeyVerificationDialog (value): ({ isOpen, scenario, ip, port, hostname, fingerprint, oldFingerprint, algorithm, onAccept, onReject, backgroundColor, }: HostKeyVerificationDialogProps) => Element
+Input (value): ({ className, type, ...props }: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => Element
+Kbd (value): ForwardRefExoticComponent<KbdProps & RefAttributes<HTMLElement>>
+KbdKey (value): { ({ className, ...props }: HTMLAttributes<HTMLSpanElement>): Element; displayName: string; }
+KbdSeparator (value): { ({ className, ...props }: HTMLAttributes<HTMLSpanElement>): Element; displayName: string; }
+KeyCombo (type): KeyCombo
+KeybindingAction (type): KeybindingAction
+KeybindingActionType (type): string
+Label (value): ({ className, ...props }: LabelProps & RefAttributes<HTMLLabelElement>) => Element
+LineChart (value): ({ series, timestamps, domain, yFormatter, height, className, }: LineChartProps) => Element
+LineChartSeries (type): LineChartSeries
+LogContext (type): LogContext
+LogEntry (type): LogEntry
+MFAPromptMode (type): MFAPromptMode
+ManagerCardError (type): ManagerCardError
+ManagerCardShell (value): ({ title, icon, loading, error, onRefresh, empty, emptyMessage, children, headerExtra, }: { title: string; icon: ReactNode; loading: boolean; error: ManagerCardError; onRefresh: () => void; empty?: boolean; emptyMessage?: string; children: ReactNode; headerExtra?: ReactNode; }) => Element
+ManagerSearch (value): ({ value, onChange, placeholder, count, extra, }: { value: string; onChange: (value: string) => void; placeholder?: string; count?: number; extra?: ReactNode; }) => Element
+MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scrollMax, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; bodyClassName?: string; scroll?: boolean; scrollMax?: number; }) => Element
+MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
+PassphraseDialog (value): ({ isOpen, onSubmit, onCancel, hostInfo, backgroundColor, }: PassphraseDialogProps) => Element
+PasswordInput (value): ForwardRefExoticComponent<PasswordInputProps & RefAttributes<HTMLInputElement>>
+PluginComponent (value): ({ id, fallback, ...props }: { [prop: string]: unknown; id: string; fallback?: ReactNode; }) => ReactNode
+PluginViewPlaceholder (value): ({ kind, viewId, compact, }: { kind: ViewKind; viewId: string; compact?: boolean; }) => Element
+Popover (value): ({ ...props }: PopoverProps) => Element
+PopoverAnchor (value): ({ ...props }: PopoverAnchorProps & RefAttributes<HTMLDivElement>) => Element
+PopoverContent (value): ({ className, align, sideOffset, ...props }: PopoverContentProps & RefAttributes<HTMLDivElement>) => Element
+PopoverTrigger (value): ({ ...props }: PopoverTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+RadialGauge (value): ({ value, label, caption, size, strokeWidth, className, colorClassName, }: RadialGaugeProps) => Element
+RadialGaugeProps (type): RadialGaugeProps
+RecentActivityItem (type): RecentActivityItem
+RobustClipboardProvider (value): typeof RobustClipboardProvider
+SSHAuthDialog (value): ({ isOpen, reason, onSubmit, onCancel, hostInfo, backgroundColor, }: SSHAuthDialogProps) => Element
+ScrollArea (value): ({ className, children, ...props }: ScrollAreaProps & RefAttributes<HTMLDivElement>) => Element
+ScrollBar (value): ({ className, orientation, ...props }: ScrollAreaScrollbarProps & RefAttributes<HTMLDivElement>) => Element
+SectionCard (value): ({ title, icon, action, children, className, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; }) => Element
+Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?(value: string): void; }) => Element
+Select2 (value): ({ className, children, value, defaultValue, onChange, disabled, placeholder, align, contentClassName, name, id, required, "aria-label": ariaLabel, ...props }: Select2Props) => Element
+SelectContent (value): ({ className, children, position, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
+SelectGroup (value): ({ ...props }: SelectGroupProps & RefAttributes<HTMLDivElement>) => Element
+SelectItem (value): ({ className, children, ...props }: SelectItemProps & RefAttributes<HTMLDivElement>) => Element
+SelectLabel (value): ({ className, ...props }: SelectLabelProps & RefAttributes<HTMLDivElement>) => Element
+SelectScrollDownButton (value): ({ className, ...props }: SelectScrollDownButtonProps & RefAttributes<HTMLDivElement>) => Element
+SelectScrollUpButton (value): ({ className, ...props }: SelectScrollUpButtonProps & RefAttributes<HTMLDivElement>) => Element
+SelectSeparator (value): ({ className, ...props }: SelectSeparatorProps & RefAttributes<HTMLDivElement>) => Element
+SelectTrigger (value): ({ className, size, children, ...props }: SelectTriggerProps & RefAttributes<HTMLButtonElement> & { size?: "default" | "sm"; }) => Element
+SelectValue (value): ({ ...props }: SelectValueProps & RefAttributes<HTMLSpanElement>) => Element
+Separator (value): ({ className, orientation, decorative, ...props }: SeparatorProps & RefAttributes<HTMLDivElement>) => Element
+SettingRow (value): ({ label, badge, description, defaultKey, children, }: { label: string; badge?: string; description?: ReactNode; defaultKey?: string; children: ReactNode; }) => Element
+Sheet (value): ({ ...props }: DialogProps) => Element
+SheetClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
+SheetContent (value): ({ className, children, side, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
+SheetDescription (value): ({ className, ...props }: DialogDescriptionProps & RefAttributes<HTMLParagraphElement>) => Element
+SheetFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+SheetHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+SheetTitle (value): ({ className, ...props }: DialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
+SheetTrigger (value): ({ ...props }: DialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+Skeleton (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+Slider (value): ({ className, defaultValue, value, min, max, ...props }: SliderProps & RefAttributes<HTMLSpanElement>) => Element
+Sparkline (value): ({ data, domain, className, colorClassName, showLastDot, height, }: SparklineProps) => Element
+SparklineProps (type): SparklineProps
+StatRow (value): ({ label, value, mono, className, }: { label: ReactNode; value: ReactNode; mono?: boolean; className?: string; }) => Element
+Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
+TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
+Textarea (value): ForwardRefExoticComponent<TextareaProps & RefAttributes<HTMLTextAreaElement>>
+TextareaProps (type): TextareaProps
+Tooltip (value): ({ ...props }: TooltipProps) => Element
+TooltipContent (value): ({ className, sideOffset, children, ...props }: TooltipContentProps & RefAttributes<HTMLDivElement>) => Element
+TooltipProvider (value): ({ delayDuration, ...props }: TooltipProviderProps) => Element
+TooltipTrigger (value): ({ ...props }: TooltipTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+UptimeInfo (type): UptimeInfo
+VersionInfo (type): VersionInfo
+WebSocketConnectionTarget (type): WebSocketConnectionTarget
+WidgetTitle (value): ({ title, icon, fallback }: WidgetTitleProps) => Element
+buildOriginWsUrl (value): ({ origin, localPort, localPath, remotePath, includeJwt, }: { origin: ConnectionOrigin; localPort: number; localPath: string; remotePath: string; includeJwt?: boolean; }) => Promise<WebSocketConnectionTarget>
+cn (value): (...inputs: ClassValue[]) => string
+copyToClipboard (value): (text: string) => Promise<boolean>
+createFrontendLogger (value): (serviceName: string, serviceIcon?: string, serviceColor?: string) => FrontendLogger
+createQuickConnectHost (value): (input: QuickConnectInput) => Host
+findMatchingKeybinding (value): (e: KeyboardEvent, bindings: CustomKeybinding[]) => CustomKeybinding
+getAdaptiveResourceBudget (value): (kind: AdaptiveTaskKind) => AdaptiveResourceBudget
+getBasePath (value): () => string
+getDatabaseHealth (value): () => Promise<Record<string, unknown>>
+getDeviceId (value): () => string
+getPollingEnvironmentMultiplier (value): (connection?: NetworkInformationLike) => number
+getRecentActivity (value): (limit?: number) => Promise<RecentActivityItem[]>
+getUptime (value): () => Promise<UptimeInfo>
+getVersionInfo (value): (checkRemote?: boolean) => Promise<VersionInfo>
+globalShortcutHandler (value): { current: (e: KeyboardEvent) => void; }
+hydrateLocalSharedHostAuth (value): <T>(host: T) => Promise<T>
+isElectron (value): () => boolean
+isMacPlatform (value): () => boolean
+isTabJumpHotkey (value): (e: KeyboardEvent) => boolean
+linkedServerUrl (value): () => Promise<string>
+markAdaptiveResourceUsed (value): (kind: AdaptiveTaskKind, action: string, now?: number) => void
+pluginWsUrl (value): (pluginId: string, path: string, options?: { origin?: ConnectionOrigin; }) => Promise<WebSocketConnectionTarget>
+readFromClipboard (value): () => Promise<string>
+resolveConnectionOrigin (value): (host: OriginResolvableHost, options?: { defaultRemote?: boolean; }) => Promise<ConnectionOrigin>
+resolveRemoteHostId (value): (syncId: string) => Promise<number>
+runAdaptiveBackgroundTask (value): (kind: AdaptiveTaskKind, action: string, task: () => Promise<unknown>, options?: AdaptiveTaskOptions) => boolean
+runAdaptivePolling (value): (poll: () => AdaptivePollResult | Promise<AdaptivePollResult>, policy: AdaptivePollingPolicy, options?: { enabled?: () => boolean; visible?: () => boolean; runImmediately?: boolean; random?: () => number; intervalMultiplier?: () => number; onError?: (error: unknown) => void; }) => () => void
+runVisibleInterval (value): (tick: () => void, intervalMs: number) => () => void
+useAdaptivePolling (value): (poll: () => AdaptivePollResult | Promise<AdaptivePollResult>, policy: AdaptivePollingPolicy, enabled?: boolean, options?: { runImmediately?: boolean; onError?: (error: unknown) => void; }) => void
+useAppTheme (value): () => ThemeProviderState
+useConfirmation (value): () => { isOpen: boolean; options: ConfirmationOptions; confirm: (opts: ConfirmationOptions, callback: () => void) => void; handleConfirm: () => void; handleCancel: () => void; confirmWithToast: (opts: string | ConfirmationOptions, callback?: () => void, variantOrConfirmLabel?: string, cancelLabel?: string, toastOptions?: ToastConfirmOptions) => Promise<boolean>; }
+useConnectionLog (value): () => ConnectionLogContextType
+useIsDefaultsEditor (value): () => boolean
+useIsMobile (value): () => boolean
+useOptionalConnectionLog (value): () => ConnectionLogContextType
+useTabs (value): () => TabContextType
+useTabsSafe (value): () => TabContextType

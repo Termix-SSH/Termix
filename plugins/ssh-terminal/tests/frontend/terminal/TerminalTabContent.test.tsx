@@ -23,7 +23,6 @@ vi.mock(
 
 vi.mock("@termix/plugin-sdk/ui", () => ({
   useIsMobile: () => false,
-  useTabsSafe: () => ({ previewTerminalTheme: null }),
 }));
 
 import { TerminalTabContent } from "../../../src/frontend/terminal/TerminalTabContent";

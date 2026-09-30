@@ -1,3 +1,4 @@
+import { parseDefaultOverrides } from "../../../types/host-defaults.js";
 import {
   parseSshOptions,
   type HostSshOptions,
@@ -481,5 +482,6 @@ export function transformHostResponse(
     portKnockSequence: host.portKnockSequence
       ? JSON.parse(host.portKnockSequence as string)
       : [],
+    defaultOverrides: parseDefaultOverrides(host.defaultOverrides),
   };
 }

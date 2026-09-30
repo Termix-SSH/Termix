@@ -21,7 +21,8 @@
     "credentials:use",
     "hosts:write",
     "ui:surface",
-    "events:core"
+    "events:core",
+    "db:core-refs"
   ],
   "provides": [
     {
@@ -107,7 +108,8 @@
             "descriptionKey": "host.startupDescription",
             "hidden": true,
             "min": 1,
-            "shareRead": "view"
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
           },
           {
             "key": "quickActions",
@@ -116,7 +118,8 @@
             "descriptionKey": "host.quickActionsDescription",
             "hidden": true,
             "default": [],
-            "shareRead": "view"
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
           }
         ]
       }
@@ -140,6 +143,11 @@
     ],
     "http": {
       "adminImpersonation": true
-    }
+    },
+    "uses": [
+      "host-metrics.toolbar",
+      "terminal.sendToActive",
+      "terminal.sendToSession"
+    ]
   }
 }

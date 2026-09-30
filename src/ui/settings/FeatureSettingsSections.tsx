@@ -25,7 +25,7 @@ import {
   type PluginSummary,
 } from "@/api/plugins-api";
 import { SettingsFieldRow } from "./SettingsFields";
-import { hasVisibleFields, isFieldActive } from "./settings-fields-util";
+import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
 
 export type FeatureSettingsScope = "admin" | "user";
 
@@ -187,7 +187,7 @@ function FeatureSettingsForm({
 
   const rows = (group: PluginSettingsField[]) =>
     group
-      .filter((field) => isFieldActive(field, values))
+      .filter((field) => isFieldShown(field, values))
       .map((field) => (
         <SettingsFieldRow
           key={field.key}

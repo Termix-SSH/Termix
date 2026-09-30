@@ -6,7 +6,7 @@ import {
   LOCAL_FILES_DRAG_MIME,
   REMOTE_FILES_DRAG_MIME,
 } from "../../src/frontend/local-transfer-utils";
-import type { LocalFileEntry } from "@termix/plugin-sdk/ui";
+import type { LocalFileEntry } from "@termix/plugin-sdk/frontend";
 
 // jsdom has no layout, so render every row instead of a virtual window.
 vi.mock("@tanstack/react-virtual", () => ({

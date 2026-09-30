@@ -20,7 +20,8 @@
     "files:own",
     "network:serve",
     "ui:surface",
-    "events:core"
+    "events:core",
+    "db:core-refs"
   ],
   "provides": [
     {
@@ -71,7 +72,8 @@
       "key": "enableSessionRecording",
       "labelKey": "hosts.enableSessionRecording",
       "editorTab": "general"
-    }
+    },
+    "uses": ["terminal.toolbarStatus"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

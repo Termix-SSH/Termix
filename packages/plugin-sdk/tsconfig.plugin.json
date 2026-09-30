@@ -5,6 +5,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "types": ["node", "vitest/globals"],
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -24,5 +26,6 @@
     "noPropertyAccessFromIndexSignature": false,
     "allowUnusedLabels": true,
     "allowUnreachableCode": true
-  }
+  },
+  "files": ["./client.d.ts"]
 }

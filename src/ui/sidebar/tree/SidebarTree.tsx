@@ -1,3 +1,4 @@
+import { useHostSpeedSearch } from "./hooks/useHostSpeedSearch";
 import {
   useCallback,
   useEffect,
@@ -7,6 +8,7 @@ import {
   useState,
 } from "react";
 import { updatePluginHostSettings } from "@/api/plugins-api";
+import { resetHostToDefaults } from "@/api/host-defaults-api";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { usePluginHostSections } from "@/settings/HostPluginSections";
 import { useTranslation } from "react-i18next";
@@ -18,6 +20,7 @@ import {
   FolderOpen,
   Loader2,
   Plus,
+  RotateCcw,
   Server,
   Terminal,
 } from "lucide-react";
@@ -60,6 +63,7 @@ import {
   collectAllHosts,
   collectAllFolderPaths,
   hostExpandKey,
+  hostMatchesQuery,
   buildReorderRows,
   collectOrderableRows,
   rowKey,
@@ -76,7 +80,7 @@ export function SidebarTree({
   onOpenTab,
   onEditHost,
   onShareHost,
-  query = "",
+  query: externalQuery = "",
   selectionMode,
   onToggleSelectionMode,
   loading = false,
@@ -117,7 +121,8 @@ export function SidebarTree({
   hostClickBehavior?: HostClickBehavior;
 }) {
   const { t } = useTranslation();
-  const hostSwitchPlugins = usePluginHostSections().filter(
+  const hostSettingPlugins = usePluginHostSections();
+  const hostSwitchPlugins = hostSettingPlugins.filter(
     (plugin) => !!plugin.contributes?.settings?.host?.enableKey,
   );
   // Knobs with no other owner come straight from the interface preset; the
@@ -661,6 +666,10 @@ export function SidebarTree({
     }
   }
 
+  const speedSearch = useHostSpeedSearch();
+  const query = speedSearch.open
+    ? speedSearch.text.trim().toLowerCase()
+    : externalQuery;
   const allHosts = collectAllHosts(children);
   const allFolderPaths = collectAllFolderPaths(children);
 
@@ -673,6 +682,13 @@ export function SidebarTree({
     closedHostParents,
   );
   const parentRef = useRef<HTMLDivElement>(null);
+  const matchingRows = visibleRows
+    .map((row, index) => ({ row, index }))
+    .filter(
+      ({ row }) => !isFolder(row.item) && hostMatchesQuery(row.item, query),
+    );
+  const activeMatch =
+    matchingRows[Math.min(speedSearch.index, matchingRows.length - 1)];
 
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
@@ -866,6 +882,15 @@ export function SidebarTree({
       .forEach((element) => virtualizer.measureElement(element));
   }, [virtualizer, density, trayTrigger, showTags, showResourceBars]);
 
+  useEffect(() => {
+    if (speedSearch.open) speedSearch.inputRef.current?.focus();
+  }, [speedSearch.open, speedSearch.inputRef]);
+  const activeMatchIndex = activeMatch?.index;
+  useEffect(() => {
+    if (speedSearch.open && activeMatchIndex !== undefined)
+      virtualizer.scrollToIndex(activeMatchIndex, { align: "auto" });
+  }, [speedSearch.open, activeMatchIndex, query, virtualizer]);
+
   if (loading) {
     return (
       <div className="relative flex flex-col flex-1 min-h-0">
@@ -892,9 +917,53 @@ export function SidebarTree({
   }
 
   return (
-    <div className="relative flex flex-col flex-1 min-h-0">
+    <div
+      className="relative flex flex-col flex-1 min-h-0"
+      onKeyDown={(event) => {
+        if (selectionMode || arrangeMode) return;
+        speedSearch.onKeyDown(
+          event,
+          matchingRows.length,
+          (index) => {
+            const host = matchingRows[index]?.row.item;
+            if (!host || isFolder(host)) return;
+            const type = resolveHostTabType(host);
+            if (type)
+              onOpenTab(host, type, {
+                forceNewTab: hostClickBehavior === "newTab",
+              });
+          },
+          () => parentRef.current?.focus(),
+        );
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          speedSearch.close();
+      }}
+    >
+      {speedSearch.open && (
+        <div className="flex items-center gap-2 border-b border-border bg-popover px-3 py-2">
+          <input
+            ref={speedSearch.inputRef}
+            type="search"
+            aria-label={t("hosts.speedSearch")}
+            placeholder={t("hosts.speedSearch")}
+            value={speedSearch.text}
+            onChange={(event) => speedSearch.change(event.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+          <span role="status" className="text-xs text-muted-foreground">
+            {matchingRows.length
+              ? Math.min(speedSearch.index + 1, matchingRows.length)
+              : 0}{" "}
+            / {matchingRows.length}
+          </span>
+        </div>
+      )}
       <div
         ref={parentRef}
+        tabIndex={0}
+        aria-label={t("hosts.speedSearchList")}
         className={`flex-1 min-h-0 overflow-y-auto ${rootDragOver ? "ring-1 ring-inset ring-accent-brand/50" : ""}`}
         // Only the container's own empty space is a root drop target. Without
         // the target check this fired for every child row the pointer crossed
@@ -962,7 +1031,11 @@ export function SidebarTree({
                   key={vItem.key}
                   data-index={vItem.index}
                   ref={virtualizer.measureElement}
-                  className="absolute top-0 left-0 w-full"
+                  data-speed-search-active={
+                    (speedSearch.open && activeMatch?.index === vItem.index) ||
+                    undefined
+                  }
+                  className={`absolute top-0 left-0 w-full ${speedSearch.open && activeMatch?.index === vItem.index ? "ring-1 ring-inset ring-accent-brand bg-accent/30" : ""}`}
                   style={{
                     transform: `translateY(${vItem.start}px)`,
                   }}
@@ -1183,6 +1256,53 @@ export function SidebarTree({
                     </DropdownMenuItem>
                   )),
                 )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+                  disabled={selectedHostIds.size === 0}
+                >
+                  {t("hostDefaults.resetMenu")}{" "}
+                  <ChevronDown className="size-2.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs">
+                {[
+                  { id: "all", label: t("hostDefaults.resetAll") },
+                  { id: "core", label: t("hostDefaults.resetCore") },
+                  ...hostSettingPlugins.map((plugin) => ({
+                    id: plugin.id,
+                    label: plugin.name,
+                  })),
+                ].map((option) => (
+                  <DropdownMenuItem
+                    key={option.id}
+                    onClick={async () => {
+                      const ids = Array.from(selectedHostIds).map(Number);
+                      try {
+                        await resetHostToDefaults(
+                          ids,
+                          option.id === "all"
+                            ? { all: true }
+                            : { namespaces: [option.id] },
+                        );
+                        window.dispatchEvent(
+                          new CustomEvent("termix:hosts-changed"),
+                        );
+                        toast.success(
+                          t("hostDefaults.resetDone", { count: ids.length }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.bulkUpdateFailed"));
+                      }
+                    }}
+                  >
+                    <RotateCcw className="size-3.5 mr-2" />
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>

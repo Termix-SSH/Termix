@@ -791,11 +791,12 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       await granted();
       if (!match.sub && !match.sid) return 0;
       const { AuthManager } = await import("../utils/auth-manager.js");
-      const revoked = await AuthManager.getInstance().revokeSessionsByOidc({
-        ssoProviderId: match.providerId ?? null,
-        sub: match.sub ?? null,
-        sid: match.sid ?? null,
-      });
+      const revoked =
+        await AuthManager.getInstance().revokeSessionsByExternalSession({
+          ssoProviderId: match.providerId ?? null,
+          sub: match.sub ?? null,
+          sid: match.sid ?? null,
+        });
       await audit(
         "auth_sessions_revoked",
         `${revoked} session(s) for provider ${match.providerId ?? "none"}`,

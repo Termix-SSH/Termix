@@ -333,7 +333,9 @@ export function HomepageCanvas({
           scheduleSave(next);
           return next;
         });
-      } catch {}
+      } catch {
+        // A bad layout write is dropped; the canvas keeps what it shows.
+      }
     },
     [scheduleSave],
   );
@@ -376,7 +378,9 @@ export function HomepageCanvas({
           scheduleSave(next);
           return next;
         });
-      } catch {}
+      } catch {
+        // A bad layout write is dropped; the canvas keeps what it shows.
+      }
     },
     [scheduleSave],
   );
@@ -403,7 +407,9 @@ export function HomepageCanvas({
         setWidgets((prev) =>
           prev.map((w) => (w.id === id ? { ...w, title, config } : w)),
         );
-      } catch {}
+      } catch {
+        // A bad layout write is dropped; the canvas keeps what it shows.
+      }
     },
     [],
   );

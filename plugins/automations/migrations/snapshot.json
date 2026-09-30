@@ -1,6 +1,35 @@
 {
   "version": 1,
   "tables": {
+    "host_maintenance": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "state": {
+          "type": "text",
+          "notNull": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "maintenance_host_owner",
+          "columns": ["userId", "hostId"],
+          "unique": true
+        }
+      ]
+    },
     "automations": {
       "columns": {
         "id": {

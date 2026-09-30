@@ -41,6 +41,14 @@
           "type": "custom",
           "component": "providers",
           "permission": "manage"
+        },
+        {
+          "key": "silentLoginDefault",
+          "type": "boolean",
+          "labelKey": "settings.silentLoginDefault.label",
+          "descriptionKey": "settings.silentLoginDefault.description",
+          "default": false,
+          "permission": "manage"
         }
       ]
     },

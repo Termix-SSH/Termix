@@ -79,7 +79,7 @@ export class UserRepository {
     return rows[0] ?? null;
   }
 
-  async findByOidcIdentifier(
+  async findByExternalIdentifier(
     oidcIdentifier: string,
   ): Promise<UserRecord | null> {
     const rows = await this.context.drizzle

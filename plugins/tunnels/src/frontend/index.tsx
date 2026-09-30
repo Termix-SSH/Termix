@@ -20,7 +20,13 @@ function TunnelTabView({ host }: TabProps) {
   return <TunnelTab host={host} />;
 }
 
+/** This plugin's C2S relay socket, which the desktop app dials on the linked server. */
+const C2S_RELAY_PATH = "/plugin-ws/tunnels/c2s/stream";
+
 export function activate(app: TermixApp): void {
+  if (typeof window !== "undefined" && window.electronAPI?.setC2SRelayPath) {
+    void window.electronAPI.setC2SRelayPath(C2S_RELAY_PATH);
+  }
   // apiFor("remote") hands back app.api itself outside the desktop app.
   const remote = app.apiFor("remote");
   setTunnelsApi(app.api, {

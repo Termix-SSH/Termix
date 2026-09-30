@@ -456,6 +456,13 @@
       "when": 1790704531255,
       "tag": "0064_sticky_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1790742086298,
+      "tag": "0065_regular_joystick",
+      "breakpoints": true
     }
   ]
 }

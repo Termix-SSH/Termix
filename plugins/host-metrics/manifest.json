@@ -22,7 +22,8 @@
     "db:own",
     "network:serve",
     "ui:surface",
-    "events:core"
+    "events:core",
+    "users:impersonate"
   ],
   "provides": [
     {
@@ -153,7 +154,12 @@
       "advanced": {
         "columns": 4
       }
-    }
+    },
+    "uses": [
+      "homepage.hostMetrics",
+      "homepage.widgets",
+      "terminal.toolbarStatus"
+    ]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

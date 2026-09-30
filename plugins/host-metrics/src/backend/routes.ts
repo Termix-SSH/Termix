@@ -104,25 +104,6 @@ export function registerRoutes(router: Router, deps: RouteDeps): void {
 
   /**
    * @openapi
-   * /plugin-api/host-metrics/defaults:
-   *   get:
-   *     summary: Get defaults for new hosts
-   *     description: Whether a new host starts with metrics on, an admin setting any user creating a host needs.
-   *     tags:
-   *       - Host Metrics
-   *     responses:
-   *       200:
-   *         description: The defaults.
-   */
-  router.get("/defaults", async (_req, res) => {
-    res.json({
-      enabledForNewHosts:
-        (await ctx.settings.get<boolean>("enabledForNewHosts")) !== false,
-    });
-  });
-
-  /**
-   * @openapi
    * /plugin-api/host-metrics/metrics/{id}:
    *   get:
    *     summary: Get host metrics

@@ -77,7 +77,14 @@ vi.mock("../../../utils/permission-manager.js", () => ({
     }),
   },
 }));
+vi.mock("../../../hosts/defaults/index.js", () => ({
+  applyHostDefaultsToWrite: async () => ({ core: [] }),
+  applyDefaultsAfterHostWrite: async () => {},
+}));
 vi.mock("../../../database/repositories/factory.js", () => ({
+  createCurrentHostDefaultsRepository: () => ({
+    listHosts: async () => [],
+  }),
   createCurrentHostRepository: () => ({
     createEncryptedForUser: async () => secretHost(1),
     updateEncryptedForUser: async () => secretHost(1),

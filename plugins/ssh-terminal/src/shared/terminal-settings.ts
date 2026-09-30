@@ -47,7 +47,7 @@ export type BackspaceMode = "normal" | "control-h";
 export type HostLocalEcho = "default" | "off" | "auto" | "on";
 export type HostLinkClickBehavior = "default" | "confirm" | "direct";
 
-/** How a terminal looks. A host follows the user's defaults unless it opts out. */
+/** How a terminal looks. Each value follows the host defaults unless the host sets it. */
 export interface TerminalAppearance {
   theme: string;
   cursorBlink: boolean;
@@ -64,7 +64,7 @@ export interface TerminalAppearance {
   customThemeColors: TerminalThemeColors | null;
 }
 
-/** How a terminal behaves on one host. Always the host's own. */
+/** How a terminal behaves on one host. */
 export interface TerminalBehavior {
   rightClickSelectsWord: boolean;
   macOptionIsMeta: boolean;
@@ -165,8 +165,8 @@ export const DEFAULT_BEHAVIOR: TerminalBehavior = {
   useSSHTitle: false,
   syntaxHighlighting: true,
   syntaxHighlightingOptions: DEFAULT_SYNTAX_HIGHLIGHTING,
-  linkClickBehavior: "default",
-  localEcho: "default",
+  linkClickBehavior: "confirm",
+  localEcho: "auto",
   passwordPromptAutoFill: true,
   sudoPasswordAutoFill: false,
 };
@@ -177,9 +177,6 @@ export const DEFAULT_HOST_TERMINAL_SETTINGS: HostTerminalSettings = {
   inheritAppearance: true,
 };
 
-/** The user's terminal defaults: any appearance key, unset ones inherit. */
-export type TerminalDefaults = Partial<TerminalAppearance>;
-
 export interface SavedCustomTheme {
   id: string;
   name: string;
@@ -188,7 +185,6 @@ export interface SavedCustomTheme {
 
 /** The ssh-terminal user settings the terminal reads. */
 export interface TerminalUserSettings {
-  terminalDefaults: TerminalDefaults;
   customThemes: SavedCustomTheme[];
   commandAutocomplete: boolean;
   localEcho: "off" | "auto" | "on";
@@ -196,32 +192,11 @@ export interface TerminalUserSettings {
 }
 
 export const DEFAULT_USER_SETTINGS: TerminalUserSettings = {
-  terminalDefaults: {},
   customThemes: [],
   commandAutocomplete: false,
   localEcho: "auto",
   linkClickBehavior: "confirm",
 };
-
-/** The admin's defaults for a new host's terminal. */
-export interface NewHostTerminalDefaults {
-  fontSize: number;
-  fontFamily: string;
-  theme: string;
-  cursorStyle: CursorStyle;
-  cursorBlink: boolean;
-  autoTmux: boolean;
-}
-
-/** Admin field -> the host field it seeds (manifest defaultFrom). */
-export const NEW_HOST_ADMIN_KEYS = {
-  newHostFontSize: "fontSize",
-  newHostFontFamily: "fontFamily",
-  newHostTheme: "theme",
-  newHostCursorStyle: "cursorStyle",
-  newHostCursorBlink: "cursorBlink",
-  newHostAutoTmux: "autoTmux",
-} as const satisfies Record<string, keyof NewHostTerminalDefaults>;
 
 const ENUMS: Record<string, readonly string[]> = {
   cursorStyle: ["block", "underline", "bar"],
@@ -357,7 +332,6 @@ export function readUserSettings(
   values: Record<string, unknown> | null | undefined,
 ): TerminalUserSettings {
   const source = values ?? {};
-  const defaults = asObject(source.terminalDefaults);
   const themes = Array.isArray(source.customThemes)
     ? source.customThemes
     : typeof source.customThemes === "string"
@@ -371,10 +345,6 @@ export function readUserSettings(
         })()
       : [];
   return {
-    terminalDefaults: pickTerminalValues(
-      defaults,
-      APPEARANCE_KEYS,
-    ) as TerminalDefaults,
     customThemes: themes.filter(
       (theme): theme is SavedCustomTheme =>
         isObject(theme) &&
@@ -393,35 +363,25 @@ export function readUserSettings(
 }
 
 /**
- * What a terminal on a host runs with: the defaults, then the user's
- * terminal defaults, then the host's own look when it does not follow the
- * user, then the host's behavior.
+ * What a terminal on a host runs with: the host's values over the built-in
+ * ones. The host's values already follow its host defaults, and for a host
+ * shared with this user its look follows theirs.
  */
 export function resolveTerminalSettings(
   host: HostTerminalSettings | null | undefined,
-  userDefaults: TerminalDefaults = {},
 ): TerminalAppearance & TerminalBehavior {
   const own = host ?? DEFAULT_HOST_TERMINAL_SETTINGS;
-  const appearance: TerminalAppearance = {
-    ...DEFAULT_APPEARANCE,
-    ...pickTerminalValues(userDefaults, APPEARANCE_KEYS),
-  };
-  if (!own.inheritAppearance) {
-    for (const key of APPEARANCE_KEYS) {
-      (appearance as unknown as Record<string, unknown>)[key] = own[key];
-    }
+  const resolved = {} as Record<string, unknown>;
+  for (const key of APPEARANCE_KEYS) {
+    resolved[key] = own[key] ?? DEFAULT_APPEARANCE[key];
   }
-  const behavior = {} as TerminalBehavior;
-  for (const key of BEHAVIOR_KEYS) {
-    (behavior as unknown as Record<string, unknown>)[key] = own[key];
-  }
-  return { ...appearance, ...behavior };
+  for (const key of BEHAVIOR_KEYS) resolved[key] = own[key];
+  return resolved as unknown as TerminalAppearance & TerminalBehavior;
 }
 
 /**
  * The host's settings in the 2.8 `terminalConfig` shape, for clients that
- * still read it (Termix-Mobile). The look is left out while the host follows
- * the user, the way 2.8 stored it.
+ * still read it (Termix-Mobile).
  */
 export function terminalConfigFromHostSettings(
   values: Record<string, unknown>,
@@ -429,9 +389,7 @@ export function terminalConfigFromHostSettings(
   const settings = readHostTerminalSettings(values);
   const config: Record<string, unknown> = {};
   for (const key of BEHAVIOR_KEYS) config[key] = settings[key];
-  if (!settings.inheritAppearance) {
-    for (const key of APPEARANCE_KEYS) config[key] = settings[key];
-  }
+  for (const key of APPEARANCE_KEYS) config[key] = settings[key];
   if (config.linkClickBehavior === "default") delete config.linkClickBehavior;
   if (config.localEcho === "default") delete config.localEcho;
   return config;

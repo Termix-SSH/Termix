@@ -32,8 +32,10 @@ describe("deriveEnabledWidgets", () => {
 
   it("output is always a subset of the 10 known WidgetTypes", () => {
     const slots = METRIC_CARD_IDS.map((id) => ({ id })).concat([
-      { id: "user_manager" } as { id: (typeof METRIC_CARD_IDS)[number] },
-      { id: "bogus" } as { id: (typeof METRIC_CARD_IDS)[number] },
+      { id: "user_manager" } as unknown as {
+        id: (typeof METRIC_CARD_IDS)[number];
+      },
+      { id: "bogus" } as unknown as { id: (typeof METRIC_CARD_IDS)[number] },
     ]);
     const out = deriveEnabledWidgets(slots);
     expect(out).toEqual(METRIC_CARD_IDS);

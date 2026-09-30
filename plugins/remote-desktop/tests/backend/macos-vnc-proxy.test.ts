@@ -43,7 +43,7 @@ describe("createMacosVncCompatibilityProxy", () => {
         socket.write(Buffer.from([5, 30, 33]));
         socket.write(Buffer.from([36, 2, 35]));
         socket.once("data", (selection) => {
-          selectedSecurityType = selection[0];
+          selectedSecurityType = Number(selection[0]);
           socket.write("desktop-data");
         });
       });

@@ -146,26 +146,20 @@ describe("terminal settings routes", () => {
     authType: "password",
   });
 
-  it("hands every user their own terminal settings and the new-host defaults", async () => {
-    server = await startServer({
-      settings: { newHostFontSize: 20, newHostTheme: "nord" },
-    });
+  it("hands every user their own terminal settings", async () => {
+    server = await startServer();
     await server.mock.ctx.settings.setUser(
       "user-1",
       "commandAutocomplete",
       true,
     );
-    await server.mock.ctx.settings.setUser("user-1", "terminalDefaults", {
-      fontSize: 18,
-    });
     const { body } = await server.request("GET", "/client-settings");
     expect(body.user).toMatchObject({
       commandAutocomplete: true,
-      terminalDefaults: { fontSize: 18 },
       localEcho: "auto",
       linkClickBehavior: "confirm",
     });
-    expect(body.newHostDefaults).toMatchObject({ fontSize: 20, theme: "nord" });
+    expect(body).not.toHaveProperty("newHostDefaults");
     const other = await server.request("GET", "/client-settings", {
       user: "user-2",
     });

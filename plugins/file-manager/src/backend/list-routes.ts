@@ -1,3 +1,4 @@
+import { resolveHomeDirectory } from "./home-directory.js";
 import { getErrorMessage } from "./error-message.js";
 import type { Express } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
@@ -52,10 +53,10 @@ export function registerFileListingRoutes(
    *       500:
    *         description: Failed to list files.
    */
-  app.get("/listFiles", (req, res) => {
+  app.get("/listFiles", async (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const sshPath = (req.query.path as string) || "/";
+    let sshPath = (req.query.path as string) || ".";
     const userId = ctx.currentActor()!;
 
     if (!sessionId) {
@@ -68,6 +69,16 @@ export function registerFileListingRoutes(
 
     if (!verifySessionOwnership(sshConn, userId)) {
       return res.status(403).json({ error: "Session access denied" });
+    }
+
+    if (sshPath === ".") {
+      try {
+        sshPath = await resolveHomeDirectory(sshConn);
+      } catch (error) {
+        return res.status(500).json({
+          error: getErrorMessage(error, "Could not resolve home directory"),
+        });
+      }
     }
 
     // Drop concurrent requests for the same session+path — each would open

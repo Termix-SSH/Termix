@@ -140,7 +140,7 @@ function setup() {
     kind: "redirect",
     external: true,
     describe: async () => [
-      { id: "3", label: "Corp", enabled: true, type: "oidc" },
+      { id: "3", label: "Corp", enabled: true, type: "oidc", autoStart: true },
     ],
     start: async () => ({ redirectUrl: "https://idp.example/auth" }),
     callback: async () => ({
@@ -161,7 +161,9 @@ function setup() {
     labelKey: "signIn",
     kind: "form",
     external: true,
-    describe: async () => [{ id: "4", label: "Directory", enabled: true }],
+    describe: async () => [
+      { id: "4", label: "Directory", enabled: true, autoStart: true },
+    ],
     verify: async (request) => {
       if (request.body.password !== "hunter2") {
         await auth.loginRateLimit.recordFailure(
@@ -303,7 +305,7 @@ describe("the other ctx.auth helpers", () => {
   it("revokes sessions by logout claims and audits it", async () => {
     const { auth } = setup();
     expect(await auth.revokeSessions({ providerId: 3, sid: "sid-1" })).toBe(1);
-    expect(h.manager.revokeSessionsByOidc).toHaveBeenCalledWith({
+    expect(h.manager.revokeSessionsByExternalSession).toHaveBeenCalledWith({
       ssoProviderId: 3,
       sub: null,
       sid: "sid-1",
@@ -349,6 +351,17 @@ describe("a disabled plugin", () => {
     expect(await listLegacySsoProviders()).toEqual([
       { id: 3, name: "Corp", type: "oidc", displayOrder: 0 },
       { id: 4, name: "Directory", type: "corp-dir", displayOrder: 1 },
+    ]);
+  });
+
+  it("passes autoStart through for redirect methods only", async () => {
+    setup();
+    const methods = await listPublicLoginMethods();
+    expect(methods.find((m) => m.id === "corp-sso")?.instances).toEqual([
+      { id: "3", label: "Corp", autoStart: true },
+    ]);
+    expect(methods.find((m) => m.id === "corp-dir")?.instances).toEqual([
+      { id: "4", label: "Directory" },
     ]);
   });
 

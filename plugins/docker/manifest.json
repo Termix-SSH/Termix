@@ -20,7 +20,8 @@
     "ssh:connect",
     "network:serve",
     "ui:surface",
-    "events:core"
+    "events:core",
+    "users:impersonate"
   ],
   "provides": [
     {
@@ -93,7 +94,8 @@
         "viewMode": "detail",
         "containerLayout": "table"
       }
-    }
+    },
+    "uses": ["homepage.widgets", "terminal.resolveTheme"]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

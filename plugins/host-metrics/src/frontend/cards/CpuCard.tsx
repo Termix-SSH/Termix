@@ -13,13 +13,6 @@ import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { type MetricsHistoryRow, useHostMetricsApi } from "../host-metrics-api";
 import { CardTimeTabs, type HistoryTab } from "./CardTimeTabs";
 
-function computeChartData(rows: MetricsHistoryRow[]) {
-  return {
-    data: rows.map((r) => r.cpu_percent),
-    timestamps: rows.map((r) => r.ts),
-  };
-}
-
 export function CpuCard({
   metrics,
   history,
