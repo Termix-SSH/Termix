@@ -48,6 +48,7 @@ import { ConnectionLogPanel } from "@termix/plugin-sdk/ui";
 import {
   usePluginUiPreferences,
   invokeAction,
+  useSettings,
   useConnectionRetry,
   logActivity,
 } from "@termix/plugin-sdk/frontend";
@@ -146,6 +147,8 @@ function FileManagerContent({
     [t],
   );
   const { confirmWithToast } = useConfirmation();
+  const confirmBeforeTrash =
+    useSettings("user").values.confirmBeforeTrash !== false;
   const { addLog, clearLogs } = useConnectionLog();
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
@@ -1484,120 +1487,121 @@ function FileManagerContent({
 
     const fullMessage = `${confirmMessage}\n\n${t("fileManager.moveToTrashWarning")}`;
 
-    confirmWithToast(
-      fullMessage,
-      async () => {
-        const operationPath = currentPath;
-        const operationSession = sshSessionId;
-        const deletedPaths = new Set(files.map((file) => file.path));
+    const moveToTrash = async () => {
+      const operationPath = currentPath;
+      const operationSession = sshSessionId;
+      const deletedPaths = new Set(files.map((file) => file.path));
+      commitFilesForPath(
+        operationSession,
+        operationPath,
+        removePaths(
+          filesForPath(operationSession, operationPath),
+          deletedPaths,
+        ),
+      );
+      clearSelection();
+      let completed = 0;
+      try {
+        await ensureSSHConnection();
+
+        for (const file of files) {
+          await deleteSSHItem(
+            sshSessionId,
+            file.path,
+            file.type === "directory",
+            currentHost?.id,
+            currentHost?.userId?.toString(),
+          );
+          completed += 1;
+        }
+
+        toast.success(
+          t("fileManager.itemsMovedToTrash", { count: files.length }),
+        );
+        if (
+          sshSessionIdRef.current === operationSession &&
+          currentPathRef.current === operationPath
+        ) {
+          handleRefreshDirectory();
+        } else {
+          invalidateCachedFileList(operationSession, operationPath);
+        }
+      } catch (error: unknown) {
         commitFilesForPath(
           operationSession,
           operationPath,
-          removePaths(
+          restoreItems(
             filesForPath(operationSession, operationPath),
-            deletedPaths,
+            files.slice(completed),
           ),
         );
-        clearSelection();
-        let completed = 0;
-        try {
-          await ensureSSHConnection();
-
-          for (const file of files) {
+        const axiosError = error as {
+          response?: {
+            data?: { needsSudo?: boolean; error?: string };
+            status?: number;
+          };
+          message?: string;
+        };
+        if (axiosError.response?.data?.needsSudo) {
+          setPendingSudoOperation({
+            type: "delete",
+            files: files.slice(completed),
+          });
+          setSudoDialogOpen(true);
+          return;
+        }
+        if (
+          (axiosError.response?.data as { trashUnavailable?: boolean })
+            ?.trashUnavailable &&
+          window.confirm(t("fileManager.trashUnavailableConfirm"))
+        ) {
+          for (const file of files.slice(completed)) {
             await deleteSSHItem(
               sshSessionId,
               file.path,
               file.type === "directory",
               currentHost?.id,
               currentHost?.userId?.toString(),
+              true,
             );
-            completed += 1;
           }
-
           toast.success(
-            t("fileManager.itemsMovedToTrash", { count: files.length }),
+            t("fileManager.itemsDeletedSuccessfully", {
+              count: files.length - completed,
+            }),
           );
-          if (
-            sshSessionIdRef.current === operationSession &&
-            currentPathRef.current === operationPath
-          ) {
-            handleRefreshDirectory();
-          } else {
-            invalidateCachedFileList(operationSession, operationPath);
-          }
-        } catch (error: unknown) {
-          commitFilesForPath(
-            operationSession,
-            operationPath,
-            restoreItems(
-              filesForPath(operationSession, operationPath),
-              files.slice(completed),
-            ),
-          );
-          const axiosError = error as {
-            response?: {
-              data?: { needsSudo?: boolean; error?: string };
-              status?: number;
-            };
-            message?: string;
-          };
-          if (axiosError.response?.data?.needsSudo) {
-            setPendingSudoOperation({
-              type: "delete",
-              files: files.slice(completed),
-            });
-            setSudoDialogOpen(true);
-            return;
-          }
-          if (
-            (axiosError.response?.data as { trashUnavailable?: boolean })
-              ?.trashUnavailable &&
-            window.confirm(t("fileManager.trashUnavailableConfirm"))
-          ) {
-            for (const file of files.slice(completed)) {
-              await deleteSSHItem(
-                sshSessionId,
-                file.path,
-                file.type === "directory",
-                currentHost?.id,
-                currentHost?.userId?.toString(),
-                true,
-              );
-            }
-            toast.success(
-              t("fileManager.itemsDeletedSuccessfully", {
-                count: files.length - completed,
-              }),
-            );
-            handleRefreshDirectory();
-            return;
-          }
-          if (
-            axiosError.response?.status === 403 ||
-            axiosError.response?.data?.error
-              ?.toLowerCase()
-              .includes("permission denied")
-          ) {
-            toast.error(t("fileManager.permissionDenied"));
-          } else if (
-            axiosError.message?.includes("connection") ||
-            axiosError.message?.includes("established")
-          ) {
-            toast.error(
-              t("fileManager.sshConnectionFailed", {
-                name: currentHost?.name,
-                ip: currentHost?.ip,
-                port: currentHost?.port,
-              }),
-            );
-          } else {
-            toast.error(t("fileManager.failedToDeleteItems"));
-          }
-          console.error("Delete failed:", error);
+          handleRefreshDirectory();
+          return;
         }
-      },
-      "destructive",
-    );
+        if (
+          axiosError.response?.status === 403 ||
+          axiosError.response?.data?.error
+            ?.toLowerCase()
+            .includes("permission denied")
+        ) {
+          toast.error(t("fileManager.permissionDenied"));
+        } else if (
+          axiosError.message?.includes("connection") ||
+          axiosError.message?.includes("established")
+        ) {
+          toast.error(
+            t("fileManager.sshConnectionFailed", {
+              name: currentHost?.name,
+              ip: currentHost?.ip,
+              port: currentHost?.port,
+            }),
+          );
+        } else {
+          toast.error(t("fileManager.failedToDeleteItems"));
+        }
+        console.error("Delete failed:", error);
+      }
+    };
+    if (confirmBeforeTrash) {
+      confirmWithToast(fullMessage, moveToTrash, "destructive");
+    } else {
+      await moveToTrash();
+    }
   }
 
   async function handleSudoPasswordSubmit(password: string) {

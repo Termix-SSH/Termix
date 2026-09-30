@@ -27,6 +27,10 @@
       "transferConcurrency": {
         "label": "Simultaneous File Transfers",
         "description": "How many files the side by side local/remote manager uploads or downloads at the same time. Lower this if your server limits SFTP channels."
+      },
+      "confirmBeforeTrash": {
+        "label": "Confirm before moving files to trash",
+        "description": "Ask before moving remote files to trash. Permanent deletion still requires confirmation."
       }
     }
   },
