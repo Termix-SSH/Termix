@@ -111,7 +111,7 @@ export function HostDefaultBadge({ settingKey }: { settingKey: string }) {
       </button>
     );
   }
-  if (own) return null;
+  if (own || source?.level === "builtin") return null;
   return (
     <span
       title={

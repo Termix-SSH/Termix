@@ -54,6 +54,14 @@ describe("HostDefaultBadge", () => {
     expect(screen.getByText("hostDefaults.source.folder:Prod")).toBeTruthy();
   });
 
+  it("shows nothing for a value that follows the built-in default", () => {
+    const { container } = withContext(
+      context({ source: () => ({ level: "builtin" }) }),
+      <HostDefaultBadge settingKey="core.sshPort" />,
+    );
+    expect(container.textContent).toBe("");
+  });
+
   it("offers a reset for a host's own value", () => {
     const value = context({ isOwn: () => true });
     withContext(value, <HostDefaultBadge settingKey="core.sshPort" />);
