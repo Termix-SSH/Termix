@@ -164,6 +164,18 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     return { ...(host as unknown as SshConnectHost), userId };
   };
 
+  /** A login to a saved host core resolved counts toward its status dot. */
+  const reportLogin = (host: number | PluginSshHost) => {
+    const hostId =
+      typeof host === "number" ? host : resolvedHosts.get(host)?.host.id;
+    if (!Number.isInteger(hostId) || hostId <= 0) return;
+    void import("../hosts/status/host-status-service.js")
+      .then(({ hostStatusService }) =>
+        hostStatusService.reportLogin(hostId, { ok: true }),
+      )
+      .catch(() => {});
+  };
+
   /** Checks, connects and audits one new connection. */
   const connectOnce = async (
     host: number | PluginSshHost,
@@ -201,6 +213,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         sock: options?.sock as MutableConnectConfig["sock"],
       });
       await audit("ssh_connect", describeHost(host), { success: true });
+      reportLogin(host);
 
       const dispose = () => {
         open.delete(dispose);

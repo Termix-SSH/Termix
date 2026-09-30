@@ -9,7 +9,7 @@ vi.mock("../../../utils/logger.js", () => ({
   pluginLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-const { HostStatusService, toStatusTarget } =
+const { HostStatusService, toStatusTarget, LOGIN_FRESH_MS } =
   await import("../../../hosts/status/host-status-service.js");
 const { hostSessionStatus } =
   await import("../../../hosts/host-session-status.js");
@@ -35,6 +35,7 @@ function setup(
   targets: Target[],
   reachable = true,
   shared: Record<string, number[]> = {},
+  clock = { now: 1_000_000 },
 ) {
   const emitted: unknown[] = [];
   const ping = vi.fn(async () => reachable);
@@ -54,6 +55,7 @@ function setup(
     pingThroughJumpHosts,
     globalInterval: () => 60,
     emit: (payload) => emitted.push(payload),
+    now: () => clock.now,
   });
   return { service, emitted, ping, pingThroughJumpHosts, loadTargets };
 }
@@ -206,7 +208,51 @@ describe("HostStatusService", () => {
     const release = hostSessionStatus.register(1);
     expect(service.get(1)?.status).toBe("online");
     release();
+    expect(service.get(1)?.status).toBe("online");
+  });
+
+  it("keeps a host online for a while after its last login", async () => {
+    const clock = { now: 1_000_000 };
+    const { service } = setup([target(1)], true, {}, clock);
+    active = service;
+    await service.statusesFor("owner", null);
+    await flush();
+
+    service.reportLogin(1, { ok: true });
+    clock.now += LOGIN_FRESH_MS - 1;
+    vi.advanceTimersByTime(75_000);
+    await flush();
+    expect(service.get(1)?.status).toBe("online");
+
+    clock.now += 2;
+    vi.advanceTimersByTime(75_000);
+    await flush();
     expect(service.get(1)?.status).toBe("reachable");
+  });
+
+  it("drops an ended session back to reachable once the login is stale", async () => {
+    const clock = { now: 1_000_000 };
+    const { service } = setup([target(1)], true, {}, clock);
+    active = service;
+    service.start();
+    await service.statusesFor("owner", null);
+    await flush();
+
+    const release = hostSessionStatus.register(1);
+    clock.now += LOGIN_FRESH_MS;
+    release();
+    expect(service.get(1)?.status).toBe("reachable");
+  });
+
+  it("shows an offline host as offline even after a login", async () => {
+    const { service } = setup([target(1)], false);
+    active = service;
+    await service.statusesFor("owner", null);
+    await flush();
+    service.reportLogin(1, { ok: true });
+    vi.advanceTimersByTime(75_000);
+    await flush();
+    expect(service.get(1)?.status).toBe("offline");
   });
 
   it("only checks the requested hosts on the desktop app", async () => {

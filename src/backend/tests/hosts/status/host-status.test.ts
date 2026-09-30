@@ -22,11 +22,12 @@ describe("isHostKeyVerificationError", () => {
 
 describe("host availability status", () => {
   it("does not call a TCP-reachable host online before authentication", () => {
-    expect(statusAfterReachabilityCheck(true)).toBe("reachable");
+    expect(statusAfterReachabilityCheck(true, false)).toBe("reachable");
   });
 
-  it("keeps a verified host online across later reachability checks", () => {
-    expect(statusAfterReachabilityCheck(true, "online")).toBe("online");
+  it("keeps a recently verified host online across reachability checks", () => {
+    expect(statusAfterReachabilityCheck(true, true)).toBe("online");
+    expect(statusAfterReachabilityCheck(false, true)).toBe("offline");
   });
 
   it("marks successful authentication online", () => {

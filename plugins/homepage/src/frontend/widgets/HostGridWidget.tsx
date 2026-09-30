@@ -24,7 +24,7 @@ function StatusDot({ status }: { status: string }) {
     status === "online"
       ? getAccentColor()
       : status === "reachable"
-        ? "#fbbf24"
+        ? `color-mix(in srgb, ${getAccentColor()} 40%, transparent)`
         : status === "offline"
           ? "#ef4444"
           : "#6b7280";

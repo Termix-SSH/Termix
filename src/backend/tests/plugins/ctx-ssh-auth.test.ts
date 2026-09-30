@@ -13,6 +13,7 @@ const h = vi.hoisted(() => ({
   revoked: [] as Array<{ userId: string; except?: string }>,
   trustedCleared: [] as string[],
   policyError: null as Error | null,
+  logins: [] as Array<{ hostId: number; outcome: unknown }>,
 }));
 
 vi.mock("../../utils/logger.js", () => {
@@ -88,6 +89,12 @@ vi.mock("../../hosts/connect/connect-host.js", () => ({
     return { client, jumpClient: null, dispose: vi.fn(() => client.end()) };
   },
 }));
+vi.mock("../../hosts/status/host-status-service.js", () => ({
+  hostStatusService: {
+    reportLogin: (hostId: number, outcome: unknown) =>
+      h.logins.push({ hostId, outcome }),
+  },
+}));
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentUserAuthRepository: () => ({
     recordSecondFactor: async (
@@ -141,6 +148,7 @@ beforeEach(() => {
   h.cleared = [];
   h.clearedAll = 0;
   h.pooled = [];
+  h.logins = [];
 });
 
 describe("ctx.ssh", () => {
@@ -182,6 +190,19 @@ describe("ctx.ssh", () => {
     expect(audit).toHaveBeenCalledWith("ssh_connect", "host 7", {
       success: true,
     });
+  });
+
+  it("reports a login to a saved host's status, never to a plugin's own host", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const ssh = createPluginSsh({
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    await ssh.connect(7);
+    await ssh.connect({ id: 9, ip: "h", port: 22, username: "u" } as never);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.logins).toEqual([{ hostId: 7, outcome: { ok: true } }]);
   });
 
   it("never believes a host object's own userId", async () => {

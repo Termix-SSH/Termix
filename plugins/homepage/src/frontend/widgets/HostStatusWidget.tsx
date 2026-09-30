@@ -60,7 +60,7 @@ function HostStatusWidget({
     : online
       ? getAccentColor()
       : reachable
-        ? "#fbbf24"
+        ? `color-mix(in srgb, ${getAccentColor()} 40%, transparent)`
         : "#ef4444";
   const onlineLabel = !statusInfo
     ? t("common.unknown")

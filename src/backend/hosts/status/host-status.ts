@@ -10,10 +10,10 @@ export function isHostKeyVerificationError(error: unknown): boolean {
 
 export function statusAfterReachabilityCheck(
   reachable: boolean,
-  current?: HostStatus,
+  loggedIn: boolean,
 ): HostStatus {
   if (!reachable) return "offline";
-  return current === "online" ? "online" : "reachable";
+  return loggedIn ? "online" : "reachable";
 }
 
 export function statusAfterAuthentication(

@@ -349,7 +349,7 @@
     "serverStats": "Host Metrics",
     "status": {
       "available": "Available",
-      "reachable": "Reachable, not authenticated",
+      "reachable": "Up, not signed in lately",
       "offline": "Offline",
       "monitoringDisabled": "Monitoring disabled",
       "label": "Status"
