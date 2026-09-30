@@ -62,10 +62,13 @@
     "installerIcon": "public/icon.ico",
     "uninstallerIcon": "public/icon.ico",
     "shortcutName": "Termix",
-    "uninstallDisplayName": "Termix"
+    "uninstallDisplayName": "Termix",
+    "include": "electron/installer.nsh"
   },
   "msi": {
-    "artifactName": "termix_windows_${arch}_msi.${ext}"
+    "artifactName": "termix_windows_${arch}_msi.${ext}",
+    "oneClick": false,
+    "additionalLightArgs": ["-sice:ICE57"]
   },
   "linux": {
     "artifactName": "termix_linux_${arch}_portable.${ext}",
@@ -102,7 +105,6 @@
   "deb": {
     "artifactName": "termix_linux_${arch}_deb.${ext}"
   },
-
   "mac": {
     "target": [
       {
@@ -146,5 +148,6 @@
       "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."
     }
   },
-  "generateUpdatesFilesForAllChannels": true
+  "generateUpdatesFilesForAllChannels": true,
+  "msiProjectCreated": "packaging/build/msi-shortcuts.cjs"
 }
