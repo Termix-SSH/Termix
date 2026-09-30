@@ -71,6 +71,7 @@ import {
 } from "./shell-bridge";
 import { PluginViewPlaceholder } from "./PluginViewPlaceholder";
 import { resolveLayoutTabTarget } from "@/shell/shell-layout";
+import { getExtension, listExtensions } from "./extension-registry";
 import type { WorkspaceTabSnapshot } from "@/types/ui-types";
 
 function recordingShell(calls: ShellCall[]): TabShellCallbacks {
@@ -236,6 +237,8 @@ export async function renderPlugin(
         mine(hostEditorSectionList()).map((section) => section.id),
       dashboardCards: () =>
         mine(registeredDashboardCardList()).map((card) => card.id),
+      extensions: (pointId) =>
+        mine(listExtensions(pointId)).map((extension) => extension.id),
       settingsComponents: () =>
         listSettingsComponents()
           .filter((key) => key.startsWith(`${pluginId}:`))
@@ -316,6 +319,16 @@ export async function renderPlugin(
           {...props}
         />,
       );
+    },
+
+    renderExtension(pointId, id, component = "view", props = {}) {
+      const extension = getExtension(pointId, id);
+      const Component =
+        extension?.pluginId === pluginId
+          ? extension.components?.[component]
+          : undefined;
+      if (!Component) missing(`an extension "${component}" component`, id);
+      return wrap(<Component {...props} />);
     },
 
     renderDashboardCard(id) {

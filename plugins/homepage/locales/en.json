@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Homepage",
     "addWidget": "Add Widget",
+    "noWidgetsInCategory": "No widgets in this category",
     "editWidget": "Edit Widget",
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",

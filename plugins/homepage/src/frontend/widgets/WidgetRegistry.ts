@@ -49,6 +49,7 @@ function toDefinition(
     ...(rest as unknown as WidgetTypeDefinition),
     component: view,
     editFormComponent: components?.editForm,
+    labelComponent: components?.label,
   };
 }
 

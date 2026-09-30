@@ -122,7 +122,7 @@ export function AddWidgetMenu({ state, onAdd, onClose }: AddWidgetMenuProps) {
       <div className="overflow-y-auto" style={{ maxHeight: "240px" }}>
         {selectedTypes.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-muted-foreground/60">
-            No widgets in this category
+            {t("homepage.noWidgetsInCategory")}
           </div>
         ) : (
           selectedTypes.map((type) => (
@@ -136,9 +136,19 @@ export function AddWidgetMenu({ state, onAdd, onClose }: AddWidgetMenuProps) {
             >
               <span className="text-accent-brand shrink-0">{type.icon}</span>
               <div className="flex flex-col min-w-0">
-                <span className="font-medium truncate">{type.name}</span>
+                <span className="font-medium truncate">
+                  {type.labelComponent ? (
+                    <type.labelComponent part="name" />
+                  ) : (
+                    type.name
+                  )}
+                </span>
                 <span className="text-[10px] text-muted-foreground truncate">
-                  {type.description}
+                  {type.labelComponent ? (
+                    <type.labelComponent part="description" />
+                  ) : (
+                    type.description
+                  )}
                 </span>
               </div>
             </button>
