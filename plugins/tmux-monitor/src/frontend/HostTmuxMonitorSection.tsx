@@ -23,14 +23,14 @@ export function HostTmuxMonitorSection({
   ] ?? {}) as Record<string, unknown>;
   const enabled = settings.enableTmuxMonitor === true;
 
-  const setEnabled = (value: boolean) =>
+  const setSetting = (key: string, value: boolean) =>
     updateForm((current) => {
       const all = (current.pluginSettings ?? {}) as PluginSettingsForm;
       return {
         ...current,
         pluginSettings: {
           ...all,
-          "tmux-monitor": { ...all["tmux-monitor"], enableTmuxMonitor: value },
+          "tmux-monitor": { ...all["tmux-monitor"], [key]: value },
         },
       };
     });
@@ -58,7 +58,19 @@ export function HostTmuxMonitorSection({
             </>
           }
         >
-          <FakeSwitch checked={enabled} onChange={setEnabled} />
+          <FakeSwitch
+            checked={enabled}
+            onChange={(value) => setSetting("enableTmuxMonitor", value)}
+          />
+        </SettingRow>
+        <SettingRow
+          label={t("settings.host.mouseEnabled.label")}
+          description={t("settings.host.mouseEnabled.description")}
+        >
+          <FakeSwitch
+            checked={settings.mouseEnabled !== false}
+            onChange={(value) => setSetting("mouseEnabled", value)}
+          />
         </SettingRow>
       </div>
     </SectionCard>

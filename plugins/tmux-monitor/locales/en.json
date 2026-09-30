@@ -23,6 +23,10 @@
       "enable": {
         "label": "Enable Tmux Monitor",
         "description": "Watch and attach to tmux sessions running on this host."
+      },
+      "mouseEnabled": {
+        "label": "Enable tmux mouse support",
+        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
       }
     }
   },

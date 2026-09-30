@@ -77,6 +77,7 @@ export interface TmuxSessionsV1 {
     stream: unknown,
     name?: string,
     newName?: string,
+    hostId?: number,
   ) => Promise<void>;
   /** Waits for a new session to exist and returns its confirmed name. */
   waitForSession: (client: unknown, name: string) => Promise<string>;

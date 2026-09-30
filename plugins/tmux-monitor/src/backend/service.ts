@@ -22,6 +22,7 @@ export interface TmuxSessionsV1 {
     stream: unknown,
     name?: string,
     newName?: string,
+    hostId?: number,
   ) => Promise<void>;
   waitForSession: (client: unknown, name: string) => Promise<string>;
 }
@@ -36,8 +37,16 @@ export function createTmuxSessionsService(ctx: PluginContext): TmuxSessionsV1 {
       };
     },
 
-    async attachOrCreate(stream, name, newName) {
-      attachOrCreateTmuxSession(stream as ClientChannel, name, newName);
+    async attachOrCreate(stream, name, newName, hostId) {
+      const mouseEnabled =
+        hostId === undefined ||
+        (await ctx.settings.getHost<boolean>(hostId, "mouseEnabled")) !== false;
+      attachOrCreateTmuxSession(
+        stream as ClientChannel,
+        name,
+        newName,
+        mouseEnabled,
+      );
     },
 
     async waitForSession(client, name) {
