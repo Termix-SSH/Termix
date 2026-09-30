@@ -417,6 +417,14 @@ describe("TerminalSessionManager - multiplayer participants", () => {
     expect(session?.detachTimeout).toBeNull();
     expect(session?.participants.size).toBe(1);
     expect(sessionManager.getParticipantForWs(session!, guestWs)).toBeNull();
+    expect(
+      JSON.parse(
+        (ownerWs.send as ReturnType<typeof vi.fn>).mock.lastCall![0] as string,
+      ),
+    ).toMatchObject({
+      type: "participants",
+      participants: [{ isOwner: true }],
+    });
 
     sessionManager.destroySession(id);
   });

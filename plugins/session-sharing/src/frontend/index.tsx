@@ -17,6 +17,7 @@ import CollabGuestView from "./CollabGuestView";
 import { CollabPanel } from "./CollabPanel";
 import { CollabRoomTab } from "./CollabRoomTab";
 import SharedSessionView from "./SharedSessionView";
+import { ParticipantsOverlay } from "./ParticipantsOverlay";
 import {
   ShareDialogHost,
   closeShareDialog,
@@ -222,6 +223,15 @@ export function activate(app: TermixApp): void {
         ? handle.getShareTarget() !== null
         : false;
     },
+  });
+
+  app.registerSlotContribution("terminal.overlay", {
+    actionId: "session-sharing.participants",
+    titleKey: "collab.members",
+    kind: "component",
+    component: ParticipantsOverlay as unknown as ComponentType<
+      Record<string, unknown>
+    >,
   });
 
   app.registerSlotContribution("shell.overlay", {

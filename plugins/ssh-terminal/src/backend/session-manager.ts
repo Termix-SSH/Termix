@@ -471,7 +471,7 @@ export class TerminalSessionManager {
    * leave, and only while someone besides the owner is (or just was) in the
    * room - a solo owner never receives presence traffic.
    */
-  private broadcastParticipants(sessionId: string): void {
+  private broadcastParticipants(sessionId: string, includeSolo = false): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     const participants = Array.from(session.participants.values()).map(
@@ -481,7 +481,11 @@ export class TerminalSessionManager {
         label: participant.displayName ?? participant.guestLabel ?? null,
       }),
     );
-    if (participants.every((participant) => participant.isOwner)) return;
+    if (
+      !includeSolo &&
+      participants.every((participant) => participant.isOwner)
+    )
+      return;
     this.broadcast(sessionId, { type: "participants", participants });
   }
 
@@ -545,7 +549,7 @@ export class TerminalSessionManager {
         }
       }
     }
-    if (disconnected > 0) this.broadcastParticipants(sessionId);
+    if (disconnected > 0) this.broadcastParticipants(sessionId, true);
     return disconnected;
   }
 
@@ -585,7 +589,7 @@ export class TerminalSessionManager {
     for (const [id, participant] of session.participants.entries()) {
       if (participant.ws === ws && !participant.isOwner) {
         session.participants.delete(id);
-        this.broadcastParticipants(sessionId);
+        this.broadcastParticipants(sessionId, true);
         this.log.info("Participant left shared session", {
           operation: "session_leave_participant",
           sessionId,
