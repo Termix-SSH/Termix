@@ -320,6 +320,7 @@ export interface TabHandle {
   isConnected?: () => boolean;
   sendInput?: (data: string) => void;
   paste?: (text: string) => void;
+  /** Repaint only. The shell calls it every time the tab becomes active. */
   refresh?: () => void;
   notifyResize?: () => void;
   [key: string]: unknown;

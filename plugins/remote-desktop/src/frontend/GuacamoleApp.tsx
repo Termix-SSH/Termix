@@ -108,8 +108,8 @@ function savedHostConfig(
 export interface GuacamoleAppHandle {
   disconnect: () => void;
   isConnected: () => boolean;
-  /** Reconnects, from the tab bar's refresh. */
-  refresh: () => void;
+  /** The tab bar's refresh. The shell calls `refresh` on every tab switch. */
+  reconnect: () => void;
 }
 
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
@@ -290,7 +290,7 @@ const GuacamoleAppInner = React.forwardRef<
   useImperativeHandle(ref, () => ({
     disconnect: () => displayRef.current?.disconnect(),
     isConnected: () => displayRef.current?.isConnected() === true,
-    refresh: () => reconnectRef.current(),
+    reconnect: () => reconnectRef.current(),
   }));
 
   const fetchToken = useCallback(async (): Promise<void> => {
