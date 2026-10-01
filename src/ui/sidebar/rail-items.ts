@@ -13,6 +13,8 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useSyncAttentionCount } from "@/hooks/use-sync-status";
 import { isElectron } from "@/lib/electron";
 import { createRegistry } from "@/lib/registry";
+import { getPanel } from "@/shell/panel-registry";
+import { getTabType } from "@/shell/tab-registry";
 
 /**
  * The one list of navigation destinations.
@@ -217,10 +219,12 @@ export function rightDockableIds(): string[] {
     .map((item) => item.id);
 }
 
-/** Ids that may be opened as a full-width tab. */
+/** Ids that may be opened as a full-width tab: a tab type or a panel to show. */
 export function promotableIds(): string[] {
   return [...mergedRailItems(), ...RAIL_UTILITY_ITEMS]
-    .filter((item) => item.promotable)
+    .filter(
+      (item) => item.promotable && (getTabType(item.id) || getPanel(item.id)),
+    )
     .map((item) => item.id);
 }
 

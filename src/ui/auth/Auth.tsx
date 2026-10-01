@@ -1685,10 +1685,7 @@ export function Auth({ onLogin }: AuthProps) {
                         id="reg-pass"
                         value={password}
                         onChange={setPassword}
-                        placeholder={t("auth.minChars", {
-                          min: 6,
-                          defaultValue: "min. 6 characters",
-                        })}
+                        placeholder={t("auth.minChars", { min: 6 })}
                         disabled={loading}
                       />
                     </Field>

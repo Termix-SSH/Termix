@@ -194,6 +194,19 @@ describe("resolveWorkspaceTabTarget", () => {
     expect((result as { host?: Host }).host?.syncId).toBe("sync-web-01");
   });
 
+  it("reopens a hostless, non-singleton type with a host as its own tab", () => {
+    registerTabType({ id: "tunnel", component: () => null, hostless: true });
+    const snapshot: WorkspaceTabSnapshot = {
+      slotId: "s1",
+      type: "tunnel",
+      label: "Tunnels",
+      hostSyncId: "sync-web-01",
+    };
+    const result = resolveWorkspaceTabTarget(snapshot, hosts);
+    expect(result.kind).toBe("host");
+    expect((result as { host?: Host }).host?.syncId).toBe("sync-web-01");
+  });
+
   it("skips a non-singleton, non-plugin type with no resolvable host", () => {
     const snapshot: WorkspaceTabSnapshot = {
       slotId: "s1",

@@ -263,12 +263,27 @@ function manifestFor(summary: PluginSummary): PluginManifest {
   };
 }
 
+const loadedNamespaceVersions = new Map<string, string>();
+
 async function loadNamespaces(summaries: PluginSummary[]): Promise<void> {
-  const ids = summaries.map((summary) => summary.id);
+  // Only a plugin that is new or was upgraded while the app was open needs
+  // its strings fetched again.
+  const ids = summaries
+    .filter(
+      (summary) =>
+        loadedNamespaceVersions.get(summary.id) !== namespaceVersion(summary),
+    )
+    .map((summary) => summary.id);
   if (ids.length === 0) return;
-  // Reloading picks up a plugin that was upgraded while the app was open.
   await i18n.reloadResources(undefined, ids).catch(() => {});
   await i18n.loadNamespaces(ids).catch(() => {});
+  for (const summary of summaries) {
+    loadedNamespaceVersions.set(summary.id, namespaceVersion(summary));
+  }
+}
+
+function namespaceVersion(summary: PluginSummary): string {
+  return `${summary.version}|${summary.assetVersion ?? ""}`;
 }
 
 async function reconcile(summaries: PluginSummary[]): Promise<void> {

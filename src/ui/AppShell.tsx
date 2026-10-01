@@ -24,6 +24,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   createRef,
   lazy,
   Suspense,
@@ -1149,13 +1150,20 @@ export function AppShell({
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)
   useEffect(() => {
     if (allHosts.length === 0) return;
-    setTabs((prev) =>
-      prev.map((t) =>
-        t.host
-          ? { ...t, host: allHosts.find((h) => h.id === t.host!.id) ?? t.host }
-          : t,
-      ),
-    );
+    const byId = new Map(allHosts.map((h) => [h.id, h]));
+    setTabs((prev) => {
+      let changed = false;
+      const next = prev.map((t) => {
+        const fresh = t.host ? byId.get(t.host.id) : undefined;
+        if (!fresh || fresh === t.host) return t;
+        // A reload hands back new objects; only replace hosts that changed so
+        // untouched tabs keep their identity and skip a re-render.
+        if (JSON.stringify(fresh) === JSON.stringify(t.host)) return t;
+        changed = true;
+        return { ...t, host: fresh };
+      });
+      return changed ? next : prev;
+    });
   }, [allHosts]);
 
   function buildWorkspacePayload(): WorkspacePayload {
@@ -1197,13 +1205,13 @@ export function AppShell({
         }
 
         if (target.kind === "singleton") {
-          openSingletonTab(
+          const newTabId = openSingletonTab(
             snapshot.type,
             undefined,
             target.host,
             snapshotData(snapshot),
           );
-          slotIdToNewTabId.set(snapshot.slotId, snapshot.type);
+          slotIdToNewTabId.set(snapshot.slotId, newTabId ?? snapshot.type);
           continue;
         }
 
@@ -1500,8 +1508,10 @@ export function AppShell({
         return existing.id;
       }
     }
-    const tabId = `${host.name}-${type}-${Date.now()}`;
     const instanceId = restore?.instanceId ?? createId();
+    // Unique per open; a timestamp collides when a workspace opens several
+    // tabs in the same millisecond.
+    const tabId = `${type}-${createId()}`;
     const openedAt = Date.now();
     const ref = isSessionTabType(type) ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
@@ -1612,11 +1622,14 @@ export function AppShell({
   );
 
   /** A tab type that opens a fresh tab every time (a local shell). */
-  function openMultiInstanceTab(type: TabType): string {
+  function openMultiInstanceTab(
+    type: TabType,
+    options?: { host?: Host; data?: Record<string, unknown>; label?: string },
+  ): string {
     const instanceId = createId();
     const id = `${type}-${instanceId}`;
     const titleKey = getTabType(type)?.titleKey;
-    const title = titleKey ? t(titleKey) : type;
+    const title = options?.label ?? (titleKey ? t(titleKey) : type);
     setTabs((current) => {
       const count = current.filter((tab) => tab.type === type).length;
       return [
@@ -1625,8 +1638,11 @@ export function AppShell({
           id,
           instanceId,
           type,
-          label: count === 0 ? title : `${title} (${count + 1})`,
+          label:
+            count === 0 || options?.label ? title : `${title} (${count + 1})`,
           openedAt: Date.now(),
+          ...(options?.host ? { host: options.host } : {}),
+          ...(options?.data !== undefined ? { data: options.data } : {}),
         },
       ];
     });
@@ -1641,10 +1657,11 @@ export function AppShell({
       pendingEvent?: string,
       host?: Host,
       data?: Record<string, unknown>,
-    ) {
+      tabLabel?: string,
+    ): string | undefined {
       // A local shell is never a singleton: each open is its own session.
       if (getTabType(type)?.multiInstance) {
-        return openMultiInstanceTab(type);
+        return openMultiInstanceTab(type, { host, data, label: tabLabel });
       }
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
@@ -1726,6 +1743,7 @@ export function AppShell({
           tabOrder: 0,
         }).catch(() => {});
       }
+      return id;
     },
     [t],
   );
@@ -1830,27 +1848,21 @@ export function AppShell({
     if (tab && confirmEnabled && isActiveConnectionTab(tab)) {
       const closeLabel = getTabCloseLabel(tab);
       const toastId = `close-tab-${id}`;
-      toast(
-        t("nav.confirmCloseHost", {
-          host: closeLabel,
-          defaultValue: `Close ${closeLabel}?`,
-        }),
-        {
-          id: toastId,
-          duration: 8000,
-          action: {
-            label: t("nav.close"),
-            onClick: () => {
-              toast.dismiss(toastId);
-              doCloseTab(id);
-            },
-          },
-          cancel: {
-            label: t("nav.cancel"),
-            onClick: () => toast.dismiss(toastId),
+      toast(t("nav.confirmCloseHost", { host: closeLabel }), {
+        id: toastId,
+        duration: 8000,
+        action: {
+          label: t("nav.close"),
+          onClick: () => {
+            toast.dismiss(toastId);
+            doCloseTab(id);
           },
         },
-      );
+        cancel: {
+          label: t("nav.cancel"),
+          onClick: () => toast.dismiss(toastId),
+        },
+      });
       return;
     }
 
@@ -2279,12 +2291,24 @@ export function AppShell({
       const startW = sidebarWidth;
       // Widths are kept in Normal-size pixels, so a drag is scaled back.
       const scale = remScale();
+      // One width update per frame, not per mousemove.
+      let frame = 0;
+      let clientX = startX;
       function onMove(ev: MouseEvent) {
-        setSidebarWidth(
-          Math.max(160, Math.min(480, startW + (ev.clientX - startX) / scale)),
-        );
+        clientX = ev.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          setSidebarWidth(
+            Math.max(160, Math.min(480, startW + (clientX - startX) / scale)),
+          );
+        });
       }
       function onUp() {
+        cancelAnimationFrame(frame);
+        setSidebarWidth(
+          Math.max(160, Math.min(480, startW + (clientX - startX) / scale)),
+        );
         setSidebarDragging(false);
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
@@ -2303,12 +2327,23 @@ export function AppShell({
       const startX = e.clientX;
       const startW = rightSidebarWidth;
       const scale = remScale();
+      let frame = 0;
+      let clientX = startX;
       function onMove(ev: MouseEvent) {
-        setRightSidebarWidth(
-          Math.max(160, Math.min(480, startW - (ev.clientX - startX) / scale)),
-        );
+        clientX = ev.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          setRightSidebarWidth(
+            Math.max(160, Math.min(480, startW - (clientX - startX) / scale)),
+          );
+        });
       }
       function onUp() {
+        cancelAnimationFrame(frame);
+        setRightSidebarWidth(
+          Math.max(160, Math.min(480, startW - (clientX - startX) / scale)),
+        );
         setRightSidebarDragging(false);
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
@@ -2350,6 +2385,9 @@ export function AppShell({
     : "";
 
   useEffect(() => {
+    // Refitting every terminal on each drag frame is what made sidebar drags
+    // stutter; fit once when the drag ends instead.
+    if (sidebarDragging || rightSidebarDragging) return;
     const id = resizeAllTerminals();
     return () => cancelAnimationFrame(id);
   }, [
@@ -2358,6 +2396,8 @@ export function AppShell({
     sidebarOpen,
     rightSidebarWidth,
     rightRailView,
+    sidebarDragging,
+    rightSidebarDragging,
   ]);
 
   // A tab inside a split is never shown on its own: activating one (tab jump,
@@ -2543,10 +2583,16 @@ export function AppShell({
    * What plugins may ask of the shell. Rebuilt every render so it always
    * closes over current state, and published to the plugin runtime.
    */
-  const shellCallbacks: TabShellCallbacks = {
+  const shellCallbacksImpl: TabShellCallbacks = {
     openTab: (host, type, options) => {
       if (!host || getTabType(type)?.singleton) {
-        openSingletonTab(type, undefined, host ?? undefined, options?.data);
+        openSingletonTab(
+          type,
+          undefined,
+          host ?? undefined,
+          options?.data,
+          options?.label,
+        );
         return;
       }
       openTab(host, type, undefined, options);
@@ -2579,15 +2625,42 @@ export function AppShell({
     saveQuickConnect: saveQuickConnectHost,
   };
 
+  // Tabs get one stable bag that forwards to the latest callbacks, so a shell
+  // render does not re-render every open tab.
+  const shellImplRef = useRef(shellCallbacksImpl);
+  useLayoutEffect(() => {
+    shellImplRef.current = shellCallbacksImpl;
+  });
+  const shellCallbacks = useMemo<TabShellCallbacks>(
+    () => ({
+      openTab: (...args) => shellImplRef.current.openTab(...args),
+      openSingletonTab: (...args) =>
+        shellImplRef.current.openSingletonTab(...args),
+      connectHost: (...args) => shellImplRef.current.connectHost(...args),
+      closeTab: (...args) => shellImplRef.current.closeTab(...args),
+      renameTab: (...args) => shellImplRef.current.renameTab(...args),
+      openRailView: (...args) => shellImplRef.current.openRailView(...args),
+      closeRailView: (...args) => shellImplRef.current.closeRailView(...args),
+      openHostEditor: (...args) =>
+        shellImplRef.current.openHostEditor?.(...args),
+      saveQuickConnect: (...args) =>
+        shellImplRef.current.saveQuickConnect!(...args),
+    }),
+    [],
+  );
+
   // Panels close the sidebar on mobile after opening something, the same as
   // the hosts panel does.
-  const panelShell: TabShellCallbacks = {
-    ...shellCallbacks,
-    openTab: (...args) => {
-      shellCallbacks.openTab(...args);
-      if (isMobile) setSidebarOpen(false);
-    },
-  };
+  const panelShell = useMemo<TabShellCallbacks>(
+    () => ({
+      ...shellCallbacks,
+      openTab: (...args) => {
+        shellCallbacks.openTab(...args);
+        if (isMobile) setSidebarOpen(false);
+      },
+    }),
+    [shellCallbacks, isMobile],
+  );
 
   useEffect(() => {
     setShellCallbacks(shellCallbacks);
@@ -3075,6 +3148,9 @@ export function AppShell({
                     return createPortal(
                       renderTabContent(tab, {
                         shell: shellCallbacks,
+                        panelTargetTab: terminalTabs.find(
+                          (t) => t.id === targetTerminalTabId,
+                        ),
                         isVisible: inPane || activeInline,
                         isFocusedPane,
                         inSplit: inPane,

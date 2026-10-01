@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { useActionSlot } from "@/hooks/use-action-slot";
@@ -57,7 +57,7 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import { useServerStatus } from "@/lib/ServerStatusContext";
+import { useServerStatusMeta } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 
@@ -137,6 +137,13 @@ export function PluginCardSlot({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
 }) {
   useRegisteredDashboardCards();
+  const cardShell = useMemo(
+    () => ({
+      ...shell,
+      openSingletonTab: (type: string) => onOpenSingletonTab(type as TabType),
+    }),
+    [onOpenSingletonTab],
+  );
   const card = getRegisteredDashboardCard(id);
   if (!card) {
     return (
@@ -146,15 +153,7 @@ export function PluginCardSlot({
     );
   }
   const Component = card.component;
-  return (
-    <Component
-      isVisible={isVisible}
-      shell={{
-        ...shell,
-        openSingletonTab: (type) => onOpenSingletonTab(type),
-      }}
-    />
-  );
+  return <Component isVisible={isVisible} shell={cardShell} />;
 }
 
 // ─── Card components ──────────────────────────────────────────────────────────
@@ -213,9 +212,7 @@ function StatsBarCard({
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.hostsAvailable", {
-            defaultValue: "Hosts Available",
-          })}
+          {t("dashboardTab.hostsAvailable")}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-xl font-bold leading-none">{online}</span>
@@ -1011,7 +1008,7 @@ export function DashboardTab({
 }) {
   const registeredCards = useRegisteredDashboardCards();
   const { t, i18n } = useTranslation();
-  const { initialLoadComplete } = useServerStatus();
+  const { initialLoadComplete } = useServerStatusMeta();
   const statusLoading = !initialLoadComplete;
 
   const [slots, setSlots] = useState<CardSlot[]>(() => {
@@ -1228,15 +1225,23 @@ export function DashboardTab({
       e.preventDefault();
       const startX = e.clientX;
       const startPct = mainWidthPct;
+      const totalW = bodyRef.current?.getBoundingClientRect().width ?? 0;
+      if (!totalW) return;
+      // One update per frame, not per mousemove.
+      let frame = 0;
+      let clientX = startX;
       const onMove = (ev: MouseEvent) => {
-        if (!bodyRef.current) return;
-        const totalW = bodyRef.current.getBoundingClientRect().width;
-        setMainWidthPct(
-          Math.min(
-            85,
-            Math.max(25, startPct + ((ev.clientX - startX) / totalW) * 100),
-          ),
-        );
+        clientX = ev.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          setMainWidthPct(
+            Math.min(
+              85,
+              Math.max(25, startPct + ((clientX - startX) / totalW) * 100),
+            ),
+          );
+        });
       };
       const onUp = () => {
         window.removeEventListener("mousemove", onMove);

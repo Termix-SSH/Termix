@@ -13,9 +13,13 @@ import {
   visibleRailItems,
 } from "@/sidebar/rail-items";
 import { isCapturableTabType } from "@/shell/shell-layout";
+import { registerPanel, resetPanels } from "@/shell/panel-registry";
 import en from "@/locales/en.json";
 
-afterEach(() => resetRegisteredRailItems());
+afterEach(() => {
+  resetRegisteredRailItems();
+  resetPanels();
+});
 
 function lookup(key: string): unknown {
   return key
@@ -144,6 +148,7 @@ describe("registered rail items", () => {
 
   it("feeds its flags into the promotable, dock and hideable lists", () => {
     registerRailItem(item("docked", { promotable: true, rightDockable: true }));
+    registerPanel({ id: "docked", component: () => null });
     registerRailItem(item("pinned", { hideable: false }));
     expect(promotableIds()).toContain("docked");
     expect(rightDockableIds()).toContain("docked");
@@ -153,6 +158,7 @@ describe("registered rail items", () => {
 
   it("drops a hidden item everywhere without unregistering it", () => {
     registerRailItem(item("off", { hidden: true, promotable: true }));
+    registerPanel({ id: "off", component: () => null });
     expect(visibleRailItems().map((entry) => entry.id)).not.toContain("off");
     expect(hideableRailIds()).not.toContain("off");
     expect(promotableIds()).not.toContain("off");

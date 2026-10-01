@@ -6,7 +6,7 @@ import {
   Settings,
   User,
 } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { lazy, memo, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import type { Tab, TabType } from "@/types/ui-types";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
@@ -16,6 +16,7 @@ import {
   type TabShellCallbacks,
   type TabTypeDef,
 } from "./tab-registry";
+import { getPanel, type PanelDef } from "./panel-registry";
 import {
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
@@ -108,7 +109,7 @@ export function tabIcon(type: TabType) {
  * A plugin's tab: its registered component with the generic render props.
  * Unregistered types get the ownership placeholder in renderTabContent.
  */
-function RegisteredTab({
+const RegisteredTab = memo(function RegisteredTab({
   def,
   tab,
   isVisible,
@@ -153,10 +154,56 @@ function RegisteredTab({
   return withTabSuspense(
     def.panelFrame ? <PanelTabFrame>{content}</PanelTabFrame> : content,
   );
-}
+});
+
+const DashboardTabHost = memo(function DashboardTabHost({
+  shell,
+  isVisible,
+}: {
+  shell: TabShellCallbacks;
+  isVisible: boolean;
+}) {
+  return withTabSuspense(
+    <DashboardTab
+      onOpenSingletonTab={(type) => shell.openSingletonTab(type)}
+      onOpenTab={(host, type) => shell.openTab(host, type)}
+      isVisible={isVisible}
+    />,
+  );
+});
+
+/** A rail panel opened as a tab when its plugin registers no tab of its own. */
+const PanelAsTab = memo(function PanelAsTab({
+  panel,
+  isVisible,
+  targetTab,
+  shell,
+}: {
+  panel: PanelDef;
+  isVisible: boolean;
+  targetTab?: Tab;
+  shell: TabShellCallbacks;
+}) {
+  const Panel = panel.component;
+  return withTabSuspense(
+    <PanelTabFrame>
+      <Panel
+        targetTab={targetTab}
+        active={isVisible}
+        shell={shell}
+        setEditing={noop}
+        placement="tab"
+      />
+    </PanelTabFrame>,
+  );
+});
+
+function noop() {}
 
 export interface TabRenderContext {
   shell: TabShellCallbacks;
+  /** The terminal a panel shown as a tab sends commands to. */
+  panelTargetTab?: Tab;
   isVisible?: boolean;
   isFocusedPane?: boolean;
   inSplit?: boolean;
@@ -172,13 +219,7 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
 
   switch (tab.type) {
     case "dashboard":
-      return withTabSuspense(
-        <DashboardTab
-          onOpenSingletonTab={(type) => shell.openSingletonTab(type)}
-          onOpenTab={(host, type) => shell.openTab(host, type)}
-          isVisible={isVisible}
-        />,
-      );
+      return <DashboardTabHost shell={shell} isVisible={isVisible} />;
 
     case "split-screen":
       return null;
@@ -191,6 +232,17 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
     default: {
       const def = getTabType(tab.type);
       if (!def) {
+        const panel = getPanel(tab.type);
+        if (panel) {
+          return (
+            <PanelAsTab
+              panel={panel}
+              isVisible={isVisible}
+              targetTab={context.panelTargetTab}
+              shell={shell}
+            />
+          );
+        }
         return <PluginViewPlaceholder kind="tab" viewId={tab.type} />;
       }
       return (

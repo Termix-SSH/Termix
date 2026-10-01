@@ -42,9 +42,11 @@ export function isCapturableTabType(type: string): boolean {
   return !!def && def.inLayouts !== false;
 }
 
-function opensAsSingleton(type: string): boolean {
+// A hostless type opened for a host (a tunnel tab) is one tab per host, the
+// same as when the shell opens it live.
+function opensAsSingleton(type: string, hasHost: boolean): boolean {
   const def = getTabType(type);
-  return !!def && (!!def.singleton || !!def.hostless);
+  return !!def && (!!def.singleton || (!!def.hostless && !hasHost));
 }
 
 /**
@@ -107,7 +109,7 @@ export function resolveLayoutTabTarget(
     if (!host) return { kind: "skip" };
   }
 
-  if (opensAsSingleton(snapshot.type)) {
+  if (opensAsSingleton(snapshot.type, !!host)) {
     return { kind: "singleton", host };
   }
 

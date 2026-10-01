@@ -306,7 +306,10 @@
     "fullscreenFailed": "Could not toggle fullscreen",
     "resetSidebarWidth": "Reset width",
     "collapseSidebar": "Collapse sidebar",
-    "openSidebar": "Open sidebar"
+    "openSidebar": "Open sidebar",
+    "confirmCloseHost": "Close {{host}}?",
+    "enterFullscreen": "Enter fullscreen (Ctrl+Shift+F)",
+    "exitFullscreen": "Exit fullscreen (Ctrl+Shift+F)"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -1054,7 +1057,8 @@
     "password": "Password",
     "secondFactorUnavailable": "Your account uses a second factor that is not available right now. Contact an admin to reset it.",
     "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin.",
-    "serverAuthentication": "Server sign-in"
+    "serverAuthentication": "Server sign-in",
+    "minChars": "min. {{min}} characters"
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",
@@ -1188,7 +1192,8 @@
     "empty": "Empty",
     "clear": "Clear",
     "viewServerDetails": "View server details",
-    "dragToResizeColumns": "Drag to resize columns"
+    "dragToResizeColumns": "Drag to resize columns",
+    "hostsAvailable": "Hosts Available"
   },
   "admin": {
     "sectionGeneral": "General",
@@ -1495,7 +1500,8 @@
     "sslRenewedBy": "Renewed automatically by {{plugin}}",
     "sslIssuer": "Issued by {{issuer}}",
     "sslNames": "Covers {{names}}",
-    "sslManualTitle": "Upload a certificate"
+    "sslManualTitle": "Upload a certificate",
+    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting"
   },
   "newUi": {
     "sidebar": {

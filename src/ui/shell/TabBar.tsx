@@ -651,11 +651,13 @@ export function TabBar({
                 className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
                 title={
                   isAppFullscreen
-                    ? "Exit fullscreen (Ctrl+Shift+F)"
-                    : "Enter fullscreen (Ctrl+Shift+F)"
+                    ? t("nav.exitFullscreen")
+                    : t("nav.enterFullscreen")
                 }
                 aria-label={
-                  isAppFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                  isAppFullscreen
+                    ? t("nav.exitFullscreen")
+                    : t("nav.enterFullscreen")
                 }
                 onClick={onToggleAppFullscreen}
               >

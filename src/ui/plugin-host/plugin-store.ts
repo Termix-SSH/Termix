@@ -60,14 +60,26 @@ export function usePluginStore(): StoreState {
 /** Replaces the summaries, keeping each plugin's frontend state. */
 export function setPluginSummaries(summaries: PluginSummary[]): void {
   const records = new Map<string, PluginRecord>();
+  let changed = !state.loaded || summaries.length !== state.records.size;
   for (const summary of summaries) {
     const previous = state.records.get(summary.id);
+    // A periodic re-sync usually returns the same list; keeping the old
+    // records lets subscribers skip a re-render.
+    if (
+      previous &&
+      JSON.stringify(previous.summary) === JSON.stringify(summary)
+    ) {
+      records.set(summary.id, previous);
+      continue;
+    }
+    changed = true;
     records.set(summary.id, {
       summary,
       frontend: previous?.frontend ?? "none",
       error: previous?.error,
     });
   }
+  if (!changed) return;
   commit({ ...state, loaded: true, records });
 }
 
