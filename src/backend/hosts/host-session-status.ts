@@ -11,6 +11,10 @@ export class HostSessionStatus {
   private counts = new Map<number, number>();
   private listeners = new Set<HostSessionStatusListener>();
 
+  hasActiveSession(hostId: number): boolean {
+    return (this.counts.get(hostId) ?? 0) > 0;
+  }
+
   register(hostId: number): () => void {
     const count = this.counts.get(hostId) ?? 0;
     this.counts.set(hostId, count + 1);

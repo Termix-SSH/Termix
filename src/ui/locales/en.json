@@ -477,7 +477,7 @@
     "sameHost": "This host (direct tunnel)",
     "statusChecksLabel": "Status Checks",
     "enableStatusChecks": "Enable Status Checks",
-    "enableStatusChecksDesc": "Periodically ping this host to verify availability",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Use Global Interval",
     "useGlobalIntervalDesc": "Override with the server-wide status check interval",
     "checkIntervalS": "Check Interval (s)",

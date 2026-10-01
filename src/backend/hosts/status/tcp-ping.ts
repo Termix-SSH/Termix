@@ -2,8 +2,8 @@ import net from "net";
 import type { Client } from "ssh2";
 
 /**
- * Opens a TCP connection and closes it again. An SSH server gets a polite
- * banner back so it does not log a failed handshake.
+ * Opens a TCP connection and closes it again. SSH probes exchange banners,
+ * but still close before authentication and may trigger aggressive Fail2Ban rules.
  */
 export function tcpPing(
   host: string,

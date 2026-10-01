@@ -78,6 +78,7 @@ export interface HostStatusDeps {
     target: StatusTarget,
     port: number,
   ) => Promise<boolean>;
+  hasActiveSession?: (hostId: number) => boolean;
   globalInterval: () => number;
   emit: (payload: HostStatusPayload) => void;
 }
@@ -126,6 +127,7 @@ const defaultDeps: HostStatusDeps = {
       );
     return [...new Set(entries.map((entry) => entry.hostId))];
   },
+  hasActiveSession: (hostId) => hostSessionStatus.hasActiveSession(hostId),
   ping: (host, port) => tcpPing(host, port, 5000),
   pingThroughJumpHosts: async (target, port) => {
     const { createJumpHostChain } = await import("../jump-host-chain.js");
@@ -429,11 +431,15 @@ export class HostStatusService {
     this.owners.set(target.id, target.userId);
     let reachable = false;
     try {
-      const port = await this.portFor(target);
-      reachable =
-        target.jumpHosts.length > 0
-          ? await this.deps.pingThroughJumpHosts(target, port)
-          : await this.deps.ping(target.ip, port);
+      if (this.deps.hasActiveSession?.(target.id)) {
+        reachable = true;
+      } else {
+        const port = await this.portFor(target);
+        reachable =
+          target.jumpHosts.length > 0
+            ? await this.deps.pingThroughJumpHosts(target, port)
+            : await this.deps.ping(target.ip, port);
+      }
     } catch {
       reachable = false;
     }
