@@ -7,6 +7,22 @@ describe("DatabaseSaveTrigger", () => {
     DatabaseSaveTrigger.cleanup();
   });
 
+  it("batches informational touches without scheduling per-session saves", async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    for (let minute = 0; minute < 4; minute++) {
+      DatabaseSaveTrigger.markDirty();
+      await vi.advanceTimersByTimeAsync(60_000);
+    }
+    expect(save).not.toHaveBeenCalled();
+    expect(DatabaseSaveTrigger.isDirty).toBe(true);
+    expect(DatabaseSaveTrigger.getStatus().hasPendingTimeout).toBe(false);
+    await DatabaseSaveTrigger.forceSave("periodic_flush");
+    expect(save).toHaveBeenCalledOnce();
+    expect(DatabaseSaveTrigger.isDirty).toBe(false);
+  });
+
   it("force saves through the initialized save function", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     DatabaseSaveTrigger.initialize(save);
