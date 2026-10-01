@@ -78,7 +78,11 @@ export function SplitLayoutMenu({
           <LayoutPanelLeft className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={1} className="w-64 p-1">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={1}
+        className="w-64 border-t-0 p-1"
+      >
         <DropdownMenuItem
           disabled={!canAddPane}
           title={fullTitle}
