@@ -81,7 +81,7 @@ export function SplitLayoutMenu({
       <DropdownMenuContent
         align="end"
         sideOffset={1}
-        className="w-64 border-t-0 p-1"
+        className="w-64 border-t-0 [clip-path:inset(0px_-4px_-4px_-4px)] p-1"
       >
         <DropdownMenuItem
           disabled={!canAddPane}
