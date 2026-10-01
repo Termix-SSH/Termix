@@ -58,11 +58,10 @@ export function LocalTransferProgressToast({
               title={status.currentFileName}
             >
               {(status.activeFiles ?? 0) > 1 && (
-                <span className="mr-1 text-foreground/70">
+                <span className="mr-2.5 text-foreground/70">
                   {t("fileManager.localTransferInFlight", {
                     count: status.activeFiles,
                   })}
-                  {" · "}
                 </span>
               )}
               {status.currentFileName}

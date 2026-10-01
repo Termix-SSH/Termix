@@ -86,7 +86,10 @@
     "imageUploaded": "Image uploaded: {{path}}",
     "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
     "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell"
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
   },
   "terminalToolbar": {
     "detachTmux": "Detach tmux",
@@ -163,7 +166,7 @@
       },
       "sessionTimeoutMinutes": {
         "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1 · Max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
       },
       "commandHistoryEnabled": {
         "label": "Command History",

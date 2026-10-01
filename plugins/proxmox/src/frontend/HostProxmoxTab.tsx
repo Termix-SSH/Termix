@@ -65,7 +65,7 @@ export function HostProxmoxTab({
       })
     : t("hosts.proxmoxLastSyncNoResult");
   const lastSyncDescription = cfg.lastSyncAt
-    ? `${new Date(cfg.lastSyncAt).toLocaleString()} · ${lastSyncSummary}`
+    ? `${new Date(cfg.lastSyncAt).toLocaleString()}, ${lastSyncSummary}`
     : t("hosts.proxmoxLastSyncNever");
 
   return (

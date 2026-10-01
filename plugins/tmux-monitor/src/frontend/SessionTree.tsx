@@ -1,6 +1,6 @@
 // Session/window/pane tree styled after the VSCode "tmux manager" view.
 // Each session is a single row: status dot, name, inline tag badges, and a
-// right-aligned meta label (relative time · cpu · mem) that is overlaid by
+// right-aligned meta label (relative time, cpu, mem) that is overlaid by
 // the hover actions (attach, new window, …-menu). The overlay uses a grid
 // stack with opacity so rows never shift and the actions stay reachable via
 // keyboard focus.
@@ -119,11 +119,17 @@ export function SessionTree({
     });
   }
 
-  function metaLabel(session: TmuxSessionOverview): string {
+  function metaLabel(session: TmuxSessionOverview) {
     const time = formatRelativeTime(session.lastActivity, now, t);
     const agg = metricsBySession.get(session.name);
     if (!agg) return time;
-    return `${time} · ${agg.cpu.toFixed(0)}% · ${formatMem(agg.memKb)}`;
+    return (
+      <span className="flex gap-2">
+        <span>{time}</span>
+        <span>{agg.cpu.toFixed(0)}%</span>
+        <span>{formatMem(agg.memKb)}</span>
+      </span>
+    );
   }
 
   return (

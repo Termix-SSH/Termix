@@ -39,7 +39,7 @@ function processVram(process: GpuProcess): string {
     process.memoryUsedMiB === null
       ? NA
       : `${formatGiB(process.memoryUsedMiB)}G`;
-  return process.gpuIndex === null ? vram : `${vram} · GPU ${process.gpuIndex}`;
+  return process.gpuIndex === null ? vram : `${vram} (GPU ${process.gpuIndex})`;
 }
 
 function executableName(path: string): string {

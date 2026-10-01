@@ -1,4 +1,11 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import {
   useTranslation,
   useToast,
@@ -146,6 +153,63 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
   );
 }
 
+function LogMeta({
+  items,
+  className,
+}: {
+  items: (string | null | undefined)[];
+  className?: string;
+}) {
+  return (
+    <span
+      className={`flex min-w-0 items-center gap-x-2.5 overflow-hidden whitespace-nowrap text-[10px] ${className ?? ""}`}
+    >
+      {items.filter(Boolean).map((item, i) => (
+        <span key={i} className="truncate last:shrink-0">
+          {item}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+const ACTION_BUTTON =
+  "size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors";
+
+function ActionButton({
+  label,
+  onClick,
+  destructive,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  destructive?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={label}
+          className={
+            destructive
+              ? "size-6 flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+              : ACTION_BUTTON
+          }
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function LogRow({
   log,
   onView,
@@ -160,7 +224,10 @@ function LogRow({
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
-  const hostLabel = log.hostName ?? log.hostIp ?? `Host ${log.hostId}`;
+  const hostLabel =
+    log.hostName ??
+    log.hostIp ??
+    t("sessionLogs.hostFallback", { id: log.hostId });
 
   return (
     <div className="group flex items-center gap-2.5 px-3 py-2.5 border-b border-border/40 last:border-b-0 hover:bg-muted/40 transition-colors">
@@ -172,68 +239,44 @@ function LogRow({
         <span className="text-xs font-semibold truncate text-foreground">
           {hostLabel}
         </span>
-        <span className="text-[10px] text-muted-foreground/60 truncate">
-          {formatDate(log.startedAt)}
-          {" · "}
-          {(log.protocol ?? "ssh").toUpperCase()}
-          {log.username ? ` · ${log.username}` : ""}
-          {" · "}
-          {formatDuration(log.duration)}
-          {" · "}
-          {formatBytes(log.sizeBytes)}
-        </span>
+        <LogMeta
+          className="text-muted-foreground/60"
+          items={[
+            formatDate(log.startedAt),
+            (log.protocol ?? "ssh").toUpperCase(),
+            log.username,
+            formatDuration(log.duration),
+            formatBytes(log.sizeBytes),
+          ]}
+        />
       </div>
 
-      <TooltipProvider>
+      <TooltipProvider disableHoverableContent>
         <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onView}
-                className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-              >
-                <Eye className="size-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left">View log</TooltipContent>
-          </Tooltip>
+          <ActionButton label={t("sessionLogs.viewLog")} onClick={onView}>
+            <Eye className="size-3" />
+          </ActionButton>
           {log.format === "asciicast" && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={onDownloadText}
-                  className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-                >
-                  <FileText className="size-3" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                {t("sessionLogs.downloadAsText")}
-              </TooltipContent>
-            </Tooltip>
+            <ActionButton
+              label={t("sessionLogs.downloadAsText")}
+              onClick={onDownloadText}
+            >
+              <FileText className="size-3" />
+            </ActionButton>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onDownload}
-                className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-              >
-                <Download className="size-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Download</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onDelete}
-                className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                <X className="size-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Delete</TooltipContent>
-          </Tooltip>
+          <ActionButton
+            label={t("sessionLogs.downloadLog")}
+            onClick={onDownload}
+          >
+            <Download className="size-3" />
+          </ActionButton>
+          <ActionButton
+            label={t("sessionLogs.deleteLog")}
+            onClick={onDelete}
+            destructive
+          >
+            <X className="size-3" />
+          </ActionButton>
         </div>
       </TooltipProvider>
     </div>
@@ -406,14 +449,18 @@ export function SessionLogsPanel() {
   // Inline log viewer
   if (viewLog) {
     const hostLabel =
-      viewLog.hostName ?? viewLog.hostIp ?? `Host ${viewLog.hostId}`;
+      viewLog.hostName ??
+      viewLog.hostIp ??
+      t("sessionLogs.hostFallback", { id: viewLog.hostId });
     return (
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Viewer header */}
         <div className="flex items-center gap-2 px-2 py-2 border-b border-border/60 bg-muted/20 shrink-0">
           <button
+            type="button"
             onClick={() => setViewLog(null)}
-            className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
+            aria-label={t("sessionLogs.back")}
+            className={ACTION_BUTTON}
           >
             <ArrowLeft className="size-3.5" />
           </button>
@@ -421,67 +468,50 @@ export function SessionLogsPanel() {
             <span className="text-xs font-semibold truncate text-foreground">
               {hostLabel}
             </span>
-            <span className="text-[10px] text-muted-foreground/50">
-              {formatDate(viewLog.startedAt)}
-              {` · ${viewLog.protocol.toUpperCase()}`}
-              {viewLog.duration != null
-                ? ` · ${formatDuration(viewLog.duration)}`
-                : ""}
-              {" · "}
-              {formatBytes(viewLog.sizeBytes)}
-            </span>
+            <LogMeta
+              className="text-muted-foreground/50"
+              items={[
+                formatDate(viewLog.startedAt),
+                viewLog.protocol.toUpperCase(),
+                viewLog.duration != null
+                  ? formatDuration(viewLog.duration)
+                  : null,
+                formatBytes(viewLog.sizeBytes),
+              ]}
+            />
           </div>
-          <TooltipProvider>
+          <TooltipProvider disableHoverableContent>
             <div className="flex items-center gap-0.5 shrink-0">
               {viewText != null && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={handleCopy}
-                      className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-                    >
-                      {copied ? (
-                        <Check className="size-3 text-green-500" />
-                      ) : (
-                        <Copy className="size-3" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    {copied
+                <ActionButton
+                  label={
+                    copied
                       ? t("sessionLogs.copied")
-                      : t("sessionLogs.copyContent")}
-                  </TooltipContent>
-                </Tooltip>
+                      : t("sessionLogs.copyContent")
+                  }
+                  onClick={handleCopy}
+                >
+                  {copied ? (
+                    <Check className="size-3 text-green-500" />
+                  ) : (
+                    <Copy className="size-3" />
+                  )}
+                </ActionButton>
               )}
               {viewLog.format === "asciicast" && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => handleDownloadText(viewLog)}
-                      className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-                    >
-                      <FileText className="size-3" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    {t("sessionLogs.downloadAsText")}
-                  </TooltipContent>
-                </Tooltip>
+                <ActionButton
+                  label={t("sessionLogs.downloadAsText")}
+                  onClick={() => handleDownloadText(viewLog)}
+                >
+                  <FileText className="size-3" />
+                </ActionButton>
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleDownload(viewLog)}
-                    className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    <Download className="size-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  {t("sessionLogs.downloadLog")}
-                </TooltipContent>
-              </Tooltip>
+              <ActionButton
+                label={t("sessionLogs.downloadLog")}
+                onClick={() => handleDownload(viewLog)}
+              >
+                <Download className="size-3" />
+              </ActionButton>
             </div>
           </TooltipProvider>
         </div>
@@ -496,7 +526,7 @@ export function SessionLogsPanel() {
             <SessionRecordingPlayer log={viewLog} blob={viewBlob} />
           ) : (
             <pre className="p-3 text-[11px] font-mono whitespace-pre-wrap break-all text-foreground/80 leading-relaxed">
-              {viewContent || "(empty)"}
+              {viewContent || t("sessionLogs.empty")}
             </pre>
           )}
         </div>
@@ -536,7 +566,7 @@ export function SessionLogsPanel() {
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
                 <span className="text-xs text-muted-foreground/50">
-                  No results for &quot;{filter}&quot;
+                  {t("sessionLogs.noResults", { query: filter })}
                 </span>
               </div>
             ) : (
@@ -568,13 +598,14 @@ export function SessionLogsPanel() {
             <p className="text-sm text-foreground">
               {t("sessionLogs.confirmDelete")}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {deleteTarget.hostName ??
-                deleteTarget.hostIp ??
-                `Session ${deleteTarget.id}`}
-              {" · "}
-              {formatDate(deleteTarget.startedAt)}
-            </p>
+            <div className="flex flex-col text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/80">
+                {deleteTarget.hostName ??
+                  deleteTarget.hostIp ??
+                  t("sessionLogs.sessionFallback", { id: deleteTarget.id })}
+              </span>
+              <span>{formatDate(deleteTarget.startedAt)}</span>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}

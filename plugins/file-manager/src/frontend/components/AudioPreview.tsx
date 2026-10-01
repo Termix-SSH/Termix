@@ -77,8 +77,9 @@ export function AudioPreview({
             <h3 className="font-semibold text-foreground text-lg mb-1">
               {file.name.replace(/\.[^/.]+$/, "")}
             </h3>
-            <p className="text-sm text-muted-foreground">
-              {ext.toUpperCase()} • {formatFileSize(file.size, t)}
+            <p className="flex justify-center gap-3 text-sm text-muted-foreground">
+              <span>{ext.toUpperCase()}</span>
+              <span>{formatFileSize(file.size, t)}</span>
             </p>
           </div>
 

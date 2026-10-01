@@ -178,8 +178,9 @@ function MetricsChartWidget({
             <span className="text-[10px] font-semibold text-foreground truncate">
               {hostName ?? `Host #${hostId}`}
             </span>
-            <span className="text-[9px] text-muted-foreground">
-              {label} · {range}
+            <span className="flex gap-2 text-[9px] text-muted-foreground">
+              <span className="truncate">{label}</span>
+              <span className="shrink-0">{range}</span>
             </span>
           </div>
           {showCurrentValue && current != null && (

@@ -133,10 +133,12 @@ export function WireGuardManagerCard({ hostId }: { hostId: number | null }) {
                   <span className="text-xs font-semibold font-mono">
                     {iface.name}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {iface.up ? "up" : "down"}
-                    {iface.listenPort ? ` · :${iface.listenPort}` : ""}
-                    {iface.peers.length > 0 ? ` · ${iface.peers.length}p` : ""}
+                  <span className="flex gap-2 text-[10px] text-muted-foreground">
+                    <span>{iface.up ? "up" : "down"}</span>
+                    {iface.listenPort ? <span>:{iface.listenPort}</span> : null}
+                    {iface.peers.length > 0 && (
+                      <span>{iface.peers.length}p</span>
+                    )}
                   </span>
                 </div>
               </button>

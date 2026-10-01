@@ -108,8 +108,8 @@ describe("GpuCard", () => {
 
     const python = screen.getByText("python3");
     expect(python).toHaveAttribute("title", "/usr/bin/python3");
-    expect(screen.getByText("7.7G · GPU 0")).toBeInTheDocument();
-    expect(screen.getByText("N/A · GPU 1")).toBeInTheDocument();
+    expect(screen.getByText("7.7G (GPU 0)")).toBeInTheDocument();
+    expect(screen.getByText("N/A (GPU 1)")).toBeInTheDocument();
   });
 
   it("says so when no process is using a GPU", () => {

@@ -256,15 +256,18 @@ export function FleetInventoryTab({
         </select>
 
         {selectedFleet && (
-          <span className="text-[11px] text-muted-foreground">
-            {t("newUi.sidebar.fleets.memberCount", {
-              count: entries.length,
-            })}{" "}
-            &middot;{" "}
-            {t("newUi.sidebar.fleets.inventoryCollectedCount", {
-              count: collectedCount,
-              total: entries.length,
-            })}
+          <span className="flex gap-3 text-[11px] text-muted-foreground">
+            <span>
+              {t("newUi.sidebar.fleets.memberCount", {
+                count: entries.length,
+              })}
+            </span>
+            <span>
+              {t("newUi.sidebar.fleets.inventoryCollectedCount", {
+                count: collectedCount,
+                total: entries.length,
+              })}
+            </span>
           </span>
         )}
 

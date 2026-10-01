@@ -132,7 +132,7 @@ export function CompressDialog({
                   key={index}
                   className="truncate text-foreground font-medium"
                 >
-                  • {name}
+                  {name}
                 </li>
               ))}
               {fileNames.length > 5 && (

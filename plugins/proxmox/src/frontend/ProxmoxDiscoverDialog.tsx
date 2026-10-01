@@ -331,7 +331,7 @@ export function ProxmoxDiscoverDialog({
                     selected: selected.size,
                   })}
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button
                     className="hover:text-foreground transition-colors"
                     onClick={() =>
@@ -340,7 +340,6 @@ export function ProxmoxDiscoverDialog({
                   >
                     {t("hosts.proxmoxSelectAll")}
                   </button>
-                  <span>·</span>
                   <button
                     className="hover:text-foreground transition-colors"
                     onClick={() => setSelected(new Set())}

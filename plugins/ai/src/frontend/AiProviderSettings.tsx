@@ -357,11 +357,17 @@ export function AiProviderSettings({
               <div className="truncate text-sm font-medium">
                 {provider.label}
               </div>
-              <div className="truncate text-xs text-muted-foreground">
-                {provider.providerType}
-                {provider.defaultModel ? ` · ${provider.defaultModel}` : ""}
-                {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
-                {provider.apiKeyPrefix ? ` · ${provider.apiKeyPrefix}…` : ""}
+              <div className="flex gap-3 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
+                <span className="shrink-0">{provider.providerType}</span>
+                {provider.defaultModel && (
+                  <span className="truncate">{provider.defaultModel}</span>
+                )}
+                {provider.baseUrl && (
+                  <span className="truncate">{provider.baseUrl}</span>
+                )}
+                {provider.apiKeyPrefix && (
+                  <span className="shrink-0">{provider.apiKeyPrefix}…</span>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 items-center">

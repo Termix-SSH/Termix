@@ -41,7 +41,7 @@ function VisibleBadge({
   return (
     <Badge
       variant="outline"
-      title={`${active.reasons.join("; ")} · ${active.estimatedEnd}`}
+      title={`${active.reasons.join("; ")}\n${active.estimatedEnd}`}
     >
       {title}
     </Badge>
@@ -121,9 +121,8 @@ function MaintenanceEditor({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 overflow-auto p-6">
       <div>
-        <h2 className="text-lg font-semibold">
-          {t("maintenance.title")} · {host.name || host.ip}
-        </h2>
+        <h2 className="text-lg font-semibold">{t("maintenance.title")}</h2>
+        <p className="text-sm font-medium">{host.name || host.ip}</p>
         <p className="text-sm text-muted-foreground">
           {t("maintenance.description")}
         </p>
@@ -308,12 +307,16 @@ function MaintenanceEditor({
           >
             <div className="min-w-0 space-y-1">
               <p className="break-words">{plan.reason}</p>
-              <p className="text-sm text-muted-foreground">
-                {t(`maintenance.${plan.recurrence}`)} ·{" "}
-                {plan.nextStart
-                  ? `${plan.nextStart.replace("T", " ").slice(0, 16)} UTC`
-                  : t("maintenance.completed")}{" "}
-                · {t("maintenance.minutes", { count: plan.durationMinutes })}
+              <p className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+                <span>{t(`maintenance.${plan.recurrence}`)}</span>
+                <span>
+                  {plan.nextStart
+                    ? `${plan.nextStart.replace("T", " ").slice(0, 16)} UTC`
+                    : t("maintenance.completed")}
+                </span>
+                <span>
+                  {t("maintenance.minutes", { count: plan.durationMinutes })}
+                </span>
               </p>
             </div>
             {canEdit && (

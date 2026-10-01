@@ -136,10 +136,10 @@ export function NodeSummaryStrip({
         </span>
         <div className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
           <Server className="size-3 shrink-0" />
-          <span className="truncate">
-            {node?.system.hostname ?? "-"}
-            {node?.system.pveVersion ? ` · ${node.system.pveVersion}` : ""}
-          </span>
+          <span className="truncate">{node?.system.hostname ?? "-"}</span>
+          {node?.system.pveVersion && (
+            <span className="ml-1 shrink-0">{node.system.pveVersion}</span>
+          )}
         </div>
       </div>
     </div>

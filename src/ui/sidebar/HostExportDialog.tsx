@@ -320,16 +320,23 @@ export function HostExportDialog({
         </div>
 
         <div className="shrink-0 text-xs text-muted-foreground">
-          {count === 0
-            ? t("hosts.export.noneSelected")
-            : `${t("hosts.export.summary", {
-                selected: count,
-                total: exportableHosts.length,
-              })} · ${
-                withCredentials
+          {count === 0 ? (
+            t("hosts.export.noneSelected")
+          ) : (
+            <span className="flex flex-wrap gap-x-3">
+              <span>
+                {t("hosts.export.summary", {
+                  selected: count,
+                  total: exportableHosts.length,
+                })}
+              </span>
+              <span>
+                {withCredentials
                   ? t("hosts.export.credentialsIncluded")
-                  : t("hosts.export.credentialsExcluded")
-              }`}
+                  : t("hosts.export.credentialsExcluded")}
+              </span>
+            </span>
+          )}
         </div>
 
         <DialogFooter className="shrink-0">

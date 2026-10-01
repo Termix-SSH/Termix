@@ -72,8 +72,9 @@ export function SearchResults({
           className="flex cursor-pointer items-baseline gap-2 px-3 py-1 text-xs hover:bg-muted/40"
           onClick={() => onSelect(match)}
         >
-          <span className="shrink-0 font-medium text-primary">
-            {match.sessionName} · {match.paneId}
+          <span className="flex shrink-0 gap-1.5 font-medium text-primary">
+            <span>{match.sessionName}</span>
+            <span className="text-primary/60">{match.paneId}</span>
           </span>
           <span className="truncate font-mono text-muted-foreground">
             {highlightMatch(match.text, query)}

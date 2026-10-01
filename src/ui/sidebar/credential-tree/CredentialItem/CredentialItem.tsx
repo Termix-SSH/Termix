@@ -335,8 +335,9 @@ export function CredentialItem({
           <span className="text-[11px] text-muted-foreground/60 truncate leading-none font-mono">
             {cred.username}
             {usedByCount > 0 && (
-              <span className="text-muted-foreground/40">
-                {cred.username ? " · " : ""}
+              <span
+                className={`text-muted-foreground/40${cred.username ? " ml-2" : ""}`}
+              >
                 {usedByCount}h
               </span>
             )}

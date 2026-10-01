@@ -288,9 +288,13 @@ export function HealthCheckCard({ hostId }: { hostId: number | null }) {
                         : check.target}
                     </span>
                   </div>
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    {result?.latencyMs != null ? `${result.latencyMs}ms` : "—"}
-                    {upPct != null ? ` · ${upPct}%` : ""}
+                  <span className="flex gap-2 font-mono text-[10px] text-muted-foreground">
+                    <span>
+                      {result?.latencyMs != null
+                        ? `${result.latencyMs}ms`
+                        : "-"}
+                    </span>
+                    {upPct != null && <span>{upPct}%</span>}
                   </span>
                 </div>
                 {hist.length > 1 && (

@@ -44,10 +44,17 @@
     "copied": "Copied!",
     "loadError": "Failed to load session logs",
     "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host..."
+    "filterByHost": "Filter by host...",
+    "back": "Back",
+    "empty": "(empty)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
   },
   "player": {
     "timeline": "Recording timeline",
-    "speed": "Playback speed"
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
   }
 }

@@ -42,7 +42,7 @@ export function ProcessesCard({ metrics }: { metrics: ServerMetrics | null }) {
             <StatRow
               key={p.pid}
               label={p.command}
-              value={`${p.cpu}% cpu · ${p.mem}% mem`}
+              value={`${p.cpu}% cpu, ${p.mem}% mem`}
               mono
             />
           ))}

@@ -66,11 +66,13 @@ export function FilesystemPicker({
                 {fs.mount}
               </span>
             )}
-            <span className="ml-auto shrink-0 whitespace-nowrap text-[10px] tabular-nums text-muted-foreground">
-              {fs.usedHuman && fs.totalHuman
-                ? `${fs.usedHuman}/${fs.totalHuman}`
-                : "N/A"}
-              {fs.percent != null ? ` · ${fs.percent}%` : ""}
+            <span className="ml-auto flex shrink-0 gap-2 whitespace-nowrap text-[10px] tabular-nums text-muted-foreground">
+              <span>
+                {fs.usedHuman && fs.totalHuman
+                  ? `${fs.usedHuman}/${fs.totalHuman}`
+                  : "N/A"}
+              </span>
+              {fs.percent != null && <span>{fs.percent}%</span>}
             </span>
           </DropdownMenuItem>
         ))}

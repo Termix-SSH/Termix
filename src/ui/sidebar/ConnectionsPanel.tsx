@@ -189,9 +189,7 @@ function ConnectionRow({
         </div>
         <span className="text-[10px] text-muted-foreground/60 truncate pl-3">
           {hostName && hostName !== name ? (
-            <span className="text-muted-foreground/50">
-              {hostName} &middot;{" "}
-            </span>
+            <span className="text-muted-foreground/50 mr-2.5">{hostName}</span>
           ) : null}
           {subLabel}
         </span>

@@ -87,6 +87,6 @@ export function createFormatTransferMetrics(t: TFunction) {
         }),
       );
     }
-    return parts.join(" · ");
+    return parts.join(", ");
   };
 }

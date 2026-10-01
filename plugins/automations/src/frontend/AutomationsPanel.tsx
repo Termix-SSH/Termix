@@ -428,15 +428,19 @@ export function AutomationsPanel({
                   </div>
 
                   <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[11px] text-muted-foreground flex-1 truncate">
-                      {row.definition
-                        ? t(
+                    <span className="text-[11px] text-muted-foreground flex-1 flex gap-2.5 min-w-0 overflow-hidden whitespace-nowrap">
+                      {row.definition && (
+                        <span className="truncate">
+                          {t(
                             `${base}.triggerKinds.${row.definition.trigger.kind}`,
-                          )
-                        : ""}
-                      {row.last_run_status
-                        ? ` · ${timeAgo(row.last_run_at, t)}`
-                        : ""}
+                          )}
+                        </span>
+                      )}
+                      {row.last_run_status && (
+                        <span className="shrink-0">
+                          {timeAgo(row.last_run_at, t)}
+                        </span>
+                      )}
                     </span>
                     <Button
                       variant="ghost"
@@ -499,11 +503,11 @@ export function AutomationsPanel({
                       {t(`${base}.statuses.${entry.status}`)}
                     </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {timeAgo(entry.started_at, t)}
-                    {entry.duration_ms !== null
-                      ? ` · ${Math.round(entry.duration_ms / 100) / 10}s`
-                      : ""}
+                  <div className="flex gap-2.5 text-[11px] text-muted-foreground">
+                    <span>{timeAgo(entry.started_at, t)}</span>
+                    {entry.duration_ms !== null && (
+                      <span>{Math.round(entry.duration_ms / 100) / 10}s</span>
+                    )}
                   </div>
                   {entry.error && (
                     <div className="text-[11px] text-destructive truncate">

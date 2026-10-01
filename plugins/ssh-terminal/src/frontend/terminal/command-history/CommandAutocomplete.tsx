@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { cn } from "@termix/plugin-sdk/ui";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 interface CommandAutocompleteProps {
   suggestions: string[];
@@ -53,6 +54,7 @@ export function CommandAutocomplete({
   position,
   visible,
 }: CommandAutocompleteProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLDivElement>(null);
 
@@ -103,7 +105,11 @@ export function CommandAutocomplete({
         ))}
       </div>
       <div className="px-3 py-1 text-xs text-muted-foreground border-t border-border bg-muted/50 shrink-0">
-        Tab/Enter to complete • ↑↓ to navigate • Esc to close
+        <span className="flex flex-wrap gap-x-3">
+          <span>{t("terminal.autocompleteHintComplete")}</span>
+          <span>{t("terminal.autocompleteHintNavigate")}</span>
+          <span>{t("terminal.autocompleteHintClose")}</span>
+        </span>
       </div>
     </div>
   );

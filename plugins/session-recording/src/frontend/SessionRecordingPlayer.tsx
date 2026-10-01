@@ -4,7 +4,6 @@ import { Pause, Play } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import Guacamole from "guacamole-common-js";
-import { Select2 } from "@termix/plugin-sdk/ui";
 import "@xterm/xterm/css/xterm.css";
 import { parseAsciicast, type Asciicast } from "./asciicast";
 import type { SessionLogRecord } from "./session-recording-api";
@@ -18,6 +17,65 @@ function formatPosition(seconds: number) {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function SeekBar({
+  position,
+  duration,
+  onSeek,
+}: {
+  position: number;
+  duration: number;
+  onSeek: (position: number) => void;
+}) {
+  const { t } = useTranslation();
+  const barRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const progress = duration > 0 ? Math.min(position / duration, 1) : 0;
+
+  const seekFromPointer = (clientX: number) => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || duration <= 0) return;
+    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+    onSeek(ratio * duration);
+  };
+
+  return (
+    <div
+      ref={barRef}
+      role="slider"
+      tabIndex={0}
+      aria-label={t("player.timeline")}
+      aria-valuemin={0}
+      aria-valuemax={duration}
+      aria-valuenow={position}
+      className="group/seek relative h-3 w-full cursor-pointer touch-none outline-none"
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+        seekFromPointer(event.clientX);
+      }}
+      onPointerMove={(event) => {
+        if (dragging) seekFromPointer(event.clientX);
+      }}
+      onPointerUp={(event) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        setDragging(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") onSeek(Math.max(position - 5, 0));
+        if (event.key === "ArrowRight")
+          onSeek(Math.min(position + 5, duration));
+      }}
+    >
+      <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-border transition-[height] group-hover/seek:h-1 group-focus-visible/seek:h-1">
+        <div
+          className="h-full bg-primary"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 function PlaybackControls({
@@ -39,47 +97,47 @@ function PlaybackControls({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2 border-t border-border/60 bg-muted/20 px-3 py-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex size-7 items-center justify-center hover:bg-muted"
-        aria-label={playing ? "Pause recording" : "Play recording"}
-      >
-        {playing ? (
-          <Pause className="size-3.5" />
-        ) : (
-          <Play className="size-3.5" />
-        )}
-      </button>
-      <span className="w-10 text-[10px] tabular-nums text-muted-foreground">
-        {formatPosition(position)}
-      </span>
-      <input
-        type="range"
-        min={0}
-        max={Math.max(duration, 0.01)}
-        step={0.01}
-        value={Math.min(position, duration)}
-        onChange={(event) => onSeek(Number(event.target.value))}
-        className="min-w-0 flex-1 accent-primary"
-        aria-label={t("player.timeline")}
-      />
-      <span className="w-10 text-right text-[10px] tabular-nums text-muted-foreground">
-        {formatPosition(duration)}
-      </span>
-      <Select2
-        value={speed}
-        onChange={(event) => onSpeed(Number(event.target.value))}
-        className="h-7 border border-border bg-background px-1 text-[10px]"
-        aria-label={t("player.speed")}
-      >
-        {SPEEDS.map((value) => (
-          <option key={value} value={value}>
-            {value}×
-          </option>
-        ))}
-      </Select2>
+    <div className="shrink-0 border-t border-border/60 bg-muted/20">
+      <SeekBar position={position} duration={duration} onSeek={onSeek} />
+      <div className="flex items-center gap-2 px-1 pb-1">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex size-6 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label={playing ? t("player.pause") : t("player.play")}
+        >
+          {playing ? (
+            <Pause className="size-3.5" />
+          ) : (
+            <Play className="size-3.5" />
+          )}
+        </button>
+        <span className="flex-1 text-[10px] tabular-nums text-muted-foreground">
+          {formatPosition(Math.min(position, duration))} /{" "}
+          {formatPosition(duration)}
+        </span>
+        <div
+          className="flex items-center"
+          role="group"
+          aria-label={t("player.speed")}
+        >
+          {SPEEDS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onSpeed(value)}
+              aria-pressed={speed === value}
+              className={
+                speed === value
+                  ? "h-5 px-1.5 text-[10px] tabular-nums bg-muted text-foreground"
+                  : "h-5 px-1.5 text-[10px] tabular-nums text-muted-foreground/60 hover:text-foreground"
+              }
+            >
+              {value}x
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

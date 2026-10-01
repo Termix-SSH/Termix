@@ -160,7 +160,7 @@ export function ProcessInspectorCard({ hostId }: { hostId: number | null }) {
             <span>{p.mem.toFixed(0)}%</span>
             <span
               className="truncate"
-              title={`${p.user} · ${p.args}`}
+              title={`${p.user}\n${p.args}`}
               style={
                 depth ? { paddingLeft: `${(depth * 12) / 14}rem` } : undefined
               }

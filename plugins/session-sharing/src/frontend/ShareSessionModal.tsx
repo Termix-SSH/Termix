@@ -416,14 +416,17 @@ export function ShareSessionModal({
                                   "?",
                               })}
                         </span>
-                        <span className="text-[10px] text-muted-foreground/60">
-                          {share.permissionLevel === "read-write"
-                            ? t("sessionSharing.permissionLevel.readWrite")
-                            : t("sessionSharing.permissionLevel.readOnly")}
-                          {" · "}
-                          {t("sessionSharing.expiresAt", {
-                            date: new Date(share.expiresAt).toLocaleString(),
-                          })}
+                        <span className="flex flex-wrap gap-x-2.5 text-[10px] text-muted-foreground/60">
+                          <span>
+                            {share.permissionLevel === "read-write"
+                              ? t("sessionSharing.permissionLevel.readWrite")
+                              : t("sessionSharing.permissionLevel.readOnly")}
+                          </span>
+                          <span>
+                            {t("sessionSharing.expiresAt", {
+                              date: new Date(share.expiresAt).toLocaleString(),
+                            })}
+                          </span>
                         </span>
                       </div>
                     </div>

@@ -79,8 +79,9 @@ export function PanePreview({
   return (
     <>
       <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">
-          {pane.sessionName} · {pane.paneId}
+        <span className="flex gap-2 font-medium text-foreground">
+          <span>{pane.sessionName}</span>
+          <span className="text-muted-foreground">{pane.paneId}</span>
         </span>
         {metrics && (
           <>

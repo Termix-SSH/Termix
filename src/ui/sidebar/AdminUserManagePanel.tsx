@@ -815,8 +815,9 @@ export function AdminUserManagePanel({
                       <span className="text-xs font-semibold truncate max-w-[180px]">
                         {cred.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground truncate">
-                        {cred.username || "-"} · {cred.type}
+                      <span className="flex gap-2.5 text-[10px] text-muted-foreground min-w-0">
+                        <span className="truncate">{cred.username || "-"}</span>
+                        <span className="shrink-0">{cred.type}</span>
                       </span>
                     </div>
                   </div>
