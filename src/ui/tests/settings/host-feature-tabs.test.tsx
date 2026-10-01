@@ -121,6 +121,51 @@ describe("syncHostFeatureTabs", () => {
     );
   });
 
+  it("places the defaults tab where the plugin's own section sits", () => {
+    registerHostEditorSection({
+      id: "docker-own",
+      pluginId: "docker",
+      group: "ssh",
+      order: 40,
+      labelKey: "k",
+      component: () => null,
+    });
+    syncHostFeatureTabs([plugin()]);
+    const tab = getHostEditorSection(hostFeatureTabId("docker"));
+    expect(tab?.group).toBe("ssh");
+    expect(tab?.order).toBe(40);
+  });
+
+  it("gives a plugin with its own section no tab when nothing can have a default", () => {
+    registerHostEditorSection({
+      id: "proxmox-own",
+      pluginId: "proxmox",
+      group: "ssh",
+      labelKey: "k",
+      component: () => null,
+    });
+    const proxmox = plugin({
+      id: "proxmox",
+      name: "Proxmox",
+      contributes: {
+        settings: {
+          host: {
+            fields: [
+              {
+                key: "enableProxmox",
+                type: "custom",
+                component: "proxmoxHostSettings",
+                defaultable: false,
+              },
+            ],
+          },
+        },
+      },
+    } as Partial<PluginSummary>);
+    expect(syncHostFeatureTabs([proxmox])).toEqual([]);
+    expect(getHostEditorSection(hostFeatureTabId("proxmox"))).toBeUndefined();
+  });
+
   it("skips a plugin whose own section already covers the defaults editor", () => {
     registerHostEditorSection({
       id: "docker-own",
