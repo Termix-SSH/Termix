@@ -121,6 +121,7 @@
       "linkInvalid": "This guest link is invalid or the meeting has ended"
     },
     "reopenFromPanel": "This meeting tab expired. Reopen the room from the Meetings panel.",
+    "retry": "Retry",
     "requestControl": "Request control",
     "cancelControlRequest": "Cancel request",
     "controlQueue": "Control requests",

@@ -1,5 +1,5 @@
 import type { TranslateFn } from "@termix/plugin-sdk/frontend";
-import type { TFunction } from "i18next";
+import type { TranslateFn as TFunction } from "@termix/plugin-sdk/frontend";
 import { getTransferStatus, listActiveTransfers } from "./api/transfer-api";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import {

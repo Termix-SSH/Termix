@@ -35,12 +35,12 @@ const sonnerToast = vi.hoisted(() => {
 });
 vi.mock("sonner", () => ({ toast: sonnerToast }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@termix/plugin-sdk/frontend")>()),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts?.count !== undefined ? `${key}:${opts.count}` : key,
   }),
-  initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
 const HOME = "/Users/max";

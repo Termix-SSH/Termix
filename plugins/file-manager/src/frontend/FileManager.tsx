@@ -26,7 +26,7 @@ import { useDragToDesktop } from "./hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "./hooks/useDragToSystemDesktop";
 import { useConfirmation } from "@termix/plugin-sdk/ui";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { PassphraseDialog } from "@termix/plugin-sdk/ui";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";

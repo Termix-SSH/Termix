@@ -1,5 +1,5 @@
 import { formatTransferMbPerSec } from "../api/transfer-api";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { ArrowDownToLine } from "lucide-react";
 import { TransferProgressBar } from "./TransferProgressBar";
 

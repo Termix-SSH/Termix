@@ -1,5 +1,5 @@
 import { Button } from "@termix/plugin-sdk/ui";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { formatFileSize } from "../file-manager-utils.ts";
 
 export interface LocalTransferBatchStatus {

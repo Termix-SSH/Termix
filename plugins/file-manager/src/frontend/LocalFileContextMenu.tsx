@@ -13,7 +13,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Kbd, KbdKey, KbdSeparator } from "@termix/plugin-sdk/ui";
 import type { LocalFileEntry } from "@termix/plugin-sdk/frontend";
 

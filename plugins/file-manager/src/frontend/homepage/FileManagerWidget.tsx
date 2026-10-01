@@ -1,5 +1,5 @@
 import { FolderSearch } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useHost } from "@termix/plugin-sdk/frontend";
 import { WidgetTitle } from "@termix/plugin-sdk/ui";
 import type {

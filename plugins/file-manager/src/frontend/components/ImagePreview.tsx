@@ -3,7 +3,7 @@ import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
 import { AlertCircle, Download } from "lucide-react";
 import { Button } from "@termix/plugin-sdk/ui";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 interface ImagePreviewProps {
   content: string;

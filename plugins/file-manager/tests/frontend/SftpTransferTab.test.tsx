@@ -47,13 +47,9 @@ vi.mock("../../src/frontend/transferMetricsFormat", () => ({
   createFormatTransferMetrics: () => () => "",
 }));
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-  initReactI18next: { type: "3rdParty", init: () => {} },
-}));
-
 vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@termix/plugin-sdk/frontend")>()),
+  useTranslation: () => ({ t: (key: string) => key, language: "en" }),
   useSettings: () => ({
     values: { confirmBeforeTrash: api.confirmBeforeTrash },
   }),

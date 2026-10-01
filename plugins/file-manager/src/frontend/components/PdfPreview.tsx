@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { AlertCircle, Download } from "lucide-react";
 import { Button } from "@termix/plugin-sdk/ui";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;

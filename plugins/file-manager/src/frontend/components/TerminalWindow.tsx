@@ -3,7 +3,7 @@ import { DraggableWindow } from "./DraggableWindow.tsx";
 import type { TabHandle as TerminalHandle } from "@termix/plugin-sdk/frontend";
 import { PluginComponent } from "@termix/plugin-sdk/ui";
 import { useWindowManager } from "./WindowManager.tsx";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { SSHHost } from "../host-types";
 import { ExternalLink } from "lucide-react";
 

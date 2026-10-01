@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next";
+import type { TranslateFn as TFunction } from "@termix/plugin-sdk/frontend";
 import {
   formatDurationMs,
   formatTransferMbPerSec,

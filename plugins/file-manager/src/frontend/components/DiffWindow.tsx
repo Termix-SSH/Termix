@@ -2,7 +2,7 @@ import React from "react";
 import { DraggableWindow } from "./DraggableWindow.tsx";
 import { DiffViewer } from "./DiffViewer.tsx";
 import { useWindowManager } from "./WindowManager.tsx";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { FileItem, SSHHost } from "../host-types";
 
 interface DiffWindowProps {

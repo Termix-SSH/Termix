@@ -214,4 +214,23 @@ export default tseslint.config([
       "termix-plugins/stay-inside": "error",
     },
   },
+  {
+    // react-i18next's hook reads core's namespace, so plugin strings show as raw keys.
+    files: ["plugins/*/src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "react-i18next",
+              importNames: ["useTranslation", "Trans", "withTranslation"],
+              message:
+                "Use useTranslation from @termix/plugin-sdk/frontend so keys resolve in this plugin's namespace.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

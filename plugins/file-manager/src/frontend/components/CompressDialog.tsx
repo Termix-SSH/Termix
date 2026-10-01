@@ -11,7 +11,7 @@ import {
   Label,
 } from "@termix/plugin-sdk/ui";
 import { Package } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 interface CompressDialogProps {
   open: boolean;

@@ -4,9 +4,9 @@ import "@testing-library/jest-dom/vitest";
 import { FileManagerGrid } from "../../src/frontend/FileManagerGrid";
 import type { FileItem } from "../../src/frontend/host-types";
 
-vi.mock("react-i18next", () => ({
+vi.mock("@termix/plugin-sdk/frontend", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@termix/plugin-sdk/frontend")>()),
   useTranslation: () => ({ t: (key: string) => key }),
-  initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
 vi.mock("@tanstack/react-virtual", () => ({

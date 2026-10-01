@@ -533,7 +533,7 @@ export function CollabRoomTab({
           <AlertCircle className="size-8" />
           <p className="max-w-sm text-center text-sm">{loadError}</p>
           <Button variant="outline" onClick={() => void refresh()}>
-            {t("common.retry")}
+            {t("collab.retry")}
           </Button>
         </div>
       </div>
@@ -562,7 +562,7 @@ export function CollabRoomTab({
           <AlertCircle className="size-4 shrink-0 text-destructive" />
           <span className="flex-1 truncate">{loadError}</span>
           <Button size="sm" variant="outline" onClick={() => void refresh()}>
-            {t("common.retry")}
+            {t("collab.retry")}
           </Button>
         </div>
       )}

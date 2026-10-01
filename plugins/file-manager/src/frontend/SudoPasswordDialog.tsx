@@ -10,7 +10,7 @@ import {
   PasswordInput,
 } from "@termix/plugin-sdk/ui";
 import { Shield } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 interface SudoPasswordDialogProps {
   open: boolean;

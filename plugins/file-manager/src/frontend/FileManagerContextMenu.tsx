@@ -21,7 +21,7 @@ import {
   ArrowRightLeft,
   Link,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Kbd, KbdKey, KbdSeparator } from "@termix/plugin-sdk/ui";
 
 const VIEWPORT_PADDING = 16;

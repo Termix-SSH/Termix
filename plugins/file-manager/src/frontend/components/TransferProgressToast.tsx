@@ -4,7 +4,7 @@ import {
   getTransferProgressPercent,
   type TransferProgressResponse,
 } from "../api/transfer-api";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import {
   Archive,
   ArchiveRestore,

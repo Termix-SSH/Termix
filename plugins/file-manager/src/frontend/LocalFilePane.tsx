@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   ArrowDown,

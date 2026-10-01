@@ -9,7 +9,7 @@ import {
   Button,
   Input,
 } from "@termix/plugin-sdk/ui";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Lock } from "lucide-react";
 
 interface FileItem {

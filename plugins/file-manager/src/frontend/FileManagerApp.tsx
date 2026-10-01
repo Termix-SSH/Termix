@@ -1,5 +1,5 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { FileManager } from "./FileManager.tsx";
 import { FullScreenAppWrapper, ConnectionScreen } from "@termix/plugin-sdk/ui";
 

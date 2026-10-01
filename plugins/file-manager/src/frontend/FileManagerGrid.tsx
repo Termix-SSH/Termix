@@ -29,7 +29,7 @@ import {
   Move,
   GitCompare,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { FileItem } from "./host-types";
 import type { CreateIntent } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";

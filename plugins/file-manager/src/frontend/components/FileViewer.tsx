@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { cn } from "@termix/plugin-sdk/ui";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import {
   FileText,
   Image as ImageIcon,

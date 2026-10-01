@@ -9,8 +9,8 @@ import {
   type MouseEvent,
 } from "react";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
+import type { TranslateFn as TFunction } from "@termix/plugin-sdk/frontend";
 import {
   ArrowLeftRight,
   File as FileIcon,

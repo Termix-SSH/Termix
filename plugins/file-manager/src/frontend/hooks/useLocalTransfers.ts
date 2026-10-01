@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { createElement } from "react";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { FileItem } from "../host-types";
 import type { LocalWalkResult } from "@termix/plugin-sdk/frontend";
 import { useSettings } from "@termix/plugin-sdk/frontend";

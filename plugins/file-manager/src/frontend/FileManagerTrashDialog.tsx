@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   Button,

@@ -16,7 +16,7 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { SSHHost } from "./host-types";
 import {
   getRecentFiles,
