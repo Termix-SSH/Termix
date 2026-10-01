@@ -4,12 +4,13 @@ import { DATABASE_DIALECT_ENV } from "../../../database/db/dialect.js";
 // getDb() throws unless a database was initialized; the context's handle is
 // not what this file is about.
 vi.mock("../../../database/db/index.js", () => ({
-  getDb: () => ({}),
+  getDb: vi.fn(() => ({})),
   getSqlite: () => ({}),
   DatabaseSaveTrigger: { forceSave: vi.fn(), triggerSave: vi.fn() },
 }));
 
 const {
+  createCurrentSessionRepository,
   createCurrentRepositoryContext,
   createCurrentRepositoryWriteHook,
   createCurrentRepositoryLazyWriteHook,
@@ -85,4 +86,36 @@ describe("createCurrentRepositoryLazyWriteHook", () => {
       expect(createCurrentRepositoryLazyWriteHook("test")).toBeUndefined();
     }
   });
+});
+
+it("wires SQLite activity to the periodic flush and token changes to immediate persistence", async () => {
+  const saved = process.env[DATABASE_DIALECT_ENV];
+  process.env[DATABASE_DIALECT_ENV] = "sqlite";
+  const { getDb } = await import("../../../database/db/index.js");
+  const { DatabaseSaveTrigger } =
+    await import("../../../utils/database-save-trigger.js");
+  const dirty = vi
+    .spyOn(DatabaseSaveTrigger, "markDirty")
+    .mockImplementation(() => {});
+  const force = vi.spyOn(DatabaseSaveTrigger, "forceSave").mockResolvedValue();
+  const query = {
+    update: () => query,
+    set: () => query,
+    where: async () => ({ changes: 1 }),
+  };
+  vi.mocked(getDb).mockReturnValue(
+    query as unknown as ReturnType<typeof getDb>,
+  );
+  try {
+    const repo = createCurrentSessionRepository();
+    await repo.touch("session-1");
+    expect(dirty).toHaveBeenCalledOnce();
+    expect(force).not.toHaveBeenCalled();
+    await repo.updateToken("session-1", "new-token");
+    expect(force).toHaveBeenCalledOnce();
+  } finally {
+    vi.restoreAllMocks();
+    if (saved === undefined) delete process.env[DATABASE_DIALECT_ENV];
+    else process.env[DATABASE_DIALECT_ENV] = saved;
+  }
 });

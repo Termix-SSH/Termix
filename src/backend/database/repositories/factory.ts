@@ -278,6 +278,10 @@ export function createCurrentSessionRepository(): SessionRepository {
   return new SessionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
+    // Activity timestamps are informational; the periodic flush persists them.
+    needsExplicitPersist(resolveDatabaseDialect())
+      ? () => DatabaseSaveTrigger.markDirty()
+      : undefined,
   );
 }
 
