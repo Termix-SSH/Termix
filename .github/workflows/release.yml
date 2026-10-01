@@ -100,6 +100,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Manifest validation in lint loads the built SDK.
+      - name: Build SDK
+        run: npm run build:sdk
+
       - name: Lint and format
         run: |
           npm run lint:fix
@@ -108,7 +112,7 @@ jobs:
 
       # The plugin boot tests load the built bundles.
       - name: Build plugins
-        run: npm run build:sdk && npm run build:plugins
+        run: npm run build:plugins
 
       - name: Run unit tests
         run: npm run test
