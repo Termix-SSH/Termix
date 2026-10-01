@@ -52,14 +52,20 @@ async function resolveProjectId() {
   return { id: match.id, targetLanguageIds: match.targetLanguageIds || [] };
 }
 
-async function resolveFileId(projectId) {
-  const files = await paged(`/projects/${projectId}/files`);
-  const match = files.find(
-    (f) => f.name === SOURCE_FILE || f.path === `/${SOURCE_FILE}`,
+// Core is /en.json and each plugin is /plugins/<id>/locales/en.json.
+function isSourceFile(file) {
+  return (
+    file.path === `/${SOURCE_FILE}` ||
+    /^\/plugins\/[^/]+\/locales\/en\.json$/.test(file.path || "")
   );
-  if (!match)
-    throw new Error(`source file "${SOURCE_FILE}" not found in project`);
-  return match.id;
+}
+
+async function resolveFileIds(projectId) {
+  const files = await paged(`/projects/${projectId}/files`);
+  const ids = files.filter(isSourceFile).map((f) => f.id);
+  if (ids.length === 0)
+    throw new Error(`no "${SOURCE_FILE}" source files found in project`);
+  return ids;
 }
 
 async function pollPreTranslation(projectId, preTranslationId) {
@@ -84,31 +90,35 @@ async function main() {
     throw new Error("project has no target languages configured");
   }
 
-  const fileId = await resolveFileId(projectId);
+  const fileIds = await resolveFileIds(projectId);
 
   console.log(
-    `Pre-translating project ${projectId}, file ${fileId}, ${targetLanguageIds.length} languages via MT engine ${ENGINE_ID}`,
+    `Pre-translating project ${projectId}, ${fileIds.length} files, ${targetLanguageIds.length} languages`,
   );
 
-  const { data } = await request(
-    "POST",
-    `/projects/${projectId}/pre-translations`,
-    {
-      languageIds: targetLanguageIds,
-      fileIds: [fileId],
-      method: "mt",
-      engineId: ENGINE_ID,
-      scope: "untranslated",
-    },
-  );
-
-  const result = await pollPreTranslation(projectId, data.identifier);
-  console.log(`Pre-translation finished (${result.progress}%)`);
+  // Translation memory first so strings that moved between files keep their
+  // existing translations, then machine translation for whatever is left.
+  const passes = [
+    { method: "tm", translateUntranslatedOnly: true },
+    { method: "mt", engineId: ENGINE_ID, scope: "untranslated" },
+  ];
+  for (const pass of passes) {
+    const { data } = await request(
+      "POST",
+      `/projects/${projectId}/pre-translations`,
+      { languageIds: targetLanguageIds, fileIds, ...pass },
+    );
+    const result = await pollPreTranslation(projectId, data.identifier);
+    console.log(
+      `${pass.method} pre-translation finished (${result.progress}%)`,
+    );
+  }
 }
 
 module.exports = {
   resolveProjectId,
-  resolveFileId,
+  resolveFileIds,
+  isSourceFile,
   pollPreTranslation,
 };
 
