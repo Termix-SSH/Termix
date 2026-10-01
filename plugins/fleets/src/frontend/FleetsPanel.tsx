@@ -1268,31 +1268,51 @@ function FleetDetail({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex items-center gap-2 p-3 border-b border-border shrink-0">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span
-          className="size-2.5 shrink-0"
-          style={{ backgroundColor: fleet.color ?? "#6b7280" }}
-        />
-        <span className="text-sm font-semibold truncate">{fleet.name}</span>
-        <Badge variant="secondary" className="ml-1">
-          {t("newUi.sidebar.fleets.memberCount", { count: members.length })}
-        </Badge>
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-auto"
-          onClick={() => setShareOpen(true)}
-        >
-          <Share2 className="size-3.5 mr-1.5" />
-          {t("newUi.sidebar.fleets.shareFleet")}
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-          <Settings2 className="size-3.5 mr-1.5" />
-          {t("newUi.sidebar.fleets.manageMembers")}
-        </Button>
+      <div className="flex flex-col gap-2 p-3 border-b border-border shrink-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={onBack}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span
+            className="size-2.5 shrink-0"
+            style={{ backgroundColor: fleet.color ?? "#6b7280" }}
+          />
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {fleet.name}
+          </span>
+          <Badge variant="secondary" className="shrink-0">
+            {t("newUi.sidebar.fleets.memberCount", { count: members.length })}
+          </Badge>
+        </div>
+        <div className="flex min-w-0 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-w-0 flex-1"
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 className="size-3.5 shrink-0" />
+            <span className="truncate">
+              {t("newUi.sidebar.fleets.shareFleet")}
+            </span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-w-0 flex-1"
+            onClick={() => setPickerOpen(true)}
+          >
+            <Settings2 className="size-3.5 shrink-0" />
+            <span className="truncate">
+              {t("newUi.sidebar.fleets.manageMembers")}
+            </span>
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-3">
@@ -1308,7 +1328,7 @@ function FleetDetail({
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <select
-                className="flex-1 px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
+                className="min-w-0 flex-1 px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
                 value={actionView}
                 onChange={(e) =>
                   setActionView(e.target.value as FleetActionView)
