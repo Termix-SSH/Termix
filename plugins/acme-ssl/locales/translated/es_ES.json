@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Gestionar certificados ACME",
+      "description": "Consulte el estado del certificado y solicite uno nuevo ahora."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "Renovación automática",
+      "description": "Compruebe dos veces al día y obtenga un nuevo certificado si no tiene ninguno, si no cubre el dominio o si caduca en los próximos 30 días."
+    },
+    "domain": {
+      "label": "Dominio",
+      "description": "El nombre de dominio público para el certificado.",
+      "placeholder": "termix.example.com"
+    },
+    "email": {
+      "label": "Correo electrónico",
+      "description": "Correo electrónico de contacto para la cuenta ACME y avisos de vencimiento.",
+      "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "Autoridad de certificación",
+      "description": "Dónde obtener el certificado. Utilice el entorno de pruebas para realizar pruebas sin alcanzar los límites de uso de Let's Encrypt.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (en fase de pruebas)",
+      "custom": "Directorio ACME personalizado"
+    },
+    "directoryUrl": {
+      "label": "URL del directorio ACME",
+      "description": "Solo para una autoridad de certificación personalizada. Debe ser una URL HTTPS."
+    },
+    "challengeType": {
+      "label": "Tipo de desafío",
+      "description": "Cómo demostrar que usted es el propietario del dominio.",
+      "http": "HTTP: necesita que el puerto 80 sea accesible desde Internet.",
+      "cloudflare": "DNS (Cloudflare): requiere un token de API de Cloudflare."
+    },
+    "cloudflareToken": {
+      "label": "Token de API de Cloudflare",
+      "description": "Token con permiso Zone:DNS:Edit limitado para tu dominio."
+    }
+  },
+  "status": {
+    "title": "Estado del certificado",
+    "none": "Sin certificado",
+    "names": "Portadas {{names}}",
+    "issuer": "Emitido por {{issuer}}",
+    "expires": "Caduca {{date}}",
+    "lastIssued": "Última emisión {{date}}",
+    "lastError": "Último intento fallido: {{error}}",
+    "missing": "Configure el dominio, el correo electrónico y los campos que requiere su tipo de desafío, luego guarde los cambios y, a continuación, solicite un certificado.",
+    "request": "Solicita tu certificado ahora",
+    "requesting": "Solicitando certificado...",
+    "issued": "Certificado emitido e instalado"
+  }
+}

@@ -1,0 +1,267 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  createMockCtx,
+  createTestDb,
+  type MockPluginContext,
+  type TestDb,
+} from "@termix/plugin-sdk/testing";
+import manifestJson from "../../manifest.json";
+import { pluginDir } from "./helpers";
+import { createSessionRecordingRepository } from "../../src/backend/repository";
+import { sessionRecordings } from "../../src/backend/tables";
+import { createRecordingsWriter } from "../../src/backend/service";
+
+const manifest =
+  manifestJson as unknown as import("@termix/plugin-sdk/manifest").PluginManifest;
+
+let db: TestDb | null = null;
+let dataDir: string;
+
+beforeEach(async () => {
+  dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "session-recording-"));
+});
+
+afterEach(async () => {
+  db?.close();
+  db = null;
+  await fs.rm(dataDir, { recursive: true, force: true });
+});
+
+async function setup(): Promise<{
+  mock: MockPluginContext;
+  writer: ReturnType<typeof createRecordingsWriter>;
+}> {
+  db = await createTestDb(pluginDir);
+  db.sqlite
+    .prepare("INSERT INTO users (id, username) VALUES (?, ?)")
+    .run("user-1", "alice");
+  db.sqlite.prepare("INSERT INTO ssh_data (id) VALUES (?)").run(7);
+  const table = await db.database.define(sessionRecordings);
+  const hosts = {
+    list: async () => [],
+    get: async () => null,
+    checkAccess: async () => ({
+      hasAccess: false,
+      isOwner: false,
+      isShared: false,
+    }),
+    create: async () => {
+      throw new Error("not used");
+    },
+    update: async () => null,
+    listOwned: async () => [],
+    share: async () => ({ hostId: 0, shared: false }),
+    listUsers: async () => [],
+    listRoles: async () => [],
+    trackSession: () => () => {},
+    recordActivity: async () => {},
+  };
+  const repo = createSessionRecordingRepository(
+    db.database,
+    table,
+    hosts as never,
+  );
+
+  const mock = createMockCtx({
+    pluginId: manifest.id,
+    manifest,
+    capabilities: manifest.capabilities,
+    db: db.database,
+  });
+  // Point ctx.files.dataDir() at a real temp dir for this test.
+  (mock.ctx as unknown as { files: { dataDir: () => Promise<string> } }).files =
+    {
+      dataDir: async () => dataDir,
+    };
+
+  const writer = createRecordingsWriter(mock.ctx, repo);
+  return { mock, writer };
+}
+
+describe("recordings.writer", () => {
+  it("is null when the host has recording switched off", async () => {
+    const { mock, writer } = await setup();
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", false);
+
+    const sink = await writer.open({
+      sessionId: "s1",
+      hostId: 7,
+      userId: "user-1",
+      protocol: "ssh",
+      format: "asciicast",
+      startedAt: Date.now(),
+    });
+
+    expect(sink).toBeNull();
+    expect(await writer.enabledFor(7)).toBe(false);
+    expect(await fs.readdir(dataDir)).toEqual([]);
+    expect(
+      db!.sqlite
+        .prepare(
+          "SELECT COUNT(*) AS count FROM p_session_recording_session_recordings",
+        )
+        .get(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("keeps a saved off switch after recreating the writer without affecting another host", async () => {
+    const { mock } = await setup();
+    db!.sqlite.prepare("INSERT INTO ssh_data (id) VALUES (?)").run(8);
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", false);
+    await mock.ctx.settings.setHost(8, "enableSessionRecording", true);
+    const table = await db!.database.define(sessionRecordings);
+    const repository = createSessionRecordingRepository(
+      db!.database,
+      table,
+      mock.ctx.hosts,
+    );
+    const reopened = createRecordingsWriter(mock.ctx, repository);
+    for (const hostId of [7, 8]) {
+      const sink = await reopened.open({
+        sessionId: `host-${hostId}`,
+        hostId,
+        userId: "user-1",
+        protocol: "ssh",
+        format: "asciicast",
+        startedAt: Date.now(),
+      });
+      if (hostId === 7) expect(sink).toBeNull();
+      else {
+        expect(sink).not.toBeNull();
+        await sink!.append("marker\n");
+      }
+    }
+    expect(
+      await fs.readdir(path.join(dataDir, "session_logs", "user-1")),
+    ).toEqual(["host-8.cast"]);
+    expect(
+      db!.sqlite
+        .prepare("SELECT host_id FROM p_session_recording_session_recordings")
+        .all(),
+    ).toEqual([{ host_id: 8 }]);
+  });
+
+  it("writes the first append with writeFile and later ones with appendFile", async () => {
+    const { writer } = await setup();
+    const sink = await writer.open({
+      sessionId: "s1",
+      hostId: 7,
+      userId: "user-1",
+      protocol: "ssh",
+      format: "asciicast",
+      startedAt: Date.now(),
+    });
+    expect(sink).not.toBeNull();
+
+    await sink!.append("chunk-one\n");
+    await sink!.append("chunk-two\n");
+
+    const filePath = path.join(dataDir, "session_logs", "user-1", "s1.cast");
+    const content = await fs.readFile(filePath, "utf-8");
+    expect(content).toBe("chunk-one\nchunk-two\n");
+  });
+
+  it("persist writes the summary onto the row", async () => {
+    const { writer } = await setup();
+    const sink = await writer.open({
+      sessionId: "s1",
+      hostId: 7,
+      userId: "user-1",
+      protocol: "ssh",
+      format: "asciicast",
+      startedAt: Date.now(),
+    });
+    await sink!.append("x\n");
+
+    const endedAt = Date.now();
+    await sink!.persist({
+      endedAt,
+      durationSeconds: 42,
+      terminatedByOwner: true,
+      terminationReason: null,
+    });
+
+    // Not thrown means it wrote successfully; deeper row assertions belong
+    // to repository.test.ts.
+  });
+
+  it("discard removes the row and further writes are no-ops", async () => {
+    const { writer } = await setup();
+    const sink = await writer.open({
+      sessionId: "s1",
+      hostId: 7,
+      userId: "user-1",
+      protocol: "ssh",
+      format: "asciicast",
+      startedAt: Date.now(),
+    });
+
+    sink!.discard();
+    await sink!.append("should not write");
+
+    const filePath = path.join(dataDir, "session_logs", "user-1", "s1.cast");
+    await expect(fs.access(filePath)).rejects.toThrow();
+  });
+
+  it("createFinished inserts a row for an already-written recording", async () => {
+    const { writer } = await setup();
+    const row = await writer.createFinished({
+      hostId: 7,
+      userId: "user-1",
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      duration: 10,
+      recordingPath: "/data/session_recordings/guacamole/x.guac",
+      protocol: "rdp",
+      format: "guacamole",
+    });
+
+    expect(row.id).toBeGreaterThan(0);
+  });
+
+  it("createFinished moves guacd's file under the data folder, where playback reads it", async () => {
+    const { mock, writer } = await setup();
+    const guacdDir = await fs.mkdtemp(path.join(os.tmpdir(), "guacd-"));
+    const source = path.join(guacdDir, "guacamole", "rdp-1.guac");
+    await fs.mkdir(path.dirname(source), { recursive: true });
+    await fs.writeFile(source, "4.size,1.0;");
+
+    const row = await writer.createFinished({
+      hostId: 7,
+      userId: "user-1",
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      duration: 10,
+      recordingPath: source,
+      protocol: "rdp",
+      format: "guacamole",
+    });
+
+    const target = path.join(
+      await mock.ctx.files.dataDir(),
+      "session_recordings",
+      "guacamole",
+      "rdp-1.guac",
+    );
+    await expect(fs.readFile(target, "utf8")).resolves.toBe("4.size,1.0;");
+    await expect(fs.access(source)).rejects.toThrow();
+    const stored = db!.sqlite
+      .prepare(
+        "SELECT recording_path FROM p_session_recording_session_recordings WHERE id = ?",
+      )
+      .get(row.id) as { recording_path: string };
+    expect(stored.recording_path).toBe(target);
+    await fs.rm(guacdDir, { recursive: true, force: true });
+  });
+
+  it("enabledFor follows the host's recording switch", async () => {
+    const { mock, writer } = await setup();
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", true);
+    await expect(writer.enabledFor(7)).resolves.toBe(true);
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", false);
+    await expect(writer.enabledFor(7)).resolves.toBe(false);
+  });
+});

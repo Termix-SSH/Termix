@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "ملف توقيع Vault",
+    "selectProfile": "اختيار ملف توقيع Vault...",
+    "hint": "تأتي الإعدادات من الملف المشترك؛ ستقوم بتسجيل الدخول إلى Vault عبر OIDC عند الاتصال. لا يتم تخزين أي أسرار.",
+    "docs": "عرض المستندات",
+    "sharedProfile": "{{name}} (مشترك)"
+  },
+  "profiles": {
+    "new": "ملف جديد",
+    "manage": "إدارة ملفات Vault",
+    "name": "الاسم المألوف",
+    "vaultAddr": "عنوان Vault",
+    "namespace": "مساحة الاسم",
+    "oidcMount": "تثبيت مصادقة OIDC",
+    "oidcRole": "دور OIDC",
+    "sshMount": "تثبيت أسرار SSH",
+    "sshRole": "دور موقع SSH",
+    "validPrincipals": "المستخدمون المسموح بهم",
+    "keyType": "نوع المفتاح المؤقت",
+    "shareWithAll": "مشاركة مع جميع المستخدمين",
+    "create": "إنشاء ملف تعريف",
+    "created": "تم إنشاء ملف تعريف Vault",
+    "saved": "تم حفظ ملف تعريف Vault",
+    "deleted": "تم حذف ملف تعريف Vault",
+    "saveFailed": "فشل حفظ ملف تعريف Vault",
+    "deleteFailed": "فشل حذف ملف تعريف Vault",
+    "save": "حفظ ملف التعريف",
+    "validationError": "الاسم وعنوان Vault ودور الموقّع SSH مطلوب",
+    "none": "لا توجد ملفات تعريف Vault بعد.",
+    "sharedBadge": "مشترك",
+    "edit": "تحرير",
+    "delete": "حذف"
+  },
+  "hosts": {
+    "filterAuthVault": "قبو"
+  },
+  "dialog": {
+    "title": "مطلوب تسجيل الدخول إلى Vault",
+    "description": "تم فتح نافذة لتسجيل الدخول إلى HashiCorp Vault. أكمل تسجيل الدخول هناك؛ سيستمر هذا الاتصال تلقائيًا.",
+    "failed": "فشلت مصادقة Vault. يرجى المحاولة مرة أخرى.",
+    "reopen": "أعد فتح نافذة تسجيل الدخول"
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدم توقيع SSH الخاص بـ Vault",
+      "description": "أنشئ ملفات تعريف التوقيع الخاصة بـ Vault وقم بالاتصال بالمضيفين الذين يستخدمون Vault."
+    },
+    "share": {
+      "title": "ملفات تعريف Share Vault",
+      "description": "قم بتحديد ملف تعريف مُوقِّع Vault على أنه مُشترك حتى يتمكن كل مستخدم من اختياره."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "عنوان إعادة التوجيه",
+      "description": "أضف عنوان URL هذا إلى allowed_redirect_uris في كل دور Vault OIDC الذي يسجل Termix الدخول به."
+    },
+    "legacyCallback": {
+      "label": "استخدم عنوان URI القديم لإعادة التوجيه",
+      "description": "استمر في إرسال /vault/oidc/callback، وهو عنوان إعادة التوجيه المستخدم قبل الإصدار 2.9. قم بإيقاف تشغيل هذا بمجرد أن تسمح أدوار Vault الخاصة بك بالعنوان الجديد."
+    },
+    "host": {
+      "profileId": {
+        "label": "ملف تعريف مُوقِّع الخزينة"
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "title": "Authenticator App",
+  "factor": "Authenticator code",
+  "challenge": {
+    "enterCode": "输入验证码",
+    "verify": "验证",
+    "backupCodeHint": "You can also enter one of your backup codes."
+  },
+  "enrollment": {
+    "title": "TOTP 身份验证器",
+    "docs": "文档",
+    "on": "双因素认证已启用",
+    "off": "添加额外的登录安全",
+    "enable": "启用",
+    "disable": "禁用",
+    "addDevice": "Add device",
+    "addTitle": "Add authenticator device",
+    "addDescription": "Confirm with a code from your authenticator or a backup code to enroll another device with the same key.",
+    "addScanInstructions": "Scan this QR code with the additional authenticator. Existing authenticators will continue to work.",
+    "addSuccess": "Additional authenticator enrolled",
+    "addFailed": "Failed to add authenticator",
+    "codeRequired": "Enter a TOTP code or backup code",
+    "codePlaceholder": "TOTP code or backup code",
+    "setupTitle": "设置 TOTP",
+    "setupFailed": "启动 TOTP 设置失败",
+    "qrCode": "二维码",
+    "secretCopied": "密钥已复制到剪贴板",
+    "instructions": "Scan the QR code or enter the secret in your authenticator app, then enter the 6-digit code",
+    "continueVerify": "继续验证",
+    "verifyTitle": "验证",
+    "verify": "验证",
+    "enter6Digits": "输入 6 位验证码",
+    "enabledSuccess": "双因素认证已启用",
+    "invalidCode": "验证码无效，请重试",
+    "disableTitle": "禁用 2FA",
+    "disabledSuccess": "双因素认证已禁用",
+    "disableFailed": "禁用 2FA 失败",
+    "backupTitle": "备份验证码",
+    "downloadBackup": "下载备份验证码",
+    "done": "完成"
+  }
+}

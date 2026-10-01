@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "הצג אוטומציות",
+      "description": "ראה את האוטומציות ואת ההיסטוריה שלהן."
+    },
+    "create": {
+      "title": "צור אוטומציות",
+      "description": "הוסף אוטומציות חדשות."
+    },
+    "edit": {
+      "title": "עריכת אוטומציות",
+      "description": "שינוי אוטומציות קיימות."
+    },
+    "delete": {
+      "title": "מחיקת אוטומציות",
+      "description": "הסר אוטומציות."
+    },
+    "run": {
+      "title": "הפעלת אוטומציות",
+      "description": "הפעל אוטומציה באופן ידני."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "אוטומציות",
+        "tabAutomations": "אוטומציות",
+        "tabRuns": "ריצות",
+        "tabChannels": "ערוצים",
+        "createAutomation": "אוטומציה חדשה",
+        "backToAutomations": "חזרה לאוטומציות",
+        "createTitle": "אוטומציה חדשה",
+        "editTitle": "עריכה אוטומציה",
+        "empty": "אין עדיין אוטומציות. צור אחת שתגיב למדד, לוח זמנים או אירוע.",
+        "emptyRuns": "עדיין אין ריצות.",
+        "channelsHint": "ערוצים מוגדרים בהתראות",
+        "noChannelsHint": "ההתראה תמיד מגיעה לתיבת הדואר הנכנס שלך. הוסף ערוצים בהתראות כדי לשלוח אותה גם למקום אחר.",
+        "nameLabel": "שֵׁם",
+        "namePlaceholder": "לדוגמה, ניקוי /נתונים כאשר הוא מתמלא",
+        "nameRequired": "שם נדרש",
+        "descriptionLabel": "תֵאוּר",
+        "descriptionPlaceholder": "תיאור אופציונלי",
+        "enabledLabel": "מופעל",
+        "concurrencyLabel": "אם זה כבר פועל",
+        "concurrencyHint": "מה לעשות כאשר זה מופעל שוב לפני שהריצה האחרונה הסתיימה.",
+        "concurrency": {
+          "skip": "דלג על הריצה החדשה",
+          "queue": "חכו ורוץ אחרי",
+          "allow": "הפעל את שניהם בו זמנית"
+        },
+        "save": "לְהַצִיל",
+        "created": "אוטומציה נוצרה",
+        "updated": "אוטומציה נשמרה",
+        "deleted": "אוטומציה נמחקה",
+        "deleteConfirm": "למחוק את האוטומציה הזו? גם היסטוריית הריצות שלה נמחקת.",
+        "runNow": "רוץ עכשיו",
+        "testRun": "ריצת מבחן",
+        "testRunHint": "רץ כל שלב אבל לא נוגע בשום דבר מחוץ לטרמיקס.",
+        "runStarted": "הריצה התחילה",
+        "runFinished": "ריצה הסתיימה: {{status}}",
+        "trigger": "לְהַפְעִיל",
+        "steps": "צעדים",
+        "addStep": "הוסף שלב",
+        "removeStep": "הסר שלב",
+        "moveUp": "הזז למעלה",
+        "moveDown": "הזז למטה",
+        "noSteps": "אין עדיין שלבים. הוסף שלבים כדי לומר מה אמור לקרות.",
+        "webhookTokenTitle": "כתובת אתר של Webhook",
+        "webhookTokenDescription": "זה מוצג פעם אחת. שמור את זה עכשיו, לא ניתן לאחזר את זה מאוחר יותר.",
+        "copy": "לְהַעְתִיק",
+        "copied": "מוּעֲתָק",
+        "viewJson": "JSON",
+        "viewBuilder": "בּוֹנֶה",
+        "viewGraph": "גרָף",
+        "lastRun": "ריצה אחרונה",
+        "never": "לְעוֹלָם לֹא",
+        "duration": "{{seconds}}ים",
+        "stepOutput": "תְפוּקָה",
+        "stepError": "שְׁגִיאָה",
+        "dryRunBadge": "ריצת מבחן",
+        "hostSelector": {
+          "trigger": "מארח מפעיל",
+          "host": "מארח ספציפי",
+          "fleet": "צִי",
+          "all": "כל המארחים"
+        },
+        "triggerKinds": {
+          "metric_threshold": "סף מטרי",
+          "host_status": "המארח עולה או יורד",
+          "health_check": "שינויים בבדיקת הבריאות",
+          "schedule": "על פי לוח זמנים",
+          "docker_event": "אירוע מיכל",
+          "internal_event": "אירוע טרמיקס",
+          "webhook": "וובהוק נכנס"
+        },
+        "stepTypes": {
+          "notify": "שלח התראה",
+          "http": "קריאה לכתובת URL",
+          "run_snippet": "הפעלת קטע קוד",
+          "run_command": "הפעל פקודה",
+          "docker": "שליטה על מכולה",
+          "tunnel": "שליטה במנהרה",
+          "wol": "להעיר מארח",
+          "wait": "לַחֲכוֹת",
+          "set_var": "הגדר משתנה",
+          "if": "אם / אחרת",
+          "run_automation": "הפעל אוטומציה נוספת",
+          "stop": "לְהַפְסִיק"
+        },
+        "statuses": {
+          "running": "רִיצָה",
+          "success": "הַצלָחָה",
+          "failed": "נִכשָׁל",
+          "timeout": "תם הזמן",
+          "skipped": "דילג",
+          "cancelled": "בּוּטלָה"
+        },
+        "fields": {
+          "host": "מְאָרֵחַ",
+          "metric": "מֶטרִי",
+          "mount": "נקודת הרכבה",
+          "operator": "האם",
+          "value": "עֵרֶך",
+          "forSeconds": "נמשך (שניות)",
+          "cooldown": "זמן קירור (דקות)",
+          "cron": "ביטוי קרון",
+          "intervalSeconds": "כל (שניות)",
+          "timezone": "אזור זמן",
+          "timezoneServer": "זמן שרת",
+          "timezoneHint": "זמני Cron נקראים באזור זה. לא חל על לוחות זמנים של מרווחים.",
+          "container": "מְכוֹלָה",
+          "command": "פְּקוּדָה",
+          "url": "כתובת אתר",
+          "method": "שִׁיטָה",
+          "body": "גוּף",
+          "channels": "שלחו גם אל",
+          "title": "כּוֹתֶרֶת",
+          "message": "הוֹדָעָה",
+          "snippet": "קטע",
+          "seconds": "שניות",
+          "conditionLeftPlaceholder": "ערך לבדיקה",
+          "conditionRightPlaceholder": "השווה מול",
+          "variableName": "שם משתנה",
+          "variableValue": "עֵרֶך",
+          "elevated": "רוץ עם סודו",
+          "onError": "אם זה ייכשל",
+          "allowPrivateNetwork": "אפשר כתובות רשת מקומיות",
+          "allowPrivateNetworkHint": "נדרש עבור שירות אירוח עצמי ברשת הרשת המקומית שלך. כבוי כברירת מחדל כדי למנוע בקשות לכתובות פנימיות."
+        },
+        "onError": {
+          "stop": "עצור את הריצה",
+          "continue": "לְהַמשִׁיך"
+        },
+        "needsPlugin": "צרכים {{plugin}}",
+        "needsPluginHint": "אוטומציה זו מדלגת עד שהתכונה הדרושה לה תהיה זמינה שוב.",
+        "offBadge": "כבוי",
+        "docsLink": "הצג מסמכים",
+        "ago": {
+          "seconds": "לפני {{count}}שניות",
+          "minutes": "לפני {{count}}דקות",
+          "hours": "{{count}}h ago",
+          "days": "{{count}}d ago"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "אוטומציות"
+  },
+  "onboarding": {
+    "feature_automations": "אוטומציות",
+    "feature_automations_desc": "הפעל שלבים באופן אוטומטי כאשר משהו קורה, וקבל הודעה."
+  },
+  "maintenance": {
+    "title": "תַחזוּקָה",
+    "description": "השהה אוטומציות של סטטוס המארח, תקינות, מדדים, ניתוק מנהרות ומכולות בזמן שהעבודה מתבצעת. ניטור, הרצות ידניות ואוטומציות מתוזמנות ממשיכות.",
+    "denied": "אין לך הרשאה לצפות בתחזוקה.",
+    "sharedReadOnly": "מארח זה שותף איתך. רק בעליו יכול לשנות את התחזוקה.",
+    "failed": "לא ניתן היה לעדכן את תוכנית התחזוקה.",
+    "active": "תחזוקה פעילה",
+    "estimated": "השלמה משוערת",
+    "noAutoEnd": "ההערכה אינה מסיימת את התחזוקה. יש לסיים אותה במפורש כאשר העבודה הושלמה.",
+    "endConfirm": "לסיים את התחזוקה ולחדש אוטומציות המופעלות על ידי אירועים עבור מארח זה?",
+    "confirmEnd": "אישור סיום",
+    "cancel": "לְבַטֵל",
+    "end": "סיום תחזוקה",
+    "action": "פְּעוּלָה",
+    "startNow": "התחל עכשיו",
+    "schedule": "קבע למועד מאוחר יותר",
+    "reason": "לְנַמֵק",
+    "startUtc": "התחלה ראשונה (UTC)",
+    "repeat": "לַחֲזוֹר עַל",
+    "once": "פַּעַם",
+    "weekly": "שְׁבוּעִי",
+    "monthly": "יַרחוֹן",
+    "utcHelp": "לוחות זמנים משתמשים ב-UTC לאורך כל השנה. לוחות זמנים חודשיים מדלגים על חודשים ללא היום שנבחר. חלונות מתוכננים אינם יכולים לחפוף; תחזוקה מדורגת ממשיכה בחלונות מאוחרים יותר.",
+    "duration": "משך זמן משוער (בדקות)",
+    "grace": "תקופת חסד (בדקות)",
+    "notify": "הודעה אחת אם עדיין לא מחובר לאחר תקופת ההערכה בתוספת חסד",
+    "addSchedule": "הוסף לוח זמנים",
+    "schedules": "לוחות זמנים",
+    "noSchedules": "אין לוחות זמנים לתחזוקה.",
+    "completed": "כבר התחיל",
+    "minutes_one": "דקה {{count}}",
+    "minutes_other": "{{count}} דקות",
+    "remove": "הסר את לוח הזמנים",
+    "loadFailed": "לא ניתן היה לרענן את סטטוס התחזוקה. השינויים מושבתים עד שניתן יהיה לטעון אותו.",
+    "loading": "טוען סטטוס תחזוקה…"
+  }
+}

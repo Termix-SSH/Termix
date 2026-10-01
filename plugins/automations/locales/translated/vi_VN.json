@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "View automations",
+      "description": "See the automations and their history."
+    },
+    "create": {
+      "title": "Create automations",
+      "description": "Add new automations."
+    },
+    "edit": {
+      "title": "Edit automations",
+      "description": "Change existing automations."
+    },
+    "delete": {
+      "title": "Delete automations",
+      "description": "Remove automations."
+    },
+    "run": {
+      "title": "Run automations",
+      "description": "Trigger an automation by hand."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "Automations",
+        "tabAutomations": "Automations",
+        "tabRuns": "Runs",
+        "tabChannels": "Kênh",
+        "createAutomation": "New Automation",
+        "backToAutomations": "Back to Automations",
+        "createTitle": "New Automation",
+        "editTitle": "Edit Automation",
+        "empty": "No automations yet. Create one to react to a metric, a schedule, or an event.",
+        "emptyRuns": "No runs yet.",
+        "channelsHint": "Channels are set up in Alerts",
+        "noChannelsHint": "The alert always goes to your inbox. Add channels in Alerts to also send it somewhere else.",
+        "nameLabel": "Tên",
+        "namePlaceholder": "e.g., Clean up /data when it fills",
+        "nameRequired": "Tên là bắt buộc",
+        "descriptionLabel": "Mô tả",
+        "descriptionPlaceholder": "Mô tả tùy chọn",
+        "enabledLabel": "Đã bật",
+        "concurrencyLabel": "If it is already running",
+        "concurrencyHint": "What to do when this is triggered again before the last run has finished.",
+        "concurrency": {
+          "skip": "Skip the new run",
+          "queue": "Wait and run after",
+          "allow": "Run both at once"
+        },
+        "save": "Lưu",
+        "created": "Automation created",
+        "updated": "Automation saved",
+        "deleted": "Automation deleted",
+        "deleteConfirm": "Delete this automation? Its run history is deleted too.",
+        "runNow": "Run now",
+        "testRun": "Test run",
+        "testRunHint": "Runs every step but does not touch anything outside Termix.",
+        "runStarted": "Run started",
+        "runFinished": "Run finished: {{status}}",
+        "trigger": "Kích hoạt",
+        "steps": "Steps",
+        "addStep": "Add step",
+        "removeStep": "Remove step",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "noSteps": "No steps yet. Add one to say what should happen.",
+        "webhookTokenTitle": "Webhook URL",
+        "webhookTokenDescription": "This is shown once. Save it now, it cannot be retrieved later.",
+        "copy": "Sao chép",
+        "copied": "Đã sao chép",
+        "viewJson": "JSON",
+        "viewBuilder": "Builder",
+        "viewGraph": "Graph",
+        "lastRun": "Last run",
+        "never": "Chưa bao giờ",
+        "duration": "{{seconds}}s",
+        "stepOutput": "Đầu ra",
+        "stepError": "Lỗi",
+        "dryRunBadge": "Test run",
+        "hostSelector": {
+          "trigger": "Triggering host",
+          "host": "Specific host",
+          "fleet": "Fleet",
+          "all": "Tất cả máy chủ"
+        },
+        "triggerKinds": {
+          "metric_threshold": "Metric threshold",
+          "host_status": "Host goes up or down",
+          "health_check": "Health check changes",
+          "schedule": "On a schedule",
+          "docker_event": "Container event",
+          "internal_event": "Termix event",
+          "webhook": "Incoming webhook"
+        },
+        "stepTypes": {
+          "notify": "Send an alert",
+          "http": "Call a URL",
+          "run_snippet": "Run a snippet",
+          "run_command": "Run a command",
+          "docker": "Control a container",
+          "tunnel": "Control a tunnel",
+          "wol": "Wake a host",
+          "wait": "Wait",
+          "set_var": "Set a variable",
+          "if": "If / otherwise",
+          "run_automation": "Run another automation",
+          "stop": "Bit dừng"
+        },
+        "statuses": {
+          "running": "Đang chạy",
+          "success": "Thành công",
+          "failed": "Thất bại",
+          "timeout": "Timed out",
+          "skipped": "Skipped",
+          "cancelled": "Cancelled"
+        },
+        "fields": {
+          "host": "Máy chủ",
+          "metric": "Chỉ số",
+          "mount": "Mount point",
+          "operator": "Is",
+          "value": "Value",
+          "forSeconds": "Sustained for (seconds)",
+          "cooldown": "Thời gian chờ (phút)",
+          "cron": "Cron expression",
+          "intervalSeconds": "Every (seconds)",
+          "timezone": "Time zone",
+          "timezoneServer": "Server time",
+          "timezoneHint": "Cron times are read in this zone. Does not apply to interval schedules.",
+          "container": "Container",
+          "command": "Lệnh",
+          "url": "URL",
+          "method": "Method",
+          "body": "Body",
+          "channels": "Also send to",
+          "title": "Tiêu đề",
+          "message": "Message",
+          "snippet": "Snippet",
+          "seconds": "Seconds",
+          "conditionLeftPlaceholder": "Value to check",
+          "conditionRightPlaceholder": "Compare against",
+          "variableName": "Variable name",
+          "variableValue": "Value",
+          "elevated": "Run with sudo",
+          "onError": "If this fails",
+          "allowPrivateNetwork": "Allow local network addresses",
+          "allowPrivateNetworkHint": "Needed for a self-hosted service on your LAN. Off by default to prevent requests to internal addresses."
+        },
+        "onError": {
+          "stop": "Stop the run",
+          "continue": "Carry on"
+        },
+        "needsPlugin": "Needs {{plugin}}",
+        "needsPluginHint": "This automation is skipped until the feature it needs is available again.",
+        "offBadge": "Tắt",
+        "docsLink": "Xem tài liệu",
+        "ago": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}} phút trước",
+          "hours": "{{count}} giờ trước",
+          "days": "{{count}} ngày trước"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "Automations"
+  },
+  "onboarding": {
+    "feature_automations": "Automations",
+    "feature_automations_desc": "Run steps automatically when something happens, and get notified."
+  },
+  "maintenance": {
+    "title": "Bảo trì",
+    "description": "Pause host status, health, metric, container and tunnel-disconnection automations while work is in progress. Monitoring, manual runs and scheduled automations continue.",
+    "denied": "You do not have permission to view maintenance.",
+    "sharedReadOnly": "This host was shared with you. Only its owner can change maintenance.",
+    "failed": "Maintenance could not be updated.",
+    "active": "Maintenance active",
+    "estimated": "Estimated completion",
+    "noAutoEnd": "The estimate does not end maintenance. End it explicitly when the work is complete.",
+    "endConfirm": "End maintenance and resume event-triggered automations for this host?",
+    "confirmEnd": "Confirm end",
+    "cancel": "Hủy",
+    "end": "End maintenance",
+    "action": "Hành động",
+    "startNow": "Start now",
+    "schedule": "Schedule for later",
+    "reason": "Reason",
+    "startUtc": "First start (UTC)",
+    "repeat": "Repeat",
+    "once": "Once",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "utcHelp": "Schedules use UTC throughout the year. Monthly schedules skip months without the selected day. Planned windows cannot overlap; overrunning maintenance continues across later windows.",
+    "duration": "Estimated duration (minutes)",
+    "grace": "Grace period (minutes)",
+    "notify": "Notify once if still offline after the estimate plus grace period",
+    "addSchedule": "Add schedule",
+    "schedules": "Schedules",
+    "noSchedules": "No maintenance schedules.",
+    "completed": "Already started",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "remove": "Remove schedule",
+    "loadFailed": "Could not refresh maintenance status. Changes are disabled until it can be loaded.",
+    "loading": "Loading maintenance status…"
+  }
+}

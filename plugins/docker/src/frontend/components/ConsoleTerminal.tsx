@@ -1,0 +1,601 @@
+import { getErrorMessage } from "../error-message";
+import {
+  Button,
+  Card,
+  CardContent,
+  ConnectionLogProvider,
+  ConnectionScreen,
+  RobustClipboardProvider,
+  Select2,
+  copyToClipboard,
+  isElectron,
+  pluginWsUrl,
+  readFromClipboard,
+  resolveConnectionOrigin,
+  useAppTheme as useTheme,
+  useConnectionLog,
+} from "@termix/plugin-sdk/ui";
+import type { DockerHost } from "../types";
+import { useConsoleLook, type ConsoleLook } from "./console-look";
+import React from "react";
+import { useXTerm } from "react-xtermjs";
+import { FitAddon } from "@xterm/addon-fit";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
+import { toast } from "sonner";
+import {
+  useTranslation,
+  useConnectionRetry,
+} from "@termix/plugin-sdk/frontend";
+
+function applyConsoleLook(
+  terminal: NonNullable<ReturnType<typeof useXTerm>["instance"]>,
+  look: ConsoleLook,
+): void {
+  terminal.options.cursorBlink = look.cursorBlink;
+  terminal.options.cursorStyle = look.cursorStyle;
+  terminal.options.fontSize = look.fontSize;
+  terminal.options.fontFamily = look.fontFamily;
+  terminal.options.scrollback = look.scrollback;
+  terminal.options.letterSpacing = look.letterSpacing;
+  terminal.options.lineHeight = look.lineHeight;
+  terminal.options.theme = { ...look.colors };
+}
+
+interface ConsoleTerminalProps {
+  containerId: string;
+  containerName: string;
+  containerState: string;
+  hostConfig: DockerHost;
+}
+
+export function ConsoleTerminal(
+  props: ConsoleTerminalProps,
+): React.ReactElement {
+  return (
+    <ConnectionLogProvider>
+      <ConsoleTerminalInner {...props} />
+    </ConnectionLogProvider>
+  );
+}
+
+function ConsoleTerminalInner({
+  containerId,
+  containerName,
+  containerState,
+  hostConfig,
+}: ConsoleTerminalProps): React.ReactElement {
+  const { t } = useTranslation();
+  const { theme: appTheme } = useTheme();
+  const { instance: terminal, ref: xtermRef } = useXTerm();
+  const { addLog, clearLogs } = useConnectionLog();
+
+  // The SSH terminal's look on this host, or plain colors while it is off.
+  const look = useConsoleLook(
+    hostConfig as unknown as Parameters<typeof useConsoleLook>[0],
+    appTheme,
+  );
+  const themeColors = look.colors;
+  const lookRef = React.useRef<ConsoleLook>(look);
+  lookRef.current = look;
+
+  const [isConnected, setIsConnected] = React.useState(false);
+  const [isConnecting, setIsConnecting] = React.useState(false);
+  const [selectedShell, setSelectedShell] = React.useState<string>("bash");
+  const wsRef = React.useRef<WebSocket | null>(null);
+  const fitAddonRef = React.useRef<FitAddon | null>(null);
+  const pingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    if (!terminal) return;
+
+    const fitAddon = new FitAddon();
+    const clipboardProvider = new RobustClipboardProvider();
+    const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
+    const webLinksAddon = new WebLinksAddon();
+
+    fitAddonRef.current = fitAddon;
+
+    terminal.loadAddon(fitAddon);
+    terminal.loadAddon(clipboardAddon);
+    terminal.loadAddon(webLinksAddon);
+
+    applyConsoleLook(terminal, lookRef.current);
+
+    const readTextFromClipboard = async (): Promise<string> => {
+      return readFromClipboard();
+    };
+
+    const writeTextToClipboard = async (text: string): Promise<void> => {
+      await copyToClipboard(text);
+    };
+
+    terminal.attachCustomKeyEventHandler((e: KeyboardEvent): boolean => {
+      if (e.type !== "keydown") return true;
+
+      if (
+        ((e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) ||
+          (e.metaKey && !e.shiftKey && !e.ctrlKey && !e.altKey)) &&
+        e.key.toLowerCase() === "v"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        readTextFromClipboard()
+          .then((text) => {
+            if (text) terminal.paste(text);
+          })
+          .catch(() => {
+            toast.error(t("terminal.clipboardReadFailed"));
+          });
+        return false;
+      }
+
+      if (
+        e.ctrlKey &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key.toLowerCase() === "c" &&
+        terminal.hasSelection()
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selection = terminal.getSelection();
+        if (selection) {
+          writeTextToClipboard(selection).catch(() => {
+            toast.error(t("terminal.clipboardWriteFailed"));
+          });
+          terminal.clearSelection();
+        }
+        return false;
+      }
+
+      if (
+        e.ctrlKey &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key === "Insert" &&
+        terminal.hasSelection()
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selection = terminal.getSelection();
+        if (selection) {
+          writeTextToClipboard(selection).catch(() => {
+            toast.error(t("terminal.clipboardWriteFailed"));
+          });
+        }
+        return false;
+      }
+
+      if (
+        e.shiftKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key === "Insert"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        readTextFromClipboard()
+          .then((text) => {
+            if (text) terminal.paste(text);
+          })
+          .catch(() => {
+            toast.error(t("terminal.clipboardReadFailed"));
+          });
+        return false;
+      }
+
+      return true;
+    });
+
+    setTimeout(() => {
+      fitAddon.fit();
+    }, 100);
+
+    const resizeHandler = () => {
+      if (fitAddonRef.current) {
+        fitAddonRef.current.fit();
+
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          const { rows, cols } = terminal;
+          wsRef.current.send(
+            JSON.stringify({
+              type: "resize",
+              data: { rows, cols },
+            }),
+          );
+        }
+      }
+    };
+
+    window.addEventListener("resize", resizeHandler);
+
+    return () => {
+      window.removeEventListener("resize", resizeHandler);
+      clipboardProvider.dispose();
+
+      if (wsRef.current) {
+        try {
+          wsRef.current.send(JSON.stringify({ type: "disconnect" }));
+        } catch {
+          // Best-effort disconnect during cleanup.
+        }
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
+      terminal.dispose();
+    };
+  }, [terminal, t]);
+
+  React.useEffect(() => {
+    if (!terminal) return;
+    applyConsoleLook(terminal, look);
+    fitAddonRef.current?.fit();
+  }, [terminal, look]);
+
+  const disconnect = React.useCallback(() => {
+    if (wsRef.current) {
+      try {
+        wsRef.current.send(JSON.stringify({ type: "disconnect" }));
+      } catch {
+        // Best-effort disconnect.
+      }
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setIsConnected(false);
+    retryRef.current.reset();
+    clearLogs();
+    if (terminal) {
+      try {
+        terminal.clear();
+      } catch {
+        // Terminal clear can fail after disposal.
+      }
+    }
+  }, [terminal, clearLogs]);
+
+  const connect = React.useCallback(async () => {
+    if (!terminal || containerState !== "running") {
+      toast.error(t("docker.containerMustBeRunning"));
+      return;
+    }
+
+    setIsConnecting(true);
+    addLog({
+      type: "info",
+      stage: "docker_connecting",
+      message: t("docker.connectingTo", { containerName }),
+    });
+
+    try {
+      if (fitAddonRef.current) {
+        fitAddonRef.current.fit();
+      }
+
+      const isElectronApp = isElectron();
+
+      const origin = isElectronApp
+        ? await resolveConnectionOrigin({
+            connectionOrigin: hostConfig.connectionOrigin,
+          })
+        : "local";
+
+      const resolvedUrl = await pluginWsUrl("docker", "/console", { origin });
+      if (!resolvedUrl) {
+        setIsConnecting(false);
+        toast.error(t("errors.remoteServerRequired"));
+        return;
+      }
+
+      const ws = new WebSocket(resolvedUrl.url, resolvedUrl.protocols);
+
+      ws.onopen = () => {
+        const cols = terminal.cols || 80;
+        const rows = terminal.rows || 24;
+
+        ws.send(
+          JSON.stringify({
+            type: "connect",
+            data: {
+              hostConfig: {
+                id: hostConfig.id,
+                syncId: hostConfig.syncId ?? null,
+                ip: hostConfig.ip,
+              },
+              containerId,
+              shell: selectedShell,
+              cols,
+              rows,
+            },
+          }),
+        );
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+
+          switch (msg.type) {
+            case "output":
+              terminal.write(msg.data);
+              break;
+
+            case "connected":
+              setIsConnected(true);
+              setIsConnecting(false);
+              retryRef.current.markConnected();
+
+              if (msg.data?.shellChanged) {
+                toast.warning(
+                  `Shell "${msg.data.requestedShell}" not available. Using "${msg.data.shell}" instead.`,
+                );
+              } else {
+                toast.success(t("docker.connectedTo", { containerName }));
+              }
+
+              setTimeout(() => {
+                if (fitAddonRef.current) {
+                  fitAddonRef.current.fit();
+                }
+
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(
+                    JSON.stringify({
+                      type: "resize",
+                      data: { rows: terminal.rows, cols: terminal.cols },
+                    }),
+                  );
+                }
+              }, 100);
+              break;
+
+            case "disconnected":
+              setIsConnected(false);
+              setIsConnecting(false);
+              retryRef.current.reset();
+              terminal.write(
+                `\r\n\x1b[1;33m${msg.message || t("docker.disconnected")}\x1b[0m\r\n`,
+              );
+              if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+              }
+              break;
+
+            case "error":
+              setIsConnecting(false);
+              toast.error(msg.message || t("docker.consoleError"));
+              terminal.write(
+                `\r\n\x1b[1;31m${t("docker.errorMessage", { message: msg.message })}\x1b[0m\r\n`,
+              );
+              addLog({
+                type: "error",
+                stage: "error",
+                message: msg.message || t("docker.consoleError"),
+              });
+              retryRef.current.markFailed();
+              break;
+          }
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setIsConnecting(false);
+        setIsConnected(false);
+        toast.error(t("docker.failedToConnect"));
+        addLog({
+          type: "error",
+          stage: "error",
+          message: t("docker.failedToConnect"),
+        });
+        retryRef.current.markFailed();
+      };
+
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
+      pingIntervalRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 30000);
+
+      ws.onclose = () => {
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
+        setIsConnected(false);
+        setIsConnecting(false);
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+        }
+      };
+
+      wsRef.current = ws;
+
+      terminal.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              type: "input",
+              data,
+            }),
+          );
+        }
+      });
+    } catch (error) {
+      setIsConnecting(false);
+      const message = `Failed to connect: ${getErrorMessage(error)}`;
+      toast.error(message);
+      addLog({ type: "error", stage: "error", message });
+      retryRef.current.markFailed();
+    }
+  }, [
+    terminal,
+    containerState,
+    hostConfig,
+    containerId,
+    selectedShell,
+    containerName,
+    t,
+    addLog,
+  ]);
+
+  const retry = useConnectionRetry({
+    connect,
+    autoStart: false,
+  });
+  const retryRef = React.useRef(retry);
+  retryRef.current = retry;
+
+  React.useEffect(() => {
+    return () => {
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      if (wsRef.current) {
+        try {
+          wsRef.current.send(JSON.stringify({ type: "disconnect" }));
+        } catch {
+          // Best-effort disconnect during cleanup.
+        }
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setIsConnected(false);
+    };
+  }, []);
+
+  if (containerState !== "running") {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-2">
+          <TerminalIcon className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+          <p className="text-muted-foreground text-lg">
+            {t("docker.containerNotRunning")}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {t("docker.startContainerToAccess")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full gap-3">
+      <Card className="py-3">
+        <CardContent className="px-3">
+          <div className="flex flex-col sm:flex-row gap-2 items-center sm:items-center">
+            <div className="flex items-center gap-2 flex-1">
+              <TerminalIcon className="h-5 w-5" />
+              <span className="text-base font-medium">
+                {t("docker.console")}
+              </span>
+            </div>
+            <Select2
+              value={selectedShell}
+              onChange={(event) => setSelectedShell(event.target.value)}
+              disabled={isConnected}
+              placeholder={t("docker.selectShell")}
+              className="w-[120px]"
+            >
+              <option value="bash">{t("docker.bash")}</option>
+              <option value="sh">{t("docker.sh")}</option>
+              <option value="ash">{t("docker.ash")}</option>
+            </Select2>
+            <div className="flex gap-2 sm:gap-2">
+              {!isConnected ? (
+                <Button
+                  onClick={connect}
+                  disabled={isConnecting}
+                  className="min-w-[120px]"
+                >
+                  {isConnecting ? (
+                    <>
+                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                      {t("docker.connecting")}
+                    </>
+                  ) : (
+                    <>
+                      <Power className="h-4 w-4 mr-2" />
+                      {t("docker.connect")}
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={disconnect}
+                  variant="destructive"
+                  className="min-w-[120px]"
+                >
+                  <PowerOff className="h-4 w-4 mr-2" />
+                  {t("docker.disconnect")}
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card
+        className="flex-1 overflow-hidden pt-1 pb-0"
+        style={{ background: themeColors.background }}
+      >
+        <CardContent className="p-0 h-full relative">
+          <div
+            ref={xtermRef}
+            className="h-full w-full"
+            style={{ display: isConnected ? "block" : "none" }}
+          />
+
+          {!isConnected &&
+            !isConnecting &&
+            retry.status !== "error" &&
+            retry.status !== "disconnected" && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <TerminalIcon className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+                  <p className="text-muted-foreground">
+                    {t("docker.notConnected")}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("docker.clickToConnect")}
+                  </p>
+                </div>
+              </div>
+            )}
+
+          {!isConnected &&
+            (isConnecting ||
+              retry.status === "error" ||
+              retry.status === "disconnected") && (
+              <ConnectionScreen
+                status={isConnecting ? "connecting" : retry.status}
+                message={t("docker.connectingTo", { containerName })}
+                attempt={retry.attempt}
+                maxAttempts={retry.maxAttempts}
+                nextRetryInMs={retry.nextRetryInMs}
+                onManualRetry={() => {
+                  clearLogs();
+                  retry.retryNow();
+                }}
+                retryLabel={t("docker.connect")}
+              />
+            )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

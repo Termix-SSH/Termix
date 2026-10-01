@@ -49,26 +49,6 @@ function legacyDatabase(): Database.Database {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE session_recordings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        access_id INTEGER,
-        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ended_at TEXT,
-        duration INTEGER,
-        commands TEXT,
-        dangerous_actions TEXT,
-        recording_path TEXT,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        format TEXT NOT NULL DEFAULT 'text',
-        terminated_by_owner INTEGER DEFAULT 0,
-        termination_reason TEXT,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
-    );
-
     INSERT INTO users (id, username) VALUES ('u-1', 'alice'), ('u-2', 'bob');
     INSERT INTO ssh_data (id, name) VALUES (1, 'prod-db');
 
@@ -78,12 +58,6 @@ function legacyDatabase(): Database.Database {
       ('u-1', 'alice', 'host.delete', 'host', '1', 1, '2026-07-01 10:00:00'),
       ('u-1', 'alice', 'credential.view', 'credential', '9', 1, '2026-07-02 11:00:00'),
       ('u-2', 'bob', 'host.create', 'host', '2', 1, '2026-07-03 12:00:00');
-
-    INSERT INTO session_recordings
-      (host_id, user_id, started_at, recording_path, protocol, format)
-    VALUES
-      (1, 'u-1', '2026-07-01 10:00:00', '/rec/a.guac', 'ssh', 'text'),
-      (1, 'u-2', '2026-07-03 12:00:00', '/rec/b.guac', 'ssh', 'text');
   `);
   return sqlite;
 }
@@ -93,15 +67,10 @@ describe("audit retention migration", () => {
     db = legacyDatabase();
 
     expect(userDeleteIsDestructive(db, "audit_logs")).toBe(true);
-    expect(userDeleteIsDestructive(db, "session_recordings")).toBe(true);
 
-    expect(migrateAuditRetention(db)).toEqual([
-      "audit_logs",
-      "session_recordings",
-    ]);
+    expect(migrateAuditRetention(db)).toEqual(["audit_logs"]);
 
     expect(userDeleteIsDestructive(db, "audit_logs")).toBe(false);
-    expect(userDeleteIsDestructive(db, "session_recordings")).toBe(false);
   });
 
   it("keeps the audit trail when the user is deleted", () => {
@@ -126,23 +95,6 @@ describe("audit retention migration", () => {
     expect(rows[2].user_id).toBe("u-2");
   });
 
-  it("backfills a username onto recordings so they stay attributable", () => {
-    db = legacyDatabase();
-    migrateAuditRetention(db);
-
-    db.exec("DELETE FROM users WHERE id = 'u-1'");
-
-    const rows = db
-      .prepare(
-        "SELECT user_id, username, recording_path FROM session_recordings ORDER BY started_at",
-      )
-      .all() as { user_id: string | null; username: string | null }[];
-
-    expect(rows).toHaveLength(2);
-    expect(rows[0].user_id).toBeNull();
-    expect(rows[0].username).toBe("alice");
-  });
-
   it("loses no data in the copy", () => {
     db = legacyDatabase();
     const before = db
@@ -156,18 +108,6 @@ describe("audit retention migration", () => {
       .all() as Record<string, unknown>[];
 
     expect(after).toEqual(before);
-  });
-
-  it("still cascades recordings when their host is deleted", () => {
-    db = legacyDatabase();
-    migrateAuditRetention(db);
-
-    db.exec("PRAGMA foreign_keys = ON");
-    db.exec("DELETE FROM ssh_data WHERE id = 1");
-
-    expect(
-      db.prepare("SELECT COUNT(*) AS n FROM session_recordings").get(),
-    ).toEqual({ n: 0 });
   });
 
   it("is idempotent and leaves an already-migrated database alone", () => {

@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Étape CA"
+  },
+  "editor": {
+    "label": "Étape CA",
+    "description": "Connectez-vous via votre fournisseur d'identité et laissez votre autorité de certification Step CA émettre un certificat SSH temporaire pour cet hôte. L'URL de l'autorité de certification, l'empreinte racine et le provisionneur OIDC sont configurés par un administrateur dans la section « Autorité de certification Step CA » des paramètres d'administration.",
+    "docs": "Voir la documentation"
+  },
+  "dialog": {
+    "title": "Étape : Authentification CA requise",
+    "description": "Veuillez vous authentifier complètement dans votre navigateur pour continuer. Le certificat reste valide aussi longtemps que votre autorité de certification le permet.",
+    "openBrowser": "Ouvrir le navigateur pour s'authentifier",
+    "waiting": "En attente de l'authentification dans le navigateur...",
+    "authenticating": "Traitement de l'authentification..."
+  },
+  "errors": {
+    "authFailed": "Échec de l'authentification. Veuillez vérifier vos identifiants et réessayer.",
+    "timeout": "L'authentification a expiré. Veuillez réessayer."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "URL CA",
+      "description": "L'URL HTTPS de votre autorité de certification SmallStep. Laissez les champs URL de l'autorité de certification, empreinte digitale et provisionneur vides pour désactiver l'autorité de certification de Step.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Empreinte racine (SHA-256)",
+      "description": "L'empreinte du certificat racine, telle qu'elle apparaît lors de l'étape d'amorçage du certificat racine."
+    },
+    "provisioner": {
+      "label": "Nom du fournisseur OIDC",
+      "description": "Le nom du fournisseur OIDC de l'autorité de certification. Choisissez ensuite « Autorité de certification par étapes » comme type d'authentification de l'hôte."
+    },
+    "privateEndpoints": {
+      "label": "Hôtes d'autorité de certification privés autorisés",
+      "description": "Les hôtes privés pour lesquels le flux de certificats Step CA peut être sollicité peuvent contacter : l’autorité de certification elle-même et, si elle est interne, votre fournisseur d’identité. Séparez ces contacts par des virgules ou des sauts de ligne."
+    },
+    "redirectUri": {
+      "label": "URI de redirection",
+      "description": "Enregistrez cette URL comme URI de redirection autorisée auprès du fournisseur d'identité qui gère le provisionneur OIDC."
+    },
+    "legacyCallback": {
+      "label": "Utilisez l'ancienne URI de redirection",
+      "description": "Continuez à envoyer /host/step-ca-callback, l'URI de redirection utilisée avant la version 2.9. Désactivez-la une fois que votre fournisseur d'identité autorisera la nouvelle."
+    }
+  }
+}

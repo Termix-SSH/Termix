@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Manage ACME certificates",
+      "description": "See the certificate status and request a new certificate now."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "Renew automatically",
+      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+    },
+    "domain": {
+      "label": "Domínio",
+      "description": "O nome de domínio público para o certificado.",
+      "placeholder": "termix.example.com"
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Contact email for the ACME account and expiry notices.",
+      "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "Autoridade de certificação",
+      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (staging)",
+      "custom": "Custom ACME directory"
+    },
+    "directoryUrl": {
+      "label": "ACME directory URL",
+      "description": "Only for a custom certificate authority. Must be an https URL."
+    },
+    "challengeType": {
+      "label": "Challenge type",
+      "description": "How to prove you own the domain.",
+      "http": "HTTP - needs port 80 reachable from the internet",
+      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API token",
+      "description": "Token com âmbito e permissão Zone:DNS:Edit para o seu domínio."
+    }
+  },
+  "status": {
+    "title": "Certificate status",
+    "none": "Sem certificado",
+    "names": "Covers {{names}}",
+    "issuer": "Issued by {{issuer}}",
+    "expires": "Expira a {{date}}",
+    "lastIssued": "Última emissão a {{date}}",
+    "lastError": "Last attempt failed: {{error}}",
+    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
+    "request": "Request certificate now",
+    "requesting": "A solicitar certificado...",
+    "issued": "Certificate issued and installed"
+  }
+}

@@ -1,45 +1,42 @@
 import { isElectron } from "@/lib/electron";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
+import { getLinkedSession } from "@/lib/linked-server";
 
 export type ConnectionOrigin = "local" | "remote";
 
 interface OriginResolvableHost {
-  connectionType?: string | null;
   connectionOrigin?: ConnectionOrigin | null;
 }
 
-const GUACAMOLE_CONNECTION_TYPES = new Set(["rdp", "vnc", "telnet"]);
-
 /**
- * Resolves which backend a given host's interactive connection (SSH,
- * Docker console, Serial, RDP/VNC/Telnet) should dial: the desktop app's
- * embedded local backend, or a connected remote sync server.
+ * Resolves which backend a given host's interactive connection (SSH, Docker
+ * console, remote desktop) should dial: the desktop app's embedded local
+ * backend, or the server it is linked to. A plugin whose connection is
+ * always local regardless of this setting (serial: the hardware is
+ * physically attached to this desktop machine) skips this helper entirely
+ * and calls app.wsUrl() without an origin option, which defaults to "local".
  *
- * Serial always resolves to "local" -- the hardware is physically attached
- * to this desktop machine. Everything else follows the host's own override
- * if set, falling back to the desktop-wide default.
+ * Everything else follows the host's own override if set, falling back to
+ * the desktop-wide default.
  *
- * RDP/VNC/Telnet are the exception to that fallback: left on Default they
- * resolve to "remote" rather than following the desktop-wide setting. They
- * need a guacd, which the desktop does not ship, so originating them here
- * only works once the user has pointed Termix at one of their own (the
- * global guacd URL setting, or a host's guacd Proxy override). Making that
- * opt-in per host keeps an upgrade from moving working connections onto a
- * guacd that isn't there -- see Termix-SSH/Support#1240.
+ * `defaultRemote` makes a host left on Default resolve to "remote" instead of
+ * following the desktop-wide setting. Remote desktop passes it: it needs a
+ * guacd, which the desktop does not ship, so originating it here only works
+ * once the user has pointed Termix at one of their own. Making that opt-in
+ * per host keeps an upgrade from moving working connections onto a guacd
+ * that isn't there -- see Termix-SSH/Support#1240.
  */
 export async function resolveConnectionOrigin(
   host: OriginResolvableHost,
+  options: { defaultRemote?: boolean } = {},
 ): Promise<ConnectionOrigin> {
-  if (host.connectionType === "serial") {
-    return "local";
-  }
   if (!isElectron()) {
     return "local";
   }
   if (host.connectionOrigin === "local" || host.connectionOrigin === "remote") {
     return host.connectionOrigin;
   }
-  if (GUACAMOLE_CONNECTION_TYPES.has(host.connectionType ?? "")) {
+  if (options.defaultRemote) {
     return "remote";
   }
 
@@ -59,26 +56,14 @@ export interface RemoteConnectionTarget {
 }
 
 async function getRemoteConnectionTarget(): Promise<RemoteConnectionTarget | null> {
-  try {
-    const [config, jwt] = await Promise.all([
-      window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
-        serverUrl?: string;
-      } | null>,
-      window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
-        string | null
-      >,
-    ]);
-    if (!config?.serverUrl) return null;
-    return { serverUrl: config.serverUrl, jwt: jwt ?? null };
-  } catch {
-    return null;
-  }
+  const linked = await getLinkedSession();
+  return linked ? { serverUrl: linked.serverUrl, jwt: linked.token } : null;
 }
 
 /**
  * Builds the base WebSocket URL for an interactive connection protocol,
- * given a resolved origin. Returns null when origin is "remote" but no
- * remote server is connected -- callers must show a blocking message
+ * given a resolved origin. Returns null when origin is "remote" but this
+ * desktop is not linked to a server -- callers must show a blocking message
  * rather than attempting to connect.
  */
 export interface WebSocketConnectionTarget {

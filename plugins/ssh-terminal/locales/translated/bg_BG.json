@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Добавяне",
+    "arrowDown": "Стрелка надолу",
+    "arrowLeft": "Стрелка наляво",
+    "arrowRight": "Стрелка надясно",
+    "arrowUp": "Стрелка нагоре",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Дел",
+    "done": "Готово",
+    "editQuickKeys": "Редактиране на бързи клавиши",
+    "end": "Край",
+    "esc": "Esc",
+    "home": "Дом",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Паста",
+    "quickKeyPlaceholder": "например sudo ",
+    "quickKeysDesc": "Докоснете × за премахване. Поддържа до 8 знака.",
+    "quickKeysTitle": "Бързи клавиши",
+    "removeQuickKey": "Премахване",
+    "resetDefaults": "Възстановяване на фабричните настройки",
+    "shift": "Изместване",
+    "tab": "Раздел"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Неуспешно активиране на Auto-Tmux",
+    "autoTmuxEnabled": "Автоматичното Tmux управление е активирано за {{host}}. Прилага се от следващата връзка.",
+    "clipboardHttpWarning": "Не можах да прочета клипборда. Някои браузъри ограничават достъпа до клипборда извън HTTPS - опитайте Ctrl+V вместо това или използвайте Termix през HTTPS.",
+    "closeTab": "Затвори",
+    "connecting": "Свързване...",
+    "connectionLost": "Връзката е прекъсната",
+    "connectionRejected": "Връзката е отхвърлена от сървъра. Моля, проверете удостоверяването и мрежовата си конфигурация.",
+    "connectionTimeout": "Време за изчакване на връзката",
+    "enableAutoTmuxAction": "Активиране на Auto-Tmux",
+    "hostKeyRejected": "Проверката на SSH ключа за хост е отхвърлена. Връзката е прекратена.",
+    "linkDialogCopy": "Копиране",
+    "linkDialogOpen": "Отворено",
+    "linkDialogTitle": "Отвори линка",
+    "maxReconnectAttemptsReached": "Достигнат е максималният брой опити за повторно свързване",
+    "noHostSelected": "Няма избран хост",
+    "passwordPromptFillTitle": "Да се попълни ли запазената парола в този ред?",
+    "reconnect": "Свържете се отново",
+    "reconnected": "Успешно повторно свързване",
+    "reconnecting": "Повторно свързване... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Връзката е прекъсната, свързването е повторно...",
+    "searchCaseSensitive": "Съвпадение на регистъра",
+    "searchClose": "Затвори (Escape)",
+    "searchNext": "Следващ мач (Enter)",
+    "searchNoResults": "Няма резултати",
+    "searchPlaceholder": "Намерете",
+    "searchPrevious": "Предишно съвпадение (Shift+Enter)",
+    "searchRegex": "Използвайте регулярни изрази",
+    "searchResultCount": "{{index}} от {{count}}",
+    "searchWholeWord": "Съвпадение на цяла дума",
+    "sessionExpiredNotice": "Предишната ви сесия на {{host}} изтече след {{minutes}} минути прекъснато свързване; обвивката и всичко, което се изпълнява в нея, са изчезнали. Активирайте Auto-Tmux на този хост, за да поддържате сесиите активни.",
+    "sessionExpiredNoticeNoMinutes": "Предишната ви сесия на {{host}} изтече, докато бяхте прекъснати; обвивката и всичко, което се изпълняваше в нея, са изчезнали. Активирайте Auto-Tmux на този хост, за да поддържате сесиите активни.",
+    "sessionTakenOver": "Сесията беше отворена в друг раздел. Повторно свързване...",
+    "tmuxAttached": "Прикачени клиенти",
+    "tmuxAttachedCount": "{{count}} прикачен",
+    "tmuxCopyHint": "Променете селекцията и натиснете Enter, за да я копирате в клипборда",
+    "tmuxCreateNew": "Започнете нова сесия",
+    "tmuxDetached": "Отделен от tmux сесията",
+    "tmuxLastActivity": "Последна активност",
+    "tmuxSessionAttached": "Прикачена tmux сесия: {{name}}",
+    "tmuxSessionCreated": "tmux сесия, създадена: {{name}}",
+    "tmuxSessionPickerDesc": "На този хост са открити съществуващи tmux сесии. Изберете една, за да я свържете отново или да създадете нова сесия.",
+    "tmuxSessionPickerTitle": "tmux сесии",
+    "tmuxTimeDays": "преди {{count}}дни",
+    "tmuxTimeHours": "преди {{count}}ч",
+    "tmuxTimeJustNow": "точно сега",
+    "tmuxTimeMinutes": "преди {{count}}мин.",
+    "tmuxUnavailable": "tmux не е инсталиран на отдалечения хост, връща се към стандартната обвивка",
+    "tmuxWindowCount": "{{count}} window",
+    "tmuxWindows": "Прозорци",
+    "unknownError": "Възникна неизвестна грешка",
+    "websocketAbnormalClose": "Връзката се прекъсна неочаквано. Това може да се дължи на проблем с обратен прокси или SSL конфигурация. Моля, проверете лог файловете на сървъра.",
+    "websocketError": "Грешка при свързване с WebSocket",
+    "clipboardReadFailed": "Четенето от клипборда не бе успешно. Уверете се, че са предоставени разрешения за достъп до клипборда.",
+    "clipboardWriteFailed": "Копирането в клипборда не бе успешно. Уверете се, че страницата се предоставя през HTTPS или localhost.",
+    "connected": "Свързан",
+    "totpCodeLabel": "Код за потвърждение",
+    "duplicateTab": "Дублиран раздел",
+    "imageChooseFile": "Изберете файл с изображение",
+    "imageUploaded": "Качено изображение: {{path}}",
+    "imageClipboardUnavailable": "Този браузър не може да чете изображения от клипборда",
+    "imageClipboardEmpty": "Няма намерено изображение в клипборда",
+    "localShell": "Локална терминална обвивка",
+    "autocompleteHintComplete": "Tab или Enter за завършване",
+    "autocompleteHintNavigate": "↑↓ за навигация",
+    "autocompleteHintClose": "Esc за затваряне"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Отделяне на tmux",
+    "detachTmuxDescription": "Отделяне на tmux сесия",
+    "dismissError": "Грешка при отхвърляне на изображението",
+    "hideToolbar": "Скриване на лентата с инструменти",
+    "image": "Действия с изображения (само с изображения)",
+    "imageActionFailed": "Действието с изображението не беше успешно",
+    "layout": "Режим на показване на лентата с инструменти",
+    "layoutExpanded": "Разширено с показатели",
+    "layoutIcon": "Само икона",
+    "layoutLabeled": "Икони и етикети",
+    "moveToolbar": "Преместване на лентата с инструменти",
+    "moveToolbarHint": "Плъзнете, за да преместите лентата с инструменти",
+    "paste": "Поставяне на изображение",
+    "pasteImage": "Поставяне на изображение от клипборда (само за изображения)",
+    "retry": "Опитай отново",
+    "showToolbar": "Разгъване на лентата с инструменти",
+    "upload": "Качване на изображение",
+    "uploadImage": "Качете изображение на хоста",
+    "uploadingImage": "Качване..."
+  },
+  "history": {
+    "noTerminalSelected": "Няма избран терминал",
+    "noTerminalSelectedHint": "Отворете раздел на SSH терминал, за да видите историята на командите му",
+    "searchPlaceholder": "История на търсенията...",
+    "clearAll": "Изчисти всички",
+    "noHistoryEntries": "Няма записи в историята",
+    "trackingDisabled": "Проследяването на историята е деактивирано",
+    "trackingDisabledHint": "Включете историята на командите в раздела SSH терминал на този хост.",
+    "commandCount_one": "команда {{count}}",
+    "commandCount_other": "{{count}} команди"
+  },
+  "touchInput": {
+    "enabled": "Активиране на сензорно въвеждане",
+    "enabledDesc": "Разрешаване на превъртане с един пръст в терминали",
+    "momentumEnabled": "Активиране на Momentum",
+    "momentumEnabledDesc": "Продължете да превъртате за кратко след плъзване",
+    "advanced": "Разширено",
+    "resetDefaults": "Възстановяване на фабричните настройки",
+    "dragThreshold": "Праг на плъзгане",
+    "maxWheelDelta": "Максимална делта на колелото",
+    "momentumSampleWindow": "Прозорец за пример на импулса",
+    "releaseGracePeriod": "Гратисен период за освобождаване",
+    "minimumVelocity": "Минимална скорост",
+    "maximumVelocity": "Максимална скорост",
+    "maximumDuration": "Максимална продължителност",
+    "maximumTravel": "Максимален ход",
+    "decayTime": "Време на разпад",
+    "pixelsPerTick": "Пиксели на такт",
+    "maximumFrameInterval": "Максимален интервал на кадрите",
+    "maximumTicksPerFrame": "Максимален брой отметки на кадър"
+  },
+  "imageStorage": {
+    "instanceId": "Идентификатор на екземпляр на терминална сесия",
+    "instanceIdDesc": "Идентификатор на екземпляр на един от свързаните ви терминални раздели, използван за тестване на видимостта.",
+    "selectedModeUnavailable": "Не е налично",
+    "test": "Тест",
+    "testing": "Тестване...",
+    "testFailed": "Тестването на съхранението на изображения не бе успешно",
+    "testConnected": "Терминалната сесия е свързана.",
+    "testNotConnected": "Няма свързана терминална сесия с този идентификатор на екземпляр.",
+    "testSelectedMode": "Качването ще използва: {{mode}}",
+    "testLocalVisible": "Локалната директория е видима от свързания хост.",
+    "testLocalNotVisible": "Локалната директория НЕ е видима от свързания хост."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Сензорно въвеждане",
+        "images": "Съхранение на изображения",
+        "sessions": "Сесии",
+        "newHosts": "Нови домакини"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Устойчивост на терминална сесия",
+        "description": "Колко дълго един прекъснат терминал се поддържа активен на сървъра, преди да бъде затворен. Мин. 1, макс. 1440 минути. За сесии, които трябва да преживеят това, активирайте Auto-Tmux на хоста."
+      },
+      "commandHistoryEnabled": {
+        "label": "История на командите",
+        "description": "Разрешаване на запис на историята на командите. Когато е деактивирано, историята не се запазва, независимо от настройките за всеки хост."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "История на командите за нови хостове",
+        "description": "Дали новите хостове започват с включена история на командите."
+      },
+      "imageStorageMode": {
+        "label": "Режим на съхранение",
+        "description": "Където се записват поставените и качени изображения на терминала. Автоматичното избиране по връзка, локално и отдалечено (SFTP) е поправено.",
+        "auto": "Автоматично",
+        "local": "Местно",
+        "remoteSftp": "Отдалечено (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Локален указател",
+        "description": "Абсолютен път в сървъра на Termix, където локалният режим записва изображения. Никога не се показва след запазване. Празният път използва TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Път на хоста",
+        "description": "Изгледът от страна на хоста на локалната директория, която получават терминалните агенти."
+      },
+      "imageTtlMs": {
+        "label": "TTL (мсек)",
+        "description": "Колко дълго се съхранява каченото изображение, в милисекунди. Празно използва TERMIX_IMAGE_TTL_MS или един час."
+      },
+      "imageMaxCount": {
+        "label": "Максимален брой изображения",
+        "description": "Повечето изображения се съхраняват наведнъж. Празните изображения използват TERMIX_MAX_IMAGE_COUNT или 100."
+      },
+      "imageMaxBytes": {
+        "label": "Максимален брой байтове за съхранение",
+        "description": "Повечето байтове изображения се съхраняват едновременно. Празните изображения използват TERMIX_MAX_IMAGE_STORAGE_BYTES или 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Запазване на сесиите след прекъсване",
+        "description": "Поддържайте несвързан терминал активен на сървъра за горепосоченото време, така че повторното отваряне на раздела му да продължи оттам, откъдето е спрял."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Стартирайте терминалите на новите хостове вътре в tmux, така че сесиите да оцелеят при прекъсвания (необходим е tmux на хоста)"
+      },
+      "newHostTheme": {
+        "label": "Тема за нови домакини",
+        "description": "Темата на терминала, с която започва нов хост."
+      },
+      "newHostFontFamily": {
+        "label": "Шрифт за нови хостове",
+        "description": "Шрифтът на терминала, с който започва новият хост."
+      },
+      "newHostFontSize": {
+        "label": "Размер на шрифта за нови хостове",
+        "description": "Размерът на шрифта на терминала, с който започва нов хост, в пиксели."
+      },
+      "newHostCursorStyle": {
+        "label": "Стил на курсора за нови хостове"
+      },
+      "newHostCursorBlink": {
+        "label": "Мигащ курсор за нови хостове"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Активиране на лентата с инструменти на терминала",
+        "description": "Показване на лента с инструменти за бърз достъп, закачена към активния терминал, за инструментите и статистиката в реално време на този хост"
+      },
+      "terminalToolbarPosition": {
+        "label": "Позиция на лентата с инструменти",
+        "description": "Мястото, където се намира лентата с инструменти в терминала. Все още можете да я плъзнете оттам.",
+        "bottom": "Долу в центъра",
+        "bottomLeft": "Долу вляво",
+        "bottomRight": "Долу вдясно",
+        "top": "Горе в центъра",
+        "topLeft": "Горе вляво",
+        "topRight": "Горе вдясно"
+      },
+      "terminalToolbarStartState": {
+        "label": "Начално състояние на лентата с инструменти",
+        "description": "Дали лентата с инструменти се отваря разгъната или минимизирана, когато терминалът се свърже",
+        "expanded": "Разширено",
+        "collapsed": "Минимизирано"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Режим на показване на лентата с инструменти",
+        "description": "Как се показват бутоните на лентата с инструменти. „Последно използвано“ запазва избраното от вас в лентата с инструменти.",
+        "remember": "Последно използвано",
+        "icon": "Само икона",
+        "labeled": "Икони и етикети",
+        "expanded": "Разширено със статистика"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Показване на статистика на живо",
+        "description": "Показване на статистика за хоста на живо над бутоните на лентата с инструменти в разгънат режим"
+      },
+      "terminalToolbarFade": {
+        "label": "Избледняване при неактивност",
+        "description": "Лентата с инструменти ще се скрива, докато задържите курсора на мишката върху нея."
+      },
+      "enableCommandHistory": {
+        "label": "История на командите",
+        "description": "Запис на команди, изпълнявани в този терминал, за история и автоматично довършване"
+      },
+      "enableTerminal": {
+        "label": "Активиране на терминала",
+        "description": "Предложете SSH терминал за този хост."
+      },
+      "inheritAppearance": {
+        "label": "Използване на потребителските настройки по подразбиране"
+      },
+      "theme": {
+        "label": "Тема"
+      },
+      "cursorBlink": {
+        "label": "Мигащ курсор"
+      },
+      "cursorStyle": {
+        "label": "Стил на курсора"
+      },
+      "fontSize": {
+        "label": "Размер на шрифта"
+      },
+      "fontFamily": {
+        "label": "Шрифт"
+      },
+      "scrollback": {
+        "label": "Превъртане назад"
+      },
+      "letterSpacing": {
+        "label": "Разстояние между буквите"
+      },
+      "lineHeight": {
+        "label": "Височина на реда"
+      },
+      "bellStyle": {
+        "label": "Бел"
+      },
+      "minimumContrastRatio": {
+        "label": "Минимално съотношение на контраста"
+      },
+      "backgroundImage": {
+        "label": "Фоново изображение"
+      },
+      "backgroundImageOpacity": {
+        "label": "Непрозрачност на фоновото изображение"
+      },
+      "customThemeColors": {
+        "label": "Персонализирани цветове на темата"
+      },
+      "rightClickSelectsWord": {
+        "label": "Щракване с десен бутон избира дума"
+      },
+      "macOptionIsMeta": {
+        "label": "Опцията е Мета"
+      },
+      "fastScrollModifier": {
+        "label": "Клавиш за бързо превъртане"
+      },
+      "fastScrollSensitivity": {
+        "label": "Бърза скорост на превъртане"
+      },
+      "backspaceMode": {
+        "label": "Назад"
+      },
+      "autoMosh": {
+        "label": "Автоматичен мош"
+      },
+      "moshCommand": {
+        "label": "Команда Mosh"
+      },
+      "autoTmux": {
+        "label": "Автоматичен tmux"
+      },
+      "useSSHTitle": {
+        "label": "Използвайте SSH заглавието"
+      },
+      "syntaxHighlighting": {
+        "label": "Подчертаване на синтаксиса"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Категории за осветяване на синтаксиса"
+      },
+      "linkClickBehavior": {
+        "label": "Кликване върху връзката"
+      },
+      "localEcho": {
+        "label": "Локално ехо"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Предложение за попълване на подканите за парола"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Попълнете sudo подканите"
+      },
+      "autoReconnect": {
+        "label": "Автоматично повторно свързване"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Автоматично довършване на команди",
+        "description": "Показване на автоматично довършване при въвеждане, ако натиснете Tab"
+      },
+      "localEcho": {
+        "label": "Локално ехо",
+        "description": "Намалете възприеманата латентност на входа, използвайки безопасно локално предсказване на натискането на клавиши"
+      },
+      "linkClickBehavior": {
+        "label": "Щракване върху връзката на терминала",
+        "description": "Поведение по подразбиране при кликване върху връзки в терминала"
+      },
+      "customThemes": {
+        "label": "Запазени теми"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Местен терминал"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Използвайте сесии на живо на терминал",
+      "description": "Позволява на други функции, като споделяне и запис на сесии, да достигнат до вашите сесии на живо в терминала."
+    },
+    "history": {
+      "title": "Прочетете историята на командите",
+      "description": "Позволява на други функции, като например асистента с изкуствен интелект, да четат историята на вашите команди."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "Терминал",
+    "addHost": "Добавяне на хост",
+    "applyGlobalThemeTooltip": "Приложете тази тема",
+    "backgroundImageDesc": "Незадължителен URL адрес за фоново изображение на терминала",
+    "backgroundImageLabel": "URL адрес на фоновото изображение",
+    "backgroundImageOpacityLabel": "Непрозрачност на фоновото изображение",
+    "backspaceMode": "Режим на връщане назад",
+    "backspaceModeControlH": "Контрол-H (BS)",
+    "backspaceModeLabel": "Режим на връщане назад",
+    "backspaceModeNormal": "Нормално (DEL)",
+    "behaviorAndAdvanced": "Поведение и напреднали",
+    "bellStyle": "Стил на камбаната",
+    "bellStyleBoth": "И двете",
+    "bellStyleLabel": "Стил на камбаната",
+    "bellStyleNone": "Няма",
+    "bellStyleSound": "Звук",
+    "bellStyleVisual": "Визуално",
+    "colorTheme": "Цветова тема",
+    "cursorBlink": "Мигане на курсора",
+    "cursorBlinking": "Мигане на курсора",
+    "cursorBlinkingDesc": "Активиране на мигаща анимация за курсора на терминала",
+    "cursorStyle": "Стил на курсора",
+    "cursorStyleBar": "Бар",
+    "cursorStyleBlock": "Блок",
+    "cursorStyleLabel": "Стил на курсора",
+    "cursorStyleUnderline": "Подчертаване",
+    "customThemeAnsiColors": "ANSI цветове",
+    "customThemeBackground": "Предистория",
+    "customThemeBlack": "Черно",
+    "customThemeBlue": "Синьо",
+    "customThemeBrightBlack": "Ярко черно",
+    "customThemeBrightBlue": "Ярко синьо",
+    "customThemeBrightCyan": "Ярко циан",
+    "customThemeBrightGreen": "Ярко зелено",
+    "customThemeBrightMagenta": "Ярко пурпурно",
+    "customThemeBrightRed": "Ярко червено",
+    "customThemeBrightWhite": "Ярко бяло",
+    "customThemeBrightYellow": "Ярко жълто",
+    "customThemeColors": "Персонализирани цветове",
+    "customThemeCursor": "Курсор",
+    "customThemeCursorAccent": "Акцент на курсора",
+    "customThemeCyan": "Циан",
+    "customThemeForeground": "Преден план",
+    "customThemeGreen": "Зелено",
+    "customThemeMagenta": "Магента",
+    "customThemeRed": "Червено",
+    "customThemeResetTooltip": "Възстановяване на фабричните настройки",
+    "customThemeSelection": "Избор",
+    "customThemeWhite": "Бяло",
+    "customThemeYellow": "Жълто",
+    "deleteGlobalThemeTooltip": "Изтрий тази тема",
+    "docsLink": "Преглед на документи",
+    "enableAutoMosh": "Активиране на Auto-Mosh",
+    "enableAutoMoshDesc": "Предпочитайте Mosh пред SSH, ако е наличен",
+    "enableAutoTmux": "Активиране на Auto-Tmux",
+    "enableAutoTmuxDesc": "Поддържайте вашата обвивка и всичко, което се изпълнява в нея, активно при прекъсвания на връзката и рестартиране на браузъра, като я стартирате вътре в tmux (tmux трябва да е инсталиран на хоста)",
+    "fastScrollModifier": "Модификатор за бързо превъртане",
+    "fastScrollModifierAlt": "Алтернативно",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Модификатор за бързо превъртане",
+    "fastScrollModifierShift": "Изместване",
+    "fastScrollSensitivity": "Чувствителност на бързото превъртане",
+    "fastScrollSensitivityLabel": "Чувствителност на бързото превъртане",
+    "fontFamily": "Семейство шрифтове",
+    "fontFamilyCustomHint": "Изберете вграден шрифт или изберете „Персонализиран“ и въведете точното име на шрифт, който вече е инсталиран на вашата система (напр. MesloLGS NF, Noto Sans Mono). Termix не може да инсталира шрифтове вместо вас, първо го инсталирайте на вашата операционна система.",
+    "fontFamilyCustomOption": "Персонализирано...",
+    "fontFamilyCustomPlaceholder": "Точно име на шрифта, например MesloLGS NF",
+    "fontFamilyLabel": "Семейство шрифтове",
+    "fontSize": "Размер на шрифта",
+    "fontSizeLabel": "Размер на шрифта",
+    "hostNotFound": "Хостът не е намерен",
+    "letterSpacing": "Разстояние между буквите",
+    "letterSpacingPx": "Разстояние между буквите (px)",
+    "lineHeight": "Височина на реда",
+    "lineHeightLabel": "Височина на реда",
+    "linkClickBehaviorConfirm": "Показване на изскачащ прозорец за отваряне или копиране",
+    "linkClickBehaviorDesc": "Контролира какво се случва, когато щракнете върху връзка в терминала. Използвайте „По подразбиране“, за да следвате настройката на ниво приложение.",
+    "linkClickBehaviorDirect": "Отвори директно",
+    "linkClickBehaviorLabel": "Поведение при кликване върху връзки",
+    "loadingHost": "Зареждане на хоста...",
+    "localEchoAuto": "Автоматично",
+    "localEchoDesc": "Предсказвайте безопасни за печат натискания на клавиши локално при бавни връзки. Подканите за парола и контролните въведени команди никога не се повтарят.",
+    "localEchoLabel": "Локално ехо",
+    "localEchoOff": "Изключено",
+    "localEchoOn": "Винаги включено",
+    "macOptionIsMetaLabel": "Клавишът с опции изпраща мета данни",
+    "macOptionIsMetaShortDesc": "Деактивирайте въвеждането на специални символи (като @ или |) с клавиша Option/Alt в macOS, вместо изпращане на Meta",
+    "moshCommand": "MOSH команда",
+    "moshCommandLabel": "Команда Мош",
+    "noSavedThemes": "Все още няма запазени теми",
+    "none": "Няма",
+    "passwordPromptAutoFillDesc": "Предложете да попълните запазената парола, когато терминалът поиска такава. Изключете, за да не се попълва автоматично парола на този хост.",
+    "passwordPromptAutoFillLabel": "Автоматично попълване на парола за оферта",
+    "autoReconnectLabel": "Автоматично повторно свързване",
+    "autoReconnectDesc": "Свързва се отново самостоятелно, когато SSH връзката прекъсне, например след прекъсване на мрежата или заспиване. Запазва превъртането назад.",
+    "rightClickSelectsWord": "Щракване с десен бутон Избира дума",
+    "rightClickSelectsWordLabel": "Щракване с десен бутон Избира дума",
+    "rightClickSelectsWordShortDesc": "Изберете думата под курсора при щракване с десния бутон",
+    "saveAsGlobalTheme": "Запазване като глобална тема",
+    "saveGlobalThemeError": "Запазването на темата не бе успешно",
+    "saveGlobalThemeNamePrompt": "Въведете име за тази тема",
+    "saveGlobalThemeSuccess": "Темата е запазена",
+    "savedThemesLabel": "Запазени теми",
+    "scrollbackBufferLabel": "Буфер за превъртане назад",
+    "scrollbackMaxLines": "Максимален брой редове, съхранявани в историята",
+    "sudoPasswordAutoFill": "Автоматично попълване на парола за Sudo",
+    "sudoPasswordAutoFillDesc": "Съхранявайте парола за sudo, така че показателите за хоста, подканите на терминала и други да могат да изпълняват привилегировани команди автоматично.",
+    "sudoPasswordAutoFillLabel": "Автоматично попълване на парола за Sudo",
+    "syntaxCategoryIpAddresses": "IP адреси",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Нива на лог файлове",
+    "syntaxCategoryLogLevelsDesc": "грешка, предупреждение, информация, отстраняване на грешки, фатален",
+    "syntaxCategoryNumbers": "Етикетирани числа",
+    "syntaxCategoryNumbersDesc": "порт 8080, изход 1, статус 404",
+    "syntaxCategoryPaths": "Пътища до файлове",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "Времеви печати",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15.01.2024 г.",
+    "syntaxCategoryUrls": "URL адреси",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Оцветяване на изхода на терминала (грешки, пътища, IP адреси, времеви отпечатъци)",
+    "syntaxHighlightingLabel": "Подчертаване на синтаксиса",
+    "terminalAppearance": "Външен вид на терминала",
+    "theme": "Тема",
+    "themePreview": "Преглед на темата",
+    "useSSHTitleDesc": "Актуализирайте заглавието на раздела от заглавието на прозореца на обвивката, вместо от името на хоста.",
+    "useSSHTitleLabel": "Използване на заглавие на SSH прозорец",
+    "enableTunnel": "Активиране на тунел",
+    "enableFileManager": "Активиране на файловия мениджър",
+    "enableDocker": "Активиране на Докер",
+    "startupSnippet": "Стартов фрагмент",
+    "quickActions": "Бързи действия",
+    "proxmoxLastSyncStatus": {
+      "success": "Успех"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} пропуснато (не е намерен IP адрес)",
+    "proxmoxStatsUrlCopied": "URL адресът на статистиката на Proxmox е копиран в клипборда",
+    "rdpUrlCopied": "RDP URL адресът е копиран",
+    "vncUrlCopied": "VNC URL адресът е копиран",
+    "filterAuthStepca": "Стъпка CA",
+    "guac": {
+      "noCredential": "Нямате пълномощия (директни пълномощия по-долу)",
+      "authTypeDirect": "Директно",
+      "authTypeCredential": "Пълномощия",
+      "authTypeNone": "Няма",
+      "recordingPath": "Път на запис",
+      "recordingName": "Име на записа",
+      "saveHostFirst": "Първо запазете хоста.",
+      "sharingOptionsAfterSave": "Опциите за споделяне са налични след запазване на хоста.",
+      "permissionLevel": "Ниво на разрешение",
+      "typeHeader": "Тип",
+      "targetHeader": "Цел",
+      "permissionHeader": "Разрешение",
+      "cancelBtn": "Отказ",
+      "savingBtn": "Запазване...",
+      "updateHostBtn": "Актуализиране на хоста",
+      "addHostBtn": "Добавяне на хост"
+    },
+    "filterAuthVault": "Трезор"
+  },
+  "nav": {
+    "history": "История",
+    "localTerminal": "Местен терминал",
+    "sshTools": "SSH инструменти",
+    "terminal": "Терминал",
+    "macros": "Макроси"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Въведете тук, за да излъчвате натисканията на клавиши...",
+    "copyOnSelect": "Автоматично копиране на избрания текст",
+    "enableRightClickCopyPaste": "Активиране на копиране/поставяне чрез щракване с десен бутон",
+    "fillPassword": "Попълнете паролата",
+    "fillPasswordMissing": "Няма запазена парола за {{count}} избрани терминали",
+    "fillPasswordSuccess": "Паролата е попълнена в {{count}} терминал(и)",
+    "keyRecordingTitle": "Запис на ключове",
+    "noTerminalTabsOpen": "Няма отворени раздели на терминала",
+    "recordToTerminals": "Записване към терминали",
+    "selectAll": "Всички",
+    "selectNone": "Няма",
+    "selectTerminalsAbove": "Изберете терминали по-горе",
+    "settingsTitle": "Настройки",
+    "startRecording": "Стартиране на запис",
+    "stopRecording": "Спиране на записа"
+  },
+  "keybindings": {
+    "copy": "Копиране на селекцията",
+    "paste": "Паста",
+    "sendControlCode": "Изпрати сигнал Ctrl+буква",
+    "sendText": "Изпращане на текст",
+    "controlCodeLabel": "Писмо",
+    "textLabel": "Текст за изпращане",
+    "appendEnterLabel": "Натиснете Enter след изпращане",
+    "clipboardPermissionNote": "Може да поиска разрешение за достъп до клипборда при първото използване в някои браузъри.",
+    "textRequired": "Въведете текста за изпращане",
+    "controlCodeRequired": "Въведете една буква за контролния код",
+    "builtIn": {
+      "copyCtrlC": "Копиране на селекцията (Ctrl+C, само когато е избран текст)",
+      "copyCtrlShiftC": "Копиране на селекцията (Ctrl+Shift+C)",
+      "copyCmdC": "Копиране на селекцията (Cmd+C)",
+      "pasteCtrlShiftV": "Поставяне от клипборда (Ctrl+Shift+V)",
+      "ctrlW": "Изпращане на Ctrl+W към обвивката (блокирано е затварянето на раздела на браузъра)",
+      "ctrlT": "Изпращане на Ctrl+T към shell (блокирано е отварянето на раздел на браузъра)",
+      "ctrlN": "Изпращане на Ctrl+N към shell (блокирано е отварянето на прозорец на браузъра)",
+      "ctrlQ": "Изпращане на Ctrl+Q към shell (блокирано е затварянето на браузъра)"
+    }
+  },
+  "macros": {
+    "title": "Макроси",
+    "description": "Изпълнете запазена серия от команди в терминал и реагирайте на това, което сървърът изпраща обратно.",
+    "target": "Цел",
+    "noTerminal": "Няма отворен терминал",
+    "empty": "Все още няма макроси",
+    "emptyHint": "Създайте макрос за автоматизиране на процес в терминал, като например влизане в системата, рестартиране на услуга или отговаряне на подкани.",
+    "create": "Нов макрос",
+    "back": "Обратно към макросите",
+    "name": "Име",
+    "namePlaceholder": "Рестартирайте уеб сървъра",
+    "nameRequired": "Дайте име на макроса, преди да го запазите",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Какво прави този макрос (по избор)",
+    "unsaved": "Незапазени промени",
+    "save": "Запазване",
+    "saved": "Макросът е запазен",
+    "saveFailed": "Макросът не можа да се запази",
+    "delete": "Изтриване",
+    "deleteTitle": "Да се изтрие ли този макрос?",
+    "deleteBody": "„{{name}}“ ще бъде изтрито за постоянно. Това не може да бъде отменено.",
+    "deleted": "Макросът е изтрит",
+    "cancel": "Отказ",
+    "run": "Бягане",
+    "stop": "Спри",
+    "running": "Бягане...",
+    "completed": "Макрото е завършено",
+    "failed": "Макросът не беше успешен",
+    "loadFailed": "Не можаха да се заредят макроси",
+    "needTerminal": "Първо отворете и свържете терминал",
+    "noSteps": "Този макрос все още няма стъпки. Добавете една по-долу.",
+    "addStep": "Добавяне на стъпка",
+    "stepNumber": "Стъпка {{number}}",
+    "removeStep": "Премахване на стъпка",
+    "confirmRunTitle": "Да се изпълни ли този макрос?",
+    "confirmRunBody": "„{{name}}“ ще изпраща команди до {{host}}.",
+    "confirmRunAction": "Изпълнете макрос",
+    "stepTypes": {
+      "send": {
+        "label": "Изпрати команда",
+        "help": "Въвежда текст в терминала, по същия начин, както ако сте го написали."
+      },
+      "wait": {
+        "label": "Изчакайте изхода",
+        "help": "Пауза, докато сървърът отпечата текста, който посочите, като например подкана за парола."
+      },
+      "delay": {
+        "label": "Пауза",
+        "help": "Изчаква фиксирано време преди следващата стъпка."
+      },
+      "if": {
+        "label": "Ако изходът съдържа",
+        "help": "Проверява всичко, което сървърът е отпечатал досега, след което изпълнява един от двата клона."
+      },
+      "repeat": {
+        "label": "Повторете",
+        "help": "Изпълнява стъпките вътре в него определен брой пъти."
+      }
+    },
+    "send": {
+      "text": "Команда или текст",
+      "textPlaceholder": "systemctl рестартиране на nginx",
+      "pressEnter": "Натиснете Enter след изпращане",
+      "pressEnterHelp": "Изключете това, за да пишете текст, без да го изпращате."
+    },
+    "wait": {
+      "pattern": "Изчакайте, докато изходът съдържа",
+      "patternPlaceholder": "парола:",
+      "timeout": "Откажи се след",
+      "onTimeout": "Ако никога не се появи",
+      "stop": "Спиране на макроса",
+      "continue": "Продължавай все пак"
+    },
+    "delay": {
+      "duration": "Изчакайте"
+    },
+    "ifStep": {
+      "pattern": "Ако изходът съдържа",
+      "patternPlaceholder": "Активен: активен (работи)",
+      "then": "Тогава направете това",
+      "else": "В противен случай направете това",
+      "emptyBranch": "Без стъпала"
+    },
+    "repeat": {
+      "count": "Брой пъти",
+      "times": "пъти"
+    },
+    "match": {
+      "useRegex": "Съвпадение с регулярен израз",
+      "useRegexHelp": "Не включвайте това, за да съвпада текстът точно както е написан.",
+      "invalidRegex": "Не е валиден регулярен израз, ще бъде съпоставен като обикновен текст"
+    },
+    "seconds": "секунди",
+    "secondsShort": "{{count}}с"
+  },
+  "errors": {
+    "remoteServerRequired": "Изисква се отдалечен сървър. Свържете се с отдалечен сървър в „Настройки“, за да използвате този тип връзка."
+  }
+}

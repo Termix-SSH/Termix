@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "عرض الأساطيل",
+      "description": "اطلع على الأساطيل وأعضائها ومخزونها."
+    },
+    "manage": {
+      "title": "إدارة الأساطيل",
+      "description": "إنشاء الأساطيل وتعديلها وحذفها، وتغيير العضوية، ومشاركة الأساطيل مع مستخدمين أو أدوار أخرى."
+    },
+    "execute": {
+      "title": "نفّذ عمليات الأسطول",
+      "description": "قم بتشغيل الأوامر وإجراءات الحزم عبر مجموعة من الأجهزة، ونقل الملفات من وإلى مضيفيها الأعضاء."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "الأساطيل",
+        "createFleet": "إنشاء أسطول",
+        "createFleetTitle": "إنشاء أسطول",
+        "editFleetTitle": "تعديل الأسطول",
+        "createFleetDescription": "الأسطول عبارة عن مجموعة محددة من المضيفين يمكنك شنّ عمليات ضدهم كوحدة واحدة.",
+        "nameLabel": "الاسم",
+        "namePlaceholder": "مثال: خوادم الويب",
+        "nameRequired": "اسم الأسطول مطلوب",
+        "descriptionLabel": "الوصف",
+        "descriptionPlaceholder": "وصف اختياري",
+        "colorLabel": "اللون",
+        "tagRulesLabel": "قواعد الوسوم",
+        "tagRulesPlaceholder": "موقع الإنتاج، الحافة",
+        "tagRulesHint": "يتم تضمين المضيفين الذين يحملون أيًا من هذه العلامات تلقائيًا، بالإضافة إلى المضيفين الذين تمت إضافتهم يدويًا.",
+        "fleetCreated": "تم إنشاء الأسطول",
+        "fleetUpdated": "تحديث الأسطول",
+        "fleetDeleted": "تم حذف الأسطول",
+        "saveFailed": "فشل في إنقاذ الأسطول",
+        "deleteFailed": "فشل حذف الأسطول",
+        "loadFailed": "فشل تحميل الأساطيل",
+        "deleteFleetTitle": "حذف الأسطول",
+        "deleteFleetDescription": "هل أنت متأكد من رغبتك في حذف \"{{name}}\"؟ هذا لا يحذف المضيفين الأعضاء أنفسهم.",
+        "searchFleets": "أساطيل البحث...",
+        "noFleets": "لا توجد أساطيل حتى الآن. أنشئ أسطولاً للبدء.",
+        "memberCount": "{{count}} المضيف",
+        "memberCount_other": "{{count}} مضيفات",
+        "manageMembers": "إدارة الأعضاء",
+        "manageMembersTitle": "إدارة أعضاء الأسطول",
+        "manageMembersDescription": "قم بتفعيل أو تعطيل عضوية المضيفين في هذه المجموعة الثابتة. يتم تضمين المضيفين الذين تتطابق قواعد الوسوم معهم دائمًا.",
+        "searchHosts": "ابحث عن مضيفين...",
+        "noHostsFound": "لم يتم العثور على مضيفين",
+        "noMembers": "لا يوجد أعضاء في هذا الأسطول حتى الآن. أضف مضيفين أو حدد قاعدة للوسوم.",
+        "membersLoadFailed": "فشل تحميل أعضاء الأسطول",
+        "memberUpdateFailed": "فشل تحديث عضوية الأسطول",
+        "tabRun": "تشغيل الأمر",
+        "tabTransfer": "نقل الملفات",
+        "tabInventory": "جرد",
+        "openInventoryTab": "افتح في علامة تبويب كاملة",
+        "tabPackages": "الحزم",
+        "runOnFleet": "انطلق على الأسطول",
+        "commandPlaceholder": "وقت التشغيل && df -h",
+        "commandRequired": "يلزم إصدار أمر",
+        "commandInputsLabel": "إدخالات الأوامر",
+        "commandSucceeded": "تم تنفيذ الأمر بنجاح على جميع الأجهزة المضيفة",
+        "commandPartialFailure": "فشل {{failed}} من أصل {{total}} مضيف",
+        "commandFailed": "فشل تنفيذ الأمر",
+        "resultSuccess": "نجاح",
+        "resultFailed": "فشل",
+        "push": "يدفع",
+        "pull": "يحذب",
+        "remotePathLabel": "المسار البعيد",
+        "remotePathRequired": "يلزم وجود مسار بعيد",
+        "fileLabel": "ملف",
+        "fileRequired": "الملف مطلوب",
+        "pushHint": "يتم كتابة الملف المحدد في هذا المسار المحدد على كل مضيف في الأسطول.",
+        "pullHint": "يتم قراءة الملف الموجود في هذا المسار من كل مضيف وتنزيله كملف مضغوط واحد، مجلد واحد لكل مضيف.",
+        "transferComplete": "اكتمل النقل",
+        "transferFailed": "فشل النقل",
+        "refreshInventory": "تحديث المخزون",
+        "inventoryLoadFailed": "فشل تحميل المخزون",
+        "inventoryRefreshed": "تم تحديث المخزون",
+        "inventoryRefreshFailed": "فشل تحديث المخزون",
+        "inventoryNoData": "لا توجد بيانات جرد حتى الآن - قم بتحديث الصفحة لجمعها.",
+        "inventoryHost": "المضيف",
+        "inventoryCollectedCount": "تم جمع {{count}}/{{total}}",
+        "inventoryOs": "نظام التشغيل",
+        "inventoryKernel": "النواة",
+        "inventoryArch": "قوس",
+        "inventoryUptime": "مدة التشغيل",
+        "inventoryPackageManager": "مدير الحزم",
+        "inventoryCollectedAt": "تم جمعها",
+        "packageActionLabel": "الإجراء",
+        "packageInstall": "ثَبَّتَ",
+        "packageRemove": "إزالة",
+        "packageUpgradeAll": "قم بترقية جميع الحزم",
+        "packageNameLabel": "اسم الحزمة",
+        "packageNameRequired": "اسم الحزمة مطلوب",
+        "packageHint": "يتطلب الوصول على مستوى الإدارة لكل مضيف ويتم رفعه باستخدام كلمة مرور sudo المخزنة للمضيف.",
+        "shareFleet": "أسطول مشترك",
+        "shareFleetTitle": "شارك \"{{name}}\"",
+        "shareFleetDescription": "يُشارك هذا الأمر أجهزة الأعضاء الحالية في هذه المجموعة مع المستخدمين أو الأدوار المُحددة. لا تتم مشاركة الأجهزة التي تُضاف إلى المجموعة لاحقًا تلقائيًا - يُرجى إعادة المشاركة لإضافتها.",
+        "shareSelectionRequired": "اختر مستخدمًا واحدًا أو دورًا واحدًا على الأقل",
+        "fleetSharedSuccessfully": "مشترك {{shared}} من {{total}} مضيف (مضيفين) في هذه المجموعة",
+        "failedToShareFleet": "فشل في مشاركة الأسطول",
+        "noMembersToShare": "لا يوجد لدى هذا الأسطول مضيفون أعضاء للمشاركة حتى الآن."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "الأساطيل"
+  },
+  "hosts": {
+    "docsLink": "عرض المستندات",
+    "sharing": {
+      "customHoursPlaceholder": "عدد الساعات حتى انتهاء صلاحية الوصول",
+      "expiry": {
+        "never": "أبدًا",
+        "oneHour": "ساعة واحدة",
+        "oneDay": "24 ساعة",
+        "sevenDays": "7 أيام",
+        "thirtyDays": "30 يومًا",
+        "custom": "مخصص"
+      },
+      "expiryLabel": "انتهاء صلاحية الوصول",
+      "levels": {
+        "connect": {
+          "label": "اتصال",
+          "description": "فتح الجلسات فقط: الطرفية، سطح المكتب البعيد، مدير الملفات، الأنفاق وDocker. لا يمكن الوصول إلى إعدادات المضيف."
+        },
+        "view": {
+          "label": "عرض",
+          "description": "الاتصال، بالإضافة إلى عرض إعدادات المضيف. لا تظهر الأسرار أبدًا."
+        },
+        "edit": {
+          "label": "تعديل",
+          "description": "يمكنك عرض وتعديل إعدادات المضيف غير المتعلقة بالمصادقة. تبقى مصادقة SSH الخاصة بالمالك سرية ومخصصة له فقط."
+        },
+        "manage": {
+          "label": "إدارة",
+          "description": "التعديل، بالإضافة إلى مشاركة المضيف مع الآخرين، وتغيير مستويات الصلاحية وإلغاء الوصول."
+        }
+      },
+      "noMatches": "لا توجد نتائج مطابقة",
+      "permissionLevelLabel": "مستوى الصلاحية",
+      "rolesTab": "الأدوار",
+      "searchPlaceholder": "البحث عن مستخدمين أو أدوار...",
+      "shareButton": "مشاركة",
+      "shareWithCount": "مشاركة ({{count}})",
+      "usersTab": "المستخدمون"
+    }
+  }
+}

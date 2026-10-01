@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Waarskuwings"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik waarskuwings",
+      "description": "Kry waarskuwings in die inboks en stuur dit na jou eie kanale."
+    }
+  },
+  "onboarding": {
+    "feature": "Waarskuwings",
+    "featureDesc": "Elke waarskuwing in een inboks, gestuur na Discord, ntfy, e-pos of 'n webhook as jy wil."
+  },
+  "settings": {
+    "group": {
+      "general": "Algemeen",
+      "email": "E-pos"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix-aankondigings",
+        "description": "Wys nuus van die Termix-span, soos sekuriteitskennisgewings en vrystellings, in almal se inboks."
+      },
+      "retentionDays": {
+        "label": "Hou waarskuwings vir (dae)",
+        "description": "Ouer waarskuwings word uit elke inboks verwyder."
+      },
+      "smtpHost": {
+        "label": "SMTP-bediener",
+        "description": "Nodig vir e-poskanale. Los leeg om e-pos af te skakel.",
+        "placeholder": "smtp.voorbeeld.com"
+      },
+      "smtpPort": {
+        "label": "SMTP-poort",
+        "description": "Gewoonlik 587 met STARTTLS of 465 met TLS."
+      },
+      "smtpSecure": {
+        "label": "Gebruik TLS van die begin af",
+        "description": "Skakel aan vir poort 465. Los af vir poort 587, wat op sy eie na TLS opgradeer."
+      },
+      "smtpUser": {
+        "label": "SMTP-gebruikersnaam",
+        "description": "Los leeg as die bediener nie 'n aanmelding benodig nie."
+      },
+      "smtpPassword": {
+        "label": "SMTP-wagwoord",
+        "description": "Geënkripteer gestoor."
+      },
+      "smtpFrom": {
+        "label": "Van adres",
+        "description": "Die senderwaarskuwings kom vandaan.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Waarskuwings-opspringvensters",
+        "description": "Watter nuwe waarskuwings verskyn terwyl jy Termix gebruik? Hulle beland altyd in die inboks.",
+        "all": "Alle waarskuwings",
+        "warning": "Waarskuwings en kritieke",
+        "critical": "Slegs krities",
+        "off": "Geen"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Inboks",
+    "channels": "Kanale",
+    "rules": "Afleweringsreëls"
+  },
+  "severity": {
+    "info": "Inligting",
+    "success": "Sukses",
+    "warning": "Waarskuwing",
+    "critical": "Krities"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Oop",
+    "view": "Bekyk",
+    "unread": "Ongelees",
+    "deliveryFailed_one": "{{count}} kanaal het misluk",
+    "deliveryFailed_other": "{{count}} kanale het misluk",
+    "markRead": "Merk as gelees",
+    "markUnread": "Merk as ongelees",
+    "markAllRead": "Merk alles as gelees",
+    "delete": "Vee uit",
+    "clearRead": "Vee leeswaarskuwings uit",
+    "cleared_one": "Verwyderde {{count}} waarskuwing",
+    "cleared_other": "Verwyderde {{count}} waarskuwings",
+    "filterAll": "Alles",
+    "filterUnread": "Ongelees",
+    "anySeverity": "Enige erns",
+    "anySource": "Enige bron",
+    "openAll": "Maak oop in 'n oortjie",
+    "empty": "Geen waarskuwings nog nie.",
+    "emptyUnread": "Julle is almal ingehaal.",
+    "loadMore": "Laai meer"
+  },
+  "channels": {
+    "intro": "Kanale is waar waarskuwings buite Termix kan gaan. Afleweringsreëls kies watter waarskuwings dit gebruik.",
+    "add": "Voeg kanaal by",
+    "edit": "Wysig kanaal",
+    "test": "Stuur 'n toets",
+    "testSent": "Toetswaarskuwing gestuur",
+    "testFailed": "Toets het misluk: {{error}}",
+    "deleteConfirm": "Vee die kanaal \"{{name}} \" uit?",
+    "deleted": "Kanaal uitgevee",
+    "empty": "Geen kanale nog nie.",
+    "enabled": "Geaktiveer",
+    "needsSave": "Hierdie kanaal moet weer oopgemaak en gestoor word voordat dit kan stuur.",
+    "name": "Naam",
+    "nameRequired": "Naam word vereis",
+    "type": "Tipe",
+    "types": {
+      "webhook": "Webhaak",
+      "ntfy": "ntfy",
+      "discord": "Disharmonie",
+      "email": "E-pos"
+    },
+    "emailUnavailable": "E-pos benodig 'n SMTP-bediener, wat 'n administrateur in die Waarskuwingsinstellings opstel.",
+    "webhookUrl": "URL",
+    "webhookHint": "Kry 'n JSON-liggaam vir elke waarskuwing.",
+    "method": "Metode",
+    "headers": "Koptekste",
+    "headersHint": "Een per lyn, soos Naam: waarde.",
+    "ntfyServer": "Bediener-URL",
+    "ntfyTopic": "Onderwerp",
+    "ntfyToken": "Toegangstoken (opsioneel)",
+    "discordUrl": "Discord webhook URL",
+    "discordHint": "Van die kanaal se instellings in Discord, onder Integrasies.",
+    "discordUsername": "Vertoonnaam (opsioneel)",
+    "discordAvatar": "Avatar-URL (opsioneel)",
+    "emailTo": "Stuur na",
+    "emailHint": "Skei meer as een adres met kommas.",
+    "privateNetwork": "Laat 'n privaat netwerkadres toe",
+    "privateNetworkHint": "Werk slegs vir gashere wat 'n administrateur toelaat in die privaat eindpuntlys."
+  },
+  "rules": {
+    "intro": "'n Afleweringsreël stuur ooreenstemmende waarskuwings na jou kanale. Waarskuwings bly ook altyd in die inboks.",
+    "add": "Voeg reël by",
+    "edit": "Wysig reël",
+    "empty": "Geen reëls nog nie, so waarskuwings verskyn slegs in die inboks.",
+    "needChannel": "Voeg eers 'n kanaal by.",
+    "enabled": "Geaktiveer",
+    "name": "Naam",
+    "nameRequired": "Naam word vereis",
+    "match": "Waarskuwings om te stuur",
+    "matchHint": "* vir alles, outomatisasies.* vir alles van outomatisasies, of een presiese soort.",
+    "minSeverity": "Ten minste",
+    "channels": "Stuur na",
+    "channelRequired": "Kies ten minste een kanaal",
+    "deleteConfirm": "Vee die reël \"{{name}} \" uit?",
+    "everything": "Alles",
+    "summary": "{{match}}, {{severity}} of hoër, na {{channels}}"
+  },
+  "actions": {
+    "cancel": "Kanselleer",
+    "save": "Stoor",
+    "saving": "Stoor...",
+    "delete": "Vee uit"
+  },
+  "widget": {
+    "name": "Waarskuwingsvoer",
+    "description": "Jou nuutste waarskuwings, met 'n vinnige manier om hulle gelees te merk",
+    "maxItems": "Maksimum items",
+    "showRead": "Wys leeswaarskuwings",
+    "allClear": "Alles duidelik",
+    "loading": "Laai tans..."
+  }
+}

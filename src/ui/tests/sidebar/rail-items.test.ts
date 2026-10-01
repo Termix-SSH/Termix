@@ -1,16 +1,25 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { Boxes } from "lucide-react";
 import {
-  HIDEABLE_RAIL_IDS,
-  PROMOTABLE_IDS,
+  hideableRailIds,
+  permittedRailItems,
+  promotableIds,
   RAIL_ITEMS,
   RAIL_UTILITY_ITEMS,
-  RIGHT_DOCKABLE_IDS,
+  registerRailItem,
+  resetRegisteredRailItems,
+  rightDockableIds,
   railItemLabel,
   visibleRailItems,
 } from "@/sidebar/rail-items";
-import { WORKSPACE_CAPTURABLE_TYPES } from "@/shell/workspaceUtils";
-import type { TabType } from "@/types/ui-types";
+import { isCapturableTabType } from "@/shell/shell-layout";
+import { registerPanel, resetPanels } from "@/shell/panel-registry";
 import en from "@/locales/en.json";
+
+afterEach(() => {
+  resetRegisteredRailItems();
+  resetPanels();
+});
 
 function lookup(key: string): unknown {
   return key
@@ -43,39 +52,30 @@ describe("RAIL_ITEMS", () => {
     // Guards against a destination silently disappearing now that the rail,
     // the settings toggles, the sidebar titles and the mobile bar all read
     // from this one list.
+    // "sftp" moved to the file-manager plugin's own registerRailItem,
+    // "port-forwarding" to the tunnels plugin's, "serial" to the serial
+    // plugin's, "collab" to the session-sharing plugin's, and "session-logs"
+    // to the session-recording plugin's, "termix-id" to the termix-identity
+    // plugin's, "ssh-tools" and "macros" to the ssh-terminal plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
-      "port-forwarding",
-      "termix-id",
       "connections",
-      "collab",
       "quick-connect",
-      "serial",
-      "ssh-tools",
-      "sftp",
-      "snippets",
-      "macros",
-      "fleets",
-      "automations",
-      "ai",
-      "history",
-      "session-logs",
-      "split-screen",
-      "workspaces",
-      "local-terminal",
-      "network_graph",
+      "sync",
     ]);
   });
 
-  it("exposes every rail item as hideable", () => {
-    expect(HIDEABLE_RAIL_IDS).toEqual(RAIL_ITEMS.map((item) => item.id));
+  it("exposes every visible rail item as hideable", () => {
+    expect(hideableRailIds()).toEqual(
+      visibleRailItems().map((item) => item.id),
+    );
   });
 
-  it("marks exactly the four mobile primary slots", () => {
+  it("marks core's mobile primary slots", () => {
     expect(
       RAIL_ITEMS.filter((item) => item.mobilePrimary).map((item) => item.id),
-    ).toEqual(["hosts", "quick-connect", "ssh-tools", "snippets"]);
+    ).toEqual(["hosts", "quick-connect"]);
   });
 
   it("marks the panels that can open as a tab", () => {
@@ -83,23 +83,13 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual([
-      "termix-id",
-      "ssh-tools",
-      "snippets",
-      "macros",
-      "automations",
-      "ai",
-      "history",
-      "session-logs",
-      "alerts",
-    ]);
+    ).toEqual([]);
   });
 
-  it("derives PROMOTABLE_IDS from the promotable flag", () => {
+  it("derives promotableIds from the promotable flag", () => {
     // The header button and the hint both gate on this list, so a drift here
     // silently hides the feature for that panel.
-    expect(PROMOTABLE_IDS).toEqual(
+    expect(promotableIds()).toEqual(
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
@@ -112,34 +102,80 @@ describe("RAIL_ITEMS", () => {
     for (const item of [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]) {
       if (!item.promotable) continue;
       expect(
-        WORKSPACE_CAPTURABLE_TYPES,
+        isCapturableTabType(item.id),
         `${item.id} is promotable but not workspace-capturable`,
-      ).toContain(item.id as TabType);
+      ).toBe(true);
     }
   });
 
   it("keeps the mounted-but-hidden panels out of the right dock", () => {
     // Hosts, credentials and fleets stay mounted while hidden and share editing
     // state, so a second live instance in the right dock would fight the first.
-    for (const id of ["hosts", "credentials", "fleets"]) {
+    for (const id of ["hosts", "credentials"]) {
       expect(
-        RIGHT_DOCKABLE_IDS,
+        rightDockableIds(),
         `${id} must not be right-dockable`,
       ).not.toContain(id);
     }
   });
 
   it("only offers reference panels in the right dock", () => {
-    expect(RIGHT_DOCKABLE_IDS).toEqual([
-      "connections",
-      "ssh-tools",
-      "snippets",
-      "macros",
-      "ai",
-      "history",
-      "session-logs",
-      "alerts",
-    ]);
+    expect(rightDockableIds()).toEqual(["connections"]);
+  });
+});
+
+describe("registered rail items", () => {
+  const item = (id: string, extra: object = {}) => ({
+    id,
+    icon: Boxes,
+    labelKey: `nav.${id}`,
+    pluginId: "p",
+    ...extra,
+  });
+
+  it("places items after their anchor, keeping their own order", () => {
+    registerRailItem(item("second", { after: "connections", order: 2 }));
+    registerRailItem(item("first", { after: "connections", order: 1 }));
+    const ids = visibleRailItems().map((entry) => entry.id);
+    const at = ids.indexOf("connections");
+    expect(ids.slice(at + 1, at + 3)).toEqual(["first", "second"]);
+  });
+
+  it("goes to the end when its anchor does not exist", () => {
+    registerRailItem(item("orphan", { after: "nowhere" }));
+    expect(visibleRailItems().at(-1)?.id).toBe("orphan");
+  });
+
+  it("feeds its flags into the promotable, dock and hideable lists", () => {
+    registerRailItem(item("docked", { promotable: true, rightDockable: true }));
+    registerPanel({ id: "docked", component: () => null });
+    registerRailItem(item("pinned", { hideable: false }));
+    expect(promotableIds()).toContain("docked");
+    expect(rightDockableIds()).toContain("docked");
+    expect(hideableRailIds()).toContain("docked");
+    expect(hideableRailIds()).not.toContain("pinned");
+  });
+
+  it("drops a hidden item everywhere without unregistering it", () => {
+    registerRailItem(item("off", { hidden: true, promotable: true }));
+    registerPanel({ id: "off", component: () => null });
+    expect(visibleRailItems().map((entry) => entry.id)).not.toContain("off");
+    expect(hideableRailIds()).not.toContain("off");
+    expect(promotableIds()).not.toContain("off");
+  });
+
+  it("labels a registered item by its own key", () => {
+    registerRailItem(item("labelled"));
+    expect(railItemLabel("labelled", (key) => `t:${key}`)).toBe(
+      "t:nav.labelled",
+    );
+  });
+
+  it("disposes only the entry it registered", () => {
+    const dispose = registerRailItem(item("same", { order: 1 }));
+    registerRailItem(item("same", { order: 2 }));
+    dispose();
+    expect(visibleRailItems().map((entry) => entry.id)).toContain("same");
   });
 });
 
@@ -157,15 +193,27 @@ describe("railItemLabel", () => {
       delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
     });
 
+    const desktopOnly = {
+      id: "desktop-only",
+      icon: Boxes,
+      labelKey: "nav.desktopOnly",
+      pluginId: "p",
+      electronOnly: true,
+    };
+
     it("hides electron-only destinations in the browser build", () => {
+      const dispose = registerRailItem(desktopOnly);
       const ids = visibleRailItems().map((item) => item.id);
-      expect(ids).not.toContain("local-terminal");
+      dispose();
+      expect(ids).not.toContain("desktop-only");
     });
 
     it("shows electron-only destinations in the desktop app", () => {
       (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+      const dispose = registerRailItem(desktopOnly);
       const ids = visibleRailItems().map((item) => item.id);
-      expect(ids).toContain("local-terminal");
+      dispose();
+      expect(ids).toContain("desktop-only");
     });
 
     it("keeps every non-electron item in both builds", () => {
@@ -179,5 +227,41 @@ describe("railItemLabel", () => {
         browser,
       );
     });
+  });
+});
+
+describe("permittedRailItems", () => {
+  const items = [
+    { id: "open", icon: Boxes, labelKey: "nav.hosts" },
+    {
+      id: "gated",
+      icon: Boxes,
+      labelKey: "nav.hosts",
+      permission: "demo.use",
+    },
+  ];
+
+  it("hides an item gated on a permission the user lacks", () => {
+    const ids = permittedRailItems(items, {
+      loaded: true,
+      has: () => false,
+    }).map((item) => item.id);
+    expect(ids).toEqual(["open"]);
+  });
+
+  it("shows it once the user holds the permission", () => {
+    const ids = permittedRailItems(items, {
+      loaded: true,
+      has: (permission) => permission === "demo.use",
+    }).map((item) => item.id);
+    expect(ids).toEqual(["open", "gated"]);
+  });
+
+  it("keeps gated items hidden until permissions have loaded", () => {
+    const ids = permittedRailItems(items, {
+      loaded: false,
+      has: () => true,
+    }).map((item) => item.id);
+    expect(ids).toEqual(["open"]);
   });
 });

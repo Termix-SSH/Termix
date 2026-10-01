@@ -1,29 +1,20 @@
 import {
-  ArrowLeftRight,
-  Boxes,
-  Braces,
-  Clock,
-  Fingerprint,
-  Hammer,
+  Cloud,
   KeyRound,
-  LayoutPanelLeft,
-  LayoutTemplate,
-  Network,
-  Play,
   Plug,
-  ScrollText,
   Server,
   Settings,
-  Sparkles,
-  TerminalSquare,
-  Usb,
   User,
-  Workflow,
   Zap,
-  Presentation,
   type LucideIcon,
 } from "lucide-react";
+import { useMemo, useSyncExternalStore } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useSyncAttentionCount } from "@/hooks/use-sync-status";
 import { isElectron } from "@/lib/electron";
+import { createRegistry } from "@/lib/registry";
+import { getPanel } from "@/shell/panel-registry";
+import { getTabType } from "@/shell/tab-registry";
 
 /**
  * The one list of navigation destinations.
@@ -41,7 +32,7 @@ export interface RailItemDef {
   icon: LucideIcon;
   /** i18n key; every label goes through t() so nothing is hardcoded English. */
   labelKey: string;
-  /** Tab-opening entries (network_graph) rather than sidebar panels. */
+  /** Tab-opening entries rather than sidebar panels. */
   kind?: "tab";
   /** Always-available destinations that users cannot hide. */
   alwaysVisible?: boolean;
@@ -61,6 +52,24 @@ export interface RailItemDef {
   rightDockable?: boolean;
   /** Desktop app only. Hidden in the browser build, including its toggle. */
   electronOnly?: boolean;
+  /** False keeps it out of the Navigation visibility toggles. */
+  hideable?: boolean;
+  /** A plugin item that stays visible in the Simple preset. */
+  simplePreset?: boolean;
+  /** Registered but not shown, e.g. while its feature is switched off. */
+  hidden?: boolean;
+  /** Places a registered item after this id instead of at the end. */
+  after?: string;
+  /** Tie-break among registered items. */
+  order?: number;
+  /** Set for items a plugin registered. */
+  pluginId?: string;
+  /** Role permission the user needs to see it at all, as a full id. */
+  permission?: string;
+  /** "footer" renders it at the bottom of the rail, above the profile. */
+  placement?: "main" | "footer";
+  /** Called as a hook by the rail; a positive number shows as a badge. */
+  useBadge?: () => number | null | undefined;
 }
 
 export const RAIL_ITEMS: RailItemDef[] = [
@@ -72,31 +81,11 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
   },
   {
-    id: "port-forwarding",
-    icon: Network,
-    labelKey: "nav.portForwarding",
-    electronOnly: true,
-    separatorAfter: true,
-  },
-  {
-    id: "termix-id",
-    icon: Fingerprint,
-    labelKey: "nav.termixId",
-    separatorAfter: true,
-    promotable: true,
-  },
-  {
     id: "connections",
     icon: Plug,
     labelKey: "nav.connections",
     separatorAfter: true,
     rightDockable: true,
-  },
-  {
-    id: "collab",
-    icon: Presentation,
-    labelKey: "nav.collab",
-    separatorAfter: true,
   },
   {
     id: "quick-connect",
@@ -105,129 +94,113 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
     mobilePrimary: true,
   },
-  { id: "serial", icon: Usb, labelKey: "nav.serial", separatorAfter: true },
   {
-    id: "ssh-tools",
-    icon: Hammer,
-    labelKey: "nav.sshTools",
-    separatorAfter: true,
-    mobilePrimary: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  {
-    id: "sftp",
-    icon: ArrowLeftRight,
-    labelKey: "nav.sftp",
-    separatorAfter: true,
-  },
-  {
-    id: "snippets",
-    icon: Play,
-    labelKey: "nav.snippets",
-    separatorAfter: true,
-    mobilePrimary: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  {
-    id: "macros",
-    icon: Braces,
-    labelKey: "nav.macros",
-    separatorAfter: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  { id: "fleets", icon: Boxes, labelKey: "nav.fleets", separatorAfter: true },
-  {
-    id: "automations",
-    icon: Workflow,
-    labelKey: "nav.automations",
-    separatorAfter: true,
-    promotable: true,
-  },
-  {
-    id: "ai",
-    icon: Sparkles,
-    labelKey: "nav.ai",
-    separatorAfter: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  {
-    id: "history",
-    icon: Clock,
-    labelKey: "nav.history",
-    separatorAfter: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  {
-    id: "session-logs",
-    icon: ScrollText,
-    labelKey: "nav.sessionLogs",
-    separatorAfter: true,
-    promotable: true,
-    rightDockable: true,
-  },
-  {
-    id: "split-screen",
-    icon: LayoutPanelLeft,
-    labelKey: "nav.splitScreen",
-    separatorAfter: true,
-  },
-  {
-    id: "workspaces",
-    icon: LayoutTemplate,
-    labelKey: "nav.workspaces",
-    separatorAfter: true,
-  },
-  {
-    id: "local-terminal",
-    icon: TerminalSquare,
-    labelKey: "nav.localTerminal",
-    kind: "tab",
-    separatorAfter: true,
+    id: "sync",
+    icon: Cloud,
+    labelKey: "nav.sync",
     electronOnly: true,
-  },
-  {
-    id: "network_graph",
-    icon: Network,
-    labelKey: "nav.networkGraph",
-    kind: "tab",
-    separatorAfter: true,
+    placement: "footer",
+    useBadge: useSyncAttentionCount,
   },
 ];
 
 /**
- * Runtime-registered rail items, for a future plugin loader to add
- * destinations that don't exist at build time. Keyed by id so a plugin can
- * cleanly unregister its own entries without touching anyone else's.
+ * Rail items registered by plugins at runtime. Reactive, because a plugin can
+ * be enabled or disabled while the app is open and the rail, the mobile bar
+ * and the Navigation toggles all have to follow.
  */
-const registeredRailItems = new Map<string, RailItemDef>();
+const registeredRailItems = createRegistry<RailItemDef>();
 
-export function registerRailItem(def: RailItemDef): void {
-  registeredRailItems.set(def.id, def);
+export function registerRailItem(def: RailItemDef): () => void {
+  return registeredRailItems.register(def);
 }
 
-export function unregisterRailItem(id: string): void {
-  registeredRailItems.delete(id);
+/** Registered items, hidden ones included. */
+export const listRegisteredRailItems = registeredRailItems.list;
+
+/**
+ * Core items in their fixed order, with each registered item placed after
+ * the item its `after` names, or at the end. Hidden items are left out.
+ */
+function mergedRailItems(): RailItemDef[] {
+  const merged = [...RAIL_ITEMS];
+  const plugins = [...registeredRailItems.list()]
+    .filter((item) => !item.hidden)
+    .sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id),
+    );
+  for (const item of plugins) {
+    let at = item.after
+      ? merged.findIndex((existing) => existing.id === item.after)
+      : -1;
+    if (at < 0) {
+      merged.push(item);
+      continue;
+    }
+    // Items sharing an anchor keep their own order after it.
+    while (
+      at + 1 < merged.length &&
+      merged[at + 1].pluginId &&
+      merged[at + 1].after === item.after
+    ) {
+      at++;
+    }
+    merged.splice(at + 1, 0, item);
+  }
+  return merged;
 }
 
 /**
  * Rail items available in the current build. Electron-only destinations are
  * dropped in the browser build so they never reach the rail, the mobile bar,
- * or the visibility toggles. Runtime-registered items are appended after the
- * built-in list.
+ * or the visibility toggles.
  */
 export function visibleRailItems(): RailItemDef[] {
   const electron = isElectron();
-  return [
-    ...RAIL_ITEMS.filter((item) => !item.electronOnly || electron),
-    ...[...registeredRailItems.values()].filter(
-      (item) => !item.electronOnly || electron,
-    ),
-  ];
+  return mergedRailItems().filter((item) => !item.electronOnly || electron);
+}
+
+let railSnapshot: RailItemDef[] | null = null;
+registeredRailItems.subscribe(() => {
+  railSnapshot = null;
+});
+
+function railItemsSnapshot(): RailItemDef[] {
+  if (!railSnapshot) railSnapshot = visibleRailItems();
+  return railSnapshot;
+}
+
+/**
+ * Drops items gated on a permission the user lacks. Until permissions load,
+ * gated items stay hidden rather than flashing in and out.
+ */
+export function permittedRailItems(
+  items: RailItemDef[],
+  permissions: { has: (permission: string) => boolean; loaded: boolean },
+): RailItemDef[] {
+  if (!items.some((item) => item.permission)) return items;
+  return items.filter(
+    (item) =>
+      !item.permission ||
+      (permissions.loaded && permissions.has(item.permission)),
+  );
+}
+
+/**
+ * visibleRailItems() as a hook, re-rendering when plugins change it, without
+ * the items the user's permissions hide.
+ */
+export function useRailItems(): RailItemDef[] {
+  const items = useSyncExternalStore(
+    registeredRailItems.subscribe,
+    railItemsSnapshot,
+    railItemsSnapshot,
+  );
+  const { has, loaded } = usePermissions();
+  return useMemo(
+    () => permittedRailItems(items, { has, loaded }),
+    [items, has, loaded],
+  );
 }
 
 /**
@@ -235,41 +208,47 @@ export function visibleRailItems(): RailItemDef[] {
  * title and a mobile entry.
  */
 export const RAIL_UTILITY_ITEMS: RailItemDef[] = [
-  {
-    id: "alerts",
-    icon: Plug,
-    labelKey: "nav.alerts",
-    promotable: true,
-    rightDockable: true,
-  },
   { id: "user-profile", icon: User, labelKey: "nav.userProfile" },
   { id: "admin-settings", icon: Settings, labelKey: "nav.admin" },
 ];
 
 /** Ids that may be opened in the right dock. */
-export const RIGHT_DOCKABLE_IDS = [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
-  .filter((item) => item.rightDockable)
-  .map((item) => item.id);
+export function rightDockableIds(): string[] {
+  return [...mergedRailItems(), ...RAIL_UTILITY_ITEMS]
+    .filter((item) => item.rightDockable)
+    .map((item) => item.id);
+}
 
-/** Ids that may be opened as a full-width tab. */
-export const PROMOTABLE_IDS = [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
-  .filter((item) => item.promotable)
-  .map((item) => item.id);
+/** Ids that may be opened as a full-width tab: a tab type or a panel to show. */
+export function promotableIds(): string[] {
+  return [...mergedRailItems(), ...RAIL_UTILITY_ITEMS]
+    .filter(
+      (item) => item.promotable && (getTabType(item.id) || getPanel(item.id)),
+    )
+    .map((item) => item.id);
+}
 
-/** Ids a user is allowed to hide, mirroring HideableRailView. */
-export const HIDEABLE_RAIL_IDS = RAIL_ITEMS.filter(
-  (item) => !item.alwaysVisible,
-).map((item) => item.id);
+/** Ids a user is allowed to hide from Appearance > Sidebar > Navigation. */
+export function hideableRailIds(): string[] {
+  return visibleRailItems()
+    .filter((item) => !item.alwaysVisible && item.hideable !== false)
+    .map((item) => item.id);
+}
 
-const LABEL_KEYS: Record<string, string> = Object.fromEntries(
-  [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS].map((item) => [
-    item.id,
-    item.labelKey,
-  ]),
-);
+/** Whether a rail view is one of core's own, rather than a plugin's. */
+export function isCoreRailView(id: string): boolean {
+  return [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS].some((item) => item.id === id);
+}
 
 /** Translated label for any rail destination, including registered ones. */
 export function railItemLabel(id: string, t: (key: string) => string): string {
-  const key = LABEL_KEYS[id] ?? registeredRailItems.get(id)?.labelKey;
+  const key =
+    [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS].find((item) => item.id === id)
+      ?.labelKey ?? registeredRailItems.get(id)?.labelKey;
   return key ? t(key) : id;
+}
+
+/** Test seam. */
+export function resetRegisteredRailItems(): void {
+  registeredRailItems.reset();
 }

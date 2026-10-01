@@ -3,19 +3,6 @@ import type { SSHHostWithStatus } from "@/main-axios";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 
 describe("sshHostToHost", () => {
-  it("preserves the Wake-on-LAN broadcast address for editing", () => {
-    const host = sshHostToHost({
-      id: 1,
-      name: "server",
-      ip: "192.168.0.10",
-      port: 22,
-      username: "root",
-      wolBroadcastAddress: "192.168.0.255",
-    } as SSHHostWithStatus);
-
-    expect(host.wolBroadcastAddress).toBe("192.168.0.255");
-  });
-
   it.each(["local", "remote"] as const)(
     "preserves the %s connection origin for editing",
     (connectionOrigin) => {
@@ -44,5 +31,34 @@ describe("sshHostToHost", () => {
 
     expect(host.id).toBe("-12");
     expect(host.isShared).toBe(true);
+  });
+
+  it("keeps every plugin's host settings so the editor can load them", () => {
+    const pluginSettings = {
+      docker: { enableDocker: true, containerRuntime: "podman" },
+      "tmux-monitor": { enableTmuxMonitor: true },
+    };
+    const host = sshHostToHost({
+      id: 3,
+      name: "box",
+      ip: "10.0.0.3",
+      port: 22,
+      username: "root",
+      pluginSettings,
+    } as unknown as SSHHostWithStatus);
+
+    expect(host.pluginSettings).toEqual(pluginSettings);
+  });
+
+  it("defaults plugin settings to an empty map", () => {
+    const host = sshHostToHost({
+      id: 4,
+      name: "bare",
+      ip: "10.0.0.4",
+      port: 22,
+      username: "root",
+    } as SSHHostWithStatus);
+
+    expect(host.pluginSettings).toEqual({});
   });
 });

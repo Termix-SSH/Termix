@@ -1,0 +1,44 @@
+{
+  "name": "@termix-plugin/serial",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p .",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "lucide-react": "^1.33.0",
+    "react-xtermjs": "^1.0.10",
+    "serialport": "^13.0.0"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "^1.0.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "@termix/plugin-sdk": "^1.0.0",
+    "react": "^19.2.8",
+    "ws": "^8.21.3"
+  },
+  "termix": {
+    "patches": [
+      "xterm-android-ime"
+    ]
+  },
+  "overrides": {
+    "react-xtermjs": {
+      "@xterm/xterm": "$@xterm/xterm"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Accedi con LDAP",
+  "loginWithProvider": "Accedi con {{name}}",
+  "loading": "Caricamento in corso...",
+  "requiredField": "Questo campo è obbligatorio",
+  "username": "Nome utente LDAP",
+  "password": "Password LDAP",
+  "signIn": "Accedi",
+  "permissions": {
+    "manage": {
+      "title": "Gestire le directory LDAP",
+      "description": "Aggiungere, modificare e rimuovere le directory LDAP con cui gli utenti possono accedere."
+    }
+  },
+  "providers": {
+    "docsLink": "Vedi documenti",
+    "none": "Nessuna directory LDAP configurata.",
+    "add": "Aggiungi directory",
+    "edit": "Modifica directory",
+    "delete": "Elimina la directory",
+    "deleteConfirm": "Eliminare questa directory? Gli utenti che accedono tramite questa directory non potranno più effettuare il login.",
+    "name": "Nome visualizzato",
+    "namePlaceholder": "Elenco delle aziende",
+    "nameRequired": "È richiesto un nome visualizzato",
+    "enabled": "Abilitato",
+    "save": "Salva directory",
+    "saving": "Salvando...",
+    "saved": "Salvato",
+    "saveFailed": "Salvataggio non riuscito",
+    "deleted": "Eliminato",
+    "deleteFailed": "Eliminazione non riuscita",
+    "loadFailed": "Impossibile caricare le directory LDAP",
+    "cancel": "Annulla"
+  },
+  "fields": {
+    "host": "Host LDAP",
+    "port": "Porta",
+    "useTls": "Usa TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Password di bind",
+    "secretKeep": "È stata salvata una password. Lascia questo campo vuoto per mantenerla.",
+    "userSearchBase": "Base di ricerca utenti",
+    "userSearchFilter": "Filtro di ricerca utenti",
+    "usernameAttr": "Attributo nome utente",
+    "displayNameAttr": "Attributo nome visualizzato",
+    "groupSearchBase": "Base di ricerca gruppi",
+    "adminGroup": "Gruppo amministratori",
+    "allowedUsers": "Utenti consentiti"
+  }
+}

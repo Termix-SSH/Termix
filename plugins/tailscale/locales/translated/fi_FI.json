@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "devices.view": {
+      "title": "Näytä häntäverkon laitteet",
+      "description": "Katso laitteet yhdistetyssä häntäverkossa."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "Tailscale-API",
+      "devices": "Hännänverkko"
+    },
+    "apiKey": {
+      "label": "API-avain",
+      "description": "Käytetään laitettasi listaamaan häntäverkossasi. Toimii Tailscale- tai Headscale-näppäimellä.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API-perus-URL",
+      "description": "Jätä tyhjäksi Tailscale-kohdassa. Aseta tämä osoittamaan Headscale-instanssiin.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Laiteluettelo",
+      "checking": "Hännänverkon tarkistus...",
+      "noKey": "API-avainta ei ole vielä asetettu.",
+      "error": "Hälytysverkkoon ei saatu yhteyttä. Tarkista API-avain.",
+      "count": "{{count}} laite tavoitettavissa",
+      "count_other": "{{count}} laitteita tavoitettavissa",
+      "refresh": "Tarkista"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
+  "hosts": {
+    "tailscaleUsernameHint": "Tämän on oltava Unix-käyttäjä, jolle Tailscale-identiteettisi on myönnetty tailnetin SSH ACL:ssä, ei välttämättä pääkäyttäjä.",
+    "tailscaleDeviceSelect": "Valitse Tailscale-laite",
+    "tailscaleDeviceSelectPlaceholder": "Valitse laite...",
+    "tailscaleNoApiKey": "Tailscale API -avainta ei ole määritetty. Lisää sellainen järjestelmänvalvojan asetuksissa, jotta laitteiden löytäminen on mahdollista.",
+    "tailscaleDocsLink": "Näytä dokumentit",
+    "tailscaleLoadingDevices": "Laitteita ladataan...",
+    "tailscaleDeviceLoadFailed": "Tailscale-laitteiden lataus epäonnistui. Tarkista API-URL-osoite ja verkkoyhteys.",
+    "tailscaleNoDevices": "Hätäverkostasi ei löytynyt laitteita.",
+    "tailscaleDeviceAutoFill": "Laitteen valinta täyttää isännän IP-osoitteen automaattisesti.",
+    "tailscaleAddHost": "Lisää isäntä",
+    "tailscaleCopyIp": "Kopioi Tailscale IP-osoite",
+    "tailscaleIpCopied": "IP-osoite kopioitu",
+    "tailscaleIpCopyFailed": "IP-osoitteen kopiointi epäonnistui",
+    "filterAuthTailscale": "Tailscale"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-todennus vaaditaan",
+    "tailscaleCheckDescription": "Tailscale SSH vaatii lisätarkistuksen. Jatka tunnistautumalla selaimessasi.",
+    "tailscaleCheckOpenBrowser": "Avaa selain todennusta varten",
+    "tailscaleCheckWaiting": "Odotetaan Tailscale-todennusta...",
+    "tailscaleCheckTimeout": "Tailscale-todennus aikakatkaistiin. Yritä uudelleen."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "Päivitä",
+    "retry": "Yritä uudelleen",
+    "sudoHint": "Aseta tälle isännälle sudo-salasana, jotta voit sallia toiminnot laajentuneilla oikeuksilla.",
+    "noData": "Ei tietoja saatavilla",
+    "filter": "Suodattaa...",
+    "tsNotInstalled": "Tailscalea ei ole asennettu tälle isännälle",
+    "tsRunning": "Juoksu",
+    "tsStopped": "Pysähtynyt",
+    "tsEnable": "Yhdistä",
+    "tsDisable": "Katkaise yhteys",
+    "tsEnabling": "Yhdistetään Tailscaleen...",
+    "tsDisabling": "Yhteyden katkaiseminen Tailscaleen...",
+    "tsEnabled": "Tailscale yhdistetty",
+    "tsDisabled": "Tailscale irrotettu",
+    "tsExitNode": "Poistumissolmu",
+    "tsExitNodeActive": "Poistumissolmu aktiivinen"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Yhdistä terminaaliin",
+        "usernameLabel": "Käyttäjätunnus"
+      }
+    }
+  }
+}

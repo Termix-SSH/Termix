@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "devices.view": {
+      "title": "テールネットデバイスを表示する",
+      "description": "接続されているテールネット上のデバイスを確認してください。"
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "テールスケールAPI",
+      "devices": "テールネット"
+    },
+    "apiKey": {
+      "label": "APIキー",
+      "description": "テールネット上のデバイスを一覧表示するために使用します。TailscaleキーまたはHeadscaleキーと連携して動作します。",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "APIベースURL",
+      "description": "テールスケールの場合は空欄のままにしてください。ヘッドスケールインスタンスを指定する場合は、こちらを設定してください。",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "デバイスリスト",
+      "checking": "テールネットをチェック中...",
+      "noKey": "APIキーはまだ設定されていません。",
+      "error": "テールネットに接続できませんでした。APIキーを確認してください。",
+      "count": "{{count}} デバイスに到達可能",
+      "count_other": "{{count}} デバイスに到達可能",
+      "refresh": "チェック"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
+  "hosts": {
+    "tailscaleUsernameHint": "これは、tailnetのSSH ACLでTailscaleのIDが付与されているUnixユーザーである必要があり、必ずしもrootである必要はありません。",
+    "tailscaleDeviceSelect": "Tailscaleデバイスを選択",
+    "tailscaleDeviceSelectPlaceholder": "デバイスを選択...",
+    "tailscaleNoApiKey": "Tailscale APIキーが設定されていません。デバイス検出を有効にするには、管理者設定で追加してください。",
+    "tailscaleDocsLink": "ドキュメントを表示",
+    "tailscaleLoadingDevices": "デバイスを読み込み中...",
+    "tailscaleDeviceLoadFailed": "Tailscaleデバイスの読み込みに失敗しました。API URLとネットワーク接続を確認してください。",
+    "tailscaleNoDevices": "テールネットにデバイスが見つかりません。",
+    "tailscaleDeviceAutoFill": "デバイスを選択するとホストIPアドレスが自動入力されます。",
+    "tailscaleAddHost": "ホストを追加",
+    "tailscaleCopyIp": "Tailscale IPをコピーする",
+    "tailscaleIpCopied": "IPアドレスがコピーされました",
+    "tailscaleIpCopyFailed": "IPアドレスをコピーできませんでした",
+    "filterAuthTailscale": "Tailscale"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "テールスケール認証が必要です",
+    "tailscaleCheckDescription": "TailscaleのSSH接続には追加の認証が必要です。ブラウザで認証を行ってから続行してください。",
+    "tailscaleCheckOpenBrowser": "ブラウザを開いて認証",
+    "tailscaleCheckWaiting": "Tailscaleの認証を待っています...",
+    "tailscaleCheckTimeout": "Tailscaleの認証がタイムアウトしました。もう一度お試しください。"
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "再読み込み",
+    "retry": "再試行",
+    "sudoHint": "このホストに対してsudoパスワードを設定し、管理者権限での操作を許可してください。",
+    "noData": "利用可能なデータはありません",
+    "filter": "フィルター...",
+    "tsNotInstalled": "このホストにTailscaleがインストールされていません",
+    "tsRunning": "実行中",
+    "tsStopped": "停止中",
+    "tsEnable": "接続",
+    "tsDisable": "切断",
+    "tsEnabling": "Tailscaleに接続中...",
+    "tsDisabling": "Tailscaleから切断中...",
+    "tsEnabled": "Tailscale接続済み",
+    "tsDisabled": "Tailscale切断済み",
+    "tsExitNode": "Exitノード",
+    "tsExitNodeActive": "Exitノード有効"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "ターミナルに接続",
+        "usernameLabel": "ユーザー名"
+      }
+    }
+  }
+}

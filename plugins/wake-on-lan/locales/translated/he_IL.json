@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "לְהִתְעוֹרֵר",
+    "sent": "חבילת Wake-on-LAN נשלחה",
+    "failed": "נכשלה שליחת חבילת Wake-on-LAN"
+  },
+  "permissions": {
+    "send": {
+      "title": "שליחת חבילות Wake-on-LAN",
+      "description": "להעיר מארח על ידי שליחת חבילת קסם לכתובת ה-MAC שלו."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "כתובת MAC",
+        "description": "כתובת ה-MAC של הרשת של המארח, המשמשת לשליחת חבילות Wake-on-LAN.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "כתובת השידור",
+        "description": "כתובת השידור של תת-הרשת שאליה יש לשלוח את החבילה. השאר ריק עבור 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

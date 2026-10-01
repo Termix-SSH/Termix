@@ -1,0 +1,84 @@
+{
+  "id": "vault",
+  "name": "HashiCorp Vault",
+  "version": "1.0.0",
+  "description": "Connect to hosts with short-lived SSH certificates from HashiCorp Vault, after signing in to Vault with OIDC.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "KeyRound",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "secrets:own",
+    "network:outbound",
+    "network:serve",
+    "auth:provide",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "sshAuthTypes": ["vault"]
+    },
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      },
+      {
+        "name": "share",
+        "titleKey": "permissions.share.title",
+        "descriptionKey": "permissions.share.description",
+        "defaultRoles": ["admin"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "redirectUri",
+          "type": "custom",
+          "component": "redirectUri"
+        },
+        {
+          "key": "legacyCallback",
+          "type": "boolean",
+          "labelKey": "settings.legacyCallback.label",
+          "descriptionKey": "settings.legacyCallback.description",
+          "default": false
+        }
+      ],
+      "host": {
+        "fields": [
+          {
+            "key": "profileId",
+            "type": "number",
+            "labelKey": "settings.host.profileId.label",
+            "hidden": true,
+            "ownerOnly": true,
+            "defaultLevels": ["user", "folder"]
+          }
+        ]
+      }
+    },
+    "http": {
+      "legacyRedirects": [
+        {
+          "from": "/vault/oidc/callback",
+          "to": "/oidc/callback"
+        }
+      ]
+    },
+    "syncEntities": ["vaultProfiles"],
+    "uses": ["terminal.overlay"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

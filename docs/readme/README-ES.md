@@ -367,9 +367,9 @@ Puedes ejecutar el servidor de Termix en un VPS en lugar de dentro de tu propia 
 
 ## Telemetría
 
-Termix envía una vez al día un pequeño aviso anónimo para que pueda ver cuántas instancias hay funcionando y qué funciones se usan. Contiene un identificador de instancia aleatorio, cuántos usuarios y hosts tienes, la versión de la aplicación y qué funciones (terminal, gestor de archivos, túneles, docker, etc.) se han usado en las últimas 24 horas. Nunca contiene nombres de usuario, nombres de host, direcciones IP, credenciales ni nada que te identifique a ti o a tus servidores.
+Termix envía una vez al día un pequeño informe anónimo para que pueda ver cuántas instancias hay funcionando y qué funciones se usan. Incluye un ID de instancia aleatorio, la versión de la app y cuántos usuarios y hosts tienes. También puede incluir tu plataforma (sistema operativo, arquitectura, versión de Node.js, tipo de base de datos y si usas Docker, la app de escritorio o un servidor normal), cuántas veces se abrió cada tipo de pestaña y cuántos inicios de sesión SSH hubo, y qué funciones integradas están activas. Nunca incluye nombres de usuario, nombres de host, direcciones IP, credenciales ni nada que te identifique a ti o a tus servidores.
 
-Viene activado. Puedes desactivarlo en los ajustes de administración, en General, o poner `ENABLE_TELEMETRY=false` antes incluso de arrancar Termix.
+Viene activado. Puedes desactivarlo o elegir qué incluye en los ajustes de administración, en Usage Statistics, donde también puedes ver el informe exacto antes de enviarlo. Cada usuario puede excluir su propio uso de funciones desde su perfil. Poner `ENABLE_TELEMETRY=false` lo desactiva y bloquea el interruptor.
 
 <br />
 

@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Teken aan met LDAP",
+  "loginWithProvider": "Teken aan met {{name}}",
+  "loading": "Laai tans...",
+  "requiredField": "Hierdie veld is verpligtend",
+  "username": "LDAP-gebruikersnaam",
+  "password": "LDAP-wagwoord",
+  "signIn": "Aanmeld",
+  "permissions": {
+    "manage": {
+      "title": "Bestuur LDAP-gidse",
+      "description": "Voeg die LDAP-gidse by, verander en verwyder dit waarmee mense kan aanmeld."
+    }
+  },
+  "providers": {
+    "docsLink": "Bekyk dokumente",
+    "none": "Geen LDAP-gidse gekonfigureer nie.",
+    "add": "Voeg gids by",
+    "edit": "Wysig gids",
+    "delete": "Vee gids uit",
+    "deleteConfirm": "Vee hierdie gids uit? Gebruikers wat daarmee aanmeld, sal nie kan aanmeld nie.",
+    "name": "Vertoonnaam",
+    "namePlaceholder": "Maatskappygids",
+    "nameRequired": "'n Vertoonnaam word vereis",
+    "enabled": "Geaktiveer",
+    "save": "Stoor gids",
+    "saving": "Stoor...",
+    "saved": "Gestoor",
+    "saveFailed": "Kon nie stoor nie",
+    "deleted": "Verwyder",
+    "deleteFailed": "Kon nie verwyder nie",
+    "loadFailed": "Kon nie LDAP-gidse laai nie",
+    "cancel": "Kanselleer"
+  },
+  "fields": {
+    "host": "LDAP-gasheer",
+    "port": "Hawe",
+    "useTls": "Gebruik TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind Wagwoord",
+    "secretKeep": "'n Wagwoord is gestoor. Los dit leeg om dit te behou.",
+    "userSearchBase": "Gebruikersoekbasis",
+    "userSearchFilter": "Gebruikersoekfilter",
+    "usernameAttr": "Gebruikersnaam-kenmerk",
+    "displayNameAttr": "Vertoonnaam-kenmerk",
+    "groupSearchBase": "Groepsoekbasis",
+    "adminGroup": "Admingroep",
+    "allowedUsers": "Toegelate Gebruikers"
+  }
+}

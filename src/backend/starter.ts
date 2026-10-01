@@ -3,10 +3,7 @@ import dotenv from "dotenv";
 import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
-import { AuthManager } from "./utils/auth-manager.js";
-import { DataCrypto } from "./utils/data-crypto.js";
-import { ensureDatabaseLayerPreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
+import { AutoSSLSetup } from "./tls/self-signed.js";
 import { DatabaseSaveTrigger } from "./utils/database-save-trigger.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
 import {
@@ -70,9 +67,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     identifierPath: "",
     namePath: "",
     scopes: "openid email profile",
-    totpSecret: null,
-    totpEnabled: false,
-    totpBackupCodes: null,
   });
 
   try {
@@ -165,20 +159,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./database/db/dialect.js");
     const databaseDialect = resolveDatabaseDialect();
 
-    // The pre-upgrade backup copies the SQLite file, so there is nothing for it
-    // to do on a client-server engine. Say so rather than no-op silently:
-    // backups are the operator's own responsibility there.
-    if (needsExplicitPersist(databaseDialect)) {
-      ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
-    } else {
-      systemLogger.info(
-        `Skipping pre-upgrade backup on ${databaseDialect} - back up the database yourself`,
-        {
-          operation: "backend_init_db_backup_skipped",
-          dialect: databaseDialect,
-        },
-      );
-    }
+    const { backupBeforeUpgrade } = await import("./boot.js");
+    await backupBeforeUpgrade({ dataDir, version });
 
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {
@@ -200,30 +182,20 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     });
 
     if (trustedProxyAuth.enabled) {
-      const {
-        createCurrentSettingsRepository,
-        createCurrentSsoProviderRepository,
-        createCurrentUserRepository,
-      } = await import("./database/repositories/factory.js");
-      const [legacyOidc, providers, users] = await Promise.all([
-        createCurrentSettingsRepository().get("oidc_config"),
-        createCurrentSsoProviderRepository().listEnabled(),
+      // Enabled external login methods are refused at runtime instead: their
+      // plugins are not running yet at this point.
+      const { createCurrentUserAuthRepository, createCurrentUserRepository } =
+        await import("./database/repositories/factory.js");
+      const [users, secondFactorUsers] = await Promise.all([
         createCurrentUserRepository().listAll(),
+        createCurrentUserAuthRepository().listUserIdsWithSecondFactors(),
       ]);
-      const conflictingProvider = providers.some((provider) =>
-        ["oidc", "github", "google"].includes(provider.type),
-      );
       const conflictingUser = users.some(
-        (user) => user.isOidc || user.totpEnabled,
+        (user) => user.isOidc || secondFactorUsers.has(user.id),
       );
-      if (
-        legacyOidc ||
-        process.env.OIDC_CLIENT_ID ||
-        conflictingProvider ||
-        conflictingUser
-      ) {
+      if (process.env.OIDC_CLIENT_ID || conflictingUser) {
         throw new Error(
-          "Trusted proxy authentication cannot start while OIDC or TOTP is enabled",
+          "Trusted proxy authentication cannot start while OIDC or a second factor is enabled",
         );
       }
       systemLogger.info("Trusted proxy authentication enabled", {
@@ -234,77 +206,41 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       });
     }
 
-    const { UserKeyManager } = await import("./utils/user-keys.js");
-    await UserKeyManager.getInstance().initialize();
+    const { runCoreBootMigrations } = await import("./boot.js");
+    await runCoreBootMigrations();
 
-    const { runBootDekMigration } =
-      await import("./utils/crypto-migration/dek-migration.js");
-    await runBootDekMigration({ cleanupLegacy: true });
-
-    const { runLegacySharedCredentialCleanup } =
-      await import("./utils/crypto-migration/legacy-share-cleanup.js");
-    await runLegacySharedCredentialCleanup();
-
-    const authManager = AuthManager.getInstance();
-    await authManager.initialize();
-    DataCrypto.initialize();
-
-    const { runLegacySharedSshAuthOptInMigration } =
-      await import("./utils/crypto-migration/legacy-shared-ssh-auth-opt-in-migration.js");
-    await runLegacySharedSshAuthOptInMigration();
-
-    const { runSharedHostSecretsMigration } =
-      await import("./utils/crypto-migration/shared-host-secrets-migration.js");
-    await runSharedHostSecretsMigration();
-
-    const { runPrivateSharedSshAuthMigration } =
-      await import("./utils/crypto-migration/private-shared-ssh-auth-migration.js");
-    await runPrivateSharedSshAuthMigration();
-
-    const { runChannelConfigEncryptionMigration } =
-      await import("./utils/crypto-migration/channel-config-encryption.js");
-    await runChannelConfigEncryptionMigration();
-
-    const { runAutomationsMigration } =
-      await import("./utils/crypto-migration/automations-migration.js");
-    await runAutomationsMigration();
+    const { hostStatusService } =
+      await import("./hosts/status/host-status-service.js");
+    hostStatusService.start();
 
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }
 
-    import("./utils/opkssh-binary-manager.js").then(
-      ({ OPKSSHBinaryManager }) => {
-        OPKSSHBinaryManager.ensureBinary().catch((error) => {
-          const dataDir =
-            process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
-          systemLogger.warn(
-            "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
-            {
-              operation: "opkssh_binary_init_failed",
-              error: getErrorMessage(error),
-              stack: error instanceof Error ? error.stack : undefined,
-              platform: process.platform,
-              arch: process.arch,
-              dataDir,
-            },
-          );
-        });
-      },
-    );
-
     const { serverReady } = await import("./database/database.js");
     await serverReady;
-    await import("./hosts/terminal/index.js");
-    await import("./hosts/tunnel/index.js");
-    await import("./hosts/file-manager/index.js");
-    await import("./hosts/metrics/index.js");
-    await import("./hosts/docker/index.js");
-    await import("./hosts/docker/console.js");
-    await import("./hosts/tmux/index.js");
-    await import("./hosts/serial.js");
-    await import("./services/dashboard.js");
-    await import("./services/homepage.js");
+
+    // Before any role is edited: a role may hold a plugin permission whose
+    // plugin is disabled or gone, and PUT /rbac/roles/:id has to keep
+    // accepting it.
+    const { primeKnownPermissions } =
+      await import("./utils/known-permissions.js");
+    await primeKnownPermissions();
+    // Terminal, docker, host-metrics, file-manager and tmux monitoring are
+    // deliberately absent: the ssh-terminal, docker, host-metrics,
+    // file-manager and tmux-monitor plugins start their own servers, so
+    // disabling any of them stops its WS/HTTP server. See
+    // plugins/ssh-terminal, plugins/docker, plugins/host-metrics,
+    // plugins/file-manager and plugins/tmux-monitor.
+    // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
+    // Network Topology, Workspaces, Web Endpoint, Tunnels, Serial, Homepage)
+    // is absent for the same reason: each one serves its routes under
+    // /plugin-api/<id>/ (or a WS route under /plugin-ws/<id>/) through ctx on
+    // activate, so disabling it answers 503 instead of leaving a dead import
+    // here. The dashboard's own uptime and recent-activity routes are core
+    // and are mounted on the main server in database.ts.
+    // Automations' scheduler and tunnel autostart also start from their own
+    // activate() rather than here.
 
     // Initialize log level from database settings
     const { getCurrentSettingValue } =
@@ -317,34 +253,42 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       });
     }
 
-    // Initialize Guacamole server for RDP/VNC/Telnet support
-    const guacEnabled = getCurrentSettingValue("guac_enabled") !== "false";
-
-    if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
-      import("./hosts/guacamole/guacamole-server.js")
-        .then(() => {
-          systemLogger.info("Guacamole server initialized", {
-            operation: "guac_init",
-          });
-        })
-        .catch((error) => {
-          systemLogger.warn(
-            "Failed to initialize Guacamole server (guacd may not be available)",
-            {
-              operation: "guac_init_skip",
-              error: getErrorMessage(error),
-            },
-          );
+    // Last, so a plugin's activate() sees a fully wired server. A plugin that
+    // fails to load must not stop the backend, so this never rejects.
+    try {
+      const { initializePlugins } = await import("./plugins/index.js");
+      const loaded = await initializePlugins();
+      if (loaded.length > 0) {
+        systemLogger.info(`Loaded ${loaded.length} plugin(s)`, {
+          operation: "plugin_init",
         });
+      }
+
+      const { runPluginDataMigrations } =
+        await import("./upgrade/boot-migrations.js");
+      await runPluginDataMigrations();
+    } catch (error) {
+      systemLogger.warn("Plugin runtime failed to initialize", {
+        operation: "plugin_init",
+        error: getErrorMessage(error),
+      });
     }
 
-    // After metrics, which the automation triggers and headless polling hook into.
-    const { startAutomationScheduler } =
-      await import("./automations/scheduler.js");
-    startAutomationScheduler();
-
-    const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
-    startAnalyticsHeartbeat();
+    // After plugins, so their sync entities are registered before a pass.
+    if (process.env.ELECTRON_EMBEDDED === "true") {
+      try {
+        const { startDesktopSync } = await import("./sync/client/engine.js");
+        startDesktopSync();
+        const { startDesktopUpdateCheck } =
+          await import("./updates/desktop-update-check.js");
+        startDesktopUpdateCheck();
+      } catch (error) {
+        systemLogger.warn("Desktop sync failed to start", {
+          operation: "sync_start",
+          error: getErrorMessage(error),
+        });
+      }
+    }
 
     systemLogger.success("Termix backend started successfully", {
       operation: "backend_init_complete",
@@ -353,10 +297,25 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       duration: Date.now() - initStartTime,
     });
 
+    // Log output can be filtered by the configured level or split across chunks.
+    if (process.env.ELECTRON_EMBEDDED === "true") {
+      process.send?.({ type: "backend-ready" });
+    }
+
     const gracefulShutdown = async (signal: string) => {
       systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
         operation: "shutdown",
       });
+
+      // Terminate plugin workers before the database goes away, so a plugin
+      // mid-write cannot outlive it.
+      try {
+        const { shutdownPlugins } = await import("./plugins/index.js");
+        await shutdownPlugins();
+      } catch {
+        // Nothing to stop.
+      }
+
       // Only SQLite has anything to flush. On a client-server engine the writes
       // committed as they happened, so there is no file to save and claiming
       // otherwise in the log would be untrue.

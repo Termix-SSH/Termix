@@ -2,9 +2,8 @@ export type FieldGroup =
   | "connection"
   | "notes"
   | "tags"
-  | "tunnels"
+  | "proxy"
   | "jumpHosts"
-  | "quickActions"
   | "featureFlags"
   | "advanced";
 
@@ -15,7 +14,7 @@ export interface ExportPayload {
   hosts: Record<string, unknown>[];
 }
 
-export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
+const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   connection: [
     "connectionType",
     "name",
@@ -29,8 +28,7 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   ],
   notes: ["notes"],
   tags: ["tags", "pin"],
-  tunnels: [
-    "tunnelConnections",
+  proxy: [
     "useSocks5",
     "socks5Host",
     "socks5Port",
@@ -38,33 +36,13 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "socks5ProxyChain",
   ],
   jumpHosts: ["jumpHosts"],
-  quickActions: ["quickActions"],
-  featureFlags: [
-    "enableTerminal",
-    "enableCommandHistory",
-    "enableTerminalToolbar",
-    "enableAiAssistant",
-    "enableTunnel",
-    "enableFileManager",
-    "enableDocker",
-    "enableWebUi",
-    "enableProxmox",
-    "enableTmuxMonitor",
-    "showTerminalInSidebar",
-    "showFileManagerInSidebar",
-    "showTunnelInSidebar",
-    "showDockerInSidebar",
-    "showServerStatsInSidebar",
-    "defaultPath",
-    "forceKeyboardInteractive",
-  ],
+  // Every plugin's host settings, enable switches included.
+  featureFlags: ["pluginSettings", "forceKeyboardInteractive"],
   advanced: [
-    "statsConfig",
-    "dockerConfig",
-    "webUiConfig",
-    "proxmoxConfig",
+    "statusCheckEnabled",
+    "statusCheckInterval",
     "terminalConfig",
-    "guacamoleConfig",
+    "sshOptions",
   ],
 };
 
@@ -87,23 +65,63 @@ const CREDENTIAL_KEYS = [
 
 const TUPLE_KEYS = ["name", "ip", "port", "username", "connectionType"];
 
-const NESTED_SECRETS: { container: string; field: string }[] = [
-  { container: "guacamoleConfig", field: "gateway-password" },
-];
+/**
+ * Keys inside a plugin's JSON host settings that hold secrets, per plugin and
+ * field, from each manifest's `secretKeys`.
+ */
+export type PluginSecretKeys = Record<string, Record<string, string[]>>;
+
+/** Reads the secret keys the plugins declare in their host settings. */
+export function pluginSecretKeys(
+  summaries: Array<{
+    id: string;
+    contributes?: {
+      settings?: {
+        host?: { fields?: Array<{ key: string; secretKeys?: string[] }> };
+      };
+    } | null;
+  }>,
+): PluginSecretKeys {
+  const result: PluginSecretKeys = {};
+  for (const summary of summaries) {
+    for (const field of summary.contributes?.settings?.host?.fields ?? []) {
+      if (!field.secretKeys?.length) continue;
+      (result[summary.id] ??= {})[field.key] = field.secretKeys;
+    }
+  }
+  return result;
+}
 
 const NESTED_SECRET_ARRAYS: { container: string; field: string }[] = [
   { container: "socks5ProxyChain", field: "password" },
 ];
 
-function nestedSecret(
-  host: Record<string, unknown>,
-  container: string,
-  field: string,
-): Record<string, unknown> | null {
-  const blob = host[container];
-  if (!blob || typeof blob !== "object") return null;
-  const record = blob as Record<string, unknown>;
-  return field in record ? record : null;
+/** Rewrites each declared secret inside a plugin's JSON host settings. */
+function mapPluginSecrets(
+  pluginSettings: unknown,
+  secrets: PluginSecretKeys,
+  replace: (value: unknown) => unknown,
+): unknown {
+  if (!pluginSettings || typeof pluginSettings !== "object") {
+    return pluginSettings;
+  }
+  const perPlugin: Record<string, unknown> = {};
+  for (const [pluginId, values] of Object.entries(
+    pluginSettings as Record<string, unknown>,
+  )) {
+    const copy = { ...(values as Record<string, unknown>) };
+    for (const [field, keys] of Object.entries(secrets[pluginId] ?? {})) {
+      const blob = copy[field];
+      if (!blob || typeof blob !== "object") continue;
+      const record = { ...(blob as Record<string, unknown>) };
+      for (const key of keys) {
+        if (key in record) record[key] = replace(record[key]);
+      }
+      copy[field] = record;
+    }
+    perPlugin[pluginId] = copy;
+  }
+  return perPlugin;
 }
 
 export function hostKey(host: Record<string, unknown>): string {
@@ -115,6 +133,7 @@ export function buildExportPayload(
   selected: Set<string> | null,
   groups: Set<FieldGroup>,
   withCredentials: boolean,
+  pluginSecrets: PluginSecretKeys = {},
 ): ExportPayload {
   const allowed = new Set<string>([
     "exportId",
@@ -133,10 +152,11 @@ export function buildExportPayload(
         if (allowed.has(key)) shaped[key] = value;
       }
       if (!withCredentials) {
-        for (const { container, field } of NESTED_SECRETS) {
-          const record = nestedSecret(shaped, container, field);
-          if (record) shaped[container] = { ...record, [field]: null };
-        }
+        shaped.pluginSettings = mapPluginSecrets(
+          shaped.pluginSettings,
+          pluginSecrets,
+          () => null,
+        );
         for (const { container, field } of NESTED_SECRET_ARRAYS) {
           const arr = shaped[container];
           if (Array.isArray(arr)) {
@@ -165,7 +185,10 @@ export function buildExportPayload(
   return result;
 }
 
-export function maskSecrets(payload: ExportPayload): ExportPayload {
+export function maskSecrets(
+  payload: ExportPayload,
+  pluginSecrets: PluginSecretKeys = {},
+): ExportPayload {
   return {
     ...payload,
     hosts: payload.hosts.map((host) => {
@@ -179,12 +202,11 @@ export function maskSecrets(payload: ExportPayload): ExportPayload {
           masked[key] = "<included>";
         }
       }
-      for (const { container, field } of NESTED_SECRETS) {
-        const record = nestedSecret(masked, container, field);
-        if (record && record[field]) {
-          masked[container] = { ...record, [field]: "<included>" };
-        }
-      }
+      masked.pluginSettings = mapPluginSecrets(
+        masked.pluginSettings,
+        pluginSecrets,
+        (value) => (value ? "<included>" : value),
+      );
       for (const { container, field } of NESTED_SECRET_ARRAYS) {
         const arr = masked[container];
         if (Array.isArray(arr)) {

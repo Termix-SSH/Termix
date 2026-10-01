@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseCustomKeybindings,
-  parseCustomThemes,
-} from "../../api/open-tabs-api";
+import { parseCustomKeybindings } from "../../api/open-tabs-api";
 
 describe("parseCustomKeybindings", () => {
   it("parses a valid JSON array", () => {
@@ -39,12 +36,5 @@ describe("parseCustomKeybindings", () => {
 
   it("returns an empty array when the JSON is not an array", () => {
     expect(parseCustomKeybindings(JSON.stringify({ foo: "bar" }))).toEqual([]);
-  });
-});
-
-describe("parseCustomThemes", () => {
-  it("still parses a valid JSON array (regression check)", () => {
-    const raw = JSON.stringify([{ id: "t1", name: "My Theme", colors: {} }]);
-    expect(parseCustomThemes(raw)).toHaveLength(1);
   });
 });

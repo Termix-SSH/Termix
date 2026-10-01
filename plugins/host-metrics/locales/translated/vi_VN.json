@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Chỉ số máy chủ"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "Bộ nhớ",
+    "disk": "Ổ đĩa",
+    "network": "Mạng",
+    "uptime": "Thời gian hoạt động",
+    "processes": "Tiến trình",
+    "available": "Khả dụng",
+    "free": "Trống",
+    "connecting": "Đang kết nối...",
+    "connectionFailed": "Kết nối máy chủ thất bại",
+    "naCpus": "N/A CPU",
+    "cpuCores_one": "{{count}} Lõi",
+    "cpuCores_other": "{{count}} Lõi",
+    "cpuUsage": "Mức sử dụng CPU",
+    "memoryUsage": "Mức sử dụng bộ nhớ",
+    "diskUsage": "Mức sử dụng ổ đĩa",
+    "selectFilesystem": "Select filesystem",
+    "temperature": "Nhiệt độ",
+    "highestTemperature": "Nhiệt độ cao nhất",
+    "primaryTemperatureSensor": "Primary sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
+    },
+    "failedToFetchHostConfig": "Không tải được cấu hình máy chủ",
+    "serverOffline": "Máy chủ ngoại tuyến",
+    "cannotFetchMetrics": "Không thể tải số liệu từ máy chủ ngoại tuyến",
+    "totpFailed": "Xác minh TOTP thất bại",
+    "noneAuthNotSupported": "Host Metrics không hỗ trợ kiểu xác thực 'none'.",
+    "noHostSelected": "Chưa chọn máy chủ",
+    "load": "Tải",
+    "systemInfo": "Thông tin hệ thống",
+    "hostname": "Tên máy chủ",
+    "operatingSystem": "Hệ điều hành",
+    "kernel": "Nhân",
+    "seconds": "giây",
+    "networkInterfaces": "Giao diện mạng",
+    "noInterfacesFound": "Không tìm thấy giao diện mạng nào",
+    "noProcessesFound": "Không tìm thấy tiến trình nào",
+    "processesTotal": "Tổng",
+    "processesRunning": "đang chạy",
+    "loginStats": "Thống kê đăng nhập SSH",
+    "noRecentLoginData": "Không có dữ liệu đăng nhập gần đây",
+    "ports": {
+      "title": "Cổng đang lắng nghe",
+      "protocol": "Giao thức",
+      "port": "Cổng",
+      "address": "Địa chỉ",
+      "process": "Tiến trình",
+      "search": "Tìm kiếm cổng...",
+      "allProtocols": "Tất cả",
+      "noData": "Không có dữ liệu cổng đang lắng nghe"
+    },
+    "firewall": {
+      "title": "Tường lửa",
+      "inactive": "Không hoạt động",
+      "policy": "Chính sách",
+      "rules": "quy tắc",
+      "noRules": "Không có quy tắc nào trong chuỗi này",
+      "noData": "Không có dữ liệu tường lửa",
+      "action": "Hành động",
+      "protocol": "Giao thức",
+      "port": "Cổng",
+      "source": "Nguồn",
+      "anywhere": "Mọi nơi",
+      "chains": "chuỗi"
+    },
+    "loadAvg": "Tải trung bình",
+    "swap": "Swap",
+    "architecture": "Kiến trúc",
+    "refresh": "Làm mới",
+    "retry": "Thử lại",
+    "customize": "Tùy chỉnh bố cục",
+    "reset": "Đặt lại",
+    "tabLive": "Trực tiếp",
+    "editModeInstructions": "Kéo thẻ để sắp xếp lại, kéo cạnh dưới để thay đổi kích thước, và dùng nút chiều rộng để thay đổi độ rộng thẻ. Thêm hoặc xóa thẻ bên dưới.",
+    "managers": {
+      "services": "Dịch vụ",
+      "processInspector": "Trình kiểm tra tiến trình",
+      "logViewer": "Trình xem nhật ký",
+      "cron": "Cron Jobs",
+      "packages": "Gói",
+      "ssl": "Chứng chỉ SSL",
+      "firewall": "Tường lửa",
+      "users": "Người dùng & Quyền",
+      "healthCheck": "Kiểm tra sức khỏe",
+      "diskBreakdown": "Phân tích ổ đĩa",
+      "systemdTimers": "Bộ hẹn giờ",
+      "topMemory": "Top theo bộ nhớ",
+      "noData": "Không có dữ liệu",
+      "sudoHint": "Đặt mật khẩu sudo cho máy chủ này trong trình chỉnh sửa máy chủ để kích hoạt các hành động đặc quyền.",
+      "filter": "Lọc...",
+      "start": "Khởi động",
+      "stop": "Dừng",
+      "restart": "Khởi động lại",
+      "actionDone": "{{name}} được cập nhật",
+      "actionFailed": "Hành động thất bại",
+      "signalSent": "Đã gửi tín hiệu đến PID {{pid}}",
+      "killHint": "Nhấp: kết thúc (SIGTERM). Nhấp chuột phải: buộc kết thúc (SIGKILL).",
+      "working": "Đang làm việc...",
+      "update": "Cập nhật",
+      "upgradeAll": "Nâng cấp tất cả",
+      "allUpToDate": "Tất cả đều mới nhất",
+      "save": "Lưu",
+      "command": "Lệnh",
+      "enabled": "Đã bật",
+      "cronSaved": "Đã cập nhật crontab",
+      "clients": "Máy khách",
+      "dryRun": "Chạy thử",
+      "renew": "Gia hạn",
+      "noAcmeClient": "Không tìm thấy máy khách ACME (certbot hoặc acme.sh) trên máy này.",
+      "addInputRule": "Thêm quy tắc INPUT",
+      "firewallWarning": "Thay đổi chỉ tạm thời, chưa được lưu vĩnh viễn. Cẩn thận kẻo tự khóa mình ra ngoài.",
+      "ruleApplied": "Quy tắc đã được áp dụng",
+      "invalidPort": "Nhập cổng hợp lệ (1-65535)",
+      "newUsername": "Tên người dùng mới",
+      "addUser": "Thêm",
+      "deleteUser": "Xóa người dùng",
+      "noHealthChecks": "Chưa có kiểm tra trạng thái nào được cấu hình.",
+      "follow": "Theo dõi",
+      "noLogData": "Không có dữ liệu nhật ký.",
+      "tree": "Dạng cây",
+      "enableDisable": "Bật / tắt khi khởi động",
+      "grantSudo": "Cấp quyền sudo",
+      "revokeSudo": "Thu hồi quyền sudo",
+      "sslIssueCert": "Cấp chứng chỉ",
+      "sslExpired": "Đã hết hạn",
+      "sslInDays": "trong {{days}}d",
+      "sslNeedDomain": "Nhập ít nhất một tên miền",
+      "sslIssued": "Đã cấp chứng chỉ",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (độc lập)",
+      "sslHttpWebroot": "HTTP (webroot)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "Nhà cung cấp DNS (ví dụ: cloudflare)",
+      "sslIssueHint": "Thông tin xác thực nhà cung cấp DNS phải được cấu hình trên máy chủ.",
+      "sslRevoke": "Thu hồi chứng chỉ",
+      "sslRevoked": "Chứng chỉ đã bị thu hồi",
+      "sslRevokeConfirm": "Thu hồi và xóa chứng chỉ \"{{name}}\"? Hành động này không thể hoàn tác.",
+      "healthRun": "Chạy",
+      "healthName": "Tên",
+      "healthTarget": "Máy chủ / địa chỉ",
+      "healthAddCheck": "Thêm kiểm tra",
+      "healthSaved": "Đã lưu kiểm tra sức khỏe",
+      "healthMissingFields": "Mỗi kiểm tra cần có tên và mục tiêu",
+      "logFile": "Tệp",
+      "logUnit": "Đơn vị",
+      "logCustomPath": "Đường dẫn tùy chỉnh trong /var/log (tùy chọn)",
+      "logGrep": "Lọc dòng...",
+      "firewallPersist": "Lưu quy tắc",
+      "firewallPersisted": "Đã lưu quy tắc tường lửa",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard chưa được cài đặt trên máy chủ này",
+      "wgNoInterfaces": "Chưa cấu hình giao diện WireGuard nào",
+      "wgInterfaceUp": "Khởi động",
+      "wgInterfaceDown": "Dừng",
+      "wgBringingUp": "Đang khởi động {{name}}...",
+      "wgBringingDown": "Đang dừng {{name}}...",
+      "wgInterfaceUpDone": "{{name}} đã hoạt động",
+      "wgInterfaceDownDone": "{{name}} đã dừng",
+      "wgListenPort": "Cổng",
+      "wgPublicKey": "Khóa công khai",
+      "wgEndpoint": "Điểm cuối",
+      "wgAllowedIPs": "IP được phép",
+      "wgLastHandshake": "Lần bắt tay cuối",
+      "wgHandshakeNever": "Chưa bao giờ",
+      "wgTransfer": "Truyền tải",
+      "wgNoPeers": "No peers"
+    }
+  },
+  "metricsHistory": {
+    "title": "Lịch sử chỉ số",
+    "historySuffix": "Lịch sử",
+    "cpuMemoryDisk": "CPU / Bộ nhớ / Ổ đĩa",
+    "network": "Mạng",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "Không có dữ liệu lịch sử cho khoảng thời gian này.",
+    "custom": "Tùy chỉnh",
+    "to": "đến",
+    "apply": "Áp dụng",
+    "viewHistory": "Xem lịch sử"
+  },
+  "hosts": {
+    "tabHostMetrics": "Số liệu máy chủ",
+    "metricsCollectionLabel": "Thu thập số liệu",
+    "enableMetricsLabel": "Bật thu thập số liệu",
+    "enableMetricsDesc": "Thu thập CPU, RAM, đĩa và các số liệu khác từ máy này",
+    "useGlobalMetrics": "Dùng khoảng thời gian toàn cục",
+    "useGlobalMetricsDesc": "Ghi đè bằng khoảng thời gian thu thập số liệu toàn máy chủ",
+    "metricsIntervalS": "Khoảng thu thập số liệu (giây)",
+    "metricsIntervalDesc2": "Số giây giữa các lần chụp số liệu",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Nhãn (tùy chọn)",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "Thêm",
+    "visibleWidgets": "Widget hiển thị",
+    "widgetsMovedToHostMetrics": "Các thẻ hiện được thêm, sắp xếp và thay đổi kích thước trực tiếp trong tab Số liệu máy. Mở Số liệu máy cho máy này và dùng Tùy chỉnh để chọn thẻ hiển thị.",
+    "hostNotFound": "Không tìm thấy máy chủ",
+    "loadingHost": "Đang tải máy chủ..."
+  },
+  "onboarding": {
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Thời gian lưu trữ lịch sử số liệu",
+    "metricsHistoryRetentionRange": "1 đến 90 ngày",
+    "days": "ngày"
+  },
+  "homepage": {
+    "noData": "Không có dữ liệu",
+    "showCurrentValue": "Hiển thị giá trị hiện tại",
+    "chartMetric": "Chỉ số",
+    "metricRange": "Phạm vi",
+    "host": "Máy chủ",
+    "loading": "Đang tải...",
+    "metricCpu": "CPU",
+    "metricDisk": "Đĩa",
+    "metricHostname": "Tên máy chủ",
+    "metricKernel": "Nhân",
+    "metricMemory": "Bộ nhớ",
+    "metricNetwork": "Mạng",
+    "metricOs": "Hệ điều hành",
+    "metricProcesses": "Tiến trình",
+    "metricProcessesRunning": "đang chạy",
+    "metricProcessesTotal": "tổng",
+    "metricUptime": "Thời gian hoạt động",
+    "metricsNotAvailable": "Chỉ số không khả dụng",
+    "noHostSelected": "Chưa chọn máy chủ",
+    "selectHost": "Chọn máy chủ..."
+  },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Ổ đĩa"
+  },
+  "terminal": {
+    "connected": "Đã kết nối"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
+  }
+}

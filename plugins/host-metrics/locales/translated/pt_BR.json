@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Métricas do Host"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "Memory",
+    "disk": "Disk",
+    "network": "Network",
+    "uptime": "Uptime",
+    "processes": "Processes",
+    "available": "Available",
+    "free": "Free",
+    "connecting": "Conectando...",
+    "connectionFailed": "Failed to connect to server",
+    "naCpus": "N/A CPU(s)",
+    "cpuCores_one": "{{count}} Core",
+    "cpuCores_other": "{{count}} Cores",
+    "cpuUsage": "CPU Usage",
+    "memoryUsage": "Memory Usage",
+    "diskUsage": "Disk Usage",
+    "selectFilesystem": "Select filesystem",
+    "temperature": "Temperature",
+    "highestTemperature": "Highest temperature",
+    "primaryTemperatureSensor": "Primary sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
+    },
+    "failedToFetchHostConfig": "Failed to fetch host configuration",
+    "serverOffline": "Server Offline",
+    "cannotFetchMetrics": "Cannot fetch metrics from offline server",
+    "totpFailed": "TOTP verification failed",
+    "noneAuthNotSupported": "Host Metrics does not support 'none' authentication type.",
+    "noHostSelected": "No host selected",
+    "load": "Load",
+    "systemInfo": "System Information",
+    "hostname": "Hostname",
+    "operatingSystem": "Operating System",
+    "kernel": "Kernel",
+    "seconds": "seconds",
+    "networkInterfaces": "Network Interfaces",
+    "noInterfacesFound": "No network interfaces found",
+    "noProcessesFound": "No processes found",
+    "processesTotal": "total",
+    "processesRunning": "running",
+    "loginStats": "SSH Login Statistics",
+    "noRecentLoginData": "No recent login data",
+    "ports": {
+      "title": "Listening Ports",
+      "protocol": "Protocol",
+      "port": "Porta",
+      "address": "Address",
+      "process": "Process",
+      "search": "Search ports...",
+      "allProtocols": "All",
+      "noData": "No listening ports data"
+    },
+    "firewall": {
+      "title": "Firewall",
+      "inactive": "Inactive",
+      "policy": "Policy",
+      "rules": "rules",
+      "noRules": "No rules in this chain",
+      "noData": "No firewall data available",
+      "action": "Action",
+      "protocol": "Proto",
+      "port": "Porta",
+      "source": "Source",
+      "anywhere": "Anywhere",
+      "chains": "chains"
+    },
+    "loadAvg": "Load Avg",
+    "swap": "Swap",
+    "architecture": "Architecture",
+    "refresh": "Atualizar",
+    "retry": "Retry",
+    "customize": "Customize layout",
+    "reset": "Reset",
+    "tabLive": "Live",
+    "editModeInstructions": "Drag cards to rearrange, drag the bottom edge to resize, and use the width button to change a card's span. Add or remove cards below.",
+    "managers": {
+      "services": "Services",
+      "processInspector": "Process Inspector",
+      "logViewer": "Log Viewer",
+      "cron": "Cron Jobs",
+      "packages": "Packages",
+      "ssl": "SSL Certificates",
+      "firewall": "Firewall",
+      "users": "Users & Permissions",
+      "healthCheck": "Health Checks",
+      "diskBreakdown": "Disk Breakdown",
+      "systemdTimers": "Timers",
+      "topMemory": "Top by Memory",
+      "noData": "No data",
+      "sudoHint": "Set a sudo password for this host in the host editor to enable privileged actions.",
+      "filter": "Filter...",
+      "start": "Iniciar",
+      "stop": "Stop",
+      "restart": "Restart",
+      "actionDone": "{{name}} updated",
+      "actionFailed": "Action failed",
+      "signalSent": "Signal sent to PID {{pid}}",
+      "killHint": "Click: terminate (SIGTERM). Right-click: force kill (SIGKILL).",
+      "working": "Working...",
+      "update": "Atualizar",
+      "upgradeAll": "Upgrade all",
+      "allUpToDate": "Everything is up to date",
+      "save": "Salvar",
+      "command": "Command",
+      "enabled": "Enabled",
+      "cronSaved": "Crontab updated",
+      "clients": "Clients",
+      "dryRun": "Dry run",
+      "renew": "Renew",
+      "noAcmeClient": "No ACME client (certbot or acme.sh) found on this host.",
+      "addInputRule": "Add INPUT rule",
+      "firewallWarning": "Changes are runtime-only until persisted. Be careful not to lock yourself out.",
+      "ruleApplied": "Rule applied",
+      "invalidPort": "Enter a valid port (1-65535)",
+      "newUsername": "New username",
+      "addUser": "Adicionar",
+      "deleteUser": "Delete user",
+      "noHealthChecks": "No health checks configured yet.",
+      "follow": "Follow",
+      "noLogData": "No log output.",
+      "tree": "Tree",
+      "enableDisable": "Enable / disable at boot",
+      "grantSudo": "Grant sudo",
+      "revokeSudo": "Revoke sudo",
+      "sslIssueCert": "Issue certificate",
+      "sslExpired": "Expired",
+      "sslInDays": "in {{days}}d",
+      "sslNeedDomain": "Enter at least one domain",
+      "sslIssued": "Certificate issued",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (standalone)",
+      "sslHttpWebroot": "HTTP (webroot)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "DNS provider (e.g. cloudflare)",
+      "sslIssueHint": "DNS provider credentials must already be configured on the host.",
+      "sslRevoke": "Revoke certificate",
+      "sslRevoked": "Certificate revoked",
+      "sslRevokeConfirm": "Revoke and remove the certificate \"{{name}}\"? This cannot be undone.",
+      "healthRun": "Run",
+      "healthName": "Name",
+      "healthTarget": "Host / address",
+      "healthAddCheck": "Add check",
+      "healthSaved": "Health checks saved",
+      "healthMissingFields": "Each check needs a name and target",
+      "logFile": "File",
+      "logUnit": "Unit",
+      "logCustomPath": "Custom path under /var/log (optional)",
+      "logGrep": "Filter lines...",
+      "firewallPersist": "Persist rules",
+      "firewallPersisted": "Firewall rules persisted",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard is not installed on this host",
+      "wgNoInterfaces": "No WireGuard interfaces configured",
+      "wgInterfaceUp": "Bring up",
+      "wgInterfaceDown": "Bring down",
+      "wgBringingUp": "Bringing {{name}} up...",
+      "wgBringingDown": "Bringing {{name}} down...",
+      "wgInterfaceUpDone": "{{name}} is up",
+      "wgInterfaceDownDone": "{{name}} is down",
+      "wgListenPort": "Porta",
+      "wgPublicKey": "Public key",
+      "wgEndpoint": "Endpoint",
+      "wgAllowedIPs": "Allowed IPs",
+      "wgLastHandshake": "Last handshake",
+      "wgHandshakeNever": "Never",
+      "wgTransfer": "Transfer",
+      "wgNoPeers": "No peers"
+    }
+  },
+  "metricsHistory": {
+    "title": "Metrics History",
+    "historySuffix": "Histórico",
+    "cpuMemoryDisk": "CPU / Memory / Disk",
+    "network": "Network",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "No history data available for this time range.",
+    "custom": "Custom",
+    "to": "to",
+    "apply": "Apply",
+    "viewHistory": "View History"
+  },
+  "hosts": {
+    "tabHostMetrics": "Métricas do Host",
+    "metricsCollectionLabel": "Coleção de Métricas",
+    "enableMetricsLabel": "Habilitar Métricas",
+    "enableMetricsDesc": "Collect CPU, RAM, disk, and other metrics from this host",
+    "useGlobalMetrics": "Use Global Interval",
+    "useGlobalMetricsDesc": "Override with the server-wide metrics interval",
+    "metricsIntervalS": "Metrics Interval (s)",
+    "metricsIntervalDesc2": "Seconds between metric snapshots",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Label (optional)",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "Adicionar",
+    "visibleWidgets": "Visible Widgets",
+    "widgetsMovedToHostMetrics": "Cards are now added, arranged, and resized directly in the Host Metrics tab. Open Host Metrics for this host and use Customize to choose which cards are shown.",
+    "hostNotFound": "Host not found",
+    "loadingHost": "Loading host..."
+  },
+  "onboarding": {
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Metrics History Retention",
+    "metricsHistoryRetentionRange": "1 to 90 days",
+    "days": "days"
+  },
+  "homepage": {
+    "noData": "No data available",
+    "showCurrentValue": "Show Current Value",
+    "chartMetric": "Metric",
+    "metricRange": "Range",
+    "host": "Host",
+    "loading": "Carregando...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Hostname",
+    "metricKernel": "Kernel",
+    "metricMemory": "Memory",
+    "metricNetwork": "Network",
+    "metricOs": "OS",
+    "metricProcesses": "Processes",
+    "metricProcessesRunning": "running",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Uptime",
+    "metricsNotAvailable": "Metrics not available",
+    "noHostSelected": "No host selected",
+    "selectHost": "Select a host..."
+  },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "terminal": {
+    "connected": "Connected"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
+  }
+}

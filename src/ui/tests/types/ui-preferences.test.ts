@@ -4,6 +4,7 @@ import {
   hasUiOverrides,
   PRESETS,
   resolveArea,
+  resolvePluginArea,
   sanitizeUiOverrides,
   sanitizeUiPreferences,
   UI_PREFERENCES_VERSION,
@@ -93,27 +94,17 @@ describe("sanitizeUiOverrides", () => {
     ).toBe(false);
   });
 
+  it("drops the retired homepage area", () => {
+    expect(sanitizeUiOverrides({ homepage: { enabledWidgets: null } })).toEqual(
+      {},
+    );
+  });
+
   it("filters non-strings out of string arrays instead of rejecting them", () => {
     const result = sanitizeUiOverrides({
       rail: { hiddenTabs: ["serial", 7, null, "history"] },
     });
     expect(result.rail?.hiddenTabs).toEqual(["serial", "history"]);
-  });
-
-  it("clamps and rounds integer knobs, dropping out-of-range values", () => {
-    expect(sanitizeUiOverrides({ hostMetrics: { columns: 2.4 } })).toEqual({
-      hostMetrics: { columns: 2 },
-    });
-    expect(sanitizeUiOverrides({ hostMetrics: { columns: 9 } })).toEqual({});
-    expect(sanitizeUiOverrides({ hostMetrics: { columns: 0 } })).toEqual({});
-  });
-
-  it("keeps an explicit null for nullable array knobs", () => {
-    expect(sanitizeUiOverrides({ homepage: { enabledWidgets: null } })).toEqual(
-      {
-        homepage: { enabledWidgets: null },
-      },
-    );
   });
 });
 
@@ -159,16 +150,14 @@ describe("PRESETS.balanced", () => {
       rowActions: "full",
     });
     expect(PRESETS.balanced.rail.hiddenTabs).toEqual([]);
-    expect(PRESETS.balanced.terminal.toolbarDensity).toBe("labeled");
-    expect(PRESETS.balanced.fileManager.viewMode).toBe("grid");
-    expect(PRESETS.balanced.docker.viewMode).toBe("list");
     expect(PRESETS.balanced.hostEditor.mode).toBe("full");
-    expect(PRESETS.balanced.homepage.enabledWidgets).toBeNull();
   });
 
-  it("never lets a preset drive the homepage canvas", () => {
-    expect(PRESETS.simple.homepage.enabledWidgets).toBeNull();
-    expect(PRESETS.advanced.homepage.enabledWidgets).toBeNull();
+  it("keeps core's basics in Simple and hides plugin rail items that do not opt in", () => {
+    expect(PRESETS.simple.rail.hiddenTabs).not.toContain("hosts");
+    expect(PRESETS.simple.rail.hiddenTabs).not.toContain("connections");
+    expect(PRESETS.simple.rail.hidePluginItems).toBe(true);
+    expect(PRESETS.balanced.rail.hidePluginItems).toBeFalsy();
   });
 
   it("leaves the wide dashboard cards off by default in every preset", () => {
@@ -182,5 +171,73 @@ describe("PRESETS.balanced", () => {
         "homepage_preview",
       );
     }
+  });
+});
+
+describe("plugin areas", () => {
+  it("moves version 1 docker and host metrics overrides to their plugins", () => {
+    const upgraded = sanitizeUiPreferences({
+      version: 1,
+      preset: "balanced",
+      overrides: {
+        docker: { containerLayout: "table" },
+        hostMetrics: { columns: 2 },
+      },
+    });
+    expect(upgraded.overrides).toEqual({
+      "plugin:docker": { containerLayout: "table" },
+      "plugin:host-metrics": { columns: 2 },
+    });
+  });
+
+  it("resolves a plugin area from its presets and the user's overrides", () => {
+    const presets = {
+      simple: { columns: 1 },
+      balanced: { columns: 3 },
+      advanced: { columns: 4 },
+    };
+    const preferences = sanitizeUiPreferences({
+      preset: "advanced",
+      overrides: { "plugin:host-metrics": { columns: 2 } },
+    });
+    expect(resolvePluginArea(preferences, "host-metrics", presets)).toEqual({
+      columns: 2,
+    });
+    expect(resolvePluginArea(preferences, "docker", presets)).toEqual({
+      columns: 4,
+    });
+  });
+
+  it("keeps only plain values in a plugin area", () => {
+    const { overrides } = sanitizeUiPreferences({
+      overrides: {
+        "plugin:docker": { ok: "card", nested: { no: 1 }, list: ["a", 2] },
+        "plugin:Bad_Id": { x: 1 },
+      },
+    });
+    expect(overrides).toEqual({ "plugin:docker": { ok: "card" } });
+  });
+});
+
+describe("areas that moved into plugins", () => {
+  it("maps version 2 terminal and file manager overrides to their plugins", () => {
+    expect(
+      sanitizeUiOverrides(
+        {
+          terminal: { toolbarDensity: "expanded" },
+          fileManager: { viewMode: "list" },
+        },
+        2,
+      ),
+    ).toEqual({
+      "plugin:ssh-terminal": { toolbarDensity: "expanded" },
+      "plugin:file-manager": { viewMode: "list" },
+    });
+  });
+
+  it("drops the old names from a current payload", () => {
+    expect(
+      sanitizeUiOverrides({ terminal: { toolbarDensity: "icon" } }),
+    ).toEqual({});
   });
 });

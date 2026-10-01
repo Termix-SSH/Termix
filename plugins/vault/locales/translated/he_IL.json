@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "פרופיל חותם בכספת",
+    "selectProfile": "בחר פרופיל כספת...",
+    "hint": "ההגדרות מגיעות מהפרופיל המשותף; תיכנס לכספת דרך OIDC כשתתחבר. לא נשמרים סודות.",
+    "docs": "הצג מסמכים",
+    "sharedProfile": "{{name}} (שותף)"
+  },
+  "profiles": {
+    "new": "פרופיל חדש",
+    "manage": "ניהול פרופילי כספת",
+    "name": "שם ידידותי",
+    "vaultAddr": "כתובת הכספת",
+    "namespace": "מרחב השמות",
+    "oidcMount": "אישור OIDC",
+    "oidcRole": "תפקיד OIDC",
+    "sshMount": "סודות SSH מאוורר",
+    "sshRole": "תפקיד חותם SSH",
+    "validPrincipals": "עקרונות תקפים",
+    "keyType": "סוג מפתח זמני",
+    "shareWithAll": "שתף עם כל המשתמשים",
+    "create": "צור פרופיל",
+    "created": "פרופיל הכספת נוצר",
+    "saved": "פרופיל הכספת נשמר",
+    "deleted": "פרופיל הכספת נמחק",
+    "saveFailed": "שמירת פרופיל הכספת נכשלה",
+    "deleteFailed": "נכשלה מחיקת פרופיל הכספת",
+    "save": "שמור פרופיל",
+    "validationError": "שם, כתובת כספת ותפקיד חתימה ב-SSH נדרשים",
+    "none": "אין עדיין פרופילים בכספת.",
+    "sharedBadge": "מְשׁוּתָף",
+    "edit": "לַעֲרוֹך",
+    "delete": "לִמְחוֹק"
+  },
+  "hosts": {
+    "filterAuthVault": "קִמרוֹן"
+  },
+  "dialog": {
+    "title": "נדרשת כניסה לכספת",
+    "description": "נפתח חלון לכניסה לכספת HashiCorp. השלם את תהליך הכניסה שם; חיבור זה ימשיך אוטומטית.",
+    "failed": "אימות הכספת נכשל. אנא נסה שוב.",
+    "reopen": "פתח מחדש את חלון הכניסה"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש בחתימת SSH של Vault",
+      "description": "צור פרופילי חותם של Vault והתחבר למארחים המשתמשים ב-Vault."
+    },
+    "share": {
+      "title": "שיתוף פרופילי כספת",
+      "description": "סמן פרופיל של חותם בכספת כמשותף כדי שכל משתמש יוכל לבחור אותו."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "כתובת URL להפניה מחדש",
+      "description": "הוסף כתובת URL זו ל- allowed_redirect_uris בכל תפקיד OIDC של Vault שאיתו Termix מתחבר."
+    },
+    "legacyCallback": {
+      "label": "השתמש ב-URI להפניה הישן",
+      "description": "המשך לשלוח את /vault/oidc/callback, URI ההפניה שהיה בשימוש לפני גרסה 2.9. כבה אפשרות זו לאחר שתפקידי הכספת שלך יאפשרו את ה-URI החדש."
+    },
+    "host": {
+      "profileId": {
+        "label": "פרופיל חותם בכספת"
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "tables": {
+    "providers": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "type": {
+          "type": "text",
+          "notNull": true
+        },
+        "enabled": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": true
+        },
+        "displayOrder": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 0
+        },
+        "config": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "legacyCallback": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        }
+      },
+      "indexes": [],
+      "adopts": "sso_providers"
+    }
+  }
+}

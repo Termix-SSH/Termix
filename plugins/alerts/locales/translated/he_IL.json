@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "התראות"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש בהתראות",
+      "description": "קבל התראות לתיבת הדואר הנכנס ושלח אותן לערוצים שלך."
+    }
+  },
+  "onboarding": {
+    "feature": "התראות",
+    "featureDesc": "כל התראה בתיבת דואר נכנס אחת, נשלחת לדיסקורד, ntfy, אימייל או webhook אם תרצו."
+  },
+  "settings": {
+    "group": {
+      "general": "כְּלָלִי",
+      "email": "אֶלֶקטרוֹנִי"
+    },
+    "admin": {
+      "announcements": {
+        "label": "הכרזות של טרמיקס",
+        "description": "הצג חדשות מצוות Termix, כמו הודעות אבטחה ושחרורים, בתיבת הדואר הנכנס של כולם."
+      },
+      "retentionDays": {
+        "label": "שמור התראות למשך (ימים)",
+        "description": "התראות ישנות יותר מוסרות מכל תיבת דואר נכנס."
+      },
+      "smtpHost": {
+        "label": "שרת SMTP",
+        "description": "נדרש עבור ערוצי דוא\"ל. השאר ריק כדי לכבות את הדוא\"ל.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "יציאת SMTP",
+        "description": "בדרך כלל 587 עם STARTTLS או 465 עם TLS."
+      },
+      "smtpSecure": {
+        "label": "השתמש ב-TLS מההתחלה",
+        "description": "הפעל עבור פורט 465. השאר את היציאה כבויה עבור פורט 587, אשר משדרג ל-TLS בעצמו."
+      },
+      "smtpUser": {
+        "label": "שם משתמש של SMTP",
+        "description": "השאר ריק אם השרת אינו דורש התחברות."
+      },
+      "smtpPassword": {
+        "label": "סיסמת SMTP",
+        "description": "מאוחסן מוצפן."
+      },
+      "smtpFrom": {
+        "label": "מכתובת",
+        "description": "התראות השולח מגיעות מ-.",
+        "placeholder": "טרמיקס <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "חלונות קופצים של התראות",
+        "description": "אילו התראות חדשות מופיעות בזמן השימוש ב-Termix? הן תמיד מגיעות לתיבת הדואר הנכנס.",
+        "all": "כל ההתראות",
+        "warning": "אזהרות ומידע קריטי",
+        "critical": "קריטי בלבד",
+        "off": "אַף לֹא אֶחָד"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "תיבת הדואר הנכנס",
+    "channels": "ערוצים",
+    "rules": "כללי משלוח"
+  },
+  "severity": {
+    "info": "מידע",
+    "success": "הַצלָחָה",
+    "warning": "אַזהָרָה",
+    "critical": "קרִיטִי"
+  },
+  "inbox": {
+    "sourceTermix": "טרמיקס",
+    "openLink": "לִפְתוֹחַ",
+    "view": "נוֹף",
+    "unread": "לא נקרא",
+    "deliveryFailed_one": "ערוץ {{count}} נכשל",
+    "deliveryFailed_other": "ערוצים {{count}} נכשלו",
+    "markRead": "סמן כנקרא",
+    "markUnread": "סמן כלא נקרא",
+    "markAllRead": "סמן הכל כנקרא",
+    "delete": "לִמְחוֹק",
+    "clearRead": "מחיקת התראות קריאה",
+    "cleared_one": "התראה {{count}} נמחקה",
+    "cleared_other": "התראות שנמחקו {{count}}",
+    "filterAll": "כֹּל",
+    "filterUnread": "לא נקרא",
+    "anySeverity": "כל חומרה",
+    "anySource": "כל מקור",
+    "openAll": "פתח בכרטיסייה",
+    "empty": "עדיין אין התראות.",
+    "emptyUnread": "כולכם שקועים.",
+    "loadMore": "טען עוד"
+  },
+  "channels": {
+    "intro": "ערוצים הם מקומות שבהם התראות יכולות להגיע מחוץ ל-Termix. כללי מסירה בוחרים אילו התראות משתמשות בהן.",
+    "add": "הוסף ערוץ",
+    "edit": "עריכת ערוץ",
+    "test": "שלח בדיקה",
+    "testSent": "התראת בדיקה נשלחה",
+    "testFailed": "הבדיקה נכשלה: {{error}}",
+    "deleteConfirm": "למחוק את הערוץ \"{{name}}\"?",
+    "deleted": "הערוץ נמחק",
+    "empty": "עדיין אין ערוצים.",
+    "enabled": "מופעל",
+    "needsSave": "יש לפתוח ולשמור שוב את הערוץ הזה לפני שניתן יהיה לשלוח אותו.",
+    "name": "שֵׁם",
+    "nameRequired": "שם נדרש",
+    "type": "סוּג",
+    "types": {
+      "webhook": "וובהוק",
+      "ntfy": "ntfy",
+      "discord": "מַחֲלוֹקֶת",
+      "email": "אֶלֶקטרוֹנִי"
+    },
+    "emailUnavailable": "דוא\"ל דורש שרת SMTP, אותו מנהל מערכת מגדיר בהגדרות ההתראות.",
+    "webhookUrl": "כתובת אתר",
+    "webhookHint": "מקבל גוף JSON עבור כל התראה.",
+    "method": "שִׁיטָה",
+    "headers": "כותרות",
+    "headersHint": "אחד בכל שורה, כמו שם: ערך.",
+    "ntfyServer": "כתובת URL של השרת",
+    "ntfyTopic": "נוֹשֵׂא",
+    "ntfyToken": "אסימון גישה (אופציונלי)",
+    "discordUrl": "כתובת אתר של דיסקורד ליצירת קשר עם רשת (webhook)",
+    "discordHint": "מהגדרות הערוץ בדיסקורד, תחת אינטגרציות.",
+    "discordUsername": "שם תצוגה (אופציונלי)",
+    "discordAvatar": "כתובת URL של אווטאר (אופציונלי)",
+    "emailTo": "שלח אל",
+    "emailHint": "הפרד יותר מכתובת אחת באמצעות פסיקים.",
+    "privateNetwork": "אפשר כתובת רשת פרטית",
+    "privateNetworkHint": "עובד רק עבור מארחים שמנהל מאפשר ברשימת נקודות הקצה הפרטיות."
+  },
+  "rules": {
+    "intro": "כלל מסירה שולח התראות תואמות לערוצים שלך. ההתראות תמיד נשארות גם בתיבת הדואר הנכנס.",
+    "add": "הוסף כלל",
+    "edit": "עריכת כלל",
+    "empty": "עדיין אין כללים, כך שההתראות מופיעות רק בתיבת הדואר הנכנס.",
+    "needChannel": "הוסף ערוץ קודם.",
+    "enabled": "מופעל",
+    "name": "שֵׁם",
+    "nameRequired": "שם נדרש",
+    "match": "התראות לשליחה",
+    "matchHint": "* להכל, אוטומציות.* להכל, החל מאוטומציות, או מסוג אחד מדויק.",
+    "minSeverity": "לְפָחוֹת",
+    "channels": "שלח אל",
+    "channelRequired": "בחר לפחות ערוץ אחד",
+    "deleteConfirm": "למחוק את הכלל \"{{name}}\"?",
+    "everything": "הַכֹּל",
+    "summary": "{{match}}, {{severity}} או גבוה יותר, עד {{channels}}"
+  },
+  "actions": {
+    "cancel": "לְבַטֵל",
+    "save": "לְהַצִיל",
+    "saving": "חִסָכוֹן...",
+    "delete": "לִמְחוֹק"
+  },
+  "widget": {
+    "name": "הזנת התראות",
+    "description": "ההתראות האחרונות שלך, עם דרך מהירה לסמן אותן כנקראו",
+    "maxItems": "מקסימום פריטים",
+    "showRead": "הצג התראות קריאה",
+    "allClear": "הכל ברור",
+    "loading": "טְעִינָה..."
+  }
+}

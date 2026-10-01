@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "自動化を表示する",
+      "description": "自動化処理とその履歴をご覧ください。"
+    },
+    "create": {
+      "title": "自動化を作成する",
+      "description": "新しい自動化機能を追加します。"
+    },
+    "edit": {
+      "title": "自動化を編集する",
+      "description": "既存の自動化プロセスを変更します。"
+    },
+    "delete": {
+      "title": "自動化を削除する",
+      "description": "自動化機能を削除してください。"
+    },
+    "run": {
+      "title": "自動化を実行する",
+      "description": "自動化処理を手動で起動する。"
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "自動化",
+        "tabAutomations": "自動化",
+        "tabRuns": "走る",
+        "tabChannels": "チャンネル",
+        "createAutomation": "新しい自動化",
+        "backToAutomations": "自動化に戻る",
+        "createTitle": "新しい自動化",
+        "editTitle": "編集自動化",
+        "empty": "自動化はまだ設定されていません。指標、スケジュール、またはイベントに応じて自動化を設定してください。",
+        "emptyRuns": "まだ得点はありません。",
+        "channelsHint": "アラートでチャンネルを設定します",
+        "noChannelsHint": "アラートは常に受信トレイに届きます。アラート設定でチャネルを追加すれば、他の場所にも送信できます。",
+        "nameLabel": "名前",
+        "namePlaceholder": "例：/data がいっぱいになったらクリーンアップする",
+        "nameRequired": "名前は必須です",
+        "descriptionLabel": "説明",
+        "descriptionPlaceholder": "任意の説明",
+        "enabledLabel": "有効",
+        "concurrencyLabel": "既に実行中の場合",
+        "concurrencyHint": "前回の実行が終了する前に、これが再び発生した場合の対処法。",
+        "concurrency": {
+          "skip": "新しいランをスキップ",
+          "queue": "待ってから追いかける",
+          "allow": "両方を同時に実行する"
+        },
+        "save": "保存",
+        "created": "自動化によって作成されました",
+        "updated": "自動化が保存されました",
+        "deleted": "自動化が削除されました",
+        "deleteConfirm": "この自動化を削除すると、実行履歴も削除されます。",
+        "runNow": "今すぐ実行",
+        "testRun": "試運転",
+        "testRunHint": "すべてのステップを実行しますが、Termix以外のものには一切触れません。",
+        "runStarted": "ランニング開始",
+        "runFinished": "実行完了: {{status}}",
+        "trigger": "トリガー",
+        "steps": "手順",
+        "addStep": "ステップを追加する",
+        "removeStep": "削除手順",
+        "moveUp": "上へ進む",
+        "moveDown": "下へ移動",
+        "noSteps": "まだ手順がありません。何が起こるべきかを記述する手順を追加してください。",
+        "webhookTokenTitle": "Webhook URL",
+        "webhookTokenDescription": "これは一度しか表示されません。今すぐ保存してください。後で取り出すことはできません。",
+        "copy": "コピー",
+        "copied": "コピーしました",
+        "viewJson": "JSON",
+        "viewBuilder": "ビルダー",
+        "viewGraph": "グラフ",
+        "lastRun": "最後の走行",
+        "never": "なし",
+        "duration": "{{seconds}}s",
+        "stepOutput": "出力",
+        "stepError": "エラー",
+        "dryRunBadge": "試運転",
+        "hostSelector": {
+          "trigger": "トリガーホスト",
+          "host": "特定の宿主",
+          "fleet": "艦隊",
+          "all": "すべてのホスト"
+        },
+        "triggerKinds": {
+          "metric_threshold": "メトリックしきい値",
+          "host_status": "ホストが起動または停止する",
+          "health_check": "健康チェックの変更点",
+          "schedule": "スケジュール通りに",
+          "docker_event": "コンテナイベント",
+          "internal_event": "ターミックスイベント",
+          "webhook": "受信ウェブフック"
+        },
+        "stepTypes": {
+          "notify": "アラートを送信する",
+          "http": "URLを呼び出す",
+          "run_snippet": "スニペットを実行する",
+          "run_command": "コマンドを実行する",
+          "docker": "コンテナを制御する",
+          "tunnel": "トンネルを制御する",
+          "wol": "ホストを起こす",
+          "wait": "待って",
+          "set_var": "変数を設定する",
+          "if": "もし／そうでなければ",
+          "run_automation": "別の自動化を実行する",
+          "stop": "ストップ"
+        },
+        "statuses": {
+          "running": "実行中",
+          "success": "成功",
+          "failed": "失敗",
+          "timeout": "タイムアウト",
+          "skipped": "スキップしました",
+          "cancelled": "キャンセル"
+        },
+        "fields": {
+          "host": "ホスト",
+          "metric": "メトリック",
+          "mount": "取り付けポイント",
+          "operator": "は",
+          "value": "価値",
+          "forSeconds": "（秒）の間持続",
+          "cooldown": "クールダウン（分）",
+          "cron": "Cron発現",
+          "intervalSeconds": "（秒）ごとに",
+          "timezone": "タイムゾーン",
+          "timezoneServer": "サーバー時間",
+          "timezoneHint": "このゾーンでは、cronの実行時間が読み取られます。インターバルスケジュールには適用されません。",
+          "container": "容器",
+          "command": "コマンド",
+          "url": "URL",
+          "method": "方法",
+          "body": "体",
+          "channels": "また、以下へも送信してください。",
+          "title": "タイトル",
+          "message": "メッセージ",
+          "snippet": "抜粋",
+          "seconds": "秒",
+          "conditionLeftPlaceholder": "チェックすべき値",
+          "conditionRightPlaceholder": "比較対象",
+          "variableName": "変数名",
+          "variableValue": "価値",
+          "elevated": "sudo を付けて実行",
+          "onError": "これが失敗した場合",
+          "allowPrivateNetwork": "ローカルネットワークアドレスを許可する",
+          "allowPrivateNetworkHint": "LAN上でセルフホスト型サービスを実行する場合に必要です。内部アドレスへのリクエストを防ぐため、デフォルトでは無効になっています。"
+        },
+        "onError": {
+          "stop": "走るのをやめろ",
+          "continue": "続ける"
+        },
+        "needsPlugin": "必要数 {{plugin}}",
+        "needsPluginHint": "この自動化処理は、必要な機能が再び利用可能になるまでスキップされます。",
+        "offBadge": "オフ",
+        "docsLink": "ドキュメントを見る",
+        "ago": {
+          "seconds": "{{count}}秒前",
+          "minutes": "{{count}}分前",
+          "hours": "{{count}}時間前",
+          "days": "{{count}}日前"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "自動化"
+  },
+  "onboarding": {
+    "feature_automations": "自動化",
+    "feature_automations_desc": "何かが発生した際に自動的に手順を実行し、通知を受け取ります。"
+  },
+  "maintenance": {
+    "title": "メンテナンス",
+    "description": "作業中は、ホストの状態、健全性、メトリック、コンテナ、トンネル切断に関する自動化処理を一時停止します。監視、手動実行、およびスケジュールされた自動化処理は継続されます。",
+    "denied": "メンテナンス情報を閲覧する権限がありません。",
+    "sharedReadOnly": "このホストはあなたと共有されています。メンテナンス設定を変更できるのは所有者のみです。",
+    "failed": "メンテナンスの更新ができませんでした。",
+    "active": "メンテナンスが有効です",
+    "estimated": "完成予定",
+    "noAutoEnd": "見積もりはメンテナンスの終了を意味するものではありません。作業が完了した時点で、明示的に終了してください。",
+    "endConfirm": "このホストのメンテナンスを終了し、イベントトリガーによる自動化を再開しますか？",
+    "confirmEnd": "終了を確認する",
+    "cancel": "キャンセル",
+    "end": "最終メンテナンス",
+    "action": "アクション",
+    "startNow": "今すぐ始めましょう",
+    "schedule": "後でスケジュールする",
+    "reason": "理由",
+    "startUtc": "最初の開始時刻（UTC）",
+    "repeat": "繰り返す",
+    "once": "一度",
+    "weekly": "毎週",
+    "monthly": "月刊",
+    "utcHelp": "年間を通してスケジュールはUTCを使用します。月間スケジュールでは、選択した日がない月はスキップされます。計画された作業期間は重複できません。作業期間が超過した場合、その超過作業は後の作業期間にも引き継がれます。",
+    "duration": "所要時間の目安（分）",
+    "grace": "猶予期間（分）",
+    "notify": "推定期間と猶予期間を過ぎてもオフライン状態が続く場合は、一度通知してください。",
+    "addSchedule": "スケジュールを追加",
+    "schedules": "スケジュール",
+    "noSchedules": "メンテナンススケジュールはありません。",
+    "completed": "既に開始済み",
+    "minutes_one": "{{count}} 分",
+    "minutes_other": "{{count}} 分",
+    "remove": "スケジュールを削除",
+    "loadFailed": "メンテナンス状況を更新できませんでした。読み込みが完了するまで、変更は無効になっています。",
+    "loading": "メンテナンスステータスをロード中…"
+  }
+}

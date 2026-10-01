@@ -100,13 +100,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Manifest validation in lint loads the built SDK.
+      - name: Build SDK
+        run: npm run build:sdk
+
       - name: Lint and format
         run: |
-          npm run lint:fix || true
+          npm run lint:fix
           npm run format
+          npm run lint
+
+      # The plugin boot tests load the built bundles.
+      - name: Build plugins
+        run: npm run build:plugins
 
       - name: Run unit tests
         run: npm run test
+
+      - name: Run plugin tests
+        run: npm run test:plugins
 
       - name: Sync version
         run: node scripts/sync-version.cjs --version "${{ needs.prep.outputs.version }}"
@@ -168,7 +180,7 @@ jobs:
           git push origin --delete i18n_translate || true
 
       - name: Upload sources to Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: true
           upload_translations: false
@@ -180,13 +192,15 @@ jobs:
         env:
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
 
-      - name: Machine pre-translate untranslated strings
+      # Off until the machine translation credits are topped up.
+      - name: Pre-translate untranslated strings
+        if: false
         env:
           CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
         run: node scripts/crowdin-pretranslate.cjs
 
       - name: Download translations from Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: false
           upload_translations: false
@@ -203,7 +217,7 @@ jobs:
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
 
-          git add src/ui/locales/translated
+          git add src/ui/locales/translated plugins/*/locales/translated
           if git diff --cached --quiet; then
             echo "No translation changes to commit."
             exit 0

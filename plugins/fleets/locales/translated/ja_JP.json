@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "車両一覧を見る",
+      "description": "艦隊、その構成員、および保有資産をご覧ください。"
+    },
+    "manage": {
+      "title": "車両群を管理する",
+      "description": "艦隊の作成、編集、削除、メンバーシップの変更、および他のユーザーや役割との艦隊の共有が可能です。"
+    },
+    "execute": {
+      "title": "艦隊作戦を実行する",
+      "description": "フリート全体でコマンドやパッケージアクションを実行し、メンバーホストとの間でファイルを転送します。"
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "艦隊",
+        "createFleet": "艦隊を作成する",
+        "createFleetTitle": "艦隊を作成する",
+        "editFleetTitle": "艦隊を編集",
+        "createFleetDescription": "フリートとは、複数のホストをまとめてグループ化し、それらを一つの単位としてアクションを実行できるグループです。",
+        "nameLabel": "名前",
+        "namePlaceholder": "例：Webサーバー",
+        "nameRequired": "艦隊名は必須です",
+        "descriptionLabel": "説明",
+        "descriptionPlaceholder": "任意の説明",
+        "colorLabel": "色",
+        "tagRulesLabel": "タグルール",
+        "tagRulesPlaceholder": "プロダクションウェブ、エッジ",
+        "tagRulesHint": "これらのタグのいずれかが付いているホストは、手動で追加されたホストに加えて、自動的に含まれます。",
+        "fleetCreated": "艦隊が編成されました",
+        "fleetUpdated": "艦隊情報更新",
+        "fleetDeleted": "艦隊削除",
+        "saveFailed": "艦隊の救出に失敗しました",
+        "deleteFailed": "艦隊の削除に失敗しました",
+        "loadFailed": "艦隊の読み込みに失敗しました",
+        "deleteFleetTitle": "艦隊を削除",
+        "deleteFleetDescription": "「{{name}}」を削除してもよろしいですか？これはメンバーホスト自体を削除するものではありません。",
+        "searchFleets": "艦隊を検索...",
+        "noFleets": "まだ艦隊がありません。まずは艦隊を作成してください。",
+        "memberCount": "{{count}} ホスト",
+        "memberCount_other": "{{count}} ホスト",
+        "manageMembers": "メンバーの管理",
+        "manageMembersTitle": "フリートメンバーの管理",
+        "manageMembersDescription": "このフリートの静的メンバーシップにホストを追加または削除する切り替えを行います。タグルールに一致するホストは常に含まれます。",
+        "searchHosts": "ホストを検索...",
+        "noHostsFound": "ホストが見つかりません",
+        "noMembers": "この艦隊にはまだメンバーがいません。ホストを追加するか、タグルールを設定してください。",
+        "membersLoadFailed": "艦隊メンバーの読み込みに失敗しました",
+        "memberUpdateFailed": "艦隊メンバーシップの更新に失敗しました",
+        "tabRun": "コマンドを実行する",
+        "tabTransfer": "ファイルの転送",
+        "tabInventory": "在庫",
+        "openInventoryTab": "全画面表示",
+        "tabPackages": "パッケージ",
+        "runOnFleet": "ラン・オン・フリート",
+        "commandPlaceholder": "uptime && df -h",
+        "commandRequired": "コマンドが必要です",
+        "commandInputsLabel": "コマンド入力",
+        "commandSucceeded": "コマンドはすべてのホストで正常に実行されました。",
+        "commandPartialFailure": "{{failed}} の {{total}} ホストが失敗しました",
+        "commandFailed": "コマンドの実行に失敗しました",
+        "resultSuccess": "成功",
+        "resultFailed": "失敗",
+        "push": "押す",
+        "pull": "引く",
+        "remotePathLabel": "リモートパス",
+        "remotePathRequired": "遠隔経路が必要です",
+        "fileLabel": "ファイル",
+        "fileRequired": "ファイルが必要です",
+        "pushHint": "選択されたファイルは、艦隊内のすべてのホスト上のこの正確なパスに書き込まれます。",
+        "pullHint": "このパスにあるファイルは、すべてのホストから読み込まれ、ホストごとに1つのフォルダ、つまり単一のzipファイルとしてダウンロードされます。",
+        "transferComplete": "転送が完了しました",
+        "transferFailed": "転送に失敗しました",
+        "refreshInventory": "在庫を更新",
+        "inventoryLoadFailed": "在庫の読み込みに失敗しました",
+        "inventoryRefreshed": "在庫が更新されました",
+        "inventoryRefreshFailed": "在庫の更新に失敗しました",
+        "inventoryNoData": "在庫データがまだありません。更新して取得してください。",
+        "inventoryHost": "ホスト",
+        "inventoryCollectedCount": "{{count}}/{{total}} が収集されました",
+        "inventoryOs": "OS",
+        "inventoryKernel": "カーネル",
+        "inventoryArch": "アーチ",
+        "inventoryUptime": "アップタイム",
+        "inventoryPackageManager": "パッケージマネージャー",
+        "inventoryCollectedAt": "収集済み",
+        "packageActionLabel": "アクション",
+        "packageInstall": "インストール",
+        "packageRemove": "削除",
+        "packageUpgradeAll": "すべてのパッケージをアップグレードする",
+        "packageNameLabel": "パッケージ名",
+        "packageNameRequired": "パッケージ名は必須です。",
+        "packageHint": "ホストごとに管理者レベルのアクセス権限が必要で、ホストに保存されているsudoパスワードを使用して権限を昇格します。",
+        "shareFleet": "シェアフリート",
+        "shareFleetTitle": "「{{name}} を共有する」",
+        "shareFleetDescription": "このフリートの現在のメンバーホストを、選択したユーザーまたはロールと共有します。後からフリートに追加されたホストは自動的に共有されません。それらを含めるには、再度共有を実行してください。",
+        "shareSelectionRequired": "少なくとも1人のユーザーまたは役割を選択してください。",
+        "fleetSharedSuccessfully": "Shared {{shared}} of {{total}} host(s) in this fleet",
+        "failedToShareFleet": "車両共有に失敗しました",
+        "noMembersToShare": "この艦隊には、まだ共有できるメンバーホストがいません。"
+      }
+    }
+  },
+  "nav": {
+    "fleets": "艦隊"
+  },
+  "hosts": {
+    "docsLink": "ドキュメントを表示",
+    "sharing": {
+      "customHoursPlaceholder": "アクセス期限までの時間数",
+      "expiry": {
+        "never": "無期限",
+        "oneHour": "1時間",
+        "oneDay": "24時間",
+        "sevenDays": "7日間",
+        "thirtyDays": "30日間",
+        "custom": "カスタム"
+      },
+      "expiryLabel": "アクセス期限",
+      "levels": {
+        "connect": {
+          "label": "接続",
+          "description": "セッションのみ開く: ターミナル、リモートデスクトップ、ファイルマネージャー、トンネル、Docker。ホスト設定へのアクセスはありません。"
+        },
+        "view": {
+          "label": "表示",
+          "description": "接続に加え、ホスト設定を表示できます。シークレットは表示されません。"
+        },
+        "edit": {
+          "label": "編集",
+          "description": "認証不要のホスト設定を表示および変更できます。所有者のSSH認証情報は非公開で、所有者のみがアクセスできます。"
+        },
+        "manage": {
+          "label": "管理",
+          "description": "編集に加え、ホストを他者と共有し、権限レベルを変更、アクセスを取り消すことができます。"
+        }
+      },
+      "noMatches": "一致する結果がありません",
+      "permissionLevelLabel": "権限レベル",
+      "rolesTab": "ロール",
+      "searchPlaceholder": "ユーザーまたはロールを検索...",
+      "shareButton": "共有",
+      "shareWithCount": "共有 ({{count}})",
+      "usersTab": "ユーザー"
+    }
+  }
+}

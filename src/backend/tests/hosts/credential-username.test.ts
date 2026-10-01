@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   pickResolvedUsername,
   pickResolvedPassword,
-  expandOidcUsername,
+  expandExternalUsername,
 } from "../../hosts/credential-username.js";
 
 describe("pickResolvedUsername", () => {
@@ -52,14 +52,14 @@ describe("pickResolvedPassword", () => {
   });
 });
 
-describe("expandOidcUsername", () => {
+describe("expandExternalUsername", () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
   it("returns the username unchanged when it has no placeholder", async () => {
-    expect(await expandOidcUsername("alice", "user-1")).toBe("alice");
-    expect(await expandOidcUsername(undefined, "user-1")).toBeUndefined();
+    expect(await expandExternalUsername("alice", "user-1")).toBe("alice");
+    expect(await expandExternalUsername(undefined, "user-1")).toBeUndefined();
   });
 
   it("expands the placeholder with the user's OIDC identifier", async () => {
@@ -69,9 +69,13 @@ describe("expandOidcUsername", () => {
       }),
     }));
 
-    const { expandOidcUsername: expand } =
+    const { expandExternalUsername: expand } =
       await import("../../hosts/credential-username.js");
     expect(await expand("$oidc.preferred_username", "user-1")).toBe("jdoe");
+    expect(await expand("$external.username", "user-1")).toBe("jdoe");
+    expect(
+      await expand("$external.username-$oidc.preferred_username", "user-1"),
+    ).toBe("jdoe-jdoe");
   });
 
   it("leaves the placeholder as-is when the user has no OIDC identifier", async () => {
@@ -81,7 +85,7 @@ describe("expandOidcUsername", () => {
       }),
     }));
 
-    const { expandOidcUsername: expand } =
+    const { expandExternalUsername: expand } =
       await import("../../hosts/credential-username.js");
     expect(await expand("$oidc.preferred_username", "user-1")).toBe(
       "$oidc.preferred_username",
@@ -95,7 +99,7 @@ describe("expandOidcUsername", () => {
       },
     }));
 
-    const { expandOidcUsername: expand } =
+    const { expandExternalUsername: expand } =
       await import("../../hosts/credential-username.js");
     expect(await expand("$oidc.preferred_username", "user-1")).toBe(
       "$oidc.preferred_username",
@@ -110,12 +114,14 @@ describe("expandOidcUsername", () => {
           ssoProviderId: 1,
         }),
       }),
-      createCurrentSsoProviderRepository: () => ({
-        findById: async () => ({ type: "ldap" }),
+      createCurrentUserAuthRepository: () => ({
+        listIdentitiesForUser: async () => [
+          { providerId: "ldap:1", subject: "jdoe" },
+        ],
       }),
     }));
 
-    const { expandOidcUsername: expand } =
+    const { expandExternalUsername: expand } =
       await import("../../hosts/credential-username.js");
     expect(await expand("$oidc.preferred_username", "user-1")).toBe("jdoe");
   });
@@ -128,12 +134,14 @@ describe("expandOidcUsername", () => {
           ssoProviderId: 1,
         }),
       }),
-      createCurrentSsoProviderRepository: () => ({
-        findById: async () => ({ type: "oidc" }),
+      createCurrentUserAuthRepository: () => ({
+        listIdentitiesForUser: async () => [
+          { providerId: "1", subject: "ldap:1:admin" },
+        ],
       }),
     }));
 
-    const { expandOidcUsername: expand } =
+    const { expandExternalUsername: expand } =
       await import("../../hosts/credential-username.js");
     expect(await expand("$oidc.preferred_username", "user-1")).toBe(
       "ldap:1:admin",
@@ -148,12 +156,14 @@ describe("expandOidcUsername", () => {
           ssoProviderId: 5,
         }),
       }),
-      createCurrentSsoProviderRepository: () => ({
-        findById: async () => ({ type: "ldap" }),
+      createCurrentUserAuthRepository: () => ({
+        listIdentitiesForUser: async () => [
+          { providerId: "ldap:5", subject: "admin" },
+        ],
       }),
     }));
 
-    const { expandOidcUsername: expand } =
+    const { expandExternalUsername: expand } =
       await import("../../hosts/credential-username.js");
     expect(await expand("$oidc.preferred_username", "user-1")).toBe(
       "ldap:1:admin",

@@ -1,0 +1,32 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Đăng nhập vào máy chủ này bằng nhà cung cấp danh tính thay vì mật khẩu hoặc khóa. Yêu cầu OPKSSH được thiết lập trên máy chủ.",
+    "docs": "Xem tài liệu"
+  },
+  "dialog": {
+    "title": "Yêu cầu xác thực OPKSSH",
+    "description": "Hoàn tất xác thực trên trình duyệt để tiếp tục. Phiên làm việc này sẽ có hiệu lực trong 24 giờ.",
+    "openBrowser": "Mở trình duyệt để xác thực",
+    "waiting": "Đang chờ xác thực trên trình duyệt...",
+    "authenticating": "Đang xử lý xác thực...",
+    "signInWith": "Đăng nhập bằng {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Xác thực thất bại. Vui lòng kiểm tra thông tin đăng nhập và thử lại.",
+    "timeout": "Xác thực đã hết thời gian chờ. Vui lòng thử lại."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
+  }
+}

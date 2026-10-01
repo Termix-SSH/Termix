@@ -1,3 +1,5 @@
+import { getTabType, isPersistentTabType } from "@/shell/tab-registry";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ExternalLink, Plug, Search, X, Pencil, Check } from "lucide-react";
@@ -8,9 +10,9 @@ import {
   type OpenTabRecord,
 } from "@/main-axios";
 import { tabIcon } from "@/shell/tabUtils";
+import { getSessionTimeoutMinutes } from "@/api/open-tabs-api";
 import type { Tab, TabType } from "@/types/ui-types";
 import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import {
   Tooltip,
@@ -21,27 +23,15 @@ import {
 import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 
-const CONNECTION_TAB_TYPES: TabType[] = [
-  "terminal",
-  "rdp",
-  "vnc",
-  "telnet",
-  "files",
-  "docker",
-  "host-metrics",
-  "tunnel",
-];
-
-const TYPE_LABELS: Record<string, string> = {
-  terminal: "SSH",
-  rdp: "RDP",
-  vnc: "VNC",
-  telnet: "Telnet",
+/** Core badge labels; plugin tabs are labelled by their registered title. */
+const CORE_TYPE_LABELS: Record<string, string> = {
   files: "Files",
-  docker: "Docker",
-  "host-metrics": "Host Metrics",
-  tunnel: "Tunnel",
 };
+
+/** Saved connection tabs: the ones reopened after login. */
+function isConnectionTabType(type: TabType): boolean {
+  return isPersistentTabType(type);
+}
 
 function formatDuration(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -66,11 +56,7 @@ function sessionsUnchanged(
       a.hostName !== b.hostName ||
       a.tabInstanceId !== b.tabInstanceId ||
       a.isConnected !== b.isConnected ||
-      a.createdAt !== b.createdAt ||
-      a.isOwnSession !== b.isOwnSession ||
-      a.sharedByUsername !== b.sharedByUsername ||
-      a.permissionLevel !== b.permissionLevel ||
-      a.shareId !== b.shareId
+      a.createdAt !== b.createdAt
     ) {
       return false;
     }
@@ -195,14 +181,15 @@ function ConnectionRow({
             variant="outline"
             className="text-[9px] px-1 py-0 h-4 font-mono shrink-0 text-muted-foreground/60 border-border/60"
           >
-            {TYPE_LABELS[tabType] ?? tabType}
+            {CORE_TYPE_LABELS[tabType] ??
+              (getTabType(tabType)?.titleKey
+                ? t(getTabType(tabType)!.titleKey!)
+                : tabType)}
           </Badge>
         </div>
         <span className="text-[10px] text-muted-foreground/60 truncate pl-3">
           {hostName && hostName !== name ? (
-            <span className="text-muted-foreground/50">
-              {hostName} &middot;{" "}
-            </span>
+            <span className="text-muted-foreground/50 mr-2.5">{hostName}</span>
           ) : null}
           {subLabel}
         </span>
@@ -295,7 +282,6 @@ export function ConnectionsPanel({
   onForgetBackground,
   onRenameTab,
   onReorderTabs,
-  onJoinSharedSession,
 }: {
   tabs: Tab[];
   activeTabId: string;
@@ -310,16 +296,14 @@ export function ConnectionsPanel({
   onForgetBackground: (recordId: string) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
   onReorderTabs?: (tabs: Tab[]) => void;
-  onJoinSharedSession?: (session: ActiveSessionInfo) => void;
 }) {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
 
   const [persistMinutes, setPersistMinutes] = useState(30);
   useEffect(() => {
-    import("@/api/settings-api")
-      .then(({ getTerminalSessionSettings }) => getTerminalSessionSettings())
-      .then((settings) => setPersistMinutes(settings.timeoutMinutes))
+    getSessionTimeoutMinutes()
+      .then((minutes) => setPersistMinutes(minutes))
       .catch(() => {});
   }, []);
   const [activeSessions, setActiveSessions] = useState<ActiveSessionInfo[]>([]);
@@ -334,9 +318,7 @@ export function ConnectionsPanel({
   const dragStartY = useRef<number>(0);
   const didDragRef = useRef(false);
 
-  const openTabs = tabs.filter((tab) =>
-    CONNECTION_TAB_TYPES.includes(tab.type),
-  );
+  const openTabs = tabs.filter((tab) => isConnectionTabType(tab.type));
 
   const openInstanceIds = new Set(
     tabs.map((t) => t.instanceId).filter(Boolean),
@@ -361,22 +343,6 @@ export function ConnectionsPanel({
         return (host?.name ?? r.label).toLowerCase().includes(q);
       })
     : backgroundTabs;
-
-  const joinedInstanceIds = new Set(
-    tabs
-      .map((t) => (t.joinSharedSessionId ? t.instanceId : null))
-      .filter(Boolean),
-  );
-  const sharedWithMe = activeSessions.filter(
-    (s) => s.isOwnSession === false && !joinedInstanceIds.has(s.sessionId),
-  );
-  const filteredSharedWithMe = q
-    ? sharedWithMe.filter(
-        (s) =>
-          s.hostName.toLowerCase().includes(q) ||
-          (s.sharedByUsername ?? "").toLowerCase().includes(q),
-      )
-    : sharedWithMe;
 
   // Duration labels only need minute-level freshness; 1s ticks re-render the whole panel.
   usePageVisibleInterval(() => setNow(Date.now()), 15_000);
@@ -437,9 +403,8 @@ export function ConnectionsPanel({
           if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
             const reordered = [...openTabs];
             reordered.splice(toIdx, 0, reordered.splice(fromIdx, 1)[0]);
-            const connectionSet = new Set(CONNECTION_TAB_TYPES as string[]);
             const nonConnectionTabs = tabs.filter(
-              (t) => !connectionSet.has(t.type),
+              (t) => !isConnectionTabType(t.type),
             );
             onReorderTabs([...nonConnectionTabs, ...reordered]);
           }
@@ -465,26 +430,36 @@ export function ConnectionsPanel({
     activeSessions.map((s) => [s.tabInstanceId, s]),
   );
 
-  const hasAnything =
-    openTabs.length > 0 || backgroundTabs.length > 0 || sharedWithMe.length > 0;
+  const hasAnything = openTabs.length > 0 || backgroundTabs.length > 0;
   const hasResults =
-    filteredOpenTabs.length > 0 ||
-    filteredBackgroundTabs.length > 0 ||
-    filteredSharedWithMe.length > 0;
+    filteredOpenTabs.length > 0 || filteredBackgroundTabs.length > 0;
+
+  const pluginSections = (
+    <ComponentSlot
+      slotId="connections.sections"
+      props={{
+        search: q,
+        openTabData: tabs.map((tab) => tab.data ?? {}),
+      }}
+    />
+  );
 
   if (!hasAnything) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 gap-3 p-6 text-center py-16">
-        <div className="size-10 rounded-full bg-muted/40 flex items-center justify-center">
-          <Plug className="size-5 text-muted-foreground/30" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-semibold text-muted-foreground/60">
-            {t("connections.noConnections")}
-          </span>
-          <span className="text-xs text-muted-foreground/40">
-            {t("connections.noConnectionsDesc")}
-          </span>
+      <div className="flex flex-col flex-1">
+        {pluginSections}
+        <div className="flex flex-col items-center justify-center flex-1 gap-3 p-6 text-center py-16">
+          <div className="size-10 rounded-full bg-muted/40 flex items-center justify-center">
+            <Plug className="size-5 text-muted-foreground/30" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-muted-foreground/60">
+              {t("connections.noConnections")}
+            </span>
+            <span className="text-xs text-muted-foreground/40">
+              {t("connections.noConnectionsDesc")}
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -521,10 +496,10 @@ export function ConnectionsPanel({
             const liveSession = tab.instanceId
               ? sessionByInstanceId.get(tab.instanceId)
               : undefined;
-            const isLive =
-              tab.type === "terminal"
-                ? (liveSession?.isConnected ?? false)
-                : true;
+            const tracksSession = !!getTabType(tab.type)?.commandTarget;
+            const isLive = tracksSession
+              ? (liveSession?.isConnected ?? false)
+              : true;
             const duration = liveSession?.createdAt
               ? formatDuration(now - liveSession.createdAt)
               : formatDuration(now - tab.openedAt);
@@ -563,7 +538,7 @@ export function ConnectionsPanel({
                   name={displayName}
                   hostName={tab.customLabel ? hostName : undefined}
                   subLabel={
-                    isLive && tab.type === "terminal"
+                    isLive && tracksSession
                       ? t("connections.connectedFor", { duration })
                       : isLive
                         ? t("connections.connected")
@@ -632,77 +607,8 @@ export function ConnectionsPanel({
         </div>
       )}
 
-      {filteredSharedWithMe.length > 0 && (
-        <div
-          className={`flex flex-col ${filteredOpenTabs.length > 0 || filteredBackgroundTabs.length > 0 ? "mt-2" : ""}`}
-        >
-          <SectionHeader
-            label={t("connections.sectionSharedWithMe")}
-            count={filteredSharedWithMe.length}
-          />
-          {filteredSharedWithMe.map((session) => (
-            <SharedWithMeRow
-              key={session.sessionId}
-              session={session}
-              onJoin={() => onJoinSharedSession?.(session)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SharedWithMeRow({
-  session,
-  onJoin,
-}: {
-  session: ActiveSessionInfo;
-  onJoin: () => void;
-}) {
-  const { t } = useTranslation();
-  const isReadWrite = session.permissionLevel === "read-write";
-
-  return (
-    <div className="group flex items-center gap-2.5 px-3 py-2.5 border-b border-border/40 last:border-b-0">
-      <div className="shrink-0 flex items-center justify-center size-7 rounded bg-muted/60 text-muted-foreground">
-        {tabIcon("terminal")}
-      </div>
-      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className={`shrink-0 size-1.5 rounded-full ${
-              session.isConnected ? "bg-green-500" : "bg-muted-foreground/30"
-            }`}
-          />
-          <span className="text-xs font-semibold truncate flex-1 text-foreground">
-            {session.hostName}
-          </span>
-          <Badge
-            variant="outline"
-            className={`text-[9px] px-1 py-0 h-4 font-mono shrink-0 border-border/60 ${
-              isReadWrite ? "text-accent-brand" : "text-muted-foreground/60"
-            }`}
-          >
-            {isReadWrite
-              ? t("sessionSharing.permissionLevel.readWrite")
-              : t("sessionSharing.permissionLevel.readOnly")}
-          </Badge>
-        </div>
-        <span className="text-[10px] text-muted-foreground/60 truncate pl-3">
-          {t("connections.sharedBy", {
-            username: session.sharedByUsername ?? "?",
-          })}
-        </span>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-6 text-[10px] px-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={onJoin}
-      >
-        {t("connections.join")}
-      </Button>
+      {/* Sections a plugin adds, such as sessions others shared with you. */}
+      {pluginSections}
     </div>
   );
 }

@@ -176,6 +176,293 @@
       "when": 1789751455415,
       "tag": "0024_flimsy_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789991403847,
+      "tag": "0025_purple_squirrel_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790083819084,
+      "tag": "0026_perfect_masque",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790102859387,
+      "tag": "0027_sharp_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790109036999,
+      "tag": "0028_whole_zemo",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790114765114,
+      "tag": "0029_nosy_roulette",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790118360674,
+      "tag": "0030_cynical_callisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790135163099,
+      "tag": "0031_nifty_sentry",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790164291317,
+      "tag": "0032_nifty_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790166644445,
+      "tag": "0033_bent_trish_tilby",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790169398038,
+      "tag": "0034_free_smiling_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790176258755,
+      "tag": "0035_ambitious_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1790185584204,
+      "tag": "0036_redundant_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790189637011,
+      "tag": "0037_dizzy_sage",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790201004950,
+      "tag": "0038_cute_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790208809860,
+      "tag": "0039_violet_firedrake",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790220944274,
+      "tag": "0040_narrow_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790224430003,
+      "tag": "0041_watery_zeigeist",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1790225599928,
+      "tag": "0042_strange_shocker",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790227893380,
+      "tag": "0043_melodic_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790266378802,
+      "tag": "0044_nostalgic_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790266402403,
+      "tag": "0045_thankful_shinobi_shaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1790268465907,
+      "tag": "0046_small_white_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1790272733784,
+      "tag": "0047_mighty_butterfly",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790274704269,
+      "tag": "0048_rare_catseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1790278287300,
+      "tag": "0049_reflective_adam_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790282597585,
+      "tag": "0050_acoustic_lady_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1790284031484,
+      "tag": "0051_useful_slyde",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1790285909968,
+      "tag": "0052_motionless_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1790287990260,
+      "tag": "0053_keen_thanos",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1790295070561,
+      "tag": "0054_cloudy_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1790298804216,
+      "tag": "0055_jazzy_quasimodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1790300572231,
+      "tag": "0056_chilly_vindicator",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1790304002011,
+      "tag": "0057_married_dragon_lord",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1790304465181,
+      "tag": "0058_goofy_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1790370151997,
+      "tag": "0059_square_korg",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1790393784687,
+      "tag": "0060_conscious_juggernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1790393788357,
+      "tag": "0061_red_lila_cheney",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790651053871,
+      "tag": "0062_curvy_killmonger",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790700738799,
+      "tag": "0063_giant_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1790704531255,
+      "tag": "0064_sticky_pestilence",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1790742086298,
+      "tag": "0065_regular_joystick",
+      "breakpoints": true
     }
   ]
 }

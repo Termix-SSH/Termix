@@ -22,11 +22,8 @@ vi.mock("react-i18next", () => ({
 
 // Panel-level dependencies that are irrelevant to AccordionSection but would
 // otherwise be pulled in by importing the module.
-vi.mock("@/settings/RemoteSyncPanel.tsx", () => ({
-  RemoteSyncPanel: () => null,
-}));
-vi.mock("@/user/C2STunnelPresetManager", () => ({
-  C2STunnelPresetManager: () => null,
+vi.mock("@/plugin-host/shell-bridge", () => ({
+  shell: { openRailView: vi.fn() },
 }));
 vi.mock("@/i18n/i18n", () => ({
   changeAppLanguage: vi.fn(),
@@ -42,7 +39,11 @@ import {
   NewApiKeyDialog,
 } from "../../sidebar/UserProfilePanel";
 
-afterEach(cleanup);
+afterEach(async () => {
+  cleanup();
+  // Radix restores focus on a timer; let it finish before jsdom is torn down.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+});
 
 function renderSection(hidden: boolean, open = false, onToggle = vi.fn()) {
   render(

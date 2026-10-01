@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Näytä laivastot",
+      "description": "Katso laivastot, niiden jäsenet ja varastot."
+    },
+    "manage": {
+      "title": "Hallitse ajoneuvokalustoja",
+      "description": "Luo, muokkaa ja poista ajoneuvokantoja, muuta jäsenyyksiä ja jaa ajoneuvokantoja muiden käyttäjien tai roolien kanssa."
+    },
+    "execute": {
+      "title": "Suorita laivaston toiminnot",
+      "description": "Suorita komentoja ja paketoi toimintoja koko laivastossa ja siirrä tiedostoja sen jäsenpalvelimiin ja niistä pois."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "Laivastot",
+        "createFleet": "Luo laivasto",
+        "createFleetTitle": "Luo laivasto",
+        "editFleetTitle": "Muokkaa kalustoa",
+        "createFleetDescription": "Laivasto on nimetty joukko isäntäjoukkoja, joita vastaan voit suorittaa toimintoja yksikkönä.",
+        "nameLabel": "Nimi",
+        "namePlaceholder": "esim. web-palvelimet",
+        "nameRequired": "Laivaston nimi on pakollinen",
+        "descriptionLabel": "Kuvaus",
+        "descriptionPlaceholder": "Valinnainen kuvaus",
+        "colorLabel": "Väri",
+        "tagRulesLabel": "Tagisäännöt",
+        "tagRulesPlaceholder": "prod-web, reuna",
+        "tagRulesHint": "Näillä tunnisteilla varustetut isännät sisällytetään automaattisesti manuaalisesti lisättyjen isäntien lisäksi.",
+        "fleetCreated": "Laivasto luotu",
+        "fleetUpdated": "Kalustoa päivitetty",
+        "fleetDeleted": "Kalusto poistettu",
+        "saveFailed": "Laivaston tallentaminen epäonnistui",
+        "deleteFailed": "Kaluston poistaminen epäonnistui",
+        "loadFailed": "Kalustojen lataus epäonnistui",
+        "deleteFleetTitle": "Poista kalusto",
+        "deleteFleetDescription": "Oletko varma, että haluat poistaa \"{{name}}\"? Tämä ei poista itse jäsenpalvelimia.",
+        "searchFleets": "Hae laivastoja...",
+        "noFleets": "Ei vielä laivastoja. Luo yksi aloittaaksesi.",
+        "memberCount": "{{count}} isäntä",
+        "memberCount_other": "{{count}} isännät",
+        "manageMembers": "Hallinnoi jäseniä",
+        "manageMembersTitle": "Hallinnoi laivaston jäseniä",
+        "manageMembersDescription": "Lisää isännät tämän laivaston staattiseen jäsenyyteen tai poista ne siitä. Tunnistesääntöjen mukaiset isännät sisällytetään aina.",
+        "searchHosts": "Hae isäntiä...",
+        "noHostsFound": "Ei isäntiä",
+        "noMembers": "Tässä laivastossa ei ole vielä jäseniä. Lisää isäntiä tai aseta tunnistesääntö.",
+        "membersLoadFailed": "Laivaston jäsenten lataaminen epäonnistui",
+        "memberUpdateFailed": "Laivaston jäsenyyden päivittäminen epäonnistui",
+        "tabRun": "Suorita komento",
+        "tabTransfer": "Tiedostojen siirto",
+        "tabInventory": "Varasto",
+        "openInventoryTab": "Avaa koko välilehdessä",
+        "tabPackages": "Paketit",
+        "runOnFleet": "Suorita laivastolla",
+        "commandPlaceholder": "käyttöaika && df -h",
+        "commandRequired": "Komento vaaditaan",
+        "commandInputsLabel": "Komentotulot",
+        "commandSucceeded": "Komento onnistui kaikissa isännissä",
+        "commandPartialFailure": "{{failed}} / {{total}} isäntäkoneesta epäonnistui",
+        "commandFailed": "Komennon suorittaminen epäonnistui",
+        "resultSuccess": "Menestys",
+        "resultFailed": "Epäonnistui",
+        "push": "Työnnä",
+        "pull": "Vedä",
+        "remotePathLabel": "Etäpolku",
+        "remotePathRequired": "Etäpolku vaaditaan",
+        "fileLabel": "Tiedosto",
+        "fileRequired": "Tiedosto vaaditaan",
+        "pushHint": "Valittu tiedosto kirjoitetaan täsmälleen tälle polulle jokaisella laivaston isännällä.",
+        "pullHint": "Tämän polun tiedosto luetaan jokaiselta isännältä ja ladataan yhtenä zip-tiedostona, yksi kansio isäntää kohden.",
+        "transferComplete": "Siirto valmis",
+        "transferFailed": "Siirto epäonnistui",
+        "refreshInventory": "Päivitä varasto",
+        "inventoryLoadFailed": "Varaston lataaminen epäonnistui",
+        "inventoryRefreshed": "Varasto päivitetty",
+        "inventoryRefreshFailed": "Varaston päivittäminen epäonnistui",
+        "inventoryNoData": "Ei vielä varastotietoja – päivitä kerätäksesi ne.",
+        "inventoryHost": "Isäntä",
+        "inventoryCollectedCount": "{{count}}/{{total}} kerätty",
+        "inventoryOs": "Käyttöjärjestelmä",
+        "inventoryKernel": "Ydin",
+        "inventoryArch": "Kaari",
+        "inventoryUptime": "Käyttöaika",
+        "inventoryPackageManager": "Pakettien hallinta",
+        "inventoryCollectedAt": "Kerätty",
+        "packageActionLabel": "Toiminta",
+        "packageInstall": "Asentaa",
+        "packageRemove": "Poistaa",
+        "packageUpgradeAll": "Päivitä kaikki paketit",
+        "packageNameLabel": "Paketin nimi",
+        "packageNameRequired": "Paketin nimi on pakollinen",
+        "packageHint": "Vaatii hallintatason käyttöoikeudet isäntäkohtaisesti ja nostaa käyttöoikeuksia isännän tallennetulla sudo-salasanalla.",
+        "shareFleet": "Jaa laivasto",
+        "shareFleetTitle": "Jaa \"{{name}}\"",
+        "shareFleetDescription": "Jakaa tämän laivaston nykyiset jäsenisännät valittujen käyttäjien tai roolien kanssa. Myöhemmin laivastoon lisättyjä isäntiä ei jaeta automaattisesti – jaa uudelleen sisällyttääksesi ne.",
+        "shareSelectionRequired": "Valitse vähintään yksi käyttäjä tai rooli",
+        "fleetSharedSuccessfully": "Jaettu {{shared}} / {{total}} isäntäkoneesta tässä laivastossa",
+        "failedToShareFleet": "Kaluston jakaminen epäonnistui",
+        "noMembersToShare": "Tällä laivueella ei ole vielä jaettavia jäsenisäntiä."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "Laivastot"
+  },
+  "hosts": {
+    "docsLink": "Näytä dokumentit",
+    "sharing": {
+      "customHoursPlaceholder": "Tuntia käyttöoikeuden vanhenemiseen",
+      "expiry": {
+        "never": "Ei koskaan",
+        "oneHour": "1 tunti",
+        "oneDay": "24 tuntia",
+        "sevenDays": "7 päivää",
+        "thirtyDays": "30 päivää",
+        "custom": "Mukautettu"
+      },
+      "expiryLabel": "Käyttöoikeuden päättyminen",
+      "levels": {
+        "connect": {
+          "label": "Yhdistä",
+          "description": "Vain avoimet istunnot: pääte, etätyöpöytä, tiedostonhallinta, tunnelit ja Docker. Ei pääsyä isäntäkokoonpanoon."
+        },
+        "view": {
+          "label": "Näytä",
+          "description": "Yhdistä ja katso isäntäkokoonpano. Salaisuuksia ei koskaan näytetä."
+        },
+        "edit": {
+          "label": "Muokata",
+          "description": "Näytä ja muokkaa ei-todennukseen perustuvia isäntäasetuksia. Omistajan SSH-todennus pysyy yksityisenä ja vain omistajalle tarkoitettuna."
+        },
+        "manage": {
+          "label": "Hallitse",
+          "description": "Muokkaa ja jaa isäntä muiden kanssa, muuta käyttöoikeustasoja ja peruuta käyttöoikeuksia."
+        }
+      },
+      "noMatches": "Ei osumia",
+      "permissionLevelLabel": "Käyttöoikeustaso",
+      "rolesTab": "Roolit",
+      "searchPlaceholder": "Hae käyttäjiä tai rooleja...",
+      "shareButton": "Jakaa",
+      "shareWithCount": "Jaa ({{count}})",
+      "usersTab": "Käyttäjät"
+    }
+  }
+}

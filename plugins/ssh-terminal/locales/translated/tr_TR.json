@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Ekle",
+    "arrowDown": "Aşağı Ok",
+    "arrowLeft": "Sol Ok",
+    "arrowRight": "Sağ Ok",
+    "arrowUp": "Yukarı Ok",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Tamam",
+    "editQuickKeys": "Hızlı tuşları düzenle",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Yapıştır",
+    "quickKeyPlaceholder": "ör. sudo ",
+    "quickKeysDesc": "Kaldırmak için × işaretine dokunun. En fazla 8 karakter desteklenir.",
+    "quickKeysTitle": "Hızlı Tuşlar",
+    "removeQuickKey": "Kaldır",
+    "resetDefaults": "Varsayılanlara sıfırla",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "closeTab": "Kapat",
+    "connecting": "Bağlanıyor...",
+    "connectionLost": "Bağlantı kesildi",
+    "connectionRejected": "Bağlantı sunucu tarafından reddedildi. Lütfen kimlik doğrulamanızı ve ağ yapılandırmanızı kontrol edin.",
+    "connectionTimeout": "Bağlantı zaman aşımı",
+    "enableAutoTmuxAction": "Otomatik Tmux'u Etkinleştir",
+    "hostKeyRejected": "SSH sunucu anahtarı doğrulaması reddedildi. Bağlantı iptal edildi.",
+    "linkDialogCopy": "Kopyala",
+    "linkDialogOpen": "Aç",
+    "linkDialogTitle": "Bağlantıyı Aç",
+    "maxReconnectAttemptsReached": "Maksimum yeniden bağlanma denemesine ulaşıldı",
+    "noHostSelected": "Hiçbir sunucu seçilmedi",
+    "passwordPromptFillTitle": "Kayıtlı parola bu isteme doldurulsun mu?",
+    "reconnect": "Yeniden Bağlan",
+    "reconnected": "Başarıyla yeniden bağlandı",
+    "reconnecting": "Yeniden bağlanıyor... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Connection lost, reconnecting...",
+    "searchCaseSensitive": "Match Case",
+    "searchClose": "Close (Escape)",
+    "searchNext": "Next Match (Enter)",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "Find",
+    "searchPrevious": "Previous Match (Shift+Enter)",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "Match Whole Word",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionTakenOver": "Oturum başka bir sekmede açıldı. Yeniden bağlanılıyor...",
+    "tmuxAttached": "Bağlı istemciler",
+    "tmuxAttachedCount": "{{count}} bağlı",
+    "tmuxCopyHint": "Seçimi ayarlayın ve panoya kopyalamak için Enter tuşuna basın",
+    "tmuxCreateNew": "Yeni oturum başlat",
+    "tmuxDetached": "tmux oturumundan ayrıldı",
+    "tmuxLastActivity": "Son etkinlik",
+    "tmuxSessionAttached": "tmux oturumuna bağlanıldı: {{name}}",
+    "tmuxSessionCreated": "tmux oturumu oluşturuldu: {{name}}",
+    "tmuxSessionPickerDesc": "Bu sunucuda mevcut tmux oturumları bulundu. Yeniden bağlanmak için birini seçin veya yeni bir oturum oluşturun.",
+    "tmuxSessionPickerTitle": "tmux Oturumları",
+    "tmuxTimeDays": "{{count}}g önce",
+    "tmuxTimeHours": "{{count}}s önce",
+    "tmuxTimeJustNow": "az önce",
+    "tmuxTimeMinutes": "{{count}}dk önce",
+    "tmuxUnavailable": "Uzak sunucuda tmux yüklü değil, standart kabuğa dönülüyor",
+    "tmuxWindowCount": "{{count}} pencere",
+    "tmuxWindows": "Pencereler",
+    "unknownError": "Bilinmeyen bir hata oluştu",
+    "websocketAbnormalClose": "Bağlantı beklenmedik şekilde kapandı. Bu, ters proxy veya SSL yapılandırma sorunundan kaynaklanabilir. Lütfen sunucu günlüklerini kontrol edin.",
+    "websocketError": "WebSocket bağlantı hatası",
+    "clipboardReadFailed": "Panodan okuma başarısız oldu. Pano izinlerinin verildiğinden emin olun.",
+    "clipboardWriteFailed": "Panoya kopyalama başarısız oldu. Sayfanın HTTPS veya localhost üzerinden sunulduğundan emin olun.",
+    "connected": "Bağlandı",
+    "totpCodeLabel": "Doğrulama Kodu",
+    "duplicateTab": "Duplicate tab",
+    "imageChooseFile": "Choose an image file",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
+    "retry": "Yeniden dene",
+    "showToolbar": "Araç çubuğunu genişlet",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
+    "uploadingImage": "Yükleniyor..."
+  },
+  "history": {
+    "noTerminalSelected": "Terminal seçilmedi",
+    "noTerminalSelectedHint": "Komut geçmişini görüntülemek için bir SSH terminal sekmesi açın",
+    "searchPlaceholder": "Geçmişte ara...",
+    "clearAll": "Tümünü Temizle",
+    "noHistoryEntries": "Geçmiş girdisi yok",
+    "trackingDisabled": "Geçmiş takibi kapalı",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
+  },
+  "touchInput": {
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "Advanced",
+    "resetDefaults": "Varsayılanlara sıfırla",
+    "dragThreshold": "Drag threshold",
+    "maxWheelDelta": "Maximum wheel delta",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "Release grace period",
+    "minimumVelocity": "Minimum velocity",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "Maximum ticks per frame"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
+    "selectedModeUnavailable": "Unavailable",
+    "test": "Test Et",
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "An upload would use: {{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "Oturumlar",
+        "newHosts": "New Hosts"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Komut Geçmişi",
+        "description": "Komut geçmişi kaydına izin ver. Devre dışı bırakıldığında, host başına ayarlara bakılmaksızın geçmiş kaydedilmez."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
+      },
+      "imageStorageMode": {
+        "label": "Storage Mode",
+        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "auto": "Otomatik",
+        "local": "Yerel",
+        "remoteSftp": "Remote (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+      },
+      "imageMaxCount": {
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+      },
+      "imageMaxBytes": {
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+      },
+      "newHostTheme": {
+        "label": "Theme for new hosts",
+        "description": "The terminal theme a new host starts with."
+      },
+      "newHostFontFamily": {
+        "label": "Font for new hosts",
+        "description": "The terminal font a new host starts with."
+      },
+      "newHostFontSize": {
+        "label": "Font size for new hosts",
+        "description": "The terminal font size a new host starts with, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Cursor style for new hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinking cursor for new hosts"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Enable Terminal Toolbar",
+        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+      },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
+      },
+      "enableCommandHistory": {
+        "label": "Komut Geçmişi",
+        "description": "Geçmiş ve otomatik tamamlama için bu terminalde çalıştırılan komutları kaydet"
+      },
+      "enableTerminal": {
+        "label": "Terminali Etkinleştir",
+        "description": "Offer an SSH terminal for this host."
+      },
+      "inheritAppearance": {
+        "label": "Use user defaults"
+      },
+      "theme": {
+        "label": "Tema"
+      },
+      "cursorBlink": {
+        "label": "Blinking cursor"
+      },
+      "cursorStyle": {
+        "label": "Cursor style"
+      },
+      "fontSize": {
+        "label": "Font size"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Scrollback"
+      },
+      "letterSpacing": {
+        "label": "Letter spacing"
+      },
+      "lineHeight": {
+        "label": "Line height"
+      },
+      "bellStyle": {
+        "label": "Bell"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum contrast ratio"
+      },
+      "backgroundImage": {
+        "label": "Background image"
+      },
+      "backgroundImageOpacity": {
+        "label": "Background image opacity"
+      },
+      "customThemeColors": {
+        "label": "Custom theme colors"
+      },
+      "rightClickSelectsWord": {
+        "label": "Right click selects word"
+      },
+      "macOptionIsMeta": {
+        "label": "Option is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Fast scroll key"
+      },
+      "fastScrollSensitivity": {
+        "label": "Fast scroll speed"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh command"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Use the SSH title"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntax highlighting"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntax highlighting categories"
+      },
+      "linkClickBehavior": {
+        "label": "Link click"
+      },
+      "localEcho": {
+        "label": "Local echo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Offer to fill password prompts"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Komut Otomatik Tamamlama",
+        "description": "Show autocomplete while typing if you press tab"
+      },
+      "localEcho": {
+        "label": "Local Echo",
+        "description": "Reduce perceived input latency using safe local keystroke prediction"
+      },
+      "linkClickBehavior": {
+        "label": "Terminal Bağlantı Tıklama",
+        "description": "Terminalde bağlantılara tıklandığında varsayılan davranış"
+      },
+      "customThemes": {
+        "label": "Saved themes"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "Terminal",
+    "addHost": "Ana Bilgisayar Ekle",
+    "applyGlobalThemeTooltip": "Apply this theme",
+    "backgroundImageDesc": "Bir terminal arka plan resmi için isteğe bağlı URL",
+    "backgroundImageLabel": "Arka Plan Resmi URL",
+    "backgroundImageOpacityLabel": "Arka Plan Resmi Opaklığı",
+    "backspaceMode": "Geri Silme Modu",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "Backspace Modu",
+    "backspaceModeNormal": "Normal (DEL)",
+    "behaviorAndAdvanced": "Davranış ve Gelişmiş",
+    "bellStyle": "Zil Stili",
+    "bellStyleBoth": "Both",
+    "bellStyleLabel": "Zil Stili",
+    "bellStyleNone": "Yok",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "Visual",
+    "colorTheme": "Renk Teması",
+    "cursorBlink": "İmleç Yanıp Sönme",
+    "cursorBlinking": "İmleç Yanıp Sönmesi",
+    "cursorBlinkingDesc": "Terminal imleci için yanıp sönme animasyonunu etkinleştir",
+    "cursorStyle": "İmleç Stili",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Block",
+    "cursorStyleLabel": "İmleç Stili",
+    "cursorStyleUnderline": "Underline",
+    "customThemeAnsiColors": "ANSI Renkleri",
+    "customThemeBackground": "Arka Plan",
+    "customThemeBlack": "Siyah",
+    "customThemeBlue": "Mavi",
+    "customThemeBrightBlack": "Parlak Siyah",
+    "customThemeBrightBlue": "Parlak Mavi",
+    "customThemeBrightCyan": "Parlak Cyan",
+    "customThemeBrightGreen": "Parlak Yeşil",
+    "customThemeBrightMagenta": "Parlak Magenta",
+    "customThemeBrightRed": "Parlak Kırmızı",
+    "customThemeBrightWhite": "Parlak Beyaz",
+    "customThemeBrightYellow": "Parlak Sarı",
+    "customThemeColors": "Özel Renkler",
+    "customThemeCursor": "İmleç",
+    "customThemeCursorAccent": "İmleç Vurgusu",
+    "customThemeCyan": "Cyan",
+    "customThemeForeground": "Ön Plan",
+    "customThemeGreen": "Yeşil",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Kırmızı",
+    "customThemeResetTooltip": "Varsayılanlara sıfırla",
+    "customThemeSelection": "Seçim",
+    "customThemeWhite": "Beyaz",
+    "customThemeYellow": "Sarı",
+    "deleteGlobalThemeTooltip": "Delete this theme",
+    "docsLink": "Dokümanları görüntüle",
+    "enableAutoMosh": "Otomatik Mosh'u Etkinleştir",
+    "enableAutoMoshDesc": "Varsa, SSH yerine Mosh'u tercih et",
+    "enableAutoTmux": "Otomatik Tmux'u Etkinleştir",
+    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "fastScrollModifier": "Hızlı Kaydırma Değiştiricisi",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Hızlı Kaydırma Değiştiricisi",
+    "fastScrollModifierShift": "Shift",
+    "fastScrollSensitivity": "Hızlı Kaydırma Hassasiyeti",
+    "fastScrollSensitivityLabel": "Hızlı Kaydırma Hassasiyeti",
+    "fontFamily": "Yazı Tipi Ailesi",
+    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
+    "fontFamilyCustomOption": "Custom...",
+    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyLabel": "Yazı Tipi Ailesi",
+    "fontSize": "Yazı Tipi Boyutu",
+    "fontSizeLabel": "Yazı Tipi Boyutu",
+    "hostNotFound": "Host bulunamadı",
+    "letterSpacing": "Harf Boşluğu",
+    "letterSpacingPx": "Harf Aralığı (px)",
+    "lineHeight": "Satır Yüksekliği",
+    "lineHeightLabel": "Satır Yüksekliği",
+    "linkClickBehaviorConfirm": "Açmak veya kopyalamak için açılır pencere göster",
+    "linkClickBehaviorDesc": "Terminalde bir bağlantıya tıkladığınızda ne olacağını kontrol eder. Uygulama düzeyindeki ayarı takip etmek için 'Varsayılan'ı kullanın.",
+    "linkClickBehaviorDirect": "Doğrudan aç",
+    "linkClickBehaviorLabel": "Bağlantı Tıklama Davranışı",
+    "loadingHost": "Host yükleniyor...",
+    "localEchoAuto": "Automatic",
+    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
+    "localEchoLabel": "Local Echo",
+    "localEchoOff": "Kapalı",
+    "localEchoOn": "Always on",
+    "macOptionIsMetaLabel": "Option Key Sends Meta",
+    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "moshCommand": "MOSH Komutu",
+    "moshCommandLabel": "Mosh Komutu",
+    "noSavedThemes": "No saved themes yet",
+    "none": "Hiçbiri",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "rightClickSelectsWord": "Sağ Tık Kelimeyi Seçer",
+    "rightClickSelectsWordLabel": "Sağ Tık Kelime Seçer",
+    "rightClickSelectsWordShortDesc": "Sağ tıklandığında imlecin altındaki kelimeyi seç",
+    "saveAsGlobalTheme": "Save as Global Theme",
+    "saveGlobalThemeError": "Failed to save theme",
+    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
+    "saveGlobalThemeSuccess": "Theme saved",
+    "savedThemesLabel": "Saved Themes",
+    "scrollbackBufferLabel": "Kaydırma Arabelleği",
+    "scrollbackMaxLines": "Geçmişte saklanan maksimum satır sayısı",
+    "sudoPasswordAutoFill": "Sudo Parolası Otomatik Doldurma",
+    "sudoPasswordAutoFillDesc": "Sudo parolasını saklayın; böylece ana bilgisayar metrikleri, terminal istemleri ve diğer bileşenler ayrıcalıklı komutları otomatik olarak çalıştırabilir.",
+    "sudoPasswordAutoFillLabel": "Sudo Parolası Otomatik Doldurma",
+    "syntaxCategoryIpAddresses": "IP Adresleri",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Günlük Düzeyleri",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "Etiketli Sayılar",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "Dosya Yolları",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "Zaman Damgaları",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL'ler",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Terminal çıktısını renklendir (hatalar, yollar, IP'ler, zaman damgaları)",
+    "syntaxHighlightingLabel": "Söz Dizimi Vurgulama",
+    "terminalAppearance": "Terminal Görünümü",
+    "theme": "Tema",
+    "themePreview": "Tema Önizlemesi",
+    "useSSHTitleDesc": "Sekme başlığını, ana bilgisayar adı yerine kabuğun pencere başlığından güncelle",
+    "useSSHTitleLabel": "SSH Pencere Başlığını Kullan",
+    "enableTunnel": "Tüneli Etkinleştir",
+    "enableFileManager": "Dosya Yöneticisini Etkinleştir",
+    "enableDocker": "Docker'ı Etkinleştir",
+    "startupSnippet": "Başlangıç Parçacığı",
+    "quickActions": "Hızlı Eylemler",
+    "proxmoxLastSyncStatus": {
+      "success": "Başarılı"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "RDP URL kopyalandı",
+    "vncUrlCopied": "VNC URL kopyalandı",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "Kimlik bilgisi yok (aşağıda doğrudan kimlik bilgileri)",
+      "authTypeDirect": "Doğrudan",
+      "authTypeCredential": "Kimlik bilgisi",
+      "authTypeNone": "Yok",
+      "recordingPath": "Kayıt Yolu",
+      "recordingName": "Kayıt Adı",
+      "saveHostFirst": "Önce ana makineyi kaydedin.",
+      "sharingOptionsAfterSave": "Paylaşım seçenekleri ana makine kaydedildikten sonra kullanılabilir.",
+      "permissionLevel": "İzin Düzeyi",
+      "typeHeader": "Tür",
+      "targetHeader": "Hedef",
+      "permissionHeader": "İzin",
+      "cancelBtn": "İptal",
+      "savingBtn": "Kaydediliyor...",
+      "updateHostBtn": "Ana Makineyi Güncelle",
+      "addHostBtn": "Ana Makine Ekle"
+    },
+    "filterAuthVault": "Vault"
+  },
+  "nav": {
+    "history": "Geçmiş",
+    "localTerminal": "Local Terminal",
+    "sshTools": "SSH Araçları",
+    "terminal": "Terminal",
+    "macros": "Macros"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Tuş vuruşlarını yayınlamak için buraya yazın...",
+    "copyOnSelect": "Copy selected text automatically",
+    "enableRightClickCopyPaste": "Sağ tık kopyala/yapıştırmayı etkinleştir",
+    "fillPassword": "Parolayı doldur",
+    "fillPasswordMissing": "Seçili {{count}} terminal için kayıtlı parola yok",
+    "fillPasswordSuccess": "Parola {{count}} terminale dolduruldu",
+    "keyRecordingTitle": "Tuş Kaydı",
+    "noTerminalTabsOpen": "Açık terminal sekmesi yok",
+    "recordToTerminals": "Terminallere Kaydet",
+    "selectAll": "Tümü",
+    "selectNone": "Yok",
+    "selectTerminalsAbove": "Yukarıdaki terminalleri seç",
+    "settingsTitle": "Ayarlar",
+    "startRecording": "Kaydı Başlat",
+    "stopRecording": "Kaydı Durdur"
+  },
+  "keybindings": {
+    "copy": "Copy selection",
+    "paste": "Yapıştır",
+    "sendControlCode": "Send Ctrl+letter signal",
+    "sendText": "Send text",
+    "controlCodeLabel": "Letter",
+    "textLabel": "Text to send",
+    "appendEnterLabel": "Press Enter after sending",
+    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+    "textRequired": "Enter the text to send",
+    "controlCodeRequired": "Enter a single letter for the control code",
+    "builtIn": {
+      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+      "copyCmdC": "Copy selection (Cmd+C)",
+      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+    }
+  },
+  "macros": {
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "Hedef",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
+    "name": "Ad",
+    "namePlaceholder": "Restart web server",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "Açıklama",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "Kaydedilmemiş değişiklikler",
+    "save": "Kaydet",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "Sil",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "İptal",
+    "run": "Çalıştır",
+    "stop": "Durdurma",
+    "running": "Running...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
+    "stepTypes": {
+      "send": {
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
+      },
+      "wait": {
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
+      },
+      "if": {
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
+      },
+      "repeat": {
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
+      }
+    },
+    "send": {
+      "text": "Command or text",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
+    },
+    "wait": {
+      "pattern": "Wait until the output contains",
+      "patternPlaceholder": "parola:",
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "Keep going anyway"
+    },
+    "delay": {
+      "duration": "Wait for"
+    },
+    "ifStep": {
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
+    },
+    "repeat": {
+      "count": "Number of times",
+      "times": "times"
+    },
+    "match": {
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "Leave this off to match the text exactly as written.",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+    },
+    "seconds": "saniye",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

@@ -12,9 +12,6 @@ import {
   ArrowLeft,
   Shield,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Fingerprint,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,11 +25,8 @@ import {
   initiatePasswordReset,
   verifyPasswordResetCode,
   completePasswordReset,
-  getOIDCAuthorizeUrl,
-  verifyTOTPLogin,
   isElectron,
   getCurrentToken,
-  getOidcSilentLoginDefault,
   requestDesktopAutoSession,
   requestTrustedProxyLogin,
 } from "@/main-axios";
@@ -40,9 +34,18 @@ import {
   getEmbeddedServerFailure,
   type EmbeddedServerFailure,
 } from "@/lib/embedded-server-status";
-import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
-import { isPasskeySupported, loginWithPasskey } from "@/api/webauthn-api";
-import type { SSOProviderPublic } from "@/types/index";
+import {
+  challengeSecondFactor,
+  getLoginMethods,
+  startLoginRedirect,
+  submitLoginMethod,
+  verifySecondFactor,
+  type LoginResponse,
+  type PublicLoginMethod,
+  type SecondFactorRef,
+} from "@/api/auth-methods-api";
+import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
+import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
 import { useBranding } from "@/contexts/BrandingContext";
 import {
@@ -55,6 +58,7 @@ import {
   shouldTriggerSilentSignin,
 } from "./silent-signin";
 import { Select2 } from "@/components/select2";
+import { cn } from "@/lib/utils";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -94,7 +98,45 @@ const LANGUAGES = [
   { code: "vi", label: "Tiếng Việt" },
 ];
 
+function LanguageRow({
+  label,
+  value,
+  onChange,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (code: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-center justify-between gap-4", className)}>
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+      <Select2
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        align="end"
+        contentClassName="w-56"
+        className="h-8 w-40 shrink-0 px-2.5 text-xs"
+      >
+        {LANGUAGES.map((lang) => (
+          <option key={lang.code} value={lang.code}>
+            {lang.label}
+          </option>
+        ))}
+      </Select2>
+    </div>
+  );
+}
+
 const STORAGE_KEY = "termix_auth";
+
+/** An empty list means "whichever factors this screen has UI for". */
+function parseSecondFactorIds(value: string | null): SecondFactorRef[] {
+  const ids = (value ?? "").split(",").filter(Boolean);
+  return ids.map((id) => ({ id, pluginId: "", labelKey: "" }));
+}
 const DESKTOP_MANUAL_LOGOUT_KEY = "termix_desktop_manual_logout";
 
 export function getStoredAuth(): {
@@ -133,7 +175,7 @@ function storeAuth(username: string) {
   );
 }
 
-type AuthView = "login" | "register" | "reset" | "totp" | "external";
+type AuthView = "login" | "register" | "reset" | "second-factor" | "external";
 type ResetStep = "email" | "code" | "newpass";
 
 interface AuthProps {
@@ -237,16 +279,6 @@ export function Auth({ onLogin }: AuthProps) {
   const localDesktopAuth = isElectron() && !isInElectronWebView();
   const [view, setView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
-  const [providerLoading, setProviderLoading] = useState<
-    Record<number, boolean>
-  >({});
-  const [passkeySupported] = useState(() => {
-    try {
-      return isPasskeySupported();
-    } catch {
-      return false;
-    }
-  });
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -259,9 +291,23 @@ export function Auth({ onLogin }: AuthProps) {
     }
   });
 
-  const [totpCode, setTotpCode] = useState("");
-  const [totpTempToken, setTotpTempToken] = useState("");
-  const totpInputRef = useRef<HTMLInputElement>(null);
+  // An empty token means the server holds the pending login in a cookie,
+  // which is how a redirect login hands over to the second factor step.
+  const [pendingToken, setPendingToken] = useState("");
+  const [secondFactors, setSecondFactors] = useState<SecondFactorRef[]>([]);
+  const [activeFactorId, setActiveFactorId] = useState("");
+  const loginMethodUIs = useLoginMethods();
+  const secondFactorUIs = useSecondFactors();
+  // A server that did not list its factors gets every factor with a UI here.
+  const shownFactors: SecondFactorRef[] =
+    secondFactors.length > 0
+      ? secondFactors
+      : secondFactorUIs.map((ui) => ({
+          id: ui.id,
+          pluginId: ui.pluginId ?? "",
+          labelKey: ui.titleKey,
+        }));
+  const currentFactorId = activeFactorId || shownFactors[0]?.id || "";
 
   const [resetStep, setResetStep] = useState<ResetStep>("email");
   const [resetCode, setResetCode] = useState("");
@@ -283,16 +329,19 @@ export function Auth({ onLogin }: AuthProps) {
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
   const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
-  const [ssoProviders, setSsoProviders] = useState<SSOProviderPublic[]>([]);
-  const [ssoProvidersLoaded, setSsoProvidersLoaded] = useState(false);
-  const [expandedLdapId, setExpandedLdapId] = useState<number | null>(null);
-  const [ldapUsername, setLdapUsername] = useState("");
-  const [ldapPassword, setLdapPassword] = useState("");
+  const [authMethods, setAuthMethods] = useState<PublicLoginMethod[]>([]);
+  const [authMethodsLoaded, setAuthMethodsLoaded] = useState(false);
+  const inlineMethodIds = new Set(
+    loginMethodUIs.filter((ui) => ui.placement === "inline").map((ui) => ui.id),
+  );
+  const inlineMethods = authMethods.filter((method) =>
+    inlineMethodIds.has(method.id),
+  );
+  const externalMethods = authMethods.filter(
+    (method) => method.id !== "password" && !inlineMethodIds.has(method.id),
+  );
   const silentSigninHandledRef = useRef(false);
   const proxySigninHandledRef = useRef(false);
-  const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
-  const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
-    useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(
@@ -348,28 +397,31 @@ export function Auth({ onLogin }: AuthProps) {
   useEffect(() => {
     if (!isInElectronWebView()) return;
 
-    const handleOIDCSystemBrowserResult = (event: MessageEvent) => {
+    const handleExternalBrowserResult = (event: MessageEvent) => {
       if (event.source !== window.parent) return;
       if (!event.data || typeof event.data !== "object") return;
       if (event.data.type !== "OIDC_SYSTEM_BROWSER_AUTH_RESULT") return;
 
-      const providerId =
-        typeof event.data.providerId === "number" ? event.data.providerId : -1;
       if (event.data.success) return;
-
-      setProviderLoading((prev) => ({ ...prev, [providerId]: false }));
+      setLoading(false);
+      if (event.data.secondFactor) {
+        enterSecondFactorStep(
+          event.data.tempToken ?? "",
+          parseSecondFactorIds(event.data.factors ?? null),
+        );
+        return;
+      }
       toast.error(event.data.error || t("errors.failedOidcLogin"));
     };
 
-    window.addEventListener("message", handleOIDCSystemBrowserResult);
+    window.addEventListener("message", handleExternalBrowserResult);
     return () =>
-      window.removeEventListener("message", handleOIDCSystemBrowserResult);
+      window.removeEventListener("message", handleExternalBrowserResult);
   }, [t]);
 
   useEffect(() => {
     if (localDesktopAuth) {
-      setSsoProvidersLoaded(true);
-      setOidcSilentLoginDefaultLoaded(true);
+      setAuthMethodsLoaded(true);
       return;
     }
     getRegistrationAllowed()
@@ -381,14 +433,12 @@ export function Auth({ onLogin }: AuthProps) {
     getPasswordResetAllowed()
       .then((allowed) => setPasswordResetAllowed(allowed))
       .catch(() => setPasswordResetAllowed(false));
-    getSSOProviders()
-      .then((providers) => setSsoProviders(providers || []))
-      .catch(() => setSsoProviders([]))
-      .finally(() => setSsoProvidersLoaded(true));
-    getOidcSilentLoginDefault()
-      .then((res) => setOidcSilentLoginDefault(res.enabled))
-      .catch(() => {})
-      .finally(() => setOidcSilentLoginDefaultLoaded(true));
+    // Plugins that draw login or second-factor UI load before sign-in.
+    void startPreLoginPlugins().catch(() => {});
+    getLoginMethods()
+      .then((methods) => setAuthMethods(methods))
+      .catch(() => setAuthMethods([]))
+      .finally(() => setAuthMethodsLoaded(true));
   }, [localDesktopAuth]);
 
   useEffect(() => {
@@ -514,30 +564,35 @@ export function Auth({ onLogin }: AuthProps) {
   ]);
 
   useEffect(() => {
-    if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();
-  }, [view]);
-
-  useEffect(() => {
-    setLdapUsername("");
-    setLdapPassword("");
-  }, [expandedLdapId]);
-
-  useEffect(() => {
-    if (!ssoProvidersLoaded) return;
-    if (!passwordLoginAllowed && ssoProviders.length > 0 && view === "login") {
+    if (!authMethodsLoaded) return;
+    if (
+      !passwordLoginAllowed &&
+      externalMethods.length > 0 &&
+      view === "login"
+    ) {
       setView("external");
     }
-  }, [ssoProvidersLoaded, passwordLoginAllowed, ssoProviders.length, view]);
+  }, [authMethodsLoaded, passwordLoginAllowed, externalMethods.length, view]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get("success");
     const error = urlParams.get("error");
+    if (urlParams.get("second_factor") === "1") {
+      enterSecondFactorStep(
+        urlParams.get("temp_token") ?? "",
+        parseSecondFactorIds(urlParams.get("second_factors")),
+      );
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
     if (error) {
       if (error === "registration_disabled")
         toast.error(t("messages.registrationDisabled"));
       else if (error === "user_not_allowed")
         toast.error(t("messages.userNotAllowed"));
+      else if (error === "second_factor_unavailable")
+        toast.error(t("auth.secondFactorUnavailable"));
       else toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
@@ -631,8 +686,7 @@ export function Auth({ onLogin }: AuthProps) {
     setNewPassword("");
     setConfirmNewPassword("");
     setResetTempToken("");
-    setTotpCode("");
-    setTotpTempToken("");
+    setPendingToken("");
   }
 
   function switchView(v: AuthView) {
@@ -649,6 +703,85 @@ export function Auth({ onLogin }: AuthProps) {
     setDesktopAutoSessionDone(null);
   }
 
+  function enterSecondFactorStep(
+    tempToken: string,
+    factors: SecondFactorRef[] = [],
+  ) {
+    setPendingToken(tempToken);
+    setSecondFactors(factors);
+    setActiveFactorId(factors[0]?.id ?? "");
+    setLoading(false);
+    setView("second-factor");
+  }
+
+  function showLoginError(err: unknown, fallbackKey: string) {
+    const error = err as {
+      message?: string;
+      response?: { data?: { error?: string; code?: string } };
+    };
+    if (error?.response?.data?.code === "SESSION_EXPIRED") {
+      setView("login");
+      toast.error(t("errors.sessionExpired"));
+      return;
+    }
+    if (error?.response?.data?.code === "second_factor_unavailable") {
+      toast.error(t("auth.secondFactorUnavailable"));
+      return;
+    }
+    toast.error(
+      error?.response?.data?.error || error?.message || t(fallbackKey),
+    );
+  }
+
+  /**
+   * Every login ends here: the second-factor step, a hand-off to the mobile
+   * or desktop shell, or signing in this window.
+   */
+  async function finishLogin(
+    res: LoginResponse,
+    source: string,
+    options: { fallbackUsername?: string; successKey?: string } = {},
+  ) {
+    if (res?.requires_totp || res?.requires_second_factor) {
+      enterSecondFactorStep(res.temp_token ?? "", res.second_factors);
+      return;
+    }
+    if (!res?.success) throw new Error(t("errors.loginFailed"));
+    if (isInMobileWebView()) {
+      // Native-app requests get the JWT in the login response body.
+      const token = res?.token ?? "";
+      (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+        JSON.stringify({ type: "AUTH_SUCCESS", token }),
+      );
+      setWebviewAuthSuccess(true);
+      return;
+    }
+    if (isInElectronWebView()) {
+      // The iframe never sends X-Electron-App, so the JWT only lands in an
+      // HttpOnly cookie on this origin. Read it back for the parent window.
+      const token = res?.token ?? (await getCurrentToken());
+      window.parent.postMessage(
+        {
+          type: "AUTH_SUCCESS",
+          source,
+          platform: "desktop",
+          token: token ?? null,
+          timestamp: Date.now(),
+        },
+        "*",
+      );
+      setWebviewAuthSuccess(true);
+      return;
+    }
+    const meRes = await getUserInfo();
+    const name =
+      meRes.username || res.username || options.fallbackUsername || "";
+    storeAuth(name);
+    clearDesktopManualLogout();
+    toast.success(t(options.successKey ?? "messages.loginSuccess"));
+    onLogin(name, meRes.userId || undefined, !!meRes.is_admin);
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!username.trim()) {
@@ -658,127 +791,11 @@ export function Auth({ onLogin }: AuthProps) {
     setLoading(true);
     try {
       const res = await loginUser(username.trim(), password, rememberMe);
-      if (res.requires_totp) {
-        setTotpTempToken(res.temp_token);
-        setView("totp");
-        return;
-      }
-      if (!res?.success) throw new Error(t("errors.loginFailed"));
-      if (isInMobileWebView()) {
-        // Native-app requests get the JWT in the login response body.
-        const token = res?.token ?? "";
-        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
-          JSON.stringify({ type: "AUTH_SUCCESS", token }),
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      if (isInElectronWebView()) {
-        // The iframe's login request never carries the X-Electron-App header
-        // (only the top-level Electron renderer's axios instances do), so the
-        // backend never includes the JWT in the login response body -- it
-        // only lands in an HttpOnly cookie scoped to this iframe's origin.
-        // Read it back via /users/me/token, same as the mobile-webview OIDC
-        // callback below does, so the parent window can persist it.
-        const token = res?.token ?? (await getCurrentToken());
-        window.parent.postMessage(
-          {
-            type: "AUTH_SUCCESS",
-            source: "auth_component",
-            platform: "desktop",
-            token: token ?? null,
-            timestamp: Date.now(),
-          },
-          "*",
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      const meRes = await getUserInfo();
-      storeAuth(meRes.username || username.trim());
-      clearDesktopManualLogout();
-      toast.success(t("messages.loginSuccess"));
-      onLogin(
-        meRes.username || username.trim(),
-        meRes.userId || undefined,
-        !!meRes.is_admin,
-      );
+      await finishLogin(res, "auth_component", {
+        fallbackUsername: username.trim(),
+      });
     } catch (err: unknown) {
-      const error = err as {
-        message?: string;
-        response?: { data?: { error?: string } };
-      };
-      toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
-          t("errors.unknownError"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handlePasskeyLogin() {
-    setLoading(true);
-    try {
-      const res = await loginWithPasskey(
-        username.trim() || undefined,
-        rememberMe,
-      );
-      if (res.requires_totp) {
-        setTotpTempToken(res.temp_token ?? "");
-        setView("totp");
-        return;
-      }
-      if (!res?.success) throw new Error(t("auth.passkeyLoginFailed"));
-      if (isInMobileWebView()) {
-        const token = res?.token ?? "";
-        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
-          JSON.stringify({ type: "AUTH_SUCCESS", token }),
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      if (isInElectronWebView()) {
-        // Same as handleLogin: the iframe never sends X-Electron-App, so read
-        // the JWT back from the cookie that was just set.
-        const token = res?.token ?? (await getCurrentToken());
-        window.parent.postMessage(
-          {
-            type: "AUTH_SUCCESS",
-            source: "passkey_auth_component",
-            platform: "desktop",
-            token: token ?? null,
-            timestamp: Date.now(),
-          },
-          "*",
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      const meRes = await getUserInfo();
-      storeAuth(meRes.username || res.username || "");
-      toast.success(t("messages.loginSuccess"));
-      onLogin(
-        meRes.username || res.username || "",
-        meRes.userId || undefined,
-        !!meRes.is_admin,
-      );
-    } catch (err: unknown) {
-      const error = err as {
-        name?: string;
-        message?: string;
-        response?: { data?: { error?: string } };
-      };
-      // Closing or cancelling the browser prompt is not a failure worth a toast.
-      if (error?.name === "NotAllowedError" || error?.name === "AbortError") {
-        return;
-      }
-      toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
-          t("auth.passkeyLoginFailed"),
-      );
+      showLoginError(err, "errors.unknownError");
     } finally {
       setLoading(false);
     }
@@ -802,124 +819,58 @@ export function Auth({ onLogin }: AuthProps) {
     try {
       await registerUser(username.trim(), password);
       const res = await loginUser(username.trim(), password, rememberMe);
-      if (res.requires_totp) {
-        setTotpTempToken(res.temp_token);
-        setView("totp");
-        return;
-      }
-      if (isInMobileWebView()) {
-        // Native-app requests get the JWT in the login response body.
-        const token = res?.token ?? "";
-        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
-          JSON.stringify({ type: "AUTH_SUCCESS", token }),
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      if (isInElectronWebView()) {
-        // Registration inside the Remote Sync iframe must hand off to the
-        // parent window the same way handleLogin does -- otherwise this
-        // component's own onLogin() below fires on the iframe's own,
-        // independent copy of the app, rendering the full remote AppShell
-        // inside the small login dialog instead of closing it.
-        const token = res?.token ?? (await getCurrentToken());
-        window.parent.postMessage(
-          {
-            type: "AUTH_SUCCESS",
-            source: "auth_component",
-            platform: "desktop",
-            token: token ?? null,
-            timestamp: Date.now(),
-          },
-          "*",
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      const meRes = await getUserInfo();
-      storeAuth(meRes.username || username.trim());
-      clearDesktopManualLogout();
-      toast.success(t("messages.registrationSuccess"));
-      onLogin(
-        meRes.username || username.trim(),
-        meRes.userId || undefined,
-        !!meRes.is_admin,
-      );
+      await finishLogin(res, "auth_component", {
+        fallbackUsername: username.trim(),
+        successKey: "messages.registrationSuccess",
+      });
     } catch (err: unknown) {
-      const error = err as {
-        message?: string;
-        response?: { data?: { error?: string } };
-      };
-      toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
-          t("errors.unknownError"),
-      );
+      showLoginError(err, "errors.unknownError");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleTOTP(e: React.FormEvent) {
-    e.preventDefault();
-    if (totpCode.length !== 6) {
-      toast.error(t("auth.enterCode"));
-      return;
-    }
+  /** Form login for any method: LDAP, a plugin's form, ... */
+  async function submitMethod(
+    methodId: string,
+    body: Record<string, unknown>,
+    instanceId?: string,
+  ) {
     setLoading(true);
     try {
-      const res = await verifyTOTPLogin(totpTempToken, totpCode, rememberMe);
-      if (!res?.success) throw new Error(t("errors.loginFailed"));
-      if (isInMobileWebView()) {
-        // Native-app requests get the JWT in the login response body.
-        const token = res?.token ?? "";
-        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
-          JSON.stringify({ type: "AUTH_SUCCESS", token }),
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      if (isInElectronWebView()) {
-        // See the equivalent branch in handleLogin: the iframe never sends
-        // X-Electron-App, so the JWT never lands in the response body here
-        // either -- read it back from the HttpOnly cookie that was just set.
-        const token = res?.token ?? (await getCurrentToken());
-        window.parent.postMessage(
-          {
-            type: "AUTH_SUCCESS",
-            source: "totp_auth_component",
-            platform: "desktop",
-            token: token ?? null,
-            timestamp: Date.now(),
-          },
-          "*",
-        );
-        setWebviewAuthSuccess(true);
-        return;
-      }
-      storeAuth(res.username || username);
-      clearDesktopManualLogout();
-      toast.success(t("messages.loginSuccess"));
-      onLogin(
-        res.username || username,
-        res.userId || undefined,
-        !!res.is_admin,
+      const res = await submitLoginMethod(
+        methodId,
+        { ...body, rememberMe },
+        instanceId,
       );
+      await finishLogin(res, "method_auth_component");
     } catch (err: unknown) {
-      const error = err as {
-        message?: string;
-        response?: { data?: { error?: string; code?: string } };
-      };
-      if (error?.response?.data?.code === "SESSION_EXPIRED") {
-        setView("login");
-        toast.error(t("errors.sessionExpired"));
-        return;
-      }
-      toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
-          t("errors.invalidTotpCode"),
-      );
+      showLoginError(err, "errors.loginFailed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function completeMethodResponse(
+    response: Record<string, unknown>,
+    source = "method_auth_component",
+  ) {
+    await finishLogin(response as LoginResponse, source);
+  }
+
+  async function verifyActiveFactor(body: Record<string, unknown>) {
+    setLoading(true);
+    try {
+      const res = await verifySecondFactor(currentFactorId, {
+        ...body,
+        rememberMe,
+        ...(pendingToken ? { temp_token: pendingToken } : {}),
+      });
+      await finishLogin(res, "second_factor_auth_component", {
+        fallbackUsername: username,
+      });
+    } catch (err: unknown) {
+      showLoginError(err, "errors.invalidTotpCode");
     } finally {
       setLoading(false);
     }
@@ -1004,22 +955,22 @@ export function Auth({ onLogin }: AuthProps) {
     }
   }
 
-  const handleOIDCLogin = useCallback(
-    async (providerId?: number) => {
-      const loadingKey = providerId ?? -1;
-      setProviderLoading((prev) => ({ ...prev, [loadingKey]: true }));
+  /**
+   * Sends the browser to a redirect login method. Inside the desktop app
+   * the system browser does it instead, so captcha stages render and the
+   * callback comes back to a local port.
+   */
+  const startRedirect = useCallback(
+    async (methodId: string, instanceId?: string) => {
+      setLoading(true);
       try {
+        const callbackPort = 17832 + Math.floor(Math.random() * 100);
         if (isInElectronWebView()) {
-          // Inside the Electron iframe: delegate OIDC to the parent window so
-          // the system browser opens instead of navigating the iframe (which
-          // would break captcha stages like Cloudflare Turnstile).
-          const callbackPort = 17832 + Math.floor(Math.random() * 100);
-          const authResponse = await getOIDCAuthorizeUrl(
+          const authUrl = await startLoginRedirect(methodId, {
+            instanceId,
             rememberMe,
-            callbackPort,
-            providerId,
-          );
-          const { auth_url: authUrl } = authResponse;
+            desktopCallbackPort: callbackPort,
+          });
           if (!authUrl) throw new Error(t("errors.invalidAuthUrl"));
           window.parent.postMessage(
             {
@@ -1027,7 +978,7 @@ export function Auth({ onLogin }: AuthProps) {
               source: "oidc_request",
               authUrl,
               callbackPort,
-              providerId: loadingKey,
+              providerId: -1,
             },
             "*",
           );
@@ -1037,27 +988,28 @@ export function Auth({ onLogin }: AuthProps) {
           const electronAPI = (
             window as unknown as {
               electronAPI?: {
-                oidcSystemBrowserAuth?: (
+                externalBrowserLogin?: (
                   authUrl: string,
                   port: number,
                 ) => Promise<{
                   success: boolean;
                   token?: string;
                   error?: string;
+                  secondFactor?: boolean;
+                  tempToken?: string;
+                  factors?: string;
                 }>;
               };
             }
           ).electronAPI;
-          if (electronAPI?.oidcSystemBrowserAuth) {
-            const callbackPort = 17832 + Math.floor(Math.random() * 100);
-            const authResponse = await getOIDCAuthorizeUrl(
+          if (electronAPI?.externalBrowserLogin) {
+            const authUrl = await startLoginRedirect(methodId, {
+              instanceId,
               rememberMe,
-              callbackPort,
-              providerId,
-            );
-            const { auth_url: authUrl } = authResponse;
+              desktopCallbackPort: callbackPort,
+            });
             if (!authUrl) throw new Error(t("errors.invalidAuthUrl"));
-            const result = await electronAPI.oidcSystemBrowserAuth(
+            const result = await electronAPI.externalBrowserLogin(
               authUrl,
               callbackPort,
             );
@@ -1066,80 +1018,84 @@ export function Auth({ onLogin }: AuthProps) {
               window.location.reload();
               return;
             }
+            if (result.secondFactor) {
+              enterSecondFactorStep(
+                result.tempToken ?? "",
+                parseSecondFactorIds(result.factors ?? null),
+              );
+              return;
+            }
             throw new Error(result.error || "Authentication failed");
           }
         }
-        const authResponse = await getOIDCAuthorizeUrl(
+        const authUrl = await startLoginRedirect(methodId, {
+          instanceId,
           rememberMe,
-          undefined,
-          providerId,
-        );
-        const { auth_url: authUrl } = authResponse;
+        });
         if (!authUrl || authUrl === "undefined")
           throw new Error(t("errors.invalidAuthUrl"));
         window.location.replace(authUrl);
       } catch (err: unknown) {
-        const error = err as {
-          message?: string;
-          response?: { data?: { error?: string } };
-        };
-        toast.error(
-          error?.response?.data?.error ||
-            error?.message ||
-            t("errors.failedOidcLogin"),
-        );
-        setProviderLoading((prev) => ({ ...prev, [loadingKey]: false }));
+        showLoginError(err, "errors.failedOidcLogin");
+        setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [rememberMe, t],
   );
 
-  const handleLDAPLogin = useCallback(
-    async (providerId: number) => {
-      if (!ldapUsername.trim() || !ldapPassword) {
-        toast.error(t("errors.requiredField"));
-        return;
-      }
-      setProviderLoading((prev) => ({ ...prev, [providerId]: true }));
-      try {
-        await ldapLogin(
-          providerId,
-          ldapUsername.trim(),
-          ldapPassword,
-          rememberMe,
-        );
-        const meRes = await getUserInfo();
-        storeAuth(meRes.username || "");
-        clearDesktopManualLogout();
-        toast.success(t("messages.loginSuccess"));
-        onLogin(
-          meRes.username || "",
-          meRes.userId || undefined,
-          !!meRes.is_admin,
-        );
-      } catch (err: unknown) {
-        const error = err as {
-          response?: { data?: { error?: string } };
-          message?: string;
-        };
-        toast.error(
-          error?.response?.data?.error ||
-            error?.message ||
-            t("auth.ldapLoginFailed"),
-        );
-      } finally {
-        setProviderLoading((prev) => ({ ...prev, [providerId]: false }));
-      }
-    },
-    [ldapUsername, ldapPassword, rememberMe, onLogin, t],
-  );
+  /** Draws a login method with the UI its plugin (or core) registered. */
+  function renderLoginMethod(method: PublicLoginMethod) {
+    const ui = loginMethodUIs.find((candidate) => candidate.id === method.id);
+    const props = {
+      methodId: method.id,
+      instances: method.instances,
+      rememberMe,
+      disabled: loading,
+      username,
+      submit: (body: Record<string, unknown>, instanceId?: string) =>
+        submitMethod(method.id, body, instanceId),
+      startRedirect: (instanceId?: string) =>
+        startRedirect(method.id, instanceId),
+      complete: (response: Record<string, unknown>) =>
+        completeMethodResponse(response).catch((err) =>
+          showLoginError(err, "errors.loginFailed"),
+        ),
+    };
+    if (ui) {
+      const Component = ui.component;
+      return <Component key={method.id} {...props} />;
+    }
+    // A redirect method needs no UI of its own: one button per instance.
+    if (method.kind === "redirect") {
+      return method.instances.map((instance) => (
+        <Button
+          key={`${method.id}:${instance.id}`}
+          onClick={() => void startRedirect(method.id, instance.id)}
+          disabled={loading}
+          className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
+        >
+          {t("auth.loginWithProvider", { name: instance.label })}
+        </Button>
+      ));
+    }
+    return null;
+  }
 
   useEffect(() => {
-    if (!ssoProvidersLoaded || silentSigninHandledRef.current) return;
-    if (!oidcSilentLoginDefaultLoaded) return;
+    if (!authMethodsLoaded || silentSigninHandledRef.current) return;
 
+    // A login method may ask to start without a click (the sso plugin's
+    // silent sign-in setting); ?silent_signin asks for it once.
+    const autoStart = externalMethods
+      .filter((method) => method.kind === "redirect")
+      .flatMap((method) =>
+        method.instances
+          .filter((instance) => instance.autoStart)
+          .map((instance) => ({ method, instance })),
+      )[0];
     const urlTriggered = shouldTriggerSilentSignin(window.location.search);
-    if (!urlTriggered && !oidcSilentLoginDefault) return;
+    if (!urlTriggered && !autoStart) return;
 
     if (urlTriggered) {
       const nextSearch = removeSilentSigninFromSearch(window.location.search);
@@ -1152,25 +1108,23 @@ export function Auth({ onLogin }: AuthProps) {
 
     silentSigninHandledRef.current = true;
 
-    const oidcProvider = ssoProviders.find(
-      (p) => p.type === "oidc" || p.type === "github" || p.type === "google",
+    const redirectMethod = externalMethods.find(
+      (method) => method.kind === "redirect" && method.instances.length > 0,
     );
-    if (oidcProvider && !isElectron()) {
-      handleOIDCLogin(oidcProvider.id);
+    const target =
+      autoStart ??
+      (redirectMethod
+        ? { method: redirectMethod, instance: redirectMethod.instances[0] }
+        : null);
+    if (target && !isElectron()) {
+      void startRedirect(target.method.id, target.instance.id);
       return;
     }
 
     if (urlTriggered) {
       toast.info(t("errors.silentSigninOidcUnavailable"));
     }
-  }, [
-    handleOIDCLogin,
-    ssoProvidersLoaded,
-    ssoProviders,
-    t,
-    oidcSilentLoginDefault,
-    oidcSilentLoginDefaultLoaded,
-  ]);
+  }, [startRedirect, authMethodsLoaded, externalMethods, t]);
 
   // Electron, non-iframed: wait for the auto-session probe before rendering
   // anything, so a standalone desktop install never flashes a login form
@@ -1194,22 +1148,12 @@ export function Auth({ onLogin }: AuthProps) {
             </p>
             <p className="text-sm text-muted-foreground">{detail}</p>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {t("common.language")}
-            </span>
-            <select
-              value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <LanguageRow
+            label={t("common.language")}
+            value={language}
+            onChange={handleLanguageChange}
+            className="pt-2 border-t border-border"
+          />
         </div>
       </div>
     );
@@ -1252,22 +1196,12 @@ export function Auth({ onLogin }: AuthProps) {
           <Button onClick={() => window.location.reload()}>
             {t("common.refresh")}
           </Button>
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {t("common.language")}
-            </span>
-            <Select2
-              value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </Select2>
-          </div>
+          <LanguageRow
+            label={t("common.language")}
+            value={language}
+            onChange={handleLanguageChange}
+            className="pt-2 border-t border-border"
+          />
         </div>
       </div>
     );
@@ -1329,22 +1263,12 @@ export function Auth({ onLogin }: AuthProps) {
                     : "Retry local desktop session"}
                 </Button>
                 <Separator />
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.language")}
-                  </span>
-                  <Select2
-                    value={language}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </Select2>
-                </div>
+                <LanguageRow
+                  label={t("common.language")}
+                  value={language}
+                  onChange={handleLanguageChange}
+                  className="pt-1"
+                />
               </div>
             </div>
           </div>
@@ -1366,7 +1290,7 @@ export function Auth({ onLogin }: AuthProps) {
     {
       id: "external",
       label: t("auth.external"),
-      show: ssoProviders.length > 0,
+      show: externalMethods.length > 0,
     },
   ];
 
@@ -1405,7 +1329,7 @@ export function Auth({ onLogin }: AuthProps) {
         <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
           <div className="w-full max-w-sm flex flex-col gap-6">
             {/* TOTP view */}
-            {view === "totp" && (
+            {view === "second-factor" && (
               <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
                   <h1 className="text-xl font-bold">
@@ -1415,40 +1339,54 @@ export function Auth({ onLogin }: AuthProps) {
                     {t("auth.enterCode")}
                   </p>
                 </div>
-                <form onSubmit={handleTOTP} className="flex flex-col gap-4">
-                  <Field label={t("auth.verifyCode")} htmlFor="totp-code">
-                    <Input
-                      ref={totpInputRef}
-                      id="totp-code"
-                      type="text"
-                      placeholder="000000"
-                      maxLength={6}
-                      value={totpCode}
-                      onChange={(e) =>
-                        setTotpCode(e.target.value.replace(/\D/g, ""))
-                      }
+                {shownFactors.length > 1 && (
+                  <div className="flex border border-border overflow-hidden">
+                    {shownFactors.map((factor) => {
+                      const ui = secondFactorUIs.find(
+                        (candidate) => candidate.id === factor.id,
+                      );
+                      return (
+                        <button
+                          key={factor.id}
+                          type="button"
+                          onClick={() => setActiveFactorId(factor.id)}
+                          className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${currentFactorId === factor.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                        >
+                          {ui ? t(ui.titleKey) : factor.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {(() => {
+                  const ui = secondFactorUIs.find(
+                    (candidate) => candidate.id === currentFactorId,
+                  );
+                  if (!ui) {
+                    return (
+                      <p className="text-xs text-destructive">
+                        {t("auth.secondFactorNoUI")}
+                      </p>
+                    );
+                  }
+                  const Component = ui.component;
+                  return (
+                    <Component
+                      key={currentFactorId}
+                      factorId={currentFactorId}
+                      rememberMe={rememberMe}
                       disabled={loading}
-                      className="text-center text-2xl tracking-widest font-mono"
-                      autoComplete="one-time-code"
+                      verify={verifyActiveFactor}
+                      challenge={() =>
+                        challengeSecondFactor(
+                          currentFactorId,
+                          pendingToken || undefined,
+                        )
+                      }
+                      cancel={() => switchView("login")}
                     />
-                  </Field>
-                  <Button
-                    type="submit"
-                    className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                    disabled={loading || totpCode.length !== 6}
-                  >
-                    {loading ? t("common.loading") : t("auth.verifyCode")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => switchView("login")}
-                    disabled={loading}
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                </form>
+                  );
+                })()}
               </div>
             )}
 
@@ -1648,113 +1586,10 @@ export function Auth({ onLogin }: AuthProps) {
                     </div>
 
                     <div className="flex flex-col gap-3">
-                      {ssoProviders.map((provider) => {
-                        const isLoading = !!providerLoading[provider.id];
-
-                        if (provider.type === "ldap") {
-                          const isExpanded = expandedLdapId === provider.id;
-                          return (
-                            <div
-                              key={provider.id}
-                              className="flex flex-col gap-0 border border-border"
-                            >
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedLdapId(
-                                    isExpanded ? null : provider.id,
-                                  )
-                                }
-                                className="flex items-center justify-between w-full px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                              >
-                                <span>
-                                  {t("auth.loginWithProvider", {
-                                    name: provider.name,
-                                  })}
-                                </span>
-                                {isExpanded ? (
-                                  <ChevronUp className="size-3.5" />
-                                ) : (
-                                  <ChevronDown className="size-3.5" />
-                                )}
-                              </button>
-                              {isExpanded && (
-                                <form
-                                  onSubmit={(e) => {
-                                    e.preventDefault();
-                                    handleLDAPLogin(provider.id);
-                                  }}
-                                  className="flex flex-col gap-3 p-3 border-t border-border"
-                                >
-                                  <Field
-                                    label={t("auth.ldapUsername")}
-                                    htmlFor={`ldap-user-${provider.id}`}
-                                  >
-                                    <Input
-                                      id={`ldap-user-${provider.id}`}
-                                      value={ldapUsername}
-                                      onChange={(e) =>
-                                        setLdapUsername(e.target.value)
-                                      }
-                                      disabled={isLoading}
-                                      autoFocus
-                                    />
-                                  </Field>
-                                  <Field
-                                    label={t("auth.ldapPassword")}
-                                    htmlFor={`ldap-pass-${provider.id}`}
-                                  >
-                                    <PasswordInput
-                                      id={`ldap-pass-${provider.id}`}
-                                      value={ldapPassword}
-                                      onChange={setLdapPassword}
-                                      disabled={isLoading}
-                                    />
-                                  </Field>
-                                  <Button
-                                    type="submit"
-                                    className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                                    disabled={isLoading}
-                                  >
-                                    {isLoading
-                                      ? t("common.loading")
-                                      : t("auth.ldapSignIn")}
-                                  </Button>
-                                </form>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <Button
-                            key={provider.id}
-                            onClick={() => handleOIDCLogin(provider.id)}
-                            disabled={isLoading}
-                            className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                          >
-                            {isLoading
-                              ? t("common.loading")
-                              : t("auth.loginWithProvider", {
-                                  name: provider.name,
-                                })}
-                          </Button>
-                        );
-                      })}
-                      {passkeySupported && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handlePasskeyLogin}
-                          disabled={loading}
-                          className="w-full h-10 font-bold"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Fingerprint className="size-4" />
-                            {t("auth.signInWithPasskey")}
-                          </span>
-                        </Button>
+                      {externalMethods.map((method) =>
+                        renderLoginMethod(method),
                       )}
+                      {inlineMethods.map((method) => renderLoginMethod(method))}
                     </div>
                   </div>
                 )}
@@ -1822,20 +1657,7 @@ export function Auth({ onLogin }: AuthProps) {
                         </span>
                       )}
                     </Button>
-                    {passkeySupported && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handlePasskeyLogin}
-                        disabled={loading}
-                        className="w-full h-10 font-bold"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Fingerprint className="size-4" />
-                          {t("auth.signInWithPasskey")}
-                        </span>
-                      </Button>
-                    )}
+                    {inlineMethods.map((method) => renderLoginMethod(method))}
                   </form>
                 )}
 
@@ -1863,10 +1685,7 @@ export function Auth({ onLogin }: AuthProps) {
                         id="reg-pass"
                         value={password}
                         onChange={setPassword}
-                        placeholder={t("auth.minChars", {
-                          min: 6,
-                          defaultValue: "min. 6 characters",
-                        })}
+                        placeholder={t("auth.minChars", { min: 6 })}
                         disabled={loading}
                       />
                     </Field>
@@ -1924,22 +1743,12 @@ export function Auth({ onLogin }: AuthProps) {
                     </>
                   ) : null}
                 </p>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {t("common.language")}
-                  </span>
-                  <Select2
-                    value={language}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </Select2>
-                </div>
+                <LanguageRow
+                  label={t("common.language")}
+                  value={language}
+                  onChange={handleLanguageChange}
+                  className="pt-1"
+                />
               </div>
             )}
           </div>

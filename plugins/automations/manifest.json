@@ -1,0 +1,138 @@
+{
+  "id": "automations",
+  "name": "Automations",
+  "version": "1.0.0",
+  "description": "Run actions on your hosts on a schedule or when something happens, like a host going down or a metric crossing a limit.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Infrastructure",
+  "icon": "Workflow",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "events:core",
+    "notify:send",
+    "network:outbound",
+    "network:serve",
+    "settings:read-core",
+    "ui:surface",
+    "users:impersonate"
+  ],
+  "optionalDependencies": {
+    "fleets": "^1.0.0",
+    "tunnels": "^1.0.0",
+    "docker": "^1.0.0",
+    "host-metrics": "^1.0.0",
+    "wake-on-lan": "^1.0.0"
+  },
+  "requires": [
+    {
+      "service": "snippets.access",
+      "versionRange": "^1.0.0"
+    },
+    {
+      "service": "fleets.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "tunnels.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "docker.containers",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "docker.events",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "host-metrics.viewers",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "wake-on-lan.send",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
+  "provides": [
+    {
+      "service": "automations.access",
+      "version": "1.0.0",
+      "permission": "automations.view"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "automations",
+        "titleKey": "nav.automations",
+        "icon": "Workflow",
+        "openFrom": ["rail"]
+      },
+      {
+        "id": "host_maintenance",
+        "titleKey": "maintenance.title",
+        "icon": "Wrench",
+        "openFrom": ["host-context-menu"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "view",
+        "titleKey": "permissions.view.title",
+        "descriptionKey": "permissions.view.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "create",
+        "titleKey": "permissions.create.title",
+        "descriptionKey": "permissions.create.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "edit",
+        "titleKey": "permissions.edit.title",
+        "descriptionKey": "permissions.edit.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "delete",
+        "titleKey": "permissions.delete.title",
+        "descriptionKey": "permissions.delete.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "run",
+        "titleKey": "permissions.run.title",
+        "descriptionKey": "permissions.run.description",
+        "defaultRoles": ["user"]
+      }
+    ],
+    "http": {
+      "legacyPaths": ["/automations/webhook"]
+    },
+    "uses": ["alerts.openChannels"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "dependencies": {
+    "snippets": "^1.0.0"
+  },
+  "desktop": "server"
+}

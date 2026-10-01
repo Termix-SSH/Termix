@@ -19,12 +19,15 @@ import {
 } from "@/components/folder-style";
 import { normalizePath, splitPath } from "./FolderPathPicker";
 import { getCredentials } from "@/main-axios";
+import { useSyncStatus } from "@/hooks/use-sync-status";
+import { FakeSwitch, SettingRow } from "@/components/section-card";
 
 export type FolderMetadataValue = {
   name: string;
   color: string;
   icon: string;
   credentialId: number | null;
+  localOnly: boolean;
 };
 
 type CredentialOption = { id: string; name: string; username?: string };
@@ -45,6 +48,7 @@ export function FolderMetadataDialog({
     color?: string;
     icon?: string;
     credentialId?: number | null;
+    localOnly?: boolean;
   };
   /** Every folder path that already exists, for duplicate-name validation. */
   existingPaths?: string[];
@@ -58,6 +62,8 @@ export function FolderMetadataDialog({
   const [color, setColor] = useState(DEFAULT_FOLDER_COLOR);
   const [icon, setIcon] = useState(DEFAULT_FOLDER_ICON);
   const [credentialId, setCredentialId] = useState<string>("");
+  const [localOnly, setLocalOnly] = useState(false);
+  const syncLinked = !!useSyncStatus()?.linked;
   const [credentials, setCredentials] = useState<CredentialOption[]>([]);
 
   const parentPath =
@@ -84,6 +90,7 @@ export function FolderMetadataDialog({
       setCredentialId(
         initial?.credentialId ? String(initial.credentialId) : "",
       );
+      setLocalOnly(!!initial?.localOnly);
     }
   }, [open, initial]);
 
@@ -111,6 +118,7 @@ export function FolderMetadataDialog({
       color,
       icon,
       credentialId: credentialId ? Number(credentialId) : null,
+      localOnly,
     });
     onOpenChange(false);
   }
@@ -186,6 +194,14 @@ export function FolderMetadataDialog({
               {t("hosts.folderCredentialHint")}
             </p>
           </div>
+          {syncLinked && (
+            <SettingRow
+              label={t("hosts.folderLocalOnly")}
+              description={t("hosts.folderLocalOnlyDesc")}
+            >
+              <FakeSwitch checked={localOnly} onChange={setLocalOnly} />
+            </SettingRow>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold">
               {t("hosts.folderPreview")}

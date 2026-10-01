@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Nhật ký phiên"
+  },
+  "hosts": {
+    "enableSessionRecording": "Ghi phiên",
+    "enableSessionRecordingDesc": "Ghi lại đầu ra phiên terminal để xem lại sau"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "Nhật ký phiên",
+    "noLogs": "Chưa có nhật ký phiên nào",
+    "noLogsDesc": "Bật ghi nhật ký phiên trên máy chủ để bắt đầu ghi",
+    "duration": "Thời lượng",
+    "viewLog": "Xem nhật ký",
+    "downloadLog": "Tải xuống",
+    "downloadAsText": "Download as text",
+    "deleteLog": "Xóa",
+    "confirmDelete": "Xóa nhật ký phiên này?",
+    "confirmDeleteDesc": "Hành động này không thể hoàn tác.",
+    "copyContent": "Sao chép",
+    "copied": "Đã sao chép!",
+    "loadError": "Tải nhật ký phiên thất bại",
+    "deleteError": "Xóa nhật ký phiên thất bại",
+    "filterByHost": "Lọc theo máy chủ...",
+    "back": "Quay lại",
+    "empty": "(trống)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
+  }
+}

@@ -363,9 +363,9 @@ A [GINERNET](https://docs.termix.site/install/ginernet) patrocina o Termix, e a 
 
 ## Telemetria
 
-O Termix manda uma vez por dia um pequeno sinal anônimo, para eu saber quantas instâncias estão rodando e quais funcionalidades são usadas. Ele contém um ID de instância aleatório, quantos usuários e hosts tu tens, a versão do aplicativo e quais funcionalidades (terminal, gerenciador de arquivos, túneis, docker, etc.) foram usadas nas últimas 24 horas. Nunca contém nomes de usuário, nomes de host, endereços IP, credenciais ou qualquer coisa que identifique ti ou os teus servidores.
+O Termix envia uma vez por dia um pequeno relatório anónimo, para eu ver quantas instâncias estão a correr e que funcionalidades são usadas. Contém um ID de instância aleatório, a versão da app e quantos utilizadores e hosts tens. Também pode incluir a tua plataforma (sistema operativo, arquitetura, versão do Node.js, tipo de base de dados e se usas Docker, a app de desktop ou um servidor normal), quantas vezes cada tipo de separador foi aberto e quantos logins SSH houve, e que funcionalidades integradas estão ativas. Nunca contém nomes de utilizador, nomes de host, endereços IP, credenciais ou qualquer outra coisa que te identifique a ti ou aos teus servidores.
 
-Vem ligado por padrão. Podes desligar nas configurações de administração, em Geral, ou definir `ENABLE_TELEMETRY=false` antes mesmo de iniciar o Termix.
+Vem ligado por padrão. Podes desligar ou escolher o que inclui nas configurações de administração, em Usage Statistics, onde também podes ver o relatório exato antes de ser enviado. Cada utilizador pode excluir o seu próprio uso de funcionalidades no perfil. Definir `ENABLE_TELEMETRY=false` desliga-o e bloqueia o interruptor.
 
 <br />
 

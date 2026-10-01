@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Přihlášení pomocí LDAP",
+  "loginWithProvider": "Přihlaste se pomocí {{name}}",
+  "loading": "Načítání...",
+  "requiredField": "Toto pole je povinné",
+  "username": "Uživatelské jméno LDAP",
+  "password": "Heslo LDAP",
+  "signIn": "Přihlásit se",
+  "permissions": {
+    "manage": {
+      "title": "Správa adresářů LDAP",
+      "description": "Přidávat, měnit a odebírat adresáře LDAP, pomocí kterých se lidé mohou přihlašovat."
+    }
+  },
+  "providers": {
+    "docsLink": "Zobrazit dokumenty",
+    "none": "Nejsou nakonfigurovány žádné adresáře LDAP.",
+    "add": "Přidat adresář",
+    "edit": "Upravit adresář",
+    "delete": "Smazat adresář",
+    "deleteConfirm": "Smazat tento adresář? Uživatelé, kteří se pomocí něj přihlásí, se nebudou moci přihlásit.",
+    "name": "Zobrazovaný název",
+    "namePlaceholder": "Adresář firem",
+    "nameRequired": "Je vyžadováno zobrazované jméno",
+    "enabled": "Povoleno",
+    "save": "Uložit adresář",
+    "saving": "Ukládání…",
+    "saved": "Uloženo",
+    "saveFailed": "Uložení se nezdařilo",
+    "deleted": "Smazáno",
+    "deleteFailed": "Smazání se nezdařilo",
+    "loadFailed": "Nepodařilo se načíst adresáře LDAP",
+    "cancel": "Zrušit"
+  },
+  "fields": {
+    "host": "Hostitel LDAP",
+    "port": "Port",
+    "useTls": "Používejte TLS (LDAPS)",
+    "bindDn": "Vázat DN",
+    "bindPassword": "Vázat heslo",
+    "secretKeep": "Heslo je uloženo. Pro jeho zachování nechte toto pole prázdné.",
+    "userSearchBase": "Vyhledávací báze uživatelů",
+    "userSearchFilter": "Filtr vyhledávání uživatelů",
+    "usernameAttr": "Atribut uživatelského jména",
+    "displayNameAttr": "Atribut zobrazovaného názvu",
+    "groupSearchBase": "Základna pro vyhledávání skupin",
+    "adminGroup": "Skupina administrátorů",
+    "allowedUsers": "Povolení uživatelé"
+  }
+}

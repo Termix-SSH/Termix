@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Stap CA"
+  },
+  "editor": {
+    "label": "Stap CA",
+    "description": "Meld aan deur jou identiteitsverskaffer en laat jou Stap-CA 'n kortstondige SSH-sertifikaat vir hierdie gasheer uitreik. Die CA-URL, wortelvingerafdruk en OIDC-voorsiening word deur 'n administrateur in die Stap-CA-afdeling van Admin-instellings gestel.",
+    "docs": "Bekyk dokumente"
+  },
+  "dialog": {
+    "title": "Stap CA-verifikasie vereis",
+    "description": "Voltooi verifikasie in jou blaaier om voort te gaan. Die sertifikaat bly geldig solank jou CA dit toelaat.",
+    "openBrowser": "Maak blaaier oop om te verifieer",
+    "waiting": "Wag vir verifikasie in blaaier...",
+    "authenticating": "Verwerk verifikasie..."
+  },
+  "errors": {
+    "authFailed": "Verifikasie het misluk. Kontroleer asseblief jou geloofsbriewe en probeer weer.",
+    "timeout": "Verifikasie het verstryk. Probeer asseblief weer."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "CA-URL",
+      "description": "Die https-URL van jou smallstep CA. Los die CA-URL, vingerafdruk en voorsiener leeg om Step CA af te skakel.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Wortelvingerafdruk (SHA-256)",
+      "description": "Die wortelsertifikaat se vingerafdruk, soos getoon deur stap ca bootstrap."
+    },
+    "provisioner": {
+      "label": "OIDC-voorsieningsnaam",
+      "description": "Die naam van die CA se OIDC-voorsieningsverskaffer. Kies dan \"Stap CA\" as 'n gasheer se verifikasietipe."
+    },
+    "privateEndpoints": {
+      "label": "Toegelate private Step CA-gashere",
+      "description": "Privaat gashere, die Step CA-sertifikaatvloei, mag kontak maak met: die CA self en, indien intern, jou identiteitsverskaffer. Skei hulle met kommas of nuwe reëls."
+    },
+    "redirectUri": {
+      "label": "Herlei URI",
+      "description": "Registreer hierdie URL as 'n toegelate herleidings-URI by die identiteitsverskaffer agter die OIDC-voorsieningsverskaffer."
+    },
+    "legacyCallback": {
+      "label": "Gebruik die ou aanstuur-URI",
+      "description": "Hou aan om /host/step-ca-callback te stuur, die aanstuur-URI wat voor 2.9 gebruik is. Skakel dit af sodra jou identiteitsverskaffer die nuwe een toelaat."
+    }
+  }
+}

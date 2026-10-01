@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Krok CA"
+  },
+  "editor": {
+    "label": "Krok CA",
+    "description": "Přihlaste se prostřednictvím svého poskytovatele identity a nechte svou certifikační autoritu Step CA vydat krátkodobý SSH certifikát pro tohoto hostitele. URL certifikační autority CA, kořenový otisk prstu a zřizovatel OIDC nastavuje administrátor v sekci Step CA v Nastavení administrátora.",
+    "docs": "Zobrazit dokumenty"
+  },
+  "dialog": {
+    "title": "Krok Vyžadováno ověření CA",
+    "description": "Pro pokračování dokončete ověření ve vašem prohlížeči. Certifikát zůstává platný tak dlouho, jak to vaše certifikační autorita dovolí.",
+    "openBrowser": "Otevřít prohlížeč pro ověření",
+    "waiting": "Čekání na ověření v prohlížeči...",
+    "authenticating": "Zpracování ověřování..."
+  },
+  "errors": {
+    "authFailed": "Ověření se nezdařilo. Zkontrolujte prosím své přihlašovací údaje a zkuste to znovu.",
+    "timeout": "Časový limit ověření vypršel. Zkuste to prosím znovu."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "URL adresa CA",
+      "description": "URL adresa https vaší certifikační autority SmallStep. Chcete-li Step CA vypnout, ponechte URL adresu certifikační autority, otisk prstu a zřizovatel prázdné.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Kořenový otisk (SHA-256)",
+      "description": "Otisk kořenového certifikátu, jak je znázorněno v kroku ca bootstrap."
+    },
+    "provisioner": {
+      "label": "Název zřizovatele OIDC",
+      "description": "Název zřizovatele OIDC certifikační autority. Poté jako typ ověřování hostitele vyberte „Krok CA“."
+    },
+    "privateEndpoints": {
+      "label": "Povolení soukromí hostitelé Step CA",
+      "description": "Soukromí hostitelé, se kterými se může tok certifikátů Step CA spojit: samotná CA a v případě interního přístupu také váš poskytovatel identity. Oddělte je čárkami nebo novými řádky."
+    },
+    "redirectUri": {
+      "label": "URI přesměrování",
+      "description": "Zaregistrujte tuto URL jako povolený URI pro přesměrování u poskytovatele identity za zřizovatelem OIDC."
+    },
+    "legacyCallback": {
+      "label": "Použít starý identifikátor URI pro přesměrování",
+      "description": "Pokračujte v odesílání /host/step-ca-callback, což je URI pro přesměrování používané před verzí 2.9. Jakmile váš poskytovatel identity nový URI povolí, vypněte ho."
+    }
+  }
+}

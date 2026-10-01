@@ -69,11 +69,12 @@ describe("sanitizeCredentialSidebarPreferences", () => {
   it("filters out invalid entries from filter arrays instead of rejecting them", () => {
     const result = sanitizeCredentialSidebarPreferences({
       filters: {
-        type: ["key", "bogus"],
+        type: ["key", "corp-token", "Bad Type!", 3],
         tags: ["prod", 42, null],
       },
     });
-    expect(result.filters.type).toEqual(["key"]);
+    // Plugins add credential types, so any well-formed id is kept.
+    expect(result.filters.type).toEqual(["key", "corp-token"]);
     expect(result.filters.tags).toEqual(["prod"]);
   });
 

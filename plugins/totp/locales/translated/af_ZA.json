@@ -1,0 +1,42 @@
+{
+  "title": "Verifikasie-app",
+  "factor": "Verifikasiekode",
+  "challenge": {
+    "enterCode": "Voer verifikasiekode in",
+    "verify": "Verifieer Kode",
+    "backupCodeHint": "Jy kan ook een van jou rugsteunkodes invoer."
+  },
+  "enrollment": {
+    "title": "TOTP-verifikasie",
+    "docs": "Dokumente",
+    "on": "2FA is geaktiveer",
+    "off": "Voeg ekstra aanmeldsekuriteit by",
+    "enable": "Aktiveer",
+    "disable": "Deaktiveer",
+    "addDevice": "Voeg toestel by",
+    "addTitle": "Voeg verifikasietoestel by",
+    "addDescription": "Bevestig met 'n kode van jou verifikator of 'n rugsteunkode om 'n ander toestel met dieselfde sleutel in te skryf.",
+    "addScanInstructions": "Skandeer hierdie QR-kode met die bykomende verifikator. Bestaande verifikators sal aanhou werk.",
+    "addSuccess": "Bykomende outentiseerder ingeskryf",
+    "addFailed": "Kon nie verifieerder byvoeg nie",
+    "codeRequired": "Voer 'n TOTP-kode of rugsteunkode in",
+    "codePlaceholder": "TOTP-kode of rugsteunkode",
+    "setupTitle": "Stel TOTP op",
+    "setupFailed": "Kon nie TOTP-opstelling begin nie",
+    "qrCode": "QR-kode",
+    "secretCopied": "Geheim gekopieer na knipbord",
+    "instructions": "Skandeer die QR-kode of voer die geheim in jou verifikasie-app in, en voer dan die 6-syferkode in",
+    "continueVerify": "Gaan voort om te verifieer",
+    "verifyTitle": "Verifieer Kode",
+    "verify": "Verifieer",
+    "enter6Digits": "Voer 'n 6-syferkode in",
+    "enabledSuccess": "Tweefaktor-verifikasie geaktiveer",
+    "invalidCode": "Ongeldige kode, probeer asseblief weer",
+    "disableTitle": "Deaktiveer 2FA",
+    "disabledSuccess": "Tweefaktor-verifikasie gedeaktiveer",
+    "disableFailed": "Kon nie 2FA deaktiveer nie",
+    "backupTitle": "Rugsteunkodes",
+    "downloadBackup": "Laai rugsteunkodes af",
+    "done": "Klaar"
+  }
+}

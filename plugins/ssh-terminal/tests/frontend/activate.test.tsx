@@ -1,0 +1,197 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  renderWithApp,
+  type RenderedPluginApp,
+} from "@termix/plugin-sdk/testing";
+import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import * as plugin from "../../src/frontend/index";
+import manifestJson from "../../manifest.json";
+import locales from "../../locales/en.json";
+
+const manifest = manifestJson as unknown as PluginManifest;
+
+const declared = (views?: Array<{ id: string }>) =>
+  (views ?? []).map((view) => view.id).sort();
+
+let rendered: RenderedPluginApp | null = null;
+
+afterEach(async () => {
+  await rendered?.deactivate();
+  rendered = null;
+});
+
+describe(`${manifest.id} activate`, () => {
+  it("activates and registers only views its manifest declares", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    const contributes = manifest.contributes as unknown as Record<
+      string,
+      Array<{ id: string }> | undefined
+    >;
+    const tabs = declared(contributes.tabs);
+    // A rail panel may reuse one of the plugin's tab ids.
+    const panels = [...declared(contributes.panels), ...tabs];
+    const cards = declared(contributes.dashboardCards);
+    for (const id of rendered.registered.tabs()) expect(tabs).toContain(id);
+    for (const id of rendered.registered.panels()) expect(panels).toContain(id);
+    for (const id of rendered.registered.dashboardCards()) {
+      expect(cards).toContain(id);
+    }
+  });
+
+  it("removes everything it registered on deactivate", async () => {
+    const app = await renderWithApp(plugin, { manifest, locales });
+    await app.deactivate();
+    expect(app.registered.tabs()).toEqual([]);
+    expect(app.registered.panels()).toEqual([]);
+    expect(app.registered.railItems()).toEqual([]);
+    expect(app.registered.hostActions()).toEqual([]);
+    expect(app.registered.hostEditorSections()).toEqual([]);
+    expect(app.registered.dashboardCards()).toEqual([]);
+    expect(app.registered.settingsComponents()).toEqual([]);
+    expect(app.registered.actions()).toEqual([]);
+  });
+
+  it("registers the terminal session actions snippets and other plugins call into", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.actions()).toEqual(
+      expect.arrayContaining([
+        "terminal.listSessions",
+        "terminal.sendToActive",
+        "terminal.sendToSession",
+        "terminal.open",
+      ]),
+    );
+  });
+
+  it("duplicates only the SSH connection configuration into a fresh tab", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    const host = { id: 7, name: "server", ip: "192.0.2.1", port: 22 };
+    expect(rendered.registered.slot("tab.menu")).toContain(
+      "terminal.duplicateTab",
+    );
+    await rendered.app.invokeAction("terminal.duplicateTab", undefined, {
+      id: "old-tab",
+      type: "terminal",
+      host,
+      instanceId: "old-instance",
+      data: { initialPath: "/tmp", joinSharedSessionId: "shared-session" },
+    });
+    expect(rendered.shellCalls).toEqual([
+      {
+        method: "openTab",
+        args: [
+          { ...host, pluginSettings: {} },
+          "terminal",
+          { forceNewTab: true },
+        ],
+      },
+    ]);
+    await rendered.app.invokeAction("terminal.duplicateTab", undefined, {
+      id: "local",
+      type: "local-terminal",
+    });
+    expect(rendered.shellCalls).toHaveLength(1);
+  });
+
+  it("owns the host editor's Terminal tab in the SSH group", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.hostEditorSections()).toEqual(["terminal"]);
+  });
+
+  it("registers the command history panel and its rail item", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.panels()).toContain("history");
+    expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+      "history",
+    );
+  });
+
+  it("offers the local terminal only in the desktop app", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.tabs()).not.toContain("local-terminal");
+    await rendered.deactivate();
+
+    (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+    try {
+      rendered = await renderWithApp(plugin, { manifest, locales });
+      expect(rendered.registered.tabs()).toContain("local-terminal");
+      expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+        "local-terminal",
+      );
+    } finally {
+      delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
+    }
+  });
+
+  it("terminal.sendToActive and terminal.listSessions report no session when none is registered", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    await expect(
+      rendered.app.invokeAction("terminal.listSessions"),
+    ).resolves.toEqual([]);
+    await expect(
+      rendered.app.invokeAction("terminal.sendToActive", "echo hi", {
+        run: true,
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it("owns the SSH Tools panel and its rail item", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.panels()).toContain("ssh-tools");
+    expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+      "ssh-tools",
+    );
+  });
+
+  it("registers its settings components", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.settingsComponents()).toEqual(
+      expect.arrayContaining(["touchInput", "imageStorageTest"]),
+    );
+    // Terminal defaults are host defaults now, set in the host editor.
+    expect(rendered.registered.settingsComponents()).not.toContain(
+      "terminalDefaults",
+    );
+  });
+
+  it("offers the terminal look to other plugins through actions", async () => {
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: {
+        get: async () => ({ data: { user: { terminalDefaults: {} } } }),
+      } as never,
+    });
+    const look = (await rendered.app.invokeAction("terminal.resolveTheme", {
+      host: {
+        id: "1",
+        name: "h",
+        ip: "10.0.0.1",
+        port: 22,
+        pluginSettings: {
+          "ssh-terminal": { inheritAppearance: false, theme: "dracula" },
+        },
+      },
+      appTheme: "dark",
+    })) as { themeId: string; colors: { background: string } };
+    expect(look.themeId).toBe("dracula");
+    expect(look.colors.background).toBe("#282a36");
+
+    const themes = (await rendered.app.invokeAction("terminal.themes")) as {
+      id: string;
+    }[];
+    expect(themes.map((theme) => theme.id)).toContain("dracula");
+    expect(themes.map((theme) => theme.id)).not.toContain("termixDark");
+  });
+
+  it("adds the terminal font faces while active and removes them on deactivate", async () => {
+    const app = await renderWithApp(plugin, { manifest, locales });
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).not.toBeNull();
+    await app.deactivate();
+    expect(
+      document.head.querySelector("style[data-termix-terminal-styles]"),
+    ).toBeNull();
+  });
+});

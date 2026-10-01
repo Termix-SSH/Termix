@@ -23,10 +23,8 @@ interface RetainedTable {
 }
 
 /**
- * `audit_logs` already denormalises `username`, so nulling `user_id` still
- * leaves a record of who acted. `session_recordings` does not, which is why the
- * column is added and backfilled before its foreign key is relaxed — otherwise
- * relaxing it would trade deleted evidence for anonymous evidence.
+ * `audit_logs` denormalises `username`, so nulling `user_id` still leaves a
+ * record of who acted.
  */
 const AUDIT_LOGS: RetainedTable = {
   name: "audit_logs",
@@ -65,50 +63,7 @@ const AUDIT_LOGS: RetainedTable = {
   `,
 };
 
-const SESSION_RECORDINGS: RetainedTable = {
-  name: "session_recordings",
-  columns: [
-    "id",
-    "host_id",
-    "user_id",
-    "username",
-    "access_id",
-    "started_at",
-    "ended_at",
-    "duration",
-    "commands",
-    "dangerous_actions",
-    "recording_path",
-    "protocol",
-    "format",
-    "terminated_by_owner",
-    "termination_reason",
-  ],
-  createSql: `
-    CREATE TABLE session_recordings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT,
-        username TEXT,
-        access_id INTEGER,
-        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ended_at TEXT,
-        duration INTEGER,
-        commands TEXT,
-        dangerous_actions TEXT,
-        recording_path TEXT,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        format TEXT NOT NULL DEFAULT 'text',
-        terminated_by_owner INTEGER DEFAULT 0,
-        termination_reason TEXT,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
-        FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
-    );
-  `,
-};
-
-const RETAINED_TABLES = [AUDIT_LOGS, SESSION_RECORDINGS];
+const RETAINED_TABLES = [AUDIT_LOGS];
 
 export function userDeleteIsDestructive(
   sqlite: MigratableSqlite,
@@ -130,34 +85,6 @@ export function userDeleteIsDestructive(
       row.from === "user_id" &&
       (row.on_delete ?? "").toUpperCase() === "CASCADE",
   );
-}
-
-function hasColumn(
-  sqlite: MigratableSqlite,
-  table: string,
-  column: string,
-): boolean {
-  try {
-    sqlite.prepare(`SELECT "${column}" FROM ${table} LIMIT 1`).get();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Gives session_recordings a username before its user_id can become null, so
- * existing rows stay attributable.
- */
-function ensureRecordingUsername(sqlite: MigratableSqlite): void {
-  if (hasColumn(sqlite, "session_recordings", "username")) return;
-
-  sqlite.exec(`ALTER TABLE session_recordings ADD COLUMN username TEXT;`);
-  sqlite.exec(`
-    UPDATE session_recordings
-    SET username = (SELECT username FROM users WHERE users.id = session_recordings.user_id)
-    WHERE username IS NULL;
-  `);
 }
 
 /**
@@ -187,10 +114,6 @@ export function migrateAuditRetention(sqlite: MigratableSqlite): string[] {
     if (!userDeleteIsDestructive(sqlite, table.name)) continue;
 
     try {
-      if (table.name === "session_recordings") {
-        ensureRecordingUsername(sqlite);
-      }
-
       sqlite.exec("PRAGMA foreign_keys = OFF");
       sqlite.exec("BEGIN TRANSACTION");
       rebuildTable(sqlite, table);

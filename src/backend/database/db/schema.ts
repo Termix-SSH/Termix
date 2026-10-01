@@ -2,7 +2,6 @@ import {
   sqliteTable,
   text,
   integer,
-  real,
   index,
   uniqueIndex,
   foreignKey,
@@ -28,12 +27,6 @@ export const users = sqliteTable("users", {
   namePath: text("name_path"),
   scopes: text().default("openid email profile"),
 
-  totpSecret: text("totp_secret"),
-  totpEnabled: integer("totp_enabled", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  totpBackupCodes: text("totp_backup_codes"),
-
   registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   donationModalDismissed: integer("donation_modal_dismissed", {
     mode: "boolean",
@@ -45,21 +38,6 @@ export const users = sqliteTable("users", {
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
-});
-
-export const ssoProviders = sqliteTable("sso_providers", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  displayOrder: integer("display_order").notNull().default(0),
-  config: text("config").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const sessions = sqliteTable(
@@ -111,24 +89,59 @@ export const trustedDevices = sqliteTable(
   (table) => [index("idx_trusted_devices_user_id").on(table.userId)],
 );
 
-export const webauthnCredentials = sqliteTable("webauthn_credentials", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  credentialId: text("credential_id").notNull(),
-  publicKey: text("public_key").notNull(),
-  counter: integer("counter").notNull().default(0),
-  deviceType: text("device_type"),
-  backedUp: integer("backed_up", { mode: "boolean" }).notNull().default(false),
-  transports: text("transports"),
-  userVerification: text("user_verification").notNull().default("preferred"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  lastUsedAt: text("last_used_at"),
-});
+/**
+ * A sign-in identity from an external provider (OIDC, LDAP, GitHub, ...).
+ * Replaces identifier strings like "ldap:<provider>:<id>" on users.
+ */
+export const userExternalIdentities = sqliteTable(
+  "user_external_identities",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    providerId: text("provider_id").notNull(),
+    /** The provider's id for the user, at most 255 characters. */
+    subject: text("subject").notNull(),
+    email: text("email"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_user_external_identities_provider_subject").on(
+      table.providerId,
+      table.subject,
+    ),
+    index("idx_user_external_identities_user").on(table.userId),
+  ],
+);
+
+/**
+ * Which second factors a user enrolled in, by plugin. Kept when the plugin is
+ * disabled or removed, so login fails closed instead of skipping the factor.
+ */
+export const userSecondFactors = sqliteTable(
+  "user_second_factors",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pluginId: text("plugin_id").notNull(),
+    factorId: text("factor_id").notNull(),
+    enrolledAt: text("enrolled_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_user_second_factors_user_factor").on(
+      table.userId,
+      table.pluginId,
+      table.factorId,
+    ),
+  ],
+);
 
 export const hosts = sqliteTable(
   "ssh_data",
@@ -155,7 +168,6 @@ export const hosts = sqliteTable(
     // never been manually reordered; falls back to name sort in that case.
     sortOrder: integer("sort_order"),
     authType: text("auth_type").notNull(),
-    useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
     shareSshAuth: integer("share_ssh_auth", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -167,120 +179,24 @@ export const hosts = sqliteTable(
     keyType: text("key_type"),
     sudoPassword: text("sudo_password"),
 
-    autostartPassword: text("autostart_password"),
-    autostartKey: text("autostart_key", { length: 8192 }),
-    autostartKeyPassword: text("autostart_key_password"),
-
     credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     overrideCredentialUsername: integer("override_credential_username", {
       mode: "boolean",
     }),
-    // When authType is "vault", the host authenticates via a Vault SSH signer
-    // profile (shared settings, no secrets). The signing certificate is obtained
-    // per-user at connect time via an interactive Vault OIDC flow.
-    vaultProfileId: integer("vault_profile_id").references(
-      () => vaultProfiles.id,
-      { onDelete: "set null" },
-    ),
-    enableTerminal: integer("enable_terminal", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    allowSessionSharing: integer("allow_session_sharing", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableTunnel: integer("enable_tunnel", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    tunnelConnections: text("tunnel_connections"),
     jumpHosts: text("jump_hosts"),
-    enableFileManager: integer("enable_file_manager", { mode: "boolean" })
+    statusCheckEnabled: integer("status_check_enabled", { mode: "boolean" })
       .notNull()
       .default(true),
-    scpLegacy: integer("scp_legacy", { mode: "boolean" }).notNull().default(false),
-    enableDocker: integer("enable_docker", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    enableWebUi: integer("enable_web_ui", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    enableTerminalToolbar: integer("enable_terminal_toolbar", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    enableAiAssistant: integer("enable_ai_assistant", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(true),
-    showFileManagerInSidebar: integer("show_file_manager_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showTunnelInSidebar: integer("show_tunnel_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showDockerInSidebar: integer("show_docker_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    showServerStatsInSidebar: integer("show_server_stats_in_sidebar", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    defaultPath: text("default_path"),
-    statsConfig: text("stats_config"),
-    dockerConfig: text("docker_config"),
-    webUiConfig: text("web_ui_config"),
-    enableProxmox: integer("enable_proxmox", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    proxmoxConfig: text("proxmox_config"),
-    enableProxmoxStats: integer("enable_proxmox_stats", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    proxmoxStatsConfig: text("proxmox_stats_config"),
+    statusCheckInterval: integer("status_check_interval"),
     terminalConfig: text("terminal_config"),
+    // SSH connection options core's connect pipeline reads (keepalive,
+    // legacy algorithms, agent, environment). JSON.
+    sshOptions: text("ssh_options"),
     quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
-    enableRdp: integer("enable_rdp", { mode: "boolean" }).notNull().default(false),
-    enableVnc: integer("enable_vnc", { mode: "boolean" }).notNull().default(false),
-    enableTelnet: integer("enable_telnet", { mode: "boolean" }).notNull().default(false),
 
     sshPort: integer("ssh_port").default(22),
-    rdpPort: integer("rdp_port").default(3389),
-    vncPort: integer("vnc_port").default(5900),
-    telnetPort: integer("telnet_port").default(23),
-
-    rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-    rdpUser: text("rdp_user"),
-    rdpPassword: text("rdp_password"),
-    rdpDomain: text("rdp_domain"),
-    rdpSecurity: text("rdp_security"),
-    rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
-
-    vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-    vncPassword: text("vnc_password"),
-    vncUser: text("vnc_user"),
-
-    telnetUser: text("telnet_user"),
-    telnetPassword: text("telnet_password"),
-    telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-
-    rdpAuthType: text("rdp_auth_type"),
-    vncAuthType: text("vnc_auth_type"),
-    telnetAuthType: text("telnet_auth_type"),
-
-    domain: text("domain"),
-    security: text("security"),
-    ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
-    guacamoleConfig: text("guacamole_config"),
 
     useSocks5: integer("use_socks5", { mode: "boolean" }),
     socks5Host: text("socks5_host"),
@@ -292,11 +208,9 @@ export const hosts = sqliteTable(
     // null = use the desktop app's global default; "local" | "remote" pins
     // this specific host's SSH/Docker-console/Serial connections to originate
     // from the embedded local backend or a connected remote sync server.
-    // Ignored for rdp/vnc/telnet, which always require the remote server.
+    // Ignored for plugin protocols, which always need the remote server.
     connectionOrigin: text("connection_origin"),
 
-    macAddress: text("mac_address"),
-    wolBroadcastAddress: text("wol_broadcast_address"),
     portKnockSequence: text("port_knock_sequence"),
 
     hostKeyFingerprint: text("host_key_fingerprint"),
@@ -310,6 +224,16 @@ export const hosts = sqliteTable(
     // databases (the embedded backend and a connected remote server) during
     // sync -- local autoincrement ids collide across instances.
     syncId: text("sync_id").unique(),
+    // Desktop only: a host kept on this device that never goes to the server.
+    localOnly: integer("local_only", { mode: "boolean" }).notNull().default(false),
+    // Desktop only: set on the read-only copy of a host someone shared with
+    // the linked account. JSON with the share's owner and permission level.
+    sharedSource: text("shared_source"),
+    // Which host default keys this host sets itself, per namespace, as JSON:
+    // {"core":["sshPort"],"<pluginId>":["key"]}. Null, or a missing
+    // namespace, means not classified yet. Every other key follows the
+    // defaults and its column holds the resolved value.
+    defaultOverrides: text("default_overrides"),
 
     createdAt: text("created_at")
       .notNull()
@@ -330,106 +254,6 @@ export const hosts = sqliteTable(
   ],
 );
 
-export const fileManagerRecent = sqliteTable(
-  "file_manager_recent",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    path: text("path").notNull(),
-    lastOpened: text("last_opened")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Every file manager surface is read for one user on one host at a time.
-  (table) => [
-    index("idx_file_manager_recent_user").on(table.userId, table.hostId),
-  ],
-);
-
-export const fileManagerPinned = sqliteTable(
-  "file_manager_pinned",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    path: text("path").notNull(),
-    pinnedAt: text("pinned_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_file_manager_pinned_user").on(table.userId, table.hostId),
-  ],
-);
-
-export const fileManagerShortcuts = sqliteTable(
-  "file_manager_shortcuts",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    path: text("path").notNull(),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_file_manager_shortcuts_user").on(table.userId, table.hostId),
-  ],
-);
-
-export const transferRecent = sqliteTable(
-  "transfer_recent",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    sourceHostId: integer("source_host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    destHostId: integer("dest_host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    destPath: text("dest_path").notNull(),
-    destPathLabel: text("dest_path_label").notNull(),
-    lastUsed: text("last_used")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [index("idx_transfer_recent_user").on(table.userId)],
-);
-
-export const dismissedAlerts = sqliteTable(
-  "dismissed_alerts",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    alertId: text("alert_id").notNull(),
-    dismissedAt: text("dismissed_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
-);
 
 export const sshCredentials = sqliteTable(
   "ssh_credentials",
@@ -459,10 +283,10 @@ export const sshCredentials = sqliteTable(
 
   certPublicKey: text("cert_public_key", { length: 8192 }),
 
-
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   syncId: text("sync_id").unique(),
+  sharedSource: text("shared_source"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -496,95 +320,42 @@ export const sshCredentialUsage = sqliteTable(
   ],
 );
 
-export const snippets = sqliteTable(
-  "snippets",
+// A host's login for a protocol a plugin declares (contributes.protocols),
+// owned and encrypted like the host itself. `fields` holds the protocol's
+// non-secret declared fields as JSON, `secret_fields` its secret ones.
+export const hostProtocolAuth = sqliteTable(
+  "host_protocol_auth",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    content: text("content").notNull(),
-    description: text("description"),
-    folder: text("folder"),
-    order: integer("order").notNull().default(0),
-    syncId: text("sync_id").unique(),
+    protocol: text("protocol").notNull(),
+    authType: text("auth_type").notNull().default("direct"),
+    credentialId: integer("credential_id").references(() => sshCredentials.id, {
+      onDelete: "set null",
+    }),
+    username: text("username"),
+    password: text("password"),
+    fields: text("fields"),
+    secretFields: text("secret_fields"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    hostFilter: text("host_filter"),
-    isNote: integer("is_note", { mode: "boolean" }).notNull().default(false),
   },
-  (table) => [index("idx_snippets_user_id").on(table.userId)],
-);
-
-export const snippetFolders = sqliteTable("snippet_folders", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const c2sTunnelPresets = sqliteTable("c2s_tunnel_presets", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  config: text("config").notNull(),
-  platform: text("platform"),
-  computerName: text("computer_name"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const snippetAccess = sqliteTable(
-  "snippet_access",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    snippetId: integer("snippet_id")
-      .notNull()
-      .references(() => snippets.id, { onDelete: "cascade" }),
-
-    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
-    roleId: integer("role_id").references(() => roles.id, {
-      onDelete: "cascade",
-    }),
-
-    grantedBy: text("granted_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    permissionLevel: text("permission_level").notNull().default("view"),
-
-    expiresAt: text("expires_at"),
-
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
   (table) => [
-    index("idx_snippet_access_user_id").on(table.userId),
-    index("idx_snippet_access_snippet_id").on(table.snippetId),
-    index("idx_snippet_access_role_id").on(table.roleId),
+    uniqueIndex("idx_host_protocol_auth_host_protocol").on(
+      table.hostId,
+      table.protocol,
+    ),
+    index("idx_host_protocol_auth_user").on(table.userId),
+    index("idx_host_protocol_auth_credential").on(table.credentialId),
   ],
 );
 
@@ -605,6 +376,7 @@ export const sshFolders = sqliteTable(
     // to name sort, same convention as hosts.sortOrder.
     sortOrder: integer("sort_order"),
     syncId: text("sync_id").unique(),
+    localOnly: integer("local_only", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -613,6 +385,41 @@ export const sshFolders = sqliteTable(
       .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [index("idx_ssh_folders_user_id").on(table.userId)],
+);
+
+/**
+ * Host defaults at one level. A host follows the deepest level that sets a
+ * key: its folders (deepest first), then its owner, then the server, then the
+ * built-in value. `scope_key` is "admin", "u:<userId>" or "f:<folderId>", so
+ * the unique index holds for the admin level too.
+ */
+export const hostDefaults = sqliteTable(
+  "host_defaults",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    level: text("level", { enum: ["admin", "user", "folder"] }).notNull(),
+    scopeKey: text("scope_key").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    folderId: integer("folder_id").references(() => sshFolders.id, {
+      onDelete: "cascade",
+    }),
+    namespace: text("namespace").notNull(),
+    key: text("key").notNull(),
+    value: text("value"),
+    updatedBy: text("updated_by"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_host_defaults_scope_key").on(
+      table.scopeKey,
+      table.namespace,
+      table.key,
+    ),
+    index("idx_host_defaults_user").on(table.userId),
+    index("idx_host_defaults_folder").on(table.folderId),
+  ],
 );
 
 export const recentActivity = sqliteTable(
@@ -636,40 +443,6 @@ export const recentActivity = sqliteTable(
     index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
   ],
 );
-
-export const commandHistory = sqliteTable(
-  "command_history",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    command: text("command").notNull(),
-    executedAt: text("executed_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_command_history_user_host").on(table.userId, table.hostId),
-  ],
-);
-
-export const networkTopology = sqliteTable("network_topology", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  topology: text("topology"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
 
 export const hostAccess = sqliteTable(
   "host_access",
@@ -768,6 +541,8 @@ export const sharedHostSecrets = sqliteTable(
     encryptedKeyPassword: text("encrypted_key_password"),
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
+    // A plugin protocol's declared credential fields, JSON, encrypted.
+    encryptedFields: text("encrypted_fields"),
 
     createdAt: text("created_at")
       .notNull()
@@ -875,210 +650,6 @@ export const auditLogs = sqliteTable(
   ],
 );
 
-export const sessionRecordings = sqliteTable(
-  "session_recordings",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    // Nullable on purpose: a recording is evidence about the host as much as the
-    // person, so it outlives the account. username keeps it attributable.
-    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-    username: text("username"),
-    accessId: integer("access_id").references(() => hostAccess.id, {
-      onDelete: "set null",
-    }),
-
-    startedAt: text("started_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    endedAt: text("ended_at"),
-    duration: integer("duration"),
-
-    commands: text("commands"),
-    dangerousActions: text("dangerous_actions"),
-
-    recordingPath: text("recording_path"),
-    protocol: text("protocol").notNull().default("ssh"),
-    format: text("format").notNull().default("text"),
-
-    terminatedByOwner: integer("terminated_by_owner", {
-      mode: "boolean",
-    }).default(false),
-    terminationReason: text("termination_reason"),
-  },
-  // Listed newest-first per user, and audited per host.
-  (table) => [
-    index("idx_session_recordings_user_started").on(
-      table.userId,
-      table.startedAt,
-    ),
-    index("idx_session_recordings_host").on(table.hostId),
-  ],
-);
-
-export const sessionShares = sqliteTable(
-  "session_shares",
-  {
-  id: text("id").primaryKey(),
-
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  ownerUserId: text("owner_user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-
-  protocol: text("protocol").notNull(),
-
-  // Live-session binding: TerminalSessionManager's session.id for SSH, or
-  // guacd's own guacamoleConnectionId for rdp/vnc/telnet. Neither is a DB
-  // row (process-local, in-memory) so this intentionally has no FK.
-  sessionId: text("session_id").notNull(),
-  tabInstanceId: text("tab_instance_id"),
-
-  shareType: text("share_type").notNull(), // "link" | "user"
-  targetUserId: text("target_user_id").references(() => users.id, {
-    onDelete: "cascade",
-  }),
-  linkToken: text("link_token").unique(),
-
-  permissionLevel: text("permission_level").notNull().default("read-only"),
-
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  revokedAt: text("revoked_at"),
-
-  lastJoinedAt: text("last_joined_at"),
-  joinCount: integer("join_count").notNull().default(0),
-  },
-  // Resolved from the live session on join, and listed per host.
-  (table) => [
-    index("idx_session_shares_session_id").on(table.sessionId),
-    index("idx_session_shares_host_id").on(table.hostId),
-  ],
-);
-
-export const sessionShareParticipants = sqliteTable(
-  "session_share_participants",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    shareId: text("share_id")
-      .notNull()
-      .references(() => sessionShares.id, { onDelete: "cascade" }),
-
-    userId: text("user_id").references(() => users.id, {
-      onDelete: "cascade",
-    }),
-    guestLabel: text("guest_label"),
-
-    joinedAt: text("joined_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    leftAt: text("left_at"),
-  },
-);
-
-export const opksshTokens = sqliteTable(
-  "opkssh_tokens",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-  
-    sshCert: text("ssh_cert", { length: 8192 }).notNull(),
-    privateKey: text("private_key", { length: 8192 }).notNull(),
-  
-    email: text("email"),
-    sub: text("sub"),
-    issuer: text("issuer"),
-    audience: text("audience"),
-  
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    expiresAt: text("expires_at").notNull(),
-    lastUsed: text("last_used"),
-  },
-  // Declared inline in the production DDL as UNIQUE(...), but never here,
-  // so the generated Postgres and MySQL schemas allowed duplicates the
-  // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_opkssh_tokens_user_host").on(table.userId, table.hostId)],
-);
-
-// Vault SSH signer profiles. These hold ONLY non-secret connection settings and
-// are intended to be shared across users (shared === true makes a profile
-// visible to every user on the server). Each user authenticates to Vault via an
-// interactive OIDC flow at connect time; no tokens or keys are stored here.
-export const vaultProfiles = sqliteTable("vault_profiles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  folder: text("folder"),
-  tags: text("tags"),
-  // Vault server connection (non-secret)
-  vaultAddr: text("vault_addr").notNull(),
-  vaultNamespace: text("vault_namespace"),
-  // OIDC auth method mount + role used to obtain a Vault token interactively
-  oidcMount: text("oidc_mount"),
-  oidcRole: text("oidc_role"),
-  // SSH secrets engine mount + signer role used to sign the ephemeral key
-  sshMount: text("ssh_mount"),
-  sshRole: text("ssh_role").notNull(),
-  validPrincipals: text("valid_principals"),
-  // Ephemeral keypair algorithm to generate per connection
-  keyType: text("key_type"),
-  // When true the profile is visible/usable by all users on the server
-  shared: integer("shared", { mode: "boolean" }).notNull().default(false),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-// Per-user cache of the ephemeral SSH private key + Vault-signed certificate.
-// Transient: rows live only until the certificate expires. Secret fields are
-// encrypted under the user's data-encryption key (see field-crypto.ts).
-export const vaultTokens = sqliteTable(
-  "vault_tokens",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    profileId: integer("profile_id")
-      .notNull()
-      .references(() => vaultProfiles.id, { onDelete: "cascade" }),
-  
-    sshCert: text("ssh_cert", { length: 8192 }).notNull(),
-    privateKey: text("private_key", { length: 8192 }).notNull(),
-  
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    expiresAt: text("expires_at").notNull(),
-    lastUsed: text("last_used"),
-  },
-  // Declared inline in the production DDL as UNIQUE(...), but never here,
-  // so the generated Postgres and MySQL schemas allowed duplicates the
-  // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_vault_tokens_user_profile").on(table.userId, table.profileId)],
-);
-
 export const apiKeys = sqliteTable(
   "api_keys",
   {
@@ -1149,79 +720,23 @@ export const userPreferences = sqliteTable("user_preferences", {
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
   confirmTabClose: integer("confirm_tab_close", { mode: "boolean" }),
   hiddenRailTabs: text("hidden_rail_tabs"),
-  // null means the user has not been asked yet; the assistant stays hidden
-  // until this is explicitly true and the admin global is on.
-  aiAssistantEnabled: integer("ai_assistant_enabled", { mode: "boolean" }),
-  // Opt-in to letting the assistant run allowlisted read-only diagnostics
-  // without a per-command approval click.
-  aiReadOnlyCommands: integer("ai_read_only_commands", { mode: "boolean" }),
   compactHostView: integer("compact_host_view", { mode: "boolean" }),
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
   terminalDefaults: text("terminal_defaults"),
-  rdpDefaults: text("rdp_defaults"),
   terminalMacros: text("terminal_macros"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const hostMetricsPreferences = sqliteTable(
-  "host_metrics_preferences",
-  {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // JSON-encoded HostMetricsLayout. Layout has no secrets, so it is stored as
-  // plain JSON (no field-level encryption).
-  layout: text("layout").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // One layout per user per host. Enforced in production since the inline DDL
-  // creates it, but it was never declared here, so the generated Postgres and
-  // MySQL schemas lacked it — and the upsert has nothing to conflict on.
-  (table) => [
-    uniqueIndex("idx_host_metrics_prefs_user_host").on(table.userId, table.hostId),
-  ],
-);
-
-export const proxmoxStatsPreferences = sqliteTable(
-  "proxmox_stats_preferences",
-  {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").notNull().references(() => hosts.id, { onDelete: "cascade" }),
-  // JSON-encoded ProxmoxStatsLayout. Layout has no secrets, so it is stored as
-  // plain JSON (no field-level encryption), same convention as hostMetricsPreferences.layout.
-  layout: text("layout").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    uniqueIndex("idx_proxmox_stats_prefs_user_host").on(table.userId, table.hostId),
-  ],
-);
-
 export const hostSidebarPreferences = sqliteTable("host_sidebar_preferences", {
   userId: text("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   // JSON-encoded HostSidebarPreferences. No secrets in this blob, stored as
-  // plain JSON like hostMetricsPreferences.layout.
+  // plain JSON.
   data: text("data").notNull(),
   updatedAt: text("updated_at")
     .notNull()
@@ -1256,813 +771,111 @@ export const uiPreferences = sqliteTable("ui_preferences", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const hostHealthChecks = sqliteTable(
-  "host_health_checks",
-  {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // JSON array of { id, name, type: "tcp"|"http", target, port, path }
-  checks: text("checks").notNull(),
-  intervalSeconds: integer("interval_seconds").notNull().default(300),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Same as above: one set of checks per user per host.
-  (table) => [
-    uniqueIndex("idx_host_health_checks_user_host").on(table.userId, table.hostId),
-  ],
-);
-
-export const hostHealthHistory = sqliteTable("host_health_history", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  checkId: text("check_id").notNull(),
-  ts: text("ts").notNull().default(sql`CURRENT_TIMESTAMP`),
-  ok: integer("ok", { mode: "boolean" }).notNull(),
-  latencyMs: integer("latency_ms"),
-  detail: text("detail"),
-});
-
-export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  url: text("url").notNull(),
-  order: integer("order").notNull().default(0),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-// --- termix-id begin ---
-// A user claims a unique public handle. Their published SSH public keys are
-// served at an unauthenticated resolver endpoint in authorized_keys format,
-// so any server can be provisioned with `curl <host>/termix-id/u/<handle> >> ~/.ssh/authorized_keys`.
-export const termixIdentities = sqliteTable("termix_identities", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  // One Termix ID per user — enforced in schema, not just in code.
-  userId: text("user_id")
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
-  handle: text("handle").notNull().unique(),
-  description: text("description"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const termixIdentityKeys = sqliteTable("termix_identity_keys", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  identityId: integer("identity_id")
-    .notNull()
-    .references(() => termixIdentities.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  // Public keys are non-secret, so they are stored in plaintext (no field-level
-  // encryption). This is what lets the unauthenticated resolver serve them.
-  publicKey: text("public_key", { length: 8192 }).notNull(),
-  // Raw algorithm token (e.g. "ssh-ed25519"), and a normalized group used for
-  // the /<ALGO> resolver filter (RSA / ED25519 / ECDSA / ...).
-  keyType: text("key_type").notNull(),
-  algorithm: text("algorithm").notNull(),
-  label: text("label"),
-  comment: text("comment"),
-  // "manual" (pasted) or "credential" (imported from an ssh_credentials entry).
-  source: text("source").notNull().default("manual"),
-  credentialId: integer("credential_id").references(() => sshCredentials.id, {
-    onDelete: "set null",
-  }),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// Per-identity certificate authority. Servers that trust this CA (via
-// TrustedUserCAKeys / @cert-authority) accept any user certificate it signs,
-// giving central revocation (rotate the CA) and expiry (cert validity).
-export const termixIdentityCa = sqliteTable("termix_identity_ca", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  identityId: integer("identity_id")
-    .notNull()
-    .unique()
-    .references(() => termixIdentities.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  // CA public key (plaintext — it is published); CA private key is field-encrypted.
-  publicKey: text("public_key", { length: 4096 }).notNull(),
-  privateKey: text("private_key", { length: 8192 }).notNull(),
-  validityDays: integer("validity_days").notNull().default(90),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- termix-id end ---
-
-// --- tmux-monitor begin ---
-export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  sessionName: text("session_name").notNull(),
-  tag: text("tag").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- tmux-monitor end ---
-
-// --- metrics-history begin ---
-export const hostMetricsHistory = sqliteTable("host_metrics_history", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  ts: text("ts")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  cpuPercent: real("cpu_percent"),
-  memPercent: real("mem_percent"),
-  diskPercent: real("disk_percent"),
-  netRxBytes: integer("net_rx_bytes"),
-  netTxBytes: integer("net_tx_bytes"),
-});
-// --- metrics-history end ---
-
-// --- proxmox-node-history begin ---
-export const proxmoxNodeHistory = sqliteTable("proxmox_node_history", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  ts: text("ts")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  cpuPercent: real("cpu_percent"),
-  memPercent: real("mem_percent"),
-  diskPercent: real("disk_percent"),
-  netRxBytes: integer("net_rx_bytes"),
-  netTxBytes: integer("net_tx_bytes"),
-});
-// --- proxmox-node-history end ---
-
-// --- alerts begin ---
-export const alertRules = sqliteTable("alert_rules", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  triggerType: text("trigger_type").notNull(),
-  thresholdValue: real("threshold_value"),
-  thresholdDurationSeconds: integer("threshold_duration_seconds"),
-  cooldownMinutes: integer("cooldown_minutes").notNull().default(15),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const notificationChannels = sqliteTable("notification_channels", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  config: text("config").notNull(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const alertRuleChannels = sqliteTable("alert_rule_channels", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  ruleId: integer("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  channelId: integer("channel_id")
-    .notNull()
-    .references(() => notificationChannels.id, { onDelete: "cascade" }),
-});
-
-export const alertFirings = sqliteTable(
-  "alert_firings",
+// --- sync begin ---
+/**
+ * One row per synced record a user owns, on both ends of a sync link.
+ *
+ * On a server, revision counts the record's changes and seq is the position
+ * in the user's change feed, which is what a desktop's cursor points at. On a
+ * linked desktop, revision is the last server revision this device saw and
+ * hash is what the record looked like then, so a different hash now means a
+ * local edit waiting to be pushed.
+ */
+export const syncRecords = sqliteTable(
+  "sync_records",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    ruleId: integer("rule_id")
-      .notNull()
-      .references(() => alertRules.id, { onDelete: "cascade" }),
-    hostId: integer("host_id").notNull(),
-    hostName: text("host_name").notNull(),
-    firedAt: text("fired_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    resolvedAt: text("resolved_at"),
-    value: real("value"),
-    message: text("message").notNull(),
-    severity: text("severity").notNull().default("warning"),
-    acknowledged: integer("acknowledged", { mode: "boolean" })
-      .notNull()
-      .default(false),
-  },
-  // A rule's history is read newest-first; host_id is filtered on its own.
-  (table) => [
-    index("idx_alert_firings_rule").on(table.ruleId, table.firedAt),
-    index("idx_alert_firings_host").on(table.hostId),
-  ],
-);
-// --- alerts end ---
-
-// --- automations begin ---
-export const automations = sqliteTable(
-  "automations",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    description: text("description"),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    // The whole trigger + steps graph, shaped by AutomationDefinition. Read and
-    // written as a unit, never queried by its inner structure.
-    definition: text("definition").notNull(),
-    definitionVersion: integer("definition_version").notNull().default(1),
-    concurrencyPolicy: text("concurrency_policy").notNull().default("skip"),
-    maxRunSeconds: integer("max_run_seconds").notNull().default(300),
-    dryRun: integer("dry_run", { mode: "boolean" }).notNull().default(false),
-    lastRunAt: text("last_run_at"),
-    lastRunStatus: text("last_run_status"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+    entityType: text("entity_type").notNull(),
+    syncId: text("sync_id").notNull(),
+    revision: integer("revision").notNull().default(0),
+    seq: integer("seq").notNull().default(0),
+    hash: text("hash"),
+    deleted: integer("deleted", { mode: "boolean" }).notNull().default(false),
+    // Desktop only: why the server refused the last push of this record, and
+    // the hash that was refused, so the same content is not re-sent forever.
+    error: text("error"),
+    errorHash: text("error_hash"),
     updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
-  // The scheduler sweeps enabled automations for one user at a time.
-  (table) => [index("idx_automations_user").on(table.userId, table.enabled)],
+  (table) => [
+    uniqueIndex("idx_sync_records_user_entity_sync").on(
+      table.userId,
+      table.entityType,
+      table.syncId,
+    ),
+    index("idx_sync_records_user_seq").on(table.userId, table.seq),
+  ],
 );
 
 /**
- * Durable per-target trigger state. state_key scopes a trigger to what it is
- * actually watching ("<hostId>", "<hostId>:/data", "<hostId>:<container>"), so
- * a sustained-breach window can track one filesystem rather than a whole host.
- * Living in the database rather than memory means cooldowns and dwell windows
- * survive a restart.
+ * Desktop only: a local edit that lost to a newer server edit. The server
+ * version was applied; this keeps the local one so the user can pick it.
  */
-export const automationTriggerState = sqliteTable(
-  "automation_trigger_state",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    automationId: integer("automation_id")
-      .notNull()
-      .references(() => automations.id, { onDelete: "cascade" }),
-    stateKey: text("state_key").notNull(),
-    breachStartedAt: text("breach_started_at"),
-    lastFiredAt: text("last_fired_at"),
-    lastValue: real("last_value"),
-    lastObservedState: text("last_observed_state"),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    uniqueIndex("idx_automation_trigger_state_key").on(
-      table.automationId,
-      table.stateKey,
-    ),
-  ],
-);
-
-export const automationSchedules = sqliteTable(
-  "automation_schedules",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    automationId: integer("automation_id")
-      .notNull()
-      .references(() => automations.id, { onDelete: "cascade" }),
-    cron: text("cron"),
-    intervalSeconds: integer("interval_seconds"),
-    timezone: text("timezone"),
-    nextDueAt: text("next_due_at"),
-    lastTickAt: text("last_tick_at"),
-  },
-  (table) => [
-    uniqueIndex("idx_automation_schedules_automation").on(table.automationId),
-    index("idx_automation_schedules_due").on(table.nextDueAt),
-  ],
-);
-
-export const automationRuns = sqliteTable(
-  "automation_runs",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    automationId: integer("automation_id")
-      .notNull()
-      .references(() => automations.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    triggerType: text("trigger_type").notNull(),
-    triggerContext: text("trigger_context"),
-    status: text("status").notNull(),
-    startedAt: text("started_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    finishedAt: text("finished_at"),
-    durationMs: integer("duration_ms"),
-    error: text("error"),
-    dryRun: integer("dry_run", { mode: "boolean" }).notNull().default(false),
-    // Set when one automation invoked another, so a chain can be traced.
-    parentRunId: integer("parent_run_id"),
-  },
-  (table) => [
-    index("idx_automation_runs_automation").on(
-      table.automationId,
-      table.startedAt,
-    ),
-    index("idx_automation_runs_user").on(table.userId, table.startedAt),
-  ],
-);
-
-export const automationRunSteps = sqliteTable(
-  "automation_run_steps",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    runId: integer("run_id")
-      .notNull()
-      .references(() => automationRuns.id, { onDelete: "cascade" }),
-    stepIndex: integer("step_index").notNull(),
-    stepId: text("step_id").notNull(),
-    stepType: text("step_type").notNull(),
-    status: text("status").notNull(),
-    startedAt: text("started_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    finishedAt: text("finished_at"),
-    output: text("output"),
-    error: text("error"),
-    truncated: integer("truncated", { mode: "boolean" })
-      .notNull()
-      .default(false),
-  },
-  (table) => [
-    index("idx_automation_run_steps_run").on(table.runId, table.stepIndex),
-  ],
-);
-
-export const automationChannels = sqliteTable(
-  "automation_channels",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    automationId: integer("automation_id")
-      .notNull()
-      .references(() => automations.id, { onDelete: "cascade" }),
-    channelId: integer("channel_id")
-      .notNull()
-      .references(() => notificationChannels.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    uniqueIndex("idx_automation_channels_pair").on(
-      table.automationId,
-      table.channelId,
-    ),
-  ],
-);
-// --- automations end ---
-
-// --- homepage begin ---
-export const homepageItems = sqliteTable(
-  "homepage_items",
+export const syncConflicts = sqliteTable(
+  "sync_conflicts",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    typeId: text("type_id").notNull(),
-    title: text("title"),
-    config: text("config").notNull().default("{}"),
-    folderId: integer("folder_id"),
-    syncId: text("sync_id").unique(),
+    entityType: text("entity_type").notNull(),
+    syncId: text("sync_id").notNull(),
+    localRow: text("local_row").notNull(),
+    serverRevision: integer("server_revision").notNull(),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => [index("idx_homepage_items_user_id").on(table.userId)],
+  (table) => [index("idx_sync_conflicts_user").on(table.userId)],
 );
 
-export const homepageLayouts = sqliteTable("homepage_layouts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
-  // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
-  layout: text("layout").notNull().default("{}"),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- homepage end ---
-
-// --- fleets begin ---
-export const fleets = sqliteTable("fleets", {
+/**
+ * Desktop only: the server this install is linked to. One row at most.
+ * Secrets (session token, proxy headers, basic auth) are encrypted with the
+ * system key.
+ */
+export const syncLink = sqliteTable("sync_link", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  color: text("color"),
-  icon: text("icon"),
-  // JSON array of { tag: string } rules, unioned with static fleetMembers at
-  // resolution time. Kept to tag-equality matching for v1.
-  tagRules: text("tag_rules"),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
+  serverUrl: text("server_url").notNull(),
+  serverName: text("server_name"),
+  serverVersion: text("server_version"),
+  sessionToken: text("session_token"),
+  customHeaders: text("custom_headers"),
+  basicAuth: text("basic_auth"),
+  allowInvalidCertificate: integer("allow_invalid_certificate", {
+    mode: "boolean",
+  })
+    .notNull()
+    .default(false),
+  remoteUserId: text("remote_user_id"),
+  remoteUsername: text("remote_username"),
+  // The linked account as the server describes it: roles, admin, permissions.
+  account: text("account"),
+  scope: text("scope"),
+  knownTypes: text("known_types"),
+  cursor: integer("cursor").notNull().default(0),
+  status: text("status").notNull().default("idle"),
+  lastError: text("last_error"),
+  linkedAt: text("linked_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const fleetMembers = sqliteTable(
-  "fleet_members",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    fleetId: integer("fleet_id")
-      .notNull()
-      .references(() => fleets.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    addedAt: text("added_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // fleet_id leads the unique pair, so listing a fleet's hosts is already
-  // served. Finding the fleets a host belongs to starts from host_id.
-  (table) => [
-    uniqueIndex("idx_fleet_members_fleet_host").on(table.fleetId, table.hostId),
-    index("idx_fleet_members_host").on(table.hostId),
-  ],
-);
-
-// Latest-only inventory snapshot per host, overwritten on each refresh - no
-// historical log, matching the "latest snapshot only" scope decision.
-export const fleetInventory = sqliteTable(
-  "fleet_inventory",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    osPrettyName: text("os_pretty_name"),
-    kernel: text("kernel"),
-    architecture: text("architecture"),
-    hostname: text("hostname"),
-    uptimeSeconds: integer("uptime_seconds"),
-    ip: text("ip"),
-    packageManager: text("package_manager"),
-    collectedAt: text("collected_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // host_id leads the unique pair; a user's whole inventory is read by user_id.
-  (table) => [
-    uniqueIndex("idx_fleet_inventory_host").on(table.hostId, table.userId),
-    index("idx_fleet_inventory_user").on(table.userId),
-  ],
-);
-// --- fleets end ---
-
-// --- workspaces begin ---
-export const userWorkspaces = sqliteTable(
-  "user_workspaces",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    color: text("color"),
-    icon: text("icon"),
-    // "manual" | "last_session" - exactly one last_session row per user.
-    kind: text("kind").notNull().default("manual"),
-    isDefault: integer("is_default", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
-    payload: text("payload").notNull().default("{}"),
-    syncId: text("sync_id").unique(),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    lastUsedAt: text("last_used_at"),
-  },
-  (table) => [index("idx_user_workspaces_user_id").on(table.userId)],
-);
-// --- workspaces end ---
-
-// --- sync begin ---
-// Records a delete for a synced entity type so the other side of a sync
-// pair (embedded desktop backend <-> connected remote server) learns about
-// the deletion instead of re-creating the row on its next pull.
-export const syncTombstones = sqliteTable("sync_tombstones", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  entityType: text("entity_type").notNull(),
-  syncId: text("sync_id").notNull(),
-  deletedAt: text("deleted_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  lastSyncAt: text("last_sync_at"),
 });
 // --- sync end ---
-
-// --- ai begin ---
-/**
- * A user's connection to one AI provider. api_key is encrypted at rest via
- * FieldCrypto; it is never returned to the frontend, which only ever sees
- * api_key_prefix for display.
- */
-export const aiProviders = sqliteTable(
-  "ai_providers",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    // ollama | anthropic | openai | gemini | openai_compatible
-    providerType: text("provider_type").notNull(),
-    label: text("label").notNull(),
-    // Required for ollama and openai_compatible, optional elsewhere.
-    baseUrl: text("base_url"),
-    apiKey: text("api_key", { length: 8192 }),
-    // First few characters, kept in the clear so the UI can identify a key.
-    apiKeyPrefix: text("api_key_prefix"),
-    defaultModel: text("default_model"),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    uniqueIndex("idx_ai_providers_user_label").on(table.userId, table.label),
-  ],
-);
-
-export const aiConversations = sqliteTable(
-  "ai_conversations",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    title: text("title"),
-    providerId: integer("provider_id"),
-    model: text("model"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_ai_conversations_user").on(table.userId, table.updatedAt),
-  ],
-);
-
-export const aiMessages = sqliteTable(
-  "ai_messages",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    conversationId: integer("conversation_id")
-      .notNull()
-      .references(() => aiConversations.id, { onDelete: "cascade" }),
-    // user | assistant | tool
-    role: text("role").notNull(),
-    content: text("content").notNull().default(""),
-    // Serialized tool calls and their results for this turn.
-    toolCalls: text("tool_calls"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_ai_messages_conversation").on(
-      table.conversationId,
-      table.createdAt,
-    ),
-  ],
-);
-
-/**
- * A change the assistant wants to make. Nothing here has been applied: the
- * payload is re-validated against the tool schema at apply time and only then
- * dispatched through the same repository logic a human action uses.
- */
-export const aiProposals = sqliteTable(
-  "ai_proposals",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    conversationId: integer("conversation_id")
-      .notNull()
-      .references(() => aiConversations.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    // The propose_* tool name that produced this.
-    kind: text("kind").notNull(),
-    summary: text("summary"),
-    payload: text("payload").notNull().default("{}"),
-    // pending | applied | rejected | expired
-    status: text("status").notNull().default("pending"),
-    appliedAt: text("applied_at"),
-    resultSummary: text("result_summary"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_ai_proposals_user").on(table.userId, table.status),
-    index("idx_ai_proposals_conversation").on(table.conversationId),
-  ],
-);
-// --- ai end ---
-
-// --- collab rooms ---
-
-/**
- * A collaboration room: a group of users watching one "stage" - the live
- * session the current presenter is showing. The stage points at a
- * shareType="room" row in session_shares, so transport, gating, recording and
- * expiry all reuse the session-sharing machinery.
- */
-export const collabRooms = sqliteTable(
-  "collab_rooms",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    ownerUserId: text("owner_user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    // Persistent rooms survive being emptied and can be re-used; one-off
-    // rooms are ended explicitly and never listed again.
-    persistent: integer("persistent", { mode: "boolean" })
-      .notNull()
-      .default(false),
-
-    presenterUserId: text("presenter_user_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    stageProtocol: text("stage_protocol"),
-    stageHostId: integer("stage_host_id").references(() => hosts.id, {
-      onDelete: "set null",
-    }),
-    stageShareId: text("stage_share_id").references(() => sessionShares.id, {
-      onDelete: "set null",
-    }),
-
-    // Set = anonymous guests may watch the stage through this token.
-    guestLinkToken: text("guest_link_token"),
-
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    endedAt: text("ended_at"),
-  },
-  (table) => [
-    index("idx_collab_rooms_owner").on(table.ownerUserId),
-    uniqueIndex("idx_collab_rooms_guest_token").on(table.guestLinkToken),
-  ],
-);
-
-export const collabRoomMembers = sqliteTable(
-  "collab_room_members",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    roomId: text("room_id")
-      .notNull()
-      .references(() => collabRooms.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    // "host" runs the room: invites, force-switches the presenter, ends it.
-    roomRole: text("room_role").notNull().default("member"),
-    addedBy: text("added_by").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    uniqueIndex("idx_collab_room_members_room_user").on(
-      table.roomId,
-      table.userId,
-    ),
-    index("idx_collab_room_members_user").on(table.userId),
-  ],
-);
-
-// --- secret sources ---
-
-/**
- * An external password manager Termix pulls secrets from at connect time,
- * instead of storing them. Only the access token is secret; it is encrypted
- * with the owner's data key under the row id. Hosts and credentials refer to
- * entries by reference ("op://vault/item/field") in their secret fields.
- */
-export const secretSources = sqliteTable(
-  "secret_sources",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    // "onepassword-connect" for now; the reference syntax is per kind.
-    kind: text("kind").notNull().default("onepassword-connect"),
-    baseUrl: text("base_url").notNull(),
-    token: text("token").notNull(),
-    // Visible to every user; secrets still decrypt with the owner's key.
-    shared: integer("shared", { mode: "boolean" }).notNull().default(false),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [index("idx_secret_sources_user").on(table.userId)],
-);
 
 // --- credential sharing ---
 
 /**
- * Who may use or manage someone else's credential. Same shape as
- * snippet_access; "use" attaches it to hosts and connects, "manage" also
- * edits and re-shares it.
+ * Who may use or manage someone else's credential. "use" attaches it to
+ * hosts and connects, "manage" also edits and re-shares it.
  */
 export const credentialAccess = sqliteTable(
   "credential_access",
@@ -2201,7 +1014,10 @@ export const plugins = sqliteTable(
     tier: text("tier").notNull().default("available"),
     source: text("source").notNull().default("community"),
     registryId: text("registry_id"),
+    /** enabled | disabled | blocked | failed */
     state: text("state").notNull().default("disabled"),
+    /** Why the plugin is blocked or failed, for the admin UI. */
+    lastError: text("last_error"),
     installedAt: text("installed_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -2227,9 +1043,16 @@ export const pluginPermissionGrants = sqliteTable(
     grantedAt: text("granted_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    grantedBy: text("granted_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * Who granted it. Null for a bundled grant, which no user made: shipping
+     * in the install is the consent. Nullable also stops a user deletion from
+     * cascading a bundled plugin's capabilities away.
+     */
+    grantedBy: text("granted_by").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    /** admin | bundled */
+    source: text("source").notNull().default("admin"),
   },
   // A plugin's grants are always read together, and re-granting the same
   // capability should update the existing row rather than duplicate it.
@@ -2278,4 +1101,152 @@ export const pluginInstallCounts = sqliteTable(
   ],
 );
 
+/**
+ * Per-plugin key/value state, written through ctx.storage. Rows are always
+ * scoped to the calling plugin by the broker, so a plugin cannot name another
+ * plugin's scope. Cascades with the plugin so uninstalling leaves nothing.
+ */
+export const pluginStorage = sqliteTable(
+  "plugin_storage",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    value: text("value").notNull(),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_storage_plugin_key").on(table.pluginId, table.key),
+  ],
+);
+
+/**
+ * Values for the settings fields a plugin declares in contributes.settings.
+ *
+ * scope_id is polymorphic: null for admin scope, a user id for user scope, a
+ * host id rendered as text for host scope. That is why it carries no foreign
+ * key - one column cannot point at two tables - so the user and host delete
+ * paths remove these rows explicitly. Cascading with the plugin is a real FK,
+ * because uninstalling should leave nothing behind.
+ *
+ * Secret fields are encrypted with the system key before they land here, and
+ * `encrypted` records which rows that applies to so a read knows to decrypt.
+ */
+export const pluginSettings = sqliteTable(
+  "plugin_settings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    scope: text("scope", { enum: ["admin", "user", "host", "secret"] }).notNull(),
+    scopeId: text("scope_id"),
+    key: text("key").notNull(),
+    /** JSON-encoded, so a field keeps its declared type across a round trip. */
+    value: text("value"),
+    encrypted: integer("encrypted", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_settings_scope_key").on(
+      table.pluginId,
+      table.scope,
+      table.scopeId,
+      table.key,
+    ),
+    index("idx_plugin_settings_plugin_scope").on(table.pluginId, table.scope),
+  ],
+);
+
+/**
+ * Which of a plugin's migrations have been applied.
+ *
+ * The checksum is what makes an already-applied migration immutable: editing
+ * one that has run blocks that plugin rather than silently leaving two
+ * databases with different shapes. Cascades with the plugin so removing its
+ * data leaves no ledger behind.
+ */
+export const pluginMigrations = sqliteTable(
+  "plugin_migrations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    migrationId: text("migration_id").notNull(),
+    checksum: text("checksum").notNull(),
+    appliedAt: text("applied_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_migrations_plugin_migration").on(
+      table.pluginId,
+      table.migrationId,
+    ),
+  ],
+);
+
 // --- plugins end ---
+
+// --- rbac plugin permissions begin ---
+
+/**
+ * Every role permission core has ever registered.
+ *
+ * Deliberately has no foreign key to `plugins`: the whole point is that a role
+ * keeps working when the plugin that contributed a permission is disabled or
+ * uninstalled. Without this, unregistering a group made PUT /rbac/roles/:id
+ * reject the entire role.
+ */
+export const rbacKnownPermissions = sqliteTable(
+  "rbac_known_permissions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    permission: text("permission").notNull(),
+    /** Which plugin contributed it, or null for a core permission. */
+    pluginId: text("plugin_id"),
+    firstSeenAt: text("first_seen_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_rbac_known_permissions_permission").on(table.permission),
+  ],
+);
+
+/**
+ * Which plugin role defaults have already been applied.
+ *
+ * Applying a default is a one-time suggestion, so an admin who revokes it does
+ * not get it handed back on the next restart. This lived in `plugin_storage`,
+ * which cascades with the plugin, so uninstall-then-reinstall silently re-added
+ * a permission that had been deliberately removed.
+ */
+export const rbacAppliedDefaults = sqliteTable(
+  "rbac_applied_defaults",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    roleName: text("role_name").notNull(),
+    permission: text("permission").notNull(),
+    appliedAt: text("applied_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_rbac_applied_defaults_role_permission").on(
+      table.roleName,
+      table.permission,
+    ),
+  ],
+);
+
+// --- rbac plugin permissions end ---

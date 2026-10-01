@@ -1,0 +1,155 @@
+import axios from "axios";
+import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
+import { isElectron } from "@termix/plugin-sdk/ui";
+import type { WebEndpoint } from "../shared/web-endpoint-config";
+
+let pluginApi: PluginApiClient | null = null;
+
+function genericFailure(error: unknown, action: string): never {
+  if (!axios.isAxiosError(error) && error instanceof Error) throw error;
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+  throw new WebEndpointTunnelError(`Could not ${action}`, status);
+}
+
+/** Set from activate with app.api, cleared on deactivate. */
+export function setWebEndpointApi(api: PluginApiClient | null): void {
+  pluginApi = api;
+}
+
+/**
+ * Thrown when the backend rejects a web endpoint tunnel open with a specific,
+ * actionable reason -- most commonly a 502 carrying the real cause: SSH auth
+ * rejected, host unreachable, or nothing listening on the target port.
+ * Preserves that reason instead of collapsing three actionable errors into
+ * one generic failure.
+ */
+export class WebEndpointTunnelError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = "WebEndpointTunnelError";
+  }
+}
+
+/**
+ * Opens (or reuses) the SSH forward for a tunnel-access web endpoint and
+ * returns the port it is listening on. The port is NOT stable across opens:
+ * the backend closes an idle tunnel and re-binds a fresh kernel-assigned port,
+ * so callers must re-resolve rather than cache it.
+ */
+export async function openWebEndpointTunnel(
+  hostId: number,
+  endpointId: string,
+): Promise<number> {
+  try {
+    if (!pluginApi) throw new Error("The web endpoint plugin is not active");
+    // Relative to the plugin mount, /plugin-api/web-endpoint.
+    const response = await pluginApi.post("/open", {
+      hostId,
+      endpointId,
+    });
+    const port = (response?.data as { port?: number } | undefined)?.port;
+    if (!port) {
+      throw new Error("The endpoint tunnel returned no port");
+    }
+    return port;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      // Typed unknown, not string: the guard below is only meaningful if the
+      // type does not already promise what it checks.
+      const data = error.response?.data as
+        { error?: unknown; message?: unknown } | undefined;
+      const backendMessage = data?.error ?? data?.message;
+      // A body shaped { error: <object> } would otherwise render as
+      // "[object Object]". Every response on this route sends a string today,
+      // but a proxy or a future handler need not.
+      if (typeof backendMessage === "string" && backendMessage) {
+        throw new WebEndpointTunnelError(
+          backendMessage,
+          error.response?.status,
+        );
+      }
+    }
+    return genericFailure(error, "open web endpoint tunnel");
+  }
+}
+
+/**
+ * Registers one exact origin as allowed to present an invalid TLS certificate.
+ * Only meaningful on the desktop, and only for direct endpoints -- a tunnel
+ * endpoint's host component is loopback, which the main process already
+ * exempts.
+ */
+export async function allowInvalidCertificateForOrigin(
+  origin: string,
+): Promise<void> {
+  if (!isElectron()) return;
+  try {
+    await window.electronAPI?.invoke?.(
+      "allow-invalid-certificate-for-origin",
+      origin,
+    );
+  } catch {
+    // The user's build may predate the handler; the load then simply fails the
+    // certificate check as it would have before.
+  }
+}
+
+/**
+ * A web endpoint tunnel opens through the backend's numeric host id.
+ * Quick-connect hosts (ids like "quick-connect-<n>") have no row on the
+ * server, so there is nothing to open a tunnel through -- unlike a direct
+ * endpoint, which never touches the backend and works regardless.
+ */
+export function requireNumericHostId(id: string): number {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    throw new Error(
+      "This endpoint needs an SSH tunnel, which requires a saved host",
+    );
+  }
+  return numericId;
+}
+
+/**
+ * Desktop windows use a dedicated ephemeral session, including login popups.
+ *
+ * The backend resolves and validates the target URL (the host's own declared
+ * address for a direct endpoint, or the tunnel port it opens for a tunnel
+ * one) and opens the window itself through ctx.desktop.openIsolatedWindow, so
+ * the capability check and audit line cover the whole decision -- this call
+ * only asks for it and reports whether it worked.
+ */
+export async function openWebEndpointExternally(
+  host: { id: string; ip: string },
+  endpoint: WebEndpoint,
+): Promise<void> {
+  if (!isElectron()) {
+    throw new Error(
+      "Isolated windows require the desktop app. Choose Embedded in the endpoint settings.",
+    );
+  }
+  if (!pluginApi) throw new Error("The web endpoint plugin is not active");
+  try {
+    await pluginApi.post("/open-window", {
+      hostId: requireNumericHostId(host.id),
+      endpointId: endpoint.id,
+      ignoreCert: endpoint.ignoreCert === true,
+    });
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data as
+        { error?: unknown; message?: unknown } | undefined;
+      const backendMessage = data?.error ?? data?.message;
+      if (typeof backendMessage === "string" && backendMessage) {
+        throw new WebEndpointTunnelError(
+          backendMessage,
+          error.response?.status,
+        );
+      }
+    }
+    return genericFailure(error, "open isolated web endpoint");
+  }
+}

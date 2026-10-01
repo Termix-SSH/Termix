@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "主机指标"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "内存",
+    "disk": "磁盘",
+    "network": "网络",
+    "uptime": "运行时间",
+    "processes": "进程",
+    "available": "可用",
+    "free": "空闲",
+    "connecting": "连接中...",
+    "connectionFailed": "连接服务器失败",
+    "naCpus": "N/A CPU",
+    "cpuCores_one": "{{count}} 核心",
+    "cpuCores_other": "{{count}} 核心",
+    "cpuUsage": "CPU 使用率",
+    "memoryUsage": "内存使用率",
+    "diskUsage": "磁盘使用率",
+    "selectFilesystem": "Select filesystem",
+    "temperature": "温度",
+    "highestTemperature": "最高温度",
+    "primaryTemperatureSensor": "Primary sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
+    },
+    "failedToFetchHostConfig": "获取主机配置失败",
+    "serverOffline": "服务器离线",
+    "cannotFetchMetrics": "无法从离线服务器获取指标",
+    "totpFailed": "TOTP 验证失败",
+    "noneAuthNotSupported": "主机指标不支持 'none' 认证类型。",
+    "noHostSelected": "未选择主机",
+    "load": "负载",
+    "systemInfo": "系统信息",
+    "hostname": "主机名",
+    "operatingSystem": "操作系统",
+    "kernel": "内核",
+    "seconds": "秒",
+    "networkInterfaces": "网络接口",
+    "noInterfacesFound": "未找到网络接口",
+    "noProcessesFound": "未找到进程",
+    "processesTotal": "总计",
+    "processesRunning": "运行中",
+    "loginStats": "SSH 登录统计",
+    "noRecentLoginData": "无最近登录数据",
+    "ports": {
+      "title": "监听端口",
+      "protocol": "协议",
+      "port": "端口",
+      "address": "地址",
+      "process": "进程",
+      "search": "搜索端口...",
+      "allProtocols": "全部",
+      "noData": "无监听端口数据"
+    },
+    "firewall": {
+      "title": "防火墙",
+      "inactive": "未激活",
+      "policy": "策略",
+      "rules": "规则",
+      "noRules": "该链中无规则",
+      "noData": "无可用防火墙数据",
+      "action": "操作",
+      "protocol": "协议",
+      "port": "端口",
+      "source": "来源",
+      "anywhere": "任意",
+      "chains": "链"
+    },
+    "loadAvg": "平均负载",
+    "swap": "交换空间",
+    "architecture": "架构",
+    "refresh": "刷新",
+    "retry": "重试",
+    "customize": "自定义布局",
+    "reset": "重置",
+    "tabLive": "实时",
+    "editModeInstructions": "拖动卡片可重新排序，拖动底部边缘可调整大小，使用宽度按钮可更改卡片的跨度。在下方添加或移除卡片。",
+    "managers": {
+      "services": "服务",
+      "processInspector": "进程查看器",
+      "logViewer": "日志查看器",
+      "cron": "定时任务",
+      "packages": "软件包",
+      "ssl": "SSL证书",
+      "firewall": "防火墙",
+      "users": "用户与权限",
+      "healthCheck": "健康检查",
+      "diskBreakdown": "磁盘详情",
+      "systemdTimers": "计时器",
+      "topMemory": "按内存占用排行",
+      "noData": "无数据",
+      "sudoHint": "在主机编辑器中为此主机设置 sudo 密码以启用特权操作。",
+      "filter": "筛选...",
+      "start": "启动",
+      "stop": "停止",
+      "restart": "重启",
+      "actionDone": "{{name}} 已更新",
+      "actionFailed": "操作失败",
+      "signalSent": "信号已发送至 PID {{pid}}",
+      "killHint": "单击：终止 (SIGTERM)。右键单击：强制终止 (SIGKILL)。",
+      "working": "处理中...",
+      "update": "更新",
+      "upgradeAll": "全部升级",
+      "allUpToDate": "所有内容均为最新",
+      "save": "保存",
+      "command": "命令",
+      "enabled": "已启用",
+      "cronSaved": "定时任务已更新",
+      "clients": "客户端",
+      "dryRun": "试运行",
+      "renew": "续期",
+      "noAcmeClient": "此主机上未找到 ACME 客户端 (certbot 或 acme.sh)。",
+      "addInputRule": "添加 INPUT 规则",
+      "firewallWarning": "更改仅在运行时有效，需持久化保存。小心不要将自己锁定在外。",
+      "ruleApplied": "规则已应用",
+      "invalidPort": "请输入有效端口 (1-65535)",
+      "newUsername": "新用户名",
+      "addUser": "添加",
+      "deleteUser": "删除用户",
+      "noHealthChecks": "尚未配置健康检查。",
+      "follow": "跟踪",
+      "noLogData": "无日志输出。",
+      "tree": "树形",
+      "enableDisable": "启用/禁用开机自启",
+      "grantSudo": "授予 sudo",
+      "revokeSudo": "撤销 sudo",
+      "sslIssueCert": "签发证书",
+      "sslExpired": "已过期",
+      "sslInDays": "{{days}} 天后",
+      "sslNeedDomain": "至少输入一个域名",
+      "sslIssued": "证书已签发",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (独立模式)",
+      "sslHttpWebroot": "HTTP (webroot)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "DNS 提供商 (如 cloudflare)",
+      "sslIssueHint": "DNS 提供商凭据必须已在主机上配置。",
+      "sslRevoke": "吊销证书",
+      "sslRevoked": "证书已吊销",
+      "sslRevokeConfirm": "吊销并删除证书 \"{{name}}\"？此操作无法撤销。",
+      "healthRun": "运行",
+      "healthName": "名称",
+      "healthTarget": "主机 / 地址",
+      "healthAddCheck": "添加检查",
+      "healthSaved": "健康检查已保存",
+      "healthMissingFields": "每个检查都需要名称和目标",
+      "logFile": "文件",
+      "logUnit": "单元",
+      "logCustomPath": "自定义路径 (位于 /var/log 下，可选)",
+      "logGrep": "过滤行...",
+      "firewallPersist": "持久化规则",
+      "firewallPersisted": "防火墙规则已持久化",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "此主机未安装 WireGuard",
+      "wgNoInterfaces": "未配置 WireGuard 接口",
+      "wgInterfaceUp": "启用",
+      "wgInterfaceDown": "停用",
+      "wgBringingUp": "正在启用 {{name}}...",
+      "wgBringingDown": "正在停用 {{name}}...",
+      "wgInterfaceUpDone": "{{name}} 已启用",
+      "wgInterfaceDownDone": "{{name}} 已停用",
+      "wgListenPort": "端口",
+      "wgPublicKey": "公钥",
+      "wgEndpoint": "对端",
+      "wgAllowedIPs": "允许的 IP",
+      "wgLastHandshake": "上次握手",
+      "wgHandshakeNever": "从未",
+      "wgTransfer": "传输",
+      "wgNoPeers": "No peers"
+    }
+  },
+  "metricsHistory": {
+    "title": "指标历史",
+    "historySuffix": "历史",
+    "cpuMemoryDisk": "CPU / 内存 / 磁盘",
+    "network": "网络",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "此时间范围内没有可用的历史数据。",
+    "custom": "自定义",
+    "to": "至",
+    "apply": "应用",
+    "viewHistory": "查看历史"
+  },
+  "hosts": {
+    "tabHostMetrics": "主机指标",
+    "metricsCollectionLabel": "指标收集",
+    "enableMetricsLabel": "启用指标",
+    "enableMetricsDesc": "从此主机收集 CPU、RAM、磁盘和其他指标",
+    "useGlobalMetrics": "使用全局间隔",
+    "useGlobalMetricsDesc": "使用服务器范围的指标间隔覆盖",
+    "metricsIntervalS": "指标间隔（秒）",
+    "metricsIntervalDesc2": "指标快照之间的秒数",
+    "excludedMountsLabel": "排除的挂载点",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "标签（可选）",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "添加",
+    "visibleWidgets": "可见小部件",
+    "widgetsMovedToHostMetrics": "卡片现在可在“主机指标”选项卡中直接添加、排列和调整大小。打开此主机的“主机指标”，使用“自定义”选择要显示的卡片。",
+    "hostNotFound": "未找到主机",
+    "loadingHost": "正在加载主机..."
+  },
+  "onboarding": {
+    "feature_metrics": "指标与告警",
+    "feature_metrics_desc": "跟踪 CPU、内存和磁盘的运行情况，并在它们出现故障时发出告警。"
+  },
+  "admin": {
+    "metricsHistoryRetention": "指标历史保留",
+    "metricsHistoryRetentionRange": "1 到 90 天",
+    "days": "天"
+  },
+  "homepage": {
+    "noData": "暂无数据",
+    "showCurrentValue": "显示当前值",
+    "chartMetric": "指标",
+    "metricRange": "范围",
+    "host": "主机",
+    "loading": "加载中...",
+    "metricCpu": "CPU",
+    "metricDisk": "磁盘",
+    "metricHostname": "主机名",
+    "metricKernel": "内核",
+    "metricMemory": "内存",
+    "metricNetwork": "网络",
+    "metricOs": "操作系统",
+    "metricProcesses": "进程",
+    "metricProcessesRunning": "运行中",
+    "metricProcessesTotal": "总数",
+    "metricUptime": "运行时间",
+    "metricsNotAvailable": "指标不可用",
+    "noHostSelected": "未选择主机",
+    "selectHost": "选择主机..."
+  },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "内存"
+  },
+  "dashboardTab": {
+    "disk": "磁盘"
+  },
+  "terminal": {
+    "connected": "已连接"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
+  }
+}

@@ -8,14 +8,8 @@ vi.mock("../../utils/system-crypto.js", () => ({
   SystemCrypto: { getInstance: () => ({ getEncryptionKey }) },
 }));
 
-const {
-  decryptSsoConfigSecrets,
-  decryptSystemSecret,
-  encryptSsoConfigSecrets,
-  encryptSystemSecret,
-  isSystemEncrypted,
-  SSO_SECRET_FIELDS,
-} = await import("../../utils/system-secret-crypto.js");
+const { decryptSystemSecret, encryptSystemSecret, isSystemEncrypted } =
+  await import("../../utils/system-secret-crypto.js");
 
 beforeEach(() => {
   getEncryptionKey.mockReset();
@@ -101,57 +95,5 @@ describe("legacy compatibility", () => {
 
     expect(isSystemEncrypted(sealed)).toBe(true);
     await expect(decryptSystemSecret(sealed)).resolves.toBe("old-secret");
-  });
-});
-
-describe("SSO provider config", () => {
-  it("seals only the secret fields", async () => {
-    const sealed = await encryptSsoConfigSecrets({
-      client_id: "termix",
-      client_secret: "shhh",
-      bindPassword: "ldap-pw",
-      issuer_url: "https://idp.example",
-    });
-
-    expect(sealed.client_id).toBe("termix");
-    expect(sealed.issuer_url).toBe("https://idp.example");
-    expect(isSystemEncrypted(sealed.client_secret as string)).toBe(true);
-    expect(isSystemEncrypted(sealed.bindPassword as string)).toBe(true);
-  });
-
-  it("round-trips a whole config", async () => {
-    const original = {
-      client_id: "termix",
-      client_secret: "shhh",
-      bindPassword: "ldap-pw",
-    };
-
-    const restored = await decryptSsoConfigSecrets(
-      await encryptSsoConfigSecrets(original),
-    );
-
-    expect(restored).toEqual(original);
-  });
-
-  it("covers both secret fields", () => {
-    expect([...SSO_SECRET_FIELDS]).toEqual(["client_secret", "bindPassword"]);
-  });
-
-  it("leaves a config without secrets untouched", async () => {
-    const config = { client_id: "termix", scopes: "openid" };
-
-    await expect(encryptSsoConfigSecrets(config)).resolves.toEqual(config);
-    await expect(decryptSsoConfigSecrets(config)).resolves.toEqual(config);
-  });
-
-  it("does not let one unreadable secret take down the provider", async () => {
-    const restored = await decryptSsoConfigSecrets({
-      client_id: "termix",
-      client_secret: "sysenc:v1:bad",
-    });
-
-    // The rest of the config survives; login fails later with a clearer error.
-    expect(restored.client_id).toBe("termix");
-    expect(restored.client_secret).toBe("sysenc:v1:bad");
   });
 });

@@ -1,4 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+
+const getLinkedSession = vi.hoisted(() => vi.fn(async () => null));
+vi.mock("@/lib/linked-server", () => ({ getLinkedSession }));
 import {
   buildOriginWsUrl,
   resolveConnectionOrigin,
@@ -15,7 +18,7 @@ describe("resolveConnectionOrigin", () => {
   // Support#1240: these can now originate from the desktop, but only when a
   // host opts in. Left on Default they stay remote, so an upgrade never moves
   // an existing host onto a local guacd the user has not set up.
-  it("resolves rdp/vnc/telnet to remote when the host has no override", async () => {
+  it("resolves to remote with defaultRemote when the host has no override", async () => {
     win.IS_ELECTRON = true;
     win.electronAPI = {
       invoke: async (channel: string) =>
@@ -23,54 +26,42 @@ describe("resolveConnectionOrigin", () => {
           ? { defaultConnectionOrigin: "local" }
           : null,
     };
-    for (const connectionType of ["rdp", "vnc", "telnet"]) {
-      await expect(
-        resolveConnectionOrigin({ connectionType, connectionOrigin: null }),
-      ).resolves.toBe("remote");
-    }
-  });
-
-  it("honors an explicit local override for rdp/vnc/telnet", async () => {
-    win.IS_ELECTRON = true;
-    for (const connectionType of ["rdp", "vnc", "telnet"]) {
-      await expect(
-        resolveConnectionOrigin({ connectionType, connectionOrigin: "local" }),
-      ).resolves.toBe("local");
-    }
-  });
-
-  it("honors an explicit remote override for rdp/vnc/telnet", async () => {
-    win.IS_ELECTRON = true;
-    for (const connectionType of ["rdp", "vnc", "telnet"]) {
-      await expect(
-        resolveConnectionOrigin({ connectionType, connectionOrigin: "remote" }),
-      ).resolves.toBe("remote");
-    }
-  });
-
-  it("resolves rdp to local outside Electron, where there is only one backend", async () => {
     await expect(
-      resolveConnectionOrigin({
-        connectionType: "rdp",
-        connectionOrigin: null,
-      }),
+      resolveConnectionOrigin(
+        { connectionOrigin: null },
+        { defaultRemote: true },
+      ),
+    ).resolves.toBe("remote");
+  });
+
+  it("honors an explicit override over defaultRemote", async () => {
+    win.IS_ELECTRON = true;
+    await expect(
+      resolveConnectionOrigin(
+        { connectionOrigin: "local" },
+        { defaultRemote: true },
+      ),
+    ).resolves.toBe("local");
+    await expect(
+      resolveConnectionOrigin(
+        { connectionOrigin: "remote" },
+        { defaultRemote: true },
+      ),
+    ).resolves.toBe("remote");
+  });
+
+  it("resolves to local outside Electron even with defaultRemote", async () => {
+    await expect(
+      resolveConnectionOrigin(
+        { connectionOrigin: null },
+        { defaultRemote: true },
+      ),
     ).resolves.toBe("local");
   });
 
-  it("always resolves serial to local, even with a remote override", async () => {
-    win.IS_ELECTRON = true;
+  it("resolves to local outside Electron regardless of the host override", async () => {
     await expect(
       resolveConnectionOrigin({
-        connectionType: "serial",
-        connectionOrigin: "remote",
-      }),
-    ).resolves.toBe("local");
-  });
-
-  it("resolves to local outside Electron regardless of connectionType", async () => {
-    await expect(
-      resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: "remote",
       }),
     ).resolves.toBe("local");
@@ -80,13 +71,11 @@ describe("resolveConnectionOrigin", () => {
     win.IS_ELECTRON = true;
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: "remote",
       }),
     ).resolves.toBe("remote");
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: "local",
       }),
     ).resolves.toBe("local");
@@ -104,7 +93,6 @@ describe("resolveConnectionOrigin", () => {
     };
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: null,
       }),
     ).resolves.toBe("remote");
@@ -119,7 +107,6 @@ describe("resolveConnectionOrigin", () => {
     };
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: null,
       }),
     ).resolves.toBe("local");
@@ -127,14 +114,15 @@ describe("resolveConnectionOrigin", () => {
 });
 
 /**
- * The embedded backend authenticates a local WebSocket from `?token=`, because
- * the browser WebSocket API cannot set an Authorization header. Electron's main
- * process does inject a JWT cookie, but only on an exact origin match, and the
- * remembered cookie belongs to the API origin (`localhost:30001`) — so nothing
- * is attached to a `127.0.0.1:30009` connection.
+ * The embedded backend authenticates a local WebSocket from its subprotocol,
+ * because the browser WebSocket API cannot set an Authorization header.
+ * Electron's main process does inject a JWT cookie, but only on an exact
+ * origin match, so a socket has to carry the credential itself.
  *
- * The Docker console opted out of the query token and had no other credential
- * left, so its handshake was closed with 1008 while logs and stats kept working.
+ * This caught a real bug: the Docker console opted out of the token and had no
+ * other credential left, so its handshake was closed with 1008 while logs and
+ * stats kept working. The fixtures below use the plugin socket routes these
+ * channels actually use now; every plugin shares the backend port.
  */
 describe("buildOriginWsUrl", () => {
   const store: Record<string, string> = {};
@@ -154,13 +142,13 @@ describe("buildOriginWsUrl", () => {
     // Every interactive channel on the embedded backend relies on this.
     const target = await buildOriginWsUrl({
       origin: "local",
-      localPort: 30009,
-      localPath: "/docker/console/",
-      remotePath: "/docker/console/",
+      localPort: 30001,
+      localPath: "/plugin-ws/docker/console",
+      remotePath: "/plugin-ws/docker/console",
     });
 
     expect(target).toEqual({
-      url: "ws://127.0.0.1:30009/docker/console/",
+      url: "ws://127.0.0.1:30001/plugin-ws/docker/console",
       protocols: ["termix.jwt.local-jwt"],
     });
   });
@@ -168,39 +156,34 @@ describe("buildOriginWsUrl", () => {
   it("omits it only when a caller asks", async () => {
     const target = await buildOriginWsUrl({
       origin: "local",
-      localPort: 30009,
-      localPath: "/docker/console/",
-      remotePath: "/docker/console/",
+      localPort: 30001,
+      localPath: "/plugin-ws/docker/console",
+      remotePath: "/plugin-ws/docker/console",
       includeJwt: false,
     });
 
     expect(target).toEqual({
-      url: "ws://127.0.0.1:30009/docker/console/",
+      url: "ws://127.0.0.1:30001/plugin-ws/docker/console",
       protocols: [],
     });
   });
 
   it("does not duplicate the Guacamole token on remote connections", async () => {
-    win.electronAPI = {
-      invoke: async (channel: string) => {
-        if (channel === "get-remote-sync-config") {
-          return { serverUrl: "https://termix.example" };
-        }
-        if (channel === "get-remote-sync-jwt") return "remote-jwt";
-        return null;
-      },
-    };
+    getLinkedSession.mockResolvedValueOnce({
+      serverUrl: "https://termix.example",
+      token: "remote-jwt",
+    } as never);
 
     const target = await buildOriginWsUrl({
       origin: "remote",
-      localPort: 30008,
-      localPath: "/guacamole/websocket/",
-      remotePath: "/guacamole/websocket/",
+      localPort: 30001,
+      localPath: "/plugin-ws/remote-desktop/display",
+      remotePath: "/plugin-ws/remote-desktop/display",
       includeJwt: false,
     });
 
     expect(target).toEqual({
-      url: "wss://termix.example/guacamole/websocket/",
+      url: "wss://termix.example/plugin-ws/remote-desktop/display",
       protocols: [],
     });
   });
@@ -210,13 +193,13 @@ describe("buildOriginWsUrl", () => {
 
     const target = await buildOriginWsUrl({
       origin: "local",
-      localPort: 30002,
-      localPath: "",
-      remotePath: "/ssh/websocket/",
+      localPort: 30001,
+      localPath: "/plugin-ws/ssh-terminal/terminal",
+      remotePath: "/plugin-ws/ssh-terminal/terminal",
     });
 
     expect(target).toEqual({
-      url: "ws://127.0.0.1:30002",
+      url: "ws://127.0.0.1:30001/plugin-ws/ssh-terminal/terminal",
       protocols: [],
     });
   });

@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Voeg by",
+    "arrowDown": "Pyltjie Af",
+    "arrowLeft": "Pyltjie links",
+    "arrowRight": "Pyltjie Regs",
+    "arrowUp": "Pyltjie Op",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Klaar",
+    "editQuickKeys": "Wysig vinnige sleutels",
+    "end": "Einde",
+    "esc": "Esc",
+    "home": "Tuis",
+    "pageDown": "PgDn",
+    "pageUp": "Bladsy Op",
+    "paste": "Plak",
+    "quickKeyPlaceholder": "bv. sudo ",
+    "quickKeysDesc": "Tik × om te verwyder. Ondersteun tot 8 karakters.",
+    "quickKeysTitle": "Vinnige sleutels",
+    "removeQuickKey": "Verwyder",
+    "resetDefaults": "Stel terug na verstekwaardes",
+    "shift": "Skof",
+    "tab": "Oortjie"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Kon nie Auto-Tmux aktiveer nie",
+    "autoTmuxEnabled": "Auto-Tmux geaktiveer vir {{host}}. Dit geld vanaf die volgende verbinding.",
+    "clipboardHttpWarning": "Kon nie die knipbord lees nie. Sommige blaaiers beperk toegang tot die knipbord buite HTTPS - probeer eerder Ctrl+V, of bedien Termix oor HTTPS.",
+    "closeTab": "Maak toe",
+    "connecting": "Verbind...",
+    "connectionLost": "Verbinding verloor",
+    "connectionRejected": "Verbinding deur bediener verwerp. Kontroleer asseblief u verifikasie en netwerkkonfigurasie.",
+    "connectionTimeout": "Verbindingstydverstryking",
+    "enableAutoTmuxAction": "Aktiveer Auto-Tmux",
+    "hostKeyRejected": "SSH-gasheersleutelverifikasie verwerp. Verbinding gekanselleer.",
+    "linkDialogCopy": "Kopieer",
+    "linkDialogOpen": "Oop",
+    "linkDialogTitle": "Maak skakel oop",
+    "maxReconnectAttemptsReached": "Maksimum herverbindingspogings bereik",
+    "noHostSelected": "Geen gasheer gekies nie",
+    "passwordPromptFillTitle": "Vul die gestoorde wagwoord in hierdie aanwysingsprompt in?",
+    "reconnect": "Herkoppel",
+    "reconnected": "Herverbind suksesvol",
+    "reconnecting": "Herverbind... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Verbinding verloor, herverbinding...",
+    "searchCaseSensitive": "Pasmaat",
+    "searchClose": "Maak toe (Escape)",
+    "searchNext": "Volgende Wedstryd (Enter)",
+    "searchNoResults": "Geen resultate nie",
+    "searchPlaceholder": "Vind",
+    "searchPrevious": "Vorige Wedersydse (Shift+Enter)",
+    "searchRegex": "Gebruik Gereelde Uitdrukking",
+    "searchResultCount": "{{index}} van {{count}}",
+    "searchWholeWord": "Pas die hele woord by",
+    "sessionExpiredNotice": "Jou vorige sessie op {{host}} het verval nadat {{minutes}} minute ontkoppel was; die dop en enigiets wat daarin loop, is weg. Aktiveer Auto-Tmux op hierdie gasheer om sessies aan die gang te hou.",
+    "sessionExpiredNoticeNoMinutes": "Jou vorige sessie op {{host}} het verval terwyl dit ontkoppel was; die dop en enigiets wat daarin loop, is weg. Aktiveer Auto-Tmux op hierdie gasheer om sessies aan die gang te hou.",
+    "sessionTakenOver": "Sessie is in 'n ander oortjie oopgemaak. Herverbind tans...",
+    "tmuxAttached": "Aangehegte kliënte",
+    "tmuxAttachedCount": "{{count}} aangeheg",
+    "tmuxCopyHint": "Pas seleksie aan en druk Enter om na knipbord te kopieer",
+    "tmuxCreateNew": "Begin nuwe sessie",
+    "tmuxDetached": "Losgemaak van tmux-sessie",
+    "tmuxLastActivity": "Laaste aktiwiteit",
+    "tmuxSessionAttached": "tmux-sessie aangeheg: {{name}}",
+    "tmuxSessionCreated": "tmux-sessie geskep: {{name}}",
+    "tmuxSessionPickerDesc": "Bestaande tmux-sessies is op hierdie gasheer gevind. Kies een om weer aan te heg of skep 'n nuwe sessie.",
+    "tmuxSessionPickerTitle": "tmux-sessies",
+    "tmuxTimeDays": "{{count}}dae gelede",
+    "tmuxTimeHours": "{{count}}uur gelede",
+    "tmuxTimeJustNow": "nou net",
+    "tmuxTimeMinutes": "{{count}}m gelede",
+    "tmuxUnavailable": "tmux is nie op die afgeleë gasheer geïnstalleer nie, en val terug na die standaard dop.",
+    "tmuxWindowCount": "{{count}} venster",
+    "tmuxWindows": "Vensters",
+    "unknownError": "Onbekende fout het voorgekom",
+    "websocketAbnormalClose": "Verbinding het onverwags gesluit. Dit kan wees as gevolg van 'n omgekeerde proxy- of SSL-konfigurasieprobleem. Gaan asseblief bedienerlogboeke na.",
+    "websocketError": "WebSocket-verbindingsfout",
+    "clipboardReadFailed": "Kon nie vanaf knipbord lees nie. Maak seker dat knipbordtoestemmings toegestaan is.",
+    "clipboardWriteFailed": "Kon nie na knipbord kopieer nie. Maak seker dat die bladsy oor HTTPS of localhost bedien word.",
+    "connected": "Verbonde",
+    "totpCodeLabel": "Verifikasiekode",
+    "duplicateTab": "Duplikaat-oortjie",
+    "imageChooseFile": "Kies 'n beeldlêer",
+    "imageUploaded": "Beeld opgelaai: {{path}}",
+    "imageClipboardUnavailable": "Hierdie blaaier kan nie beelde vanaf die knipbord lees nie",
+    "imageClipboardEmpty": "Geen beeld in die knipbord gevind nie",
+    "localShell": "Plaaslike terminaaldop",
+    "autocompleteHintComplete": "Tab of Enter om te voltooi",
+    "autocompleteHintNavigate": "↑↓ om te navigeer",
+    "autocompleteHintClose": "Esc om te sluit"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Ontkoppel tmux",
+    "detachTmuxDescription": "Ontkoppel tmux-sessie",
+    "dismissError": "Maak beeldfout toe",
+    "hideToolbar": "Versteek nutsbalk",
+    "image": "Beeldaksies (slegs beelde)",
+    "imageActionFailed": "Beeldaksie het misluk",
+    "layout": "Nutsbalk-vertoonmodus",
+    "layoutExpanded": "Uitgebrei met statistieke",
+    "layoutIcon": "Slegs ikoon",
+    "layoutLabeled": "Ikone en etikette",
+    "moveToolbar": "Skuif nutsbalk",
+    "moveToolbarHint": "Sleep om die nutsbalk te herposisioneer",
+    "paste": "Plak beeld",
+    "pasteImage": "Plak beeld vanaf knipbord (slegs beelde)",
+    "retry": "Probeer weer",
+    "showToolbar": "Vou die nutsbalk uit",
+    "upload": "Laai beeld op",
+    "uploadImage": "Laai 'n beeld op na die gasheer",
+    "uploadingImage": "Laai tans op..."
+  },
+  "history": {
+    "noTerminalSelected": "Geen terminaal gekies nie",
+    "noTerminalSelectedHint": "Maak 'n SSH-terminaal-oortjie oop om die opdraggeskiedenis te sien",
+    "searchPlaceholder": "Soekgeskiedenis...",
+    "clearAll": "Vee alles uit",
+    "noHistoryEntries": "Geen geskiedenisinskrywings nie",
+    "trackingDisabled": "Geskiedenisopsporing is gedeaktiveer",
+    "trackingDisabledHint": "Skakel Opdraggeskiedenis aan in hierdie gasheer se SSH-terminale-oortjie.",
+    "commandCount_one": "{{count}} opdrag",
+    "commandCount_other": "{{count}} opdragte"
+  },
+  "touchInput": {
+    "enabled": "Aktiveer Aanraakinvoer",
+    "enabledDesc": "Laat eenvinger-aanraakblaai in terminale toe",
+    "momentumEnabled": "Aktiveer Momentum",
+    "momentumEnabledDesc": "Gaan voort met blaai kortliks na 'n swipe",
+    "advanced": "Gevorderd",
+    "resetDefaults": "Stel terug na verstekwaardes",
+    "dragThreshold": "Sleepdrempel",
+    "maxWheelDelta": "Maksimum wieldelta",
+    "momentumSampleWindow": "Momentum voorbeeldvenster",
+    "releaseGracePeriod": "Vrystellingsgrasietydperk",
+    "minimumVelocity": "Minimum snelheid",
+    "maximumVelocity": "Maksimum snelheid",
+    "maximumDuration": "Maksimum duur",
+    "maximumTravel": "Maksimum reis",
+    "decayTime": "Vervaltyd",
+    "pixelsPerTick": "Piksels per tik",
+    "maximumFrameInterval": "Maksimum raaminterval",
+    "maximumTicksPerFrame": "Maksimum aantal tikkies per raam"
+  },
+  "imageStorage": {
+    "instanceId": "Terminale sessie-instansie-ID",
+    "instanceIdDesc": "Instansie-ID van een van jou gekoppelde terminaal-oortjies, wat gebruik word om sigbaarheid te toets.",
+    "selectedModeUnavailable": "Nie beskikbaar nie",
+    "test": "Toets",
+    "testing": "Toetsing...",
+    "testFailed": "Kon nie beeldberging toets nie",
+    "testConnected": "Terminaalsessie is gekoppel.",
+    "testNotConnected": "Geen gekoppelde terminaalsessie met hierdie instansie-ID nie.",
+    "testSelectedMode": "'n Oplaai sal gebruik: {{mode}}",
+    "testLocalVisible": "Die plaaslike gids is sigbaar vanaf die gekoppelde gasheer.",
+    "testLocalNotVisible": "Die plaaslike gids is NIE sigbaar vanaf die gekoppelde gasheer nie."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Aanraakinvoer",
+        "images": "Beeldberging",
+        "sessions": "Sessies",
+        "newHosts": "Nuwe gashere"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminale Sessie Persistensie",
+        "description": "Hoe lank 'n ontkoppelde terminaal op die bediener aan die gang gehou word voordat dit gesluit word. Min 1, maksimum 1440 minute. Vir sessies wat dit moet oorleef, aktiveer Auto-Tmux op die gasheer."
+      },
+      "commandHistoryEnabled": {
+        "label": "Opdraggeskiedenis",
+        "description": "Laat die opname van opdraggeskiedenis toe. Wanneer dit gedeaktiveer is, word geskiedenis nie gestoor nie, ongeag die instellings per gasheer."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Opdraggeskiedenis vir nuwe gashere",
+        "description": "Of nuwe gashere begin met opdraggeskiedenis aan."
+      },
+      "imageStorageMode": {
+        "label": "Bergingsmodus",
+        "description": "Waar geplakte en opgelaaide terminaalbeelde geskryf word. Outomatiese keuses per verbinding, Plaaslik en Afgeleë (SFTP) is reggestel.",
+        "auto": "Outomaties",
+        "local": "Plaaslik",
+        "remoteSftp": "Afstandsbediening (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Plaaslike gids",
+        "description": "Absolute pad op die Termix-agterkant waar plaaslike modus beelde skryf. Nooit getoon na stoor nie. Leeg gebruik TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Gasheerpad",
+        "description": "Die gasheer-kant-aansig van die plaaslike gids wat terminaalagente ontvang."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "Hoe lank 'n opgelaaide beeld gehou word, in millisekondes. Leeg gebruik TERMIX_IMAGE_TTL_MS of een uur."
+      },
+      "imageMaxCount": {
+        "label": "Maksimum beeldtelling",
+        "description": "Meeste beelde word gelyktydig gehou. Leeg gebruik TERMIX_MAX_IMAGE_COUNT of 100."
+      },
+      "imageMaxBytes": {
+        "label": "Maksimum stoorplekgrepe",
+        "description": "Meeste grepe beelde word gelyktydig gehou. Leeg gebruik TERMIX_MAX_IMAGE_STORAGE_BYTES of 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Hou sessies na ontkoppeling",
+        "description": "Hou 'n ontkoppelde terminaal vir die bogenoemde tydperk op die bediener aan die gang, sodat die heropening van die oortjie voortgaan waar dit opgehou het."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Laat nuwe gashere se terminale binne tmux loop sodat sessies ontkoppelings oorleef (benodig tmux op die gasheer)"
+      },
+      "newHostTheme": {
+        "label": "Tema vir nuwe gashere",
+        "description": "Die terminaaltema waarmee 'n nuwe gasheer begin."
+      },
+      "newHostFontFamily": {
+        "label": "Lettertipe vir nuwe gashere",
+        "description": "Die terminaalfont waarmee 'n nuwe gasheer begin."
+      },
+      "newHostFontSize": {
+        "label": "Lettergrootte vir nuwe gashere",
+        "description": "Die terminaallettergrootte waarmee 'n nuwe gasheer begin, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Wyserstyl vir nuwe gashere"
+      },
+      "newHostCursorBlink": {
+        "label": "Knipperende wyser vir nuwe gashere"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Aktiveer Terminale-nutsbalk",
+        "description": "Wys 'n vinnige toegangsbalk wat aan die aktiewe terminaal gekoppel is vir hierdie gasheer se gereedskap en regstreekse statistieke."
+      },
+      "terminalToolbarPosition": {
+        "label": "Nutsbalkposisie",
+        "description": "Waar die nutsbalk in die terminaal is. Jy kan dit steeds van daar af sleep.",
+        "bottom": "Onderste middelpunt",
+        "bottomLeft": "Links onder",
+        "bottomRight": "Regs onder",
+        "top": "Boonste middelpunt",
+        "topLeft": "Links bo",
+        "topRight": "Regs bo"
+      },
+      "terminalToolbarStartState": {
+        "label": "Beginstatus van die nutsbalk",
+        "description": "Of die nutsbalk uitgebrei of geminimaliseerd oopmaak wanneer die terminaal verbind",
+        "expanded": "Uitgebrei",
+        "collapsed": "Geminimaliseer"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Nutsbalk-vertoonmodus",
+        "description": "Hoe nutsbalkknoppies vertoon word. Laas gebruik behou wat jy ook al in die nutsbalk gekies het.",
+        "remember": "Laas gebruik",
+        "icon": "Slegs ikoon",
+        "labeled": "Ikone en etikette",
+        "expanded": "Uitgebrei met statistieke"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Wys Regstreekse Statistiek",
+        "description": "Wys regstreekse gasheerstatistieke bo die nutsbalkknoppies in uitgebreide modus"
+      },
+      "terminalToolbarFade": {
+        "label": "Vervaag wanneer dit ledig is",
+        "description": "Vervaag die nutsbalk totdat jy daaroor beweeg"
+      },
+      "enableCommandHistory": {
+        "label": "Opdraggeskiedenis",
+        "description": "Rekordopdragte word in hierdie terminaal uitgevoer vir geskiedenis en outovoltooiing"
+      },
+      "enableTerminal": {
+        "label": "Aktiveer Terminaal",
+        "description": "Bied 'n SSH-terminaal vir hierdie gasheer aan."
+      },
+      "inheritAppearance": {
+        "label": "Gebruik gebruikersverstekwaardes"
+      },
+      "theme": {
+        "label": "Tema"
+      },
+      "cursorBlink": {
+        "label": "Knipperende wyser"
+      },
+      "cursorStyle": {
+        "label": "Wyserstyl"
+      },
+      "fontSize": {
+        "label": "Lettergrootte"
+      },
+      "fontFamily": {
+        "label": "Lettertipe"
+      },
+      "scrollback": {
+        "label": "Terugblaai"
+      },
+      "letterSpacing": {
+        "label": "Letterspasiëring"
+      },
+      "lineHeight": {
+        "label": "Lynhoogte"
+      },
+      "bellStyle": {
+        "label": "Klok"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum kontrasverhouding"
+      },
+      "backgroundImage": {
+        "label": "Agtergrondbeeld"
+      },
+      "backgroundImageOpacity": {
+        "label": "Agtergrondbeeld ondeursigtigheid"
+      },
+      "customThemeColors": {
+        "label": "Pasgemaakte temakleure"
+      },
+      "rightClickSelectsWord": {
+        "label": "Regskliek kies woord"
+      },
+      "macOptionIsMeta": {
+        "label": "Opsie is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Vinnige blaai-sleutel"
+      },
+      "fastScrollSensitivity": {
+        "label": "Vinnige blaaispoed"
+      },
+      "backspaceMode": {
+        "label": "Terugspasie"
+      },
+      "autoMosh": {
+        "label": "Outomatiese mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh-opdrag"
+      },
+      "autoTmux": {
+        "label": "Outomatiese tmux"
+      },
+      "useSSHTitle": {
+        "label": "Gebruik die SSH-titel"
+      },
+      "syntaxHighlighting": {
+        "label": "Sintaksuitlig"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Sintaksis-uitligkategorieë"
+      },
+      "linkClickBehavior": {
+        "label": "Skakelklik"
+      },
+      "localEcho": {
+        "label": "Plaaslike eggo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Aanbod om wagwoordaanwysings in te vul"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Vul sudo-aanwysings in"
+      },
+      "autoReconnect": {
+        "label": "Herkoppel outomaties"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Opdrag Outomatiese Voltooiing",
+        "description": "Wys outovoltooiing terwyl jy tik as jy Tab druk"
+      },
+      "localEcho": {
+        "label": "Plaaslike Eggo",
+        "description": "Verminder waargenome invoervertraging deur veilige plaaslike toetsaanslagvoorspelling te gebruik"
+      },
+      "linkClickBehavior": {
+        "label": "Klik op die terminaalskakel",
+        "description": "Standaardgedrag wanneer op skakels in die terminaal geklik word"
+      },
+      "customThemes": {
+        "label": "Gestoorde temas"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Plaaslike Terminaal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Gebruik lewendige terminaalsessies",
+      "description": "Laat ander funksies, soos sessiedeling en -opname, jou regstreekse terminaalsessies bereik."
+    },
+    "history": {
+      "title": "Lees opdraggeskiedenis",
+      "description": "Laat ander funksies, soos die KI-assistent, jou opdraggeskiedenis lees."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "Terminaal",
+    "addHost": "Voeg gasheer by",
+    "applyGlobalThemeTooltip": "Pas hierdie tema toe",
+    "backgroundImageDesc": "Opsionele URL vir 'n terminaal agtergrondbeeld",
+    "backgroundImageLabel": "Agtergrondprent-URL",
+    "backgroundImageOpacityLabel": "Agtergrondbeeld ondeursigtigheid",
+    "backspaceMode": "Terugspasie-modus",
+    "backspaceModeControlH": "Beheer-H (BS)",
+    "backspaceModeLabel": "Terugspasie-modus",
+    "backspaceModeNormal": "Normaal (DEL)",
+    "behaviorAndAdvanced": "Gedrag en Gevorderd",
+    "bellStyle": "Klokstyl",
+    "bellStyleBoth": "Beide",
+    "bellStyleLabel": "Klokstyl",
+    "bellStyleNone": "Geen",
+    "bellStyleSound": "Klank",
+    "bellStyleVisual": "Visueel",
+    "colorTheme": "Kleurtema",
+    "cursorBlink": "Wyserknip",
+    "cursorBlinking": "Wysertjie flikker",
+    "cursorBlinkingDesc": "Aktiveer flikkerende animasie vir die terminaalwyser",
+    "cursorStyle": "Wyserstyl",
+    "cursorStyleBar": "Kroeg",
+    "cursorStyleBlock": "Blok",
+    "cursorStyleLabel": "Wyserstyl",
+    "cursorStyleUnderline": "Onderstreep",
+    "customThemeAnsiColors": "ANSI-kleure",
+    "customThemeBackground": "Agtergrond",
+    "customThemeBlack": "Swart",
+    "customThemeBlue": "Blou",
+    "customThemeBrightBlack": "Helder Swart",
+    "customThemeBrightBlue": "Helderblou",
+    "customThemeBrightCyan": "Helder Siaan",
+    "customThemeBrightGreen": "Heldergroen",
+    "customThemeBrightMagenta": "Helder Magenta",
+    "customThemeBrightRed": "Helderrooi",
+    "customThemeBrightWhite": "Helderwit",
+    "customThemeBrightYellow": "Heldergeel",
+    "customThemeColors": "Pasgemaakte kleure",
+    "customThemeCursor": "Wysertjie",
+    "customThemeCursorAccent": "Wyseraksent",
+    "customThemeCyan": "Siaan",
+    "customThemeForeground": "Voorgrond",
+    "customThemeGreen": "Groen",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Rooi",
+    "customThemeResetTooltip": "Stel terug na verstekwaardes",
+    "customThemeSelection": "Seleksie",
+    "customThemeWhite": "Wit",
+    "customThemeYellow": "Geel",
+    "deleteGlobalThemeTooltip": "Vee hierdie tema uit",
+    "docsLink": "Bekyk dokumente",
+    "enableAutoMosh": "Aktiveer Auto-Mosh",
+    "enableAutoMoshDesc": "Verkies Mosh bo SSH indien beskikbaar",
+    "enableAutoTmux": "Aktiveer Auto-Tmux",
+    "enableAutoTmuxDesc": "Hou jou dop en enigiets wat daarin loop lewendig oor ontkoppelings en herbegin van blaaiers deur dit binne tmux te laat loop (tmux moet op die gasheer geïnstalleer wees)",
+    "fastScrollModifier": "Vinnige Blaai-wysiger",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Vinnige Blaai-wysiger",
+    "fastScrollModifierShift": "Skof",
+    "fastScrollSensitivity": "Vinnige blaai-sensitiwiteit",
+    "fastScrollSensitivityLabel": "Vinnige blaai-sensitiwiteit",
+    "fontFamily": "Lettertipefamilie",
+    "fontFamilyCustomHint": "Kies 'n gebundelde lettertipe, of kies Pasgemaak en tik die presiese naam van 'n lettertipe wat reeds op jou stelsel geïnstalleer is (bv. MesloLGS NF, Noto Sans Mono). Termix kan nie lettertipes vir jou installeer nie, installeer dit eers op jou bedryfstelsel.",
+    "fontFamilyCustomOption": "Pasgemaakte...",
+    "fontFamilyCustomPlaceholder": "Presiese lettertipenaam, bv. MesloLGS NF",
+    "fontFamilyLabel": "Lettertipefamilie",
+    "fontSize": "Lettergrootte",
+    "fontSizeLabel": "Lettergrootte",
+    "hostNotFound": "Gasheer nie gevind nie",
+    "letterSpacing": "Letterspasiëring",
+    "letterSpacingPx": "Letterspasiëring (px)",
+    "lineHeight": "Lynhoogte",
+    "lineHeightLabel": "Lynhoogte",
+    "linkClickBehaviorConfirm": "Wys opspringvenster om oop te maak of te kopieer",
+    "linkClickBehaviorDesc": "Beheer wat gebeur wanneer jy op 'n skakel in die terminaal klik. Gebruik 'Standaard' om die programvlakinstelling te volg.",
+    "linkClickBehaviorDirect": "Maak direk oop",
+    "linkClickBehaviorLabel": "Skakelklikgedrag",
+    "loadingHost": "Laai gasheer...",
+    "localEchoAuto": "Outomaties",
+    "localEchoDesc": "Voorspel veilige drukbare toetsaanslagen plaaslik op stadige verbindings. Wagwoordaanwysings en beheerinvoer word nooit herhaal nie.",
+    "localEchoLabel": "Plaaslike Eggo",
+    "localEchoOff": "Af",
+    "localEchoOn": "Altyd aan",
+    "macOptionIsMetaLabel": "Opsiesleutel stuur Meta",
+    "macOptionIsMetaShortDesc": "Deaktiveer om spesiale karakters (soos @ of |) met die Opsie/Alt-sleutel op macOS te tik in plaas van Meta te stuur",
+    "moshCommand": "MOSH-opdrag",
+    "moshCommandLabel": "Mosh-opdrag",
+    "noSavedThemes": "Geen gestoorde temas nog nie",
+    "none": "Geen",
+    "passwordPromptAutoFillDesc": "Bied aan om die gestoorde wagwoord in te vul wanneer die terminaal daarvoor vra. Skakel af om nooit outomaties enige wagwoord op hierdie gasheer in te vul nie.",
+    "passwordPromptAutoFillLabel": "Aanbodwagwoord outomaties invul",
+    "autoReconnectLabel": "Outomatiese Herverbinding",
+    "autoReconnectDesc": "Koppel weer vanself wanneer die SSH-verbinding val, soos na 'n netwerkonderbreking of slaap. Behou die terugskrol.",
+    "rightClickSelectsWord": "Regskliek Kies Woord",
+    "rightClickSelectsWordLabel": "Regskliek Kies Woord",
+    "rightClickSelectsWordShortDesc": "Kies die woord onder die wyser met die regskliek",
+    "saveAsGlobalTheme": "Stoor as globale tema",
+    "saveGlobalThemeError": "Kon nie tema stoor nie",
+    "saveGlobalThemeNamePrompt": "Voer 'n naam vir hierdie tema in",
+    "saveGlobalThemeSuccess": "Tema gestoor",
+    "savedThemesLabel": "Gestoorde temas",
+    "scrollbackBufferLabel": "Terugrolbuffer",
+    "scrollbackMaxLines": "Maksimum aantal lyne wat in die geskiedenis gehou word",
+    "sudoPasswordAutoFill": "Sudo Wagwoord Outomatiese Vul",
+    "sudoPasswordAutoFillDesc": "Stoor 'n sudo-wagwoord sodat gasheermetrieke, terminaalprompts en ander outomaties bevoorregte opdragte kan uitvoer.",
+    "sudoPasswordAutoFillLabel": "Sudo Wagwoord Outomatiese Vul",
+    "syntaxCategoryIpAddresses": "IP-adresse",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Logvlakke",
+    "syntaxCategoryLogLevelsDesc": "fout, waarsku, inligting, ontfouting, noodlottig",
+    "syntaxCategoryNumbers": "Geëtiketteerde Nommers",
+    "syntaxCategoryNumbersDesc": "poort 8080, uitgang 1, status 404",
+    "syntaxCategoryPaths": "Lêerpaaie",
+    "syntaxCategoryPathsDesc": "/usr/deel/dok, ~/lêer.txt",
+    "syntaxCategoryTimestamps": "Tydstempels",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL'e",
+    "syntaxCategoryUrlsDesc": "https://voorbeeld.com",
+    "syntaxHighlightingDesc": "Kleur terminaaluitvoer in (foute, paaie, IP's, tydstempels)",
+    "syntaxHighlightingLabel": "Sintaksisuitlig",
+    "terminalAppearance": "Terminaalvoorkoms",
+    "theme": "Tema",
+    "themePreview": "Temavoorskou",
+    "useSSHTitleDesc": "Dateer die oortjietitel op vanaf die dop se venstertitel in plaas van die gasheernaam",
+    "useSSHTitleLabel": "Gebruik SSH-venstertitel",
+    "enableTunnel": "Aktiveer Tonnel",
+    "enableFileManager": "Aktiveer Lêerbestuurder",
+    "enableDocker": "Aktiveer Docker",
+    "startupSnippet": "Opstart-brokkie",
+    "quickActions": "Vinnige Aksies",
+    "proxmoxLastSyncStatus": {
+      "success": "Sukses"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} oorgeslaan (geen IP gevind nie)",
+    "proxmoxStatsUrlCopied": "Proxmox Statistiek URL na knipbord gekopieer",
+    "rdpUrlCopied": "RDP-URL gekopieer",
+    "vncUrlCopied": "VNC URL gekopieer",
+    "filterAuthStepca": "Stap CA",
+    "guac": {
+      "noCredential": "Geen geloofsbriewe nie (direkte geloofsbriewe hieronder)",
+      "authTypeDirect": "Direkte",
+      "authTypeCredential": "Geloofsbrief",
+      "authTypeNone": "Geen",
+      "recordingPath": "Opnamepad",
+      "recordingName": "Opnamenaam",
+      "saveHostFirst": "Stoor eers die gasheer.",
+      "sharingOptionsAfterSave": "Deelopsies is beskikbaar nadat die gasheer gestoor is.",
+      "permissionLevel": "Toestemmingsvlak",
+      "typeHeader": "Tipe",
+      "targetHeader": "Teiken",
+      "permissionHeader": "Toestemming",
+      "cancelBtn": "Kanselleer",
+      "savingBtn": "Stoor...",
+      "updateHostBtn": "Opdateer gasheer",
+      "addHostBtn": "Voeg gasheer by"
+    },
+    "filterAuthVault": "Kluis"
+  },
+  "nav": {
+    "history": "Geskiedenis",
+    "localTerminal": "Plaaslike Terminaal",
+    "sshTools": "SSH-gereedskap",
+    "terminal": "Terminaal",
+    "macros": "Makro's"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Tik hier om toetsaanslagen uit te saai...",
+    "copyOnSelect": "Kopieer geselekteerde teks outomaties",
+    "enableRightClickCopyPaste": "Aktiveer regskliek kopieer/plak",
+    "fillPassword": "Vul wagwoord in",
+    "fillPasswordMissing": "Geen gestoorde wagwoord vir {{count}} gekose terminaal(e) nie",
+    "fillPasswordSuccess": "Wagwoord ingevul in {{count}} terminaal(e)",
+    "keyRecordingTitle": "Sleutelopname",
+    "noTerminalTabsOpen": "Geen terminaal-oortjies oop nie",
+    "recordToTerminals": "Neem op na terminale",
+    "selectAll": "Alles",
+    "selectNone": "Geen",
+    "selectTerminalsAbove": "Kies terminale hierbo",
+    "settingsTitle": "Instellings",
+    "startRecording": "Begin Opname",
+    "stopRecording": "Stop opname"
+  },
+  "keybindings": {
+    "copy": "Kopieer seleksie",
+    "paste": "Plak",
+    "sendControlCode": "Stuur Ctrl+letter sein",
+    "sendText": "Stuur SMS",
+    "controlCodeLabel": "Brief",
+    "textLabel": "SMS om te stuur",
+    "appendEnterLabel": "Druk Enter na stuur",
+    "clipboardPermissionNote": "Kan in sommige blaaiers met die eerste gebruik vir knipbordtoestemming vra.",
+    "textRequired": "Voer die teks in om te stuur",
+    "controlCodeRequired": "Voer 'n enkele letter vir die beheerkode in",
+    "builtIn": {
+      "copyCtrlC": "Kopieer seleksie (Ctrl+C, slegs wanneer teks gekies is)",
+      "copyCtrlShiftC": "Kopieer seleksie (Ctrl+Shift+C)",
+      "copyCmdC": "Kopieer seleksie (Cmd+C)",
+      "pasteCtrlShiftV": "Plak vanaf knipbord (Ctrl+Shift+V)",
+      "ctrlW": "Stuur Ctrl+W na dop (geblokkeer om blaaier-oortjie te sluit)",
+      "ctrlT": "Stuur Ctrl+T na dop (geblokkeer om blaaier-oortjie oop te maak)",
+      "ctrlN": "Stuur Ctrl+N na shell (geblokkeer om blaaiervenster oop te maak)",
+      "ctrlQ": "Stuur Ctrl+Q na dop (geblokkeer om blaaier te sluit)"
+    }
+  },
+  "macros": {
+    "title": "Makro's",
+    "description": "Voer 'n gestoorde reeks opdragte in 'n terminaal uit en reageer op wat die bediener terugstuur.",
+    "target": "Teiken",
+    "noTerminal": "Geen terminaal oop nie",
+    "empty": "Geen makro's nog nie",
+    "emptyHint": "Skep 'n makro om 'n terminaalvloei te outomatiseer, soos om aan te meld, 'n diens te herbegin of aanwysings te beantwoord.",
+    "create": "Nuwe makro",
+    "back": "Terug na makro's",
+    "name": "Naam",
+    "namePlaceholder": "Herbegin die webbediener",
+    "nameRequired": "Gee die makro 'n naam voordat jy dit stoor",
+    "descriptionLabel": "Beskrywing",
+    "descriptionPlaceholder": "Wat hierdie makro doen (opsioneel)",
+    "unsaved": "Ongestoorde veranderinge",
+    "save": "Stoor",
+    "saved": "Makro gestoor",
+    "saveFailed": "Kon nie die makro stoor nie",
+    "delete": "Vee uit",
+    "deleteTitle": "Vee hierdie makro uit?",
+    "deleteBody": "\"{{name}}\" sal permanent verwyder word. Dit kan nie ongedaan gemaak word nie.",
+    "deleted": "Makro uitgevee",
+    "cancel": "Kanselleer",
+    "run": "Hardloop",
+    "stop": "Stop",
+    "running": "Hardloop...",
+    "completed": "Makro klaar",
+    "failed": "Makro het misluk",
+    "loadFailed": "Kon nie makro's laai nie",
+    "needTerminal": "Maak eers 'n terminaal oop en koppel dit",
+    "noSteps": "Hierdie makro het nog geen stappe nie. Voeg een hieronder by.",
+    "addStep": "Voeg stap by",
+    "stepNumber": "Stap {{number}}",
+    "removeStep": "Verwyder stap",
+    "confirmRunTitle": "Voer hierdie makro uit?",
+    "confirmRunBody": "\"{{name}}\" sal bevele stuur na {{host}}.",
+    "confirmRunAction": "Begin makro",
+    "stepTypes": {
+      "send": {
+        "label": "Stuur opdrag",
+        "help": "Tik teks in die terminaal, dieselfde asof jy dit getik het."
+      },
+      "wait": {
+        "label": "Wag vir uitvoer",
+        "help": "Pouseer totdat die bediener die teks wat jy noem, druk, soos 'n wagwoordaanwysing."
+      },
+      "delay": {
+        "label": "Pouseer",
+        "help": "Wag 'n vaste hoeveelheid tyd voor die volgende stap."
+      },
+      "if": {
+        "label": "Indien die uitvoer bevat",
+        "help": "Kontroleer alles wat die bediener tot dusver gedruk het, en voer dan een van twee takke uit."
+      },
+      "repeat": {
+        "label": "Herhaal",
+        "help": "Voer die stappe daarin 'n vasgestelde aantal kere uit."
+      }
+    },
+    "send": {
+      "text": "Opdrag of teks",
+      "textPlaceholder": "systemctl herbegin nginx",
+      "pressEnter": "Druk Enter na stuur",
+      "pressEnterHelp": "Skakel dit af om teks te tik sonder om dit in te dien."
+    },
+    "wait": {
+      "pattern": "Wag totdat die uitvoer bevat",
+      "patternPlaceholder": "wagwoord:",
+      "timeout": "Gee op daarna",
+      "onTimeout": "As dit nooit verskyn nie",
+      "stop": "Stop die makro",
+      "continue": "Gaan in elk geval voort"
+    },
+    "delay": {
+      "duration": "Wag vir"
+    },
+    "ifStep": {
+      "pattern": "Indien die uitvoer bevat",
+      "patternPlaceholder": "Aktief: aktief (hardloop)",
+      "then": "Doen dan hierdie",
+      "else": "Andersins doen dit",
+      "emptyBranch": "Geen stappe nie"
+    },
+    "repeat": {
+      "count": "Aantal kere",
+      "times": "tye"
+    },
+    "match": {
+      "useRegex": "Stem ooreen met 'n gereelde uitdrukking",
+      "useRegexHelp": "Los dit af om die teks presies soos geskryf te laat ooreenstem.",
+      "invalidRegex": "Nie 'n geldige gereelde uitdrukking nie, dit sal as gewone teks ooreenstem"
+    },
+    "seconds": "sekondes",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Afstandbediener word benodig. Koppel 'n afstandbediener in Instellings om hierdie verbindingstipe te gebruik."
+  }
+}

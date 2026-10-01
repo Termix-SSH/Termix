@@ -1,0 +1,407 @@
+/**
+ * WebSockets for plugins: one upgrade handler, no ports.
+ *
+ * A plugin registers /plugin-ws/<id>/<path> and core serves it from the main
+ * server's upgrade event. Auth is the same as every other socket in Termix
+ * (utils/ws-auth.ts), the actor is set for the handler, and every socket a
+ * plugin opened is closed when it deactivates.
+ *
+ * Two shapes, because two kinds of caller exist:
+ *
+ *   - route(): core owns the WebSocketServer and hands the plugin a live
+ *     socket. What a plugin writing its own protocol wants.
+ *   - upgrade(): core hands over the raw upgrade after authenticating it, for
+ *     a library that insists on owning its own server. guacamole-lite is the
+ *     reason this exists: it constructs a WebSocketServer internally, so the
+ *     only way to attach it is to give it the upgrade.
+ *
+ * Both run auth first, so "bring your own server" never means "bring your own
+ * auth".
+ */
+
+import type { IncomingMessage, Server as HttpServer } from "node:http";
+import type { Duplex } from "node:stream";
+import { WebSocketServer, type WebSocket } from "ws";
+import type {
+  PluginWebSocketHandler,
+  PluginWebSocketOptions,
+} from "@termix/plugin-sdk/backend";
+import { pluginLogger } from "../utils/logger.js";
+import { recordConflict } from "./conflicts.js";
+import { extractWebSocketToken } from "../utils/ws-auth.js";
+import { runAsActor } from "./actor.js";
+import { isPluginInstalled } from "./http.js";
+
+const PLUGIN_WS_PREFIX = "/plugin-ws/";
+
+type RawUpgradeHandler = (
+  request: IncomingMessage,
+  socket: Duplex,
+  head: Buffer,
+  userId: string,
+) => void;
+
+interface Route {
+  pluginId: string;
+  path: string;
+  options: PluginWebSocketOptions;
+  /** Declared capabilities, for the per-upgrade network:serve check. */
+  declared: readonly string[];
+  handler?: PluginWebSocketHandler;
+  rawHandler?: RawUpgradeHandler;
+  /** Sockets handed to rawHandler, destroyed when the route goes away. */
+  rawSockets?: Set<Duplex>;
+}
+
+/** Largest frame a plugin socket accepts. ws defaults to 100MB. */
+const MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
+
+/** Keyed by "<pluginId>:<path>". */
+const routes = new Map<string, Route>();
+
+/** One server per plugin route, so disposal can close exactly its sockets. */
+const servers = new Map<string, WebSocketServer>();
+
+const attachedServers = new Set<HttpServer>();
+
+function normalizePath(path: string): string {
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  return withSlash.length > 1 && withSlash.endsWith("/")
+    ? withSlash.slice(0, -1)
+    : withSlash;
+}
+
+function key(pluginId: string, path: string): string {
+  return `${pluginId}:${normalizePath(path)}`;
+}
+
+/**
+ * Parses /plugin-ws/<id>/<path> out of an upgrade URL.
+ *
+ * Returns null for anything else, so core's own sockets and a stray request
+ * both fall through to whatever else is listening rather than being claimed.
+ */
+export function parsePluginWsUrl(
+  url: string | undefined,
+): { pluginId: string; path: string } | null {
+  if (!url) return null;
+  const pathname = url.split("?")[0];
+  if (!pathname.startsWith(PLUGIN_WS_PREFIX)) return null;
+
+  const rest = pathname.slice(PLUGIN_WS_PREFIX.length);
+  const slash = rest.indexOf("/");
+  if (slash <= 0) return null;
+
+  const pluginId = rest.slice(0, slash);
+  const path = normalizePath(rest.slice(slash));
+  if (!pluginId || path === "/") return null;
+  return { pluginId, path };
+}
+
+/**
+ * Resolves the user behind an upgrade, or null.
+ *
+ * A half-authenticated session is not a user: a token still awaiting TOTP is
+ * refused here exactly as createAuthMiddleware refuses it for HTTP, so a
+ * socket cannot be the way around the second factor.
+ */
+async function verifyToken(request: IncomingMessage): Promise<string | null> {
+  const token = extractWebSocketToken(request);
+  if (!token) return null;
+  try {
+    const { AuthManager } = await import("../utils/auth-manager.js");
+    const payload = await AuthManager.getInstance().verifyJWTToken(token);
+    if (!payload || payload.pendingTOTP) return null;
+    return payload.userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function reject(socket: Duplex, status: number, message: string): void {
+  try {
+    socket.write(`HTTP/1.1 ${status} ${message}\r\nConnection: close\r\n\r\n`);
+  } catch {
+    // The peer may already be gone.
+  }
+  socket.destroy();
+}
+
+/**
+ * Serves a plugin upgrade, or returns false so the caller can pass it on.
+ *
+ * Exported for the test suite and for database.ts, which wires it into both
+ * the HTTP and the HTTPS server.
+ */
+async function handlePluginUpgrade(
+  request: IncomingMessage,
+  socket: Duplex,
+  head: Buffer,
+): Promise<boolean> {
+  const parsed = parsePluginWsUrl(request.url);
+  if (!parsed) return false;
+
+  const route = routes.get(key(parsed.pluginId, parsed.path));
+  if (!route) {
+    // Claimed by the prefix but nothing is listening: answering here is more
+    // honest than leaving the socket hanging. A disabled plugin has no routes
+    // left, so an installed id means "off", not "missing".
+    if (isPluginInstalled(parsed.pluginId)) {
+      reject(socket, 503, "Service Unavailable");
+    } else {
+      reject(socket, 404, "Not Found");
+    }
+    return true;
+  }
+
+  // Same reasoning as the HTTP side: the grant is in the database, so it is
+  // checked per upgrade rather than at registration, and a revoke takes effect
+  // on the next connection without a restart.
+  const { hasCapability } = await import("./permissions.js");
+  if (!(await hasCapability(route.pluginId, "network:serve", route.declared))) {
+    reject(socket, 403, "Forbidden");
+    return true;
+  }
+
+  let userId = "";
+  if (!route.options.public) {
+    const resolved = await verifyToken(request);
+    if (!resolved) {
+      reject(socket, 401, "Unauthorized");
+      return true;
+    }
+    userId = resolved;
+  } else if (route.options.optionalAuth) {
+    userId = (await verifyToken(request)) ?? "";
+  }
+
+  // A guest on a public socket has no actor at all, the same as a public
+  // HTTP route, so nothing downstream mistakes a placeholder for a user.
+  const asCaller = (fn: () => void) =>
+    userId ? runAsActor(userId, "request", fn) : fn();
+
+  if (route.rawHandler) {
+    const rawHandler = route.rawHandler;
+    const tracked = route.rawSockets;
+    if (tracked) {
+      tracked.add(socket);
+      socket.once("close", () => tracked.delete(socket));
+    }
+    asCaller(() => rawHandler(request, socket, head, userId));
+    return true;
+  }
+
+  const server = servers.get(key(route.pluginId, route.path));
+  if (!server) {
+    reject(socket, 503, "Service Unavailable");
+    return true;
+  }
+
+  const { getClientIp, getRequestOrigin } =
+    await import("../utils/request-origin.js");
+  const { DataCrypto } = await import("../utils/data-crypto.js");
+  const connection = {
+    userId,
+    request,
+    clientIp: getClientIp(request as never),
+    requestOrigin: getRequestOrigin(request as never),
+    isDataUnlocked: () => !!userId && !!DataCrypto.getUserDataKey(userId),
+  };
+
+  server.handleUpgrade(request, socket, head, (ws: WebSocket) => {
+    const handler = route.handler;
+    if (!handler) {
+      ws.close(1011, "No handler");
+      return;
+    }
+    asCaller(() => {
+      void Promise.resolve(handler({ ...connection, socket: ws })).catch(
+        (error) => {
+          pluginLogger.error(
+            `Plugin ${route.pluginId} socket ${route.path} failed`,
+            error instanceof Error ? error : new Error(String(error)),
+            { operation: "plugin_ws_error" },
+          );
+          try {
+            ws.close(1011, "Plugin error");
+          } catch {
+            // Already closed.
+          }
+        },
+      );
+    });
+  });
+
+  return true;
+}
+
+/** Wires the upgrade handler onto a server. Idempotent per server. */
+export function attachPluginWebSockets(server: HttpServer): void {
+  if (attachedServers.has(server)) return;
+  attachedServers.add(server);
+
+  server.on("upgrade", (request, socket, head) => {
+    void handlePluginUpgrade(
+      request as IncomingMessage,
+      socket as Duplex,
+      head as Buffer,
+    ).catch((error) => {
+      pluginLogger.error(
+        "Plugin WebSocket upgrade failed",
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_ws_upgrade" },
+      );
+      reject(socket as Duplex, 500, "Internal Server Error");
+    });
+  });
+}
+
+export function registerPluginWsRoute(
+  pluginId: string,
+  path: string,
+  handler: PluginWebSocketHandler,
+  declared: readonly string[],
+  options: PluginWebSocketOptions = {},
+): () => void {
+  const routeKey = key(pluginId, path);
+  const normalized = normalizePath(path);
+  if (routes.has(routeKey)) {
+    recordConflict({ kind: "ws", pluginId, name: normalized });
+    throw new Error(
+      `/plugin-ws/${pluginId}${normalized} is already registered`,
+    );
+  }
+
+  routes.set(routeKey, {
+    pluginId,
+    path: normalized,
+    options,
+    declared,
+    handler,
+  });
+  if (options.public) auditPublicSocket(pluginId, normalized);
+  servers.set(
+    routeKey,
+    new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES }),
+  );
+
+  pluginLogger.info(`Mounted /plugin-ws/${pluginId}${normalized}`, {
+    operation: "plugin_ws_mount",
+  });
+
+  return () => disposeRoute(routeKey, pluginId, normalized);
+}
+
+export function registerPluginWsUpgrade(
+  pluginId: string,
+  path: string,
+  handler: RawUpgradeHandler,
+  declared: readonly string[],
+  options: PluginWebSocketOptions = {},
+): () => void {
+  const routeKey = key(pluginId, path);
+  const normalized = normalizePath(path);
+  if (routes.has(routeKey)) {
+    recordConflict({ kind: "ws", pluginId, name: normalized });
+    throw new Error(
+      `/plugin-ws/${pluginId}${normalized} is already registered`,
+    );
+  }
+
+  routes.set(routeKey, {
+    pluginId,
+    path: normalized,
+    options,
+    declared,
+    rawHandler: handler,
+    rawSockets: new Set(),
+  });
+  if (options.public) auditPublicSocket(pluginId, normalized);
+
+  pluginLogger.info(`Mounted raw upgrade /plugin-ws/${pluginId}${normalized}`, {
+    operation: "plugin_ws_mount",
+  });
+
+  return () => disposeRoute(routeKey, pluginId, normalized);
+}
+
+function disposeRoute(routeKey: string, pluginId: string, path: string): void {
+  const route = routes.get(routeKey);
+  routes.delete(routeKey);
+
+  for (const socket of route?.rawSockets ?? []) {
+    try {
+      socket.destroy();
+    } catch {
+      // Already gone.
+    }
+  }
+  route?.rawSockets?.clear();
+
+  const server = servers.get(routeKey);
+  if (server) {
+    servers.delete(routeKey);
+    // Close the clients first: server.close() waits for them to drain, and a
+    // live terminal would otherwise keep the route alive after deactivate.
+    for (const client of server.clients) {
+      try {
+        client.close(1001, "Plugin disabled");
+      } catch {
+        // Already gone.
+      }
+    }
+    try {
+      server.close();
+    } catch {
+      // Closing twice is not an error worth surfacing.
+    }
+  }
+
+  pluginLogger.info(`Unmounted /plugin-ws/${pluginId}${path}`, {
+    operation: "plugin_ws_unmount",
+  });
+}
+
+export function getRegisteredWsRoutes(): string[] {
+  return [...routes.keys()];
+}
+
+/** The socket paths a plugin serves without core's login check. */
+export function getPluginPublicWsRoutes(pluginId: string): string[] {
+  return [...routes.values()]
+    .filter((route) => route.pluginId === pluginId && route.options.public)
+    .map((route) => route.path);
+}
+
+/** Same record the HTTP side writes for its public routes. */
+function auditPublicSocket(pluginId: string, path: string): void {
+  pluginLogger.warn(
+    `Plugin ${pluginId} serves /plugin-ws/${pluginId}${path} without core authentication`,
+    { operation: "plugin_ws_public" },
+  );
+  void import("../utils/audit-logger.js")
+    .then(({ logAudit }) =>
+      logAudit({
+        userId: "system",
+        username: `plugin:${pluginId}`,
+        action: "plugin_ws_public_route",
+        resourceType: "plugin",
+        resourceId: pluginId,
+        resourceName: pluginId,
+        details: `unauthenticated socket: ${path}`,
+        success: true,
+      }),
+    )
+    .catch(() => {});
+}
+
+/** Test seam. */
+export function resetPluginWebSockets(): void {
+  for (const routeKey of [...routes.keys()]) {
+    const route = routes.get(routeKey);
+    if (route) disposeRoute(routeKey, route.pluginId, route.path);
+  }
+  routes.clear();
+  servers.clear();
+  attachedServers.clear();
+}

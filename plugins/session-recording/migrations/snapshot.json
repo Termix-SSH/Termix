@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "tables": {
+    "session_recordings": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "userId": {
+          "type": "varchar",
+          "length": 255
+        },
+        "username": {
+          "type": "text"
+        },
+        "accessId": {
+          "type": "integer"
+        },
+        "startedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "endedAt": {
+          "type": "timestamp"
+        },
+        "duration": {
+          "type": "integer"
+        },
+        "commands": {
+          "type": "text"
+        },
+        "dangerousActions": {
+          "type": "text"
+        },
+        "recordingPath": {
+          "type": "text"
+        },
+        "protocol": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "ssh"
+        },
+        "format": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "text"
+        },
+        "terminatedByOwner": {
+          "type": "boolean",
+          "defaultValue": false
+        },
+        "terminationReason": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_session_recordings_user_started",
+          "columns": ["userId", "startedAt"]
+        },
+        {
+          "name": "idx_session_recordings_host",
+          "columns": ["hostId"]
+        }
+      ],
+      "adopts": "session_recordings"
+    }
+  }
+}

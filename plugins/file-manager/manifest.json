@@ -1,0 +1,135 @@
+{
+  "id": "file-manager",
+  "name": "File Manager",
+  "version": "1.0.0",
+  "description": "Browse, edit and transfer files over SFTP, including between two hosts.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Files & Transfer",
+  "icon": "FolderSearch",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "credentials:read",
+    "ssh:connect",
+    "db:own",
+    "network:serve",
+    "ui:surface",
+    "events:core",
+    "kv:own",
+    "users:impersonate"
+  ],
+  "provides": [
+    {
+      "service": "files.sftp",
+      "version": "1.0.0",
+      "permission": "file-manager.use"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "files",
+        "titleKey": "nav.files",
+        "icon": "FolderSearch",
+        "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "sftp",
+        "titleKey": "nav.sftp",
+        "icon": "ArrowLeftRight",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "actions": [
+      {
+        "id": "files.openHost",
+        "titleKey": "nav.files",
+        "handler": "openHost",
+        "permission": "file-manager.use"
+      },
+      {
+        "id": "files.openEditor",
+        "titleKey": "nav.files",
+        "handler": "openEditor",
+        "permission": "file-manager.use"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "user": [
+        {
+          "key": "transferConcurrency",
+          "type": "number",
+          "labelKey": "settings.user.transferConcurrency.label",
+          "descriptionKey": "settings.user.transferConcurrency.description",
+          "min": 1,
+          "max": 8,
+          "default": 4
+        },
+        {
+          "key": "confirmBeforeTrash",
+          "type": "boolean",
+          "labelKey": "settings.user.confirmBeforeTrash.label",
+          "descriptionKey": "settings.user.confirmBeforeTrash.description",
+          "default": true
+        }
+      ],
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 60,
+        "enableKey": "enableFileManager",
+        "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
+        "enableDefault": true,
+        "fields": [
+          {
+            "key": "defaultPath",
+            "type": "string",
+            "labelKey": "settings.host.defaultPath.label",
+            "requires": "enableFileManager"
+          },
+          {
+            "key": "scpLegacy",
+            "type": "boolean",
+            "labelKey": "settings.host.scpLegacy.label",
+            "requires": "enableFileManager"
+          }
+        ]
+      }
+    },
+    "hostCapability": {
+      "key": "enableFileManager",
+      "labelKey": "hostCapability.label",
+      "editorTab": "plugins"
+    },
+    "uiPresets": {
+      "simple": {
+        "viewMode": "grid"
+      },
+      "balanced": {
+        "viewMode": "grid"
+      },
+      "advanced": {
+        "viewMode": "list"
+      }
+    },
+    "uses": ["homepage.widgets", "host-metrics.disk", "terminal.open"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

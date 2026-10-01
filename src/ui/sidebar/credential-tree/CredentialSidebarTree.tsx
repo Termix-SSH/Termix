@@ -35,7 +35,6 @@ export function CredentialSidebarTree({
   onDeleteCredential,
   onShareCredential,
   usedByCounts,
-  termixIdLinkedIds,
   query = "",
   loading = false,
   arrangeLocked = true,
@@ -57,7 +56,6 @@ export function CredentialSidebarTree({
   onDeleteCredential: (cred: Credential) => void;
   onShareCredential?: (cred: Credential) => void;
   usedByCounts?: Map<string, number>;
-  termixIdLinkedIds?: Set<number>;
   query?: string;
   loading?: boolean;
   /** When true, drag-to-rearrange is off entirely. Toggled from the panel header. */
@@ -398,7 +396,6 @@ export function CredentialSidebarTree({
                     <CredentialItem
                       cred={item}
                       usedByCount={usedByCounts?.get(item.id) ?? 0}
-                      termixIdLinked={termixIdLinkedIds?.has(Number(item.id))}
                       query={query}
                       stripeIndex={vItem.index}
                       isMenuOpen={openMenuCredentialId === item.id}

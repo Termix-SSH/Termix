@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Se automatiseringer",
+      "description": "Se automatiseringerne og deres historik."
+    },
+    "create": {
+      "title": "Opret automatiseringer",
+      "description": "Tilføj nye automatiseringer."
+    },
+    "edit": {
+      "title": "Rediger automatiseringer",
+      "description": "Ændr eksisterende automatiseringer."
+    },
+    "delete": {
+      "title": "Slet automatiseringer",
+      "description": "Fjern automatiseringer."
+    },
+    "run": {
+      "title": "Kør automatiseringer",
+      "description": "Udløs en automatisering manuelt."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "Automatiseringer",
+        "tabAutomations": "Automatiseringer",
+        "tabRuns": "Løber",
+        "tabChannels": "Kanaler",
+        "createAutomation": "Ny automatisering",
+        "backToAutomations": "Tilbage til Automatiseringer",
+        "createTitle": "Ny automatisering",
+        "editTitle": "Rediger automatisering",
+        "empty": "Ingen automatiseringer endnu. Opret en for at reagere på en metric, en tidsplan eller en begivenhed.",
+        "emptyRuns": "Ingen løb endnu.",
+        "channelsHint": "Kanaler er konfigureret i advarsler",
+        "noChannelsHint": "Beskeden sendes altid til din indbakke. Tilføj kanaler i Beskeder for også at sende den et andet sted hen.",
+        "nameLabel": "Navn",
+        "namePlaceholder": "f.eks. Ryd op i /data når den fyldes op",
+        "nameRequired": "Navn er påkrævet",
+        "descriptionLabel": "Beskrivelse",
+        "descriptionPlaceholder": "Valgfri beskrivelse",
+        "enabledLabel": "Aktiveret",
+        "concurrencyLabel": "Hvis den allerede kører",
+        "concurrencyHint": "Hvad skal man gøre, når dette udløses igen, før den sidste kørsel er færdig.",
+        "concurrency": {
+          "skip": "Spring den nye kørsel over",
+          "queue": "Vent og løb efter",
+          "allow": "Kør begge på én gang"
+        },
+        "save": "Spare",
+        "created": "Automatisering skabt",
+        "updated": "Automatisering gemt",
+        "deleted": "Automatisering slettet",
+        "deleteConfirm": "Vil du slette denne automatisering? Dens kørselshistorik slettes også.",
+        "runNow": "Løb nu",
+        "testRun": "Testkørsel",
+        "testRunHint": "Kører hvert trin, men rører ikke noget uden for Termix.",
+        "runStarted": "Løbet startede",
+        "runFinished": "Kørsel færdig: {{status}}",
+        "trigger": "Udløser",
+        "steps": "Trin",
+        "addStep": "Tilføj trin",
+        "removeStep": "Fjern trin",
+        "moveUp": "Flyt op",
+        "moveDown": "Flyt ned",
+        "noSteps": "Ingen trin endnu. Tilføj et trin for at angive, hvad der skal ske.",
+        "webhookTokenTitle": "Webhook-URL",
+        "webhookTokenDescription": "Dette vises én gang. Gem det nu, det kan ikke hentes senere.",
+        "copy": "Kopi",
+        "copied": "Kopieret",
+        "viewJson": "JSON",
+        "viewBuilder": "Byggefirma",
+        "viewGraph": "Kurve",
+        "lastRun": "Sidste løb",
+        "never": "Aldrig",
+        "duration": "{{seconds}}s",
+        "stepOutput": "Produktion",
+        "stepError": "Fejl",
+        "dryRunBadge": "Testkørsel",
+        "hostSelector": {
+          "trigger": "Udløsende vært",
+          "host": "Specifik vært",
+          "fleet": "Flåde",
+          "all": "Alle værter"
+        },
+        "triggerKinds": {
+          "metric_threshold": "Metrisk tærskel",
+          "host_status": "Værten går op eller ned",
+          "health_check": "Ændringer i sundhedstjek",
+          "schedule": "På en tidsplan",
+          "docker_event": "Containerhændelse",
+          "internal_event": "Termix-begivenhed",
+          "webhook": "Indgående webhook"
+        },
+        "stepTypes": {
+          "notify": "Send en alarm",
+          "http": "Kald en URL",
+          "run_snippet": "Kør et uddrag",
+          "run_command": "Kør en kommando",
+          "docker": "Styr en container",
+          "tunnel": "Kontroller en tunnel",
+          "wol": "Væk en vært",
+          "wait": "Vente",
+          "set_var": "Angiv en variabel",
+          "if": "Hvis / ellers",
+          "run_automation": "Kør en anden automatisering",
+          "stop": "Stop"
+        },
+        "statuses": {
+          "running": "Løb",
+          "success": "Succes",
+          "failed": "Mislykkedes",
+          "timeout": "Timeout",
+          "skipped": "Springet over",
+          "cancelled": "Annulleret"
+        },
+        "fields": {
+          "host": "Vært",
+          "metric": "Metrisk",
+          "mount": "Monteringspunkt",
+          "operator": "Er",
+          "value": "Værdi",
+          "forSeconds": "Vedvarende i (sekunder)",
+          "cooldown": "Nedkølingstid (minutter)",
+          "cron": "Cron-udtryk",
+          "intervalSeconds": "Hvert (sekund)",
+          "timezone": "Tidszone",
+          "timezoneServer": "Servertid",
+          "timezoneHint": "Cron-tider aflæses i denne zone. Gælder ikke for intervalplaner.",
+          "container": "Beholder",
+          "command": "Kommando",
+          "url": "URL",
+          "method": "Metode",
+          "body": "Legeme",
+          "channels": "Send også til",
+          "title": "Titel",
+          "message": "Besked",
+          "snippet": "Uddrag",
+          "seconds": "Sekunder",
+          "conditionLeftPlaceholder": "Værdi at kontrollere",
+          "conditionRightPlaceholder": "Sammenlign med",
+          "variableName": "Variabelnavn",
+          "variableValue": "Værdi",
+          "elevated": "Kør med sudo",
+          "onError": "Hvis dette mislykkes",
+          "allowPrivateNetwork": "Tillad lokale netværksadresser",
+          "allowPrivateNetworkHint": "Nødvendig for en selvhostet tjeneste på dit LAN. Deaktiveret som standard for at forhindre anmodninger til interne adresser."
+        },
+        "onError": {
+          "stop": "Stop løbet",
+          "continue": "Fortsæt"
+        },
+        "needsPlugin": "Behøver {{plugin}}",
+        "needsPluginHint": "Denne automatisering springes over, indtil den nødvendige funktion er tilgængelig igen.",
+        "offBadge": "Slukket",
+        "docsLink": "Se dokumenter",
+        "ago": {
+          "seconds": "For {{count}}sekunder siden",
+          "minutes": "For {{count}}minutter siden",
+          "hours": "For {{count}}timer siden",
+          "days": "for {{count}}dage siden"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "Automatiseringer"
+  },
+  "onboarding": {
+    "feature_automations": "Automatiseringer",
+    "feature_automations_desc": "Kør trin automatisk, når der sker noget, og få besked."
+  },
+  "maintenance": {
+    "title": "Opretholdelse",
+    "description": "Sæt automatiseringer for værtsstatus, tilstand, metrikker, containere og tunnelfrakobling på pause, mens arbejdet er i gang. Overvågning, manuelle kørsel og planlagte automatiseringer fortsætter.",
+    "denied": "Du har ikke tilladelse til at se vedligeholdelsen.",
+    "sharedReadOnly": "Denne vært blev delt med dig. Kun dens ejer kan ændre vedligeholdelsen.",
+    "failed": "Vedligeholdelsen kunne ikke opdateres.",
+    "active": "Vedligeholdelse aktiv",
+    "estimated": "Forventet færdiggørelse",
+    "noAutoEnd": "Estimatet afslutter ikke vedligeholdelsen. Afslut den eksplicit, når arbejdet er færdigt.",
+    "endConfirm": "Vil du afslutte vedligeholdelsen og genoptage hændelsesudløste automatiseringer for denne vært?",
+    "confirmEnd": "Bekræft slut",
+    "cancel": "Ophæve",
+    "end": "Afslut vedligeholdelse",
+    "action": "Handling",
+    "startNow": "Start nu",
+    "schedule": "Planlæg til senere",
+    "reason": "Årsag",
+    "startUtc": "Første start (UTC)",
+    "repeat": "Gentage",
+    "once": "Engang",
+    "weekly": "Ugentlig",
+    "monthly": "Månedlig",
+    "utcHelp": "Tidsplaner bruger UTC hele året. Månedlige tidsplaner springer måneder over uden den valgte dag. Planlagte vinduer kan ikke overlappe hinanden; overstyring af vedligeholdelse fortsætter på tværs af senere vinduer.",
+    "duration": "Estimeret varighed (minutter)",
+    "grace": "Frist (minutter)",
+    "notify": "Giv én besked, hvis du stadig er offline efter estimatet plus den henstandsperiode",
+    "addSchedule": "Tilføj tidsplan",
+    "schedules": "Tidsplaner",
+    "noSchedules": "Ingen vedligeholdelsesplaner.",
+    "completed": "Allerede startet",
+    "minutes_one": "{{count}} minut",
+    "minutes_other": "{{count}} minutter",
+    "remove": "Fjern tidsplan",
+    "loadFailed": "Vedligeholdelsesstatus kunne ikke opdateres. Ændringer er deaktiveret, indtil den kan indlæses.",
+    "loading": "Indlæser vedligeholdelsesstatus…"
+  }
+}

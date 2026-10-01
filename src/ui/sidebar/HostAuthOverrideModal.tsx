@@ -17,9 +17,10 @@ import {
 } from "@/main-axios";
 import type { Credential, Host } from "@/types/ui-types";
 import {
-  AUTH_PROTOCOL_METADATA,
+  SSH_AUTH_PROTOCOL,
   type AuthOverrideProtocol,
 } from "@/types/auth-protocols";
+import { authProtocolLabel } from "./host-permissions";
 import { mapCredentials } from "./HostManagerData";
 import { getConnectedRemoteApi } from "@/lib/remote-server-api";
 
@@ -44,8 +45,10 @@ export function HostAuthOverrideModal({
   const overrideState = host.authOverrides?.[protocol];
   const ownerAuthShared =
     overrideState?.ownerAuthShared ??
-    (protocol === "ssh" ? !!host.shareSshAuth : false);
-  const remoteShared = !!host.isShared && Number(host.id) < 0;
+    (protocol === SSH_AUTH_PROTOCOL ? !!host.shareSshAuth : false);
+  // A shared host's copy on a linked desktop: its override lives on the
+  // server, against the server's own credentials.
+  const sharedCopySyncId = host.sharedCopy ? (host.syncId ?? null) : null;
 
   useEffect(() => {
     if (!open) return;
@@ -53,18 +56,16 @@ export function HostAuthOverrideModal({
     setLoading(true);
     setLoadError(false);
 
-    const credentialsRequest = remoteShared
+    const credentialsRequest = sharedCopySyncId
       ? getConnectedRemoteApi().then((api) => {
-          if (!api) throw new Error("Remote server is not connected");
+          if (!api) throw new Error("The linked server is not reachable");
           return api.get("/credentials").then((response) => response.data);
         })
       : getCredentials();
 
     Promise.all([
       credentialsRequest,
-      remoteShared
-        ? getHostAuthOverride(Number(host.id), protocol, true)
-        : getHostAuthOverride(Number(host.id), protocol),
+      getHostAuthOverride(Number(host.id), protocol, sharedCopySyncId),
     ])
       .then(([credentialResult, overrideResult]) => {
         if (cancelled) return;
@@ -87,22 +88,18 @@ export function HostAuthOverrideModal({
     return () => {
       cancelled = true;
     };
-  }, [host.id, open, protocol, remoteShared]);
+  }, [host.id, open, protocol, sharedCopySyncId]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const credentialId = selectedId ? Number(selectedId) : null;
-      if (remoteShared) {
-        await setHostAuthOverride(
-          Number(host.id),
-          protocol,
-          credentialId,
-          true,
-        );
-      } else {
-        await setHostAuthOverride(Number(host.id), protocol, credentialId);
-      }
+      await setHostAuthOverride(
+        Number(host.id),
+        protocol,
+        credentialId,
+        sharedCopySyncId,
+      );
       toast.success(
         credentialId === null
           ? t(
@@ -131,7 +128,7 @@ export function HostAuthOverrideModal({
           <DialogHeader>
             <DialogTitle>
               {t("hosts.sharing.authOverrideTitleProtocol", {
-                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+                protocol: authProtocolLabel(protocol, t),
               })}
             </DialogTitle>
             <DialogDescription>

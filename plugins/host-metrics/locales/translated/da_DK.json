@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Værtsmålinger"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "Hukommelse",
+    "disk": "Disk",
+    "network": "Netværk",
+    "uptime": "Oppetid",
+    "processes": "Processer",
+    "available": "Tilgængelig",
+    "free": "Gratis",
+    "connecting": "Forbinder...",
+    "connectionFailed": "Kunne ikke oprette forbindelse til serveren",
+    "naCpus": "Ikke tilgængelig CPU(er)",
+    "cpuCores_one": "{{count}} Kerne",
+    "cpuCores_other": "{{count}} Kerner",
+    "cpuUsage": "CPU-forbrug",
+    "memoryUsage": "Hukommelsesforbrug",
+    "diskUsage": "Diskforbrug",
+    "selectFilesystem": "Vælg filsystem",
+    "temperature": "Temperatur",
+    "highestTemperature": "Højeste temperatur",
+    "primaryTemperatureSensor": "Primær sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "Ingen NVIDIA GPU fundet. Installer NVIDIA-driveren (den leverer nvidia-smi) for at se GPU-målinger.",
+      "driver": "Chauffør {{version}}",
+      "utilization": "Udnyttelse",
+      "memory": "VRAM",
+      "temperature": "Temp.",
+      "power": "Magt",
+      "fan": "Ventilator",
+      "processes": "GPU-processer",
+      "noProcesses": "Ingen processer bruger GPU'en"
+    },
+    "failedToFetchHostConfig": "Kunne ikke hente værtkonfigurationen",
+    "serverOffline": "Server offline",
+    "cannotFetchMetrics": "Kan ikke hente målinger fra offlineserveren",
+    "totpFailed": "TOTP-bekræftelse mislykkedes",
+    "noneAuthNotSupported": "Host Metrics understøtter ikke godkendelsestypen 'ingen'.",
+    "noHostSelected": "Ingen vært valgt",
+    "load": "Indlæs",
+    "systemInfo": "Systemoplysninger",
+    "hostname": "Værtsnavn",
+    "operatingSystem": "Operativsystem",
+    "kernel": "Kernen",
+    "seconds": "sekunder",
+    "networkInterfaces": "Netværksgrænseflader",
+    "noInterfacesFound": "Ingen netværksgrænseflader fundet",
+    "noProcessesFound": "Ingen processer fundet",
+    "processesTotal": "total",
+    "processesRunning": "løb",
+    "loginStats": "SSH-loginstatistik",
+    "noRecentLoginData": "Ingen nylige logindata",
+    "ports": {
+      "title": "Lytteporte",
+      "protocol": "Protokol",
+      "port": "Havn",
+      "address": "Adresse",
+      "process": "Behandle",
+      "search": "Søg efter porte...",
+      "allProtocols": "Alle",
+      "noData": "Ingen data om lytteporte"
+    },
+    "firewall": {
+      "title": "Firewall",
+      "inactive": "Inaktiv",
+      "policy": "Politik",
+      "rules": "regler",
+      "noRules": "Ingen regler i denne kæde",
+      "noData": "Ingen firewalldata tilgængelige",
+      "action": "Handling",
+      "protocol": "Proto",
+      "port": "Havn",
+      "source": "Kilde",
+      "anywhere": "Hvor som helst",
+      "chains": "kæder"
+    },
+    "loadAvg": "Indlæs gennemsnit",
+    "swap": "Byt",
+    "architecture": "Arkitektur",
+    "refresh": "Opfriske",
+    "retry": "Prøv igen",
+    "customize": "Tilpas layout",
+    "reset": "Nulstil",
+    "tabLive": "Levende",
+    "editModeInstructions": "Træk kort for at omarrangere, træk i den nederste kant for at ændre størrelsen, og brug breddeknappen til at ændre et korts spændvidde. Tilføj eller fjern kort nedenfor.",
+    "managers": {
+      "services": "Tjenester",
+      "processInspector": "Procesinspektør",
+      "logViewer": "Logfremviser",
+      "cron": "Cron-job",
+      "packages": "Pakker",
+      "ssl": "SSL-certifikater",
+      "firewall": "Firewall",
+      "users": "Brugere og tilladelser",
+      "healthCheck": "Sundhedstjek",
+      "diskBreakdown": "Disknedbrydning",
+      "systemdTimers": "Timere",
+      "topMemory": "Top efter hukommelse",
+      "noData": "Ingen data",
+      "sudoHint": "Angiv en sudo-adgangskode til denne vært i værtseditoren for at aktivere privilegerede handlinger.",
+      "filter": "Filter...",
+      "start": "Starte",
+      "stop": "Stop",
+      "restart": "Genstart",
+      "actionDone": "{{name}} opdateret",
+      "actionFailed": "Handlingen mislykkedes",
+      "signalSent": "Signal sendt til PID {{pid}}",
+      "killHint": "Klik: afslut (SIGTERM). Højreklik: tvungen afbrydelse (SIGKILL).",
+      "working": "Arbejder...",
+      "update": "Opdatering",
+      "upgradeAll": "Opgrader alle",
+      "allUpToDate": "Alt er opdateret",
+      "save": "Spare",
+      "command": "Kommando",
+      "enabled": "Aktiveret",
+      "cronSaved": "Crontab opdateret",
+      "clients": "Klienter",
+      "dryRun": "Tørløb",
+      "renew": "Forny",
+      "noAcmeClient": "Ingen ACME-klient (certbot eller acme.sh) fundet på denne vært.",
+      "addInputRule": "Tilføj INPUT-regel",
+      "firewallWarning": "Ændringer gælder kun for kørsel, indtil de bevares. Pas på ikke at låse dig selv ude.",
+      "ruleApplied": "Regel anvendt",
+      "invalidPort": "Indtast en gyldig port (1-65535)",
+      "newUsername": "Nyt brugernavn",
+      "addUser": "Tilføje",
+      "deleteUser": "Slet bruger",
+      "noHealthChecks": "Ingen sundhedstjek konfigureret endnu.",
+      "follow": "Følge",
+      "noLogData": "Ingen log-output.",
+      "tree": "Træ",
+      "enableDisable": "Aktivér/deaktiver ved opstart",
+      "grantSudo": "Giv sudo",
+      "revokeSudo": "Tilbagekald sudo",
+      "sslIssueCert": "Udstedelsescertifikat",
+      "sslExpired": "Udløbet",
+      "sslInDays": "i {{days}}d",
+      "sslNeedDomain": "Angiv mindst ét domæne",
+      "sslIssued": "Certifikat udstedt",
+      "sslDomainsPlaceholder": "eksempel.com, www.eksempel.com",
+      "sslHttpStandalone": "HTTP (selvstændig)",
+      "sslHttpWebroot": "HTTP (webroot)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "DNS-udbyder (f.eks. Cloudflare)",
+      "sslIssueHint": "DNS-udbyderens legitimationsoplysninger skal allerede være konfigureret på værten.",
+      "sslRevoke": "Tilbagekald certifikat",
+      "sslRevoked": "Certifikat tilbagekaldt",
+      "sslRevokeConfirm": "Tilbagekald og fjern certifikatet \"{{name}}\"? Dette kan ikke fortrydes.",
+      "healthRun": "Løbe",
+      "healthName": "Navn",
+      "healthTarget": "Vært / adresse",
+      "healthAddCheck": "Tilføj check",
+      "healthSaved": "Sundhedstjek gemt",
+      "healthMissingFields": "Hver check skal have et navn og et mål",
+      "logFile": "Fil",
+      "logUnit": "Enhed",
+      "logCustomPath": "Brugerdefineret sti under /var/log (valgfrit)",
+      "logGrep": "Filtrer linjer...",
+      "firewallPersist": "Vedvarende regler",
+      "firewallPersisted": "Firewallregler bevares",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard er ikke installeret på denne vært",
+      "wgNoInterfaces": "Ingen WireGuard-grænseflader konfigureret",
+      "wgInterfaceUp": "Bring op",
+      "wgInterfaceDown": "Bring ned",
+      "wgBringingUp": "Bringer {{name}} op...",
+      "wgBringingDown": "Bringer {{name}} ned...",
+      "wgInterfaceUpDone": "{{name}} er oppe",
+      "wgInterfaceDownDone": "{{name}} er nede",
+      "wgListenPort": "Havn",
+      "wgPublicKey": "Offentlig nøgle",
+      "wgEndpoint": "Endepunkt",
+      "wgAllowedIPs": "Tilladte IP-adresser",
+      "wgLastHandshake": "Sidste håndtryk",
+      "wgHandshakeNever": "Aldrig",
+      "wgTransfer": "Overførsel",
+      "wgNoPeers": "Ingen ligemænd"
+    }
+  },
+  "metricsHistory": {
+    "title": "Metrikhistorik",
+    "historySuffix": "Historie",
+    "cpuMemoryDisk": "CPU / Hukommelse / Disk",
+    "network": "Netværk",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "Der er ingen historiske data tilgængelige for dette tidsinterval.",
+    "custom": "Skik",
+    "to": "til",
+    "apply": "Anvende",
+    "viewHistory": "Vis historik"
+  },
+  "hosts": {
+    "tabHostMetrics": "Værtsmålinger",
+    "metricsCollectionLabel": "Metriksamling",
+    "enableMetricsLabel": "Aktivér metrikker",
+    "enableMetricsDesc": "Indsaml CPU-, RAM-, disk- og andre målinger fra denne vært",
+    "useGlobalMetrics": "Brug globalt interval",
+    "useGlobalMetricsDesc": "Tilsidesæt med det serveromfattende metrikinterval",
+    "metricsIntervalS": "Målinger Interval (s)",
+    "metricsIntervalDesc2": "Sekunder mellem metriske snapshots",
+    "excludedMountsLabel": "Ekskluderede monteringer",
+    "monitoredMountsLabel": "Brugerdefinerede overvågede stier",
+    "monitoredMountsDesc": "Tilføj stier, der ikke er eksponeret som separate monteringer, herunder bind-monterede Home Assistant-stier såsom /config.",
+    "monitoredMountPathPlaceholder": "Sti (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Etiket (valgfrit)",
+    "addMonitoredMount": "Tilføj sti",
+    "excludedMountsDesc": "Skjul specifikke monteringspunkter eller filsystemtyper (f.eks. nfs, cifs) fra diskbrug og advarsler for denne vært.",
+    "excludedMountsPlaceholder": "Monteringssti (/mnt/nas) eller filsystemtype (nfs, cifs)",
+    "excludedMountsEmpty": "Ingen monteringer er udelukket. Alle detekterede filsystemer vises.",
+    "addExcludedMount": "Tilføje",
+    "visibleWidgets": "Synlige widgets",
+    "widgetsMovedToHostMetrics": "Kort tilføjes, arrangeres og skaleres nu direkte i fanen Værtsmål. Åbn Værtsmål for denne vært, og brug Tilpas til at vælge, hvilke kort der vises.",
+    "hostNotFound": "Værten blev ikke fundet",
+    "loadingHost": "Indlæser vært..."
+  },
+  "onboarding": {
+    "feature_metrics": "Målinger og advarsler",
+    "feature_metrics_desc": "Spor CPU, hukommelse og disk over tid, og få en advarsel, når de bliver dårlige."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Opbevaring af metrikhistorik",
+    "metricsHistoryRetentionRange": "1 til 90 dage",
+    "days": "dage"
+  },
+  "homepage": {
+    "noData": "Ingen data tilgængelige",
+    "showCurrentValue": "Vis aktuel værdi",
+    "chartMetric": "Metrisk",
+    "metricRange": "Rækkevidde",
+    "host": "Vært",
+    "loading": "Indlæser...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Værtsnavn",
+    "metricKernel": "Kernen",
+    "metricMemory": "Hukommelse",
+    "metricNetwork": "Netværk",
+    "metricOs": "OS",
+    "metricProcesses": "Processer",
+    "metricProcessesRunning": "løb",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Oppetid",
+    "metricsNotAvailable": "Målinger er ikke tilgængelige",
+    "noHostSelected": "Ingen vært valgt",
+    "selectHost": "Vælg en vært..."
+  },
+  "terminalStatus": {
+    "unavailable": "Livestatistik ikke tilgængelig"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "VÆDDER"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "terminal": {
+    "connected": "Forbundet"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug værtsmålinger",
+      "description": "Se værtsmålinger og brug værtsadministratorerne (tjenester, pakker, firewall og mere) på værter, du kan nå."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Måleinterval (sekunder)",
+        "description": "Hvor ofte en vært, der vises, samples, medmindre værten angiver sit eget interval."
+      },
+      "historyRetentionDays": {
+        "label": "Historikopbevaring (dage)",
+        "description": "Hvor længe metrikker gemmes til historikdiagrammerne."
+      },
+      "enabledForNewHosts": {
+        "label": "Målinger aktiveret for nye værter",
+        "description": "Om nye værter starter med indsamling af metrics aktiveret."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperaturenhed",
+        "description": "Hvordan temperaturer vises i Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Indsaml målinger"
+      },
+      "metricsInterval": {
+        "label": "Måleinterval (sekunder)"
+      },
+      "enabledWidgets": {
+        "label": "Aktiverede widgets"
+      },
+      "excludedMounts": {
+        "label": "Ekskluderede monteringer"
+      },
+      "monitoredMounts": {
+        "label": "Overvågede stier"
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "tables": {
+    "tokens": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "sshCert": {
+          "type": "text",
+          "notNull": true
+        },
+        "privateKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "email": {
+          "type": "text"
+        },
+        "sub": {
+          "type": "text"
+        },
+        "issuer": {
+          "type": "text"
+        },
+        "audience": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "expiresAt": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "lastUsed": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_opkssh_tokens_user_host",
+          "columns": ["userId", "hostId"],
+          "unique": true
+        }
+      ],
+      "adopts": "opkssh_tokens"
+    }
+  }
+}

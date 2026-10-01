@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "node:url";
 import * as schema from "../../../database/db/schema.js";
 import type { DatabaseContext } from "../../../database/repositories/database-context.js";
 import type { DatabaseDialect } from "../../../database/db/dialect.js";
@@ -448,7 +449,10 @@ let cachedSqliteSchema: string | null = null;
 function sqliteSchemaSql(): string {
   if (cachedSqliteSchema) return cachedSqliteSchema;
 
-  const dir = path.resolve(process.cwd(), "drizzle", "sqlite");
+  // Resolved from this file, not cwd: plugin suites run with their own
+  // directory as cwd and would not find drizzle/ otherwise.
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const dir = path.resolve(here, "../../../../..", "drizzle", "sqlite");
   const files = fs
     .readdirSync(dir)
     .filter((name) => name.endsWith(".sql"))

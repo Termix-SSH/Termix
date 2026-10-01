@@ -1,0 +1,350 @@
+{
+  "remoteDesktop": {
+    "connecting": "正在连接到 {{type}} 会话...",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
+    "connectionError": "连接错误",
+    "connectionFailed": "连接失败",
+    "failedToConnect": "获取连接令牌失败",
+    "hostNotFound": "未找到主机",
+    "noHostSelected": "未选择主机",
+    "reconnect": "重新连接",
+    "retry": "重试",
+    "guacdUnavailable": "远程桌面服务 (guacd) 不可用。请确保 guacd 正在运行并可访问，且在管理设置中正确配置。",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "connect": "连接",
+    "ctrlAltDel": "Ctrl+Alt+Del",
+    "files": {
+      "title": "Drive Files",
+      "parent": "Parent directory",
+      "refresh": "刷新",
+      "empty": "此文件夹为空",
+      "listFailed": "Failed to read this folder",
+      "download": "下载",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "正在上传 {{name}}...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
+    },
+    "toolbar": {
+      "ctrlAltDel": "Ctrl+Alt+Del",
+      "winL": "Win+L (锁定屏幕)",
+      "winKey": "Windows 键",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift",
+      "win": "Win",
+      "stickyActive": "{{key}}（已锁定 - 点击释放）",
+      "stickyInactive": "{{key}}（点击锁定）",
+      "esc": "Escape",
+      "tab": "Tab",
+      "home": "Home",
+      "end": "End",
+      "pageUp": "Page Up",
+      "pageDown": "Page Down",
+      "arrowUp": "Arrow Up",
+      "arrowDown": "Arrow Down",
+      "arrowLeft": "Arrow Left",
+      "arrowRight": "Arrow Right",
+      "fnToggle": "功能键",
+      "reconnect": "重新连接会话",
+      "collapse": "折叠工具栏",
+      "expand": "展开工具栏",
+      "dragHandle": "拖动以重新定位",
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
+      "switchToTrackpad": "切换到触控板模式（拖动移动光标，轻点进行点击）",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+  },
+  "hosts": {
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
+    "guac": {
+      "toolbar": "Toolbar",
+      "connection": "连接",
+      "authentication": "认证",
+      "storedCredential": "已存储凭据",
+      "authMethod": "认证方法",
+      "authTypeDirect": "直接",
+      "authTypeCredential": "凭据",
+      "authTypeNone": "无",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
+      "selectCredential": "选择凭据...",
+      "connectionSettings": "连接设置",
+      "displaySettings": "显示设置",
+      "audioSettings": "音频设置",
+      "rdpPerformance": "RDP 性能",
+      "deviceRedirection": "设备重定向",
+      "session": "会话",
+      "gateway": "网关",
+      "remoteApp": "RemoteApp",
+      "clipboard": "剪贴板",
+      "sessionRecording": "会话录制",
+      "wakeOnLan": "网络唤醒",
+      "vncSettings": "VNC 设置",
+      "terminalSettings": "终端设置",
+      "rdpPort": "RDP 端口",
+      "username": "用户名",
+      "password": "密码",
+      "passwordSaved": "Password saved, type to change",
+      "domain": "域",
+      "securityMode": "安全模式",
+      "width": "宽度",
+      "height": "高度",
+      "dpi": "DPI",
+      "clientName": "客户端名称",
+      "initialProgram": "初始程序",
+      "serverLayout": "服务器布局",
+      "timezone": "时区",
+      "loadBalanceInfo": "负载均衡信息 / Cookie",
+      "loadBalanceInfoDesc": "RD 连接代理 Cookie，用于 RDS 场负载均衡（例如 tsv://MS Terminal Services Plugin.1.CollectionName）",
+      "guacdProxy": "guacd 代理",
+      "guacdHostname": "guacd 主机",
+      "guacdHostnamePlaceholder": "全局默认",
+      "guacdPort": "guacd 端口",
+      "guacdProxyDesc": "为此连接覆盖全局 guacd 实例。留空则使用全局配置的 guacd。",
+      "gatewayHostname": "网关主机名",
+      "gatewayPort": "网关端口",
+      "gatewayUsername": "网关用户名",
+      "gatewayPassword": "网关密码",
+      "gatewayDomain": "网关域",
+      "remoteAppProgram": "RemoteApp 程序",
+      "workingDirectory": "工作目录",
+      "arguments": "参数",
+      "normalizeLineEndings": "规范化行尾",
+      "macAddress": "MAC 地址",
+      "broadcastAddress": "广播地址",
+      "udpPort": "UDP 端口",
+      "waitTimeS": "等待时间（秒）",
+      "driveName": "驱动器名称",
+      "drivePath": "驱动器路径",
+      "ignoreCertificate": "忽略证书",
+      "ignoreCertificateDesc": "允许连接到具有自签名证书的主机",
+      "forceLossless": "强制无损",
+      "forceLosslessDesc": "强制无损图像编码（质量更高，占用更多带宽）",
+      "disableAudio": "禁用音频",
+      "disableAudioDesc": "将远程会话的所有音频静音",
+      "enableAudioInput": "启用音频输入（麦克风）",
+      "enableAudioInputDesc": "将本地麦克风转发到远程会话",
+      "wallpaper": "壁纸",
+      "wallpaperDesc": "显示桌面壁纸（禁用可提高性能）",
+      "theming": "主题",
+      "themingDesc": "启用视觉主题和样式",
+      "fontSmoothing": "字体平滑",
+      "fontSmoothingDesc": "启用 ClearType 字体渲染",
+      "fullWindowDrag": "全窗口拖动",
+      "fullWindowDragDesc": "拖动时显示窗口内容",
+      "desktopComposition": "桌面合成",
+      "desktopCompositionDesc": "启用 Aero 玻璃效果",
+      "menuAnimations": "菜单动画",
+      "menuAnimationsDesc": "启用菜单淡入淡出与滑动动画",
+      "disableBitmapCaching": "禁用位图缓存",
+      "disableBitmapCachingDesc": "关闭位图缓存（可能有助于解决显示故障）",
+      "disableOffscreenCaching": "禁用离屏缓存",
+      "disableOffscreenCachingDesc": "关闭离屏缓存",
+      "disableGlyphCaching": "禁用字形缓存",
+      "disableGlyphCachingDesc": "关闭字形缓存",
+      "enableGfx": "启用 GFX",
+      "enableGfxDesc": "使用 RemoteFX 图形管道",
+      "enablePrinting": "启用打印",
+      "enablePrintingDesc": "将本地打印机重定向到远程会话",
+      "enableDriveRedirection": "启用驱动器重定向",
+      "enableDriveRedirectionDesc": "将本地文件夹映射为远程会话中的驱动器",
+      "createDrivePath": "创建驱动器路径",
+      "createDrivePathDesc": "如果文件夹不存在，则自动创建",
+      "disableDownload": "禁用下载",
+      "disableDownloadDesc": "禁止从远程会话下载文件",
+      "disableUpload": "禁用上传",
+      "disableUploadDesc": "禁止上传文件到远程会话",
+      "enableTouch": "启用触控",
+      "enableTouchDesc": "启用触控输入转发",
+      "consoleSession": "控制台会话",
+      "consoleSessionDesc": "连接到控制台（会话 0）而不是新会话",
+      "sendWolPacket": "发送 WOL 数据包",
+      "sendWolPacketDesc": "在连接前发送魔术包以唤醒此主机",
+      "disableCopy": "禁用复制",
+      "disableCopyDesc": "禁止从远程会话复制文本",
+      "disablePaste": "禁用粘贴",
+      "disablePasteDesc": "禁止粘贴文本到远程会话",
+      "createPathIfMissing": "如果路径不存在则创建",
+      "createPathIfMissingDesc": "自动创建录制目录",
+      "excludeOutput": "排除输出",
+      "excludeOutputDesc": "不录制屏幕输出（仅元数据）",
+      "excludeMouse": "排除鼠标",
+      "excludeMouseDesc": "不录制鼠标移动",
+      "includeKeystrokes": "包含击键",
+      "includeKeystrokesDesc": "除了屏幕输出外，还录制原始击键",
+      "vncPort": "VNC 端口",
+      "vncPassword": "VNC 密码",
+      "vncUsernameOptional": "用户名 (可选)",
+      "vncLeaveBlank": "如不需要请留空",
+      "cursorMode": "光标模式",
+      "swapRedBlue": "交换红/蓝",
+      "swapRedBlueDesc": "交换红蓝色彩通道 (可修复某些色彩问题)",
+      "readOnly": "只读",
+      "readOnlyDesc": "仅查看远程屏幕，不发送任何输入",
+      "telnetPort": "Telnet 端口",
+      "terminalType": "终端类型",
+      "fontName": "字体名称",
+      "fontSize": "字体大小",
+      "colorScheme": "配色方案",
+      "backspaceKey": "退格键",
+      "colorDepth": "颜色深度",
+      "resizeMethod": "调整大小方法",
+      "driveNamePlaceholder": "Termix Drive"
+    },
+    "remoteDesktop": "远程桌面",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "虚拟网络",
+    "unencryptedShell": "未加密 Shell",
+    "remoteDesktopNotes": "笔记",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "查看文档",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+  },
+  "onboarding": {
+    "feature_desktop": "Remote desktop",
+    "feature_desktop_desc": "像 SSH 一样，在标签页中直接打开 RDP、VNC 和 Telnet 会话。"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "颜色深度",
+        "description": "Used for RDP hosts that leave it on their default."
+      },
+      "resizeMethod": {
+        "label": "调整大小方法",
+        "description": "How the remote screen follows the window size."
+      },
+      "resizeDisplayUpdate": "Display Update",
+      "resizeReconnect": "重新连接",
+      "inherit": "Inherit",
+      "on": "开启",
+      "off": "关闭",
+      "forceLossless": {
+        "label": "强制无损",
+        "description": "强制无损图像编码（质量更高，占用更多带宽）"
+      },
+      "enableWallpaper": {
+        "label": "壁纸",
+        "description": "显示桌面壁纸（禁用可提高性能）"
+      },
+      "enableFontSmoothing": {
+        "label": "字体平滑",
+        "description": "启用 ClearType 字体渲染"
+      },
+      "enableDesktopComposition": {
+        "label": "桌面合成",
+        "description": "启用 Aero 玻璃效果"
+      },
+      "disableAudio": {
+        "label": "禁用音频",
+        "description": "将远程会话的所有音频静音"
+      },
+      "enablePrinting": {
+        "label": "启用打印",
+        "description": "将本地打印机重定向到远程会话"
+      },
+      "enableDrive": {
+        "label": "启用驱动器重定向",
+        "description": "将本地文件夹映射为远程会话中的驱动器"
+      },
+      "disableCopy": {
+        "label": "禁用复制",
+        "description": "禁止从远程会话复制文本"
+      },
+      "disablePaste": {
+        "label": "禁用粘贴",
+        "description": "禁止粘贴文本到远程会话"
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
+    },
+    "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
+      "guacdUrl": {
+        "label": "guacd URL",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
+      }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "远程桌面"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+    }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

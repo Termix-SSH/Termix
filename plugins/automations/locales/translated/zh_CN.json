@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "View automations",
+      "description": "See the automations and their history."
+    },
+    "create": {
+      "title": "Create automations",
+      "description": "Add new automations."
+    },
+    "edit": {
+      "title": "Edit automations",
+      "description": "Change existing automations."
+    },
+    "delete": {
+      "title": "Delete automations",
+      "description": "Remove automations."
+    },
+    "run": {
+      "title": "Run automations",
+      "description": "Trigger an automation by hand."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "Automations",
+        "tabAutomations": "Automations",
+        "tabRuns": "运行记录",
+        "tabChannels": "通道",
+        "createAutomation": "New Automation",
+        "backToAutomations": "Back to Automations",
+        "createTitle": "New Automation",
+        "editTitle": "Edit Automation",
+        "empty": "No automations yet. Create one to react to a metric, a schedule, or an event.",
+        "emptyRuns": "暂无运行记录。",
+        "channelsHint": "Channels are set up in Alerts",
+        "noChannelsHint": "The alert always goes to your inbox. Add channels in Alerts to also send it somewhere else.",
+        "nameLabel": "名称",
+        "namePlaceholder": "e.g., Clean up /data when it fills",
+        "nameRequired": "名称为必填项",
+        "descriptionLabel": "描述",
+        "descriptionPlaceholder": "可选描述",
+        "enabledLabel": "已启用",
+        "concurrencyLabel": "If it is already running",
+        "concurrencyHint": "What to do when this is triggered again before the last run has finished.",
+        "concurrency": {
+          "skip": "Skip the new run",
+          "queue": "稍等会再运行",
+          "allow": "Run both at once"
+        },
+        "save": "保存",
+        "created": "自动化已创建",
+        "updated": "自动化已保存",
+        "deleted": "自动化已删除",
+        "deleteConfirm": "Delete this automation? Its run history is deleted too.",
+        "runNow": "Run now",
+        "testRun": "Test run",
+        "testRunHint": "Runs every step but does not touch anything outside Termix.",
+        "runStarted": "Run started",
+        "runFinished": "Run finished: {{status}}",
+        "trigger": "触发器",
+        "steps": "Steps",
+        "addStep": "Add step",
+        "removeStep": "Remove step",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "noSteps": "No steps yet. Add one to say what should happen.",
+        "webhookTokenTitle": "Webhook URL",
+        "webhookTokenDescription": "This is shown once. Save it now, it cannot be retrieved later.",
+        "copy": "复制",
+        "copied": "已复制",
+        "viewJson": "JSON",
+        "viewBuilder": "构建器",
+        "viewGraph": "Graph",
+        "lastRun": "上次运行",
+        "never": "从未",
+        "duration": "{{seconds}}s",
+        "stepOutput": "输出",
+        "stepError": "错误",
+        "dryRunBadge": "Test run",
+        "hostSelector": {
+          "trigger": "Triggering host",
+          "host": "Specific host",
+          "fleet": "Fleet",
+          "all": "所有主机"
+        },
+        "triggerKinds": {
+          "metric_threshold": "Metric threshold",
+          "host_status": "主机上线或离线",
+          "health_check": "Health check changes",
+          "schedule": "On a schedule",
+          "docker_event": "Container event",
+          "internal_event": "Termix 事件",
+          "webhook": "Incoming webhook"
+        },
+        "stepTypes": {
+          "notify": "Send an alert",
+          "http": "Call a URL",
+          "run_snippet": "Run a snippet",
+          "run_command": "Run a command",
+          "docker": "Control a container",
+          "tunnel": "Control a tunnel",
+          "wol": "Wake a host",
+          "wait": "Wait",
+          "set_var": "Set a variable",
+          "if": "If / otherwise",
+          "run_automation": "运行另一个自动化程序",
+          "stop": "停止"
+        },
+        "statuses": {
+          "running": "运行中",
+          "success": "成功",
+          "failed": "失败",
+          "timeout": "Timed out",
+          "skipped": "Skipped",
+          "cancelled": "已取消"
+        },
+        "fields": {
+          "host": "主机",
+          "metric": "指标",
+          "mount": "挂载点",
+          "operator": "Is",
+          "value": "值",
+          "forSeconds": "Sustained for (seconds)",
+          "cooldown": "冷却时间（分钟）",
+          "cron": "Cron 表达式",
+          "intervalSeconds": "Every (seconds)",
+          "timezone": "Time zone",
+          "timezoneServer": "Server time",
+          "timezoneHint": "Cron times are read in this zone. Does not apply to interval schedules.",
+          "container": "Container",
+          "command": "命令",
+          "url": "URL",
+          "method": "Method",
+          "body": "请求体",
+          "channels": "Also send to",
+          "title": "标题",
+          "message": "消息",
+          "snippet": "Snippet",
+          "seconds": "Seconds",
+          "conditionLeftPlaceholder": "Value to check",
+          "conditionRightPlaceholder": "Compare against",
+          "variableName": "变量名",
+          "variableValue": "值",
+          "elevated": "Run with sudo",
+          "onError": "If this fails",
+          "allowPrivateNetwork": "Allow local network addresses",
+          "allowPrivateNetworkHint": "Needed for a self-hosted service on your LAN. Off by default to prevent requests to internal addresses."
+        },
+        "onError": {
+          "stop": "停止运行",
+          "continue": "Carry on"
+        },
+        "needsPlugin": "Needs {{plugin}}",
+        "needsPluginHint": "This automation is skipped until the feature it needs is available again.",
+        "offBadge": "关闭",
+        "docsLink": "查看文档",
+        "ago": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}} 分钟前",
+          "hours": "{{count}} 小时前",
+          "days": "{{count}} 天前"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "Automations"
+  },
+  "onboarding": {
+    "feature_automations": "Automations",
+    "feature_automations_desc": "触发特定事件时自动执行任务，并接收通知。"
+  },
+  "maintenance": {
+    "title": "维护中",
+    "description": "Pause host status, health, metric, container and tunnel-disconnection automations while work is in progress. Monitoring, manual runs and scheduled automations continue.",
+    "denied": "You do not have permission to view maintenance.",
+    "sharedReadOnly": "This host was shared with you. Only its owner can change maintenance.",
+    "failed": "Maintenance could not be updated.",
+    "active": "Maintenance active",
+    "estimated": "Estimated completion",
+    "noAutoEnd": "The estimate does not end maintenance. End it explicitly when the work is complete.",
+    "endConfirm": "End maintenance and resume event-triggered automations for this host?",
+    "confirmEnd": "Confirm end",
+    "cancel": "取消",
+    "end": "End maintenance",
+    "action": "操作",
+    "startNow": "Start now",
+    "schedule": "Schedule for later",
+    "reason": "Reason",
+    "startUtc": "First start (UTC)",
+    "repeat": "Repeat",
+    "once": "Once",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "utcHelp": "Schedules use UTC throughout the year. Monthly schedules skip months without the selected day. Planned windows cannot overlap; overrunning maintenance continues across later windows.",
+    "duration": "Estimated duration (minutes)",
+    "grace": "Grace period (minutes)",
+    "notify": "Notify once if still offline after the estimate plus grace period",
+    "addSchedule": "Add schedule",
+    "schedules": "Schedules",
+    "noSchedules": "No maintenance schedules.",
+    "completed": "Already started",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "remove": "Remove schedule",
+    "loadFailed": "Could not refresh maintenance status. Changes are disabled until it can be loaded.",
+    "loading": "Loading maintenance status…"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "warpgate",
+  "name": "Warpgate",
+  "version": "1.0.0",
+  "description": "Connect through a Warpgate SSH bastion. Its browser approval shows as a sign-in dialog and your saved password is sent for you.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "DoorOpen",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["auth:provide"],
+  "contributes": {
+    "auth": {
+      "keyboardInteractive": ["warpgate"]
+    },
+    "settings": {
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 95,
+        "fields": [
+          {
+            "key": "useWarpgate",
+            "type": "boolean",
+            "labelKey": "settings.host.useWarpgate.label",
+            "descriptionKey": "settings.host.useWarpgate.description",
+            "default": false
+          }
+        ]
+      }
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

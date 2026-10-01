@@ -14,6 +14,37 @@ const mainAxios = vi.hoisted(() => ({
 
 vi.mock("@/main-axios", () => mainAxios);
 
+// The remote-desktop plugin declares its gateway password as a secret key.
+vi.mock("@/plugin-host/plugin-store", () => ({
+  usePluginStore: () => ({
+    loaded: true,
+    settled: true,
+    records: new Map([
+      [
+        "remote-desktop",
+        {
+          frontend: "active",
+          summary: {
+            id: "remote-desktop",
+            contributes: {
+              settings: {
+                host: {
+                  fields: [
+                    {
+                      key: "guacamoleConfig",
+                      secretKeys: ["gateway-password"],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      ],
+    ]),
+  }),
+}));
+
 const i18n = vi.hoisted(() => ({
   t: (key: string, opts?: Record<string, unknown>) =>
     opts ? `${key}:${JSON.stringify(opts)}` : key,
@@ -45,24 +76,6 @@ function sshHost(
     pin: false,
     authType: "password",
     connectionType: "ssh",
-    enableTerminal: true,
-    enableSessionLogging: false,
-    enableCommandHistory: false,
-    enableTunnel: false,
-    enableFileManager: false,
-    enableDocker: false,
-    enableProxmox: false,
-    enableProxmoxStats: false,
-    enableTmuxMonitor: false,
-    enableTerminalToolbar: true,
-    enableAiAssistant: false,
-    showTerminalInSidebar: true,
-    showFileManagerInSidebar: false,
-    showTunnelInSidebar: false,
-    showDockerInSidebar: false,
-    showServerStatsInSidebar: false,
-    defaultPath: "",
-    tunnelConnections: [],
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     status: "online",
@@ -80,9 +93,13 @@ function rawPayload() {
         port: 22,
         username: "deploy",
         password: "hunter2",
-        guacamoleConfig: {
-          "gateway-hostname": "gw.example.com",
-          "gateway-password": "gw-secret",
+        pluginSettings: {
+          "remote-desktop": {
+            guacamoleConfig: {
+              "gateway-hostname": "gw.example.com",
+              "gateway-password": "gw-secret",
+            },
+          },
         },
       },
     ],
@@ -211,6 +228,10 @@ describe("HostExportDialog - credential handling", () => {
     expect(text).toContain("gw.example.com");
 
     const parsed = JSON.parse(text);
-    expect(parsed.hosts[0].guacamoleConfig["gateway-password"]).toBeNull();
+    expect(
+      parsed.hosts[0].pluginSettings["remote-desktop"].guacamoleConfig[
+        "gateway-password"
+      ],
+    ).toBeNull();
   });
 });

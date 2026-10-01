@@ -1,0 +1,350 @@
+{
+  "remoteDesktop": {
+    "connecting": "Подключение к сессии {{type}}...",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
+    "connectionError": "Ошибка подключения",
+    "connectionFailed": "Ошибка подключения",
+    "failedToConnect": "Не удалось получить токен подключения",
+    "hostNotFound": "Хост не найден",
+    "noHostSelected": "Хост не выбран",
+    "reconnect": "Переподключиться",
+    "retry": "Повторить",
+    "guacdUnavailable": "Служба удалённого рабочего стола (guacd) недоступна. Убедитесь, что guacd запущен, доступен и правильно настроен в настройках администратора.",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "connect": "Соединить",
+    "ctrlAltDel": "Ctrl+Alt+Del",
+    "files": {
+      "title": "Drive Files",
+      "parent": "Parent directory",
+      "refresh": "Обновить",
+      "empty": "Эта папка пуста",
+      "listFailed": "Failed to read this folder",
+      "download": "Скачать",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "Загрузка {{name}}...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
+    },
+    "toolbar": {
+      "ctrlAltDel": "Ctrl+Alt+Del",
+      "winL": "Win+L (Блокировка экрана)",
+      "winKey": "Клавиша Windows",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift",
+      "win": "Win",
+      "stickyActive": "{{key}} (зафиксирована – кликните для отключения)",
+      "stickyInactive": "{{key}} (кликните для фиксации)",
+      "esc": "Escape",
+      "tab": "Tab",
+      "home": "Главная",
+      "end": "End",
+      "pageUp": "Page Up",
+      "pageDown": "Page Down",
+      "arrowUp": "Вверх",
+      "arrowDown": "Вниз",
+      "arrowLeft": "Влево",
+      "arrowRight": "Вправо",
+      "fnToggle": "Функциональные клавиши",
+      "reconnect": "Переподключить сеанс",
+      "collapse": "Свернуть панель",
+      "expand": "Развернуть панель",
+      "dragHandle": "Перетащите для перемещения",
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
+      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+  },
+  "hosts": {
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
+    "guac": {
+      "toolbar": "Toolbar",
+      "connection": "Подключение",
+      "authentication": "Аутентификация",
+      "storedCredential": "Сохраненные учетные данные",
+      "authMethod": "Метод аутентификации",
+      "authTypeDirect": "Прямой",
+      "authTypeCredential": "Учетные данные",
+      "authTypeNone": "Ни одного",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
+      "selectCredential": "Выберите учетные данные...",
+      "connectionSettings": "Параметры подключения",
+      "displaySettings": "Параметры отображения",
+      "audioSettings": "Параметры звука",
+      "rdpPerformance": "Производительность RDP",
+      "deviceRedirection": "Перенаправление устройств",
+      "session": "Сессия",
+      "gateway": "Шлюз",
+      "remoteApp": "RemoteApp",
+      "clipboard": "Буфер обмена",
+      "sessionRecording": "Запись сессии",
+      "wakeOnLan": "Wake-on-LAN",
+      "vncSettings": "Параметры VNC",
+      "terminalSettings": "Параметры терминала",
+      "rdpPort": "Порт RDP",
+      "username": "Имя пользователя",
+      "password": "Пароль",
+      "passwordSaved": "Password saved, type to change",
+      "domain": "Домен",
+      "securityMode": "Режим безопасности",
+      "width": "Ширина",
+      "height": "Высота",
+      "dpi": "DPI",
+      "clientName": "Имя клиента",
+      "initialProgram": "Начальная программа",
+      "serverLayout": "Раскладка сервера",
+      "timezone": "Часовой пояс",
+      "loadBalanceInfo": "Информация о балансировке нагрузки / Cookie",
+      "loadBalanceInfoDesc": "Cookie брокера подключений к удаленному рабочему столу для балансировки нагрузки фермы RDS (например, tsv://MS Terminal Services Plugin.1.CollectionName)",
+      "guacdProxy": "Прокси guacd",
+      "guacdHostname": "Хост guacd",
+      "guacdHostnamePlaceholder": "Глобальное значение по умолчанию",
+      "guacdPort": "Порт guacd",
+      "guacdProxyDesc": "Переопределить глобальный экземпляр guacd для этого соединения. Оставьте пустым для использования глобально настроенного guacd.",
+      "gatewayHostname": "Имя хоста шлюза",
+      "gatewayPort": "Порт шлюза",
+      "gatewayUsername": "Имя пользователя шлюза",
+      "gatewayPassword": "Пароль шлюза",
+      "gatewayDomain": "Домен шлюза",
+      "remoteAppProgram": "Программа RemoteApp",
+      "workingDirectory": "Рабочий каталог",
+      "arguments": "Аргументы",
+      "normalizeLineEndings": "Нормализовать окончания строк",
+      "macAddress": "MAC-адрес",
+      "broadcastAddress": "Широковещательный адрес",
+      "udpPort": "Порт UDP",
+      "waitTimeS": "Время ожидания (с)",
+      "driveName": "Имя диска",
+      "drivePath": "Путь к диску",
+      "ignoreCertificate": "Игнорировать сертификат",
+      "ignoreCertificateDesc": "Разрешить подключения к хостам с самоподписанными сертификатами",
+      "forceLossless": "Принудительно без потерь",
+      "forceLosslessDesc": "Принудительное кодирование изображений без потерь (более высокое качество, больший расход трафика)",
+      "disableAudio": "Отключить звук",
+      "disableAudioDesc": "Отключить весь звук в удаленном сеансе",
+      "enableAudioInput": "Включить аудиовход (микрофон)",
+      "enableAudioInputDesc": "Передавать локальный микрофон в удаленный сеанс",
+      "wallpaper": "Обои",
+      "wallpaperDesc": "Показывать обои рабочего стола (отключение повышает производительность)",
+      "theming": "Темы",
+      "themingDesc": "Включить визуальные темы и стили",
+      "fontSmoothing": "Сглаживание шрифтов",
+      "fontSmoothingDesc": "Включить рендеринг шрифтов ClearType",
+      "fullWindowDrag": "Перетаскивание окон с содержимым",
+      "fullWindowDragDesc": "Показывать содержимое окна при перетаскивании",
+      "desktopComposition": "Композиция рабочего стола",
+      "desktopCompositionDesc": "Включить эффекты Aero Glass",
+      "menuAnimations": "Анимации меню",
+      "menuAnimationsDesc": "Включить анимацию исчезновения и сдвига меню",
+      "disableBitmapCaching": "Отключить кеширование растровых изображений",
+      "disableBitmapCachingDesc": "Отключить кеш растровых изображений (может помочь при сбоях)",
+      "disableOffscreenCaching": "Отключить внеэкранное кеширование",
+      "disableOffscreenCachingDesc": "Отключить внеэкранный кеш",
+      "disableGlyphCaching": "Отключить кеширование глифов",
+      "disableGlyphCachingDesc": "Отключить кеш глифов",
+      "enableGfx": "Включить GFX",
+      "enableGfxDesc": "Использовать графический конвейер RemoteFX",
+      "enablePrinting": "Включить печать",
+      "enablePrintingDesc": "Перенаправлять локальные принтеры в удаленный сеанс",
+      "enableDriveRedirection": "Включить перенаправление дисков",
+      "enableDriveRedirectionDesc": "Подключать локальную папку как диск в удаленном сеансе",
+      "createDrivePath": "Создать путь к диску",
+      "createDrivePathDesc": "Автоматически создать папку, если она не существует",
+      "disableDownload": "Отключить загрузку",
+      "disableDownloadDesc": "Запретить загрузку файлов из удаленного сеанса",
+      "disableUpload": "Отключить выгрузку",
+      "disableUploadDesc": "Запретить выгрузку файлов в удаленный сеанс",
+      "enableTouch": "Включить сенсорный ввод",
+      "enableTouchDesc": "Включить передачу сенсорного ввода",
+      "consoleSession": "Консольный сеанс",
+      "consoleSessionDesc": "Подключиться к консоли (сеанс 0) вместо создания нового сеанса",
+      "sendWolPacket": "Отправить WOL-пакет",
+      "sendWolPacketDesc": "Отправить magic-пакет для пробуждения хоста перед подключением",
+      "disableCopy": "Отключить копирование",
+      "disableCopyDesc": "Запретить копирование текста из удаленного сеанса",
+      "disablePaste": "Отключить вставку",
+      "disablePasteDesc": "Запретить вставку текста в удаленный сеанс",
+      "createPathIfMissing": "Создать путь, если отсутствует",
+      "createPathIfMissingDesc": "Автоматически создать каталог для записей",
+      "excludeOutput": "Исключить вывод",
+      "excludeOutputDesc": "Не записывать вывод экрана (только метаданные)",
+      "excludeMouse": "Исключить мышь",
+      "excludeMouseDesc": "Не записывать движения мыши",
+      "includeKeystrokes": "Записывать нажатия",
+      "includeKeystrokesDesc": "Записывать необработанные нажатия клавиш в дополнение к выводу экрана",
+      "vncPort": "Порт VNC",
+      "vncPassword": "Пароль VNC",
+      "vncUsernameOptional": "Имя пользователя (необязательно)",
+      "vncLeaveBlank": "Оставьте пустым, если не требуется",
+      "cursorMode": "Режим курсора",
+      "swapRedBlue": "Поменять красный/синий",
+      "swapRedBlueDesc": "Обменять красный и синий цветовые каналы (исправляет некоторые проблемы с цветом)",
+      "readOnly": "Только чтение",
+      "readOnlyDesc": "Просмотр удаленного экрана без отправки ввода",
+      "telnetPort": "Порт Telnet",
+      "terminalType": "Тип терминала",
+      "fontName": "Название шрифта",
+      "fontSize": "Размер шрифта",
+      "colorScheme": "Цветовая схема",
+      "backspaceKey": "Клавиша Backspace",
+      "colorDepth": "Глубина цвета",
+      "resizeMethod": "Метод изменения размера",
+      "driveNamePlaceholder": "Termix Drive"
+    },
+    "remoteDesktop": "Удаленный рабочий стол",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Виртуальная сеть",
+    "unencryptedShell": "Незашифрованная оболочка",
+    "remoteDesktopNotes": "Заметки",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "Документация",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+  },
+  "onboarding": {
+    "feature_desktop": "Remote desktop",
+    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Глубина цвета",
+        "description": "Used for RDP hosts that leave it on their default."
+      },
+      "resizeMethod": {
+        "label": "Метод изменения размера",
+        "description": "How the remote screen follows the window size."
+      },
+      "resizeDisplayUpdate": "Display Update",
+      "resizeReconnect": "Переподключиться",
+      "inherit": "Inherit",
+      "on": "Включено",
+      "off": "Отключено",
+      "forceLossless": {
+        "label": "Принудительно без потерь",
+        "description": "Принудительное кодирование изображений без потерь (более высокое качество, больший расход трафика)"
+      },
+      "enableWallpaper": {
+        "label": "Обои",
+        "description": "Показывать обои рабочего стола (отключение повышает производительность)"
+      },
+      "enableFontSmoothing": {
+        "label": "Сглаживание шрифтов",
+        "description": "Включить рендеринг шрифтов ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Композиция рабочего стола",
+        "description": "Включить эффекты Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Отключить звук",
+        "description": "Отключить весь звук в удаленном сеансе"
+      },
+      "enablePrinting": {
+        "label": "Включить печать",
+        "description": "Перенаправлять локальные принтеры в удаленный сеанс"
+      },
+      "enableDrive": {
+        "label": "Включить перенаправление дисков",
+        "description": "Подключать локальную папку как диск в удаленном сеансе"
+      },
+      "disableCopy": {
+        "label": "Отключить копирование",
+        "description": "Запретить копирование текста из удаленного сеанса"
+      },
+      "disablePaste": {
+        "label": "Отключить вставку",
+        "description": "Запретить вставку текста в удаленный сеанс"
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
+    },
+    "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
+      "guacdUrl": {
+        "label": "URL guacd",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
+      }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "Удаленный рабочий стол"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+    }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

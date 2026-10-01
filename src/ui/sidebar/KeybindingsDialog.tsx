@@ -5,12 +5,16 @@ import {
   getUserPreferences,
   parseCustomKeybindings,
 } from "@/api/open-tabs-api";
-import { saveUserPreferences, getSnippets } from "@/main-axios";
-import { BUILT_IN_DEFAULTS } from "@/lib/default-keybindings";
+import { saveUserPreferences } from "@/main-axios";
+import {
+  useKeybindingActions,
+  useKeybindingDefaults,
+  type KeybindingActionDef,
+} from "@/shell/keybinding-registry";
 import type {
   CustomKeybinding,
+  KeybindingAction,
   KeyCombo,
-  KeybindingActionType,
 } from "@/types/keybindings";
 import {
   Dialog,
@@ -22,11 +26,7 @@ import {
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
-
-interface SnippetOption {
-  id: number;
-  name: string;
-}
+import { FixedShortcutsList } from "./FixedShortcutsList";
 
 function formatCombo(combo: KeyCombo): string {
   const parts: string[] = [];
@@ -38,23 +38,29 @@ function formatCombo(combo: KeyCombo): string {
   return parts.join(" + ");
 }
 
-const ACTION_LABEL_KEYS: Record<KeybindingActionType, string> = {
-  copy: "newUi.sidebar.keybindings.actionCopy",
-  paste: "newUi.sidebar.keybindings.actionPaste",
-  sendControlCode: "newUi.sidebar.keybindings.actionSendControlCode",
-  sendText: "newUi.sidebar.keybindings.actionSendText",
-  runSnippet: "newUi.sidebar.keybindings.actionRunSnippet",
-  nextTab: "newUi.sidebar.keybindings.actionNextTab",
-  previousTab: "newUi.sidebar.keybindings.actionPreviousTab",
-  openCommandPalette: "newUi.sidebar.keybindings.actionOpenCommandPalette",
-};
-
 function generateId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `kb-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+/** An action without the keys an editor cleared, so it saves clean. */
+function withoutEmpty(action: KeybindingAction): KeybindingAction {
+  const out: KeybindingAction = { type: action.type };
+  for (const [key, value] of Object.entries(action)) {
+    if (key !== "type" && value !== undefined && value !== null) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+/**
+ * Appearance > Keybindings. The actions come from the keybinding registry:
+ * the shell's own and whatever the running plugins register, each with its
+ * own parameter editor. A saved binding whose plugin is off stays in the
+ * list and keeps working once the plugin is back.
+ */
 export function KeybindingsDialog({
   open,
   onOpenChange,
@@ -63,9 +69,10 @@ export function KeybindingsDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const actions = useKeybindingActions();
+  const defaults = useKeybindingDefaults();
   const [bindings, setBindings] = useState<CustomKeybinding[]>([]);
   const [loading, setLoading] = useState(false);
-  const [snippets, setSnippets] = useState<SnippetOption[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [overridesDefaultId, setOverridesDefaultId] = useState<
@@ -74,32 +81,22 @@ export function KeybindingsDialog({
 
   const [recordedCombo, setRecordedCombo] = useState<KeyCombo | null>(null);
   const [recording, setRecording] = useState(false);
-  const [actionType, setActionType] =
-    useState<KeybindingActionType>("sendText");
-  const [text, setText] = useState("");
-  const [appendEnter, setAppendEnter] = useState(false);
-  const [controlCode, setControlCode] = useState("");
-  const [snippetId, setSnippetId] = useState("");
+  const [draft, setDraft] = useState<KeybindingAction>({ type: "" });
+
+  const actionById = useMemo(
+    () => new Map(actions.map((action) => [action.id, action])),
+    [actions],
+  );
+  const draftDef: KeybindingActionDef | undefined = actionById.get(draft.type);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    Promise.all([
-      getUserPreferences().catch(() => null),
-      getSnippets().catch(() => []),
-    ])
-      .then(([prefs, snippetList]) => {
-        setBindings(
-          prefs ? parseCustomKeybindings(prefs.customKeybindings) : [],
-        );
-        const list = Array.isArray(snippetList) ? snippetList : [];
-        setSnippets(
-          list.map((s: { id: number; name: string }) => ({
-            id: s.id,
-            name: s.name,
-          })),
-        );
-      })
+    getUserPreferences()
+      .then((prefs) =>
+        setBindings(parseCustomKeybindings(prefs.customKeybindings)),
+      )
+      .catch(() => setBindings([]))
       .finally(() => setLoading(false));
   }, [open]);
 
@@ -123,16 +120,19 @@ export function KeybindingsDialog({
     return null;
   }, [recordedCombo, bindings, editingId, t]);
 
+  function actionLabel(type: string): string {
+    const def = actionById.get(type);
+    return def
+      ? t(def.labelKey)
+      : t("newUi.sidebar.keybindings.unavailableAction", { type });
+  }
+
   function resetForm() {
     setEditingId(null);
     setOverridesDefaultId(undefined);
     setRecordedCombo(null);
     setRecording(false);
-    setActionType("sendText");
-    setText("");
-    setAppendEnter(false);
-    setControlCode("");
-    setSnippetId("");
+    setDraft({ type: actions[0]?.id ?? "" });
   }
 
   function openAddForm() {
@@ -145,11 +145,7 @@ export function KeybindingsDialog({
     setOverridesDefaultId(kb.overridesDefaultId);
     setRecordedCombo(kb.combo);
     setRecording(false);
-    setActionType(kb.action.type);
-    setText(kb.action.text ?? "");
-    setAppendEnter(kb.action.appendEnter ?? false);
-    setControlCode(kb.action.controlCode ?? "");
-    setSnippetId(kb.action.snippetId ?? "");
+    setDraft({ ...kb.action });
     setFormOpen(true);
   }
 
@@ -210,16 +206,14 @@ export function KeybindingsDialog({
       toast.error(t("newUi.sidebar.keybindings.comboRequiredError"));
       return;
     }
-    if (actionType === "sendText" && !text.trim()) {
-      toast.error(t("newUi.sidebar.keybindings.textRequiredError"));
+    if (!draftDef) {
+      toast.error(t("newUi.sidebar.keybindings.actionRequiredError"));
       return;
     }
-    if (actionType === "sendControlCode" && !/^[a-zA-Z]$/.test(controlCode)) {
-      toast.error(t("newUi.sidebar.keybindings.controlCodeRequiredError"));
-      return;
-    }
-    if (actionType === "runSnippet" && !snippetId) {
-      toast.error(t("newUi.sidebar.keybindings.snippetRequiredError"));
+    const action = withoutEmpty(draft);
+    const problem = draftDef.validate?.(action);
+    if (problem) {
+      toast.error(t(problem));
       return;
     }
 
@@ -231,21 +225,7 @@ export function KeybindingsDialog({
     const newBinding: CustomKeybinding = {
       id: editingId ?? generateId(),
       combo: recordedCombo,
-      action: {
-        type: actionType,
-        text: actionType === "sendText" ? text : undefined,
-        controlCode:
-          actionType === "sendControlCode"
-            ? controlCode.toLowerCase()
-            : undefined,
-        snippetId: actionType === "runSnippet" ? snippetId : undefined,
-        appendEnter:
-          actionType === "runSnippet"
-            ? true
-            : actionType === "sendText"
-              ? appendEnter
-              : undefined,
-      },
+      action,
       enabled: true,
       overridesDefaultId,
       createdAt: existing?.createdAt ?? now,
@@ -262,6 +242,7 @@ export function KeybindingsDialog({
   }
 
   const customOnlyBindings = bindings.filter((kb) => !kb.overridesDefaultId);
+  const Editor = draftDef?.editor;
 
   return (
     <>
@@ -277,78 +258,80 @@ export function KeybindingsDialog({
           </DialogHeader>
 
           <div className="flex flex-col gap-4 mt-1 max-h-[60vh] overflow-y-auto">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {t("newUi.sidebar.keybindings.defaultsHeading")}
-              </span>
-              {BUILT_IN_DEFAULTS.map((def) => {
-                const override = bindings.find(
-                  (kb) => kb.overridesDefaultId === def.id,
-                );
-                return (
-                  <div
-                    key={def.id}
-                    className="flex items-center justify-between gap-2 border border-border bg-background px-2.5 py-2"
-                  >
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-mono">
-                        {override
-                          ? formatCombo(override.combo)
-                          : formatCombo(def.combo)}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {def.description}
-                      </span>
+            {defaults.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {t("newUi.sidebar.keybindings.defaultsHeading")}
+                </span>
+                {defaults.map((def) => {
+                  const override = bindings.find(
+                    (kb) => kb.overridesDefaultId === def.id,
+                  );
+                  return (
+                    <div
+                      key={def.id}
+                      className="flex items-center justify-between gap-2 border border-border bg-background px-2.5 py-2"
+                    >
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-mono">
+                          {override
+                            ? formatCombo(override.combo)
+                            : formatCombo(def.combo)}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {t(def.descriptionKey)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {override ? (
+                          <>
+                            <span className="text-[10px] font-bold text-accent-brand border border-accent-brand/40 px-1">
+                              {t("newUi.sidebar.keybindings.customizedBadge")}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              onClick={() => openEditForm(override)}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDelete(override.id)}
+                              title={t(
+                                "newUi.sidebar.keybindings.resetToDefault",
+                              )}
+                            >
+                              <RotateCcw className="size-3.5" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[10px] text-muted-foreground border border-border px-1">
+                              {t("newUi.sidebar.keybindings.defaultBadge")}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              onClick={() =>
+                                openOverrideDefaultForm(def.id, def.combo)
+                              }
+                              title={t("newUi.sidebar.keybindings.customize")}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {override ? (
-                        <>
-                          <span className="text-[10px] font-bold text-accent-brand border border-accent-brand/40 px-1">
-                            {t("newUi.sidebar.keybindings.customizedBadge")}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7"
-                            onClick={() => openEditForm(override)}
-                          >
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDelete(override.id)}
-                            title={t(
-                              "newUi.sidebar.keybindings.resetToDefault",
-                            )}
-                          >
-                            <RotateCcw className="size-3.5" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[10px] text-muted-foreground border border-border px-1">
-                            {t("newUi.sidebar.keybindings.defaultBadge")}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7"
-                            onClick={() =>
-                              openOverrideDefaultForm(def.id, def.combo)
-                            }
-                            title={t("newUi.sidebar.keybindings.customize")}
-                          >
-                            <Pencil className="size-3.5" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
@@ -370,9 +353,7 @@ export function KeybindingsDialog({
                 </span>
               ) : (
                 customOnlyBindings.map((kb) => {
-                  const orphaned =
-                    kb.action.type === "runSnippet" &&
-                    !snippets.some((s) => String(s.id) === kb.action.snippetId);
+                  const Summary = actionById.get(kb.action.type)?.summary;
                   return (
                     <div
                       key={kb.id}
@@ -383,16 +364,12 @@ export function KeybindingsDialog({
                           {formatCombo(kb.combo)}
                         </span>
                         <span className="text-xs text-muted-foreground truncate">
-                          {t(ACTION_LABEL_KEYS[kb.action.type])}
-                          {orphaned && (
-                            <span className="text-destructive">
+                          {actionLabel(kb.action.type)}
+                          {Summary && (
+                            <>
                               {" "}
-                              (
-                              {t(
-                                "newUi.sidebar.keybindings.orphanedSnippetWarning",
-                              )}
-                              )
-                            </span>
+                              <Summary action={kb.action} onChange={() => {}} />
+                            </>
                           )}
                         </span>
                       </div>
@@ -419,6 +396,7 @@ export function KeybindingsDialog({
                 })
               )}
             </div>
+            <FixedShortcutsList />
           </div>
 
           <div className="flex items-center justify-between gap-2 mt-2">
@@ -480,101 +458,22 @@ export function KeybindingsDialog({
                 {t("newUi.sidebar.keybindings.actionLabel")}
               </label>
               <select
-                value={actionType}
-                onChange={(e) =>
-                  setActionType(e.target.value as KeybindingActionType)
-                }
+                value={draft.type}
+                onChange={(e) => setDraft({ type: e.target.value })}
                 className="h-8 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
               >
-                <option value="copy">
-                  {t("newUi.sidebar.keybindings.actionCopy")}
-                </option>
-                <option value="paste">
-                  {t("newUi.sidebar.keybindings.actionPaste")}
-                </option>
-                <option value="sendControlCode">
-                  {t("newUi.sidebar.keybindings.actionSendControlCode")}
-                </option>
-                <option value="sendText">
-                  {t("newUi.sidebar.keybindings.actionSendText")}
-                </option>
-                <option value="runSnippet">
-                  {t("newUi.sidebar.keybindings.actionRunSnippet")}
-                </option>
-                <option value="nextTab">
-                  {t("newUi.sidebar.keybindings.actionNextTab")}
-                </option>
-                <option value="previousTab">
-                  {t("newUi.sidebar.keybindings.actionPreviousTab")}
-                </option>
-                <option value="openCommandPalette">
-                  {t("newUi.sidebar.keybindings.actionOpenCommandPalette")}
-                </option>
+                {!draftDef && draft.type && (
+                  <option value={draft.type}>{actionLabel(draft.type)}</option>
+                )}
+                {actions.map((action) => (
+                  <option key={action.id} value={action.id}>
+                    {t(action.labelKey)}
+                  </option>
+                ))}
               </select>
-              {actionType === "paste" && (
-                <span className="text-xs text-muted-foreground">
-                  {t("newUi.sidebar.keybindings.clipboardPermissionNote")}
-                </span>
-              )}
             </div>
 
-            {actionType === "sendControlCode" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold">
-                  {t("newUi.sidebar.keybindings.controlCodeLabel")}
-                </label>
-                <Input
-                  value={controlCode}
-                  maxLength={1}
-                  onChange={(e) => setControlCode(e.target.value)}
-                  placeholder="w"
-                  className="w-16 font-mono"
-                />
-              </div>
-            )}
-
-            {actionType === "sendText" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold">
-                  {t("newUi.sidebar.keybindings.textLabel")}
-                </label>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="w-full h-24 px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                />
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={appendEnter}
-                    onChange={(e) => setAppendEnter(e.target.checked)}
-                  />
-                  {t("newUi.sidebar.keybindings.appendEnterLabel")}
-                </label>
-              </div>
-            )}
-
-            {actionType === "runSnippet" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold">
-                  {t("newUi.sidebar.keybindings.snippetLabel")}
-                </label>
-                <select
-                  value={snippetId}
-                  onChange={(e) => setSnippetId(e.target.value)}
-                  className="h-8 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">
-                    {t("newUi.sidebar.keybindings.selectSnippetPlaceholder")}
-                  </option>
-                  {snippets.map((s) => (
-                    <option key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {Editor && <Editor action={draft} onChange={setDraft} />}
           </div>
           <div className="flex items-center justify-end gap-2 mt-2">
             <Button variant="ghost" onClick={() => setFormOpen(false)}>

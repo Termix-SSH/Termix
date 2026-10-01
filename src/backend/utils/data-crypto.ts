@@ -180,29 +180,6 @@ class DataCrypto {
         }
       }
 
-      const userRecord = store.getUserRecord(userId);
-      if (userRecord) {
-        const sensitiveFields =
-          LazyFieldEncryption.getSensitiveFieldsForTable("users");
-        const { updatedRecord, migratedFields, needsUpdate } =
-          LazyFieldEncryption.migrateRecordSensitiveFields(
-            userRecord,
-            sensitiveFields,
-            userDataKey,
-            userId,
-          );
-
-        if (needsUpdate) {
-          store.updateUserSensitiveFields(userId, updatedRecord);
-
-          migratedFieldsCount += migratedFields.length;
-          if (!migratedTables.includes("users")) {
-            migratedTables.push("users");
-          }
-          migrated = true;
-        }
-      }
-
       return { migrated, migratedTables, migratedFieldsCount };
     } catch (error) {
       databaseLogger.error("User sensitive fields migration failed", error, {

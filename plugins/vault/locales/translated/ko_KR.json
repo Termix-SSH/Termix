@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "Vault 서명자 프로필",
+    "selectProfile": "Vault 프로필 선택...",
+    "hint": "설정은 공유 프로필에서 가져옵니다. 연결 시 OIDC를 통해 Vault에 로그인하게 됩니다. 비밀은 저장되지 않습니다.",
+    "docs": "문서 보기",
+    "sharedProfile": "{{name}} (공유됨)"
+  },
+  "profiles": {
+    "new": "새 프로필",
+    "manage": "Vault 프로필 관리",
+    "name": "친숙한 이름",
+    "vaultAddr": "Vault 주소",
+    "namespace": "네임스페이스",
+    "oidcMount": "OIDC 인증 마운트",
+    "oidcRole": "OIDC 역할",
+    "sshMount": "SSH 시크릿 마운트",
+    "sshRole": "SSH 서명자 역할",
+    "validPrincipals": "유효한 프린시펄",
+    "keyType": "임시 키 유형",
+    "shareWithAll": "모든 사용자와 공유",
+    "create": "프로필 생성",
+    "created": "Vault 프로필 생성됨",
+    "saved": "Vault 프로필 저장됨",
+    "deleted": "Vault 프로필 삭제됨",
+    "saveFailed": "Vault 프로필 저장 실패",
+    "deleteFailed": "Vault 프로필 삭제 실패",
+    "save": "프로필 저장",
+    "validationError": "이름, Vault 주소 및 SSH 서명자 역할이 필요합니다.",
+    "none": "아직 Vault 프로필이 없습니다.",
+    "sharedBadge": "공유",
+    "edit": "편집",
+    "delete": "삭제"
+  },
+  "hosts": {
+    "filterAuthVault": "둥근 천장"
+  },
+  "dialog": {
+    "title": "Vault 로그인 필요",
+    "description": "HashiCorp Vault 로그인을 위한 창이 열렸습니다. 해당 창에서 로그인을 완료하면 연결이 자동으로 계속됩니다.",
+    "failed": "Vault 인증에 실패했습니다. 다시 시도하세요.",
+    "reopen": "로그인 창 다시 열기"
+  },
+  "permissions": {
+    "use": {
+      "title": "Vault SSH 서명을 사용하세요.",
+      "description": "Vault 서명자 프로필을 생성하고 Vault를 사용하는 호스트에 연결합니다."
+    },
+    "share": {
+      "title": "Share Vault 프로필",
+      "description": "Vault 서명자 프로필을 공유로 표시하면 모든 사용자가 해당 프로필을 선택할 수 있습니다."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "리디렉션 URI",
+      "description": "Termix가 로그인하는 각 Vault OIDC 역할의 allowed_redirect_uris에 이 URL을 추가하세요."
+    },
+    "legacyCallback": {
+      "label": "이전 리디렉션 URI를 사용하세요",
+      "description": "2.9 이전 버전에서 사용했던 리디렉션 URI인 /vault/oidc/callback을 계속 전송하세요. Vault 역할에서 새 URI를 허용하면 이 기능을 비활성화하십시오."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault 서명자 프로필"
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import * as React from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 
@@ -21,6 +22,8 @@ type Select2Props = Omit<
     "value" | "defaultValue" | "onChange" | "required"
   > & {
     placeholder?: string;
+    align?: "start" | "center" | "end";
+    contentClassName?: string;
   };
 
 function getText(children: React.ReactNode): string {
@@ -85,12 +88,15 @@ function Select2({
   onChange,
   disabled,
   placeholder,
+  align = "start",
+  contentClassName,
   name,
   id,
   required,
   "aria-label": ariaLabel,
   ...props
 }: Select2Props) {
+  const { t } = useTranslation();
   const options = React.useMemo(() => getOptions(children), [children]);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -171,8 +177,11 @@ function Select2({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
-        className="z-[99999] w-[var(--radix-popover-trigger-width)] min-w-52 p-0"
+        align={align}
+        className={cn(
+          "z-[99999] w-[var(--radix-popover-trigger-width)] min-w-52 p-0",
+          contentClassName,
+        )}
       >
         <div className="flex items-center border-b border-border px-2">
           <Search className="mr-2 size-4 shrink-0 text-muted-foreground" />
@@ -190,7 +199,7 @@ function Select2({
         >
           {filteredOptions.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              No results found
+              {t("common.noResults")}
             </div>
           ) : (
             filteredOptions.map((option, index) => {

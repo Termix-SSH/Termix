@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -7,6 +7,10 @@ vi.mock("react-i18next", () => ({
 
 import { HostStatusCard } from "@/dashboard/DashboardTab";
 import type { Host } from "@/types/ui-types";
+import {
+  registerHostAction,
+  resetHostContributions,
+} from "@/sidebar/host-contributions";
 
 afterEach(cleanup);
 
@@ -19,13 +23,7 @@ describe("HostStatusCard", () => {
       online: false,
     } as Host;
 
-    render(
-      <HostStatusCard
-        hosts={[host]}
-        hostMetrics={new Map()}
-        onOpenTab={() => {}}
-      />,
-    );
+    render(<HostStatusCard hosts={[host]} onOpenTab={() => {}} />);
 
     const name = screen.getByText(host.name);
     const ip = screen.getByText(host.ip);
@@ -42,28 +40,51 @@ describe("HostStatusCard", () => {
   });
 });
 
-describe("dashboard protocol routing", () => {
+describe("dashboard host routing", () => {
+  const Icon = (() => null) as never;
+  beforeEach(() => {
+    registerHostAction({
+      id: "desk-connect",
+      titleKey: "x",
+      icon: Icon,
+      kind: "connect",
+      priority: 50,
+      tabType: "desk",
+      when: (host) => (host as Record<string, unknown>).enableDesk === true,
+    });
+    registerHostAction({
+      id: "shell-connect",
+      titleKey: "x",
+      icon: Icon,
+      kind: "connect",
+      priority: 100,
+      tabType: "shell",
+      when: (host) => (host as Record<string, unknown>).enableShell === true,
+    });
+    registerHostAction({
+      id: "stats",
+      titleKey: "x",
+      icon: Icon,
+      kind: "open",
+      overview: true,
+      tabType: "stats",
+      when: (host) => (host as Record<string, unknown>).enableShell === true,
+    });
+  });
+  afterEach(resetHostContributions);
+
   it.each([
-    [{ enableRdp: true }, "rdp"],
-    [{ enableVnc: true }, "vnc"],
-    [{ enableTelnet: true }, "telnet"],
-    [{ enableSsh: true, enableRdp: true }, "host-metrics"],
-  ] as const)("opens the enabled protocol for %j", (protocols, expected) => {
+    [{ enableDesk: true }, "desk"],
+    [{ enableShell: true, enableDesk: true }, "stats"],
+  ] as const)("opens the right view for %j", (flags, expected) => {
     const host = {
       id: "1",
       name: "Remote host",
       ip: "192.0.2.1",
-      enableSsh: false,
-      ...protocols,
-    } as Host;
+      ...flags,
+    } as unknown as Host;
     const onOpenTab = vi.fn();
-    render(
-      <HostStatusCard
-        hosts={[host]}
-        hostMetrics={new Map()}
-        onOpenTab={onOpenTab}
-      />,
-    );
+    render(<HostStatusCard hosts={[host]} onOpenTab={onOpenTab} />);
     fireEvent.click(screen.getByText("Remote host"));
     expect(onOpenTab).toHaveBeenCalledWith(host, expected);
   });

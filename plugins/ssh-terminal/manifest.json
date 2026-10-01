@@ -1,0 +1,832 @@
+{
+  "id": "ssh-terminal",
+  "name": "SSH Terminal",
+  "version": "1.0.0",
+  "description": "SSH terminal sessions with jump hosts, host key checks, command history and a local terminal in the desktop app.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Terminal",
+  "icon": "SquareTerminal",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "credentials:read",
+    "ssh:connect",
+    "network:serve",
+    "db:own",
+    "events:core",
+    "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "sessions.live",
+      "version": "1.0.0",
+      "permission": "ssh-terminal.sessions",
+      "names": ["ssh"]
+    },
+    {
+      "service": "terminal.history",
+      "version": "1.0.0",
+      "permission": "ssh-terminal.history"
+    }
+  ],
+  "requires": [
+    {
+      "service": "tmux.sessions",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "sessions.sharing",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "recordings.writer",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "terminal",
+        "titleKey": "nav.terminal",
+        "icon": "SquareTerminal",
+        "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "local-terminal",
+        "titleKey": "nav.localTerminal",
+        "icon": "Laptop",
+        "openFrom": ["rail", "palette"]
+      }
+    ],
+    "panels": [
+      {
+        "id": "history",
+        "titleKey": "nav.history",
+        "icon": "History"
+      },
+      {
+        "id": "ssh-tools",
+        "titleKey": "nav.sshTools",
+        "icon": "Hammer"
+      },
+      {
+        "id": "macros",
+        "titleKey": "nav.macros",
+        "icon": "Braces"
+      }
+    ],
+    "actionSlots": [
+      {
+        "id": "terminal.toolbar",
+        "accepts": ["button"]
+      },
+      {
+        "id": "terminal.toolbarStatus",
+        "accepts": ["component"]
+      },
+      {
+        "id": "terminal.sidePanel",
+        "accepts": ["component"]
+      },
+      {
+        "id": "terminal.overlay",
+        "accepts": ["component"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "sessions",
+        "titleKey": "permissions.sessions.title",
+        "descriptionKey": "permissions.sessions.description",
+        "defaultRoles": ["admin", "user"]
+      },
+      {
+        "name": "history",
+        "titleKey": "permissions.history.title",
+        "descriptionKey": "permissions.history.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "sessionTimeoutMinutes",
+          "type": "number",
+          "labelKey": "settings.admin.sessionTimeoutMinutes.label",
+          "descriptionKey": "settings.admin.sessionTimeoutMinutes.description",
+          "group": "settings.admin.group.sessions",
+          "min": 1,
+          "max": 1440,
+          "default": 30
+        },
+        {
+          "key": "sessionPersistence",
+          "type": "boolean",
+          "labelKey": "settings.admin.sessionPersistence.label",
+          "descriptionKey": "settings.admin.sessionPersistence.description",
+          "group": "settings.admin.group.sessions",
+          "default": true
+        },
+        {
+          "key": "commandHistoryEnabled",
+          "type": "boolean",
+          "labelKey": "settings.admin.commandHistoryEnabled.label",
+          "descriptionKey": "settings.admin.commandHistoryEnabled.description",
+          "group": "settings.admin.group.sessions",
+          "default": true
+        },
+        {
+          "key": "commandHistoryForNewHosts",
+          "type": "boolean",
+          "labelKey": "settings.admin.commandHistoryForNewHosts.label",
+          "descriptionKey": "settings.admin.commandHistoryForNewHosts.description",
+          "default": true,
+          "hidden": true
+        },
+        {
+          "key": "newHostTheme",
+          "type": "custom",
+          "component": "newHostTheme",
+          "group": "settings.admin.group.newHosts",
+          "default": "termix",
+          "hidden": true
+        },
+        {
+          "key": "newHostFontFamily",
+          "type": "custom",
+          "component": "newHostFontFamily",
+          "group": "settings.admin.group.newHosts",
+          "default": "Caskaydia Cove Nerd Font Mono",
+          "hidden": true
+        },
+        {
+          "key": "newHostFontSize",
+          "type": "number",
+          "labelKey": "settings.admin.newHostFontSize.label",
+          "descriptionKey": "settings.admin.newHostFontSize.description",
+          "group": "settings.admin.group.newHosts",
+          "min": 8,
+          "max": 36,
+          "default": 14,
+          "hidden": true
+        },
+        {
+          "key": "newHostCursorStyle",
+          "type": "select",
+          "labelKey": "settings.admin.newHostCursorStyle.label",
+          "group": "settings.admin.group.newHosts",
+          "default": "bar",
+          "options": [
+            {
+              "value": "block",
+              "labelKey": "hosts.cursorStyleBlock"
+            },
+            {
+              "value": "underline",
+              "labelKey": "hosts.cursorStyleUnderline"
+            },
+            {
+              "value": "bar",
+              "labelKey": "hosts.cursorStyleBar"
+            }
+          ],
+          "hidden": true
+        },
+        {
+          "key": "newHostCursorBlink",
+          "type": "boolean",
+          "labelKey": "settings.admin.newHostCursorBlink.label",
+          "group": "settings.admin.group.newHosts",
+          "default": true,
+          "hidden": true
+        },
+        {
+          "key": "newHostAutoTmux",
+          "type": "boolean",
+          "labelKey": "settings.admin.newHostAutoTmux.label",
+          "descriptionKey": "settings.admin.newHostAutoTmux.description",
+          "group": "settings.admin.group.newHosts",
+          "default": false,
+          "hidden": true
+        },
+        {
+          "key": "touchInput",
+          "type": "custom",
+          "component": "touchInput",
+          "group": "settings.admin.group.touch"
+        },
+        {
+          "key": "imageStorageMode",
+          "type": "select",
+          "labelKey": "settings.admin.imageStorageMode.label",
+          "descriptionKey": "settings.admin.imageStorageMode.description",
+          "group": "settings.admin.group.images",
+          "options": [
+            {
+              "value": "auto",
+              "labelKey": "settings.admin.imageStorageMode.auto"
+            },
+            {
+              "value": "local",
+              "labelKey": "settings.admin.imageStorageMode.local"
+            },
+            {
+              "value": "remote-sftp",
+              "labelKey": "settings.admin.imageStorageMode.remoteSftp"
+            }
+          ]
+        },
+        {
+          "key": "imageLocalDir",
+          "type": "secret",
+          "labelKey": "settings.admin.imageLocalDir.label",
+          "descriptionKey": "settings.admin.imageLocalDir.description",
+          "group": "settings.admin.group.images"
+        },
+        {
+          "key": "imageHostPath",
+          "type": "string",
+          "labelKey": "settings.admin.imageHostPath.label",
+          "descriptionKey": "settings.admin.imageHostPath.description",
+          "group": "settings.admin.group.images"
+        },
+        {
+          "key": "imageTtlMs",
+          "type": "number",
+          "labelKey": "settings.admin.imageTtlMs.label",
+          "descriptionKey": "settings.admin.imageTtlMs.description",
+          "group": "settings.admin.group.images",
+          "min": 0
+        },
+        {
+          "key": "imageMaxCount",
+          "type": "number",
+          "labelKey": "settings.admin.imageMaxCount.label",
+          "descriptionKey": "settings.admin.imageMaxCount.description",
+          "group": "settings.admin.group.images",
+          "min": 1
+        },
+        {
+          "key": "imageMaxBytes",
+          "type": "number",
+          "labelKey": "settings.admin.imageMaxBytes.label",
+          "descriptionKey": "settings.admin.imageMaxBytes.description",
+          "group": "settings.admin.group.images",
+          "min": 1048576
+        },
+        {
+          "key": "imageStorageTest",
+          "type": "custom",
+          "component": "imageStorageTest",
+          "group": "settings.admin.group.images"
+        }
+      ],
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 12,
+        "enableKey": "enableTerminal",
+        "enableLabelKey": "settings.host.enableTerminal.label",
+        "enableDescriptionKey": "settings.host.enableTerminal.description",
+        "enableDefault": true,
+        "fields": [
+          {
+            "key": "enableTerminalToolbar",
+            "type": "boolean",
+            "labelKey": "settings.host.enableTerminalToolbar.label",
+            "descriptionKey": "settings.host.enableTerminalToolbar.description",
+            "default": true
+          },
+          {
+            "key": "terminalToolbarPosition",
+            "type": "select",
+            "labelKey": "settings.host.terminalToolbarPosition.label",
+            "descriptionKey": "settings.host.terminalToolbarPosition.description",
+            "requires": "enableTerminalToolbar",
+            "default": "bottom",
+            "options": [
+              {
+                "value": "bottom",
+                "labelKey": "settings.host.terminalToolbarPosition.bottom"
+              },
+              {
+                "value": "bottom-left",
+                "labelKey": "settings.host.terminalToolbarPosition.bottomLeft"
+              },
+              {
+                "value": "bottom-right",
+                "labelKey": "settings.host.terminalToolbarPosition.bottomRight"
+              },
+              {
+                "value": "top",
+                "labelKey": "settings.host.terminalToolbarPosition.top"
+              },
+              {
+                "value": "top-left",
+                "labelKey": "settings.host.terminalToolbarPosition.topLeft"
+              },
+              {
+                "value": "top-right",
+                "labelKey": "settings.host.terminalToolbarPosition.topRight"
+              }
+            ]
+          },
+          {
+            "key": "terminalToolbarStartState",
+            "type": "select",
+            "labelKey": "settings.host.terminalToolbarStartState.label",
+            "descriptionKey": "settings.host.terminalToolbarStartState.description",
+            "requires": "enableTerminalToolbar",
+            "default": "expanded",
+            "options": [
+              {
+                "value": "expanded",
+                "labelKey": "settings.host.terminalToolbarStartState.expanded"
+              },
+              {
+                "value": "collapsed",
+                "labelKey": "settings.host.terminalToolbarStartState.collapsed"
+              }
+            ]
+          },
+          {
+            "key": "terminalToolbarDisplay",
+            "type": "select",
+            "labelKey": "settings.host.terminalToolbarDisplay.label",
+            "descriptionKey": "settings.host.terminalToolbarDisplay.description",
+            "requires": "enableTerminalToolbar",
+            "default": "remember",
+            "options": [
+              {
+                "value": "remember",
+                "labelKey": "settings.host.terminalToolbarDisplay.remember"
+              },
+              {
+                "value": "icon",
+                "labelKey": "settings.host.terminalToolbarDisplay.icon"
+              },
+              {
+                "value": "labeled",
+                "labelKey": "settings.host.terminalToolbarDisplay.labeled"
+              },
+              {
+                "value": "expanded",
+                "labelKey": "settings.host.terminalToolbarDisplay.expanded"
+              }
+            ]
+          },
+          {
+            "key": "terminalToolbarShowStatus",
+            "type": "boolean",
+            "labelKey": "settings.host.terminalToolbarShowStatus.label",
+            "descriptionKey": "settings.host.terminalToolbarShowStatus.description",
+            "requires": "enableTerminalToolbar",
+            "default": true
+          },
+          {
+            "key": "terminalToolbarFade",
+            "type": "boolean",
+            "labelKey": "settings.host.terminalToolbarFade.label",
+            "descriptionKey": "settings.host.terminalToolbarFade.description",
+            "requires": "enableTerminalToolbar",
+            "default": true
+          },
+          {
+            "key": "enableCommandHistory",
+            "type": "boolean",
+            "labelKey": "settings.host.enableCommandHistory.label",
+            "descriptionKey": "settings.host.enableCommandHistory.description",
+            "default": true
+          },
+          {
+            "key": "inheritAppearance",
+            "type": "boolean",
+            "labelKey": "settings.host.inheritAppearance.label",
+            "hidden": true,
+            "default": true,
+            "defaultable": false
+          },
+          {
+            "key": "theme",
+            "type": "string",
+            "labelKey": "settings.host.theme.label",
+            "hidden": true,
+            "default": "termix",
+            "personal": true
+          },
+          {
+            "key": "cursorBlink",
+            "type": "boolean",
+            "labelKey": "settings.host.cursorBlink.label",
+            "hidden": true,
+            "default": true,
+            "personal": true
+          },
+          {
+            "key": "cursorStyle",
+            "type": "select",
+            "labelKey": "settings.host.cursorStyle.label",
+            "hidden": true,
+            "default": "bar",
+            "options": [
+              {
+                "value": "block",
+                "labelKey": "hosts.cursorStyleBlock"
+              },
+              {
+                "value": "underline",
+                "labelKey": "hosts.cursorStyleUnderline"
+              },
+              {
+                "value": "bar",
+                "labelKey": "hosts.cursorStyleBar"
+              }
+            ],
+            "personal": true
+          },
+          {
+            "key": "fontSize",
+            "type": "number",
+            "labelKey": "settings.host.fontSize.label",
+            "hidden": true,
+            "default": 14,
+            "personal": true
+          },
+          {
+            "key": "fontFamily",
+            "type": "string",
+            "labelKey": "settings.host.fontFamily.label",
+            "hidden": true,
+            "default": "Caskaydia Cove Nerd Font Mono",
+            "personal": true
+          },
+          {
+            "key": "scrollback",
+            "type": "number",
+            "labelKey": "settings.host.scrollback.label",
+            "hidden": true,
+            "default": 10000,
+            "personal": true
+          },
+          {
+            "key": "letterSpacing",
+            "type": "number",
+            "labelKey": "settings.host.letterSpacing.label",
+            "hidden": true,
+            "default": 0,
+            "personal": true
+          },
+          {
+            "key": "lineHeight",
+            "type": "number",
+            "labelKey": "settings.host.lineHeight.label",
+            "hidden": true,
+            "default": 1,
+            "personal": true
+          },
+          {
+            "key": "bellStyle",
+            "type": "select",
+            "labelKey": "settings.host.bellStyle.label",
+            "hidden": true,
+            "default": "none",
+            "options": [
+              {
+                "value": "none",
+                "labelKey": "hosts.bellStyleNone"
+              },
+              {
+                "value": "sound",
+                "labelKey": "hosts.bellStyleSound"
+              },
+              {
+                "value": "visual",
+                "labelKey": "hosts.bellStyleVisual"
+              },
+              {
+                "value": "both",
+                "labelKey": "hosts.bellStyleBoth"
+              }
+            ],
+            "personal": true
+          },
+          {
+            "key": "minimumContrastRatio",
+            "type": "number",
+            "labelKey": "settings.host.minimumContrastRatio.label",
+            "hidden": true,
+            "default": 1,
+            "personal": true
+          },
+          {
+            "key": "backgroundImage",
+            "type": "string",
+            "labelKey": "settings.host.backgroundImage.label",
+            "hidden": true,
+            "default": "",
+            "personal": true
+          },
+          {
+            "key": "backgroundImageOpacity",
+            "type": "number",
+            "labelKey": "settings.host.backgroundImageOpacity.label",
+            "hidden": true,
+            "default": 0.15,
+            "personal": true
+          },
+          {
+            "key": "customThemeColors",
+            "type": "json",
+            "labelKey": "settings.host.customThemeColors.label",
+            "hidden": true,
+            "personal": true
+          },
+          {
+            "key": "rightClickSelectsWord",
+            "type": "boolean",
+            "labelKey": "settings.host.rightClickSelectsWord.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "macOptionIsMeta",
+            "type": "boolean",
+            "labelKey": "settings.host.macOptionIsMeta.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "fastScrollModifier",
+            "type": "select",
+            "labelKey": "settings.host.fastScrollModifier.label",
+            "hidden": true,
+            "default": "alt",
+            "options": [
+              {
+                "value": "alt",
+                "labelKey": "hosts.fastScrollModifierAlt"
+              },
+              {
+                "value": "ctrl",
+                "labelKey": "hosts.fastScrollModifierCtrl"
+              },
+              {
+                "value": "shift",
+                "labelKey": "hosts.fastScrollModifierShift"
+              }
+            ]
+          },
+          {
+            "key": "fastScrollSensitivity",
+            "type": "number",
+            "labelKey": "settings.host.fastScrollSensitivity.label",
+            "hidden": true,
+            "default": 5
+          },
+          {
+            "key": "backspaceMode",
+            "type": "select",
+            "labelKey": "settings.host.backspaceMode.label",
+            "hidden": true,
+            "default": "normal",
+            "options": [
+              {
+                "value": "normal",
+                "labelKey": "hosts.backspaceModeNormal"
+              },
+              {
+                "value": "control-h",
+                "labelKey": "hosts.backspaceModeControlH"
+              }
+            ]
+          },
+          {
+            "key": "autoMosh",
+            "type": "boolean",
+            "labelKey": "settings.host.autoMosh.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "moshCommand",
+            "type": "string",
+            "labelKey": "settings.host.moshCommand.label",
+            "hidden": true,
+            "default": ""
+          },
+          {
+            "key": "autoTmux",
+            "type": "boolean",
+            "labelKey": "settings.host.autoTmux.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "useSSHTitle",
+            "type": "boolean",
+            "labelKey": "settings.host.useSSHTitle.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "syntaxHighlighting",
+            "type": "boolean",
+            "labelKey": "settings.host.syntaxHighlighting.label",
+            "hidden": true,
+            "default": true
+          },
+          {
+            "key": "syntaxHighlightingOptions",
+            "type": "json",
+            "labelKey": "settings.host.syntaxHighlightingOptions.label",
+            "hidden": true
+          },
+          {
+            "key": "linkClickBehavior",
+            "type": "select",
+            "labelKey": "settings.host.linkClickBehavior.label",
+            "hidden": true,
+            "default": "confirm",
+            "options": [
+              {
+                "value": "confirm",
+                "labelKey": "hosts.linkClickBehaviorConfirm"
+              },
+              {
+                "value": "direct",
+                "labelKey": "hosts.linkClickBehaviorDirect"
+              }
+            ]
+          },
+          {
+            "key": "localEcho",
+            "type": "select",
+            "labelKey": "settings.host.localEcho.label",
+            "hidden": true,
+            "default": "auto",
+            "options": [
+              {
+                "value": "off",
+                "labelKey": "hosts.localEchoOff"
+              },
+              {
+                "value": "auto",
+                "labelKey": "hosts.localEchoAuto"
+              },
+              {
+                "value": "on",
+                "labelKey": "hosts.localEchoOn"
+              }
+            ]
+          },
+          {
+            "key": "passwordPromptAutoFill",
+            "type": "boolean",
+            "labelKey": "settings.host.passwordPromptAutoFill.label",
+            "hidden": true,
+            "default": true
+          },
+          {
+            "key": "sudoPasswordAutoFill",
+            "type": "boolean",
+            "labelKey": "settings.host.sudoPasswordAutoFill.label",
+            "hidden": true,
+            "default": false
+          },
+          {
+            "key": "autoReconnect",
+            "type": "boolean",
+            "labelKey": "settings.host.autoReconnect.label",
+            "hidden": true,
+            "default": false
+          }
+        ]
+      },
+      "user": [
+        {
+          "key": "terminalDefaults",
+          "type": "custom",
+          "component": "terminalDefaults",
+          "default": {},
+          "hidden": true
+        },
+        {
+          "key": "customThemes",
+          "type": "json",
+          "labelKey": "settings.user.customThemes.label",
+          "hidden": true,
+          "default": []
+        },
+        {
+          "key": "commandAutocomplete",
+          "type": "boolean",
+          "labelKey": "settings.user.commandAutocomplete.label",
+          "descriptionKey": "settings.user.commandAutocomplete.description",
+          "default": false
+        },
+        {
+          "key": "localEcho",
+          "type": "select",
+          "labelKey": "settings.user.localEcho.label",
+          "descriptionKey": "settings.user.localEcho.description",
+          "default": "auto",
+          "options": [
+            {
+              "value": "off",
+              "labelKey": "hosts.localEchoOff"
+            },
+            {
+              "value": "auto",
+              "labelKey": "hosts.localEchoAuto"
+            },
+            {
+              "value": "on",
+              "labelKey": "hosts.localEchoOn"
+            }
+          ],
+          "hidden": true
+        },
+        {
+          "key": "linkClickBehavior",
+          "type": "select",
+          "labelKey": "settings.user.linkClickBehavior.label",
+          "descriptionKey": "settings.user.linkClickBehavior.description",
+          "default": "confirm",
+          "options": [
+            {
+              "value": "confirm",
+              "labelKey": "hosts.linkClickBehaviorConfirm"
+            },
+            {
+              "value": "direct",
+              "labelKey": "hosts.linkClickBehaviorDirect"
+            }
+          ],
+          "hidden": true
+        },
+        {
+          "key": "macros",
+          "type": "json",
+          "labelKey": "macros.title",
+          "hidden": true,
+          "default": []
+        }
+      ]
+    },
+    "keybindingActions": [
+      {
+        "id": "copy"
+      },
+      {
+        "id": "paste"
+      },
+      {
+        "id": "sendControlCode",
+        "params": {
+          "controlCode": {
+            "type": "string",
+            "required": true,
+            "pattern": "^[a-zA-Z]$"
+          }
+        }
+      },
+      {
+        "id": "sendText",
+        "params": {
+          "text": {
+            "type": "string",
+            "maxLength": 65536,
+            "required": true
+          },
+          "appendEnter": {
+            "type": "boolean"
+          }
+        }
+      }
+    ],
+    "uiPresets": {
+      "simple": {
+        "toolbarDensity": "icon"
+      },
+      "balanced": {
+        "toolbarDensity": "labeled"
+      },
+      "advanced": {
+        "toolbarDensity": "expanded"
+      }
+    },
+    "uses": ["files.openEditor", "files.openHost", "snippets.startupCommand"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

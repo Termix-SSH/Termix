@@ -10,7 +10,15 @@ import {
   DialogTitle,
 } from "@/components/dialog";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
-import { relevantSteps, type OnboardingContext } from "./onboarding-steps";
+import { useActionSlot } from "@/hooks/use-action-slot";
+import {
+  relevantSteps,
+  type OnboardingContext,
+  type OnboardingStep,
+} from "./onboarding-steps";
+
+/** Plugin steps go in before this one. */
+const PLUGIN_STEPS_BEFORE = "security";
 
 export function OnboardingDialog({
   open,
@@ -23,7 +31,22 @@ export function OnboardingDialog({
 }) {
   const { t } = useTranslation();
   const ctx = useUiPreferencesContext();
-  const steps = useMemo(() => relevantSteps(context), [context]);
+  const pluginSteps = useActionSlot("onboarding.steps");
+  const steps = useMemo(() => {
+    const core = relevantSteps(context);
+    const extra: OnboardingStep[] = pluginSteps
+      .filter((contribution) => contribution.component)
+      .map((contribution) => ({
+        id: contribution.actionId,
+        titleKey: contribution.titleKey,
+        Component:
+          contribution.component as unknown as OnboardingStep["Component"],
+      }));
+    const at = core.findIndex((step) => step.id === PLUGIN_STEPS_BEFORE);
+    return at < 0
+      ? [...core, ...extra]
+      : [...core.slice(0, at), ...extra, ...core.slice(at)];
+  }, [context, pluginSteps]);
   const [index, setIndex] = useState(0);
 
   // A reopened run always starts from the top.

@@ -1,0 +1,24 @@
+/**
+ * Core data that moves into a plugin's tables once they exist. Runs whenever
+ * a plugin's migrations applied something, at boot or when a plugin is
+ * enabled later, so the data is in place before the plugin's activate runs. Each move is
+ * idempotent and does nothing until its target table exists.
+ */
+
+import { runLdapProviderMigration } from "./ldap-provider-migration.js";
+import { runOpksshConfigMigration } from "./opkssh-config-migration.js";
+import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
+import { runSessionRecordingDataMigration } from "./session-recording-data-migration.js";
+import { runHostMetricsSettingsMigration } from "./host-metrics-settings-migration.js";
+import { runNotificationChannelMigration } from "./notification-channel-migration.js";
+
+export async function runPluginDataMoves(): Promise<void> {
+  await runLdapProviderMigration();
+  await runOpksshConfigMigration();
+  await runTermixIdentityCaMigration();
+  // Both set how long history is kept, which the plugin prunes by on activate.
+  await runSessionRecordingDataMigration();
+  await runHostMetricsSettingsMigration();
+  // Automations name channels by id, so they are in place before it starts.
+  await runNotificationChannelMigration();
+}

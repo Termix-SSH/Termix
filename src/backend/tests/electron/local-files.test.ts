@@ -44,8 +44,10 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
   TRANSFER_ROUTES: Record<string, string>;
   createTargetResolver: (deps: {
     localBaseUrl?: string;
-    getRemoteSyncConfig?: () => { serverUrl?: string } | null;
-    getRemoteSyncJwt?: () => string | null;
+    getLinkedServer?: () => {
+      serverUrl?: string;
+      token?: string | null;
+    } | null;
   }) => (req: { origin?: unknown; route?: unknown; deviceId?: unknown }) => {
     url: string;
     headers: Record<string, string>;
@@ -53,8 +55,10 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
   createLocalFileHandlers: (deps: {
     net: unknown;
     shell: unknown;
-    getRemoteSyncConfig?: () => { serverUrl?: string } | null;
-    getRemoteSyncJwt?: () => string | null;
+    getLinkedServer?: () => {
+      serverUrl?: string;
+      token?: string | null;
+    } | null;
     localBaseUrl?: string;
     publishFs?: PublishFs;
   }) => Record<
@@ -128,7 +132,7 @@ function startBackend(
     let body = "";
     req.on("data", (d) => (body += d));
     req.on("end", () => {
-      if (!opts.failAll && req.url?.endsWith("/ssh/downloadFileStream")) {
+      if (!opts.failAll && req.url?.endsWith("/downloadFileStream")) {
         // Headers go out immediately so the client opens its temp file;
         // the body may be delayed to keep the transfer in flight.
         res.writeHead(200, { "Content-Length": payload.length });
@@ -150,7 +154,7 @@ function startBackend(
     server.listen(0, "127.0.0.1", () => {
       const address = server.address() as { port: number };
       resolve({
-        url: `http://127.0.0.1:${address.port}/ssh/file_manager`,
+        url: `http://127.0.0.1:${address.port}/plugin-api/file-manager`,
         seen,
         close: () => new Promise((r) => server.close(() => r())),
       });
@@ -160,25 +164,28 @@ function startBackend(
 
 describe("local-files transfer target resolution", () => {
   const resolve = localFiles.createTargetResolver({
-    localBaseUrl: "http://127.0.0.1:30004/ssh/file_manager",
-    getRemoteSyncConfig: () => ({ serverUrl: "https://termix.example.com/" }),
-    getRemoteSyncJwt: () => "remote-jwt",
+    localBaseUrl: "http://127.0.0.1:30001/plugin-api/file-manager",
+    apiPath: "/plugin-api/file-manager",
+    getLinkedServer: () => ({
+      serverUrl: "https://termix.example.com/",
+      token: "remote-jwt",
+    }),
   });
 
   it("only reaches the two file-manager streaming routes on the local backend", () => {
     expect(resolve({ origin: "local", route: "uploadFileStream" })).toEqual({
-      url: "http://127.0.0.1:30004/ssh/file_manager/ssh/uploadFileStream",
+      url: "http://127.0.0.1:30001/plugin-api/file-manager/uploadFileStream",
       headers: { "X-Electron-App": "true" },
     });
     expect(resolve({ origin: "local", route: "downloadFileStream" }).url).toBe(
-      "http://127.0.0.1:30004/ssh/file_manager/ssh/downloadFileStream",
+      "http://127.0.0.1:30001/plugin-api/file-manager/downloadFileStream",
     );
   });
 
-  it("derives the remote target from the configured sync server and attaches its JWT itself", () => {
+  it("derives the remote target from the linked server and attaches its session itself", () => {
     const target = resolve({ origin: "remote", route: "downloadFileStream" });
     expect(target.url).toBe(
-      "https://termix.example.com/ssh/file_manager/ssh/downloadFileStream",
+      "https://termix.example.com/plugin-api/file-manager/downloadFileStream",
     );
     expect(target.headers.Authorization).toBe("Bearer remote-jwt");
   });
@@ -196,15 +203,15 @@ describe("local-files transfer target resolution", () => {
     expect(() => resolve({})).toThrow(/Unknown transfer route/);
   });
 
-  it("refuses a remote origin when no sync server is configured or it is not http(s)", () => {
+  it("refuses a remote origin when the device is not linked or the server is not http(s)", () => {
     const unconfigured = localFiles.createTargetResolver({
-      getRemoteSyncConfig: () => null,
+      getLinkedServer: () => null,
     });
     expect(() =>
       unconfigured({ origin: "remote", route: "uploadFileStream" }),
-    ).toThrow(/not configured/);
+    ).toThrow(/not linked/);
     const bogus = localFiles.createTargetResolver({
-      getRemoteSyncConfig: () => ({ serverUrl: "file:///etc/passwd" }),
+      getLinkedServer: () => ({ serverUrl: "file:///etc/passwd" }),
     });
     expect(() =>
       bogus({ origin: "remote", route: "uploadFileStream" }),
@@ -242,7 +249,7 @@ describe("local-files transfer target resolution", () => {
     });
     expect(target.headers.Authorization).toBe(`Bearer ${jwt}`);
     expect(target.url).toBe(
-      "http://127.0.0.1:30004/ssh/file_manager/ssh/uploadFileStream",
+      "http://127.0.0.1:30001/plugin-api/file-manager/uploadFileStream",
     );
     // Absent or empty: no header at all (the session cookie is the fallback).
     for (const authToken of [undefined, null, ""]) {
@@ -290,8 +297,7 @@ describe("local-files download boundary", () => {
       net: fakeNet,
       shell: {},
       localBaseUrl: backend.url,
-      getRemoteSyncConfig: () => null,
-      getRemoteSyncJwt: () => null,
+      getLinkedServer: () => null,
     });
   });
   afterAll(() => backend.close());
@@ -355,7 +361,7 @@ describe("local-files download boundary", () => {
     });
     expect(result.success).toBe(true);
     const last = backend.seen[backend.seen.length - 1];
-    expect(last.url).toBe("/ssh/file_manager/ssh/downloadFileStream");
+    expect(last.url).toBe("/plugin-api/file-manager/downloadFileStream");
     expect(last.headers.authorization).toBeUndefined();
     expect(last.headers.cookie).toBeUndefined();
     expect(last.headers["x-electron-app"]).toBe("true");
@@ -952,7 +958,7 @@ describe("local-files upload boundary", () => {
       const handlers = localFiles.createLocalFileHandlers({
         net: fakeNet,
         shell: {},
-        localBaseUrl: `http://127.0.0.1:${port}/ssh/file_manager`,
+        localBaseUrl: `http://127.0.0.1:${port}/plugin-api/file-manager`,
       });
       const result = await handlers[localFiles.IPC.UPLOAD](fakeEvent, {
         transferId: "up-1",
@@ -964,7 +970,7 @@ describe("local-files upload boundary", () => {
         headers: { Authorization: "Bearer leaked" },
       });
       expect(result.success).toBe(true);
-      expect(received.url).toBe("/ssh/file_manager/ssh/uploadFileStream");
+      expect(received.url).toBe("/plugin-api/file-manager/uploadFileStream");
       expect(received.headers?.authorization).toBeUndefined();
       expect(received.fields).toEqual({
         sessionId: "42",
@@ -1006,7 +1012,7 @@ describe("local-files upload boundary", () => {
       const handlers = localFiles.createLocalFileHandlers({
         net: fakeNet,
         shell: {},
-        localBaseUrl: `http://127.0.0.1:${port}/ssh/file_manager`,
+        localBaseUrl: `http://127.0.0.1:${port}/plugin-api/file-manager`,
       });
       const withoutToken = await handlers[localFiles.IPC.UPLOAD](fakeEvent, {
         transferId: "up-auth-0",
@@ -1105,7 +1111,7 @@ describe("local-files upload boundary", () => {
       const handlers = localFiles.createLocalFileHandlers({
         net: fakeNet,
         shell: {},
-        localBaseUrl: `http://127.0.0.1:${port}/ssh/file_manager`,
+        localBaseUrl: `http://127.0.0.1:${port}/plugin-api/file-manager`,
       });
       const results = await Promise.all(
         files.map((f) =>
@@ -1131,7 +1137,7 @@ describe("local-files upload boundary", () => {
     const handlers = localFiles.createLocalFileHandlers({
       net: fakeNet,
       shell: {},
-      localBaseUrl: "http://127.0.0.1:1/ssh/file_manager",
+      localBaseUrl: "http://127.0.0.1:1/plugin-api/file-manager",
     });
     const result = await handlers[localFiles.IPC.UPLOAD](fakeEvent, {
       transferId: "up-2",
@@ -1142,5 +1148,19 @@ describe("local-files upload boundary", () => {
     });
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Unknown transfer origin/);
+  });
+});
+
+describe("local-files transfer API path", () => {
+  it("accepts only a /plugin-api/<id> path from the plugin", () => {
+    const set = (
+      localFiles as unknown as {
+        setTransferApiPath: (path: unknown) => void;
+      }
+    ).setTransferApiPath;
+    expect(() => set("/plugin-api/file-manager")).not.toThrow();
+    for (const bad of ["/users", "/plugin-api/../users", "https://x", 3]) {
+      expect(() => set(bad)).toThrow(/Invalid transfer API path/);
+    }
   });
 });

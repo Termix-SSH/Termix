@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Connexion via LDAP",
+  "loginWithProvider": "Se connecter avec {{name}}",
+  "loading": "Chargement...",
+  "requiredField": "Ce champ est obligatoire",
+  "username": "Nom d'utilisateur LDAP",
+  "password": "Mot de passe LDAP",
+  "signIn": "Se connecter",
+  "permissions": {
+    "manage": {
+      "title": "Gérer les annuaires LDAP",
+      "description": "Ajouter, modifier et supprimer les annuaires LDAP permettant aux utilisateurs de se connecter."
+    }
+  },
+  "providers": {
+    "docsLink": "Documentation",
+    "none": "Aucun annuaire LDAP configuré.",
+    "add": "Ajouter un répertoire",
+    "edit": "Modifier le répertoire",
+    "delete": "Supprimer le répertoire",
+    "deleteConfirm": "Supprimer ce répertoire ? Les utilisateurs qui s’y connectent ne pourront plus accéder à leur compte.",
+    "name": "Nom affiché",
+    "namePlaceholder": "Annuaire des entreprises",
+    "nameRequired": "Un nom d'affichage est requis.",
+    "enabled": "Activé",
+    "save": "Répertoire de sauvegarde",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "deleted": "Supprimé",
+    "deleteFailed": "Échec de la suppression",
+    "loadFailed": "Échec du chargement des répertoires LDAP",
+    "cancel": "Annuler"
+  },
+  "fields": {
+    "host": "Hôte LDAP",
+    "port": "Port",
+    "useTls": "Utiliser TLS (LDAPS)",
+    "bindDn": "DN de liaison",
+    "bindPassword": "Mot de passe de liaison",
+    "secretKeep": "Un mot de passe est enregistré. Laissez ce champ vide pour le conserver.",
+    "userSearchBase": "Base de recherche utilisateur",
+    "userSearchFilter": "Filtre de recherche utilisateur",
+    "usernameAttr": "Attribut de nom d’utilisateur",
+    "displayNameAttr": "Attribut de nom d’affichage",
+    "groupSearchBase": "Base de recherche de groupe",
+    "adminGroup": "Groupe administrateur",
+    "allowedUsers": "Utilisateurs autorisés"
+  }
+}

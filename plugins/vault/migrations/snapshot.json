@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "tables": {
+    "profiles": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "folder": {
+          "type": "text"
+        },
+        "tags": {
+          "type": "text"
+        },
+        "vaultAddr": {
+          "type": "text",
+          "notNull": true
+        },
+        "vaultNamespace": {
+          "type": "text"
+        },
+        "oidcMount": {
+          "type": "text"
+        },
+        "oidcRole": {
+          "type": "text"
+        },
+        "sshMount": {
+          "type": "text"
+        },
+        "sshRole": {
+          "type": "text",
+          "notNull": true
+        },
+        "validPrincipals": {
+          "type": "text"
+        },
+        "keyType": {
+          "type": "text"
+        },
+        "shared": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "vault_profiles"
+    },
+    "tokens": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "profileId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "sshCert": {
+          "type": "text",
+          "notNull": true
+        },
+        "privateKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "expiresAt": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "lastUsed": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_vault_tokens_user_profile",
+          "columns": ["userId", "profileId"],
+          "unique": true
+        }
+      ],
+      "adopts": "vault_tokens"
+    }
+  }
+}

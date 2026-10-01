@@ -10,7 +10,9 @@ export type PluginPermissionGrantRecord =
 export interface PluginPermissionGrantCreateInput {
   pluginId: string;
   capability: string;
-  grantedBy: string;
+  /** Null for a bundled grant, which no user made. */
+  grantedBy: string | null;
+  source?: "admin" | "bundled";
 }
 
 export class PluginPermissionGrantRepository {
@@ -55,6 +57,7 @@ export class PluginPermissionGrantRepository {
         pluginId: input.pluginId,
         capability: input.capability,
         grantedBy: input.grantedBy,
+        source: input.source ?? "admin",
         grantedAt: now,
       },
     );

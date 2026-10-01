@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Bekyk vlote",
+      "description": "Sien vlote, hul lede en inventaris."
+    },
+    "manage": {
+      "title": "Bestuur vlote",
+      "description": "Skep, wysig en verwyder vlote, verander lidmaatskap en deel vlote met ander gebruikers of rolle."
+    },
+    "execute": {
+      "title": "Voer vlootaksies uit",
+      "description": "Voer bevele en pakketaksies oor 'n vloot uit, en dra lêers na en van sy lidgashere oor."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "Vlote",
+        "createFleet": "Skep Vloot",
+        "createFleetTitle": "Skep Vloot",
+        "editFleetTitle": "Wysig vloot",
+        "createFleetDescription": "'n Vloot is 'n benoemde groep gashere teen wie jy as 'n eenheid aksies kan uitvoer.",
+        "nameLabel": "Naam",
+        "namePlaceholder": "bv. webbedieners",
+        "nameRequired": "Vlootnaam word vereis",
+        "descriptionLabel": "Beskrywing",
+        "descriptionPlaceholder": "Opsionele beskrywing",
+        "colorLabel": "Kleur",
+        "tagRulesLabel": "Etiketreëls",
+        "tagRulesPlaceholder": "prod-web, rand",
+        "tagRulesHint": "Gashere met enige van hierdie etikette word outomaties ingesluit, benewens gashere wat handmatig bygevoeg word.",
+        "fleetCreated": "Vloot geskep",
+        "fleetUpdated": "Vloot opgedateer",
+        "fleetDeleted": "Vloot uitgevee",
+        "saveFailed": "Kon nie vloot stoor nie",
+        "deleteFailed": "Kon nie vloot uitvee nie",
+        "loadFailed": "Kon nie vlote laai nie",
+        "deleteFleetTitle": "Vee Vloot uit",
+        "deleteFleetDescription": "Is jy seker jy wil \"{{name}}\" verwyder? Dit verwyder nie die lidgashere self nie.",
+        "searchFleets": "Soek vlote...",
+        "noFleets": "Geen vlote nog nie. Skep een om te begin.",
+        "memberCount": "{{count}} gasheer",
+        "memberCount_other": "{{count}} gashere",
+        "manageMembers": "Bestuur Lede",
+        "manageMembersTitle": "Bestuur Vlootlede",
+        "manageMembersDescription": "Wissel gashere in of uit hierdie vloot se statiese lidmaatskap. Gashere wat ooreenstem met etiketreëls word altyd ingesluit.",
+        "searchHosts": "Soek gashere...",
+        "noHostsFound": "Geen gashere gevind nie",
+        "noMembers": "Hierdie vloot het nog geen lede nie. Voeg gashere by of stel 'n etiketreël.",
+        "membersLoadFailed": "Kon nie vlootlede laai nie",
+        "memberUpdateFailed": "Kon nie vlootlidmaatskap opdateer nie",
+        "tabRun": "Voer die opdrag uit",
+        "tabTransfer": "Dra lêers oor",
+        "tabInventory": "Voorraad",
+        "openInventoryTab": "Maak oop in volle oortjie",
+        "tabPackages": "Pakkette",
+        "runOnFleet": "Hardloop op Vloot",
+        "commandPlaceholder": "optyd && df -h",
+        "commandRequired": "'n Opdrag word vereis",
+        "commandInputsLabel": "Opdraginvoere",
+        "commandSucceeded": "Opdrag het op alle gashere geslaag",
+        "commandPartialFailure": "{{failed}} van {{total}} gashere het misluk",
+        "commandFailed": "Kon nie die opdrag uitvoer nie",
+        "resultSuccess": "Sukses",
+        "resultFailed": "Misluk",
+        "push": "Stoot",
+        "pull": "Trek",
+        "remotePathLabel": "Afgeleë pad",
+        "remotePathRequired": "'n Afgeleë pad word benodig",
+        "fileLabel": "Lêer",
+        "fileRequired": "'n Lêer word vereis",
+        "pushHint": "Die gekose lêer word na hierdie presiese pad op elke gasheer in die vloot geskryf.",
+        "pullHint": "Die lêer op hierdie pad word van elke gasheer gelees en as 'n enkele zip-lêer afgelaai, een lêergids per gasheer.",
+        "transferComplete": "Oordrag voltooi",
+        "transferFailed": "Oordrag het misluk",
+        "refreshInventory": "Verfris voorraad",
+        "inventoryLoadFailed": "Kon nie voorraad laai nie",
+        "inventoryRefreshed": "Voorraad verfris",
+        "inventoryRefreshFailed": "Kon nie voorraad verfris nie",
+        "inventoryNoData": "Geen voorraaddata nog nie - verfris om dit te versamel.",
+        "inventoryHost": "Gasheer",
+        "inventoryCollectedCount": "{{count}}/{{total}} versamel",
+        "inventoryOs": "OS",
+        "inventoryKernel": "Kern",
+        "inventoryArch": "Boog",
+        "inventoryUptime": "Optyd",
+        "inventoryPackageManager": "Pakketbestuurder",
+        "inventoryCollectedAt": "Versamel",
+        "packageActionLabel": "Aksie",
+        "packageInstall": "Installeer",
+        "packageRemove": "Verwyder",
+        "packageUpgradeAll": "Gradeer alle pakkette op",
+        "packageNameLabel": "Pakketnaam",
+        "packageNameRequired": "'n Pakketnaam word vereis",
+        "packageHint": "Vereis bestuursvlaktoegang per gasheer en verhoog met behulp van die gasheer se gestoorde sudo-wagwoord.",
+        "shareFleet": "Deel Vloot",
+        "shareFleetTitle": "Deel \"{{name}}\"",
+        "shareFleetDescription": "Deel hierdie vloot se huidige lid-gashere met die gekose gebruikers of rolle. Gashere wat later by die vloot gevoeg word, word nie outomaties gedeel nie - deel weer om hulle in te sluit.",
+        "shareSelectionRequired": "Kies ten minste een gebruiker of rol",
+        "fleetSharedSuccessfully": "Gedeelde {{shared}} van {{total}} gasheer(s) in hierdie vloot",
+        "failedToShareFleet": "Kon nie vloot deel nie",
+        "noMembersToShare": "Hierdie vloot het nog geen lidgashere om te deel nie."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "Vlote"
+  },
+  "hosts": {
+    "docsLink": "Bekyk dokumente",
+    "sharing": {
+      "customHoursPlaceholder": "Ure totdat toegang verval",
+      "expiry": {
+        "never": "Nooit",
+        "oneHour": "1 uur",
+        "oneDay": "24 uur",
+        "sevenDays": "7 dae",
+        "thirtyDays": "30 dae",
+        "custom": "Pasgemaak"
+      },
+      "expiryLabel": "Toegang verval",
+      "levels": {
+        "connect": {
+          "label": "Verbind",
+          "description": "Slegs oop sessies: terminaal, afstandwerkskerm, lêerbestuurder, tonnels en Docker. Geen toegang tot die gasheerkonfigurasie nie."
+        },
+        "view": {
+          "label": "Bekyk",
+          "description": "Verbind, plus sien die gasheerkonfigurasie. Geheime word nooit gewys nie."
+        },
+        "edit": {
+          "label": "Wysig",
+          "description": "Bekyk, plus wysig nie-verifikasie gasheerinstellings. Die eienaar se SSH-verifikasie bly privaat en slegs vir die eienaar."
+        },
+        "manage": {
+          "label": "Bestuur",
+          "description": "Wysig, plus deel die gasheer met ander, verander toestemmingsvlakke en herroep toegang."
+        }
+      },
+      "noMatches": "Geen ooreenstemmings gevind nie",
+      "permissionLevelLabel": "Toestemmingsvlak",
+      "rolesTab": "Rolle",
+      "searchPlaceholder": "Soek gebruikers of rolle...",
+      "shareButton": "Deel",
+      "shareWithCount": "Deel ({{count}})",
+      "usersTab": "Gebruikers"
+    }
+  }
+}

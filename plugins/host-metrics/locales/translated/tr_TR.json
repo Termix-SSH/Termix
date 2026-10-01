@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Sunucu Metrikleri"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "Bellek",
+    "disk": "Disk",
+    "network": "Ağ",
+    "uptime": "Çalışma Süresi",
+    "processes": "İşlemler",
+    "available": "Kullanılabilir",
+    "free": "Boş",
+    "connecting": "Bağlanıyor...",
+    "connectionFailed": "Sunucuya bağlanılamadı",
+    "naCpus": "CPU yok",
+    "cpuCores_one": "{{count}} Çekirdek",
+    "cpuCores_other": "{{count}} Çekirdek",
+    "cpuUsage": "CPU Kullanımı",
+    "memoryUsage": "Bellek Kullanımı",
+    "diskUsage": "Disk Kullanımı",
+    "selectFilesystem": "Select filesystem",
+    "temperature": "Sıcaklık",
+    "highestTemperature": "En yüksek sıcaklık",
+    "primaryTemperatureSensor": "Primary sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
+    },
+    "failedToFetchHostConfig": "Host yapılandırması alınamadı",
+    "serverOffline": "Sunucu Çevrimdışı",
+    "cannotFetchMetrics": "Çevrimdışı sunucudan ölçümler alınamaz",
+    "totpFailed": "TOTP doğrulaması başarısız",
+    "noneAuthNotSupported": "Sunucu Metrikleri 'none' kimlik doğrulama türünü desteklemiyor.",
+    "noHostSelected": "Sunucu seçilmedi",
+    "load": "Yük",
+    "systemInfo": "Sistem Bilgisi",
+    "hostname": "Sunucu Adı",
+    "operatingSystem": "İşletim Sistemi",
+    "kernel": "Çekirdek",
+    "seconds": "saniye",
+    "networkInterfaces": "Ağ Arayüzleri",
+    "noInterfacesFound": "Ağ arayüzleri bulunamadı",
+    "noProcessesFound": "Hiç işlem bulunamadı",
+    "processesTotal": "toplam",
+    "processesRunning": "çalışan",
+    "loginStats": "SSH Giriş İstatistikleri",
+    "noRecentLoginData": "Son giriş verisi yok",
+    "ports": {
+      "title": "Dinlenen Portlar",
+      "protocol": "Protokol",
+      "port": "Port",
+      "address": "Adres",
+      "process": "İşlem",
+      "search": "Portları ara...",
+      "allProtocols": "Tümü",
+      "noData": "Dinlenen port verisi yok"
+    },
+    "firewall": {
+      "title": "Güvenlik Duvarı",
+      "inactive": "Etkin Değil",
+      "policy": "Politika",
+      "rules": "kurallar",
+      "noRules": "Bu zincirde kural yok",
+      "noData": "Güvenlik duvarı verisi bulunamadı",
+      "action": "Eylem",
+      "protocol": "Protokol",
+      "port": "Port",
+      "source": "Kaynak",
+      "anywhere": "Her yer",
+      "chains": "zincirler"
+    },
+    "loadAvg": "Ortalama Yük",
+    "swap": "Takas",
+    "architecture": "Mimari",
+    "refresh": "Yenile",
+    "retry": "Yeniden dene",
+    "customize": "Düzeni özelleştir",
+    "reset": "Sıfırla",
+    "tabLive": "Canlı",
+    "editModeInstructions": "Kartları yeniden düzenlemek için sürükleyin, yeniden boyutlandırmak için alt kenarı sürükleyin ve bir kartın genişliğini değiştirmek için genişlik düğmesini kullanın. Aşağıdan kart ekleyin veya kaldırın.",
+    "managers": {
+      "services": "Hizmetler",
+      "processInspector": "İşlem Denetçisi",
+      "logViewer": "Günlük Görüntüleyici",
+      "cron": "Cron Görevleri",
+      "packages": "Paketler",
+      "ssl": "SSL Sertifikaları",
+      "firewall": "Güvenlik Duvarı",
+      "users": "Kullanıcılar ve İzinler",
+      "healthCheck": "Sağlık Kontrolleri",
+      "diskBreakdown": "Disk Dağılımı",
+      "systemdTimers": "Zamanlayıcılar",
+      "topMemory": "Bellek Sıralaması",
+      "noData": "Veri yok",
+      "sudoHint": "Ayrıcalıklı eylemleri etkinleştirmek için host düzenleyicisinde bu host için bir sudo parolası belirleyin.",
+      "filter": "Filtrele...",
+      "start": "Başlat",
+      "stop": "Durdur",
+      "restart": "Yeniden Başlat",
+      "actionDone": "{{name}} güncellendi",
+      "actionFailed": "Eylem başarısız oldu",
+      "signalSent": "PID {{pid}}'e sinyal gönderildi",
+      "killHint": "Tıklama: sonlandır (SIGTERM). Sağ tıklama: zorla sonlandır (SIGKILL).",
+      "working": "Çalışıyor...",
+      "update": "Güncelle",
+      "upgradeAll": "Tümünü yükselt",
+      "allUpToDate": "Her şey güncel",
+      "save": "Kaydet",
+      "command": "Komut",
+      "enabled": "Etkin",
+      "cronSaved": "Crontab güncellendi",
+      "clients": "İstemciler",
+      "dryRun": "Deneme çalıştırması",
+      "renew": "Yenile",
+      "noAcmeClient": "Bu sunucuda ACME istemcisi (certbot veya acme.sh) bulunamadı.",
+      "addInputRule": "INPUT kuralı ekle",
+      "firewallWarning": "Değişiklikler, kalıcı hale getirilene kadar yalnızca çalışma zamanında geçerlidir. Kendinizi kilitlememeye dikkat edin.",
+      "ruleApplied": "Kural uygulandı",
+      "invalidPort": "Geçerli bir bağlantı noktası girin (1-65535)",
+      "newUsername": "Yeni kullanıcı adı",
+      "addUser": "Ekle",
+      "deleteUser": "Kullanıcıyı sil",
+      "noHealthChecks": "Henüz yapılandırılmış bir sağlık denetimi yok.",
+      "follow": "Takip et",
+      "noLogData": "Günlük çıktısı yok.",
+      "tree": "Ağaç",
+      "enableDisable": "Önyüklemede etkinleştir / devre dışı bırak",
+      "grantSudo": "Sudo yetkisi ver",
+      "revokeSudo": "Sudo yetkisini kaldır",
+      "sslIssueCert": "Sertifika oluştur",
+      "sslExpired": "Süresi dolmuş",
+      "sslInDays": "{{days}} gün içinde",
+      "sslNeedDomain": "En az bir alan adı girin",
+      "sslIssued": "Sertifika oluşturuldu",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (bağımsız)",
+      "sslHttpWebroot": "HTTP (webroot)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "DNS sağlayıcısı (örn. cloudflare)",
+      "sslIssueHint": "DNS sağlayıcı kimlik bilgileri sunucuda zaten yapılandırılmış olmalıdır.",
+      "sslRevoke": "Sertifikayı iptal et",
+      "sslRevoked": "Sertifika iptal edildi",
+      "sslRevokeConfirm": "\"{{name}}\" sertifikası iptal edilip kaldırılsın mı? Bu işlem geri alınamaz.",
+      "healthRun": "Çalıştır",
+      "healthName": "Ad",
+      "healthTarget": "Sunucu / adres",
+      "healthAddCheck": "Kontrol ekle",
+      "healthSaved": "Sağlık kontrolleri kaydedildi",
+      "healthMissingFields": "Her kontrol bir ad ve hedef gerektirir",
+      "logFile": "Dosya",
+      "logUnit": "Birim",
+      "logCustomPath": "/var/log altında özel yol (isteğe bağlı)",
+      "logGrep": "Satırları filtrele...",
+      "firewallPersist": "Kuralları kalıcı yap",
+      "firewallPersisted": "Güvenlik duvarı kuralları kalıcı hale getirildi",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "Bu sunucuda WireGuard yüklü değil",
+      "wgNoInterfaces": "Yapılandırılmış WireGuard arayüzü yok",
+      "wgInterfaceUp": "Başlat",
+      "wgInterfaceDown": "Durdur",
+      "wgBringingUp": "{{name}} başlatılıyor...",
+      "wgBringingDown": "{{name}} durduruluyor...",
+      "wgInterfaceUpDone": "{{name}} çalışıyor",
+      "wgInterfaceDownDone": "{{name}} çalışmıyor",
+      "wgListenPort": "Port",
+      "wgPublicKey": "Açık anahtar",
+      "wgEndpoint": "Uç nokta",
+      "wgAllowedIPs": "İzin verilen IP'ler",
+      "wgLastHandshake": "Son el sıkışma",
+      "wgHandshakeNever": "Hiçbir zaman",
+      "wgTransfer": "Transfer",
+      "wgNoPeers": "No peers"
+    }
+  },
+  "metricsHistory": {
+    "title": "Metrik Geçmişi",
+    "historySuffix": "Geçmiş",
+    "cpuMemoryDisk": "CPU / Bellek / Disk",
+    "network": "Ağ",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "Bu zaman aralığı için geçmiş verisi yok.",
+    "custom": "Özel",
+    "to": "ile",
+    "apply": "Uygula",
+    "viewHistory": "Geçmişi Görüntüle"
+  },
+  "hosts": {
+    "tabHostMetrics": "Sunucu Metrikleri",
+    "metricsCollectionLabel": "Metrik Toplama",
+    "enableMetricsLabel": "Metrikleri Etkinleştir",
+    "enableMetricsDesc": "Bu sunucudan CPU, RAM, disk ve diğer metrikleri topla",
+    "useGlobalMetrics": "Genel Aralığı Kullan",
+    "useGlobalMetricsDesc": "Sunucu geneli metrik aralığını geçersiz kıl",
+    "metricsIntervalS": "Metrik Aralığı (sn)",
+    "metricsIntervalDesc2": "Metrik anlık görüntüleri arasındaki saniye",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Etiket (isteğe bağlı)",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "Ekle",
+    "visibleWidgets": "Görünür Widget'lar",
+    "widgetsMovedToHostMetrics": "Kartlar artık doğrudan Sunucu Metrikleri sekmesinde eklenir, düzenlenir ve yeniden boyutlandırılır. Bu sunucu için Sunucu Metrikleri'ni açın ve hangi kartların gösterileceğini seçmek için Özelleştir'i kullanın.",
+    "hostNotFound": "Host bulunamadı",
+    "loadingHost": "Host yükleniyor..."
+  },
+  "onboarding": {
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Metrik Geçmişi Saklama",
+    "metricsHistoryRetentionRange": "1 ila 90 gün",
+    "days": "gün"
+  },
+  "homepage": {
+    "noData": "Veri yok",
+    "showCurrentValue": "Geçerli Değeri Göster",
+    "chartMetric": "Metrik",
+    "metricRange": "Aralık",
+    "host": "Sunucu",
+    "loading": "Yükleniyor...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Ana Bilgisayar Adı",
+    "metricKernel": "Çekirdek",
+    "metricMemory": "Bellek",
+    "metricNetwork": "Ağ",
+    "metricOs": "İşletim Sistemi",
+    "metricProcesses": "İşlemler",
+    "metricProcessesRunning": "çalışan",
+    "metricProcessesTotal": "toplam",
+    "metricUptime": "Çalışma Süresi",
+    "metricsNotAvailable": "Metrikler kullanılamıyor",
+    "noHostSelected": "Sunucu seçilmedi",
+    "selectHost": "Bir sunucu seçin..."
+  },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "terminal": {
+    "connected": "Bağlandı"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
+  }
+}

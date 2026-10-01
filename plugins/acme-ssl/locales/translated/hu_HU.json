@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "ACME tanúsítványok kezelése",
+      "description": "Tekintse meg a tanúsítvány állapotát, és igényeljen új tanúsítványt most."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "Automatikus megújítás",
+      "description": "Naponta kétszer ellenőrizd, és szerezz be új tanúsítványt, ha nincs még tanúsítvány, ha nem fedi le a domaint, vagy ha 30 napon belül lejár."
+    },
+    "domain": {
+      "label": "Domain",
+      "description": "A tanúsítvány nyilvános domainneve.",
+      "placeholder": "termix.example.com"
+    },
+    "email": {
+      "label": "Email",
+      "description": "Az ACME fiókkal és a lejárati értesítésekkel kapcsolatos elérhetőségi e-mail cím.",
+      "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "Tanúsítványkibocsátó",
+      "description": "Hol lehet beszerezni a tanúsítványt? Használjon előzetes tesztelést a Let's Encrypt sebességkorlátainak elérése nélkül.",
+      "letsencrypt": "Titkosítsunk",
+      "letsencryptStaging": "Titkosítsuk (előkészítés)",
+      "custom": "Egyéni ACME címtár"
+    },
+    "directoryUrl": {
+      "label": "ACME könyvtár URL-címe",
+      "description": "Csak egyéni hitelesítésszolgáltató esetén. Https URL-címnek kell lennie."
+    },
+    "challengeType": {
+      "label": "Kihívás típusa",
+      "description": "Hogyan bizonyíthatod, hogy te vagy a domain tulajdonosa?",
+      "http": "HTTP – internetről elérhető 80-as port szükséges",
+      "cloudflare": "DNS (Cloudflare) – Cloudflare API token szükséges"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API token",
+      "description": "Hatókörbe tartozó token Zóna:DNS:Szerkesztés engedéllyel a domainhez."
+    }
+  },
+  "status": {
+    "title": "Tanúsítvány állapota",
+    "none": "Nincs tanúsítvány",
+    "names": "Borítók {{names}}",
+    "issuer": "Kibocsátó: {{issuer}}",
+    "expires": "Lejár {{date}}",
+    "lastIssued": "Utolsó kiadás {{date}}",
+    "lastError": "Utolsó kísérlet sikertelen: {{error}}",
+    "missing": "Állítsa be a domaint, az e-mail címet és a kihívástípushoz szükséges mezőket, majd mentse el a beállításokat a tanúsítvány igénylése előtt.",
+    "request": "Igényeljen tanúsítványt most",
+    "requesting": "Tanúsítvány kérése...",
+    "issued": "Tanúsítvány kiállítva és telepítve"
+  }
+}

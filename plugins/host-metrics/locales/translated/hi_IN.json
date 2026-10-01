@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "होस्ट मेट्रिक्स"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "मेमोरी",
+    "disk": "डिस्क",
+    "network": "नेटवर्क",
+    "uptime": "अपटाइम",
+    "processes": "प्रोसेसेस",
+    "available": "उपलब्ध",
+    "free": "फ्री",
+    "connecting": "कनेक्ट हो रहा है...",
+    "connectionFailed": "सर्वर से कनेक्ट करने में विफल",
+    "naCpus": "N/A CPU(s)",
+    "cpuCores_one": "{{count}} कोर",
+    "cpuCores_other": "{{count}} कोर",
+    "cpuUsage": "CPU उपयोग",
+    "memoryUsage": "मेमोरी उपयोग",
+    "diskUsage": "डिस्क उपयोग",
+    "selectFilesystem": "Select filesystem",
+    "temperature": "तापमान",
+    "highestTemperature": "उच्चतम तापमान",
+    "primaryTemperatureSensor": "Primary sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
+    },
+    "failedToFetchHostConfig": "होस्ट कॉन्फ़िगरेशन प्राप्त करने में विफल",
+    "serverOffline": "सर्वर ऑफ़लाइन",
+    "cannotFetchMetrics": "ऑफ़लाइन सर्वर से मीट्रिक्स प्राप्त नहीं कर सकते",
+    "totpFailed": "TOTP सत्यापन विफल",
+    "noneAuthNotSupported": "होस्ट मेट्रिक्स 'none' प्रमाणीकरण प्रकार का समर्थन नहीं करता।",
+    "noHostSelected": "कोई होस्ट चयनित नहीं",
+    "load": "लोड",
+    "systemInfo": "सिस्टम जानकारी",
+    "hostname": "होस्टनाम",
+    "operatingSystem": "ऑपरेटिंग सिस्टम",
+    "kernel": "कर्नेल",
+    "seconds": "सेकंड",
+    "networkInterfaces": "नेटवर्क इंटरफ़ेस",
+    "noInterfacesFound": "कोई नेटवर्क इंटरफ़ेस नहीं मिला",
+    "noProcessesFound": "कोई प्रोसेस नहीं मिला",
+    "processesTotal": "कुल",
+    "processesRunning": "चल रहे",
+    "loginStats": "SSH लॉगिन आँकड़े",
+    "noRecentLoginData": "कोई हालिया लॉगिन डेटा नहीं",
+    "ports": {
+      "title": "लिसनिंग पोर्ट",
+      "protocol": "प्रोटोकॉल",
+      "port": "पोर्ट",
+      "address": "पता",
+      "process": "प्रोसेस",
+      "search": "पोर्ट खोजें...",
+      "allProtocols": "सभी",
+      "noData": "कोई लिसनिंग पोर्ट डेटा नहीं"
+    },
+    "firewall": {
+      "title": "फ़ायरवॉल",
+      "inactive": "निष्क्रिय",
+      "policy": "नीति",
+      "rules": "नियम",
+      "noRules": "इस चेन में कोई नियम नहीं",
+      "noData": "कोई फ़ायरवॉल डेटा उपलब्ध नहीं",
+      "action": "कार्रवाई",
+      "protocol": "प्रोटो",
+      "port": "पोर्ट",
+      "source": "स्रोत",
+      "anywhere": "कहीं भी",
+      "chains": "चेन्स"
+    },
+    "loadAvg": "लोड औसत",
+    "swap": "स्वैप",
+    "architecture": "आर्किटेक्चर",
+    "refresh": "रीफ़्रेश",
+    "retry": "पुनः प्रयास करें",
+    "customize": "लेआउट अनुकूलित करें",
+    "reset": "रीसेट",
+    "tabLive": "लाइव",
+    "editModeInstructions": "कार्ड को पुनर्व्यवस्थित करने के लिए खींचें, आकार बदलने के लिए निचले किनारे को खींचें, और कार्ड की चौड़ाई बदलने के लिए चौड़ाई बटन का उपयोग करें। नीचे कार्ड जोड़ें या हटाएं।",
+    "managers": {
+      "services": "सेवाएँ",
+      "processInspector": "प्रोसेस इंस्पेक्टर",
+      "logViewer": "लॉग व्यूअर",
+      "cron": "क्रॉन जॉब्स",
+      "packages": "पैकेजेस",
+      "ssl": "SSL प्रमाणपत्र",
+      "firewall": "फ़ायरवॉल",
+      "users": "उपयोगकर्ता और अनुमतियाँ",
+      "healthCheck": "स्वास्थ्य जांच",
+      "diskBreakdown": "डिस्क ब्रेकडाउन",
+      "systemdTimers": "टाइमर",
+      "topMemory": "मेमोरी के अनुसार शीर्ष",
+      "noData": "कोई डेटा नहीं",
+      "sudoHint": "विशेषाधिकार क्रियाओं को सक्षम करने के लिए होस्ट संपादक में इस होस्ट के लिए एक sudo पासवर्ड सेट करें।",
+      "filter": "फ़िल्टर...",
+      "start": "प्रारंभ",
+      "stop": "रोकें",
+      "restart": "पुनरारंभ",
+      "actionDone": "{{name}} अद्यतित",
+      "actionFailed": "कार्रवाई विफल",
+      "signalSent": "PID {{pid}} को सिग्नल भेजा गया",
+      "killHint": "क्लिक: समाप्त करें (SIGTERM)। राइट-क्लिक: बलपूर्वक समाप्त करें (SIGKILL)।",
+      "working": "काम कर रहा है...",
+      "update": "अपडेट करें",
+      "upgradeAll": "सभी अपग्रेड करें",
+      "allUpToDate": "सब कुछ अप टू डेट है",
+      "save": "सहेजें",
+      "command": "कमांड",
+      "enabled": "सक्षम",
+      "cronSaved": "क्रॉनटैब अपडेट किया गया",
+      "clients": "क्लाइंट",
+      "dryRun": "ड्राई रन",
+      "renew": "रीन्यू करें",
+      "noAcmeClient": "इस होस्ट पर कोई ACME क्लाइंट (certbot या acme.sh) नहीं मिला।",
+      "addInputRule": "INPUT नियम जोड़ें",
+      "firewallWarning": "परिवर्तन केवल रनटाइम के लिए हैं जब तक स्थायी न हों। स्वयं को लॉक आउट करने से सावधान रहें।",
+      "ruleApplied": "नियम लागू किया गया",
+      "invalidPort": "एक वैध पोर्ट दर्ज करें (1-65535)",
+      "newUsername": "नया उपयोगकर्ता नाम",
+      "addUser": "जोड़ें",
+      "deleteUser": "उपयोगकर्ता हटाएं",
+      "noHealthChecks": "अभी तक कोई हेल्थ चेक कॉन्फ़िगर नहीं किया गया है।",
+      "follow": "अनुसरण करें",
+      "noLogData": "कोई लॉग आउटपुट नहीं।",
+      "tree": "ट्री",
+      "enableDisable": "बूट पर सक्षम / अक्षम करें",
+      "grantSudo": "sudo दें",
+      "revokeSudo": "sudo वापस लें",
+      "sslIssueCert": "प्रमाणपत्र जारी करें",
+      "sslExpired": "समाप्त",
+      "sslInDays": "{{days}} दिनों में",
+      "sslNeedDomain": "कम से कम एक डोमेन दर्ज करें",
+      "sslIssued": "प्रमाणपत्र जारी किया गया",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (स्टैंडअलोन)",
+      "sslHttpWebroot": "HTTP (वेबरूट)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "DNS प्रदाता (उदा. cloudflare)",
+      "sslIssueHint": "DNS प्रदाता क्रेडेंशियल पहले से होस्ट पर कॉन्फ़िगर किए गए होने चाहिए।",
+      "sslRevoke": "प्रमाणपत्र निरस्त करें",
+      "sslRevoked": "प्रमाणपत्र निरस्त किया गया",
+      "sslRevokeConfirm": "प्रमाणपत्र \"{{name}}\" निरस्त करें और हटाएं? यह पूर्ववत नहीं किया जा सकता।",
+      "healthRun": "चलाएं",
+      "healthName": "नाम",
+      "healthTarget": "होस्ट / पता",
+      "healthAddCheck": "जांच जोड़ें",
+      "healthSaved": "स्वास्थ्य जांच सहेजी गईं",
+      "healthMissingFields": "प्रत्येक जांच के लिए एक नाम और लक्ष्य आवश्यक है",
+      "logFile": "फ़ाइल",
+      "logUnit": "यूनिट",
+      "logCustomPath": "/var/log के अंतर्गत कस्टम पथ (वैकल्पिक)",
+      "logGrep": "लाइनें फ़िल्टर करें...",
+      "firewallPersist": "नियम स्थायी करें",
+      "firewallPersisted": "फ़ायरवॉल नियम स्थायी किए गए",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard इस होस्ट पर स्थापित नहीं है",
+      "wgNoInterfaces": "कोई WireGuard इंटरफ़ेस कॉन्फ़िगर्ड नहीं हैं",
+      "wgInterfaceUp": "चालू करें",
+      "wgInterfaceDown": "बंद करें",
+      "wgBringingUp": "{{name}} चालू किया जा रहा है...",
+      "wgBringingDown": "{{name}} बंद किया जा रहा है...",
+      "wgInterfaceUpDone": "{{name}} चालू है",
+      "wgInterfaceDownDone": "{{name}} बंद है",
+      "wgListenPort": "पोर्ट",
+      "wgPublicKey": "सार्वजनिक कुंजी",
+      "wgEndpoint": "एंडपॉइंट",
+      "wgAllowedIPs": "अनुमत IPs",
+      "wgLastHandshake": "अंतिम हैंडशेक",
+      "wgHandshakeNever": "कभी नहीं",
+      "wgTransfer": "ट्रांसफर",
+      "wgNoPeers": "No peers"
+    }
+  },
+  "metricsHistory": {
+    "title": "मेट्रिक्स इतिहास",
+    "historySuffix": "इतिहास",
+    "cpuMemoryDisk": "CPU / मेमोरी / डिस्क",
+    "network": "नेटवर्क",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "इस समय सीमा के लिए कोई इतिहास डेटा उपलब्ध नहीं है।",
+    "custom": "कस्टम",
+    "to": "तक",
+    "apply": "लागू करें",
+    "viewHistory": "इतिहास देखें"
+  },
+  "hosts": {
+    "tabHostMetrics": "होस्ट मेट्रिक्स",
+    "metricsCollectionLabel": "मेट्रिक्स संग्रह",
+    "enableMetricsLabel": "मेट्रिक्स सक्षम करें",
+    "enableMetricsDesc": "इस होस्ट से CPU, RAM, डिस्क और अन्य मेट्रिक्स एकत्र करें",
+    "useGlobalMetrics": "वैश्विक अंतराल का उपयोग करें",
+    "useGlobalMetricsDesc": "सर्वर-व्यापी मेट्रिक्स अंतराल से ओवरराइड करें",
+    "metricsIntervalS": "मेट्रिक्स अंतराल (सेकंड)",
+    "metricsIntervalDesc2": "मेट्रिक स्नैपशॉट के बीच सेकंड",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "लेबल (वैकल्पिक)",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "जोड़ें",
+    "visibleWidgets": "दृश्यमान विजेट्स",
+    "widgetsMovedToHostMetrics": "कार्ड अब सीधे होस्ट मेट्रिक्स टैब में जोड़े, व्यवस्थित और आकार बदले जा सकते हैं। इस होस्ट के लिए होस्ट मेट्रिक्स खोलें और यह चुनने के लिए कस्टमाइज़ का उपयोग करें कि कौन से कार्ड दिखाए जाएँ।",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "loadingHost": "होस्ट लोड हो रहा है..."
+  },
+  "onboarding": {
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
+  },
+  "admin": {
+    "metricsHistoryRetention": "मेट्रिक्स इतिहास प्रतिधारण",
+    "metricsHistoryRetentionRange": "1 से 90 दिन",
+    "days": "दिन"
+  },
+  "homepage": {
+    "noData": "कोई डेटा उपलब्ध नहीं",
+    "showCurrentValue": "वर्तमान मान दिखाएं",
+    "chartMetric": "मीट्रिक",
+    "metricRange": "सीमा",
+    "host": "होस्ट",
+    "loading": "लोड हो रहा है...",
+    "metricCpu": "CPU",
+    "metricDisk": "डिस्क",
+    "metricHostname": "होस्टनेम",
+    "metricKernel": "कर्नेल",
+    "metricMemory": "मेमोरी",
+    "metricNetwork": "नेटवर्क",
+    "metricOs": "ओएस",
+    "metricProcesses": "प्रोसेस",
+    "metricProcessesRunning": "चालू",
+    "metricProcessesTotal": "कुल",
+    "metricUptime": "अपटाइम",
+    "metricsNotAvailable": "मेट्रिक्स उपलब्ध नहीं",
+    "noHostSelected": "कोई होस्ट चयनित नहीं",
+    "selectHost": "होस्ट चुनें..."
+  },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "डिस्क"
+  },
+  "terminal": {
+    "connected": "कनेक्टेड"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
+  }
+}

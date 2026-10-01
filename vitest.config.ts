@@ -3,10 +3,28 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@/types": path.resolve(__dirname, "./src/types"),
-      "@": path.resolve(__dirname, "./src/ui"),
-    },
+    alias: [
+      {
+        find: "@termix/plugin-sdk/frontend",
+        replacement: path.resolve(
+          __dirname,
+          "./packages/plugin-sdk/src/frontend.ts",
+        ),
+      },
+      {
+        find: "@termix/plugin-sdk/ui",
+        replacement: path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts"),
+      },
+      {
+        find: "@termix/plugin-host/testing",
+        replacement: path.resolve(
+          __dirname,
+          "./src/ui/plugin-host/testing-host.tsx",
+        ),
+      },
+      { find: "@/types", replacement: path.resolve(__dirname, "./src/types") },
+      { find: "@", replacement: path.resolve(__dirname, "./src/ui") },
+    ],
   },
   test: {
     globals: true,
@@ -48,6 +66,9 @@ export default defineConfig({
           name: "frontend",
           environment: "jsdom",
           include: ["src/ui/**/*.test.{ts,tsx}"],
+          // The CLI bundle test builds under node_modules; inline it so its
+          // SDK imports hit the aliases instead of a second copy of the SDK.
+          server: { deps: { inline: [/cli-bundle-test/] } },
         },
       },
       {

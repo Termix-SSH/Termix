@@ -1,0 +1,35 @@
+# Throwaway Postgres and MySQL servers for scripts/upgrade-check.sh. Data
+# lives in tmpfs, so every run starts from an empty server.
+name: termix-upgrade-check
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: termix
+      POSTGRES_PASSWORD: termix
+      POSTGRES_DB: termix
+    ports:
+      - "55433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U termix -d termix"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: termix
+      MYSQL_DATABASE: termix
+    ports:
+      - "33307:3306"
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ptermix"]
+      interval: 2s
+      timeout: 5s
+      retries: 60

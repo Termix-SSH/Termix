@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Hallinnoi ACME-sertifikaatteja",
+      "description": "Tarkista varmenteen tila ja pyydä uusi varmenne nyt."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "Uudista automaattisesti",
+      "description": "Tarkista kahdesti päivässä ja hanki uusi varmenne, jos sitä ei ole, se ei kata verkkotunnusta tai se vanhenee 30 päivän kuluessa."
+    },
+    "domain": {
+      "label": "Verkkotunnus",
+      "description": "Varmenteen julkinen verkkotunnus.",
+      "placeholder": "termix.esimerkki.com"
+    },
+    "email": {
+      "label": "Sähköposti",
+      "description": "ACME-tilin yhteystiedot ja vanhenemisilmoitukset.",
+      "placeholder": "admin@esimerkki.com"
+    },
+    "provider": {
+      "label": "Varmentaja",
+      "description": "Mistä varmenteen saa? Käytä testausympäristöä Let's Encrypt -nopeusrajoitusten ylittämättä.",
+      "letsencrypt": "Salataanpa",
+      "letsencryptStaging": "Let's Encrypt (vaiheistus)",
+      "custom": "Mukautettu ACME-hakemisto"
+    },
+    "directoryUrl": {
+      "label": "ACME-hakemiston URL-osoite",
+      "description": "Vain mukautetulle varmentajalle. URL-osoitteen on oltava https."
+    },
+    "challengeType": {
+      "label": "Haasteen tyyppi",
+      "description": "Kuinka todistaa omistavasi verkkotunnuksen.",
+      "http": "HTTP - vaatii portin 80, johon internetistä voi päästä käsiksi",
+      "cloudflare": "DNS (Cloudflare) – vaatii Cloudflare API -tunnuksen"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API -tunnus",
+      "description": "Laajuusaluetunnus, jolla on Zone:DNS:Edit-käyttöoikeus verkkotunnuksellesi."
+    }
+  },
+  "status": {
+    "title": "Sertifikaatin tila",
+    "none": "Ei todistusta",
+    "names": "Kannet {{names}}",
+    "issuer": "Myöntäjä {{issuer}}",
+    "expires": "Vanhenee {{date}}",
+    "lastIssued": "Viimeksi myönnetty {{date}}",
+    "lastError": "Viimeisin yritys epäonnistui: {{error}}",
+    "missing": "Aseta verkkotunnus, sähköpostiosoite ja haastetyyppisi tarvitsemat kentät ja tallenna ne ennen varmenteen pyytämistä.",
+    "request": "Pyydä todistus nyt",
+    "requesting": "Pyydetään varmennetta...",
+    "issued": "Sertifikaatti myönnetty ja asennettu"
+  }
+}

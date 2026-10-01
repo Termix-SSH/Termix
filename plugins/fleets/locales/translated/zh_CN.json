@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "View fleets",
+      "description": "See fleets, their members and inventory."
+    },
+    "manage": {
+      "title": "Manage fleets",
+      "description": "Create, edit and delete fleets, change membership, and share fleets with other users or roles."
+    },
+    "execute": {
+      "title": "Run fleet actions",
+      "description": "Run commands and package actions across a fleet, and transfer files to and from its member hosts."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "Fleets",
+        "createFleet": "Create Fleet",
+        "createFleetTitle": "Create Fleet",
+        "editFleetTitle": "Edit Fleet",
+        "createFleetDescription": "舰队是一个命名的主机组，你可以将其作为一个整体来执行操作。",
+        "nameLabel": "名称",
+        "namePlaceholder": "例如：Web 服务器",
+        "nameRequired": "需要填写舰队名称。",
+        "descriptionLabel": "描述",
+        "descriptionPlaceholder": "可选描述",
+        "colorLabel": "颜色",
+        "tagRulesLabel": "Tag rules",
+        "tagRulesPlaceholder": "prod-web, edge",
+        "tagRulesHint": "Hosts with any of these tags are automatically included, in addition to hosts added manually.",
+        "fleetCreated": "舰队已创建",
+        "fleetUpdated": "舰队已更新",
+        "fleetDeleted": "Fleet deleted",
+        "saveFailed": "保存舰队失败",
+        "deleteFailed": "Failed to delete fleet",
+        "loadFailed": "Failed to load fleets",
+        "deleteFleetTitle": "Delete Fleet",
+        "deleteFleetDescription": "Are you sure you want to delete \"{{name}}\"? This does not delete the member hosts themselves.",
+        "searchFleets": "Search fleets...",
+        "noFleets": "No fleets yet. Create one to get started.",
+        "memberCount": "{{count}} 台主机",
+        "memberCount_other": "{{count}} 台主机",
+        "manageMembers": "Manage Members",
+        "manageMembersTitle": "管理舰队成员",
+        "manageMembersDescription": "Toggle hosts in or out of this fleet's static membership. Hosts matched by tag rules are always included.",
+        "searchHosts": "搜索主机...",
+        "noHostsFound": "未找到主机",
+        "noMembers": "This fleet has no members yet. Add hosts or set a tag rule.",
+        "membersLoadFailed": "Failed to load fleet members",
+        "memberUpdateFailed": "Failed to update fleet membership",
+        "tabRun": "Run Command",
+        "tabTransfer": "Transfer Files",
+        "tabInventory": "清单",
+        "openInventoryTab": "Open in full tab",
+        "tabPackages": "软件包",
+        "runOnFleet": "在舰队上运行",
+        "commandPlaceholder": "uptime && df -h",
+        "commandRequired": "A command is required",
+        "commandInputsLabel": "Command inputs",
+        "commandSucceeded": "Command succeeded on all hosts",
+        "commandPartialFailure": "{{total}} 台主机中有 {{failed}} 台失败",
+        "commandFailed": "Failed to run command",
+        "resultSuccess": "成功",
+        "resultFailed": "失败",
+        "push": "推送",
+        "pull": "拉取",
+        "remotePathLabel": "Remote path",
+        "remotePathRequired": "A remote path is required",
+        "fileLabel": "文件",
+        "fileRequired": "需要选择文件",
+        "pushHint": "选定的文件将被写入舰队中每台主机上的指定路径。",
+        "pullHint": "The file at this path is read from every host and downloaded as a single zip, one folder per host.",
+        "transferComplete": "传输完成",
+        "transferFailed": "传输失败",
+        "refreshInventory": "刷新清单",
+        "inventoryLoadFailed": "加载清单失败",
+        "inventoryRefreshed": "清单已刷新",
+        "inventoryRefreshFailed": "刷新清单失败",
+        "inventoryNoData": "暂无清单数据 - 请刷新页面以获取数据。",
+        "inventoryHost": "主机",
+        "inventoryCollectedCount": "已收集 {{count}}/{{total}}",
+        "inventoryOs": "操作系统",
+        "inventoryKernel": "内核",
+        "inventoryArch": "架构",
+        "inventoryUptime": "运行时间",
+        "inventoryPackageManager": "Package manager",
+        "inventoryCollectedAt": "Collected",
+        "packageActionLabel": "操作",
+        "packageInstall": "Install",
+        "packageRemove": "移除",
+        "packageUpgradeAll": "升级所有软件包",
+        "packageNameLabel": "Package name",
+        "packageNameRequired": "A package name is required",
+        "packageHint": "Requires manage-level access per host and elevates using the host's stored sudo password.",
+        "shareFleet": "Share Fleet",
+        "shareFleetTitle": "Share \"{{name}}\"",
+        "shareFleetDescription": "Shares this fleet's current member hosts with the selected users or roles. Hosts added to the fleet later are not shared automatically - share again to include them.",
+        "shareSelectionRequired": "Select at least one user or role",
+        "fleetSharedSuccessfully": "Shared {{shared}} of {{total}} host(s) in this fleet",
+        "failedToShareFleet": "Failed to share fleet",
+        "noMembersToShare": "This fleet has no member hosts to share yet."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "Fleets"
+  },
+  "hosts": {
+    "docsLink": "查看文档",
+    "sharing": {
+      "customHoursPlaceholder": "过期前的小时数",
+      "expiry": {
+        "never": "永不过期",
+        "oneHour": "1 小时",
+        "oneDay": "24 小时",
+        "sevenDays": "7 天",
+        "thirtyDays": "30 天",
+        "custom": "自定义"
+      },
+      "expiryLabel": "访问有效期",
+      "levels": {
+        "connect": {
+          "label": "连接",
+          "description": "仅打开会话：终端、远程桌面、文件管理器、隧道和 Docker。无权访问主机配置。"
+        },
+        "view": {
+          "label": "查看",
+          "description": "连接，并查看主机配置。凭据信息从不显示。"
+        },
+        "edit": {
+          "label": "编辑",
+          "description": "View, plus modify non-authentication host settings. The owner's SSH authentication stays private and owner-only."
+        },
+        "manage": {
+          "label": "管理",
+          "description": "编辑，并与其他用户共享主机、更改权限级别及撤销访问。"
+        }
+      },
+      "noMatches": "未找到匹配项",
+      "permissionLevelLabel": "权限级别",
+      "rolesTab": "角色",
+      "searchPlaceholder": "搜索用户或角色...",
+      "shareButton": "共享",
+      "shareWithCount": "共享（{{count}}）",
+      "usersTab": "用户"
+    }
+  }
+}

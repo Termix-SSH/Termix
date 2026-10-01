@@ -1,0 +1,117 @@
+{
+  "hosts": {
+    "enableTmuxMonitor": "تمكين مراقب Tmux",
+    "enableTmuxMonitorDesc": "إظهار هذا المضيف في مراقب Tmux وإضافة إجراءات tmux الخاصة به إلى الشريط الجانبي",
+    "tabTmuxMonitor": "مراقب Tmux",
+    "docsLink": "عرض المستندات"
+  },
+  "nav": {
+    "tmuxMonitor": "مراقب Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "مراقب Tmux",
+    "tmuxMonitorDesc": "مراقبة جلسات tmux عبر مضيفيك"
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدم مراقب Tmux",
+      "description": "تصفح وتحكم في جلسات tmux والنوافذ والأجزاء على الأجهزة المضيفة التي تم تمكين الشاشة عليها."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "تمكين مراقب Tmux",
+        "description": "قم بمراقبة جلسات tmux التي تعمل على هذا المضيف والاتصال بها."
+      },
+      "mouseEnabled": {
+        "label": "تفعيل دعم الماوس في tmux",
+        "description": "قم بتفعيل دعم الماوس لجلسة tmux عند ربط جلسة أو إنشائها. تبقى الجلسات الأخرى وإعدادات tmux العامة دون تغيير."
+      }
+    }
+  },
+  "tmuxMonitor": {
+    "title": "مراقب Tmux",
+    "failedToLoadHosts": "فشل تحميل الأجهزة المضيفة",
+    "failedToLoad": "فشل تحميل جلسات tmux",
+    "tmuxUnavailable": "tmux غير مثبت على هذا الجهاز المضيف",
+    "noSessions": "لا توجد جلسات tmux على هذا الجهاز المضيف",
+    "noHostSelected": "لم يتم تحديد أي جهاز مضيف",
+    "attached": "متصلة",
+    "detached": "منفصلة",
+    "attach": "اتصال",
+    "editTags": "تعديل العلامات",
+    "tagsHint": "علامات مفصولة بفواصل (مثال: YOLO, lab, training)",
+    "tagsSaved": "تم حفظ العلامات",
+    "tagsSaveFailed": "فشل حفظ العلامات",
+    "searchPlaceholder": "بحث في المخرجات عبر الجلسات...",
+    "searchResults": "{{count}} مطابقة",
+    "searchFailed": "فشل البحث",
+    "selectPaneHint": "حدد إطارًا لمعاينة مخرجاته",
+    "closePreview": "إغلاق المعاينة",
+    "newSession": "جلسة جديدة",
+    "newSessionHint": "اسم الجلسة (حروف، أرقام، _ @ % + = -)",
+    "newSessionPlaceholder": "my-session",
+    "create": "إنشاء",
+    "sessionCreated": "تم إنشاء الجلسة \"{{name}}\"",
+    "sessionCreateFailed": "فشل إنشاء الجلسة",
+    "splitRight": "تقسيم لليمين",
+    "splitDown": "تقسيم للأسفل",
+    "splitFailed": "فشل تقسيم الإطار",
+    "newWindow": "نافذة جديدة",
+    "windowCreateFailed": "فشل إنشاء النافذة",
+    "attachSessionTooltip": "اتصل بـ {{session}}",
+    "refresh": "تحديث",
+    "refreshFailed": "فشل تحديث الجلسات",
+    "collapseAll": "طي الكل",
+    "expandAll": "توسيع الكل",
+    "moreActions": "إجراءات أخرى",
+    "sessionStats": "إحصائيات الجلسة",
+    "renameSessionTitle": "إعادة تسمية الجلسة \"{{name}}\"",
+    "rename": "إعادة تسمية",
+    "sessionRenamed": "تمت إعادة تسمية الجلسة إلى \"{{name}}\"",
+    "sessionRenameFailed": "فشل إعادة تسمية الجلسة",
+    "editTagsTitle": "تعديل العلامات لـ \"{{name}}\"",
+    "killPane": "إنهاء الجزء",
+    "resizeTree": "اسحب لتغيير الحجم، وانقر نقراً مزدوجاً لإعادة الضبط",
+    "reattach": "إعادة الارتباط (لإصلاح العرض المشوش)",
+    "killWindow": "إنهاء النافذة",
+    "killWindowTitle": "هل تريد إنهاء النافذة {{index}} من الجلسة \"{{session}}\"؟",
+    "killWindowBody": "سيتم إنهاء كل جزء وعملية في هذه النافذة. إنهاء آخر نافذة ينهي الجلسة.",
+    "windowKillFailed": "فشل إنهاء النافذة",
+    "statusActivity": "نشاط",
+    "statusWindows": "نوافذ",
+    "statusPanes": "أجزاء",
+    "statusTags": "وسوم",
+    "killPaneTitle": "هل تريد إنهاء الجزء {{id}}؟",
+    "killPaneBody": "سيتم إنهاء العملية الجارية في هذا الجزء. إنهاء آخر جزء يغلق نافذته.",
+    "paneKillFailed": "فشل إنهاء الجزء",
+    "killSessionTitle": "هل تريد إنهاء الجلسة \"{{name}}\"؟",
+    "killSessionBody": "سيتم إنهاء جميع النوافذ والعمليات الجارية في هذه الجلسة. لا يمكن التراجع عن ذلك.",
+    "kill": "إنهاء",
+    "sessionKilled": "تم إنهاء الجلسة \"{{name}}\"",
+    "sessionKillFailed": "فشل إنهاء الجلسة",
+    "hostUnreachable": "تعذر الاتصال بالمضيف. تأكد من أنه متصل وقابل للوصول.",
+    "noServer": "لا يوجد خادم tmux يعمل على هذا المضيف.",
+    "searchTruncated": "نتائج جزئية. يغطي البحث آخر {{lines}} سطر من كل جزء وبحد أقصى {{panes}} أجزاء.",
+    "closeSearchResults": "إغلاق نتائج البحث",
+    "retry": "إعادة المحاولة",
+    "noHosts": "لا توجد مضيفات SSH متاحة",
+    "noHostsHint": "قم بتمكين خيار مراقبة Tmux على مضيف SSH (مدير المضيف، علامة تبويب مراقبة Tmux) لمراقبة جلسات tmux الخاصة به.",
+    "tmuxInstallHint": "قم بتثبيته على المضيف باستخدام:",
+    "attachTooltip": "افتح طرفية إلى {{host}}",
+    "attachTooltipPane": "افتح نافذة طرفية إلى {{host}}، ثم افتح جلسة tmux {{session}}",
+    "timeJustNow": "الآن",
+    "timeMinutes": "قبل {{count}}m",
+    "timeHours": "قبل {{count}}h",
+    "timeDays": "قبل {{count}}d",
+    "allHosts": "جميع المضيفين",
+    "singleHost": "مضيف واحد",
+    "hostScope": "منظار الشاشة",
+    "filterHosts": "تصفية المضيفين حسب الاسم أو العنوان",
+    "selectHost": "حدد المضيف",
+    "toggleHost": "توسيع أو طي {{host}}",
+    "noMatchingHosts": "لا توجد مضيفات مطابقة",
+    "toggleSession": "توسيع أو طي {{session}}"
+  }
+}

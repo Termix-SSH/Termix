@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Logi sesji"
+  },
+  "hosts": {
+    "enableSessionRecording": "Nagrywanie sesji",
+    "enableSessionRecordingDesc": "Zapisuj wyjście sesji terminala do późniejszego przejrzenia"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "Logi sesji",
+    "noLogs": "Brak logów sesji",
+    "noLogsDesc": "Włącz rejestrowanie sesji na hoście, aby rozpocząć nagrywanie",
+    "duration": "Czas trwania",
+    "viewLog": "Wyświetl log",
+    "downloadLog": "Pobierz",
+    "downloadAsText": "Pobierz jako tekst",
+    "deleteLog": "Usuń",
+    "confirmDelete": "Usunąć ten log sesji?",
+    "confirmDeleteDesc": "Tej czynności nie można cofnąć.",
+    "copyContent": "Kopiuj",
+    "copied": "Skopiowano!",
+    "loadError": "Nie udało się załadować logów sesji",
+    "deleteError": "Nie udało się usunąć logu sesji",
+    "filterByHost": "Filtruj według hosta...",
+    "back": "Wstecz",
+    "empty": "(pusty)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
+  }
+}

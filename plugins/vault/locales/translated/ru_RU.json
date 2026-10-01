@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "Профиль подписчика Vault",
+    "selectProfile": "Выберите профиль Vault...",
+    "hint": "Настройки берутся из общего профиля; при подключении вы войдёте в Vault через OIDC. Секреты не хранятся.",
+    "docs": "Документация",
+    "sharedProfile": "{{name}} (shared)"
+  },
+  "profiles": {
+    "new": "Новый профиль",
+    "manage": "Управление профилями Vault",
+    "name": "Дружественное имя",
+    "vaultAddr": "Адрес Vault",
+    "namespace": "Пространство имён",
+    "oidcMount": "Монтирование аутентификации OIDC",
+    "oidcRole": "Роль OIDC",
+    "sshMount": "Монтирование секретов SSH",
+    "sshRole": "Роль подписчика SSH",
+    "validPrincipals": "Допустимые принципалы",
+    "keyType": "Тип эфемерного ключа",
+    "shareWithAll": "Общий доступ для всех пользователей",
+    "create": "Создать профиль",
+    "created": "Профиль Vault создан",
+    "saved": "Профиль Vault сохранён",
+    "deleted": "Профиль Vault удалён",
+    "saveFailed": "Не удалось сохранить профиль Vault",
+    "deleteFailed": "Не удалось удалить профиль Vault",
+    "save": "Сохранить профиль",
+    "validationError": "Требуются имя, адрес Vault и роль SSH подписанта",
+    "none": "Пока нет профилей Vault.",
+    "sharedBadge": "общий",
+    "edit": "Редактировать",
+    "delete": "Удалить"
+  },
+  "hosts": {
+    "filterAuthVault": "Vault"
+  },
+  "dialog": {
+    "title": "Требуется вход в Vault",
+    "description": "Открыто окно для входа в HashiCorp Vault. Завершите вход там; подключение продолжится автоматически.",
+    "failed": "Аутентификация Vault не удалась. Попробуйте снова.",
+    "reopen": "Повторно открыть окно входа"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Vault SSH signing",
+      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+    },
+    "share": {
+      "title": "Share Vault profiles",
+      "description": "Mark a Vault signer profile as shared so every user can pick it."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault signer profile"
+      }
+    }
+  }
+}

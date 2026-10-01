@@ -4,16 +4,16 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
+import { termixPluginHost } from "./scripts/vite-plugin-termix-plugins.mjs";
 
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");
 const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
 
 const hasSSL = fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath);
 const useHTTPS = process.env.VITE_HTTPS === "true" && hasSSL;
-const apiProxyPorts = [
-  30001, 30002, 30003, 30004, 30005, 30006, 30007, 30008, 30009, 30010, 30011,
-  30012,
-];
+// Everything rides the main backend on 30001, plugins included (under
+// /plugin-api and /plugin-ws).
+const apiProxyPorts = [30001];
 const apiProxy = Object.fromEntries(
   apiProxyPorts.map((port) => [
     `/__termix_api/${port}`,
@@ -46,37 +46,12 @@ const manualChunkGroups: Record<string, string[]> = {
     "tailwind-merge",
     "class-variance-authority",
   ],
-  monaco: ["@monaco-editor/react", "monaco-editor"],
-  "terminal-vendor": [
-    "@xterm/addon-clipboard",
-    "@xterm/addon-fit",
-    "@xterm/addon-unicode11",
-    "@xterm/addon-web-links",
-    "@xterm/xterm",
-    "react-xtermjs",
-  ],
   codemirror: [
     "@uiw/react-codemirror",
     "@codemirror/view",
     "@codemirror/state",
     "@codemirror/language",
-    "@codemirror/commands",
-    "@codemirror/search",
-    "@codemirror/autocomplete",
     "@codemirror/theme-one-dark",
-    "@uiw/codemirror-extensions-langs",
-    "@uiw/codemirror-theme-github",
-  ],
-  "remote-desktop-vendor": ["guacamole-common-js"],
-  "graph-vendor": ["cytoscape", "react-cytoscapejs"],
-  "file-preview-vendor": [
-    "react-pdf",
-    "pdfjs-dist",
-    "react-photo-view",
-    "react-h5-audio-player",
-    "react-markdown",
-    "react-syntax-highlighter",
-    "remark-gfm",
   ],
 };
 
@@ -98,8 +73,21 @@ function getManualChunk(id: string): string | undefined {
   return undefined;
 }
 
+// The SDK's browser entries resolve to source, so the shell and workspace
+// plugins share one instance in dev and nobody waits on a stale SDK build.
+const sdkFrontendEntry = path.resolve(
+  __dirname,
+  "./packages/plugin-sdk/src/frontend.ts",
+);
+const sdkUiEntry = path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts");
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), svgr()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    svgr(),
+    termixPluginHost({ repoRoot: __dirname, sdkFrontendEntry, sdkUiEntry }),
+  ],
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(
       packageJson.version || "0.0.0",
@@ -107,6 +95,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@termix/plugin-sdk/frontend": sdkFrontendEntry,
+      "@termix/plugin-sdk/ui": sdkUiEntry,
       "@/types": path.resolve(__dirname, "./src/types"),
       "@": path.resolve(__dirname, "./src/ui"),
     },

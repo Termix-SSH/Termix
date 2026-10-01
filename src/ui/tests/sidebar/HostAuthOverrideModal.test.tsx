@@ -36,6 +36,7 @@ vi.mock("react-i18next", () => ({
 
 import { HostAuthOverrideModal } from "../../sidebar/HostAuthOverrideModal";
 import { canOverrideHostAuth } from "../../sidebar/host-permissions";
+import { registerHostProtocol } from "../../sidebar/host-protocols";
 
 const host = {
   id: "42",
@@ -48,7 +49,7 @@ const host = {
       ownerAuthShared: false,
     },
   },
-} as Host;
+} as unknown as Host;
 
 beforeEach(() => {
   api.getCredentials.mockReset();
@@ -102,8 +103,8 @@ describe("HostAuthOverrideModal", () => {
     fireEvent.click(screen.getByText("common.save"));
 
     await waitFor(() => {
-      expect(api.getHostAuthOverride).toHaveBeenCalledWith(42, "ssh");
-      expect(api.setHostAuthOverride).toHaveBeenCalledWith(42, "ssh", 8);
+      expect(api.getHostAuthOverride).toHaveBeenCalledWith(42, "ssh", null);
+      expect(api.setHostAuthOverride).toHaveBeenCalledWith(42, "ssh", 8, null);
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
   });
@@ -127,7 +128,12 @@ describe("HostAuthOverrideModal", () => {
     fireEvent.click(screen.getByText("common.save"));
 
     await waitFor(() => {
-      expect(api.setHostAuthOverride).toHaveBeenCalledWith(42, "ssh", null);
+      expect(api.setHostAuthOverride).toHaveBeenCalledWith(
+        42,
+        "ssh",
+        null,
+        null,
+      );
     });
   });
 
@@ -159,7 +165,7 @@ describe("HostAuthOverrideModal", () => {
     ).toBeTruthy();
   });
 
-  it("loads credentials and overrides from the remote server for remote-only shared hosts", async () => {
+  it("loads credentials and overrides from the server for a synced shared copy", async () => {
     remote.get.mockResolvedValue({
       data: [
         {
@@ -176,7 +182,7 @@ describe("HostAuthOverrideModal", () => {
       <HostAuthOverrideModal
         open
         onOpenChange={() => {}}
-        host={{ ...host, id: "-42" }}
+        host={{ ...host, sharedCopy: true, syncId: "host-sync-42" } as Host}
         protocol="ssh"
       />,
     );
@@ -187,7 +193,11 @@ describe("HostAuthOverrideModal", () => {
     expect((select as HTMLSelectElement).value).toBe("19");
     expect(remote.get).toHaveBeenCalledWith("/credentials");
     expect(api.getCredentials).not.toHaveBeenCalled();
-    expect(api.getHostAuthOverride).toHaveBeenCalledWith(-42, "ssh", true);
+    expect(api.getHostAuthOverride).toHaveBeenCalledWith(
+      42,
+      "ssh",
+      "host-sync-42",
+    );
   });
 
   it("renders empty and load-error states", async () => {
@@ -238,9 +248,27 @@ describe("canOverrideHostAuth", () => {
     expect(
       canOverrideHostAuth({ ...host, enableSsh: false } as Host, "ssh"),
     ).toBe(false);
+    const dispose = registerHostProtocol({
+      id: "rdp",
+      pluginId: "demo",
+      settingKey: "enableRdp",
+      defaultPort: 3389,
+      titleKey: "rdp",
+      icon: () => null,
+    });
     expect(
-      canOverrideHostAuth({ ...host, enableRdp: true } as Host, "rdp"),
+      canOverrideHostAuth(
+        { ...host, pluginSettings: { demo: { enableRdp: true } } } as Host,
+        "rdp",
+      ),
     ).toBe(true);
     expect(canOverrideHostAuth(host, "rdp")).toBe(false);
+    dispose();
+    expect(
+      canOverrideHostAuth(
+        { ...host, pluginSettings: { demo: { enableRdp: true } } } as Host,
+        "rdp",
+      ),
+    ).toBe(false);
   });
 });

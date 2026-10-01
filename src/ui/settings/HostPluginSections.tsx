@@ -1,0 +1,197 @@
+/**
+ * Host editor sections contributed by plugins.
+ *
+ * A plugin declares host-scope fields in its manifest and core draws them, so
+ * a plugin cannot ship its own form styling and a section disappears when its
+ * plugin does. The enable switch comes first and gates the rest, which is the
+ * shape the hardcoded feature tabs already have.
+ *
+ * Nothing is rendered when no enabled plugin declares host settings, so the
+ * group does not appear as an empty tab.
+ */
+
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { SectionCard } from "@/components/section-card";
+import { PluginIcon } from "@/lib/plugin-icon";
+import { getPlugins, type PluginSummary } from "@/api/plugins-api";
+import { usePluginScope } from "@/plugin-host/scope";
+import { SettingsFieldRow } from "./SettingsFields";
+import { hasVisibleFields, isFieldShown } from "./settings-fields-util";
+
+/** Values for every plugin on one host: { [pluginId]: { [key]: value } }. */
+export type HostPluginSettings = Record<string, Record<string, unknown>>;
+
+/** Enabled plugins declaring host-scope settings. */
+export function usePluginHostSections(): PluginSummary[] {
+  const [plugins, setPlugins] = useState<PluginSummary[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getPlugins()
+      .then((loaded) => {
+        if (!cancelled) setPlugins(loaded);
+      })
+      .catch(() => {
+        // Additive: the built-in host tabs do not depend on this.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return useMemo(
+    () =>
+      plugins.filter((plugin) => {
+        if (!plugin.enabled) return false;
+        const host = plugin.contributes?.settings?.host;
+        return !!host && (hasVisibleFields(host.fields) || !!host.enableKey);
+      }),
+    [plugins],
+  );
+}
+
+/** What each field reads before the host saves it. */
+function hostFieldDefaults(plugin: PluginSummary): Record<string, unknown> {
+  const host = plugin.contributes?.settings?.host;
+  if (!host) return {};
+  const defaults: Record<string, unknown> = {};
+  if (host.enableKey) defaults[host.enableKey] = host.enableDefault ?? false;
+  for (const field of host.fields) {
+    if (field.default !== undefined) defaults[field.key] = field.default;
+  }
+  return defaults;
+}
+
+export interface HostPluginSectionsProps {
+  plugins: PluginSummary[];
+  values: HostPluginSettings;
+  setValue: (pluginId: string, key: string, value: unknown) => void;
+}
+
+export function HostPluginSections({
+  plugins,
+  values,
+  setValue,
+}: HostPluginSectionsProps) {
+  if (plugins.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {plugins.map((plugin) => (
+        <HostPluginSection
+          key={plugin.id}
+          plugin={plugin}
+          values={values[plugin.id] ?? {}}
+          setValue={(key, value) => setValue(plugin.id, key, value)}
+        />
+      ))}
+    </div>
+  );
+}
+
+export interface HostFeatureFieldsProps {
+  // The host editor form, as handed to a host editor section.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: any;
+  updateForm: (
+    patch: (form: Record<string, unknown>) => Record<string, unknown>,
+  ) => void;
+}
+
+/**
+ * The calling plugin's manifest host settings, for a plugin that registered
+ * its own host editor section and so gets no generated tab.
+ */
+export function HostFeatureFields({
+  form,
+  updateForm,
+}: HostFeatureFieldsProps) {
+  const pluginId = usePluginScope();
+  const plugin = usePluginHostSections().find((p) => p.id === pluginId);
+  if (!plugin) return null;
+  const values = (form?.pluginSettings as HostPluginSettings | undefined) ?? {};
+  return (
+    <HostPluginSection
+      plugin={plugin}
+      values={values[plugin.id] ?? {}}
+      setValue={(key, value) =>
+        updateForm((current) => {
+          const all = (current.pluginSettings ?? {}) as HostPluginSettings;
+          return {
+            ...current,
+            pluginSettings: {
+              ...all,
+              [plugin.id]: { ...(all[plugin.id] ?? {}), [key]: value },
+            },
+          };
+        })
+      }
+    />
+  );
+}
+
+function HostPluginSection({
+  plugin,
+  values,
+  setValue,
+}: {
+  plugin: PluginSummary;
+  values: Record<string, unknown>;
+  setValue: (key: string, value: unknown) => void;
+}) {
+  const { t } = useTranslation();
+  const host = plugin.contributes?.settings?.host;
+  if (!host) return null;
+  const shown = { ...hostFieldDefaults(plugin), ...values };
+
+  const running = plugin.enabled && plugin.state !== "failed";
+  const enableKey = host.enableKey;
+  // With no enable switch the section is always on, which is what a plugin
+  // declaring only plain fields means.
+  const enabled = enableKey ? shown[enableKey] === true : true;
+
+  return (
+    <SectionCard
+      title={plugin.name}
+      icon={<PluginIcon name={plugin.icon} className="size-3.5" />}
+    >
+      {!running && (
+        <div className="my-3 border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500">
+          {t("settings.featureUnavailable", { name: plugin.name })}
+        </div>
+      )}
+
+      {enableKey && (
+        <SettingsFieldRow
+          pluginId={plugin.id}
+          field={{
+            key: enableKey,
+            type: "boolean",
+            labelKey: host.enableLabelKey,
+            descriptionKey: host.enableDescriptionKey,
+          }}
+          values={shown}
+          setValue={setValue}
+          running={running}
+          defaultKey={`${plugin.id}.${enableKey}`}
+        />
+      )}
+
+      {enabled &&
+        host.fields
+          .filter((field) => isFieldShown(field, shown))
+          .map((field) => (
+            <SettingsFieldRow
+              key={field.key}
+              pluginId={plugin.id}
+              field={field}
+              values={shown}
+              setValue={setValue}
+              running={running}
+              defaultKey={`${plugin.id}.${field.key}`}
+            />
+          ))}
+    </SectionCard>
+  );
+}

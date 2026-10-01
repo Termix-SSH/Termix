@@ -2,9 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createQuickConnectHost,
   isQuickConnectHost,
-  quickConnectGuacHost,
   quickConnectHostToPayload,
+  quickConnectTargets,
 } from "../../sidebar/quick-connect-host";
+import type { HostActionDef } from "../../sidebar/host-contributions";
 
 describe("quick connect host", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -62,59 +63,116 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
     expect(isQuickConnectHost(host)).toBe(true);
     expect(host).toMatchObject({
       enableSsh: true,
-      enableRdp: false,
       sshPort: 2222,
       password: "pw",
     });
   });
 
-  it("builds an RDP host that GuacamoleApp can mint a token from", () => {
+  const desktop = {
+    id: "demo-desktop",
+    pluginId: "demo",
+    settingKey: "enableDemo",
+    portKey: "demoPort",
+    defaultPort: 3389,
+    titleKey: "demo",
+    icon: () => null,
+  };
+
+  it("builds a plugin protocol host with its switch and port in plugin settings", () => {
     const host = createQuickConnectHost({
       ip: "10.0.0.2",
       port: 3390,
       username: "admin",
       authType: "password",
       password: "pw",
-      protocol: "rdp",
+      protocol: desktop,
       domain: "CORP",
     });
     expect(host).toMatchObject({
       enableSsh: false,
-      enableRdp: true,
-      enableVnc: false,
-      rdpPort: 3390,
-      rdpUser: "admin",
-      rdpPassword: "pw",
-      domain: "CORP",
+      pluginSettings: { demo: { enableDemo: true, demoPort: 3390 } },
     });
-    expect(quickConnectGuacHost(host)).toMatchObject({
-      ip: "10.0.0.2",
-      connectionType: "rdp",
-      rdpPort: 3390,
-      rdpUser: "admin",
-      rdpPassword: "pw",
-      domain: "CORP",
+    // The unsaved login travels to the protocol's tab as it is.
+    expect(host.quickConnectLogin).toEqual({
+      protocol: "demo-desktop",
+      username: "admin",
+      password: "pw",
+      fields: { domain: "CORP" },
     });
   });
 
-  it("builds a VNC host with the password on the VNC fields", () => {
+  it("carries the fields a plugin's SSH auth editor filled in", () => {
     const host = createQuickConnectHost({
-      ip: "10.0.0.3",
-      port: 5901,
-      username: "",
-      authType: "password",
-      password: "vncpw",
-      protocol: "vnc",
+      ip: "100.64.0.9",
+      port: 22,
+      username: "root",
+      authType: "tailnet-login",
+      authFields: { pluginSettings: { demo: { profileId: 3 } } },
     });
+    expect(host.authType).toBe("tailnet-login");
+    expect(host.password).toBeUndefined();
     expect(host).toMatchObject({
-      enableVnc: true,
-      vncPort: 5901,
-      vncPassword: "vncpw",
+      pluginSettings: { demo: { profileId: 3 } },
     });
-    expect(quickConnectGuacHost(host)).toMatchObject({
-      connectionType: "vnc",
-      vncPort: 5901,
-      vncPassword: "vncpw",
-    });
+  });
+
+  it("marks only hosts core can save", () => {
+    const base = { ip: "10.0.0.2", port: 22, username: "root" };
+    expect(
+      createQuickConnectHost({ ...base, authType: "password" })
+        .quickConnectSavable,
+    ).toBe(true);
+    expect(
+      createQuickConnectHost({ ...base, authType: "tailscale" })
+        .quickConnectSavable,
+    ).toBe(false);
+    expect(
+      createQuickConnectHost({
+        ...base,
+        authType: "password",
+        authFields: { extra: true },
+      }).quickConnectSavable,
+    ).toBe(false);
+  });
+});
+
+describe("quickConnectTargets", () => {
+  const action = (over: Partial<HostActionDef>): HostActionDef => ({
+    id: "x",
+    titleKey: "x",
+    icon: () => null,
+    kind: "open",
+    when: () => true,
+    ...over,
+  });
+  const host = createQuickConnectHost({
+    ip: "10.0.0.3",
+    port: 22,
+    username: "root",
+    authType: "password",
+  });
+
+  it("puts connect actions first by priority, then opted-in tools", () => {
+    const targets = quickConnectTargets(
+      [
+        action({ id: "files", tabType: "files", quickConnect: true }),
+        action({ id: "docker", tabType: "docker" }),
+        action({ id: "vnc", kind: "connect", priority: 40, tabType: "vnc" }),
+        action({ id: "term", kind: "connect", priority: 100, tabType: "t" }),
+        action({ id: "run-only", kind: "connect", priority: 200 }),
+        action({
+          id: "off",
+          kind: "connect",
+          tabType: "off",
+          when: () => false,
+        }),
+      ],
+      host,
+    );
+    expect(targets.map((target) => target.id)).toEqual([
+      "term",
+      "vnc",
+      "files",
+    ]);
   });
 });

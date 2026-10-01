@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "tables": {
+    "identities": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true,
+          "unique": true
+        },
+        "handle": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true,
+          "unique": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "termix_identities"
+    },
+    "keys": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "identityId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "publicKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "keyType": {
+          "type": "text",
+          "notNull": true
+        },
+        "algorithm": {
+          "type": "text",
+          "notNull": true
+        },
+        "label": {
+          "type": "text"
+        },
+        "comment": {
+          "type": "text"
+        },
+        "source": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "manual"
+        },
+        "credentialId": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": true
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_termix_identity_keys_identity",
+          "columns": ["identityId"]
+        }
+      ],
+      "adopts": "termix_identity_keys"
+    },
+    "ca": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "identityId": {
+          "type": "integer",
+          "notNull": true,
+          "unique": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "publicKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "privateKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "validityDays": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 90
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "termix_identity_ca"
+    }
+  }
+}

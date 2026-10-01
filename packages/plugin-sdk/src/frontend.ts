@@ -1,0 +1,1642 @@
+/**
+ * The frontend contract: what a plugin's frontend entry receives, and the
+ * hooks its components use.
+ *
+ * A plugin frontend is `src/frontend/index.tsx` exporting `activate(app)` and
+ * optionally `deactivate()`. Everything it contributes goes through `app`, and
+ * everything registered there is removed when the plugin is disabled, without
+ * a page reload.
+ *
+ * This module has no runtime dependencies. The hooks delegate to a host that
+ * core installs at startup (`__setPluginHost`), because React, i18next and the
+ * shell's state all live in core and must be one instance across the shell
+ * and every plugin bundle.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComponentType, ReactNode, Ref } from "react";
+import type { PluginManifest } from "./manifest.js";
+import type { HostSshOptions } from "./ssh-options.js";
+export type { HostSshOptions } from "./ssh-options.js";
+
+export type Disposer = () => void;
+
+/** A Lucide icon or anything with the same props. */
+export type IconComponent = ComponentType<{
+  className?: string;
+  size?: number | string;
+  strokeWidth?: number | string;
+}>;
+
+/**
+ * A host as the shell hands it to a plugin. Every field is listed here and
+ * core builds the record field by field, so a plugin cannot come to depend on
+ * a core column that is not part of this contract. A plugin's own host
+ * settings are in `pluginSettings[<plugin id>]`.
+ */
+export interface PluginHostRecord {
+  id: string;
+  name: string;
+  ip: string;
+  port: number;
+  username?: string;
+  folder?: string;
+  tags?: string[];
+  pin?: boolean;
+  notes?: string;
+  /** Stable across a desktop and the server it syncs with. */
+  syncId?: string | null;
+  /** Sub-host nesting: the host this one is organized under. */
+  parentHostId?: string | null;
+  authType?: string;
+  credentialId?: string | number | null;
+  overrideCredentialUsername?: boolean;
+  /** "ssh", or the id of the plugin protocol a host without SSH uses. */
+  connectionType?: string;
+  /** Desktop app: where connections to this host start from. */
+  connectionOrigin?: "local" | "remote" | null;
+  enableSsh?: boolean;
+  sshPort?: number;
+  jumpHosts?: { hostId: string | number }[];
+  statusCheckEnabled?: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval?: number | null;
+  /** Keepalive, legacy algorithms, agent and environment options. */
+  sshOptions?: HostSshOptions | null;
+  /**
+   * This plugin's own host settings, under its id, secrets redacted. Another
+   * plugin's settings never appear here; ask that plugin through an action.
+   */
+  pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Each declared protocol's login, secrets left out. */
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
+  /** Set on a Quick Connect host, which is never saved. */
+  quickConnectLogin?: QuickConnectLogin;
+  /** Quick Connect only: core can save this host as it is. */
+  quickConnectSavable?: boolean;
+  /** Assigned when a host is opened in a tab; tells duplicate tabs apart. */
+  instanceId?: string;
+  /** Core's status: "online" once a login worked. */
+  status?: "online" | "reachable" | "offline" | "unknown";
+  online?: boolean;
+  /** Someone else owns this host and shared it with the user. */
+  isShared?: boolean;
+  permissionLevel?: "connect" | "view" | "edit" | "manage";
+  sharedExpiresAt?: string;
+  ownerUsername?: string;
+  /**
+   * A shared host's login per protocol ("ssh" or a plugin protocol): whether
+   * the owner shared theirs, and the recipient's own credential if they had
+   * to pick one.
+   */
+  authOverrides?: Partial<Record<string, HostAuthOverrideSummary>>;
+  /** A read-only copy of a host shared with the linked account. */
+  sharedCopy?: boolean;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly?: boolean;
+}
+
+export interface HostAuthOverrideSummary {
+  credentialId?: number | string;
+  required: boolean;
+  ownerAuthShared: boolean;
+}
+
+/** The protocol login a Quick Connect host carries, in plain text. */
+export interface QuickConnectLogin {
+  protocol: string;
+  username?: string;
+  password?: string;
+  /** "domain" when the protocol's Quick Connect entry shows that field. */
+  fields?: Record<string, string>;
+}
+
+/** "direct" (a username and password), "credential" (a saved one) or "none". */
+export type HostProtocolAuthType = "direct" | "credential" | "none";
+
+/** A host's login for a protocol a plugin declares, as the host API returns it. */
+export interface HostProtocolAuthSummary {
+  authType: HostProtocolAuthType;
+  /** Left out for a shared recipient at connect level. */
+  credentialId?: number | null;
+  username?: string | null;
+  /** The declared non-secret credential fields. */
+  fields?: Record<string, string>;
+  /** Owner only. */
+  hasPassword?: boolean;
+  /** Owner only: the secret credential fields that hold a value. */
+  secretFieldKeys?: string[];
+}
+
+/**
+ * One protocol's login in the host editor form (`form.protocolAuth[id]`).
+ * Core sends it with the host; `password` and secret fields hold
+ * HOST_PROTOCOL_SECRET_KEPT while the saved value is left alone.
+ */
+export interface HostProtocolAuthForm {
+  authType: HostProtocolAuthType;
+  credentialId: string;
+  username: string;
+  password: string;
+  fields: Record<string, string>;
+}
+
+/** Stands in for a saved protocol secret the editor has not changed. */
+export const HOST_PROTOCOL_SECRET_KEPT = "existing_protocol_secret";
+
+/** An open tab as the shell holds it. `data` is the plugin's own payload. */
+export interface PluginTabRecord {
+  id: string;
+  type: string;
+  label: string;
+  host?: PluginHostRecord;
+  data?: Record<string, unknown>;
+  /** Stable across restores, for a session tab to reattach by. */
+  instanceId?: string;
+  /** A backend session a session tab should reattach to. */
+  restoredSessionId?: string | null;
+  [key: string]: unknown;
+}
+
+export interface OpenTabOptions {
+  label?: string;
+  /** Open a second tab even when one for this host and type exists. */
+  forceNewTab?: boolean;
+  /** Plugin payload, stored on the tab and restored with it. */
+  data?: Record<string, unknown>;
+}
+
+/** A saved arrangement of tabs, used by workspaces. Opaque to plugins. */
+export interface ShellLayout {
+  version: number;
+  [key: string]: unknown;
+}
+
+/** What a plugin may ask of the shell. */
+/** Fields a plugin can fill in when it opens the host editor. */
+export interface HostDraft {
+  name?: string;
+  ip?: string;
+  port?: number;
+  username?: string;
+  authType?: string;
+}
+
+export interface ShellApi {
+  openTab: (
+    host: PluginHostRecord | null,
+    type: string,
+    options?: OpenTabOptions,
+  ) => void;
+  openSingletonTab: (type: string, options?: OpenTabOptions) => void;
+  /**
+   * Connects to a host the way clicking it in the host list does: its
+   * default connection, or `type` when given.
+   */
+  connectHost: (host: PluginHostRecord, type?: string) => void;
+  closeTab: (tabId: string) => void;
+  renameTab: (tabId: string, label: string) => void;
+  /** Saves a quick-connect tab's host as a real host. Absent in some shells. */
+  saveQuickConnect?: (
+    tab: PluginTabRecord,
+    host: PluginHostRecord,
+  ) => Promise<void>;
+  /**
+   * Opens the host editor for a new host with these fields filled in. The
+   * user reviews and saves it. Absent in some shells.
+   */
+  openHostEditor?: (draft?: HostDraft) => void;
+  /** Opens a rail view in the left sidebar. */
+  openRailView: (id: string) => void;
+  /** Closes a rail view wherever it is shown. */
+  closeRailView: (id: string) => void;
+}
+
+export interface TabsApi extends Pick<
+  ShellApi,
+  "openTab" | "openSingletonTab" | "connectHost" | "closeTab" | "openRailView"
+> {
+  /** The current tabs and split layout, or null before the shell mounts. */
+  getLayout: () => ShellLayout | null;
+  /**
+   * Replaces the open tabs with a saved layout. `name` labels a restored
+   * split. Resolves with the tabs that could not be reopened, e.g. because
+   * their host was deleted.
+   */
+  applyLayout: (
+    layout: ShellLayout,
+    options?: { name?: string },
+  ) => Promise<{ skipped: string[] }>;
+  /** Called whenever tabs open, close or move. */
+  onChange: (listener: () => void) => Disposer;
+  /** Called once the shell has restored its tabs after login. */
+  onReady: (listener: () => void) => Disposer;
+}
+
+// ---------------------------------------------------------------------------
+// Registrations
+// ---------------------------------------------------------------------------
+
+export interface RailItemContribution {
+  /** Must be declared in manifest contributes.tabs or contributes.panels. */
+  id: string;
+  icon: IconComponent;
+  titleKey: string;
+  /** "panel" opens the left sidebar, "tab" opens a tab. Default "panel". */
+  kind?: "panel" | "tab";
+  /** Users may hide it from Appearance > Sidebar > Navigation. Default true. */
+  hideable?: boolean;
+  /**
+   * Stays visible in the Simple interface preset, which hides every other
+   * plugin rail item. For the one or two things a new user reaches for.
+   */
+  simplePreset?: boolean;
+  /** Can also open as a full-width tab. */
+  promotable?: boolean;
+  /** Can open in the right dock. */
+  rightDockable?: boolean;
+  /** Shown on the mobile bar's primary row. */
+  mobilePrimary?: boolean;
+  /** Desktop app only. */
+  electronOnly?: boolean;
+  separatorAfter?: boolean;
+  /** Hidden without being unregistered, e.g. while a feature is switched off. */
+  hidden?: boolean;
+  /**
+   * A permission the user needs to see the item at all, usually one of the
+   * plugin's own short names. The rail, the mobile bar, the palette and the
+   * Navigation toggles all leave it out otherwise.
+   */
+  permission?: string;
+  /** Place it after this rail id rather than at the end. */
+  after?: string;
+  /** Lower sorts first among plugin items. */
+  order?: number;
+  /**
+   * "footer" puts it at the bottom of the rail, above the user's profile,
+   * for something always at hand like an inbox. Default "main".
+   */
+  placement?: "main" | "footer";
+  /**
+   * A hook the rail calls to show a count on the icon, e.g. unread alerts.
+   * Zero or nothing shows no badge.
+   */
+  useBadge?: () => number | null | undefined;
+}
+
+export interface PanelProps {
+  /**
+   * The command-target tab (see TabOptions.commandTarget) the user is working
+   * in: the active one, else the one focused last. For panels that act on it.
+   */
+  targetTab?: PluginTabRecord;
+  /** Whether the panel is the one currently shown. */
+  active: boolean;
+  shell: ShellApi;
+  /** Tells the shell the panel is editing, which widens the sidebar. */
+  setEditing: (editing: boolean) => void;
+  /** Type of the focused tab, if any. */
+  activeTabType?: string;
+  /** Where the panel is rendered. */
+  placement: "left" | "right" | "tab";
+}
+
+export interface PanelOptions {
+  /** Keep the panel mounted after the user switches away. */
+  keepMounted?: boolean;
+}
+
+/**
+ * What a session tab hands the shell through `handleRef`, so split view, tab
+ * close and reconnect-all can drive it without knowing what kind it is.
+ */
+export interface TabHandle {
+  focus?: () => void;
+  fit?: () => void;
+  reconnect?: () => void;
+  /** Start a manual reconnect only when disconnected and idle; return whether it started. */
+  reconnectIfDisconnected?: () => boolean;
+  disconnect?: () => void;
+  isConnected?: () => boolean;
+  sendInput?: (data: string) => void;
+  paste?: (text: string) => void;
+  /** Repaint only. The shell calls it every time the tab becomes active. */
+  refresh?: () => void;
+  notifyResize?: () => void;
+  [key: string]: unknown;
+}
+
+export interface TabProps {
+  tab: PluginTabRecord;
+  host?: PluginHostRecord;
+  /** The host in the shape the connection APIs take. */
+  sshHost?: Record<string, unknown>;
+  label: string;
+  isVisible: boolean;
+  /** The pane the user is working in, or the active tab outside a split. */
+  isFocusedPane: boolean;
+  /**
+   * Shown in a split pane next to other tabs. The shell moves focus between
+   * panes itself, so a tab should not grab focus on its own while this is set.
+   */
+  inSplit?: boolean;
+  /** Forward to a component exposing `refresh()` or `disconnect()`. */
+  handleRef: Ref<unknown>;
+  shell: ShellApi;
+}
+
+export interface StandaloneViewProps {
+  hostId?: string;
+  view: string;
+  params: URLSearchParams;
+}
+
+export interface TabOptions {
+  icon?: IconComponent;
+  /** Label for singleton tabs and anywhere the type is named. */
+  titleKey?: string;
+  /** Needs a host; renders `noHostMessageKey` without one. */
+  requiresHost?: boolean;
+  noHostMessageKey?: string;
+  /** Reopened after login. */
+  persistent?: boolean;
+  /** One tab of this type at a time, keyed by type. */
+  singleton?: boolean;
+  /** A live session: asks before closing and can be refreshed. */
+  session?: boolean;
+  /** Restorable without a host. */
+  hostless?: boolean;
+  /** Decides whether a saved tab for this host may be restored. */
+  restore?: (host: PluginHostRecord) => boolean;
+  /** Recent-activity types that open this tab. */
+  activityTypes?: string[];
+  /** Rendered for `?view=<type>` full-screen links. */
+  standalone?: ComponentType<StandaloneViewProps>;
+  /** Extra `?view=` names that also open `standalone`. */
+  standaloneViews?: string[];
+  /** Wrap in the readable-width frame used by panels opened as tabs. */
+  panelFrame?: boolean;
+  /** False keeps the tab out of saved layouts and workspaces. Default true. */
+  inLayouts?: boolean;
+  /**
+   * Its session takes typed commands: the history, macros and SSH tools
+   * panels act on the one focused last.
+   */
+  commandTarget?: boolean;
+  /** Paints its own background, so the shell leaves its frame transparent. */
+  ownBackground?: boolean;
+  /** Every open is a new tab, labelled "<title> (2)" and so on. */
+  multiInstance?: boolean;
+  /** Warms the tab's code before it is opened. */
+  preload?: () => Promise<unknown>;
+}
+
+export interface HostEditorSectionProps {
+  // The editor form is a plain object; a section reads the fields it owns.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: any;
+  setField: (key: string, value: unknown) => void;
+  /** Sets several fields at once, computed from the latest form. */
+  updateForm: (
+    patch: (form: Record<string, unknown>) => Record<string, unknown>,
+  ) => void;
+  host?: PluginHostRecord;
+  credentials?: unknown[];
+  /** Set while an admin edits another user's host from the admin panel. */
+  adminTargetUserId?: string;
+  /** Which connection protocols are switched on for this host. */
+  protocols: Record<string, boolean>;
+  /**
+   * "defaults" while the editor sets a level of host defaults (server, user
+   * or folder) rather than one host. There is no `host` then, and the form
+   * holds the defaults. Only a section registered with `defaults: true` is
+   * shown in that mode.
+   */
+  mode?: "host" | "defaults";
+}
+
+export interface HostEditorSectionContribution {
+  id: string;
+  /** "top" sits in the main tab strip, "ssh" under the SSH group. */
+  group: "top" | "ssh";
+  titleKey: string;
+  icon?: IconComponent;
+  /**
+   * Position among the group's tabs, core ones included. Top: General 0,
+   * SSH 10. SSH group: General 0, Terminal 10, Tunnels 20, Files 60.
+   */
+  order?: number;
+  /** Whether to offer the tab, from the host's enabled protocols. */
+  visible?: (protocols: Record<string, boolean>) => boolean;
+  /**
+   * Also shown in the host defaults editor. Only for a section whose fields
+   * are this plugin's host settings kept on the form, and that makes no
+   * calls about one particular host. Off by default. "only" shows it in the
+   * defaults editor and never for a host.
+   */
+  defaults?: boolean | "only";
+  component: ComponentType<HostEditorSectionProps>;
+}
+
+export interface HostActionContribution {
+  id: string;
+  titleKey: string;
+  icon: IconComponent;
+  /**
+   * "connect" is a way to open a session (terminal, remote desktop) and is offered as a
+   * host's default action by priority. "open" opens a tool for the host.
+   */
+  kind: "connect" | "open";
+  /** Higher wins when choosing a host's default connect action. */
+  priority?: number;
+  /** Opened with shell.openTab when `run` is absent. */
+  tabType?: string;
+  when: (host: PluginHostRecord) => boolean;
+  run?: (host: PluginHostRecord, shell: ShellApi) => void;
+  /** Shows a quick button on the host row. Default true. */
+  tray?: boolean;
+  /** `?view=` name for "Copy link". */
+  copyUrlView?: string;
+  /** Where a host overview (the dashboard's host status list) sends a click. */
+  overview?: boolean;
+  /**
+   * Offered as a button in Quick Connect, next to the default connect button,
+   * for an address that is never saved. Opens tabType.
+   */
+  quickConnect?: boolean;
+  /**
+   * Position in the host row. Core: Files 20, Tunnel 40, Tmux 70. Connect
+   * actions default to 100 and sit after a separator.
+   */
+  order?: number;
+  /** A label worked out per host, e.g. a single endpoint's name. */
+  label?: (host: PluginHostRecord) => string | undefined;
+  /** Several targets: two or more become a picker, one runs directly. */
+  items?: (host: PluginHostRecord) => {
+    id: string;
+    label: string;
+    run: (host: PluginHostRecord, shell: ShellApi) => void;
+  }[];
+}
+
+/**
+ * A connection protocol next to SSH, shown as a switch in the host editor's
+ * General tab and in host filters and Quick Connect. Its switch and port are
+ * this plugin's own host settings (declare both in contributes.settings.host).
+ */
+export interface HostProtocolContribution {
+  id: string;
+  /** Boolean host setting that turns the protocol on. */
+  settingKey: string;
+  /** Number host setting holding the port. */
+  portKey?: string;
+  defaultPort: number;
+  titleKey: string;
+  descriptionKey?: string;
+  /** Added to the host editor's connection origin help while the protocol is on. */
+  connectionOriginNoteKey?: string;
+  icon: IconComponent;
+  order?: number;
+  /** Offer it in Quick Connect, optionally with a domain field. */
+  quickConnect?: { showDomain?: boolean };
+}
+
+export interface HostBadgeContribution {
+  id: string;
+  when: (host: PluginHostRecord) => boolean;
+  component: ComponentType<{ host: PluginHostRecord }>;
+}
+
+export interface HostContextMenuItemContribution {
+  id: string;
+  titleKey: string;
+  icon?: IconComponent;
+  when: (host: PluginHostRecord) => boolean;
+  run: (host: PluginHostRecord, shell: ShellApi) => void;
+}
+
+export interface PaletteEntryContribution {
+  id: string;
+  titleKey: string;
+  icon?: IconComponent;
+  keywords?: string[];
+  /** "global" entries stand alone, "host" entries appear under a host. */
+  scope: "global" | "host";
+  when?: (host?: PluginHostRecord) => boolean;
+  run: (shell: ShellApi, host?: PluginHostRecord) => void;
+}
+
+/** What a palette item's run gets. */
+export interface PaletteRunContext {
+  /** The command-target tab the user is working in, if any. */
+  targetTab?: PluginTabRecord;
+  shell: ShellApi;
+}
+
+/** One searchable row in a palette group. */
+export interface PaletteItem {
+  id: string;
+  /** Already translated; items are data, not keys. */
+  title: string;
+  description?: string;
+  icon?: IconComponent;
+  /** Extra words the search matches. */
+  keywords?: string[];
+  /** Acts on the command-target tab, so it is greyed out without one. */
+  needsTarget?: boolean;
+  /** Short text at the row's end, e.g. "Run in terminal". */
+  hint?: string;
+  run: (context: PaletteRunContext) => void;
+}
+
+/**
+ * A group of items in the command palette, e.g. the user's snippets. `load`
+ * runs each time the palette opens; the palette filters the items by what
+ * the user types.
+ */
+export interface PaletteGroupContribution {
+  id: string;
+  titleKey: string;
+  /** Lower sorts first. */
+  order?: number;
+  load: () => PaletteItem[] | Promise<PaletteItem[]>;
+  /** Show the items before anything is typed. Default false. */
+  showWhenEmpty?: boolean;
+}
+
+/** A keybinding action's parameter editor in Appearance > Keybindings. */
+export interface KeybindingActionEditorProps {
+  action: KeybindingAction;
+  onChange: (action: KeybindingAction) => void;
+}
+
+/** Where a keybinding action runs when the terminal hands it on. */
+export interface KeybindingRunContext {
+  /** The session the key was pressed in. */
+  sessionId?: string;
+  host?: {
+    ip?: string;
+    username?: string;
+    port?: number | string;
+    name?: string;
+  } | null;
+  /** Writes raw input to that session. */
+  send?: (data: string) => void;
+}
+
+/**
+ * A keybinding action. `id` is stored as the binding's action.type and must
+ * be declared in contributes.keybindingActions, which is what the server
+ * validates saved bindings against.
+ */
+export interface KeybindingActionContribution {
+  id: string;
+  titleKey: string;
+  /**
+   * "session" runs while a session tab such as a terminal has focus (the
+   * default). "global" runs anywhere in the app.
+   */
+  scope?: "session" | "global";
+  /** Draws the action's parameters in the binding form. */
+  editor?: ComponentType<KeybindingActionEditorProps>;
+  /** Drawn after the action's name in the binding list, e.g. a warning. */
+  summary?: ComponentType<KeybindingActionEditorProps>;
+  /** A plugin translation key when the action cannot be saved yet. */
+  validate?: (action: KeybindingAction) => string | null;
+  /**
+   * Runs it. A terminal hands on every bound action it does not handle
+   * itself; a global action runs from anywhere.
+   */
+  run?: (action: KeybindingAction, context: KeybindingRunContext) => void;
+}
+
+/** A built-in key the user can rebind in Appearance > Keybindings. */
+export interface KeybindingDefaultContribution {
+  id: string;
+  combo: KeyCombo;
+  descriptionKey: string;
+}
+
+export interface DashboardCardProps {
+  isVisible: boolean;
+  shell: ShellApi;
+}
+
+export interface DashboardCardContribution {
+  /** Must be declared in manifest contributes.dashboardCards. */
+  id: string;
+  titleKey: string;
+  defaultHeight?: number;
+  /** Which column a preset places this card in by default. Defaults to "main". */
+  defaultPanel?: "main" | "side";
+  component: ComponentType<DashboardCardProps>;
+}
+
+/**
+ * One item in a named list another plugin reads (app.registerExtension). The
+ * reading plugin owns the point id and the item shape. Components go under
+ * `components` so core can scope them to the registering plugin.
+ */
+export interface ExtensionContribution {
+  id: string;
+  /** Set by core to the registering plugin's id; a plugin never sets this itself. */
+  pluginId?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  components?: Record<string, ComponentType<any>>;
+  [key: string]: unknown;
+}
+
+export interface SettingsComponentProps {
+  pluginId: string;
+  values: Record<string, unknown>;
+  setValue: (key: string, value: unknown) => void;
+  running: boolean;
+}
+
+export type ActionHandler = (...args: never[]) => unknown;
+
+export interface ActionSlotDefinition {
+  id: string;
+  /** Contribution kinds the slot renders: "button", "component". */
+  accepts: string[];
+}
+
+export interface SlotContribution {
+  actionId: string;
+  titleKey: string;
+  /** Secondary text, for slots that show one (onboarding cards). */
+  descriptionKey?: string;
+  icon?: IconComponent;
+  kind?: "button" | "component" | string;
+  /** For kind "component". Receives the slot owner's props. */
+  component?: ComponentType<Record<string, unknown>>;
+  /** Extra condition on top of the action's permission. */
+  when?: (context: Record<string, unknown>) => boolean;
+  order?: number;
+}
+
+export interface SshAuthEditorProps {
+  form: Record<string, unknown>;
+  setField: (key: string, value: unknown) => void;
+}
+
+export interface SshAuthEditorContribution {
+  /** The value stored in the host's authType. */
+  authType: string;
+  titleKey: string;
+  hintKey?: string;
+  component?: ComponentType<SshAuthEditorProps>;
+}
+
+/** What the login screen hands a login method's UI. */
+export interface LoginMethodUIProps {
+  methodId: string;
+  /** Enabled instances from the server, e.g. one per SSO provider. */
+  instances: Array<{ id: string; label: string }>;
+  rememberMe: boolean;
+  disabled: boolean;
+  /** What the user typed in the username field, when there is one. */
+  username?: string;
+  /**
+   * Form methods: posts the body to the method's verify endpoint, then the
+   * login screen finishes the login or shows the second-factor step.
+   */
+  submit: (body: Record<string, unknown>, instanceId?: string) => Promise<void>;
+  /** Redirect methods: sends the browser (or the system browser) away. */
+  startRedirect: (instanceId?: string) => Promise<void>;
+  /** Hands a login response from a request the UI made itself. */
+  complete: (response: Record<string, unknown>) => Promise<void>;
+}
+
+/**
+ * A button or form on the login screen. `id` matches the login method the
+ * backend registered with ctx.auth.registerLoginMethod; the screen shows it
+ * only while the server reports that method as enabled.
+ */
+export interface LoginMethodContribution {
+  id: string;
+  titleKey: string;
+  icon?: IconComponent;
+  component: ComponentType<LoginMethodUIProps>;
+  /**
+   * "inline" also draws the method under the password form, for a local
+   * method people use instead of a password (a passkey). Otherwise it only
+   * shows in the list of other sign-in methods.
+   */
+  placement?: "inline";
+  /** Enrolment, shown in Settings > Security (registering a passkey). */
+  enrollment?: ComponentType<Record<string, unknown>>;
+}
+
+/**
+ * How an SSH keyboard-interactive prompt is shown by TOTPDialog: a code field
+ * (the default), a password, a menu choice, or a push approval.
+ */
+export type MFAPromptMode = "totp" | "password" | "menu" | "push";
+
+/** What the second-factor step hands a factor's UI. */
+export interface SecondFactorUIProps {
+  factorId: string;
+  rememberMe: boolean;
+  disabled: boolean;
+  /** Sends the user's answer; the login screen finishes or shows the error. */
+  verify: (body: Record<string, unknown>) => Promise<void>;
+  /** Whatever the backend factor's challenge() returns. */
+  challenge: () => Promise<unknown>;
+  cancel: () => void;
+}
+
+export interface SecondFactorContribution {
+  /** Matches the id the backend registered with ctx.auth.registerSecondFactor. */
+  id: string;
+  titleKey: string;
+  /** The challenge shown after the first login step. */
+  component: ComponentType<SecondFactorUIProps>;
+  /** Enrolment, shown in Settings > Security. */
+  enrollment?: ComponentType<Record<string, unknown>>;
+}
+
+/** The subset of axios a plugin uses, rooted at /plugin-api/<id>/. */
+export interface PluginApiClient {
+  get<T = unknown>(url: string, config?: unknown): Promise<{ data: T }>;
+  delete<T = unknown>(url: string, config?: unknown): Promise<{ data: T }>;
+  post<T = unknown>(
+    url: string,
+    body?: unknown,
+    config?: unknown,
+  ): Promise<{ data: T }>;
+  put<T = unknown>(
+    url: string,
+    body?: unknown,
+    config?: unknown,
+  ): Promise<{ data: T }>;
+  patch<T = unknown>(
+    url: string,
+    body?: unknown,
+    config?: unknown,
+  ): Promise<{ data: T }>;
+}
+
+export interface PluginWsTarget {
+  url: string;
+  protocols?: string[];
+}
+
+/** Where the frontend runs, for a plugin that behaves differently in the desktop app. */
+export interface DesktopApi {
+  /** True inside the Termix desktop app. */
+  readonly available: boolean;
+  /**
+   * The remote server the desktop app is connected to for sync, or null
+   * outside the desktop app and while it runs standalone.
+   */
+  remoteServerUrl: () => Promise<string | null>;
+  /** Called when the desktop app connects to or leaves a remote server. */
+  onRemoteServerChange: (listener: () => void) => Disposer;
+}
+
+export interface TermixAppInfo {
+  readonly pluginId: string;
+  readonly manifest: PluginManifest;
+}
+
+/**
+ * Registration surface for a plugin frontend. Every `register*` returns a
+ * disposer, and anything not disposed by hand is disposed when the plugin is
+ * disabled.
+ */
+export interface TermixApp extends TermixAppInfo {
+  /**
+   * True on anonymous guest pages (a shared-session link). Only plugins with
+   * contributes.guest run there, and they should register just what a guest
+   * sees: there is no user, so API calls needing a login will fail.
+   */
+  readonly guest: boolean;
+  registerRailItem: (item: RailItemContribution) => Disposer;
+  registerPanel: (
+    id: string,
+    component: ComponentType<PanelProps>,
+    options?: PanelOptions,
+  ) => Disposer;
+  registerTab: (
+    type: string,
+    component: ComponentType<TabProps>,
+    options?: TabOptions,
+  ) => Disposer;
+  registerHostEditorSection: (
+    section: HostEditorSectionContribution,
+  ) => Disposer;
+  registerHostAction: (action: HostActionContribution) => Disposer;
+  registerHostProtocol: (protocol: HostProtocolContribution) => Disposer;
+  registerHostBadge: (badge: HostBadgeContribution) => Disposer;
+  registerHostContextMenuItem: (
+    item: HostContextMenuItemContribution,
+  ) => Disposer;
+  registerPaletteEntry: (entry: PaletteEntryContribution) => Disposer;
+  registerPaletteGroup: (group: PaletteGroupContribution) => Disposer;
+  registerKeybindingAction: (action: KeybindingActionContribution) => Disposer;
+  registerKeybindingDefault: (
+    binding: KeybindingDefaultContribution,
+  ) => Disposer;
+  registerDashboardCard: (card: DashboardCardContribution) => Disposer;
+  registerExtension: (
+    pointId: string,
+    extension: ExtensionContribution,
+  ) => Disposer;
+  /**
+   * Every host the user can see, fetched now. Like every host record a plugin
+   * gets, `pluginSettings` holds only this plugin's own settings.
+   */
+  listHosts: () => Promise<PluginHostRecord[]>;
+  /** A saved host from the shell's list, or undefined. No request is made. */
+  getHost: (hostId: string | number) => PluginHostRecord | undefined;
+  registerSettingsComponent: (
+    componentId: string,
+    component: ComponentType<SettingsComponentProps>,
+  ) => Disposer;
+  registerAction: (
+    id: string,
+    handler: ActionHandler,
+    options?: { permission?: string },
+  ) => Disposer;
+  declareActionSlot: (slot: ActionSlotDefinition) => Disposer;
+  registerSlotContribution: (
+    slotId: string,
+    contribution: SlotContribution,
+  ) => Disposer;
+  invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
+  /**
+   * Offers a component to other plugins and to core by id, rendered where
+   * they choose with `PluginComponent` from @termix/plugin-sdk/ui or
+   * `usePluginComponent`. The id should start with a name the plugin owns
+   * ("terminal.view"). The props are the owner's contract; document them.
+   */
+  registerComponent: (
+    id: string,
+    component: ComponentType<Record<string, unknown>>,
+  ) => Disposer;
+  registerSshAuthEditor: (editor: SshAuthEditorContribution) => Disposer;
+  registerLoginMethod: (method: LoginMethodContribution) => Disposer;
+  registerSecondFactorUI: (factor: SecondFactorContribution) => Disposer;
+
+  /**
+   * Translates a key from the plugin's own locales, for code outside a
+   * component (a toast from activate). Components use useTranslation().
+   */
+  t: TranslateFn;
+  /**
+   * Whether the current user holds a permission, for code outside a
+   * component. A short name resolves to <id>.<name>, as usePermission does.
+   * Resolves false before sign-in and when the lookup fails.
+   */
+  hasPermission: (permission: string) => Promise<boolean>;
+
+  /** HTTP client for this plugin's /plugin-api/<id>/ routes. */
+  api: PluginApiClient;
+  /**
+   * The same client for a resolved connection origin: "remote" reaches the
+   * desktop app's connected remote server, anything else is `api`.
+   */
+  apiFor: (origin?: unknown) => PluginApiClient;
+  /**
+   * A raw fetch on /plugin-api/<id>/<path> with core's auth, for a response
+   * read as a stream (server-sent events), which `api` cannot do.
+   */
+  fetch: (path: string, init?: RequestInit) => Promise<Response>;
+  /** WebSocket URL and auth subprotocols for /plugin-ws/<id>/<path>. */
+  wsUrl: (
+    path: string,
+    options?: { origin?: unknown },
+  ) => Promise<PluginWsTarget | null>;
+  tabs: TabsApi;
+  /** The desktop app, when the frontend runs in it. */
+  desktop: DesktopApi;
+  /**
+   * Fires after this plugin's settings are saved from the settings screen or
+   * the host editor. Disposed automatically.
+   */
+  onSettingsChanged: (
+    listener: (change: {
+      scope: "admin" | "user" | "host";
+      hostId?: number;
+    }) => void,
+  ) => Disposer;
+  /** Registered cleanup, run when the plugin is disabled. */
+  onDispose: (dispose: Disposer) => void;
+}
+
+export type FrontendActivate = (app: TermixApp) => void | Promise<void>;
+
+export interface FrontendModule {
+  activate: FrontendActivate;
+  deactivate?: () => void | Promise<void>;
+}
+
+export function definePluginFrontend(plugin: FrontendModule): FrontendModule {
+  return plugin;
+}
+
+// ---------------------------------------------------------------------------
+// Hooks
+// ---------------------------------------------------------------------------
+
+export type TranslateFn = (
+  key: string,
+  options?: Record<string, unknown> | string,
+) => string;
+
+export interface CurrentUser {
+  userId: string;
+  username: string;
+  isAdmin: boolean;
+}
+
+export interface ToastApi {
+  success: (message: string) => void;
+  error: (message: string) => void;
+  info: (message: string) => void;
+  warning: (message: string) => void;
+}
+
+export type SettingsScope = "admin" | "user" | "host";
+
+export interface SettingsState {
+  values: Record<string, unknown>;
+  loaded: boolean;
+  save: (values: Record<string, unknown>) => Promise<void>;
+}
+
+/** An SSH auth type the server can connect with. */
+export interface SshAuthTypeInfo {
+  type: string;
+  /** Core translation key, or the plugin editor's title. */
+  labelKey: string;
+  pluginId: string;
+  /** Also offered as a stored credential type. */
+  credentialType: boolean;
+  /** Can connect unattended, for polling. */
+  supportsBackground: boolean;
+  /** Offered in Quick Connect, for a host that is never saved. */
+  quickConnect: boolean;
+}
+
+/**
+ * What core implements behind the hooks. Internal: a plugin never calls this.
+ */
+export interface PluginHostBridge {
+  usePluginId: () => string;
+  useTranslation: (pluginId: string) => {
+    t: TranslateFn;
+    language: string;
+  };
+  usePermission: (pluginId: string, permission: string) => boolean;
+  useSettings: (
+    pluginId: string,
+    scope: SettingsScope,
+    hostId?: number | string,
+  ) => SettingsState;
+  useHost: (hostId: string | number | undefined) => PluginHostRecord | null;
+  useHosts: () => { hosts: PluginHostRecord[]; loaded: boolean };
+  useCurrentUser: () => CurrentUser | null;
+  useTheme: () => { theme: "light" | "dark" };
+  toast: ToastApi;
+  getApi: (pluginId: string) => PluginApiClient;
+  getApiFor: (pluginId: string, origin: unknown) => PluginApiClient;
+  useTabs: () => TabsApi;
+  invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
+  useSshAuthTypes: () => { types: SshAuthTypeInfo[]; loaded: boolean };
+  useSlotContributions: (
+    slotId: string,
+    context?: Record<string, unknown>,
+  ) => SlotContribution[];
+  usePluginComponent: (
+    id: string,
+  ) => ComponentType<Record<string, unknown>> | undefined;
+  hostProtocols: (host: PluginHostRecord) => string[];
+  useHostStatus: (hostId: number | undefined) => HostStatusInfo | null;
+  useHostActions: () => HostActionContribution[];
+  useActivityTypes: () => string[];
+  activityTarget: (type: string) => ActivityTargetInfo | undefined;
+  useExtensions: (pointId: string) => ExtensionContribution[];
+  getExtension: (
+    pointId: string,
+    id: string,
+  ) => ExtensionContribution | undefined;
+  core: PluginCoreApi;
+  usePluginUiPreferences: (pluginId: string) => {
+    values: Record<string, unknown>;
+    set: (key: string, value: unknown) => void;
+  };
+}
+
+/** A key combination a user bound in Appearance > Keybindings. */
+export interface KeyCombo {
+  key: string;
+  isCode: boolean;
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+}
+
+/**
+ * The shell's own actions (nextTab, previousTab, openCommandPalette,
+ * reconnectSession) or one a plugin declared in contributes.keybindingActions.
+ */
+export type KeybindingActionType = string;
+
+/** A bound action: its type plus the parameters its declaration lists. */
+export interface KeybindingAction {
+  type: KeybindingActionType;
+  [param: string]: unknown;
+}
+
+export interface CustomKeybinding {
+  id: string;
+  combo: KeyCombo;
+  action: KeybindingAction;
+  enabled: boolean;
+  overridesDefaultId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Core calls a plugin frontend makes for the signed-in user. */
+export interface PluginCoreApi {
+  /** Adds a recent-activity entry. `type` is one of the plugin's activityTypes. */
+  logActivity: (
+    type: string,
+    hostId: number,
+    hostName: string,
+  ) => Promise<void>;
+  /** A host's stored password or sudo password, for autofill. Null when unset. */
+  getHostPassword: (
+    hostId: number,
+    field: "password" | "sudoPassword",
+  ) => Promise<string | null>;
+  /** Updates the saved open-tab record a page reload reattaches from. */
+  patchOpenTab: (
+    instanceId: string,
+    updates: {
+      hostId?: number;
+      label?: string;
+      tabOrder?: number;
+      backendSessionId?: string | null;
+    },
+  ) => Promise<void>;
+  /** The user's custom keybindings, enabled or not. */
+  getCustomKeybindings: () => Promise<CustomKeybinding[]>;
+  /**
+   * Runs a bound action through whoever registered it (a plugin's
+   * registerKeybindingAction, or the shell for its own). False when nothing
+   * running handles that type.
+   */
+  runKeybindingAction: (
+    action: KeybindingAction,
+    context?: KeybindingRunContext,
+  ) => boolean;
+  /** A browser-side UI preference (a cookie, or the desktop app's store). */
+  getClientPreference: (name: string) => string | undefined;
+  /** Saves a browser-side UI preference where getClientPreference reads it. */
+  setClientPreference: (name: string, value: string) => void;
+  /**
+   * Every host the user can see, fetched now rather than from the shell's
+   * cache, carrying only `pluginId`'s host settings.
+   */
+  listHosts: (pluginId: string) => Promise<PluginHostRecord[]>;
+  /** The user's stored credentials, without their secrets. */
+  listCredentials: () => Promise<PluginCredentialSummary[]>;
+  /** Tells the shell hosts were added or changed, so lists reload. */
+  notifyHostsChanged: () => void;
+  /** How the user wants host status shown: the brand accent, or green/red. */
+  getHostStatusColorScheme: () => "accent" | "status";
+  /**
+   * The token the desktop app's embedded backend accepts, for work the
+   * desktop main process does on the renderer's behalf. Null in a browser.
+   */
+  getLocalAuthToken: () => string | null;
+}
+
+/** A stored credential as a picker needs it. Secrets never leave core. */
+export interface PluginCredentialSummary {
+  id: number;
+  name: string;
+  username?: string;
+  authType?: string;
+}
+
+/** What a recent-activity entry opens and how it is labelled. */
+export interface ActivityTargetInfo {
+  icon?: IconComponent;
+  /** Tab type the entry reopens. */
+  tab: string;
+  titleKey?: string;
+}
+
+/**
+ * Core's status for a host, the one behind the host list's dot. online: a
+ * login worked. reachable: the port answers. unknown: not checked yet.
+ */
+export interface HostStatusInfo {
+  status: "online" | "reachable" | "offline" | "unknown";
+  reason?: "host_key_changed";
+}
+
+let host: PluginHostBridge | null = null;
+
+/**
+ * Called once by core, before any plugin loads. Not part of the plugin API:
+ * once set it cannot be swapped, so a plugin cannot replace the bridge every
+ * other plugin talks through.
+ */
+export function __setPluginHost(bridge: PluginHostBridge | null): void {
+  if (host && bridge !== host) {
+    throw new Error(
+      "@termix/plugin-sdk/frontend: the plugin host is already set",
+    );
+  }
+  host = bridge;
+}
+
+/**
+ * Set by the shared test setup, so a plugin component rendered on its own in a
+ * unit test still has hooks. A global rather than an import, because the test
+ * setup and the component can load different copies of this module.
+ */
+const TEST_HOST_KEY = "__termixTestPluginHost";
+
+function requireHost(): PluginHostBridge {
+  const fallback = (globalThis as Record<string, unknown>)[TEST_HOST_KEY] as
+    PluginHostBridge | undefined;
+  if (!host && fallback) return fallback;
+  if (!host) {
+    throw new Error(
+      "@termix/plugin-sdk/frontend: no plugin host. Hooks only work inside Termix or renderWithApp().",
+    );
+  }
+  return host;
+}
+
+/** The id of the plugin that registered the component being rendered. */
+export function usePluginId(): string {
+  return requireHost().usePluginId();
+}
+
+/**
+ * Translation bound to this plugin's namespace. Keys the plugin does not
+ * define fall back to core's shared strings (common.*, hosts.*).
+ */
+export function useTranslation(): { t: TranslateFn; language: string } {
+  const bridge = requireHost();
+  return bridge.useTranslation(bridge.usePluginId());
+}
+
+/**
+ * Whether the current user holds a permission. A short name resolves to this
+ * plugin's own namespace, a dotted id is taken as given. UI only: the backend
+ * route checks again.
+ */
+export function usePermission(permission: string): boolean {
+  const bridge = requireHost();
+  return bridge.usePermission(bridge.usePluginId(), permission);
+}
+
+export function useSettings(
+  scope: SettingsScope,
+  hostId?: number | string,
+): SettingsState {
+  const bridge = requireHost();
+  return bridge.useSettings(bridge.usePluginId(), scope, hostId);
+}
+
+export function useHost(
+  hostId: string | number | undefined,
+): PluginHostRecord | null {
+  return requireHost().useHost(hostId);
+}
+
+export function useHosts(): { hosts: PluginHostRecord[]; loaded: boolean } {
+  return requireHost().useHosts();
+}
+
+/**
+ * Core's status for one host, kept current by the shell's own polling. Null
+ * outside the app shell (a standalone window) and for hosts with status
+ * checks off.
+ */
+export function useHostStatus(
+  hostId: number | undefined,
+): HostStatusInfo | null {
+  return requireHost().useHostStatus(hostId);
+}
+
+export function useCurrentUser(): CurrentUser | null {
+  return requireHost().useCurrentUser();
+}
+
+export function useTheme(): { theme: "light" | "dark" } {
+  return requireHost().useTheme();
+}
+
+export function useToast(): ToastApi {
+  return requireHost().toast;
+}
+
+export function logActivity(
+  type: string,
+  hostId: number,
+  hostName: string,
+): Promise<void> {
+  return requireHost().core.logActivity(type, hostId, hostName);
+}
+
+/** Tells the shell hosts were added or changed, so its lists reload. */
+export function notifyHostsChanged(): void {
+  requireHost().core.notifyHostsChanged();
+}
+
+/** How the user wants host status shown: the brand accent, or green/red. */
+export function getHostStatusColorScheme(): "accent" | "status" {
+  return requireHost().core.getHostStatusColorScheme();
+}
+
+/** The desktop app's local backend token, or null in a browser. */
+export function getLocalAuthToken(): string | null {
+  return requireHost().core.getLocalAuthToken();
+}
+
+export function getHostPassword(
+  hostId: number,
+  field: "password" | "sudoPassword",
+): Promise<string | null> {
+  return requireHost().core.getHostPassword(hostId, field);
+}
+
+export function patchOpenTab(
+  instanceId: string,
+  updates: Parameters<PluginCoreApi["patchOpenTab"]>[1],
+): Promise<void> {
+  return requireHost().core.patchOpenTab(instanceId, updates);
+}
+
+export function getCustomKeybindings(): Promise<CustomKeybinding[]> {
+  return requireHost().core.getCustomKeybindings();
+}
+
+export function runKeybindingAction(
+  action: KeybindingAction,
+  context?: KeybindingRunContext,
+): boolean {
+  return requireHost().core.runKeybindingAction(action, context);
+}
+
+export function getClientPreference(name: string): string | undefined {
+  return requireHost().core.getClientPreference(name);
+}
+
+export function setClientPreference(name: string, value: string): void {
+  requireHost().core.setClientPreference(name, value);
+}
+
+export function listCredentials(): Promise<PluginCredentialSummary[]> {
+  return requireHost().core.listCredentials();
+}
+
+export function usePluginApi(): PluginApiClient {
+  const bridge = requireHost();
+  return bridge.getApi(bridge.usePluginId());
+}
+
+/**
+ * This plugin's client for a resolved connection origin: "remote" reaches the
+ * desktop app's connected remote server, anything else is usePluginApi's.
+ */
+export function usePluginApiFor(origin: unknown): PluginApiClient {
+  const bridge = requireHost();
+  return bridge.getApiFor(bridge.usePluginId(), origin);
+}
+
+/**
+ * This plugin's Appearance area: the preset it declared in
+ * contributes.uiPresets for the user's level, with the user's changes on top.
+ * `set` saves one change; null clears it back to the preset.
+ */
+export function usePluginUiPreferences<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(): {
+  values: T;
+  set: <K extends keyof T & string>(key: K, value: T[K] | null) => void;
+} {
+  const bridge = requireHost();
+  return bridge.usePluginUiPreferences(bridge.usePluginId()) as never;
+}
+
+export function useTabs(): TabsApi {
+  return requireHost().useTabs();
+}
+
+/**
+ * The SSH auth types this server can connect with, core's and every enabled
+ * plugin's, for pickers such as a default auth type.
+ */
+export function useSshAuthTypes(): {
+  types: SshAuthTypeInfo[];
+  loaded: boolean;
+} {
+  return requireHost().useSshAuthTypes();
+}
+
+/**
+ * The visible contributions to a slot another plugin owns, with their
+ * metadata (id, titleKey, component). For an owner that needs to build a
+ * catalog from what was contributed rather than just render it in place, e.g.
+ * host-metrics listing manager cards plugins added to "host-metrics.managers"
+ * next to its own. Same permission and `when` filtering as ComponentSlot;
+ * `context` is what each contribution's `when` sees.
+ */
+/**
+ * The connection protocols a host has switched on: "ssh" plus every protocol
+ * a running plugin registered with registerHostProtocol. Lets a
+ * plugin offer a protocol without knowing which plugin owns its settings.
+ */
+export function hostProtocols(record: PluginHostRecord): string[] {
+  return requireHost().hostProtocols(record);
+}
+
+export function useSlotContributions(
+  slotId: string,
+  context?: Record<string, unknown>,
+): SlotContribution[] {
+  return requireHost().useSlotContributions(slotId, context);
+}
+
+/**
+ * Every host action any running plugin (and core) registered with
+ * registerHostAction, for a plugin that offers a picker over "what can I do
+ * with this host" without knowing which plugin provides each one - a quick
+ * connect widget, say. Reactive: it re-renders as plugins enable and disable.
+ */
+export function useHostActions(): HostActionContribution[] {
+  return requireHost().useHostActions();
+}
+
+/**
+ * Recent-activity types every registered tab claims (registerTab's
+ * activityTypes), core's and plugins'. For a filter that lists what a user
+ * can pick, without knowing which plugin owns each activity type.
+ */
+export function useActivityTypes(): string[] {
+  return requireHost().useActivityTypes();
+}
+
+/**
+ * What a recent-activity entry of this type opens and how it is labelled -
+ * the tab type claiming it through registerTab's activityTypes, core's or a
+ * plugin's. undefined for a type nothing claims (its plugin is gone).
+ */
+export function activityTarget(type: string): ActivityTargetInfo | undefined {
+  return requireHost().activityTarget(type);
+}
+
+/**
+ * Every item any running plugin added to `pointId` with registerExtension.
+ * Reactive: it re-renders as plugins enable and disable.
+ */
+export function useExtensions<T extends ExtensionContribution>(
+  pointId: string,
+): T[] {
+  return requireHost().useExtensions(pointId) as T[];
+}
+
+/** A single item added to `pointId`, by id, or undefined if none. */
+export function getExtension<T extends ExtensionContribution>(
+  pointId: string,
+  id: string,
+): T | undefined {
+  return requireHost().getExtension(pointId, id) as T | undefined;
+}
+
+/**
+ * The component another plugin registered under `id` with
+ * app.registerComponent, or undefined while that plugin is off.
+ */
+export function usePluginComponent(
+  id: string,
+): ComponentType<Record<string, unknown>> | undefined {
+  return requireHost().usePluginComponent(id);
+}
+
+/**
+ * Runs an action another plugin registered, from anywhere in a plugin's code.
+ * Resolves undefined when nobody registered it, so an optional dependency
+ * that is switched off reads as "nothing there".
+ */
+export function invokeAction(id: string, ...args: unknown[]): Promise<unknown> {
+  return requireHost().invokeAction(id, ...args);
+}
+
+// ---------------------------------------------------------------------------
+// Connection retry
+// ---------------------------------------------------------------------------
+
+export type ConnectionRetryStatus =
+  "connecting" | "connected" | "error" | "disconnected";
+
+export interface UseConnectionRetryOptions {
+  connect: () => void | Promise<void>;
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  enabled?: boolean;
+  autoStart?: boolean;
+}
+
+export interface UseConnectionRetryResult {
+  status: ConnectionRetryStatus;
+  attempt: number;
+  maxAttempts: number;
+  nextRetryInMs: number | null;
+  markConnected: () => void;
+  markFailed: () => void;
+  retryNow: () => void;
+  reset: () => void;
+}
+
+const COUNTDOWN_TICK_MS = 250;
+const RETRY_JITTER_RATIO = 0.1;
+
+export function computeReconnectDelay(
+  attempt: number,
+  baseDelayMs: number,
+  maxDelayMs: number,
+  random = Math.random,
+): number {
+  const base = Math.min(
+    baseDelayMs * Math.pow(2, Math.max(0, attempt - 1)),
+    maxDelayMs,
+  );
+  const jitter = base * RETRY_JITTER_RATIO * (random() * 2 - 1);
+  return Math.max(baseDelayMs, Math.min(maxDelayMs, Math.round(base + jitter)));
+}
+
+/**
+ * Exponential-backoff reconnect with jitter, for a plugin's own connect flow
+ * (docker's console, host-metrics polling, remote desktop tokens, the file
+ * manager). Promoted here once a fourth plugin needed its own copy of the
+ * same hook.
+ */
+export function useConnectionRetry({
+  connect,
+  maxAttempts = 8,
+  baseDelayMs = 2000,
+  maxDelayMs = 8000,
+  enabled = true,
+  autoStart = true,
+}: UseConnectionRetryOptions): UseConnectionRetryResult {
+  const [status, setStatus] = useState<ConnectionRetryStatus>("connecting");
+  const [attempt, setAttempt] = useState(0);
+  const [nextRetryInMs, setNextRetryInMs] = useState<number | null>(null);
+
+  const connectRef = useRef(connect);
+  connectRef.current = connect;
+
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+
+  const attemptRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+  const isMountedRef = useRef(true);
+  const markFailedRef = useRef<() => void>(() => {});
+
+  const clearTimers = useCallback(() => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  }, []);
+
+  const runConnect = useCallback(() => {
+    if (!isMountedRef.current) return;
+    setStatus("connecting");
+    try {
+      void Promise.resolve(connectRef.current()).catch(() => {
+        markFailedRef.current();
+      });
+    } catch {
+      markFailedRef.current();
+    }
+  }, []);
+
+  const scheduleRetry = useCallback(() => {
+    if (attemptRef.current >= maxAttempts) {
+      setStatus("disconnected");
+      setNextRetryInMs(null);
+      return;
+    }
+
+    attemptRef.current += 1;
+    setAttempt(attemptRef.current);
+
+    const delay = computeReconnectDelay(
+      attemptRef.current,
+      baseDelayMs,
+      maxDelayMs,
+    );
+
+    let remaining = delay;
+    setNextRetryInMs(remaining);
+    countdownIntervalRef.current = setInterval(() => {
+      remaining = Math.max(0, remaining - COUNTDOWN_TICK_MS);
+      setNextRetryInMs(remaining);
+    }, COUNTDOWN_TICK_MS);
+
+    retryTimeoutRef.current = setTimeout(() => {
+      clearTimers();
+      if (!isMountedRef.current || !enabledRef.current) return;
+      runConnect();
+    }, delay);
+  }, [baseDelayMs, maxDelayMs, maxAttempts, clearTimers, runConnect]);
+
+  const markConnected = useCallback(() => {
+    clearTimers();
+    attemptRef.current = 0;
+    setAttempt(0);
+    setNextRetryInMs(null);
+    if (isMountedRef.current) setStatus("connected");
+  }, [clearTimers]);
+
+  const markFailed = useCallback(() => {
+    clearTimers();
+    if (!isMountedRef.current) return;
+    setStatus("error");
+    if (enabledRef.current) {
+      scheduleRetry();
+    } else {
+      setNextRetryInMs(null);
+    }
+  }, [clearTimers, scheduleRetry]);
+  markFailedRef.current = markFailed;
+
+  const retryNow = useCallback(() => {
+    clearTimers();
+    attemptRef.current = 0;
+    setAttempt(0);
+    setNextRetryInMs(null);
+    runConnect();
+  }, [clearTimers, runConnect]);
+
+  const reset = useCallback(() => {
+    clearTimers();
+    attemptRef.current = 0;
+    setAttempt(0);
+    setNextRetryInMs(null);
+    if (isMountedRef.current) setStatus("connecting");
+  }, [clearTimers]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    if (autoStart) {
+      runConnect();
+    }
+    return () => {
+      isMountedRef.current = false;
+      clearTimers();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (enabled && status === "error" && !retryTimeoutRef.current) {
+      scheduleRetry();
+    }
+    if (!enabled) {
+      clearTimers();
+      setNextRetryInMs(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+
+  return {
+    status,
+    attempt,
+    maxAttempts,
+    nextRetryInMs,
+    markConnected,
+    markFailed,
+    retryNow,
+    reset,
+  };
+}
+
+export type { PluginManifest } from "./manifest.js";
+export type { ReactNode };
+
+// The desktop bridge types, and the window.electronAPI global they declare.
+export type * from "./desktop.js";

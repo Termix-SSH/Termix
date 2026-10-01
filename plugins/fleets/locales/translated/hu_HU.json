@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Flották megtekintése",
+      "description": "Tekintse meg a flottákat, azok tagjait és a készletet."
+    },
+    "manage": {
+      "title": "Flották kezelése",
+      "description": "Flották létrehozása, szerkesztése és törlése, tagság módosítása, valamint flották megosztása más felhasználókkal vagy szerepkörökkel."
+    },
+    "execute": {
+      "title": "Flotta műveletek futtatása",
+      "description": "Parancsok és csomagműveletek futtatása egy flottán belül, fájlok átvitele a taggépekre és a taggépekről."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "Flották",
+        "createFleet": "Flotta létrehozása",
+        "createFleetTitle": "Flotta létrehozása",
+        "editFleetTitle": "Flotta szerkesztése",
+        "createFleetDescription": "A flotta egy elnevezett hosztcsoport, amely ellen egységként műveleteket lehet végrehajtani.",
+        "nameLabel": "Név",
+        "namePlaceholder": "pl. webszerverek",
+        "nameRequired": "A flotta nevének megadása kötelező",
+        "descriptionLabel": "Leírás",
+        "descriptionPlaceholder": "Opcionális leírás",
+        "colorLabel": "Szín",
+        "tagRulesLabel": "Címkeszabályok",
+        "tagRulesPlaceholder": "prod-web, él",
+        "tagRulesHint": "Az ezen címkék bármelyikével rendelkező hosztok automatikusan bele lesznek foglalva, a manuálisan hozzáadott hosztok mellett.",
+        "fleetCreated": "Flotta létrehozva",
+        "fleetUpdated": "Flotta frissítve",
+        "fleetDeleted": "Flotta törölve",
+        "saveFailed": "Nem sikerült menteni a flottát",
+        "deleteFailed": "Nem sikerült törölni a flottát",
+        "loadFailed": "Nem sikerült betölteni a flottákat",
+        "deleteFleetTitle": "Flotta törlése",
+        "deleteFleetDescription": "Biztosan törölni szeretnéd a(z) \"{{name}}\" fájlt? Ez nem törli a taghosztokat.",
+        "searchFleets": "Flották keresése...",
+        "noFleets": "Még nincsenek flották. Hozz létre egyet a kezdéshez.",
+        "memberCount": "{{count}} gazdagép",
+        "memberCount_other": "{{count}} gazdagépek",
+        "manageMembers": "Tagok kezelése",
+        "manageMembersTitle": "Flottatagok kezelése",
+        "manageMembersDescription": "Hosztok be- és kikapcsolása a flotta statikus tagságába. A címkeszabályoknak megfelelő hosztok mindig szerepelnek.",
+        "searchHosts": "Gazdagépek keresése...",
+        "noHostsFound": "Nem találhatók hostok",
+        "noMembers": "Ennek a flottának még nincsenek tagjai. Adjon hozzá hosztokat, vagy állítson be címkézési szabályt.",
+        "membersLoadFailed": "Nem sikerült betölteni a flotta tagjait",
+        "memberUpdateFailed": "Nem sikerült frissíteni a flottatagságot",
+        "tabRun": "Parancs futtatása",
+        "tabTransfer": "Fájlok átvitele",
+        "tabInventory": "Leltár",
+        "openInventoryTab": "Megnyitás teljes lapon",
+        "tabPackages": "Csomagok",
+        "runOnFleet": "Fleet Run",
+        "commandPlaceholder": "üzemidő && df -h",
+        "commandRequired": "Parancsra van szükség",
+        "commandInputsLabel": "Parancsbemenetek",
+        "commandSucceeded": "A parancs minden gépen sikeresen lefutott",
+        "commandPartialFailure": "{{failed}} / {{total}} gazdagépből {{total}} hibát jelzett",
+        "commandFailed": "Nem sikerült futtatni a parancsot",
+        "resultSuccess": "Siker",
+        "resultFailed": "Sikertelen",
+        "push": "Nyomás",
+        "pull": "Húzni",
+        "remotePathLabel": "Távoli útvonal",
+        "remotePathRequired": "Távoli elérési út szükséges",
+        "fileLabel": "Fájl",
+        "fileRequired": "Fájl megadása szükséges",
+        "pushHint": "A kiválasztott fájl pontosan erre az elérési útra kerül a flotta minden egyes gépén.",
+        "pullHint": "Az ezen az elérési úton található fájlt minden hosztról beolvassa a rendszer, és egyetlen zip fájlként tölti le, hosztonként egy mappában.",
+        "transferComplete": "Átvitel befejezve",
+        "transferFailed": "Átvitel sikertelen",
+        "refreshInventory": "Készlet frissítése",
+        "inventoryLoadFailed": "Nem sikerült betölteni a készletet",
+        "inventoryRefreshed": "Készlet frissítve",
+        "inventoryRefreshFailed": "Nem sikerült frissíteni a készletet",
+        "inventoryNoData": "Még nincsenek készletadatok – frissítse az oldalt az összegyűjtéséhez.",
+        "inventoryHost": "Házigazda",
+        "inventoryCollectedCount": "{{count}}/{{total}} begyűjtött",
+        "inventoryOs": "operációs rendszer",
+        "inventoryKernel": "Kernel",
+        "inventoryArch": "Boltív",
+        "inventoryUptime": "Üzemidő",
+        "inventoryPackageManager": "Csomagkezelő",
+        "inventoryCollectedAt": "Összegyűjtött",
+        "packageActionLabel": "Akció",
+        "packageInstall": "Telepítés",
+        "packageRemove": "Eltávolítás",
+        "packageUpgradeAll": "Az összes csomag frissítése",
+        "packageNameLabel": "Csomag neve",
+        "packageNameRequired": "Csomagnév megadása kötelező",
+        "packageHint": "Gazdagépenként felügyeleti szintű hozzáférést igényel, és a gazdagép tárolt sudo jelszavával emeli ki a jogosultságokat.",
+        "shareFleet": "Megosztási flotta",
+        "shareFleetTitle": "Megosztás \"{{name}}\"",
+        "shareFleetDescription": "Megosztja a flotta jelenlegi tag hosztjait a kiválasztott felhasználókkal vagy szerepkörökkel. A flottához később hozzáadott hosztok nem kerülnek automatikusan megosztásra – ossza meg újra, hogy belefoglalja őket.",
+        "shareSelectionRequired": "Válasszon ki legalább egy felhasználót vagy szerepkört",
+        "fleetSharedSuccessfully": "Megosztott {{shared}} a {{total}} hosztból ebben a flottában",
+        "failedToShareFleet": "Nem sikerült megosztani a flottát",
+        "noMembersToShare": "Ennek a flottának még nincsenek megosztható tag hosztjai."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "Flották"
+  },
+  "hosts": {
+    "docsLink": "Dokumentumok megtekintése",
+    "sharing": {
+      "customHoursPlaceholder": "Órák a hozzáférés lejártáig",
+      "expiry": {
+        "never": "Soha",
+        "oneHour": "1 óra",
+        "oneDay": "24 óra",
+        "sevenDays": "7 nap",
+        "thirtyDays": "30 nap",
+        "custom": "Szokás"
+      },
+      "expiryLabel": "Hozzáférés lejárata",
+      "levels": {
+        "connect": {
+          "label": "Csatlakozás",
+          "description": "Csak nyitott munkamenetek: terminál, távoli asztal, fájlkezelő, alagutak és Docker. Nincs hozzáférés a gazdagép konfigurációjához."
+        },
+        "view": {
+          "label": "Kilátás",
+          "description": "Csatlakozás, valamint a gazdagép konfigurációjának megtekintése. A titkos kódok soha nem jelennek meg."
+        },
+        "edit": {
+          "label": "Szerkesztés",
+          "description": "A nem hitelesítési hosztbeállítások megtekintése és módosítása. A tulajdonos SSH-hitelesítése privát és csak a tulajdonos számára elérhető marad."
+        },
+        "manage": {
+          "label": "Kezelés",
+          "description": "Szerkeszd, és oszd meg a gazdagépet másokkal, módosítsd a jogosultsági szinteket és vond vissza a hozzáférést."
+        }
+      },
+      "noMatches": "Nincs találat",
+      "permissionLevelLabel": "Jogosultsági szint",
+      "rolesTab": "Szerepkörök",
+      "searchPlaceholder": "Felhasználók vagy szerepkörök keresése...",
+      "shareButton": "Részesedés",
+      "shareWithCount": "Megosztás ({{count}})",
+      "usersTab": "Felhasználók"
+    }
+  }
+}

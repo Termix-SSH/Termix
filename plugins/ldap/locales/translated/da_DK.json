@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Log ind med LDAP",
+  "loginWithProvider": "Log ind med {{name}}",
+  "loading": "Indlæser...",
+  "requiredField": "Dette felt er påkrævet",
+  "username": "LDAP-brugernavn",
+  "password": "LDAP-adgangskode",
+  "signIn": "Log ind",
+  "permissions": {
+    "manage": {
+      "title": "Administrer LDAP-mapper",
+      "description": "Tilføj, rediger og fjern de LDAP-mapper, som folk kan logge ind med."
+    }
+  },
+  "providers": {
+    "docsLink": "Se dokumenter",
+    "none": "Ingen LDAP-mapper konfigureret.",
+    "add": "Tilføj mappe",
+    "edit": "Rediger mappe",
+    "delete": "Slet mappe",
+    "deleteConfirm": "Vil du slette denne mappe? Brugere, der logger ind med den, vil ikke kunne logge ind.",
+    "name": "Vist navn",
+    "namePlaceholder": "Firmaregister",
+    "nameRequired": "Et visningsnavn er påkrævet",
+    "enabled": "Aktiveret",
+    "save": "Gem mappe",
+    "saving": "Gemmer...",
+    "saved": "Gemt",
+    "saveFailed": "Kunne ikke gemme",
+    "deleted": "Slettet",
+    "deleteFailed": "Kunne ikke slette",
+    "loadFailed": "Kunne ikke indlæse LDAP-mapper",
+    "cancel": "Ophæve"
+  },
+  "fields": {
+    "host": "LDAP-vært",
+    "port": "Havn",
+    "useTls": "Brug TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind adgangskode",
+    "secretKeep": "En adgangskode er gemt. Lad dette felt være tomt for at beholde den.",
+    "userSearchBase": "Brugersøgningsbase",
+    "userSearchFilter": "Brugersøgningsfilter",
+    "usernameAttr": "Brugernavnsattribut",
+    "displayNameAttr": "Visningsnavnattribut",
+    "groupSearchBase": "Gruppesøgningsbase",
+    "adminGroup": "Admingruppe",
+    "allowedUsers": "Tilladte brugere"
+  }
+}

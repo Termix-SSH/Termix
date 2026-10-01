@@ -98,7 +98,6 @@ describe("applyHostEnrollmentDefaults", () => {
       ip: "server.example",
       port: 22,
       authType: "none",
-      enableTerminal: true,
       enableSsh: true,
     });
   });
@@ -109,12 +108,12 @@ describe("applyHostEnrollmentDefaults", () => {
         ip: "server.example",
         port: 2222,
         authType: "password",
-        enableTerminal: false,
+        enableSsh: false,
       }),
     ).toMatchObject({
       port: 2222,
       authType: "password",
-      enableTerminal: false,
+      enableSsh: false,
     });
   });
 });

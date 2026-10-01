@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "tables": {
+    "channels": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "type": {
+          "type": "varchar",
+          "length": 32,
+          "notNull": true
+        },
+        "config": {
+          "type": "encryptedText"
+        },
+        "enabled": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_alerts_channels_user",
+          "columns": ["userId"]
+        }
+      ]
+    },
+    "items": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "source": {
+          "type": "varchar",
+          "length": 64,
+          "notNull": true
+        },
+        "category": {
+          "type": "varchar",
+          "length": 128,
+          "notNull": true
+        },
+        "severity": {
+          "type": "varchar",
+          "length": 16,
+          "notNull": true
+        },
+        "title": {
+          "type": "text",
+          "notNull": true
+        },
+        "body": {
+          "type": "text"
+        },
+        "link": {
+          "type": "text"
+        },
+        "context": {
+          "type": "text"
+        },
+        "dedupeKey": {
+          "type": "varchar",
+          "length": 255
+        },
+        "deliveries": {
+          "type": "text"
+        },
+        "readAt": {
+          "type": "timestamp"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_alerts_items_user",
+          "columns": ["userId", "createdAt"]
+        },
+        {
+          "name": "idx_alerts_items_unread",
+          "columns": ["userId", "readAt"]
+        },
+        {
+          "name": "idx_alerts_items_dedupe",
+          "columns": ["userId", "dedupeKey"]
+        }
+      ]
+    },
+    "rules": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "pattern": {
+          "type": "varchar",
+          "length": 128,
+          "notNull": true,
+          "defaultValue": "*"
+        },
+        "minSeverity": {
+          "type": "varchar",
+          "length": 16,
+          "notNull": true,
+          "defaultValue": "warning"
+        },
+        "channelIds": {
+          "type": "text",
+          "notNull": true
+        },
+        "enabled": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_alerts_rules_user",
+          "columns": ["userId"]
+        }
+      ]
+    },
+    "dismissed": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "alertId": {
+          "type": "text",
+          "notNull": true
+        },
+        "dismissedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_dismissed_alerts_user_id",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "dismissed_alerts"
+    }
+  }
+}

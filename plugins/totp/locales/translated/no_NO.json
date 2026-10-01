@@ -1,0 +1,42 @@
+{
+  "title": "Authenticator App",
+  "factor": "Authenticator code",
+  "challenge": {
+    "enterCode": "Angi verifikasjonskode",
+    "verify": "Bekreft kode",
+    "backupCodeHint": "You can also enter one of your backup codes."
+  },
+  "enrollment": {
+    "title": "TOTP Authenticator",
+    "docs": "Docs",
+    "on": "2FA is enabled",
+    "off": "Add extra login security",
+    "enable": "Enable",
+    "disable": "Disable",
+    "addDevice": "Add device",
+    "addTitle": "Add authenticator device",
+    "addDescription": "Confirm with a code from your authenticator or a backup code to enroll another device with the same key.",
+    "addScanInstructions": "Scan this QR code with the additional authenticator. Existing authenticators will continue to work.",
+    "addSuccess": "Additional authenticator enrolled",
+    "addFailed": "Failed to add authenticator",
+    "codeRequired": "Enter a TOTP code or backup code",
+    "codePlaceholder": "TOTP code or backup code",
+    "setupTitle": "Setup TOTP",
+    "setupFailed": "Kunne ikke starte TOTP-oppsett",
+    "qrCode": "QR Code",
+    "secretCopied": "Secret copied to clipboard",
+    "instructions": "Scan the QR code or enter the secret in your authenticator app, then enter the 6-digit code",
+    "continueVerify": "Continue to Verify",
+    "verifyTitle": "Bekreft kode",
+    "verify": "Verifiser",
+    "enter6Digits": "Enter a 6-digit code",
+    "enabledSuccess": "Two-factor authentication enabled",
+    "invalidCode": "Invalid code, please try again",
+    "disableTitle": "Deaktiver 2FA",
+    "disabledSuccess": "Tofaktorautentisering er deaktivert",
+    "disableFailed": "Failed to disable 2FA",
+    "backupTitle": "Reservekoder",
+    "downloadBackup": "Download Backup Codes",
+    "done": "Done"
+  }
+}

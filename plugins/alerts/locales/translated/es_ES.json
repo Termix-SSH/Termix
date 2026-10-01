@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Alertas"
+  },
+  "permissions": {
+    "use": {
+      "title": "Usar alertas",
+      "description": "Recibe alertas en tu bandeja de entrada y envíalas a tus propios canales."
+    }
+  },
+  "onboarding": {
+    "feature": "Alertas",
+    "featureDesc": "Todas las alertas en una sola bandeja de entrada, enviadas a Discord, ntfy, correo electrónico o un webhook si lo deseas."
+  },
+  "settings": {
+    "group": {
+      "general": "General",
+      "email": "Correo electrónico"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Anuncios de Termix",
+        "description": "Muestra las novedades del equipo de Termix, como avisos de seguridad y actualizaciones, directamente en la bandeja de entrada de todos."
+      },
+      "retentionDays": {
+        "label": "Mantener alertas durante (días)",
+        "description": "Las alertas más antiguas se eliminan de todas las bandejas de entrada."
+      },
+      "smtpHost": {
+        "label": "servidor SMTP",
+        "description": "Necesario para los canales de correo electrónico. Déjelo en blanco para desactivar el correo electrónico.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "puerto SMTP",
+        "description": "Normalmente 587 con STARTTLS o 465 con TLS."
+      },
+      "smtpSecure": {
+        "label": "Utilice TLS desde el principio.",
+        "description": "Habilítelo para el puerto 465. Déjelo desactivado para el puerto 587, que se actualiza a TLS automáticamente."
+      },
+      "smtpUser": {
+        "label": "Nombre de usuario SMTP",
+        "description": "Déjelo en blanco si el servidor no requiere inicio de sesión."
+      },
+      "smtpPassword": {
+        "label": "Contraseña SMTP",
+        "description": "Almacenado cifrado."
+      },
+      "smtpFrom": {
+        "label": "Desde la dirección",
+        "description": "Las alertas del remitente provienen de.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "ventanas emergentes de alerta",
+        "description": "¿Qué alertas nuevas aparecen mientras usas Termix? Siempre llegan a la bandeja de entrada.",
+        "all": "Todas las alertas",
+        "warning": "Advertencias y críticas",
+        "critical": "Solo crítico",
+        "off": "Ninguna"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Bandeja de entrada",
+    "channels": "Canales",
+    "rules": "Normas de entrega"
+  },
+  "severity": {
+    "info": "Información",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "critical": "Crítico"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Abrir",
+    "view": "Ver",
+    "unread": "No leído",
+    "deliveryFailed_one": "El canal {{count}} falló",
+    "deliveryFailed_other": "{{count}} canales fallaron",
+    "markRead": "Marcar como leído",
+    "markUnread": "Marcar como no leído",
+    "markAllRead": "Marcar todo como leído",
+    "delete": "Eliminar",
+    "clearRead": "Eliminar alertas de lectura",
+    "cleared_one": "Alerta eliminada {{count}}",
+    "cleared_other": "Alertas {{count}} eliminadas",
+    "filterAll": "Revocar todo",
+    "filterUnread": "No leído",
+    "anySeverity": "Cualquier gravedad",
+    "anySource": "Cualquier fuente",
+    "openAll": "Abrir en una pestaña",
+    "empty": "Aún no hay alertas.",
+    "emptyUnread": "Ya estás al día.",
+    "loadMore": "Cargar más"
+  },
+  "channels": {
+    "intro": "Los canales son donde las alertas pueden enviarse fuera de Termix. Las reglas de entrega determinan qué alertas los utilizan.",
+    "add": "Agregar canal",
+    "edit": "Editar canal",
+    "test": "Enviar una prueba",
+    "testSent": "Alerta de prueba enviada",
+    "testFailed": "Prueba fallida: {{error}}",
+    "deleteConfirm": "¿Eliminar el canal \"{{name}}\"?",
+    "deleted": "Canal eliminado",
+    "empty": "Aún no hay canales.",
+    "enabled": "Activado",
+    "needsSave": "Este canal debe abrirse y guardarse de nuevo antes de poder enviar mensajes.",
+    "name": "Nombre",
+    "nameRequired": "El nombre es obligatorio",
+    "type": "Tipo",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discord",
+      "email": "Correo electrónico"
+    },
+    "emailUnavailable": "El correo electrónico necesita un servidor SMTP, que un administrador configura en los ajustes de alertas.",
+    "webhookUrl": "URL",
+    "webhookHint": "Obtiene un cuerpo JSON para cada alerta.",
+    "method": "Método",
+    "headers": "Encabezados",
+    "headersHint": "Uno por línea, como Nombre: valor.",
+    "ntfyServer": "URL del servidor",
+    "ntfyTopic": "Tema",
+    "ntfyToken": "Token de acceso (opcional)",
+    "discordUrl": "URL del webhook de Discord",
+    "discordHint": "Desde la configuración del canal en Discord, en Integraciones.",
+    "discordUsername": "Nombre para mostrar (opcional)",
+    "discordAvatar": "URL del avatar (opcional)",
+    "emailTo": "Enviar a",
+    "emailHint": "Separe las direcciones con comas.",
+    "privateNetwork": "Permitir una dirección de red privada",
+    "privateNetworkHint": "Solo funciona para los hosts que un administrador haya autorizado en la lista de puntos finales privados."
+  },
+  "rules": {
+    "intro": "Una regla de envío envía alertas coincidentes a tus canales. Las alertas también permanecen siempre en la bandeja de entrada.",
+    "add": "Agregar regla",
+    "edit": "Regla de edición",
+    "empty": "Aún no hay reglas, por lo que las alertas solo aparecen en la bandeja de entrada.",
+    "needChannel": "Primero añade un canal.",
+    "enabled": "Activado",
+    "name": "Nombre",
+    "nameRequired": "El nombre es obligatorio",
+    "match": "Alertas para enviar",
+    "matchHint": "* para todo, automatizaciones.* para todo a partir de automatizaciones, o un tipo exacto.",
+    "minSeverity": "Al menos",
+    "channels": "Enviar a",
+    "channelRequired": "Elige al menos un canal.",
+    "deleteConfirm": "¿Eliminar la regla \"{{name}}\"?",
+    "everything": "Todo",
+    "summary": "{{match}}, {{severity}} o superior, a {{channels}}"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "delete": "Eliminar"
+  },
+  "widget": {
+    "name": "Feed de alertas",
+    "description": "Tus últimas alertas, con una forma rápida de marcarlas como leídas.",
+    "maxItems": "Artículos máximos",
+    "showRead": "Mostrar alertas de lectura",
+    "allClear": "Todo correcto",
+    "loading": "Cargando..."
+  }
+}

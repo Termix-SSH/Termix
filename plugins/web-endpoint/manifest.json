@@ -1,0 +1,65 @@
+{
+  "id": "web-endpoint",
+  "name": "Web Endpoint",
+  "version": "1.0.0",
+  "description": "Open a host's web UI in a tab or a separate desktop window, directly or over an SSH tunnel.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Networking",
+  "icon": "Globe",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "network:serve",
+    "ui:surface",
+    "desktop:window"
+  ],
+  "dependencies": {
+    "tunnels": "^1.0.0"
+  },
+  "requires": [
+    {
+      "service": "tunnels.access",
+      "versionRange": "^1.0.0"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "web-endpoint",
+        "titleKey": "hosts.tabWebUi",
+        "icon": "Globe",
+        "openFrom": ["host-context-menu"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "enableKey": "enableWebUi",
+        "enableLabelKey": "hosts.enableWebUi",
+        "enableDescriptionKey": "hosts.enableWebUiDesc",
+        "fields": [
+          {
+            "key": "webUiConfig",
+            "type": "json",
+            "labelKey": "hosts.webUiEndpointsSection",
+            "requires": "enableWebUi",
+            "defaultable": false
+          }
+        ]
+      }
+    },
+    "hostCapability": {
+      "key": "enableWebUi",
+      "labelKey": "hosts.tabWebUi",
+      "editorTab": "general"
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

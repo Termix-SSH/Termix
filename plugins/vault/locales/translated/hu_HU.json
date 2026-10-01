@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "Vault aláírói profil",
+    "selectProfile": "Válasszon ki egy Vault profilt...",
+    "hint": "A beállítások a megosztott profilból származnak; a csatlakozáskor OIDC-n keresztül fog bejelentkezni a Vaultba. A rendszer nem tárol titkos adatokat.",
+    "docs": "Dokumentumok megtekintése",
+    "sharedProfile": "{{name}} (megosztva)"
+  },
+  "profiles": {
+    "new": "Új profil",
+    "manage": "Vault profilok kezelése",
+    "name": "Barátságos név",
+    "vaultAddr": "Trezor címe",
+    "namespace": "Névtér",
+    "oidcMount": "OIDC hitelesítési csatolás",
+    "oidcRole": "OIDC szerepkör",
+    "sshMount": "SSH titkok felfűzése",
+    "sshRole": "SSH aláíró szerepkör",
+    "validPrincipals": "Érvényes megbízók",
+    "keyType": "Efemer kulcstípus",
+    "shareWithAll": "Megosztás az összes felhasználóval",
+    "create": "Profil létrehozása",
+    "created": "Létrehozva a trezor profilja",
+    "saved": "A trezor profilja mentve",
+    "deleted": "Tárolóprofil törölve",
+    "saveFailed": "Nem sikerült menteni a Vault profilját",
+    "deleteFailed": "Nem sikerült törölni a Vault profilját",
+    "save": "Profil mentése",
+    "validationError": "Név, trezor címe és SSH aláírói szerepkör megadása kötelező.",
+    "none": "Még nincsenek Vault-profilok.",
+    "sharedBadge": "megosztott",
+    "edit": "Szerkesztés",
+    "delete": "Töröl"
+  },
+  "hosts": {
+    "filterAuthVault": "Boltozat"
+  },
+  "dialog": {
+    "title": "Bejelentkezés szükséges a széfbe",
+    "description": "Megnyílt egy ablak a HashiCorp Vaultba való bejelentkezéshez. Fejezze be a bejelentkezést ott; a kapcsolat automatikusan folytatódik.",
+    "failed": "A trezor hitelesítése sikertelen. Próbálja újra.",
+    "reopen": "Bejelentkezési ablak újranyitása"
+  },
+  "permissions": {
+    "use": {
+      "title": "Vault SSH aláírás használata",
+      "description": "Hozzon létre Vault aláírói profilokat, és csatlakozzon a Vaultot használó gazdagépekhez."
+    },
+    "share": {
+      "title": "Vault profilok megosztása",
+      "description": "Jelöljön meg egy Vault aláírói profilt megosztottként, hogy minden felhasználó kiválaszthassa."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Átirányítási URI",
+      "description": "Adja hozzá ezt az URL-címet az allowed_redirect_uris paraméterhez minden olyan Vault OIDC szerepkörben, amellyel a Termix bejelentkezik."
+    },
+    "legacyCallback": {
+      "label": "Használja a régi átirányítási URI-t",
+      "description": "Továbbra is küldje el a /vault/oidc/callback átirányítási URI-t, amely a 2.9 előtt használt. Kapcsolja ki ezt, amint a Vault szerepkörei engedélyezik az újat."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault aláírói profil"
+      }
+    }
+  }
+}

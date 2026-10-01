@@ -1,1 +1,3 @@
-npx lint-staged
+# The .cmd shims on Windows add their own paths to each command, so keep
+# lint-staged's chunks well under cmd.exe's 8191 character limit.
+npx lint-staged --max-arg-length 4000

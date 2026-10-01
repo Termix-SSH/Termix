@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "添加",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right",
+    "arrowUp": "Arrow Up",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "完成",
+    "editQuickKeys": "编辑快速键",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "粘贴",
+    "quickKeyPlaceholder": "例如 sudo ",
+    "quickKeysDesc": "点击 × 删除。最多支持 8 个字符。",
+    "quickKeysTitle": "快速键",
+    "removeQuickKey": "删除",
+    "resetDefaults": "重置为默认值",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "closeTab": "关闭",
+    "connecting": "正在连接…",
+    "connectionLost": "连接丢失",
+    "connectionRejected": "服务器拒绝了连接。请检查您的身份验证和网络配置。",
+    "connectionTimeout": "连接超时",
+    "enableAutoTmuxAction": "启用自动 Tmux",
+    "hostKeyRejected": "SSH主机密钥验证被拒绝。连接已取消。",
+    "linkDialogCopy": "复制",
+    "linkDialogOpen": "打开",
+    "linkDialogTitle": "打开链接",
+    "maxReconnectAttemptsReached": "已达到最大重连尝试次数",
+    "noHostSelected": "未选择主机",
+    "passwordPromptFillTitle": "将保存的密码填入此提示？",
+    "reconnect": "重新连接",
+    "reconnected": "重新连接成功",
+    "reconnecting": "正在重新连接…（{{attempt}}/{{max}}）",
+    "autoReconnecting": "Connection lost, reconnecting...",
+    "searchCaseSensitive": "区分大小写",
+    "searchClose": "关闭（Esc）",
+    "searchNext": "下一个匹配（Enter）",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "搜索",
+    "searchPrevious": "上一个匹配（Shift+Enter）",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "全字匹配",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionTakenOver": "会话已在另一个标签页中打开。正在重新连接...",
+    "tmuxAttached": "已连接客户端",
+    "tmuxAttachedCount": "{{count}} 个已连接",
+    "tmuxCopyHint": "调整选择并按 Enter 复制到剪贴板",
+    "tmuxCreateNew": "启动新会话",
+    "tmuxDetached": "已从 tmux 会话分离",
+    "tmuxLastActivity": "最后活动",
+    "tmuxSessionAttached": "tmux 会话已附加：{{name}}",
+    "tmuxSessionCreated": "tmux 会话已创建：{{name}}",
+    "tmuxSessionPickerDesc": "在此主机上发现现有 tmux 会话。选择一个重新连接或创建新会话。",
+    "tmuxSessionPickerTitle": "tmux 会话",
+    "tmuxTimeDays": "{{count}} 天前",
+    "tmuxTimeHours": "{{count}} 小时前",
+    "tmuxTimeJustNow": "刚刚",
+    "tmuxTimeMinutes": "{{count}} 分钟前",
+    "tmuxUnavailable": "远程主机上未安装 tmux，回退到标准 shell",
+    "tmuxWindowCount": "{{count}} 个窗口",
+    "tmuxWindows": "窗口",
+    "unknownError": "发生未知错误",
+    "websocketAbnormalClose": "连接意外关闭。这可能是因为反向代理或SSL配置问题。请检查服务器日志。",
+    "websocketError": "WebSocket 连接错误",
+    "clipboardReadFailed": "从剪贴板读取失败。请确保已授予剪贴板权限。",
+    "clipboardWriteFailed": "复制到剪贴板失败。请确保页面通过 HTTPS 或 localhost 提供服务。",
+    "connected": "已连接",
+    "totpCodeLabel": "验证码",
+    "duplicateTab": "Duplicate tab",
+    "imageChooseFile": "Choose an image file",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
+    "retry": "重试",
+    "showToolbar": "展开工具栏",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
+    "uploadingImage": "上传中..."
+  },
+  "history": {
+    "noTerminalSelected": "未选择终端",
+    "noTerminalSelectedHint": "打开一个 SSH 终端标签页以查看其命令历史",
+    "searchPlaceholder": "搜索历史...",
+    "clearAll": "全部清除",
+    "noHistoryEntries": "无历史记录",
+    "trackingDisabled": "历史跟踪已禁用",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
+  },
+  "touchInput": {
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "高级",
+    "resetDefaults": "重置为默认值",
+    "dragThreshold": "拖动阈值",
+    "maxWheelDelta": "最大滚轮增量",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "释放宽限期",
+    "minimumVelocity": "最小速度",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "每帧最大刻度数"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "用于测试可见性的已连接终端标签页的实例 ID。",
+    "selectedModeUnavailable": "Unavailable",
+    "test": "测试",
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "上传将使用：{{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "会话",
+        "newHosts": "New Hosts"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+      },
+      "commandHistoryEnabled": {
+        "label": "命令历史",
+        "description": "允许记录命令历史。禁用后，无论各主机设置如何，均不保存历史记录。"
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
+      },
+      "imageStorageMode": {
+        "label": "Storage Mode",
+        "description": "粘贴和上传的终端图片的写入位置。自动模式根据连接自动选择，本地和远程（SFTP）为固定模式。",
+        "auto": "自动",
+        "local": "本地",
+        "remoteSftp": "Remote (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+      },
+      "imageMaxCount": {
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+      },
+      "imageMaxBytes": {
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+      },
+      "newHostTheme": {
+        "label": "Theme for new hosts",
+        "description": "The terminal theme a new host starts with."
+      },
+      "newHostFontFamily": {
+        "label": "Font for new hosts",
+        "description": "The terminal font a new host starts with."
+      },
+      "newHostFontSize": {
+        "label": "Font size for new hosts",
+        "description": "The terminal font size a new host starts with, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Cursor style for new hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinking cursor for new hosts"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Enable Terminal Toolbar",
+        "description": "在当前终端上显示该主机的工具和实时信息的 Dock栏"
+      },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
+      },
+      "enableCommandHistory": {
+        "label": "命令历史",
+        "description": "记录此终端中运行的命令，用于历史记录和自动补全"
+      },
+      "enableTerminal": {
+        "label": "启用终端",
+        "description": "Offer an SSH terminal for this host."
+      },
+      "inheritAppearance": {
+        "label": "Use user defaults"
+      },
+      "theme": {
+        "label": "主题"
+      },
+      "cursorBlink": {
+        "label": "Blinking cursor"
+      },
+      "cursorStyle": {
+        "label": "Cursor style"
+      },
+      "fontSize": {
+        "label": "Font size"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Scrollback"
+      },
+      "letterSpacing": {
+        "label": "Letter spacing"
+      },
+      "lineHeight": {
+        "label": "Line height"
+      },
+      "bellStyle": {
+        "label": "Bell"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum contrast ratio"
+      },
+      "backgroundImage": {
+        "label": "Background image"
+      },
+      "backgroundImageOpacity": {
+        "label": "Background image opacity"
+      },
+      "customThemeColors": {
+        "label": "Custom theme colors"
+      },
+      "rightClickSelectsWord": {
+        "label": "Right click selects word"
+      },
+      "macOptionIsMeta": {
+        "label": "Option is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Fast scroll key"
+      },
+      "fastScrollSensitivity": {
+        "label": "Fast scroll speed"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh command"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Use the SSH title"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntax highlighting"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntax highlighting categories"
+      },
+      "linkClickBehavior": {
+        "label": "Link click"
+      },
+      "localEcho": {
+        "label": "Local echo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Offer to fill password prompts"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "命令自动补全",
+        "description": "Show autocomplete while typing if you press tab"
+      },
+      "localEcho": {
+        "label": "Local Echo",
+        "description": "Reduce perceived input latency using safe local keystroke prediction"
+      },
+      "linkClickBehavior": {
+        "label": "终端链接点击",
+        "description": "点击终端内链接时的默认行为"
+      },
+      "customThemes": {
+        "label": "Saved themes"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "终端",
+    "addHost": "添加主机",
+    "applyGlobalThemeTooltip": "Apply this theme",
+    "backgroundImageDesc": "终端背景图片的可选 URL",
+    "backgroundImageLabel": "背景图片 URL",
+    "backgroundImageOpacityLabel": "背景图片不透明度",
+    "backspaceMode": "退格模式",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "退格模式",
+    "backspaceModeNormal": "标准（DEL）",
+    "behaviorAndAdvanced": "行为与高级设置",
+    "bellStyle": "响铃样式",
+    "bellStyleBoth": "两者皆有",
+    "bellStyleLabel": "响铃样式",
+    "bellStyleNone": "全不选",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "视觉",
+    "colorTheme": "颜色主题",
+    "cursorBlink": "光标闪烁",
+    "cursorBlinking": "光标闪烁",
+    "cursorBlinkingDesc": "为终端光标启用闪烁动画",
+    "cursorStyle": "光标样式",
+    "cursorStyleBar": "竖线形",
+    "cursorStyleBlock": "方块形",
+    "cursorStyleLabel": "光标样式",
+    "cursorStyleUnderline": "下划线形",
+    "customThemeAnsiColors": "ANSI 颜色",
+    "customThemeBackground": "背景色",
+    "customThemeBlack": "黑色",
+    "customThemeBlue": "蓝色",
+    "customThemeBrightBlack": "亮黑色",
+    "customThemeBrightBlue": "亮蓝色",
+    "customThemeBrightCyan": "亮青色",
+    "customThemeBrightGreen": "亮绿色",
+    "customThemeBrightMagenta": "亮品红",
+    "customThemeBrightRed": "亮红色",
+    "customThemeBrightWhite": "亮白色",
+    "customThemeBrightYellow": "亮黄色",
+    "customThemeColors": "自定义颜色",
+    "customThemeCursor": "光标颜色",
+    "customThemeCursorAccent": "光标强调色",
+    "customThemeCyan": "青色",
+    "customThemeForeground": "前景色",
+    "customThemeGreen": "绿色",
+    "customThemeMagenta": "品红",
+    "customThemeRed": "红色",
+    "customThemeResetTooltip": "重置为默认值",
+    "customThemeSelection": "选中色",
+    "customThemeWhite": "白色",
+    "customThemeYellow": "黄色",
+    "deleteGlobalThemeTooltip": "Delete this theme",
+    "docsLink": "查看文档",
+    "enableAutoMosh": "启用自动 Mosh",
+    "enableAutoMoshDesc": "若可用，优先使用 Mosh 而非 SSH",
+    "enableAutoTmux": "启用自动 Tmux",
+    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "fastScrollModifier": "快速滚动修饰键",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "快速滚动修饰键",
+    "fastScrollModifierShift": "Shift",
+    "fastScrollSensitivity": "快速滚动灵敏度",
+    "fastScrollSensitivityLabel": "快速滚动灵敏度",
+    "fontFamily": "字体族",
+    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
+    "fontFamilyCustomOption": "自定义...",
+    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyLabel": "字体",
+    "fontSize": "字体大小",
+    "fontSizeLabel": "字体大小",
+    "hostNotFound": "未找到主机",
+    "letterSpacing": "字母间距",
+    "letterSpacingPx": "字母间距 (px)",
+    "lineHeight": "行高",
+    "lineHeightLabel": "行高",
+    "linkClickBehaviorConfirm": "显示弹出窗口以打开或复制",
+    "linkClickBehaviorDesc": "控制点击终端中链接时的行为。选择“默认”以遵循应用级设置。",
+    "linkClickBehaviorDirect": "直接打开",
+    "linkClickBehaviorLabel": "链接点击行为",
+    "loadingHost": "正在加载主机...",
+    "localEchoAuto": "自动",
+    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
+    "localEchoLabel": "Local Echo",
+    "localEchoOff": "关闭",
+    "localEchoOn": "Always on",
+    "macOptionIsMetaLabel": "选项键发送 Meta",
+    "macOptionIsMetaShortDesc": "禁用后，可在 macOS 上使用 Option/Alt 键输入特殊字符（例如 @ 或 |），而不是发送 Meta。",
+    "moshCommand": "MOSH 命令",
+    "moshCommandLabel": "Mosh 命令",
+    "noSavedThemes": "No saved themes yet",
+    "none": "无",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "rightClickSelectsWord": "右键单击选择单词",
+    "rightClickSelectsWordLabel": "右键选择单词",
+    "rightClickSelectsWordShortDesc": "右键点击时选中光标下的单词",
+    "saveAsGlobalTheme": "Save as Global Theme",
+    "saveGlobalThemeError": "Failed to save theme",
+    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
+    "saveGlobalThemeSuccess": "Theme saved",
+    "savedThemesLabel": "Saved Themes",
+    "scrollbackBufferLabel": "回滚缓冲区",
+    "scrollbackMaxLines": "保留在历史记录中的最大行数",
+    "sudoPasswordAutoFill": "Sudo 密码自动填充",
+    "sudoPasswordAutoFillDesc": "存储 sudo 密码，以便主机指标、终端提示和其他操作可以自动运行特权命令。",
+    "sudoPasswordAutoFillLabel": "Sudo 密码自动填充",
+    "syntaxCategoryIpAddresses": "IP 地址",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "日志级别",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "标记数字",
+    "syntaxCategoryNumbersDesc": "端口 8080, 退出 1, 状态 404",
+    "syntaxCategoryPaths": "文件路径",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "时间戳",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "对终端输出着色（错误、路径、IP、时间戳）",
+    "syntaxHighlightingLabel": "语法高亮",
+    "terminalAppearance": "终端外观",
+    "theme": "主题",
+    "themePreview": "主题预览",
+    "useSSHTitleDesc": "使用 shell 的窗口标题更新标签页标题，而非主机名",
+    "useSSHTitleLabel": "使用 SSH 窗口标题",
+    "enableTunnel": "启用隧道",
+    "enableFileManager": "启用文件管理器",
+    "enableDocker": "启用 Docker",
+    "startupSnippet": "启动代码片段",
+    "quickActions": "快捷操作",
+    "proxmoxLastSyncStatus": {
+      "success": "成功"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} 已跳过（未找到 IP ）",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "RDP URL 已复制",
+    "vncUrlCopied": "VNC URL 已复制",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "无凭据（下方直接填写凭据）",
+      "authTypeDirect": "直接",
+      "authTypeCredential": "凭据",
+      "authTypeNone": "无",
+      "recordingPath": "录制路径",
+      "recordingName": "录制名称",
+      "saveHostFirst": "请先保存主机。",
+      "sharingOptionsAfterSave": "保存主机后，共享选项可用。",
+      "permissionLevel": "权限级别",
+      "typeHeader": "类型",
+      "targetHeader": "目标",
+      "permissionHeader": "权限",
+      "cancelBtn": "取消",
+      "savingBtn": "保存中...",
+      "updateHostBtn": "更新主机",
+      "addHostBtn": "添加主机"
+    },
+    "filterAuthVault": "Vault"
+  },
+  "nav": {
+    "history": "历史记录",
+    "localTerminal": "Local Terminal",
+    "sshTools": "SSH 工具",
+    "terminal": "终端",
+    "macros": "Macros"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "在此输入以广播按键...",
+    "copyOnSelect": "Copy selected text automatically",
+    "enableRightClickCopyPaste": "启用右键复制/粘贴",
+    "fillPassword": "填充密码",
+    "fillPasswordMissing": "{{count}} 个所选终端无保存的密码",
+    "fillPasswordSuccess": "已将密码填充到 {{count}} 个终端",
+    "keyRecordingTitle": "按键录制",
+    "noTerminalTabsOpen": "无打开的终端标签页",
+    "recordToTerminals": "录制到终端",
+    "selectAll": "全部",
+    "selectNone": "全不选",
+    "selectTerminalsAbove": "选择上方终端",
+    "settingsTitle": "设置",
+    "startRecording": "开始录制",
+    "stopRecording": "停止录制"
+  },
+  "keybindings": {
+    "copy": "Copy selection",
+    "paste": "粘贴",
+    "sendControlCode": "Send Ctrl+letter signal",
+    "sendText": "发送文本",
+    "controlCodeLabel": "字母",
+    "textLabel": "Text to send",
+    "appendEnterLabel": "Press Enter after sending",
+    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+    "textRequired": "Enter the text to send",
+    "controlCodeRequired": "Enter a single letter for the control code",
+    "builtIn": {
+      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+      "copyCmdC": "Copy selection (Cmd+C)",
+      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+    }
+  },
+  "macros": {
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "目标",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
+    "name": "名称",
+    "namePlaceholder": "重启 Web 服务器",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "未保存的更改",
+    "save": "保存",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "删除",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "取消",
+    "run": "运行",
+    "stop": "停止",
+    "running": "运行中...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
+    "stepTypes": {
+      "send": {
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
+      },
+      "wait": {
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
+      },
+      "if": {
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
+      },
+      "repeat": {
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
+      }
+    },
+    "send": {
+      "text": "Command or text",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
+    },
+    "wait": {
+      "pattern": "Wait until the output contains",
+      "patternPlaceholder": "密码:",
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "无论如何都继续"
+    },
+    "delay": {
+      "duration": "Wait for"
+    },
+    "ifStep": {
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
+    },
+    "repeat": {
+      "count": "Number of times",
+      "times": "次"
+    },
+    "match": {
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "关闭此选项以完全按原文匹配文本。",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+    },
+    "seconds": "秒",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

@@ -1,0 +1,245 @@
+import { rbacApi } from "@/main-axios";
+
+export interface PluginTabContribution {
+  id: string;
+  titleKey: string;
+  icon: string;
+  openFrom: string[];
+}
+
+export type PluginSettingsFieldType =
+  | "boolean"
+  | "string"
+  | "number"
+  | "select"
+  | "multiselect"
+  | "secret"
+  | "textarea"
+  | "json"
+  | "custom";
+
+export interface PluginSettingsField {
+  key: string;
+  type: PluginSettingsFieldType;
+  labelKey?: string;
+  descriptionKey?: string;
+  placeholderKey?: string;
+  default?: unknown;
+  options?: { value: string; labelKey: string }[];
+  min?: number;
+  max?: number;
+  requires?: string;
+  permission?: string;
+  group?: string;
+  component?: string;
+  hidden?: boolean;
+  defaultable?: boolean;
+  defaultLevels?: Array<"admin" | "user" | "folder">;
+  personal?: boolean;
+  secretKeys?: string[];
+  shareRead?: "connect" | "view" | "edit" | "manage";
+  ownerOnly?: boolean;
+}
+
+export interface PluginHostSettingsContribution {
+  enableKey?: string;
+  enableLabelKey?: string;
+  enableDescriptionKey?: string;
+  enableDefault?: boolean;
+  editorGroup?: "top" | "ssh";
+  editorOrder?: number;
+  fields: PluginSettingsField[];
+}
+
+/** A plugin's Appearance defaults for each interface preset. */
+export type PluginUiPresets = Record<
+  "simple" | "balanced" | "advanced",
+  Record<string, unknown>
+>;
+
+export interface PluginSettingsContribution {
+  admin?: PluginSettingsField[];
+  user?: PluginSettingsField[];
+  host?: PluginHostSettingsContribution;
+}
+
+/** A panel or dashboard card, declared so its owner is known while it is off. */
+export interface PluginViewContribution {
+  id: string;
+  titleKey: string;
+  icon?: string;
+}
+
+export interface PluginContributions {
+  tabs?: PluginTabContribution[];
+  panels?: PluginViewContribution[];
+  dashboardCards?: PluginViewContribution[];
+  /** The frontend also runs on anonymous guest pages. */
+  guest?: boolean;
+  settings?: PluginSettingsContribution;
+  permissions?: { name: string; titleKey: string; descriptionKey: string }[];
+  uiPresets?: PluginUiPresets;
+}
+
+export {
+  isRedactedSecret,
+  type RedactedSecret,
+} from "@termix/plugin-sdk/settings";
+
+export type PluginSettingsValues = Record<string, unknown>;
+
+/** Per-field messages from a rejected PUT, keyed by field key. */
+export interface PluginSettingsErrors {
+  [key: string]: string;
+}
+
+export class PluginSettingsValidationError extends Error {
+  readonly errors: PluginSettingsErrors;
+
+  constructor(errors: PluginSettingsErrors) {
+    super("Some settings were rejected");
+    this.name = "PluginSettingsValidationError";
+    this.errors = errors;
+  }
+}
+
+function settingsPath(pluginId: string, suffix: string): string {
+  return `/plugins/${encodeURIComponent(pluginId)}/settings/${suffix}`;
+}
+
+/** Turns a 400 carrying per-field errors into something a form can render. */
+async function putSettings(
+  path: string,
+  values: PluginSettingsValues,
+): Promise<PluginSettingsValues> {
+  try {
+    const response = await rbacApi.put(path, values);
+    return response.data?.values ?? {};
+  } catch (error) {
+    const data = (
+      error as { response?: { status?: number; data?: { errors?: unknown } } }
+    ).response;
+    if (data?.status === 400 && data.data?.errors) {
+      throw new PluginSettingsValidationError(
+        data.data.errors as PluginSettingsErrors,
+      );
+    }
+    throw error;
+  }
+}
+
+export async function getPluginAdminSettings(
+  pluginId: string,
+): Promise<PluginSettingsValues> {
+  const response = await rbacApi.get(settingsPath(pluginId, "admin"));
+  return response.data?.values ?? {};
+}
+
+/** Tells the plugin's own frontend, through app.onSettingsChanged. */
+export const PLUGIN_SETTINGS_CHANGED_EVENT = "termix:plugin-settings-changed";
+
+function announceSettingsChange(
+  pluginId: string,
+  scope: "admin" | "user" | "host",
+  hostId?: number,
+): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(PLUGIN_SETTINGS_CHANGED_EVENT, {
+      detail: { pluginId, scope, hostId },
+    }),
+  );
+}
+
+export async function updatePluginAdminSettings(
+  pluginId: string,
+  values: PluginSettingsValues,
+): Promise<PluginSettingsValues> {
+  const saved = await putSettings(settingsPath(pluginId, "admin"), values);
+  announceSettingsChange(pluginId, "admin");
+  return saved;
+}
+
+export async function getPluginUserSettings(
+  pluginId: string,
+): Promise<PluginSettingsValues> {
+  const response = await rbacApi.get(settingsPath(pluginId, "user"));
+  return response.data?.values ?? {};
+}
+
+export async function updatePluginUserSettings(
+  pluginId: string,
+  values: PluginSettingsValues,
+): Promise<PluginSettingsValues> {
+  const saved = await putSettings(settingsPath(pluginId, "user"), values);
+  announceSettingsChange(pluginId, "user");
+  return saved;
+}
+
+export async function getPluginHostSettings(
+  pluginId: string,
+  hostId: number,
+): Promise<PluginSettingsValues> {
+  const response = await rbacApi.get(
+    settingsPath(pluginId, `host/${encodeURIComponent(String(hostId))}`),
+  );
+  return response.data?.values ?? {};
+}
+
+export async function updatePluginHostSettings(
+  pluginId: string,
+  hostId: number,
+  values: PluginSettingsValues,
+): Promise<PluginSettingsValues> {
+  const saved = await putSettings(
+    settingsPath(pluginId, `host/${encodeURIComponent(String(hostId))}`),
+    values,
+  );
+  announceSettingsChange(pluginId, "host", hostId);
+  return saved;
+}
+
+/**
+ * What GET /plugins returns.
+ *
+ * The admin-only fields are absent for a caller without
+ * admin.plugins.manage: what a plugin may do, what it has been granted and
+ * why it failed are operational details the shell does not need.
+ */
+export interface PluginSummary {
+  id: string;
+  name: string;
+  version: string;
+  enabled: boolean;
+  /** enabled | disabled | blocked | failed, or the loader's live state. */
+  state: string;
+  contributes: PluginContributions | null;
+  /** Lucide icon name from the manifest. */
+  icon?: string;
+  dependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  /** A built frontend bundle is served at /plugin-assets/<id>/frontend.js. */
+  frontend?: boolean;
+  /** A frontend.css sits beside the bundle. */
+  css?: boolean;
+  /** Cache key for the bundle; changes when it is rebuilt. */
+  assetVersion?: string | null;
+  /** "en" plus the xx_YY names of shipped translations. */
+  locales?: string[];
+
+  tier?: string;
+  source?: string;
+  /** Capabilities this plugin's manifest declares. Admins only. */
+  capabilities?: string[];
+  /** The subset of `capabilities` actually granted. Admins only. */
+  grantedCapabilities?: string[];
+  /** Why the plugin is blocked or failed. Admins only. */
+  lastError?: string | null;
+  /** Paths a running plugin serves without login. Admins only. */
+  publicRoutes?: { http: string[]; ws: string[] };
+}
+
+export async function getPlugins(): Promise<PluginSummary[]> {
+  const response = await rbacApi.get("/plugins");
+  return Array.isArray(response.data) ? response.data : [];
+}

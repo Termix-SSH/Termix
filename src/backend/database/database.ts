@@ -1,4 +1,14 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { sshOptionsForWrite } from "../hosts/ssh-options.js";
+import {
+  applyDefaultsAfterHostWrite,
+  applyHostDefaultsToWrite,
+} from "../hosts/defaults/index.js";
+import { recompute } from "../hosts/defaults/recompute.js";
+import {
+  importHostDefaults,
+  writeHostDefaultsToExport,
+} from "../hosts/defaults/user-export.js";
 import express from "express";
 import http from "http";
 import https from "https";
@@ -7,35 +17,27 @@ import multer from "multer";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/users.js";
 import hostRoutes from "./routes/host.js";
-import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
-import snippetsRoutes from "./routes/snippets.js";
-import fleetRoutes from "./routes/fleet-routes.js";
-import workspaceRoutes from "./routes/workspaces.js";
-import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
-import terminalRoutes from "./routes/terminal.js";
-import sessionLogRoutes from "./routes/session-log-routes.js";
-import guacamoleRoutes from "../hosts/guacamole/routes.js";
-import sessionSharingRoutes from "../hosts/session-sharing/routes.js";
-import collabRoutes from "../hosts/collab/routes.js";
-import networkTopologyRoutes from "./routes/network-topology.js";
+import sshAuthRoutes from "./routes/ssh-auth-routes.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
 import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
-import proxmoxRoutes from "./routes/proxmox.js";
-import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
-import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
-import vaultRoutes from "./routes/vault.js";
-import secretSourceRoutes from "./routes/secret-sources.js";
-import alertRulesRoutes from "./routes/alert-rules-routes.js";
-import aiRoutes from "../ai/index.js";
-import automationsRoutes from "./routes/automations.js";
-import syncRoutes from "./routes/sync.js";
-import pluginApiRoutes from "./routes/plugin-api-routes.js";
+import syncRoutes from "../sync/server/routes.js";
+import syncLinkRoutes from "../sync/client/routes.js";
+import { syncChangeWatcher } from "../sync/server/change-watcher.js";
+import dashboardRoutes from "./routes/dashboard-routes.js";
+import {
+  mountPluginApi,
+  mountPluginLegacyPaths,
+} from "./routes/plugin-api-routes.js";
+import { attachPluginWebSockets } from "../plugins/ws.js";
+import pluginRoutes from "./routes/plugins.js";
+import { createPluginAssetsRouter } from "../plugins/assets.js";
+import { getPluginRuntime } from "../plugins/index.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
@@ -43,30 +45,43 @@ import path from "path";
 import os from "os";
 import "dotenv/config";
 import { databaseLogger, apiLogger } from "../utils/logger.js";
+import { getLocalVersion } from "../utils/app-version.js";
+import {
+  compareSemver,
+  fetchGitHubAPI,
+  REPO_NAME,
+  REPO_OWNER,
+} from "../utils/latest-release.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
-import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
+import {
+  importUserPluginRows,
+  writeUserPluginTables,
+} from "../plugins/user-data.js";
+import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
+import { acmeChallengeHandler } from "../tls/acme-challenges.js";
 import {
   createCurrentCredentialRepository,
-  createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentHostRepository,
+  createCurrentPluginSettingsRepository,
   createCurrentSettingsRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentUserRepository,
 } from "./repositories/factory.js";
 import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
+import { applyPluginHostImportSettings } from "./routes/host-plugin-settings.js";
+import {
+  keepUsableProtocolCredentials,
+  listProtocolLogins,
+  readProtocolAuthPayload,
+  toPortableLogins,
+  writeProtocolAuth,
+} from "../hosts/protocol-auth/protocol-auth.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
-import { getProxyAgent } from "../utils/proxy-agent.js";
-import type {
-  CacheEntry,
-  GitHubRelease,
-  GitHubAPIResponse,
-  AuthenticatedRequest,
-} from "../../types/index.js";
+import type { GitHubRelease, AuthenticatedRequest } from "../../types/index.js";
 import { DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
@@ -152,123 +167,29 @@ const upload = multer({
   },
 });
 
-class GitHubCache {
-  private cache: Map<string, CacheEntry> = new Map();
-  private readonly CACHE_DURATION = 30 * 60 * 1000;
+// Skipped for /plugin-api: a plugin router brings its own parsers with its own
+// limit (see plugins/http.ts), and parsing here first would consume the body
+// and silently cap every plugin at this limit instead.
+const coreJsonParser = bodyParser.json({ limit: "2mb" });
+const coreUrlencodedParser = bodyParser.urlencoded({
+  limit: "2mb",
+  extended: true,
+});
 
-  set<T>(key: string, data: T): void {
-    const now = Date.now();
-    this.cache.set(key, {
-      data,
-      timestamp: now,
-      expiresAt: now + this.CACHE_DURATION,
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) {
-      return null;
-    }
-
-    if (Date.now() > entry.expiresAt) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
-  }
-}
-
-const githubCache = new GitHubCache();
-
-function parseSemver(
-  version: string | undefined,
-): [number, number, number] | null {
-  const match = String(version || "").match(/(\d+)\.(\d+)(?:\.(\d+))?/);
-  if (!match) return null;
-
-  return [Number(match[1]), Number(match[2]), Number(match[3] || 0)];
-}
-
-function compareSemver(
-  a: string | undefined,
-  b: string | undefined,
-): number | null {
-  const parsedA = parseSemver(a);
-  const parsedB = parseSemver(b);
-  if (!parsedA || !parsedB) return null;
-
-  for (let i = 0; i < 3; i += 1) {
-    if (parsedA[i] > parsedB[i]) return 1;
-    if (parsedA[i] < parsedB[i]) return -1;
-  }
-
-  return 0;
-}
-
-const GITHUB_API_BASE = "https://api.github.com";
-const REPO_OWNER = "Termix-SSH";
-const REPO_NAME = "Termix";
-
-async function fetchGitHubAPI<T>(
-  endpoint: string,
-  cacheKey: string,
-): Promise<GitHubAPIResponse<T>> {
-  const cachedEntry = githubCache.get<CacheEntry<T>>(cacheKey);
-  if (cachedEntry) {
-    return {
-      data: cachedEntry.data,
-      cached: true,
-      cache_age: Date.now() - cachedEntry.timestamp,
-    };
-  }
-
-  try {
-    const url = `${GITHUB_API_BASE}${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "TermixUpdateChecker/1.0",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      dispatcher: getProxyAgent(url),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `GitHub API error: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const data = (await response.json()) as T;
-    const cacheData: CacheEntry<T> = {
-      data,
-      timestamp: Date.now(),
-      expiresAt: Date.now() + 30 * 60 * 1000,
-    };
-    githubCache.set(cacheKey, cacheData);
-
-    return {
-      data: data,
-      cached: false,
-    };
-  } catch (error) {
-    databaseLogger.error(`Failed to fetch from GitHub API`, error, {
-      operation: "github_api",
-      endpoint,
-    });
-    throw error;
-  }
-}
-
-app.use(bodyParser.json({ limit: "2mb" }));
-app.use(bodyParser.urlencoded({ limit: "2mb", extended: true }));
+app.use((req, res, next) => {
+  if (req.path.startsWith("/plugin-api/")) return next();
+  coreJsonParser(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.path.startsWith("/plugin-api/")) return next();
+  coreUrlencodedParser(req, res, next);
+});
 app.use(cookieParser());
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
+app.use(syncChangeWatcher);
 
 /**
  * @openapi
@@ -296,66 +217,96 @@ app.get("/health", (req, res) => {
 
 /**
  * @openapi
+ * /.well-known/acme-challenge/{token}:
+ *   get:
+ *     summary: Answer an ACME http-01 challenge
+ *     description: Public. Serves the key authorization a plugin published through ctx.system.publishHttpChallenge while it proves control of the domain.
+ *     tags:
+ *       - General
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The key authorization, as text/plain.
+ *       404:
+ *         description: No challenge is published for this token.
+ */
+app.get("/.well-known/acme-challenge/:token", acmeChallengeHandler);
+
+/**
+ * @openapi
  * /version:
  *   get:
  *     summary: Get version information
- *     description: Returns the local and remote version of the application.
+ *     description: Returns the running instance's version in localVersion. When the update check succeeds, remoteVersion is the latest GitHub release and version is its legacy alias, not the instance's version. Remote fields are omitted when the check is disabled, fails, or returns an unparseable release tag.
  *     tags:
  *       - General
+ *     parameters:
+ *       - in: query
+ *         name: checkRemote
+ *         description: Set to false to return only localVersion and status without contacting GitHub.
+ *         schema:
+ *           type: boolean
+ *           default: true
  *     responses:
  *       200:
  *         description: Version information.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required:
+ *                 - localVersion
+ *                 - status
+ *               properties:
+ *                 localVersion:
+ *                   type: string
+ *                   description: Version of the running instance. Use this field for client compatibility checks.
+ *                   example: 2.7.1
+ *                 status:
+ *                   type: string
+ *                   description: Update comparison result, update_check_disabled when explicitly disabled, or unknown when the remote lookup fails or the release tag cannot be parsed.
+ *                   enum: [up_to_date, beta, requires_update, update_check_disabled, unknown]
+ *                 remoteVersion:
+ *                   type: string
+ *                   description: Latest GitHub release version. Present only when the update check succeeds.
+ *                   example: 2.8.0
+ *                 version:
+ *                   type: string
+ *                   deprecated: true
+ *                   description: Legacy alias of remoteVersion, not the running instance's version. Present only when the update check succeeds. Use localVersion for the instance or remoteVersion for the latest release.
+ *                   example: 2.8.0
+ *                 latest_release:
+ *                   type: object
+ *                   description: GitHub release metadata. Present only when the update check succeeds.
+ *                   properties:
+ *                     tag_name:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                       nullable: true
+ *                     published_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     html_url:
+ *                       type: string
+ *                       format: uri
+ *                 cached:
+ *                   type: boolean
+ *                   description: Whether the release lookup used a cached response. Present only when the update check succeeds.
+ *                 cache_age:
+ *                   type: number
+ *                   description: Age of the cached response in milliseconds, when available.
  *       404:
  *         description: Local version not set.
- *       500:
- *         description: Fetch error.
  */
 app.get("/version", authenticateJWT, async (req, res) => {
-  let localVersion = process.env.VERSION;
-
-  if (!localVersion) {
-    const versionSources = [
-      () => {
-        try {
-          const packagePath = path.resolve(process.cwd(), "package.json");
-          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-      () => {
-        try {
-          const packagePath = path.resolve("/app", "package.json");
-          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-      () => {
-        try {
-          const packagePath = path.resolve(__dirname, "../../../package.json");
-          const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-    ];
-
-    for (const getVersion of versionSources) {
-      try {
-        const foundVersion = getVersion();
-        if (foundVersion && foundVersion !== "unknown") {
-          localVersion = foundVersion;
-          break;
-        }
-      } catch {
-        continue;
-      }
-    }
-  }
+  const localVersion = getLocalVersion();
 
   if (!localVersion) {
     databaseLogger.error("No version information available", undefined, {
@@ -683,7 +634,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
     if (!DataCrypto.getUserDataKey(userId)) {
       if (isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(
+        const oidcUnlocked = await authManager.authenticateExternalUser(
           userId,
           deviceInfo.type,
         );
@@ -753,10 +704,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           token_url TEXT,
           identifier_path TEXT,
           name_path TEXT,
-          scopes TEXT DEFAULT 'openid email profile',
-          totp_secret TEXT,
-          totp_enabled INTEGER NOT NULL DEFAULT 0,
-          totp_backup_codes TEXT
+          scopes TEXT DEFAULT 'openid email profile'
         );
 
         CREATE TABLE settings (
@@ -782,28 +730,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           key_password TEXT,
           key_type TEXT,
           sudo_password TEXT,
-          autostart_password TEXT,
-          autostart_key TEXT,
-          autostart_key_password TEXT,
           credential_id INTEGER,
           override_credential_username INTEGER,
-          enable_terminal INTEGER NOT NULL DEFAULT 1,
-          enable_tunnel INTEGER NOT NULL DEFAULT 1,
-          tunnel_connections TEXT,
           jump_hosts TEXT,
-          enable_file_manager INTEGER NOT NULL DEFAULT 1,
-          enable_docker INTEGER NOT NULL DEFAULT 0,
-          enable_web_ui INTEGER NOT NULL DEFAULT 0,
-          show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1,
-          show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          show_tunnel_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          show_docker_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0,
-          default_path TEXT,
-          stats_config TEXT,
-          docker_config TEXT,
-          web_ui_config TEXT,
+          status_check_enabled INTEGER NOT NULL DEFAULT 1,
+          status_check_interval INTEGER,
           terminal_config TEXT,
+          ssh_options TEXT,
           quick_actions TEXT,
           notes TEXT,
           use_socks5 INTEGER,
@@ -812,14 +745,26 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           socks5_username TEXT,
           socks5_password TEXT,
           socks5_proxy_chain TEXT,
-          domain TEXT,
-          security TEXT,
-          ignore_cert INTEGER NOT NULL DEFAULT 0,
-          guacamole_config TEXT,
-          mac_address TEXT,
           port_knock_sequence TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE plugin_settings (
+          plugin_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          key TEXT NOT NULL,
+          value TEXT
+        );
+
+        CREATE TABLE host_protocol_auth (
+          host_id INTEGER NOT NULL,
+          protocol TEXT NOT NULL,
+          auth_type TEXT NOT NULL,
+          credential_id INTEGER,
+          username TEXT,
+          password TEXT,
+          fields TEXT
         );
 
         CREATE TABLE ssh_credentials (
@@ -844,50 +789,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE file_manager_recent (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          path TEXT NOT NULL,
-          last_opened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE file_manager_pinned (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          path TEXT NOT NULL,
-          pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE file_manager_shortcuts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          path TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE transfer_recent (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          source_host_id INTEGER NOT NULL,
-          dest_host_id INTEGER NOT NULL,
-          dest_path TEXT NOT NULL,
-          dest_path_label TEXT NOT NULL,
-          last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE dismissed_alerts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          alert_id TEXT NOT NULL,
-          dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
         CREATE TABLE ssh_credential_usage (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           credential_id INTEGER NOT NULL,
@@ -899,8 +800,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
       const userRecord = user;
       const insertUser = exportDb.prepare(`
-        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       insertUser.run(
         userRecord.id,
@@ -917,16 +818,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userRecord.identifierPath || null,
         userRecord.namePath || null,
         userRecord.scopes || null,
-        userRecord.totpSecret || null,
-        userRecord.totpEnabled ? 1 : 0,
-        userRecord.totpBackupCodes || null,
       );
 
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, enable_web_ui, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, docker_config, web_ui_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, security, ignore_cert, guacamole_config, mac_address, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -948,28 +846,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.keyPassword || null,
           decrypted.keyType || null,
           decrypted.sudoPassword || null,
-          decrypted.autostartPassword || null,
-          decrypted.autostartKey || null,
-          decrypted.autostartKeyPassword || null,
           decrypted.credentialId || null,
           decrypted.overrideCredentialUsername ? 1 : 0,
-          decrypted.enableTerminal ? 1 : 0,
-          decrypted.enableTunnel ? 1 : 0,
-          decrypted.tunnelConnections || null,
           decrypted.jumpHosts || null,
-          decrypted.enableFileManager ? 1 : 0,
-          decrypted.enableDocker ? 1 : 0,
-          decrypted.enableWebUi ? 1 : 0,
-          decrypted.showTerminalInSidebar ? 1 : 0,
-          decrypted.showFileManagerInSidebar ? 1 : 0,
-          decrypted.showTunnelInSidebar ? 1 : 0,
-          decrypted.showDockerInSidebar ? 1 : 0,
-          decrypted.showServerStatsInSidebar ? 1 : 0,
-          decrypted.defaultPath || null,
-          decrypted.statsConfig || null,
-          decrypted.dockerConfig || null,
-          decrypted.webUiConfig || null,
+          decrypted.statusCheckEnabled === false ? 0 : 1,
+          decrypted.statusCheckInterval ?? null,
           decrypted.terminalConfig || null,
+          decrypted.sshOptions || null,
           decrypted.quickActions || null,
           decrypted.notes || null,
           decrypted.useSocks5 ? 1 : 0,
@@ -978,15 +861,51 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.socks5Username || null,
           decrypted.socks5Password || null,
           decrypted.socks5ProxyChain || null,
-          decrypted.domain || null,
-          decrypted.security || null,
-          decrypted.ignoreCert ? 1 : 0,
-          decrypted.guacamoleConfig || null,
-          decrypted.macAddress || null,
           decrypted.portKnockSequence || null,
           decrypted.createdAt,
           decrypted.updatedAt,
         );
+      }
+
+      // Host-scope plugin settings travel with their hosts. Secrets are sealed
+      // with this server's key, which the importing server does not have.
+      const insertPluginSetting = exportDb.prepare(
+        "INSERT INTO plugin_settings (plugin_id, host_id, key, value) VALUES (?, ?, ?, ?)",
+      );
+      const hostPluginRows =
+        await createCurrentPluginSettingsRepository().getAllForScopeIds(
+          "host",
+          sshHosts.map((host) => String(host.id)),
+        );
+      for (const row of hostPluginRows) {
+        if (row.encrypted) continue;
+        insertPluginSetting.run(
+          row.pluginId,
+          Number(row.scopeId),
+          row.key,
+          row.value,
+        );
+      }
+
+      // Plugin protocol logins, decrypted like the host's own secrets.
+      const insertProtocolAuth = exportDb.prepare(
+        "INSERT INTO host_protocol_auth (host_id, protocol, auth_type, credential_id, username, password, fields) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      );
+      for (const host of sshHosts) {
+        const logins = toPortableLogins(
+          await listProtocolLogins(host.id as number, userId),
+        );
+        for (const [protocol, login] of Object.entries(logins)) {
+          insertProtocolAuth.run(
+            host.id,
+            protocol,
+            login.authType,
+            login.credentialId,
+            login.username,
+            login.password,
+            JSON.stringify(login.fields),
+          );
+        }
       }
 
       const credentials =
@@ -1020,73 +939,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      const fileManagerRepository =
-        createCurrentFileManagerBookmarkRepository();
-      const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
-        fileManagerRepository.listRecentByUserId(userId),
-        fileManagerRepository.listPinnedByUserId(userId),
-        fileManagerRepository.listShortcutsByUserId(userId),
-      ]);
-
-      const insertRecent = exportDb.prepare(`
-        INSERT INTO file_manager_recent (id, user_id, host_id, name, path, last_opened)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const item of recentFiles) {
-        insertRecent.run(
-          item.id,
-          item.userId,
-          item.hostId,
-          item.name,
-          item.path,
-          item.lastOpened,
-        );
-      }
-
-      const insertPinned = exportDb.prepare(`
-        INSERT INTO file_manager_pinned (id, user_id, host_id, name, path, pinned_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const item of pinnedFiles) {
-        insertPinned.run(
-          item.id,
-          item.userId,
-          item.hostId,
-          item.name,
-          item.path,
-          item.pinnedAt,
-        );
-      }
-
-      const insertShortcut = exportDb.prepare(`
-        INSERT INTO file_manager_shortcuts (id, user_id, host_id, name, path, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const item of shortcuts) {
-        insertShortcut.run(
-          item.id,
-          item.userId,
-          item.hostId,
-          item.name,
-          item.path,
-          item.createdAt,
-        );
-      }
-
-      const dismissedAlertRepository = createCurrentDismissedAlertRepository();
-      const alerts = await dismissedAlertRepository.listByUserId(userId);
-      const insertAlert = exportDb.prepare(`
-        INSERT INTO dismissed_alerts (id, user_id, alert_id, dismissed_at)
-        VALUES (?, ?, ?, ?)
-      `);
-      for (const alert of alerts) {
-        insertAlert.run(
-          alert.id,
-          alert.userId,
-          alert.alertId,
-          alert.dismissedAt,
-        );
-      }
+      // Rows the user owns in plugin tables travel with the export.
+      await writeUserPluginTables(exportDb, userId);
 
       const sshCredentialUsageRepository =
         createCurrentSshCredentialUsageRepository();
@@ -1106,6 +960,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       }
 
       writeSettingsToExportDatabase(exportDb, await getExportableSettings());
+      await writeHostDefaultsToExport(exportDb, userId);
     } finally {
       exportDb.close();
     }
@@ -1213,7 +1068,7 @@ app.post(
 
       if (!DataCrypto.getUserDataKey(userId)) {
         if (isOidcUser) {
-          const oidcUnlocked = await authManager.authenticateOIDCUser(
+          const oidcUnlocked = await authManager.authenticateExternalUser(
             userId,
             deviceInfo.type,
           );
@@ -1281,8 +1136,7 @@ app.post(
         summary: {
           sshHostsImported: 0,
           sshCredentialsImported: 0,
-          fileManagerItemsImported: 0,
-          dismissedAlertsImported: 0,
+          pluginItemsImported: 0,
           credentialUsageImported: 0,
           settingsImported: 0,
           skippedItems: 0,
@@ -1327,31 +1181,20 @@ app.post(
                   keyPassword: host.key_password,
                   keyType: host.key_type,
                   sudoPassword: host.sudo_password,
-                  autostartPassword: host.autostart_password,
-                  autostartKey: host.autostart_key,
-                  autostartKeyPassword: host.autostart_key_password,
                   credentialId: host.credential_id || null,
                   overrideCredentialUsername: Boolean(
                     host.override_credential_username,
                   ),
-                  enableTerminal: Boolean(host.enable_terminal),
-                  enableTunnel: Boolean(host.enable_tunnel),
-                  tunnelConnections: host.tunnel_connections,
                   jumpHosts: host.jump_hosts,
-                  enableFileManager: Boolean(host.enable_file_manager),
-                  enableDocker: Boolean(host.enable_docker),
-                  showTerminalInSidebar: Boolean(host.show_terminal_in_sidebar),
-                  showFileManagerInSidebar: Boolean(
-                    host.show_file_manager_in_sidebar,
-                  ),
-                  showTunnelInSidebar: Boolean(host.show_tunnel_in_sidebar),
-                  showDockerInSidebar: Boolean(host.show_docker_in_sidebar),
-                  showServerStatsInSidebar: Boolean(
-                    host.show_server_stats_in_sidebar,
-                  ),
-                  defaultPath: host.default_path,
-                  statsConfig: host.stats_config,
+                  ...legacyStatusCheck(host),
                   terminalConfig: host.terminal_config,
+                  // Exports from before 2.9.0 carry these in terminal_config.
+                  sshOptions:
+                    host.ssh_options ??
+                    sshOptionsForWrite({
+                      terminalConfig: host.terminal_config,
+                    }) ??
+                    null,
                   quickActions: host.quick_actions,
                   notes: host.notes,
                   useSocks5: Boolean(host.use_socks5),
@@ -1364,7 +1207,30 @@ app.post(
                   updatedAt: new Date().toISOString(),
                 };
 
-                await hostRepository.createEncryptedForUser(userId, hostData);
+                (hostData as Record<string, unknown>).defaultOverrides =
+                  JSON.stringify(
+                    await applyHostDefaultsToWrite({
+                      ownerId: userId,
+                      hostId: null,
+                      columns: hostData as Record<string, unknown>,
+                      body: hostData as Record<string, unknown>,
+                    }),
+                  );
+                const created = await hostRepository.createEncryptedForUser(
+                  userId,
+                  hostData,
+                );
+                await applyPluginHostImportSettings(
+                  Number(created.id),
+                  importedHostPluginSettings(importDb, host),
+                );
+                await applyDefaultsAfterHostWrite(Number(created.id));
+                await importHostProtocolLogins(
+                  importDb,
+                  host,
+                  Number(created.id),
+                  userId,
+                );
                 result.summary.sshHostsImported++;
               } catch (hostError) {
                 result.summary.errors.push(
@@ -1434,102 +1300,15 @@ app.post(
             );
           }
 
-          const fileManagerTables = [
-            {
-              table: "file_manager_recent",
-              key: "fileManagerItemsImported",
-            },
-            {
-              table: "file_manager_pinned",
-              key: "fileManagerItemsImported",
-            },
-            {
-              table: "file_manager_shortcuts",
-              key: "fileManagerItemsImported",
-            },
-          ];
+          const pluginRows = await importUserPluginRows(importDb, userId);
+          result.summary.pluginItemsImported += pluginRows.imported;
+          result.summary.skippedItems += pluginRows.skipped;
+          result.summary.errors.push(...pluginRows.errors);
 
-          const fileManagerRepository =
-            createCurrentFileManagerBookmarkRepository();
-
-          for (const { table, key } of fileManagerTables) {
-            try {
-              const importedItems = importDb
-                .prepare(`SELECT * FROM ${table}`)
-                .all();
-              for (const item of importedItems) {
-                try {
-                  const bookmark = {
-                    hostId: item.host_id,
-                    name: item.name,
-                    path: item.path,
-                  };
-                  const created =
-                    table === "file_manager_recent"
-                      ? await fileManagerRepository.createRecentForImport(
-                          userId,
-                          bookmark,
-                          item.last_opened,
-                        )
-                      : table === "file_manager_pinned"
-                        ? await fileManagerRepository.createPinnedForImport(
-                            userId,
-                            bookmark,
-                            item.pinned_at,
-                          )
-                        : await fileManagerRepository.createShortcutForImport(
-                            userId,
-                            bookmark,
-                            item.created_at,
-                          );
-
-                  if (created) {
-                    result.summary[key]++;
-                  } else {
-                    result.summary.skippedItems++;
-                  }
-                } catch (itemError) {
-                  result.summary.errors.push(
-                    `${table} import error: ${itemError.message}`,
-                  );
-                }
-              }
-            } catch {
-              apiLogger.info(
-                `${table} table not found in import file, skipping`,
-              );
-            }
-          }
-
-          const dismissedAlertRepository =
-            createCurrentDismissedAlertRepository();
-
-          try {
-            const importedAlerts = importDb
-              .prepare("SELECT * FROM dismissed_alerts")
-              .all();
-            for (const alert of importedAlerts) {
-              try {
-                const created = await dismissedAlertRepository.createForImport(
-                  userId,
-                  alert.alert_id,
-                  alert.dismissed_at,
-                );
-                if (created) {
-                  result.summary.dismissedAlertsImported++;
-                } else {
-                  result.summary.skippedItems++;
-                }
-              } catch (alertError) {
-                result.summary.errors.push(
-                  `Dismissed alert import error: ${alertError.message}`,
-                );
-              }
-            }
-          } catch {
-            apiLogger.info(
-              "dismissed_alerts table not found in import file, skipping",
-            );
+          const hostDefaults = await importHostDefaults(importDb, userId);
+          result.summary.skippedItems += hostDefaults.skipped;
+          if (hostDefaults.imported > 0) {
+            await recompute({ userIds: [userId] });
           }
 
           const targetUser = await userRepository.findById(userId);
@@ -1749,37 +1528,38 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
 
 app.use("/users", userRoutes);
 app.use("/host", hostRoutes);
-app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
-app.use("/snippets", snippetsRoutes);
-app.use("/fleets", fleetRoutes);
-app.use("/workspaces", workspaceRoutes);
-app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
-app.use("/terminal", terminalRoutes);
-app.use("/session_logs", sessionLogRoutes);
-app.use("/guacamole", guacamoleRoutes);
-app.use("/session-sharing", sessionSharingRoutes);
-app.use("/collab", collabRoutes);
-app.use("/network-topology", networkTopologyRoutes);
+app.use("/ssh-auth", sshAuthRoutes);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
 app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
-app.use("/proxmox", proxmoxRoutes);
-app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
-registerTailscaleRoutes(app, authenticateJWT);
-app.use("/vault", vaultRoutes);
-app.use("/secret-sources", secretSourceRoutes);
-// Before the alert routes, which are mounted at the root and would otherwise
-// have first claim on the path.
-app.use("/automations", automationsRoutes);
-app.use("/ai", aiRoutes);
-app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
-app.use("/plugin-api", pluginApiRoutes);
+app.use("/sync", syncLinkRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/plugins", pluginRoutes);
+app.use(
+  "/plugin-assets",
+  createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id)),
+);
+mountPluginApi(app);
+mountPluginLegacyPaths(app, () =>
+  getPluginRuntime()
+    .loader.list()
+    .filter((plugin) => plugin.state === "active")
+    .map((plugin) => ({
+      id: plugin.id,
+      legacyPaths: plugin.manifest.contributes?.http?.legacyPaths ?? [],
+      legacyRedirects: plugin.manifest.contributes?.http?.legacyRedirects ?? [],
+    }))
+    .filter(
+      (plugin) =>
+        plugin.legacyPaths.length > 0 || plugin.legacyRedirects.length > 0,
+    ),
+);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),
@@ -2028,6 +1808,10 @@ app.get(
 
 const httpServer = http.createServer(app);
 
+// Plugin sockets ride this server at /plugin-ws/<id>/<path>. Anything else is
+// left alone, so core's own upgrade handling is unaffected.
+attachPluginWebSockets(httpServer);
+
 httpServer.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {
     databaseLogger.error(
@@ -2054,7 +1838,7 @@ export const serverReady = new Promise<void>((resolve) => {
   });
 });
 
-const sslConfig = AutoSSLSetup.getSSLConfig();
+const sslConfig = getTlsConfig();
 if (sslConfig.enabled) {
   databaseLogger.info(`SSL is enabled`, {
     operation: "ssl_info",
@@ -2063,54 +1847,162 @@ if (sslConfig.enabled) {
   });
 }
 
-if (
-  sslConfig.enabled &&
-  process.env.TERMIX_SSL_TERMINATED_BY_NGINX !== "true"
-) {
-  try {
-    const httpsServer = https.createServer(
-      {
-        cert: fs.readFileSync(sslConfig.certPath),
-        key: fs.readFileSync(sslConfig.keyPath),
-      },
-      app,
-    );
+// Built through the TLS service so a new certificate can be swapped in, or
+// HTTPS started, without a restart.
+void configureDirectHttps((options) => {
+  const port = getTlsConfig().port;
+  const httpsServer = https.createServer(options, app);
 
-    httpsServer.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        databaseLogger.error(
-          `SSL port ${sslConfig.port} is already in use. Kill the existing process and retry.`,
-          err,
-          {
-            operation: "https_server_port_conflict",
-            port: sslConfig.port,
-          },
-        );
-        return;
-      }
-      databaseLogger.error("HTTPS server error", err, {
-        operation: "https_server_error",
-      });
-    });
+  attachPluginWebSockets(httpsServer);
 
-    httpsServer.listen(sslConfig.port, "127.0.0.1", () => {
-      databaseLogger.success(
-        `Backend is now also listening for HTTPS directly`,
+  httpsServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      databaseLogger.error(
+        `SSL port ${port} is already in use. Kill the existing process and retry.`,
+        err,
         {
-          operation: "https_server_started",
-          port: sslConfig.port,
+          operation: "https_server_port_conflict",
+          port,
         },
       );
+      return;
+    }
+    databaseLogger.error("HTTPS server error", err, {
+      operation: "https_server_error",
     });
-  } catch (error) {
-    databaseLogger.error(
-      "Failed to start HTTPS server with configured SSL certificate",
-      error,
-      {
-        operation: "https_server_start_failed",
-        cert_path: sslConfig.certPath,
-        key_path: sslConfig.keyPath,
-      },
-    );
+  });
+
+  httpsServer.listen(port, "127.0.0.1", () => {
+    databaseLogger.success(`Backend is now also listening for HTTPS directly`, {
+      operation: "https_server_started",
+      port,
+    });
+  });
+  return httpsServer;
+});
+
+/**
+ * Status check columns from an export row. Exports from before 2.9.0 only
+ * have stats_config, which carried them.
+ */
+function legacyStatusCheck(row: Record<string, unknown>): {
+  statusCheckEnabled: boolean;
+  statusCheckInterval: number | null;
+} {
+  if (row.status_check_enabled !== undefined) {
+    return {
+      statusCheckEnabled: Boolean(row.status_check_enabled),
+      statusCheckInterval:
+        typeof row.status_check_interval === "number"
+          ? row.status_check_interval
+          : null,
+    };
   }
+  let legacy: Record<string, unknown> = {};
+  try {
+    legacy =
+      typeof row.stats_config === "string" && row.stats_config
+        ? JSON.parse(row.stats_config)
+        : {};
+  } catch {
+    legacy = {};
+  }
+  const seconds = Number(legacy.statusCheckInterval);
+  return {
+    statusCheckEnabled:
+      legacy.statusCheckEnabled !== false && legacy.disableTcpPing !== true,
+    statusCheckInterval:
+      legacy.useGlobalStatusInterval === false &&
+      Number.isInteger(seconds) &&
+      seconds >= 5
+        ? seconds
+        : null,
+  };
+}
+
+/**
+ * A host's plugin protocol logins from an export. The file's credential ids
+ * belong to the server that wrote it, so a login keeps one only when it is
+ * a credential the importing user can use.
+ */
+async function importHostProtocolLogins(
+  importDb: Database.Database,
+  host: Record<string, unknown>,
+  hostId: number,
+  userId: string,
+): Promise<void> {
+  let rows: Array<Record<string, unknown>>;
+  try {
+    rows = importDb
+      .prepare("SELECT * FROM host_protocol_auth WHERE host_id = ?")
+      .all(host.id) as Array<Record<string, unknown>>;
+  } catch {
+    // An export from before 2.9.0 has no protocol logins.
+    return;
+  }
+  const protocolAuth: Record<string, unknown> = {};
+  for (const row of rows) {
+    let fields: unknown = {};
+    try {
+      fields = JSON.parse(String(row.fields ?? "{}"));
+    } catch {
+      fields = {};
+    }
+    protocolAuth[String(row.protocol)] = {
+      authType: row.auth_type,
+      credentialId: row.credential_id,
+      username: row.username,
+      password: row.password,
+      fields,
+    };
+  }
+  const patch = readProtocolAuthPayload({ protocolAuth });
+  if (!patch) return;
+  await writeProtocolAuth(
+    userId,
+    hostId,
+    await keepUsableProtocolCredentials(patch, userId),
+    { isOwner: true },
+  );
+}
+
+/**
+ * What an exported host carries for plugins: the plugin_settings rows a 2.9
+ * export writes, plus the whole row in camelCase so a plugin's import
+ * normalizer can read the columns a 2.8 export still had.
+ */
+function importedHostPluginSettings(
+  importDb: Database.Database,
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+  for (const [column, value] of Object.entries(host)) {
+    raw[column.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())] = value;
+  }
+
+  const pluginSettings: Record<string, Record<string, unknown>> = {};
+  try {
+    const rows = importDb
+      .prepare(
+        "SELECT plugin_id, key, value FROM plugin_settings WHERE host_id = ?",
+      )
+      .all(host.id) as Array<{
+      plugin_id: string;
+      key: string;
+      value: string | null;
+    }>;
+    for (const row of rows) {
+      let value: unknown = null;
+      try {
+        value = row.value === null ? null : JSON.parse(row.value);
+      } catch {
+        continue;
+      }
+      (pluginSettings[row.plugin_id] ??= {})[row.key] = value;
+    }
+  } catch {
+    // A 2.8 export has no plugin_settings table.
+  }
+  raw.pluginSettings = pluginSettings;
+  return raw;
 }

@@ -1,6 +1,8 @@
 import { lookup, type LookupAddress, type LookupOptions } from "dns";
 import { BlockList, isIP } from "net";
 import { Agent, fetch as undiciFetch } from "undici";
+import type { Dispatcher } from "undici-types";
+import { getProxyAgent } from "./proxy-agent.js";
 
 type DnsLookupFn = (
   hostname: string,
@@ -186,11 +188,19 @@ export async function readResponseTextLimited(
   return Buffer.concat(chunks, total).toString("utf8");
 }
 
+/** undici's own default for both, kept as the floor. */
+const DEFAULT_IDLE_TIMEOUT_MS = 300_000;
+
+export function outboundIdleTimeout(timeoutMs?: number): number {
+  return Math.max(timeoutMs ?? 0, DEFAULT_IDLE_TIMEOUT_MS);
+}
+
 export async function safeOutboundFetch(
   rawUrl: string,
   options: RequestInit,
   allowedPrivateHosts: readonly string[] = [],
   tls: OutboundTlsOptions = {},
+  idleTimeoutMs?: number,
 ): Promise<Response> {
   const url = new URL(rawUrl);
   if (
@@ -209,7 +219,27 @@ export async function safeOutboundFetch(
     throw new Error("Private destinations are not allowed");
   }
 
+  // An admin-allowlisted private host goes through the configured proxy,
+  // when there is one, the same way core's own outbound calls do. A public
+  // host never does: the proxy would resolve it, skipping the check above.
+  const proxy =
+    allowPrivate && !tls.ca && tls.rejectUnauthorized !== false
+      ? getProxyAgent(url.toString())
+      : undefined;
+  if (proxy) {
+    return (await undiciFetch(url.toString(), {
+      ...options,
+      dispatcher: proxy as unknown as Dispatcher,
+      redirect: options.redirect === "manual" ? "manual" : "error",
+    } as never)) as unknown as Response;
+  }
+
+  // A slow model can go quiet for minutes mid-stream. Past bodyTimeout undici
+  // kills the body with a bare "terminated".
+  const idle = outboundIdleTimeout(idleTimeoutMs);
   const dispatcher = new Agent({
+    headersTimeout: idle,
+    bodyTimeout: idle,
     connect: {
       lookup: createDnsLookupHook(lookup, allowPrivate),
       ...(tls.ca ? { ca: tls.ca } : {}),
@@ -220,12 +250,16 @@ export async function safeOutboundFetch(
   });
 
   try {
-    return await undiciFetch(url.toString(), {
+    const response = await undiciFetch(url.toString(), {
       ...options,
       dispatcher,
-      redirect: "error",
+      redirect: options.redirect === "manual" ? "manual" : "error",
     });
-  } finally {
-    await dispatcher.close();
+    // close() waits for the body, which the caller reads after we return.
+    dispatcher.close().catch(() => {});
+    return response;
+  } catch (error) {
+    await dispatcher.destroy().catch(() => {});
+    throw error;
   }
 }

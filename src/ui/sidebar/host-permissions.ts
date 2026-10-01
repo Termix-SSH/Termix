@@ -1,9 +1,13 @@
 import type { Host, SharePermissionLevel } from "@/types/ui-types";
 import {
-  AUTH_PROTOCOL_METADATA,
-  isSupportedAuthOverrideProtocol,
+  SSH_AUTH_PROTOCOL,
   type AuthOverrideProtocol,
 } from "@/types/auth-protocols";
+import {
+  listHostProtocols,
+  protocolEnabled,
+  type HostProtocolDef,
+} from "./host-protocols";
 
 const LEVEL_RANK: Record<SharePermissionLevel, number> = {
   connect: 1,
@@ -32,14 +36,31 @@ export function canDeleteHost(host: Host): boolean {
   return !host.isShared;
 }
 
+/** SSH, then every protocol a running plugin registered. */
+export function authOverrideProtocols(
+  list: HostProtocolDef[] = listHostProtocols(),
+): AuthOverrideProtocol[] {
+  return [SSH_AUTH_PROTOCOL, ...list.map((protocol) => protocol.id)];
+}
+
+/** How a protocol is named in the override menu and dialog. */
+export function authProtocolLabel(
+  protocol: AuthOverrideProtocol,
+  t: (key: string) => string,
+  list: HostProtocolDef[] = listHostProtocols(),
+): string {
+  if (protocol === SSH_AUTH_PROTOCOL) return "SSH";
+  const def = list.find((entry) => entry.id === protocol);
+  return def ? t(def.titleKey) : protocol;
+}
+
 export function canOverrideHostAuth(
   host: Host,
   protocol: AuthOverrideProtocol,
 ): boolean {
-  const enableField = AUTH_PROTOCOL_METADATA[protocol].enableField;
-  return (
-    !!host.isShared &&
-    isSupportedAuthOverrideProtocol(protocol) &&
-    !!host[enableField]
-  );
+  if (!host.isShared) return false;
+  if (protocol === SSH_AUTH_PROTOCOL) return !!host.enableSsh;
+  // Other protocols are switched on in their plugin's host settings.
+  const plugin = listHostProtocols().find((entry) => entry.id === protocol);
+  return !!plugin && protocolEnabled(host.pluginSettings, plugin);
 }

@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "devices.view": {
+      "title": "Veure dispositius de xarxa de cua",
+      "description": "Veureu els dispositius de la xarxa de cua connectada."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "API de tailscal",
+      "devices": "Xarxa de cua"
+    },
+    "apiKey": {
+      "label": "Clau API",
+      "description": "S'utilitza per llistar els dispositius de la xarxa de tailnet. Funciona amb una clau Tailscale o Headscale.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "URL base de l'API",
+      "description": "Deixeu-ho en blanc per a Tailscale. Defineu-ho perquè apunti a una instància de Headscale.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Llista de dispositius",
+      "checking": "Revisant la xarxa de cua...",
+      "noKey": "Encara no s'ha definit cap clau API.",
+      "error": "No s'ha pogut accedir a la xarxa de cua. Comproveu la clau API.",
+      "count": "dispositiu {{count}} accessible",
+      "count_other": "dispositius accessibles {{count}}",
+      "refresh": "Comprovar"
+    }
+  },
+  "nav": {
+    "tailscale": "Escala de cua"
+  },
+  "hosts": {
+    "tailscaleUsernameHint": "Aquest ha de ser un usuari d'Unix; la teva identitat Tailscale està atorgada a l'ACL SSH de la xarxa principal, no necessàriament un usuari root.",
+    "tailscaleDeviceSelect": "Selecciona el dispositiu Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Selecciona un dispositiu...",
+    "tailscaleNoApiKey": "No hi ha cap clau d'API de Tailscale configurada. Afegeix-ne una a la configuració de l'administrador per habilitar la detecció de dispositius.",
+    "tailscaleDocsLink": "Veure documents",
+    "tailscaleLoadingDevices": "S'estan carregant els dispositius...",
+    "tailscaleDeviceLoadFailed": "No s'han pogut carregar els dispositius Tailscale. Comproveu l'URL de l'API i la connexió de xarxa.",
+    "tailscaleNoDevices": "No s'han trobat dispositius a la xarxa de cua.",
+    "tailscaleDeviceAutoFill": "En seleccionar un dispositiu, l'adreça IP de l'amfitrió s'omplirà automàticament.",
+    "tailscaleAddHost": "Afegeix un amfitrió",
+    "tailscaleCopyIp": "Copia IP de tailscal",
+    "tailscaleIpCopied": "IP copiada",
+    "tailscaleIpCopyFailed": "No s'ha pogut copiar la IP",
+    "filterAuthTailscale": "Escala de cua"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Autenticació a escala final requerida",
+    "tailscaleCheckDescription": "L'SSH a escala de punta requereix una comprovació addicional. Autentiqueu-vos al navegador per continuar.",
+    "tailscaleCheckOpenBrowser": "Obre el navegador per autenticar-te",
+    "tailscaleCheckWaiting": "Esperant l'autenticació de Tailscale...",
+    "tailscaleCheckTimeout": "S'ha esgotat el temps d'espera de l'autenticació a escala final. Torna-ho a provar."
+  },
+  "manager": {
+    "title": "Escala de cua",
+    "refresh": "Actualitza",
+    "retry": "Torna-ho a intentar",
+    "sudoHint": "Estableix una contrasenya sudo per a aquest host per permetre accions amb privilegis elevats.",
+    "noData": "No hi ha dades disponibles",
+    "filter": "Filtra...",
+    "tsNotInstalled": "Tailscale no està instal·lat en aquest amfitrió",
+    "tsRunning": "Córrer",
+    "tsStopped": "Aturat",
+    "tsEnable": "Connecta",
+    "tsDisable": "Desconnecta",
+    "tsEnabling": "Connectant a Tailscale...",
+    "tsDisabling": "Desconnectant de Tailscale...",
+    "tsEnabled": "Escala de cua connectada",
+    "tsDisabled": "Escala de cua desconnectada",
+    "tsExitNode": "Node de sortida",
+    "tsExitNodeActive": "Node de sortida actiu"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Connecta't al terminal",
+        "usernameLabel": "Nom d'usuari"
+      }
+    }
+  }
+}

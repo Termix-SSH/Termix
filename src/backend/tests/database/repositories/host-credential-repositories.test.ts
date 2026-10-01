@@ -483,7 +483,6 @@ describe("HostRepository and CredentialRepository", () => {
       port: 22,
       username: "root",
       authType: "password",
-      statsConfig: JSON.stringify({ cpu: true }),
     });
     const second = await repo.hosts.create({
       userId: "user-1",

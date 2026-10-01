@@ -8,17 +8,12 @@ export interface UserEncryptionMigrationRecord {
 export interface UserEncryptionMigrationStore {
   listHostRecords(userId: string): UserEncryptionMigrationRecord[];
   listCredentialRecords(userId: string): UserEncryptionMigrationRecord[];
-  getUserRecord(userId: string): UserEncryptionMigrationRecord | undefined;
   updateHostSensitiveFields(
     recordId: number | string,
     record: Record<string, unknown>,
   ): void;
   updateCredentialSensitiveFields(
     recordId: number | string,
-    record: Record<string, unknown>,
-  ): void;
-  updateUserSensitiveFields(
-    userId: string,
     record: Record<string, unknown>,
   ): void;
   updatePasswordResetFields(
@@ -52,10 +47,6 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
       .all(userId);
   }
 
-  getUserRecord(userId: string): UserEncryptionMigrationRecord | undefined {
-    return this.db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  }
-
   updateHostSensitiveFields(
     recordId: number | string,
     record: Record<string, unknown>,
@@ -64,7 +55,7 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
       .prepare(
         `
           UPDATE ssh_data
-          SET password = ?, key = ?, key_password = ?, key_type = ?, autostart_password = ?, autostart_key = ?, autostart_key_password = ?, sudo_password = ?, updated_at = CURRENT_TIMESTAMP
+          SET password = ?, key = ?, key_password = ?, key_type = ?, sudo_password = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `,
       )
@@ -73,9 +64,6 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
         record.key || null,
         record.key_password || null,
         record.key_type || null,
-        record.autostart_password || null,
-        record.autostart_key || null,
-        record.autostart_key_password || null,
         record.sudo_password || null,
         recordId,
       );
@@ -101,27 +89,6 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
         record.public_key || null,
         record.key_type || null,
         recordId,
-      );
-  }
-
-  updateUserSensitiveFields(
-    userId: string,
-    record: Record<string, unknown>,
-  ): void {
-    this.db
-      .prepare(
-        `
-          UPDATE users
-          SET totp_secret = ?, totp_backup_codes = ?, client_secret = ?, oidc_identifier = ?
-          WHERE id = ?
-        `,
-      )
-      .run(
-        record.totp_secret || null,
-        record.totp_backup_codes || null,
-        record.client_secret || null,
-        record.oidc_identifier || null,
-        userId,
       );
   }
 

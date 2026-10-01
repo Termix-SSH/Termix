@@ -1,15 +1,17 @@
-import {
-  isSupportedAuthOverrideProtocol,
-  type AuthOverrideProtocol,
-} from "../../types/auth-protocols.js";
+import type { AuthOverrideProtocol } from "../../types/auth-protocols.js";
+import { isAuthOverrideProtocol } from "../hosts/protocol-auth/registry.js";
 import {
   createCurrentHostResolutionRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
   createCurrentSharedHostAuthOverrideRepository,
 } from "../database/repositories/factory.js";
 import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../database/repositories/host-resolution-repository.js";
+import { getSshAuthProvider } from "../hosts/connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
 import {
   SharedHostSecretsManager,
   type SharedSecretData,
@@ -33,20 +35,16 @@ export function requiresPersonalHostAuthentication(
   host: Pick<HostResolutionHostRecord, "credentialId" | "authType">,
   protocol: AuthOverrideProtocol,
 ): boolean {
-  // Owner auth for RDP/VNC/Telnet is snapshotted for every recipient, so only
-  // SSH, which sits behind shareSshAuth, can leave a recipient without auth.
+  // Owner auth for a plugin protocol is snapshotted for every recipient, so
+  // only SSH, which sits behind shareSshAuth, can leave one without auth.
   if (protocol !== "ssh") return false;
-  return (
-    !!host.credentialId ||
-    host.authType === "password" ||
-    host.authType === "key" ||
-    host.authType === "credential" ||
-    host.authType === "agent"
-  );
+  if (host.credentialId) return true;
+  ensureCoreSshAuthProviders();
+  return !!getSshAuthProvider(host.authType ?? "none")?.requiresSecret;
 }
 
 /** Whether the owner's auth for this protocol is available to recipients. */
-export function isOwnerAuthShared(
+function isOwnerAuthShared(
   host: Pick<HostResolutionHostRecord, "shareSshAuth">,
   protocol: AuthOverrideProtocol,
 ): boolean {
@@ -64,10 +62,8 @@ export async function resolveRecipientSharedHostAuthentication(
   userId: string,
   protocol: AuthOverrideProtocol,
 ): Promise<RecipientSharedHostAuthResolution> {
-  if (!isSupportedAuthOverrideProtocol(protocol)) {
-    throw new Error(
-      `${protocol.toUpperCase()} shared-host authentication is not implemented`,
-    );
+  if (!isAuthOverrideProtocol(protocol)) {
+    throw new Error(`No plugin declares the ${String(protocol)} protocol`);
   }
 
   const repository = createCurrentHostResolutionRepository();
@@ -107,12 +103,36 @@ export async function resolveRecipientSharedHostAuthentication(
     }
 
     try {
-      const secret =
-        await SharedHostSecretsManager.getInstance().getSecretForUser(
-          hostId,
-          userId,
-          protocol,
-        );
+      const secretsManager = SharedHostSecretsManager.getInstance();
+      let secret = await secretsManager.getSecretForUser(
+        hostId,
+        userId,
+        protocol,
+      );
+
+      if (!secret) {
+        // No snapshot yet -- most often the grant was created while this
+        // recipient's data key was unavailable (snapshotForUser silently
+        // skips in that case). Mirrors the self-heal in findUsableCredential.
+        const hostAccessId = await findActiveHostAccessId(hostId, userId);
+        if (hostAccessId !== null) {
+          const ownerId = await repository.findHostOwnerId(hostId);
+          if (ownerId) {
+            await secretsManager.snapshotForUser(
+              hostAccessId,
+              hostId,
+              userId,
+              ownerId,
+            );
+            secret = await secretsManager.getSecretForUser(
+              hostId,
+              userId,
+              protocol,
+            );
+          }
+        }
+      }
+
       if (secret) {
         return {
           source: "owner-shared",
@@ -128,4 +148,18 @@ export async function resolveRecipientSharedHostAuthentication(
   return requiresPersonalHostAuthentication(host, protocol)
     ? { source: "required" }
     : { source: "secretless" };
+}
+
+/** The grant id for this user's access to the host, direct or via a role. */
+async function findActiveHostAccessId(
+  hostId: number,
+  userId: string,
+): Promise<number | null> {
+  const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+  const access = await createCurrentRbacAccessRepository().findActiveHostAccess(
+    hostId,
+    userId,
+    roleIds,
+  );
+  return access?.id ?? null;
 }

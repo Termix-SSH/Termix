@@ -7,15 +7,13 @@ import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import {
   createCurrentCredentialRepository,
-  createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentHostRepository,
   createCurrentRecentActivityRepository,
   createCurrentSettingsRepository,
-  createCurrentSnippetRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 
 interface UserPasswordResetRoutesDeps {
   authManager: AuthManager;
@@ -70,12 +68,12 @@ export async function resetUserPassword(
   await userRepository.update(userId, { passwordHash });
 
   await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
-  await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
   await createCurrentRecentActivityRepository().deleteByUserId(userId);
-  await createCurrentDismissedAlertRepository().deleteByUserId(userId);
-  await createCurrentSnippetRepository().deleteByUserId(userId);
   await createCurrentHostRepository().deleteByUserId(userId);
   await createCurrentCredentialRepository().deleteByUserId(userId);
+  // A plugin holding this user's data (anything keyed by
+  // refUser()) wipes it on this topic, since the user row itself survives.
+  pluginEvents.emit(TOPICS.userDataWiped, { userId });
 
   const { UserKeyManager } = await import("../../utils/user-keys.js");
   await UserKeyManager.getInstance().rotateUserDEK(userId);
@@ -84,11 +82,11 @@ export async function resetUserPassword(
   await deleteLegacyWraps(userId);
   await authManager.logoutUser(userId);
 
-  await userRepository.update(userId, {
-    totpEnabled: false,
-    totpSecret: null,
-    totpBackupCodes: null,
-  });
+  // Same as 2.8, where the wipe took the TOTP secret with it: the user sets
+  // up their second factors again after this.
+  const { resetUserSecondFactors } =
+    await import("../../auth/second-factor-admin.js");
+  await resetUserSecondFactors(userId);
 
   authLogger.warn(
     `Password reset completed for user: ${username}. All encrypted data has been deleted because the old key was unrecoverable.`,
@@ -418,7 +416,7 @@ export function registerUserPasswordResetRoutes(
       if (outcome.status === "wipe_confirmation_required") {
         return res.status(409).json({
           error:
-            "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets.",
+            "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and other saved data.",
           code: "DATA_WIPE_REQUIRED",
         });
       }

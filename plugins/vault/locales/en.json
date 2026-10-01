@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "Vault Signer Profile",
+    "selectProfile": "Select a Vault profile...",
+    "hint": "Settings come from the shared profile; you'll sign in to Vault via OIDC when you connect. No secrets are stored.",
+    "docs": "View docs",
+    "sharedProfile": "{{name}} (shared)"
+  },
+  "profiles": {
+    "new": "New profile",
+    "manage": "Manage Vault profiles",
+    "name": "Friendly Name",
+    "vaultAddr": "Vault Address",
+    "namespace": "Namespace",
+    "oidcMount": "OIDC Auth Mount",
+    "oidcRole": "OIDC Role",
+    "sshMount": "SSH Secrets Mount",
+    "sshRole": "SSH Signer Role",
+    "validPrincipals": "Valid Principals",
+    "keyType": "Ephemeral Key Type",
+    "shareWithAll": "Share with all users",
+    "create": "Create profile",
+    "created": "Vault profile created",
+    "saved": "Vault profile saved",
+    "deleted": "Vault profile deleted",
+    "saveFailed": "Failed to save Vault profile",
+    "deleteFailed": "Failed to delete Vault profile",
+    "save": "Save profile",
+    "validationError": "Name, Vault address and SSH signer role are required",
+    "none": "No Vault profiles yet.",
+    "sharedBadge": "shared",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "hosts": {
+    "filterAuthVault": "Vault"
+  },
+  "dialog": {
+    "title": "Vault sign-in required",
+    "description": "A window has opened to sign in to HashiCorp Vault. Complete the sign-in there; this connection will continue automatically.",
+    "failed": "Vault authentication failed. Please try again.",
+    "reopen": "Reopen sign-in window"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Vault SSH signing",
+      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+    },
+    "share": {
+      "title": "Share Vault profiles",
+      "description": "Mark a Vault signer profile as shared so every user can pick it."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault signer profile"
+      }
+    }
+  }
+}

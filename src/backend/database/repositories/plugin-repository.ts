@@ -18,6 +18,7 @@ export interface PluginCreateInput {
   source?: string;
   registryId?: string | null;
   state?: string;
+  lastError?: string | null;
   autoUpdate?: boolean;
   manifestJson: string;
 }
@@ -29,6 +30,7 @@ export interface PluginUpdateInput {
   source?: string;
   registryId?: string | null;
   state?: string;
+  lastError?: string | null;
   autoUpdate?: boolean;
   manifestJson?: string;
 }
@@ -64,6 +66,7 @@ export class PluginRepository {
       source: input.source ?? "community",
       registryId: input.registryId ?? null,
       state: input.state ?? "disabled",
+      lastError: input.lastError ?? null,
       autoUpdate: input.autoUpdate ?? false,
       manifestJson: input.manifestJson,
       installedAt: now,
@@ -95,6 +98,8 @@ export class PluginRepository {
             ? existing.registryId
             : input.registryId,
         state: input.state ?? existing.state,
+        lastError:
+          input.lastError === undefined ? existing.lastError : input.lastError,
         autoUpdate: input.autoUpdate ?? existing.autoUpdate,
         manifestJson: input.manifestJson ?? existing.manifestJson,
         updatedAt: now,

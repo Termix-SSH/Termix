@@ -61,6 +61,8 @@ jobs:
 
       - name: Setup Docker Buildx
         uses: useblacksmith/setup-docker-builder@v2
+        with:
+          cache-key: termix-ssh/termix
 
       - name: Determine tags
         id: tags
@@ -121,8 +123,6 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.created=${{ github.run_id }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd' }}
 
       - name: Cleanup Docker

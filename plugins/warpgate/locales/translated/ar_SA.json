@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "بوابة Warpgate",
+        "description": "يتصل هذا المضيف عبر وكيل SSH من Warpgate. سيتولى Termix عملية الموافقة عبر المتصفح تلقائيًا بعد المصادقة."
+      }
+    }
+  }
+}

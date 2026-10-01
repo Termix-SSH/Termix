@@ -1,0 +1,34 @@
+{
+  "name": "@termix-plugin/web-endpoint",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p .",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "lucide-react": "^1.33.0"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "^1.0.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "@termix/plugin-sdk": "^1.0.0",
+    "axios": "^1.19.0",
+    "express": "^5.2.1",
+    "i18next": "^26.4.2",
+    "react": "^19.2.8",
+    "sonner": "^2.0.8"
+  }
+}

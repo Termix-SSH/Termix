@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Bekijk vloten",
+      "description": "Bekijk de vloten, hun leden en inventaris."
+    },
+    "manage": {
+      "title": "Vlootbeheer",
+      "description": "Vloten aanmaken, bewerken en verwijderen, het lidmaatschap wijzigen en vloten delen met andere gebruikers of rollen."
+    },
+    "execute": {
+      "title": "Voer vlootacties uit",
+      "description": "Voer opdrachten en pakketacties uit op een hele vloot en breng bestanden over van en naar de hosts die lid zijn van de vloot."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "Vloten",
+        "createFleet": "Vloot creëren",
+        "createFleetTitle": "Vloot creëren",
+        "editFleetTitle": "Vloot bewerken",
+        "createFleetDescription": "Een vloot is een benoemde groep hosts waartegen je als eenheid acties kunt uitvoeren.",
+        "nameLabel": "Naam",
+        "namePlaceholder": "bijvoorbeeld webservers",
+        "nameRequired": "Vlootnaam is verplicht",
+        "descriptionLabel": "Beschrijving",
+        "descriptionPlaceholder": "Optionele beschrijving",
+        "colorLabel": "Kleur",
+        "tagRulesLabel": "Tagregels",
+        "tagRulesPlaceholder": "prod-web, edge",
+        "tagRulesHint": "Hosts met een van deze tags worden automatisch opgenomen, naast hosts die handmatig zijn toegevoegd.",
+        "fleetCreated": "Vloot gecreëerd",
+        "fleetUpdated": "Vloot bijgewerkt",
+        "fleetDeleted": "Vloot verwijderd",
+        "saveFailed": "Vloot kon niet worden gered",
+        "deleteFailed": "Het verwijderen van de vloot is mislukt.",
+        "loadFailed": "Het laden van de vloot is mislukt.",
+        "deleteFleetTitle": "Vloot verwijderen",
+        "deleteFleetDescription": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Hiermee worden de lidhosts zelf niet verwijderd.",
+        "searchFleets": "Zoekvloten...",
+        "noFleets": "Nog geen vloten. Maak er een aan om te beginnen.",
+        "memberCount": "{{count}} host",
+        "memberCount_other": "{{count}} hosts",
+        "manageMembers": "Leden beheren",
+        "manageMembersTitle": "Vlootleden beheren",
+        "manageMembersDescription": "Voeg hosts toe aan of verwijder ze uit het statische lidmaatschap van deze vloot. Hosts die overeenkomen met tagregels zijn altijd inbegrepen.",
+        "searchHosts": "Hosts zoeken...",
+        "noHostsFound": "Geen hosts gevonden",
+        "noMembers": "Deze vloot heeft nog geen leden. Voeg hosts toe of stel een tagregel in.",
+        "membersLoadFailed": "Het laden van de vlootleden is mislukt.",
+        "memberUpdateFailed": "Het bijwerken van het vlootlidmaatschap is mislukt.",
+        "tabRun": "Voer het commando uit",
+        "tabTransfer": "Bestanden overdragen",
+        "tabInventory": "Inventaris",
+        "openInventoryTab": "Openen in een volledig tabblad",
+        "tabPackages": "Pakketten",
+        "runOnFleet": "Run on Fleet",
+        "commandPlaceholder": "uptime && df -h",
+        "commandRequired": "Een opdracht is vereist.",
+        "commandInputsLabel": "Commando-invoer",
+        "commandSucceeded": "De opdracht is op alle hosts succesvol uitgevoerd.",
+        "commandPartialFailure": "{{failed}} van {{total}} hosts mislukt",
+        "commandFailed": "Het uitvoeren van de opdracht is mislukt.",
+        "resultSuccess": "Succes",
+        "resultFailed": "Mislukt",
+        "push": "Duw",
+        "pull": "Trekken",
+        "remotePathLabel": "Externe route",
+        "remotePathRequired": "Een externe verbinding is vereist.",
+        "fileLabel": "Bestand",
+        "fileRequired": "Een bestand is vereist.",
+        "pushHint": "Het geselecteerde bestand wordt op elke host in de vloot naar precies dit pad geschreven.",
+        "pullHint": "Het bestand op dit pad wordt van elke host gelezen en gedownload als één zipbestand, één map per host.",
+        "transferComplete": "Overdracht voltooid",
+        "transferFailed": "Overdracht mislukt",
+        "refreshInventory": "Voorraad vernieuwen",
+        "inventoryLoadFailed": "Het laden van de inventaris is mislukt.",
+        "inventoryRefreshed": "Voorraad bijgewerkt",
+        "inventoryRefreshFailed": "Het vernieuwen van de inventaris is mislukt.",
+        "inventoryNoData": "Er zijn nog geen voorraadgegevens beschikbaar - vernieuw de pagina om ze te verzamelen.",
+        "inventoryHost": "Gastheer",
+        "inventoryCollectedCount": "{{count}}/{{total}} verzameld",
+        "inventoryOs": "OS",
+        "inventoryKernel": "Kernel",
+        "inventoryArch": "Boog",
+        "inventoryUptime": "Beschikbaarheid",
+        "inventoryPackageManager": "Pakketbeheerder",
+        "inventoryCollectedAt": "Verzameld",
+        "packageActionLabel": "Actie",
+        "packageInstall": "Installeren",
+        "packageRemove": "Verwijderen",
+        "packageUpgradeAll": "Upgrade alle pakketten",
+        "packageNameLabel": "Pakketnaam",
+        "packageNameRequired": "Een pakketnaam is vereist.",
+        "packageHint": "Vereist beheerrechten per host en verhoogt deze rechten met behulp van het opgeslagen sudo-wachtwoord van de host.",
+        "shareFleet": "Deel vloot",
+        "shareFleetTitle": "Delen \"{{name}}\"",
+        "shareFleetDescription": "Deelt de huidige hosts van deze vloot met de geselecteerde gebruikers of rollen. Hosts die later aan de vloot worden toegevoegd, worden niet automatisch gedeeld; deel ze opnieuw om ze toe te voegen.",
+        "shareSelectionRequired": "Selecteer ten minste één gebruiker of rol.",
+        "fleetSharedSuccessfully": "Gedeelde {{shared}} van {{total}} host(s) in deze vloot",
+        "failedToShareFleet": "Het delen van de vloot is mislukt.",
+        "noMembersToShare": "Deze vloot heeft nog geen leden die de diensten van andere beheerders kunnen aanbieden."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "Vloten"
+  },
+  "hosts": {
+    "docsLink": "Documenten bekijken",
+    "sharing": {
+      "customHoursPlaceholder": "Aantal uren tot de toegang verloopt",
+      "expiry": {
+        "never": "Nooit",
+        "oneHour": "1 uur",
+        "oneDay": "24 uur",
+        "sevenDays": "7 dagen",
+        "thirtyDays": "30 dagen",
+        "custom": "Aangepast"
+      },
+      "expiryLabel": "Toegang verloopt",
+      "levels": {
+        "connect": {
+          "label": "Verbinden",
+          "description": "Alleen open sessies: terminal, extern bureaublad, bestandsbeheer, tunnels en Docker. Geen toegang tot de hostconfiguratie."
+        },
+        "view": {
+          "label": "Weergave",
+          "description": "Maak verbinding en bekijk de hostconfiguratie. Geheime gegevens worden nooit weergegeven."
+        },
+        "edit": {
+          "label": "Bewerking",
+          "description": "Bekijk en wijzig de instellingen van de host die geen authenticatie vereist. De SSH-authenticatie van de eigenaar blijft privé en alleen toegankelijk voor de eigenaar."
+        },
+        "manage": {
+          "label": "Beheren",
+          "description": "Bewerken, de host delen met anderen, toegangsrechten wijzigen en toegang intrekken."
+        }
+      },
+      "noMatches": "Geen overeenkomsten gevonden",
+      "permissionLevelLabel": "Toegangsniveau",
+      "rolesTab": "Rollen",
+      "searchPlaceholder": "Gebruikers of rollen zoeken...",
+      "shareButton": "Deel",
+      "shareWithCount": "Delen ({{count}})",
+      "usersTab": "Gebruikers"
+    }
+  }
+}

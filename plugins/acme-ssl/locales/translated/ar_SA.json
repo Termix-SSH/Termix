@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "إدارة شهادات ACME",
+      "description": "اطلع على حالة الشهادة واطلب شهادة جديدة الآن."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "يتم التجديد تلقائياً",
+      "description": "تحقق مرتين في اليوم واحصل على شهادة جديدة عندما لا تكون هناك شهادة، أو عندما لا تغطي النطاق، أو عندما تنتهي صلاحيتها في غضون 30 يومًا."
+    },
+    "domain": {
+      "label": "النطاق",
+      "description": "اسم النطاق العام للشهادة.",
+      "placeholder": "termix.example.com"
+    },
+    "email": {
+      "label": "البريد الإلكتروني",
+      "description": "البريد الإلكتروني للتواصل بخصوص حساب ACME وإشعارات انتهاء الصلاحية.",
+      "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "المرجع المصدق (CA)",
+      "description": "من أين أحصل على الشهادة؟ استخدم بيئة الاختبار لإجراء الاختبارات دون تجاوز حدود معدل Let's Encrypt.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (مرحلة تجريبية)",
+      "custom": "دليل ACME مخصص"
+    },
+    "directoryUrl": {
+      "label": "رابط دليل ACME",
+      "description": "مخصص فقط لهيئة إصدار شهادات مخصصة. يجب أن يكون عنوان URL من نوع https."
+    },
+    "challengeType": {
+      "label": "نوع التحدي",
+      "description": "كيفية إثبات ملكيتك للنطاق.",
+      "http": "بروتوكول HTTP - يتطلب منفذ 80 يمكن الوصول إليه من الإنترنت",
+      "cloudflare": "نظام أسماء النطاقات (Cloudflare) - يتطلب رمز API من Cloudflare"
+    },
+    "cloudflareToken": {
+      "label": "رمز واجهة برمجة تطبيقات Cloudflare",
+      "description": "رمز مقيد بصلاحية Zone:DNS:Edit للنطاق الخاص بك."
+    }
+  },
+  "status": {
+    "title": "حالة الشهادة",
+    "none": "لا توجد شهادة",
+    "names": "يغطي {{names}}",
+    "issuer": "صادر عن {{issuer}}",
+    "expires": "تنتهي في {{date}}",
+    "lastIssued": "آخر إصدار {{date}}",
+    "lastError": "فشلت المحاولة الأخيرة: {{error}}",
+    "missing": "قم بتعيين النطاق والبريد الإلكتروني والحقول التي يحتاجها نوع التحدي الخاص بك، ثم احفظ التغييرات قبل طلب الشهادة.",
+    "request": "اطلب الشهادة الآن",
+    "requesting": "جارٍ طلب الشهادة...",
+    "issued": "تم إصدار الشهادة وتركيبها"
+  }
+}

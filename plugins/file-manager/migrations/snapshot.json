@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "tables": {
+    "recent": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "path": {
+          "type": "text",
+          "notNull": true
+        },
+        "lastOpened": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_file_manager_recent_user",
+          "columns": ["userId", "hostId"]
+        }
+      ],
+      "adopts": "file_manager_recent"
+    },
+    "pinned": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "path": {
+          "type": "text",
+          "notNull": true
+        },
+        "pinnedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_file_manager_pinned_user",
+          "columns": ["userId", "hostId"]
+        }
+      ],
+      "adopts": "file_manager_pinned"
+    },
+    "shortcuts": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "path": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_file_manager_shortcuts_user",
+          "columns": ["userId", "hostId"]
+        }
+      ],
+      "adopts": "file_manager_shortcuts"
+    },
+    "transfer_recent": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "sourceHostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "destHostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "destPath": {
+          "type": "text",
+          "notNull": true
+        },
+        "destPathLabel": {
+          "type": "text",
+          "notNull": true
+        },
+        "lastUsed": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_transfer_recent_user",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "transfer_recent"
+    }
+  }
+}

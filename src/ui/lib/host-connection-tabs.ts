@@ -1,40 +1,37 @@
 import type { Host, TabType } from "@/types/ui-types";
+import {
+  defaultConnectAction,
+  hostActionsFor,
+  listHostActions,
+} from "@/sidebar/host-contributions";
 
-type ConnectionTabType = "terminal" | "rdp" | "vnc" | "telnet";
-
-function isConnectionTabType(type: TabType): type is ConnectionTabType {
-  return (
-    type === "terminal" || type === "rdp" || type === "vnc" || type === "telnet"
-  );
+/**
+ * Which tab a click on a host opens. The ways to connect (the SSH terminal,
+ * remote desktop) are host actions that plugins register, so the answer is the
+ * highest-priority connect action the host allows, or null when no running
+ * plugin can connect to it.
+ */
+export function getDefaultConnectionTab(host: Host): TabType | null {
+  return defaultConnectAction(listHostActions(), host)?.tabType ?? null;
 }
 
-function isConnectionEnabled(host: Host, type: ConnectionTabType): boolean {
-  switch (type) {
-    case "terminal":
-      return host.enableSsh;
-    case "rdp":
-      return host.enableRdp;
-    case "vnc":
-      return host.enableVnc;
-    case "telnet":
-      return host.enableTelnet;
-  }
-}
-
-export function getDefaultConnectionTab(host: Host): ConnectionTabType {
-  if (host.enableSsh) return "terminal";
-  if (host.enableRdp) return "rdp";
-  if (host.enableVnc) return "vnc";
-  if (host.enableTelnet) return "telnet";
-  return "terminal";
-}
-
+/**
+ * The preferred tab if the host allows it. A connect tab type the host has
+ * switched off falls back to the host's default; any other type is taken as
+ * asked.
+ */
 export function resolveHostTabType(
   host: Host,
   preferredType?: TabType,
-): TabType {
+): TabType | null {
   if (!preferredType) return getDefaultConnectionTab(host);
-  if (!isConnectionTabType(preferredType)) return preferredType;
-  if (isConnectionEnabled(host, preferredType)) return preferredType;
-  return getDefaultConnectionTab(host);
+  const all = listHostActions();
+  const isConnectType = all.some(
+    (action) => action.kind === "connect" && action.tabType === preferredType,
+  );
+  if (!isConnectType) return preferredType;
+  const allowed = hostActionsFor(all, host, "connect").some(
+    (action) => action.tabType === preferredType,
+  );
+  return allowed ? preferredType : getDefaultConnectionTab(host);
 }

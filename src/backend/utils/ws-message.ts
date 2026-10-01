@@ -3,7 +3,7 @@ import type { RawData } from "ws";
 // Cap on a single decoded text frame. Anything larger is almost certainly
 // abuse - the legitimate control messages here are tiny, and terminal input is
 // bounded by what a user can type or paste.
-export const MAX_WS_MESSAGE_BYTES = 1024 * 1024;
+const MAX_WS_MESSAGE_BYTES = 1024 * 1024;
 
 export class WsMessageError extends Error {}
 

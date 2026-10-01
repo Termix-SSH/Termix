@@ -9,7 +9,6 @@ export function applyHostEnrollmentDefaults(
     connectionType: "ssh",
     port: 22,
     authType: "none",
-    enableTerminal: true,
     enableSsh: true,
     ...hostData,
   };

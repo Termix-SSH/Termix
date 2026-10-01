@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Logs de sessão"
+  },
+  "hosts": {
+    "enableSessionRecording": "Session Recording",
+    "enableSessionRecordingDesc": "Record terminal session output for later review"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "Logs de sessão",
+    "noLogs": "No session logs yet",
+    "noLogsDesc": "Enable session logging on a host to start recording",
+    "duration": "Duration",
+    "viewLog": "View log",
+    "downloadLog": "Download",
+    "downloadAsText": "Download as text",
+    "deleteLog": "Apagar",
+    "confirmDelete": "Delete this session log?",
+    "confirmDeleteDesc": "This action cannot be undone.",
+    "copyContent": "Copiar",
+    "copied": "Copiado!",
+    "loadError": "Failed to load session logs",
+    "deleteError": "Failed to delete session log",
+    "filterByHost": "Filter by host...",
+    "back": "Voltar",
+    "empty": "(empty)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
+  }
+}

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -15,10 +15,6 @@ export interface HostKeyVerificationRecord {
 export interface HostUpdateStateRecord {
   userId: string;
   credentialId: number | null;
-  rdpCredentialId: number | null;
-  vncCredentialId: number | null;
-  telnetCredentialId: number | null;
-  vaultProfileId: number | null;
   authType: string;
   parentHostId: number | null;
   folder: string | null;
@@ -56,6 +52,17 @@ export type HostListRow = HostResolutionHostRecord & {
   permissionLevel?: string;
   expiresAt?: string | null;
 };
+
+export interface HostStatusTargetRow {
+  id: number;
+  userId: string;
+  ip: string;
+  port: number;
+  connectionType: string;
+  jumpHosts: string | null;
+  statusCheckEnabled: boolean;
+  statusCheckInterval: number | null;
+}
 
 export class HostResolutionRepository {
   constructor(
@@ -132,10 +139,6 @@ export class HostResolutionRepository {
       .select({
         userId: hosts.userId,
         credentialId: hosts.credentialId,
-        rdpCredentialId: hosts.rdpCredentialId,
-        vncCredentialId: hosts.vncCredentialId,
-        telnetCredentialId: hosts.telnetCredentialId,
-        vaultProfileId: hosts.vaultProfileId,
         authType: hosts.authType,
         parentHostId: hosts.parentHostId,
         folder: hosts.folder,
@@ -262,19 +265,36 @@ export class HostResolutionRepository {
     return rows.length > 0;
   }
 
-  async listAllHosts(): Promise<HostResolutionHostRecord[]> {
-    const rows = await this.context.drizzle.select().from(hosts);
-
-    return this.decryptManyByOwner("ssh_data", rows);
+  /**
+   * What the status checker needs, without decrypting anything: none of these
+   * columns are encrypted. Filtered by owner, by id, or both.
+   */
+  async listStatusTargets(filter: {
+    userId?: string;
+    hostIds?: number[];
+  }): Promise<HostStatusTargetRow[]> {
+    if (filter.hostIds && filter.hostIds.length === 0) return [];
+    const conditions = [
+      filter.userId ? eq(hosts.userId, filter.userId) : undefined,
+      filter.hostIds ? inArray(hosts.id, filter.hostIds) : undefined,
+    ].filter((condition) => condition !== undefined);
+    return this.context.drizzle
+      .select({
+        id: hosts.id,
+        userId: hosts.userId,
+        ip: hosts.ip,
+        port: hosts.port,
+        connectionType: hosts.connectionType,
+        jumpHosts: hosts.jumpHosts,
+        statusCheckEnabled: hosts.statusCheckEnabled,
+        statusCheckInterval: hosts.statusCheckInterval,
+      })
+      .from(hosts)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
   }
 
-  async listHostsWithTunnelConnections(): Promise<HostResolutionHostRecord[]> {
-    const rows = await this.context.drizzle
-      .select()
-      .from(hosts)
-      .where(
-        and(eq(hosts.enableTunnel, true), isNotNull(hosts.tunnelConnections)),
-      );
+  async listAllHosts(): Promise<HostResolutionHostRecord[]> {
+    const rows = await this.context.drizzle.select().from(hosts);
 
     return this.decryptManyByOwner("ssh_data", rows);
   }
@@ -326,6 +346,7 @@ export class HostResolutionRepository {
         hostKeyAlgorithm: algorithm,
         hostKeyFirstSeen: now,
         hostKeyLastVerified: now,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(hosts.id, hostId));
     await this.afterWrite();
@@ -347,6 +368,7 @@ export class HostResolutionRepository {
         hostKeyAlgorithm: algorithm,
         hostKeyLastVerified: now,
         hostKeyChangedCount: currentChangeCount + 1,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(hosts.id, hostId));
     await this.afterWrite();
@@ -358,7 +380,7 @@ export class HostResolutionRepository {
   ): Promise<void> {
     await this.context.drizzle
       .update(hosts)
-      .set({ hostKeyLastVerified: now })
+      .set({ hostKeyLastVerified: now, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(eq(hosts.id, hostId));
     await (this.onLazyWrite?.() ?? this.afterWrite());
   }

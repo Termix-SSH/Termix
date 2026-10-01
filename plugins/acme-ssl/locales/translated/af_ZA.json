@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Bestuur ACME-sertifikate",
+      "description": "Sien die sertifikaatstatus en versoek nou 'n nuwe sertifikaat."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "Hernu outomaties",
+      "description": "Kontroleer twee keer per dag en kry 'n nuwe sertifikaat wanneer daar geen is nie, dit nie die domein dek nie, of dit binne 30 dae verval."
+    },
+    "domain": {
+      "label": "Domein",
+      "description": "Die publieke domeinnaam vir die sertifikaat.",
+      "placeholder": "termix.voorbeeld.com"
+    },
+    "email": {
+      "label": "E-pos",
+      "description": "Kontak-e-posadres vir die ACME-rekening en vervalkennisgewings.",
+      "placeholder": "admin@voorbeeld.com"
+    },
+    "provider": {
+      "label": "Sertifikaatowerheid",
+      "description": "Waar om die sertifikaat te kry. Gebruik staging om te toets sonder om Let's Encrypt-tarieflimiete te bereik.",
+      "letsencrypt": "Kom ons enkripteer",
+      "letsencryptStaging": "Kom ons enkripteer (opvoering)",
+      "custom": "Pasgemaakte ACME-gids"
+    },
+    "directoryUrl": {
+      "label": "ACME-gids-URL",
+      "description": "Slegs vir 'n persoonlike sertifikaatowerheid. Moet 'n https-URL wees."
+    },
+    "challengeType": {
+      "label": "Uitdagingsoort",
+      "description": "Hoe om te bewys dat jy die domein besit.",
+      "http": "HTTP - benodig poort 80 wat vanaf die internet bereikbaar is",
+      "cloudflare": "DNS (Cloudflare) - benodig 'n Cloudflare API-token"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API-token",
+      "description": "Omvangryke token met Zone:DNS:Wysig toestemming vir jou domein."
+    }
+  },
+  "status": {
+    "title": "Sertifikaatstatus",
+    "none": "Geen sertifikaat nie",
+    "names": "Omslae {{names}}",
+    "issuer": "Uitgereik deur {{issuer}}",
+    "expires": "Vervaldatum {{date}}",
+    "lastIssued": "Laas uitgereik {{date}}",
+    "lastError": "Laaste poging het misluk: {{error}}",
+    "missing": "Stel die domein, e-posadres en die velde wat jou uitdagingsoort benodig, en stoor dit dan voordat jy 'n sertifikaat aanvra.",
+    "request": "Versoek nou 'n sertifikaat",
+    "requesting": "Versoek sertifikaat...",
+    "issued": "Sertifikaat uitgereik en geïnstalleer"
+  }
+}

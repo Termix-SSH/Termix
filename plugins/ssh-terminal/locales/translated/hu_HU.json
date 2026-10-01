@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Hozzáadás",
+    "arrowDown": "Lefelé mutató nyíl",
+    "arrowLeft": "Balra nyíl",
+    "arrowRight": "Jobbra nyíl",
+    "arrowUp": "Felfelé nyíl",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Kész",
+    "editQuickKeys": "Gyorsbillentyűk szerkesztése",
+    "end": "Vége",
+    "esc": "Esc",
+    "home": "Otthon",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Paszta",
+    "quickKeyPlaceholder": "pl. sudo ",
+    "quickKeysDesc": "Koppintson a × jelre az eltávolításhoz. Legfeljebb 8 karaktert támogat.",
+    "quickKeysTitle": "Gyorsbillentyűk",
+    "removeQuickKey": "Eltávolítás",
+    "resetDefaults": "Alapértelmezett beállítások visszaállítása",
+    "shift": "Váltás",
+    "tab": "Fül"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Nem sikerült engedélyezni az Auto-Tmux-ot",
+    "autoTmuxEnabled": "Auto-Tmux engedélyezve a {{host}}számára. A következő kapcsolattól érvényes.",
+    "clipboardHttpWarning": "Nem sikerült beolvasni a vágólapot. Néhány böngésző korlátozza a vágólap elérését HTTPS-en kívül - próbálja ki a Ctrl+V billentyűkombinációt, vagy HTTPS-en keresztül szolgáltassa ki a Termixet.",
+    "closeTab": "Közeli",
+    "connecting": "Kapcsolódás...",
+    "connectionLost": "Kapcsolat megszakadt",
+    "connectionRejected": "A szerver elutasította a kapcsolatot. Kérjük, ellenőrizze a hitelesítést és a hálózati konfigurációt.",
+    "connectionTimeout": "Kapcsolati időtúllépés",
+    "enableAutoTmuxAction": "Auto-Tmux engedélyezése",
+    "hostKeyRejected": "SSH host kulcs ellenőrzése elutasítva. Kapcsolat megszakítva.",
+    "linkDialogCopy": "Másolat",
+    "linkDialogOpen": "Nyitott",
+    "linkDialogTitle": "Link megnyitása",
+    "maxReconnectAttemptsReached": "Elérte az újracsatlakozási kísérletek maximális számát",
+    "noHostSelected": "Nincs kiválasztva gazdagép",
+    "passwordPromptFillTitle": "Írja be a mentett jelszót ebbe a mezőbe?",
+    "reconnect": "Újracsatlakozás",
+    "reconnected": "Sikeresen újrakapcsolódott",
+    "reconnecting": "Újracsatlakozás... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Kapcsolat megszakadt, újracsatlakozás...",
+    "searchCaseSensitive": "Gyufa tok",
+    "searchClose": "Bezárás (Escape)",
+    "searchNext": "Következő találat (Enter)",
+    "searchNoResults": "Nincs találat",
+    "searchPlaceholder": "Lelet",
+    "searchPrevious": "Előző találat (Shift+Enter)",
+    "searchRegex": "Reguláris kifejezés használata",
+    "searchResultCount": "{{index}} a {{count}}-ból",
+    "searchWholeWord": "Egész szó egyezése",
+    "sessionExpiredNotice": "Az előző munkameneted a következő helyen: {{host}} lejárt {{minutes}} perc leválasztás után; a shell és minden, ami benne fut, eltűnt. Kapcsold be az Auto-Tmux-ot ezen a gépen a munkamenetek életben tartásához.",
+    "sessionExpiredNoticeNoMinutes": "Az előző munkameneted a {{host}} gépen lejárt, miközben le voltál választva; a shell és minden benne futó dolog elveszett. Kapcsold be az Auto-Tmuxot ezen a gépen a munkamenetek életben tartásához.",
+    "sessionTakenOver": "A munkamenet egy másik lapon nyílt meg. Újrakapcsolódás...",
+    "tmuxAttached": "Csatlakoztatott ügyfelek",
+    "tmuxAttachedCount": "{{count}} csatolva",
+    "tmuxCopyHint": "Módosítsa a kijelölést, és nyomja meg az Enter billentyűt a vágólapra másoláshoz",
+    "tmuxCreateNew": "Új munkamenet indítása",
+    "tmuxDetached": "Leválasztva a tmux munkamenetről",
+    "tmuxLastActivity": "Utolsó tevékenység",
+    "tmuxSessionAttached": "tmux munkamenet csatolva: {{name}}",
+    "tmuxSessionCreated": "tmux munkamenet létrehozva: {{name}}",
+    "tmuxSessionPickerDesc": "Meglévő tmux munkamenetek találhatók ezen a gazdagépen. Válasszon ki egyet az újracsatlakozáshoz, vagy hozzon létre egy új munkamenetet.",
+    "tmuxSessionPickerTitle": "tmux munkamenetek",
+    "tmuxTimeDays": "{{count}}nappal ezelőtt",
+    "tmuxTimeHours": "{{count}}órával ezelőtt",
+    "tmuxTimeJustNow": "éppen most",
+    "tmuxTimeMinutes": "{{count}}perccel ezelőtt",
+    "tmuxUnavailable": "A tmux nincs telepítve a távoli gépre, a standard shell-t használja.",
+    "tmuxWindowCount": "{{count}} ablak",
+    "tmuxWindows": "Ablakok",
+    "unknownError": "Ismeretlen hiba történt",
+    "websocketAbnormalClose": "A kapcsolat váratlanul megszakadt. Ennek oka lehet fordított proxy vagy SSL konfigurációs probléma. Kérjük, ellenőrizze a szervernaplókat.",
+    "websocketError": "WebSocket csatlakozási hiba",
+    "clipboardReadFailed": "Nem sikerült beolvasni a vágólapról. Győződjön meg arról, hogy a vágólapra vonatkozó engedélyek meg vannak adva.",
+    "clipboardWriteFailed": "Nem sikerült a vágólapra másolni. Győződjön meg arról, hogy az oldal HTTPS vagy localhost protokollon keresztül jelenik meg.",
+    "connected": "Csatlakoztatva",
+    "totpCodeLabel": "Ellenőrző kód",
+    "duplicateTab": "Duplikált lap",
+    "imageChooseFile": "Válasszon egy képfájlt",
+    "imageUploaded": "Feltöltött kép: {{path}}",
+    "imageClipboardUnavailable": "Ez a böngésző nem tudja beolvasni a képeket a vágólapról",
+    "imageClipboardEmpty": "Nem található kép a vágólapon",
+    "localShell": "Helyi terminálhéj",
+    "autocompleteHintComplete": "Tab vagy Enter billentyűvel befejezheti",
+    "autocompleteHintNavigate": "↑↓ navigációhoz",
+    "autocompleteHintClose": "Esc a bezáráshoz"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux leválasztása",
+    "detachTmuxDescription": "tmux munkamenet leválasztása",
+    "dismissError": "Képhiba elvetése",
+    "hideToolbar": "Eszköztár elrejtése",
+    "image": "Képműveletek (csak képek)",
+    "imageActionFailed": "Képművelet sikertelen",
+    "layout": "Eszköztár megjelenítési módja",
+    "layoutExpanded": "Metrikákkal bővítve",
+    "layoutIcon": "Csak ikon",
+    "layoutLabeled": "Ikonok és címkék",
+    "moveToolbar": "Eszköztár áthelyezése",
+    "moveToolbarHint": "Húzza az eszköztár áthelyezéséhez",
+    "paste": "Kép beillesztése",
+    "pasteImage": "Kép beillesztése a vágólapról (csak képek)",
+    "retry": "Újrapróbálkozás",
+    "showToolbar": "Eszköztár kibontása",
+    "upload": "Kép feltöltése",
+    "uploadImage": "Töltsön fel egy képet a tárhelyszolgáltatóra",
+    "uploadingImage": "Feltöltés..."
+  },
+  "history": {
+    "noTerminalSelected": "Nincs kiválasztva terminál",
+    "noTerminalSelectedHint": "Nyisson meg egy SSH terminálfület a parancselőzmények megtekintéséhez",
+    "searchPlaceholder": "Keresési előzmények...",
+    "clearAll": "Összes törlése",
+    "noHistoryEntries": "Nincsenek előzménybejegyzések",
+    "trackingDisabled": "Az előzmények követése le van tiltva",
+    "trackingDisabledHint": "Kapcsold be a Parancselőzményeket a gép SSH Terminál lapján.",
+    "commandCount_one": "{{count}} parancs",
+    "commandCount_other": "{{count}} parancsok"
+  },
+  "touchInput": {
+    "enabled": "Érintéses bevitel engedélyezése",
+    "enabledDesc": "Egyujjas görgetés engedélyezése a terminálokban",
+    "momentumEnabled": "Lendület engedélyezése",
+    "momentumEnabledDesc": "Görgessen tovább röviden egy húzás után",
+    "advanced": "Fejlett",
+    "resetDefaults": "Alapértelmezett beállítások visszaállítása",
+    "dragThreshold": "Húzási küszöb",
+    "maxWheelDelta": "Maximális kerékdelta",
+    "momentumSampleWindow": "Lendület mintavételi ablak",
+    "releaseGracePeriod": "Kiadási türelmi időszak",
+    "minimumVelocity": "Minimális sebesség",
+    "maximumVelocity": "Maximális sebesség",
+    "maximumDuration": "Maximális időtartam",
+    "maximumTravel": "Maximális mozgástartomány",
+    "decayTime": "Bomlási idő",
+    "pixelsPerTick": "Pixelek száma kullancsonként",
+    "maximumFrameInterval": "Maximális képkocka-intervallum",
+    "maximumTicksPerFrame": "Maximális tickek képkockánként"
+  },
+  "imageStorage": {
+    "instanceId": "Terminál munkamenet példányazonosítója",
+    "instanceIdDesc": "Az egyik csatlakoztatott terminálfül példányazonosítója, amelyet a láthatóság teszteléséhez használunk.",
+    "selectedModeUnavailable": "Nem elérhető",
+    "test": "Teszt",
+    "testing": "Tesztelés...",
+    "testFailed": "Nem sikerült tesztelni a képtárolást",
+    "testConnected": "A terminál munkamenet csatlakozva van.",
+    "testNotConnected": "Nincs csatlakoztatott terminál munkamenet ezzel a példányazonosítóval.",
+    "testSelectedMode": "Egy feltöltés ezt használná: {{mode}}",
+    "testLocalVisible": "A helyi könyvtár látható a csatlakoztatott gépről.",
+    "testLocalNotVisible": "A helyi könyvtár NEM látható a csatlakoztatott gépről."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Érintéses bevitel",
+        "images": "Képtárolás",
+        "sessions": "Munkamenetek",
+        "newHosts": "Új házigazdák"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminál munkamenet-megőrző",
+        "description": "Mennyi ideig marad életben egy leválasztott terminál a szerveren, mielőtt bezárásra kerül. Minimum 1, maximum 1440 perc. Azoknál a munkameneteknél, amelyeknek ezt az időtartamot túl kell élniük, engedélyezze az Auto-Tmux funkciót a gazdagépen."
+      },
+      "commandHistoryEnabled": {
+        "label": "Parancsnoki előzmények",
+        "description": "Parancselőzmények rögzítésének engedélyezése. Ha le van tiltva, az előzmények nem kerülnek mentésre, függetlenül a gazdagép beállításaitól."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Új hosztok parancselőzményei",
+        "description": "Az új hosztok bekapcsolt parancselőzményekkel indulnak-e."
+      },
+      "imageStorageMode": {
+        "label": "Tárolási mód",
+        "description": "A beillesztett és feltöltött terminálképek írási helye. Kijavítottuk az automatikus kiválasztást kapcsolat, helyi és távoli (SFTP) alapján.",
+        "auto": "Autó",
+        "local": "Helyi",
+        "remoteSftp": "Távoli (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Helyi címtár",
+        "description": "Abszolút elérési út a Termix backend rendszeren, ahová a helyi mód képeket ír. Mentés után soha nem jelenik meg. Az üresen álló fájl a TERMIX_IMAGE_DIR-t használja."
+      },
+      "imageHostPath": {
+        "label": "Gazdagép elérési útja",
+        "description": "A terminálügynökök által fogadott helyi könyvtár hosztoldali nézete."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "Mennyi ideig tárolja a rendszer a feltöltött képet milliszekundumban. Az üres kép TERMIX_IMAGE_TTL_MS-t vagy egy órát használ."
+      },
+      "imageMaxCount": {
+        "label": "Max. képszám",
+        "description": "A legtöbb kép egyszerre tárolódik. Az üres képek TERMIX_MAX_IMAGE_COUNT vagy 100 értéket használnak."
+      },
+      "imageMaxBytes": {
+        "label": "Max. tárhely byte-okban",
+        "description": "A képek legtöbb bájtja egyszerre tárolódik. Az üresen hagyott fájlok TERMIX_MAX_IMAGE_STORAGE_BYTES-t vagy 5 GiB-ot használnak."
+      },
+      "sessionPersistence": {
+        "label": "Munkamenetek megtartása a leválasztás után",
+        "description": "Tartsa életben a leválasztott terminált a szerveren a fenti ideig, így a fülének újranyitása ott folytatja, ahol abbahagyta."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Új hosztok termináljait a tmuxon belül kell futtatni, hogy a munkamenetek túléljék a kapcsolatmegszakadásokat (tmux szükséges a hoszton)"
+      },
+      "newHostTheme": {
+        "label": "Téma új házigazdáknak",
+        "description": "A termináltéma, amellyel egy új host indul."
+      },
+      "newHostFontFamily": {
+        "label": "Betűtípus új házigazdáknak",
+        "description": "Az új hoszt által használt terminálbetűtípus."
+      },
+      "newHostFontSize": {
+        "label": "Betűméret új házigazdáknak",
+        "description": "Az új hoszt kezdőbetűmérete pixelben."
+      },
+      "newHostCursorStyle": {
+        "label": "Kurzorstílus új házigazdáknak"
+      },
+      "newHostCursorBlink": {
+        "label": "Villogó kurzor új gazdagépek esetén"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Terminál eszköztár engedélyezése",
+        "description": "Gyorselérési eszköztár megjelenítése az aktív terminálhoz rögzítve a gazdagép eszközeihez és élő statisztikáihoz"
+      },
+      "terminalToolbarPosition": {
+        "label": "Eszköztár pozíciója",
+        "description": "Ahol az eszköztár található a terminálban. Továbbra is áthúzhatod onnan.",
+        "bottom": "Alul középen",
+        "bottomLeft": "Bal alsó sarokban",
+        "bottomRight": "Jobb alsó sarokban",
+        "top": "Felső középpont",
+        "topLeft": "Bal felső sarok",
+        "topRight": "Jobb felső sarokban"
+      },
+      "terminalToolbarStartState": {
+        "label": "Eszköztár indítási állapota",
+        "description": "Az eszköztár kibontva vagy kicsinyítve nyílik-e meg, amikor a terminál csatlakozik",
+        "expanded": "Kiterjesztett",
+        "collapsed": "Minimalizált"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Eszköztár megjelenítési módja",
+        "description": "Az eszköztár gombjainak megjelenítése. Az Utoljára használt megőrzi az eszköztáron kiválasztott elemeket.",
+        "remember": "Utolsó használat",
+        "icon": "Csak ikon",
+        "labeled": "Ikonok és címkék",
+        "expanded": "Statisztikákkal bővítve"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Élő statisztikák megjelenítése",
+        "description": "Élő host statisztikák megjelenítése az eszköztár gombjai felett kibontott módban"
+      },
+      "terminalToolbarFade": {
+        "label": "Elhalványulás tétlenségkor",
+        "description": "Eszköztár elhalványítása, amíg fölé nem viszi az egérmutatót"
+      },
+      "enableCommandHistory": {
+        "label": "Parancsnoki előzmények",
+        "description": "A terminálon futó parancsok rögzítése előzmények és automatikus kiegészítés céljából"
+      },
+      "enableTerminal": {
+        "label": "Terminál engedélyezése",
+        "description": "Kínálj fel egy SSH terminált ehhez a hoszthoz."
+      },
+      "inheritAppearance": {
+        "label": "Felhasználói alapértelmezett beállítások használata"
+      },
+      "theme": {
+        "label": "Téma"
+      },
+      "cursorBlink": {
+        "label": "Villogó kurzor"
+      },
+      "cursorStyle": {
+        "label": "Kurzor stílusa"
+      },
+      "fontSize": {
+        "label": "Betűméret"
+      },
+      "fontFamily": {
+        "label": "Betűtípus"
+      },
+      "scrollback": {
+        "label": "Visszagörgetés"
+      },
+      "letterSpacing": {
+        "label": "Betűköz"
+      },
+      "lineHeight": {
+        "label": "Vonalmagasság"
+      },
+      "bellStyle": {
+        "label": "Harang"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimális kontrasztarány"
+      },
+      "backgroundImage": {
+        "label": "Háttérkép"
+      },
+      "backgroundImageOpacity": {
+        "label": "Háttérkép átlátszósága"
+      },
+      "customThemeColors": {
+        "label": "Egyéni témaszínek"
+      },
+      "rightClickSelectsWord": {
+        "label": "Jobb klikk kijelöli a szót"
+      },
+      "macOptionIsMeta": {
+        "label": "Az opció Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Gyors görgetőgomb"
+      },
+      "fastScrollSensitivity": {
+        "label": "Gyors görgetési sebesség"
+      },
+      "backspaceMode": {
+        "label": "Visszatörlés"
+      },
+      "autoMosh": {
+        "label": "Autómosh"
+      },
+      "moshCommand": {
+        "label": "Mosh parancs"
+      },
+      "autoTmux": {
+        "label": "Automatikus tmux"
+      },
+      "useSSHTitle": {
+        "label": "Használd az SSH-címet"
+      },
+      "syntaxHighlighting": {
+        "label": "Szintaxis kiemelése"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Szintaxis kiemelés kategóriák"
+      },
+      "linkClickBehavior": {
+        "label": "Linkkattintás"
+      },
+      "localEcho": {
+        "label": "Helyi visszhang"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Jelszókérések kitöltésének felajánlása"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Sudo promptok kitöltése"
+      },
+      "autoReconnect": {
+        "label": "Automatikus újracsatlakozás"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Parancs automatikus kiegészítése",
+        "description": "Automatikus kiegészítés megjelenítése gépelés közben, ha megnyomja a Tab billentyűt"
+      },
+      "localEcho": {
+        "label": "Helyi visszhang",
+        "description": "Csökkentse az érzékelt bemeneti késleltetést biztonságos helyi billentyűleütés-előrejelzéssel"
+      },
+      "linkClickBehavior": {
+        "label": "Terminálkapcsolat kattintása",
+        "description": "Alapértelmezett viselkedés hivatkozásokra kattintva a terminálban"
+      },
+      "customThemes": {
+        "label": "Mentett témák"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Helyi terminál"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Élő terminál munkamenetek használata",
+      "description": "Lehetővé teszi más funkciók, például a munkamenet-megosztás és -rögzítés elérését az élő terminál-munkamenetek során."
+    },
+    "history": {
+      "title": "Parancselőzmények olvasása",
+      "description": "Lehetővé teszi más funkciók, például a mesterséges intelligencia asszisztens számára a parancsok előzményeinek beolvasását."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "Terminál",
+    "addHost": "Gazdagép hozzáadása",
+    "applyGlobalThemeTooltip": "Alkalmazd ezt a témát",
+    "backgroundImageDesc": "Opcionális URL a terminál háttérképéhez",
+    "backgroundImageLabel": "Háttérkép URL-címe",
+    "backgroundImageOpacityLabel": "Háttérkép átlátszósága",
+    "backspaceMode": "Visszatörlés mód",
+    "backspaceModeControlH": "Kontroll-H (BS)",
+    "backspaceModeLabel": "Visszatörlés mód",
+    "backspaceModeNormal": "Normál (DEL)",
+    "behaviorAndAdvanced": "Viselkedés és haladó",
+    "bellStyle": "Harang stílus",
+    "bellStyleBoth": "Mindkét",
+    "bellStyleLabel": "Harang stílus",
+    "bellStyleNone": "Egyik sem",
+    "bellStyleSound": "Hang",
+    "bellStyleVisual": "Vizuális",
+    "colorTheme": "Színtéma",
+    "cursorBlink": "Kurzor villogása",
+    "cursorBlinking": "Kurzor villog",
+    "cursorBlinkingDesc": "Villogó animáció engedélyezése a terminálkurzorhoz",
+    "cursorStyle": "Kurzor stílusa",
+    "cursorStyleBar": "Bár",
+    "cursorStyleBlock": "Tömb",
+    "cursorStyleLabel": "Kurzor stílusa",
+    "cursorStyleUnderline": "Aláhúzás",
+    "customThemeAnsiColors": "ANSI színek",
+    "customThemeBackground": "Háttér",
+    "customThemeBlack": "Fekete",
+    "customThemeBlue": "Kék",
+    "customThemeBrightBlack": "Élénk fekete",
+    "customThemeBrightBlue": "Élénk kék",
+    "customThemeBrightCyan": "Élénk ciánkék",
+    "customThemeBrightGreen": "Élénkzöld",
+    "customThemeBrightMagenta": "Élénk bíbor",
+    "customThemeBrightRed": "Élénkpiros",
+    "customThemeBrightWhite": "Élénk fehér",
+    "customThemeBrightYellow": "Élénk sárga",
+    "customThemeColors": "Egyedi színek",
+    "customThemeCursor": "Kurzor",
+    "customThemeCursorAccent": "Kurzor ékezet",
+    "customThemeCyan": "Cián",
+    "customThemeForeground": "Előtér",
+    "customThemeGreen": "Zöld",
+    "customThemeMagenta": "Bíborvörös",
+    "customThemeRed": "Piros",
+    "customThemeResetTooltip": "Alapértelmezett beállítások visszaállítása",
+    "customThemeSelection": "Kiválasztás",
+    "customThemeWhite": "Fehér",
+    "customThemeYellow": "Sárga",
+    "deleteGlobalThemeTooltip": "Téma törlése",
+    "docsLink": "Dokumentumok megtekintése",
+    "enableAutoMosh": "Auto-Mosh engedélyezése",
+    "enableAutoMoshDesc": "Ha elérhető, akkor a Mosh-t részesítsd előnyben az SSH-val szemben.",
+    "enableAutoTmux": "Auto-Tmux engedélyezése",
+    "enableAutoTmuxDesc": "Tartsd életben a shell-edet és a benne futó dolgokat a lecsatlakozások és a böngésző újraindítása során a tmux-on belüli futtatással (a tmux-nak telepítve kell lennie a gazdagépen)",
+    "fastScrollModifier": "Gyors görgetési módosító",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Gyors görgetési módosító",
+    "fastScrollModifierShift": "Váltás",
+    "fastScrollSensitivity": "Gyors görgetési érzékenység",
+    "fastScrollSensitivityLabel": "Gyors görgetési érzékenység",
+    "fontFamily": "Betűcsalád",
+    "fontFamilyCustomHint": "Válasszon egy csomagban található betűtípust, vagy válassza az Egyéni lehetőséget, és írja be a rendszerére már telepített betűtípus pontos nevét (pl. MesloLGS NF, Noto Sans Mono). A Termix nem tud betűtípusokat telepíteni, először telepítse az operációs rendszerére.",
+    "fontFamilyCustomOption": "Szokás...",
+    "fontFamilyCustomPlaceholder": "Pontos betűtípusnév, pl. MesloLGS NF",
+    "fontFamilyLabel": "Betűcsalád",
+    "fontSize": "Betűméret",
+    "fontSizeLabel": "Betűméret",
+    "hostNotFound": "Nem található gazdagép",
+    "letterSpacing": "Betűköz",
+    "letterSpacingPx": "Betűköz (px)",
+    "lineHeight": "Vonalmagasság",
+    "lineHeightLabel": "Vonalmagasság",
+    "linkClickBehaviorConfirm": "Felugró ablak megjelenítése megnyitáshoz vagy másoláshoz",
+    "linkClickBehaviorDesc": "Azt szabályozza, hogy mi történjen, ha egy hivatkozásra kattintasz a terminálban. Az „Alapértelmezett” érték használatával követheted az alkalmazásszintű beállításokat.",
+    "linkClickBehaviorDirect": "Közvetlen nyitás",
+    "linkClickBehaviorLabel": "Linkkattintási viselkedés",
+    "loadingHost": "Gazdagép betöltése...",
+    "localEchoAuto": "Automatikus",
+    "localEchoDesc": "Lassú kapcsolatok esetén is helyben előrejelzi a biztonságosan nyomtatható billentyűleütéseket. A jelszókérések és a vezérlőbevitel soha nem jelenik meg.",
+    "localEchoLabel": "Helyi visszhang",
+    "localEchoOff": "Le",
+    "localEchoOn": "Mindig bekapcsolva",
+    "macOptionIsMetaLabel": "Option Key küldi a metaadatokat",
+    "macOptionIsMetaShortDesc": "Tiltsa le a speciális karakterek (például @ vagy |) Option/Alt billentyűvel történő beírását macOS rendszeren a Meta küldése helyett",
+    "moshCommand": "MOSH parancs",
+    "moshCommandLabel": "Mosh parancsnokság",
+    "noSavedThemes": "Még nincsenek mentett témák",
+    "none": "Egyik sem",
+    "passwordPromptAutoFillDesc": "Ajánlja fel a mentett jelszó kitöltését, amikor a terminál kéri. Kapcsolja ki, ha soha nem szeretné automatikusan kitölteni a jelszót ezen a gépen.",
+    "passwordPromptAutoFillLabel": "Jelszó automatikus kitöltése ajánlatban",
+    "autoReconnectLabel": "Automatikus újracsatlakozás",
+    "autoReconnectDesc": "Magától újracsatlakozik, ha megszakad az SSH-kapcsolat, például hálózati kimaradás vagy alvó állapot után. Megtartja a visszagörgetést.",
+    "rightClickSelectsWord": "Jobb klikk kijelöli a szót",
+    "rightClickSelectsWordLabel": "Jobb klikk Kijelöli a szót",
+    "rightClickSelectsWordShortDesc": "Jobb klikk esetén jelölje ki a kurzor alatti szót",
+    "saveAsGlobalTheme": "Mentés globális témaként",
+    "saveGlobalThemeError": "Nem sikerült menteni a témát",
+    "saveGlobalThemeNamePrompt": "Adjon meg egy nevet ennek a témának",
+    "saveGlobalThemeSuccess": "Téma mentve",
+    "savedThemesLabel": "Mentett témák",
+    "scrollbackBufferLabel": "Görgetési puffer",
+    "scrollbackMaxLines": "A történetben tárolt sorok maximális száma",
+    "sudoPasswordAutoFill": "Sudo jelszó automatikus kitöltése",
+    "sudoPasswordAutoFillDesc": "Tároljon egy sudo jelszót, hogy a gazdagép metrikái, a terminálpromptok és mások automatikusan futtathassanak privilegizált parancsokat.",
+    "sudoPasswordAutoFillLabel": "Sudo jelszó automatikus kitöltése",
+    "syntaxCategoryIpAddresses": "IP-címek",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Naplózási szintek",
+    "syntaxCategoryLogLevelsDesc": "hiba, figyelmeztetés, információ, hibakeresés, végzetes",
+    "syntaxCategoryNumbers": "Címkézett számok",
+    "syntaxCategoryNumbersDesc": "8080-as port, 1-es kijárat, 404-es állapot",
+    "syntaxCategoryPaths": "Fájlútvonalak",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/fájl.txt",
+    "syntaxCategoryTimestamps": "Időbélyegek",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL-ek",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Terminál kimenetének színezése (hibák, elérési utak, IP-címek, időbélyegek)",
+    "syntaxHighlightingLabel": "Szintaxis kiemelése",
+    "terminalAppearance": "Terminál megjelenése",
+    "theme": "Téma",
+    "themePreview": "Téma előnézete",
+    "useSSHTitleDesc": "A fül címének frissítése a shell ablakcíméből a gazdagépnév helyett",
+    "useSSHTitleLabel": "SSH ablakcím használata",
+    "enableTunnel": "Alagút engedélyezése",
+    "enableFileManager": "Fájlkezelő engedélyezése",
+    "enableDocker": "Docker engedélyezése",
+    "startupSnippet": "Indítási kódrészlet",
+    "quickActions": "Gyors műveletek",
+    "proxmoxLastSyncStatus": {
+      "success": "Siker"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} kihagyva (nem található IP cím)",
+    "proxmoxStatsUrlCopied": "Proxmox Statisztikai URL a vágólapra másolva",
+    "rdpUrlCopied": "RDP URL másolva",
+    "vncUrlCopied": "VNC URL másolva",
+    "filterAuthStepca": "CA lépés",
+    "guac": {
+      "noCredential": "Nincs hitelesítő adat (közvetlen hitelesítő adat lent)",
+      "authTypeDirect": "Közvetlen",
+      "authTypeCredential": "Hitelesítő adat",
+      "authTypeNone": "Egyik sem",
+      "recordingPath": "Felvételi útvonal",
+      "recordingName": "Felvétel neve",
+      "saveHostFirst": "Először mentsd el a gazdagépet.",
+      "sharingOptionsAfterSave": "A megosztási beállítások a gazdagép mentése után érhetők el.",
+      "permissionLevel": "Engedélyszint",
+      "typeHeader": "Típus",
+      "targetHeader": "Cél",
+      "permissionHeader": "Engedély",
+      "cancelBtn": "Mégsem",
+      "savingBtn": "Megtakarítás...",
+      "updateHostBtn": "Frissítse a gazdagépet",
+      "addHostBtn": "Gazdagép hozzáadása"
+    },
+    "filterAuthVault": "Boltozat"
+  },
+  "nav": {
+    "history": "Történelem",
+    "localTerminal": "Helyi terminál",
+    "sshTools": "SSH eszközök",
+    "terminal": "Terminál",
+    "macros": "Makrók"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Írjon ide a billentyűleütések sugárzásához...",
+    "copyOnSelect": "Kijelölt szöveg automatikus másolása",
+    "enableRightClickCopyPaste": "Jobb klikkes másolás/beillesztés engedélyezése",
+    "fillPassword": "Jelszó kitöltése",
+    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
+    "fillPasswordSuccess": "Jelszó beírva a {{count}} terminálba/terminálokba",
+    "keyRecordingTitle": "Kulcsfelvétel",
+    "noTerminalTabsOpen": "Nincsenek megnyitott terminálfülek",
+    "recordToTerminals": "Felvétel terminálokra",
+    "selectAll": "Minden",
+    "selectNone": "Egyik sem",
+    "selectTerminalsAbove": "Válassza ki a fenti terminálokat",
+    "settingsTitle": "Beállítások",
+    "startRecording": "Felvétel indítása",
+    "stopRecording": "Felvétel leállítása"
+  },
+  "keybindings": {
+    "copy": "Kijelölés másolása",
+    "paste": "Paszta",
+    "sendControlCode": "Ctrl+betűjel küldése",
+    "sendText": "SMS küldése",
+    "controlCodeLabel": "Levél",
+    "textLabel": "Küldendő szöveg",
+    "appendEnterLabel": "Küldés után nyomja meg az Enter billentyűt",
+    "clipboardPermissionNote": "Egyes böngészőkben első használatkor vágólap-engedélyt kérhet.",
+    "textRequired": "Írd be a küldendő szöveget",
+    "controlCodeRequired": "Írjon be egyetlen betűt az ellenőrző kódhoz",
+    "builtIn": {
+      "copyCtrlC": "Kijelölés másolása (Ctrl+C, csak szöveg kijelölése esetén)",
+      "copyCtrlShiftC": "Kijelölés másolása (Ctrl+Shift+C)",
+      "copyCmdC": "Kijelölés másolása (Cmd+C)",
+      "pasteCtrlShiftV": "Beillesztés a vágólapról (Ctrl+Shift+V)",
+      "ctrlW": "Ctrl+W küldése a parancsértelmezőnek (a böngészőfül bezárása blokkolva)",
+      "ctrlT": "Ctrl+T küldése a parancsértelmezőnek (a böngészőfül megnyitásának blokkolva)",
+      "ctrlN": "Ctrl+N küldése a parancsértelmezőnek (a böngészőablak megnyitása blokkolva)",
+      "ctrlQ": "Ctrl+Q küldése a parancsértelmezőnek (a böngészőből való kilépés blokkolva)"
+    }
+  },
+  "macros": {
+    "title": "Makrók",
+    "description": "Futtass egy mentett parancssorozatot egy terminálban, és reagálj a szerver által küldöttekre.",
+    "target": "Cél",
+    "noTerminal": "Nincs nyitva terminál",
+    "empty": "Még nincsenek makrók",
+    "emptyHint": "Hozz létre egy makrót egy terminálfolyamat automatizálásához, például bejelentkezéshez, szolgáltatás újraindításához vagy a kérdések megválaszolásához.",
+    "create": "Új makró",
+    "back": "Vissza a makrókhoz",
+    "name": "Név",
+    "namePlaceholder": "Indítsa újra a webszervert",
+    "nameRequired": "Mentés előtt adjon nevet a makrónak",
+    "descriptionLabel": "Leírás",
+    "descriptionPlaceholder": "Mit csinál ez a makró (opcionális)",
+    "unsaved": "Nem mentett változtatások",
+    "save": "Megtakarítás",
+    "saved": "Makró mentve",
+    "saveFailed": "Nem sikerült menteni a makrót",
+    "delete": "Töröl",
+    "deleteTitle": "Törli ezt a makrót?",
+    "deleteBody": "A(z) „{{name}}” véglegesen törlésre kerül. Ez a művelet nem vonható vissza.",
+    "deleted": "Makró törölve",
+    "cancel": "Mégsem",
+    "run": "Fut",
+    "stop": "Stop",
+    "running": "Futás...",
+    "completed": "Makró kész",
+    "failed": "Makró sikertelen",
+    "loadFailed": "Nem sikerült betölteni a makrókat",
+    "needTerminal": "Először nyiss meg és csatlakoztass egy terminált",
+    "noSteps": "Ennek a makrónak még nincsenek lépései. Adjon hozzá egyet alább.",
+    "addStep": "Lépés hozzáadása",
+    "stepNumber": "{{number}} lépés",
+    "removeStep": "Lépés eltávolítása",
+    "confirmRunTitle": "Futtassa ezt a makrót?",
+    "confirmRunBody": "A „{{name}}” parancsokat küld a {{host}} címre.",
+    "confirmRunAction": "Makró futtatása",
+    "stepTypes": {
+      "send": {
+        "label": "Parancs küldése",
+        "help": "Beírja a szöveget a terminálba, ugyanúgy, mintha beírta volna."
+      },
+      "wait": {
+        "label": "Várjon a kimenetre",
+        "help": "Szünetet tart, amíg a szerver ki nem írja a megnevezett szöveget, például egy jelszókérést."
+      },
+      "delay": {
+        "label": "Szünet",
+        "help": "Egy meghatározott ideig vár a következő lépés előtt."
+      },
+      "if": {
+        "label": "Ha a kimenet tartalmaz",
+        "help": "Ellenőrzi a szerver által eddig kinyomtatott összes adatot, majd lefuttatja a két ág egyikét."
+      },
+      "repeat": {
+        "label": "Ismétlés",
+        "help": "Meghatározott számú alkalommal futtatja le a benne található lépéseket."
+      }
+    },
+    "send": {
+      "text": "Parancs vagy szöveg",
+      "textPlaceholder": "systemctl újraindítja az nginx-et",
+      "pressEnter": "Küldés után nyomja meg az Enter billentyűt",
+      "pressEnterHelp": "Kapcsold ki ezt, ha beküldés nélkül szeretnél szöveget beírni."
+    },
+    "wait": {
+      "pattern": "Várjon, amíg a kimenet tartalmazza a",
+      "patternPlaceholder": "jelszó:",
+      "timeout": "Add fel utána",
+      "onTimeout": "Ha soha nem jelenik meg",
+      "stop": "A makró leállítása",
+      "continue": "Folytasd mindenképpen"
+    },
+    "delay": {
+      "duration": "Várj"
+    },
+    "ifStep": {
+      "pattern": "Ha a kimenet tartalmaz",
+      "patternPlaceholder": "Aktív: aktív (fut)",
+      "then": "Akkor csináld ezt",
+      "else": "Egyébként tedd ezt",
+      "emptyBranch": "Nincsenek lépcsők"
+    },
+    "repeat": {
+      "count": "Alkalmak száma",
+      "times": "alkalommal"
+    },
+    "match": {
+      "useRegex": "Egyezés reguláris kifejezéssel",
+      "useRegexHelp": "Hagyd ezt ki, hogy a szöveg pontosan úgy illeszkedjen, ahogy írva van.",
+      "invalidRegex": "Nem érvényes reguláris kifejezés, sima szövegként lesz egyezve."
+    },
+    "seconds": "másodperc",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Távoli szerver szükséges. Csatlakoztasson egy távoli szervert a Beállításokban a kapcsolattípus használatához."
+  }
+}

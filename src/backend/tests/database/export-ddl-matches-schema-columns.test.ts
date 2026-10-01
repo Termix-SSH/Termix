@@ -48,14 +48,17 @@ describe("the encrypted-export ssh_data DDL agrees with its INSERT", () => {
     expect(missing).toEqual([]);
   });
 
-  it("carries the web endpoint columns in both halves", () => {
-    // Named explicitly rather than derived: the generic check above passes if
-    // BOTH halves omit a column, which is precisely how this feature's columns
-    // would go missing.
-    for (const column of ["enable_web_ui", "web_ui_config"]) {
-      expect(createBody).toContain(column);
-      expect(insertMatch?.[1]).toContain(column);
+  it("leaves plugin host settings to their own table", () => {
+    // Moved columns must not creep back: plugins own these values now.
+    for (const column of [
+      "enable_web_ui",
+      "web_ui_config",
+      "enable_terminal",
+    ]) {
+      expect(createBody).not.toContain(column);
+      expect(insertMatch?.[1]).not.toContain(column);
     }
+    expect(text).toContain("CREATE TABLE plugin_settings (");
   });
 
   it("binds exactly one placeholder per column", () => {
@@ -76,8 +79,8 @@ describe("the encrypted-export ssh_data DDL agrees with its INSERT", () => {
     expect((values ?? "").split("?").length - 1).toBe(columns.length);
   });
 
-  it("carries the web endpoint values in the bound parameter list", () => {
-    expect(text).toContain("decrypted.enableWebUi");
-    expect(text).toContain("decrypted.webUiConfig");
+  it("copies non-secret host plugin settings into the export", () => {
+    expect(text).toContain("INSERT INTO plugin_settings");
+    expect(text).toContain("if (row.encrypted) continue;");
   });
 });

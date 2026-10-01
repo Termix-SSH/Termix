@@ -8,27 +8,17 @@ interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: (token: string | null) => void | Promise<void>;
   onChangeServer: () => void;
-  // "local" (default): the app's own login, JWT goes to localStorage like
-  // every other client. "remoteSync": this iframe is authenticating a
-  // Settings-triggered connection to a remote Termix server for the sync
-  // engine -- the JWT is handed to the Electron main process's encrypted
-  // store instead, never exposed to the renderer's localStorage.
-  targetPurpose?: "local" | "remoteSync";
-}
-
-interface SaveRemoteSyncJwtResult {
-  success: boolean;
-  reason?: string;
-  error?: string;
-  status?: {
-    needsReauth?: boolean;
-    lastError?: string | null;
-  } | null;
+  // "local" (default): the app's own login, the token goes to localStorage
+  // like every other client. "link": signing in to a server to link this
+  // desktop to it; the token is only handed to onAuthSuccess, which trades
+  // it for the desktop's own session.
+  targetPurpose?: "local" | "link";
 }
 
 const AUTH_MESSAGE_SOURCES = new Set([
   "auth_component",
-  "totp_auth_component",
+  "second_factor_auth_component",
+  "method_auth_component",
   "oidc_callback",
 ]);
 
@@ -60,30 +50,9 @@ export function ElectronLoginForm({
       setIsAuthenticating(true);
 
       try {
-        if (targetPurpose === "remoteSync") {
+        if (targetPurpose === "link") {
           if (!token) {
             throw new Error(t("errors.authTokenMissing"));
-          }
-          // The main process refuses to persist the JWT when it has no OS
-          // keyring to encrypt it with, and reports that by resolving with
-          // success: false. Dropping the result signs the user in against a
-          // store that kept nothing, so the next sync tick calls a session
-          // that was never saved expired.
-          const result = (await window.electronAPI?.invoke?.(
-            "save-remote-sync-jwt",
-            token,
-          )) as SaveRemoteSyncJwtResult | undefined;
-          if (!result?.success) {
-            throw new Error(
-              result?.reason === "encryption_unavailable"
-                ? t("errors.keyringUnavailable")
-                : result?.error || t("errors.authTokenSaveFailed"),
-            );
-          }
-          if (result.status?.needsReauth || result.status?.lastError) {
-            throw new Error(
-              result.status.lastError || t("errors.authTokenRejected"),
-            );
           }
         } else if (token) {
           localStorage.setItem("jwt", token);
@@ -135,6 +104,9 @@ export function ElectronLoginForm({
           const sendResultToIframe = (result: {
             success: boolean;
             error?: string;
+            secondFactor?: boolean;
+            tempToken?: string;
+            factors?: string;
           }) => {
             iframeRef.current?.contentWindow?.postMessage(
               {
@@ -149,30 +121,43 @@ export function ElectronLoginForm({
           const electronAPI = (
             window as unknown as {
               electronAPI?: {
-                oidcSystemBrowserAuth?: (
+                externalBrowserLogin?: (
                   url: string,
                   port: number,
                 ) => Promise<{
                   success: boolean;
                   token?: string;
                   error?: string;
+                  secondFactor?: boolean;
+                  tempToken?: string;
+                  factors?: string;
                 }>;
               };
             }
           ).electronAPI;
-          if (!electronAPI?.oidcSystemBrowserAuth) {
+          if (!electronAPI?.externalBrowserLogin) {
             sendResultToIframe({
               success: false,
               error: t("errors.failedOidcLogin"),
             });
             return;
           }
-          const result = await electronAPI.oidcSystemBrowserAuth(
+          const result = await electronAPI.externalBrowserLogin(
             authUrl,
             callbackPort,
           );
           if (result.success && result.token) {
             await handleAuthSuccess(result.token);
+            return;
+          }
+          // The login stopped for a second factor; the iframe asks for it.
+          if (result.secondFactor) {
+            sendResultToIframe({
+              success: false,
+              secondFactor: true,
+              tempToken: result.tempToken,
+              factors: result.factors,
+            });
             return;
           }
           sendResultToIframe({
@@ -247,7 +232,6 @@ export function ElectronLoginForm({
   };
 
   const displayUrl = currentUrl.replace(/^https?:\/\//, "");
-  const isEmbeddedServer = serverUrl.includes("localhost:30001");
 
   return (
     <div className="relative w-full h-full bg-background flex flex-col">
@@ -265,12 +249,12 @@ export function ElectronLoginForm({
           >
             <ArrowLeft className="h-5 w-5" />
             <span className="text-base font-medium">
-              {t("serverConfig.changeServer")}
+              {t("sync.wizard.back")}
             </span>
           </button>
           <div className="flex-1 mx-4 text-center">
             <span className="text-muted-foreground text-sm truncate block">
-              {isEmbeddedServer ? t("serverConfig.localServer") : displayUrl}
+              {displayUrl}
             </span>
           </div>
           <button
@@ -315,7 +299,7 @@ export function ElectronLoginForm({
           ref={iframeRef}
           src={serverUrl}
           className="w-full h-full border-0"
-          title="Server Authentication"
+          title={t("auth.serverAuthentication")}
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
           allow="clipboard-read; clipboard-write; publickey-credentials-get; publickey-credentials-create"
         />

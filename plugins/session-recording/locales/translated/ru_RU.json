@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Журналы сессий"
+  },
+  "hosts": {
+    "enableSessionRecording": "Запись сессии",
+    "enableSessionRecordingDesc": "Записывать вывод терминальной сессии для последующего просмотра"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "Журналы сеансов",
+    "noLogs": "Пока нет журналов сеансов",
+    "noLogsDesc": "Включите ведение журнала сеансов на хосте, чтобы начать запись",
+    "duration": "Продолжительность",
+    "viewLog": "Просмотреть журнал",
+    "downloadLog": "Скачать",
+    "downloadAsText": "Download as text",
+    "deleteLog": "Удалить",
+    "confirmDelete": "Удалить этот журнал сеансов?",
+    "confirmDeleteDesc": "Это действие нельзя отменить.",
+    "copyContent": "Копировать",
+    "copied": "Скопировано!",
+    "loadError": "Не удалось загрузить журналы сеансов",
+    "deleteError": "Не удалось удалить журнал сеанса",
+    "filterByHost": "Фильтровать по хосту...",
+    "back": "Назад",
+    "empty": "(пусто)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
+  }
+}

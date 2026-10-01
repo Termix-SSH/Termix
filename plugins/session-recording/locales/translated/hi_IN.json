@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "सत्र लॉग्स"
+  },
+  "hosts": {
+    "enableSessionRecording": "सत्र रिकॉर्डिंग",
+    "enableSessionRecordingDesc": "बाद में समीक्षा के लिए टर्मिनल सत्र का आउटपुट रिकॉर्ड करें"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "सेशन लॉग्स",
+    "noLogs": "अभी तक कोई सेशन लॉग नहीं",
+    "noLogsDesc": "रिकॉर्डिंग शुरू करने के लिए किसी होस्ट पर सेशन लॉगिंग सक्षम करें",
+    "duration": "अवधि",
+    "viewLog": "लॉग देखें",
+    "downloadLog": "डाउनलोड करें",
+    "downloadAsText": "Download as text",
+    "deleteLog": "हटाएं",
+    "confirmDelete": "क्या इस सेशन लॉग को हटाएं?",
+    "confirmDeleteDesc": "यह क्रिया वापस नहीं ली जा सकती।",
+    "copyContent": "कॉपी करें",
+    "copied": "कॉपी हो गया!",
+    "loadError": "सेशन लॉग लोड करने में विफल",
+    "deleteError": "सेशन लॉग हटाने में विफल",
+    "filterByHost": "होस्ट द्वारा फ़िल्टर करें...",
+    "back": "वापस",
+    "empty": "(empty)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
+  }
+}

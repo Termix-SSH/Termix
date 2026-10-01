@@ -228,7 +228,7 @@ export interface KeyPairValidationResult {
 
 const PUTTY_PRIVATE_KEY_RE = /^PuTTY-User-Key-File-(\d+):\s*(.+)$/m;
 
-export function normalizePrivateKeyText(privateKeyData: string): string {
+function normalizePrivateKeyText(privateKeyData: string): string {
   return privateKeyData.trim().replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 

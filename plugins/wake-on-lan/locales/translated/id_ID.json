@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Wake",
+    "sent": "Paket Wake-on-LAN berhasil dikirim",
+    "failed": "Gagal mengirim paket Wake-on-LAN"
+  },
+  "permissions": {
+    "send": {
+      "title": "Send Wake-on-LAN packets",
+      "description": "Wake a host by sending a magic packet to its MAC address."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "MAC address",
+        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Broadcast address",
+        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

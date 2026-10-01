@@ -21,6 +21,17 @@ export function isLoopbackRequest(req: Request): boolean {
   );
 }
 
+/**
+ * Whether this backend may hand out the desktop auto-session at all: the
+ * embedded desktop backend, or a development backend the desktop app points
+ * at. A production server never does, whoever asks.
+ */
+export function allowsDesktopAutoSession(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.ELECTRON_EMBEDDED === "true" || env.NODE_ENV !== "production";
+}
+
 export function extractBearerOrCookieToken(req: Request): string | undefined {
   const cookieToken = (req as Request & { cookies?: Record<string, string> })
     .cookies?.jwt;

@@ -2,12 +2,8 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { sessionManager } from "../../hosts/terminal/session-manager.js";
-import {
-  getCurrentSettingValue,
-  createCurrentOpenTabRepository,
-  createCurrentSessionShareRepository,
-} from "../repositories/factory.js";
+import { liveTerminalSessions } from "../../hosts/live-terminal-sessions.js";
+import { createCurrentOpenTabRepository } from "../repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -26,27 +22,10 @@ const authenticateJWT = authManager.createAuthMiddleware();
  */
 const DEFAULT_TAB_TTL_MINUTES = 30;
 
+// Tabs live as long as the terminal keeps a detached session.
 function getTabTtlMs(): number {
-  try {
-    const value = getCurrentSettingValue("terminal_session_timeout_minutes");
-    if (value) {
-      const minutes = parseInt(value, 10);
-      if (!isNaN(minutes) && minutes > 0) return minutes * 60_000;
-    }
-  } catch {
-    // DB not available, use default
-  }
-  return DEFAULT_TAB_TTL_MINUTES * 60_000;
-}
-
-// Legacy tab types that were renamed. Normalize on read so previously saved
-// tabs still restore to the correct (renamed) tab type.
-const LEGACY_TAB_TYPE_MAP: Record<string, string> = {
-  stats: "host-metrics",
-};
-
-function normalizeTabType(tabType: string): string {
-  return LEGACY_TAB_TYPE_MAP[tabType] ?? tabType;
+  const minutes = liveTerminalSessions.idleTimeoutMinutes();
+  return (minutes && minutes > 0 ? minutes : DEFAULT_TAB_TTL_MINUTES) * 60_000;
 }
 
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
@@ -57,9 +36,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       userId,
       cutoff,
     );
-    return res.json(
-      tabs.map((tab) => ({ ...tab, tabType: normalizeTabType(tab.tabType) })),
-    );
+    return res.json(tabs);
   } catch (e) {
     databaseLogger.error("Failed to get open tabs", e, {
       operation: "get_open_tabs",
@@ -275,18 +252,44 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /open-tabs/active-sessions:
+ * /open-tabs/session-timeout:
  *   get:
- *     summary: Get all active backend sessions for the current user
- *     description: >
- *       Returns live terminal sessions from the session manager, both sessions the
- *       caller owns and SSH sessions shared to the caller by another user (via
- *       an in-app session share). Used by the Active Connections panel and tab restore logic.
+ *     summary: Get how long a detached session is kept
+ *     description: The terminal's idle timeout for detached sessions, which is also how long a saved open tab lives. 30 while the terminal is off.
  *     tags:
  *       - Open Tabs
  *     responses:
  *       200:
- *         description: List of active sessions (own and shared-with-me).
+ *         description: The timeout in minutes.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 minutes:
+ *                   type: integer
+ */
+router.get(
+  "/session-timeout",
+  authenticateJWT,
+  (_req: Request, res: Response) => {
+    res.json({ minutes: getTabTtlMs() / 60_000 });
+  },
+);
+
+/**
+ * @openapi
+ * /open-tabs/active-sessions:
+ *   get:
+ *     summary: Get all active backend sessions for the current user
+ *     description: >
+ *       Returns the live terminal sessions the caller owns. Used by the
+ *       Active Connections panel and tab restore logic.
+ *     tags:
+ *       - Open Tabs
+ *     responses:
+ *       200:
+ *         description: List of the caller's active sessions.
  *         content:
  *           application/json:
  *             schema:
@@ -306,17 +309,6 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
  *                     type: boolean
  *                   createdAt:
  *                     type: number
- *                   isOwnSession:
- *                     type: boolean
- *                   sharedByUsername:
- *                     type: string
- *                     nullable: true
- *                   permissionLevel:
- *                     type: string
- *                     nullable: true
- *                   shareId:
- *                     type: string
- *                     nullable: true
  */
 router.get(
   "/active-sessions",
@@ -324,44 +316,15 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const ownSessions = sessionManager.getUserSessions(userId);
+      const ownSessions = liveTerminalSessions.listForUser(userId);
       const result = ownSessions.map((s) => ({
         sessionId: s.id,
         hostId: s.hostId,
         hostName: s.hostName,
-        tabInstanceId: s.attachedTabInstanceId ?? s.tabInstanceId ?? null,
+        tabInstanceId: s.tabInstanceId,
         isConnected: s.isConnected,
         createdAt: s.createdAt,
-        isOwnSession: true,
-        sharedByUsername: null as string | null,
-        permissionLevel: null as string | null,
-        shareId: null as string | null,
       }));
-
-      const sharedWithMe =
-        await createCurrentSessionShareRepository().findSharesTargetingUser(
-          userId,
-        );
-      for (const share of sharedWithMe) {
-        if (share.protocol !== "ssh") continue;
-        const sharedSession = sessionManager.getSession(share.sessionId);
-        if (!sharedSession || !sharedSession.isConnected) continue;
-        result.push({
-          sessionId: sharedSession.id,
-          hostId: sharedSession.hostId,
-          hostName: sharedSession.hostName,
-          tabInstanceId:
-            sharedSession.attachedTabInstanceId ??
-            sharedSession.tabInstanceId ??
-            null,
-          isConnected: sharedSession.isConnected,
-          createdAt: sharedSession.createdAt,
-          isOwnSession: false,
-          sharedByUsername: share.ownerUsername,
-          permissionLevel: share.permissionLevel,
-          shareId: share.id,
-        });
-      }
 
       return res.json(result);
     } catch (e) {

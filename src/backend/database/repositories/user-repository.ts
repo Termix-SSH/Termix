@@ -1,5 +1,5 @@
-import { asc, eq, inArray, like, sql } from "drizzle-orm";
-import { users } from "../db/schema.js";
+import { and, asc, eq, inArray, like, sql } from "drizzle-orm";
+import { pluginSettings, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import {
   countValue,
@@ -79,7 +79,7 @@ export class UserRepository {
     return rows[0] ?? null;
   }
 
-  async findByOidcIdentifier(
+  async findByExternalIdentifier(
     oidcIdentifier: string,
   ): Promise<UserRecord | null> {
     const rows = await this.context.drizzle
@@ -199,6 +199,18 @@ export class UserRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    // plugin_settings.scope_id is polymorphic, so it carries no foreign key to
+    // users and the engine will not cascade it. Removed here rather than in a
+    // route so every caller that deletes a user is covered.
+    await this.context.drizzle
+      .delete(pluginSettings)
+      .where(
+        and(
+          inArray(pluginSettings.scope, ["user", "secret"]),
+          eq(pluginSettings.scopeId, id),
+        ),
+      );
+
     const result = await this.context.drizzle
       .delete(users)
       .where(eq(users.id, id));
@@ -212,15 +224,6 @@ export class UserRepository {
       .select({ id: users.id })
       .from(users)
       .where(eq(users.isAdmin, true));
-
-    return rows.length;
-  }
-
-  async countTotpEnabled(): Promise<number> {
-    const rows = await this.context.drizzle
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.totpEnabled, true));
 
     return rows.length;
   }

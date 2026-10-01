@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "devices.view": {
+      "title": "테일넷 장치 보기",
+      "description": "연결된 테일넷에서 장치를 확인하세요."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "테일스케일 API",
+      "devices": "테일넷"
+    },
+    "apiKey": {
+      "label": "API 키",
+      "description": "테일넷에 연결된 장치 목록을 표시하는 데 사용됩니다. Tailscale 또는 Headscale 키와 함께 작동합니다.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API 기본 URL",
+      "description": "Tailscale을 사용하려면 비워 두십시오. Headscale 인스턴스를 가리키도록 설정하십시오.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "기기 목록",
+      "checking": "테일넷을 확인하는 중...",
+      "noKey": "아직 API 키가 설정되지 않았습니다.",
+      "error": "테일넷에 연결할 수 없습니다. API 키를 확인하세요.",
+      "count": "{{count}} 장치에 연결 가능",
+      "count_other": "{{count}} 기기 연결 가능",
+      "refresh": "확인하다"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
+  "hosts": {
+    "tailscaleUsernameHint": "이 값은 Tailscale ID가 Tailnet의 SSH ACL에 부여된 Unix 사용자여야 하며, 반드시 root일 필요는 없습니다.",
+    "tailscaleDeviceSelect": "Tailscale 기기 선택",
+    "tailscaleDeviceSelectPlaceholder": "기기 선택...",
+    "tailscaleNoApiKey": "Tailscale API 키가 구성되지 않았습니다. 기기 검색을 활성화하려면 관리자 설정에서 추가하세요.",
+    "tailscaleDocsLink": "문서 보기",
+    "tailscaleLoadingDevices": "장치를 불러오는 중...",
+    "tailscaleDeviceLoadFailed": "Tailscale 장치를 불러오는 데 실패했습니다. API URL과 네트워크 연결을 확인하세요.",
+    "tailscaleNoDevices": "테일넷에서 장치를 찾을 수 없습니다.",
+    "tailscaleDeviceAutoFill": "장치를 선택하면 호스트 IP 주소가 자동으로 채워집니다.",
+    "tailscaleAddHost": "호스트 추가",
+    "tailscaleCopyIp": "Tailscale IP 복사",
+    "tailscaleIpCopied": "IP 복사됨",
+    "tailscaleIpCopyFailed": "IP 주소를 복사할 수 없습니다.",
+    "filterAuthTailscale": "Tailscale"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale 인증이 필요합니다.",
+    "tailscaleCheckDescription": "Tailscale SSH는 추가 인증이 필요합니다. 계속하려면 브라우저에서 인증하십시오.",
+    "tailscaleCheckOpenBrowser": "브라우저로 인증하기",
+    "tailscaleCheckWaiting": "Tailscale 인증을 기다리는 중...",
+    "tailscaleCheckTimeout": "Tailscale 인증 시간이 초과되었습니다. 다시 시도해 주세요."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "새로 고침",
+    "retry": "재시도",
+    "sudoHint": "관리자 권한으로 작업을 수행할 수 있도록 이 호스트에 sudo 암호를 설정하십시오.",
+    "noData": "데이터 없음",
+    "filter": "필터...",
+    "tsNotInstalled": "이 호스트에 Tailscale이 설치되어 있지 않습니다",
+    "tsRunning": "실행 중",
+    "tsStopped": "중지됨",
+    "tsEnable": "연결",
+    "tsDisable": "연결 끊기",
+    "tsEnabling": "Tailscale에 연결 중...",
+    "tsDisabling": "Tailscale 연결 해제 중...",
+    "tsEnabled": "Tailscale 연결됨",
+    "tsDisabled": "Tailscale 연결 해제됨",
+    "tsExitNode": "출구 노드",
+    "tsExitNodeActive": "출구 노드 활성"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "터미널에 연결",
+        "usernameLabel": "사용자 이름"
+      }
+    }
+  }
+}

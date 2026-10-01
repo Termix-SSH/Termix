@@ -1,0 +1,42 @@
+{
+  "title": "App di autenticazione",
+  "factor": "Codice di autenticazione",
+  "challenge": {
+    "enterCode": "Inserisci il codice di verifica",
+    "verify": "Verifica codice",
+    "backupCodeHint": "È inoltre possibile inserire uno dei propri codici di backup."
+  },
+  "enrollment": {
+    "title": "Autenticatore TOTP",
+    "docs": "Documentazione",
+    "on": "2FA è attivata",
+    "off": "Aggiungi sicurezza aggiuntiva all'accesso",
+    "enable": "Abilita",
+    "disable": "Disabilita",
+    "addDevice": "Aggiungi dispositivo",
+    "addTitle": "Aggiungi dispositivo di autenticazione",
+    "addDescription": "Conferma con un codice fornito dal tuo autenticatore o con un codice di backup per registrare un altro dispositivo con la stessa chiave.",
+    "addScanInstructions": "Scansiona questo codice QR con l'autenticatore aggiuntivo. Gli autenticatori già in uso continueranno a funzionare.",
+    "addSuccess": "Autenticatore aggiuntivo registrato",
+    "addFailed": "Impossibile aggiungere l'autenticatore",
+    "codeRequired": "Inserisci un codice TOTP o un codice di backup",
+    "codePlaceholder": "Codice TOTP o codice di backup",
+    "setupTitle": "Configura TOTP",
+    "setupFailed": "Impossibile avviare la configurazione TOTP",
+    "qrCode": "Codice QR",
+    "secretCopied": "Segreto copiato negli appunti",
+    "instructions": "Scansiona il codice QR o inserisci il codice segreto nella tua app di autenticazione, quindi inserisci il codice a 6 cifre",
+    "continueVerify": "Procedi alla verifica",
+    "verifyTitle": "Verifica codice",
+    "verify": "Verifica",
+    "enter6Digits": "Inserisci un codice a 6 cifre",
+    "enabledSuccess": "Autenticazione a due fattori abilitata",
+    "invalidCode": "Codice non valido, riprova",
+    "disableTitle": "Disabilita 2FA",
+    "disabledSuccess": "Autenticazione a due fattori disabilitata",
+    "disableFailed": "Impossibile disabilitare la 2FA",
+    "backupTitle": "Codici di backup",
+    "downloadBackup": "Scarica i codici di backup",
+    "done": "Fine"
+  }
+}

@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Añadir",
+    "arrowDown": "Flecha abajo",
+    "arrowLeft": "Flecha izquierda",
+    "arrowRight": "Flecha derecha",
+    "arrowUp": "Flecha arriba",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Supr",
+    "done": "Hecho",
+    "editQuickKeys": "Editar teclas rápidas",
+    "end": "Fin",
+    "esc": "Esc",
+    "home": "Inicio",
+    "pageDown": "Re Pág",
+    "pageUp": "Av Pág",
+    "paste": "Pegar",
+    "quickKeyPlaceholder": "p. ej. sudo ",
+    "quickKeysDesc": "Toca × para eliminar. Admite hasta 8 caracteres.",
+    "quickKeysTitle": "Teclas rápidas",
+    "removeQuickKey": "Eliminar",
+    "resetDefaults": "Restablecer",
+    "shift": "Mayús",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "No se pudo habilitar Auto-Tmux.",
+    "autoTmuxEnabled": "Auto-Tmux habilitado para {{host}}. Se aplica a partir de la siguiente conexión.",
+    "clipboardHttpWarning": "No se pudo leer el portapapeles. Algunos navegadores restringen el acceso al portapapeles fuera de HTTPS; intente usar Ctrl+V o ejecute Termix a través de HTTPS.",
+    "closeTab": "Cerrar",
+    "connecting": "Conectando...",
+    "connectionLost": "Conexión perdida",
+    "connectionRejected": "Conexión rechazada por el servidor. Revisa tu autenticación y configuración de red.",
+    "connectionTimeout": "Timeout de conexión",
+    "enableAutoTmuxAction": "Habilitar Auto-Tmux",
+    "hostKeyRejected": "Verificación de clave de host SSH rechazada. Conexión cancelada.",
+    "linkDialogCopy": "Copiar",
+    "linkDialogOpen": "Abrir",
+    "linkDialogTitle": "Abrir enlace",
+    "maxReconnectAttemptsReached": "Número máximo de intentos de reconexión alcanzado",
+    "noHostSelected": "Ningún host seleccionado",
+    "passwordPromptFillTitle": "¿Rellenar este campo con la contraseña guardada?",
+    "reconnect": "Reconectar",
+    "reconnected": "Reconectado correctamente",
+    "reconnecting": "Reconectando... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Se perdió la conexión, reconectando...",
+    "searchCaseSensitive": "Caja de cerillas",
+    "searchClose": "Cerrar (Escape)",
+    "searchNext": "Siguiente partido (Entrar)",
+    "searchNoResults": "No hay resultados",
+    "searchPlaceholder": "Encontrar",
+    "searchPrevious": "Coincidencia anterior (Shift+Enter)",
+    "searchRegex": "Utilizar expresiones regulares",
+    "searchResultCount": "{{index}} de {{count}}",
+    "searchWholeWord": "Emparejar palabra completa",
+    "sessionExpiredNotice": "Tu sesión anterior en {{host}} expiró después de {{minutes}} minutos desconectada; la consola y todo lo que se ejecutaba en ella se han perdido. Habilita Auto-Tmux en este host para mantener las sesiones activas.",
+    "sessionExpiredNoticeNoMinutes": "Tu sesión anterior en {{host}} expiró mientras estabas desconectado; la consola y todo lo que se ejecutaba en ella se perdieron. Habilita Auto-Tmux en este host para mantener las sesiones activas.",
+    "sessionTakenOver": "La sesión se abrió en otra pestaña. Reconectando...",
+    "tmuxAttached": "Clientes adjuntos",
+    "tmuxAttachedCount": "{{count}} adjunto",
+    "tmuxCopyHint": "Ajuste la selección y pulse Intro para copiar al portapapeles",
+    "tmuxCreateNew": "Iniciar nueva sesión",
+    "tmuxDetached": "Desconectado de la sesión tmux",
+    "tmuxLastActivity": "Última actividad",
+    "tmuxSessionAttached": "Sesión tmux adjuntada: {{name}}",
+    "tmuxSessionCreated": "Sesión tmux creada: {{name}}",
+    "tmuxSessionPickerDesc": "Se encontraron sesiones tmux existentes en este host. Seleccione una para readjuntar o cree una nueva sesión.",
+    "tmuxSessionPickerTitle": "Sesiones tmux",
+    "tmuxTimeDays": "hace {{count}}d",
+    "tmuxTimeHours": "hace {{count}}h",
+    "tmuxTimeJustNow": "ahora mismo",
+    "tmuxTimeMinutes": "hace {{count}}m",
+    "tmuxUnavailable": "tmux no está instalado en el host remoto, recurriendo al intérprete de comandos estándar",
+    "tmuxWindowCount": "{{count}} ventana",
+    "tmuxWindows": "Ventanas",
+    "unknownError": "Se ha producido un error desconocido.",
+    "websocketAbnormalClose": "La conexión se cerró de forma inesperada. Esto puede deberse a un problema con el proxy inverso o la configuración SSL. Revisa los registros del servidor.",
+    "websocketError": "Error de conexión WebSocket",
+    "clipboardReadFailed": "No se pudo leer del portapapeles. Asegúrese de que los permisos del portapapeles estén concedidos.",
+    "clipboardWriteFailed": "Error al copiar al portapapeles. Asegúrese de que la página se sirva a través de HTTPS o en localhost.",
+    "connected": "Conectado",
+    "totpCodeLabel": "Código de verificación",
+    "duplicateTab": "Pestaña duplicada",
+    "imageChooseFile": "Seleccione un archivo de imagen",
+    "imageUploaded": "Imagen subida: {{path}}",
+    "imageClipboardUnavailable": "Este navegador no puede leer imágenes del portapapeles.",
+    "imageClipboardEmpty": "No se encontró ninguna imagen en el portapapeles.",
+    "localShell": "shell de terminal local",
+    "autocompleteHintComplete": "Presione Tabulador o Enter para completar",
+    "autocompleteHintNavigate": "↑↓ para navegar",
+    "autocompleteHintClose": "Presione Esc para cerrar"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Desvincular tmux",
+    "detachTmuxDescription": "Desvincular sesión de tmux",
+    "dismissError": "Descartar error de imagen",
+    "hideToolbar": "Ocultar barra de herramientas",
+    "image": "Acciones de imagen (solo imágenes)",
+    "imageActionFailed": "La acción de la imagen falló.",
+    "layout": "Modo de visualización de la barra de herramientas",
+    "layoutExpanded": "Ampliado con métricas",
+    "layoutIcon": "Solo icono",
+    "layoutLabeled": "Iconos y etiquetas",
+    "moveToolbar": "Mover barra de herramientas",
+    "moveToolbarHint": "Arrastra para cambiar la posición de la barra de herramientas.",
+    "paste": "Pegar imagen",
+    "pasteImage": "Pegar imagen desde el portapapeles (solo imágenes)",
+    "retry": "Reintentar",
+    "showToolbar": "Expandir barra de herramientas",
+    "upload": "Subir imagen",
+    "uploadImage": "Sube una imagen al servidor.",
+    "uploadingImage": "Subiendo..."
+  },
+  "history": {
+    "noTerminalSelected": "Ningún terminal seleccionado",
+    "noTerminalSelectedHint": "Abra una pestaña de terminal SSH para ver su historial de comandos",
+    "searchPlaceholder": "Buscar en el historial...",
+    "clearAll": "Borrar todo",
+    "noHistoryEntries": "Sin entradas de historial",
+    "trackingDisabled": "El seguimiento del historial está desactivado",
+    "trackingDisabledHint": "Active el historial de comandos en la pestaña Terminal SSH de este host.",
+    "commandCount_one": "{{count}} comando",
+    "commandCount_other": "{{count}} comandos"
+  },
+  "touchInput": {
+    "enabled": "Habilitar la entrada táctil",
+    "enabledDesc": "Permitir el desplazamiento táctil con un solo dedo en terminales.",
+    "momentumEnabled": "Habilitar el impulso",
+    "momentumEnabledDesc": "Continúa desplazándote brevemente después de deslizar el dedo.",
+    "advanced": "Avanzado",
+    "resetDefaults": "Restablecer",
+    "dragThreshold": "Umbral de arrastre",
+    "maxWheelDelta": "Delta máximo de rueda",
+    "momentumSampleWindow": "Ventana de muestreo de Momentum",
+    "releaseGracePeriod": "Período de gracia de liberación",
+    "minimumVelocity": "Velocidad mínima",
+    "maximumVelocity": "Velocidad máxima",
+    "maximumDuration": "Duración máxima",
+    "maximumTravel": "Viaje máximo",
+    "decayTime": "Tiempo de decaimiento",
+    "pixelsPerTick": "Píxeles por tick",
+    "maximumFrameInterval": "Intervalo máximo de fotogramas",
+    "maximumTicksPerFrame": "Número máximo de ticks por fotograma"
+  },
+  "imageStorage": {
+    "instanceId": "ID de instancia de sesión de terminal",
+    "instanceIdDesc": "ID de instancia de una de las pestañas de terminal conectadas, utilizada para probar la visibilidad.",
+    "selectedModeUnavailable": "Indisponible",
+    "test": "Probar",
+    "testing": "Pruebas...",
+    "testFailed": "No se pudo probar el almacenamiento de imágenes.",
+    "testConnected": "La sesión de terminal está conectada.",
+    "testNotConnected": "No existe ninguna sesión de terminal conectada con este ID de instancia.",
+    "testSelectedMode": "Una carga usaría: {{mode}}",
+    "testLocalVisible": "El directorio local es visible desde el host conectado.",
+    "testLocalNotVisible": "El directorio local NO es visible desde el host conectado."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Entrada táctil",
+        "images": "Almacenamiento de imágenes",
+        "sessions": "Sesiones",
+        "newHosts": "Nuevos anfitriones"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Persistencia de sesión terminal",
+        "description": "¿Cuánto tiempo permanece activa una terminal desconectada en el servidor antes de cerrarse? Mínimo 1 minuto, máximo 1440 minutos. Para sesiones que deban superar este límite, active Auto-Tmux en el host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Historial de comandos",
+        "description": "Permitir el registro del historial de comandos. Si se desactiva, el historial no se guarda independientemente de la configuración por host."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Historial de comandos para nuevos hosts",
+        "description": "Si los nuevos hosts comienzan con el historial de comandos activado."
+      },
+      "imageStorageMode": {
+        "label": "Modo de almacenamiento",
+        "description": "Donde se escriben las imágenes de terminal pegadas y cargadas. La selección automática por conexión, local y remota (SFTP) es fija.",
+        "auto": "Automático",
+        "local": "Local",
+        "remoteSftp": "Remoto (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Directorio local",
+        "description": "Ruta absoluta en el backend de Termix donde el modo local escribe las imágenes. Nunca se muestra después de guardar. Si está vacío, usa TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Ruta del host",
+        "description": "La vista del directorio local que reciben los agentes de terminal desde el lado del host."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "Tiempo de conservación de una imagen subida, en milisegundos. Si está vacío, utiliza TERMIX_IMAGE_TTL_MS o una hora."
+      },
+      "imageMaxCount": {
+        "label": "Número máximo de imágenes",
+        "description": "La mayoría de las imágenes se conservan a la vez. Si está vacío, utiliza TERMIX_MAX_IMAGE_COUNT o 100."
+      },
+      "imageMaxBytes": {
+        "label": "Bytes de almacenamiento máximo",
+        "description": "La mayoría de los bytes de las imágenes se almacenan a la vez. El espacio vacío utiliza TERMIX_MAX_IMAGE_STORAGE_BYTES o 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Conservar las sesiones después de la desconexión",
+        "description": "Mantén una terminal desconectada activa en el servidor durante el tiempo indicado anteriormente, de modo que al volver a abrir su pestaña se retome la tarea donde se interrumpió."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Ejecuta las terminales de los nuevos hosts dentro de tmux para que las sesiones sobrevivan a las desconexiones (requiere tmux en el host)."
+      },
+      "newHostTheme": {
+        "label": "Tema para nuevos anfitriones",
+        "description": "El tema de terminal con el que se inicia un nuevo host."
+      },
+      "newHostFontFamily": {
+        "label": "Fuente para nuevos anfitriones",
+        "description": "La fuente de terminal con la que se inicia un nuevo host."
+      },
+      "newHostFontSize": {
+        "label": "Tamaño de fuente para nuevos anfitriones",
+        "description": "El tamaño de fuente de la terminal con el que se inicia un nuevo host, en píxeles."
+      },
+      "newHostCursorStyle": {
+        "label": "Estilo del cursor para nuevos hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Cursor parpadeante para nuevos hosts"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Habilitar la barra de herramientas del terminal",
+        "description": "Mostrar una barra de herramientas de acceso rápido acoplada al terminal activo para las herramientas y estadísticas en tiempo real de este host."
+      },
+      "terminalToolbarPosition": {
+        "label": "Posición de la barra de herramientas",
+        "description": "Donde se ubica la barra de herramientas en la terminal. Aún puedes arrastrarla desde allí.",
+        "bottom": "Parte inferior central",
+        "bottomLeft": "Abajo a la izquierda",
+        "bottomRight": "Abajo a la derecha",
+        "top": "Centro superior",
+        "topLeft": "Arriba a la izquierda",
+        "topRight": "Arriba a la derecha"
+      },
+      "terminalToolbarStartState": {
+        "label": "Estado inicial de la barra de herramientas",
+        "description": "Si la barra de herramientas se abre expandida o minimizada cuando se conecta el terminal.",
+        "expanded": "Expandido",
+        "collapsed": "Minimizado"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Modo de visualización de la barra de herramientas",
+        "description": "Cómo se muestran los botones de la barra de herramientas. La última opción utilizada conserva la selección que hayas hecho en la barra de herramientas.",
+        "remember": "Último uso",
+        "icon": "Solo icono",
+        "labeled": "Iconos y etiquetas",
+        "expanded": "Ampliado con estadísticas"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Mostrar estadísticas en vivo",
+        "description": "Muestra las estadísticas del anfitrión en tiempo real encima de los botones de la barra de herramientas en modo expandido."
+      },
+      "terminalToolbarFade": {
+        "label": "Atenuarse cuando está inactivo",
+        "description": "Desvanezca la barra de herramientas hasta que pase el cursor sobre ella."
+      },
+      "enableCommandHistory": {
+        "label": "Historial de comandos",
+        "description": "Registrar los comandos ejecutados en este terminal para el historial y autocompletado"
+      },
+      "enableTerminal": {
+        "label": "Habilitar terminal",
+        "description": "Ofrezca un terminal SSH para este host."
+      },
+      "inheritAppearance": {
+        "label": "Usar valores predeterminados del usuario"
+      },
+      "theme": {
+        "label": "Tema"
+      },
+      "cursorBlink": {
+        "label": "cursor parpadeante"
+      },
+      "cursorStyle": {
+        "label": "Estilo del cursor"
+      },
+      "fontSize": {
+        "label": "Tamaño de fuente"
+      },
+      "fontFamily": {
+        "label": "Fuente"
+      },
+      "scrollback": {
+        "label": "Retroceder"
+      },
+      "letterSpacing": {
+        "label": "espaciado entre letras"
+      },
+      "lineHeight": {
+        "label": "Altura de línea"
+      },
+      "bellStyle": {
+        "label": "Campana"
+      },
+      "minimumContrastRatio": {
+        "label": "relación de contraste mínima"
+      },
+      "backgroundImage": {
+        "label": "Imagen de fondo"
+      },
+      "backgroundImageOpacity": {
+        "label": "opacidad de la imagen de fondo"
+      },
+      "customThemeColors": {
+        "label": "Colores de tema personalizados"
+      },
+      "rightClickSelectsWord": {
+        "label": "El clic derecho selecciona la palabra."
+      },
+      "macOptionIsMeta": {
+        "label": "La opción es Meta"
+      },
+      "fastScrollModifier": {
+        "label": "tecla de desplazamiento rápido"
+      },
+      "fastScrollSensitivity": {
+        "label": "Velocidad de desplazamiento rápida"
+      },
+      "backspaceMode": {
+        "label": "Retroceso"
+      },
+      "autoMosh": {
+        "label": "Mosh automático"
+      },
+      "moshCommand": {
+        "label": "Comando Mosh"
+      },
+      "autoTmux": {
+        "label": "tmux automático"
+      },
+      "useSSHTitle": {
+        "label": "Utilice el título SSH"
+      },
+      "syntaxHighlighting": {
+        "label": "Resaltado de sintaxis"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Categorías de resaltado de sintaxis"
+      },
+      "linkClickBehavior": {
+        "label": "Enlace clic"
+      },
+      "localEcho": {
+        "label": "Eco local"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Ofrecer rellenar las solicitudes de contraseña"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Rellene las indicaciones de sudo"
+      },
+      "autoReconnect": {
+        "label": "Volver a conectarse automáticamente"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Autocompletado de comandos",
+        "description": "Mostrar autocompletar mientras escribes si pulsas la tecla Tab"
+      },
+      "localEcho": {
+        "label": "Eco local",
+        "description": "Reduzca la latencia de entrada percibida mediante la predicción segura de pulsaciones de teclas locales."
+      },
+      "linkClickBehavior": {
+        "label": "Clic en enlace de terminal",
+        "description": "Comportamiento predeterminado al hacer clic en enlaces del terminal"
+      },
+      "customThemes": {
+        "label": "Temas guardados"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal local"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Utilice sesiones de terminal en vivo",
+      "description": "Permite que otras funciones, como compartir y grabar sesiones, lleguen a tus sesiones de terminal en directo."
+    },
+    "history": {
+      "title": "Historial de comandos (Leer)",
+      "description": "Permite que otras funciones, como el asistente de IA, lean tu historial de comandos."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "Terminal",
+    "addHost": "Añadir host",
+    "applyGlobalThemeTooltip": "Aplicar este tema",
+    "backgroundImageDesc": "URL opcional para una imagen de fondo del terminal",
+    "backgroundImageLabel": "URL de la imagen de fondo",
+    "backgroundImageOpacityLabel": "Opacidad de la imagen de fondo",
+    "backspaceMode": "Modo de retroceso",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "Modo de retroceso",
+    "backspaceModeNormal": "Normal (DEL)",
+    "behaviorAndAdvanced": "Comportamiento y avanzado",
+    "bellStyle": "Estilo de campana",
+    "bellStyleBoth": "Ambos",
+    "bellStyleLabel": "Estilo de aviso sonoro",
+    "bellStyleNone": "Ninguna",
+    "bellStyleSound": "Sonido",
+    "bellStyleVisual": "Visual",
+    "colorTheme": "Tema de color",
+    "cursorBlink": "Parpadeo del cursor",
+    "cursorBlinking": "Parpadeo del cursor",
+    "cursorBlinkingDesc": "Activar la animación de parpadeo para el cursor del terminal",
+    "cursorStyle": "Estilo del cursor",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Bloquear",
+    "cursorStyleLabel": "Estilo del cursor",
+    "cursorStyleUnderline": "Subrayar",
+    "customThemeAnsiColors": "Colores ANSI",
+    "customThemeBackground": "Fondo",
+    "customThemeBlack": "Negro",
+    "customThemeBlue": "Azul",
+    "customThemeBrightBlack": "Negro brillante",
+    "customThemeBrightBlue": "Azul brillante",
+    "customThemeBrightCyan": "Cian brillante",
+    "customThemeBrightGreen": "Verde brillante",
+    "customThemeBrightMagenta": "Magenta brillante",
+    "customThemeBrightRed": "Rojo brillante",
+    "customThemeBrightWhite": "Blanco brillante",
+    "customThemeBrightYellow": "Amarillo brillante",
+    "customThemeColors": "Colores personalizados",
+    "customThemeCursor": "Cursor",
+    "customThemeCursorAccent": "Acento del cursor",
+    "customThemeCyan": "Cian",
+    "customThemeForeground": "Primer plano",
+    "customThemeGreen": "Verde",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Rojo",
+    "customThemeResetTooltip": "Restablecer valores predeterminados",
+    "customThemeSelection": "Selección",
+    "customThemeWhite": "Blanco",
+    "customThemeYellow": "Amarillo",
+    "deleteGlobalThemeTooltip": "Eliminar este tema",
+    "docsLink": "Ver documentación",
+    "enableAutoMosh": "Habilitar Auto-Mosh",
+    "enableAutoMoshDesc": "Preferir Mosh sobre SSH si está disponible",
+    "enableAutoTmux": "Habilitar Auto-Tmux",
+    "enableAutoTmuxDesc": "Mantén tu shell y todo lo que se esté ejecutando en él activo durante desconexiones y reinicios del navegador ejecutándolo dentro de tmux (tmux debe estar instalado en el host).",
+    "fastScrollModifier": "Modificador de desplazamiento rápido",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Modificador de desplazamiento rápido",
+    "fastScrollModifierShift": "Mayús",
+    "fastScrollSensitivity": "Sensibilidad de desplazamiento rápido",
+    "fastScrollSensitivityLabel": "Sensibilidad de desplazamiento rápido",
+    "fontFamily": "Familia de fuentes",
+    "fontFamilyCustomHint": "Selecciona una fuente incluida o elige Personalizada e introduce el nombre exacto de una fuente ya instalada en tu sistema (por ejemplo, MesloLGS NF, Noto Sans Mono). Termix no puede instalar fuentes por ti; primero debes instalarlas en tu sistema operativo.",
+    "fontFamilyCustomOption": "Costumbre...",
+    "fontFamilyCustomPlaceholder": "Nombre exacto de la fuente, por ejemplo MesloLGS NF",
+    "fontFamilyLabel": "Familia de fuentes",
+    "fontSize": "Tamaño de fuente",
+    "fontSizeLabel": "Tamaño de fuente",
+    "hostNotFound": "Host no encontrado",
+    "letterSpacing": "Espaciado entre letras",
+    "letterSpacingPx": "Espaciado entre letras (px)",
+    "lineHeight": "Altura de línea",
+    "lineHeightLabel": "Altura de línea",
+    "linkClickBehaviorConfirm": "Mostrar ventana emergente para abrir o copiar",
+    "linkClickBehaviorDesc": "Controla lo que sucede al hacer clic en un enlace en el terminal. Use 'Predeterminado' para seguir la configuración de la aplicación.",
+    "linkClickBehaviorDirect": "Abrir directamente",
+    "linkClickBehaviorLabel": "Comportamiento al hacer clic en enlaces",
+    "loadingHost": "Cargando host...",
+    "localEchoAuto": "Automático",
+    "localEchoDesc": "Predice localmente las pulsaciones de teclas seguras para imprimir en conexiones lentas. Las solicitudes de contraseña y la entrada de control nunca se repiten.",
+    "localEchoLabel": "Eco local",
+    "localEchoOff": "Desactivado",
+    "localEchoOn": "Siempre encendido",
+    "macOptionIsMetaLabel": "La tecla de opción envía metadatos",
+    "macOptionIsMetaShortDesc": "Deshabilitar la escritura de caracteres especiales (como @ o |) con la tecla Opción/Alt en macOS en lugar de enviar Meta",
+    "moshCommand": "Comando MOSH",
+    "moshCommandLabel": "Comando Mosh",
+    "noSavedThemes": "Aún no hay temas guardados",
+    "none": "Ninguno",
+    "passwordPromptAutoFillDesc": "Ofrece rellenar automáticamente la contraseña guardada cuando el terminal la solicite. Desactiva esta opción para no rellenar automáticamente ninguna contraseña en este equipo.",
+    "passwordPromptAutoFillLabel": "Ofrecer autocompletado de contraseña",
+    "autoReconnectLabel": "Reconexión automática",
+    "autoReconnectDesc": "Se reconecta automáticamente cuando se pierde la conexión SSH, por ejemplo, tras una interrupción de la red o un período de inactividad. Conserva el historial de desplazamiento.",
+    "rightClickSelectsWord": "Clic derecho selecciona palabra",
+    "rightClickSelectsWordLabel": "Clic derecho selecciona palabra",
+    "rightClickSelectsWordShortDesc": "Selecciona la palabra bajo el cursor al hacer clic derecho",
+    "saveAsGlobalTheme": "Guardar como tema global",
+    "saveGlobalThemeError": "No se pudo guardar el tema.",
+    "saveGlobalThemeNamePrompt": "Introduce un nombre para este tema.",
+    "saveGlobalThemeSuccess": "Tema guardado",
+    "savedThemesLabel": "Temas guardados",
+    "scrollbackBufferLabel": "Búfer de retroceso",
+    "scrollbackMaxLines": "Número máximo de líneas conservadas en el historial",
+    "sudoPasswordAutoFill": "Autocompletado de contraseña de sudo",
+    "sudoPasswordAutoFillDesc": "Almacenar una contraseña sudo para que las métricas del host, las solicitudes del terminal y otros puedan ejecutar comandos privilegiados automáticamente.",
+    "sudoPasswordAutoFillLabel": "Autocompletado de contraseña sudo",
+    "syntaxCategoryIpAddresses": "Direcciones IP",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Niveles de registro",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "Números etiquetados",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "Rutas de archivo",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "Marcas de tiempo",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URLs",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Colorear la salida del terminal (errores, rutas, IPs, marcas de tiempo)",
+    "syntaxHighlightingLabel": "Resaltado de sintaxis",
+    "terminalAppearance": "Apariencia del terminal",
+    "theme": "Tema",
+    "themePreview": "Vista previa del tema",
+    "useSSHTitleDesc": "Actualizar el título de la pestaña desde el título de la ventana del shell en lugar del nombre del host",
+    "useSSHTitleLabel": "Usar título de ventana SSH",
+    "enableTunnel": "Activar túnel",
+    "enableFileManager": "Activar gestor de archivos",
+    "enableDocker": "Activar Docker",
+    "startupSnippet": "Fragmento de inicio",
+    "quickActions": "Acciones rápidas",
+    "proxmoxLastSyncStatus": {
+      "success": "Correcto"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} omitido (no se encontró ninguna IP)",
+    "proxmoxStatsUrlCopied": "Se copió al portapapeles la URL de estadísticas de Proxmox.",
+    "rdpUrlCopied": "URL de RDP copiada",
+    "vncUrlCopied": "URL de VNC copiada",
+    "filterAuthStepca": "Paso CA",
+    "guac": {
+      "noCredential": "Sin credencial (credenciales directas a continuación)",
+      "authTypeDirect": "Directa",
+      "authTypeCredential": "Credencial",
+      "authTypeNone": "Ninguna",
+      "recordingPath": "Ruta de grabación",
+      "recordingName": "Nombre de la grabación",
+      "saveHostFirst": "Primero guarde el host.",
+      "sharingOptionsAfterSave": "Las opciones de compartición están disponibles después de guardar el host.",
+      "permissionLevel": "Nivel de permiso",
+      "typeHeader": "Tipo",
+      "targetHeader": "Destino",
+      "permissionHeader": "Permiso",
+      "cancelBtn": "Cancelar",
+      "savingBtn": "Guardando...",
+      "updateHostBtn": "Actualizar host",
+      "addHostBtn": "Añadir host"
+    },
+    "filterAuthVault": "Bóveda"
+  },
+  "nav": {
+    "history": "Historial",
+    "localTerminal": "Terminal local",
+    "sshTools": "Herramientas SSH",
+    "terminal": "Terminal",
+    "macros": "Macros"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Escriba aquí para transmitir pulsaciones...",
+    "copyOnSelect": "Copiar automáticamente el texto seleccionado",
+    "enableRightClickCopyPaste": "Activar copiar/pegar con clic derecho",
+    "fillPassword": "Rellenar contraseña",
+    "fillPasswordMissing": "No hay contraseña guardada para {{count}} terminal(es) seleccionado(s)",
+    "fillPasswordSuccess": "Contraseña rellenada en {{count}} terminal(es)",
+    "keyRecordingTitle": "Grabación de teclas",
+    "noTerminalTabsOpen": "Sin pestañas de terminal abiertas",
+    "recordToTerminals": "Grabar en terminales",
+    "selectAll": "Revocar todo",
+    "selectNone": "Ninguna",
+    "selectTerminalsAbove": "Seleccionar terminales arriba",
+    "settingsTitle": "Configuración",
+    "startRecording": "Iniciar grabación",
+    "stopRecording": "Detener grabación"
+  },
+  "keybindings": {
+    "copy": "Copiar selección",
+    "paste": "Pegar",
+    "sendControlCode": "Enviar señal Ctrl+letra",
+    "sendText": "Enviar mensaje de texto",
+    "controlCodeLabel": "Carta",
+    "textLabel": "Texto para enviar",
+    "appendEnterLabel": "Presione Enter después de enviar",
+    "clipboardPermissionNote": "En algunos navegadores, puede solicitar permiso para copiar y pegar el contenido del portapapeles la primera vez que se utilice.",
+    "textRequired": "Introduce el texto que deseas enviar",
+    "controlCodeRequired": "Introduzca una sola letra para el código de control.",
+    "builtIn": {
+      "copyCtrlC": "Copiar selección (Ctrl+C, solo cuando el texto esté seleccionado)",
+      "copyCtrlShiftC": "Copiar selección (Ctrl+Mayús+C)",
+      "copyCmdC": "Copiar selección (Cmd+C)",
+      "pasteCtrlShiftV": "Pegar desde el portapapeles (Ctrl+Mayús+V)",
+      "ctrlW": "Enviar Ctrl+W a la consola (bloqueado para cerrar la pestaña del navegador)",
+      "ctrlT": "Enviar Ctrl+T a la consola (bloqueado para abrir una pestaña del navegador)",
+      "ctrlN": "Enviar Ctrl+N a la consola (bloqueado para abrir la ventana del navegador)",
+      "ctrlQ": "Enviar Ctrl+Q a la consola (bloqueado para salir del navegador)"
+    }
+  },
+  "macros": {
+    "title": "Macros",
+    "description": "Ejecuta una serie de comandos guardados en una terminal y reacciona a la respuesta que envíe el servidor.",
+    "target": "Destino",
+    "noTerminal": "No hay terminal abierta",
+    "empty": "Aún no hay macros",
+    "emptyHint": "Crea una macro para automatizar un flujo de terminal, como iniciar sesión, reiniciar un servicio o responder a preguntas.",
+    "create": "Nueva macro",
+    "back": "Volver a las macros",
+    "name": "Nombre",
+    "namePlaceholder": "Reiniciar el servidor web",
+    "nameRequired": "Dale un nombre a la macro antes de guardarla.",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Qué hace esta macro (opcional)",
+    "unsaved": "Cambios sin guardar",
+    "save": "Guardar",
+    "saved": "Macro guardada",
+    "saveFailed": "No se pudo guardar la macro",
+    "delete": "Eliminar",
+    "deleteTitle": "¿Eliminar esta macro?",
+    "deleteBody": "\"{{name}}\" se eliminará permanentemente. Esto no se puede deshacer.",
+    "deleted": "Macro eliminada",
+    "cancel": "Cancelar",
+    "run": "Ejecutar",
+    "stop": "Parada",
+    "running": "Correr...",
+    "completed": "Macro terminado",
+    "failed": "La macro falló",
+    "loadFailed": "No se pudieron cargar las macros",
+    "needTerminal": "Primero, abre y conecta una terminal.",
+    "noSteps": "Esta macro aún no tiene pasos. Añada uno a continuación.",
+    "addStep": "Agregar paso",
+    "stepNumber": "Paso {{number}}",
+    "removeStep": "Eliminar paso",
+    "confirmRunTitle": "¿Ejecutar esta macro?",
+    "confirmRunBody": "\"{{name}}\" enviará comandos a {{host}}.",
+    "confirmRunAction": "Ejecutar macro",
+    "stepTypes": {
+      "send": {
+        "label": "Enviar comando",
+        "help": "Escribe el texto en la terminal, igual que si lo hubieras escrito tú."
+      },
+      "wait": {
+        "label": "Espere la salida",
+        "help": "Hace una pausa hasta que el servidor imprime el texto que usted especifique, como si fuera una solicitud de contraseña."
+      },
+      "delay": {
+        "label": "Pausa",
+        "help": "Espera un tiempo fijo antes de pasar al siguiente paso."
+      },
+      "if": {
+        "label": "Si la salida contiene",
+        "help": "Comprueba todo lo que el servidor ha impreso hasta el momento y, a continuación, ejecuta una de las dos ramas."
+      },
+      "repeat": {
+        "label": "Repetir",
+        "help": "Reproduce los pasos que contiene un número determinado de veces."
+      }
+    },
+    "send": {
+      "text": "Comando o texto",
+      "textPlaceholder": "systemctl reiniciar nginx",
+      "pressEnter": "Presione Enter después de enviar",
+      "pressEnterHelp": "Desactive esta opción para escribir texto sin enviarlo."
+    },
+    "wait": {
+      "pattern": "Espere hasta que la salida contenga",
+      "patternPlaceholder": "contraseña:",
+      "timeout": "Rendirse después",
+      "onTimeout": "Si nunca aparece",
+      "stop": "Detén la macro",
+      "continue": "Sigue adelante de todos modos."
+    },
+    "delay": {
+      "duration": "Esperar"
+    },
+    "ifStep": {
+      "pattern": "Si la salida contiene",
+      "patternPlaceholder": "Activo: activo (corriendo)",
+      "then": "Entonces haz esto",
+      "else": "De lo contrario, haz esto",
+      "emptyBranch": "Sin escalones"
+    },
+    "repeat": {
+      "count": "Número de veces",
+      "times": "veces"
+    },
+    "match": {
+      "useRegex": "Coincidencia con una expresión regular",
+      "useRegexHelp": "Omita esta opción para que coincida exactamente con el texto escrito.",
+      "invalidRegex": "No es una expresión regular válida, se interpretará como texto plano."
+    },
+    "seconds": "segundos",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Se requiere un servidor remoto. Conecte un servidor remoto en Configuración para usar este tipo de conexión."
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "id": "docker",
+  "name": "Docker",
+  "version": "1.0.0",
+  "description": "Manage Docker and Podman containers over SSH, with logs and a container console.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Infrastructure",
+  "icon": "Box",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "network:serve",
+    "ui:surface",
+    "events:core",
+    "users:impersonate"
+  ],
+  "provides": [
+    {
+      "service": "docker.containers",
+      "version": "1.0.0",
+      "permission": "docker.use"
+    },
+    {
+      "service": "docker.events",
+      "version": "1.0.0",
+      "permission": "docker.use"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "docker",
+        "titleKey": "nav.docker",
+        "icon": "Box",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 30,
+        "enableKey": "enableDocker",
+        "enableLabelKey": "settings.host.enable.label",
+        "enableDescriptionKey": "settings.host.enable.description",
+        "fields": [
+          {
+            "key": "containerRuntime",
+            "type": "select",
+            "labelKey": "settings.host.containerRuntime.label",
+            "descriptionKey": "settings.host.containerRuntime.description",
+            "requires": "enableDocker",
+            "default": "docker",
+            "options": [
+              {
+                "value": "docker",
+                "labelKey": "settings.host.containerRuntime.docker"
+              },
+              {
+                "value": "podman",
+                "labelKey": "settings.host.containerRuntime.podman"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "uiPresets": {
+      "simple": {
+        "viewMode": "list",
+        "containerLayout": "card"
+      },
+      "balanced": {
+        "viewMode": "list",
+        "containerLayout": "card"
+      },
+      "advanced": {
+        "viewMode": "detail",
+        "containerLayout": "table"
+      }
+    },
+    "uses": ["homepage.widgets", "terminal.resolveTheme"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

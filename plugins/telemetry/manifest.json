@@ -1,0 +1,97 @@
+{
+  "id": "telemetry",
+  "name": "Usage Statistics",
+  "version": "1.0.0",
+  "description": "Sends an anonymous daily summary of how Termix is used, to help decide what to work on next.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Monitoring",
+  "icon": "ChartNoAxesColumn",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:core-refs",
+    "network:outbound",
+    "network:serve",
+    "events:core",
+    "db:own",
+    "kv:own",
+    "plugins:read",
+    "ui:surface"
+  ],
+  "contributes": {
+    "permissions": [
+      {
+        "name": "manage",
+        "titleKey": "permissions.manage.title",
+        "descriptionKey": "permissions.manage.description",
+        "defaultRoles": ["admin"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "status",
+          "type": "custom",
+          "component": "status",
+          "permission": "manage"
+        },
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "labelKey": "settings.enabled.label",
+          "descriptionKey": "settings.enabled.description",
+          "default": true
+        },
+        {
+          "key": "includePlatform",
+          "type": "boolean",
+          "labelKey": "settings.includePlatform.label",
+          "descriptionKey": "settings.includePlatform.description",
+          "requires": "enabled",
+          "default": true
+        },
+        {
+          "key": "includeFeatureUsage",
+          "type": "boolean",
+          "labelKey": "settings.includeFeatureUsage.label",
+          "descriptionKey": "settings.includeFeatureUsage.description",
+          "requires": "enabled",
+          "default": true
+        },
+        {
+          "key": "includePlugins",
+          "type": "boolean",
+          "labelKey": "settings.includePlugins.label",
+          "descriptionKey": "settings.includePlugins.description",
+          "requires": "enabled",
+          "default": true
+        },
+        {
+          "key": "instanceId",
+          "type": "string",
+          "labelKey": "settings.instanceId.label",
+          "hidden": true,
+          "default": ""
+        }
+      ],
+      "user": [
+        {
+          "key": "shareFeatureUsage",
+          "type": "boolean",
+          "labelKey": "settings.shareFeatureUsage.label",
+          "descriptionKey": "settings.shareFeatureUsage.description",
+          "default": true
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "desktop": "server"
+}

@@ -6,15 +6,20 @@ import {
   SECRET_KEYS,
   type ExportPayload,
   type FieldGroup,
+  pluginSecretKeys,
 } from "../../sidebar/host-export-payload";
+
+// What the remote-desktop manifest declares for its guacamoleConfig field.
+const RDP_SECRETS = {
+  "remote-desktop": { guacamoleConfig: ["gateway-password"] },
+};
 
 const ALL_GROUPS = new Set<FieldGroup>([
   "connection",
   "notes",
   "tags",
-  "tunnels",
+  "proxy",
   "jumpHosts",
-  "quickActions",
   "featureFlags",
   "advanced",
 ]);
@@ -62,6 +67,14 @@ function shareRaw(): ExportPayload {
   };
 }
 
+function gatewayConfig(host: Record<string, unknown>): Record<string, unknown> {
+  const plugins = host.pluginSettings as Record<
+    string,
+    Record<string, unknown>
+  >;
+  return plugins["remote-desktop"].guacamoleConfig as Record<string, unknown>;
+}
+
 function rdpRaw(): ExportPayload {
   return {
     hosts: [
@@ -72,9 +85,13 @@ function rdpRaw(): ExportPayload {
         port: 3389,
         username: "admin",
         password: null,
-        guacamoleConfig: {
-          "gateway-hostname": "gw.example.com",
-          "gateway-password": "gw-secret",
+        pluginSettings: {
+          "remote-desktop": {
+            guacamoleConfig: {
+              "gateway-hostname": "gw.example.com",
+              "gateway-password": "gw-secret",
+            },
+          },
         },
       },
     ],
@@ -197,22 +214,28 @@ describe("buildExportPayload", () => {
   });
 
   it("nulls the guacamole gateway password when credentials are excluded", () => {
-    const out = buildExportPayload(rdpRaw(), null, ALL_GROUPS, false);
-    const config = out.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const out = buildExportPayload(
+      rdpRaw(),
+      null,
+      ALL_GROUPS,
+      false,
+      RDP_SECRETS,
+    );
+    const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBeNull();
     expect(config["gateway-hostname"]).toBe("gw.example.com");
   });
 
   it("keeps the guacamole gateway password when credentials are included", () => {
     const out = buildExportPayload(rdpRaw(), null, ALL_GROUPS, true);
-    const config = out.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBe("gw-secret");
   });
 
   it("does not mutate the source payload when nulling nested secrets", () => {
     const raw = rdpRaw();
-    buildExportPayload(raw, null, ALL_GROUPS, false);
-    const config = raw.hosts[0].guacamoleConfig as Record<string, unknown>;
+    buildExportPayload(raw, null, ALL_GROUPS, false, RDP_SECRETS);
+    const config = gatewayConfig(raw.hosts[0]);
     expect(config["gateway-password"]).toBe("gw-secret");
   });
 
@@ -259,8 +282,8 @@ describe("maskSecrets", () => {
   });
 
   it("masks the guacamole gateway password", () => {
-    const out = maskSecrets(rdpRaw());
-    const config = out.hosts[0].guacamoleConfig as Record<string, unknown>;
+    const out = maskSecrets(rdpRaw(), RDP_SECRETS);
+    const config = gatewayConfig(out.hosts[0]);
     expect(config["gateway-password"]).toBe("<included>");
     expect(config["gateway-hostname"]).toBe("gw.example.com");
     expect(JSON.stringify(out)).not.toContain("gw-secret");
@@ -273,5 +296,28 @@ describe("maskSecrets", () => {
     expect(chain[1].password).toBe("<included>");
     expect(JSON.stringify(out)).not.toContain("proxy-secret-1");
     expect(JSON.stringify(out)).not.toContain("proxy-secret-2");
+  });
+});
+
+describe("pluginSecretKeys", () => {
+  it("reads secretKeys off each plugin's host fields", () => {
+    expect(
+      pluginSecretKeys([
+        {
+          id: "remote-desktop",
+          contributes: {
+            settings: {
+              host: {
+                fields: [
+                  { key: "guacamoleConfig", secretKeys: ["gateway-password"] },
+                  { key: "enableRdp" },
+                ],
+              },
+            },
+          },
+        },
+        { id: "docker", contributes: null },
+      ]),
+    ).toEqual(RDP_SECRETS);
   });
 });

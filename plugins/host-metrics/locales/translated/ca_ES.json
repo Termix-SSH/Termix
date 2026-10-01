@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Mètriques de l'amfitrió"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "Memòria",
+    "disk": "Disc",
+    "network": "Xarxa",
+    "uptime": "Temps de funcionament",
+    "processes": "Processos",
+    "available": "Disponible",
+    "free": "Gratuït",
+    "connecting": "Connectant...",
+    "connectionFailed": "No s'ha pogut connectar al servidor",
+    "naCpus": "CPU(s) N/A",
+    "cpuCores_one": "{{count}} Nucli",
+    "cpuCores_other": "{{count}} Nuclis",
+    "cpuUsage": "Ús de la CPU",
+    "memoryUsage": "Ús de memòria",
+    "diskUsage": "Ús del disc",
+    "selectFilesystem": "Selecciona el sistema de fitxers",
+    "temperature": "Temperatura",
+    "highestTemperature": "Temperatura més alta",
+    "primaryTemperatureSensor": "Sensor principal",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No s'ha detectat cap GPU NVIDIA. Instal·leu el controlador NVIDIA (proporciona nvidia-smi) per veure les mètriques de la GPU.",
+      "driver": "Conductor {{version}}",
+      "utilization": "Utilització",
+      "memory": "VRAM",
+      "temperature": "Temperatura",
+      "power": "Poder",
+      "fan": "Ventilador",
+      "processes": "Processos de la GPU",
+      "noProcesses": "Cap procés utilitza la GPU"
+    },
+    "failedToFetchHostConfig": "No s'ha pogut obtenir la configuració de l'amfitrió",
+    "serverOffline": "Servidor fora de línia",
+    "cannotFetchMetrics": "No es poden obtenir mètriques del servidor fora de línia",
+    "totpFailed": "La verificació TOTP ha fallat",
+    "noneAuthNotSupported": "Les mètriques de l'amfitrió no admeten el tipus d'autenticació \"cap\".",
+    "noHostSelected": "No s'ha seleccionat cap amfitrió",
+    "load": "Carrega",
+    "systemInfo": "Informació del sistema",
+    "hostname": "Nom d'amfitrió",
+    "operatingSystem": "Sistema operatiu",
+    "kernel": "Nucli",
+    "seconds": "segons",
+    "networkInterfaces": "Interfícies de xarxa",
+    "noInterfacesFound": "No s'han trobat interfícies de xarxa",
+    "noProcessesFound": "No s'han trobat processos",
+    "processesTotal": "total",
+    "processesRunning": "corrent",
+    "loginStats": "Estadístiques d'inici de sessió SSH",
+    "noRecentLoginData": "Sense dades d'inici de sessió recents",
+    "ports": {
+      "title": "Ports d'escolta",
+      "protocol": "Protocol",
+      "port": "Port",
+      "address": "Adreça",
+      "process": "Procés",
+      "search": "Cerca ports...",
+      "allProtocols": "Tot",
+      "noData": "No hi ha dades de ports d'escolta"
+    },
+    "firewall": {
+      "title": "Tallafocs",
+      "inactive": "Inactiu",
+      "policy": "Política",
+      "rules": "regles",
+      "noRules": "No hi ha regles en aquesta cadena",
+      "noData": "No hi ha dades de tallafocs disponibles",
+      "action": "Acció",
+      "protocol": "Proto",
+      "port": "Port",
+      "source": "Font",
+      "anywhere": "A qualsevol lloc",
+      "chains": "cadenes"
+    },
+    "loadAvg": "Mitjana de càrrega",
+    "swap": "Intercanvi",
+    "architecture": "Arquitectura",
+    "refresh": "Actualitza",
+    "retry": "Torna-ho a intentar",
+    "customize": "Personalitza el disseny",
+    "reset": "Restablir",
+    "tabLive": "En directe",
+    "editModeInstructions": "Arrossega les cartes per reorganitzar-les, arrossega la vora inferior per canviar-ne la mida i utilitza el botó d'amplada per canviar l'extensió d'una carta. Afegeix o elimina cartes a continuació.",
+    "managers": {
+      "services": "Serveis",
+      "processInspector": "Inspector de processos",
+      "logViewer": "Visualitzador de registre",
+      "cron": "Treballs cron",
+      "packages": "Paquets",
+      "ssl": "Certificats SSL",
+      "firewall": "Tallafocs",
+      "users": "Usuaris i permisos",
+      "healthCheck": "Controls de salut",
+      "diskBreakdown": "Avaria del disc",
+      "systemdTimers": "Temporitzadors",
+      "topMemory": "Top per memòria",
+      "noData": "Sense dades",
+      "sudoHint": "Establiu una contrasenya sudo per a aquest host a l'editor d'hosts per habilitar accions privilegiades.",
+      "filter": "Filtra...",
+      "start": "Inici",
+      "stop": "Atura",
+      "restart": "Reinicia",
+      "actionDone": "{{name}} actualitzat",
+      "actionFailed": "L'acció ha fallat",
+      "signalSent": "Senyal enviat al PID {{pid}}",
+      "killHint": "Clic: finalitzar (SIGTERM). Clic amb el botó dret: forçar la mort (SIGKILL).",
+      "working": "Treballant...",
+      "update": "Actualització",
+      "upgradeAll": "Actualitza-ho tot",
+      "allUpToDate": "Tot està actualitzat",
+      "save": "Desa",
+      "command": "Comandament",
+      "enabled": "Activat",
+      "cronSaved": "Crontab actualitzat",
+      "clients": "Clients",
+      "dryRun": "Sessió en sec",
+      "renew": "Renovar",
+      "noAcmeClient": "No s'ha trobat cap client ACME (certbot o acme.sh) en aquest amfitrió.",
+      "addInputRule": "Afegeix una regla INPUT",
+      "firewallWarning": "Els canvis només són en temps d'execució fins que persisteixen. Aneu amb compte de no bloquejar-vos l'accés.",
+      "ruleApplied": "Regla aplicada",
+      "invalidPort": "Introduïu un port vàlid (1-65535)",
+      "newUsername": "Nou nom d'usuari",
+      "addUser": "Afegeix",
+      "deleteUser": "Suprimeix l'usuari",
+      "noHealthChecks": "Encara no s'ha configurat cap comprovació d'estat.",
+      "follow": "Segueix",
+      "noLogData": "No hi ha sortida de registre.",
+      "tree": "Arbre",
+      "enableDisable": "Activa / desactiva a l'arrencada",
+      "grantSudo": "Concedir sudo",
+      "revokeSudo": "Revoca sudo",
+      "sslIssueCert": "Emetre certificat",
+      "sslExpired": "Caducat",
+      "sslInDays": "en {{days}}d",
+      "sslNeedDomain": "Introduïu com a mínim un domini",
+      "sslIssued": "Certificat emès",
+      "sslDomainsPlaceholder": "exemple.com, www.exemple.com",
+      "sslHttpStandalone": "HTTP (autònom)",
+      "sslHttpWebroot": "HTTP (arrel web)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "Proveïdor de DNS (per exemple, Cloudflare)",
+      "sslIssueHint": "Les credencials del proveïdor DNS ja han d'estar configurades a l'amfitrió.",
+      "sslRevoke": "Revoca el certificat",
+      "sslRevoked": "Certificat revocat",
+      "sslRevokeConfirm": "Voleu revocar i eliminar el certificat \"{{name}}\"? Això no es pot desfer.",
+      "healthRun": "Corre",
+      "healthName": "Nom",
+      "healthTarget": "Host / adreça",
+      "healthAddCheck": "Afegeix un xec",
+      "healthSaved": "S'han desat les comprovacions d'estat",
+      "healthMissingFields": "Cada comprovació necessita un nom i un objectiu",
+      "logFile": "Fitxer",
+      "logUnit": "Unitat",
+      "logCustomPath": "Ruta personalitzada a /var/log (opcional)",
+      "logGrep": "Línies de filtre...",
+      "firewallPersist": "Regles de persistència",
+      "firewallPersisted": "Les regles del tallafocs van persistir",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard no està instal·lat en aquest host.",
+      "wgNoInterfaces": "No hi ha cap interfície de WireGuard configurada",
+      "wgInterfaceUp": "Porta a col·lació",
+      "wgInterfaceDown": "Baixar",
+      "wgBringingUp": "S'està mostrant {{name}}...",
+      "wgBringingDown": "Baixant {{name}}...",
+      "wgInterfaceUpDone": "{{name}} està activat",
+      "wgInterfaceDownDone": "{{name}} està inactiu",
+      "wgListenPort": "Port",
+      "wgPublicKey": "Clau pública",
+      "wgEndpoint": "Punt final",
+      "wgAllowedIPs": "IP permeses",
+      "wgLastHandshake": "Última encaixada de mans",
+      "wgHandshakeNever": "Mai",
+      "wgTransfer": "Transferència",
+      "wgNoPeers": "Sense iguals"
+    }
+  },
+  "metricsHistory": {
+    "title": "Historial de mètriques",
+    "historySuffix": "Història",
+    "cpuMemoryDisk": "CPU / Memòria / Disc",
+    "network": "Xarxa",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "No hi ha dades històriques disponibles per a aquest interval de temps.",
+    "custom": "Personalitzat",
+    "to": "a",
+    "apply": "Aplica",
+    "viewHistory": "Veure l'historial"
+  },
+  "hosts": {
+    "tabHostMetrics": "Mètriques de l'amfitrió",
+    "metricsCollectionLabel": "Col·lecció de mètriques",
+    "enableMetricsLabel": "Activa les mètriques",
+    "enableMetricsDesc": "Recopila mètriques de CPU, RAM, disc i altres d'aquest amfitrió",
+    "useGlobalMetrics": "Utilitza l'interval global",
+    "useGlobalMetricsDesc": "Substitueix amb l'interval de mètriques de tot el servidor",
+    "metricsIntervalS": "Interval de mètriques (s)",
+    "metricsIntervalDesc2": "Segons entre instantànies de mètriques",
+    "excludedMountsLabel": "Muntatges exclosos",
+    "monitoredMountsLabel": "Rutes monitoritzades personalitzades",
+    "monitoredMountsDesc": "Afegiu camins que no estiguin exposats com a muntatges separats, inclosos els camins de l'Assistent d'inici muntats per vinculació, com ara /config.",
+    "monitoredMountPathPlaceholder": "Camí (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Etiqueta (opcional)",
+    "addMonitoredMount": "Afegeix un camí",
+    "excludedMountsDesc": "Amaga punts de muntatge o tipus de sistemes de fitxers específics (per exemple, nfs, cifs) de l'ús del disc i de les alertes per a aquest amfitrió.",
+    "excludedMountsPlaceholder": "Ruta de muntatge (/mnt/nas) o tipus de sistema de fitxers (nfs, cifs)",
+    "excludedMountsEmpty": "No s'han exclòs muntatges. Es mostren tots els sistemes de fitxers detectats.",
+    "addExcludedMount": "Afegeix",
+    "visibleWidgets": "Widgets visibles",
+    "widgetsMovedToHostMetrics": "Ara les targetes s'afegeixen, s'organitzen i es canvien de mida directament a la pestanya Mètriques de l'amfitrió. Obriu Mètriques de l'amfitrió per a aquest amfitrió i utilitzeu Personalitza per triar quines targetes es mostren.",
+    "hostNotFound": "No s'ha trobat l'amfitrió",
+    "loadingHost": "S'està carregant l'amfitrió..."
+  },
+  "onboarding": {
+    "feature_metrics": "Mètriques i alertes",
+    "feature_metrics_desc": "Fes un seguiment de la CPU, la memòria i el disc al llarg del temps i rep alertes quan es facin malbé."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Retenció de l'historial de mètriques",
+    "metricsHistoryRetentionRange": "D'1 a 90 dies",
+    "days": "dies"
+  },
+  "homepage": {
+    "noData": "No hi ha dades disponibles",
+    "showCurrentValue": "Mostra el valor actual",
+    "chartMetric": "Mètrica",
+    "metricRange": "Rang",
+    "host": "Amfitrió",
+    "loading": "S'està carregant...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disc",
+    "metricHostname": "Nom d'amfitrió",
+    "metricKernel": "Nucli",
+    "metricMemory": "Memòria",
+    "metricNetwork": "Xarxa",
+    "metricOs": "Sistema operatiu",
+    "metricProcesses": "Processos",
+    "metricProcessesRunning": "corrent",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Temps de funcionament",
+    "metricsNotAvailable": "Mètriques no disponibles",
+    "noHostSelected": "No s'ha seleccionat cap amfitrió",
+    "selectHost": "Seleccioneu un amfitrió..."
+  },
+  "terminalStatus": {
+    "unavailable": "Estadístiques en directe no disponibles"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disc"
+  },
+  "terminal": {
+    "connected": "Connectat"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza les mètriques de l'amfitrió",
+      "description": "Visualitza les mètriques de l'amfitrió i utilitza els gestors d'amfitrió (serveis, paquets, tallafocs i més) als amfitrions als quals pots accedir."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Interval de mètriques (segons)",
+        "description": "Amb quina freqüència es mostreja un amfitrió que es visualitza, tret que l'amfitrió estableixi el seu propi interval."
+      },
+      "historyRetentionDays": {
+        "label": "Retenció de l'historial (dies)",
+        "description": "Quant de temps es conserven les mostres de mètriques per als gràfics d'historial."
+      },
+      "enabledForNewHosts": {
+        "label": "Mètriques activades per a nous amfitrions",
+        "description": "Si els nous amfitrions comencen amb la recopilació de mètriques activada."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Unitat de temperatura",
+        "description": "Com es mostren les temperatures a les mètriques de l'amfitrió.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Recopilar mètriques"
+      },
+      "metricsInterval": {
+        "label": "Interval de mètriques (segons)"
+      },
+      "enabledWidgets": {
+        "label": "Widgets activats"
+      },
+      "excludedMounts": {
+        "label": "Muntatges exclosos"
+      },
+      "monitoredMounts": {
+        "label": "Camins monitoritzats"
+      }
+    }
+  }
+}

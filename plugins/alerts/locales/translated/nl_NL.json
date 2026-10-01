@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Waarschuwingen"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik waarschuwingen",
+      "description": "Ontvang meldingen in je inbox en deel ze via je eigen kanalen."
+    }
+  },
+  "onboarding": {
+    "feature": "Waarschuwingen",
+    "featureDesc": "Alle meldingen in één inbox, die je desgewenst kunt doorsturen naar Discord, ntfy, e-mail of een webhook."
+  },
+  "settings": {
+    "group": {
+      "general": "Algemeen",
+      "email": "E-mail"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix-aankondigingen",
+        "description": "Toon nieuws van het Termix-team, zoals beveiligingsmeldingen en releases, in ieders inbox."
+      },
+      "retentionDays": {
+        "label": "Houd meldingen aan voor (dagen)",
+        "description": "Oudere meldingen worden uit alle inboxen verwijderd."
+      },
+      "smtpHost": {
+        "label": "SMTP-server",
+        "description": "Nodig voor e-mailkanalen. Laat dit veld leeg om e-mail uit te schakelen.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "SMTP-poort",
+        "description": "Meestal poort 587 met STARTTLS of 465 met TLS."
+      },
+      "smtpSecure": {
+        "label": "Gebruik TLS vanaf het begin.",
+        "description": "Schakel poort 465 in. Laat deze uitgeschakeld voor poort 587, die automatisch overschakelt naar TLS."
+      },
+      "smtpUser": {
+        "label": "SMTP-gebruikersnaam",
+        "description": "Laat dit veld leeg als er geen inloggegevens nodig zijn voor de server."
+      },
+      "smtpPassword": {
+        "label": "SMTP-wachtwoord",
+        "description": "Versleuteld opgeslagen."
+      },
+      "smtpFrom": {
+        "label": "Van adres",
+        "description": "De afzenderwaarschuwingen zijn afkomstig van.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Waarschuwingspop-ups",
+        "description": "Welke nieuwe meldingen verschijnen er tijdens het gebruik van Termix? Ze komen altijd in je inbox terecht.",
+        "all": "Alle meldingen",
+        "warning": "Waarschuwingen en kritieke",
+        "critical": "Alleen kritisch",
+        "off": "Geen"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Inbox",
+    "channels": "Kanalen",
+    "rules": "Leveringsregels"
+  },
+  "severity": {
+    "info": "Informatie",
+    "success": "Succes",
+    "warning": "Waarschuwing",
+    "critical": "Kritisch"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Open",
+    "view": "Weergave",
+    "unread": "Ongelezen",
+    "deliveryFailed_one": "{{count}} kanaal mislukt",
+    "deliveryFailed_other": "{{count}} kanalen mislukt",
+    "markRead": "Markeer als gelezen",
+    "markUnread": "Markeer als ongelezen",
+    "markAllRead": "Markeer alles als gelezen",
+    "delete": "Verwijderen",
+    "clearRead": "Leeswaarschuwingen verwijderen",
+    "cleared_one": "Verwijderde {{count}} melding",
+    "cleared_other": "Verwijderde {{count}} -waarschuwingen",
+    "filterAll": "Alle",
+    "filterUnread": "Ongelezen",
+    "anySeverity": "Elke ernst",
+    "anySource": "Elke bron",
+    "openAll": "Openen in een tabblad",
+    "empty": "Nog geen meldingen.",
+    "emptyUnread": "Je bent helemaal bij.",
+    "loadMore": "Meer laden"
+  },
+  "channels": {
+    "intro": "Kanalen zijn de plekken waar meldingen buiten Termix naartoe kunnen worden gestuurd. Leveringsregels bepalen welke meldingen via deze kanalen worden verzonden.",
+    "add": "Voeg kanaal toe",
+    "edit": "Bewerk het kanaal",
+    "test": "Stuur een test",
+    "testSent": "Testwaarschuwing verzonden",
+    "testFailed": "Test mislukt: {{error}}",
+    "deleteConfirm": "Verwijder het kanaal \"{{name}}\"?",
+    "deleted": "Kanaal verwijderd",
+    "empty": "Nog geen kanalen.",
+    "enabled": "Ingeschakeld",
+    "needsSave": "Dit kanaal moet opnieuw worden geopend en opgeslagen voordat er berichten kunnen worden verzonden.",
+    "name": "Naam",
+    "nameRequired": "Naam is verplicht",
+    "type": "Type",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Meningsverschil",
+      "email": "E-mail"
+    },
+    "emailUnavailable": "Voor e-mail is een SMTP-server nodig, die een beheerder instelt in de waarschuwingsinstellingen.",
+    "webhookUrl": "URL",
+    "webhookHint": "Ontvangt een JSON-body voor elke melding.",
+    "method": "Methode",
+    "headers": "Kopteksten",
+    "headersHint": "Eén per regel, bijvoorbeeld: Naam: waarde.",
+    "ntfyServer": "Server-URL",
+    "ntfyTopic": "Onderwerp",
+    "ntfyToken": "Toegangstoken (optioneel)",
+    "discordUrl": "Discord webhook-URL",
+    "discordHint": "Via de kanaalinstellingen in Discord, onder Integraties.",
+    "discordUsername": "Weergavenaam (optioneel)",
+    "discordAvatar": "Avatar-URL (optioneel)",
+    "emailTo": "Verzenden naar",
+    "emailHint": "Scheid meerdere adressen met komma's.",
+    "privateNetwork": "Sta een privé-netwerkadres toe",
+    "privateNetworkHint": "Werkt alleen voor hosts die een beheerder toestaat in de lijst met privé-eindpunten."
+  },
+  "rules": {
+    "intro": "Een verzendregel stuurt overeenkomende meldingen naar uw kanalen. De meldingen blijven ook altijd in uw inbox staan.",
+    "add": "Regel toevoegen",
+    "edit": "Regel bewerken",
+    "empty": "Er zijn nog geen regels, dus meldingen verschijnen alleen in de inbox.",
+    "needChannel": "Voeg eerst een kanaal toe.",
+    "enabled": "Ingeschakeld",
+    "name": "Naam",
+    "nameRequired": "Naam is verplicht",
+    "match": "Waarschuwingen om te verzenden",
+    "matchHint": "* voor alles, automatiseringen.* voor alles wat met automatiseringen te maken heeft, of één specifiek type.",
+    "minSeverity": "Ten minste",
+    "channels": "Verzenden naar",
+    "channelRequired": "Kies minstens één kanaal",
+    "deleteConfirm": "Verwijder de regel \"{{name}}\"?",
+    "everything": "Alles",
+    "summary": "{{match}}, {{severity}} of hoger, tot {{channels}}"
+  },
+  "actions": {
+    "cancel": "Annuleren",
+    "save": "Redden",
+    "saving": "Besparing...",
+    "delete": "Verwijderen"
+  },
+  "widget": {
+    "name": "Waarschuwingsfeed",
+    "description": "Je meest recente meldingen, met een snelle manier om ze als gelezen te markeren.",
+    "maxItems": "Max items",
+    "showRead": "Leeswaarschuwingen weergeven",
+    "allClear": "Alles in orde",
+    "loading": "Laden..."
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "tables": {
+    "snippets": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "content": {
+          "type": "text",
+          "notNull": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "folder": {
+          "type": "text"
+        },
+        "order": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 0
+        },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "hostFilter": {
+          "type": "text"
+        },
+        "isNote": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_snippets_user_id",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "snippets"
+    },
+    "snippet_folders": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "color": {
+          "type": "text"
+        },
+        "icon": {
+          "type": "text"
+        },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "snippet_folders"
+    },
+    "snippet_access": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "snippetId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "userId": {
+          "type": "varchar",
+          "length": 255
+        },
+        "roleId": {
+          "type": "integer"
+        },
+        "grantedBy": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "permissionLevel": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "view"
+        },
+        "expiresAt": {
+          "type": "timestamp"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_snippet_access_user_id",
+          "columns": ["userId"]
+        },
+        {
+          "name": "idx_snippet_access_snippet_id",
+          "columns": ["snippetId"]
+        },
+        {
+          "name": "idx_snippet_access_role_id",
+          "columns": ["roleId"]
+        }
+      ],
+      "adopts": "snippet_access"
+    }
+  }
+}

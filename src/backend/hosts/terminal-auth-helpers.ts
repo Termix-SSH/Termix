@@ -10,9 +10,11 @@ import ssh2Pkg, {
   type SigningRequestOptions,
 } from "ssh2";
 
+import type { HostSshOptions } from "./ssh-options.js";
+
 type KnownPublicKey = KnownPublicKeys[number];
 
-const { AgentProtocol, BaseAgent } = ssh2Pkg;
+const { BaseAgent } = ssh2Pkg;
 const DEFAULT_PORT_KNOCK_TIMEOUT_MS = 1000;
 
 type Sleep = (ms: number) => Promise<void>;
@@ -27,64 +29,10 @@ type PortKnockingOptions = {
 
 const sleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export class MemoryAgent extends BaseAgent {
-  private key: ParsedKey;
-
-  constructor(key: ParsedKey) {
-    super();
-    this.key = key;
-  }
-
-  getIdentities(cb: IdentityCallback<ParsedKey>): void {
-    cb(null, [this.key]);
-  }
-
-  getStream(cb: GetStreamCallback): void {
-    const protocol = new AgentProtocol(false);
-
-    protocol.on("identities", (request) => {
-      protocol.getIdentitiesReply(request, [this.key]);
-    });
-
-    protocol.on("sign", (request, publicKey, data, options) => {
-      this.sign(publicKey, data, options, (error, signature) => {
-        if (error || !signature) return protocol.failureReply(request);
-        protocol.signReply(request, signature);
-      });
-    });
-
-    cb(null, protocol);
-  }
-
-  sign(
-    _pubKey: ParsedKey | Buffer | string,
-    data: Buffer,
-    optionsOrCb: SigningRequestOptions | SignCallback,
-    cb?: SignCallback,
-  ): void {
-    const callback = typeof optionsOrCb === "function" ? optionsOrCb : cb!;
-    const options = typeof optionsOrCb === "function" ? {} : optionsOrCb;
-    try {
-      const algo =
-        options.hash === "sha256"
-          ? "rsa-sha2-256"
-          : options.hash === "sha512"
-            ? "rsa-sha2-512"
-            : undefined;
-      const signature = this.key.sign(data, algo);
-      callback(null, signature);
-    } catch (err) {
-      callback(err instanceof Error ? err : new Error(String(err)));
-    }
-  }
-}
-
 export async function resolveAgentSocket(
-  terminalConfig: Record<string, unknown> | undefined,
+  sshOptions: HostSshOptions | null | undefined,
 ): Promise<{ socketPath: string } | { error: string }> {
-  const explicit = (
-    terminalConfig?.agentSocketPath as string | undefined
-  )?.trim();
+  const explicit = sshOptions?.agentSocketPath?.trim();
   const resolved = explicit || process.env.SSH_AUTH_SOCK;
 
   if (!resolved) {
@@ -187,17 +135,15 @@ function parseAgentIdentityBlob(agentIdentity: string): Buffer | null {
 
 export async function applyAgentAuth(
   connectConfig: Record<string, unknown>,
-  terminalConfig: Record<string, unknown> | undefined,
+  sshOptions: HostSshOptions | null | undefined,
 ): Promise<{ socketPath: string } | { error: string }> {
-  const result = await resolveAgentSocket(terminalConfig);
+  const result = await resolveAgentSocket(sshOptions);
   if ("error" in result) return result;
 
   const { createAgent } = ssh2Pkg;
   const agent = createAgent(result.socketPath);
 
-  const agentIdentity = (
-    terminalConfig?.agentIdentity as string | undefined
-  )?.trim();
+  const agentIdentity = sshOptions?.agentIdentity?.trim();
   if (agentIdentity) {
     const publicKeyBlob = parseAgentIdentityBlob(agentIdentity);
     if (!publicKeyBlob) {

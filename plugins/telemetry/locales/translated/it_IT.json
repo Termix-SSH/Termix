@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Gestisci le statistiche di utilizzo",
+      "description": "Controlla quali statistiche di utilizzo vengono inviate, inviale ora e reimposta l'ID dell'istanza."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Condividi statistiche di utilizzo anonime",
+      "description": "Invia un breve riepilogo anonimo una volta al giorno per contribuire al miglioramento di Termix. Non include mai nomi utente, nomi host, indirizzi IP o credenziali."
+    },
+    "includePlatform": {
+      "label": "Includi le informazioni sulla piattaforma",
+      "description": "Il sistema operativo, l'architettura della CPU, la versione di Node.js, il tipo di database e la modalità di installazione di Termix (Docker, applicazione desktop o server)."
+    },
+    "includeFeatureUsage": {
+      "label": "Includi l'utilizzo delle funzionalità",
+      "description": "Quante volte è stata aperta ciascuna tipologia di scheda e quanti accessi SSH sono stati effettuati dall'ultimo report. Gli utenti possono disattivare questa funzione nel proprio profilo."
+    },
+    "includePlugins": {
+      "label": "Includi le funzionalità installate",
+      "description": "Quali funzionalità integrate sono installate e in esecuzione."
+    },
+    "instanceId": {
+      "label": "ID istanza"
+    },
+    "shareFeatureUsage": {
+      "label": "Includi il mio utilizzo delle funzionalità",
+      "description": "Questo strumento tiene traccia dei tipi di schede che apri nelle statistiche di utilizzo anonime. Nessuna informazione su di te o sui tuoi host viene inviata."
+    }
+  },
+  "status": {
+    "title": "Stato",
+    "on": "Condivisione delle statistiche di utilizzo una volta al giorno",
+    "off": "Non condividiamo le statistiche di utilizzo",
+    "lockedOn": "Attivato dalla variabile d'ambiente ENABLE_TELEMETRY. Modificala lì.",
+    "lockedOff": "Disattivato dalla variabile d'ambiente ENABLE_TELEMETRY. Modificala lì.",
+    "instanceId": "ID istanza: {{id}}",
+    "noInstanceId": "Nessun ID istanza ancora disponibile",
+    "lastSent": "Ultimo invio {{date}}",
+    "neverSent": "Non ancora inviato",
+    "nextSend": "Prossimo rapporto previsto per {{date}}",
+    "lastError": "Ultimo tentativo fallito: {{error}}",
+    "preview": "Anteprima del rapporto",
+    "sendNow": "Invia ora",
+    "sending": "Invio in corso...",
+    "sent": "Statistiche di utilizzo inviate",
+    "notSent": "Le statistiche di utilizzo sono disattivate, non è stato inviato nulla",
+    "resetId": "Reimposta l'ID dell'istanza",
+    "resetIdConfirm": "Reimpostare l'ID dell'istanza? I report futuri sembreranno quelli di una nuova installazione.",
+    "resetIdDone": "Ripristino dell'ID istanza",
+    "previewTitle": "Prossimo rapporto",
+    "previewDescription": "Questo è esattamente ciò che verrebbe inviato ora.",
+    "close": "Chiudi",
+    "loadFailed": "Impossibile caricare lo stato delle statistiche di utilizzo"
+  }
+}

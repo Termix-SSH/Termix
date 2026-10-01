@@ -39,7 +39,7 @@ jobs:
           node-version-file: ".nvmrc"
 
       - name: Upload sources to Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: true
           upload_translations: false
@@ -51,13 +51,13 @@ jobs:
         env:
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
 
-      - name: Machine pre-translate untranslated strings
+      - name: Pre-translate untranslated strings
         env:
           CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
         run: node scripts/crowdin-pretranslate.cjs
 
       - name: Download translations from Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: false
           upload_translations: false
@@ -74,7 +74,7 @@ jobs:
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
 
-          git add src/ui/locales/translated
+          git add src/ui/locales/translated plugins/*/locales/translated
           if git diff --cached --quiet; then
             echo "No translation changes to commit."
             exit 0

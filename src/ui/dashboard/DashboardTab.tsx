@@ -1,24 +1,24 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
+import { ComponentSlot } from "@/shell/ActionSlot";
+import { useActionSlot } from "@/hooks/use-action-slot";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePluginStore } from "@/plugin-host/plugin-store";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
 import { Separator } from "@/components/separator";
+import { Skeleton } from "@/components/skeleton";
 import {
   Activity,
-  Check,
   Database,
   ExternalLink,
   GripHorizontal,
   GripVertical,
   KeyRound,
   LayoutDashboard,
-  Link,
-  MessagesSquare,
-  Network,
   Plus,
   Server,
   Settings,
-  Terminal,
   Trash2,
   User,
   Zap,
@@ -26,7 +26,6 @@ import {
 import { Kbd } from "@/components/kbd";
 import { VersionBadge } from "@/components/version-badge";
 import { DASHBOARD_CARDS } from "@/lib/theme";
-import { CONNECTION_STATES } from "@/types/index";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
@@ -35,43 +34,32 @@ import {
   releaseUrlFrom,
   getDatabaseHealth,
   getRecentActivity,
-  getTunnelStatuses,
   getCredentials,
   resetRecentActivity,
-  getAllServerStatuses,
-  getServerMetricsById,
-  registerMetricsViewer,
-  sendMetricsHeartbeat,
   getUserInfo,
-  getServiceLinks,
-  createServiceLink,
-  deleteServiceLink,
   isElectron,
 } from "@/main-axios";
-import type { RecentActivityItem, ServiceLink } from "@/main-axios";
+import type { RecentActivityItem } from "@/main-axios";
 import { useTranslation } from "react-i18next";
-import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
-import { HomepagePreviewCard } from "@/dashboard/cards/HomepagePreviewCard";
-import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
-
-// Side-effect imports so homepage widgets register themselves
-import "@/features/homepage/widgets/ServiceLinkWidget";
-import "@/features/homepage/widgets/ClockWidget";
-import "@/features/homepage/widgets/NotesWidget";
-import "@/features/homepage/widgets/BookmarkListWidget";
-import "@/features/homepage/widgets/HostStatusWidget";
-import "@/features/homepage/widgets/FolderWidget";
+import {
+  getRegisteredDashboardCard,
+  useRegisteredDashboardCards,
+} from "./dashboard-cards-registry";
+import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
+import { activityTarget } from "@/lib/activity-types";
+import { shell } from "@/plugin-host/shell-bridge";
+import {
+  defaultConnectAction,
+  hostActionsFor,
+  listHostActions,
+} from "@/sidebar/host-contributions";
 import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import { useServerStatus } from "@/lib/ServerStatusContext";
+import { useServerStatusMeta } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
-import {
-  isValidServiceLinkUrl,
-  normalizeServiceLinkUrl,
-} from "@/lib/service-link-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +113,48 @@ const DEFAULT_SLOTS: CardSlot[] = [
     height: null,
   },
 ];
+
+/** Cards core draws itself; any other id belongs to a plugin. */
+const CORE_CARD_IDS = new Set<string>([
+  "stats_bar",
+  "counters_bar",
+  "quick_actions",
+  "host_status",
+  "recent_activity",
+]);
+
+/**
+ * A plugin's card, or a placeholder that keeps the slot while its plugin is
+ * off, so the card comes back in the same place when the plugin does.
+ */
+export function PluginCardSlot({
+  id,
+  isVisible,
+  onOpenSingletonTab,
+}: {
+  id: string;
+  isVisible: boolean;
+  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
+}) {
+  useRegisteredDashboardCards();
+  const cardShell = useMemo(
+    () => ({
+      ...shell,
+      openSingletonTab: (type: string) => onOpenSingletonTab(type as TabType),
+    }),
+    [onOpenSingletonTab],
+  );
+  const card = getRegisteredDashboardCard(id);
+  if (!card) {
+    return (
+      <Card className="flex h-full w-full overflow-hidden py-0">
+        <PluginViewPlaceholder kind="card" viewId={id} compact />
+      </Card>
+    );
+  }
+  const Component = card.component;
+  return <Component isVisible={isVisible} shell={cardShell} />;
+}
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
@@ -182,9 +212,7 @@ function StatsBarCard({
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.hostsAvailable", {
-            defaultValue: "Hosts Available",
-          })}
+          {t("dashboardTab.hostsAvailable")}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-xl font-bold leading-none">{online}</span>
@@ -200,17 +228,15 @@ function StatsBarCard({
 function CountersBarCard({
   hosts,
   credentialCount,
-  activeTunnelCount,
   onOpenSingletonTab,
 }: {
   hosts: Host[];
   credentialCount: number;
-  activeTunnelCount: number;
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <Card className="grid grid-cols-3 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
+    <Card className="grid grid-flow-col auto-cols-fr divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <button
         onClick={() => onOpenSingletonTab("host-manager")}
         className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
@@ -233,16 +259,7 @@ function CountersBarCard({
           {t("dashboard.totalCredentials")}
         </span>
       </button>
-      <button
-        onClick={() => onOpenSingletonTab("tunnel")}
-        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
-      >
-        <Network className="size-3.5 text-muted-foreground shrink-0" />
-        <span className="text-base font-bold">{activeTunnelCount}</span>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.activeTunnels")}
-        </span>
-      </button>
+      <ComponentSlot slotId="dashboard.counters" />
     </Card>
   );
 }
@@ -261,23 +278,17 @@ function QuickActionsCard({
   const { t } = useTranslation();
   const pinnedHosts = hosts.filter((h) => h.pin);
   const getConnectionEndpoint = (host: Host) => {
-    const type = getDefaultConnectionTab(host);
-    const port =
-      type === "rdp"
-        ? host.rdpPort
-        : type === "vnc"
-          ? host.vncPort
-          : type === "telnet"
-            ? host.telnetPort
-            : host.sshPort;
-    return `${host.ip}:${port}`;
+    const protocol = host.enableSsh ? undefined : enabledHostProtocols(host)[0];
+    const port = host.enableSsh
+      ? host.sshPort
+      : protocol
+        ? protocolPort(host.pluginSettings, protocol)
+        : host.port;
+    return `${host.ip}:${port ?? host.port}`;
   };
   const renderConnectionIcon = (host: Host) => {
-    const type = getDefaultConnectionTab(host);
-    if (type === "terminal" || type === "telnet") {
-      return <Terminal className="size-3 text-accent-brand" />;
-    }
-    return <Server className="size-3 text-accent-brand" />;
+    const Icon = defaultConnectAction(listHostActions(), host)?.icon ?? Server;
+    return <Icon className="size-3 text-accent-brand" />;
   };
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -332,7 +343,10 @@ function QuickActionsCard({
               {pinnedHosts.slice(0, 4).map((host) => (
                 <button
                   key={host.id}
-                  onClick={() => onOpenTab(host, getDefaultConnectionTab(host))}
+                  onClick={() => {
+                    const type = getDefaultConnectionTab(host);
+                    if (type) onOpenTab(host, type);
+                  }}
                   className="group/btn flex items-center gap-2.5 px-4 py-2 hover:bg-muted transition-colors cursor-pointer border-b border-border last:border-b-0"
                 >
                   <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
@@ -393,45 +407,12 @@ function QuickActionsCard({
   );
 }
 
-function MetricBar({ label, value }: { label: string; value: number }) {
-  const color =
-    value >= 90
-      ? "bg-red-500"
-      : value >= 70
-        ? "bg-yellow-500"
-        : "bg-accent-brand";
-  const textColor =
-    value >= 90
-      ? "text-red-400"
-      : value >= 70
-        ? "text-yellow-400"
-        : "text-accent-brand";
-  return (
-    <div className="flex flex-col gap-0.5 w-16">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">{label}</span>
-        <span className={`text-[10px] font-bold ${textColor}`}>
-          {value.toFixed(0)}%
-        </span>
-      </div>
-      <div className="h-0.5 bg-muted w-full">
-        <div className={`h-full ${color}`} style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  );
-}
-
 export function HostStatusCard({
   hosts,
-  hostMetrics,
   onOpenTab,
   statusLoading,
 }: {
   hosts: Host[];
-  hostMetrics: Map<
-    string,
-    { cpu: number | null; ram: number | null; disk: number | null }
-  >;
   onOpenTab: (host: Host, type: TabType) => void;
   statusLoading?: boolean;
 }) {
@@ -448,8 +429,7 @@ export function HostStatusCard({
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length}{" "}
-          {t("dashboardTab.availableLower", { defaultValue: "Available" })}
+          {online}/{hosts.length} {t("hosts.status.available")}
         </span>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
@@ -465,28 +445,17 @@ export function HostStatusCard({
               : host.online
                 ? "online"
                 : "offline";
-          const metrics = hostMetrics.get(host.id);
-          const cpu = metrics?.cpu ?? null;
-          const ram = metrics?.ram ?? null;
-          const disk = metrics?.disk ?? null;
-          const hasMetrics = cpu !== null || ram !== null || disk !== null;
           return (
             <div
               key={i}
-              onClick={() =>
-                onOpenTab(
-                  host,
-                  host.enableSsh
-                    ? "host-metrics"
-                    : host.enableRdp
-                      ? "rdp"
-                      : host.enableVnc
-                        ? "vnc"
-                        : host.enableTelnet
-                          ? "telnet"
-                          : "host-metrics",
-                )
-              }
+              onClick={() => {
+                // An overview action (a metrics view) wins over connecting.
+                const actions = hostActionsFor(listHostActions(), host);
+                const target =
+                  actions.find((action) => action.overview)?.tabType ??
+                  defaultConnectAction(actions, host)?.tabType;
+                if (target) onOpenTab(host, target);
+              }}
               className="flex min-w-0 items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
             >
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -512,45 +481,24 @@ export function HostStatusCard({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                {availability === "online" && hasMetrics ? (
-                  <div className="flex items-center gap-3">
-                    {cpu !== null && (
-                      <MetricBar label={t("dashboard.cpu")} value={cpu} />
-                    )}
-                    {ram !== null && (
-                      <MetricBar label={t("dashboard.ram")} value={ram} />
-                    )}
-                    {disk !== null && (
-                      <MetricBar label={t("dashboardTab.disk")} value={disk} />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-muted-foreground w-16 text-center">
-                      —
-                    </span>
-                    <span className="text-[10px] text-muted-foreground w-16 text-center">
-                      —
-                    </span>
-                    <span className="text-[10px] text-muted-foreground w-16 text-center">
-                      —
-                    </span>
-                  </div>
-                )}
+                {/* Plugins add live details to a host row here. */}
+                <ComponentSlot
+                  slotId="dashboard.hostRow"
+                  props={{
+                    hostId: Number(host.id),
+                    online: availability === "online",
+                  }}
+                />
                 <span
                   className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(availability, statusScheme, "badge", statusLoading)}`}
                 >
                   {statusLoading
                     ? t("dashboardTab.checking")
                     : availability === "online"
-                      ? t("dashboardTab.available", {
-                          defaultValue: "AVAILABLE",
-                        })
+                      ? t("hosts.status.available")
                       : availability === "reachable"
-                        ? t("dashboardTab.reachable", {
-                            defaultValue: "REACHABLE",
-                          })
-                        : t("dashboardTab.offline")}
+                        ? t("hosts.status.reachable")
+                        : t("hosts.status.offline")}
                 </span>
               </div>
             </div>
@@ -562,7 +510,7 @@ export function HostStatusCard({
 }
 
 function isStatusCheckEnabled(host: Host): boolean {
-  return host.statsConfig?.statusCheckEnabled !== false;
+  return host.statusCheckEnabled !== false;
 }
 
 function RecentActivityCard({
@@ -580,35 +528,13 @@ function RecentActivityCard({
 }) {
   const { t } = useTranslation();
   const statusScheme = useStatusColorScheme();
-  const typeIcon: Record<RecentActivityItem["type"], React.ReactNode> = {
-    terminal: <Terminal className="size-2.5" />,
-    file_manager: <Server className="size-2.5" />,
-    server_stats: <Activity className="size-2.5" />,
-    tunnel: <Network className="size-2.5" />,
-    docker: <Server className="size-2.5" />,
-    rdp: <Server className="size-2.5" />,
-    vnc: <Server className="size-2.5" />,
-    telnet: <MessagesSquare className="size-2.5" />,
+  const typeIcon = (type: string): React.ReactNode => {
+    const Icon = activityTarget(type)?.icon ?? Server;
+    return <Icon className="size-2.5" />;
   };
-  const typeToTab: Record<RecentActivityItem["type"], TabType> = {
-    terminal: "terminal",
-    file_manager: "files",
-    server_stats: "host-metrics",
-    tunnel: "tunnel",
-    docker: "docker",
-    rdp: "rdp",
-    vnc: "vnc",
-    telnet: "telnet",
-  };
-  const typeLabel: Record<RecentActivityItem["type"], string> = {
-    terminal: t("networkGraph.terminal"),
-    file_manager: t("networkGraph.fileManager"),
-    server_stats: t("networkGraph.serverStats"),
-    tunnel: t("networkGraph.tunnel"),
-    docker: t("networkGraph.docker"),
-    rdp: "RDP",
-    vnc: "VNC",
-    telnet: "Telnet",
+  const typeLabel = (type: string): string => {
+    const labelKey = activityTarget(type)?.labelKey;
+    return labelKey ? t(labelKey) : type.replace("_", " ");
   };
   function formatTime(ts: string) {
     const diffMs = Date.now() - new Date(ts).getTime();
@@ -649,21 +575,24 @@ function RecentActivityCard({
             <div
               key={item.id}
               onClick={() => {
-                if (host) onOpenTab(host, typeToTab[item.type]);
+                const target = activityTarget(item.type);
+                if (host && target) onOpenTab(host, target.tab);
               }}
-              className="flex items-center justify-between px-4 py-2 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
+              className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span
                   className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.online ?? false, statusScheme, "dot", statusLoading)}`}
                 />
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold truncate max-w-24">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-semibold truncate">
                     {item.hostName}
                   </span>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    {typeIcon[item.type]}
-                    <span className="text-[10px]">{typeLabel[item.type]}</span>
+                  <div className="flex items-center gap-1 min-w-0 text-muted-foreground">
+                    {typeIcon(item.type)}
+                    <span className="text-[10px] truncate">
+                      {typeLabel(item.type)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -674,131 +603,6 @@ function RecentActivityCard({
           );
         })}
       </div>
-    </Card>
-  );
-}
-
-function ServiceLinksCard({
-  links,
-  onAdd,
-  onDelete,
-}: {
-  links: ServiceLink[];
-  onAdd: (label: string, url: string) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("");
-  const [urlError, setUrlError] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = async () => {
-    const normalizedUrl = normalizeServiceLinkUrl(url);
-    if (!isValidServiceLinkUrl(normalizedUrl)) {
-      setUrlError(true);
-      setAddError("");
-      return;
-    }
-    setUrlError(false);
-    setAddError("");
-    setAdding(true);
-    try {
-      await onAdd(label.trim(), normalizedUrl);
-      setLabel("");
-      setUrl("");
-    } catch (error) {
-      setAddError(
-        error instanceof Error
-          ? error.message
-          : t("dashboardTab.serviceLinksAddFailed"),
-      );
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
-        <Link className="size-3.5 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.serviceLinksTitle")}
-        </span>
-      </div>
-      <div className="flex flex-col overflow-auto flex-1">
-        {links.length === 0 && (
-          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-4">
-            {t("dashboardTab.serviceLinksEmpty")}
-          </div>
-        )}
-        {links.map((link) => (
-          <div
-            key={link.id}
-            className="flex items-center justify-between px-4 py-2 border-b border-border last:border-0 group/link"
-          >
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="flex items-center gap-2 min-w-0 flex-1 hover:text-accent-brand transition-colors"
-            >
-              <ExternalLink className="size-3 text-muted-foreground shrink-0" />
-              <span className="text-xs font-semibold truncate">
-                {link.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground truncate">
-                {link.url}
-              </span>
-            </a>
-            <button
-              onClick={() => onDelete(link.id)}
-              className="ml-2 opacity-0 group-hover/link:opacity-100 transition-opacity size-5 flex items-center justify-center hover:text-destructive"
-            >
-              <Trash2 className="size-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2 px-4 py-2 border-t border-border shrink-0">
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder={t("dashboardTab.serviceLinksLabelPlaceholder")}
-          className="flex-1 min-w-0 text-xs bg-transparent border border-border px-2 py-1 focus:outline-none focus:border-accent-brand/60"
-        />
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setUrlError(false);
-            setAddError("");
-          }}
-          placeholder={t("dashboardTab.serviceLinksUrlPlaceholder")}
-          className={`flex-[2] min-w-0 text-xs bg-transparent border px-2 py-1 focus:outline-none ${urlError ? "border-destructive" : "border-border focus:border-accent-brand/60"}`}
-        />
-        <Button
-          size="sm"
-          className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white h-6 px-2 shrink-0"
-          onClick={handleAdd}
-          disabled={!label.trim() || !url.trim() || adding}
-        >
-          {t("dashboardTab.serviceLinksAdd")}
-        </Button>
-      </div>
-      {urlError && (
-        <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
-          {t("dashboardTab.serviceLinksInvalidUrl")}
-        </div>
-      )}
-      {addError && (
-        <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
-          {addError}
-        </div>
-      )}
     </Card>
   );
 }
@@ -817,20 +621,15 @@ function CardItem({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
-  hostMetrics,
   uptimeFormatted,
   versionText,
   versionStatus,
   releaseUrl,
   dbHealth,
   credentialCount,
-  activeTunnelCount,
   activity,
   onClearActivity,
   isAdmin,
-  serviceLinks,
-  onAddServiceLink,
-  onDeleteServiceLink,
   statusLoading,
   isVisible = true,
 }: {
@@ -845,26 +644,19 @@ function CardItem({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
-  hostMetrics: Map<
-    string,
-    { cpu: number | null; ram: number | null; disk: number | null }
-  >;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
-  activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   isAdmin: boolean;
-  serviceLinks: ServiceLink[];
-  onAddServiceLink: (label: string, url: string) => Promise<void>;
-  onDeleteServiceLink: (id: number) => Promise<void>;
   statusLoading?: boolean;
   isVisible?: boolean;
 }) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const onResizeMouseDown = useCallback(
@@ -929,7 +721,6 @@ function CardItem({
           <CountersBarCard
             hosts={hosts}
             credentialCount={credentialCount}
-            activeTunnelCount={activeTunnelCount}
             onOpenSingletonTab={onOpenSingletonTab}
           />
         )}
@@ -944,7 +735,6 @@ function CardItem({
         {slot.id === "host_status" && (
           <HostStatusCard
             hosts={hosts}
-            hostMetrics={hostMetrics}
             onOpenTab={onOpenTab}
             statusLoading={statusLoading}
           />
@@ -958,23 +748,11 @@ function CardItem({
             statusLoading={statusLoading}
           />
         )}
-        {slot.id === "network_graph" && (
-          <NetworkGraphCard
-            embedded={true}
+        {!CORE_CARD_IDS.has(slot.id) && (
+          <PluginCardSlot
+            id={slot.id}
             isVisible={isVisible}
-            onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
-          />
-        )}
-        {slot.id === "service_links" && (
-          <ServiceLinksCard
-            links={serviceLinks}
-            onAdd={onAddServiceLink}
-            onDelete={onDeleteServiceLink}
-          />
-        )}
-        {slot.id === "homepage_preview" && (
-          <HomepagePreviewCard
-            onOpenFullscreen={() => onOpenSingletonTab("homepage")}
+            onOpenSingletonTab={onOpenSingletonTab}
           />
         )}
       </div>
@@ -982,7 +760,7 @@ function CardItem({
         <div
           onMouseDown={onResizeMouseDown}
           className="absolute bottom-0 left-0 right-0 h-2 z-20 flex items-center justify-center cursor-row-resize group/resize"
-          title="Drag to resize"
+          title={t("cardGrid.dragToResize")}
         >
           <div className="w-12 h-0.5 bg-border group-hover/resize:bg-accent-brand/60 transition-colors rounded-full" />
         </div>
@@ -1031,12 +809,16 @@ function AddCardTray({
   onAdd,
   cardLabels,
 }: {
-  activeIds: DashboardCardId[];
-  onAdd: (id: DashboardCardId) => void;
-  cardLabels: Record<DashboardCardId, string>;
+  activeIds: string[];
+  onAdd: (id: string) => void;
+  cardLabels: Record<string, string>;
 }) {
   const { t } = useTranslation();
-  const available = DASHBOARD_CARDS.filter((c) => !activeIds.includes(c.id));
+  const registeredCards = useRegisteredDashboardCards();
+  const available = [
+    ...DASHBOARD_CARDS.map((card) => ({ id: card.id as string })),
+    ...registeredCards.map((card) => ({ id: card.id })),
+  ].filter((c) => !activeIds.includes(c.id));
   if (available.length === 0) return null;
   return (
     <div className="flex items-center gap-2 px-1 py-2 flex-wrap shrink-0">
@@ -1073,24 +855,16 @@ type PanelColumnProps = {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
-  hostMetrics: Map<
-    string,
-    { cpu: number | null; ram: number | null; disk: number | null }
-  >;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
-  activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   cardLabels: Record<DashboardCardId, string>;
   isAdmin: boolean;
-  serviceLinks: ServiceLink[];
-  onAddServiceLink: (label: string, url: string) => Promise<void>;
-  onDeleteServiceLink: (id: number) => Promise<void>;
   statusLoading: boolean;
   isVisible?: boolean;
 };
@@ -1109,21 +883,16 @@ function PanelColumn({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
-  hostMetrics,
   uptimeFormatted,
   versionText,
   versionStatus,
   releaseUrl,
   dbHealth,
   credentialCount,
-  activeTunnelCount,
   activity,
   onClearActivity,
   cardLabels,
   isAdmin,
-  serviceLinks,
-  onAddServiceLink,
-  onDeleteServiceLink,
   statusLoading,
   isVisible = true,
 }: PanelColumnProps) {
@@ -1168,20 +937,15 @@ function PanelColumn({
             onOpenSingletonTab={onOpenSingletonTab}
             onOpenTab={onOpenTab}
             hosts={hosts}
-            hostMetrics={hostMetrics}
             uptimeFormatted={uptimeFormatted}
             versionText={versionText}
             versionStatus={versionStatus}
             releaseUrl={releaseUrl}
             dbHealth={dbHealth}
             credentialCount={credentialCount}
-            activeTunnelCount={activeTunnelCount}
             activity={activity}
             onClearActivity={onClearActivity}
             isAdmin={isAdmin}
-            serviceLinks={serviceLinks}
-            onAddServiceLink={onAddServiceLink}
-            onDeleteServiceLink={onDeleteServiceLink}
             statusLoading={statusLoading}
             isVisible={isVisible}
           />
@@ -1215,11 +979,12 @@ function ColumnDivider({
 }: {
   onMouseDown: (e: React.MouseEvent) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       onMouseDown={onMouseDown}
       className="w-3 shrink-0 flex items-center justify-center cursor-col-resize group/divider self-stretch z-10"
-      title="Drag to resize columns"
+      title={t("dashboardTab.dragToResizeColumns")}
     >
       <div className="w-px h-full bg-border group-hover/divider:bg-accent-brand/50 transition-colors" />
       <div className="absolute size-4 flex items-center justify-center opacity-0 group-hover/divider:opacity-100 transition-opacity">
@@ -1241,8 +1006,9 @@ export function DashboardTab({
   /** When false, pause dashboard metrics refresh while the tab stays mounted. */
   isVisible?: boolean;
 }) {
+  const registeredCards = useRegisteredDashboardCards();
   const { t, i18n } = useTranslation();
-  const { initialLoadComplete } = useServerStatus();
+  const { initialLoadComplete } = useServerStatusMeta();
   const statusLoading = !initialLoadComplete;
 
   const [slots, setSlots] = useState<CardSlot[]>(() => {
@@ -1277,26 +1043,27 @@ export function DashboardTab({
     return () => window.removeEventListener("dashboardSlotsChanged", handler);
   }, []);
 
-  const [homepageLinkCopied, setHomepageLinkCopied] = useState(false);
+  // A plugin's own view next to the dashboard, e.g. the homepage plugin's
+  // canvas preview. Only one is offered today; "dashboard" always exists.
+  const secondaryViews = useActionSlot("dashboard.secondaryView");
+  const secondaryView = secondaryViews[0];
+  const { settled: pluginsSettled } = usePluginStore();
 
-  const handleCopyHomepageLink = () => {
-    navigator.clipboard
-      .writeText(`${window.location.origin}?view=homepage`)
-      .catch(() => {});
-    setHomepageLinkCopied(true);
-    setTimeout(() => setHomepageLinkCopied(false), 1500);
-  };
-
-  const [dashboardView, setDashboardView] = useState<"dashboard" | "homepage">(
-    () => {
-      try {
-        return (localStorage.getItem("dashboardView") ?? "dashboard") as
-          "dashboard" | "homepage";
-      } catch {
-        return "dashboard";
-      }
-    },
-  );
+  const [dashboardView, setDashboardView] = useState<string>(() => {
+    try {
+      return localStorage.getItem("dashboardView") ?? "dashboard";
+    } catch {
+      return "dashboard";
+    }
+  });
+  // Until plugins settle, a plugin view saved from last session hasn't had a
+  // chance to register yet, so its absence doesn't mean it's really gone.
+  const viewPending = !pluginsSettled && dashboardView !== "dashboard";
+  // Falls back to the dashboard when the view a plugin contributed is off.
+  const isDashboardView =
+    dashboardView === "dashboard" ||
+    (!viewPending && !secondaryView) ||
+    (!!secondaryView && dashboardView !== secondaryView.actionId);
 
   useEffect(() => {
     try {
@@ -1345,95 +1112,22 @@ export function DashboardTab({
   const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
-  const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
-  const [hostMetrics, setHostMetrics] = useState<
-    Map<string, { cpu: number | null; ram: number | null; disk: number | null }>
-  >(new Map());
-  const viewerSessionsRef = useRef<Map<number, string>>(new Map());
   const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
-
-  const fetchMetrics = useCallback(async (hostList: Host[]) => {
-    let statuses: Record<number, { status?: string }> = {};
-    try {
-      statuses = (await getAllServerStatuses()) as Record<
-        number,
-        { status?: string }
-      >;
-    } catch {
-      /* best-effort */
-    }
-
-    const newSessions = new Map<number, string>(viewerSessionsRef.current);
-    const results = await Promise.all(
-      hostList.map(async (host) => {
-        const hostId = Number(host.id);
-        const knownStatus = statuses?.[hostId]?.status;
-        if (knownStatus === "offline") return null;
-        if (
-          host.authType === "none" ||
-          host.authType === "opkssh" ||
-          host.authType === "stepca"
-        )
-          return null;
-
-        try {
-          const existing = newSessions.get(hostId);
-          if (existing && !(await sendMetricsHeartbeat(existing))) {
-            newSessions.delete(hostId);
-          }
-          if (!newSessions.has(hostId)) {
-            const reg = await registerMetricsViewer(hostId);
-            if (reg.skipped) return null;
-            if (reg.success && reg.viewerSessionId) {
-              newSessions.set(hostId, reg.viewerSessionId);
-            }
-          }
-          const metrics = await getServerMetricsById(hostId);
-          if (!metrics) return null;
-          return {
-            id: host.id,
-            cpu: metrics.cpu?.percent ?? null,
-            ram: metrics.memory?.percent ?? null,
-            disk: metrics.disk?.percent ?? null,
-          };
-        } catch {
-          return null;
-        }
-      }),
-    );
-
-    viewerSessionsRef.current = newSessions;
-    const map = new Map<
-      string,
-      { cpu: number | null; ram: number | null; disk: number | null }
-    >();
-    for (const r of results) {
-      if (r) map.set(r.id, { cpu: r.cpu, ram: r.ram, disk: r.disk });
-    }
-    setHostMetrics(map);
-  }, []);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       const raw = await getSSHHosts().catch(() => []);
-      const mapped = raw.map(sshHostToHost);
-      const statusHosts = mapped.filter(isStatusCheckEnabled);
-      if (mounted) setHosts(mapped);
-      if (isVisible) {
-        fetchMetrics(statusHosts).catch(() => {});
-      }
+      if (mounted) setHosts(raw.map(sshHostToHost));
     };
     load();
 
     getUserInfo()
       .then((info) => {
-        // Remote sync is not yet configurable (added in a later phase), so
-        // a standalone desktop install never shows admin/user-management
-        // UI -- it has exactly one implicit user and nothing to administer.
-        const isRemoteSyncConnected = false;
-        setIsAdmin(!!info.is_admin && (!isElectron() || isRemoteSyncConnected));
+        // A desktop on its own has one implicit user and nothing to
+        // administer; linked, it is an admin when the server account is.
+        setIsAdmin(isElectron() ? !!info.linked?.isAdmin : !!info.is_admin);
       })
       .catch(() => {});
     getUptime()
@@ -1471,14 +1165,6 @@ export function DashboardTab({
         ),
       )
       .catch(() => {});
-    getTunnelStatuses()
-      .then((statuses) => {
-        const active = Object.values(statuses ?? {}).filter(
-          (s) => s?.status === CONNECTION_STATES.CONNECTED,
-        ).length;
-        setActiveTunnelCount(active);
-      })
-      .catch(() => {});
 
     if (!isVisible) {
       return () => {
@@ -1486,37 +1172,17 @@ export function DashboardTab({
       };
     }
 
-    const metricsInterval = setInterval(async () => {
+    const hostsInterval = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
       const raw = await getSSHHosts().catch(() => []);
-      const mapped = raw.map(sshHostToHost);
-      const statusHosts = mapped.filter(isStatusCheckEnabled);
-      if (mounted) setHosts(mapped);
-      fetchMetrics(statusHosts).catch(() => {});
+      if (mounted) setHosts(raw.map(sshHostToHost));
     }, 30000);
 
     return () => {
       mounted = false;
-      clearInterval(metricsInterval);
+      clearInterval(hostsInterval);
     };
-  }, [fetchMetrics, isVisible]);
-
-  useEffect(() => {
-    if (!isVisible || viewerSessionsRef.current.size === 0) return;
-    const heartbeat = setInterval(async () => {
-      if (document.visibilityState === "hidden") return;
-      for (const [hostId, sessionId] of viewerSessionsRef.current) {
-        sendMetricsHeartbeat(sessionId)
-          .then((alive) => {
-            if (!alive && viewerSessionsRef.current.get(hostId) === sessionId) {
-              viewerSessionsRef.current.delete(hostId);
-            }
-          })
-          .catch(() => {});
-      }
-    }, 30000);
-    return () => clearInterval(heartbeat);
-  }, [hostMetrics, isVisible]);
+  }, [isVisible]);
 
   const handleClearActivity = async () => {
     try {
@@ -1525,24 +1191,6 @@ export function DashboardTab({
     } catch {
       /* ignore */
     }
-  };
-
-  const [serviceLinks, setServiceLinks] = useState<ServiceLink[]>([]);
-
-  useEffect(() => {
-    getServiceLinks()
-      .then(setServiceLinks)
-      .catch(() => {});
-  }, []);
-
-  const handleAddServiceLink = async (label: string, url: string) => {
-    const created = await createServiceLink(label, url);
-    setServiceLinks((prev) => [...prev, created]);
-  };
-
-  const handleDeleteServiceLink = async (id: number) => {
-    await deleteServiceLink(id);
-    setServiceLinks((prev) => prev.filter((l) => l.id !== id));
   };
 
   const todayLabel = new Date().toLocaleDateString(i18n.language, {
@@ -1561,15 +1209,15 @@ export function DashboardTab({
     .sort((a, b) => a.order - b.order);
   const hasSide = sideSlots.length > 0;
 
-  const cardLabels: Record<DashboardCardId, string> = {
+  const cardLabels: Record<string, string> = {
     stats_bar: t("dashboard.serverOverview"),
     counters_bar: t("dashboard.serverStats"),
     quick_actions: t("dashboard.quickActions"),
     host_status: t("dashboardTab.hostStatus"),
     recent_activity: t("dashboard.recentActivity"),
-    network_graph: t("dashboard.networkGraph"),
-    service_links: t("dashboard.serviceLinks"),
-    homepage_preview: t("dashboard.homepagePreview"),
+    ...Object.fromEntries(
+      registeredCards.map((card) => [card.id, t(card.titleKey)]),
+    ),
   };
 
   const onColumnDividerMouseDown = useCallback(
@@ -1577,15 +1225,23 @@ export function DashboardTab({
       e.preventDefault();
       const startX = e.clientX;
       const startPct = mainWidthPct;
+      const totalW = bodyRef.current?.getBoundingClientRect().width ?? 0;
+      if (!totalW) return;
+      // One update per frame, not per mousemove.
+      let frame = 0;
+      let clientX = startX;
       const onMove = (ev: MouseEvent) => {
-        if (!bodyRef.current) return;
-        const totalW = bodyRef.current.getBoundingClientRect().width;
-        setMainWidthPct(
-          Math.min(
-            85,
-            Math.max(25, startPct + ((ev.clientX - startX) / totalW) * 100),
-          ),
-        );
+        clientX = ev.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          setMainWidthPct(
+            Math.min(
+              85,
+              Math.max(25, startPct + ((clientX - startX) / totalW) * 100),
+            ),
+          );
+        });
       };
       const onUp = () => {
         window.removeEventListener("mousemove", onMove);
@@ -1640,13 +1296,8 @@ export function DashboardTab({
           ? Math.max(...panelSlots.map((s) => s.order)) + 1
           : 0;
       const defaultHeight: number | null =
-        id === "network_graph"
-          ? 350
-          : id === "host_status" || id === "recent_activity"
-            ? null
-            : id === "service_links"
-              ? 200
-              : 150;
+        getRegisteredDashboardCard(id)?.defaultHeight ??
+        (id === "host_status" || id === "recent_activity" ? null : 150);
       const key = `${id}_${Date.now()}`;
       return [
         ...prev,
@@ -1672,23 +1323,18 @@ export function DashboardTab({
 
   const columnProps = {
     hosts,
-    hostMetrics,
     uptimeFormatted,
     versionText,
     versionStatus,
     releaseUrl,
     dbHealth,
     credentialCount,
-    activeTunnelCount,
     activity,
     onClearActivity: handleClearActivity,
     onOpenSingletonTab,
     onOpenTab,
     cardLabels,
     isAdmin,
-    serviceLinks,
-    onAddServiceLink: handleAddServiceLink,
-    onDeleteServiceLink: handleDeleteServiceLink,
     statusLoading,
     isVisible,
   };
@@ -1799,7 +1445,6 @@ export function DashboardTab({
                 <CountersBarCard
                   hosts={hosts}
                   credentialCount={credentialCount}
-                  activeTunnelCount={activeTunnelCount}
                   onOpenSingletonTab={onOpenSingletonTab}
                 />
               )}
@@ -1814,7 +1459,6 @@ export function DashboardTab({
               {slot.id === "host_status" && (
                 <HostStatusCard
                   hosts={statusCheckHosts}
-                  hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
                   statusLoading={statusLoading}
                 />
@@ -1828,18 +1472,11 @@ export function DashboardTab({
                   statusLoading={statusLoading}
                 />
               )}
-              {slot.id === "network_graph" && (
-                <NetworkGraphCard
-                  embedded={true}
+              {!CORE_CARD_IDS.has(slot.id) && (
+                <PluginCardSlot
+                  id={slot.id}
                   isVisible={isVisible}
-                  onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
-                />
-              )}
-              {slot.id === "service_links" && (
-                <ServiceLinksCard
-                  links={serviceLinks}
-                  onAdd={handleAddServiceLink}
-                  onDelete={handleDeleteServiceLink}
+                  onOpenSingletonTab={onOpenSingletonTab}
                 />
               )}
             </div>
@@ -1853,21 +1490,27 @@ export function DashboardTab({
     <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
       <Card className="flex-row items-center justify-between px-5 py-3 shrink-0 mx-5 mt-5 gap-0">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
-            <button
-              onClick={() => setDashboardView("dashboard")}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${dashboardView === "dashboard" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {t("dashboard.title")}
-            </button>
-            <button
-              onClick={() => setDashboardView("homepage")}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${dashboardView === "homepage" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {t("nav.homepage")}
-            </button>
-          </div>
-          {dashboardView === "dashboard" && (
+          {viewPending ? (
+            <Skeleton className="h-7 w-40" />
+          ) : (
+            <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
+              <button
+                onClick={() => setDashboardView("dashboard")}
+                className={`px-3 py-1 text-sm font-medium transition-colors ${isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("dashboard.title")}
+              </button>
+              {secondaryView && (
+                <button
+                  onClick={() => setDashboardView(secondaryView.actionId)}
+                  className={`px-3 py-1 text-sm font-medium transition-colors ${!isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {t(secondaryView.titleKey)}
+                </button>
+              )}
+            </div>
+          )}
+          {isDashboardView && !viewPending && (
             <p className="text-xs text-muted-foreground hidden sm:block">
               {todayLabel}
             </p>
@@ -1954,7 +1597,7 @@ export function DashboardTab({
               {t("dashboard.donate")}
             </a>
           </Button>
-          {dashboardView === "dashboard" && (
+          {isDashboardView && (
             <>
               <Separator orientation="vertical" className="mx-1 h-5" />
               {editMode ? (
@@ -1990,43 +1633,15 @@ export function DashboardTab({
         </div>
       </Card>
 
-      {dashboardView === "homepage" ? (
+      {viewPending ? (
+        <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col p-5 gap-3">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full flex-1" />
+        </div>
+      ) : !isDashboardView && secondaryView?.component ? (
         <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col">
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-muted/20">
-            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-semibold">
-              {t("nav.homepage")}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                onClick={handleCopyHomepageLink}
-              >
-                {homepageLinkCopied ? (
-                  <>
-                    <Check size={10} className="text-accent-brand" />
-                    <span className="text-accent-brand">
-                      {t("homepage.linkCopied")}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Link size={10} />
-                    {t("homepage.copyLink")}
-                  </>
-                )}
-              </button>
-              <button
-                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                onClick={() => onOpenSingletonTab("homepage")}
-              >
-                <ExternalLink size={10} />
-                {t("homepage.openFullView")}
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <HomepageCanvas />
-          </div>
+          <secondaryView.component onOpenSingletonTab={onOpenSingletonTab} />
         </div>
       ) : (
         <>

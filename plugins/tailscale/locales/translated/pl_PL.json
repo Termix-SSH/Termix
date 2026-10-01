@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "devices.view": {
+      "title": "View tailnet devices",
+      "description": "See the devices on the connected tailnet."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "Tailscale API",
+      "devices": "Tailnet"
+    },
+    "apiKey": {
+      "label": "Klucz API",
+      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API base URL",
+      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Device list",
+      "checking": "Checking the tailnet...",
+      "noKey": "No API key set yet.",
+      "error": "Could not reach the tailnet. Check the API key.",
+      "count": "{{count}} device reachable",
+      "count_other": "{{count}} devices reachable",
+      "refresh": "Check"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
+  "hosts": {
+    "tailscaleUsernameHint": "Musi to być użytkownik systemu Unix, któremu Twoja tożsamość Tailscale została przyznana w ACL SSH sieci tailnet, niekoniecznie root.",
+    "tailscaleDeviceSelect": "Wybierz urządzenie Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Wybierz urządzenie...",
+    "tailscaleNoApiKey": "Nie skonfigurowano klucza API Tailscale. Dodaj go w Ustawieniach administratora, aby włączyć wykrywanie urządzeń.",
+    "tailscaleDocsLink": "Zobacz dokumentację",
+    "tailscaleLoadingDevices": "Ładowanie urządzeń...",
+    "tailscaleDeviceLoadFailed": "Nie udało się załadować urządzeń Tailscale. Sprawdź adres URL API i połączenie sieciowe.",
+    "tailscaleNoDevices": "Nie znaleziono urządzeń w Twojej sieci tailnet.",
+    "tailscaleDeviceAutoFill": "Wybranie urządzenia spowoduje automatyczne wypełnienie adresu IP hosta.",
+    "tailscaleAddHost": "Add host",
+    "tailscaleCopyIp": "Copy Tailscale IP",
+    "tailscaleIpCopied": "IP copied",
+    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "filterAuthTailscale": "Tailscale"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Wymagane uwierzytelnienie Tailscale",
+    "tailscaleCheckDescription": "Tailscale SSH wymaga dodatkowej weryfikacji. Uwierzytelnij się w przeglądarce, aby kontynuować.",
+    "tailscaleCheckOpenBrowser": "Otwórz przeglądarkę, aby uwierzytelnić",
+    "tailscaleCheckWaiting": "Oczekiwanie na uwierzytelnienie Tailscale...",
+    "tailscaleCheckTimeout": "Upłynął limit czasu uwierzytelniania Tailscale. Spróbuj ponownie."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "Odśwież",
+    "retry": "Ponów",
+    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "noData": "Brak dostępnych danych",
+    "filter": "Filtr...",
+    "tsNotInstalled": "Tailscale nie jest zainstalowany na tym hoście",
+    "tsRunning": "Działa",
+    "tsStopped": "Zatrzymany",
+    "tsEnable": "Połączenie",
+    "tsDisable": "Odłącz",
+    "tsEnabling": "Łączenie z Tailscale...",
+    "tsDisabling": "Rozłączanie z Tailscale...",
+    "tsEnabled": "Tailscale połączony",
+    "tsDisabled": "Tailscale rozłączony",
+    "tsExitNode": "Węzeł wyjściowy",
+    "tsExitNodeActive": "Węzeł wyjściowy aktywny"
+  },
+  "newUi": {
+    "sidebar": {
+      "quickConnect": {
+        "connectToTerminal": "Połącz z terminalem",
+        "usernameLabel": "Nazwa użytkownika"
+      }
+    }
+  }
+}

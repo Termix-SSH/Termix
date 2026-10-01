@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "Kluis Ondertekenaar Profiel",
+    "selectProfile": "Kies 'n kluisprofiel...",
+    "hint": "Instellings kom van die gedeelde profiel; jy sal by Vault aanmeld via OIDC wanneer jy koppel. Geen geheime word gestoor nie.",
+    "docs": "Bekyk dokumente",
+    "sharedProfile": "{{name}} (gedeel)"
+  },
+  "profiles": {
+    "new": "Nuwe profiel",
+    "manage": "Bestuur Vault-profiele",
+    "name": "Vriendelike Naam",
+    "vaultAddr": "Kluisadres",
+    "namespace": "Naamruimte",
+    "oidcMount": "OIDC-magtigingsmontering",
+    "oidcRole": "OIDC-rol",
+    "sshMount": "SSH-geheime berg",
+    "sshRole": "SSH-ondertekenaarrol",
+    "validPrincipals": "Geldige Prinsipale",
+    "keyType": "Efemere Sleuteltipe",
+    "shareWithAll": "Deel met alle gebruikers",
+    "create": "Skep profiel",
+    "created": "Kluisprofiel geskep",
+    "saved": "Kluisprofiel gestoor",
+    "deleted": "Kluisprofiel uitgevee",
+    "saveFailed": "Kon nie kluisprofiel stoor nie",
+    "deleteFailed": "Kon nie kluisprofiel uitvee nie",
+    "save": "Stoor profiel",
+    "validationError": "Naam, kluisadres en SSH-ondertekenaarsrol word vereis",
+    "none": "Geen Vault-profiele nog nie.",
+    "sharedBadge": "gedeel",
+    "edit": "Wysig",
+    "delete": "Vee uit"
+  },
+  "hosts": {
+    "filterAuthVault": "Kluis"
+  },
+  "dialog": {
+    "title": "Kluisaanmelding vereis",
+    "description": "'n Venster het oopgemaak om by HashiCorp Vault aan te meld. Voltooi die aanmelding daar; hierdie verbinding sal outomaties voortgaan.",
+    "failed": "Kluisverifikasie het misluk. Probeer asseblief weer.",
+    "reopen": "Maak aanmeldvenster weer oop"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik Vault SSH-ondertekening",
+      "description": "Skep Vault-ondertekenaarsprofiele en koppel aan gashere wat Vault gebruik."
+    },
+    "share": {
+      "title": "Deel Vault-profiele",
+      "description": "Merk 'n kluisondertekenaarsprofiel as gedeel sodat elke gebruiker dit kan kies."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Herlei URI",
+      "description": "Voeg hierdie URL by allowed_redirect_uris in elke Vault OIDC-rol waarmee Termix aanmeld."
+    },
+    "legacyCallback": {
+      "label": "Gebruik die ou aanstuur-URI",
+      "description": "Hou aan om /vault/oidc/callback te stuur, die aanstuur-URI wat voor 2.9 gebruik is. Skakel dit af sodra jou Vault-rolle die nuwe een toelaat."
+    },
+    "host": {
+      "profileId": {
+        "label": "Kluisondertekenaarprofiel"
+      }
+    }
+  }
+}

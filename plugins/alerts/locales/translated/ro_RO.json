@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Alerte"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizați alertele",
+      "description": "Primește alerte în căsuța poștală și trimite-le către propriile canale."
+    }
+  },
+  "onboarding": {
+    "feature": "Alerte",
+    "featureDesc": "Fiecare alertă într-o singură căsuță poștală, trimisă pe Discord, ntfy, e-mail sau un webhook, dacă dorești."
+  },
+  "settings": {
+    "group": {
+      "general": "General",
+      "email": "E-mail"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Anunțuri Termix",
+        "description": "Afișează știri de la echipa Termix, cum ar fi notificări de securitate și lansări, în căsuța poștală a tuturor."
+      },
+      "retentionDays": {
+        "label": "Păstrați alertele timp de (zile)",
+        "description": "Alertele mai vechi sunt eliminate din fiecare inbox."
+      },
+      "smtpHost": {
+        "label": "Server SMTP",
+        "description": "Necesar pentru canalele de e-mail. Lăsați gol pentru a dezactiva e-mailul.",
+        "placeholder": "smtp.exemplu.com"
+      },
+      "smtpPort": {
+        "label": "Port SMTP",
+        "description": "De obicei 587 cu STARTTLS sau 465 cu TLS."
+      },
+      "smtpSecure": {
+        "label": "Folosește TLS de la început",
+        "description": "Activați portul 465. Lăsați dezactivat portul 587, care face upgrade la TLS de la sine."
+      },
+      "smtpUser": {
+        "label": "Nume de utilizator SMTP",
+        "description": "Lăsați câmpul gol dacă serverul nu necesită date de autentificare."
+      },
+      "smtpPassword": {
+        "label": "Parolă SMTP",
+        "description": "Stocat criptat."
+      },
+      "smtpFrom": {
+        "label": "Adresă de la",
+        "description": "Alertele expeditorului provin de la.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Ferestre pop-up de alertă",
+        "description": "Ce alerte noi apar în timp ce folosești Termix. Acestea ajung întotdeauna în inbox.",
+        "all": "Toate alertele",
+        "warning": "Avertismente și aspecte critice",
+        "critical": "Numai critice",
+        "off": "Nici unul"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Inbox",
+    "channels": "Canale",
+    "rules": "Reguli de livrare"
+  },
+  "severity": {
+    "info": "Informații",
+    "success": "Succes",
+    "warning": "Avertizare",
+    "critical": "Critic"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Deschide",
+    "view": "Vedere",
+    "unread": "Necitit",
+    "deliveryFailed_one": "Canalul {{count}} a eșuat",
+    "deliveryFailed_other": "{{count}} canale au eșuat",
+    "markRead": "Marchează ca citit",
+    "markUnread": "Marchează ca necitit",
+    "markAllRead": "Marchează toate ca citite",
+    "delete": "Şterge",
+    "clearRead": "Ștergeți alertele de citire",
+    "cleared_one": "Alertă {{count}} ștearsă",
+    "cleared_other": "Alerte {{count}} șterse",
+    "filterAll": "Toate",
+    "filterUnread": "Necitit",
+    "anySeverity": "Orice severitate",
+    "anySource": "Orice sursă",
+    "openAll": "Deschide într-o filă",
+    "empty": "Încă nu există alerte.",
+    "emptyUnread": "Sunteți cu toții prinși la zi.",
+    "loadMore": "Încărcați mai multe"
+  },
+  "channels": {
+    "intro": "Canalele sunt locurile prin care alertele pot fi trimise în afara Termix. Regulile de livrare aleg alertele care le utilizează.",
+    "add": "Adăugați canal",
+    "edit": "Editați canalul",
+    "test": "Trimiteți un test",
+    "testSent": "Alertă de test trimisă",
+    "testFailed": "Testul a eșuat: {{error}}",
+    "deleteConfirm": "Ștergeți canalul „{{name}}”?",
+    "deleted": "Canalul a fost șters",
+    "empty": "Încă nu există canale.",
+    "enabled": "Activat",
+    "needsSave": "Acest canal trebuie deschis și salvat din nou înainte de a putea trimite.",
+    "name": "Nume",
+    "nameRequired": "Numele este obligatoriu",
+    "type": "Tip",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discordie",
+      "email": "E-mail"
+    },
+    "emailUnavailable": "E-mailul necesită un server SMTP, pe care un administrator îl configurează în setările Alerte.",
+    "webhookUrl": "URL-ul",
+    "webhookHint": "Obține un corp JSON pentru fiecare alertă.",
+    "method": "Metodă",
+    "headers": "Anteturi",
+    "headersHint": "Unul pe linie, cum ar fi Nume: valoare.",
+    "ntfyServer": "URL-ul serverului",
+    "ntfyTopic": "Subiect",
+    "ntfyToken": "Token de acces (opțional)",
+    "discordUrl": "Adresa URL a webhook-ului Discord",
+    "discordHint": "Din setările canalului din Discord, la Integrări.",
+    "discordUsername": "Nume afișat (opțional)",
+    "discordAvatar": "URL-ul avatarului (opțional)",
+    "emailTo": "Trimiteți către",
+    "emailHint": "Separați mai multe adrese prin virgule.",
+    "privateNetwork": "Permiteți o adresă de rețea privată",
+    "privateNetworkHint": "Funcționează doar pentru gazdele permise de un administrator în lista de puncte finale private."
+  },
+  "rules": {
+    "intro": "O regulă de livrare trimite alerte corespunzătoare către canalele dvs. Alertele rămân întotdeauna și în căsuța poștală.",
+    "add": "Adăugați o regulă",
+    "edit": "Editați regula",
+    "empty": "Încă nu există reguli, așa că alertele apar doar în inbox.",
+    "needChannel": "Adăugați mai întâi un canal.",
+    "enabled": "Activat",
+    "name": "Nume",
+    "nameRequired": "Numele este obligatoriu",
+    "match": "Alerte de trimis",
+    "matchHint": "* pentru orice, automatizări. * pentru orice, de la automatizări sau pentru un singur tip exact.",
+    "minSeverity": "Cel puţin",
+    "channels": "Trimiteți către",
+    "channelRequired": "Alege cel puțin un canal",
+    "deleteConfirm": "Ștergeți regula „{{name}}”?",
+    "everything": "Tot",
+    "summary": "{{match}}, {{severity}} sau mai mare, până la {{channels}}"
+  },
+  "actions": {
+    "cancel": "Anula",
+    "save": "Salva",
+    "saving": "Economisire...",
+    "delete": "Şterge"
+  },
+  "widget": {
+    "name": "Flux de alerte",
+    "description": "Cele mai recente alerte, cu o modalitate rapidă de a le marca ca fiind citite",
+    "maxItems": "Articole maxime",
+    "showRead": "Afișează alertele de citire",
+    "allClear": "Totul este clar",
+    "loading": "Încărcare..."
+  }
+}

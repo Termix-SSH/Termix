@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Administrer ACME-certifikater",
+      "description": "Se certifikatstatussen, og anmod om et nyt certifikat nu."
+    }
+  },
+  "settings": {
+    "autoRenew": {
+      "label": "Forny automatisk",
+      "description": "Tjek to gange om dagen, og få et nyt certifikat, hvis der ikke er noget, det ikke dækker domænet, eller det udløber inden for 30 dage."
+    },
+    "domain": {
+      "label": "Domæne",
+      "description": "Det offentlige domænenavn for certifikatet.",
+      "placeholder": "termix.example.com"
+    },
+    "email": {
+      "label": "E-mail",
+      "description": "Kontakt-e-mailadresse for ACME-kontoen og udløbsmeddelelser.",
+      "placeholder": "admin@eksempel.com"
+    },
+    "provider": {
+      "label": "Certifikatmyndighed",
+      "description": "Hvor kan man få certifikatet? Brug staging til at teste uden at nå Let's Encrypt-hastighedsgrænserne.",
+      "letsencrypt": "Lad os kryptere",
+      "letsencryptStaging": "Lad os kryptere (staging)",
+      "custom": "Brugerdefineret ACME-mappe"
+    },
+    "directoryUrl": {
+      "label": "ACME-katalogets URL",
+      "description": "Kun for en brugerdefineret certifikatmyndighed. Skal være en https-URL."
+    },
+    "challengeType": {
+      "label": "Udfordringstype",
+      "description": "Sådan beviser du, at du ejer domænet.",
+      "http": "HTTP - kræver port 80, der kan nås fra internettet",
+      "cloudflare": "DNS (Cloudflare) - kræver et Cloudflare API-token"
+    },
+    "cloudflareToken": {
+      "label": "Cloudflare API-token",
+      "description": "Scoped-token med Zone:DNS:Rediger-tilladelse for dit domæne."
+    }
+  },
+  "status": {
+    "title": "Certifikatstatus",
+    "none": "Intet certifikat",
+    "names": "Dækker {{names}}",
+    "issuer": "Udstedt af {{issuer}}",
+    "expires": "Udløber {{date}}",
+    "lastIssued": "Sidst udstedt {{date}}",
+    "lastError": "Sidste forsøg mislykkedes: {{error}}",
+    "missing": "Angiv domæne, e-mail og de felter, som din udfordringstype kræver, og gem derefter, før du anmoder om et certifikat.",
+    "request": "Anmod om certifikat nu",
+    "requesting": "Anmoder om certifikat...",
+    "issued": "Certifikat udstedt og installeret"
+  }
+}

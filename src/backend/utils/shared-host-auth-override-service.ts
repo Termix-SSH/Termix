@@ -1,8 +1,5 @@
-import {
-  AUTH_PROTOCOL_METADATA,
-  isSupportedAuthOverrideProtocol,
-  type AuthOverrideProtocol,
-} from "../../types/auth-protocols.js";
+import type { AuthOverrideProtocol } from "../../types/auth-protocols.js";
+import { isAuthOverrideProtocol } from "../hosts/protocol-auth/registry.js";
 import {
   createCurrentCredentialRepository,
   createCurrentSharedHostAuthOverrideRepository,
@@ -109,9 +106,9 @@ export class SharedHostAuthOverrideService {
   }
 
   private requireSupportedProtocol(protocol: AuthOverrideProtocol): void {
-    if (!isSupportedAuthOverrideProtocol(protocol)) {
+    if (!isAuthOverrideProtocol(protocol)) {
       throw new SharedHostAuthOverrideServiceError(
-        `${AUTH_PROTOCOL_METADATA[protocol].label} authentication overrides are not supported yet`,
+        `No plugin declares the ${protocol} protocol`,
         400,
       );
     }

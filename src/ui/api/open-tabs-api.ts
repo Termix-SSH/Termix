@@ -1,6 +1,5 @@
 import { authApi } from "@/main-axios";
 import { createTtlRequestCache } from "@/lib/ttl-request-cache";
-import type { TerminalTheme } from "@/lib/terminal-themes";
 import type { CustomKeybinding } from "@/types/keybindings";
 
 // OPEN TABS API
@@ -43,10 +42,6 @@ export interface ActiveSessionInfo {
   tabInstanceId: string | null;
   isConnected: boolean;
   createdAt: number;
-  isOwnSession: boolean;
-  sharedByUsername: string | null;
-  permissionLevel: string | null;
-  shareId: string | null;
 }
 
 // Negative IDs identify remote-only shared hosts, absent from the local DB.
@@ -84,6 +79,7 @@ export async function addOpenTab(tab: OpenTabUpsertPayload): Promise<void> {
   await authApi.post("/open-tabs", tab);
 }
 
+/** The caller's own live sessions. */
 export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
   return activeSessionsCache.get(async () => {
     const response = await authApi.get("/open-tabs/active-sessions");
@@ -91,15 +87,15 @@ export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
   });
 }
 
+/** How long a detached terminal session is kept, in minutes. */
+export async function getSessionTimeoutMinutes(): Promise<number> {
+  const response = await authApi.get("/open-tabs/session-timeout");
+  return Number(response.data?.minutes) || 30;
+}
+
 // ============================================================================
 // USER PREFERENCES API
 // ============================================================================
-
-export interface SavedCustomTheme {
-  id: string;
-  name: string;
-  colors: TerminalTheme["colors"];
-}
 
 export interface UserPreferences {
   reopenTabsOnLogin: boolean;
@@ -108,37 +104,18 @@ export interface UserPreferences {
   accentColor?: string | null;
   language?: string | null;
   storageMode?: string | null;
-  commandAutocomplete?: boolean | null;
   commandPaletteEnabled?: boolean | null;
   showHostTags?: boolean | null;
   hostTrayOnClick?: boolean | null;
   pinAppRail?: boolean | null;
   expandAppRailOnHover?: boolean | null;
   showPinAppRailButton?: boolean | null;
-  foldersCollapsed?: boolean | null;
-  confirmSnippetExecution?: boolean | null;
   disableUpdateCheck?: boolean | null;
   confirmTabClose?: boolean | null;
   hiddenRailTabs?: string | null;
-  aiAssistantEnabled?: boolean | null;
-  aiReadOnlyCommands?: boolean | null;
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
-  customThemes?: string | null;
   customKeybindings?: string | null;
-  terminalDefaults?: string | null;
-  rdpDefaults?: string | null;
-  terminalMacros?: string | null;
-}
-
-export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 export function parseCustomKeybindings(
@@ -153,9 +130,19 @@ export function parseCustomKeybindings(
   }
 }
 
+const userPreferencesCache = createTtlRequestCache<UserPreferences>(10_000);
+
+/**
+ * Cached briefly so the loading gate's prefetch and the shell's own read on
+ * mount share one request instead of two, which is what let stale
+ * localStorage flags (hiddenRailTabs, pinAppRail) flash before the real
+ * values landed a moment after the shell first rendered.
+ */
 export async function getUserPreferences(): Promise<UserPreferences> {
-  const response = await authApi.get("/user-preferences");
-  return response.data;
+  return userPreferencesCache.get(async () => {
+    const response = await authApi.get("/user-preferences");
+    return response.data;
+  });
 }
 
 export async function saveUserPreferences(

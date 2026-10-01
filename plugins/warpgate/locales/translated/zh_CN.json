@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Warpgate 网关",
+        "description": "此主机通过 Warpgate SSH 代理连接。Termix 将在认证后自动处理基于浏览器的审批流程。"
+      }
+    }
+  }
+}

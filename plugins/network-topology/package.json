@@ -1,0 +1,32 @@
+{
+  "name": "@termix-plugin/network-topology",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p .",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "cytoscape": "^3.34.3",
+    "lucide-react": "^1.33.0",
+    "react-cytoscapejs": "^2.0.0"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "^1.0.0",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "better-sqlite3": "^13.0.3",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "@termix/plugin-sdk": "^1.0.0",
+    "drizzle-orm": "^0.45.2",
+    "express": "^5.2.1",
+    "react": "^19.2.8"
+  }
+}

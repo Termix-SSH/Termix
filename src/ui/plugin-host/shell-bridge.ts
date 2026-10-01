@@ -1,0 +1,148 @@
+import { useSyncExternalStore } from "react";
+import type { Host } from "@/types/ui-types";
+import type { TabShellCallbacks } from "@/shell/tab-registry";
+
+/**
+ * The live shell, as plugins see it.
+ *
+ * AppShell owns tabs and hosts in React state. It publishes callbacks and
+ * the host list here on every render, and plugin code (the app object, the
+ * SDK hooks, registered host actions) calls through this module, so nothing
+ * has to be threaded through props into a plugin.
+ */
+type Layout = { version: number; [key: string]: unknown };
+
+export interface ShellLayoutProvider {
+  getLayout: () => Layout | null;
+  applyLayout: (
+    layout: Layout,
+    options?: { name?: string },
+  ) => Promise<{ skipped: string[] }>;
+}
+
+let callbacks: TabShellCallbacks | null = null;
+let layoutProvider: ShellLayoutProvider | null = null;
+let hosts: Host[] = [];
+let hostsLoaded = false;
+let ready = false;
+
+const hostListeners = new Set<() => void>();
+const changeListeners = new Set<() => void>();
+const readyListeners = new Set<() => void>();
+
+export function setShellCallbacks(next: TabShellCallbacks | null): void {
+  callbacks = next;
+}
+
+export function setShellLayoutProvider(next: ShellLayoutProvider | null): void {
+  layoutProvider = next;
+}
+
+export function setShellHosts(next: Host[], loaded = true): void {
+  if (next === hosts && loaded === hostsLoaded) return;
+  hosts = next;
+  hostsLoaded = loaded;
+  hostSnapshot = { hosts, loaded: hostsLoaded };
+  for (const listener of hostListeners) listener();
+}
+
+let hostSnapshot = { hosts, loaded: hostsLoaded };
+
+export function useShellHosts(): { hosts: Host[]; loaded: boolean } {
+  return useSyncExternalStore(
+    (listener) => {
+      hostListeners.add(listener);
+      return () => hostListeners.delete(listener);
+    },
+    () => hostSnapshot,
+    () => hostSnapshot,
+  );
+}
+
+export function notifyTabsChanged(): void {
+  for (const listener of changeListeners) listener();
+}
+
+/** Called once the shell has restored its tabs. Late listeners fire at once. */
+export function notifyShellReady(): void {
+  if (ready) return;
+  ready = true;
+  for (const listener of readyListeners) listener();
+}
+
+function subscribe(set: Set<() => void>, listener: () => void): () => void {
+  set.add(listener);
+  return () => {
+    set.delete(listener);
+  };
+}
+
+const noop = () => {};
+
+/**
+ * A plugin hands back the typed record it got from the SDK, which carries
+ * fewer fields than the shell's own host. A tab should get the shell's host,
+ * with whatever the plugin set on top.
+ */
+export function withShellHost(host: Host | null): Host | null {
+  if (!host) return host;
+  const own = shellHost(host.id);
+  if (!own || own === host) return host;
+  const merged: Record<string, unknown> = { ...own };
+  for (const [key, value] of Object.entries(host)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  // A plugin only ever holds its own slice of the settings.
+  merged.pluginSettings = own.pluginSettings;
+  return merged as Host;
+}
+
+/** The shell's own copy of a saved host, with every plugin's settings. */
+export function shellHost(id: string | number | undefined): Host | undefined {
+  if (id === undefined || id === null) return undefined;
+  return hosts.find((entry) => String(entry.id) === String(id));
+}
+
+/** Forwards to the mounted shell; a no-op before it mounts or after logout. */
+export const shell: TabShellCallbacks = {
+  openTab: (host, ...rest) => callbacks?.openTab(withShellHost(host), ...rest),
+  openSingletonTab: (...args) => callbacks?.openSingletonTab(...args),
+  connectHost: (host, ...rest) =>
+    callbacks?.connectHost(withShellHost(host), ...rest),
+  closeTab: (...args) => callbacks?.closeTab(...args),
+  renameTab: (...args) => callbacks?.renameTab(...args),
+  openRailView: (...args) => callbacks?.openRailView(...args),
+  closeRailView: (...args) => callbacks?.closeRailView(...args),
+  openHostEditor: (...args) => callbacks?.openHostEditor?.(...args),
+  saveQuickConnect: (...args) =>
+    callbacks?.saveQuickConnect?.(...args) ?? Promise.resolve(),
+};
+
+export const tabsApi = {
+  openTab: shell.openTab,
+  openSingletonTab: shell.openSingletonTab,
+  connectHost: shell.connectHost,
+  closeTab: shell.closeTab,
+  openRailView: shell.openRailView,
+  getLayout: () => layoutProvider?.getLayout() ?? null,
+  applyLayout: (layout: Layout, options?: { name?: string }) =>
+    layoutProvider
+      ? layoutProvider.applyLayout(layout, options)
+      : Promise.resolve({ skipped: [] as string[] }),
+  onChange: (listener: () => void) => subscribe(changeListeners, listener),
+  onReady: (listener: () => void) => {
+    if (ready) {
+      listener();
+      return noop;
+    }
+    return subscribe(readyListeners, listener);
+  },
+};
+
+/** Test seam, and on logout. */
+export function resetShellBridge(): void {
+  callbacks = null;
+  layoutProvider = null;
+  ready = false;
+  setShellHosts([], false);
+}

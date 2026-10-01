@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Sign in with LDAP",
+  "loginWithProvider": "使用 {{name}} 登入",
+  "loading": "載入中...",
+  "requiredField": "此欄位為必填",
+  "username": "LDAP 使用者名稱",
+  "password": "LDAP 密碼",
+  "signIn": "登入",
+  "permissions": {
+    "manage": {
+      "title": "Manage LDAP directories",
+      "description": "Add, change and remove the LDAP directories people can sign in with."
+    }
+  },
+  "providers": {
+    "docsLink": "檢視文件",
+    "none": "No LDAP directories configured.",
+    "add": "Add Directory",
+    "edit": "Edit Directory",
+    "delete": "Delete Directory",
+    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "name": "顯示名稱",
+    "namePlaceholder": "Company directory",
+    "nameRequired": "A display name is required",
+    "enabled": "已啟用",
+    "save": "Save Directory",
+    "saving": "儲存中…",
+    "saved": "已儲存",
+    "saveFailed": "儲存失敗",
+    "deleted": "已刪除",
+    "deleteFailed": "刪除失敗",
+    "loadFailed": "Failed to load LDAP directories",
+    "cancel": "取消"
+  },
+  "fields": {
+    "host": "LDAP 主機",
+    "port": "連接埠",
+    "useTls": "使用 TLS (LDAPS)",
+    "bindDn": "綁定 DN",
+    "bindPassword": "綁定密碼",
+    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "userSearchBase": "使用者搜尋基底",
+    "userSearchFilter": "使用者搜尋篩選器",
+    "usernameAttr": "使用者名稱屬性",
+    "displayNameAttr": "顯示名稱屬性",
+    "groupSearchBase": "群組搜尋基底",
+    "adminGroup": "管理員群組",
+    "allowedUsers": "允許的使用者"
+  }
+}

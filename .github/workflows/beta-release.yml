@@ -75,17 +75,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build plugin SDK
+        run: npm run build:sdk
+
       - name: Run ESLint
         run: npx eslint .
 
       - name: Type check
         run: npm run type-check
 
+      # Before the tests: the plugin boot tests load the built bundles.
+      - name: Build
+        run: npm run build
+
       - name: Run unit tests
         run: npm run test
 
-      - name: Build
-        run: npm run build
+      - name: Run plugin tests
+        run: npm run test:plugins
 
   create-release:
     needs: [prep, verify]
@@ -105,20 +112,40 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
+          SHA="${{ needs.prep.outputs.sha }}"
           PREV_SHA=$(gh release view beta --repo ${{ github.repository }} --json targetCommitish -q .targetCommitish 2>/dev/null || true)
-          if [ -n "$PREV_SHA" ] && git cat-file -e "$PREV_SHA" 2>/dev/null && git merge-base --is-ancestor "$PREV_SHA" "${{ needs.prep.outputs.sha }}"; then
-            echo "sha=$PREV_SHA" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha=" >> "$GITHUB_OUTPUT"
+          if [ -z "$PREV_SHA" ] || ! git cat-file -e "$PREV_SHA^{commit}" 2>/dev/null; then
+            PREV_SHA=$(git rev-parse -q --verify "refs/tags/beta^{commit}" || true)
           fi
+          # The last beta may come from an older dev branch, so diff from where the two meet.
+          if [ -n "$PREV_SHA" ] && ! git merge-base --is-ancestor "$PREV_SHA" "$SHA"; then
+            PREV_SHA=$(git merge-base "$PREV_SHA" "$SHA" || true)
+          fi
+          echo "Previous beta commit: ${PREV_SHA:-none}"
+          echo "sha=$PREV_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Generate rolling beta release notes
         run: |
-          if [ -n "${{ steps.prev.outputs.sha }}" ]; then
-            CHANGES=$(git log --oneline --no-merges "${{ steps.prev.outputs.sha }}..${{ needs.prep.outputs.sha }}" -- . ':!package-lock.json' | sed 's/^/- /')
-          fi
-          if [ -z "$CHANGES" ]; then
-            CHANGES="- No new commits since the last beta."
+          PREV="${{ steps.prev.outputs.sha }}"
+          SHA="${{ needs.prep.outputs.sha }}"
+          MAX=150
+          if [ -z "$PREV" ]; then
+            CHANGES="- Could not find the previous beta commit."
+          else
+            LOG=$(git log --oneline --no-merges "$PREV..$SHA" -- . ':!package-lock.json')
+            COUNT=$(printf '%s' "$LOG" | grep -c . || true)
+            if [ "$COUNT" -eq 0 ]; then
+              CHANGES="- No new commits since the last beta."
+            else
+              CHANGES=$(printf '%s\n' "$LOG" | head -n "$MAX" | sed 's/^/- /')
+              if [ "$COUNT" -gt "$MAX" ]; then
+                CHANGES="$CHANGES
+          - ...and $((COUNT - MAX)) more"
+              fi
+              CHANGES="$CHANGES
+
+          [Full diff](https://github.com/${{ github.repository }}/compare/$PREV...$SHA)"
+            fi
           fi
 
           cat > BETA_RELEASE_BODY.md << EOF
@@ -143,6 +170,9 @@ jobs:
           TAG="beta"
           TITLE="Beta (rolling) - ${{ needs.prep.outputs.beta_version }}"
           if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+            # --target only applies to a new tag, so move the existing one by hand.
+            gh api -X PATCH "repos/${{ github.repository }}/git/refs/tags/$TAG" \
+              -f sha="${{ needs.prep.outputs.sha }}" -F force=true >/dev/null
             gh release edit "$TAG" --repo ${{ github.repository }} \
               --title "$TITLE" --notes-file BETA_RELEASE_BODY.md \
               --prerelease --target "${{ needs.prep.outputs.sha }}"

@@ -1,0 +1,53 @@
+{
+  "id": "network-topology",
+  "name": "Network Topology",
+  "version": "1.0.0",
+  "description": "Show your hosts and how they connect as an interactive graph.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Infrastructure",
+  "icon": "Network",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["db:own", "network:serve", "ui:surface"],
+  "provides": [
+    {
+      "service": "network-topology.graph",
+      "version": "1.0.0",
+      "permission": "network-topology.use"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "network_graph",
+        "titleKey": "nav.networkGraph",
+        "icon": "Network",
+        "openFrom": ["rail", "palette"]
+      }
+    ],
+    "dashboardCards": [
+      {
+        "id": "network_graph",
+        "titleKey": "dashboard.networkGraph",
+        "icon": "Network"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "syncEntities": ["networkTopology"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

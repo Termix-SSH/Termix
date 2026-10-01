@@ -1,9 +1,9 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { parseSshOptions } from "./ssh-options.js";
 import { findUsableCredential } from "./usable-credential.js";
 import { resolveExternalSecretRefs } from "./external-secrets.js";
 import {
   createCurrentHostResolutionRepository,
-  createCurrentVaultProfileRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
 import type { HostResolutionHostRecord } from "../database/repositories/host-resolution-repository.js";
@@ -13,10 +13,9 @@ import { resolveRecipientSharedHostAuthentication } from "../utils/shared-host-a
 import {
   pickResolvedPassword,
   pickResolvedUsername,
-  expandOidcUsername,
+  expandExternalUsername,
 } from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
-import type { HostAction } from "../utils/permission-manager.js";
 
 const sshLogger = logger;
 
@@ -97,9 +96,6 @@ export async function resolveHostById(
   if (!ownerEquivalent) {
     // Owner-only operational secrets are never shared.
     host.sudoPassword = null;
-    host.autostartPassword = null;
-    host.autostartKey = null;
-    host.autostartKeyPassword = null;
   }
 
   // Parse JSON fields
@@ -110,20 +106,6 @@ export async function resolveHostById(
       host.jumpHosts = [];
     }
   }
-  if (typeof host.tunnelConnections === "string") {
-    try {
-      host.tunnelConnections = JSON.parse(host.tunnelConnections as string);
-    } catch {
-      host.tunnelConnections = [];
-    }
-  }
-  if (typeof host.statsConfig === "string" && host.statsConfig) {
-    try {
-      host.statsConfig = JSON.parse(host.statsConfig as string);
-    } catch {
-      host.statsConfig = undefined;
-    }
-  }
   if (typeof host.terminalConfig === "string" && host.terminalConfig) {
     try {
       host.terminalConfig = JSON.parse(host.terminalConfig as string);
@@ -132,28 +114,30 @@ export async function resolveHostById(
     }
   }
   if (
-    !ownerEquivalent &&
     host.terminalConfig &&
     typeof host.terminalConfig === "object" &&
     !Array.isArray(host.terminalConfig)
   ) {
-    host.terminalConfig = {
-      ...(host.terminalConfig as Record<string, unknown>),
-      sudoPassword: null,
-    };
+    // 2.8 editors kept the sudo password inside terminal_config. It is only
+    // ever handed out as sudoPassword, and only to the owner.
+    const { sudoPassword: legacySudo, ...rest } = host.terminalConfig as Record<
+      string,
+      unknown
+    >;
+    if (ownerEquivalent && !host.sudoPassword && legacySudo) {
+      host.sudoPassword = legacySudo;
+    }
+    host.terminalConfig = rest;
   }
+  // A row the boot copy has not reached yet still has them in terminal_config.
+  host.sshOptions = parseSshOptions(
+    host.sshOptions != null ? host.sshOptions : host.terminalConfig,
+  );
   if (typeof host.socks5ProxyChain === "string" && host.socks5ProxyChain) {
     try {
       host.socks5ProxyChain = JSON.parse(host.socks5ProxyChain as string);
     } catch {
       host.socks5ProxyChain = [];
-    }
-  }
-  if (typeof host.quickActions === "string" && host.quickActions) {
-    try {
-      host.quickActions = JSON.parse(host.quickActions as string);
-    } catch {
-      host.quickActions = [];
     }
   }
   if (typeof host.portKnockSequence === "string" && host.portKnockSequence) {
@@ -226,7 +210,7 @@ export async function resolveHostById(
     }
   }
 
-  host.username = await expandOidcUsername(
+  host.username = await expandExternalUsername(
     host.username as string | undefined,
     ownerEquivalent ? ownerId : userId,
   );
@@ -239,24 +223,19 @@ export async function resolveHostById(
     sharedAuthResolution === "recipient-override" ? userId : ownerId,
   );
 
-  // Resolve a Vault SSH signer profile (shared settings, no secrets). The
-  // certificate itself is obtained per-user at connect time via Vault OIDC.
-  if (host.vaultProfileId && sharedAuthResolution !== "recipient-override") {
-    try {
-      const profile = await createCurrentVaultProfileRepository().findById(
-        host.vaultProfileId as number,
-      );
-      if (profile) {
-        (host as Record<string, unknown>).vaultProfile = profile;
-        host.authType = "vault";
-      }
-    } catch (e) {
-      sshLogger.warn("Failed to resolve vault profile for host", {
-        operation: "host_resolver_vault_profile",
-        hostId,
-        error: getErrorMessage(e, "Unknown"),
-      });
-    }
+  // Keyboard-interactive handlers run synchronously mid-handshake and can
+  // only read their host settings from here.
+  try {
+    const { loadHostPluginSettings } =
+      await import("../database/routes/host-plugin-settings.js");
+    const settings = (await loadHostPluginSettings([hostId])).get(hostId);
+    if (settings) host.pluginSettings = settings;
+  } catch (e) {
+    sshLogger.warn("Failed to load plugin settings for host", {
+      operation: "host_resolver_plugin_settings",
+      hostId,
+      error: getErrorMessage(e, "Unknown"),
+    });
   }
 
   return host as unknown as SSHHost;
@@ -335,30 +314,4 @@ async function resolveRecipientSshAuth(
   }
 
   return null;
-}
-
-/**
- * Check if a user has access to a host (owner or shared access).
- */
-export async function checkHostAccess(
-  hostId: number,
-  userId: string,
-  hostUserId: string,
-  requiredPermission: HostAction = "connect",
-): Promise<boolean> {
-  if (userId === hostUserId) return true;
-
-  try {
-    const { PermissionManager } =
-      await import("../utils/permission-manager.js");
-    const permissionManager = PermissionManager.getInstance();
-    const accessInfo = await permissionManager.canAccessHost(
-      userId,
-      hostId,
-      requiredPermission,
-    );
-    return accessInfo.hasAccess;
-  } catch {
-    return false;
-  }
 }

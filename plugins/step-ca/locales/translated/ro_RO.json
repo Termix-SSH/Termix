@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Pasul CA"
+  },
+  "editor": {
+    "label": "Pasul CA",
+    "description": "Conectați-vă prin intermediul furnizorului de identitate și permiteți ca autoritatea de certificare Step CA să emită un certificat SSH de scurtă durată pentru această gazdă. Adresa URL a autorității de certificare, amprenta rădăcină și furnizorul OIDC sunt setate de un administrator în secțiunea Step CA din Setări administrator.",
+    "docs": "Vizualizați documentele"
+  },
+  "dialog": {
+    "title": "Pasul Autentificare CA necesară",
+    "description": "Finalizați autentificarea în browser pentru a continua. Certificatul rămâne valabil atât timp cât permite autoritatea de certificare (CA).",
+    "openBrowser": "Deschideți browserul pentru autentificare",
+    "waiting": "Se așteaptă autentificarea în browser...",
+    "authenticating": "Se procesează autentificarea..."
+  },
+  "errors": {
+    "authFailed": "Autentificarea a eșuat. Verificați acreditările și încercați din nou.",
+    "timeout": "Autentificarea a expirat. Vă rugăm să încercați din nou."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "URL-ul CA",
+      "description": "URL-ul https al autorității dvs. de certificare Smallstep. Lăsați URL-ul CA, amprenta și aprovizionatorul necompletate pentru a dezactiva Step CA.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Amprentă digitală rădăcină (SHA-256)",
+      "description": "Amprenta electronică a certificatului rădăcină, așa cum se arată în pasul ca bootstrap."
+    },
+    "provisioner": {
+      "label": "Numele furnizorului OIDC",
+      "description": "Numele furnizorului OIDC al CA. Apoi, alegeți „Step CA” ca tip de autentificare al gazdei."
+    },
+    "privateEndpoints": {
+      "label": "Gazde private permise de Step CA",
+      "description": "Gazde private pe care fluxul de certificate Step CA le poate contacta: CA-ul în sine și, dacă este intern, furnizorul dvs. de identitate. Separați-le prin virgule sau linii noi."
+    },
+    "redirectUri": {
+      "label": "URI de redirecționare",
+      "description": "Înregistrați această adresă URL ca URI de redirecționare permisă la furnizorul de identitate din spatele furnizorului OIDC."
+    },
+    "legacyCallback": {
+      "label": "Folosește vechiul URI de redirecționare",
+      "description": "Continuă să trimiți /host/step-ca-callback, URI-ul de redirecționare folosit înainte de versiunea 2.9. Dezactivează această opțiune odată ce furnizorul de identitate îl permite pe cel nou."
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "editor": {
+    "profile": "Profil podepisujícího trezoru",
+    "selectProfile": "Vyberte profil úložiště...",
+    "hint": "Nastavení pocházejí ze sdíleného profilu; po připojení se do úložiště přihlásíte přes OIDC. Žádné tajné kódy se neukládají.",
+    "docs": "Zobrazit dokumenty",
+    "sharedProfile": "{{name}} (sdílené)"
+  },
+  "profiles": {
+    "new": "Nový profil",
+    "manage": "Správa profilů úložiště",
+    "name": "Přátelský název",
+    "vaultAddr": "Adresa trezoru",
+    "namespace": "Jmenný prostor",
+    "oidcMount": "Připojení autorizace OIDC",
+    "oidcRole": "Role OIDC",
+    "sshMount": "SSH tajemství Mount",
+    "sshRole": "Role SSH podepisujícího",
+    "validPrincipals": "Platné principy",
+    "keyType": "Typ dočasného klíče",
+    "shareWithAll": "Sdílet se všemi uživateli",
+    "create": "Vytvořit profil",
+    "created": "Profil úložiště vytvořen",
+    "saved": "Profil trezoru uložen",
+    "deleted": "Profil trezoru smazán",
+    "saveFailed": "Uložení profilu úložiště se nezdařilo.",
+    "deleteFailed": "Profil v úložišti se nepodařilo smazat.",
+    "save": "Uložit profil",
+    "validationError": "Jméno, adresa trezoru a role SSH signatáře jsou povinné.",
+    "none": "Zatím žádné profily v úložišti Vault.",
+    "sharedBadge": "sdílené",
+    "edit": "Upravit",
+    "delete": "Vymazat"
+  },
+  "hosts": {
+    "filterAuthVault": "Klenba"
+  },
+  "dialog": {
+    "title": "Vyžaduje se přihlášení do trezoru",
+    "description": "Otevřelo se okno pro přihlášení do HashiCorp Vault. Dokončete přihlášení tam; toto připojení bude automaticky pokračovat.",
+    "failed": "Ověření v trezoru se nezdařilo. Zkuste to prosím znovu.",
+    "reopen": "Znovu otevřít přihlašovací okno"
+  },
+  "permissions": {
+    "use": {
+      "title": "Používejte podepisování přes SSH v úložišti",
+      "description": "Vytvořte profily podepisujících v aplikaci Vault a připojte se k hostitelům, kteří ji používají."
+    },
+    "share": {
+      "title": "Sdílení profilů úložiště",
+      "description": "Označte profil podepisujícího v úložišti Vault jako sdílený, aby si ho mohl vybrat každý uživatel."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "URI přesměrování",
+      "description": "Přidejte tuto URL adresu do allowed_redirect_uris v každé roli OIDC úložiště, se kterou se Termix přihlašuje."
+    },
+    "legacyCallback": {
+      "label": "Použít starý identifikátor URI pro přesměrování",
+      "description": "Pokračujte v odesílání /vault/oidc/callback, což je URI pro přesměrování používané před verzí 2.9. Jakmile vaše role v úložišti povolí použití nového URI, vypněte tuto funkci."
+    },
+    "host": {
+      "profileId": {
+        "label": "Profil podepisujícího v trezoru"
+      }
+    }
+  }
+}

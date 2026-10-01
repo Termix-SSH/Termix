@@ -1,0 +1,1813 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useLayoutEffect,
+} from "react";
+import { createPortal } from "react-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { cn } from "@termix/plugin-sdk/ui";
+import {
+  Folder,
+  File,
+  FileText,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  Archive,
+  Code,
+  Settings,
+  Download,
+  Upload,
+  ArrowUp,
+  CornerLeftUp,
+  ArrowDown,
+  FileSymlink,
+  Move,
+  GitCompare,
+} from "lucide-react";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
+import type { FileItem } from "./host-types";
+import type { CreateIntent } from "./file-manager-types.ts";
+import { formatFileSize } from "./file-manager-utils.ts";
+import {
+  beginRemoteFilesDrag,
+  isLocalFilesDrag,
+  parseLocalFilesDragPayload,
+} from "./local-transfer-utils.ts";
+import {
+  useResizableColumns,
+  type ResizableColumnSpec,
+} from "./hooks/useResizableColumns.ts";
+import { ColumnResizeHandle } from "./components/ColumnResizeHandle.tsx";
+import { ColumnVisibilityMenu } from "./components/ColumnVisibilityMenu.tsx";
+
+// Fixed list-view columns after the flexible name column; user-resizable.
+const LIST_COLUMNS: ResizableColumnSpec[] = [
+  {
+    key: "modified",
+    labelKey: "fileManager.modified",
+    defaultWidth: 120,
+    minWidth: 70,
+  },
+  {
+    key: "owner",
+    labelKey: "fileManager.owner",
+    defaultWidth: 150,
+    minWidth: 60,
+  },
+  { key: "size", labelKey: "fileManager.size", defaultWidth: 80, minWidth: 56 },
+  {
+    key: "permissions",
+    labelKey: "fileManager.permissions",
+    defaultWidth: 90,
+    minWidth: 70,
+  },
+];
+const LIST_COLUMNS_STORAGE_KEY = "termix:file-manager:columns:remote";
+
+interface DragState {
+  /**
+   * internal: rows of this grid being moved around
+   * external: files dragged in from the OS
+   * local: entries dragged from the desktop app's local pane
+   */
+  type: "none" | "internal" | "external" | "local";
+  files: FileItem[];
+  draggedFiles?: FileItem[];
+  target?: FileItem;
+  counter: number;
+  mousePosition?: { x: number; y: number };
+}
+
+interface FileManagerGridProps {
+  files: FileItem[];
+  selectedFiles: FileItem[];
+  onFileOpen: (file: FileItem) => void;
+  onFileIntent?: (file: FileItem) => void;
+  onSelectionChange: (files: FileItem[]) => void;
+  onRefresh: () => void;
+  onUpload?: (files: FileList) => void;
+  /** OS drop that contains at least one directory (needs a recursive walk). */
+  onUploadItems?: (entries: FileSystemEntry[]) => void;
+  /** Entries dragged from the local pane; `targetDir` when dropped on a folder. */
+  onLocalFilesDrop?: (localPaths: string[], targetDir?: FileItem) => void;
+  onDownload?: (files: FileItem[]) => void;
+  onContextMenu?: (event: React.MouseEvent, file?: FileItem) => void;
+  viewMode?: "grid" | "list";
+  density?: "comfortable" | "compact";
+  onRename?: (file: FileItem, newName: string) => void;
+  editingFile?: FileItem | null;
+  onStartEdit?: (file: FileItem) => void;
+  onCancelEdit?: () => void;
+  onDelete?: (files: FileItem[]) => void;
+  onCopy?: (files: FileItem[]) => void;
+  onCut?: (files: FileItem[]) => void;
+  onPaste?: () => void;
+  onUndo?: () => void;
+  onFileDrop?: (draggedFiles: FileItem[], targetFile: FileItem) => void;
+  onFileDiff?: (file1: FileItem, file2: FileItem) => void;
+  onSystemDragStart?: (files: FileItem[]) => void;
+  onSystemDragEnd?: (e: DragEvent, files: FileItem[]) => void;
+  hasClipboard?: boolean;
+  createIntent?: CreateIntent | null;
+  onConfirmCreate?: (name: string) => void;
+  onCancelCreate?: () => void;
+  onNewFile?: () => void;
+  onNewFolder?: () => void;
+  sortBy?: "name" | "modified" | "size";
+  sortOrder?: "asc" | "desc";
+  onSortChange?: (field: "name" | "modified" | "size") => void;
+  /**
+   * Parent of the listed directory. When set (together with onNavigateUp) a
+   * pinned ".." entry is shown first; double-click goes up and drops on it
+   * target the parent folder.
+   */
+  parentPath?: string | null;
+  onNavigateUp?: () => void;
+}
+
+const getFileTypeColor = (file: FileItem): string => {
+  if (file.type === "directory") {
+    return "text-red-400";
+  }
+
+  if (file.type === "link") {
+    return "text-green-400";
+  }
+
+  return "text-blue-400";
+};
+
+const getFileIcon = (
+  file: FileItem,
+  viewMode: "grid" | "list" = "grid",
+  compact = false,
+) => {
+  const iconClass = compact
+    ? viewMode === "grid"
+      ? "size-6"
+      : "size-4"
+    : viewMode === "grid"
+      ? "size-8"
+      : "size-6";
+  const colorClass = getFileTypeColor(file);
+
+  if (file.type === "directory") {
+    return <Folder className={`${iconClass} ${colorClass}`} />;
+  }
+
+  if (file.type === "link") {
+    return <FileSymlink className={`${iconClass} ${colorClass}`} />;
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase();
+
+  switch (ext) {
+    case "txt":
+    case "md":
+    case "readme":
+      return <FileText className={`${iconClass} ${colorClass}`} />;
+    case "png":
+    case "jpg":
+    case "jpeg":
+    case "gif":
+    case "bmp":
+    case "svg":
+      return <FileImage className={`${iconClass} ${colorClass}`} />;
+    case "mp4":
+    case "avi":
+    case "mkv":
+    case "mov":
+      return <FileVideo className={`${iconClass} ${colorClass}`} />;
+    case "mp3":
+    case "wav":
+    case "flac":
+    case "ogg":
+      return <FileAudio className={`${iconClass} ${colorClass}`} />;
+    case "zip":
+    case "tar":
+    case "gz":
+    case "rar":
+    case "7z":
+      return <Archive className={`${iconClass} ${colorClass}`} />;
+    case "js":
+    case "ts":
+    case "jsx":
+    case "tsx":
+    case "py":
+    case "java":
+    case "cpp":
+    case "c":
+    case "cs":
+    case "php":
+    case "rb":
+    case "go":
+    case "rs":
+      return <Code className={`${iconClass} ${colorClass}`} />;
+    case "json":
+    case "xml":
+    case "yaml":
+    case "yml":
+    case "toml":
+    case "ini":
+    case "conf":
+    case "config":
+      return <Settings className={`${iconClass} ${colorClass}`} />;
+    default:
+      return <File className={`${iconClass} ${colorClass}`} />;
+  }
+};
+
+export function FileManagerGrid({
+  files,
+  selectedFiles,
+  onFileOpen,
+  onFileIntent,
+  onSelectionChange,
+  onRefresh,
+  onUpload,
+  onUploadItems,
+  onLocalFilesDrop,
+  onDownload,
+  onContextMenu,
+  viewMode = "grid",
+  density = "comfortable",
+  onRename,
+  editingFile,
+  onStartEdit,
+  onCancelEdit,
+  onDelete,
+  onCopy,
+  onCut,
+  onPaste,
+  onUndo,
+  onFileDrop,
+  onFileDiff,
+  onSystemDragEnd,
+  hasClipboard,
+  createIntent,
+  onConfirmCreate,
+  onCancelCreate,
+  onNewFile,
+  onNewFolder,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  parentPath,
+  onNavigateUp,
+}: FileManagerGridProps) {
+  const { t } = useTranslation();
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [editingName, setEditingName] = useState("");
+  const [gridCols, setGridCols] = useState(4);
+
+  const compact = density === "compact";
+  const LIST_ROW_H = compact ? 29 : 41;
+  const GRID_ROW_H = compact ? 76 : 112;
+  const LIST_HEADER_H = compact ? 25 : 33;
+  const CONTENT_PAD = compact ? 8 : 16;
+  const GRID_GAP = compact ? 8 : 16;
+  const GRID_CELL = compact ? 76 : 112;
+
+  const [dragState, setDragState] = useState<DragState>({
+    type: "none",
+    files: [],
+    counter: 0,
+  });
+
+  // Responsive column count for grid virtualization (matches Tailwind breakpoints roughly).
+  useEffect(() => {
+    if (viewMode !== "grid") return;
+    const el = gridRef.current;
+    if (!el) return;
+
+    const updateCols = () => {
+      const w = el.clientWidth - CONTENT_PAD * 2;
+      const n = Math.max(
+        2,
+        Math.min(10, Math.floor((w + GRID_GAP) / GRID_CELL)),
+      );
+      setGridCols(n);
+    };
+    updateCols();
+    const ro = new ResizeObserver(updateCols);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [viewMode, CONTENT_PAD, GRID_GAP, GRID_CELL]);
+
+  const gridRowCount = useMemo(
+    () => (viewMode === "grid" ? Math.ceil(files.length / gridCols) : 0),
+    [viewMode, files.length, gridCols],
+  );
+
+  const listVirtualizer = useVirtualizer({
+    count: viewMode === "list" ? files.length : 0,
+    getScrollElement: () => gridRef.current,
+    estimateSize: () => LIST_ROW_H,
+    overscan: 16,
+    getItemKey: (index) => files[index]?.path ?? index,
+    enabled: viewMode === "list" && files.length > 0,
+  });
+
+  const listColumns = useResizableColumns({
+    storageKey: LIST_COLUMNS_STORAGE_KEY,
+    columns: LIST_COLUMNS,
+  });
+  const [columnMenu, setColumnMenu] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
+  const closeColumnMenu = useCallback(
+    () => setColumnMenu((prev) => ({ ...prev, visible: false })),
+    [],
+  );
+
+  const gridVirtualizer = useVirtualizer({
+    count: gridRowCount,
+    getScrollElement: () => gridRef.current,
+    estimateSize: () => GRID_ROW_H,
+    overscan: 6,
+    getItemKey: (index) => `row-${index}`,
+    enabled: viewMode === "grid" && files.length > 0,
+  });
+
+  useLayoutEffect(() => {
+    if (viewMode === "list") listVirtualizer.measure();
+    else gridVirtualizer.measure();
+  }, [
+    viewMode,
+    density,
+    files.length,
+    editingFile?.path,
+    createIntent,
+    gridCols,
+  ]);
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (dragState.type === "internal" && dragState.files.length > 0) {
+        setDragState((prev) => ({
+          ...prev,
+          mousePosition: { x: e.clientX, y: e.clientY },
+        }));
+      }
+    };
+
+    if (dragState.type === "internal" && dragState.files.length > 0) {
+      document.addEventListener("mousemove", handleGlobalMouseMove);
+      return () =>
+        document.removeEventListener("mousemove", handleGlobalMouseMove);
+    }
+  }, [dragState.type, dragState.files.length]);
+
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingFile) {
+      setEditingName(editingFile.name);
+      setTimeout(() => {
+        editInputRef.current?.focus();
+        editInputRef.current?.select();
+      }, 0);
+    }
+  }, [editingFile]);
+
+  const handleEditConfirm = () => {
+    if (
+      editingFile &&
+      onRename &&
+      editingName.trim() &&
+      editingName !== editingFile.name
+    ) {
+      onRename(editingFile, editingName.trim());
+    }
+    onCancelEdit?.();
+  };
+
+  const handleEditCancel = () => {
+    setEditingName("");
+    onCancelEdit?.();
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleEditConfirm();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleEditCancel();
+    }
+  };
+
+  const handleFileDragStart = (e: React.DragEvent, file: FileItem) => {
+    const filesToDrag = selectedFiles.includes(file) ? selectedFiles : [file];
+
+    setDragState({
+      type: "internal",
+      files: filesToDrag,
+      draggedFiles: filesToDrag,
+      counter: 0,
+      mousePosition: { x: e.clientX, y: e.clientY },
+    });
+
+    beginRemoteFilesDrag(
+      e.dataTransfer,
+      filesToDrag.map((f) => f.path),
+    );
+  };
+
+  const handleFileDragOver = (e: React.DragEvent, targetFile: FileItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (
+      dragState.type === "internal" &&
+      !dragState.files.some((f) => f.path === targetFile.path)
+    ) {
+      setDragState((prev) => ({ ...prev, target: targetFile }));
+      e.dataTransfer.dropEffect = "move";
+    } else if (isLocalFilesDrag(e.dataTransfer)) {
+      e.dataTransfer.dropEffect = "copy";
+      const nextTarget =
+        targetFile.type === "directory" ? targetFile : undefined;
+      if (
+        dragState.type !== "local" ||
+        dragState.target?.path !== nextTarget?.path
+      ) {
+        setDragState((prev) => ({
+          ...prev,
+          type: "local",
+          target: nextTarget,
+        }));
+      }
+    }
+  };
+
+  const handleFileDragLeave = (e: React.DragEvent, targetFile: FileItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (dragState.target?.path === targetFile.path) {
+      setDragState((prev) => ({ ...prev, target: undefined }));
+    }
+  };
+
+  const handleFileDrop = (e: React.DragEvent, targetFile: FileItem) => {
+    // OS drops belong to the pane's upload handler, even over an existing row.
+    if (dragState.type !== "internal" && !isLocalFilesDrag(e.dataTransfer))
+      return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isLocalFilesDrag(e.dataTransfer)) {
+      const localPaths = parseLocalFilesDragPayload(
+        e.dataTransfer.getData("text/plain"),
+      );
+      setDragState({ type: "none", files: [], counter: 0 });
+      if (localPaths) {
+        onLocalFilesDrop?.(
+          localPaths,
+          targetFile.type === "directory" ? targetFile : undefined,
+        );
+      }
+      return;
+    }
+
+    if (dragState.type !== "internal" || dragState.files.length === 0) {
+      setDragState((prev) => ({ ...prev, target: undefined }));
+      return;
+    }
+
+    const isDroppingOnSelf = dragState.files.some(
+      (f) => f.path === targetFile.path,
+    );
+    if (isDroppingOnSelf) {
+      setDragState({ type: "none", files: [], counter: 0 });
+      return;
+    }
+
+    if (targetFile.type === "directory") {
+      onFileDrop?.(dragState.files, targetFile);
+    } else if (
+      targetFile.type === "file" &&
+      dragState.files.length === 1 &&
+      dragState.files[0].type === "file"
+    ) {
+      onFileDiff?.(dragState.files[0], targetFile);
+    }
+
+    setDragState({ type: "none", files: [], counter: 0 });
+  };
+
+  const handleFileDragEnd = (e: React.DragEvent) => {
+    const draggedFiles = dragState.draggedFiles || [];
+    setDragState({ type: "none", files: [], counter: 0 });
+
+    onSystemDragEnd?.(e.nativeEvent, draggedFiles);
+  };
+
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [justFinishedSelecting, setJustFinishedSelecting] = useState(false);
+
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isInternalDrag = dragState.type === "internal";
+
+      if (!isInternalDrag) {
+        const nextType = isLocalFilesDrag(e.dataTransfer)
+          ? "local"
+          : "external";
+        setDragState((prev) => ({
+          ...prev,
+          type: nextType,
+          counter: prev.counter + 1,
+        }));
+      }
+    },
+    [dragState.type],
+  );
+
+  const handleDragLeave = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isInternalDrag = dragState.type === "internal";
+
+      if (
+        !isInternalDrag &&
+        (dragState.type === "external" || dragState.type === "local")
+      ) {
+        setDragState((prev) => {
+          const newCounter = prev.counter - 1;
+          return {
+            ...prev,
+            counter: newCounter,
+            type: newCounter <= 0 ? "none" : prev.type,
+            target: newCounter <= 0 ? undefined : prev.target,
+          };
+        });
+      }
+    },
+    [dragState.type],
+  );
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isInternalDrag = dragState.type === "internal";
+
+      if (isInternalDrag) {
+        setDragState((prev) => ({
+          ...prev,
+          mousePosition: { x: e.clientX, y: e.clientY },
+        }));
+        e.dataTransfer.dropEffect = "move";
+      } else {
+        e.dataTransfer.dropEffect = "copy";
+      }
+    },
+    [dragState.type],
+  );
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (createIntent) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT") {
+          e.preventDefault();
+        }
+        return;
+      }
+      if (e.target === e.currentTarget && e.button === 0) {
+        e.preventDefault();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const startX = e.clientX - rect.left;
+        const startY = e.clientY - rect.top;
+
+        setIsSelecting(true);
+        setSelectionStart({ x: startX, y: startY });
+        setSelectionRect({ x: startX, y: startY, width: 0, height: 0 });
+
+        setJustFinishedSelecting(false);
+      }
+    },
+    [createIntent],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isSelecting && selectionStart && gridRef.current) {
+        const rect = gridRef.current.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+
+        const x = Math.min(selectionStart.x, currentX);
+        const y = Math.min(selectionStart.y, currentY);
+        const width = Math.abs(currentX - selectionStart.x);
+        const height = Math.abs(currentY - selectionStart.y);
+
+        setSelectionRect({ x, y, width, height });
+
+        if (gridRef.current) {
+          const selectionBox = {
+            left: x,
+            top: y,
+            right: x + width,
+            bottom: y + height,
+          };
+
+          // Virtual list: only visible DOM nodes exist. For list mode compute
+          // selection from scroll position + fixed row height so drag-select
+          // still covers off-screen rows.
+          if (viewMode === "list" && files.length > 0) {
+            const scrollTop = gridRef.current.scrollTop;
+            const createExtra = createIntent ? LIST_ROW_H : 0;
+            const contentTop =
+              selectionBox.top +
+              scrollTop -
+              CONTENT_PAD -
+              LIST_HEADER_H -
+              createExtra;
+            const contentBottom =
+              selectionBox.bottom +
+              scrollTop -
+              CONTENT_PAD -
+              LIST_HEADER_H -
+              createExtra;
+            const startIdx = Math.max(0, Math.floor(contentTop / LIST_ROW_H));
+            const endIdx = Math.min(
+              files.length - 1,
+              Math.ceil(contentBottom / LIST_ROW_H),
+            );
+            if (endIdx >= startIdx) {
+              onSelectionChange(files.slice(startIdx, endIdx + 1));
+            } else {
+              onSelectionChange([]);
+            }
+            return;
+          }
+
+          if (viewMode === "grid" && files.length > 0) {
+            const scrollTop = gridRef.current.scrollTop;
+            const createExtra = createIntent ? GRID_ROW_H : 0;
+            const contentTop =
+              selectionBox.top + scrollTop - CONTENT_PAD - createExtra;
+            const contentBottom =
+              selectionBox.bottom + scrollTop - CONTENT_PAD - createExtra;
+            const startRow = Math.max(0, Math.floor(contentTop / GRID_ROW_H));
+            const endRow = Math.min(
+              gridRowCount - 1,
+              Math.ceil(contentBottom / GRID_ROW_H),
+            );
+            // Column range from X within padded content.
+            const contentLeft = selectionBox.left - CONTENT_PAD;
+            const contentRight = selectionBox.right - CONTENT_PAD;
+            const cellW =
+              (gridRef.current.clientWidth - CONTENT_PAD * 2 + GRID_GAP) /
+              gridCols;
+            const startCol = Math.max(0, Math.floor(contentLeft / cellW));
+            const endCol = Math.min(
+              gridCols - 1,
+              Math.ceil(contentRight / cellW),
+            );
+            const selected: FileItem[] = [];
+            for (let r = startRow; r <= endRow; r++) {
+              for (let c = startCol; c <= endCol; c++) {
+                const idx = r * gridCols + c;
+                if (idx >= 0 && idx < files.length) selected.push(files[idx]);
+              }
+            }
+            onSelectionChange(selected);
+            return;
+          }
+
+          const fileElements =
+            gridRef.current.querySelectorAll("[data-file-path]");
+          const selectedPaths: string[] = [];
+
+          fileElements.forEach((element) => {
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = gridRef.current!.getBoundingClientRect();
+
+            const relativeElementRect = {
+              left: elementRect.left - containerRect.left,
+              top: elementRect.top - containerRect.top,
+              right: elementRect.right - containerRect.left,
+              bottom: elementRect.bottom - containerRect.top,
+            };
+
+            const intersects = !(
+              relativeElementRect.right < selectionBox.left ||
+              relativeElementRect.left > selectionBox.right ||
+              relativeElementRect.bottom < selectionBox.top ||
+              relativeElementRect.top > selectionBox.bottom
+            );
+
+            if (intersects) {
+              const filePath = element.getAttribute("data-file-path");
+              if (filePath) {
+                selectedPaths.push(filePath);
+              }
+            }
+          });
+
+          const newSelection = files.filter((file) =>
+            selectedPaths.includes(file.path),
+          );
+          onSelectionChange(newSelection);
+        }
+      }
+    },
+    [
+      isSelecting,
+      selectionStart,
+      files,
+      onSelectionChange,
+      viewMode,
+      GRID_GAP,
+      createIntent,
+      gridCols,
+      gridRowCount,
+    ],
+  );
+
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      if (isSelecting) {
+        setIsSelecting(false);
+        setSelectionStart(null);
+        setSelectionRect(null);
+
+        const startPos = selectionStart;
+        if (startPos) {
+          const rect = gridRef.current?.getBoundingClientRect();
+          if (rect) {
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+            const distance = Math.sqrt(
+              Math.pow(endX - startPos.x, 2) + Math.pow(endY - startPos.y, 2),
+            );
+
+            if (distance > 5) {
+              setJustFinishedSelecting(true);
+              setTimeout(() => {
+                setJustFinishedSelecting(false);
+              }, 50);
+            } else {
+              setJustFinishedSelecting(false);
+            }
+          }
+        }
+      }
+    },
+    [isSelecting, selectionStart],
+  );
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isSelecting) {
+        setIsSelecting(false);
+        setSelectionStart(null);
+        setSelectionRect(null);
+
+        setJustFinishedSelecting(true);
+        setTimeout(() => {
+          setJustFinishedSelecting(false);
+        }, 50);
+      }
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isSelecting && selectionStart && gridRef.current) {
+        const rect = gridRef.current.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+
+        const x = Math.min(selectionStart.x, currentX);
+        const y = Math.min(selectionStart.y, currentY);
+        const width = Math.abs(currentX - selectionStart.x);
+        const height = Math.abs(currentY - selectionStart.y);
+
+        setSelectionRect({ x, y, width, height });
+      }
+    };
+
+    if (isSelecting) {
+      document.addEventListener("mouseup", handleGlobalMouseUp);
+      document.addEventListener("mousemove", handleGlobalMouseMove);
+
+      return () => {
+        document.removeEventListener("mouseup", handleGlobalMouseUp);
+        document.removeEventListener("mousemove", handleGlobalMouseMove);
+      };
+    }
+  }, [isSelecting, selectionStart]);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (dragState.type === "internal") {
+        setDragState({ type: "none", files: [], counter: 0 });
+        return;
+      }
+
+      // Read everything off dataTransfer before any setState: the browser
+      // clears it once the handler unwinds and a state flush can get there
+      // first.
+      const localPaths = isLocalFilesDrag(e.dataTransfer)
+        ? parseLocalFilesDragPayload(e.dataTransfer.getData("text/plain"))
+        : null;
+      const files = e.dataTransfer.files;
+      const entries: FileSystemEntry[] = [];
+      if (onUploadItems && e.dataTransfer.items?.length > 0) {
+        for (const item of Array.from(e.dataTransfer.items)) {
+          const entry = item.webkitGetAsEntry?.();
+          if (entry) entries.push(entry);
+        }
+      }
+
+      setDragState({ type: "none", files: [], counter: 0 });
+
+      if (localPaths) {
+        onLocalFilesDrop?.(localPaths);
+        return;
+      }
+      if (onUploadItems && entries.some((entry) => entry.isDirectory)) {
+        onUploadItems(entries);
+        return;
+      }
+      if (onUpload && files.length > 0) {
+        onUpload(files);
+      }
+    },
+    [onUpload, onUploadItems, onLocalFilesDrop, dragState],
+  );
+
+  const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    onFileIntent?.(file);
+
+    if (gridRef.current && !createIntent) {
+      gridRef.current.focus();
+    }
+
+    if (event.detail === 2) {
+      onFileOpen(file);
+    } else {
+      const multiSelect = event.ctrlKey || event.metaKey;
+      const rangeSelect = event.shiftKey;
+
+      if (rangeSelect && selectedFiles.length > 0) {
+        const lastSelected = selectedFiles[selectedFiles.length - 1];
+        const currentIndex = files.findIndex((f) => f.path === file.path);
+        const lastIndex = files.findIndex((f) => f.path === lastSelected.path);
+
+        if (currentIndex !== -1 && lastIndex !== -1) {
+          const start = Math.min(currentIndex, lastIndex);
+          const end = Math.max(currentIndex, lastIndex);
+          const rangeFiles = files.slice(start, end + 1);
+          onSelectionChange(rangeFiles);
+        }
+      } else if (multiSelect) {
+        const isSelected = selectedFiles.some((f) => f.path === file.path);
+        if (isSelected) {
+          onSelectionChange(selectedFiles.filter((f) => f.path !== file.path));
+        } else {
+          onSelectionChange([...selectedFiles, file]);
+        }
+      } else {
+        onSelectionChange([file]);
+      }
+    }
+  };
+
+  const handleGridClick = (event: React.MouseEvent) => {
+    if (gridRef.current && !createIntent) {
+      gridRef.current.focus();
+    }
+
+    if (
+      event.target === event.currentTarget &&
+      !isSelecting &&
+      !justFinishedSelecting
+    ) {
+      onSelectionChange([]);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Every open file-manager tab mounts its own grid with a global keydown
+      // listener, so without this guard a shortcut (notably Delete) would fire
+      // in every tab at once - including hidden ones - and act on their
+      // selections. Only the visible grid should respond. See issue #783.
+      const grid = gridRef.current;
+      if (!grid) return;
+      const isVisible =
+        typeof grid.checkVisibility === "function"
+          ? grid.checkVisibility({ visibilityProperty: true })
+          : grid.offsetParent !== null;
+      if (!isVisible) return;
+
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          (activeElement as HTMLElement).contentEditable === "true")
+      ) {
+        return;
+      }
+
+      switch (event.key) {
+        case "Escape":
+          onSelectionChange([]);
+          break;
+        case "a":
+        case "A":
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            onSelectionChange([...files]);
+          }
+          break;
+        case "c":
+        case "C":
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            selectedFiles.length > 0 &&
+            onCopy
+          ) {
+            event.preventDefault();
+            onCopy(selectedFiles);
+          }
+          break;
+        case "x":
+        case "X":
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            selectedFiles.length > 0 &&
+            onCut
+          ) {
+            event.preventDefault();
+            onCut(selectedFiles);
+          }
+          break;
+        case "v":
+        case "V":
+          if ((event.ctrlKey || event.metaKey) && onPaste && hasClipboard) {
+            event.preventDefault();
+            onPaste();
+          }
+          break;
+        case "z":
+        case "Z":
+          if ((event.ctrlKey || event.metaKey) && onUndo) {
+            event.preventDefault();
+            onUndo();
+          }
+          break;
+        case "d":
+        case "D":
+          if (
+            (event.ctrlKey || event.metaKey) &&
+            selectedFiles.length > 0 &&
+            onDownload
+          ) {
+            event.preventDefault();
+            onDownload(selectedFiles);
+          }
+          break;
+        case "n":
+        case "N":
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            if (event.shiftKey && onNewFolder) {
+              onNewFolder();
+            } else if (!event.shiftKey && onNewFile) {
+              onNewFile();
+            }
+          }
+          break;
+        case "u":
+        case "U":
+          if ((event.ctrlKey || event.metaKey) && onUpload) {
+            event.preventDefault();
+            const input = document.createElement("input");
+            input.type = "file";
+            input.multiple = true;
+            input.onchange = (e) => {
+              const files = (e.target as HTMLInputElement).files;
+              if (files) onUpload(files);
+            };
+            input.click();
+          }
+          break;
+        case "Delete":
+          if (selectedFiles.length > 0 && onDelete) {
+            onDelete(selectedFiles);
+          }
+          break;
+        case "F2":
+        case "F6":
+          if (selectedFiles.length === 1 && onStartEdit) {
+            event.preventDefault();
+            onStartEdit(selectedFiles[0]);
+          }
+          break;
+        case "Enter":
+          if (selectedFiles.length === 1) {
+            event.preventDefault();
+            onFileOpen(selectedFiles[0]);
+          }
+          break;
+        case "y":
+        case "Y":
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            onRefresh();
+          }
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    selectedFiles,
+    files,
+    onSelectionChange,
+    onRefresh,
+    onDelete,
+    onCopy,
+    onCut,
+    onPaste,
+    onUndo,
+  ]);
+
+  // Pinned ".." entry (Termius-style). Behaves as a directory drop target
+  // for internal moves and local-pane uploads, and navigates up on open.
+  const parentEntry: FileItem | null =
+    parentPath && onNavigateUp
+      ? { name: "..", path: parentPath, type: "directory" }
+      : null;
+  const isParentTarget =
+    !!parentEntry && dragState.target?.path === parentEntry.path;
+
+  const parentEntryHandlers = parentEntry
+    ? {
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          onNavigateUp?.();
+        },
+        onDoubleClick: (e: React.MouseEvent) => e.stopPropagation(),
+        onContextMenu: (e: React.MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+        onDragOver: (e: React.DragEvent) => handleFileDragOver(e, parentEntry),
+        onDragLeave: (e: React.DragEvent) =>
+          handleFileDragLeave(e, parentEntry),
+        onDrop: (e: React.DragEvent) => handleFileDrop(e, parentEntry),
+      }
+    : null;
+
+  const parentListRow =
+    parentEntry && parentEntryHandlers ? (
+      <div
+        data-parent-entry
+        title={t("fileManager.goToParentFolder")}
+        style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
+        className={cn(
+          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors text-xs",
+          compact ? "px-2 py-1" : "px-4 py-2",
+          isParentTarget &&
+            "bg-accent-brand/20 border-accent-brand border-dashed",
+        )}
+        {...parentEntryHandlers}
+      >
+        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+          <div className="shrink-0">
+            <CornerLeftUp className="size-4 text-muted-foreground" />
+          </div>
+          <span className="font-bold tracking-tight text-muted-foreground">
+            ..
+          </span>
+        </div>
+      </div>
+    ) : null;
+
+  const parentGridStrip =
+    parentEntry && parentEntryHandlers ? (
+      <div
+        data-parent-entry
+        title={t("fileManager.goToParentFolder")}
+        className={cn(
+          "flex items-center gap-2 rounded-none border border-transparent transition-colors cursor-pointer hover:bg-muted/50 select-none text-xs",
+          compact ? "-mx-2 -mt-2 px-2 py-1" : "-mx-4 -mt-4 px-4 py-1.5",
+          isParentTarget &&
+            "bg-accent-brand/20 border-accent-brand border-dashed",
+        )}
+        {...parentEntryHandlers}
+      >
+        <CornerLeftUp className="size-3.5 text-muted-foreground pointer-events-none" />
+        <span className="font-bold tracking-tight text-muted-foreground pointer-events-none">
+          ..
+        </span>
+      </div>
+    ) : null;
+
+  return (
+    <div className="h-full flex flex-col bg-card overflow-hidden relative">
+      <div className="flex-1 relative overflow-hidden">
+        <div
+          ref={gridRef}
+          className={cn(
+            "absolute inset-0 overflow-y-auto thin-scrollbar",
+            compact ? "p-2" : "p-4",
+            (dragState.type === "external" || dragState.type === "local") &&
+              "bg-muted/20 border-2 border-dashed border-primary",
+          )}
+          onClick={handleGridClick}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onWheel={handleWheel}
+          onContextMenu={(e) => onContextMenu?.(e)}
+          tabIndex={0}
+        >
+          {files.length === 0 && !createIntent ? (
+            <div className="h-full flex flex-col">
+              {viewMode === "grid" ? parentGridStrip : parentListRow}
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground opacity-10 gap-4 select-none pointer-events-none">
+                <Folder className="size-32" strokeWidth={1} />
+                <span className="text-2xl font-black uppercase tracking-[0.2em]">
+                  {t("fileManager.emptyFolder")}
+                </span>
+              </div>
+            </div>
+          ) : viewMode === "grid" ? (
+            <div className={cn("flex flex-col", compact ? "gap-2" : "gap-4")}>
+              {parentGridStrip}
+              {createIntent && (
+                <div
+                  className={cn("grid", compact ? "gap-2" : "gap-4")}
+                  style={{
+                    gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+                  }}
+                >
+                  <CreateIntentGridItem
+                    intent={createIntent}
+                    onConfirm={onConfirmCreate}
+                    onCancel={onCancelCreate}
+                  />
+                </div>
+              )}
+              <div
+                className="relative w-full"
+                style={{ height: gridVirtualizer.getTotalSize() }}
+              >
+                {gridVirtualizer.getVirtualItems().map((vRow) => {
+                  const start = vRow.index * gridCols;
+                  const rowFiles = files.slice(start, start + gridCols);
+                  return (
+                    <div
+                      key={vRow.key}
+                      data-index={vRow.index}
+                      ref={gridVirtualizer.measureElement}
+                      className="absolute top-0 left-0 w-full"
+                      style={{
+                        transform: `translateY(${vRow.start}px)`,
+                      }}
+                    >
+                      <div
+                        className={cn(
+                          "grid",
+                          compact ? "gap-2 pb-2" : "gap-4 pb-4",
+                        )}
+                        style={{
+                          gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+                        }}
+                      >
+                        {rowFiles.map((file) => {
+                          const isSelected = selectedFiles.some(
+                            (f) => f.path === file.path,
+                          );
+                          return (
+                            <div
+                              key={file.path}
+                              data-file-path={file.path}
+                              draggable={true}
+                              className={cn(
+                                "group flex flex-col items-center rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
+                                compact ? "p-1.5" : "p-3",
+                                isSelected &&
+                                  "bg-accent-brand/10 hover:bg-accent-brand/10 border-accent-brand/40",
+                                dragState.target?.path === file.path &&
+                                  "bg-accent-brand/20 border-accent-brand border-dashed",
+                                dragState.files.some(
+                                  (f) => f.path === file.path,
+                                ) && "opacity-50",
+                              )}
+                              title={file.name}
+                              onClick={(e) => handleFileClick(file, e)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onContextMenu?.(e, file);
+                              }}
+                              onDragStart={(e) => handleFileDragStart(e, file)}
+                              onDragOver={(e) => handleFileDragOver(e, file)}
+                              onDragLeave={(e) => handleFileDragLeave(e, file)}
+                              onDrop={(e) => handleFileDrop(e, file)}
+                              onDragEnd={handleFileDragEnd}
+                            >
+                              <div
+                                className={cn(
+                                  "relative pointer-events-none",
+                                  compact ? "mb-1" : "mb-2",
+                                )}
+                              >
+                                {getFileIcon(file, viewMode, compact)}
+                              </div>
+                              <div className="w-full flex flex-col items-center pointer-events-none">
+                                {editingFile?.path === file.path ? (
+                                  <input
+                                    ref={editInputRef}
+                                    type="text"
+                                    value={editingName}
+                                    onChange={(e) =>
+                                      setEditingName(e.target.value)
+                                    }
+                                    onKeyDown={handleEditKeyDown}
+                                    onBlur={handleEditConfirm}
+                                    className="max-w-[120px] min-w-[60px] w-fit border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 text-center pointer-events-auto"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <p
+                                    className="font-bold tracking-tight text-center truncate w-full px-1 text-[11px]"
+                                    title={file.name}
+                                  >
+                                    {file.name}
+                                  </p>
+                                )}
+                                {file.type === "file" &&
+                                  file.size !== undefined &&
+                                  file.size !== null && (
+                                    <p className="text-[10px] font-medium text-muted-foreground/60 mt-0.5">
+                                      {formatFileSize(file.size)}
+                                    </p>
+                                  )}
+                                {file.type === "link" && file.linkTarget && (
+                                  <p
+                                    className="text-[10px] text-accent-brand mt-0.5 truncate w-full text-center"
+                                    title={file.linkTarget}
+                                  >
+                                    → {file.linkTarget}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <div
+                className={cn(
+                  "grid gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card",
+                  compact ? "px-2 py-1" : "px-4 py-2",
+                )}
+                style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
+                title={t("fileManager.columnsHint")}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setColumnMenu({ x: e.clientX, y: e.clientY, visible: true });
+                }}
+              >
+                <div
+                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
+                  onClick={() => onSortChange?.("name")}
+                >
+                  {t("fileManager.name")}
+                  {sortBy === "name" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="size-3" />
+                    ) : (
+                      <ArrowDown className="size-3" />
+                    ))}
+                </div>
+                {listColumns.isVisible("modified") && (
+                  <div
+                    className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
+                    onClick={() => onSortChange?.("modified")}
+                  >
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("modified")}
+                    />
+                    <span className="truncate">
+                      {t("fileManager.modified")}
+                    </span>
+                    {sortBy === "modified" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUp className="size-3" />
+                      ) : (
+                        <ArrowDown className="size-3" />
+                      ))}
+                  </div>
+                )}
+                {listColumns.isVisible("owner") && (
+                  <div className="relative flex items-center min-w-0">
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("owner")}
+                    />
+                    <span className="truncate">{t("fileManager.owner")}</span>
+                  </div>
+                )}
+                {listColumns.isVisible("size") && (
+                  <div
+                    className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end min-w-0"
+                    onClick={() => onSortChange?.("size")}
+                  >
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("size")}
+                    />
+                    <span className="truncate">{t("fileManager.size")}</span>
+                    {sortBy === "size" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUp className="size-3" />
+                      ) : (
+                        <ArrowDown className="size-3" />
+                      ))}
+                  </div>
+                )}
+                {listColumns.isVisible("permissions") && (
+                  <div className="relative flex items-center justify-end min-w-0">
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("permissions")}
+                    />
+                    <span className="truncate">
+                      {t("fileManager.permissions")}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <ColumnVisibilityMenu
+                x={columnMenu.x}
+                y={columnMenu.y}
+                isVisible={columnMenu.visible}
+                columns={listColumns}
+                onClose={closeColumnMenu}
+              />
+              {parentListRow}
+              {createIntent && (
+                <CreateIntentListItem
+                  intent={createIntent}
+                  onConfirm={onConfirmCreate}
+                  onCancel={onCancelCreate}
+                  gridTemplateColumns={listColumns.gridTemplateColumns}
+                />
+              )}
+              <div
+                className="relative w-full"
+                style={{ height: listVirtualizer.getTotalSize() }}
+              >
+                {listVirtualizer.getVirtualItems().map((vItem) => {
+                  const file = files[vItem.index];
+                  if (!file) return null;
+                  const isSelected = selectedFiles.some(
+                    (f) => f.path === file.path,
+                  );
+                  const isEditing = editingFile?.path === file.path;
+                  return (
+                    <div
+                      key={vItem.key}
+                      data-index={vItem.index}
+                      ref={listVirtualizer.measureElement}
+                      className="absolute top-0 left-0 w-full"
+                      style={{
+                        transform: `translateY(${vItem.start}px)`,
+                      }}
+                    >
+                      <div
+                        data-file-path={file.path}
+                        draggable={true}
+                        style={{
+                          gridTemplateColumns: isEditing
+                            ? "minmax(0, 1fr)"
+                            : listColumns.gridTemplateColumns,
+                        }}
+                        className={cn(
+                          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors text-xs",
+                          compact ? "px-2 py-1" : "px-4 py-2",
+                          isSelected &&
+                            "bg-accent-brand/10 hover:bg-accent-brand/10",
+                          dragState.target?.path === file.path &&
+                            "bg-accent-brand/20 border-accent-brand border-dashed",
+                          dragState.files.some((f) => f.path === file.path) &&
+                            "opacity-50",
+                        )}
+                        onClick={(e) => handleFileClick(file, e)}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onContextMenu?.(e, file);
+                        }}
+                        onDragStart={(e) => handleFileDragStart(e, file)}
+                        onDragOver={(e) => handleFileDragOver(e, file)}
+                        onDragLeave={(e) => handleFileDragLeave(e, file)}
+                        onDrop={(e) => handleFileDrop(e, file)}
+                        onDragEnd={handleFileDragEnd}
+                      >
+                        <div
+                          className={cn(
+                            "flex items-center overflow-hidden pointer-events-none",
+                            compact ? "gap-2" : "gap-3",
+                            isEditing && "col-span-full",
+                          )}
+                        >
+                          <div className="shrink-0">
+                            {getFileIcon(file, viewMode, compact)}
+                          </div>
+                          {isEditing ? (
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={handleEditKeyDown}
+                              onBlur={handleEditConfirm}
+                              className={cn(
+                                "flex-1 min-w-0 border border-accent-brand/60 bg-card px-2 py-0 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto",
+                                compact ? "h-5" : "h-6",
+                              )}
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span
+                              className="font-bold truncate tracking-tight"
+                              title={file.name}
+                            >
+                              {file.name}
+                              {file.type === "link" && file.linkTarget && (
+                                <span className="text-accent-brand ml-1 normal-case font-normal">
+                                  → {file.linkTarget}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+
+                        {!isEditing && listColumns.isVisible("modified") && (
+                          <span className="text-[10px] text-muted-foreground pointer-events-none truncate">
+                            {file.modified || "—"}
+                          </span>
+                        )}
+
+                        {!isEditing && listColumns.isVisible("owner") && (
+                          <span className="text-[10px] text-muted-foreground truncate pointer-events-none">
+                            {file.owner
+                              ? `${file.owner}${file.group ? `:${file.group}` : ""}`
+                              : "—"}
+                          </span>
+                        )}
+
+                        {!isEditing && listColumns.isVisible("size") && (
+                          <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none truncate">
+                            {file.type === "file" &&
+                            file.size !== undefined &&
+                            file.size !== null
+                              ? formatFileSize(file.size)
+                              : "—"}
+                          </span>
+                        )}
+
+                        {!isEditing && listColumns.isVisible("permissions") && (
+                          <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none truncate">
+                            {file.permissions || "—"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {isSelecting && selectionRect && (
+            <div
+              className="absolute border border-accent-brand bg-accent-brand/10 pointer-events-none z-50"
+              style={{
+                left: selectionRect.x,
+                top: selectionRect.y,
+                width: selectionRect.width,
+                height: selectionRect.height,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Sibling of the scroll container, not a child: an absolutely
+            positioned child of a scroll container scrolls away with the
+            content, so the hint would land above the viewport whenever the
+            list is scrolled down. */}
+        {(dragState.type === "external" ||
+          (dragState.type === "local" && !dragState.target)) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10 pointer-events-none">
+            <div className="text-center p-8 bg-card/95 border border-accent-brand/40 flex flex-col items-center gap-4">
+              <Upload className="size-12 text-accent-brand" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
+                {dragState.type === "local"
+                  ? t("fileManager.dropToUploadHere")
+                  : t("fileManager.dragFilesToUpload")}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 py-1.5 bg-muted/30 border-t border-border flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
+        <span>
+          {files.length} {t("fileManager.items")}
+        </span>
+        {selectedFiles.length > 0 && (
+          <span className="text-accent-brand">
+            {selectedFiles.length} {t("fileManager.selected")}
+          </span>
+        )}
+      </div>
+
+      {dragState.type === "internal" &&
+        (dragState.files.length > 0 || dragState.draggedFiles?.length > 0) &&
+        dragState.mousePosition &&
+        createPortal(
+          <div
+            className="fixed pointer-events-none"
+            style={{
+              left: Math.min(
+                Math.max(dragState.mousePosition.x + 40, 0),
+                window.innerWidth - 300,
+              ),
+              top: Math.max(
+                Math.min(
+                  dragState.mousePosition.y - 80,
+                  window.innerHeight - 100,
+                ),
+                0,
+              ),
+              zIndex: 999999,
+            }}
+          >
+            <div className="bg-card border border-border rounded-none shadow-md px-3 py-2 flex items-center gap-2">
+              {(() => {
+                const files =
+                  dragState.files.length > 0
+                    ? dragState.files
+                    : dragState.draggedFiles || [];
+                return dragState.target ? (
+                  dragState.target.type === "directory" ? (
+                    <>
+                      <Move className="size-3.5 text-accent-brand" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
+                        {t("fileManager.moveTo", {
+                          name: dragState.target.name,
+                        })}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <GitCompare className="size-3.5 text-accent-brand" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
+                        {t("fileManager.diffCompareWith", {
+                          name: dragState.target.name,
+                        })}
+                      </span>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <Download className="size-3.5 text-accent-brand" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
+                      {t("fileManager.dragOutsideToDownload", {
+                        count: files.length,
+                      })}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+function CreateIntentGridItem({
+  intent,
+  onConfirm,
+  onCancel,
+}: {
+  intent: CreateIntent;
+  onConfirm?: (name: string) => void;
+  onCancel?: () => void;
+}) {
+  const { t } = useTranslation();
+  const [inputName, setInputName] = useState(intent.currentName);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [intent.id]);
+
+  const commit = useCallback(
+    (name: string) => {
+      if (doneRef.current) return;
+      doneRef.current = true;
+      if (name) {
+        onConfirm?.(name);
+      } else {
+        onCancel?.();
+      }
+    },
+    [onConfirm, onCancel],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit(inputName.trim());
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      if (doneRef.current) return;
+      doneRef.current = true;
+      onCancel?.();
+    }
+  };
+
+  return (
+    <div
+      className="group flex flex-col items-center p-3 rounded-none border-2 border-dashed border-accent-brand/60 bg-accent-brand/5"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="mb-2">
+        {intent.type === "directory" ? (
+          <Folder className="size-10 text-accent-brand" />
+        ) : (
+          <File className="size-10 text-accent-brand" />
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputName}
+        onChange={(e) => setInputName(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => commit(inputName.trim())}
+        className="w-full max-w-[120px] border border-accent-brand/60 bg-card px-2 py-1 text-xs text-center rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50"
+        placeholder={
+          intent.type === "directory"
+            ? t("fileManager.folderName")
+            : t("fileManager.fileName")
+        }
+      />
+    </div>
+  );
+}
+
+function CreateIntentListItem({
+  intent,
+  onConfirm,
+  onCancel,
+  gridTemplateColumns,
+}: {
+  intent: CreateIntent;
+  onConfirm?: (name: string) => void;
+  onCancel?: () => void;
+  gridTemplateColumns?: string;
+}) {
+  const { t } = useTranslation();
+  const [inputName, setInputName] = useState(intent.currentName);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [intent.id]);
+
+  const commit = useCallback(
+    (name: string) => {
+      if (doneRef.current) return;
+      doneRef.current = true;
+      if (name) {
+        onConfirm?.(name);
+      } else {
+        onCancel?.();
+      }
+    },
+    [onConfirm, onCancel],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit(inputName.trim());
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      if (doneRef.current) return;
+      doneRef.current = true;
+      onCancel?.();
+    }
+  };
+
+  return (
+    <div
+      className="grid gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      style={{
+        gridTemplateColumns:
+          gridTemplateColumns ?? "minmax(140px, 1fr) 120px 150px 80px 90px",
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-3">
+        <div className="shrink-0">
+          {intent.type === "directory" ? (
+            <Folder className="size-4 text-accent-brand" />
+          ) : (
+            <File className="size-4 text-accent-brand" />
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputName}
+          onChange={(e) => setInputName(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => commit(inputName.trim())}
+          className="flex-1 min-w-0 max-w-[200px] border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50"
+          placeholder={
+            intent.type === "directory"
+              ? t("fileManager.folderName")
+              : t("fileManager.fileName")
+          }
+        />
+      </div>
+    </div>
+  );
+}

@@ -3,11 +3,14 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import {
+  CURRENT_PREUPGRADE_BACKUP_REASON,
   DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER,
-  DATABASE_LAYER_PREUPGRADE_BACKUP_PREFIX,
   DATABASE_LAYER_SKIP_PREUPGRADE_BACKUP_ENV,
-  ensureDatabaseLayerPreupgradeBackup,
+  ensurePreupgradeBackup,
+  preupgradeBackupMarker,
 } from "../../utils/database-layer-preupgrade-backup.js";
+
+const MARKER = preupgradeBackupMarker(CURRENT_PREUPGRADE_BACKUP_REASON);
 
 const tempDirs: string[] = [];
 
@@ -23,7 +26,7 @@ afterEach(() => {
   }
 });
 
-describe("ensureDatabaseLayerPreupgradeBackup", () => {
+describe("ensurePreupgradeBackup", () => {
   it("copies existing database files and writes a marker", () => {
     const dataDir = makeTempDir();
     const encryptedDbPath = path.join(dataDir, "db.sqlite.encrypted");
@@ -33,7 +36,7 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
     fs.writeFileSync(metadataPath, '{"version":"v2"}');
     fs.writeFileSync(envPath, "DATABASE_KEY=test-key");
 
-    const result = ensureDatabaseLayerPreupgradeBackup({
+    const result = ensurePreupgradeBackup({
       dataDir,
       version: "2.5.0-test",
       now: new Date("2026-06-27T12:00:00.000Z"),
@@ -41,12 +44,8 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
     });
 
     expect(result.status).toBe("created");
-    expect(result.backupDir).toContain(DATABASE_LAYER_PREUPGRADE_BACKUP_PREFIX);
-    expect(
-      fs.existsSync(
-        path.join(dataDir, DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER),
-      ),
-    ).toBe(true);
+    expect(result.backupDir).toContain(CURRENT_PREUPGRADE_BACKUP_REASON);
+    expect(fs.existsSync(path.join(dataDir, MARKER))).toBe(true);
     expect(
       fs.readFileSync(
         path.join(result.backupDir!, "db.sqlite.encrypted"),
@@ -72,12 +71,9 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
   it("skips when the marker already exists", () => {
     const dataDir = makeTempDir();
     fs.writeFileSync(path.join(dataDir, "db.sqlite.encrypted"), "encrypted-db");
-    fs.writeFileSync(
-      path.join(dataDir, DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER),
-      "{}",
-    );
+    fs.writeFileSync(path.join(dataDir, MARKER), "{}");
 
-    const result = ensureDatabaseLayerPreupgradeBackup({
+    const result = ensurePreupgradeBackup({
       dataDir,
       env: {} as NodeJS.ProcessEnv,
     });
@@ -89,10 +85,37 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
     expect(fs.existsSync(path.join(dataDir, "backups"))).toBe(false);
   });
 
+  it("still backs up an install that has the 2.5 refactor's marker", () => {
+    const dataDir = makeTempDir();
+    fs.writeFileSync(path.join(dataDir, "db.sqlite"), "2.8-db");
+    fs.writeFileSync(
+      path.join(dataDir, DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER),
+      "{}",
+    );
+
+    const first = ensurePreupgradeBackup({
+      dataDir,
+      env: {} as NodeJS.ProcessEnv,
+    });
+    expect(first.status).toBe("created");
+    expect(
+      fs.readFileSync(path.join(first.backupDir!, "db.sqlite"), "utf8"),
+    ).toBe("2.8-db");
+
+    const second = ensurePreupgradeBackup({
+      dataDir,
+      env: {} as NodeJS.ProcessEnv,
+    });
+    expect(second).toMatchObject({
+      status: "skipped",
+      reason: "marker_exists",
+    });
+  });
+
   it("skips new installs without a database file", () => {
     const dataDir = makeTempDir();
 
-    const result = ensureDatabaseLayerPreupgradeBackup({
+    const result = ensurePreupgradeBackup({
       dataDir,
       env: {} as NodeJS.ProcessEnv,
     });
@@ -101,18 +124,14 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
       status: "skipped",
       reason: "no_database_file",
     });
-    expect(
-      fs.existsSync(
-        path.join(dataDir, DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER),
-      ),
-    ).toBe(false);
+    expect(fs.existsSync(path.join(dataDir, MARKER))).toBe(false);
   });
 
   it("honors the explicit skip environment variable", () => {
     const dataDir = makeTempDir();
     fs.writeFileSync(path.join(dataDir, "db.sqlite.encrypted"), "encrypted-db");
 
-    const result = ensureDatabaseLayerPreupgradeBackup({
+    const result = ensurePreupgradeBackup({
       dataDir,
       env: {
         [DATABASE_LAYER_SKIP_PREUPGRADE_BACKUP_ENV]: "1",
@@ -132,7 +151,7 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
     fs.writeFileSync(path.join(dataDir, "backups"), "not-a-directory");
 
     expect(() =>
-      ensureDatabaseLayerPreupgradeBackup({
+      ensurePreupgradeBackup({
         dataDir,
         env: {} as NodeJS.ProcessEnv,
       }),

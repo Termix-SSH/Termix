@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Oturum Kayıtları"
+  },
+  "hosts": {
+    "enableSessionRecording": "Oturum kaydı",
+    "enableSessionRecordingDesc": "Daha sonra gözden geçirmek için terminal oturumu çıktısını kaydet"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "Oturum Günlükleri",
+    "noLogs": "Henüz oturum günlüğü yok",
+    "noLogsDesc": "Kayda başlamak için bir sunucuda oturum günlüğünü etkinleştirin",
+    "duration": "Süre",
+    "viewLog": "Günlüğü görüntüle",
+    "downloadLog": "İndir",
+    "downloadAsText": "Download as text",
+    "deleteLog": "Sil",
+    "confirmDelete": "Bu oturum günlüğü silinsin mi?",
+    "confirmDeleteDesc": "Bu işlem geri alınamaz.",
+    "copyContent": "Kopyala",
+    "copied": "Kopyalandı!",
+    "loadError": "Oturum günlükleri yüklenemedi",
+    "deleteError": "Oturum günlüğü silinemedi",
+    "filterByHost": "Sunucuya göre filtrele...",
+    "back": "Geri",
+    "empty": "(boş)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
+  }
+}

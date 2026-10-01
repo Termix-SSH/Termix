@@ -1,19 +1,10 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { notifyAiStatusChanged } from "@/hooks/use-ai-availability";
 import { useBranding } from "@/contexts/BrandingContext";
 import {
-  getAiGloballyEnabled,
-  getAiPrivateEndpoints,
   getNotificationPrivateEndpoints,
-  getStepCaPrivateEndpoints,
-  setStepCaPrivateEndpoints as setStepCaPrivateEndpointsApi,
-  getSecretSourcePrivateEndpoints,
-  setSecretSourcePrivateEndpoints as setSecretSourcePrivateEndpointsApi,
-  setAiGloballyEnabled as setAiGloballyEnabledApi,
-  setAiPrivateEndpoints as setAiPrivateEndpointsApi,
   setNotificationPrivateEndpoints as setNotificationPrivateEndpointsApi,
-} from "@/api/ai-api";
+} from "@/api/private-endpoints-api";
 import {
   getUserList,
   getSessions,
@@ -34,59 +25,27 @@ import {
   updatePasswordResetAllowed,
   getSessionTimeout,
   updateSessionTimeout,
-  getGlobalMonitoringSettings,
-  updateGlobalMonitoringSettings,
+  getStatusCheckSettings,
+  updateStatusCheckSettings,
   getLogLevel,
   updateLogLevel,
-  getGuacamoleSettings,
-  updateGuacamoleSettings,
-  getOidcAutoProvision,
-  updateOidcAutoProvision,
-  getOidcSilentLoginDefault,
-  updateOidcSilentLoginDefault,
-  getCommandHistoryEnabled,
-  updateCommandHistoryEnabled,
+  getExternalAutoProvision,
+  updateExternalAutoProvision,
+  getSecondFactorAfterExternalLogin,
+  updateSecondFactorAfterExternalLogin,
   isElectron,
   getUserRoles,
 } from "@/main-axios";
 import {
-  getTailscaleSettings,
-  updateTailscaleSettings,
-  getHostDefaults,
-  updateHostDefaults,
-  getAnalyticsEnabled,
-  updateAnalyticsEnabled,
-  getTerminalImageStorageSettings,
-  updateTerminalImageStorageSettings,
-  testTerminalImageStorage,
   getBranding,
   updateBranding,
-  type HostDefaults,
-  type TerminalImageStorageSettings,
-  type TerminalImageStorageTestResult,
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
-  getSessionSharingGloballyEnabled,
-  updateSessionSharingGloballyEnabled,
-} from "@/api/session-sharing-api";
-import {
-  getAcmeSslSettings,
-  updateAcmeSslSettings,
-  requestAcmeCertificate,
-  uploadManualSslCertificate,
-  type AcmeSettings,
-} from "@/api/acme-ssl-api";
-import {
-  getAdminSSOProviders,
-  updateSSOProvider,
-  deleteSSOProvider,
-} from "@/api/sso-provider-api";
-import {
-  getMetricsHistoryRetention,
-  saveMetricsHistoryRetention,
-} from "@/api/host-metrics-api";
-import type { SSOProvider } from "@/types/index";
+  getTlsStatus,
+  uploadTlsCertificate,
+  type TlsStatus,
+} from "@/api/tls-api";
 import {
   type ApiKey,
   type CreatedApiKey,
@@ -95,6 +54,12 @@ import {
 } from "@/main-axios";
 import { type AdminSection, type Host } from "@/types/ui-types";
 import {
+  FeatureSettingsSection,
+  featureSectionId,
+  useFeatureSettings,
+  type FeatureSectionId,
+} from "@/settings/FeatureSettingsSections";
+import {
   AdminRolesSection,
   AdminSessionsSection,
   AdminUsersSection,
@@ -102,21 +67,13 @@ import {
   type AdminUser,
 } from "./AdminManagementSections";
 import { toast } from "sonner";
-import {
-  getTerminalSessionSettings,
-  updateTerminalSessionSettings,
-  getStepCaSettings,
-  updateStepCaSettings,
-} from "@/api/settings-api";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
   AdminDatabaseSection,
   AdminGeneralSettingsSection,
   AdminHostDefaultsSection,
-  AdminSSOSection,
   AdminSSLSection,
 } from "./AdminSettingsSections";
-import { SSOProviderDialog } from "./SSOProviderDialog";
 import { AdminApiKeysSection } from "./AdminApiKeysSection";
 import { AdminAuditLogSection } from "./AdminAuditLogSection";
 import {
@@ -126,17 +83,6 @@ import {
   AdminUnlinkAccountDialog,
 } from "./AdminUserDialogs";
 import { AdminUserManagePanel } from "./AdminUserManagePanel";
-import {
-  TOUCH_INPUT_DEFAULTS,
-  type TouchInputSettings,
-} from "@/types/touch-input-settings";
-import {
-  getTouchInputSettings,
-  updateTouchInputSettings,
-} from "@/api/touch-input-settings-api";
-import { cacheTouchInputSettings } from "@/features/terminal/touch-input-settings-store";
-import { AdminTouchInputSection } from "./AdminTouchInputSection";
-import { AdminImageStorageSection } from "./AdminImageStorageSection";
 import { AdminBrandingSection } from "./AdminBrandingSection";
 
 type ApiErrorLike = {
@@ -161,87 +107,30 @@ export function AdminSettingsPanel({
   onOpenHostTab?: (host: Host) => void;
 } = {}) {
   const { t } = useTranslation();
-  const [openSections, setOpenSections] = useState<Set<AdminSection>>(
-    () => new Set(["general"]),
-  );
+  const [openSections, setOpenSections] = useState<
+    Set<AdminSection | FeatureSectionId>
+  >(() => new Set(["general"]));
+  const featureSettings = useFeatureSettings("admin");
   const [manageUser, setManageUser] = useState<AdminUser | null>(null);
   const [allowRegistration, setAllowRegistration] = useState(true);
   const [allowPasswordLogin, setAllowPasswordLogin] = useState(true);
+  const [passwordLoginForced, setPasswordLoginForced] = useState(false);
   const [allowPasswordReset, setAllowPasswordReset] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("24");
-  const [terminalTimeout, setTerminalTimeout] = useState("30");
-  useEffect(() => {
-    getTerminalSessionSettings()
-      .then((settings) => setTerminalTimeout(String(settings.timeoutMinutes)))
-      .catch(() => {});
-  }, []);
   const [statusInterval, setStatusInterval] = useState("60");
-  const [metricsInterval, setMetricsInterval] = useState("30");
-  const [metricsHistoryRetention, setMetricsHistoryRetention] = useState("7");
-  const [guacEnabled, setGuacEnabled] = useState(false);
-  const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
-  const [tailscaleApiKey, setTailscaleApiKey] = useState("");
-  const [tailscaleApiBaseUrl, setTailscaleApiBaseUrl] = useState("");
-  const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
-  const [analyticsLocked, setAnalyticsLocked] = useState(false);
-  const [oidcSilentLoginDefaultLocked, setOidcSilentLoginDefaultLocked] =
-    useState(false);
-  const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
-    useState(true);
-  const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
-  const [aiPrivateEndpoints, setAiPrivateEndpoints] = useState<string[]>([]);
-  const [stepCaPrivateEndpoints, setStepCaPrivateEndpoints] = useState<
-    string[]
-  >([]);
-  const [secretSourcePrivateEndpoints, setSecretSourcePrivateEndpoints] =
-    useState<string[]>([]);
-  const [stepCaSettings, setStepCaSettings] = useState({
-    caUrl: "",
-    fingerprint: "",
-    provisioner: "",
-  });
-  useEffect(() => {
-    getStepCaSettings()
-      .then((s) =>
-        setStepCaSettings({
-          caUrl: s.caUrl,
-          fingerprint: s.fingerprint,
-          provisioner: s.provisioner,
-        }),
-      )
-      .catch(() => {});
-  }, []);
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
-  const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
-  const [touchInputSettings, setTouchInputSettings] =
-    useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
-
-  // Terminal image storage state. localDir stays a draft: the API never
-  // returns the configured backend path, so it is only sent when changed.
-  const [imageStorageSettings, setImageStorageSettings] =
-    useState<TerminalImageStorageSettings | null>(null);
-  const [imageStorageLocalDir, setImageStorageLocalDir] = useState("");
-  const [imageStorageInstanceId, setImageStorageInstanceId] = useState("");
-  const [imageStorageSaving, setImageStorageSaving] = useState(false);
-  const [imageStorageTesting, setImageStorageTesting] = useState(false);
-  const [imageStorageTestResult, setImageStorageTestResult] =
-    useState<TerminalImageStorageTestResult | null>(null);
 
   const [brandingSettings, setBrandingSettings] =
     useState<BrandingSettings | null>(null);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const { applyBranding } = useBranding();
 
-  // SSO / auto-provision state
-  const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
-  const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
-  const [ssoProviders, setSsoProviders] = useState<SSOProvider[]>([]);
-  const [ssoDialogOpen, setSsoDialogOpen] = useState(false);
-  const [ssoDialogProvider, setSsoDialogProvider] =
-    useState<SSOProvider | null>(null);
+  // External login state
+  const [externalAutoProvision, setExternalAutoProvision] = useState(false);
+  const [secondFactorAfterExternalLogin, setSecondFactorAfterExternalLogin] =
+    useState(false);
 
   // Create user dialog
   const [createUserOpen, setCreateUserOpen] = useState(false);
@@ -292,21 +181,7 @@ export function AdminSettingsPanel({
   const [exportLoading, setExportLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
 
-  // ACME SSL state
-  const defaultAcmeSettings: AcmeSettings = {
-    enabled: false,
-    domain: "",
-    email: "",
-    challengeType: "http-webroot",
-    cloudflareToken: "",
-    lastIssuedAt: null,
-    certStatus: "none",
-    certExpiresAt: null,
-  };
-  const [acmeSettings, setAcmeSettings] =
-    useState<AcmeSettings>(defaultAcmeSettings);
-  const [cloudflareTokenDraft, setCloudflareTokenDraft] = useState("");
-  const [acmeRequesting, setAcmeRequesting] = useState(false);
+  const [tlsStatus, setTlsStatus] = useState<TlsStatus | null>(null);
   const [manualCertDraft, setManualCertDraft] = useState("");
   const [manualKeyDraft, setManualKeyDraft] = useState("");
   const [manualUploading, setManualUploading] = useState(false);
@@ -324,7 +199,6 @@ export function AdminSettingsPanel({
     loadRoles();
     loadApiKeys();
     loadGeneralSettings();
-    loadSSOProviders();
   }, []);
 
   // Debounced so typing in the search box does not fire a request per keystroke.
@@ -368,10 +242,10 @@ export function AdminSettingsPanel({
             id: user.userId,
             username: user.username,
             isAdmin: user.is_admin,
-            isOidc: user.is_oidc,
+            isOidc: user.is_external ?? user.is_oidc,
             passwordHash: user.password_hash,
             dataUnlocked: user.data_unlocked,
-            totpEnabled: user.totp_enabled,
+            secondFactorEnabled: user.second_factor_enabled,
           })),
         );
         setUserTotal(total ?? u.length);
@@ -406,105 +280,45 @@ export function AdminSettingsPanel({
         timeout,
         monitoring,
         level,
-        guac,
         oidcProv,
-        oidcSilent,
-        tailscale,
-        cmdHistory,
-        analytics,
-        sessionSharingEnabled,
-        touchInput,
-        aiEnabled,
-        aiEndpoints,
+        secondFactorExternal,
         notificationEndpoints,
-        stepCaEndpoints,
-        secretSourceEndpoints,
-        imageStorage,
         branding,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
         getPasswordResetAllowed(),
         getSessionTimeout(),
-        getGlobalMonitoringSettings(),
+        getStatusCheckSettings(),
         getLogLevel(),
-        getGuacamoleSettings(),
-        getOidcAutoProvision(),
-        getOidcSilentLoginDefault(),
-        getTailscaleSettings(),
-        getCommandHistoryEnabled(),
-        getAnalyticsEnabled(),
-        getSessionSharingGloballyEnabled(),
-        getTouchInputSettings(),
-        getAiGloballyEnabled(),
-        getAiPrivateEndpoints(),
+        getExternalAutoProvision(),
+        getSecondFactorAfterExternalLogin(),
         getNotificationPrivateEndpoints(),
-        getStepCaPrivateEndpoints(),
-        getSecretSourcePrivateEndpoints(),
-        getTerminalImageStorageSettings(),
         getBranding(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
-      if (pwLogin.status === "fulfilled")
-        setAllowPasswordLogin(pwLogin.value.allowed);
-      if (oidcProv.status === "fulfilled")
-        setOidcAutoProvision(oidcProv.value.enabled);
-      if (oidcSilent.status === "fulfilled") {
-        setOidcSilentLoginDefault(oidcSilent.value.enabled);
-        setOidcSilentLoginDefaultLocked(oidcSilent.value.locked ?? false);
+      if (pwLogin.status === "fulfilled") {
+        // When forced on, the setting itself is off; show that and warn.
+        setPasswordLoginForced(!!pwLogin.value.forced);
+        setAllowPasswordLogin(
+          pwLogin.value.forced ? false : pwLogin.value.allowed,
+        );
       }
+      if (oidcProv.status === "fulfilled")
+        setExternalAutoProvision(oidcProv.value.enabled);
+      if (secondFactorExternal.status === "fulfilled")
+        setSecondFactorAfterExternalLogin(secondFactorExternal.value.enabled);
       if (pwReset.status === "fulfilled") setAllowPasswordReset(pwReset.value);
       if (timeout.status === "fulfilled")
         setSessionTimeout(String(timeout.value.timeoutHours));
       if (monitoring.status === "fulfilled") {
         setStatusInterval(String(monitoring.value.statusCheckInterval));
-        setMetricsInterval(String(monitoring.value.metricsInterval));
       }
 
-      getMetricsHistoryRetention()
-        .then((days) => setMetricsHistoryRetention(String(days)))
-        .catch(() => {});
       if (level.status === "fulfilled") setLogLevel(level.value.level);
-      if (guac.status === "fulfilled") {
-        setGuacEnabled(guac.value.enabled);
-        setGuacUrl(guac.value.url || "guacd:4822");
-      }
-      if (tailscale.status === "fulfilled") {
-        setTailscaleApiKey(tailscale.value.apiKey ?? "");
-        setTailscaleApiBaseUrl(tailscale.value.apiBaseUrl ?? "");
-      }
-      if (cmdHistory.status === "fulfilled") {
-        setCommandHistoryEnabled(cmdHistory.value.enabled);
-      }
-      if (analytics.status === "fulfilled") {
-        setAnalyticsEnabled(analytics.value.enabled);
-        setAnalyticsLocked(analytics.value.locked ?? false);
-      }
-      if (sessionSharingEnabled.status === "fulfilled") {
-        setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
-      }
-      if (touchInput.status === "fulfilled") {
-        setTouchInputSettings(touchInput.value);
-        cacheTouchInputSettings(touchInput.value);
-      }
-      if (aiEnabled.status === "fulfilled") {
-        setAiGloballyEnabled(aiEnabled.value);
-      }
-      if (aiEndpoints.status === "fulfilled") {
-        setAiPrivateEndpoints(aiEndpoints.value);
-      }
-      if (stepCaEndpoints.status === "fulfilled") {
-        setStepCaPrivateEndpoints(stepCaEndpoints.value);
-      }
-      if (secretSourceEndpoints.status === "fulfilled") {
-        setSecretSourcePrivateEndpoints(secretSourceEndpoints.value);
-      }
       if (notificationEndpoints.status === "fulfilled") {
         setNotificationPrivateEndpoints(notificationEndpoints.value);
-      }
-      if (imageStorage.status === "fulfilled") {
-        setImageStorageSettings(imageStorage.value);
       }
       if (branding.status === "fulfilled") {
         setBrandingSettings(branding.value);
@@ -513,40 +327,18 @@ export function AdminSettingsPanel({
       // non-fatal
     }
 
-    getHostDefaults()
-      .then((d) => setHostDefaults(d))
-      .catch(() => {});
-
-    getAcmeSslSettings()
-      .then((s) => setAcmeSettings(s))
+    getTlsStatus()
+      .then((s) => setTlsStatus(s))
       .catch(() => {});
   }
 
-  async function loadSSOProviders() {
-    try {
-      const providers = await getAdminSSOProviders();
-      setSsoProviders(providers);
-    } catch {
-      // non-fatal
-    }
-  }
-
-  function toggle(id: AdminSection) {
+  function toggle(id: AdminSection | FeatureSectionId) {
     setOpenSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
-
-  async function handleSaveHostDefaults() {
-    try {
-      await updateHostDefaults(hostDefaults);
-      toast.success(t("admin.hostDefaultsSaved"));
-    } catch {
-      toast.error(t("admin.hostDefaultsSaveFailed"));
-    }
   }
 
   async function handleToggleRegistration() {
@@ -572,26 +364,25 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleToggleOidcAutoProvision() {
-    const newVal = !oidcAutoProvision;
-    setOidcAutoProvision(newVal);
+  async function handleToggleExternalAutoProvision() {
+    const newVal = !externalAutoProvision;
+    setExternalAutoProvision(newVal);
     try {
-      await updateOidcAutoProvision(newVal);
+      await updateExternalAutoProvision(newVal);
     } catch {
-      setOidcAutoProvision(!newVal);
-      toast.error(t("admin.updateOidcAutoProvisionFailed"));
+      setExternalAutoProvision(!newVal);
+      toast.error(t("admin.updateExternalAutoProvisionFailed"));
     }
   }
 
-  async function handleToggleOidcSilentLoginDefault() {
-    if (oidcSilentLoginDefaultLocked) return;
-    const newVal = !oidcSilentLoginDefault;
-    setOidcSilentLoginDefault(newVal);
+  async function handleToggleSecondFactorAfterExternalLogin() {
+    const newVal = !secondFactorAfterExternalLogin;
+    setSecondFactorAfterExternalLogin(newVal);
     try {
-      await updateOidcSilentLoginDefault(newVal);
+      await updateSecondFactorAfterExternalLogin(newVal);
     } catch {
-      setOidcSilentLoginDefault(!newVal);
-      toast.error(t("admin.updateOidcSilentLoginDefaultFailed"));
+      setSecondFactorAfterExternalLogin(!newVal);
+      toast.error(t("admin.updateSecondFactorAfterExternalLoginFailed"));
     }
   }
 
@@ -606,100 +397,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleToggleCommandHistory() {
-    const newVal = !commandHistoryEnabled;
-    setCommandHistoryEnabled(newVal);
-    try {
-      await updateCommandHistoryEnabled(newVal);
-    } catch {
-      setCommandHistoryEnabled(!newVal);
-      toast.error(t("admin.updateCommandHistoryFailed"));
-    }
-  }
-
-  async function handleToggleAnalytics() {
-    if (analyticsLocked) return;
-    const newVal = !analyticsEnabled;
-    setAnalyticsEnabled(newVal);
-    try {
-      await updateAnalyticsEnabled(newVal);
-    } catch {
-      setAnalyticsEnabled(!newVal);
-      toast.error(t("admin.updateAnalyticsFailed"));
-    }
-  }
-
-  async function handleToggleSessionSharingGloballyEnabled() {
-    const newVal = !sessionSharingGloballyEnabled;
-    setSessionSharingGloballyEnabled(newVal);
-    try {
-      await updateSessionSharingGloballyEnabled(newVal);
-    } catch {
-      setSessionSharingGloballyEnabled(!newVal);
-      toast.error(t("admin.updateSessionSharingFailed"));
-    }
-  }
-
-  async function handleToggleAiGloballyEnabled() {
-    const newVal = !aiGloballyEnabled;
-    setAiGloballyEnabled(newVal);
-    try {
-      await setAiGloballyEnabledApi(newVal);
-      // Every AI surface listens for this, so the admin sees the entry appear
-      // or disappear right away instead of after a reload.
-      notifyAiStatusChanged();
-    } catch {
-      setAiGloballyEnabled(!newVal);
-      toast.error(t("admin.updateAiEnabledFailed"));
-    }
-  }
-
-  async function handleSaveAiPrivateEndpoints(hosts: string[]) {
-    const previous = aiPrivateEndpoints;
-    setAiPrivateEndpoints(hosts);
-    try {
-      setAiPrivateEndpoints(await setAiPrivateEndpointsApi(hosts));
-    } catch {
-      setAiPrivateEndpoints(previous);
-      toast.error(t("admin.updateAiEndpointsFailed"));
-    }
-  }
-
-  async function handleSaveStepCaSettings() {
-    try {
-      await updateStepCaSettings(stepCaSettings);
-      toast.success(t("admin.stepCaSaved"));
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("admin.stepCaSaveFailed"),
-      );
-    }
-  }
-
-  async function handleSaveSecretSourcePrivateEndpoints(hosts: string[]) {
-    const previous = secretSourcePrivateEndpoints;
-    setSecretSourcePrivateEndpoints(hosts);
-    try {
-      setSecretSourcePrivateEndpoints(
-        await setSecretSourcePrivateEndpointsApi(hosts),
-      );
-    } catch {
-      setSecretSourcePrivateEndpoints(previous);
-      toast.error(t("admin.updateSecretSourceEndpointsFailed"));
-    }
-  }
-
-  async function handleSaveStepCaPrivateEndpoints(hosts: string[]) {
-    const previous = stepCaPrivateEndpoints;
-    setStepCaPrivateEndpoints(hosts);
-    try {
-      setStepCaPrivateEndpoints(await setStepCaPrivateEndpointsApi(hosts));
-    } catch {
-      setStepCaPrivateEndpoints(previous);
-      toast.error(t("admin.updateStepCaEndpointsFailed"));
-    }
-  }
-
   async function handleSaveNotificationPrivateEndpoints(hosts: string[]) {
     const previous = notificationPrivateEndpoints;
     setNotificationPrivateEndpoints(hosts);
@@ -710,47 +407,6 @@ export function AdminSettingsPanel({
     } catch {
       setNotificationPrivateEndpoints(previous);
       toast.error(t("admin.updateNotificationEndpointsFailed"));
-    }
-  }
-
-  async function saveTouchInputSettings(settings = touchInputSettings) {
-    try {
-      const saved = await updateTouchInputSettings(settings);
-      setTouchInputSettings(saved);
-      cacheTouchInputSettings(saved);
-      toast.success(t("admin.touchSaved"));
-    } catch {
-      toast.error(t("admin.touchSaveFailed"));
-    }
-  }
-
-  function resetTouchInputSettings() {
-    const defaults = { ...TOUCH_INPUT_DEFAULTS };
-    setTouchInputSettings(defaults);
-    void saveTouchInputSettings(defaults);
-  }
-
-  async function handleSaveImageStorage() {
-    if (!imageStorageSettings) return;
-    setImageStorageSaving(true);
-    try {
-      const saved = await updateTerminalImageStorageSettings({
-        mode: imageStorageSettings.mode,
-        hostPath: imageStorageSettings.hostPath,
-        ttlMs: imageStorageSettings.ttlMs,
-        maxCount: imageStorageSettings.maxCount,
-        maxBytes: imageStorageSettings.maxBytes,
-        ...(imageStorageLocalDir.trim()
-          ? { localDir: imageStorageLocalDir.trim() }
-          : {}),
-      });
-      setImageStorageSettings(saved);
-      setImageStorageLocalDir("");
-      toast.success(t("admin.imageStorageSaved"));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.imageStorageSaveFailed")));
-    } finally {
-      setImageStorageSaving(false);
     }
   }
 
@@ -788,24 +444,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleTestImageStorage() {
-    if (!imageStorageInstanceId.trim()) {
-      toast.error(t("admin.imageStorageInstanceIdRequired"));
-      return;
-    }
-    setImageStorageTesting(true);
-    setImageStorageTestResult(null);
-    try {
-      setImageStorageTestResult(
-        await testTerminalImageStorage(imageStorageInstanceId.trim()),
-      );
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.imageStorageTestFailed")));
-    } finally {
-      setImageStorageTesting(false);
-    }
-  }
-
   async function handleSaveSessionTimeout() {
     const hours = parseInt(sessionTimeout, 10);
     if (isNaN(hours) || hours < 1 || hours > 720) {
@@ -820,74 +458,17 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleSaveTerminalTimeout() {
-    const minutes = parseInt(terminalTimeout, 10);
-    if (isNaN(minutes) || minutes < 1 || minutes > 1440) {
-      toast.error(t("admin.terminalSessionTimeoutRange"));
-      return;
-    }
-    try {
-      await updateTerminalSessionSettings({ timeoutMinutes: minutes });
-      toast.success(t("admin.terminalSessionTimeoutSaved"));
-    } catch {
-      toast.error(t("admin.terminalSessionTimeoutSaveFailed"));
-    }
-  }
-
   async function handleSaveMonitoring() {
     const status = parseInt(statusInterval, 10);
-    const metrics = parseInt(metricsInterval, 10);
-    const retention = parseInt(metricsHistoryRetention, 10);
-    if (isNaN(status) || isNaN(metrics)) {
+    if (isNaN(status) || status < 5 || status > 3600) {
       toast.error(t("admin.monitoringIntervalInvalid"));
       return;
     }
-    if (!isNaN(retention) && (retention < 1 || retention > 90)) {
-      toast.error(t("admin.metricsHistoryRetentionRange"));
-      return;
-    }
     try {
-      await Promise.all([
-        updateGlobalMonitoringSettings({
-          statusCheckInterval: status,
-          metricsInterval: metrics,
-        }),
-        !isNaN(retention)
-          ? saveMetricsHistoryRetention(retention)
-          : Promise.resolve(),
-      ]);
+      await updateStatusCheckSettings({ statusCheckInterval: status });
       toast.success(t("admin.monitoringSaved"));
     } catch {
       toast.error(t("admin.monitoringSaveFailed"));
-    }
-  }
-
-  async function handleSaveGuacamole() {
-    try {
-      await updateGuacamoleSettings({ enabled: guacEnabled, url: guacUrl });
-      toast.success(t("admin.guacamoleSaved"));
-    } catch {
-      toast.error(t("admin.guacamoleSaveFailed"));
-    }
-  }
-
-  async function handleToggleGuacamole() {
-    const newVal = !guacEnabled;
-    setGuacEnabled(newVal);
-    try {
-      await updateGuacamoleSettings({ enabled: newVal, url: guacUrl });
-    } catch {
-      setGuacEnabled(!newVal);
-      toast.error(t("admin.guacamoleUpdateFailed"));
-    }
-  }
-
-  async function handleSaveTailscaleApiKey() {
-    try {
-      await updateTailscaleSettings(tailscaleApiKey, tailscaleApiBaseUrl);
-      toast.success(t("admin.tailscaleSettingsSaved"));
-    } catch {
-      toast.error(t("admin.tailscaleSettingsSaveFailed"));
     }
   }
 
@@ -900,90 +481,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  function handleAddProvider() {
-    setSsoDialogProvider(null);
-    setSsoDialogOpen(true);
-  }
-
-  function handleEditProvider(provider: SSOProvider) {
-    setSsoDialogProvider(provider);
-    setSsoDialogOpen(true);
-  }
-
-  async function handleDeleteProvider(id: number) {
-    if (!window.confirm(t("admin.ssoDeleteConfirm"))) return;
-    try {
-      await deleteSSOProvider(id);
-      setSsoProviders((prev) => prev.filter((p) => p.id !== id));
-      toast.success(t("common.deleted"));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("common.deleteFailed")));
-    }
-  }
-
-  async function handleToggleProviderEnabled(id: number, enabled: boolean) {
-    const provider = ssoProviders.find((p) => p.id === id);
-    if (!provider) return;
-    setSsoProviders((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, enabled } : p)),
-    );
-    try {
-      await updateSSOProvider(id, { enabled });
-    } catch (e) {
-      setSsoProviders((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, enabled: !enabled } : p)),
-      );
-      toast.error(apiErrorMessage(e, t("common.saveFailed")));
-    }
-  }
-
-  async function handleSaveAcmeSettings() {
-    try {
-      const payload: Parameters<typeof updateAcmeSslSettings>[0] = {
-        enabled: acmeSettings.enabled,
-        domain: acmeSettings.domain,
-        email: acmeSettings.email,
-        challengeType: acmeSettings.challengeType,
-        ...(cloudflareTokenDraft && { cloudflareToken: cloudflareTokenDraft }),
-      };
-      const updated = await updateAcmeSslSettings(payload);
-      setAcmeSettings(updated);
-      setCloudflareTokenDraft("");
-      toast.success(t("admin.sslSaved"));
-    } catch {
-      toast.error(t("admin.sslSaveFailed"));
-    }
-  }
-
-  async function handleRequestAcmeCertificate() {
-    if (!acmeSettings.domain || !acmeSettings.email) {
-      toast.error(t("admin.sslRequiresDomain"));
-      return;
-    }
-    setAcmeRequesting(true);
-    try {
-      if (cloudflareTokenDraft) {
-        await updateAcmeSslSettings({
-          domain: acmeSettings.domain,
-          email: acmeSettings.email,
-          challengeType: acmeSettings.challengeType,
-          cloudflareToken: cloudflareTokenDraft,
-        });
-        setCloudflareTokenDraft("");
-      }
-      const result = await requestAcmeCertificate();
-      setAcmeSettings(result);
-      toast.success(t("admin.sslRequestCertSuccess"));
-      if (result.reloadMessage) {
-        toast.info(result.reloadMessage);
-      }
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.sslRequestCertFailed")));
-    } finally {
-      setAcmeRequesting(false);
-    }
-  }
-
   async function handleManualSslUpload() {
     if (!manualCertDraft.trim() || !manualKeyDraft.trim()) {
       toast.error(t("admin.sslManualRequiresFields"));
@@ -991,11 +488,11 @@ export function AdminSettingsPanel({
     }
     setManualUploading(true);
     try {
-      const result = await uploadManualSslCertificate({
+      const result = await uploadTlsCertificate({
         certificate: manualCertDraft,
         privateKey: manualKeyDraft,
       });
-      setAcmeSettings(result);
+      setTlsStatus(result);
       setManualCertDraft("");
       setManualKeyDraft("");
       toast.success(t("admin.sslManualUploadSuccess"));
@@ -1007,18 +504,6 @@ export function AdminSettingsPanel({
     } finally {
       setManualUploading(false);
     }
-  }
-
-  function handleProviderSaved(saved: SSOProvider) {
-    setSsoProviders((prev) => {
-      const idx = prev.findIndex((p) => p.id === saved.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = saved;
-        return next;
-      }
-      return [...prev, saved];
-    });
   }
 
   async function handleCreateUser() {
@@ -1224,8 +709,7 @@ export function AdminSettingsPanel({
           const total =
             (s.sshHostsImported || 0) +
             (s.sshCredentialsImported || 0) +
-            (s.fileManagerItemsImported || 0) +
-            (s.dismissedAlertsImported || 0) +
+            (s.pluginItemsImported || 0) +
             (s.settingsImported || 0);
           toast.success(
             t("admin.importCompleted", { total, skipped: s.skippedItems || 0 }),
@@ -1262,10 +746,10 @@ export function AdminSettingsPanel({
           setUsers((prev) => prev.filter((u) => u.id !== manageUser.id));
           setManageUser(null);
         }}
-        onTotpDisabled={() => {
+        onSecondFactorsReset={() => {
           setUsers((prev) =>
             prev.map((u) =>
-              u.id === manageUser.id ? { ...u, totpEnabled: false } : u,
+              u.id === manageUser.id ? { ...u, secondFactorEnabled: false } : u,
             ),
           );
         }}
@@ -1278,85 +762,31 @@ export function AdminSettingsPanel({
       <AdminGeneralSettingsSection
         open={openSections.has("general")}
         onToggle={() => toggle("general")}
-        analyticsEnabled={analyticsEnabled}
-        analyticsLocked={analyticsLocked}
-        handleToggleAnalytics={handleToggleAnalytics}
-        sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
-        aiGloballyEnabled={aiGloballyEnabled}
-        onToggleAiGloballyEnabled={handleToggleAiGloballyEnabled}
-        aiPrivateEndpoints={aiPrivateEndpoints}
-        onSaveAiPrivateEndpoints={handleSaveAiPrivateEndpoints}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
-        stepCaPrivateEndpoints={stepCaPrivateEndpoints}
-        onSaveStepCaPrivateEndpoints={handleSaveStepCaPrivateEndpoints}
-        secretSourcePrivateEndpoints={secretSourcePrivateEndpoints}
-        onSaveSecretSourcePrivateEndpoints={
-          handleSaveSecretSourcePrivateEndpoints
-        }
-        stepCaSettings={stepCaSettings}
-        setStepCaSettings={setStepCaSettings}
-        handleSaveStepCaSettings={handleSaveStepCaSettings}
         onSaveNotificationPrivateEndpoints={
           handleSaveNotificationPrivateEndpoints
-        }
-        handleToggleSessionSharingGloballyEnabled={
-          handleToggleSessionSharingGloballyEnabled
         }
         allowRegistration={allowRegistration}
         handleToggleRegistration={handleToggleRegistration}
         allowPasswordLogin={allowPasswordLogin}
+        passwordLoginForced={passwordLoginForced && !allowPasswordLogin}
         handleTogglePasswordLogin={handleTogglePasswordLogin}
-        oidcAutoProvision={oidcAutoProvision}
-        handleToggleOidcAutoProvision={handleToggleOidcAutoProvision}
-        oidcSilentLoginDefault={oidcSilentLoginDefault}
-        oidcSilentLoginDefaultLocked={oidcSilentLoginDefaultLocked}
-        handleToggleOidcSilentLoginDefault={handleToggleOidcSilentLoginDefault}
+        externalAutoProvision={externalAutoProvision}
+        handleToggleExternalAutoProvision={handleToggleExternalAutoProvision}
+        secondFactorAfterExternalLogin={secondFactorAfterExternalLogin}
+        handleToggleSecondFactorAfterExternalLogin={
+          handleToggleSecondFactorAfterExternalLogin
+        }
         allowPasswordReset={allowPasswordReset}
         handleTogglePasswordReset={handleTogglePasswordReset}
-        commandHistoryEnabled={commandHistoryEnabled}
-        handleToggleCommandHistory={handleToggleCommandHistory}
         sessionTimeout={sessionTimeout}
         setSessionTimeout={setSessionTimeout}
         handleSaveSessionTimeout={handleSaveSessionTimeout}
-        terminalTimeout={terminalTimeout}
-        setTerminalTimeout={setTerminalTimeout}
-        handleSaveTerminalTimeout={handleSaveTerminalTimeout}
         statusInterval={statusInterval}
         setStatusInterval={setStatusInterval}
-        metricsInterval={metricsInterval}
-        setMetricsInterval={setMetricsInterval}
-        metricsHistoryRetention={metricsHistoryRetention}
-        setMetricsHistoryRetention={setMetricsHistoryRetention}
         handleSaveMonitoring={handleSaveMonitoring}
-        guacEnabled={guacEnabled}
-        handleToggleGuacamole={handleToggleGuacamole}
-        guacUrl={guacUrl}
-        setGuacUrl={setGuacUrl}
-        handleSaveGuacamole={handleSaveGuacamole}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
-        tailscaleApiKey={tailscaleApiKey}
-        setTailscaleApiKey={setTailscaleApiKey}
-        tailscaleApiBaseUrl={tailscaleApiBaseUrl}
-        setTailscaleApiBaseUrl={setTailscaleApiBaseUrl}
-        handleSaveTailscaleApiKey={handleSaveTailscaleApiKey}
-      />
-
-      <AdminSSOSection
-        open={openSections.has("sso")}
-        onToggle={() => toggle("sso")}
-        providers={ssoProviders}
-        onAddProvider={handleAddProvider}
-        onEditProvider={handleEditProvider}
-        onDeleteProvider={handleDeleteProvider}
-        onToggleEnabled={handleToggleProviderEnabled}
-      />
-
-      <SSOProviderDialog
-        open={ssoDialogOpen}
-        onOpenChange={setSsoDialogOpen}
-        provider={ssoDialogProvider}
-        onSaved={handleProviderSaved}
       />
 
       <AdminUsersSection
@@ -1409,25 +839,6 @@ export function AdminSettingsPanel({
       <AdminHostDefaultsSection
         open={openSections.has("host-defaults")}
         onToggle={() => toggle("host-defaults")}
-        defaults={hostDefaults}
-        setDefaults={setHostDefaults}
-        handleSaveDefaults={handleSaveHostDefaults}
-      />
-
-      <AdminImageStorageSection
-        open={openSections.has("image-storage")}
-        onToggle={() => toggle("image-storage")}
-        settings={imageStorageSettings}
-        setSettings={setImageStorageSettings}
-        localDir={imageStorageLocalDir}
-        setLocalDir={setImageStorageLocalDir}
-        instanceId={imageStorageInstanceId}
-        setInstanceId={setImageStorageInstanceId}
-        saving={imageStorageSaving}
-        testing={imageStorageTesting}
-        testResult={imageStorageTestResult}
-        onSave={() => void handleSaveImageStorage()}
-        onTest={() => void handleTestImageStorage()}
       />
 
       <AdminBrandingSection
@@ -1454,13 +865,7 @@ export function AdminSettingsPanel({
       <AdminSSLSection
         open={openSections.has("ssl")}
         onToggle={() => toggle("ssl")}
-        settings={acmeSettings}
-        setSettings={setAcmeSettings}
-        cloudflareTokenDraft={cloudflareTokenDraft}
-        setCloudflareTokenDraft={setCloudflareTokenDraft}
-        requesting={acmeRequesting}
-        handleSave={handleSaveAcmeSettings}
-        handleRequest={handleRequestAcmeCertificate}
+        status={tlsStatus}
         manualCertDraft={manualCertDraft}
         setManualCertDraft={setManualCertDraft}
         manualKeyDraft={manualKeyDraft}
@@ -1496,14 +901,15 @@ export function AdminSettingsPanel({
         users={users}
       />
 
-      <AdminTouchInputSection
-        open={openSections.has("touch-input")}
-        onToggle={() => toggle("touch-input")}
-        settings={touchInputSettings}
-        setSettings={setTouchInputSettings}
-        onSave={() => void saveTouchInputSettings()}
-        onReset={resetTouchInputSettings}
-      />
+      {featureSettings.map((plugin) => (
+        <FeatureSettingsSection
+          key={plugin.id}
+          plugin={plugin}
+          scope="admin"
+          open={openSections.has(featureSectionId(plugin.id))}
+          onToggle={() => toggle(featureSectionId(plugin.id))}
+        />
+      ))}
 
       <AdminCreateUserDialog
         open={createUserOpen}

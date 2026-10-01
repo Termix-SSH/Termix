@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Přidat",
+    "arrowDown": "Šipka dolů",
+    "arrowLeft": "Šipka vlevo",
+    "arrowRight": "Šipka vpravo",
+    "arrowUp": "Šipka nahoru",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Hotovo",
+    "editQuickKeys": "Upravit rychlé klávesy",
+    "end": "Konec",
+    "esc": "Esc",
+    "home": "Domov",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Pasta",
+    "quickKeyPlaceholder": "např. sudo ",
+    "quickKeysDesc": "Klepnutím na × odstraníte. Podporuje až 8 znaků.",
+    "quickKeysTitle": "Rychlé klávesy",
+    "removeQuickKey": "Odstranit",
+    "resetDefaults": "Obnovit na výchozí nastavení",
+    "shift": "Posun",
+    "tab": "Záložka"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Nepodařilo se povolit Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux povolen pro {{host}}. Platí od dalšího připojení.",
+    "clipboardHttpWarning": "Nelze přečíst schránku. Některé prohlížeče omezují přístup ke schránce mimo HTTPS – zkuste Ctrl+V nebo přes HTTPS poskytněte Termix.",
+    "closeTab": "Blízko",
+    "connecting": "Spojovací...",
+    "connectionLost": "Spojení ztraceno",
+    "connectionRejected": "Server odmítl připojení. Zkontrolujte prosím ověření a konfiguraci sítě.",
+    "connectionTimeout": "Časový limit připojení",
+    "enableAutoTmuxAction": "Povolit Auto-Tmux",
+    "hostKeyRejected": "Ověření klíče hostitele SSH odmítnuto. Připojení zrušeno.",
+    "linkDialogCopy": "Kopie",
+    "linkDialogOpen": "OTEVŘENO",
+    "linkDialogTitle": "Otevřít odkaz",
+    "maxReconnectAttemptsReached": "Dosažen maximální počet pokusů o opětovné připojení",
+    "noHostSelected": "Nebyl vybrán žádný hostitel",
+    "passwordPromptFillTitle": "Vyplňte uložené heslo do tohoto řádku?",
+    "reconnect": "Znovu se připojte",
+    "reconnected": "Úspěšné opětovné připojení",
+    "reconnecting": "Znovu se připojuji... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Spojení přerušeno, znovu se připojuji...",
+    "searchCaseSensitive": "Zápasová karta",
+    "searchClose": "Zavřít (Escape)",
+    "searchNext": "Další zápas (Enter)",
+    "searchNoResults": "Žádné výsledky",
+    "searchPlaceholder": "Nalézt",
+    "searchPrevious": "Předchozí shoda (Shift+Enter)",
+    "searchRegex": "Použít regulární výraz",
+    "searchResultCount": "{{index}} z {{count}}",
+    "searchWholeWord": "Shoda celého slova",
+    "sessionExpiredNotice": "Vaše předchozí relace na {{host}} vypršela po {{minutes}} minutách odpojení; shell a vše, co v něm běží, je pryč. Povolte na tomto hostiteli Auto-Tmux, aby relace zůstaly aktivní.",
+    "sessionExpiredNoticeNoMinutes": "Vaše předchozí relace na {{host}} vypršela během odpojení; shell a vše, co v něm běží, je pryč. Povolte na tomto hostiteli Auto-Tmux, aby relace zůstaly aktivní.",
+    "sessionTakenOver": "Relace byla otevřena na jiné kartě. Znovu se připojuji...",
+    "tmuxAttached": "Připojení klienti",
+    "tmuxAttachedCount": "{{count}} připojen",
+    "tmuxCopyHint": "Upravte výběr a stiskněte Enter pro zkopírování do schránky",
+    "tmuxCreateNew": "Zahájit novou relaci",
+    "tmuxDetached": "Odpojeno od relace tmux",
+    "tmuxLastActivity": "Poslední aktivita",
+    "tmuxSessionAttached": "připojena relace tmux: {{name}}",
+    "tmuxSessionCreated": "Vytvořena relace tmux: {{name}}",
+    "tmuxSessionPickerDesc": "Na tomto hostiteli byly nalezeny existující relace tmux. Vyberte jednu, kterou chcete znovu připojit, nebo vytvořte novou relaci.",
+    "tmuxSessionPickerTitle": "Sezení tmux",
+    "tmuxTimeDays": "Před {{count}}dny",
+    "tmuxTimeHours": "{{count}}před hodinami",
+    "tmuxTimeJustNow": "právě teď",
+    "tmuxTimeMinutes": "{{count}}před m",
+    "tmuxUnavailable": "tmux není nainstalován na vzdáleném hostiteli, vrací se ke standardnímu shellu.",
+    "tmuxWindowCount": "{{count}} okno",
+    "tmuxWindows": "Okna",
+    "unknownError": "Došlo k neznámé chybě",
+    "websocketAbnormalClose": "Spojení se neočekávaně ukončilo. Může to být způsobeno problémem s reverzní proxy nebo konfigurací SSL. Zkontrolujte prosím protokoly serveru.",
+    "websocketError": "Chyba připojení k WebSocketu",
+    "clipboardReadFailed": "Čtení ze schránky se nezdařilo. Ujistěte se, že máte povolena přístup ke schránce.",
+    "clipboardWriteFailed": "Kopírování do schránky se nezdařilo. Ujistěte se, že stránka je zobrazována přes HTTPS nebo localhost.",
+    "connected": "Připojeno",
+    "totpCodeLabel": "Ověřovací kód",
+    "duplicateTab": "Duplikovat kartu",
+    "imageChooseFile": "Vyberte soubor s obrázkem",
+    "imageUploaded": "Nahraný obrázek: {{path}}",
+    "imageClipboardUnavailable": "Tento prohlížeč nemůže číst obrázky ze schránky.",
+    "imageClipboardEmpty": "Ve schránce nebyl nalezen žádný obrázek.",
+    "localShell": "Lokální terminálový shell",
+    "autocompleteHintComplete": "Dokončete klávesou Tab nebo Enter",
+    "autocompleteHintNavigate": "↑↓ pro navigaci",
+    "autocompleteHintClose": "Esc pro zavření"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Odpojit tmux",
+    "detachTmuxDescription": "Odpojit relaci tmux",
+    "dismissError": "Chyba při zavírání obrázku",
+    "hideToolbar": "Skrýt panel nástrojů",
+    "image": "Akce s obrázky (pouze obrázky)",
+    "imageActionFailed": "Akce s obrázkem se nezdařila",
+    "layout": "Režim zobrazení panelu nástrojů",
+    "layoutExpanded": "Rozšířeno o metriky",
+    "layoutIcon": "Pouze ikona",
+    "layoutLabeled": "Ikony a štítky",
+    "moveToolbar": "Přesunout panel nástrojů",
+    "moveToolbarHint": "Přetažením změňte umístění panelu nástrojů",
+    "paste": "Vložit obrázek",
+    "pasteImage": "Vložit obrázek ze schránky (pouze obrázky)",
+    "retry": "Zkusit znovu",
+    "showToolbar": "Rozbalit panel nástrojů",
+    "upload": "Nahrát obrázek",
+    "uploadImage": "Nahrajte obrázek na hostitele",
+    "uploadingImage": "Nahrávání..."
+  },
+  "history": {
+    "noTerminalSelected": "Není vybrán žádný terminál",
+    "noTerminalSelectedHint": "Otevření karty terminálu SSH pro zobrazení historie jejích příkazů",
+    "searchPlaceholder": "Historie vyhledávání...",
+    "clearAll": "Vymazat vše",
+    "noHistoryEntries": "Žádné záznamy v historii",
+    "trackingDisabled": "Sledování historie je zakázáno",
+    "trackingDisabledHint": "Zapněte historii příkazů na kartě SSH Terminál tohoto hostitele.",
+    "commandCount_one": "příkaz {{count}}",
+    "commandCount_other": "příkazy {{count}}"
+  },
+  "touchInput": {
+    "enabled": "Povolit dotykový vstup",
+    "enabledDesc": "Povolit posouvání jedním prstem v terminálech",
+    "momentumEnabled": "Povolit hybnost",
+    "momentumEnabledDesc": "Po přejetí prstem krátce pokračujte v rolování",
+    "advanced": "Moderní",
+    "resetDefaults": "Obnovit na výchozí nastavení",
+    "dragThreshold": "Práh přetažení",
+    "maxWheelDelta": "Maximální delta kola",
+    "momentumSampleWindow": "Okno vzorku hybnosti",
+    "releaseGracePeriod": "Dodatečná lhůta",
+    "minimumVelocity": "Minimální rychlost",
+    "maximumVelocity": "Maximální rychlost",
+    "maximumDuration": "Maximální doba trvání",
+    "maximumTravel": "Maximální zdvih",
+    "decayTime": "Doba rozpadu",
+    "pixelsPerTick": "Pixely na tik",
+    "maximumFrameInterval": "Maximální interval snímků",
+    "maximumTicksPerFrame": "Maximální počet tiků na snímek"
+  },
+  "imageStorage": {
+    "instanceId": "ID instance terminálové relace",
+    "instanceIdDesc": "ID instance jedné z vašich připojených karet terminálu, používané k testování viditelnosti.",
+    "selectedModeUnavailable": "Nedostupné",
+    "test": "Test",
+    "testing": "Testování...",
+    "testFailed": "Nepodařilo se otestovat úložiště obrázků",
+    "testConnected": "Terminálová relace je připojena.",
+    "testNotConnected": "S tímto ID instance není připojena žádná terminálová relace.",
+    "testSelectedMode": "Nahrávání by použilo: {{mode}}",
+    "testLocalVisible": "Lokální adresář je viditelný z připojeného hostitele.",
+    "testLocalNotVisible": "Lokální adresář NENÍ viditelný z připojeného hostitele."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Dotykový vstup",
+        "images": "Ukládání obrázků",
+        "sessions": "Relace",
+        "newHosts": "Noví hostitelé"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Perzistence terminálové relace",
+        "description": "Jak dlouho je odpojený terminál udržován aktivní na serveru, než je uzavřen. Min. 1, max. 1440 minut. Pro relace, které musí tuto dobu přetrvávat, povolte na hostiteli Auto-Tmux."
+      },
+      "commandHistoryEnabled": {
+        "label": "Historie příkazů",
+        "description": "Povolit záznam historie příkazů. Pokud je tato možnost zakázána, historie se neukládá bez ohledu na nastavení pro jednotlivé hostitele."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Historie příkazů pro nové hostitele",
+        "description": "Zda se u nových hostitelů má zapnout historie příkazů."
+      },
+      "imageStorageMode": {
+        "label": "Režim úložiště",
+        "description": "Kam se zapisují vložené a nahrané obrazy terminálu. Automatické výběry podle připojení, lokální a vzdálené (SFTP) jsou opraveny.",
+        "auto": "Auto",
+        "local": "Místní",
+        "remoteSftp": "Vzdálené (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Místní adresář",
+        "description": "Absolutní cesta na serveru Termix, kam lokální režim zapisuje obrazy. Po uložení se nikdy nezobrazí. Prázdná hodnota používá TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Cesta hostitele",
+        "description": "Pohled na lokální adresář, který termináloví agenti přijímají, na straně hostitele."
+      },
+      "imageTtlMs": {
+        "label": "Doba trvání (ms)",
+        "description": "Jak dlouho je nahraný obrázek uchováván v milisekundách. Prázdná hodnota používá TERMIX_IMAGE_TTL_MS nebo jednu hodinu."
+      },
+      "imageMaxCount": {
+        "label": "Maximální počet obrázků",
+        "description": "Většina obrázků se uchovává najednou. Prázdné pole používá TERMIX_MAX_IMAGE_COUNT nebo 100."
+      },
+      "imageMaxBytes": {
+        "label": "Maximální počet bajtů úložiště",
+        "description": "Nejvíce bajtů obrázků se uchovává najednou. Prázdné obrázky používají TERMIX_MAX_IMAGE_STORAGE_BYTES nebo 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Zachovat relace i po odpojení",
+        "description": "Udržujte odpojený terminál aktivní na serveru po výše uvedenou dobu, aby opětovné otevření jeho karty pokračovalo tam, kde skončilo."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Spouštět terminály nových hostitelů uvnitř tmuxu, aby relace přežily odpojení (vyžaduje tmux na hostiteli)"
+      },
+      "newHostTheme": {
+        "label": "Téma pro nové hostitele",
+        "description": "Terminální šablona, se kterou začíná nový hostitel."
+      },
+      "newHostFontFamily": {
+        "label": "Písmo pro nové hostitele",
+        "description": "Terminální písmo, se kterým začíná nový hostitel."
+      },
+      "newHostFontSize": {
+        "label": "Velikost písma pro nové hostitele",
+        "description": "Velikost písma terminálu, s níž začíná nový hostitel, v pixelech."
+      },
+      "newHostCursorStyle": {
+        "label": "Styl kurzoru pro nové hostitele"
+      },
+      "newHostCursorBlink": {
+        "label": "Blikající kurzor pro nové hostitele"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Povolit panel nástrojů terminálu",
+        "description": "Zobrazit panel nástrojů pro rychlý přístup ukotvený v aktivním terminálu pro nástroje a aktuální statistiky tohoto hostitele"
+      },
+      "terminalToolbarPosition": {
+        "label": "Pozice panelu nástrojů",
+        "description": "Místo, kde se v terminálu nachází panel nástrojů. Můžete ho odtud stále přetahovat.",
+        "bottom": "Dole uprostřed",
+        "bottomLeft": "Vlevo dole",
+        "bottomRight": "Vpravo dole",
+        "top": "Nahoře uprostřed",
+        "topLeft": "Vlevo nahoře",
+        "topRight": "Vpravo nahoře"
+      },
+      "terminalToolbarStartState": {
+        "label": "Počáteční stav panelu nástrojů",
+        "description": "Zda se panel nástrojů po připojení terminálu otevře rozbalený nebo minimalizovaný",
+        "expanded": "Rozšířený",
+        "collapsed": "Minimalizované"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Režim zobrazení panelu nástrojů",
+        "description": "Jak se zobrazují tlačítka panelu nástrojů. Možnost „Naposledy použité“ zachovává vše, co jste vybrali v panelu nástrojů.",
+        "remember": "Naposledy použito",
+        "icon": "Pouze ikona",
+        "labeled": "Ikony a popisky",
+        "expanded": "Rozšířeno o statistiky"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Zobrazit živé statistiky",
+        "description": "Zobrazit statistiky živého hostitele nad tlačítky panelu nástrojů v rozbaleném režimu"
+      },
+      "terminalToolbarFade": {
+        "label": "Ztlumení při nečinnosti",
+        "description": "Ztmavování panelu nástrojů, dokud na něj nenajedete myší"
+      },
+      "enableCommandHistory": {
+        "label": "Historie příkazů",
+        "description": "Zaznamenávejte příkazy spouštěné v tomto terminálu pro historii a automatické dokončování"
+      },
+      "enableTerminal": {
+        "label": "Povolit terminál",
+        "description": "Nabídněte SSH terminál pro tohoto hostitele."
+      },
+      "inheritAppearance": {
+        "label": "Použít výchozí nastavení uživatele"
+      },
+      "theme": {
+        "label": "Téma"
+      },
+      "cursorBlink": {
+        "label": "Blikající kurzor"
+      },
+      "cursorStyle": {
+        "label": "Styl kurzoru"
+      },
+      "fontSize": {
+        "label": "Velikost písma"
+      },
+      "fontFamily": {
+        "label": "Písmo"
+      },
+      "scrollback": {
+        "label": "Posunout zpět"
+      },
+      "letterSpacing": {
+        "label": "Rozteč písmen"
+      },
+      "lineHeight": {
+        "label": "Výška řádku"
+      },
+      "bellStyle": {
+        "label": "Zvonek"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimální kontrastní poměr"
+      },
+      "backgroundImage": {
+        "label": "Obrázek na pozadí"
+      },
+      "backgroundImageOpacity": {
+        "label": "Neprůhlednost obrázku na pozadí"
+      },
+      "customThemeColors": {
+        "label": "Vlastní barvy motivu"
+      },
+      "rightClickSelectsWord": {
+        "label": "Kliknutím pravým tlačítkem myši vyberete slovo"
+      },
+      "macOptionIsMeta": {
+        "label": "Možnost je Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Klávesa pro rychlé procházení"
+      },
+      "fastScrollSensitivity": {
+        "label": "Rychlá rychlost rolování"
+      },
+      "backspaceMode": {
+        "label": "Zpět"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Moshův příkaz"
+      },
+      "autoTmux": {
+        "label": "Automatický tmux"
+      },
+      "useSSHTitle": {
+        "label": "Použijte SSH titul"
+      },
+      "syntaxHighlighting": {
+        "label": "Zvýrazňování syntaxe"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Kategorie zvýrazňování syntaxe"
+      },
+      "linkClickBehavior": {
+        "label": "Kliknutí na odkaz"
+      },
+      "localEcho": {
+        "label": "Místní ozvěna"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Nabídnout vyplnění výzev k zadání hesla"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Vyplňte příkazy Sudo"
+      },
+      "autoReconnect": {
+        "label": "Automatické opětovné připojení"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "Automatické dokončování příkazů",
+        "description": "Zobrazit automatické dokončování při psaní po stisknutí klávesy Tab"
+      },
+      "localEcho": {
+        "label": "Místní ozvěna",
+        "description": "Snižte vnímanou latenci vstupu pomocí bezpečné lokální predikce stisků kláves"
+      },
+      "linkClickBehavior": {
+        "label": "Kliknutí na odkaz terminálu",
+        "description": "Výchozí chování při kliknutí na odkazy v terminálu"
+      },
+      "customThemes": {
+        "label": "Uložená témata"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Místní terminál"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Používejte živé terminálové relace",
+      "description": "Umožňuje dalším funkcím, jako je sdílení a nahrávání relací, dosáhnout vašich živých terminálových relací."
+    },
+    "history": {
+      "title": "Číst historii příkazů",
+      "description": "Umožňuje dalším funkcím, jako je například asistent s umělou inteligencí, číst historii vašich příkazů."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "Terminál",
+    "addHost": "Přidat hostitele",
+    "applyGlobalThemeTooltip": "Použít toto téma",
+    "backgroundImageDesc": "Volitelná URL adresa pro obrázek na pozadí terminálu",
+    "backgroundImageLabel": "URL adresa obrázku na pozadí",
+    "backgroundImageOpacityLabel": "Neprůhlednost obrázku na pozadí",
+    "backspaceMode": "Režim zpětného volání",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "Režim zpětného volání",
+    "backspaceModeNormal": "Normální (DEL)",
+    "behaviorAndAdvanced": "Chování a pokročilé",
+    "bellStyle": "Styl zvonu",
+    "bellStyleBoth": "Obě",
+    "bellStyleLabel": "Styl zvonu",
+    "bellStyleNone": "Žádný",
+    "bellStyleSound": "Zvuk",
+    "bellStyleVisual": "Vizuální",
+    "colorTheme": "Barevný motiv",
+    "cursorBlink": "Blikání kurzoru",
+    "cursorBlinking": "Kurzor bliká",
+    "cursorBlinkingDesc": "Povolit blikající animaci kurzoru terminálu",
+    "cursorStyle": "Styl kurzoru",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Blok",
+    "cursorStyleLabel": "Styl kurzoru",
+    "cursorStyleUnderline": "Zdůraznit",
+    "customThemeAnsiColors": "Barvy ANSI",
+    "customThemeBackground": "Pozadí",
+    "customThemeBlack": "Černý",
+    "customThemeBlue": "Modrý",
+    "customThemeBrightBlack": "Jasně černá",
+    "customThemeBrightBlue": "Jasně modrá",
+    "customThemeBrightCyan": "Jasně azurová",
+    "customThemeBrightGreen": "Jasně zelená",
+    "customThemeBrightMagenta": "Světle purpurová",
+    "customThemeBrightRed": "Jasně červená",
+    "customThemeBrightWhite": "Jasně bílá",
+    "customThemeBrightYellow": "Jasně žlutá",
+    "customThemeColors": "Vlastní barvy",
+    "customThemeCursor": "Kurzor",
+    "customThemeCursorAccent": "Akcent kurzoru",
+    "customThemeCyan": "Azurová",
+    "customThemeForeground": "Popředí",
+    "customThemeGreen": "Zelený",
+    "customThemeMagenta": "Purpurová",
+    "customThemeRed": "Červený",
+    "customThemeResetTooltip": "Obnovit na výchozí nastavení",
+    "customThemeSelection": "Výběr",
+    "customThemeWhite": "Bílý",
+    "customThemeYellow": "Žluť",
+    "deleteGlobalThemeTooltip": "Smazat toto téma",
+    "docsLink": "Zobrazit dokumenty",
+    "enableAutoMosh": "Povolit Auto-Mosh",
+    "enableAutoMoshDesc": "Pokud je k dispozici, preferujte Mosh před SSH.",
+    "enableAutoTmux": "Povolit Auto-Tmux",
+    "enableAutoTmuxDesc": "Udržujte svůj shell a vše, co v něm běží, aktivní i po odpojení a restartu prohlížeče spuštěním uvnitř tmuxu (tmux musí být nainstalován na hostiteli).",
+    "fastScrollModifier": "Modifikátor rychlého rolování",
+    "fastScrollModifierAlt": "Alternativní",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Modifikátor rychlého rolování",
+    "fastScrollModifierShift": "Posun",
+    "fastScrollSensitivity": "Citlivost rychlého rolování",
+    "fastScrollSensitivityLabel": "Citlivost rychlého rolování",
+    "fontFamily": "Rodina písem",
+    "fontFamilyCustomHint": "Vyberte si dodané písmo nebo zvolte možnost Vlastní a zadejte přesný název písma, které je již ve vašem systému nainstalováno (např. MesloLGS NF, Noto Sans Mono). Termix písma za vás nainstalovat nemůže, nejprve si ho nainstalujte do svého operačního systému.",
+    "fontFamilyCustomOption": "Zvyk...",
+    "fontFamilyCustomPlaceholder": "Přesný název písma, např. MesloLGS NF",
+    "fontFamilyLabel": "Rodina písem",
+    "fontSize": "Velikost písma",
+    "fontSizeLabel": "Velikost písma",
+    "hostNotFound": "Hostitel nenalezen",
+    "letterSpacing": "Rozteč písmen",
+    "letterSpacingPx": "Rozteč písmen (px)",
+    "lineHeight": "Výška řádku",
+    "lineHeightLabel": "Výška řádku",
+    "linkClickBehaviorConfirm": "Zobrazit vyskakovací okno pro otevření nebo kopírování",
+    "linkClickBehaviorDesc": "Řídí, co se stane po kliknutí na odkaz v terminálu. Pro nastavení na úrovni aplikace použijte možnost „Výchozí“.",
+    "linkClickBehaviorDirect": "Otevřít přímo",
+    "linkClickBehaviorLabel": "Chování při kliknutí na odkaz",
+    "loadingHost": "Načítání hostitele...",
+    "localEchoAuto": "Automatický",
+    "localEchoDesc": "Předvídat bezpečně tisknutelné stisky kláves lokálně na pomalém připojení. Výzvy k zadání hesla a ovládací prvky se nikdy nezobrazují.",
+    "localEchoLabel": "Místní ozvěna",
+    "localEchoOff": "Vypnuto",
+    "localEchoOn": "Vždy zapnuto",
+    "macOptionIsMetaLabel": "Klávesa Option odesílá metadata",
+    "macOptionIsMetaShortDesc": "Zakázat psaní speciálních znaků (například @ nebo |) pomocí klávesy Option/Alt v systému macOS namísto odesílání Meta",
+    "moshCommand": "Příkaz MOSH",
+    "moshCommandLabel": "Mosh Command",
+    "noSavedThemes": "Zatím žádné uložené motivy",
+    "none": "Žádný",
+    "passwordPromptAutoFillDesc": "Nabídnout vyplnění uloženého hesla, když se o něj terminál zeptá. Vypněte tuto možnost, pokud chcete, aby se na tomto hostiteli heslo nikdy automaticky nevyplňovalo.",
+    "passwordPromptAutoFillLabel": "Automatické vyplnění hesla nabídky",
+    "autoReconnectLabel": "Automatické opětovné připojení",
+    "autoReconnectDesc": "Samovolně se znovu připojí, když SSH připojení přestane být připojeno, například po výpadku sítě nebo po uspání. Zachovává posun zpět.",
+    "rightClickSelectsWord": "Kliknutí pravým tlačítkem myši vybere slovo",
+    "rightClickSelectsWordLabel": "Kliknutí pravým tlačítkem myši Vybere slovo",
+    "rightClickSelectsWordShortDesc": "Vyberte slovo pod kurzorem kliknutím pravým tlačítkem myši",
+    "saveAsGlobalTheme": "Uložit jako globální motiv",
+    "saveGlobalThemeError": "Uložení motivu se nezdařilo",
+    "saveGlobalThemeNamePrompt": "Zadejte název tohoto motivu",
+    "saveGlobalThemeSuccess": "Téma uloženo",
+    "savedThemesLabel": "Uložená témata",
+    "scrollbackBufferLabel": "Vyrovnávací paměť pro rolování zpět",
+    "scrollbackMaxLines": "Maximální počet řádků uchovávaných v historii",
+    "sudoPasswordAutoFill": "Automatické vyplňování hesla Sudo",
+    "sudoPasswordAutoFillDesc": "Uložte heslo sudo, aby metriky hostitele, výzvy terminálu a další mohly automaticky spouštět privilegované příkazy.",
+    "sudoPasswordAutoFillLabel": "Automatické vyplňování hesla Sudo",
+    "syntaxCategoryIpAddresses": "IP adresy",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "Úrovně protokolů",
+    "syntaxCategoryLogLevelsDesc": "chyba, varování, informace, ladění, fatální",
+    "syntaxCategoryNumbers": "Označená čísla",
+    "syntaxCategoryNumbersDesc": "port 8080, výstup 1, stav 404",
+    "syntaxCategoryPaths": "Cesty k souborům",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/soubor.txt",
+    "syntaxCategoryTimestamps": "Časová razítka",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15. 1. 2024",
+    "syntaxCategoryUrls": "URL adresy",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "Obarvení výstupu terminálu (chyby, cesty, IP adresy, časová razítka)",
+    "syntaxHighlightingLabel": "Zvýrazňování syntaxe",
+    "terminalAppearance": "Vzhled terminálu",
+    "theme": "Téma",
+    "themePreview": "Náhled motivu",
+    "useSSHTitleDesc": "Aktualizujte název karty z názvu okna shellu namísto názvu hostitele",
+    "useSSHTitleLabel": "Použít název okna SSH",
+    "enableTunnel": "Povolit tunel",
+    "enableFileManager": "Povolit Správce souborů",
+    "enableDocker": "Povolit Docker",
+    "startupSnippet": "Spustit úryvek",
+    "quickActions": "Rychlé akce",
+    "proxmoxLastSyncStatus": {
+      "success": "Úspěch"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} přeskočeno (nenalezena žádná IP adresa)",
+    "proxmoxStatsUrlCopied": "URL statistik Proxmoxu zkopírována do schránky",
+    "rdpUrlCopied": "URL adresa RDP zkopírována",
+    "vncUrlCopied": "URL adresa VNC zkopírována",
+    "filterAuthStepca": "Krok CA",
+    "guac": {
+      "noCredential": "Žádné pověření (přímé pověření níže)",
+      "authTypeDirect": "Řídit",
+      "authTypeCredential": "Přihlašovací údaj",
+      "authTypeNone": "Žádný",
+      "recordingPath": "Cesta záznamu",
+      "recordingName": "Název nahrávky",
+      "saveHostFirst": "Nejprve uložte hostitele.",
+      "sharingOptionsAfterSave": "Možnosti sdílení jsou k dispozici po uložení hostitele.",
+      "permissionLevel": "Úroveň oprávnění",
+      "typeHeader": "Typ",
+      "targetHeader": "Cíl",
+      "permissionHeader": "Povolení",
+      "cancelBtn": "Zrušit",
+      "savingBtn": "Ukládání…",
+      "updateHostBtn": "Aktualizovat hostitele",
+      "addHostBtn": "Přidat hostitele"
+    },
+    "filterAuthVault": "Klenba"
+  },
+  "nav": {
+    "history": "Dějiny",
+    "localTerminal": "Místní terminál",
+    "sshTools": "SSH nástroje",
+    "terminal": "Terminál",
+    "macros": "Makra"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "Zde napište pro vysílání stisknutí kláves...",
+    "copyOnSelect": "Automatické kopírování vybraného textu",
+    "enableRightClickCopyPaste": "Povolit kopírování/vkládání kliknutím pravým tlačítkem myši",
+    "fillPassword": "Vyplňte heslo",
+    "fillPasswordMissing": "Pro {{count}} vybraných terminálů není uloženo žádné heslo.",
+    "fillPasswordSuccess": "Heslo vyplněno do terminálu(ů) {{count}}",
+    "keyRecordingTitle": "Nahrávání klíčů",
+    "noTerminalTabsOpen": "Žádné otevřené karty terminálu",
+    "recordToTerminals": "Záznam do terminálů",
+    "selectAll": "Vše",
+    "selectNone": "Žádný",
+    "selectTerminalsAbove": "Vyberte terminály výše",
+    "settingsTitle": "Nastavení",
+    "startRecording": "Spustit nahrávání",
+    "stopRecording": "Zastavit nahrávání"
+  },
+  "keybindings": {
+    "copy": "Kopírovat výběr",
+    "paste": "Pasta",
+    "sendControlCode": "Odeslat signál Ctrl+písmeno",
+    "sendText": "Odeslat text",
+    "controlCodeLabel": "Dopis",
+    "textLabel": "Text k odeslání",
+    "appendEnterLabel": "Po odeslání stiskněte Enter",
+    "clipboardPermissionNote": "V některých prohlížečích se může při prvním použití zobrazit výzva k zadání povolení ke schránce.",
+    "textRequired": "Zadejte text k odeslání",
+    "controlCodeRequired": "Zadejte jedno písmeno pro kontrolní kód",
+    "builtIn": {
+      "copyCtrlC": "Kopírovat výběr (Ctrl+C, pouze když je vybraný text)",
+      "copyCtrlShiftC": "Kopírovat výběr (Ctrl+Shift+C)",
+      "copyCmdC": "Kopírovat výběr (Cmd+C)",
+      "pasteCtrlShiftV": "Vložit ze schránky (Ctrl+Shift+V)",
+      "ctrlW": "Odeslat Ctrl+W do shellu (blokováno zavírání karty prohlížeče)",
+      "ctrlT": "Odeslat Ctrl+T do shellu (blokováno otevírání karty prohlížeče)",
+      "ctrlN": "Odeslat Ctrl+N do shellu (blokováno otevírání okna prohlížeče)",
+      "ctrlQ": "Odeslat Ctrl+Q do shellu (blokováno ukončení prohlížeče)"
+    }
+  },
+  "macros": {
+    "title": "Makra",
+    "description": "Spusťte v terminálu uloženou sérii příkazů a reagujte na to, co server odešle zpět.",
+    "target": "Cíl",
+    "noTerminal": "Žádný otevřený terminál",
+    "empty": "Zatím žádná makra",
+    "emptyHint": "Vytvořte makro pro automatizaci procesů v terminálu, jako je přihlašování, restartování služby nebo odpovídání na výzvy.",
+    "create": "Nové makro",
+    "back": "Zpět k makrům",
+    "name": "Jméno",
+    "namePlaceholder": "Restartujte webový server",
+    "nameRequired": "Před uložením zadejte makro název",
+    "descriptionLabel": "Popis",
+    "descriptionPlaceholder": "Co toto makro dělá (volitelné)",
+    "unsaved": "Neuložené změny",
+    "save": "Uložit",
+    "saved": "Makro uloženo",
+    "saveFailed": "Makro se nepodařilo uložit.",
+    "delete": "Vymazat",
+    "deleteTitle": "Smazat toto makro?",
+    "deleteBody": "Soubor „{{name}}“ bude trvale smazán. Tuto akci nelze vrátit zpět.",
+    "deleted": "Makro smazáno",
+    "cancel": "Zrušit",
+    "run": "Běh",
+    "stop": "Zastávka",
+    "running": "Běh...",
+    "completed": "Makro dokončeno",
+    "failed": "Makro selhalo",
+    "loadFailed": "Nepodařilo se načíst makra",
+    "needTerminal": "Nejprve otevřete a připojte terminál",
+    "noSteps": "Toto makro zatím nemá žádné kroky. Přidejte jeden níže.",
+    "addStep": "Přidat krok",
+    "stepNumber": "Krok {{number}}",
+    "removeStep": "Odebrat krok",
+    "confirmRunTitle": "Spustit toto makro?",
+    "confirmRunBody": "„{{name}}“ odešle příkazy pro {{host}}.",
+    "confirmRunAction": "Spustit makro",
+    "stepTypes": {
+      "send": {
+        "label": "Odeslat příkaz",
+        "help": "Zadá text do terminálu, stejně jako byste ho napsali."
+      },
+      "wait": {
+        "label": "Počkejte na výstup",
+        "help": "Pozastaví se, dokud server nevypíše text, který pojmenujete, například výzvu k zadání hesla."
+      },
+      "delay": {
+        "label": "Pauza",
+        "help": "Čeká pevně stanovenou dobu před dalším krokem."
+      },
+      "if": {
+        "label": "Pokud výstup obsahuje",
+        "help": "Zkontroluje vše, co server dosud vytiskl, a poté spustí jednu ze dvou větví."
+      },
+      "repeat": {
+        "label": "Opakovat",
+        "help": "Spustí kroky uvnitř něj tolikrát, kolikrát je nastaveno."
+      }
+    },
+    "send": {
+      "text": "Příkaz nebo text",
+      "textPlaceholder": "restartování systemctl v Nginxu",
+      "pressEnter": "Po odeslání stiskněte Enter",
+      "pressEnterHelp": "Vypněte tuto funkci, chcete-li psát text bez jeho odesílání."
+    },
+    "wait": {
+      "pattern": "Počkejte, dokud výstup neobsahuje",
+      "patternPlaceholder": "heslo:",
+      "timeout": "Vzdej se po",
+      "onTimeout": "Pokud se to nikdy neobjeví",
+      "stop": "Zastavit makro",
+      "continue": "Stejně pokračuj"
+    },
+    "delay": {
+      "duration": "Čekat na"
+    },
+    "ifStep": {
+      "pattern": "Pokud výstup obsahuje",
+      "patternPlaceholder": "Aktivní: aktivní (běží)",
+      "then": "Pak udělej tohle",
+      "else": "Jinak to udělej",
+      "emptyBranch": "Žádné schody"
+    },
+    "repeat": {
+      "count": "Počet opakování",
+      "times": "krát"
+    },
+    "match": {
+      "useRegex": "Porovnání s regulárním výrazem",
+      "useRegexHelp": "Nechte toto vypnuté, aby text přesně odpovídal napsanému textu.",
+      "invalidRegex": "Není to platný regulární výraz, bude nalezen jako prostý text."
+    },
+    "seconds": "sekundy",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Je vyžadován vzdálený server. Pro použití tohoto typu připojení se připojte ke vzdálenému serveru v Nastavení."
+  }
+}

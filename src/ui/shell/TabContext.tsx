@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { getTabType } from "./tab-registry";
 import React, {
   createContext,
   useContext,
@@ -35,8 +36,6 @@ interface TabContextType {
     },
   ) => void;
   updateTab: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
-  previewTerminalTheme: string | null;
-  setPreviewTerminalTheme: (theme: string | null) => void;
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
@@ -61,8 +60,6 @@ const NOOP_TABS: TabContextType = {
   reorderTabs: () => {},
   updateHostConfig: () => {},
   updateTab: () => {},
-  previewTerminalTheme: null,
-  setPreviewTerminalTheme: () => {},
 };
 
 export function useTabsSafe(): TabContextType {
@@ -85,9 +82,6 @@ export function TabProvider({ children }: TabProviderProps) {
   ]);
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
-  const [previewTerminalTheme, setPreviewTerminalTheme] = useState<
-    string | null
-  >(null);
   const [initialMaxId] = useState(2);
   const nextTabId = useRef(initialMaxId);
 
@@ -110,16 +104,8 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const computeUniqueTitle = useCallback(
     (tabType: Tab["type"], desiredTitle: string | undefined): string => {
-      const defaultTitle =
-        tabType === "server_stats"
-          ? t("nav.hostMetrics")
-          : tabType === "file_manager"
-            ? t("nav.fileManager")
-            : tabType === "tunnel"
-              ? t("nav.tunnels")
-              : tabType === "docker"
-                ? t("nav.docker")
-                : t("nav.terminal");
+      const titleKey = getTabType(tabType)?.titleKey;
+      const defaultTitle = titleKey ? t(titleKey) : t("nav.terminal");
       const baseTitle = (desiredTitle || defaultTitle).trim();
       const match = baseTitle.match(/^(.*) \((\d+)\)$/);
       const root = match ? match[1] : baseTitle;
@@ -153,9 +139,12 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const addTab = useCallback(
     (tabData: Omit<Tab, "id">): number => {
-      // --- tmux-monitor --- (tmux_monitor is a singleton tab like ssh_manager:
-      // re-opening focuses the existing tab instead of adding a duplicate)
-      if (tabData.type === "ssh_manager" || tabData.type === "tmux_monitor") {
+      // A singleton tab: re-opening focuses the existing tab instead of
+      // adding a duplicate.
+      if (
+        tabData.type === "ssh_manager" ||
+        getTabType(tabData.type)?.singleton
+      ) {
         const existingTab = tabs.find((t) => t.type === tabData.type);
         if (existingTab) {
           setTabs((prev) =>
@@ -183,26 +172,23 @@ export function TabProvider({ children }: TabProviderProps) {
 
       const id = nextTabId.current++;
       const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const isCommandTarget = !!getTabType(tabData.type)?.commandTarget;
       const needsUniqueTitle =
-        tabData.type === "terminal" ||
-        tabData.type === "server_stats" ||
-        tabData.type === "file_manager" ||
-        tabData.type === "tunnel" ||
-        tabData.type === "docker";
+        isCommandTarget || !!getTabType(tabData.type)?.multiInstance;
+      const singletonTitleKey = getTabType(tabData.type)?.singleton
+        ? getTabType(tabData.type)?.titleKey
+        : undefined;
       const effectiveTitle = needsUniqueTitle
         ? computeUniqueTitle(tabData.type, tabData.title)
-        : tabData.type === "tmux_monitor" // --- tmux-monitor ---
-          ? tabData.title || t("nav.tmuxMonitor")
-          : tabData.title || "";
+        : tabData.title || (singletonTitleKey ? t(singletonTitleKey) : "");
       const newTab: Tab = {
         ...tabData,
         id,
         instanceId,
         title: effectiveTitle,
-        terminalRef:
-          tabData.type === "terminal"
-            ? React.createRef<TerminalRefHandle>()
-            : undefined,
+        terminalRef: isCommandTarget
+          ? React.createRef<TerminalRefHandle>()
+          : undefined,
         hostConfig: tabData.hostConfig
           ? {
               ...tabData.hostConfig,
@@ -215,7 +201,7 @@ export function TabProvider({ children }: TabProviderProps) {
       setAllSplitScreenTab((prev) => prev.filter((tid) => tid !== id));
       return id;
     },
-    [computeUniqueTitle, tabs, t], // --- tmux-monitor --- (added t)
+    [computeUniqueTitle, tabs, t],
   );
 
   const pendingCurrentTabRef = useRef<number | null>(null);
@@ -379,8 +365,6 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
-      previewTerminalTheme,
-      setPreviewTerminalTheme,
     }),
     [
       tabs,
@@ -393,8 +377,6 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
-      previewTerminalTheme,
-      setPreviewTerminalTheme,
     ],
   );
 

@@ -3,8 +3,9 @@ import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { Shield, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { MFAPromptMode } from "@termix/plugin-sdk/frontend";
 
-export type MFAPromptMode = "totp" | "password" | "menu" | "push";
+export type { MFAPromptMode };
 
 interface TOTPDialogProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ interface TOTPDialogProps {
 export function TOTPDialog({
   isOpen,
   prompt,
-  mode = "totp",
+  mode,
   waiting = false,
   onSubmit,
   onCancel,
@@ -38,8 +39,11 @@ export function TOTPDialog({
 
   const isPush = mode === "push";
   const isMenu = mode === "menu";
-  const isTotp = mode === "totp";
+  const isTotp = !isPush && !isMenu && mode !== "password";
   const showWaiting = waiting || (isPush && pushSubmitted);
+  // FortiToken-style prompts ask for a numeric code or the literal word
+  // "push", so the field can't be restricted to digits only.
+  const allowsPushKeyword = isTotp && /push/i.test(prompt);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -112,6 +116,15 @@ export function TOTPDialog({
                 type="text"
                 autoFocus
                 placeholder={t("terminal.mfaMenuPlaceholder")}
+                className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
+              />
+            ) : allowsPushKeyword ? (
+              <Input
+                id="totpCode"
+                name="totpCode"
+                type="text"
+                autoFocus
+                placeholder={t("terminal.mfaCodeOrPushPlaceholder")}
                 className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
               />
             ) : (

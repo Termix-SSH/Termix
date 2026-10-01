@@ -1,0 +1,194 @@
+{
+  "id": "ai",
+  "name": "AI Assistant",
+  "version": "1.0.0",
+  "description": "An AI assistant that can read your hosts, snippets, fleets, alerts and automations, and suggest changes for you to approve.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "Sparkles",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "hosts:write",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "secrets:own",
+    "network:outbound",
+    "notify:send",
+    "network:serve",
+    "ui:surface",
+    "users:impersonate"
+  ],
+  "optionalDependencies": {
+    "workspaces": "^1.0.0",
+    "network-topology": "^1.0.0",
+    "snippets": "^1.0.0",
+    "fleets": "^1.0.0",
+    "ssh-terminal": "^1.0.0",
+    "automations": "^1.0.0",
+    "homepage": "^1.0.0"
+  },
+  "requires": [
+    {
+      "service": "workspaces.saved",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "network-topology.graph",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "snippets.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "fleets.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "terminal.history",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "automations.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "homepage.items",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
+  "providesSecret": [
+    {
+      "key": "api-key",
+      "permission": "ai.secrets.share",
+      "descriptionKey": "ai.secrets.shareApiKey"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "ai",
+        "titleKey": "nav.ai",
+        "icon": "Sparkles",
+        "openFrom": ["rail", "palette"]
+      }
+    ],
+    "actions": [
+      {
+        "id": "ai.openWithContext",
+        "titleKey": "ai.assistant",
+        "handler": "openWithContext",
+        "icon": "Bot",
+        "permission": "ai.services.use",
+        "slot": "terminal.toolbar",
+        "kind": "button"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "manage_providers",
+        "titleKey": "permissions.manage_providers.title",
+        "descriptionKey": "permissions.manage_providers.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "apply_proposals",
+        "titleKey": "permissions.apply_proposals.title",
+        "descriptionKey": "permissions.apply_proposals.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "services.use",
+        "titleKey": "permissions.services.use.title",
+        "descriptionKey": "permissions.services.use.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "secrets.share",
+        "titleKey": "permissions.secrets.share.title",
+        "descriptionKey": "permissions.secrets.share.description",
+        "defaultRoles": ["user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "globallyEnabled",
+          "type": "boolean",
+          "labelKey": "settings.admin.globallyEnabled.label",
+          "descriptionKey": "settings.admin.globallyEnabled.description",
+          "default": false
+        },
+        {
+          "key": "privateEndpoints",
+          "type": "textarea",
+          "labelKey": "settings.admin.privateEndpoints.label",
+          "descriptionKey": "settings.admin.privateEndpoints.description",
+          "requires": "globallyEnabled",
+          "default": "localhost\n127.0.0.1\n::1\nhost.docker.internal"
+        }
+      ],
+      "user": [
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "labelKey": "ai.enableTitle",
+          "descriptionKey": "ai.enableDescription",
+          "default": false
+        },
+        {
+          "key": "allowReadOnlyCommands",
+          "type": "boolean",
+          "labelKey": "ai.readOnlyCommands",
+          "descriptionKey": "ai.readOnlyCommandsDescription",
+          "requires": "enabled",
+          "default": false
+        },
+        {
+          "key": "providers",
+          "type": "custom",
+          "component": "providers",
+          "permission": "manage_providers"
+        }
+      ],
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 90,
+        "fields": [
+          {
+            "key": "enableAiAssistant",
+            "type": "boolean",
+            "labelKey": "settings.host.enableAiAssistant.label",
+            "descriptionKey": "settings.host.enableAiAssistant.description",
+            "default": false
+          }
+        ]
+      }
+    },
+    "uses": ["terminal.sidePanel", "terminal.toolbar"]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

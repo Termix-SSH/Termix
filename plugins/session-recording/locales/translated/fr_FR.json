@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Journaux de session"
+  },
+  "hosts": {
+    "enableSessionRecording": "Enregistrement de session",
+    "enableSessionRecordingDesc": "Enregistrer la sortie de la session terminal pour une consultation ultérieure"
+  },
+  "permissions": {
+    "view": {
+      "title": "Consulter les enregistrements des sessions",
+      "description": "Consultez et relisez vos propres enregistrements de session."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Rétention (jours)",
+        "description": "Durée de conservation d'un enregistrement de session avant sa suppression automatique."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Activer l'enregistrement de session",
+        "description": "Enregistrez la sortie du terminal pour cet hôte afin de pouvoir la relire ou la télécharger ultérieurement."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Enregistrement"
+  },
+  "sessionLogs": {
+    "title": "Journaux de session",
+    "noLogs": "Aucun journal de session pour l’instant",
+    "noLogsDesc": "Activez la journalisation des sessions sur un hôte pour démarrer l’enregistrement",
+    "duration": "Durée",
+    "viewLog": "Afficher le journal",
+    "downloadLog": "Télécharger",
+    "downloadAsText": "Télécharger au format texte",
+    "deleteLog": "Supprimer",
+    "confirmDelete": "Supprimer ce journal de session ?",
+    "confirmDeleteDesc": "Cette action est irréversible.",
+    "copyContent": "Copier",
+    "copied": "Copié !",
+    "loadError": "Échec du chargement des journaux de session",
+    "deleteError": "Échec de la suppression du journal de session",
+    "filterByHost": "Filtrer par hôte...",
+    "back": "Retour",
+    "empty": "(vide)",
+    "noResults": "Aucun résultat pour «{{query}}»",
+    "hostFallback": "Hôte {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Chronologie de l'enregistrement",
+    "speed": "Vitesse de lecture",
+    "play": "Lire l'enregistrement",
+    "pause": "Mettre en pause l'enregistrement"
+  }
+}

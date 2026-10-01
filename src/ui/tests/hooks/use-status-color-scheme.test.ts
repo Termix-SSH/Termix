@@ -65,4 +65,9 @@ describe("getStatusClasses", () => {
   it("uses the accent color for the accent scheme", () => {
     expect(getStatusClasses(true, "accent", "dot")).toContain("accent-brand");
   });
+
+  it("draws reachable as a warning in both schemes", () => {
+    expect(getStatusClasses("reachable", "accent", "dot")).toContain("amber");
+    expect(getStatusClasses("reachable", "status", "dot")).toContain("amber");
+  });
 });

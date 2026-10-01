@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Bejelentkezés LDAP-pal",
+  "loginWithProvider": "Bejelentkezés {{name}} használatával",
+  "loading": "Terhelés...",
+  "requiredField": "Ez a mező kötelező",
+  "username": "LDAP felhasználónév",
+  "password": "LDAP jelszó",
+  "signIn": "Bejelentkezés",
+  "permissions": {
+    "manage": {
+      "title": "LDAP-címtárak kezelése",
+      "description": "LDAP-könyvtárak hozzáadása, módosítása és eltávolítása, amelyekkel a felhasználók bejelentkezhetnek."
+    }
+  },
+  "providers": {
+    "docsLink": "Dokumentumok megtekintése",
+    "none": "Nincsenek LDAP könyvtárak konfigurálva.",
+    "add": "Könyvtár hozzáadása",
+    "edit": "Könyvtár szerkesztése",
+    "delete": "Könyvtár törlése",
+    "deleteConfirm": "Törli ezt a könyvtárat? Az ezzel bejelentkező felhasználók nem fognak tudni bejelentkezni.",
+    "name": "Megjelenített név",
+    "namePlaceholder": "Cégjegyzék",
+    "nameRequired": "Megjelenített név megadása kötelező",
+    "enabled": "Engedélyezve",
+    "save": "Könyvtár mentése",
+    "saving": "Megtakarítás...",
+    "saved": "Mentett",
+    "saveFailed": "Nem sikerült menteni",
+    "deleted": "Törölt",
+    "deleteFailed": "Nem sikerült törölni",
+    "loadFailed": "Nem sikerült betölteni az LDAP könyvtárakat",
+    "cancel": "Mégsem"
+  },
+  "fields": {
+    "host": "LDAP-gazdagép",
+    "port": "Kikötő",
+    "useTls": "TLS (LDAPS) használata",
+    "bindDn": "Kötési DN",
+    "bindPassword": "Jelszó kötése",
+    "secretKeep": "A jelszó mentésre került. Hagyja ezt üresen a megőrzéshez.",
+    "userSearchBase": "Felhasználói keresési bázis",
+    "userSearchFilter": "Felhasználói keresési szűrő",
+    "usernameAttr": "Felhasználónév attribútum",
+    "displayNameAttr": "Megjelenített név attribútum",
+    "groupSearchBase": "Csoportkeresési bázis",
+    "adminGroup": "Adminisztrátori csoport",
+    "allowedUsers": "Engedélyezett felhasználók"
+  }
+}

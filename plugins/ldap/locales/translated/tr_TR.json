@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Sign in with LDAP",
+  "loginWithProvider": "{{name}} ile giriş yap",
+  "loading": "Yükleniyor...",
+  "requiredField": "Bu alan zorunludur",
+  "username": "LDAP Kullanıcı Adı",
+  "password": "LDAP Parolası",
+  "signIn": "Oturum Aç",
+  "permissions": {
+    "manage": {
+      "title": "Manage LDAP directories",
+      "description": "Add, change and remove the LDAP directories people can sign in with."
+    }
+  },
+  "providers": {
+    "docsLink": "Belgelere bak",
+    "none": "No LDAP directories configured.",
+    "add": "Add Directory",
+    "edit": "Edit Directory",
+    "delete": "Delete Directory",
+    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "name": "Görünen Ad",
+    "namePlaceholder": "Company directory",
+    "nameRequired": "A display name is required",
+    "enabled": "Etkin",
+    "save": "Save Directory",
+    "saving": "Kaydediliyor...",
+    "saved": "Kaydedildi",
+    "saveFailed": "Kaydedilemedi",
+    "deleted": "Silindi",
+    "deleteFailed": "Silinemedi",
+    "loadFailed": "Failed to load LDAP directories",
+    "cancel": "İptal"
+  },
+  "fields": {
+    "host": "LDAP Sunucusu",
+    "port": "Port",
+    "useTls": "TLS Kullan (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind Parolası",
+    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "userSearchBase": "Kullanıcı Arama Tabanı",
+    "userSearchFilter": "Kullanıcı Arama Süzgeci",
+    "usernameAttr": "Kullanıcı Adı Özniteliği",
+    "displayNameAttr": "Görünen Ad Özniteliği",
+    "groupSearchBase": "Grup Arama Tabanı",
+    "adminGroup": "Yönetici Grubu",
+    "allowedUsers": "İzin Verilen Kullanıcılar"
+  }
+}

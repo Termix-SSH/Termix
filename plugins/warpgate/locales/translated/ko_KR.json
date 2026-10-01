@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Warpgate 게이트웨이",
+        "description": "이 호스트는 Warpgate SSH 프록시를 통해 연결됩니다. Termix는 인증 후 브라우저 기반 승인 과정을 자동으로 처리합니다."
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "title": "Autentificeringsapp",
+  "factor": "Autentificeringskode",
+  "challenge": {
+    "enterCode": "Indtast bekræftelseskode",
+    "verify": "Bekræft kode",
+    "backupCodeHint": "Du kan også indtaste en af dine backupkoder."
+  },
+  "enrollment": {
+    "title": "TOTP-godkendelse",
+    "docs": "Dokumenter",
+    "on": "2FA er aktiveret",
+    "off": "Tilføj ekstra loginsikkerhed",
+    "enable": "Aktivér",
+    "disable": "Deaktiver",
+    "addDevice": "Tilføj enhed",
+    "addTitle": "Tilføj godkendelsesenhed",
+    "addDescription": "Bekræft med en kode fra din autentificeringsværktøj eller en backupkode for at tilmelde en anden enhed med den samme nøgle.",
+    "addScanInstructions": "Scan denne QR-kode med den ekstra godkendelsesfunktion. Eksisterende godkendelsesfunktioner vil fortsat virke.",
+    "addSuccess": "Yderligere godkendelsesfunktion tilmeldt",
+    "addFailed": "Kunne ikke tilføje godkendelse",
+    "codeRequired": "Indtast en TOTP-kode eller backupkode",
+    "codePlaceholder": "TOTP-kode eller backupkode",
+    "setupTitle": "Opsæt TOTP",
+    "setupFailed": "Kunne ikke starte TOTP-opsætningen",
+    "qrCode": "QR-kode",
+    "secretCopied": "Hemmelighed kopieret til udklipsholder",
+    "instructions": "Scan QR-koden, eller indtast hemmeligheden i din autentificeringsapp, og indtast derefter den 6-cifrede kode",
+    "continueVerify": "Fortsæt med at bekræfte",
+    "verifyTitle": "Bekræft kode",
+    "verify": "Verificere",
+    "enter6Digits": "Indtast en 6-cifret kode",
+    "enabledSuccess": "Tofaktorgodkendelse aktiveret",
+    "invalidCode": "Ugyldig kode, prøv igen",
+    "disableTitle": "Deaktiver 2FA",
+    "disabledSuccess": "Tofaktorgodkendelse deaktiveret",
+    "disableFailed": "Kunne ikke deaktivere 2FA",
+    "backupTitle": "Backupkoder",
+    "downloadBackup": "Download backupkoder",
+    "done": "Færdig"
+  }
+}

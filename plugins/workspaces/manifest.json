@@ -1,0 +1,45 @@
+{
+  "id": "workspaces",
+  "name": "Workspaces",
+  "version": "1.0.0",
+  "description": "Save and restore named tab and split layouts.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "LayoutTemplate",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["db:own", "network:serve", "ui:surface"],
+  "provides": [
+    {
+      "service": "workspaces.saved",
+      "version": "1.0.0",
+      "permission": "workspaces.use"
+    }
+  ],
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "panels": [
+      {
+        "id": "workspaces",
+        "titleKey": "nav.workspaces",
+        "icon": "LayoutTemplate"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "syncEntities": ["workspaces"]
+  }
+}

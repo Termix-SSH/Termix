@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "tables": {
+    "providers": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "providerType": {
+          "type": "text",
+          "notNull": true
+        },
+        "label": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "baseUrl": {
+          "type": "text"
+        },
+        "apiKeyPrefix": {
+          "type": "text"
+        },
+        "defaultModel": {
+          "type": "text"
+        },
+        "enabled": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_providers_user_label",
+          "columns": ["userId", "label"],
+          "unique": true
+        }
+      ],
+      "adopts": "ai_providers"
+    },
+    "conversations": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "title": {
+          "type": "text"
+        },
+        "providerId": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_conversations_user",
+          "columns": ["userId", "updatedAt"]
+        }
+      ],
+      "adopts": "ai_conversations"
+    },
+    "messages": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "conversationId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "role": {
+          "type": "text",
+          "notNull": true
+        },
+        "content": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": ""
+        },
+        "toolCalls": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_messages_conversation",
+          "columns": ["conversationId", "createdAt"]
+        }
+      ],
+      "adopts": "ai_messages"
+    },
+    "proposals": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "conversationId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "kind": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "summary": {
+          "type": "text"
+        },
+        "payload": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "{}"
+        },
+        "status": {
+          "type": "varchar",
+          "length": 32,
+          "notNull": true,
+          "defaultValue": "pending"
+        },
+        "appliedAt": {
+          "type": "text"
+        },
+        "resultSummary": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_proposals_user",
+          "columns": ["userId", "status"]
+        },
+        {
+          "name": "idx_ai_proposals_conversation",
+          "columns": ["conversationId"]
+        }
+      ],
+      "adopts": "ai_proposals"
+    }
+  }
+}

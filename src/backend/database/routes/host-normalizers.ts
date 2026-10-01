@@ -1,5 +1,10 @@
-import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
-import { parseWebUiConfig } from "./host-web-endpoints.js";
+import { parseDefaultOverrides } from "../../../types/host-defaults.js";
+import {
+  parseSshOptions,
+  type HostSshOptions,
+} from "../../hosts/ssh-options.js";
+import { listHostProtocols } from "../../hosts/protocol-auth/registry.js";
+import { sanitizeProtocolAuthForRecipient } from "../../hosts/protocol-auth/summary.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -24,12 +29,7 @@ export function applyHostKeyTypeUpdate(
   }
 }
 
-const PROTOCOL_ENABLE_FIELDS = [
-  "enableSsh",
-  "enableRdp",
-  "enableVnc",
-  "enableTelnet",
-] as const;
+const PROTOCOL_ENABLE_FIELDS = ["enableSsh"] as const;
 
 export function normalizeProtocolEnableFields(
   values: Record<string, unknown>,
@@ -43,12 +43,15 @@ export function normalizeProtocolEnableFields(
   );
 }
 
+/**
+ * The owner's SSH authentication, which a shared editor may not change. A
+ * plugin protocol's login is guarded in writeProtocolAuth instead.
+ */
 export const OWNER_PRIVATE_AUTH_FIELDS = {
   ssh: [
     "authType",
     "authMethod",
     "credentialId",
-    "vaultProfileId",
     "overrideCredentialUsername",
     "shareSshAuth",
     "password",
@@ -57,37 +60,26 @@ export const OWNER_PRIVATE_AUTH_FIELDS = {
     "keyType",
     "sudoPassword",
   ],
-  rdp: [
-    "rdpAuthType",
-    "rdpCredentialId",
-    "rdpUser",
-    "rdpPassword",
-    "rdpDomain",
-  ],
-  vnc: ["vncAuthType", "vncCredentialId", "vncUser", "vncPassword"],
-  telnet: [
-    "telnetAuthType",
-    "telnetCredentialId",
-    "telnetUser",
-    "telnetPassword",
-  ],
-} as const satisfies Record<AuthOverrideProtocol, readonly string[]>;
+} as const;
 
 export const OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS = [
   "sudoPassword",
   "agentSocketPath",
 ] as const;
 
+/** SSH options only the host's owner may change. */
+export const OWNER_PRIVATE_SSH_OPTION_FIELDS = ["agentSocketPath"] as const;
+
 export function containsOwnerPrivateAuthUpdate(
   hostData: Record<string, unknown>,
-  protocol: AuthOverrideProtocol,
+  protocol: keyof typeof OWNER_PRIVATE_AUTH_FIELDS,
 ): boolean {
   return OWNER_PRIVATE_AUTH_FIELDS[protocol].some((field) =>
     Object.prototype.hasOwnProperty.call(hostData, field),
   );
 }
 
-export const FOLDER_PATH_SEPARATOR = " / ";
+const FOLDER_PATH_SEPARATOR = " / ";
 
 /**
  * Re-paths a folder string when its ancestor folder is renamed. Returns the new
@@ -177,33 +169,12 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   credentialId?: number;
   credentialAlias?: string;
   pin?: unknown;
-  enableTerminal?: unknown;
-  enableTunnel?: unknown;
-  enableFileManager?: unknown;
-  enableDocker?: unknown;
-  enableWebUi?: unknown;
-  enableProxmox?: unknown;
-  enableTmuxMonitor?: unknown;
-  enableTerminalToolbar?: unknown;
-  enableAiAssistant?: unknown;
-  enableCommandHistory?: unknown;
-  showTerminalInSidebar?: unknown;
-  showFileManagerInSidebar?: unknown;
-  showTunnelInSidebar?: unknown;
-  showDockerInSidebar?: unknown;
-  showServerStatsInSidebar?: unknown;
-  defaultPath?: unknown;
   sudoPassword?: unknown;
-  tunnelConnections?: unknown;
   jumpHosts?: unknown;
-  quickActions?: unknown;
-  statsConfig?: unknown;
-  dockerConfig?: unknown;
-  webUiConfig?: unknown;
-  proxmoxConfig?: unknown;
-  enableProxmoxStats?: unknown;
-  proxmoxStatsConfig?: unknown;
+  statusCheckEnabled?: unknown;
+  statusCheckInterval?: unknown;
   terminalConfig?: unknown;
+  sshOptions?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
   useSocks5?: unknown;
@@ -214,40 +185,41 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   socks5ProxyChain?: unknown;
   portKnockSequence?: unknown;
   overrideCredentialUsername?: unknown;
-  domain?: unknown;
-  security?: unknown;
-  ignoreCert?: unknown;
-  guacamoleConfig?: unknown;
   enableSsh: boolean;
-  enableRdp: boolean;
-  enableVnc: boolean;
-  enableTelnet: boolean;
 };
+
+function legacyPrefix(protocolId: string): string {
+  return protocolId.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+}
+
+function legacyKey(protocolId: string): string {
+  const prefix = legacyPrefix(protocolId);
+  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+}
 
 export function normalizeImportedHost(
   hostData: Record<string, unknown>,
 ): NormalizedImportedHost {
   const credentialAlias =
     asString(hostData.credentialAlias) || asString(hostData.credentialName);
+  // A row with no connectionType names its protocol the way a 2.8 export
+  // did: an "enable<Protocol>" flag and a "<protocol>Port".
+  const flagged = listHostProtocols().find((protocol) =>
+    asBoolean(hostData[`enable${legacyKey(protocol.id)}`]),
+  );
   const connectionType =
-    asString(hostData.connectionType) ||
-    (asBoolean(hostData.enableRdp)
-      ? "rdp"
-      : asBoolean(hostData.enableVnc)
-        ? "vnc"
-        : asBoolean(hostData.enableTelnet)
-          ? "telnet"
-          : "ssh");
+    asString(hostData.connectionType) || flagged?.id || "ssh";
+  const protocol = listHostProtocols().find(
+    (entry) => entry.id === connectionType,
+  );
 
   const port =
     asPort(hostData.port) ||
-    (connectionType === "rdp"
-      ? asPort(hostData.rdpPort) || 3389
-      : connectionType === "vnc"
-        ? asPort(hostData.vncPort) || 5900
-        : connectionType === "telnet"
-          ? asPort(hostData.telnetPort) || 23
-          : asPort(hostData.sshPort) || 22);
+    (protocol
+      ? asPort(hostData[`${legacyPrefix(protocol.id)}Port`]) ||
+        protocol.defaultPort ||
+        22
+      : asPort(hostData.sshPort) || 22);
 
   return {
     ...hostData,
@@ -276,33 +248,15 @@ export function normalizeImportedHost(
       hostData.enableSsh === undefined
         ? connectionType === "ssh"
         : asBoolean(hostData.enableSsh),
-    enableRdp:
-      hostData.enableRdp === undefined
-        ? connectionType === "rdp"
-        : asBoolean(hostData.enableRdp),
-    enableVnc:
-      hostData.enableVnc === undefined
-        ? connectionType === "vnc"
-        : asBoolean(hostData.enableVnc),
-    enableTelnet:
-      hostData.enableTelnet === undefined
-        ? connectionType === "telnet"
-        : asBoolean(hostData.enableTelnet),
   };
 }
 
 const SENSITIVE_FIELDS = [
   "key",
   "keyPassword",
-  "autostartKey",
-  "autostartKeyPassword",
   "password",
   "sudoPassword",
   "socks5Password",
-  "rdpPassword",
-  "vncPassword",
-  "telnetPassword",
-  "autostartPassword",
 ];
 
 export function stripSensitiveFields(
@@ -318,11 +272,9 @@ export function stripSensitiveFields(
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
   result.hasPassword = !!host.password;
+  // 2.8 editors kept the sudo password inside terminal_config.
   result.hasSudoPassword =
     !!host.sudoPassword || !!terminalConfigForSudo?.sudoPassword;
-  result.hasRdpPassword = !!host.rdpPassword;
-  result.hasVncPassword = !!host.vncPassword;
-  result.hasTelnetPassword = !!host.telnetPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
@@ -360,34 +312,11 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "shareSshAuth",
   "authOverrides",
   "connectionType",
-  "enableTerminal",
-  "enableTunnel",
-  "enableFileManager",
-  "enableDocker",
-  "enableWebUi",
-  "webUiConfig",
-  "enableProxmox",
-  "enableProxmoxStats",
-  "enableTmuxMonitor",
-  "enableTerminalToolbar",
-  "enableAiAssistant",
-  "showTerminalInSidebar",
-  "showFileManagerInSidebar",
-  "showTunnelInSidebar",
-  "showDockerInSidebar",
-  "showServerStatsInSidebar",
+  "statusCheckEnabled",
+  "statusCheckInterval",
   "enableSsh",
-  "enableRdp",
-  "enableVnc",
-  "enableTelnet",
   "sshPort",
-  "rdpPort",
-  "rdpAuthType",
-  "vncPort",
-  "telnetPort",
-  "defaultPath",
-  "scpLegacy",
-  "tunnelConnections",
+  "protocolAuth",
   "jumpHosts",
   "createdAt",
   "updatedAt",
@@ -409,16 +338,13 @@ export function sanitizeHostForRecipient(
   // can't see (or share permission on) the parent host row, so a shared
   // host always renders at root rather than leaking another host's id.
   delete stripped.parentHostId;
-  if (
-    stripped.terminalConfig &&
-    typeof stripped.terminalConfig === "object" &&
-    !Array.isArray(stripped.terminalConfig)
-  ) {
-    const terminalConfig = {
-      ...(stripped.terminalConfig as Record<string, unknown>),
-    };
-    delete terminalConfig.agentSocketPath;
-    stripped.terminalConfig = terminalConfig;
+  for (const field of ["terminalConfig", "sshOptions"] as const) {
+    const value = stripped[field];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const copy = { ...(value as Record<string, unknown>) };
+      for (const key of OWNER_PRIVATE_SSH_OPTION_FIELDS) delete copy[key];
+      stripped[field] = copy;
+    }
   }
   const authOverrides =
     stripped.authOverrides &&
@@ -432,6 +358,12 @@ export function sanitizeHostForRecipient(
     !Array.isArray(authOverrides.ssh)
       ? (authOverrides.ssh as Record<string, unknown>)
       : undefined;
+  if (stripped.protocolAuth !== undefined) {
+    stripped.protocolAuth = sanitizeProtocolAuthForRecipient(
+      stripped.protocolAuth,
+      permissionLevel,
+    );
+  }
   if (!sshOverride?.credentialId) {
     stripped.hasPassword = false;
     stripped.hasKey = false;
@@ -452,11 +384,76 @@ export function sanitizeHostForRecipient(
   return reduced;
 }
 
+/** Who shared a host that a linked desktop holds a read-only copy of. */
+export function parseSharedSource(
+  value: unknown,
+): { owner?: string; permissionLevel?: string } | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * sshOptions, and terminalConfig in the shape 2.8 clients and exports read:
+ * core's own keys only, the SSH options. Everything else 2.8 kept there now
+ * belongs to plugins' host settings, which they put back through their
+ * hostPayloadLegacy. A sudo password 2.8 kept in terminal_config comes out as
+ * sudoPassword, for the sanitizers to handle.
+ */
+export function hostTerminalExport(host: Record<string, unknown>): {
+  sshOptions: HostSshOptions;
+  terminalConfig?: Record<string, unknown>;
+  sudoPassword?: unknown;
+} {
+  const raw = parseJsonObject(host.terminalConfig);
+  const sshOptions = parseSshOptions(
+    host.sshOptions != null ? host.sshOptions : raw,
+  );
+  const terminalConfig: Record<string, unknown> = { ...sshOptions };
+  const legacySudo = !host.sudoPassword ? raw?.sudoPassword : undefined;
+  return {
+    sshOptions,
+    terminalConfig:
+      Object.keys(terminalConfig).length > 0 ? terminalConfig : undefined,
+    ...(legacySudo ? { sudoPassword: legacySudo } : {}),
+  };
+}
+
 export function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
+  const shared = parseSharedSource(host.sharedSource);
   return {
     ...host,
+    sharedSource: undefined,
+    localOnly: !!host.localOnly,
+    sharedCopy: !!shared,
+    ...(shared
+      ? {
+          isShared: true,
+          ownerUsername: shared.owner || undefined,
+          permissionLevel: shared.permissionLevel || "connect",
+        }
+      : {}),
     tags:
       typeof host.tags === "string"
         ? host.tags
@@ -465,86 +462,26 @@ export function transformHostResponse(
         : [],
     pin: !!host.pin,
     shareSshAuth: !!host.shareSshAuth,
-    enableTerminal: !!host.enableTerminal,
-    enableTunnel: !!host.enableTunnel,
-    enableFileManager: host.enableFileManager !== false,
-    enableDocker: !!host.enableDocker,
-    enableWebUi: !!host.enableWebUi,
-    enableProxmox: !!host.enableProxmox,
-    enableProxmoxStats: !!host.enableProxmoxStats,
-    enableTmuxMonitor: !!host.enableTmuxMonitor,
-    enableTerminalToolbar: host.enableTerminalToolbar !== false,
-    enableAiAssistant: !!host.enableAiAssistant,
-    showTerminalInSidebar: !!host.showTerminalInSidebar,
-    showFileManagerInSidebar: !!host.showFileManagerInSidebar,
-    showTunnelInSidebar: !!host.showTunnelInSidebar,
-    showDockerInSidebar: !!host.showDockerInSidebar,
-    showServerStatsInSidebar: !!host.showServerStatsInSidebar,
-    // Old hosts only had connection_type set; the per-protocol enable flags didn't exist yet.
-    // The schema defaults (enableSsh=true, others=false) wrongly mark every old host as SSH.
-    // Detect this migration case: if no non-SSH protocol is explicitly enabled AND
-    // connectionType is set to a non-SSH value, fall back to inferring from connectionType.
-    ...(() => {
-      const ct = host.connectionType;
-      const rdp = !!host.enableRdp;
-      const vnc = !!host.enableVnc;
-      const tel = !!host.enableTelnet;
-      const isMigratedNonSsh = !rdp && !vnc && !tel && ct && ct !== "ssh";
-      return {
-        enableSsh: isMigratedNonSsh ? false : !!host.enableSsh,
-        enableRdp: isMigratedNonSsh ? ct === "rdp" : rdp,
-        enableVnc: isMigratedNonSsh ? ct === "vnc" : vnc,
-        enableTelnet: isMigratedNonSsh ? ct === "telnet" : tel,
-      };
-    })(),
+    enableSsh: !!host.enableSsh,
     sshPort: host.sshPort ?? host.port ?? 22,
-    rdpPort: host.rdpPort ?? 3389,
-    vncPort: host.vncPort ?? 5900,
-    telnetPort: host.telnetPort ?? 23,
-    rdpUser: host.rdpUser || undefined,
-    rdpDomain: host.rdpDomain || undefined,
-    rdpSecurity: host.rdpSecurity || undefined,
-    rdpIgnoreCert: !!host.rdpIgnoreCert,
-    vncUser: host.vncUser || undefined,
-    telnetUser: host.telnetUser || undefined,
-    tunnelConnections: host.tunnelConnections
-      ? JSON.parse(host.tunnelConnections as string)
-      : [],
     jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
-    quickActions: host.quickActions
-      ? JSON.parse(host.quickActions as string)
-      : [],
-    statsConfig: host.statsConfig
-      ? JSON.parse(host.statsConfig as string)
-      : undefined,
-    terminalConfig: host.terminalConfig
-      ? JSON.parse(host.terminalConfig as string)
-      : undefined,
-    dockerConfig: host.dockerConfig
-      ? JSON.parse(host.dockerConfig as string)
-      : undefined,
-    // Guarded, unlike dockerConfig directly above: parseWebUiConfig never
-    // throws, so a half-written config cannot take out the whole host listing.
-    webUiConfig: parseWebUiConfig(host.webUiConfig),
-    proxmoxConfig: host.proxmoxConfig
-      ? JSON.parse(host.proxmoxConfig as string)
-      : undefined,
-    proxmoxStatsConfig: host.proxmoxStatsConfig
-      ? JSON.parse(host.proxmoxStatsConfig as string)
-      : undefined,
+    // Moved into a plugin's host settings; its hostPayloadLegacy puts it
+    // back for 2.8 clients.
+    quickActions: undefined,
+    statusCheckEnabled:
+      host.statusCheckEnabled !== false && host.statusCheckEnabled !== 0,
+    statusCheckInterval:
+      typeof host.statusCheckInterval === "number"
+        ? host.statusCheckInterval
+        : null,
+    ...hostTerminalExport(host),
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
-    useWarpgate: !!host.useWarpgate,
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],
     portKnockSequence: host.portKnockSequence
       ? JSON.parse(host.portKnockSequence as string)
       : [],
-    domain: host.domain || undefined,
-    security: host.security || undefined,
-    ignoreCert: !!host.ignoreCert,
-    guacamoleConfig: host.guacamoleConfig
-      ? JSON.parse(host.guacamoleConfig as string)
-      : undefined,
+    defaultOverrides: parseDefaultOverrides(host.defaultOverrides),
   };
 }

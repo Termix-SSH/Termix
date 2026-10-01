@@ -1,0 +1,142 @@
+{
+  "name": "@termix/plugin-sdk",
+  "version": "1.0.0",
+  "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Termix-SSH/Termix.git",
+    "directory": "packages/plugin-sdk"
+  },
+  "homepage": "https://github.com/Termix-SSH/Termix/tree/main/packages/plugin-sdk#readme",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "termix-plugin": "./cli/index.mjs"
+  },
+  "exports": {
+    "./backend": {
+      "types": "./dist/backend.d.ts",
+      "default": "./dist/backend.js"
+    },
+    "./db": {
+      "types": "./dist/db.d.ts",
+      "default": "./dist/db.js"
+    },
+    "./ddl": {
+      "types": "./dist/ddl.d.ts",
+      "default": "./dist/ddl.js"
+    },
+    "./table-builder": {
+      "types": "./dist/table-builder.d.ts",
+      "default": "./dist/table-builder.js"
+    },
+    "./frontend": {
+      "types": "./dist/frontend.d.ts",
+      "default": "./dist/frontend.js"
+    },
+    "./desktop": {
+      "types": "./dist/desktop.d.ts",
+      "default": "./dist/desktop.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.ts",
+      "default": "./dist/capabilities.js"
+    },
+    "./settings": {
+      "types": "./dist/settings.d.ts",
+      "default": "./dist/settings.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./testing/setup": {
+      "types": "./dist/testing/setup.d.ts",
+      "default": "./dist/testing/setup.js"
+    },
+    "./vitest-preset": {
+      "types": "./dist/vitest-preset.d.ts",
+      "default": "./dist/vitest-preset.js"
+    },
+    "./host-commands": {
+      "types": "./dist/host-commands.d.ts",
+      "default": "./dist/host-commands.js"
+    },
+    "./ssh-certs": {
+      "types": "./dist/ssh-certs.d.ts",
+      "default": "./dist/ssh-certs.js"
+    },
+    "./tsconfig.plugin.json": "./tsconfig.plugin.json",
+    "./schema/manifest.schema.json": "./schema/manifest.schema.json",
+    "./ui": {
+      "types": "./dist/host/ui.d.ts",
+      "default": "./dist/host/ui.js"
+    },
+    "./testing-host": {
+      "default": "./dist/host/testing-host.js"
+    },
+    "./theme.css": "./dist/host/theme.css"
+  },
+  "files": [
+    "dist",
+    "cli",
+    "schema",
+    "tsconfig.plugin.json",
+    "README.md",
+    "client.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@tailwindcss/node": "^4.2.4",
+    "@tailwindcss/oxide": "^4.2.4",
+    "esbuild": "^0.28.1",
+    "semver": "^7.6.3",
+    "tailwindcss": "^4.2.4",
+    "tar": "^7.5.22"
+  },
+  "peerDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "better-sqlite3": "*",
+    "drizzle-orm": "*",
+    "i18next": "^26.4.2",
+    "react": "*",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.14",
+    "sonner": "^2.0.8",
+    "ssh2": "*",
+    "vitest": "*"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    },
+    "ssh2": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    },
+    "@testing-library/react": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

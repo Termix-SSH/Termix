@@ -1,0 +1,1 @@
+ALTER TABLE `ssh_data` ADD `ssh_options` text;

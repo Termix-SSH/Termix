@@ -1,0 +1,186 @@
+{
+  "sessionSharing": {
+    "guestView": {
+      "loading": "Łączenie z sesją współdzieloną...",
+      "linkInvalid": "Ten link do udostępniania jest nieprawidłowy, wygasł lub został odwołany",
+      "rateLimited": "Zbyt wiele prób, spróbuj ponownie za chwilę",
+      "sessionEnded": "Ta sesja dobiegła końca",
+      "readOnlyBadge": "Tylko do podglądu",
+      "ownerLabel": "Host owner"
+    },
+    "modalTitle": "Udostępnij sesję",
+    "shareButton": "Udostępnij",
+    "notReadyToShare": "Sesja nie jest jeszcze gotowa do udostępnienia",
+    "modeTab": {
+      "link": "Link",
+      "user": "Użytkownik"
+    },
+    "linkModeDescription": "Każdy mający ten link może dołączyć, nie jest wymagane założenie konta.",
+    "userModeDescription": "Udostępnij konkretnemu użytkownikowi, który ma już dostęp do tego hosta. Jeśli jeszcze go nie ma, najpierw udostępnij mu hosta albo skorzystaj z linku. Po udostępnieniu sesja pojawi się na jego karcie Połączenia.",
+    "permissionLevel": {
+      "label": "Poziom uprawnień",
+      "readOnly": "Tylko do odczytu",
+      "readOnlyDescription": "Może oglądać sesję na żywo, ale nie może pisać ani nic w niej zmieniać.",
+      "readWrite": "Odczyt-zapis",
+      "readWriteDescription": "Może pisać i uczestniczyć w sesji tak samo jak właściciel."
+    },
+    "expiryLabel": "Wygaśnięcie linku",
+    "createLinkButton": "Utwórz link",
+    "createShareButton": "Udostępnij użytkownikowi",
+    "searchUsersPlaceholder": "Wyszukaj użytkowników...",
+    "noUsersFound": "Nie znaleziono użytkowników",
+    "linkCreated": "Utworzono link do udostępniania",
+    "linkNeedsServer": "Share links only work for sessions on a Termix server. Connect this host through your linked server to share it with a link.",
+    "linkCopied": "Link skopiowany do schowka",
+    "copyLink": "Kopiuj link",
+    "shareCreated": "Udostępniono sesję. Pojawi się na jego karcie Połączenia.",
+    "shareFailed": "Nie udało się utworzyć udostępnienia",
+    "userLacksHostAccess": "Ten użytkownik nie ma jeszcze dostępu do tego hosta. Udostępnij mu najpierw hosta lub skorzystaj z linku.",
+    "activeShares": "Aktywne udostępnienia",
+    "noActiveShares": "Brak aktywnych udostępnień tej sesji",
+    "revoke": "Unieważnij",
+    "revokeConfirmTitle": "Cofnąć to udostępnienie?",
+    "revokeConfirmDescription": "Każdy, kto korzysta z tego udostępnienia, natychmiast utraci dostęp.",
+    "revoked": "Unieważniono udostępnienie",
+    "revokeFailed": "Nie udało się unieważnić udostępnienia",
+    "joinCount": "{{count}} dołączenie",
+    "joinCount_other": "{{count}} dołączeń",
+    "expiresAt": "Wygasa {{date}}",
+    "linkShareBadge": "Link",
+    "userShareBadge": "Użytkownik: {{username}}",
+    "loadSharesFailed": "Nie udało się załadować aktywnych udostępnień",
+    "remoteDisplayUnavailable": "Remote desktop is not available right now.",
+    "sharedWithMe": "Sessions shared with me",
+    "customHoursPlaceholder": "Godziny do wygaśnięcia dostępu"
+  },
+  "collab": {
+    "createRoom": "New room",
+    "roomName": "Room name",
+    "persistentRoom": "Persistent room",
+    "persistentRoomHint": "Persistent rooms stay listed after the meeting ends and can be reused.",
+    "noRooms": "No rooms yet. Create one to start a meeting.",
+    "openRoom": "Otwórz",
+    "endRoom": "End meeting",
+    "leaveRoom": "Leave",
+    "deleteMember": "Usuń",
+    "removeMember": "Usuń {{name}}",
+    "removeMemberTitle": "Remove this member?",
+    "removeMemberDescription": "{{name}} will lose access to this room immediately. Any active SSH viewer will be disconnected.",
+    "invite": "Invite",
+    "inviteTitle": "Invite members",
+    "members": "Members",
+    "membersPanel": "Room members and control requests",
+    "membersWithCount": "Members ({{count}})",
+    "guestsWithCount": "Guests ({{count}})",
+    "removeGuests": "Remove guests",
+    "anonymousGuest": "Guest",
+    "online": "online",
+    "offline": "offline",
+    "you": "(you)",
+    "hostBadge": "Host",
+    "presenterBadge": "Presenting",
+    "present": "Present",
+    "presentTitle": "Take the stage",
+    "presentHost": "Host",
+    "searchHosts": "Wyszukaj hosty",
+    "noHostsFound": "No available hosts found.",
+    "presentProtocol": "Protokół",
+    "stopPresenting": "Stop presenting",
+    "takeOver": "Take over",
+    "takeOverConfirmTitle": "Replace the current presentation?",
+    "takeOverDescription": "{{name}} is presenting now. Taking over will disconnect everyone from that stage.",
+    "emptyStage": "Nobody is presenting. Take the stage to share a session.",
+    "stageLoading": "Connecting to the stage...",
+    "stageEnded": "The presentation ended",
+    "roomEnded": "This meeting has ended",
+    "presenterLabel": "{{name}} is presenting",
+    "guestLink": "Guest link",
+    "guestLinkOn": "Guest link is on. Anyone with the link can watch the stage.",
+    "guestLinkOff": "Guest link is off.",
+    "copyLink": "Kopiuj link",
+    "rotateLink": "Rotate link",
+    "disableLink": "Disable link",
+    "rotateLinkConfirmTitle": "Rotate the guest link?",
+    "rotateLinkDescription": "The current link will stop working immediately. Connected SSH guests will be disconnected.",
+    "disableLinkConfirmTitle": "Disable the guest link?",
+    "disableLinkDescription": "Anonymous SSH viewers will be disconnected immediately and the current link will stop working.",
+    "linkCopied": "Link skopiowany",
+    "roles": "Role",
+    "users": "Użytkownicy",
+    "searchUsers": "Wyszukaj użytkowników",
+    "endConfirmTitle": "End this meeting?",
+    "endDescription": "{{name}} will end for everyone and cannot be reopened.",
+    "endPersistentDescription": "The active presentation in {{name}} will stop. The room remains available for reuse.",
+    "deleteRoom": "Delete room",
+    "deleteConfirmTitle": "Delete this room?",
+    "deleteDescription": "{{name}} will be permanently deleted for everyone and cannot be undone.",
+    "invitedTo": "You were invited to \"{{name}}\"",
+    "guest": {
+      "title": "Meeting",
+      "waiting": "Waiting for the presenter...",
+      "linkInvalid": "This guest link is invalid or the meeting has ended"
+    },
+    "reopenFromPanel": "This meeting tab expired. Reopen the room from the Meetings panel.",
+    "retry": "Ponów",
+    "requestControl": "Request control",
+    "cancelControlRequest": "Cancel request",
+    "controlQueue": "Control requests",
+    "noControlRequests": "No pending requests.",
+    "grantControlTo": "Give control to {{name}}",
+    "dismissControlRequest": "Dismiss {{name}}'s control request",
+    "releaseControl": "Release control",
+    "grantControl": "Give control",
+    "revokeControl": "Take back control",
+    "controlRequestedBy": "{{name}} asked for control",
+    "grant": "Grant",
+    "controlBadge": "In control",
+    "youArePresenting": "You are presenting in another tab. Stop presenting to hand the stage over.",
+    "created": "Room created",
+    "invited": "Members invited",
+    "roomTab": "Meeting",
+    "serverChanged": "The meeting server changed. Reopen this meeting from the Meetings panel.",
+    "hostNotSynced": "Sync this host to the meeting server before presenting.",
+    "linkRequiresServer": "Link this desktop to a Termix server and create the meeting there to share a web link."
+  },
+  "nav": {
+    "collab": "Meetings"
+  },
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Zezwól na udostępnianie sesji",
+        "description": "Zezwalaj na udostępnianie sesji terminala na żywo, RDP, VNC i Telnet w obrębie instancji. Po wyłączeniu zastępuje wszystkie przełączniki udostępniania dla poszczególnych hostów."
+      }
+    },
+    "host": {
+      "allowSessionSharing": {
+        "label": "Zezwól na udostępnianie sesji",
+        "description": "Zezwól na udostępnianie sesji na żywo na tym hoście przez link lub innym użytkownikom"
+      }
+    }
+  },
+  "permissions": {
+    "use": {
+      "title": "Share sessions and join rooms",
+      "description": "Share live sessions by link or with other users, and create and join collaboration rooms."
+    }
+  },
+  "hosts": {
+    "sharing": {
+      "expiry": {
+        "never": "Nigdy",
+        "oneHour": "1 godzina",
+        "oneDay": "24 godziny",
+        "sevenDays": "7 dni",
+        "thirtyDays": "30 dni",
+        "custom": "Niestandardowy"
+      }
+    }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Udostępniono mi",
+    "sharedBy": "Udostępnione przez {{username}}",
+    "join": "Dołącz",
+    "sharedSessionLabel": "{{hostName}} (udostępnione)"
+  }
+}

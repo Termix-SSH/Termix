@@ -85,37 +85,3 @@ export async function decryptSystemSecret(stored: string): Promise<string> {
     decipher.final(),
   ]).toString("utf8");
 }
-
-/** Fields inside an SSO provider config that must not be stored readable. */
-export const SSO_SECRET_FIELDS = ["client_secret", "bindPassword"] as const;
-
-export async function encryptSsoConfigSecrets(
-  config: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const out = { ...config };
-  for (const field of SSO_SECRET_FIELDS) {
-    const value = out[field];
-    if (typeof value === "string" && value) {
-      out[field] = await encryptSystemSecret(value);
-    }
-  }
-  return out;
-}
-
-export async function decryptSsoConfigSecrets(
-  config: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const out = { ...config };
-  for (const field of SSO_SECRET_FIELDS) {
-    const value = out[field];
-    if (typeof value === "string" && value) {
-      try {
-        out[field] = await decryptSystemSecret(value);
-      } catch {
-        // A secret we cannot read must not take the whole provider down;
-        // login will fail with a clearer error downstream.
-      }
-    }
-  }
-  return out;
-}

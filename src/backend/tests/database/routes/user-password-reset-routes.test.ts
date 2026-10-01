@@ -6,6 +6,8 @@ const calls = vi.hoisted(() => ({
   deletedFor: [] as string[],
   rotatedFor: [] as string[],
   legacyWrapsDeletedFor: [] as string[],
+  dataWipedEvents: [] as Array<{ userId: string }>,
+  secondFactorsReset: [] as string[],
 }));
 
 function deletingRepo(label: string) {
@@ -26,12 +28,18 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
   createCurrentSettingsRepository: () => ({}),
   createCurrentSshCredentialUsageRepository: deletingRepo("usage"),
-  createCurrentFileManagerBookmarkRepository: deletingRepo("bookmarks"),
   createCurrentRecentActivityRepository: deletingRepo("activity"),
-  createCurrentDismissedAlertRepository: deletingRepo("alerts"),
-  createCurrentSnippetRepository: deletingRepo("snippets"),
   createCurrentHostRepository: deletingRepo("hosts"),
   createCurrentCredentialRepository: deletingRepo("credentials"),
+}));
+
+vi.mock("../../../plugins/events.js", () => ({
+  pluginEvents: {
+    emit: (_topic: string, payload: { userId: string }) => {
+      calls.dataWipedEvents.push(payload);
+    },
+  },
+  TOPICS: { userDataWiped: "user.data_wiped" },
 }));
 
 vi.mock("../../../utils/user-keys.js", () => ({
@@ -51,6 +59,13 @@ vi.mock("../../../utils/crypto-migration/dek-migration.js", () => ({
   },
 }));
 
+vi.mock("../../../auth/second-factor-admin.js", () => ({
+  resetUserSecondFactors: async (userId: string) => {
+    calls.secondFactorsReset.push(userId);
+    return [];
+  },
+}));
+
 import { resetUserPassword } from "../../../database/routes/user-password-reset-routes.js";
 
 function fakeAuthManager(unlocked: boolean): AuthManager {
@@ -62,9 +77,11 @@ function fakeAuthManager(unlocked: boolean): AuthManager {
 
 beforeEach(() => {
   calls.userUpdates = [];
+  calls.secondFactorsReset = [];
   calls.deletedFor = [];
   calls.rotatedFor = [];
   calls.legacyWrapsDeletedFor = [];
+  calls.dataWipedEvents = [];
 });
 
 describe("resetUserPassword", () => {
@@ -107,17 +124,13 @@ describe("resetUserPassword", () => {
     expect(outcome).toEqual({ status: "reset", dataWiped: true });
     expect(calls.deletedFor).toEqual([
       "usage:user-1",
-      "bookmarks:user-1",
       "activity:user-1",
-      "alerts:user-1",
-      "snippets:user-1",
       "hosts:user-1",
       "credentials:user-1",
     ]);
+    expect(calls.dataWipedEvents).toEqual([{ userId: "user-1" }]);
     expect(calls.rotatedFor).toEqual(["user-1"]);
     expect(calls.legacyWrapsDeletedFor).toEqual(["user-1"]);
-    expect(
-      calls.userUpdates.some(([, update]) => update.totpEnabled === false),
-    ).toBe(true);
+    expect(calls.secondFactorsReset).toEqual(["user-1"]);
   });
 });

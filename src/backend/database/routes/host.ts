@@ -1,11 +1,13 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { isQuickConnectAuthType } from "../../hosts/connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
 import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js";
 import { findUsableCredential } from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
-import axios from "axios";
 import multer from "multer";
 import { sshLogger, databaseLogger } from "../../utils/logger.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -14,23 +16,17 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "../../hosts/credential-username.js";
-import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js";
+import { emitInternalEvent } from "../../hosts/internal-events.js";
+import { deleteOwnedHost } from "../../hosts/delete-host.js";
 import {
-  createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
-  createCurrentFileManagerBookmarkRepository,
-  createCurrentOpksshTokenRepository,
-  createCurrentRecentActivityRepository,
-  createCurrentSshCredentialUsageRepository,
-  createCurrentSessionRecordingRepository,
-  createCurrentTransferRecentRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
   createCurrentUserRepository,
-  createCurrentSyncTombstoneRepository,
   createCurrentSharedHostAuthOverrideRepository,
+  createCurrentHostDefaultsRepository,
 } from "../repositories/factory.js";
 import {
   applyHostKeyTypeUpdate,
@@ -40,21 +36,24 @@ import {
   isValidPort,
   normalizeProtocolEnableFields,
   OWNER_PRIVATE_AUTH_FIELDS,
+  OWNER_PRIVATE_SSH_OPTION_FIELDS,
   OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS,
+  hostTerminalExport,
   sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
 } from "./host-normalizers.js";
+import {
+  attachHostPluginSettings,
+  loadHostPluginSettings,
+  withHostPluginSettings,
+} from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
-import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
-import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
-import { registerHostFileManagerBookmarkRoutes } from "./host-file-manager-bookmark-routes.js";
-import { registerHostCommandHistoryRoutes } from "./host-command-history-routes.js";
-import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
-import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
+import { registerHostDefaultsRoutes } from "./host-defaults-routes.js";
+import { registerHostStatusRoutes } from "./host-status-routes.js";
 import {
   applyHostEnrollmentDefaults,
   requireHostEnrollmentAccessForPath,
@@ -68,46 +67,68 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../repositories/host-resolution-repository.js";
-import { AUTH_PROTOCOL_METADATA } from "../../../types/auth-protocols.js";
-import {
-  parseWebUiConfig,
-  serializeWebUiConfig,
-} from "./host-web-endpoints.js";
 import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
 } from "../../utils/shared-host-auth-resolver.js";
+import { rejectSharedCopyWrites } from "../../sync/shared-copy-guard.js";
+import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
+import {
+  applyDefaultsAfterHostWrite,
+  applyHostDefaultsToWrite,
+} from "../../hosts/defaults/index.js";
+import { applyPersonalHostValues } from "../../hosts/defaults/personal.js";
+import {
+  applyProtocolAuthPlan,
+  attachProtocolAuth,
+  firstProtocolUsername,
+  listProtocolLogins,
+  loadProtocolAuthSummaries,
+  planProtocolAuthWrite,
+  ProtocolAuthWriteError,
+  readProtocolAuthPayload,
+  toPortableLogins,
+  withProtocolAuth,
+  writeProtocolAuth,
+  type PlannedProtocolAuth,
+} from "../../hosts/protocol-auth/protocol-auth.js";
+import {
+  findHostProtocol,
+  listHostProtocols,
+} from "../../hosts/protocol-auth/registry.js";
+import {
+  mergeStoredTerminalFields,
+  parseTerminalConfig,
+} from "./host-terminal-fields.js";
 
 const router = express.Router();
+router.use(rejectSharedCopyWrites("host", /^\/db\/host\/(\d+)$/));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const STATS_SERVER_URL = "http://localhost:30005";
-
+/**
+ * Tells whoever is polling this host that its details changed.
+ *
+ * An event, so whichever plugin polls the host can listen for it. Fire and
+ * forget, so a subscriber that throws cannot fail the host update that
+ * caused it.
+ */
 function notifyStatsHostUpdated(
   hostId: number,
-  headers: Pick<Request["headers"], "authorization" | "cookie">,
+  userId: string,
   operation: string,
 ): void {
-  axios
-    .post(
-      `${STATS_SERVER_URL}/host-updated`,
-      { hostId },
-      {
-        headers: {
-          Authorization: headers.authorization || "",
-          Cookie: headers.cookie || "",
-        },
-        timeout: 5000,
-      },
-    )
-    .catch((err) => {
-      sshLogger.warn("Failed to notify stats server of host update", {
-        operation,
-        hostId,
-        error: err instanceof Error ? err.message : String(err),
-      });
+  try {
+    // The user travels with the event: a subscriber re-reading the host needs
+    // a data key, and the bus carries no session of its own.
+    pluginEvents.emit(TOPICS.hostUpdated, { hostId, userId });
+  } catch (err) {
+    sshLogger.warn("Failed to publish host update event", {
+      operation,
+      hostId,
+      error: err instanceof Error ? err.message : String(err),
     });
+  }
 }
 
 const authManager = AuthManager.getInstance();
@@ -115,7 +136,10 @@ const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-registerHostInternalRoutes(router);
+registerHostStatusRoutes(router, {
+  authenticateJWT,
+  requireAdmin: authManager.createAdminMiddleware(),
+});
 
 /**
  * @openapi
@@ -187,48 +211,19 @@ router.post(
       password,
       authMethod,
       authType,
-      useWarpgate,
       shareSshAuth,
       credentialId,
-      vaultProfileId,
       key,
       keyPassword,
       keyType,
       sudoPassword,
       pin,
-      enableTerminal,
-      enableCommandHistory,
-      enableTunnel,
-      enableFileManager,
-      scpLegacy,
-      enableDocker,
-      enableWebUi,
-      enableProxmox,
-      enableTmuxMonitor,
-      enableTerminalToolbar,
-      enableAiAssistant,
-      allowSessionSharing,
-      showTerminalInSidebar,
-      showFileManagerInSidebar,
-      showTunnelInSidebar,
-      showDockerInSidebar,
-      showServerStatsInSidebar,
-      defaultPath,
-      tunnelConnections,
       jumpHosts,
-      quickActions,
-      statsConfig,
-      dockerConfig,
-      webUiConfig,
-      proxmoxConfig,
-      enableProxmoxStats,
-      proxmoxStatsConfig,
+      statusCheckEnabled,
+      statusCheckInterval,
       terminalConfig,
+      sshOptions,
       forceKeyboardInteractive,
-      domain,
-      security,
-      ignoreCert,
-      guacamoleConfig,
       notes,
       useSocks5,
       socks5Host,
@@ -237,34 +232,13 @@ router.post(
       socks5Password,
       socks5ProxyChain,
       connectionOrigin,
+      localOnly,
       portKnockSequence,
       overrideCredentialUsername,
-      macAddress,
-      wolBroadcastAddress,
       enableSsh,
-      enableRdp,
-      enableVnc,
-      enableTelnet,
       sshPort,
-      rdpPort,
-      vncPort,
-      telnetPort,
-      rdpAuthType,
-      rdpCredentialId,
-      rdpUser,
-      rdpPassword,
-      rdpDomain,
-      rdpSecurity,
-      rdpIgnoreCert,
-      vncAuthType,
-      vncCredentialId,
-      vncPassword,
-      vncUser,
-      telnetAuthType,
-      telnetCredentialId,
-      telnetUser,
-      telnetPassword,
     } = hostData;
+    const protocolAuthPatch = readProtocolAuthPayload(hostData);
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
       userId,
@@ -277,7 +251,7 @@ router.post(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
-      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(isOptionalBoolean)
+      !isOptionalBoolean(enableSsh)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
@@ -312,7 +286,7 @@ router.post(
       authMethod ||
       (effectiveConnectionType !== "ssh" ? "password" : undefined);
     const effectiveUsername =
-      username || rdpUser || vncUser || telnetUser || "";
+      username || firstProtocolUsername(protocolAuthPatch);
     const effectiveName =
       name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
@@ -328,76 +302,20 @@ router.post(
       port,
       username: effectiveUsername,
       authType: effectiveAuthType,
-      useWarpgate: useWarpgate ? 1 : 0,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
-      vaultProfileId:
-        effectiveAuthType === "vault" ? vaultProfileId || null : null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
-      enableTerminal: enableTerminal ? 1 : 0,
-      enableCommandHistory: enableCommandHistory ? 1 : 0,
-      enableTunnel: enableTunnel ? 1 : 0,
-      tunnelConnections: Array.isArray(tunnelConnections)
-        ? JSON.stringify(tunnelConnections)
-        : null,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
-      quickActions: Array.isArray(quickActions)
-        ? JSON.stringify(quickActions)
-        : null,
-      enableFileManager: enableFileManager ? 1 : 0,
-      scpLegacy: scpLegacy ? 1 : 0,
-      enableDocker: enableDocker ? 1 : 0,
-      enableWebUi: enableWebUi ? 1 : 0,
-      enableProxmox: enableProxmox ? 1 : 0,
-      enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
-      enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
-      enableAiAssistant: enableAiAssistant ? 1 : 0,
-      allowSessionSharing: allowSessionSharing === false ? 0 : 1,
-      showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
-      showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
-      showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
-      showDockerInSidebar: showDockerInSidebar ? 1 : 0,
-      showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
-      defaultPath: defaultPath || null,
-      statsConfig: statsConfig
-        ? typeof statsConfig === "string"
-          ? statsConfig
-          : JSON.stringify(statsConfig)
-        : null,
-      dockerConfig: dockerConfig
-        ? typeof dockerConfig === "string"
-          ? dockerConfig
-          : JSON.stringify(dockerConfig)
-        : null,
-      webUiConfig: enableWebUi
-        ? serializeWebUiConfig(
-            typeof webUiConfig === "string"
-              ? safeParseJson(webUiConfig)
-              : webUiConfig,
-          )
-        : null,
-      proxmoxConfig: proxmoxConfig
-        ? typeof proxmoxConfig === "string"
-          ? proxmoxConfig
-          : JSON.stringify(proxmoxConfig)
-        : null,
-      enableProxmoxStats: enableProxmoxStats ? 1 : 0,
-      proxmoxStatsConfig: proxmoxStatsConfig
-        ? typeof proxmoxStatsConfig === "string"
-          ? proxmoxStatsConfig
-          : JSON.stringify(proxmoxStatsConfig)
-        : null,
+      statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
+      statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
           ? terminalConfig
           : JSON.stringify(terminalConfig)
         : null,
+      sshOptions: sshOptionsForWrite({ sshOptions, terminalConfig }) ?? null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
-      domain: domain || null,
-      security: security || null,
-      ignoreCert: ignoreCert ? 1 : 0,
-      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
       notes: notes || null,
       sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
@@ -412,40 +330,15 @@ router.post(
         connectionOrigin === "local" || connectionOrigin === "remote"
           ? connectionOrigin
           : null,
-      macAddress: macAddress || null,
-      wolBroadcastAddress: wolBroadcastAddress || null,
+      ...(typeof localOnly === "boolean" ? { localOnly } : {}),
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
       ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
-      rdpPort: rdpPort || 3389,
-      vncPort: vncPort || 5900,
-      telnetPort: telnetPort || 23,
-      rdpAuthType: enableRdp ? rdpAuthType || null : null,
-      rdpCredentialId:
-        enableRdp && rdpAuthType === "credential" && rdpCredentialId
-          ? rdpCredentialId
-          : null,
-      rdpUser: rdpUser || null,
-      rdpDomain: rdpDomain || null,
-      rdpSecurity: rdpSecurity || null,
-      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
-      vncAuthType: enableVnc ? vncAuthType || null : null,
-      vncCredentialId:
-        enableVnc && vncAuthType === "credential" && vncCredentialId
-          ? vncCredentialId
-          : null,
-      vncUser: vncUser || null,
-      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
-      telnetCredentialId:
-        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
-          ? telnetCredentialId
-          : null,
-      telnetUser: telnetUser || null,
     };
 
-    // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
+    // A host whose main protocol is a plugin's keeps any password it is given.
     if (effectiveConnectionType !== "ssh") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
@@ -498,11 +391,15 @@ router.post(
       sshDataObj.keyType = null;
     }
 
-    sshDataObj.rdpPassword = rdpPassword || null;
-    sshDataObj.vncPassword = vncPassword || null;
-    sshDataObj.telnetPassword = telnetPassword || null;
-
     try {
+      sshDataObj.defaultOverrides = JSON.stringify(
+        await applyHostDefaultsToWrite({
+          ownerId: userId,
+          hostId: null,
+          columns: sshDataObj,
+          body: hostData,
+        }),
+      );
       const result = await createCurrentHostRepository().createEncryptedForUser(
         userId,
         sshDataObj,
@@ -520,6 +417,16 @@ router.post(
       }
 
       const createdHost = result;
+      await applyDefaultsAfterHostWrite(createdHost.id as number);
+      if (protocolAuthPatch) {
+        await writeProtocolAuth(
+          userId,
+          createdHost.id as number,
+          protocolAuthPatch,
+          { isOwner: true },
+        );
+      }
+
       // Standing folder shares apply to the newcomer.
       try {
         await applyFolderAccessRules(
@@ -558,19 +465,12 @@ router.post(
         success: true,
       });
 
-      notifyAutomationInternalEvent(
-        "host_added",
-        userId,
-        createdHost.id as number,
-        { name: String(name ?? ip) },
-      );
+      emitInternalEvent("host_added", userId, createdHost.id as number, {
+        name: String(name ?? ip),
+      });
 
-      res.json(stripSensitiveFields(resolvedHost));
-      notifyStatsHostUpdated(
-        createdHost.id as number,
-        req.headers,
-        "host_create",
-      );
+      res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
+      notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
         operation: "host_create",
@@ -628,12 +528,6 @@ router.post(
  *                   - type: array
  *                     items:
  *                       type: string
- *               enableTerminal:
- *                 type: boolean
- *               enableFileManager:
- *                 type: boolean
- *               enableTunnel:
- *                 type: boolean
  *     responses:
  *       200:
  *         description: Host enrolled successfully.
@@ -677,8 +571,7 @@ router.post(
  *                 description: SSH username
  *               authType:
  *                 type: string
- *                 enum: [password, key, credential]
- *                 description: Authentication method
+ *                 description: Any registered SSH auth type that works for an unsaved host (password, key, credential, agent, none, or one a plugin marks for Quick Connect).
  *               password:
  *                 type: string
  *                 description: Password (required if authType is password)
@@ -739,6 +632,13 @@ router.post(
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    ensureCoreSshAuthProviders();
+    if (!isQuickConnectAuthType(String(authType))) {
+      return res
+        .status(400)
+        .json({ error: "That auth type cannot be used for Quick Connect" });
+    }
+
     try {
       let resolvedPassword = password;
       let resolvedKey = key;
@@ -781,26 +681,9 @@ router.post(
         key: resolvedKey,
         keyPassword: resolvedKeyPassword,
         keyType: resolvedKeyType,
-        enableTerminal: true,
-        enableTunnel: false,
-        enableFileManager: true,
-        enableDocker: false,
-        enableWebUi: false,
-        enableProxmox: false,
-        enableProxmoxStats: false,
-        enableTmuxMonitor: false,
-        enableTerminalToolbar: true,
-        enableAiAssistant: false,
-        showTerminalInSidebar: true,
-        showFileManagerInSidebar: false,
-        showTunnelInSidebar: false,
-        showDockerInSidebar: false,
-        showServerStatsInSidebar: false,
-        defaultPath: "/",
-        tunnelConnections: [],
         jumpHosts: [],
-        quickActions: [],
-        statsConfig: {},
+        statusCheckEnabled: true,
+        statusCheckInterval: null,
         notes: "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -902,48 +785,19 @@ router.put(
       password,
       authMethod,
       authType,
-      useWarpgate,
       shareSshAuth,
       credentialId,
-      vaultProfileId,
       key,
       keyPassword,
       keyType,
       sudoPassword,
       pin,
-      enableTerminal,
-      enableCommandHistory,
-      enableTunnel,
-      enableFileManager,
-      scpLegacy,
-      enableDocker,
-      enableWebUi,
-      enableProxmox,
-      enableTmuxMonitor,
-      enableTerminalToolbar,
-      enableAiAssistant,
-      allowSessionSharing,
-      showTerminalInSidebar,
-      showFileManagerInSidebar,
-      showTunnelInSidebar,
-      showDockerInSidebar,
-      showServerStatsInSidebar,
-      defaultPath,
-      tunnelConnections,
       jumpHosts,
-      quickActions,
-      statsConfig,
-      dockerConfig,
-      webUiConfig,
-      proxmoxConfig,
-      enableProxmoxStats,
-      proxmoxStatsConfig,
+      statusCheckEnabled,
+      statusCheckInterval,
       terminalConfig,
+      sshOptions,
       forceKeyboardInteractive,
-      domain,
-      security,
-      ignoreCert,
-      guacamoleConfig,
       notes,
       useSocks5,
       socks5Host,
@@ -952,34 +806,13 @@ router.put(
       socks5Password,
       socks5ProxyChain,
       connectionOrigin,
+      localOnly,
       portKnockSequence,
       overrideCredentialUsername,
-      macAddress,
-      wolBroadcastAddress,
       enableSsh,
-      enableRdp,
-      enableVnc,
-      enableTelnet,
       sshPort,
-      rdpPort,
-      vncPort,
-      telnetPort,
-      rdpAuthType,
-      rdpCredentialId,
-      rdpUser,
-      rdpPassword,
-      rdpDomain,
-      rdpSecurity,
-      rdpIgnoreCert,
-      vncAuthType,
-      vncCredentialId,
-      vncPassword,
-      vncUser,
-      telnetAuthType,
-      telnetCredentialId,
-      telnetUser,
-      telnetPassword,
     } = hostData;
+    const protocolAuthPatch = readProtocolAuthPayload(hostData);
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
       userId,
@@ -992,9 +825,7 @@ router.put(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
-      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(
-        isOptionalBoolean,
-      ) ||
+      !isOptionalBoolean(enableSsh) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {
@@ -1031,7 +862,7 @@ router.put(
 
     const effectiveAuthType = authType || authMethod;
     const effectiveUsername =
-      username || rdpUser || vncUser || telnetUser || "";
+      username || firstProtocolUsername(protocolAuthPatch);
     const effectiveName =
       name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
@@ -1046,78 +877,20 @@ router.put(
       port,
       username: effectiveUsername,
       authType: effectiveAuthType,
-      useWarpgate: useWarpgate ? 1 : 0,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
-      vaultProfileId:
-        effectiveAuthType === "vault" ? vaultProfileId || null : null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
-      enableTerminal: enableTerminal ? 1 : 0,
-      enableCommandHistory: enableCommandHistory ? 1 : 0,
-      enableTunnel: enableTunnel ? 1 : 0,
-      tunnelConnections: Array.isArray(tunnelConnections)
-        ? JSON.stringify(tunnelConnections)
-        : null,
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
-      quickActions: Array.isArray(quickActions)
-        ? JSON.stringify(quickActions)
-        : null,
-      enableFileManager: enableFileManager ? 1 : 0,
-      scpLegacy: scpLegacy ? 1 : 0,
-      enableDocker: enableDocker ? 1 : 0,
-      enableWebUi: enableWebUi ? 1 : 0,
-      enableProxmox: enableProxmox ? 1 : 0,
-      enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
-      enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
-      enableAiAssistant: enableAiAssistant ? 1 : 0,
-      allowSessionSharing: allowSessionSharing === false ? 0 : 1,
-      showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
-      showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
-      showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
-      showDockerInSidebar: showDockerInSidebar ? 1 : 0,
-      showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
-      defaultPath: defaultPath || null,
-      statsConfig: statsConfig
-        ? typeof statsConfig === "string"
-          ? statsConfig
-          : JSON.stringify(statsConfig)
-        : null,
-      dockerConfig: dockerConfig
-        ? typeof dockerConfig === "string"
-          ? dockerConfig
-          : JSON.stringify(dockerConfig)
-        : null,
-      webUiConfig: enableWebUi
-        ? serializeWebUiConfig(
-            typeof webUiConfig === "string"
-              ? safeParseJson(webUiConfig)
-              : webUiConfig,
-          )
-        : null,
-      proxmoxConfig: proxmoxConfig
-        ? typeof proxmoxConfig === "string"
-          ? proxmoxConfig
-          : JSON.stringify(proxmoxConfig)
-        : null,
-      enableProxmoxStats: enableProxmoxStats ? 1 : 0,
-      proxmoxStatsConfig: proxmoxStatsConfig
-        ? typeof proxmoxStatsConfig === "string"
-          ? proxmoxStatsConfig
-          : JSON.stringify(proxmoxStatsConfig)
-        : null,
+      statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
+      statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
           ? terminalConfig
           : JSON.stringify(terminalConfig)
         : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
-      domain: domain || null,
-      security: security || null,
-      ignoreCert: ignoreCert ? 1 : 0,
-      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
       notes: notes || null,
-      sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
       socks5Host: socks5Host || null,
       socks5Port: socks5Port || null,
@@ -1130,40 +903,22 @@ router.put(
         connectionOrigin === "local" || connectionOrigin === "remote"
           ? connectionOrigin
           : null,
-      macAddress: macAddress || null,
-      wolBroadcastAddress: wolBroadcastAddress || null,
+      ...(typeof localOnly === "boolean" ? { localOnly } : {}),
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
       ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
-      rdpPort: rdpPort || 3389,
-      vncPort: vncPort || 5900,
-      telnetPort: telnetPort || 23,
-      rdpAuthType: enableRdp ? rdpAuthType || null : null,
-      rdpCredentialId:
-        enableRdp && rdpAuthType === "credential" && rdpCredentialId
-          ? rdpCredentialId
-          : null,
-      rdpUser: rdpUser || null,
-      rdpDomain: rdpDomain || null,
-      rdpSecurity: rdpSecurity || null,
-      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
-      vncAuthType: enableVnc ? vncAuthType || null : null,
-      vncCredentialId:
-        enableVnc && vncAuthType === "credential" && vncCredentialId
-          ? vncCredentialId
-          : null,
-      vncUser: vncUser || null,
-      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
-      telnetCredentialId:
-        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
-          ? telnetCredentialId
-          : null,
-      telnetUser: telnetUser || null,
     };
 
-    // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
+    const nextSshOptions = sshOptionsForWrite({ sshOptions, terminalConfig });
+    if (nextSshOptions !== undefined) sshDataObj.sshOptions = nextSshOptions;
+    // The editor leaves sudoPassword out when the user did not touch it.
+    if (sudoPassword !== undefined) {
+      sshDataObj.sudoPassword = sudoPassword || null;
+    }
+
+    // A host whose main protocol is a plugin's keeps any password it is given.
     if ((connectionType || "ssh") !== "ssh") {
       if (password) {
         sshDataObj.password = password;
@@ -1223,10 +978,6 @@ router.put(
       sshDataObj.keyType = null;
     }
 
-    if (rdpPassword) sshDataObj.rdpPassword = rdpPassword;
-    if (vncPassword) sshDataObj.vncPassword = vncPassword;
-    if (telnetPassword) sshDataObj.telnetPassword = telnetPassword;
-
     if (validatedParentHostId !== undefined) {
       sshDataObj.parentHostId = validatedParentHostId;
     } else if (folder !== undefined) {
@@ -1278,142 +1029,98 @@ router.put(
           });
         }
 
-        const parseTerminalConfig = (
-          value: unknown,
-        ): Record<string, unknown> | null => {
-          if (!value) return null;
-          if (
-            typeof value === "object" &&
-            value !== null &&
-            !Array.isArray(value)
-          ) {
-            return { ...(value as Record<string, unknown>) };
-          }
-          if (typeof value === "string") {
-            const parsed = JSON.parse(value) as unknown;
-            if (
-              typeof parsed === "object" &&
-              parsed !== null &&
-              !Array.isArray(parsed)
-            ) {
-              return { ...(parsed as Record<string, unknown>) };
-            }
-          }
-          return null;
-        };
-
-        if (hostData.terminalConfig === undefined) {
-          delete sshDataObj.terminalConfig;
-        } else {
-          let incomingTerminalConfig: Record<string, unknown> | null;
-          try {
-            incomingTerminalConfig = parseTerminalConfig(
-              hostData.terminalConfig,
-            );
-          } catch {
-            return res.status(400).json({ error: "Invalid terminal config" });
-          }
-
-          if (!incomingTerminalConfig) {
-            return res.status(400).json({ error: "Invalid terminal config" });
-          }
-          const protectedTerminalConfigField =
-            OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS.find((field) =>
-              Object.prototype.hasOwnProperty.call(
-                incomingTerminalConfig,
-                field,
-              ),
-            );
-          if (protectedTerminalConfigField) {
-            return res.status(403).json({
-              error:
-                "Only the host owner can change private SSH authentication settings",
-            });
-          }
-
-          const ownerHost =
-            await createCurrentHostResolutionRepository().findHostById(
-              Number(hostId),
-              ownerId,
-            );
-          const ownerTerminalConfig = parseTerminalConfig(
-            ownerHost?.terminalConfig,
+        const incomingTerminalConfig = parseTerminalConfig(
+          hostData.terminalConfig,
+        );
+        const protectedTerminalConfigField =
+          OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS.find((field) =>
+            Object.prototype.hasOwnProperty.call(
+              incomingTerminalConfig ?? {},
+              field,
+            ),
           );
-          if (ownerTerminalConfig) {
-            for (const field of OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS) {
-              if (
-                Object.prototype.hasOwnProperty.call(ownerTerminalConfig, field)
-              ) {
-                incomingTerminalConfig[field] = ownerTerminalConfig[field];
-              }
-            }
-          }
-          sshDataObj.terminalConfig = JSON.stringify(incomingTerminalConfig);
-        }
-
-        const referenceViolations: Array<[unknown, number | null, string]> = [
-          [
-            hostData.rdpCredentialId,
-            hostRecord.rdpCredentialId,
-            "RDP credential",
-          ],
-          [
-            hostData.vncCredentialId,
-            hostRecord.vncCredentialId,
-            "VNC credential",
-          ],
-          [
-            hostData.telnetCredentialId,
-            hostRecord.telnetCredentialId,
-            "Telnet credential",
-          ],
-        ];
-
-        for (const [incoming, current, label] of referenceViolations) {
-          if (incoming !== undefined && (incoming ?? null) !== current) {
-            return res.status(403).json({
-              error: `Only the host owner can change the ${label}`,
-            });
-          }
+        const incomingSshOptions = parseTerminalConfig(hostData.sshOptions);
+        const protectedSshOptionField = OWNER_PRIVATE_SSH_OPTION_FIELDS.find(
+          (field) =>
+            Object.prototype.hasOwnProperty.call(
+              incomingSshOptions ?? {},
+              field,
+            ),
+        );
+        if (protectedTerminalConfigField || protectedSshOptionField) {
+          return res.status(403).json({
+            error:
+              "Only the host owner can change private SSH authentication settings",
+          });
         }
 
         for (const field of OWNER_PRIVATE_AUTH_FIELDS.ssh) {
           delete sshDataObj[field];
         }
-      } else if (
-        sshDataObj.terminalConfig &&
-        (hostData.terminalConfig as Record<string, unknown> | undefined)
-          ?.sudoPassword === undefined
-      ) {
-        // The editor omits sudoPassword entirely when the user hasn't
-        // touched the field, so preserve whatever is already stored instead
-        // of letting the wholesale terminalConfig replacement below wipe it.
-        const existingHost =
-          await createCurrentHostResolutionRepository().findHostById(
-            Number(hostId),
+      }
+
+      let protocolAuthPlan: PlannedProtocolAuth | null = null;
+      if (protocolAuthPatch) {
+        try {
+          protocolAuthPlan = await planProtocolAuthWrite(
             ownerId,
+            Number(hostId),
+            protocolAuthPatch,
+            { isOwner: accessInfo.isOwner },
           );
-        const existingTerminalConfig = existingHost?.terminalConfig
-          ? (JSON.parse(existingHost.terminalConfig as string) as Record<
-              string,
-              unknown
-            >)
-          : undefined;
-        if (existingTerminalConfig?.sudoPassword !== undefined) {
-          const incomingTerminalConfig = JSON.parse(
-            sshDataObj.terminalConfig as string,
-          ) as Record<string, unknown>;
-          incomingTerminalConfig.sudoPassword =
-            existingTerminalConfig.sudoPassword;
-          sshDataObj.terminalConfig = JSON.stringify(incomingTerminalConfig);
+        } catch (error) {
+          if (error instanceof ProtocolAuthWriteError) {
+            return res.status(error.status).json({ error: error.message });
+          }
+          throw error;
         }
       }
+
+      const terminalFieldsError = await mergeStoredTerminalFields(
+        sshDataObj,
+        hostData,
+        Number(hostId),
+        ownerId,
+        accessInfo.isOwner,
+      );
+      if (terminalFieldsError) {
+        return res.status(400).json({ error: terminalFieldsError });
+      }
+
+      const storedRow = (
+        await createCurrentHostDefaultsRepository().listHosts({
+          hostIds: [Number(hostId)],
+        })
+      )[0];
+      sshDataObj.defaultOverrides = JSON.stringify(
+        await applyHostDefaultsToWrite({
+          ownerId,
+          hostId: Number(hostId),
+          columns: sshDataObj,
+          body: hostData,
+          stored: storedRow,
+          lockedKeys: accessInfo.isOwner ? [] : ["auth"],
+        }),
+      );
 
       await createCurrentHostRepository().updateEncryptedForUser(
         ownerId,
         Number(hostId),
         sshDataObj,
       );
+      await applyDefaultsAfterHostWrite(Number(hostId), {
+        moved:
+          !!storedRow &&
+          ((sshDataObj.folder !== undefined &&
+            (sshDataObj.folder ?? null) !== (storedRow.folder ?? null)) ||
+            (sshDataObj.parentHostId !== undefined &&
+              (sshDataObj.parentHostId ?? null) !==
+                (storedRow.parentHostId ?? null))),
+        ownerId,
+      });
+      if (protocolAuthPlan) {
+        await applyProtocolAuthPlan(ownerId, Number(hostId), protocolAuthPlan);
+      }
 
       // A host that moved into a folder inherits that folder's standing shares.
       try {
@@ -1482,8 +1189,8 @@ router.put(
         success: true,
       });
 
-      res.json(stripSensitiveFields(resolvedHost));
-      notifyStatsHostUpdated(parseInt(hostId), req.headers, "host_update");
+      res.json(await withProtocolAuth(stripSensitiveFields(resolvedHost)));
+      notifyStatsHostUpdated(parseInt(hostId), userId, "host_update");
     } catch (err) {
       sshLogger.error("Failed to update SSH host in database", err, {
         operation: "host_update",
@@ -1515,90 +1222,6 @@ router.put(
  *       500:
  *         description: Failed to fetch SSH data.
  */
-/**
- * @openapi
- * /host/db/host/{id}/terminal-config:
- *   patch:
- *     summary: Update a host's terminal behaviour flags
- *     description: Merges the given flags into the host's terminalConfig. Owner or a recipient with edit access. Currently supports autoTmux; used by the "enable Auto-Tmux" action shown when a persisted session expires.
- *     tags:
- *       - Hosts
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               autoTmux:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Updated.
- *       403:
- *         description: No edit access.
- *       404:
- *         description: Host not found.
- */
-router.patch(
-  "/db/host/:id/terminal-config",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId!;
-    const hostId = parseInt(String(req.params.id), 10);
-    const { autoTmux } = req.body ?? {};
-
-    if (isNaN(hostId)) {
-      return res.status(400).json({ error: "Invalid host ID" });
-    }
-    if (typeof autoTmux !== "boolean") {
-      return res.status(400).json({ error: "autoTmux must be a boolean" });
-    }
-
-    try {
-      const access = await permissionManager.canAccessHost(
-        userId,
-        hostId,
-        "edit",
-      );
-      if (!access.hasAccess) {
-        return res.status(403).json({ error: "Access denied to host" });
-      }
-      const ownerId =
-        await createCurrentHostResolutionRepository().findHostOwnerId(hostId);
-      const host = ownerId
-        ? await createCurrentHostRepository().findByIdForUser(ownerId, hostId)
-        : null;
-      if (!host || !ownerId) {
-        return res.status(404).json({ error: "Host not found" });
-      }
-
-      let terminalConfig: Record<string, unknown> = {};
-      if (host.terminalConfig) {
-        try {
-          terminalConfig = JSON.parse(host.terminalConfig);
-        } catch {
-          terminalConfig = {};
-        }
-      }
-      await createCurrentHostRepository().updateForUser(ownerId, hostId, {
-        terminalConfig: JSON.stringify({ ...terminalConfig, autoTmux }),
-      });
-
-      res.json({ success: true, autoTmux });
-    } catch (error) {
-      sshLogger.error("Failed to update host terminal config", error, {
-        operation: "host_terminal_config_update",
-        hostId,
-        userId,
-      });
-      res.status(500).json({ error: "Failed to update terminal config" });
-    }
-  },
-);
-
 router.get(
   "/db/host",
   authenticateJWT,
@@ -1683,14 +1306,16 @@ router.get(
 
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
+          const transformed = transformHostResponse(row);
           const baseHost = {
-            ...transformHostResponse(row),
-            isShared: !!row.isShared,
-            permissionLevel: row.permissionLevel || undefined,
+            ...transformed,
+            isShared: !!row.isShared || !!transformed.sharedCopy,
+            permissionLevel:
+              row.permissionLevel || transformed.permissionLevel || undefined,
             sharedExpiresAt: row.expiresAt || undefined,
             ownerUsername: row.isShared
               ? ownerUsernames.get(row.userId as string) || undefined
-              : undefined,
+              : transformed.ownerUsername,
           };
 
           const resolved =
@@ -1700,6 +1325,7 @@ router.get(
         }),
       );
 
+      attachProtocolAuth(result, await loadProtocolAuthSummaries(result));
       const sanitized = result.map((host) =>
         host.isShared
           ? sanitizeHostForRecipient(
@@ -1708,6 +1334,19 @@ router.get(
             )
           : stripSensitiveFields(host),
       );
+
+      // After sanitizing: the connect-level projection reduces a shared host
+      // to an allowlist, which would drop this again. One query for the list.
+      const pluginSettingsByHost = await loadHostPluginSettings(
+        sanitized
+          .map((host) => Number(host.id))
+          .filter((id) => Number.isInteger(id)),
+      );
+      await applyPersonalHostValues(pluginSettingsByHost, userId).catch(
+        () => {},
+      );
+      attachHostPluginSettings(sanitized, pluginSettingsByHost);
+
       res.json(sanitized);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH hosts from database", err, {
@@ -1774,7 +1413,11 @@ router.get(
         const resolved =
           (await resolveHostCredentials(result, userId)) || result;
 
-        return res.json(stripSensitiveFields(resolved));
+        return res.json(
+          await withHostPluginSettings(
+            await withProtocolAuth(stripSensitiveFields(resolved)),
+          ),
+        );
       }
 
       // Not the owner: shared recipients get a sanitized view of the host.
@@ -1821,13 +1464,17 @@ router.get(
         sharedExpiresAt: accessInfo.expiresAt || undefined,
         ownerUsername,
       };
-      const resolvedSharedResult =
-        (await resolveHostCredentials(sharedResult, userId)) || sharedResult;
+      const resolvedSharedResult = await withProtocolAuth(
+        (await resolveHostCredentials(sharedResult, userId)) || sharedResult,
+      );
 
       res.json(
-        sanitizeHostForRecipient(
-          resolvedSharedResult,
-          accessInfo.permissionLevel,
+        await withHostPluginSettings(
+          sanitizeHostForRecipient(
+            resolvedSharedResult,
+            accessInfo.permissionLevel,
+          ),
+          userId,
         ),
       );
     } catch (err) {
@@ -1842,9 +1489,26 @@ router.get(
 );
 
 /**
- * Returns the minimum authentication material needed by the desktop app to
- * connect to a shared host from the recipient's own network. The response is
- * deliberately transient: callers must not persist it or include it in logs.
+ * @openapi
+ * /host/db/host/{id}/local-connection-auth:
+ *   get:
+ *     summary: Get the login a desktop needs to reach a shared host itself
+ *     description: The minimum authentication material for connecting to a shared host from the recipient's own network. Transient; callers must not store or log it.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The connection auth.
+ *       400:
+ *         description: Invalid id.
+ *       404:
+ *         description: Shared host not found.
  */
 router.get(
   "/db/host/:id/local-connection-auth",
@@ -1931,7 +1595,12 @@ router.get(
  *         name: field
  *         schema:
  *           type: string
- *           enum: [password, sudoPassword, rdpPassword, vncPassword, telnetPassword, key, keyPassword]
+ *           enum: [password, sudoPassword, key, keyPassword]
+ *       - in: query
+ *         name: protocol
+ *         schema:
+ *           type: string
+ *         description: A plugin protocol id; returns that protocol's saved password instead of field.
  *     responses:
  *       200:
  *         description: The requested password value.
@@ -1946,18 +1615,22 @@ router.get(
     const hostId = Number(req.params.id);
     const userId = (req as AuthenticatedRequest).userId;
     const field = (req.query.field as string) || "password";
+    const coreField = [
+      "password",
+      "sudoPassword",
+      "key",
+      "keyPassword",
+    ].includes(field);
+    // 2.8 clients ask for "<protocol>Password".
+    const protocol =
+      typeof req.query.protocol === "string"
+        ? req.query.protocol
+        : coreField
+          ? undefined
+          : /^([a-z][a-zA-Z0-9]*)Password$/.exec(field)?.[1];
+    const protocolId = protocol ? findHostProtocol(protocol)?.id : undefined;
 
-    if (
-      ![
-        "password",
-        "sudoPassword",
-        "rdpPassword",
-        "vncPassword",
-        "telnetPassword",
-        "key",
-        "keyPassword",
-      ].includes(field)
-    ) {
+    if (!protocolId && (protocol || !coreField)) {
       return res.status(400).json({ error: "Invalid field" });
     }
 
@@ -1972,19 +1645,21 @@ router.get(
         return res.status(404).json({ error: "Host not found" });
       }
 
+      if (protocolId) {
+        const login = (await listProtocolLogins(hostId, userId)).find(
+          (entry) => entry.protocol === protocolId,
+        );
+        if (!login?.password) {
+          return res.status(404).json({ error: "No password set" });
+        }
+        return res.json({ value: login.password });
+      }
+
       const resolved = (await resolveHostCredentials(host, userId)) || host;
       let value = resolved[field];
 
-      if (!value && field === "sudoPassword" && resolved.terminalConfig) {
-        try {
-          const tc =
-            typeof resolved.terminalConfig === "string"
-              ? JSON.parse(resolved.terminalConfig)
-              : resolved.terminalConfig;
-          value = tc?.sudoPassword || null;
-        } catch {
-          // malformed JSON — leave value null
-        }
+      if (!value && field === "sudoPassword") {
+        value = hostTerminalExport(resolved).sudoPassword || null;
       }
 
       if (!value) {
@@ -2053,12 +1728,13 @@ router.get(
       }
 
       const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
+      const hostPluginSettings = (
+        await loadHostPluginSettings([Number(hostId)])
+      ).get(Number(hostId));
 
       const exportedConnectionType =
         (resolvedHost.connectionType as string) || "ssh";
-      const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
-        exportedConnectionType,
-      );
+      const isRemoteDesktop = exportedConnectionType !== "ssh";
 
       const baseExportData = {
         exportId: resolvedHost.id,
@@ -2075,36 +1751,16 @@ router.get(
             : resolvedHost.tags || [],
         pin: !!resolvedHost.pin,
         notes: resolvedHost.notes || null,
+        // Every plugin's host settings, secrets redacted, for import to hand back.
+        pluginSettings: hostPluginSettings ?? {},
+        // Each plugin protocol's login, secrets included like the SSH ones.
+        protocolAuth: toPortableLogins(
+          await listProtocolLogins(Number(hostId), userId),
+        ),
       };
 
       const exportData = isRemoteDesktop
-        ? {
-            ...baseExportData,
-            enableRdp: !!resolvedHost.enableRdp,
-            enableVnc: !!resolvedHost.enableVnc,
-            enableTelnet: !!resolvedHost.enableTelnet,
-            rdpPort: resolvedHost.rdpPort || 3389,
-            vncPort: resolvedHost.vncPort || 5900,
-            telnetPort: resolvedHost.telnetPort || 23,
-            rdpAuthType: resolvedHost.rdpAuthType || null,
-            rdpCredentialId: resolvedHost.rdpCredentialId || null,
-            rdpUser: resolvedHost.rdpUser || null,
-            rdpPassword: resolvedHost.rdpPassword || null,
-            rdpDomain: resolvedHost.rdpDomain || null,
-            rdpSecurity: resolvedHost.rdpSecurity || null,
-            rdpIgnoreCert: !!resolvedHost.rdpIgnoreCert,
-            vncAuthType: resolvedHost.vncAuthType || null,
-            vncCredentialId: resolvedHost.vncCredentialId || null,
-            vncUser: resolvedHost.vncUser || null,
-            vncPassword: resolvedHost.vncPassword || null,
-            telnetAuthType: resolvedHost.telnetAuthType || null,
-            telnetCredentialId: resolvedHost.telnetCredentialId || null,
-            telnetUser: resolvedHost.telnetUser || null,
-            telnetPassword: resolvedHost.telnetPassword || null,
-            guacamoleConfig: resolvedHost.guacamoleConfig
-              ? JSON.parse(resolvedHost.guacamoleConfig as string)
-              : null,
-          }
+        ? baseExportData
         : {
             ...baseExportData,
             authType: resolvedHost.authType,
@@ -2114,50 +1770,16 @@ router.get(
             credentialId: resolvedHost.credentialId || null,
             overrideCredentialUsername:
               !!resolvedHost.overrideCredentialUsername,
-            enableTerminal: !!resolvedHost.enableTerminal,
-            enableCommandHistory: resolvedHost.enableCommandHistory !== false,
-            enableTunnel: !!resolvedHost.enableTunnel,
-            enableFileManager: resolvedHost.enableFileManager !== false,
-            scpLegacy: !!resolvedHost.scpLegacy,
-            enableDocker: !!resolvedHost.enableDocker,
-            enableWebUi: !!resolvedHost.enableWebUi,
-            enableProxmox: !!resolvedHost.enableProxmox,
-            enableProxmoxStats: !!resolvedHost.enableProxmoxStats,
-            enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
-            enableTerminalToolbar: resolvedHost.enableTerminalToolbar !== false,
-            enableAiAssistant: !!resolvedHost.enableAiAssistant,
-            showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
-            showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
-            showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
-            showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
-            showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
-            defaultPath: resolvedHost.defaultPath,
-            sudoPassword: resolvedHost.sudoPassword || null,
-            tunnelConnections: resolvedHost.tunnelConnections
-              ? JSON.parse(resolvedHost.tunnelConnections as string)
-              : [],
+            sudoPassword:
+              resolvedHost.sudoPassword ||
+              hostTerminalExport(resolvedHost).sudoPassword ||
+              null,
             jumpHosts: resolvedHost.jumpHosts
               ? JSON.parse(resolvedHost.jumpHosts as string)
               : null,
-            quickActions: resolvedHost.quickActions
-              ? JSON.parse(resolvedHost.quickActions as string)
-              : null,
-            statsConfig: resolvedHost.statsConfig
-              ? JSON.parse(resolvedHost.statsConfig as string)
-              : null,
-            webUiConfig: parseWebUiConfig(resolvedHost.webUiConfig),
-            dockerConfig: resolvedHost.dockerConfig
-              ? JSON.parse(resolvedHost.dockerConfig as string)
-              : null,
-            proxmoxConfig: resolvedHost.proxmoxConfig
-              ? JSON.parse(resolvedHost.proxmoxConfig as string)
-              : null,
-            proxmoxStatsConfig: resolvedHost.proxmoxStatsConfig
-              ? JSON.parse(resolvedHost.proxmoxStatsConfig as string)
-              : null,
-            terminalConfig: resolvedHost.terminalConfig
-              ? JSON.parse(resolvedHost.terminalConfig as string)
-              : null,
+            terminalConfig:
+              hostTerminalExport(resolvedHost).terminalConfig ?? null,
+            sshOptions: hostTerminalExport(resolvedHost).sshOptions,
             forceKeyboardInteractive:
               resolvedHost.forceKeyboardInteractive === "true",
             useSocks5: !!resolvedHost.useSocks5,
@@ -2229,6 +1851,9 @@ router.get(
     try {
       const allHosts =
         await createCurrentHostResolutionRepository().findHostsByUserId(userId);
+      const pluginSettingsByHost = await loadHostPluginSettings(
+        allHosts.map((h) => h.id as number),
+      );
 
       const exportedHosts = [];
       const usedCredentialIds = new Set<number>();
@@ -2237,12 +1862,11 @@ router.get(
         const resolvedHost = shareMode
           ? host
           : (await resolveHostCredentials(host, userId)) || host;
+        const hostPluginSettings = pluginSettingsByHost.get(host.id as number);
 
         const exportedConnectionType =
           (resolvedHost.connectionType as string) || "ssh";
-        const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
-          exportedConnectionType,
-        );
+        const isRemoteDesktop = exportedConnectionType !== "ssh";
 
         const baseExportData = {
           exportId: resolvedHost.id,
@@ -2259,18 +1883,18 @@ router.get(
               : resolvedHost.tags || [],
           pin: !!resolvedHost.pin,
           notes: resolvedHost.notes || null,
+          // Every plugin's host settings, secrets redacted, for import to hand back.
+          pluginSettings: hostPluginSettings ?? {},
+          protocolAuth: shareableLogins(
+            toPortableLogins(
+              await listProtocolLogins(host.id as number, userId),
+            ),
+            shareMode,
+          ),
         };
 
         const exportData = isRemoteDesktop
-          ? {
-              ...baseExportData,
-              domain: resolvedHost.domain || null,
-              security: resolvedHost.security || null,
-              ignoreCert: !!resolvedHost.ignoreCert,
-              guacamoleConfig: resolvedHost.guacamoleConfig
-                ? JSON.parse(resolvedHost.guacamoleConfig as string)
-                : null,
-            }
+          ? baseExportData
           : {
               ...baseExportData,
               authType: resolvedHost.authType,
@@ -2280,48 +1904,17 @@ router.get(
               credentialId: resolvedHost.credentialId || null,
               overrideCredentialUsername:
                 !!resolvedHost.overrideCredentialUsername,
-              enableTerminal: !!resolvedHost.enableTerminal,
-              enableCommandHistory: resolvedHost.enableCommandHistory !== false,
-              enableTunnel: !!resolvedHost.enableTunnel,
-              enableFileManager: resolvedHost.enableFileManager !== false,
-              enableDocker: !!resolvedHost.enableDocker,
-              enableWebUi: !!resolvedHost.enableWebUi,
-              enableProxmox: !!resolvedHost.enableProxmox,
-              enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
-              enableTerminalToolbar:
-                resolvedHost.enableTerminalToolbar !== false,
-              enableAiAssistant: !!resolvedHost.enableAiAssistant,
-              showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
-              showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
-              showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
-              showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
-              showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
-              defaultPath: resolvedHost.defaultPath,
               sudoPassword: shareMode
                 ? null
-                : resolvedHost.sudoPassword || null,
-              tunnelConnections: resolvedHost.tunnelConnections
-                ? JSON.parse(resolvedHost.tunnelConnections as string)
-                : [],
+                : resolvedHost.sudoPassword ||
+                  hostTerminalExport(resolvedHost).sudoPassword ||
+                  null,
               jumpHosts: resolvedHost.jumpHosts
                 ? JSON.parse(resolvedHost.jumpHosts as string)
                 : null,
-              quickActions: resolvedHost.quickActions
-                ? JSON.parse(resolvedHost.quickActions as string)
-                : null,
-              statsConfig: resolvedHost.statsConfig
-                ? JSON.parse(resolvedHost.statsConfig as string)
-                : null,
-              webUiConfig: parseWebUiConfig(resolvedHost.webUiConfig),
-              dockerConfig: resolvedHost.dockerConfig
-                ? JSON.parse(resolvedHost.dockerConfig as string)
-                : null,
-              proxmoxConfig: resolvedHost.proxmoxConfig
-                ? JSON.parse(resolvedHost.proxmoxConfig as string)
-                : null,
-              terminalConfig: resolvedHost.terminalConfig
-                ? JSON.parse(resolvedHost.terminalConfig as string)
-                : null,
+              terminalConfig:
+                hostTerminalExport(resolvedHost).terminalConfig ?? null,
+              sshOptions: hostTerminalExport(resolvedHost).sshOptions,
               forceKeyboardInteractive:
                 resolvedHost.forceKeyboardInteractive === "true",
               useSocks5: !!resolvedHost.useSocks5,
@@ -2473,58 +2066,15 @@ router.delete(
       hostId: parseInt(hostId),
     });
     try {
-      const hostToDelete =
-        await createCurrentHostResolutionRepository().findHostByIdForUser(
-          Number(hostId),
-          userId,
-        );
+      const deleted = await deleteOwnedHost(userId, Number(hostId));
 
-      if (!hostToDelete) {
+      if (!deleted) {
         sshLogger.warn("SSH host not found for deletion", {
           operation: "host_delete",
           hostId: parseInt(hostId),
           userId,
         });
         return res.status(404).json({ error: "SSH host not found" });
-      }
-
-      const numericHostId = Number(hostId);
-
-      await createCurrentFileManagerBookmarkRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentTransferRecentRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentCommandHistoryRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentSshCredentialUsageRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentRecentActivityRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentRbacAccessRepository().deleteHostAccessForHost(
-        numericHostId,
-      );
-
-      await createCurrentSessionRecordingRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentHostRepository().deleteForUser(userId, numericHostId);
-      if (hostToDelete.syncId) {
-        await createCurrentSyncTombstoneRepository().record(
-          userId,
-          "hosts",
-          hostToDelete.syncId,
-        );
       }
 
       databaseLogger.success("SSH host deleted", {
@@ -2540,36 +2090,11 @@ router.delete(
         action: "delete_host",
         resourceType: "host",
         resourceId: hostId,
-        resourceName: hostToDelete.name ?? hostToDelete.ip,
+        resourceName: deleted.name,
         ipAddress: dhIp,
         userAgent: dhUa,
         success: true,
       });
-
-      notifyAutomationInternalEvent("host_deleted", userId, numericHostId, {
-        name: hostToDelete.name ?? hostToDelete.ip,
-      });
-
-      try {
-        const axios = (await import("axios")).default;
-        await axios.post(
-          `${STATS_SERVER_URL}/host-deleted`,
-          { hostId: numericHostId },
-          {
-            headers: {
-              Authorization: req.headers.authorization || "",
-              Cookie: req.headers.cookie || "",
-            },
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        sshLogger.warn("Failed to notify stats server of host deletion", {
-          operation: "host_delete",
-          hostId: numericHostId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
 
       res.json({ message: "SSH host deleted" });
     } catch (err) {
@@ -2583,93 +2108,41 @@ router.delete(
   },
 );
 
-registerHostFileManagerBookmarkRoutes(
-  router,
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-);
+// File manager recent/pinned/shortcuts and transfer/recent routes moved to
+// the file-manager plugin, under /plugin-api/file-manager/, and command
+// history to the ssh-terminal plugin, under /plugin-api/ssh-terminal/.
 
-router.get(
-  "/transfer/recent",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const sourceHostIdQuery = Array.isArray(req.query.sourceHostId)
-      ? req.query.sourceHostId[0]
-      : req.query.sourceHostId;
-    const sourceHostId = sourceHostIdQuery
-      ? parseInt(sourceHostIdQuery as string)
-      : null;
-
-    if (!isNonEmptyString(userId)) {
-      return res.status(400).json({ error: "Invalid userId" });
-    }
-
-    if (!sourceHostId) {
-      return res.status(400).json({ error: "Source host ID is required" });
-    }
-
-    try {
-      const recent =
-        await createCurrentTransferRecentRepository().listBySourceHost(
-          userId,
-          sourceHostId,
-          10,
-        );
-
-      res.json(recent);
-    } catch (err) {
-      sshLogger.error("Failed to fetch transfer recent destinations", err);
-      res.status(500).json({ error: "Failed to fetch recent destinations" });
-    }
-  },
-);
-
-router.post(
-  "/transfer/recent",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const { sourceHostId, destHostId, destPath, destPathLabel } = req.body;
-
-    if (
-      !isNonEmptyString(userId) ||
-      !sourceHostId ||
-      !destHostId ||
-      !destPath
-    ) {
-      return res.status(400).json({ error: "Invalid data" });
-    }
-
-    try {
-      const transferRecentRepository = createCurrentTransferRecentRepository();
-      await transferRecentRepository.upsertForDestination(userId, {
-        sourceHostId,
-        destHostId,
-        destPath,
-        destPathLabel,
-      });
-
-      await transferRecentRepository.pruneSourceHost(userId, sourceHostId, 10);
-
-      res.json({ message: "Recent destination saved" });
-    } catch (err) {
-      sshLogger.error("Failed to save transfer recent destination", err);
-      res.status(500).json({ error: "Failed to save recent destination" });
-    }
-  },
-);
-registerHostCommandHistoryRoutes(
-  router,
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-);
+/**
+ * A share export leaves out every secret and credential link, the same as
+ * it does for SSH.
+ */
+function shareableLogins(
+  logins: ReturnType<typeof toPortableLogins>,
+  shareMode: boolean,
+): ReturnType<typeof toPortableLogins> {
+  if (!shareMode) return logins;
+  const out: ReturnType<typeof toPortableLogins> = {};
+  for (const [protocol, login] of Object.entries(logins)) {
+    const declared = findHostProtocol(protocol);
+    const secret = new Set(
+      (declared?.credentialFields ?? [])
+        .filter((field) => field.secret)
+        .map((field) => field.key),
+    );
+    out[protocol] = {
+      authType: login.authType === "credential" ? "direct" : login.authType,
+      credentialId: null,
+      username: login.username,
+      password: null,
+      fields: Object.fromEntries(
+        Object.entries(login.fields).filter(
+          ([key]) => declared && !secret.has(key),
+        ),
+      ),
+    };
+  }
+  return out;
+}
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
@@ -2708,8 +2181,9 @@ async function resolveHostCredentials(
           host.id,
           requestingUserId,
         );
-      for (const protocol of ["rdp", "vnc", "telnet"] as const) {
-        if (!host[AUTH_PROTOCOL_METADATA[protocol].enableField]) continue;
+      // Whether a plugin protocol is on is its plugin's host setting; the
+      // client only offers an override for one that is.
+      for (const { id: protocol } of listHostProtocols()) {
         authOverrides[protocol] = {
           credentialId: overrideCredentialIds[protocol],
           required: false,
@@ -2871,7 +2345,6 @@ registerHostFolderRoutes(router, {
   requireCredentialEditPermission:
     permissionManager.requirePermission("credentials.edit"),
   requireDataAccess,
-  statsServerUrl: STATS_SERVER_URL,
 });
 
 registerHostBulkRoutes(
@@ -2882,178 +2355,28 @@ registerHostBulkRoutes(
   requireDataAccess,
 );
 
-registerHostAutostartRoutes(router, {
-  authenticateJWT,
-  requireViewPermission: permissionManager.requirePermission("hosts.view"),
-  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
-});
-
-/**
- * @openapi
- * /host/opkssh/token/{hostId}:
- *   get:
- *     summary: Get OPKSSH token status for a host
- *     tags: [SSH]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: hostId
- *         in: path
- *         required: true
- *         schema:
- *           type: integer
- *         description: Host ID
- *     responses:
- *       200:
- *         description: Token status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 exists:
- *                   type: boolean
- *                   description: Whether a valid token exists
- *                 expiresAt:
- *                   type: string
- *                   format: date-time
- *                   description: Token expiration timestamp
- *                 email:
- *                   type: string
- *                   description: User email from OIDC identity
- *       404:
- *         description: No valid token found
- *       500:
- *         description: Internal server error
- */
-router.get(
-  "/ssh/opkssh/token/:hostId",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-  requireDataAccess,
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.userId;
-    const hostId = parseInt(
-      Array.isArray(req.params.hostId)
-        ? req.params.hostId[0]
-        : req.params.hostId,
-    );
-
-    if (!userId || isNaN(hostId)) {
-      return res.status(400).json({ error: "Invalid request" });
-    }
-
-    try {
-      const opksshTokenRepository = createCurrentOpksshTokenRepository();
-      const tokenData = await opksshTokenRepository.findByUserAndHost(
-        userId,
-        hostId,
-      );
-
-      if (!tokenData) {
-        return res.status(404).json({ exists: false });
-      }
-
-      const expiresAt = new Date(tokenData.expiresAt);
-
-      if (expiresAt < new Date()) {
-        await opksshTokenRepository.deleteByUserAndHost(userId, hostId);
-        return res.status(404).json({ exists: false });
-      }
-
-      res.json({
-        exists: true,
-        expiresAt: tokenData.expiresAt,
-        email: tokenData.email,
-      });
-    } catch (error) {
-      sshLogger.error("Error retrieving OPKSSH token status", error, {
-        operation: "opkssh_token_status_error",
-        userId,
-        hostId,
-      });
-      res.status(500).json({ error: "Internal server error" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /host/opkssh/token/{hostId}:
- *   delete:
- *     summary: Delete OPKSSH token for a host
- *     tags: [SSH]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: hostId
- *         in: path
- *         required: true
- *         schema:
- *           type: integer
- *         description: Host ID
- *     responses:
- *       200:
- *         description: Token deleted successfully
- *       500:
- *         description: Internal server error
- */
-router.delete(
-  "/ssh/opkssh/token/:hostId",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
-  requireDataAccess,
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.userId;
-    const hostId = parseInt(
-      Array.isArray(req.params.hostId)
-        ? req.params.hostId[0]
-        : req.params.hostId,
-    );
-
-    if (!userId || isNaN(hostId)) {
-      return res.status(400).json({ error: "Invalid request" });
-    }
-
-    try {
-      const { deleteOPKSSHToken } = await import("../../hosts/opkssh-auth.js");
-      await deleteOPKSSHToken(userId, hostId);
-      res.json({ success: true });
-    } catch (error) {
-      sshLogger.error("Error deleting OPKSSH token", error, {
-        operation: "opkssh_token_delete_error",
-        userId,
-        hostId,
-      });
-      res.status(500).json({ error: "Internal server error" });
-    }
-  },
-);
-
-registerHostOpksshRoutes(router);
-registerHostStepCaRoutes(router);
-
 registerHostNetworkRoutes(router, {
   authenticateJWT,
   requireViewPermission: permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
 });
 
+registerHostDefaultsRoutes(router, {
+  authenticateJWT,
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+  requireAdminSettings: permissionManager.requirePermission(
+    "admin.settings.manage",
+  ),
+});
+
 export default router;
 
-/**
- * A webUiConfig arriving as a JSON string (an import, or a client that
- * stringified it) must still reach serializeWebUiConfig as an object.
- * Malformed input becomes null, which serializes to a cleared column rather
- * than throwing inside a host save.
- */
-function safeParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+/** Seconds between status checks, or null to follow the global setting. */
+function normalizeStatusInterval(value: unknown): number | null {
+  const seconds = Number(value);
+  if (value === null || value === undefined || value === "") return null;
+  return Number.isInteger(seconds) && seconds >= 5 && seconds <= 86400
+    ? seconds
+    : null;
 }

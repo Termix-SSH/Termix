@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Iniciar sesión con LDAP",
+  "loginWithProvider": "Iniciar sesión con {{name}}",
+  "loading": "Cargando...",
+  "requiredField": "Este campo es obligatorio",
+  "username": "Nombre de usuario LDAP",
+  "password": "Contraseña LDAP",
+  "signIn": "Iniciar sesión",
+  "permissions": {
+    "manage": {
+      "title": "Administrar directorios LDAP",
+      "description": "Agregar, modificar y eliminar los directorios LDAP con los que los usuarios pueden iniciar sesión."
+    }
+  },
+  "providers": {
+    "docsLink": "Ver documentación",
+    "none": "No hay directorios LDAP configurados.",
+    "add": "Agregar directorio",
+    "edit": "Editar directorio",
+    "delete": "Eliminar directorio",
+    "deleteConfirm": "¿Eliminar este directorio? Los usuarios que inicien sesión con él no podrán acceder.",
+    "name": "Nombre para mostrar",
+    "namePlaceholder": "Directorio de empresas",
+    "nameRequired": "Se requiere un nombre para mostrar.",
+    "enabled": "Activado",
+    "save": "Guardar directorio",
+    "saving": "Guardando...",
+    "saved": "Guardado",
+    "saveFailed": "Error al guardar",
+    "deleted": "Eliminado",
+    "deleteFailed": "Error al eliminar",
+    "loadFailed": "No se pudieron cargar los directorios LDAP.",
+    "cancel": "Cancelar"
+  },
+  "fields": {
+    "host": "Host LDAP",
+    "port": "Puerto",
+    "useTls": "Usar TLS (LDAPS)",
+    "bindDn": "DN de enlace",
+    "bindPassword": "Contraseña de enlace",
+    "secretKeep": "Se ha guardado una contraseña. Déjelo en blanco para conservarla.",
+    "userSearchBase": "Base de búsqueda de usuarios",
+    "userSearchFilter": "Filtro de búsqueda de usuarios",
+    "usernameAttr": "Atributo de nombre de usuario",
+    "displayNameAttr": "Atributo de nombre visible",
+    "groupSearchBase": "Base de búsqueda de grupos",
+    "adminGroup": "Grupo de administradores",
+    "allowedUsers": "Usuarios permitidos"
+  }
+}

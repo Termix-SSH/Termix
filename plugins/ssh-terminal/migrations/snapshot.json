@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "tables": {
+    "command_history": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "command": {
+          "type": "text",
+          "notNull": true
+        },
+        "executedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_command_history_user_host",
+          "columns": ["userId", "hostId"]
+        }
+      ],
+      "adopts": "command_history"
+    }
+  }
+}

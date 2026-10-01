@@ -31,20 +31,8 @@ vi.mock("@/main-axios", () => ({
   initiatePasswordReset: vi.fn(),
   verifyPasswordResetCode: vi.fn(),
   completePasswordReset: vi.fn(),
-  getOIDCAuthorizeUrl: vi.fn(),
-  verifyTOTPLogin: vi.fn(),
   getCurrentToken: vi.fn().mockReturnValue(null),
   requestTrustedProxyLogin: vi.fn(),
-}));
-
-vi.mock("@/api/sso-provider-api", () => ({
-  getSSOProviders: vi.fn().mockResolvedValue([]),
-  ldapLogin: vi.fn(),
-}));
-
-vi.mock("@/api/webauthn-api", () => ({
-  isPasskeySupported: () => false,
-  loginWithPasskey: vi.fn(),
 }));
 
 import { Auth } from "@/auth/Auth";

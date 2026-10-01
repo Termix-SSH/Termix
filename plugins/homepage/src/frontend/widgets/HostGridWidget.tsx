@@ -1,0 +1,125 @@
+import { LayoutGrid } from "lucide-react";
+import {
+  useTranslation,
+  useHostStatus,
+  useHosts,
+  type PluginHostRecord,
+} from "@termix/plugin-sdk/frontend";
+
+import { registerWidget } from "./WidgetRegistry";
+import type { HostGridConfig, WidgetComponentProps } from "../types.js";
+import { GRID_SIZE } from "../types.js";
+import { WidgetTitle } from "@termix/plugin-sdk/ui";
+
+function getAccentColor(): string {
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--accent-brand")
+      .trim() || "#f59145"
+  );
+}
+
+function StatusDot({ status }: { status: string }) {
+  const color =
+    status === "online"
+      ? getAccentColor()
+      : status === "reachable"
+        ? "#fbbf24"
+        : status === "offline"
+          ? "#ef4444"
+          : "#6b7280";
+  return (
+    <span
+      className="w-1.5 h-1.5 rounded-full shrink-0 inline-block"
+      style={{ background: color }}
+    />
+  );
+}
+
+function HostGridRow({
+  host,
+  showIp,
+}: {
+  host: PluginHostRecord;
+  showIp: boolean;
+}) {
+  const status = useHostStatus(Number(host.id));
+  return (
+    <div className="flex items-center gap-1.5 p-1.5 bg-muted/30 border border-border/40 overflow-hidden">
+      <StatusDot status={status?.status ?? "unknown"} />
+      <div className="flex flex-col min-w-0">
+        <span className="text-[10px] font-medium text-foreground truncate">
+          {host.name}
+        </span>
+        {showIp && (
+          <span className="text-[9px] text-muted-foreground truncate">
+            {host.ip}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HostGridWidget({
+  widget,
+  config,
+}: WidgetComponentProps<HostGridConfig>) {
+  const { t } = useTranslation();
+  const { hostIds, showIp, columns } = config;
+  const { hosts: allHosts, loaded } = useHosts();
+  const hosts =
+    hostIds.length > 0
+      ? allHosts.filter((h) => hostIds.includes(Number(h.id)))
+      : allHosts;
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">
+        {t("common.loading")}
+      </div>
+    );
+  }
+
+  if (hosts.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">
+        {t("homepage.noHosts")}
+      </div>
+    );
+  }
+
+  const gridCols =
+    columns === 2
+      ? "grid-cols-2"
+      : columns === 3
+        ? "grid-cols-3"
+        : "grid-cols-4";
+
+  return (
+    <div className="flex flex-col w-full h-full overflow-hidden">
+      <WidgetTitle title={widget.title} icon={<LayoutGrid size={11} />} />
+      <div
+        className={`grid ${gridCols} gap-1.5 p-2 flex-1 content-start overflow-auto`}
+      >
+        {hosts.map((host) => (
+          <HostGridRow key={String(host.id)} host={host} showIp={showIp} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+registerWidget<HostGridConfig>({
+  id: "host_grid",
+  name: "Host Grid",
+  description: "Live status overview grid for all your SSH hosts",
+  category: "monitoring",
+  icon: <LayoutGrid size={14} />,
+  defaultConfig: { hostIds: [], showIp: false, columns: 3 },
+  defaultSize: { w: GRID_SIZE * 12, h: GRID_SIZE * 8 },
+  minSize: { w: GRID_SIZE * 4, h: GRID_SIZE * 3 },
+  component: HostGridWidget,
+});
+
+export { HostGridWidget };

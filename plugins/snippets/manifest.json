@@ -1,0 +1,154 @@
+{
+  "id": "snippets",
+  "name": "Snippets",
+  "version": "1.0.0",
+  "description": "Save commands and notes, then run or paste them into a terminal. Supports variables and sharing.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "Play",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "network:serve",
+    "ssh:connect",
+    "credentials:use",
+    "hosts:write",
+    "ui:surface",
+    "events:core",
+    "db:core-refs"
+  ],
+  "provides": [
+    {
+      "service": "snippets.access",
+      "version": "1.0.0",
+      "permission": "snippets.view"
+    }
+  ],
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "panels": [
+      {
+        "id": "snippets",
+        "titleKey": "nav.snippets",
+        "icon": "Play"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "view",
+        "titleKey": "permissions.view.title",
+        "descriptionKey": "permissions.view.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "create",
+        "titleKey": "permissions.create.title",
+        "descriptionKey": "permissions.create.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "edit",
+        "titleKey": "permissions.edit.title",
+        "descriptionKey": "permissions.edit.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "delete",
+        "titleKey": "permissions.delete.title",
+        "descriptionKey": "permissions.delete.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "share",
+        "titleKey": "permissions.share.title",
+        "descriptionKey": "permissions.share.description",
+        "defaultRoles": ["user"]
+      }
+    ],
+    "settings": {
+      "user": [
+        {
+          "key": "foldersCollapsed",
+          "type": "boolean",
+          "labelKey": "settings.foldersCollapsed.label",
+          "descriptionKey": "settings.foldersCollapsed.description",
+          "default": true
+        },
+        {
+          "key": "showCommands",
+          "type": "boolean",
+          "labelKey": "settings.showCommands.label",
+          "descriptionKey": "settings.showCommands.description",
+          "default": true
+        },
+        {
+          "key": "confirmExecution",
+          "type": "boolean",
+          "labelKey": "settings.confirmExecution.label",
+          "descriptionKey": "settings.confirmExecution.description",
+          "default": false
+        }
+      ],
+      "host": {
+        "editorGroup": "ssh",
+        "editorOrder": 15,
+        "fields": [
+          {
+            "key": "startupSnippetId",
+            "type": "number",
+            "labelKey": "host.startupTitle",
+            "descriptionKey": "host.startupDescription",
+            "hidden": true,
+            "min": 1,
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
+          },
+          {
+            "key": "quickActions",
+            "type": "json",
+            "labelKey": "host.quickActionsTitle",
+            "descriptionKey": "host.quickActionsDescription",
+            "hidden": true,
+            "default": [],
+            "shareRead": "view",
+            "defaultLevels": ["user", "folder"]
+          }
+        ]
+      }
+    },
+    "syncEntities": ["snippetFolders", "snippets"],
+    "keybindingActions": [
+      {
+        "id": "runSnippet",
+        "params": {
+          "snippetId": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "maxLength": 20,
+            "syncEntity": "snippets"
+          },
+          "appendEnter": {
+            "type": "boolean"
+          }
+        }
+      }
+    ],
+    "http": {
+      "adminImpersonation": true
+    },
+    "uses": [
+      "host-metrics.toolbar",
+      "terminal.sendToActive",
+      "terminal.sendToSession",
+      "terminal.listSessions"
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Pas CA"
+  },
+  "editor": {
+    "label": "Pas CA",
+    "description": "Inicieu la sessió a través del vostre proveïdor d'identitat i deixeu que la vostra Step CA emeti un certificat SSH de curta durada per a aquest amfitrió. L'URL de la CA, l'empremta digital arrel i el proveïdor OIDC els defineix un administrador a la secció Step CA de la Configuració de l'administrador.",
+    "docs": "Veure documents"
+  },
+  "dialog": {
+    "title": "Autenticació de CA requerida",
+    "description": "Completeu l'autenticació al navegador per continuar. El certificat continua sent vàlid mentre ho permeti la vostra autoritat de certificació.",
+    "openBrowser": "Obre el navegador per autenticar-te",
+    "waiting": "Esperant l'autenticació al navegador...",
+    "authenticating": "Processant l'autenticació..."
+  },
+  "errors": {
+    "authFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
+    "timeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "URL de CA",
+      "description": "L'URL https de la vostra CA Smallstep. Deixeu l'URL de la CA, l'empremta digital i el proveïdor buits per desactivar la CA de Step.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Empremta digital arrel (SHA-256)",
+      "description": "L'empremta digital del certificat arrel, tal com es mostra al pas de bootstrap de CA."
+    },
+    "provisioner": {
+      "label": "Nom del proveïdor OIDC",
+      "description": "El nom del proveïdor OIDC de la CA. A continuació, trieu \"Step CA\" com a tipus d'autenticació de l'amfitrió."
+    },
+    "privateEndpoints": {
+      "label": "Amfitrions privats permesos de Step CA",
+      "description": "Amfitrions privats amb els quals el flux de certificats de la CA de Step pot contactar: la mateixa CA i, si és intern, el vostre proveïdor d'identitat. Separeu-los amb comes o noves línies."
+    },
+    "redirectUri": {
+      "label": "URI de redirecció",
+      "description": "Registra aquesta URL com a URI de redirecció permesa amb el proveïdor d'identitat darrere del proveidor OIDC."
+    },
+    "legacyCallback": {
+      "label": "Utilitza l'URI de redirecció antiga",
+      "description": "Continua enviant /host/step-ca-callback, l'URI de redirecció utilitzat abans de la versió 2.9. Desactiva-ho un cop el proveïdor d'identitat permeti el nou."
+    }
+  }
+}

@@ -1,0 +1,350 @@
+{
+  "remoteDesktop": {
+    "connecting": "{{type}} oturumuna bağlanılıyor...",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
+    "connectionError": "Bağlantı hatası",
+    "connectionFailed": "Bağlantı başarısız",
+    "failedToConnect": "Bağlantı belirteci alınamadı",
+    "hostNotFound": "Sunucu bulunamadı",
+    "noHostSelected": "Sunucu seçilmedi",
+    "reconnect": "Yeniden Bağlan",
+    "retry": "Yeniden dene",
+    "guacdUnavailable": "Uzak masaüstü hizmeti (guacd) kullanılamıyor. Lütfen guacd'nin çalıştığından, erişilebilir olduğundan ve yönetici ayarlarında düzgün yapılandırıldığından emin olun.",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "connect": "Bağlan",
+    "ctrlAltDel": "Ctrl+Alt+Del",
+    "files": {
+      "title": "Drive Files",
+      "parent": "Parent directory",
+      "refresh": "Yenile",
+      "empty": "Bu klasör boş",
+      "listFailed": "Failed to read this folder",
+      "download": "İndir",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "{{name}} yükleniyor...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
+    },
+    "toolbar": {
+      "ctrlAltDel": "Ctrl+Alt+Del",
+      "winL": "Win+L (Ekranı Kilitle)",
+      "winKey": "Windows Tuşu",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift",
+      "win": "Win",
+      "stickyActive": "{{key}} (sabitlenmiş - bırakmak için tıklayın)",
+      "stickyInactive": "{{key}} (sabitlemek için tıklayın)",
+      "esc": "Escape",
+      "tab": "Tab",
+      "home": "Home",
+      "end": "End",
+      "pageUp": "Page Up",
+      "pageDown": "Page Down",
+      "arrowUp": "Yukarı Ok",
+      "arrowDown": "Aşağı Ok",
+      "arrowLeft": "Sol Ok",
+      "arrowRight": "Sağ Ok",
+      "fnToggle": "Fonksiyon Tuşları",
+      "reconnect": "Oturumu Yeniden Bağla",
+      "collapse": "Araç çubuğunu daralt",
+      "expand": "Araç çubuğunu genişlet",
+      "dragHandle": "Yeniden konumlandırmak için sürükle",
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
+      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+  },
+  "hosts": {
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
+    "guac": {
+      "toolbar": "Toolbar",
+      "connection": "Bağlantı",
+      "authentication": "Kimlik doğrulama",
+      "storedCredential": "Kayıtlı kimlik bilgisi",
+      "authMethod": "Kimlik doğrulama yöntemi",
+      "authTypeDirect": "Doğrudan",
+      "authTypeCredential": "Kimlik bilgisi",
+      "authTypeNone": "Yok",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
+      "selectCredential": "Bir kimlik bilgisi seçin...",
+      "connectionSettings": "Bağlantı ayarları",
+      "displaySettings": "Görüntü ayarları",
+      "audioSettings": "Ses ayarları",
+      "rdpPerformance": "RDP performansı",
+      "deviceRedirection": "Cihaz yönlendirme",
+      "session": "Oturum",
+      "gateway": "Ağ geçidi",
+      "remoteApp": "RemoteApp",
+      "clipboard": "Pano",
+      "sessionRecording": "Oturum kaydı",
+      "wakeOnLan": "LAN üzerinden uyandırma",
+      "vncSettings": "VNC ayarları",
+      "terminalSettings": "Terminal ayarları",
+      "rdpPort": "RDP Portu",
+      "username": "Kullanıcı Adı",
+      "password": "Parola",
+      "passwordSaved": "Password saved, type to change",
+      "domain": "Etki Alanı",
+      "securityMode": "Güvenlik Modu",
+      "width": "Genişlik",
+      "height": "Yükseklik",
+      "dpi": "DPI",
+      "clientName": "İstemci Adı",
+      "initialProgram": "Başlangıç Programı",
+      "serverLayout": "Sunucu Düzeni",
+      "timezone": "Saat Dilimi",
+      "loadBalanceInfo": "Yük Dengeleme Bilgisi / Çerez",
+      "loadBalanceInfoDesc": "RDS grubu yük dengelemesi için RD Bağlantı Aracısı çerezi (ör. tsv://MS Terminal Services Plugin.1.CollectionName)",
+      "guacdProxy": "guacd Proxy",
+      "guacdHostname": "guacd Sunucusu",
+      "guacdHostnamePlaceholder": "Genel varsayılan",
+      "guacdPort": "guacd Portu",
+      "guacdProxyDesc": "Bu bağlantı için genel guacd örneğini geçersiz kıl. Genel olarak yapılandırılmış guacd'yi kullanmak için boş bırak.",
+      "gatewayHostname": "Ağ Geçidi Ana Bilgisayar Adı",
+      "gatewayPort": "Ağ Geçidi Portu",
+      "gatewayUsername": "Ağ Geçidi Kullanıcı Adı",
+      "gatewayPassword": "Ağ Geçidi Parolası",
+      "gatewayDomain": "Ağ Geçidi Etki Alanı",
+      "remoteAppProgram": "RemoteApp Programı",
+      "workingDirectory": "Çalışma Dizini",
+      "arguments": "Argümanlar",
+      "normalizeLineEndings": "Satır Sonlarını Normalleştir",
+      "macAddress": "MAC Adresi",
+      "broadcastAddress": "Yayın Adresi",
+      "udpPort": "UDP Portu",
+      "waitTimeS": "Bekleme Süresi (sn)",
+      "driveName": "Sürücü Adı",
+      "drivePath": "Sürücü Yolu",
+      "ignoreCertificate": "Sertifikayı Yoksay",
+      "ignoreCertificateDesc": "Kendinden imzalı sertifikalara sahip sunuculara bağlantılara izin ver",
+      "forceLossless": "Kayıpsız Zorla",
+      "forceLosslessDesc": "Kayıpsız görüntü kodlamasını zorla (daha yüksek kalite, daha fazla bant genişliği)",
+      "disableAudio": "Sesi Devre Dışı Bırak",
+      "disableAudioDesc": "Uzak oturumdaki tüm sesleri kapat",
+      "enableAudioInput": "Ses Girişini Etkinleştir (Mikrofon)",
+      "enableAudioInputDesc": "Yerel mikrofonu uzak oturuma yönlendir",
+      "wallpaper": "Duvar Kağıdı",
+      "wallpaperDesc": "Masaüstü duvar kağıdını göster (devre dışı bırakmak performansı artırır)",
+      "theming": "Tema",
+      "themingDesc": "Görsel temaları ve stilleri etkinleştir",
+      "fontSmoothing": "Yazı Tipi Yumuşatma",
+      "fontSmoothingDesc": "ClearType yazı tipi işlemeyi etkinleştir",
+      "fullWindowDrag": "Tam Pencere Sürükleme",
+      "fullWindowDragDesc": "Sürüklerken pencere içeriğini göster",
+      "desktopComposition": "Masaüstü Birleştirme",
+      "desktopCompositionDesc": "Aero cam efektlerini etkinleştir",
+      "menuAnimations": "Menü Animasyonları",
+      "menuAnimationsDesc": "Menü solma ve kayma animasyonlarını etkinleştir",
+      "disableBitmapCaching": "Bitmap Önbelleğini Devre Dışı Bırak",
+      "disableBitmapCachingDesc": "Bitmap önbelleğini kapat (grafik bozulmalarına yardımcı olabilir)",
+      "disableOffscreenCaching": "Ekran Dışı Önbelleğini Devre Dışı Bırak",
+      "disableOffscreenCachingDesc": "Ekran dışı önbelleğini kapat",
+      "disableGlyphCaching": "Glif Önbelleğini Devre Dışı Bırak",
+      "disableGlyphCachingDesc": "Glif önbelleğini kapat",
+      "enableGfx": "GFX'i Etkinleştir",
+      "enableGfxDesc": "RemoteFX grafik işlem hattını kullan",
+      "enablePrinting": "Yazdırmayı Etkinleştir",
+      "enablePrintingDesc": "Yerel yazıcıları uzak oturuma yönlendir",
+      "enableDriveRedirection": "Sürücü Yönlendirmesini Etkinleştir",
+      "enableDriveRedirectionDesc": "Yerel bir klasörü uzak oturumda sürücü olarak eşleştir",
+      "createDrivePath": "Sürücü Yolu Oluştur",
+      "createDrivePathDesc": "Klasör mevcut değilse otomatik oluştur",
+      "disableDownload": "İndirmeyi Devre Dışı Bırak",
+      "disableDownloadDesc": "Uzak oturumdan dosya indirmeyi engelle",
+      "disableUpload": "Yüklemeyi Devre Dışı Bırak",
+      "disableUploadDesc": "Uzak oturuma dosya yüklemeyi engelle",
+      "enableTouch": "Dokunmayı Etkinleştir",
+      "enableTouchDesc": "Dokunma girişi iletimini etkinleştir",
+      "consoleSession": "Konsol Oturumu",
+      "consoleSessionDesc": "Yeni oturum yerine konsola (oturum 0) bağlan",
+      "sendWolPacket": "WOL Paketi Gönder",
+      "sendWolPacketDesc": "Bağlanmadan önce bu sunucuyu uyandırmak için sihirli paket gönder",
+      "disableCopy": "Kopyalamayı Devre Dışı Bırak",
+      "disableCopyDesc": "Uzak oturumdan metin kopyalamayı engelle",
+      "disablePaste": "Yapıştırmayı Devre Dışı Bırak",
+      "disablePasteDesc": "Uzak oturuma metin yapıştırmayı engelle",
+      "createPathIfMissing": "Yol Yoksa Oluştur",
+      "createPathIfMissingDesc": "Kayıt dizinini otomatik oluştur",
+      "excludeOutput": "Çıktıyı Hariç Tut",
+      "excludeOutputDesc": "Ekran çıktısını kaydetme (yalnızca meta veri)",
+      "excludeMouse": "Fareyi Hariç Tut",
+      "excludeMouseDesc": "Fare hareketlerini kaydetme",
+      "includeKeystrokes": "Tuş Vuruşlarını Dahil Et",
+      "includeKeystrokesDesc": "Ekran çıktısına ek olarak ham tuş vuruşlarını kaydet",
+      "vncPort": "VNC Portu",
+      "vncPassword": "VNC Parolası",
+      "vncUsernameOptional": "Kullanıcı adı (isteğe bağlı)",
+      "vncLeaveBlank": "Gerekli değilse boş bırakın",
+      "cursorMode": "İmleç Modu",
+      "swapRedBlue": "Kırmızı ve Maviyi Değiştir",
+      "swapRedBlueDesc": "Kırmızı ve mavi renk kanallarını değiştir (bazı renk sorunlarını giderir)",
+      "readOnly": "Salt okunur",
+      "readOnlyDesc": "Hiçbir giriş göndermeden uzak ekranı görüntüle",
+      "telnetPort": "Telnet Portu",
+      "terminalType": "Terminal Türü",
+      "fontName": "Yazı Tipi Adı",
+      "fontSize": "Yazı Tipi Boyutu",
+      "colorScheme": "Renk Şeması",
+      "backspaceKey": "Geri Silme Tuşu",
+      "colorDepth": "Renk Derinliği",
+      "resizeMethod": "Yeniden Boyutlandırma Yöntemi",
+      "driveNamePlaceholder": "Termix Drive"
+    },
+    "remoteDesktop": "Uzak Masaüstü",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Sanal Ağ",
+    "unencryptedShell": "Şifrelenmemiş Shell",
+    "remoteDesktopNotes": "Notlar",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "Dokümanları görüntüle",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+  },
+  "onboarding": {
+    "feature_desktop": "Remote desktop",
+    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Renk Derinliği",
+        "description": "Used for RDP hosts that leave it on their default."
+      },
+      "resizeMethod": {
+        "label": "Yeniden Boyutlandırma Yöntemi",
+        "description": "How the remote screen follows the window size."
+      },
+      "resizeDisplayUpdate": "Display Update",
+      "resizeReconnect": "Yeniden Bağlan",
+      "inherit": "Inherit",
+      "on": "Açık",
+      "off": "Kapalı",
+      "forceLossless": {
+        "label": "Kayıpsız Zorla",
+        "description": "Kayıpsız görüntü kodlamasını zorla (daha yüksek kalite, daha fazla bant genişliği)"
+      },
+      "enableWallpaper": {
+        "label": "Duvar Kağıdı",
+        "description": "Masaüstü duvar kağıdını göster (devre dışı bırakmak performansı artırır)"
+      },
+      "enableFontSmoothing": {
+        "label": "Yazı Tipi Yumuşatma",
+        "description": "ClearType yazı tipi işlemeyi etkinleştir"
+      },
+      "enableDesktopComposition": {
+        "label": "Masaüstü Birleştirme",
+        "description": "Aero cam efektlerini etkinleştir"
+      },
+      "disableAudio": {
+        "label": "Sesi Devre Dışı Bırak",
+        "description": "Uzak oturumdaki tüm sesleri kapat"
+      },
+      "enablePrinting": {
+        "label": "Yazdırmayı Etkinleştir",
+        "description": "Yerel yazıcıları uzak oturuma yönlendir"
+      },
+      "enableDrive": {
+        "label": "Sürücü Yönlendirmesini Etkinleştir",
+        "description": "Yerel bir klasörü uzak oturumda sürücü olarak eşleştir"
+      },
+      "disableCopy": {
+        "label": "Kopyalamayı Devre Dışı Bırak",
+        "description": "Uzak oturumdan metin kopyalamayı engelle"
+      },
+      "disablePaste": {
+        "label": "Yapıştırmayı Devre Dışı Bırak",
+        "description": "Uzak oturuma metin yapıştırmayı engelle"
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
+    },
+    "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
+      "guacdUrl": {
+        "label": "guacd URL'si",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
+      }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "Uzak Masaüstü"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+    }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

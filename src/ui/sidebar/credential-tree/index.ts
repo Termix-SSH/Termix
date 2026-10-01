@@ -1,2 +1,2 @@
 export { CredentialSidebarTree } from "./CredentialSidebarTree";
-export { isFolder, type CredentialFolder } from "./visible-rows";
+export { type CredentialFolder } from "./visible-rows";

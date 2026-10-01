@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "セッションログ"
+  },
+  "hosts": {
+    "enableSessionRecording": "セッション記録",
+    "enableSessionRecordingDesc": "後で確認できるようにターミナルセッションの出力を記録します"
+  },
+  "permissions": {
+    "view": {
+      "title": "セッションの録画を見る",
+      "description": "自分のセッション録音を視聴・再生できます。"
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "保持期間（日数）",
+        "description": "セッション記録が自動的に削除されるまでの保存期間。"
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "セッション記録を有効にする",
+        "description": "このホストの端末出力を記録しておけば、後で再生したりダウンロードしたりできます。"
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "録音"
+  },
+  "sessionLogs": {
+    "title": "セッションログ",
+    "noLogs": "セッションログはまだありません",
+    "noLogsDesc": "ホストでセッションログを有効にして記録を開始してください",
+    "duration": "所要時間",
+    "viewLog": "ログを表示",
+    "downloadLog": "ダウンロード",
+    "downloadAsText": "テキストとしてダウンロード",
+    "deleteLog": "削除",
+    "confirmDelete": "このセッションログを削除しますか？",
+    "confirmDeleteDesc": "この操作は元に戻せません。",
+    "copyContent": "コピー",
+    "copied": "コピーしました！",
+    "loadError": "セッションログの読み込みに失敗しました",
+    "deleteError": "セッションログの削除に失敗しました",
+    "filterByHost": "ホストでフィルター...",
+    "back": "戻る",
+    "empty": "(空)",
+    "noResults": "「{{query}}」の検索結果はありません",
+    "hostFallback": "ホスト {{id}}",
+    "sessionFallback": "セッション {{id}}"
+  },
+  "player": {
+    "timeline": "録音タイムライン",
+    "speed": "再生速度",
+    "play": "録音を再生する",
+    "pause": "録画を一時停止"
+  }
+}

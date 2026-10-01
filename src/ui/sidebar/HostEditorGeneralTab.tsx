@@ -6,23 +6,20 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
 import type { Host } from "@/types/ui-types";
-import {
-  Globe,
-  LayoutGrid,
-  Monitor,
-  MousePointerClick,
-  Plus,
-  Tag,
-  Terminal,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Activity, Globe, Plus, Tag, Terminal, Trash2, X } from "lucide-react";
 import { FolderPathPicker } from "./FolderPathPicker";
 import { HostParentPicker } from "./HostParentPicker";
 import { getSSHFolders, isElectron } from "@/main-axios";
 import { connectionOriginAppliesTo } from "./HostEditorData";
+import { useSyncStatus } from "@/hooks/use-sync-status";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
 import { Select2 } from "@/components/select2";
+import { useHostProtocols } from "./host-protocols";
+import {
+  DefaultsOnly,
+  HostDefaultBadge,
+  HostOnly,
+} from "@/lib/host-defaults-context";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
   key: K,
@@ -48,6 +45,8 @@ export function HostEditorGeneralTab({
   simpleMode?: boolean;
 }) {
   const { t } = useTranslation();
+  const syncLinked = !!useSyncStatus()?.linked;
+  const pluginProtocols = useHostProtocols();
 
   // Tracks which picker is shown, independent of whether a value is set yet
   // -- switching to "parent host" mode with nothing picked shouldn't bounce
@@ -108,279 +107,242 @@ export function HostEditorGeneralTab({
 
   return (
     <>
-      {/* Protocols — enable/disable each connection type */}
-      <SectionCard
-        title={t("hosts.protocols")}
-        icon={<Globe className="size-3.5" />}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 py-3">
-          {[
-            {
-              proto: "enableSsh" as const,
-              label: t("hosts.tabSsh"),
-              desc: t("hosts.secureShell"),
-              icon: <Terminal className="size-4" />,
-              portField: "sshPort" as const,
-            },
-            {
-              proto: "enableRdp" as const,
-              label: t("hosts.tabRdp"),
-              desc: t("hosts.remoteDesktop"),
-              icon: <Monitor className="size-4" />,
-              portField: "rdpPort" as const,
-            },
-            {
-              proto: "enableVnc" as const,
-              label: t("hosts.tabVnc"),
-              desc: t("hosts.virtualNetwork"),
-              icon: <MousePointerClick className="size-4" />,
-              portField: "vncPort" as const,
-            },
-            {
-              proto: "enableTelnet" as const,
-              label: t("hosts.tabTelnet"),
-              desc: t("hosts.unencryptedShell"),
-              icon: <Terminal className="size-4" />,
-              portField: "telnetPort" as const,
-            },
-          ].map(({ proto, label, desc, icon }) => {
-            const enabled = protocols[proto];
-            return (
-              <div
-                key={proto}
-                className={`flex items-center gap-3 p-3 border transition-colors ${enabled ? "border-accent-brand/20 bg-accent-brand/5" : "border-border bg-muted/10"}`}
-              >
+      <HostOnly>
+        {/* Protocols — enable/disable each connection type */}
+        <SectionCard
+          title={t("hosts.protocols")}
+          icon={<Globe className="size-3.5" />}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 py-3">
+            {[
+              {
+                proto: "enableSsh",
+                label: t("hosts.tabSsh"),
+                desc: t("hosts.secureShell"),
+                icon: <Terminal className="size-4" />,
+              },
+              ...pluginProtocols.map((protocol) => {
+                const Icon = protocol.icon;
+                return {
+                  proto: protocol.settingKey,
+                  label: t(protocol.titleKey),
+                  desc: protocol.descriptionKey
+                    ? t(protocol.descriptionKey)
+                    : "",
+                  icon: <Icon className="size-4" />,
+                };
+              }),
+            ].map(({ proto, label, desc, icon }) => {
+              const enabled = !!protocols[proto];
+              return (
                 <div
-                  className={`size-8 flex items-center justify-center shrink-0 ${enabled ? "text-accent-brand" : "text-muted-foreground/30"}`}
+                  key={proto}
+                  className={`flex items-center gap-3 p-3 border transition-colors ${enabled ? "border-accent-brand/20 bg-accent-brand/5" : "border-border bg-muted/10"}`}
                 >
-                  {icon}
-                </div>
-                <div className="flex flex-col gap-1 flex-1 min-w-0">
-                  <span
-                    className={`text-xs font-bold ${enabled ? "text-foreground" : "text-muted-foreground/50"}`}
+                  <div
+                    className={`size-8 flex items-center justify-center shrink-0 ${enabled ? "text-accent-brand" : "text-muted-foreground/30"}`}
                   >
-                    {label}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/50">
-                    {desc}
-                  </span>
+                    {icon}
+                  </div>
+                  <div className="flex flex-col gap-1 flex-1 min-w-0">
+                    <span
+                      className={`text-xs font-bold ${enabled ? "text-foreground" : "text-muted-foreground/50"}`}
+                    >
+                      {label}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/50">
+                      {desc}
+                    </span>
+                  </div>
+                  <FakeSwitch
+                    checked={enabled}
+                    onChange={(v: boolean) => handleProtocolToggle(proto, v)}
+                  />
                 </div>
-                <FakeSwitch
-                  checked={enabled}
-                  onChange={(v: boolean) => handleProtocolToggle(proto, v)}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        title={t("hosts.connectionDetails")}
-        icon={<Globe className="size-3.5" />}
-      >
-        <div className="flex flex-col gap-4 py-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("hosts.addressIp")}
-            </label>
-            <Input
-              placeholder="10.0.0.1 or example.com"
-              value={form.ip}
-              onChange={(e) => setField("ip", e.target.value)}
-            />
+              );
+            })}
           </div>
+        </SectionCard>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SectionCard
+          title={t("hosts.connectionDetails")}
+          icon={<Globe className="size-3.5" />}
+        >
+          <div className="flex flex-col gap-4 py-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.friendlyName")}
+                {t("hosts.addressIp")}
               </label>
               <Input
-                placeholder="e.g. Web Server Production"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
+                placeholder="10.0.0.1 or example.com"
+                value={form.ip}
+                onChange={(e) => setField("ip", e.target.value)}
               />
             </div>
-            {protocols.enableSsh && !simpleMode && (
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.macAddress")}
-                  </label>
-                  <a
-                    href="https://docs.termix.site/features/networking/wake-on-lan"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-accent-brand hover:underline"
-                  >
-                    {t("hosts.docsLink")}
-                  </a>
-                </div>
-                <Input
-                  placeholder="AA:BB:CC:DD:EE:FF"
-                  value={form.macAddress}
-                  onChange={(e) => setField("macAddress", e.target.value)}
-                />
-              </div>
-            )}
-            {protocols.enableSsh && !simpleMode && form.macAddress && (
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("hosts.wolBroadcastAddress")}
+                  {t("hosts.friendlyName")}
                 </label>
                 <Input
-                  placeholder="192.168.1.255"
-                  value={form.wolBroadcastAddress}
-                  onChange={(e) =>
-                    setField("wolBroadcastAddress", e.target.value)
-                  }
+                  placeholder="e.g. Web Server Production"
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
                 />
-                <p className="text-[10px] text-muted-foreground/60">
-                  {t("hosts.wolBroadcastAddressDesc")}
-                </p>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
 
-      {!protocols.enableSsh &&
-        !protocols.enableRdp &&
-        !protocols.enableVnc &&
-        !protocols.enableTelnet && (
+        {!Object.values(protocols).some(Boolean) && (
           <div className="flex items-center gap-3 p-3 border border-border bg-muted/20 text-xs text-muted-foreground">
             <Globe className="size-4 shrink-0 text-muted-foreground/40" />
             <span>{t("hosts.enableAtLeastOneProtocol")}</span>
           </div>
         )}
+      </HostOnly>
 
       <SectionCard
         title={t("hosts.folderAndAdvanced")}
         icon={<Tag className="size-3.5" />}
         className={simpleMode ? "hidden" : undefined}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
-          <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {placementMode === "parentHost"
-                  ? t("hosts.parentHost")
-                  : t("hosts.folder")}
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  if (placementMode === "parentHost") {
-                    setPlacementMode("folder");
-                    setField("parentHostId", "");
-                  } else {
-                    setPlacementMode("parentHost");
-                    setField("folder", "");
-                  }
-                }}
-                className="text-[10px] text-accent-brand hover:underline"
-              >
-                {placementMode === "parentHost"
-                  ? t("hosts.useFolderInstead")
-                  : t("hosts.useParentHostInstead")}
-              </button>
+        <HostOnly>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+            <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {placementMode === "parentHost"
+                    ? t("hosts.parentHost")
+                    : t("hosts.folder")}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (placementMode === "parentHost") {
+                      setPlacementMode("folder");
+                      setField("parentHostId", "");
+                    } else {
+                      setPlacementMode("parentHost");
+                      setField("folder", "");
+                    }
+                  }}
+                  className="text-[10px] text-accent-brand hover:underline"
+                >
+                  {placementMode === "parentHost"
+                    ? t("hosts.useFolderInstead")
+                    : t("hosts.useParentHostInstead")}
+                </button>
+              </div>
+              {placementMode === "parentHost" ? (
+                <HostParentPicker
+                  value={String(form.parentHostId)}
+                  onChange={(hostId) => setField("parentHostId", hostId)}
+                  hosts={hosts}
+                  excludeHostId={host?.id}
+                />
+              ) : (
+                <FolderPathPicker
+                  value={form.folder}
+                  onChange={(path) => setField("folder", path)}
+                  folderPaths={folderPaths}
+                  folderMeta={folderMeta}
+                />
+              )}
             </div>
-            {placementMode === "parentHost" ? (
-              <HostParentPicker
-                value={String(form.parentHostId)}
-                onChange={(hostId) => setField("parentHostId", hostId)}
-                hosts={hosts}
-                excludeHostId={host?.id}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.tags")}
+              </label>
+              <div className="flex flex-wrap items-center gap-1 min-h-9 px-2 py-1 border border-border bg-background focus-within:ring-1 focus-within:ring-ring">
+                {form.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-muted border border-border/60 text-foreground"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setField(
+                          "tags",
+                          form.tags.filter((tg) => tg !== tag),
+                        )
+                      }
+                      className="text-muted-foreground hover:text-destructive ml-0.5"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  className="flex-1 min-w-16 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50"
+                  placeholder={form.tags.length === 0 ? t("hosts.addTag") : ""}
+                  value={form.tagInput}
+                  onChange={(e) => setField("tagInput", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      (e.key === " " || e.key === "Enter") &&
+                      form.tagInput.trim()
+                    ) {
+                      e.preventDefault();
+                      const tag = form.tagInput.trim();
+                      if (!form.tags.includes(tag))
+                        setField("tags", [...form.tags, tag]);
+                      setField("tagInput", "");
+                    } else if (
+                      e.key === "Backspace" &&
+                      !form.tagInput &&
+                      form.tags.length > 0
+                    ) {
+                      setField("tags", form.tags.slice(0, -1));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 col-span-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.privateNotes")}
+              </label>
+              <textarea
+                rows={3}
+                placeholder={t("hosts.privateNotesPlaceholder")}
+                className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
+                value={form.notes}
+                onChange={(e) => setField("notes", e.target.value)}
               />
-            ) : (
-              <FolderPathPicker
-                value={form.folder}
-                onChange={(path) => setField("folder", path)}
-                folderPaths={folderPaths}
-                folderMeta={folderMeta}
+            </div>
+            <SettingRow
+              label={t("hosts.pinToTop")}
+              description={t("hosts.pinToTopDesc")}
+            >
+              <FakeSwitch
+                checked={form.pin}
+                onChange={(v) => setField("pin", v)}
               />
+            </SettingRow>
+            {syncLinked && (
+              <SettingRow
+                label={t("hosts.localOnly")}
+                description={t("hosts.localOnlyDesc")}
+              >
+                <FakeSwitch
+                  checked={form.localOnly}
+                  onChange={(v) => setField("localOnly", v)}
+                />
+              </SettingRow>
             )}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("hosts.tags")}
-            </label>
-            <div className="flex flex-wrap items-center gap-1 min-h-9 px-2 py-1 border border-border bg-background focus-within:ring-1 focus-within:ring-ring">
-              {form.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-muted border border-border/60 text-foreground"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setField(
-                        "tags",
-                        form.tags.filter((tg) => tg !== tag),
-                      )
-                    }
-                    className="text-muted-foreground hover:text-destructive ml-0.5"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </span>
-              ))}
-              <input
-                className="flex-1 min-w-16 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50"
-                placeholder={form.tags.length === 0 ? t("hosts.addTag") : ""}
-                value={form.tagInput}
-                onChange={(e) => setField("tagInput", e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === " " || e.key === "Enter") &&
-                    form.tagInput.trim()
-                  ) {
-                    e.preventDefault();
-                    const tag = form.tagInput.trim();
-                    if (!form.tags.includes(tag))
-                      setField("tags", [...form.tags, tag]);
-                    setField("tagInput", "");
-                  } else if (
-                    e.key === "Backspace" &&
-                    !form.tagInput &&
-                    form.tags.length > 0
-                  ) {
-                    setField("tags", form.tags.slice(0, -1));
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5 col-span-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("hosts.privateNotes")}
-            </label>
-            <textarea
-              rows={3}
-              placeholder={t("hosts.privateNotesPlaceholder")}
-              className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
-              value={form.notes}
-              onChange={(e) => setField("notes", e.target.value)}
-            />
-          </div>
-          <SettingRow
-            label={t("hosts.pinToTop")}
-            description={t("hosts.pinToTopDesc")}
-          >
-            <FakeSwitch
-              checked={form.pin}
-              onChange={(v) => setField("pin", v)}
-            />
-          </SettingRow>
-        </div>
+        </HostOnly>
         <div className="flex flex-col gap-3 border-t border-border pt-4 pb-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.portKnockingSequence")}
               </span>
+              <HostDefaultBadge settingKey="core.portKnockSequence" />
               <a
                 href="https://docs.termix.site/features/networking/port-knocking"
                 target="_blank"
@@ -495,6 +457,7 @@ export function HostEditorGeneralTab({
           <SettingRow
             label={t("hosts.useSocks5Proxy")}
             description={t("hosts.useSocks5ProxyDesc")}
+            defaultKey="core.socks5"
           >
             <FakeSwitch
               checked={form.useSocks5}
@@ -559,19 +522,21 @@ export function HostEditorGeneralTab({
                       }
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.proxyPassword")}
-                    </label>
-                    <PasswordInput
-                      className="h-7 text-xs pr-8"
-                      placeholder={t("hosts.optional")}
-                      value={form.socks5Password}
-                      onChange={(e) =>
-                        setField("socks5Password", e.target.value)
-                      }
-                    />
-                  </div>
+                  <HostOnly>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.proxyPassword")}
+                      </label>
+                      <PasswordInput
+                        className="h-7 text-xs pr-8"
+                        placeholder={t("hosts.optional")}
+                        value={form.socks5Password}
+                        onChange={(e) =>
+                          setField("socks5Password", e.target.value)
+                        }
+                      />
+                    </div>
+                  </HostOnly>
                 </div>
               )}
 
@@ -675,24 +640,26 @@ export function HostEditorGeneralTab({
                             }}
                           />
                         </div>
-                        <div className="flex flex-col gap-1 col-span-2">
-                          <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                            {t("hosts.proxyPassword")}
-                          </label>
-                          <PasswordInput
-                            className="h-7 text-xs pr-8"
-                            placeholder={t("hosts.optional")}
-                            value={node.password}
-                            onChange={(e) => {
-                              const u = [...form.socks5ProxyChain];
-                              u[ni] = {
-                                ...u[ni],
-                                password: e.target.value,
-                              };
-                              setField("socks5ProxyChain", u);
-                            }}
-                          />
-                        </div>
+                        <HostOnly>
+                          <div className="flex flex-col gap-1 col-span-2">
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                              {t("hosts.proxyPassword")}
+                            </label>
+                            <PasswordInput
+                              className="h-7 text-xs pr-8"
+                              placeholder={t("hosts.optional")}
+                              value={node.password}
+                              onChange={(e) => {
+                                const u = [...form.socks5ProxyChain];
+                                u[ni] = {
+                                  ...u[ni],
+                                  password: e.target.value,
+                                };
+                                setField("socks5ProxyChain", u);
+                              }}
+                            />
+                          </div>
+                        </HostOnly>
                       </div>
                     </div>
                   ))}
@@ -767,127 +734,160 @@ export function HostEditorGeneralTab({
             </div>
           )}
           {isElectron() && connectionOriginAppliesTo(protocols) && (
-            <SettingRow
-              label={t("hosts.connectionOrigin")}
-              description={
-                protocols.enableRdp ||
-                protocols.enableVnc ||
-                protocols.enableTelnet
-                  ? `${t("hosts.connectionOriginDesc")} ${t("hosts.connectionOriginGuacamoleNote")}`
-                  : t("hosts.connectionOriginDesc")
-              }
-            >
-              <select
-                className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
-                value={form.connectionOrigin ?? ""}
-                onChange={(e) =>
-                  setField(
-                    "connectionOrigin",
-                    (e.target.value || null) as "local" | "remote" | null,
-                  )
-                }
-              >
-                <option value="">{t("hosts.connectionOriginDefault")}</option>
-                <option value="local">
-                  {t("hosts.connectionOriginLocal")}
-                </option>
-                <option value="remote">
-                  {t("hosts.connectionOriginRemote")}
-                </option>
-              </select>
-            </SettingRow>
-          )}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.jumpHostChainLabel")}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                onClick={() =>
-                  setField("jumpHosts", [...form.jumpHosts, { hostId: "" }])
-                }
-              >
-                <Plus className="size-3 mr-1" /> {t("hosts.addJumpBtn")}
-              </Button>
-            </div>
-            {form.jumpHosts.length === 0 && (
-              <p className="text-[10px] text-muted-foreground/50">
-                {t("hosts.noJumpHosts")}
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {form.jumpHosts.map((jh, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 p-2 bg-background border border-border"
-                >
-                  <span className="text-[10px] font-bold text-muted-foreground shrink-0">
-                    {i + 1}.
-                  </span>
-                  <Select2
-                    className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
-                    value={jh.hostId}
-                    onChange={(e) => {
-                      const updated = [...form.jumpHosts];
-                      updated[i] = { hostId: e.target.value };
-                      setField("jumpHosts", updated);
-                    }}
-                  >
-                    <option value="">{t("hosts.selectAServer")}</option>
-                    {hosts
-                      .filter((h) => (host ? h.id !== host.id : true))
-                      .map((h) => (
-                        <option key={h.id} value={h.id}>
-                          {h.name || h.ip}
-                        </option>
-                      ))}
-                  </Select2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-destructive"
-                    onClick={() =>
-                      setField(
-                        "jumpHosts",
-                        form.jumpHosts.filter((_, idx) => idx !== i),
+            <HostOnly>
+              <SettingRow
+                label={t("hosts.connectionOrigin")}
+                description={[
+                  t("hosts.connectionOriginDesc"),
+                  ...new Set(
+                    pluginProtocols
+                      .filter(
+                        (protocol) =>
+                          protocols[protocol.settingKey] &&
+                          protocol.connectionOriginNoteKey,
                       )
-                    }
+                      .map((protocol) => t(protocol.connectionOriginNoteKey!)),
+                  ),
+                ].join(" ")}
+              >
+                <select
+                  className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
+                  value={form.connectionOrigin ?? ""}
+                  onChange={(e) =>
+                    setField(
+                      "connectionOrigin",
+                      (e.target.value || null) as "local" | "remote" | null,
+                    )
+                  }
+                >
+                  <option value="">{t("hosts.connectionOriginDefault")}</option>
+                  <option value="local">
+                    {t("hosts.connectionOriginLocal")}
+                  </option>
+                  <option value="remote">
+                    {t("hosts.connectionOriginRemote")}
+                  </option>
+                </select>
+              </SettingRow>
+            </HostOnly>
+          )}
+          <DefaultsOnly settingKey="core.jumpHosts">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("hosts.jumpHostChainLabel")}
+                  <HostDefaultBadge settingKey="core.jumpHosts" />
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                  onClick={() =>
+                    setField("jumpHosts", [...form.jumpHosts, { hostId: "" }])
+                  }
+                >
+                  <Plus className="size-3 mr-1" /> {t("hosts.addJumpBtn")}
+                </Button>
+              </div>
+              {form.jumpHosts.length === 0 && (
+                <p className="text-[10px] text-muted-foreground/50">
+                  {t("hosts.noJumpHosts")}
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
+                {form.jumpHosts.map((jh, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 p-2 bg-background border border-border"
                   >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              ))}
+                    <span className="text-[10px] font-bold text-muted-foreground shrink-0">
+                      {i + 1}.
+                    </span>
+                    <Select2
+                      className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
+                      value={jh.hostId}
+                      onChange={(e) => {
+                        const updated = [...form.jumpHosts];
+                        updated[i] = { hostId: e.target.value };
+                        setField("jumpHosts", updated);
+                      }}
+                    >
+                      <option value="">{t("hosts.selectAServer")}</option>
+                      {hosts
+                        .filter((h) => (host ? h.id !== host.id : true))
+                        .map((h) => (
+                          <option key={h.id} value={h.id}>
+                            {h.name || h.ip}
+                          </option>
+                        ))}
+                    </Select2>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-destructive"
+                      onClick={() =>
+                        setField(
+                          "jumpHosts",
+                          form.jumpHosts.filter((_, idx) => idx !== i),
+                        )
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </DefaultsOnly>
         </div>
       </SectionCard>
 
       <SectionCard
-        title={t("hosts.connectionToolbar")}
-        icon={<LayoutGrid className="size-3.5" />}
+        title={t("hosts.statusChecksLabel")}
+        icon={<Activity className="size-3.5" />}
       >
-        <div className="flex flex-col gap-4 py-3">
+        <div className="flex flex-col gap-0 py-1">
           <SettingRow
-            label={t("hosts.showConnectionToolbar")}
-            description={t("hosts.showConnectionToolbarDesc")}
+            label={t("hosts.enableStatusChecks")}
+            description={t("hosts.enableStatusChecksDesc")}
+            defaultKey="core.statusCheckEnabled"
           >
             <FakeSwitch
-              checked={form.enableTerminalToolbar}
-              onChange={(value) => setField("enableTerminalToolbar", value)}
+              checked={form.statusCheckEnabled}
+              onChange={(value) => setField("statusCheckEnabled", value)}
             />
           </SettingRow>
-          <SettingRow
-            label={t("hosts.enableAiAssistant")}
-            description={t("hosts.enableAiAssistantDesc")}
-          >
-            <FakeSwitch
-              checked={form.enableAiAssistant}
-              onChange={(value) => setField("enableAiAssistant", value)}
-            />
-          </SettingRow>
+          {form.statusCheckEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalInterval")}
+              description={t("hosts.useGlobalIntervalDesc")}
+              defaultKey="core.statusCheckInterval"
+            >
+              <FakeSwitch
+                checked={form.statusCheckInterval === null}
+                onChange={(useGlobal) =>
+                  setField("statusCheckInterval", useGlobal ? null : 60)
+                }
+              />
+            </SettingRow>
+          )}
+          {form.statusCheckEnabled && form.statusCheckInterval !== null && (
+            <SettingRow
+              label={t("hosts.checkIntervalS")}
+              description={t("hosts.checkIntervalDesc")}
+            >
+              <Input
+                type="number"
+                min={5}
+                max={86400}
+                value={form.statusCheckInterval}
+                onChange={(e) =>
+                  setField("statusCheckInterval", Number(e.target.value))
+                }
+                className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </SettingRow>
+          )}
         </div>
       </SectionCard>
     </>

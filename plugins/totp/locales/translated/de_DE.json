@@ -1,0 +1,42 @@
+{
+  "title": "Authentifizierungs-App",
+  "factor": "Authentifizierungscode",
+  "challenge": {
+    "enterCode": "Bestätigungscode eingeben",
+    "verify": "Code verifizieren",
+    "backupCodeHint": "Sie können auch einen Ihrer Backup-Codes eingeben."
+  },
+  "enrollment": {
+    "title": "TOTP-Authentifikator",
+    "docs": "Dokumentation",
+    "on": "2FA ist aktiviert",
+    "off": "Zusätzliche Anmeldesicherheit hinzufügen",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "addDevice": "Gerät hinzufügen",
+    "addTitle": "Authentifizierungsgerät hinzufügen",
+    "addDescription": "Bestätigen Sie mit einem Code Ihres Authentifizierungsgeräts oder einem Ersatzcode, um ein anderes Gerät mit demselben Schlüssel zu registrieren.",
+    "addScanInstructions": "Scannen Sie diesen QR-Code mit dem zusätzlichen Authentifikator. Bestehende Authentifikatoren funktionieren weiterhin.",
+    "addSuccess": "Zusätzlicher Authentifizierungsalgorithmus registriert",
+    "addFailed": "Authentifikator konnte nicht hinzugefügt werden",
+    "codeRequired": "Geben Sie einen TOTP-Code oder einen Backup-Code ein.",
+    "codePlaceholder": "TOTP-Code oder Backup-Code",
+    "setupTitle": "TOTP einrichten",
+    "setupFailed": "Fehler beim Starten der TOTP-Einrichtung",
+    "qrCode": "QR-Code",
+    "secretCopied": "Secret in die Zwischenablage kopiert",
+    "instructions": "Scannen Sie den QR-Code oder geben Sie das Geheimnis in Ihrer Authentifizierungs-App ein und geben Sie anschließend den 6-stelligen Code ein.",
+    "continueVerify": "Weiter zur Verifizierung",
+    "verifyTitle": "Code verifizieren",
+    "verify": "Verifizieren",
+    "enter6Digits": "Geben Sie einen 6-stelligen Code ein",
+    "enabledSuccess": "Zwei-Faktor-Authentifizierung aktiviert",
+    "invalidCode": "Ungültiger Code, bitte versuchen Sie es erneut",
+    "disableTitle": "2FA deaktivieren",
+    "disabledSuccess": "Zwei-Faktor-Authentifizierung deaktiviert",
+    "disableFailed": "Fehler beim Deaktivieren der 2FA",
+    "backupTitle": "Backup-Codes",
+    "downloadBackup": "Backup-Codes herunterladen",
+    "done": "Fertig"
+  }
+}

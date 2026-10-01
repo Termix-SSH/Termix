@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "sessionLogs": "Munkamenet-naplók"
+  },
+  "hosts": {
+    "enableSessionRecording": "Munkamenet-felvétel",
+    "enableSessionRecordingDesc": "Terminál munkamenet kimenetének rögzítése későbbi áttekintés céljából"
+  },
+  "permissions": {
+    "view": {
+      "title": "Munkamenet-felvételek megtekintése",
+      "description": "Tekintse meg és játssza le saját felvételeit."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Megtartás (nap)",
+        "description": "Mennyi ideig tárolják a munkamenet-felvételt, mielőtt automatikusan törlődne."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Munkamenet-rögzítés engedélyezése",
+        "description": "Rögzítse a terminál kimenetét ehhez a gazdagéphez, hogy később lejátszhassa vagy letölthesse."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Felvétel"
+  },
+  "sessionLogs": {
+    "title": "Munkamenet-naplók",
+    "noLogs": "Még nincsenek munkamenet-naplók",
+    "noLogsDesc": "A felvétel megkezdéséhez engedélyezze a munkamenet-naplózást egy gazdagépen",
+    "duration": "Időtartam",
+    "viewLog": "Napló megtekintése",
+    "downloadLog": "Letöltés",
+    "downloadAsText": "Letöltés szövegként",
+    "deleteLog": "Töröl",
+    "confirmDelete": "Törli ezt a munkamenet-naplót?",
+    "confirmDeleteDesc": "Ez a művelet nem vonható vissza.",
+    "copyContent": "Másolat",
+    "copied": "Másolva!",
+    "loadError": "Nem sikerült betölteni a munkamenet-naplókat",
+    "deleteError": "Nem sikerült törölni a munkamenet-naplót",
+    "filterByHost": "Szűrés hoszt szerint...",
+    "back": "Vissza",
+    "empty": "(üres)",
+    "noResults": "Nincs találat a(z) „{{query}} ” kifejezésre",
+    "hostFallback": "Gazdagép {{id}}",
+    "sessionFallback": "Munkamenet {{id}}"
+  },
+  "player": {
+    "timeline": "Felvételi idővonal",
+    "speed": "Lejátszási sebesség",
+    "play": "Felvétel lejátszása",
+    "pause": "Felvétel szüneteltetése"
+  }
+}

@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "追加",
+    "arrowDown": "↓",
+    "arrowLeft": "←",
+    "arrowRight": "→",
+    "arrowUp": "↑",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "完了",
+    "editQuickKeys": "クイックキー編集",
+    "end": "エンド",
+    "esc": "Esc",
+    "home": "ホーム",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "貼り付け",
+    "quickKeyPlaceholder": "例: sudo ",
+    "quickKeysDesc": "× をタップして削除します。最大8文字まで対応。",
+    "quickKeysTitle": "クイックキー",
+    "removeQuickKey": "削除",
+    "resetDefaults": "デフォルトにリセット",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Auto-Tmux の有効化に失敗しました",
+    "autoTmuxEnabled": "{{host}}に対して Auto-Tmux が有効になりました。これは次回の接続時に適用されます。",
+    "clipboardHttpWarning": "クリップボードを読み取れませんでした。一部のブラウザはHTTPS接続以外でのクリップボードへのアクセスを制限しています。代わりにCtrl+Vを試すか、TermixをHTTPS経由で提供してみてください。",
+    "closeTab": "閉じる",
+    "connecting": "接続中...",
+    "connectionLost": "接続切断",
+    "connectionRejected": "サーバーによって接続が拒否されました。認証設定とネットワーク構成を確認してください。",
+    "connectionTimeout": "接続タイムアウト",
+    "enableAutoTmuxAction": "Auto-Tmux を有効にする",
+    "hostKeyRejected": "SSHホストキーの検証が拒否されました。接続がキャンセルされました。",
+    "linkDialogCopy": "コピー",
+    "linkDialogOpen": "開く",
+    "linkDialogTitle": "リンクを開く",
+    "maxReconnectAttemptsReached": "再接続の最大試行回数に達しました",
+    "noHostSelected": "ホストが選択されていません",
+    "passwordPromptFillTitle": "保存されたパスワードをこのプロンプトに入力しますか？",
+    "reconnect": "再接続",
+    "reconnected": "再接続完了",
+    "reconnecting": "再接続中... ({{attempt}}/{{max}})",
+    "autoReconnecting": "接続が切断されました。再接続中です。",
+    "searchCaseSensitive": "マッチケース",
+    "searchClose": "閉じる（Escキー）",
+    "searchNext": "次の試合（入場）",
+    "searchNoResults": "検索結果なし",
+    "searchPlaceholder": "探す",
+    "searchPrevious": "前の試合 (Shift+Enter)",
+    "searchRegex": "正規表現を使用する",
+    "searchResultCount": "{{index}} / {{count}}",
+    "searchWholeWord": "単語全体を一致させる",
+    "sessionExpiredNotice": "{{host}} での前回のセッションは {{minutes}} 分後に切断され、シェルおよびそこで実行されていたすべてのものが失われました。セッションを維持するには、このホストで Auto-Tmux を有効にしてください。",
+    "sessionExpiredNoticeNoMinutes": "{{host}} での前回のセッションは、接続が切断された状態で期限切れになりました。シェルおよびシェル内で実行されていたすべてのプロセスは失われています。セッションを維持するには、このホストで Auto-Tmux を有効にしてください。",
+    "sessionTakenOver": "セッションが別のタブで開かれました。再接続中...",
+    "tmuxAttached": "接続クライアント",
+    "tmuxAttachedCount": "{{count}} 接続",
+    "tmuxCopyHint": "選択範囲を調整してEnterでクリップボードにコピー",
+    "tmuxCreateNew": "新規セッションを開始",
+    "tmuxDetached": "tmuxセッションからデタッチしました",
+    "tmuxLastActivity": "最終アクティビティ",
+    "tmuxSessionAttached": "tmuxセッションに接続しました: {{name}}",
+    "tmuxSessionCreated": "tmuxセッションが作成されました: {{name}}",
+    "tmuxSessionPickerDesc": "このホストに既存のtmuxセッションがあります。再アタッチするか、新しいセッションを作成してください。",
+    "tmuxSessionPickerTitle": "tmuxセッション",
+    "tmuxTimeDays": "{{count}}日前",
+    "tmuxTimeHours": "{{count}}時間前",
+    "tmuxTimeJustNow": "たった今",
+    "tmuxTimeMinutes": "{{count}}分前",
+    "tmuxUnavailable": "リモートホストにtmuxがインストールされていません。標準シェルにフォールバックします。",
+    "tmuxWindowCount": "{{count}} ウィンドウ",
+    "tmuxWindows": "ウィンドウ",
+    "unknownError": "不明なエラーが発生しました",
+    "websocketAbnormalClose": "接続が予期せず切断されました。リバースプロキシまたはSSLの設定に問題がある可能性があります。サーバーログを確認してください。",
+    "websocketError": "WebSocket接続エラー",
+    "clipboardReadFailed": "クリップボードからの読み取りに失敗しました。クリップボードのアクセス許可が付与されていることを確認してください。",
+    "clipboardWriteFailed": "クリップボードへのコピーに失敗しました。ページがHTTPSまたはlocalhostで提供されていることを確認してください。",
+    "connected": "接続中",
+    "totpCodeLabel": "確認コード",
+    "duplicateTab": "重複タブ",
+    "imageChooseFile": "画像ファイルを選択してください",
+    "imageUploaded": "アップロードされた画像: {{path}}",
+    "imageClipboardUnavailable": "このブラウザはクリップボードから画像を読み取ることができません",
+    "imageClipboardEmpty": "クリップボードに画像が見つかりませんでした",
+    "localShell": "ローカル端末シェル",
+    "autocompleteHintComplete": "タブキーまたはエンターキーを押して完了",
+    "autocompleteHintNavigate": "↑↓でナビゲート",
+    "autocompleteHintClose": "Escキーを押して閉じる"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmuxをデタッチする",
+    "detachTmuxDescription": "tmuxセッションをデタッチする",
+    "dismissError": "画像エラーを非表示にする",
+    "hideToolbar": "ツールバーを非表示にする",
+    "image": "画像アクション（画像のみ）",
+    "imageActionFailed": "画像操作が失敗しました",
+    "layout": "ツールバー表示モード",
+    "layoutExpanded": "指標を追加して拡張",
+    "layoutIcon": "アイコンのみ",
+    "layoutLabeled": "アイコンとラベル",
+    "moveToolbar": "ツールバーを移動",
+    "moveToolbarHint": "ツールバーをドラッグして位置を変更します",
+    "paste": "画像を貼り付ける",
+    "pasteImage": "クリップボードから画像を貼り付ける（画像のみ）",
+    "retry": "再試行",
+    "showToolbar": "ツールバーを展開",
+    "upload": "画像をアップロード",
+    "uploadImage": "ホストに画像をアップロードする",
+    "uploadingImage": "アップロード中..."
+  },
+  "history": {
+    "noTerminalSelected": "ターミナルが選択されていません",
+    "noTerminalSelectedHint": "SSH ターミナルタブを開いてコマンド履歴を表示",
+    "searchPlaceholder": "履歴を検索...",
+    "clearAll": "すべてクリア",
+    "noHistoryEntries": "履歴エントリがありません",
+    "trackingDisabled": "履歴の追跡が無効です",
+    "trackingDisabledHint": "このホストのSSHターミナルタブでコマンド履歴を有効にしてください。",
+    "commandCount_one": "{{count}} コマンド",
+    "commandCount_other": "{{count}} コマンド"
+  },
+  "touchInput": {
+    "enabled": "タッチ入力を有効にする",
+    "enabledDesc": "端末で指一本でのスクロールを可能にする",
+    "momentumEnabled": "勢いを加速させる",
+    "momentumEnabledDesc": "スワイプ後、少しスクロールを続ける",
+    "advanced": "高度な",
+    "resetDefaults": "デフォルトにリセット",
+    "dragThreshold": "ドラッグしきい値",
+    "maxWheelDelta": "最大ホイールデルタ",
+    "momentumSampleWindow": "モメンタムサンプルウィンドウ",
+    "releaseGracePeriod": "釈放猶予期間",
+    "minimumVelocity": "最小速度",
+    "maximumVelocity": "最大速度",
+    "maximumDuration": "最大持続時間",
+    "maximumTravel": "最大移動距離",
+    "decayTime": "減衰時間",
+    "pixelsPerTick": "ピクセル/ティック",
+    "maximumFrameInterval": "最大フレーム間隔",
+    "maximumTicksPerFrame": "フレームあたりの最大ティック数"
+  },
+  "imageStorage": {
+    "instanceId": "端末セッションインスタンスID",
+    "instanceIdDesc": "接続されているターミナルタブのいずれかのインスタンスID。表示テストに使用されます。",
+    "selectedModeUnavailable": "利用不可",
+    "test": "テスト",
+    "testing": "テスト中...",
+    "testFailed": "画像ストレージのテストに失敗しました",
+    "testConnected": "端末セッションが接続されました。",
+    "testNotConnected": "このインスタンスIDで接続されている端末セッションはありません。",
+    "testSelectedMode": "アップロードには以下を使用します： {{mode}}",
+    "testLocalVisible": "ローカルディレクトリは、接続されているホストから参照可能です。",
+    "testLocalNotVisible": "ローカルディレクトリは、接続されているホストからアクセスできません。"
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "タッチ入力",
+        "images": "画像ストレージ",
+        "sessions": "セッション",
+        "newHosts": "新しいホスト"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "端末セッションの永続性",
+        "description": "切断された端末がサーバー上で閉じられるまでの時間。最小1分、最大1440分。この時間を超えてセッションを継続する必要がある場合は、ホスト上でAuto-Tmuxを有効にしてください。"
+      },
+      "commandHistoryEnabled": {
+        "label": "コマンド履歴",
+        "description": "コマンド履歴の記録を許可します。無効にすると、ホストごとの設定に関わらず履歴は保存されません。"
+      },
+      "commandHistoryForNewHosts": {
+        "label": "新規ホストのコマンド履歴",
+        "description": "新しいホストがコマンド履歴を有効にした状態で起動するかどうか。"
+      },
+      "imageStorageMode": {
+        "label": "ストレージモード",
+        "description": "貼り付けおよびアップロードされた端末イメージが書き込まれる場所。接続による自動選択、ローカルおよびリモート（SFTP）が固定されています。",
+        "auto": "自動",
+        "local": "ローカル",
+        "remoteSftp": "リモート（SFTP）"
+      },
+      "imageLocalDir": {
+        "label": "ローカルディレクトリ",
+        "description": "Termixバックエンド上の、ローカルモードが画像を書き込む絶対パス。保存後は表示されません。空欄の場合はTERMIX_IMAGE_DIRが使用されます。"
+      },
+      "imageHostPath": {
+        "label": "ホストパス",
+        "description": "端末エージェントが受信するローカルディレクトリのホスト側ビュー。"
+      },
+      "imageTtlMs": {
+        "label": "TTL（ミリ秒）",
+        "description": "アップロードされた画像が保持される期間（ミリ秒単位）。空欄の場合はTERMIX_IMAGE_TTL_MS（1時間）が使用されます。"
+      },
+      "imageMaxCount": {
+        "label": "最大画像数",
+        "description": "ほとんどの画像は一度に保持されます。空の場合はTERMIX_MAX_IMAGE_COUNTまたは100が使用されます。"
+      },
+      "imageMaxBytes": {
+        "label": "最大ストレージバイト数",
+        "description": "一度に保持される画像の最大バイト数。空の場合はTERMIX_MAX_IMAGE_STORAGE_BYTESまたは5 GiBを使用します。"
+      },
+      "sessionPersistence": {
+        "label": "切断後もセッションを維持する",
+        "description": "上記時間の間、サーバー上で切断された端末をアクティブな状態にしておくことで、そのタブを再度開いたときに、前回中断したところから作業が再開されます。"
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "tmux内で新しいホストのターミナルを実行することで、セッションが切断後も維持されます（ホストにtmuxがインストールされている必要があります）。"
+      },
+      "newHostTheme": {
+        "label": "新規ホスト向けテーマ",
+        "description": "新しいホストが起動時に使用するターミナルテーマ。"
+      },
+      "newHostFontFamily": {
+        "label": "新規ホスト用のフォント",
+        "description": "新しいホストが起動時に使用するターミナルフォント。"
+      },
+      "newHostFontSize": {
+        "label": "新規ホスト向けのフォントサイズ",
+        "description": "新しいホストが最初に使用する端末のフォントサイズ（ピクセル単位）。"
+      },
+      "newHostCursorStyle": {
+        "label": "新規ホスト向けのカーソルスタイル"
+      },
+      "newHostCursorBlink": {
+        "label": "新規ホストの場合はカーソルが点滅します"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "ターミナルツールバーを有効にする",
+        "description": "このホストのツールとリアルタイム統計情報に素早くアクセスできるツールバーを、アクティブなターミナルにドッキングして表示します。"
+      },
+      "terminalToolbarPosition": {
+        "label": "ツールバーの位置",
+        "description": "ターミナル内のツールバーの位置です。そこからドラッグして移動することもできます。",
+        "bottom": "下中央",
+        "bottomLeft": "左下",
+        "bottomRight": "右下",
+        "top": "中央上部",
+        "topLeft": "左上",
+        "topRight": "右上"
+      },
+      "terminalToolbarStartState": {
+        "label": "ツールバーの開始状態",
+        "description": "端末が接続されたときにツールバーが展開された状態で開くか、最小化された状態で開くか",
+        "expanded": "拡張版",
+        "collapsed": "最小化"
+      },
+      "terminalToolbarDisplay": {
+        "label": "ツールバー表示モード",
+        "description": "ツールバーボタンの表示方法。最後に使用したボタンは、ツールバーに保持されます。",
+        "remember": "最終使用日時",
+        "icon": "アイコンのみ",
+        "labeled": "アイコンとラベル",
+        "expanded": "統計情報を追加"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "ライブ統計を表示",
+        "description": "展開モードでツールバーボタンの上にホストのライブ統計情報を表示する"
+      },
+      "terminalToolbarFade": {
+        "label": "アイドル時にフェードアウト",
+        "description": "ツールバーをマウスオーバーするまでフェードアウトさせる"
+      },
+      "enableCommandHistory": {
+        "label": "コマンド履歴",
+        "description": "このターミナルで実行されたコマンドを履歴とオートコンプリート用に記録します"
+      },
+      "enableTerminal": {
+        "label": "ターミナルを有効化",
+        "description": "このホストにSSHターミナルを提供します。"
+      },
+      "inheritAppearance": {
+        "label": "ユーザーデフォルトを使用する"
+      },
+      "theme": {
+        "label": "テーマ"
+      },
+      "cursorBlink": {
+        "label": "点滅するカーソル"
+      },
+      "cursorStyle": {
+        "label": "カーソルスタイル"
+      },
+      "fontSize": {
+        "label": "フォントサイズ"
+      },
+      "fontFamily": {
+        "label": "フォント"
+      },
+      "scrollback": {
+        "label": "スクロールバック"
+      },
+      "letterSpacing": {
+        "label": "文字間隔"
+      },
+      "lineHeight": {
+        "label": "行の高さ"
+      },
+      "bellStyle": {
+        "label": "ベル"
+      },
+      "minimumContrastRatio": {
+        "label": "最小コントラスト比"
+      },
+      "backgroundImage": {
+        "label": "背景画像"
+      },
+      "backgroundImageOpacity": {
+        "label": "背景画像の不透明度"
+      },
+      "customThemeColors": {
+        "label": "カスタムテーマカラー"
+      },
+      "rightClickSelectsWord": {
+        "label": "右クリックで単語を選択"
+      },
+      "macOptionIsMeta": {
+        "label": "オプションはメタです"
+      },
+      "fastScrollModifier": {
+        "label": "高速スクロールキー"
+      },
+      "fastScrollSensitivity": {
+        "label": "高速スクロール速度"
+      },
+      "backspaceMode": {
+        "label": "バックスペース"
+      },
+      "autoMosh": {
+        "label": "オートモッシュ"
+      },
+      "moshCommand": {
+        "label": "モッシュコマンド"
+      },
+      "autoTmux": {
+        "label": "自動tmux"
+      },
+      "useSSHTitle": {
+        "label": "SSHタイトルを使用する"
+      },
+      "syntaxHighlighting": {
+        "label": "構文ハイライト"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "構文強調表示カテゴリ"
+      },
+      "linkClickBehavior": {
+        "label": "リンクをクリック"
+      },
+      "localEcho": {
+        "label": "ローカルエコー"
+      },
+      "passwordPromptAutoFill": {
+        "label": "パスワード入力欄への入力を代行する。"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "sudoプロンプトに記入してください"
+      },
+      "autoReconnect": {
+        "label": "自動的に再接続します"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "コマンド補完",
+        "description": "タブキーを押すと入力中にオートコンプリートを表示する"
+      },
+      "localEcho": {
+        "label": "ローカルエコー",
+        "description": "安全なローカルキーストローク予測を使用して、体感入力遅延を低減する"
+      },
+      "linkClickBehavior": {
+        "label": "ターミナルリンククリック",
+        "description": "ターミナル内のリンクをクリックしたときのデフォルト動作"
+      },
+      "customThemes": {
+        "label": "保存されたテーマ"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "ローカル端末"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "ライブターミナルセッションを使用する",
+      "description": "セッション共有や録画などの他の機能を、ライブのターミナルセッションで利用できるようにします。"
+    },
+    "history": {
+      "title": "コマンド履歴を読む",
+      "description": "AIアシスタントなどの他の機能が、あなたのコマンド履歴を読み取れるようにします。"
+    }
+  },
+  "hosts": {
+    "tabTerminal": "ターミナル",
+    "addHost": "ホストを追加",
+    "applyGlobalThemeTooltip": "このテーマを適用する",
+    "backgroundImageDesc": "ターミナルの背景画像のオプションURL",
+    "backgroundImageLabel": "背景画像 URL",
+    "backgroundImageOpacityLabel": "背景画像の不透明度",
+    "backspaceMode": "バックスペースモード",
+    "backspaceModeControlH": "コントロールH（BS）",
+    "backspaceModeLabel": "バックスペースモード",
+    "backspaceModeNormal": "通常（DEL）",
+    "behaviorAndAdvanced": "動作と詳細設定",
+    "bellStyle": "ベルスタイル",
+    "bellStyleBoth": "両方",
+    "bellStyleLabel": "ベルスタイル",
+    "bellStyleNone": "すべて解除",
+    "bellStyleSound": "音",
+    "bellStyleVisual": "ビジュアル",
+    "colorTheme": "カラーテーマ",
+    "cursorBlink": "カーソル点滅",
+    "cursorBlinking": "カーソル点滅",
+    "cursorBlinkingDesc": "ターミナルカーソルの点滅アニメーションを有効にします",
+    "cursorStyle": "カーソルスタイル",
+    "cursorStyleBar": "バー",
+    "cursorStyleBlock": "ブロック",
+    "cursorStyleLabel": "カーソルスタイル",
+    "cursorStyleUnderline": "下線",
+    "customThemeAnsiColors": "ANSIカラー",
+    "customThemeBackground": "背景",
+    "customThemeBlack": "黒",
+    "customThemeBlue": "ブルー",
+    "customThemeBrightBlack": "ブライトブラック",
+    "customThemeBrightBlue": "ブライトブルー",
+    "customThemeBrightCyan": "ブライトシアン",
+    "customThemeBrightGreen": "ブライトグリーン",
+    "customThemeBrightMagenta": "ブライトマゼンタ",
+    "customThemeBrightRed": "ブライトレッド",
+    "customThemeBrightWhite": "ブライトホワイト",
+    "customThemeBrightYellow": "ブライトイエロー",
+    "customThemeColors": "カスタムカラー",
+    "customThemeCursor": "カーソル",
+    "customThemeCursorAccent": "カーソルアクセント",
+    "customThemeCyan": "シアン",
+    "customThemeForeground": "前景",
+    "customThemeGreen": "緑",
+    "customThemeMagenta": "マゼンタ",
+    "customThemeRed": "赤",
+    "customThemeResetTooltip": "デフォルトにリセット",
+    "customThemeSelection": "選択",
+    "customThemeWhite": "ホワイト",
+    "customThemeYellow": "黄",
+    "deleteGlobalThemeTooltip": "このテーマを削除",
+    "docsLink": "ドキュメントを表示",
+    "enableAutoMosh": "Auto-Mosh を有効にする",
+    "enableAutoMoshDesc": "利用可能な場合、SSH よりも Mosh を優先します",
+    "enableAutoTmux": "Auto-Tmux を有効にする",
+    "enableAutoTmuxDesc": "tmux内で実行することで、接続切断やブラウザの再起動後もシェルとその中で実行されているすべての処理を正常に実行状態に保つことができます（ホストにtmuxがインストールされている必要があります）。",
+    "fastScrollModifier": "高速スクロール修飾キー",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "高速スクロールの修飾キー",
+    "fastScrollModifierShift": "Shift",
+    "fastScrollSensitivity": "高速スクロール感度",
+    "fastScrollSensitivityLabel": "高速スクロールの感度",
+    "fontFamily": "フォントファミリー",
+    "fontFamilyCustomHint": "同梱のフォントを選択するか、「カスタム」を選択して、システムに既にインストールされているフォントの正確な名前を入力してください（例：MesloLGS NF、Noto Sans Mono）。Termixはフォントをインストールできませんので、まずTermixをOSにインストールしてください。",
+    "fontFamilyCustomOption": "カスタム...",
+    "fontFamilyCustomPlaceholder": "正確なフォント名（例：MesloLGS NF）",
+    "fontFamilyLabel": "フォントファミリー",
+    "fontSize": "フォントサイズ",
+    "fontSizeLabel": "フォントサイズ",
+    "hostNotFound": "ホストが見つかりません",
+    "letterSpacing": "文字間隔",
+    "letterSpacingPx": "文字間隔 (px)",
+    "lineHeight": "行の高さ",
+    "lineHeightLabel": "行の高さ",
+    "linkClickBehaviorConfirm": "開くまたはコピーするポップアップを表示",
+    "linkClickBehaviorDesc": "ターミナル内のリンクをクリックしたときの動作を制御します。「デフォルト」を選択することで、アプリ全体の設定に従います。",
+    "linkClickBehaviorDirect": "直接開く",
+    "linkClickBehaviorLabel": "リンククリック時の動作",
+    "loadingHost": "ホストを読み込み中...",
+    "localEchoAuto": "自動",
+    "localEchoDesc": "低速回線でも、印刷可能な安全なキー入力をローカルで予測します。パスワード入力や制御入力はエコーバックされません。",
+    "localEchoLabel": "ローカルエコー",
+    "localEchoOff": "オフ",
+    "localEchoOn": "常時接続",
+    "macOptionIsMetaLabel": "Optionキーでメタデータを送信",
+    "macOptionIsMetaShortDesc": "macOSで特殊文字（@や|など）を入力する際に、Metaを送信する代わりにOption/Altキーを使用するのを無効にする",
+    "moshCommand": "Mosh コマンド",
+    "moshCommandLabel": "Mosh コマンド",
+    "noSavedThemes": "まだ保存されたテーマはありません",
+    "none": "なし",
+    "passwordPromptAutoFillDesc": "端末でパスワードの入力を求められた際に、保存済みのパスワードを入力するよう促します。このホストではパスワードの自動入力を一切行わないようにするには、この設定を無効にします。",
+    "passwordPromptAutoFillLabel": "パスワードの自動入力機能を提供する",
+    "autoReconnectLabel": "自動再接続",
+    "autoReconnectDesc": "ネットワーク障害やスリープ状態などによりSSH接続が切断された場合、自動的に再接続します。スクロールバックした状態は保持されます。",
+    "rightClickSelectsWord": "右クリックで単語選択",
+    "rightClickSelectsWordLabel": "右クリックで単語選択",
+    "rightClickSelectsWordShortDesc": "右クリック時にカーソル下の単語を選択します",
+    "saveAsGlobalTheme": "グローバルテーマとして保存",
+    "saveGlobalThemeError": "テーマの保存に失敗しました",
+    "saveGlobalThemeNamePrompt": "このテーマの名前を入力してください",
+    "saveGlobalThemeSuccess": "テーマが保存されました",
+    "savedThemesLabel": "保存済みテーマ",
+    "scrollbackBufferLabel": "スクロールバッファ",
+    "scrollbackMaxLines": "履歴に保持する最大行数",
+    "sudoPasswordAutoFill": "Sudo パスワードの自動入力",
+    "sudoPasswordAutoFillDesc": "sudo パスワードを保存して、ホストメトリクス、ターミナルプロンプトなどが自動的に特権コマンドを実行できるようにします",
+    "sudoPasswordAutoFillLabel": "sudo パスワードの自動入力",
+    "syntaxCategoryIpAddresses": "IPアドレス",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "ログレベル",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "ラベル付き数値",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "ファイルパス",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "タイムスタンプ",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "ターミナル出力に色を付ける（エラー、パス、IP、タイムスタンプ）",
+    "syntaxHighlightingLabel": "シンタックスハイライト",
+    "terminalAppearance": "ターミナルの外観",
+    "theme": "テーマ",
+    "themePreview": "テーマプレビュー",
+    "useSSHTitleDesc": "タブのタイトルをホスト名ではなくシェルのウィンドウタイトルから更新する",
+    "useSSHTitleLabel": "SSHウィンドウタイトルを使用する",
+    "enableTunnel": "トンネルを有効にする",
+    "enableFileManager": "ファイルマネージャーを有効にする",
+    "enableDocker": "Dockerを有効にする",
+    "startupSnippet": "起動時スニペット",
+    "quickActions": "クイックアクション",
+    "proxmoxLastSyncStatus": {
+      "success": "成功"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} スキップしました（IPアドレスが見つかりませんでした）",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL がクリップボードにコピーされました",
+    "rdpUrlCopied": "RDP URL をコピーしました",
+    "vncUrlCopied": "VNC URL をコピーしました",
+    "filterAuthStepca": "ステップCA",
+    "guac": {
+      "noCredential": "認証情報なし (直接入力は以下)",
+      "authTypeDirect": "直接",
+      "authTypeCredential": "認証情報",
+      "authTypeNone": "すべて解除",
+      "recordingPath": "録画パス",
+      "recordingName": "録画名",
+      "saveHostFirst": "最初にホストを保存してください。",
+      "sharingOptionsAfterSave": "共有オプションはホストの保存後に利用可能です。",
+      "permissionLevel": "権限レベル",
+      "typeHeader": "タイプ",
+      "targetHeader": "ターゲット",
+      "permissionHeader": "権限",
+      "cancelBtn": "キャンセル",
+      "savingBtn": "保存中...",
+      "updateHostBtn": "ホストを更新",
+      "addHostBtn": "ホストを追加"
+    },
+    "filterAuthVault": "金庫"
+  },
+  "nav": {
+    "history": "履歴",
+    "localTerminal": "ローカル端末",
+    "sshTools": "SSHツール",
+    "terminal": "ターミナル",
+    "macros": "マクロ"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "ここに入力してキーをブロードキャスト...",
+    "copyOnSelect": "選択したテキストを自動的にコピーします",
+    "enableRightClickCopyPaste": "右クリックでのコピー/貼り付けを有効にする",
+    "fillPassword": "パスワードを自動入力",
+    "fillPasswordMissing": "選択した {{count}} 個のターミナルに保存されたパスワードがありません",
+    "fillPasswordSuccess": "{{count}} 個のターミナルにパスワードを入力しました",
+    "keyRecordingTitle": "キー記録",
+    "noTerminalTabsOpen": "開いている端末タブはありません",
+    "recordToTerminals": "ターミナルに記録",
+    "selectAll": "すべて選択",
+    "selectNone": "すべて解除",
+    "selectTerminalsAbove": "上のターミナルを選択",
+    "settingsTitle": "設定",
+    "startRecording": "記録開始",
+    "stopRecording": "記録停止"
+  },
+  "keybindings": {
+    "copy": "選択範囲をコピー",
+    "paste": "貼り付け",
+    "sendControlCode": "Ctrlキーと文字キーを同時に押して信号を送る",
+    "sendText": "テキストを送信",
+    "controlCodeLabel": "手紙",
+    "textLabel": "送信するテキスト",
+    "appendEnterLabel": "送信後にEnterキーを押してください。",
+    "clipboardPermissionNote": "一部のブラウザでは、初回使用時にクリップボードのアクセス許可を求められる場合があります。",
+    "textRequired": "送信するテキストを入力してください",
+    "controlCodeRequired": "制御コードとして1文字を入力してください",
+    "builtIn": {
+      "copyCtrlC": "選択範囲をコピーする（Ctrl+C、テキストが選択されている場合のみ）",
+      "copyCtrlShiftC": "選択範囲をコピーする（Ctrl+Shift+C）",
+      "copyCmdC": "選択範囲をコピーする（Cmd+C）",
+      "pasteCtrlShiftV": "クリップボードから貼り付け（Ctrl+Shift+V）",
+      "ctrlW": "Ctrl+Wをシェルに送信する（ブラウザタブを閉じることができない）",
+      "ctrlT": "Ctrl+T をシェルに送信してください（ブラウザのタブを開くことがブロックされます）。",
+      "ctrlN": "Ctrl+Nをシェルに送信する（ブラウザウィンドウを開くことがブロックされる）",
+      "ctrlQ": "Ctrl+Q をシェルに送信してください（ブラウザの終了がブロックされます）。"
+    }
+  },
+  "macros": {
+    "title": "マクロ",
+    "description": "ターミナルで保存済みのコマンド系列を実行し、サーバーからの応答に応じて処理を行います。",
+    "target": "ターゲット",
+    "noTerminal": "端末が開いていません",
+    "empty": "マクロはまだありません",
+    "emptyHint": "ログイン、サービスの再起動、プロンプトへの応答など、ターミナル操作の流れを自動化するマクロを作成します。",
+    "create": "新しいマクロ",
+    "back": "マクロに戻る",
+    "name": "名前",
+    "namePlaceholder": "ウェブサーバーを再起動します",
+    "nameRequired": "保存する前にマクロに名前を付けてください。",
+    "descriptionLabel": "説明",
+    "descriptionPlaceholder": "このマクロの機能（オプション）",
+    "unsaved": "保存されていない変更があります",
+    "save": "保存",
+    "saved": "マクロが保存されました",
+    "saveFailed": "マクロを保存できませんでした",
+    "delete": "削除",
+    "deleteTitle": "このマクロを削除しますか？",
+    "deleteBody": "\"{{name}}\" は完全に削除されます。元に戻すことはできません。",
+    "deleted": "マクロが削除されました",
+    "cancel": "キャンセル",
+    "run": "実行",
+    "stop": "ストップ",
+    "running": "実行中...",
+    "completed": "マクロ撮影終了",
+    "failed": "マクロが失敗しました",
+    "loadFailed": "マクロを読み込めませんでした",
+    "needTerminal": "まずターミナルを開いて接続します。",
+    "noSteps": "このマクロにはまだ手順がありません。以下に手順を追加してください。",
+    "addStep": "ステップを追加する",
+    "stepNumber": "ステップ {{number}}",
+    "removeStep": "削除手順",
+    "confirmRunTitle": "このマクロを実行しますか？",
+    "confirmRunBody": "\"{{name}}\" は {{host}} にコマンドを送信します。",
+    "confirmRunAction": "マクロを実行する",
+    "stepTypes": {
+      "send": {
+        "label": "コマンドを送信",
+        "help": "端末にテキストを入力します。まるで手入力したかのように表示されます。"
+      },
+      "wait": {
+        "label": "出力を待つ",
+        "help": "サーバーが指定したテキスト（パスワード入力画面など）を表示するまで一時停止します。"
+      },
+      "delay": {
+        "label": "一時停止",
+        "help": "次のステップに進む前に、一定時間待機します。"
+      },
+      "if": {
+        "label": "出力に以下が含まれる場合",
+        "help": "サーバーがこれまでに出力したすべての内容を確認し、その後、2つの分岐のうちいずれか1つを実行します。"
+      },
+      "repeat": {
+        "label": "繰り返す",
+        "help": "指定された回数だけ、その中の手順を実行します。"
+      }
+    },
+    "send": {
+      "text": "コマンドまたはテキスト",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "送信後にEnterキーを押してください。",
+      "pressEnterHelp": "テキストを送信せずに入力する場合は、これをオフにしてください。"
+    },
+    "wait": {
+      "pattern": "出力に以下が含まれるまで待機してください",
+      "patternPlaceholder": "パスワード:",
+      "timeout": "諦めた後",
+      "onTimeout": "それが決して現れない場合",
+      "stop": "マクロを停止する",
+      "continue": "とにかく続けて"
+    },
+    "delay": {
+      "duration": "待って"
+    },
+    "ifStep": {
+      "pattern": "出力に以下が含まれる場合",
+      "patternPlaceholder": "アクティブ：アクティブ（実行中）",
+      "then": "次にこれを実行してください",
+      "else": "そうでなければ、これを実行してください。",
+      "emptyBranch": "階段なし"
+    },
+    "repeat": {
+      "count": "回数",
+      "times": "タイムズ"
+    },
+    "match": {
+      "useRegex": "正規表現で一致させる",
+      "useRegexHelp": "原文と完全に一致させるには、この部分を削除してください。",
+      "invalidRegex": "有効な正規表現ではないため、プレーンテキストとしてマッチします。"
+    },
+    "seconds": "秒",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "リモートサーバーが必要です。この接続タイプを使用するには、設定でリモートサーバーを接続してください。"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "title": "Authenticator App",
+  "factor": "Authenticator code",
+  "challenge": {
+    "enterCode": "Wprowadź kod weryfikacyjny",
+    "verify": "Zweryfikuj kod",
+    "backupCodeHint": "You can also enter one of your backup codes."
+  },
+  "enrollment": {
+    "title": "Aplikacja TOTP",
+    "docs": "Dokumentacja",
+    "on": "Włączono uwierzytelnianie dwuskładnikowe",
+    "off": "Dodaj dodatkowe zabezpieczenia logowania",
+    "enable": "Włącz",
+    "disable": "Wyłącz",
+    "addDevice": "Add device",
+    "addTitle": "Add authenticator device",
+    "addDescription": "Confirm with a code from your authenticator or a backup code to enroll another device with the same key.",
+    "addScanInstructions": "Scan this QR code with the additional authenticator. Existing authenticators will continue to work.",
+    "addSuccess": "Additional authenticator enrolled",
+    "addFailed": "Failed to add authenticator",
+    "codeRequired": "Enter a TOTP code or backup code",
+    "codePlaceholder": "TOTP code or backup code",
+    "setupTitle": "Skonfiguruj TOTP",
+    "setupFailed": "Nie udało się uruchomić konfiguracji TOTP",
+    "qrCode": "Kod QR",
+    "secretCopied": "Skopiowano sekret do schowka",
+    "instructions": "Scan the QR code or enter the secret in your authenticator app, then enter the 6-digit code",
+    "continueVerify": "Kontynuuj weryfikację",
+    "verifyTitle": "Zweryfikuj kod",
+    "verify": "Zweryfikuj",
+    "enter6Digits": "Wprowadź 6-cyfrowy kod",
+    "enabledSuccess": "Włączono uwierzytelnianie dwuskładnikowe",
+    "invalidCode": "Nieprawidłowy kod, spróbuj ponownie",
+    "disableTitle": "Wyłącz 2FA",
+    "disabledSuccess": "Wyłączono uwierzytelnianie dwuskładnikowe",
+    "disableFailed": "Nie udało się wyłączyć uwierzytelniania dwuskładnikowego",
+    "backupTitle": "Kody zapasowe",
+    "downloadBackup": "Pobierz kody zapasowe",
+    "done": "Gotowe"
+  }
+}

@@ -1,4 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+import {
+  enabledHostProtocols,
+  hostProtocolFlags,
+  type HostProtocols,
+} from "./host-protocols";
 import React, {
   useState,
   useEffect,
@@ -6,6 +11,13 @@ import React, {
   type MutableRefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
+import type { HostDefaultsLevel } from "@/types/host-defaults";
+import { getFolderDefaultsId } from "@/api/host-defaults-api";
+import {
+  HostDefaultsEditorView,
+  type HostDefaultsEditorTarget,
+} from "./host-defaults/HostDefaultsEditorView";
+import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import { CredentialShareModal } from "./CredentialShareModal";
 
 import { Button } from "@/components/button";
@@ -21,7 +33,6 @@ import {
   updateCredential,
   deployCredentialToHost,
   renameCredentialFolder,
-  getLinkedCredentialIds,
 } from "@/main-axios";
 
 import type { Host, Credential } from "@/types/ui-types";
@@ -39,7 +50,8 @@ import {
   makeCredentialTabs,
   makeHostTabs,
   makeHostSshSubTabs,
-  SSH_GROUP_TABS,
+  isSshGroupTab,
+  useHostEditorSections,
   TabStrip,
 } from "./HostManagerTabs";
 import { Select2 } from "@/components/select2";
@@ -73,8 +85,19 @@ export function HostManager({
   onTagsChange?: (tags: string[]) => void;
   active?: boolean;
 } = {}) {
+  // Re-render when a plugin adds or removes a host editor tab.
+  useHostEditorSections();
   const { t } = useTranslation();
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
+  // A level of host defaults open in the editor instead of a host.
+  const [editingDefaults, setEditingDefaults] =
+    useState<HostDefaultsEditorTarget | null>(null);
+  // Fields a plugin filled in for a new host, keyed so a second draft remounts
+  // the editor.
+  const [hostDraft, setHostDraft] = useState<{
+    key: number;
+    draft: HostDraft;
+  } | null>(null);
   const [shareCredential, setShareCredential] = useState<Credential | null>(
     null,
   );
@@ -99,12 +122,9 @@ export function HostManager({
   } | null>(null);
   const [hostEditorDirty, setHostEditorDirty] = useState(false);
   const [showUnsavedHostDialog, setShowUnsavedHostDialog] = useState(false);
-  const [editingProtocols, setEditingProtocols] = useState({
-    enableSsh: true,
-    enableRdp: false,
-    enableVnc: false,
-    enableTelnet: false,
-  });
+  const [editingProtocols, setEditingProtocols] = useState<HostProtocols>(() =>
+    hostProtocolFlags(null),
+  );
   const simpleEditor = useUiPreference("hostEditor", "mode") === "simple";
   // Expanding advanced is a per-session choice; fixing one host's SSH options
   // shouldn't quietly move the whole app off the Simple preset.
@@ -122,9 +142,6 @@ export function HostManager({
   const [credentialReturnHost, setCredentialReturnHost] = useState<
     Host | "new" | null
   >(null);
-  const [termixIdLinkedIds, setTermixIdLinkedIds] = useState<Set<number>>(
-    new Set(),
-  );
 
   useEffect(() => {
     onTagsChange?.([...new Set(credentials.flatMap((c) => c.tags ?? []))]);
@@ -139,12 +156,7 @@ export function HostManager({
         setEditingHost(host);
         setEditingCredential(null);
         setActiveHostTab("general");
-        setEditingProtocols({
-          enableSsh: host.enableSsh,
-          enableRdp: host.enableRdp,
-          enableVnc: host.enableVnc,
-          enableTelnet: host.enableTelnet,
-        });
+        setEditingProtocols(hostProtocolFlags(host));
         return true;
       }
     }
@@ -168,16 +180,9 @@ export function HostManager({
       .finally(() => setCredentialsLoading(false));
   };
 
-  const reloadLinkedIds = () => {
-    getLinkedCredentialIds()
-      .then((d) => setTermixIdLinkedIds(new Set(d.credentialIds)))
-      .catch(() => {});
-  };
-
   useEffect(() => {
     reloadHosts();
     reloadCredentials();
-    reloadLinkedIds();
 
     window.addEventListener("termix:hosts-changed", reloadHosts);
     window.addEventListener("ssh-hosts:changed", reloadHosts);
@@ -200,13 +205,9 @@ export function HostManager({
       pendingAction.current = null;
       if (action === "add-host") {
         setEditingHost("new");
+        setHostDraft(null);
         setEditingCredential(null);
-        setEditingProtocols({
-          enableSsh: true,
-          enableRdp: false,
-          enableVnc: false,
-          enableTelnet: false,
-        });
+        setEditingProtocols(hostProtocolFlags(null));
         setActiveHostTab("general");
       } else if (action === "add-credential") {
         setEditingCredential("new");
@@ -218,21 +219,37 @@ export function HostManager({
 
   useEffect(() => {
     if (!active) return;
-    const handleAddHost = () => {
+    const handleAddHost = (e: Event) => {
+      const draft = (e as CustomEvent<HostDraft | undefined>).detail;
       setEditingHost("new");
+      setHostDraft(draft ? { key: Date.now(), draft } : null);
       setEditingCredential(null);
-      setEditingProtocols({
-        enableSsh: true,
-        enableRdp: false,
-        enableVnc: false,
-        enableTelnet: false,
-      });
+      setEditingProtocols(hostProtocolFlags(null));
       setActiveHostTab("general");
     };
     const handleAddCredential = () => {
       setEditingCredential("new");
       setEditingHost(null);
       setActiveCredentialTab("general");
+    };
+    const handleEditDefaults = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ level: HostDefaultsLevel; folderName?: string }>
+      ).detail;
+      if (!detail) return;
+      const open = (target: HostDefaultsEditorTarget) => {
+        setEditingHost(null);
+        setEditingCredential(null);
+        setEditingDefaults(target);
+      };
+      if (detail.level === "folder" && detail.folderName) {
+        const folderName = detail.folderName;
+        getFolderDefaultsId(folderName)
+          .then((folderId) => open({ level: "folder", folderId, folderName }))
+          .catch(() => toast.error(t("hostDefaults.loadFailed")));
+      } else if (detail.level !== "folder") {
+        open({ level: detail.level });
+      }
     };
     const handleEditHost = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
@@ -241,18 +258,18 @@ export function HostManager({
         setEditingHost(host);
         setEditingCredential(null);
         setActiveHostTab("general");
-        setEditingProtocols({
-          enableSsh: host.enableSsh,
-          enableRdp: host.enableRdp,
-          enableVnc: host.enableVnc,
-          enableTelnet: host.enableTelnet,
-        });
+        setEditingProtocols(hostProtocolFlags(host));
       }
     };
     window.addEventListener("host-manager:add-host", handleAddHost);
     window.addEventListener("host-manager:add-credential", handleAddCredential);
     window.addEventListener("host-manager:edit-host", handleEditHost);
+    window.addEventListener("host-manager:edit-defaults", handleEditDefaults);
     return () => {
+      window.removeEventListener(
+        "host-manager:edit-defaults",
+        handleEditDefaults,
+      );
       window.removeEventListener("host-manager:add-host", handleAddHost);
       window.removeEventListener(
         "host-manager:add-credential",
@@ -402,6 +419,7 @@ export function HostManager({
     setHostEditorDirty(false);
     setShowUnsavedHostDialog(false);
     setEditingHost(null);
+    setEditingDefaults(null);
     setActiveHostTab("general");
   };
 
@@ -414,6 +432,17 @@ export function HostManager({
   };
 
   const renderEditorView = () => {
+    if (editingDefaults) {
+      return (
+        <HostDefaultsEditorView
+          target={editingDefaults}
+          onClose={requestCloseHostEditor}
+          onDirtyChange={setHostEditorDirty}
+          hosts={hosts}
+          credentials={credentials}
+        />
+      );
+    }
     const isHost = !!editingHost;
     // Simple mode keeps General and SSH -- between them they hold everything
     // needed to reach a host (name, address, username, auth) -- and hides the
@@ -422,30 +451,31 @@ export function HostManager({
     // buildHostEditorPayload still serializes all of them, so hiding a tab
     // hides its inputs, not its values.
     const collapseAdvanced = isHost && simpleEditor && !showAdvancedEditor;
+    const protocols = editingProtocols as unknown as Record<string, boolean>;
+    // Plugin tabs decide their own visibility from the host's protocols.
     const tabs = isHost
-      ? makeHostTabs(t).filter((tab) => {
+      ? makeHostTabs(t, protocols).filter((tab) => {
           if (tab.id === "general") return true;
           if (tab.id === "ssh") return editingProtocols.enableSsh;
-          if (collapseAdvanced) return false;
-          if (tab.id === "rdp") return editingProtocols.enableRdp;
-          if (tab.id === "vnc") return editingProtocols.enableVnc;
-          if (tab.id === "telnet") return editingProtocols.enableTelnet;
-          return false;
+          return !collapseAdvanced;
         })
       : makeCredentialTabs(t);
     // Collapsing while on a now-hidden tab would leave nothing selected. The
     // SSH group collapses to its own "ssh" tab, everything else to General.
-    // The top-level strip only lists general/ssh/rdp/vnc/telnet -- the SSH
+    // The top-level strip only lists general, ssh and protocol tabs -- the SSH
     // sub-tabs live in the secondary strip, so they count as visible whenever
     // the SSH group is expanded.
+    const sshSubTabs = makeHostSshSubTabs(t, protocols);
+    // Registered SSH-group tabs count too: checking a fixed list here is what
+    // left plugin tabs unreachable.
     const hostTabVisible =
       tabs.some((tab) => tab.id === activeHostTab) ||
       (!collapseAdvanced &&
         editingProtocols.enableSsh &&
-        SSH_GROUP_TABS.has(activeHostTab as never));
+        sshSubTabs.some((tab) => tab.id === activeHostTab));
     const effectiveHostTab = hostTabVisible
       ? activeHostTab
-      : collapseAdvanced && SSH_GROUP_TABS.has(activeHostTab as never)
+      : collapseAdvanced && isSshGroupTab(activeHostTab)
         ? "ssh"
         : "general";
     const activeTab = isHost ? effectiveHostTab : activeCredentialTab;
@@ -454,8 +484,7 @@ export function HostManager({
       isHost &&
       !collapseAdvanced &&
       editingProtocols.enableSsh &&
-      SSH_GROUP_TABS.has(activeHostTab as never);
-    const sshSubTabs = makeHostSshSubTabs(t);
+      isSshGroupTab(activeHostTab);
 
     return (
       <div className="flex flex-col flex-1 min-h-0">
@@ -499,7 +528,7 @@ export function HostManager({
             activeTab={activeTab}
             onTabChange={(id) => {
               if (isHost && id === "ssh") {
-                if (!SSH_GROUP_TABS.has(activeHostTab as never)) {
+                if (!isSshGroupTab(activeHostTab)) {
                   setActiveHostTab("ssh");
                 }
               } else {
@@ -510,7 +539,7 @@ export function HostManager({
               isHost
                 ? (id) =>
                     id === "ssh"
-                      ? SSH_GROUP_TABS.has(activeHostTab as never)
+                      ? isSshGroupTab(activeHostTab)
                       : activeHostTab === id
                 : undefined
             }
@@ -544,9 +573,12 @@ export function HostManager({
           {isHost ? (
             <HostEditor
               key={
-                editingHost === "new" ? "new-host" : (editingHost as Host).id
+                editingHost === "new"
+                  ? `new-host-${hostDraft?.key ?? ""}`
+                  : (editingHost as Host).id
               }
               host={editingHost === "new" ? null : (editingHost as Host)}
+              draft={editingHost === "new" ? hostDraft?.draft : undefined}
               activeTab={effectiveHostTab}
               simpleMode={collapseAdvanced}
               onBack={requestCloseHostEditor}
@@ -670,7 +702,7 @@ export function HostManager({
     );
   };
 
-  const isEditing = !!editingHost || !!editingCredential;
+  const isEditing = !!editingHost || !!editingCredential || !!editingDefaults;
 
   useEffect(() => {
     if (active) onEditingChange?.(isEditing);
@@ -726,7 +758,6 @@ export function HostManager({
             <CredentialSidebarTree
               folders={credentialFolderTree}
               usedByCounts={usedByCounts}
-              termixIdLinkedIds={termixIdLinkedIds}
               query=""
               loading={credentialsLoading}
               arrangeLocked={externalArrangeLocked}
@@ -845,9 +876,7 @@ export function HostManager({
                 <option value="">{t("credentials.selectHostOption")}</option>
                 {allHosts
                   .filter(
-                    (h) =>
-                      h.enableSsh ||
-                      (!h.enableRdp && !h.enableVnc && !h.enableTelnet),
+                    (h) => h.enableSsh || enabledHostProtocols(h).length === 0,
                   )
                   .map((h) => (
                     <option key={h.id} value={h.id}>

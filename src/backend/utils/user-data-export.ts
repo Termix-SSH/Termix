@@ -1,10 +1,11 @@
 import {
-  createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
-  createCurrentTransferRecentRepository,
+  createCurrentHostProtocolAuthRepository,
   createCurrentUserDataExportRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
+import { decryptProtocolLogin } from "../database/repositories/host-protocol-auth-repository.js";
+import { toPortableLogins } from "../hosts/protocol-auth/protocol-auth.js";
+import { readUserPluginRows } from "../plugins/user-data.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 
@@ -16,13 +17,8 @@ interface UserExportData {
   userData: {
     sshHosts: unknown[];
     sshCredentials: unknown[];
-    fileManagerData: {
-      recent: unknown[];
-      pinned: unknown[];
-      shortcuts: unknown[];
-      transferRecent: unknown[];
-    };
-    dismissedAlerts: unknown[];
+    /** The user's rows in plugin tables, keyed by table name. */
+    pluginData: Record<string, unknown[]>;
   };
   metadata: {
     totalRecords: number;
@@ -66,12 +62,28 @@ class UserDataExport {
 
       const exportRepository = createCurrentUserDataExportRepository();
       const sshHosts = await exportRepository.listHostsByUserId(userId);
-      const processedSshHosts =
+      // Each host's plugin protocol logins ride on it, sealed like the
+      // host's own secrets unless the export is plaintext.
+      const logins = new Map<number, Record<string, unknown>>();
+      for (const row of await createCurrentHostProtocolAuthRepository().listRowsForUser(
+        userId,
+      )) {
+        const own = logins.get(row.hostId) ?? {};
+        own[row.protocol] =
+          format === "plaintext" && userDataKey
+            ? toPortableLogins([decryptProtocolLogin(row, userDataKey)])[
+                row.protocol
+              ]
+            : row;
+        logins.set(row.hostId, own);
+      }
+      const processedSshHosts = (
         format === "plaintext" && userDataKey
           ? sshHosts.map((host) =>
               DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey!),
             )
-          : sshHosts;
+          : sshHosts
+      ).map((host) => ({ ...host, protocolAuth: logins.get(host.id) ?? {} }));
 
       let sshCredentialsData: unknown[] = [];
       if (includeCredentials) {
@@ -90,22 +102,11 @@ class UserDataExport {
             : credentials;
       }
 
-      const [recentFiles, pinnedFiles, shortcuts, transferRecentData] =
-        await Promise.all([
-          createCurrentFileManagerBookmarkRepository().listRecentByUserId(
-            userId,
-          ),
-          createCurrentFileManagerBookmarkRepository().listPinnedByUserId(
-            userId,
-          ),
-          createCurrentFileManagerBookmarkRepository().listShortcutsByUserId(
-            userId,
-          ),
-          createCurrentTransferRecentRepository().listByUserId(userId),
-        ]);
-
-      const alerts =
-        await createCurrentDismissedAlertRepository().listByUserId(userId);
+      const pluginData = await readUserPluginRows(userId);
+      const pluginRowCount = Object.values(pluginData).reduce(
+        (total, rows) => total + rows.length,
+        0,
+      );
 
       const exportData: UserExportData = {
         version: this.EXPORT_VERSION,
@@ -115,23 +116,13 @@ class UserDataExport {
         userData: {
           sshHosts: processedSshHosts,
           sshCredentials: sshCredentialsData,
-          fileManagerData: {
-            recent: recentFiles,
-            pinned: pinnedFiles,
-            shortcuts: shortcuts,
-            transferRecent: transferRecentData,
-          },
-          dismissedAlerts: alerts,
+          pluginData,
         },
         metadata: {
           totalRecords:
             processedSshHosts.length +
             sshCredentialsData.length +
-            recentFiles.length +
-            pinnedFiles.length +
-            shortcuts.length +
-            transferRecentData.length +
-            alerts.length,
+            pluginRowCount,
           encrypted: format === "encrypted",
           exportType: scope,
         },
@@ -203,37 +194,22 @@ class UserDataExport {
 
     if (dataObj.userData) {
       const userData = dataObj.userData as Record<string, unknown>;
-      const requiredFields = [
-        "sshHosts",
-        "sshCredentials",
-        "fileManagerData",
-        "dismissedAlerts",
-      ];
+      const requiredFields = ["sshHosts", "sshCredentials"];
       for (const field of requiredFields) {
-        if (
-          !Array.isArray(userData[field]) &&
-          !(field === "fileManagerData" && typeof userData[field] === "object")
-        ) {
+        if (!Array.isArray(userData[field])) {
           errors.push(`Missing or invalid userData.${field} field`);
         }
       }
 
       if (
-        userData.fileManagerData &&
-        typeof userData.fileManagerData === "object"
+        userData.pluginData !== undefined &&
+        (typeof userData.pluginData !== "object" ||
+          userData.pluginData === null ||
+          Object.values(userData.pluginData).some(
+            (rows) => !Array.isArray(rows),
+          ))
       ) {
-        const fileManagerData = userData.fileManagerData as Record<
-          string,
-          unknown
-        >;
-        const fmFields = ["recent", "pinned", "shortcuts"];
-        for (const field of fmFields) {
-          if (!Array.isArray(fileManagerData[field])) {
-            errors.push(
-              `Missing or invalid userData.fileManagerData.${field} field`,
-            );
-          }
-        }
+        errors.push("Missing or invalid userData.pluginData field");
       }
     }
 
@@ -248,8 +224,7 @@ class UserDataExport {
     breakdown: {
       sshHosts: number;
       sshCredentials: number;
-      fileManagerItems: number;
-      dismissedAlerts: number;
+      pluginRows: number;
     };
     encrypted: boolean;
   } {
@@ -261,11 +236,10 @@ class UserDataExport {
       breakdown: {
         sshHosts: data.userData.sshHosts.length,
         sshCredentials: data.userData.sshCredentials.length,
-        fileManagerItems:
-          data.userData.fileManagerData.recent.length +
-          data.userData.fileManagerData.pinned.length +
-          data.userData.fileManagerData.shortcuts.length,
-        dismissedAlerts: data.userData.dismissedAlerts.length,
+        pluginRows: Object.values(data.userData.pluginData ?? {}).reduce(
+          (total, rows) => total + rows.length,
+          0,
+        ),
       },
       encrypted: data.metadata.encrypted,
     };

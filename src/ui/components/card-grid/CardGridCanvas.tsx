@@ -1,3 +1,4 @@
+import { rem, remScale } from "@/lib/rem";
 import {
   useCallback,
   useEffect,
@@ -212,7 +213,8 @@ function MasonryTile({
     const el = innerRef.current;
     if (!el) return;
     const report = () => {
-      const h = fixedHeight ?? el.getBoundingClientRect().height;
+      // Row units are Normal-size pixels; a measured height is scaled back.
+      const h = fixedHeight ?? el.getBoundingClientRect().height / remScale();
       onReportRows(heightToRowSpan(h, ROW_UNIT, ROW_GAP));
     };
     report();
@@ -247,7 +249,7 @@ function MasonryTile({
           "min-h-0",
           fixedHeight != null && "overflow-hidden [&>*]:h-full",
         )}
-        style={fixedHeight != null ? { height: fixedHeight } : undefined}
+        style={fixedHeight != null ? { height: rem(fixedHeight) } : undefined}
       >
         {children}
       </div>
@@ -358,10 +360,16 @@ export function CardGridCanvas({
       e.preventDefault();
       e.stopPropagation();
       const startY = e.clientY;
+      // Heights are stored in Normal-size pixels, whatever the interface size.
+      const scale = remScale();
       const startH =
-        tileRefs.current.get(id)?.getBoundingClientRect().height ?? 120;
+        (tileRefs.current.get(id)?.getBoundingClientRect().height ??
+          120 * scale) / scale;
       const onMove = (ev: globalThis.MouseEvent) => {
-        onChange(setHeight(slots, id, startH + (ev.clientY - startY)), columns);
+        onChange(
+          setHeight(slots, id, startH + (ev.clientY - startY) / scale),
+          columns,
+        );
       };
       const onUp = () => {
         window.removeEventListener("mousemove", onMove);
@@ -396,10 +404,10 @@ export function CardGridCanvas({
         className="grid items-start"
         style={{
           gridTemplateColumns: `repeat(${effectiveColumns}, minmax(0, 1fr))`,
-          gridAutoRows: `${ROW_UNIT}px`,
+          gridAutoRows: rem(ROW_UNIT),
           gridAutoFlow: "row dense",
-          columnGap: `${ROW_GAP}px`,
-          rowGap: `${ROW_GAP}px`,
+          columnGap: rem(ROW_GAP),
+          rowGap: rem(ROW_GAP),
         }}
       >
         {sorted.map((slot) => {

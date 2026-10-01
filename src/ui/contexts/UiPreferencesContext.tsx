@@ -18,6 +18,8 @@ import {
   defaultUiPreferences,
   PRESETS,
   resolveArea,
+  resolvePluginArea,
+  type UiPluginPresets,
   sanitizeUiPreferences,
   UI_ONBOARDING_VERSION,
   type UiAreaKey,
@@ -29,7 +31,6 @@ import {
 
 const SAVE_DEBOUNCE_MS = 500;
 const LS_KEY = "uiPreferences";
-const SYNC_EVENT = "uiPreferencesChanged";
 
 function readCache(): UiPreferences | null {
   try {
@@ -62,6 +63,12 @@ interface UiPreferencesContextValue {
   clearArea: (area: UiAreaKey) => void;
   clearAllOverrides: () => void;
   completeOnboarding: (skipped: boolean) => void;
+  /** A plugin's own area, from the presets it declared. */
+  resolvePlugin: (
+    pluginId: string,
+    presets: UiPluginPresets | undefined,
+  ) => Record<string, unknown>;
+  setPluginOverride: (pluginId: string, key: string, value: unknown) => void;
 }
 
 const UiPreferencesContext = createContext<UiPreferencesContextValue | null>(
@@ -108,15 +115,6 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handler = () => {
-      const cached = readCache();
-      if (cached) setPreferences(cached);
-    };
-    window.addEventListener(SYNC_EVENT, handler);
-    return () => window.removeEventListener(SYNC_EVENT, handler);
-  }, []);
-
-  useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
@@ -144,8 +142,13 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
       pendingPatch.current = {};
       getUserPreferences()
         .then((prefs) => {
-          if (prefs.storageMode !== "cloud") return;
-          return saveUiPreferences(body);
+          if (prefs.storageMode === "cloud") return saveUiPreferences(body);
+          // The server copy replaces the cache on load, so onboarding has to
+          // reach it even in local mode or it reruns every time.
+          if (body.onboarding)
+            return saveUiPreferences({
+              onboarding: body.onboarding as UiPreferences["onboarding"],
+            });
         })
         .catch(() => {
           /* best-effort; cache already holds it */
@@ -162,7 +165,6 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
       setPreferences((prev) => {
         const next = sanitizeUiPreferences(mutate(prev));
         writeCache(next);
-        window.dispatchEvent(new Event(SYNC_EVENT));
         return next;
       });
       queueSave(patch);
@@ -247,6 +249,14 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
       clearArea,
       clearAllOverrides,
       completeOnboarding,
+      resolvePlugin: (pluginId, presets) =>
+        resolvePluginArea(preferences, pluginId, presets),
+      setPluginOverride: (pluginId, key, value) =>
+        setOverride(
+          `plugin:${pluginId}` as never,
+          key as never,
+          value as never,
+        ),
     }),
     [
       preferences,

@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "מדדי מארח"
+  },
+  "hostMetrics": {
+    "cpu": "מעבד",
+    "memory": "זֵכֶר",
+    "disk": "דִיסק",
+    "network": "רֶשֶׁת",
+    "uptime": "זמן פעולה",
+    "processes": "תהליכים",
+    "available": "זָמִין",
+    "free": "לְשַׁחְרֵר",
+    "connecting": "מְקַשֵׁר...",
+    "connectionFailed": "נכשלה ההתחברות לשרת",
+    "naCpus": "מעבדים לא רלוונטיים",
+    "cpuCores_one": "{{count}} ליבה",
+    "cpuCores_other": "{{count}} ליבות",
+    "cpuUsage": "שימוש במעבד",
+    "memoryUsage": "שימוש בזיכרון",
+    "diskUsage": "שימוש בדיסק",
+    "selectFilesystem": "בחירת מערכת קבצים",
+    "temperature": "טֶמפֶּרָטוּרָה",
+    "highestTemperature": "הטמפרטורה הגבוהה ביותר",
+    "primaryTemperatureSensor": "חיישן ראשי",
+    "gpu": {
+      "title": "כרטיס מסך",
+      "noDevice": "לא זוהה כרטיס מסך של NVIDIA. התקן את מנהל ההתקן של NVIDIA (הוא מספק nvidia-smi) כדי לראות את מדדי הכרטיס המסך.",
+      "driver": "נהג {{version}}",
+      "utilization": "ניצול",
+      "memory": "זיכרון RAM",
+      "temperature": "טמפ'",
+      "power": "כּוֹחַ",
+      "fan": "מְנִיפָה",
+      "processes": "תהליכי GPU",
+      "noProcesses": "אף תהליכים לא משתמשים ב-GPU"
+    },
+    "failedToFetchHostConfig": "נכשל באחזור תצורת המארח",
+    "serverOffline": "שרת לא מקוון",
+    "cannotFetchMetrics": "לא ניתן לאחזר מדדים משרת לא מקוון",
+    "totpFailed": "אימות TOTP נכשל",
+    "noneAuthNotSupported": "Host Metrics אינו תומך בסוג אימות 'ללא'.",
+    "noHostSelected": "לא נבחר מארח",
+    "load": "לִטעוֹן",
+    "systemInfo": "מידע מערכת",
+    "hostname": "שם מארח",
+    "operatingSystem": "מַעֲרֶכֶת הַפעָלָה",
+    "kernel": "גַרעִין",
+    "seconds": "שניות",
+    "networkInterfaces": "ממשקי רשת",
+    "noInterfacesFound": "לא נמצאו ממשקי רשת",
+    "noProcessesFound": "לא נמצאו תהליכים",
+    "processesTotal": "סַך הַכֹּל",
+    "processesRunning": "רִיצָה",
+    "loginStats": "סטטיסטיקות כניסה ל-SSH",
+    "noRecentLoginData": "אין נתוני התחברות אחרונים",
+    "ports": {
+      "title": "יציאות האזנה",
+      "protocol": "פּרוֹטוֹקוֹל",
+      "port": "נָמָל",
+      "address": "כְּתוֹבֶת",
+      "process": "תַהֲלִיך",
+      "search": "חיפוש פורטים...",
+      "allProtocols": "כֹּל",
+      "noData": "אין נתוני יציאות האזנה"
+    },
+    "firewall": {
+      "title": "חומת אש",
+      "inactive": "לֹא פָּעִיל",
+      "policy": "מְדִינִיוּת",
+      "rules": "כללים",
+      "noRules": "אין חוקים בשרשרת הזו",
+      "noData": "אין נתוני חומת אש זמינים",
+      "action": "פְּעוּלָה",
+      "protocol": "פרוטו",
+      "port": "נָמָל",
+      "source": "מָקוֹר",
+      "anywhere": "בְּכָל מָקוֹם",
+      "chains": "שרשראות"
+    },
+    "loadAvg": "טען ממוצע",
+    "swap": "לְהַחלִיף",
+    "architecture": "אַדְרִיכָלוּת",
+    "refresh": "לְרַעֲנֵן",
+    "retry": "נסה שוב",
+    "customize": "התאמה אישית של הפריסה",
+    "reset": "אִתחוּל",
+    "tabLive": "לִחיוֹת",
+    "editModeInstructions": "גרור כרטיסים כדי לסדר מחדש, גרור את הקצה התחתון כדי לשנות את הגודל, והשתמש בלחצן הרוחב כדי לשנות את טווח הכרטיס. הוסף או הסר כרטיסים למטה.",
+    "managers": {
+      "services": "שירותים",
+      "processInspector": "מפקח תהליכים",
+      "logViewer": "מציג יומנים",
+      "cron": "עבודות קרון",
+      "packages": "חבילות",
+      "ssl": "תעודות SSL",
+      "firewall": "חומת אש",
+      "users": "משתמשים והרשאות",
+      "healthCheck": "בדיקות בריאות",
+      "diskBreakdown": "פירוט דיסק",
+      "systemdTimers": "טיימרים",
+      "topMemory": "מובילים לפי זיכרון",
+      "noData": "אין נתונים",
+      "sudoHint": "הגדר סיסמת sudo עבור מארח זה בעורך המארחים כדי לאפשר פעולות הרשאות.",
+      "filter": "לְסַנֵן...",
+      "start": "הַתחָלָה",
+      "stop": "לְהַפְסִיק",
+      "restart": "הפעלה מחדש",
+      "actionDone": "{{name}} updated",
+      "actionFailed": "הפעולה נכשלה",
+      "signalSent": "אות שנשלח ל-PID {{pid}}",
+      "killHint": "לחיצה: סיום (SIGTERM). לחיצה ימנית: כיבוי בכוח (SIGKILL).",
+      "working": "עובד...",
+      "update": "לְעַדְכֵּן",
+      "upgradeAll": "שדרגו הכל",
+      "allUpToDate": "הכל מעודכן",
+      "save": "לְהַצִיל",
+      "command": "פְּקוּדָה",
+      "enabled": "מופעל",
+      "cronSaved": "קרונטאב עודכן",
+      "clients": "לקוחות",
+      "dryRun": "ריצה יבשה",
+      "renew": "לְחַדֵשׁ",
+      "noAcmeClient": "לא נמצא לקוח ACME ‏(certbot או acme.sh) בשרת זה.",
+      "addInputRule": "הוסף כלל INPUT",
+      "firewallWarning": "שינויים הם בזמן ריצה בלבד עד שהם מתמשכים. היזהרו לא לנעול את עצמכם מחוץ למערכת.",
+      "ruleApplied": "כלל שהוחל",
+      "invalidPort": "הזן פורט תקין (1-65535)",
+      "newUsername": "שם משתמש חדש",
+      "addUser": "לְהוֹסִיף",
+      "deleteUser": "מחיקת משתמש",
+      "noHealthChecks": "עדיין לא הוגדרו בדיקות תקינות.",
+      "follow": "לַעֲקוֹב",
+      "noLogData": "אין פלט יומן.",
+      "tree": "עֵץ",
+      "enableDisable": "הפעלה/השבתה בעת האתחול",
+      "grantSudo": "גרנט סודו",
+      "revokeSudo": "בטל את הסודו",
+      "sslIssueCert": "הנפקת תעודה",
+      "sslExpired": "פג תוקף",
+      "sslInDays": "ב- {{days}}ד'",
+      "sslNeedDomain": "הזן לפחות דומיין אחד",
+      "sslIssued": "תעודה שהונפקה",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (עצמאי)",
+      "sslHttpWebroot": "HTTP (שורש רשת)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "ספק DNS (למשל cloudflare)",
+      "sslIssueHint": "יש להגדיר את פרטי הגישה של ספק ה-DNS כבר במארח.",
+      "sslRevoke": "בטל את האישור",
+      "sslRevoked": "התעודה בוטלה",
+      "sslRevokeConfirm": "לבטל ולהסיר את האישור \"{{name}}\"? לא ניתן לבטל פעולה זו.",
+      "healthRun": "לָרוּץ",
+      "healthName": "שֵׁם",
+      "healthTarget": "מארח / כתובת",
+      "healthAddCheck": "הוסף צ'ק",
+      "healthSaved": "בדיקות הבריאות נשמרו",
+      "healthMissingFields": "כל צ'ק צריך שם ומטרה",
+      "logFile": "קוֹבֶץ",
+      "logUnit": "יְחִידָה",
+      "logCustomPath": "נתיב מותאם אישית תחת /var/log (אופציונלי)",
+      "logGrep": "קווי סינון...",
+      "firewallPersist": "כללים קבועים",
+      "firewallPersisted": "כללי חומת האש נשמרו",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard אינו מותקן על מחשב זה",
+      "wgNoInterfaces": "לא הוגדרו ממשקי WireGuard",
+      "wgInterfaceUp": "לְהַעֲלוֹת",
+      "wgInterfaceDown": "לְהַפִּיל",
+      "wgBringingUp": "מעלה {{name}}...",
+      "wgBringingDown": "מוריד את {{name}}...",
+      "wgInterfaceUpDone": "{{name}} פעיל",
+      "wgInterfaceDownDone": "{{name}} מושבת",
+      "wgListenPort": "נָמָל",
+      "wgPublicKey": "מפתח ציבורי",
+      "wgEndpoint": "נקודת קצה",
+      "wgAllowedIPs": "כתובות IP מותרות",
+      "wgLastHandshake": "לחיצת יד אחרונה",
+      "wgHandshakeNever": "לְעוֹלָם לֹא",
+      "wgTransfer": "לְהַעֲבִיר",
+      "wgNoPeers": "אין עמיתים"
+    }
+  },
+  "metricsHistory": {
+    "title": "היסטוריית מדדים",
+    "historySuffix": "הִיסטוֹרִיָה",
+    "cpuMemoryDisk": "מעבד / זיכרון / דיסק",
+    "network": "רֶשֶׁת",
+    "download": "מרשם",
+    "upload": "טקסס",
+    "noData": "אין נתוני היסטוריה זמינים עבור טווח זמן זה.",
+    "custom": "מִנְהָג",
+    "to": "אֶל",
+    "apply": "לִפְנוֹת",
+    "viewHistory": "הצג היסטוריה"
+  },
+  "hosts": {
+    "tabHostMetrics": "מדדי מארח",
+    "metricsCollectionLabel": "אוסף מדדים",
+    "enableMetricsLabel": "הפעל מדדים",
+    "enableMetricsDesc": "איסוף מדדים של מעבד, זיכרון RAM, דיסק ומדדים אחרים ממארח זה",
+    "useGlobalMetrics": "השתמש במרווח גלובלי",
+    "useGlobalMetricsDesc": "עקיפה עם מרווח המדדים הכולל של השרת",
+    "metricsIntervalS": "מרווח מדדים (ים)",
+    "metricsIntervalDesc2": "שניות בין תמונות מצב של מדדים",
+    "excludedMountsLabel": "תושבות לא כלולות",
+    "monitoredMountsLabel": "נתיבים מנוטרים בהתאמה אישית",
+    "monitoredMountsDesc": "הוסף נתיבים שאינם חשופים כחיבורים נפרדים, כולל נתיבי Home Assistant המותקנים באמצעות binding כגון /config.",
+    "monitoredMountPathPlaceholder": "נתיב (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "תווית (אופציונלי)",
+    "addMonitoredMount": "הוסף נתיב",
+    "excludedMountsDesc": "הסתר נקודות הרכבה או סוגי מערכת קבצים ספציפיים (למשל nfs, cifs) משימוש בדיסק והתראות עבור מארח זה.",
+    "excludedMountsPlaceholder": "נתיב הרכבה (/mnt/nas) או סוג מערכת קבצים (nfs, cifs)",
+    "excludedMountsEmpty": "לא נכללו רכיבי טעינה. כל מערכות הקבצים שזוהו מוצגות.",
+    "addExcludedMount": "לְהוֹסִיף",
+    "visibleWidgets": "ווידג'טים גלויים",
+    "widgetsMovedToHostMetrics": "כעת ניתן להוסיף, לסידור ולשנות את גודל הכרטיסים ישירות בכרטיסייה 'מדדי מארח'. פתחו את 'מדדי מארח' עבור מארח זה והשתמשו באפשרות 'התאמה אישית' כדי לבחור אילו כרטיסים יוצגו.",
+    "hostNotFound": "המארח לא נמצא",
+    "loadingHost": "טוען מארח..."
+  },
+  "onboarding": {
+    "feature_metrics": "מדדים והתראות",
+    "feature_metrics_desc": "עקוב אחר המעבד, הזיכרון והדיסק לאורך זמן, וקבל התראות כאשר הם מתקלקלים."
+  },
+  "admin": {
+    "metricsHistoryRetention": "שמירת היסטוריית מדדים",
+    "metricsHistoryRetentionRange": "יום אחד עד 90 ימים",
+    "days": "ימים"
+  },
+  "homepage": {
+    "noData": "אין נתונים זמינים",
+    "showCurrentValue": "הצג ערך נוכחי",
+    "chartMetric": "מֶטרִי",
+    "metricRange": "לָנוּעַ",
+    "host": "מְאָרֵחַ",
+    "loading": "טְעִינָה...",
+    "metricCpu": "מעבד",
+    "metricDisk": "דִיסק",
+    "metricHostname": "שם מארח",
+    "metricKernel": "גַרעִין",
+    "metricMemory": "זֵכֶר",
+    "metricNetwork": "רֶשֶׁת",
+    "metricOs": "מערכת הפעלה",
+    "metricProcesses": "תהליכים",
+    "metricProcessesRunning": "רִיצָה",
+    "metricProcessesTotal": "סַך הַכֹּל",
+    "metricUptime": "זמן פעולה",
+    "metricsNotAvailable": "מדדים אינם זמינים",
+    "noHostSelected": "לא נבחר מארח",
+    "selectHost": "בחר מארח..."
+  },
+  "terminalStatus": {
+    "unavailable": "סטטיסטיקות חיות לא זמינות"
+  },
+  "dashboard": {
+    "cpu": "מעבד",
+    "ram": "אַיִל"
+  },
+  "dashboardTab": {
+    "disk": "דִיסק"
+  },
+  "terminal": {
+    "connected": "מְחוּבָּר"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש במדדי מארח",
+      "description": "צפה במדדי אירוח והשתמש במנהלי אירוח (שירותים, חבילות, חומת אש ועוד) עבור אירוחים שאתה יכול להגיע אליהם."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "מרווח מדדים (שניות)",
+        "description": "באיזו תדירות נדגם מארח שנצפה, אלא אם כן המארח קובע מרווח זמן משלו."
+      },
+      "historyRetentionDays": {
+        "label": "שמירת היסטוריה (ימים)",
+        "description": "כמה זמן נשמרות דגימות מדדים עבור תרשימי ההיסטוריה."
+      },
+      "enabledForNewHosts": {
+        "label": "מדדים מופעלים עבור מארחים חדשים",
+        "description": "האם מארחים חדשים מתחילים עם איסוף מדדים מופעל."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "יחידת טמפרטורה",
+        "description": "כיצד מוצגות טמפרטורות ב- Host Metrics.",
+        "celsius": "צֶלסִיוּס",
+        "fahrenheit": "פרנהייט"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "איסוף מדדים"
+      },
+      "metricsInterval": {
+        "label": "מרווח מדדים (שניות)"
+      },
+      "enabledWidgets": {
+        "label": "ווידג'טים מופעלים"
+      },
+      "excludedMounts": {
+        "label": "הרכבות לא כלולות"
+      },
+      "monitoredMounts": {
+        "label": "נתיבים מנוטרים"
+      }
+    }
+  }
+}

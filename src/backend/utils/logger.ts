@@ -34,7 +34,6 @@ export interface LogContext {
   operation?: string;
   userId?: string;
   hostId?: number;
-  tunnelName?: string;
   sessionId?: string;
   requestId?: string;
   duration?: number;
@@ -51,9 +50,6 @@ const SENSITIVE_FIELDS = [
   "secret",
   "clientSecret",
   "keyPassword",
-  "autostartPassword",
-  "autostartKey",
-  "autostartKeyPassword",
   "credentialId",
   "authToken",
   "jwt",
@@ -142,8 +138,6 @@ export class Logger {
         contextParts.push(`user:${sanitizedContext.userId}`);
       if (sanitizedContext.hostId)
         contextParts.push(`host:${sanitizedContext.hostId}`);
-      if (sanitizedContext.tunnelName)
-        contextParts.push(`tunnel:${sanitizedContext.tunnelName}`);
       if (sanitizedContext.sessionId)
         contextParts.push(`session:${sanitizedContext.sessionId}`);
       if (sanitizedContext.requestId)
@@ -258,10 +252,6 @@ export class Logger {
     this.info(`SSH: ${message}`, { ...context, operation: "ssh" });
   }
 
-  tunnel(message: string, context?: LogContext): void {
-    this.info(`TUNNEL: ${message}`, { ...context, operation: "tunnel" });
-  }
-
   file(message: string, context?: LogContext): void {
     this.info(`FILE: ${message}`, { ...context, operation: "file" });
   }
@@ -299,15 +289,13 @@ export class Logger {
 
 export const databaseLogger = new Logger("DATABASE", "🗄️", "#6366f1");
 export const sshLogger = new Logger("SSH", "🖥️", "#0ea5e9");
-export const tunnelLogger = new Logger("TUNNEL", "📡", "#a855f7");
 export const fileLogger = new Logger("FILE", "📁", "#f59e0b");
-export const statsLogger = new Logger("STATS", "📊", "#22c55e");
 export const apiLogger = new Logger("API", "🌐", "#3b82f6");
 export const authLogger = new Logger("AUTH", "🔐", "#ef4444");
 export const systemLogger = new Logger("SYSTEM", "🚀", "#14b8a6");
 export const versionLogger = new Logger("VERSION", "📦", "#8b5cf6");
 export const dashboardLogger = new Logger("DASHBOARD", "📊", "#ec4899");
-export const guacLogger = new Logger("GUACAMOLE", "🖼️", "#ff6b6b");
-export const homepageLogger = new Logger("HOMEPAGE", "🏠", "#f97316");
+export const pluginLogger = new Logger("PLUGIN", "🧩", "#84cc16");
+export const syncLogger = new Logger("SYNC", "🔄", "#06b6d4");
 
 export const logger = systemLogger;

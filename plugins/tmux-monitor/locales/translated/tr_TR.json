@@ -1,0 +1,117 @@
+{
+  "hosts": {
+    "enableTmuxMonitor": "Tmux İzleyiciyi Etkinleştir",
+    "enableTmuxMonitorDesc": "Bu ana bilgisayarı Tmux İzleyicide göster ve tmux eylemlerini kenar çubuğuna ekle",
+    "tabTmuxMonitor": "Tmux İzleyici",
+    "docsLink": "Dokümanları görüntüle"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux İzleyicisi"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux İzleyici",
+    "tmuxMonitorDesc": "Ana makinelerinizdeki tmux oturumlarını izle"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Tmux Monitor",
+      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tmux İzleyiciyi Etkinleştir",
+        "description": "Watch and attach to tmux sessions running on this host."
+      },
+      "mouseEnabled": {
+        "label": "Enable tmux mouse support",
+        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+      }
+    }
+  },
+  "tmuxMonitor": {
+    "title": "Tmux İzleyici",
+    "failedToLoadHosts": "Sunucular yüklenemedi",
+    "failedToLoad": "Tmux oturumları yüklenemedi",
+    "tmuxUnavailable": "Bu sunucuda tmux yüklü değil",
+    "noSessions": "Bu sunucuda tmux oturumu yok",
+    "noHostSelected": "Sunucu seçilmedi",
+    "attached": "Bağlı",
+    "detached": "Bağlantısız",
+    "attach": "Bağlan",
+    "editTags": "Etiketleri düzenle",
+    "tagsHint": "Virgülle ayrılmış etiketler (örn. YOLO, lab, training)",
+    "tagsSaved": "Etiketler kaydedildi",
+    "tagsSaveFailed": "Etiketler kaydedilemedi",
+    "searchPlaceholder": "Oturumlar arasında çıktı ara...",
+    "searchResults": "{{count}} eşleşme",
+    "searchFailed": "Arama başarısız",
+    "selectPaneHint": "Çıktısını önizlemek için bir bölme seçin",
+    "closePreview": "Önizlemeyi kapat",
+    "newSession": "Yeni oturum",
+    "newSessionHint": "Oturum adı (harfler, rakamlar, _ @ % + = -)",
+    "newSessionPlaceholder": "my-session",
+    "create": "Oluştur",
+    "sessionCreated": "Oturum \"{{name}}\" oluşturuldu",
+    "sessionCreateFailed": "Oturum oluşturulamadı",
+    "splitRight": "Sağa böl",
+    "splitDown": "Aşağı böl",
+    "splitFailed": "Bölme başarısız",
+    "newWindow": "Yeni pencere",
+    "windowCreateFailed": "Pencere oluşturulamadı",
+    "attachSessionTooltip": "{{session}} oturumuna bağlan",
+    "refresh": "Yenile",
+    "refreshFailed": "Yenileme başarısız",
+    "collapseAll": "Tümünü daralt",
+    "expandAll": "Tümünü genişlet",
+    "moreActions": "Diğer işlemler",
+    "sessionStats": "Oturum istatistikleri",
+    "renameSessionTitle": "Oturumu yeniden adlandır \"{{name}}\"",
+    "rename": "Yeniden adlandır",
+    "sessionRenamed": "Oturum \"{{name}}\" olarak yeniden adlandırıldı",
+    "sessionRenameFailed": "Oturum yeniden adlandırılamadı",
+    "editTagsTitle": "\"{{name}}\" için etiketleri düzenle",
+    "killPane": "Paneyi sonlandır",
+    "resizeTree": "Drag to resize, double-click to reset",
+    "reattach": "Yeniden bağlan (bozuk görünümü düzeltir)",
+    "killWindow": "Pencereyi sonlandır",
+    "killWindowTitle": "\"{{session}}\" oturumundaki {{index}} numaralı pencere sonlandırılsın mı?",
+    "killWindowBody": "Bu penceredeki tüm paneler ve işlemler sonlandırılacak. Son pencereyi sonlandırmak oturumu sona erdirir.",
+    "windowKillFailed": "Pencere sonlandırılamadı",
+    "statusActivity": "Etkinlik",
+    "statusWindows": "Pencereler",
+    "statusPanes": "Paneler",
+    "statusTags": "Etiketler",
+    "killPaneTitle": "{{id}} numaralı pane sonlandırılsın mı?",
+    "killPaneBody": "Bu panede çalışan işlem sonlandırılacak. Son paneyi sonlandırmak penceresini kapatır.",
+    "paneKillFailed": "Pane sonlandırılamadı",
+    "killSessionTitle": "\"{{name}}\" oturumu sonlandırılsın mı?",
+    "killSessionBody": "Bu oturumdaki tüm pencereler ve çalışan işlemler sonlandırılacak. Bu işlem geri alınamaz.",
+    "kill": "Sonlandır",
+    "sessionKilled": "\"{{name}}\" oturumu sonlandırıldı",
+    "sessionKillFailed": "Oturum sonlandırılamadı",
+    "hostUnreachable": "Ana bilgisayara bağlanılamadı. Çevrimiçi ve erişilebilir olduğunu kontrol edin.",
+    "noServer": "Bu ana bilgisayarda tmux sunucusu çalışmıyor.",
+    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "closeSearchResults": "Arama sonuçlarını kapat",
+    "retry": "Yeniden dene",
+    "noHosts": "Kullanılabilir SSH ana bilgisayarı yok",
+    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "tmuxInstallHint": "Ana bilgisayara şu komutla yükleyin:",
+    "attachTooltip": "{{host}} için bir terminal aç",
+    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "timeJustNow": "az önce",
+    "timeMinutes": "{{count}} dakika önce",
+    "timeHours": "{{count}} saat önce",
+    "timeDays": "{{count}} gün önce",
+    "allHosts": "Tüm sunucular",
+    "singleHost": "Single host",
+    "hostScope": "Monitor scope",
+    "filterHosts": "Filter hosts by name or address",
+    "selectHost": "Select host",
+    "toggleHost": "Expand or collapse {{host}}",
+    "noMatchingHosts": "No matching hosts",
+    "toggleSession": "Expand or collapse {{session}}"
+  }
+}

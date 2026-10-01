@@ -22,74 +22,30 @@ import type { FontSizeId, UiFontId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
-import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
+import {
+  fetchGuestViews,
+  startPluginRuntime,
+  stopPluginRuntime,
+} from "@/plugin-host/loader";
+import { settledPromise } from "@/plugin-host/plugin-store";
+import { resetShellBridge } from "@/plugin-host/shell-bridge";
+import { preloadPermissions } from "@/hooks/use-permissions";
+import { getUserPreferences } from "@/api/open-tabs-api";
+import { standaloneViewFor } from "@/shell/tab-registry";
+import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
 );
 
-// Full-screen apps opened via query params (e.g. from external links or Electron)
-const TerminalApp = lazy(() =>
-  import("@/features/terminal/TerminalApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const FileManagerApp = lazy(() =>
-  import("@/features/file-manager/FileManagerApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const TunnelApp = lazy(() =>
-  import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
-);
-const HostMetricsApp = lazy(() =>
-  import("@/features/host-metrics/HostMetricsApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const ProxmoxStatsApp = lazy(() =>
-  import("@/features/proxmox-stats/ProxmoxStatsApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const DockerApp = lazy(() =>
-  import("@/features/docker/DockerApp").then((m) => ({ default: m.default })),
-);
-const GuacamoleApp = lazy(() =>
-  import("@/features/guacamole/GuacamoleApp").then((m) => ({
-    default: m.default,
-  })),
-);
-// --- tmux-monitor ---
-const TmuxMonitorApp = lazy(() =>
-  import("@/features/tmux-monitor/TmuxMonitorApp").then((m) => ({
-    default: m.default,
-  })),
-);
-
-const HomepageApp = lazy(() =>
-  import("@/features/homepage/HomepageApp").then((m) => ({
-    default: m.default,
-  })),
-);
-
-const ElectronVersionCheck = lazy(() =>
-  import("@/user/ElectronVersionCheck").then((module) => ({
-    default: module.ElectronVersionCheck,
-  })),
-);
-
-// Anonymous guest view for shared terminal/RDP/VNC/Telnet sessions (?view=shared&token=<linkToken>).
-// Rendered outside FullscreenAppGate since guests never have a JWT/cookie to verify.
-const SharedSessionView = lazy(
-  () => import("@/features/session-sharing/SharedSessionView"),
-);
-// Anonymous guest view for collab rooms (?view=collab-guest&token=<guestLinkToken>).
-const CollabGuestView = lazy(() => import("@/features/collab/CollabGuestView"));
-
 type Phase =
-  "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
+  | "verifying"
+  | "idle-auth"
+  | "loading-app"
+  | "fading-in"
+  | "idle-app"
+  | "fading-out";
 
 type LogoutOptions = {
   manual?: boolean;
@@ -99,49 +55,22 @@ function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
-  const tmuxSession = searchParams.get("tmuxSession");
-  const path = searchParams.get("path");
 
   switch (view) {
-    case "terminal":
+    default: {
+      const def = view ? standaloneViewFor(view) : undefined;
+      if (!def?.standalone) {
+        return view ? <PluginViewPlaceholder kind="tab" viewId={view} /> : null;
+      }
+      const Standalone = def.standalone;
       return (
-        <TerminalApp
+        <Standalone
           hostId={hostId || undefined}
-          tmuxSession={tmuxSession || undefined}
+          view={view!}
+          params={searchParams}
         />
       );
-    case "file-manager":
-      return (
-        <FileManagerApp
-          hostId={hostId || undefined}
-          initialPath={path || undefined}
-        />
-      );
-    case "tunnel":
-      return <TunnelApp hostId={hostId || undefined} />;
-    case "host-metrics":
-    case "server-stats":
-      return <HostMetricsApp hostId={hostId || undefined} />;
-    case "proxmox-stats":
-      return <ProxmoxStatsApp hostId={hostId || undefined} />;
-    case "docker":
-      return <DockerApp hostId={hostId || undefined} />;
-    case "rdp":
-    case "vnc":
-    case "telnet":
-      return (
-        <GuacamoleApp
-          hostId={hostId || undefined}
-          protocol={view as "rdp" | "vnc" | "telnet"}
-        />
-      );
-    case "tmux-monitor": // --- tmux-monitor ---
-    case "tmux_monitor": // tab type spelling, so copied links also resolve
-      return <TmuxMonitorApp hostId={hostId || undefined} />;
-    case "homepage":
-      return <HomepageApp />;
-    default:
-      return null;
+    }
   }
 }
 
@@ -164,6 +93,9 @@ function FullscreenAppGate() {
             // WebSocket connections can still fall back to cookie auth.
           }
         }
+        // Plugin views (metrics, Docker, remote desktop) register their
+        // full-screen component when their plugin starts.
+        await startPluginRuntime().catch(() => {});
         if (!cancelled) setReady(true);
       })
       .catch(() => {
@@ -201,10 +133,6 @@ function App() {
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const [verifyRetryCount, setVerifyRetryCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track whether fading-in came from a fresh login (vs. session verification on page load).
-  // When session-verified, Auth must not mount during the transition — it would trigger
-  // silent OIDC redirect and cause an infinite refresh loop.
-  const fadingInFromLoginRef = useRef(false);
   // Dedupes concurrent handleLogout() calls within the same tick -- see
   // handleLogout for why phase state alone isn't sufficient for this.
   const loggingOutRef = useRef(false);
@@ -237,23 +165,19 @@ function App() {
         if (isElectron()) {
           try {
             const token = await getCurrentToken();
-            if (token) {
-              localStorage.setItem("jwt", token);
-              // Remote Sync's engine (main process) needs this local JWT to
-              // authenticate against the embedded backend during sync, same
-              // as a fresh login provides via handleLogin below -- a session
-              // restore (the common case on every normal launch) must hand
-              // it over too, or sync silently never runs after the first
-              // app restart.
-              window.electronAPI
-                ?.invoke?.("notify-local-login", token)
-                .catch(() => {});
-            }
+            if (token) localStorage.setItem("jwt", token);
           } catch {
             // Non-fatal: WebSocket connections will fall back to cookie auth
           }
         }
-        fadingInFromLoginRef.current = false;
+        setPhase("loading-app");
+        await Promise.all([
+          startPluginRuntime()
+            .catch(() => {})
+            .then(() => settledPromise()),
+          preloadPermissions(),
+          getUserPreferences().catch(() => undefined),
+        ]);
         setPhase("fading-in");
         timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
       })
@@ -311,17 +235,20 @@ function App() {
     loggingOutRef.current = false;
     clearDesktopManualLogout();
     setAuthUsername(u);
-    fadingInFromLoginRef.current = true;
-    setPhase("fading-in");
-    timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+    setPhase("loading-app");
+    void (async () => {
+      await Promise.all([
+        startPluginRuntime()
+          .catch(() => {})
+          .then(() => settledPromise()),
+        preloadPermissions(),
+        getUserPreferences().catch(() => undefined),
+      ]);
+      setPhase("fading-in");
+      timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+    })();
     if (isElectron()) {
       window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
-      const localJwt = localStorage.getItem("jwt");
-      if (localJwt) {
-        window.electronAPI
-          ?.invoke?.("notify-local-login", localJwt)
-          .catch(() => {});
-      }
     }
   }
 
@@ -338,6 +265,10 @@ function App() {
     // isn't subject to batching, so it correctly dedupes within one tick.
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
+    // The next user may see different plugins, so nothing they registered
+    // should survive into the next session.
+    void stopPluginRuntime();
+    resetShellBridge();
     clearStoredAuth();
     localStorage.removeItem("jwt");
     if (isElectron() && options?.manual) {
@@ -361,17 +292,14 @@ function App() {
 
   const showApp =
     phase === "idle-app" || phase === "fading-in" || phase === "fading-out";
-  const showAuth =
-    phase === "idle-auth" ||
-    (phase === "fading-in" && fadingInFromLoginRef.current) ||
-    phase === "fading-out";
+  const showAuth = phase === "idle-auth" || phase === "fading-out";
   const appOpacity = phase === "idle-app" ? 1 : 0;
   const authOpacity = phase === "idle-auth" ? 1 : 0;
 
   const { t } = useTranslation();
   const isTransitioning = phase === "fading-in" || phase === "fading-out";
 
-  if (phase === "verifying") {
+  if (phase === "verifying" || phase === "loading-app") {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -405,9 +333,7 @@ function App() {
         >
           <Suspense fallback={null}>
             <UiPreferencesProvider>
-              <ConnectionDefaultsProvider>
-                <AppShell username={authUsername} onLogout={handleLogout} />
-              </ConnectionDefaultsProvider>
+              <AppShell username={authUsername} onLogout={handleLogout} />
             </UiPreferencesProvider>
           </Suspense>
         </div>
@@ -430,47 +356,60 @@ function App() {
   );
 }
 
-function RootApp() {
-  const [showVersionCheck, setShowVersionCheck] = useState(true);
+/**
+ * An anonymous guest link (a shared session, a collab room). The view comes
+ * from a guest plugin's standalone tab view, so the guest-capable plugins
+ * load first, without a session.
+ */
+function GuestView({ view }: { view: string }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    startPluginRuntime({ guest: true })
+      .catch(() => {})
+      .finally(() => setReady(true));
+  }, []);
+  if (!ready) return null;
+  const def = standaloneViewFor(view);
+  if (!def?.standalone) {
+    return <PluginViewPlaceholder kind="tab" viewId={view} />;
+  }
+  const Standalone = def.standalone;
+  return (
+    <Standalone
+      view={view}
+      params={new URLSearchParams(window.location.search)}
+    />
+  );
+}
 
+/**
+ * Picks between a guest link and a signed-in full-screen view. Guests never
+ * have a JWT or cookie to verify, so a guest view skips FullscreenAppGate.
+ */
+function ViewRouter({ view }: { view: string }) {
+  const [guestViews, setGuestViews] = useState<string[] | null>(null);
+  useEffect(() => {
+    void fetchGuestViews().then(setGuestViews);
+  }, []);
+  if (!guestViews) return null;
+  if (guestViews.includes(view)) return <GuestView view={view} />;
+  return (
+    <UiPreferencesProvider>
+      <FullscreenAppGate />
+    </UiPreferencesProvider>
+  );
+}
+
+function RootApp() {
   useServiceWorker();
 
   const searchParams = new URLSearchParams(window.location.search);
-  const isFullscreen = searchParams.has("view");
+  const view = searchParams.get("view");
 
-  // Anonymous guests have no cookie/JWT at all, so this bypasses FullscreenAppGate's
-  // auth check entirely rather than waiting on a getUserInfo() call that would always fail.
-  if (searchParams.get("view") === "shared") {
+  if (view !== null) {
     return (
       <Suspense fallback={null}>
-        <SharedSessionView />
-      </Suspense>
-    );
-  }
-  if (searchParams.get("view") === "collab-guest") {
-    return (
-      <Suspense fallback={null}>
-        <CollabGuestView />
-      </Suspense>
-    );
-  }
-
-  if (isFullscreen) {
-    return (
-      <Suspense fallback={null}>
-        <UiPreferencesProvider>
-          <ConnectionDefaultsProvider>
-            <FullscreenAppGate />
-          </ConnectionDefaultsProvider>
-        </UiPreferencesProvider>
-      </Suspense>
-    );
-  }
-
-  if (isElectron() && showVersionCheck) {
-    return (
-      <Suspense fallback={null}>
-        <ElectronVersionCheck onContinue={() => setShowVersionCheck(false)} />
+        <ViewRouter view={view} />
       </Suspense>
     );
   }

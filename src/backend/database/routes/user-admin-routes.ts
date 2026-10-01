@@ -1,3 +1,4 @@
+import { isExternalAccount } from "../../auth/external-account.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -9,8 +10,13 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
   createCurrentRoleRepository,
+  createCurrentUserAuthRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
+import {
+  listUserSecondFactors,
+  resetUserSecondFactors,
+} from "../../auth/second-factor-admin.js";
 import type {
   UserRecord,
   UserRepository,
@@ -107,11 +113,16 @@ export function registerUserAdminRoutes(
         total = pageUsers.length;
       }
 
+      const secondFactorUsers = requester?.isAdmin
+        ? await createCurrentUserAuthRepository().listUserIdsWithSecondFactors()
+        : new Set<string>();
+
       res.json({
         users: pageUsers.map((u) => ({
           userId: u.id,
           username: u.username,
           is_admin: u.isAdmin,
+          is_external: isExternalAccount(u),
           is_oidc: u.isOidc,
           password_hash: u.passwordHash ? "set" : null,
           // Management-only details stay admin-eyes-only; regular users hit
@@ -119,7 +130,7 @@ export function registerUserAdminRoutes(
           ...(requester?.isAdmin
             ? {
                 data_unlocked: DataCrypto.canUserAccessData(u.id),
-                totp_enabled: !!u.totpEnabled,
+                second_factor_enabled: secondFactorUsers.has(u.id),
               }
             : {}),
         })),
@@ -468,9 +479,6 @@ export function registerUserAdminRoutes(
         identifierPath: "",
         namePath: "",
         scopes: "openid email profile",
-        totpSecret: null,
-        totpEnabled: false,
-        totpBackupCodes: null,
       });
 
       try {
@@ -641,7 +649,7 @@ export function registerUserAdminRoutes(
       if (outcome.status === "wipe_confirmation_required") {
         return res.status(409).json({
           error:
-            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and snippets.",
+            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and other saved data.",
           code: "DATA_WIPE_REQUIRED",
         });
       }
@@ -673,92 +681,123 @@ export function registerUserAdminRoutes(
 
   /**
    * @openapi
-   * /users/admin/totp/disable:
-   *   post:
-   *     summary: Disable a user's TOTP (admin only)
-   *     description: Clears another user's TOTP secret, enabled flag and backup codes so they can log in without 2FA.
+   * /users/admin/{userId}/second-factors:
+   *   get:
+   *     summary: List a user's second factors (admin only)
+   *     description: Every second factor the user is enrolled in, and whether the plugin behind it is running.
    *     tags:
    *       - Users
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               userId:
-   *                 type: string
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
    *     responses:
    *       200:
-   *         description: TOTP disabled for the user.
-   *       400:
-   *         description: User ID is required or TOTP is not enabled.
+   *         description: Enrolled factors.
    *       403:
    *         description: Admin access required.
    *       404:
    *         description: User not found.
-   *       500:
-   *         description: Failed to disable TOTP.
    */
-  router.post("/admin/totp/disable", authenticateJWT, async (req, res) => {
-    const adminId = (req as AuthenticatedRequest).userId;
-    const { userId: targetUserId } = req.body;
-
-    if (!isNonEmptyString(targetUserId)) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
-
-    try {
-      const userRepository = createCurrentUserRepository();
-      const adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-
-      const targetUser = await userRepository.findById(targetUserId.trim());
-      if (!targetUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      if (!targetUser.totpEnabled) {
-        return res
-          .status(400)
-          .json({ error: "TOTP is not enabled for this user" });
-      }
-
-      await userRepository.update(targetUser.id, {
-        totpSecret: null,
-        totpEnabled: false,
-        totpBackupCodes: null,
-      });
-
+  router.get(
+    "/admin/:userId/second-factors",
+    authenticateJWT,
+    async (req, res) => {
+      const adminId = (req as AuthenticatedRequest).userId;
       try {
-        await DatabaseSaveTrigger.forceSave("admin_disable_totp");
-      } catch (saveError) {
-        authLogger.error("Failed to persist TOTP disable to disk", saveError, {
-          operation: "admin_disable_totp_save_failed",
-          userId: targetUser.id,
-        });
+        const userRepository = createCurrentUserRepository();
+        const adminUser = await userRepository.findById(adminId);
+        if (!adminUser?.isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        const targetUser = await userRepository.findById(
+          String(req.params.userId),
+        );
+        if (!targetUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        res.json({ factors: await listUserSecondFactors(targetUser.id) });
+      } catch (err) {
+        authLogger.error("Failed to list second factors", err);
+        res.status(500).json({ error: "Failed to list second factors" });
       }
+    },
+  );
 
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId: adminId,
-        username: adminUser.username ?? adminId,
-        action: "admin_disable_totp",
-        resourceType: "user",
-        resourceId: targetUser.id,
-        resourceName: targetUser.username,
-        ipAddress,
-        userAgent,
-        success: true,
-      });
+  /**
+   * @openapi
+   * /users/admin/{userId}/second-factors:
+   *   delete:
+   *     summary: Reset a user's second factors (admin only)
+   *     description: Removes every second factor the user enrolled in, including ones whose plugin is disabled or missing, and forgets their trusted devices. The user can sign in with their first factor and enrol again.
+   *     tags:
+   *       - Users
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Second factors reset.
+   *       403:
+   *         description: Admin access required.
+   *       404:
+   *         description: User not found.
+   */
+  router.delete(
+    "/admin/:userId/second-factors",
+    authenticateJWT,
+    async (req, res) => {
+      const adminId = (req as AuthenticatedRequest).userId;
+      try {
+        const userRepository = createCurrentUserRepository();
+        const adminUser = await userRepository.findById(adminId);
+        if (!adminUser?.isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        const targetUser = await userRepository.findById(
+          String(req.params.userId),
+        );
+        if (!targetUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
 
-      res.json({ message: "TOTP disabled" });
-    } catch (err) {
-      authLogger.error("Failed to disable TOTP for user", err);
-      res.status(500).json({ error: "Failed to disable TOTP" });
-    }
-  });
+        const removed = await resetUserSecondFactors(targetUser.id);
+
+        try {
+          await DatabaseSaveTrigger.forceSave("admin_reset_second_factors");
+        } catch (saveError) {
+          authLogger.error("Failed to persist second factor reset", saveError, {
+            operation: "admin_reset_second_factors_save_failed",
+            userId: targetUser.id,
+          });
+        }
+
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId: adminId,
+          username: adminUser.username ?? adminId,
+          action: "admin_reset_second_factors",
+          resourceType: "user",
+          resourceId: targetUser.id,
+          resourceName: targetUser.username,
+          details: JSON.stringify({ removed }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+
+        res.json({ message: "Second factors reset", removed });
+      } catch (err) {
+        authLogger.error("Failed to reset second factors", err);
+        res.status(500).json({ error: "Failed to reset second factors" });
+      }
+    },
+  );
 
   /**
    * @openapi

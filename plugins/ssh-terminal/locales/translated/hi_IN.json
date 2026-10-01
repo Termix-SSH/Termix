@@ -1,0 +1,705 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "जोड़ें",
+    "arrowDown": "नीचे तीर",
+    "arrowLeft": "बाएँ तीर",
+    "arrowRight": "दाएँ तीर",
+    "arrowUp": "ऊपर तीर",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "पूर्ण",
+    "editQuickKeys": "त्वरित कुंजियाँ संपादित करें",
+    "end": "एंड",
+    "esc": "Esc",
+    "home": "होम",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "चिपकाएँ",
+    "quickKeyPlaceholder": "उदा. sudo ",
+    "quickKeysDesc": "हटाने के लिए × पर टैप करें। अधिकतम 8 वर्ण समर्थित।",
+    "quickKeysTitle": "त्वरित कुंजियाँ",
+    "removeQuickKey": "हटाएँ",
+    "resetDefaults": "डिफ़ॉल्ट पर रीसेट करें",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "closeTab": "बंद करें",
+    "connecting": "कनेक्ट हो रहा है...",
+    "connectionLost": "कनेक्शन खो गया",
+    "connectionRejected": "सर्वर द्वारा कनेक्शन अस्वीकृत। कृपया अपनी प्रमाणीकरण और नेटवर्क कॉन्फ़िगरेशन जाँचें।",
+    "connectionTimeout": "कनेक्शन टाइमआउट",
+    "enableAutoTmuxAction": "ऑटो-tmux सक्षम करें",
+    "hostKeyRejected": "SSH होस्ट कुंजी सत्यापन अस्वीकृत। कनेक्शन रद्द किया गया।",
+    "linkDialogCopy": "कॉपी करें",
+    "linkDialogOpen": "खोलें",
+    "linkDialogTitle": "लिंक खोलें",
+    "maxReconnectAttemptsReached": "अधिकतम पुनः कनेक्ट प्रयास पूर्ण हो गए",
+    "noHostSelected": "कोई होस्ट चयनित नहीं",
+    "passwordPromptFillTitle": "क्या सहेजे गए पासवर्ड को इस प्रांप्ट में भरें?",
+    "reconnect": "पुनः कनेक्ट करें",
+    "reconnected": "पुनः कनेक्ट हुआ",
+    "reconnecting": "पुनः कनेक्ट हो रहा है... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Connection lost, reconnecting...",
+    "searchCaseSensitive": "Match Case",
+    "searchClose": "Close (Escape)",
+    "searchNext": "Next Match (Enter)",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "Find",
+    "searchPrevious": "Previous Match (Shift+Enter)",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "Match Whole Word",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionTakenOver": "सत्र किसी अन्य टैब में खोला गया था। पुनः कनेक्ट हो रहा है...",
+    "tmuxAttached": "अटैच किए गए क्लाइंट",
+    "tmuxAttachedCount": "{{count}} अटैच किए गए",
+    "tmuxCopyHint": "चयन समायोजित करें और क्लिपबोर्ड पर कॉपी करने के लिए Enter दबाएं",
+    "tmuxCreateNew": "नया सत्र प्रारंभ करें",
+    "tmuxDetached": "tmux सत्र से डिटैच हो गया",
+    "tmuxLastActivity": "अंतिम गतिविधि",
+    "tmuxSessionAttached": "tmux सत्र अटैच किया गया: {{name}}",
+    "tmuxSessionCreated": "tmux सत्र बनाया गया: {{name}}",
+    "tmuxSessionPickerDesc": "इस होस्ट पर मौजूदा tmux सत्र पाए गए। पुनः अटैच करने के लिए एक का चयन करें या नया सत्र बनाएं।",
+    "tmuxSessionPickerTitle": "tmux सत्र",
+    "tmuxTimeDays": "{{count}} दिन पहले",
+    "tmuxTimeHours": "{{count}} घंटे पहले",
+    "tmuxTimeJustNow": "अभी-अभी",
+    "tmuxTimeMinutes": "{{count}} मिनट पहले",
+    "tmuxUnavailable": "tmux रिमोट होस्ट पर स्थापित नहीं है, मानक शेल पर वापस लौट रहा है",
+    "tmuxWindowCount": "{{count}} विंडो",
+    "tmuxWindows": "विंडो",
+    "unknownError": "अज्ञात त्रुटि हुई",
+    "websocketAbnormalClose": "कनेक्शन अप्रत्याशित रूप से बंद हो गया। यह रिवर्स प्रॉक्सी या SSL कॉन्फ़िगरेशन समस्या के कारण हो सकता है। कृपया सर्वर लॉग जाँचें।",
+    "websocketError": "WebSocket कनेक्शन त्रुटि",
+    "clipboardReadFailed": "क्लिपबोर्ड से पढ़ने में विफल। सुनिश्चित करें कि क्लिपबोर्ड अनुमतियाँ दी गई हैं।",
+    "clipboardWriteFailed": "क्लिपबोर्ड पर कॉपी करने में विफल। सुनिश्चित करें कि पेज HTTPS या लोकलहोस्ट पर सर्व किया गया है।",
+    "connected": "कनेक्टेड",
+    "totpCodeLabel": "सत्यापन कोड",
+    "duplicateTab": "Duplicate tab",
+    "imageChooseFile": "Choose an image file",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
+    "retry": "पुनः प्रयास करें",
+    "showToolbar": "टूलबार विस्तारित करें",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
+    "uploadingImage": "अपलोड हो रहा है..."
+  },
+  "history": {
+    "noTerminalSelected": "कोई टर्मिनल चयनित नहीं",
+    "noTerminalSelectedHint": "कमांड इतिहास देखने के लिए SSH टर्मिनल टैब खोलें",
+    "searchPlaceholder": "इतिहास खोजें...",
+    "clearAll": "सभी साफ़ करें",
+    "noHistoryEntries": "कोई इतिहास प्रविष्टियाँ नहीं",
+    "trackingDisabled": "इतिहास ट्रैकिंग अक्षम है",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
+  },
+  "touchInput": {
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "Advanced",
+    "resetDefaults": "डिफ़ॉल्ट पर रीसेट करें",
+    "dragThreshold": "Drag threshold",
+    "maxWheelDelta": "Maximum wheel delta",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "Release grace period",
+    "minimumVelocity": "Minimum velocity",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "Maximum ticks per frame"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
+    "selectedModeUnavailable": "Unavailable",
+    "test": "परीक्षण",
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "An upload would use: {{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "सेशन",
+        "newHosts": "New Hosts"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+      },
+      "commandHistoryEnabled": {
+        "label": "कमांड इतिहास",
+        "description": "कमांड इतिहास रिकॉर्डिंग की अनुमति दें। अक्षम होने पर, प्रति-होस्ट सेटिंग्स की परवाह किए बिना इतिहास सहेजा नहीं जाता है।"
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
+      },
+      "imageStorageMode": {
+        "label": "Storage Mode",
+        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "auto": "स्वचालित",
+        "local": "स्थानीय",
+        "remoteSftp": "Remote (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+      },
+      "imageMaxCount": {
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+      },
+      "imageMaxBytes": {
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+      },
+      "newHostAutoTmux": {
+        "label": "Auto-Tmux",
+        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+      },
+      "newHostTheme": {
+        "label": "Theme for new hosts",
+        "description": "The terminal theme a new host starts with."
+      },
+      "newHostFontFamily": {
+        "label": "Font for new hosts",
+        "description": "The terminal font a new host starts with."
+      },
+      "newHostFontSize": {
+        "label": "Font size for new hosts",
+        "description": "The terminal font size a new host starts with, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Cursor style for new hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinking cursor for new hosts"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Enable Terminal Toolbar",
+        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+      },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
+      },
+      "enableCommandHistory": {
+        "label": "कमांड इतिहास",
+        "description": "इतिहास और स्वतः पूर्ण के लिए इस टर्मिनल में चलाए गए कमांड रिकॉर्ड करें"
+      },
+      "enableTerminal": {
+        "label": "टर्मिनल सक्षम करें",
+        "description": "Offer an SSH terminal for this host."
+      },
+      "inheritAppearance": {
+        "label": "Use user defaults"
+      },
+      "theme": {
+        "label": "थीम"
+      },
+      "cursorBlink": {
+        "label": "Blinking cursor"
+      },
+      "cursorStyle": {
+        "label": "Cursor style"
+      },
+      "fontSize": {
+        "label": "Font size"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Scrollback"
+      },
+      "letterSpacing": {
+        "label": "Letter spacing"
+      },
+      "lineHeight": {
+        "label": "Line height"
+      },
+      "bellStyle": {
+        "label": "Bell"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum contrast ratio"
+      },
+      "backgroundImage": {
+        "label": "Background image"
+      },
+      "backgroundImageOpacity": {
+        "label": "Background image opacity"
+      },
+      "customThemeColors": {
+        "label": "Custom theme colors"
+      },
+      "rightClickSelectsWord": {
+        "label": "Right click selects word"
+      },
+      "macOptionIsMeta": {
+        "label": "Option is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Fast scroll key"
+      },
+      "fastScrollSensitivity": {
+        "label": "Fast scroll speed"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh command"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Use the SSH title"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntax highlighting"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntax highlighting categories"
+      },
+      "linkClickBehavior": {
+        "label": "Link click"
+      },
+      "localEcho": {
+        "label": "Local echo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Offer to fill password prompts"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
+      }
+    },
+    "user": {
+      "commandAutocomplete": {
+        "label": "कमांड ऑटोकम्प्लीट",
+        "description": "Show autocomplete while typing if you press tab"
+      },
+      "localEcho": {
+        "label": "Local Echo",
+        "description": "Reduce perceived input latency using safe local keystroke prediction"
+      },
+      "linkClickBehavior": {
+        "label": "टर्मिनल लिंक क्लिक",
+        "description": "टर्मिनल में लिंक क्लिक करने पर डिफ़ॉल्ट व्यवहार"
+      },
+      "customThemes": {
+        "label": "Saved themes"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
+  },
+  "hosts": {
+    "tabTerminal": "टर्मिनल",
+    "addHost": "होस्ट जोड़ें",
+    "applyGlobalThemeTooltip": "Apply this theme",
+    "backgroundImageDesc": "टर्मिनल पृष्ठभूमि छवि के लिए वैकल्पिक URL",
+    "backgroundImageLabel": "पृष्ठभूमि छवि URL",
+    "backgroundImageOpacityLabel": "पृष्ठभूमि छवि अपारदर्शिता",
+    "backspaceMode": "बैकस्पेस मोड",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "बैकस्पेस मोड",
+    "backspaceModeNormal": "Normal (DEL)",
+    "behaviorAndAdvanced": "व्यवहार और उन्नत",
+    "bellStyle": "बेल शैली",
+    "bellStyleBoth": "Both",
+    "bellStyleLabel": "घंटी शैली",
+    "bellStyleNone": "कोई नहीं",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "Visual",
+    "colorTheme": "रंग थीम",
+    "cursorBlink": "कर्सर ब्लिंक",
+    "cursorBlinking": "कर्सर झपकना",
+    "cursorBlinkingDesc": "टर्मिनल कर्सर के लिए झपकने वाला एनीमेशन सक्षम करें",
+    "cursorStyle": "कर्सर शैली",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Block",
+    "cursorStyleLabel": "कर्सर शैली",
+    "cursorStyleUnderline": "Underline",
+    "customThemeAnsiColors": "ANSI रंग",
+    "customThemeBackground": "पृष्ठभूमि",
+    "customThemeBlack": "काला",
+    "customThemeBlue": "नीला",
+    "customThemeBrightBlack": "चमकदार काला",
+    "customThemeBrightBlue": "चमकदार नीला",
+    "customThemeBrightCyan": "चमकदार सियान",
+    "customThemeBrightGreen": "चमकदार हरा",
+    "customThemeBrightMagenta": "चमकदार मैजेंटा",
+    "customThemeBrightRed": "चमकदार लाल",
+    "customThemeBrightWhite": "चमकदार सफेद",
+    "customThemeBrightYellow": "चमकदार पीला",
+    "customThemeColors": "कस्टम रंग",
+    "customThemeCursor": "कर्सर",
+    "customThemeCursorAccent": "कर्सर एक्सेंट",
+    "customThemeCyan": "सियान",
+    "customThemeForeground": "अग्रभूमि",
+    "customThemeGreen": "हरा",
+    "customThemeMagenta": "मैजेंटा",
+    "customThemeRed": "लाल",
+    "customThemeResetTooltip": "डिफ़ॉल्ट पर रीसेट करें",
+    "customThemeSelection": "चयन",
+    "customThemeWhite": "सफेद",
+    "customThemeYellow": "पीला",
+    "deleteGlobalThemeTooltip": "Delete this theme",
+    "docsLink": "दस्तावेज़ देखें",
+    "enableAutoMosh": "ऑटो-मोश सक्षम करें",
+    "enableAutoMoshDesc": "यदि उपलब्ध हो तो SSH के बजाय Mosh को प्राथमिकता दें",
+    "enableAutoTmux": "ऑटो-tmux सक्षम करें",
+    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "fastScrollModifier": "फास्ट स्क्रॉल मॉडिफ़ायर",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "तेज़ स्क्रॉल संशोधक",
+    "fastScrollModifierShift": "Shift",
+    "fastScrollSensitivity": "फास्ट स्क्रॉल संवेदनशीलता",
+    "fastScrollSensitivityLabel": "तेज़ स्क्रॉल संवेदनशीलता",
+    "fontFamily": "फ़ॉन्ट परिवार",
+    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
+    "fontFamilyCustomOption": "Custom...",
+    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyLabel": "फ़ॉन्ट परिवार",
+    "fontSize": "फ़ॉन्ट आकार",
+    "fontSizeLabel": "फ़ॉन्ट आकार",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "letterSpacing": "अक्षर अंतराल",
+    "letterSpacingPx": "अक्षर अंतराल (px)",
+    "lineHeight": "पंक्ति ऊंचाई",
+    "lineHeightLabel": "पंक्ति ऊंचाई",
+    "linkClickBehaviorConfirm": "खोलने या कॉपी करने के लिए पॉपअप दिखाएं",
+    "linkClickBehaviorDesc": "टर्मिनल में लिंक क्लिक करने पर क्या होता है यह नियंत्रित करता है। ऐप-स्तरीय सेटिंग का अनुसरण करने के लिए 'डिफ़ॉल्ट' का उपयोग करें।",
+    "linkClickBehaviorDirect": "सीधे खोलें",
+    "linkClickBehaviorLabel": "लिंक क्लिक व्यवहार",
+    "loadingHost": "होस्ट लोड हो रहा है...",
+    "localEchoAuto": "Automatic",
+    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
+    "localEchoLabel": "Local Echo",
+    "localEchoOff": "बंद",
+    "localEchoOn": "Always on",
+    "macOptionIsMetaLabel": "Option Key Sends Meta",
+    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "moshCommand": "MOSH कमांड",
+    "moshCommandLabel": "Mosh कमांड",
+    "noSavedThemes": "No saved themes yet",
+    "none": "कोई नहीं",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "rightClickSelectsWord": "राइट क्लिक शब्द चयन",
+    "rightClickSelectsWordLabel": "राइट-क्लिक शब्द चुनता है",
+    "rightClickSelectsWordShortDesc": "राइट-क्लिक पर कर्सर के नीचे का शब्द चुनें",
+    "saveAsGlobalTheme": "Save as Global Theme",
+    "saveGlobalThemeError": "Failed to save theme",
+    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
+    "saveGlobalThemeSuccess": "Theme saved",
+    "savedThemesLabel": "Saved Themes",
+    "scrollbackBufferLabel": "स्क्रॉलबैक बफ़र",
+    "scrollbackMaxLines": "इतिहास में रखी जाने वाली लाइनों की अधिकतम संख्या",
+    "sudoPasswordAutoFill": "sudo पासवर्ड ऑटो-फिल",
+    "sudoPasswordAutoFillDesc": "sudo पासवर्ड संग्रहीत करें ताकि होस्ट मेट्रिक्स, टर्मिनल संकेत और अन्य स्वचालित रूप से विशेषाधिकार प्राप्त कमांड चला सकें।",
+    "sudoPasswordAutoFillLabel": "sudo पासवर्ड स्वतः-भरण",
+    "syntaxCategoryIpAddresses": "IP पते",
+    "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
+    "syntaxCategoryLogLevels": "लॉग स्तर",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "लेबल की गई संख्याएँ",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "फ़ाइल पथ",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
+    "syntaxCategoryTimestamps": "समय-चिह्न",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryUrlsDesc": "https://example.com",
+    "syntaxHighlightingDesc": "टर्मिनल आउटपुट को रंगीन करें (त्रुटियाँ, पथ, IP, समय-चिह्न)",
+    "syntaxHighlightingLabel": "सिंटैक्स हाइलाइटिंग",
+    "terminalAppearance": "टर्मिनल स्वरूप",
+    "theme": "थीम",
+    "themePreview": "थीम पूर्वावलोकन",
+    "useSSHTitleDesc": "टैब शीर्षक को होस्ट नाम के बजाय शेल की विंडो शीर्षक से अपडेट करें",
+    "useSSHTitleLabel": "SSH विंडो शीर्षक का उपयोग करें",
+    "enableTunnel": "टनल सक्षम करें",
+    "enableFileManager": "फ़ाइल प्रबंधक सक्षम करें",
+    "enableDocker": "Docker सक्षम करें",
+    "startupSnippet": "स्टार्टअप स्निपेट",
+    "quickActions": "त्वरित कार्रवाइयाँ",
+    "proxmoxLastSyncStatus": {
+      "success": "सफलता"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "RDP URL कॉपी किया गया",
+    "vncUrlCopied": "VNC URL कॉपी किया गया",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "कोई क्रेडेंशियल नहीं (नीचे सीधे क्रेडेंशियल)",
+      "authTypeDirect": "सीधा",
+      "authTypeCredential": "क्रेडेंशियल",
+      "authTypeNone": "कोई नहीं",
+      "recordingPath": "रिकॉर्डिंग पथ",
+      "recordingName": "रिकॉर्डिंग नाम",
+      "saveHostFirst": "पहले होस्ट सहेजें।",
+      "sharingOptionsAfterSave": "साझाकरण विकल्प होस्ट सहेजे जाने के बाद उपलब्ध हैं।",
+      "permissionLevel": "अनुमति स्तर",
+      "typeHeader": "प्रकार",
+      "targetHeader": "लक्ष्य",
+      "permissionHeader": "अनुमति",
+      "cancelBtn": "रद्द करें",
+      "savingBtn": "सहेज रहा है...",
+      "updateHostBtn": "होस्ट अपडेट करें",
+      "addHostBtn": "होस्ट जोड़ें"
+    },
+    "filterAuthVault": "Vault"
+  },
+  "nav": {
+    "history": "इतिहास",
+    "localTerminal": "Local Terminal",
+    "sshTools": "SSH टूल्स",
+    "terminal": "टर्मिनल",
+    "macros": "Macros"
+  },
+  "sshTools": {
+    "broadcastInputPlaceholder": "कीस्ट्रोक्स प्रसारित करने के लिए यहाँ टाइप करें...",
+    "copyOnSelect": "Copy selected text automatically",
+    "enableRightClickCopyPaste": "राइट-क्लिक कॉपी/पेस्ट सक्षम करें",
+    "fillPassword": "पासवर्ड भरें",
+    "fillPasswordMissing": "{{count}} चयनित टर्मिनल(ों) के लिए कोई सहेजा गया पासवर्ड नहीं",
+    "fillPasswordSuccess": "{{count}} टर्मिनल(ों) में पासवर्ड भरा गया",
+    "keyRecordingTitle": "की रिकॉर्डिंग",
+    "noTerminalTabsOpen": "कोई टर्मिनल टैब खुला नहीं है",
+    "recordToTerminals": "टर्मिनलों में रिकॉर्ड करें",
+    "selectAll": "सभी",
+    "selectNone": "कोई नहीं",
+    "selectTerminalsAbove": "ऊपर के टर्मिनल चुनें",
+    "settingsTitle": "सेटिंग्स",
+    "startRecording": "रिकॉर्डिंग शुरू करें",
+    "stopRecording": "रिकॉर्डिंग रोकें"
+  },
+  "keybindings": {
+    "copy": "Copy selection",
+    "paste": "चिपकाएँ",
+    "sendControlCode": "Send Ctrl+letter signal",
+    "sendText": "Send text",
+    "controlCodeLabel": "Letter",
+    "textLabel": "Text to send",
+    "appendEnterLabel": "Press Enter after sending",
+    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+    "textRequired": "Enter the text to send",
+    "controlCodeRequired": "Enter a single letter for the control code",
+    "builtIn": {
+      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+      "copyCmdC": "Copy selection (Cmd+C)",
+      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+    }
+  },
+  "macros": {
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "लक्ष्य",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
+    "name": "नाम",
+    "namePlaceholder": "Restart web server",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "विवरण",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "सहेजे न गए परिवर्तन",
+    "save": "सहेजें",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "हटाएँ",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "रद्द करें",
+    "run": "चलाएं",
+    "stop": "स्टॉप",
+    "running": "Running...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
+    "stepTypes": {
+      "send": {
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
+      },
+      "wait": {
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
+      },
+      "if": {
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
+      },
+      "repeat": {
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
+      }
+    },
+    "send": {
+      "text": "Command or text",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
+    },
+    "wait": {
+      "pattern": "Wait until the output contains",
+      "patternPlaceholder": "पासवर्ड:",
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "Keep going anyway"
+    },
+    "delay": {
+      "duration": "Wait for"
+    },
+    "ifStep": {
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
+    },
+    "repeat": {
+      "count": "Number of times",
+      "times": "times"
+    },
+    "match": {
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "Leave this off to match the text exactly as written.",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+    },
+    "seconds": "सेकंड",
+    "secondsShort": "{{count}}s"
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

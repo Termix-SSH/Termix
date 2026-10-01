@@ -27,6 +27,7 @@ export function buildHostTree(
       icon?: string;
       credentialId?: number | null;
       sortOrder?: number | null;
+      localOnly?: boolean;
     }
   >,
 ): HostFolder {
@@ -48,6 +49,7 @@ export function buildHostTree(
           icon: meta?.icon,
           credentialId: meta?.credentialId ?? null,
           sortOrder: meta?.sortOrder ?? null,
+          localOnly: !!meta?.localOnly,
           children: [],
         };
         folderMap.set(accumulated, folder);

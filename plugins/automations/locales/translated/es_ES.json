@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Ver automatizaciones",
+      "description": "Consulta las automatizaciones y su historial."
+    },
+    "create": {
+      "title": "Crear automatizaciones",
+      "description": "Agregar nuevas automatizaciones."
+    },
+    "edit": {
+      "title": "Editar automatizaciones",
+      "description": "Modificar las automatizaciones existentes."
+    },
+    "delete": {
+      "title": "Eliminar automatizaciones",
+      "description": "Eliminar automatizaciones."
+    },
+    "run": {
+      "title": "Ejecutar automatizaciones",
+      "description": "Activar una automatización manualmente."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "Automatizaciones",
+        "tabAutomations": "Automatizaciones",
+        "tabRuns": "Corre",
+        "tabChannels": "Canales",
+        "createAutomation": "Nueva automatización",
+        "backToAutomations": "Volver a Automatizaciones",
+        "createTitle": "Nueva automatización",
+        "editTitle": "Automatización de edición",
+        "empty": "Aún no hay automatizaciones. Crea una para que reaccione a una métrica, una programación o un evento.",
+        "emptyRuns": "Aún no hay carreras.",
+        "channelsHint": "Los canales se configuran en Alertas.",
+        "noChannelsHint": "La alerta siempre llega a tu bandeja de entrada. Agrega canales en Alertas para enviarla también a otros lugares.",
+        "nameLabel": "Nombre",
+        "namePlaceholder": "Por ejemplo, limpiar /data cuando se llena",
+        "nameRequired": "El nombre es obligatorio",
+        "descriptionLabel": "Descripción",
+        "descriptionPlaceholder": "Descripción opcional",
+        "enabledLabel": "Activado",
+        "concurrencyLabel": "Si ya está en funcionamiento",
+        "concurrencyHint": "Qué hacer si esto se activa de nuevo antes de que finalice la última ejecución.",
+        "concurrency": {
+          "skip": "Saltarse la nueva carrera",
+          "queue": "Espera y corre tras",
+          "allow": "Ejecutar ambos a la vez"
+        },
+        "save": "Guardar",
+        "created": "Automatización creada",
+        "updated": "Automatización guardada",
+        "deleted": "Automatización eliminada",
+        "deleteConfirm": "¿Eliminar esta automatización? Su historial de ejecución también se eliminará.",
+        "runNow": "Corre ahora",
+        "testRun": "Ejecución de prueba",
+        "testRunHint": "Ejecuta todos los pasos, pero no toca nada fuera de Termix.",
+        "runStarted": "La carrera ha comenzado.",
+        "runFinished": "Ejecución finalizada: {{status}}",
+        "trigger": "Disparador",
+        "steps": "Pasos",
+        "addStep": "Agregar paso",
+        "removeStep": "Eliminar paso",
+        "moveUp": "Subir",
+        "moveDown": "Baja",
+        "noSteps": "Aún no hay pasos a seguir. Añade uno para indicar qué debería suceder.",
+        "webhookTokenTitle": "URL del webhook",
+        "webhookTokenDescription": "Esto se muestra una sola vez. Guárdalo ahora, no se podrá recuperar más tarde.",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "viewJson": "JSON",
+        "viewBuilder": "Constructor",
+        "viewGraph": "Gráfico",
+        "lastRun": "Última carrera",
+        "never": "Nunca",
+        "duration": "{{seconds}}s",
+        "stepOutput": "Salida",
+        "stepError": "Error",
+        "dryRunBadge": "Ejecución de prueba",
+        "hostSelector": {
+          "trigger": "Host desencadenante",
+          "host": "Anfitrión específico",
+          "fleet": "Flota",
+          "all": "Todos los hosts"
+        },
+        "triggerKinds": {
+          "metric_threshold": "Umbral métrico",
+          "host_status": "El host sube o baja",
+          "health_check": "Cambios en los chequeos médicos",
+          "schedule": "Según un horario",
+          "docker_event": "Evento de contenedor",
+          "internal_event": "Evento Termix",
+          "webhook": "Webhook entrante"
+        },
+        "stepTypes": {
+          "notify": "Enviar alerta",
+          "http": "Llamar a una URL",
+          "run_snippet": "Ejecutar un fragmento",
+          "run_command": "Ejecutar un comando",
+          "docker": "Controlar un contenedor",
+          "tunnel": "Controlar un túnel",
+          "wol": "Despierta a un anfitrión",
+          "wait": "Esperar",
+          "set_var": "Establecer una variable",
+          "if": "Si / de lo contrario",
+          "run_automation": "Ejecuta otra automatización",
+          "stop": "Parada"
+        },
+        "statuses": {
+          "running": "En ejecución",
+          "success": "Éxito",
+          "failed": "Fallido",
+          "timeout": "Tiempo de espera agotado",
+          "skipped": "Saltado",
+          "cancelled": "Cancelado"
+        },
+        "fields": {
+          "host": "Host",
+          "metric": "Métrica",
+          "mount": "Punto de montaje",
+          "operator": "Es",
+          "value": "Valor",
+          "forSeconds": "Mantenido durante (segundos)",
+          "cooldown": "Tiempo de espera (minutos)",
+          "cron": "Expresión cron",
+          "intervalSeconds": "Cada (segundos)",
+          "timezone": "Huso horario",
+          "timezoneServer": "Hora del servidor",
+          "timezoneHint": "En esta zona se leen las horas cron. No se aplica a los horarios de intervalo.",
+          "container": "Recipiente",
+          "command": "Comando",
+          "url": "URL",
+          "method": "Método",
+          "body": "Cuerpo",
+          "channels": "También enviar a",
+          "title": "Título",
+          "message": "Mensaje",
+          "snippet": "Retazo",
+          "seconds": "Artículos de segunda clase",
+          "conditionLeftPlaceholder": "Valor a comprobar",
+          "conditionRightPlaceholder": "Comparar con",
+          "variableName": "nombre de la variable",
+          "variableValue": "Valor",
+          "elevated": "Ejecutar con sudo",
+          "onError": "Si esto falla",
+          "allowPrivateNetwork": "Permitir direcciones de red local",
+          "allowPrivateNetworkHint": "Necesario para un servicio autohospedado en su LAN. Desactivado por defecto para evitar solicitudes a direcciones internas."
+        },
+        "onError": {
+          "stop": "Detengan la carrera",
+          "continue": "Continuar"
+        },
+        "needsPlugin": "Necesidades {{plugin}}",
+        "needsPluginHint": "Esta automatización se omite hasta que la función que necesita vuelva a estar disponible.",
+        "offBadge": "Desactivado",
+        "docsLink": "Ver documentación",
+        "ago": {
+          "seconds": "{{count}}hace s",
+          "minutes": "hace {{count}}m",
+          "hours": "hace {{count}}h",
+          "days": "hace {{count}}d"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "Automatizaciones"
+  },
+  "onboarding": {
+    "feature_automations": "Automatizaciones",
+    "feature_automations_desc": "Ejecuta pasos automáticamente cuando ocurra algo y recibe notificaciones."
+  },
+  "maintenance": {
+    "title": "Mantenimiento",
+    "description": "Se pausan las automatizaciones de estado del host, salud, métricas, contenedores y desconexión de túneles mientras se realiza el trabajo. La monitorización, las ejecuciones manuales y las automatizaciones programadas continúan.",
+    "denied": "No tienes permiso para ver el mantenimiento.",
+    "sharedReadOnly": "Este servidor se ha compartido contigo. Solo su propietario puede modificar el mantenimiento.",
+    "failed": "No se pudo actualizar el mantenimiento.",
+    "active": "Mantenimiento activo",
+    "estimated": "Finalización estimada",
+    "noAutoEnd": "El presupuesto no pone fin al mantenimiento. Finalícelo explícitamente cuando el trabajo esté terminado.",
+    "endConfirm": "¿Finalizar el mantenimiento y reanudar las automatizaciones activadas por eventos para este host?",
+    "confirmEnd": "Confirmar fin",
+    "cancel": "Cancelar",
+    "end": "Fin del mantenimiento",
+    "action": "Acción",
+    "startNow": "Empieza ahora",
+    "schedule": "Programar para más tarde",
+    "reason": "Razón",
+    "startUtc": "Primer inicio (UTC)",
+    "repeat": "Repetir",
+    "once": "Una vez",
+    "weekly": "Semanalmente",
+    "monthly": "Mensual",
+    "utcHelp": "Los horarios utilizan UTC durante todo el año. Los horarios mensuales omiten los meses que no incluyen el día seleccionado. Los periodos de mantenimiento planificados no pueden superponerse; el mantenimiento prolongado continúa en los periodos posteriores.",
+    "duration": "Duración estimada (minutos)",
+    "grace": "Período de gracia (minutos)",
+    "notify": "Notificar una vez si sigue sin conexión después del período estimado más el período de gracia.",
+    "addSchedule": "Agregar horario",
+    "schedules": "Horarios",
+    "noSchedules": "Sin programas de mantenimiento.",
+    "completed": "Ya ha comenzado",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minutos",
+    "remove": "Eliminar horario",
+    "loadFailed": "No se pudo actualizar el estado de mantenimiento. Los cambios están deshabilitados hasta que se puedan cargar.",
+    "loading": "Cargando estado de mantenimiento…"
+  }
+}

@@ -7,22 +7,16 @@ export interface KeyCombo {
   meta: boolean;
 }
 
-export type KeybindingActionType =
-  | "copy"
-  | "paste"
-  | "sendControlCode"
-  | "sendText"
-  | "runSnippet"
-  | "nextTab"
-  | "previousTab"
-  | "openCommandPalette";
+/**
+ * The shell's own actions (nextTab, previousTab, openCommandPalette,
+ * reconnectSession) or one a plugin declared in contributes.keybindingActions.
+ */
+export type KeybindingActionType = string;
 
+/** A bound action: its type plus the parameters its declaration lists. */
 export interface KeybindingAction {
   type: KeybindingActionType;
-  text?: string;
-  controlCode?: string;
-  snippetId?: string;
-  appendEnter?: boolean;
+  [param: string]: unknown;
 }
 
 export interface CustomKeybinding {

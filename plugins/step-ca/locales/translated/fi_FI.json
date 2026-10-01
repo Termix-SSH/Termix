@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Vaihe CA"
+  },
+  "editor": {
+    "label": "Vaihe CA",
+    "description": "Kirjaudu sisään identiteetintarjoajasi kautta ja anna vaiheittaisen varmentajan myöntää lyhytaikainen SSH-varmenne tälle isännälle. Järjestelmänvalvojan on määritettävä varmentajan URL-osoite, pääkäyttäjän sormenjälki ja OIDC-varmenne järjestelmävalvojan asetuksissa olevassa vaiheittaisen varmentajan osiossa.",
+    "docs": "Näytä dokumentit"
+  },
+  "dialog": {
+    "title": "Vaiheen CA-todennus vaaditaan",
+    "description": "Jatka suorittamalla todennus selaimessasi. Varmenne on voimassa niin kauan kuin varmenteen myöntäjäsi sallii.",
+    "openBrowser": "Avaa selain todennusta varten",
+    "waiting": "Odotetaan selaimen todennusta...",
+    "authenticating": "Todennusta käsitellään..."
+  },
+  "errors": {
+    "authFailed": "Todennus epäonnistui. Tarkista tunnistetietosi ja yritä uudelleen.",
+    "timeout": "Todennus aikakatkaistiin. Yritä uudelleen."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "Kalifornian URL-osoite",
+      "description": "Smallstep-CA:n https-URL-osoite. Jätä CA:n URL-osoite, sormenjälki ja tarjoaja tyhjiksi poistaaksesi Step CA:n käytöstä.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Juurisormenjälki (SHA-256)",
+      "description": "Juurivarmenteen sormenjälki, kuten vaiheessa ca bootstrap näyttää."
+    },
+    "provisioner": {
+      "label": "OIDC-palveluntarjoajan nimi",
+      "description": "Varmentajan OIDC-palveluntarjoajan nimi. Valitse sitten isännän todennustyypiksi \"Vaiheen varmentaja\"."
+    },
+    "privateEndpoints": {
+      "label": "Sallitut yksityiset Step CA -isännät",
+      "description": "Yksityiset isännöitsijät, joilla Step CA -varmennetyönkulku voi ottaa yhteyttä: itse CA:han ja, jos kyseessä on sisäinen varmenne, identiteetintarjoajaasi. Erota ne pilkuilla tai rivinvaihdolla."
+    },
+    "redirectUri": {
+      "label": "Uudelleenohjauksen URI",
+      "description": "Rekisteröi tämä URL-osoite sallituksi uudelleenohjauksen URI:ksi OIDC-tarjoajan takana olevalle identiteetintarjoajalle."
+    },
+    "legacyCallback": {
+      "label": "Käytä vanhaa uudelleenohjaus-URI:ta",
+      "description": "Lähetä edelleen /host/step-ca-callback, ennen versiota 2.9 käytetty uudelleenohjaus-URI. Poista tämä käytöstä, kun identiteetintarjoajasi sallii uuden."
+    }
+  }
+}

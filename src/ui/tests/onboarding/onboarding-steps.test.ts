@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ONBOARDING_STEPS, relevantSteps } from "@/onboarding/onboarding-steps";
 import { UI_AREA_KEYS, PRESETS } from "@/types/ui-preferences";
 import en from "@/locales/en.json";
+
+const isElectron = vi.hoisted(() => vi.fn(() => false));
+vi.mock("@/lib/electron", () => ({ isElectron }));
 
 function lookup(key: string): unknown {
   return key
@@ -30,22 +33,21 @@ describe("ONBOARDING_STEPS", () => {
   });
 
   it("has no add-a-host step, which used to close onboarding mid-flow", () => {
-    const ids = relevantSteps({ aiGloballyEnabled: false }).map((s) => s.id);
+    const ids = relevantSteps({}).map((s) => s.id);
     expect(ids).not.toContain("first-host");
   });
 
-  it("ends on the done step", () => {
-    const ids = relevantSteps({ aiGloballyEnabled: false }).map((s) => s.id);
-    expect(ids[ids.length - 1]).toBe("done");
+  it("asks how the desktop app is used only on the desktop", () => {
+    isElectron.mockReturnValue(false);
+    expect(relevantSteps({}).map((s) => s.id)).not.toContain("desktop-sync");
+    isElectron.mockReturnValue(true);
+    expect(relevantSteps({}).map((s) => s.id)).toContain("desktop-sync");
+    isElectron.mockReturnValue(false);
   });
 
-  it("only offers the AI step when an admin has enabled the assistant", () => {
-    // A user on an instance with AI switched off should never be told the
-    // feature exists, so the step has to disappear rather than render disabled.
-    const off = relevantSteps({ aiGloballyEnabled: false }).map((s) => s.id);
-    const on = relevantSteps({ aiGloballyEnabled: true }).map((s) => s.id);
-    expect(off).not.toContain("ai");
-    expect(on).toContain("ai");
+  it("ends on the done step", () => {
+    const ids = relevantSteps({}).map((s) => s.id);
+    expect(ids[ids.length - 1]).toBe("done");
   });
 
   it("tours the feature set after the setup choices", () => {
@@ -60,16 +62,7 @@ describe("ONBOARDING_STEPS", () => {
 describe("onboarding step body translations", () => {
   const KEYS: Record<string, string[]> = {
     welcome: ["hosts", "terminal", "files"],
-    feature: [
-      "files",
-      "desktop",
-      "tunnels",
-      "docker",
-      "snippets",
-      "automations",
-      "metrics",
-    ],
-    workflow: ["palette", "split", "dock", "workspaces"],
+    workflow: ["palette", "split", "dock"],
     security: ["credentials", "twofa", "identity", "sharing"],
     done: ["settings", "rerun", "docs"],
   };
@@ -97,12 +90,6 @@ describe("onboarding step body translations", () => {
       "featuresIntro",
       "workflowIntro",
       "securityIntro",
-      "aiIntro",
-      "aiEnableTitle",
-      "aiEnableDesc",
-      "aiSkipTitle",
-      "aiSkipDesc",
-      "aiNote",
       "doneDesc",
     ]) {
       expect(lookup(`onboarding.${key}`), key).toBeTypeOf("string");

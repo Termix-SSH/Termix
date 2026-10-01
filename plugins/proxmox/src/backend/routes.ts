@@ -1,0 +1,1031 @@
+import express, { type Router } from "express";
+import type { Client as SSHClient } from "ssh2";
+import { execElevated } from "@termix/plugin-sdk/host-commands";
+import type {
+  PluginHostCreateInput,
+  PluginHostJumpHost,
+  PluginHostUpdateInput,
+  PluginSshHost,
+} from "@termix/plugin-sdk/backend";
+import { connectSsh } from "./ssh.js";
+import { pluginCtx } from "./plugin-ctx.js";
+import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
+import { parseProxmoxJumpHosts } from "./proxmox-jump-hosts.js";
+import { isSafeNodeName } from "./proxmox-shared.js";
+import {
+  indexImportedGuests,
+  parseJsonObject,
+  type ProxmoxSource,
+} from "./guest-sync.js";
+
+/** A thrown value's message, or the fallback when it is not an Error. */
+function getErrorMessage(error: unknown, fallback = "Unknown error"): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+const router = express.Router();
+const runningSyncs = new Set<string>();
+
+const MIN_SYNC_INTERVAL_MINUTES = 5;
+const DEFAULT_SYNC_INTERVAL_MINUTES = 15;
+
+// Helpers
+
+function execCommand(
+  client: SSHClient,
+  command: string,
+  timeoutMs = 25000,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error(`Command timed out after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+
+    client.exec(command, (err, stream) => {
+      if (err) {
+        clearTimeout(timer);
+        return reject(err);
+      }
+      let stdout = "";
+      let stderr = "";
+      stream.on("close", (code: number) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (code !== 0)
+          reject(new Error(stderr || `Command exited with code ${code}`));
+        else resolve(stdout);
+      });
+      stream.on("data", (data: Buffer) => {
+        stdout += data.toString();
+      });
+      stream.stderr.on("data", (data: Buffer) => {
+        stderr += data.toString();
+      });
+    });
+  });
+}
+
+export async function execPveshCommand(
+  client: SSHClient,
+  command: string,
+  sudoPassword: string | undefined,
+  timeoutMs = 25000,
+): Promise<string> {
+  if (!sudoPassword) {
+    return execCommand(client, command, timeoutMs);
+  }
+
+  const result = await execElevated(client, command, sudoPassword, {
+    forceSudo: true,
+    timeoutMs,
+  });
+  if (result.code !== 0) {
+    throw new Error(result.stderr || `Command exited with code ${result.code}`);
+  }
+  return result.stdout;
+}
+
+// Parse all IPs from LXC net config, then return the one matching the preferred prefix.
+function parseLxcIp(
+  config: Record<string, unknown>,
+  preferredPrefixes: string[] = [],
+): string | null {
+  const ips: string[] = [];
+  for (const [key, value] of Object.entries(config)) {
+    if (/^net\d+$/.test(key) && typeof value === "string") {
+      const m = value.match(/ip=(\d{1,3}(?:\.\d{1,3}){3})/);
+      if (m) ips.push(m[1]);
+    }
+  }
+  if (!ips.length) return null;
+  for (const prefix of preferredPrefixes) {
+    const match = ips.find((ip) => ip.startsWith(prefix));
+    if (match) return match;
+  }
+  return ips[0];
+}
+
+function matchesAny(name: string, patterns: string[]): boolean {
+  const lower = name.toLowerCase();
+  return patterns.some((p) => lower.includes(p.toLowerCase()));
+}
+
+function parseProxmoxConfig(raw: unknown): {
+  windowsPatterns: string[];
+  dockerPatterns: string[];
+  preferredPrefixes: string[];
+  defaultCredentialId: number | null;
+  defaultAuthType: string;
+  autoSyncEnabled: boolean;
+  syncIntervalMinutes: number;
+  markMissingGuests: boolean;
+} {
+  const split = (s: string) =>
+    s
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+  if (!raw || typeof raw !== "object") {
+    return {
+      windowsPatterns: ["win", "windows"],
+      dockerPatterns: ["docker"],
+      preferredPrefixes: [],
+      defaultCredentialId: null,
+      defaultAuthType: "password",
+      autoSyncEnabled: false,
+      syncIntervalMinutes: DEFAULT_SYNC_INTERVAL_MINUTES,
+      markMissingGuests: true,
+    };
+  }
+  const cfg = raw as Record<string, unknown>;
+  const interval =
+    typeof cfg.syncIntervalMinutes === "number"
+      ? cfg.syncIntervalMinutes
+      : Number.parseInt(String(cfg.syncIntervalMinutes ?? ""), 10);
+  return {
+    defaultCredentialId:
+      typeof cfg.defaultCredentialId === "number"
+        ? cfg.defaultCredentialId
+        : null,
+    defaultAuthType:
+      typeof cfg.defaultAuthType === "string"
+        ? cfg.defaultAuthType
+        : "password",
+    windowsPatterns: split(
+      typeof cfg.windowsPatterns === "string"
+        ? cfg.windowsPatterns
+        : "win,windows",
+    ),
+    dockerPatterns: split(
+      typeof cfg.dockerPatterns === "string" ? cfg.dockerPatterns : "docker",
+    ),
+    preferredPrefixes: split(
+      typeof cfg.preferredPrefixes === "string" ? cfg.preferredPrefixes : "",
+    ),
+    autoSyncEnabled: cfg.autoSyncEnabled === true,
+    syncIntervalMinutes:
+      Number.isFinite(interval) && interval >= MIN_SYNC_INTERVAL_MINUTES
+        ? interval
+        : DEFAULT_SYNC_INTERVAL_MINUTES,
+    markMissingGuests: cfg.markMissingGuests !== false,
+  };
+}
+
+type ProxmoxGuest = {
+  name: string;
+  vmid: number;
+  type: "qemu" | "lxc";
+  node: string;
+  status: string;
+  ip: string | null;
+  connectionType: "ssh" | "rdp";
+  enableDocker: boolean;
+};
+
+/** The resolved host ctx.ssh.connect hands back, plus the sudo secret proxmox needs for pvesh. */
+type PluginSshHostWithSudo = PluginSshHost & { sudoPassword?: string };
+
+type ProxmoxSyncResult = {
+  created: number;
+  updated: number;
+  markedMissing: number;
+  skipped: number;
+  errors: string[];
+};
+
+function guestSourceKey(sourceHostId: number, guest: ProxmoxGuest): string {
+  return `${sourceHostId}:${guest.node}:${guest.type}:${guest.vmid}`;
+}
+
+function guestTags(guest: ProxmoxGuest): string[] {
+  const idTag = guest.type === "lxc" ? `ct-${guest.vmid}` : `vm-${guest.vmid}`;
+  return [
+    "proxmox",
+    guest.type,
+    guest.node,
+    idTag,
+    ...(guest.enableDocker ? ["docker"] : []),
+  ];
+}
+
+/**
+ * The switches another plugin keeps for an imported guest. An entry for a
+ * plugin that is not running is skipped by core.
+ */
+export function guestPluginSettings(
+  connectionType: "ssh" | "rdp",
+  enableDocker: boolean,
+): Record<string, Record<string, unknown>> {
+  return {
+    ...(connectionType === "rdp"
+      ? { "remote-desktop": { enableRdp: true, rdpPort: 3389 } }
+      : {}),
+    ...(enableDocker ? { docker: { enableDocker: true } } : {}),
+  };
+}
+
+function mergeTags(
+  existing: unknown,
+  additions: string[],
+  removals: string[] = [],
+): string {
+  const removeSet = new Set(removals);
+  const base =
+    typeof existing === "string"
+      ? existing
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : Array.isArray(existing)
+        ? existing
+            .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+            .filter(Boolean)
+        : [];
+  return [...new Set([...base, ...additions])]
+    .filter((tag) => !removeSet.has(tag))
+    .join(",");
+}
+
+async function discoverProxmoxGuestsForHost(
+  userId: string,
+  parsedHostId: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<{
+  host: PluginSshHostWithSudo;
+  guests: ProxmoxGuest[];
+  credentialId: number | null;
+  defaultCredentialId: number | null;
+  jumpHosts: unknown[] | null;
+  config: ReturnType<typeof parseProxmoxConfig>;
+}> {
+  const ctx = pluginCtx();
+  const proxmoxCfgRaw = await ctx.settings.getHost(
+    parsedHostId,
+    "proxmoxConfig",
+  );
+  const config = parseProxmoxConfig(proxmoxCfgRaw);
+
+  const { client, host } = await connectSsh(parsedHostId, {
+    purpose: "proxmox",
+    timeoutMs: 35000,
+    overrides: { tryKeyboard: false, readyTimeout: 30000 },
+  });
+  const hostWithSudo: PluginSshHostWithSudo = host;
+  const hostCredentialId = (hostWithSudo.credentialId as number | null) ?? null;
+
+  try {
+    ctx.log.info("Proxmox discovery SSH connection established");
+
+    const pveshCheck = await execCommand(
+      client,
+      "command -v pvesh >/dev/null 2>&1 && echo ok || echo missing",
+    );
+    if (pveshCheck.trim() !== "ok") {
+      const error = new Error("pvesh not found — is this a Proxmox node?");
+      (error as Error & { status?: number }).status = 422;
+      throw error;
+    }
+
+    const resourcesJson = await execPveshCommand(
+      client,
+      "pvesh get /cluster/resources --output-format json 2>/dev/null",
+      hostWithSudo.sudoPassword,
+    );
+
+    let resources: Array<Record<string, unknown>>;
+    try {
+      resources = JSON.parse(resourcesJson);
+    } catch {
+      const error = new Error(
+        "Failed to parse pvesh output — unexpected response",
+      );
+      (error as Error & { status?: number }).status = 502;
+      throw error;
+    }
+
+    type GuestBase = {
+      name: string;
+      vmid: number;
+      type: "qemu" | "lxc";
+      node: string;
+      status: string;
+    };
+
+    const guestBases: GuestBase[] = [];
+    for (const r of resources) {
+      const type = r.type as string;
+      if (type !== "qemu" && type !== "lxc") continue;
+      if (r.template) continue;
+      const node = r.node as string;
+      if (!isSafeNodeName(node)) {
+        ctx.log.warn(
+          `Skipping guest with unsafe node name: ${node} (vmid ${r.vmid})`,
+        );
+        continue;
+      }
+      guestBases.push({
+        name: (r.name as string) || String(r.vmid),
+        vmid: Number(r.vmid),
+        type: type as "qemu" | "lxc",
+        node,
+        status: (r.status as string) || "unknown",
+      });
+    }
+
+    async function resolveIp(g: GuestBase): Promise<string | null> {
+      if (g.type === "lxc") {
+        let configIp: string | null = null;
+        try {
+          const cfgJson = await execPveshCommand(
+            client,
+            `pvesh get /nodes/${g.node}/lxc/${g.vmid}/config --output-format json 2>/dev/null`,
+            hostWithSudo.sudoPassword,
+            25000,
+          );
+          configIp = parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
+        } catch {
+          configIp = null;
+        }
+        if (configIp) return configIp;
+        // Static config parsing found nothing (e.g. net0 uses ip=dhcp).
+        // Fall back to the live interface list for running containers.
+        if (g.status === "running") {
+          try {
+            const ifRaw = await execPveshCommand(
+              client,
+              `pvesh get /nodes/${g.node}/lxc/${g.vmid}/interfaces --output-format json 2>/dev/null`,
+              hostWithSudo.sudoPassword,
+              12000,
+            );
+            const data = JSON.parse(ifRaw);
+            const entries: Array<Record<string, unknown>> = Array.isArray(data)
+              ? data
+              : [];
+            const allIps: string[] = [];
+            for (const entry of entries) {
+              if (entry.name === "lo") continue;
+              const inet = entry.inet;
+              if (typeof inet !== "string") continue;
+              const m = inet.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/\d+$/);
+              if (m && !m[1].startsWith("127.")) allIps.push(m[1]);
+            }
+            if (allIps.length) {
+              for (const prefix of config.preferredPrefixes) {
+                const match = allIps.find((ip) => ip.startsWith(prefix));
+                if (match) return match;
+              }
+              return allIps[0];
+            }
+          } catch {
+            // Guest not running or interfaces unavailable
+          }
+        }
+        return null;
+      }
+      if (g.type === "qemu" && g.status === "running") {
+        try {
+          const ifJson = await execPveshCommand(
+            client,
+            `pvesh get /nodes/${g.node}/qemu/${g.vmid}/agent/network-get-interfaces --output-format json 2>/dev/null`,
+            hostWithSudo.sudoPassword,
+            12000,
+          );
+          const data = JSON.parse(ifJson);
+          const ifaces: Array<Record<string, unknown>> = Array.isArray(
+            data?.result,
+          )
+            ? data.result
+            : Array.isArray(data)
+              ? data
+              : [];
+          const allIps: string[] = [];
+          for (const iface of ifaces) {
+            if (iface.name === "lo") continue;
+            const addrs =
+              (iface["ip-addresses"] as Array<Record<string, string>>) ?? [];
+            for (const a of addrs) {
+              if (
+                a["ip-address-type"] === "ipv4" &&
+                !a["ip-address"].startsWith("127.")
+              ) {
+                allIps.push(a["ip-address"]);
+              }
+            }
+          }
+          if (allIps.length) {
+            for (const prefix of config.preferredPrefixes) {
+              const match = allIps.find((ip) => ip.startsWith(prefix));
+              if (match) return match;
+            }
+            return allIps[0];
+          }
+        } catch {
+          // Guest agent absent or timed out
+        }
+      }
+      return null;
+    }
+
+    // Low concurrency on purpose: pvesh is heavy and small Proxmox nodes
+    // (especially reached over a high-latency jump chain) suffer severe
+    // contention when many run at once — calls then exceed execCommand's
+    // timeout and IPs come back empty. 2 keeps each call well under budget.
+    const CONCURRENCY = 2;
+    const ips: (string | null)[] = new Array(guestBases.length).fill(null);
+    let cursor = 0;
+    let completed = 0;
+    onProgress?.(0, guestBases.length);
+    async function ipWorker() {
+      while (cursor < guestBases.length) {
+        const i = cursor++;
+        ips[i] = await resolveIp(guestBases[i]);
+        completed++;
+        onProgress?.(completed, guestBases.length);
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, guestBases.length) }, () =>
+        ipWorker(),
+      ),
+    );
+
+    const guests: ProxmoxGuest[] = guestBases.map((g, i) => ({
+      ...g,
+      ip: ips[i],
+      connectionType: matchesAny(g.name, config.windowsPatterns)
+        ? "rdp"
+        : "ssh",
+      enableDocker: matchesAny(g.name, config.dockerPatterns),
+    }));
+
+    ctx.log.info(
+      `Proxmox discovery completed for host ${parsedHostId}: ${guests.length} guest(s)`,
+    );
+
+    return {
+      host: hostWithSudo,
+      guests,
+      credentialId: hostCredentialId,
+      defaultCredentialId: config.defaultCredentialId,
+      jumpHosts: parseProxmoxJumpHosts(hostWithSudo.jumpHosts),
+      config,
+    };
+  } finally {
+    try {
+      client.end();
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+}
+
+async function syncProxmoxHost(
+  userId: string,
+  sourceHostId: number,
+): Promise<ProxmoxSyncResult> {
+  const ctx = pluginCtx();
+  const lockKey = `${userId}:${sourceHostId}`;
+  if (runningSyncs.has(lockKey)) {
+    return {
+      created: 0,
+      updated: 0,
+      markedMissing: 0,
+      skipped: 0,
+      errors: ["Sync already running"],
+    };
+  }
+
+  runningSyncs.add(lockKey);
+  const result: ProxmoxSyncResult = {
+    created: 0,
+    updated: 0,
+    markedMissing: 0,
+    skipped: 0,
+    errors: [],
+  };
+  const startedAt = new Date().toISOString();
+
+  try {
+    const discovery = await discoverProxmoxGuestsForHost(userId, sourceHostId);
+    const sourceHostName = String(discovery.host.name || "Proxmox");
+    const defaultCredentialId =
+      discovery.config.defaultCredentialId ?? discovery.credentialId ?? null;
+    const importAuth = resolveProxmoxImportAuth(
+      discovery.config.defaultAuthType,
+      defaultCredentialId,
+    );
+    const now = new Date().toISOString();
+
+    const existingBySource = indexImportedGuests(
+      await ctx.hosts.listOwned(),
+      await ctx.settings.listHostValues("proxmoxConfig"),
+      sourceHostId,
+    );
+
+    const seen = new Set<string>();
+    for (const guest of discovery.guests) {
+      const key = guestSourceKey(sourceHostId, guest);
+      seen.add(key);
+      const imported = existingBySource.get(key);
+      const existing = imported?.host;
+      const source: ProxmoxSource = {
+        source: "proxmox",
+        sourceHostId,
+        node: guest.node,
+        vmid: guest.vmid,
+        type: guest.type,
+        lastSeenAt: now,
+        lastStatus: guest.status,
+        missingSince: null,
+      };
+
+      const proxmoxConfig = { ...(imported?.config ?? {}), source };
+      const existingConnectionType =
+        existing?.connectionType === "ssh" || existing?.connectionType === "rdp"
+          ? existing.connectionType
+          : null;
+      const connectionType = existingConnectionType ?? guest.connectionType;
+      const usesImportCredential =
+        connectionType === "ssh" && importAuth.authType === "credential";
+      const existingUsesImportCredential =
+        usesImportCredential &&
+        existing?.authType === "credential" &&
+        existing?.credentialId === importAuth.credentialId;
+      const port =
+        typeof existing?.port === "number"
+          ? existing.port
+          : connectionType === "rdp"
+            ? 3389
+            : 22;
+      const username =
+        usesImportCredential && (!existing || existingUsesImportCredential)
+          ? ""
+          : typeof existing?.username === "string" && existing.username
+            ? existing.username
+            : connectionType === "rdp"
+              ? ""
+              : "root";
+      const update: PluginHostUpdateInput = {
+        name: guest.name,
+        ip: guest.ip || existing?.ip || "0.0.0.0",
+        port,
+        username,
+        connectionType,
+        folder: existing?.folder || sourceHostName,
+        tags: mergeTags(existing?.tags, guestTags(guest), ["proxmox-missing"]),
+        pluginSettings: { [ctx.pluginId]: { proxmoxConfig } },
+      };
+
+      if (existing) {
+        if (existingUsesImportCredential) {
+          update.credentialId = importAuth.credentialId;
+          update.overrideCredentialUsername = false;
+        }
+        await ctx.hosts.update(existing.id, update);
+        result.updated++;
+        continue;
+      }
+
+      await ctx.hosts.create({
+        ...update,
+        name: guest.name,
+        ip: update.ip!,
+        port,
+        username,
+        enableSsh: connectionType === "ssh",
+        pin: false,
+        authType: connectionType === "rdp" ? "password" : importAuth.authType,
+        credentialId: connectionType === "ssh" ? importAuth.credentialId : null,
+        overrideCredentialUsername: !!importAuth.overrideCredentialUsername,
+        jumpHosts: (parseProxmoxJumpHosts(discovery.jumpHosts) ??
+          []) as PluginHostJumpHost[],
+        forceKeyboardInteractive: false,
+        pluginSettings: {
+          ...update.pluginSettings,
+          ...guestPluginSettings(connectionType, guest.enableDocker),
+        },
+      });
+      result.created++;
+    }
+
+    if (discovery.config.markMissingGuests) {
+      for (const [key, { host, config, source }] of existingBySource) {
+        if (seen.has(key)) continue;
+        await ctx.hosts.update(host.id, {
+          tags: mergeTags(host.tags, ["proxmox-missing"]),
+          pluginSettings: {
+            [ctx.pluginId]: {
+              proxmoxConfig: {
+                ...config,
+                source: { ...source, missingSince: source.missingSince || now },
+              },
+            },
+          },
+        });
+        result.markedMissing++;
+      }
+    }
+
+    await writeSyncStatus(sourceHostId, {
+      lastSyncAt: startedAt,
+      lastSyncStatus: "success",
+      lastSyncError: null,
+      lastSyncResult: result,
+    });
+
+    return result;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    result.errors.push(message);
+    await writeSyncStatus(sourceHostId, {
+      lastSyncAt: startedAt,
+      lastSyncStatus: "error",
+      lastSyncError: message,
+      lastSyncResult: result,
+    });
+    throw error;
+  } finally {
+    runningSyncs.delete(lockKey);
+  }
+}
+
+async function writeSyncStatus(
+  hostId: number,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const ctx = pluginCtx();
+  const config = parseJsonObject(
+    await ctx.settings.getHost(hostId, "proxmoxConfig"),
+  );
+  await ctx.settings.setHost(hostId, "proxmoxConfig", { ...config, ...patch });
+}
+
+/**
+ * @openapi
+ * /proxmox/sync:
+ *   post:
+ *     summary: Sync Proxmox guests for a host
+ *     description: Re-runs discovery for a Proxmox node and creates, updates or marks missing the imported guest hosts.
+ *     tags: [Proxmox]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hostId]
+ *             properties:
+ *               hostId:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Sync result.
+ *       400:
+ *         description: Missing or invalid hostId.
+ *       500:
+ *         description: Sync failed.
+ */
+router.post("/sync", async (req, res) => {
+  const { hostId } = req.body as { hostId?: unknown };
+  const userId = pluginCtx().currentActor()!;
+
+  const parsedHostId = Number(hostId);
+  if (!hostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
+    return res.status(400).json({ error: "Missing or invalid hostId" });
+  }
+
+  try {
+    const result = await syncProxmoxHost(userId, parsedHostId);
+    return res.json(result);
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    const status = (err as Error & { status?: number }).status || 500;
+    pluginCtx().log.error(
+      `Proxmox sync failed for host ${parsedHostId}`,
+      err as Error,
+    );
+    return res.status(status).json({ error: `Sync failed: ${message}` });
+  }
+});
+
+async function runDueProxmoxAutoSyncs(): Promise<void> {
+  const ctx = pluginCtx();
+  try {
+    const enabled = await ctx.settings.listHostValues<boolean>("enableProxmox");
+
+    const now = Date.now();
+    for (const { hostId, userId, value } of enabled) {
+      if (value !== true) continue;
+
+      const configRaw =
+        (await ctx.settings.getHost<Record<string, unknown>>(
+          hostId,
+          "proxmoxConfig",
+        )) ?? {};
+      const config = parseProxmoxConfig(configRaw);
+      if (!config.autoSyncEnabled) continue;
+
+      const lastSyncAt =
+        typeof configRaw.lastSyncAt === "string"
+          ? Date.parse(configRaw.lastSyncAt)
+          : 0;
+      const intervalMs = config.syncIntervalMinutes * 60 * 1000;
+      if (lastSyncAt && now - lastSyncAt < intervalMs) continue;
+
+      ctx
+        .asUser(userId, () => syncProxmoxHost(userId, hostId))
+        .catch((error) => {
+          ctx.log.error(
+            `Scheduled Proxmox sync failed for host ${hostId}`,
+            error as Error,
+          );
+        });
+    }
+  } catch (error) {
+    ctx.log.error("Failed to scan Proxmox auto sync jobs", error as Error);
+  }
+}
+
+let proxmoxAutoSyncTimer: NodeJS.Timeout | undefined;
+let proxmoxAutoSyncStartupTimer: NodeJS.Timeout | undefined;
+
+/**
+ * @openapi
+ * /proxmox/discover:
+ *   post:
+ *     summary: Discover Proxmox guests on a node
+ *     description: >
+ *       Connects to an existing SSH host (a Proxmox node) using its stored
+ *       credentials, runs pvesh to enumerate all guests (VMs and LXC
+ *       containers) in the cluster, and returns them ready to be imported as
+ *       Termix hosts. No separate Proxmox API token is required.
+ *     tags: [Proxmox]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hostId]
+ *             properties:
+ *               hostId:
+ *                 type: number
+ *                 description: ID of the SSH host that is a Proxmox node.
+ *     responses:
+ *       200:
+ *         description: Discovered guests.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 guests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       vmid:
+ *                         type: number
+ *                       type:
+ *                         type: string
+ *                         enum: [qemu, lxc]
+ *                       node:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       ip:
+ *                         type: string
+ *                         nullable: true
+ *                       connectionType:
+ *                         type: string
+ *                         enum: [ssh, rdp]
+ *                       enableDocker:
+ *                         type: boolean
+ *                 credentialId:
+ *                   type: number
+ *                   nullable: true
+ *                 defaultCredentialId:
+ *                   type: number
+ *                   nullable: true
+ *       400:
+ *         description: Missing or invalid hostId.
+ *       401:
+ *         description: Authentication required or session expired.
+ *       403:
+ *         description: Access denied to the host.
+ *       404:
+ *         description: Host not found.
+ *       422:
+ *         description: Host is not a Proxmox node or is unreachable.
+ *       500:
+ *         description: Discovery failed.
+ */
+router.get("/discover/stream", async (req, res) => {
+  const userId = pluginCtx().currentActor()!;
+  const parsedHostId = Number((req.query as { hostId?: unknown }).hostId);
+  if (!parsedHostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
+    return res.status(400).json({ error: "Missing or invalid hostId" });
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-store, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders?.();
+
+  let closed = false;
+  const send = (event: string, data: unknown) => {
+    if (closed) return;
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      closed = true;
+    }
+  };
+  const heartbeat = setInterval(() => {
+    if (closed) return;
+    try {
+      res.write(": keepalive\n\n");
+    } catch {
+      closed = true;
+      clearInterval(heartbeat);
+    }
+  }, 15000);
+  req.on("close", () => {
+    closed = true;
+    clearInterval(heartbeat);
+  });
+
+  try {
+    const discovery = await discoverProxmoxGuestsForHost(
+      userId,
+      parsedHostId,
+      (done, total) => send("progress", { done, total }),
+    );
+    send("result", {
+      guests: discovery.guests,
+      credentialId: discovery.credentialId,
+      defaultCredentialId: discovery.defaultCredentialId,
+      jumpHosts: discovery.jumpHosts,
+    });
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    pluginCtx().log.error(
+      `Proxmox discovery (stream) failed for host ${parsedHostId}`,
+      err as Error,
+    );
+    send("fail", { message });
+  } finally {
+    clearInterval(heartbeat);
+    if (!closed) {
+      try {
+        res.end();
+      } catch {
+        // ignore end errors
+      }
+    }
+  }
+});
+
+/**
+ * @openapi
+ * /plugin-api/proxmox/discover:
+ *   post:
+ *     summary: Discover the guests on a Proxmox node
+ *     description: Lists the node's VMs and containers so they can be added as hosts. /discover/stream reports the same with progress.
+ *     tags: [Proxmox]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hostId]
+ *             properties:
+ *               hostId: { type: integer }
+ *     responses:
+ *       200: { description: The guests found. }
+ *       400: { description: Missing or invalid hostId. }
+ *       403: { description: Access denied to the host. }
+ *       404: { description: Host not found. }
+ *       422: { description: Host is not a Proxmox node or is unreachable. }
+ */
+router.post("/discover", async (req, res) => {
+  const { hostId } = req.body as { hostId?: unknown };
+  const userId = pluginCtx().currentActor()!;
+
+  const parsedHostId = Number(hostId);
+  if (!hostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
+    return res.status(400).json({ error: "Missing or invalid hostId" });
+  }
+
+  try {
+    const discovery = await discoverProxmoxGuestsForHost(userId, parsedHostId);
+    return res.json({
+      guests: discovery.guests,
+      credentialId: discovery.credentialId,
+      defaultCredentialId: discovery.defaultCredentialId,
+      jumpHosts: discovery.jumpHosts,
+    });
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    pluginCtx().log.error(
+      `Proxmox discovery failed for host ${parsedHostId}`,
+      err as Error,
+    );
+
+    const status =
+      (err as Error & { status?: number }).status ||
+      (message.includes("Authentication failed") ||
+      message.includes("connect ECONNREFUSED") ||
+      message.includes("connect ETIMEDOUT")
+        ? 422
+        : 500);
+    return res.status(status).json({ error: `Discovery failed: ${message}` });
+  }
+});
+
+/**
+ * @openapi
+ * /plugin-api/proxmox/import:
+ *   post:
+ *     summary: Import discovered Proxmox guests as hosts
+ *     description: >
+ *       Creates one host per entry, owned by the caller, and stores each
+ *       entry's proxmox host settings (the guest's source) on the new host.
+ *     tags:
+ *       - Proxmox
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - hosts
+ *             properties:
+ *               hosts:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: How many hosts were created and which failed.
+ *       400:
+ *         description: No hosts given.
+ */
+router.post("/import", async (req, res) => {
+  const ctx = pluginCtx();
+  const { hosts } = req.body as { hosts?: unknown };
+  if (!Array.isArray(hosts) || hosts.length === 0) {
+    return res.status(400).json({ error: "No hosts to import" });
+  }
+  const result = { success: 0, failed: 0, errors: [] as string[] };
+  for (const entry of hosts as PluginHostCreateInput[]) {
+    try {
+      // Core refuses any field it does not take, and any host setting its
+      // plugin does not declare.
+      await ctx.hosts.create(entry);
+      result.success++;
+    } catch (err: unknown) {
+      result.failed++;
+      result.errors.push(`${String(entry?.name)}: ${getErrorMessage(err)}`);
+    }
+  }
+  return res.json(result);
+});
+
+/** Called from activate(). Mounts this router at /proxmox via the shared
+ * dispatcher, and starts the background auto-sync scan (a 60s interval plus
+ * a one-off 30s-delayed startup run, both unref'd so they never keep the
+ * process alive on their own). */
+export function startProxmoxService(mountOn: Router): void {
+  mountOn.use(router);
+  proxmoxAutoSyncTimer = setInterval(runDueProxmoxAutoSyncs, 60 * 1000);
+  proxmoxAutoSyncTimer.unref?.();
+  proxmoxAutoSyncStartupTimer = setTimeout(runDueProxmoxAutoSyncs, 30 * 1000);
+  proxmoxAutoSyncStartupTimer.unref?.();
+}
+
+/** Called from deactivate(). /proxmox/* falls back to 404 until reactivated,
+ * and the auto-sync timers are cleared so a disabled plugin stops syncing. */
+export function stopProxmoxService(): void {
+  // Unmounted by the runtime when the plugin deactivates.
+  if (proxmoxAutoSyncTimer) clearInterval(proxmoxAutoSyncTimer);
+  if (proxmoxAutoSyncStartupTimer) clearTimeout(proxmoxAutoSyncStartupTimer);
+  proxmoxAutoSyncTimer = undefined;
+  proxmoxAutoSyncStartupTimer = undefined;
+}

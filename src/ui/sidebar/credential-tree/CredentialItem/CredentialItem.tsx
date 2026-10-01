@@ -1,3 +1,4 @@
+import { rem } from "@/lib/rem";
 import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
@@ -12,19 +13,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import type { Credential } from "@/types/ui-types";
 import type {
   CredentialDensity,
   CredentialTrayTrigger,
 } from "@/types/credential-sidebar-preferences";
-
-export function credentialMatchesQuery(cred: Credential, query: string) {
-  return (
-    cred.name.toLowerCase().includes(query) ||
-    cred.username.toLowerCase().includes(query) ||
-    cred.tags?.some((t) => t.toLowerCase().includes(query))
-  );
-}
 
 /**
  * Per-density layout knobs, mirroring HOST_ITEM_DENSITY_TOKENS in
@@ -49,11 +43,8 @@ const CREDENTIAL_ITEM_DENSITY_TOKENS = {
 export function CredentialItem({
   cred,
   usedByCount = 0,
-  termixIdLinked = false,
-  query = "",
   stripeIndex = 0,
   isMenuOpen = false,
-  onMenuOpenChange,
   isTrayOpen = false,
   onTrayOpenChange,
   onDragStart,
@@ -76,7 +67,6 @@ export function CredentialItem({
 }: {
   cred: Credential;
   usedByCount?: number;
-  termixIdLinked?: boolean;
   query?: string;
   stripeIndex?: number;
   isMenuOpen?: boolean;
@@ -123,7 +113,7 @@ export function CredentialItem({
   const canDrag = arrangeMode && !isTouchOnly;
 
   const depthStyle =
-    depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
+    depth > 0 ? ({ paddingLeft: rem(depth * 12) } as const) : undefined;
 
   const trayButtonClass =
     "flex items-center justify-center size-6.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
@@ -308,11 +298,10 @@ export function CredentialItem({
           >
             {isKey ? t("credentials.keyBadge") : t("credentials.passwordBadge")}
           </span>
-          {termixIdLinked && (
-            <span className="text-[9px] px-1 py-px font-bold border leading-none shrink-0 border-accent-brand/30 text-accent-brand/70">
-              {t("credentials.idBadge")}
-            </span>
-          )}
+          <ComponentSlot
+            slotId="credentials.badges"
+            props={{ credentialId: Number(cred.id) }}
+          />
           {cred.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
@@ -346,8 +335,9 @@ export function CredentialItem({
           <span className="text-[11px] text-muted-foreground/60 truncate leading-none font-mono">
             {cred.username}
             {usedByCount > 0 && (
-              <span className="text-muted-foreground/40">
-                {cred.username ? " · " : ""}
+              <span
+                className={`text-muted-foreground/40${cred.username ? " ml-2" : ""}`}
+              >
                 {usedByCount}h
               </span>
             )}

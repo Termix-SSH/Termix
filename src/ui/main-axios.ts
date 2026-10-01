@@ -6,11 +6,11 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { toast } from "sonner";
+import i18n from "i18next";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type { SSHHost } from "@/types/index";
-import type { GpuMetrics } from "@/types/stats-widgets";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -55,14 +55,11 @@ import {
   apiLogger,
   authLogger,
   sshLogger,
-  tunnelLogger,
   fileLogger,
-  statsLogger,
   dashboardLogger,
   type LogContext,
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
-import { asHttpError } from "@/lib/http-error";
 import { getDeviceId } from "@/lib/device-id";
 
 export type ServerStatus = {
@@ -75,145 +72,13 @@ export type SSHHostWithStatus = SSHHost & {
   status: "online" | "reachable" | "offline" | "unknown";
 };
 
-interface CpuMetrics {
-  percent: number | null;
-  cores: number | null;
-  load: [number, number, number] | null;
-}
-
-interface MemoryMetrics {
-  percent: number | null;
-  usedGiB: number | null;
-  totalGiB: number | null;
-}
-
-export interface DiskFilesystem {
-  filesystem: string;
-  type: string;
-  mount: string;
-  percent: number | null;
-  usedHuman: string | null;
-  totalHuman: string | null;
-  availableHuman: string | null;
-  usedBytes: number | null;
-  totalBytes: number | null;
-  availableBytes: number | null;
-  label?: string;
-}
-
-interface DiskMetrics {
-  percent: number | null;
-  usedHuman: string | null;
-  totalHuman: string | null;
-  availableHuman?: string | null;
-  mount?: string | null;
-  filesystems?: DiskFilesystem[];
-}
-
-export interface NetworkInterface {
-  name: string;
-  ip: string;
-  state: string;
-  rx?: string | null;
-  tx?: string | null;
-  rxBytes?: string | null;
-  txBytes?: string | null;
-  rxRateBps?: number | null;
-  txRateBps?: number | null;
-}
-
-export interface ProcessInfo {
-  pid: string;
-  user: string;
-  cpu: string;
-  mem: string;
-  command: string;
-}
-
-export interface LoginRecord {
-  user: string;
-  ip: string;
-  time: string;
-  status: "success" | "failed";
-}
-
-export interface ListeningPort {
-  protocol: "tcp" | "udp";
-  localAddress: string;
-  localPort: number;
-  state?: string;
-  pid?: number;
-  process?: string;
-}
-
-export interface FirewallRule {
-  chain: string;
-  target: string;
-  protocol: string;
-  source: string;
-  destination: string;
-  dport?: string;
-  sport?: string;
-  state?: string;
-  interface?: string;
-  extra?: string;
-}
-
-export interface FirewallChain {
-  name: string;
-  policy: string;
-  rules: FirewallRule[];
-}
-
-export type ServerMetrics = {
-  cpu: CpuMetrics;
-  memory: MemoryMetrics;
-  disk: DiskMetrics;
-  network?: { interfaces?: NetworkInterface[] };
-  uptime?: { seconds?: number | null; formatted?: string | null };
-  system?: {
-    hostname?: string | null;
-    os?: string | null;
-    kernel?: string | null;
-    arch?: string | null;
-  };
-  processes?: {
-    total?: number | null;
-    running?: number | null;
-    top?: ProcessInfo[];
-  };
-  login_stats?: {
-    recentLogins?: LoginRecord[];
-    failedLogins?: LoginRecord[];
-    totalLogins?: number;
-    uniqueIPs?: number;
-  };
-  ports?: {
-    source?: "ss" | "netstat" | "none";
-    ports?: ListeningPort[];
-  };
-  firewall?: {
-    type?: "iptables" | "nftables" | "none";
-    status?: "active" | "inactive" | "unknown";
-    chains?: FirewallChain[];
-  };
-  temperature?: {
-    source?: "sysfs" | "sensors" | "none";
-    highestCelsius?: number | null;
-    sensors?: Array<{
-      label: string;
-      celsius: number;
-    }>;
-  };
-  gpu?: GpuMetrics;
-  lastChecked: string;
-};
-
 export interface AuthResponse {
   success?: boolean;
   is_admin?: boolean;
   username?: string;
   userId?: string;
+  is_external?: boolean;
+  /** 2.8 name for is_external. */
   is_oidc?: boolean;
   totp_enabled?: boolean;
   requires_totp?: boolean;
@@ -223,27 +88,37 @@ export interface AuthResponse {
 }
 
 export interface UserInfo {
+  /** Any second factor, kept under its 2.8 name for older clients. */
   totp_enabled: boolean;
+  /** Admin user list only. */
+  second_factor_enabled?: boolean;
   userId: string;
   username: string;
   is_admin: boolean;
+  /** Signs in through an external login such as SSO or LDAP. */
+  is_external?: boolean;
+  /** 2.8 name for is_external. */
   is_oidc: boolean;
   is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
   show_donation_modal?: boolean;
+  /** On a desktop linked to a server, the account it is signed in to there. */
+  linked?: LinkedAccountInfo | null;
 }
 
-export interface RemoteSyncUserInfo extends UserInfo {
-  roles: UserRole[];
+export interface LinkedAccountInfo {
+  serverUrl: string;
+  serverName: string | null;
+  username: string | null;
+  isAdmin: boolean;
+  roles: string[];
+  permissions: string[];
+  status: string;
 }
 
 interface UserCount {
   count: number;
-}
-
-interface OIDCAuthorize {
-  auth_url: string;
 }
 
 type ElectronApi = {
@@ -268,12 +143,8 @@ export { isElectron };
 function getLoggerForService(serviceName: string) {
   if (serviceName.includes("SSH") || serviceName.includes("ssh")) {
     return sshLogger;
-  } else if (serviceName.includes("TUNNEL") || serviceName.includes("tunnel")) {
-    return tunnelLogger;
   } else if (serviceName.includes("FILE") || serviceName.includes("file")) {
     return fileLogger;
-  } else if (serviceName.includes("STATS") || serviceName.includes("stats")) {
-    return statsLogger;
   } else if (serviceName.includes("AUTH") || serviceName.includes("auth")) {
     return authLogger;
   } else if (
@@ -664,7 +535,7 @@ function createApiInstance(
 
             if (typeof window !== "undefined") {
               console.warn("Session expired - please log in again");
-              toast.warning("Session expired. Please log in again.");
+              toast.warning(i18n.t("errors.sessionExpiredLogin"));
               window.dispatchEvent(new Event("termix:logout"));
             }
 
@@ -717,41 +588,9 @@ interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
 
-export interface ElectronUpdateCheckResult {
-  success: boolean;
-  status?: "up_to_date" | "requires_update" | "beta";
-  localVersion?: string;
-  remoteVersion?: string;
-  latest_release?: {
-    tag_name: string;
-    name: string;
-    published_at: string;
-    html_url: string;
-    body: string;
-  };
-  cached?: boolean;
-  cache_age?: number;
-  error?: string;
-}
-
-export async function checkElectronUpdate(): Promise<ElectronUpdateCheckResult> {
-  if (!isElectron())
-    return { success: false, error: "Not in Electron environment" };
-
-  try {
-    const result = (await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: { invoke?: (channel: string) => Promise<unknown> };
-        }
-    ).electronAPI?.invoke?.("check-electron-update")) as
-      ElectronUpdateCheckResult | undefined;
-    return result ?? { success: false, error: "Update check failed" };
-  } catch (error) {
-    console.error("Failed to check Electron update:", error);
-    return { success: false, error: "Update check failed" };
-  }
+/** A URL on the main backend, resolved for web, dev proxy and Electron. */
+export function getBackendUrl(path: string): string {
+  return getApiUrl(path, 30001);
 }
 
 function getApiUrl(path: string, defaultPort: number): string {
@@ -759,10 +598,8 @@ function getApiUrl(path: string, defaultPort: number): string {
   const electronMode = isElectron();
 
   if (electronMode) {
-    // The desktop app always runs its embedded local backend as the
-    // source of truth. A configured remote sync server is a separate,
-    // narrow connection used only by the sync engine (see
-    // remote-sync-axios.ts), not by these shared instances.
+    // The desktop app always talks to its embedded backend. The server it
+    // may be linked to is reached through createRemoteOriginApiInstance.
     return `http://localhost:${defaultPort}${path}`;
   } else if (devMode) {
     if (!import.meta.env.VITE_API_HOST) {
@@ -781,18 +618,15 @@ function getApiUrl(path: string, defaultPort: number): string {
 // PER-HOST ORIGIN ROUTING (Electron desktop only)
 // ============================================================================
 //
-// hostApi/fileManagerApi/tunnelApi/statsApi above always point at the
-// embedded local backend -- they're the shared, always-on instances. When a
-// host's connection origin resolves to "remote" (see
-// src/ui/lib/connection-origin.ts), the backend that actually holds that
-// host's live SSH session is the connected remote server instead, so file
-// manager, tunnel, and stats calls for that host must follow it there.
+// hostApi above always points at the embedded local backend. When a host's
+// connection origin resolves to "remote" (see src/ui/lib/connection-origin.ts),
+// the backend that holds that host's live session is the connected remote
+// server instead, so calls for that host must follow it there.
 //
-// These dynamically-baseURL'd instances resolve the remote server's URL and
-// JWT fresh on every request (cheap, and correct even if the user
-// connects/disconnects remote sync without an app reload).
+// These instances look up the linked server and its session on every
+// request, so linking or unlinking needs no reload.
 
-function createRemoteOriginApiInstance(path: string): AxiosInstance {
+export function createRemoteOriginApiInstance(path: string): AxiosInstance {
   const instance = axios.create({
     headers: { "Content-Type": "application/json" },
     timeout: 30000,
@@ -800,27 +634,19 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
 
   instance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      const [remoteConfig, remoteJwt] = await Promise.all([
-        window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
-          serverUrl?: string;
-        } | null>,
-        window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
-          string | null
-        >,
-      ]);
-
-      const baseUrl = (remoteConfig?.serverUrl || "").replace(/\/$/, "");
-      config.baseURL = baseUrl
-        ? `${baseUrl}${path}`
+      const { getLinkedSession } = await import("@/lib/linked-server");
+      const linked = await getLinkedSession();
+      config.baseURL = linked
+        ? `${linked.serverUrl}${path}`
         : "http://no-server-configured";
 
       if (config.headers.set) {
         config.headers.set("X-Electron-App", "true");
-        if (remoteJwt)
-          config.headers.set("Authorization", `Bearer ${remoteJwt}`);
+        if (linked)
+          config.headers.set("Authorization", `Bearer ${linked.token}`);
       } else {
         config.headers["X-Electron-App"] = "true";
-        if (remoteJwt) config.headers["Authorization"] = `Bearer ${remoteJwt}`;
+        if (linked) config.headers["Authorization"] = `Bearer ${linked.token}`;
       }
 
       return config;
@@ -830,149 +656,38 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
   return instance;
 }
 
-let remoteFileManagerApi: AxiosInstance | null = null;
-let remoteTunnelApi: AxiosInstance | null = null;
-let remoteStatsApi: AxiosInstance | null = null;
-let remoteGuacamoleApi: AxiosInstance | null = null;
+let remoteCoreApi: AxiosInstance | null = null;
 
-export function getRemoteFileManagerApi(): AxiosInstance {
-  if (!remoteFileManagerApi) {
-    remoteFileManagerApi = createRemoteOriginApiInstance("/ssh/file_manager");
+/** The linked server's core routes, unprefixed. */
+export function getRemoteCoreApi(): AxiosInstance {
+  if (!remoteCoreApi) {
+    remoteCoreApi = createRemoteOriginApiInstance("");
   }
-  return remoteFileManagerApi;
-}
-
-export function getRemoteTunnelApi(): AxiosInstance {
-  if (!remoteTunnelApi) {
-    remoteTunnelApi = createRemoteOriginApiInstance("/ssh");
-  }
-  return remoteTunnelApi;
-}
-
-export function getRemoteStatsApi(): AxiosInstance {
-  if (!remoteStatsApi) {
-    remoteStatsApi = createRemoteOriginApiInstance("");
-  }
-  return remoteStatsApi;
-}
-
-export function getRemoteGuacamoleApi(): AxiosInstance {
-  if (!remoteGuacamoleApi) {
-    remoteGuacamoleApi = createRemoteOriginApiInstance("");
-  }
-  return remoteGuacamoleApi;
-}
-
-// Maps a live SSH session (keyed by sessionId, which today is the host's
-// numeric id as a string -- see ensureSSHSessionForHost) to the resolved
-// origin it was connected through, so every subsequent file-manager call
-// for that session reaches the backend that actually holds it.
-const sessionOrigins = new Map<string, "local" | "remote">();
-
-export function setSessionOrigin(
-  sessionId: string,
-  origin: "local" | "remote",
-): void {
-  sessionOrigins.set(sessionId, origin);
-}
-
-export function clearSessionOrigin(sessionId: string): void {
-  sessionOrigins.delete(sessionId);
-}
-
-export function getFileManagerApiForSession(sessionId: string): AxiosInstance {
-  return sessionOrigins.get(sessionId) === "remote"
-    ? getRemoteFileManagerApi()
-    : fileManagerApi;
-}
-
-/** Which backend currently holds a live SSH session (see setSessionOrigin). */
-export function getSessionOrigin(sessionId: string): "local" | "remote" {
-  return sessionOrigins.get(sessionId) === "remote" ? "remote" : "local";
-}
-
-export function getTunnelApiForOrigin(
-  origin: "local" | "remote",
-): AxiosInstance {
-  return origin === "remote" ? getRemoteTunnelApi() : tunnelApi;
-}
-
-export function getStatsApiForOrigin(
-  origin: "local" | "remote",
-): AxiosInstance {
-  return origin === "remote" ? getRemoteStatsApi() : statsApi;
+  return remoteCoreApi;
 }
 
 function initializeApiInstances() {
-  // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
+  // Host Management API (port 30001) - SSH and plugin protocols
   hostApi = createApiInstance(getApiUrl("/host", 30001), "HOST");
   sshHostApi = hostApi;
-
-  // Tunnel Management API (port 30003)
-  tunnelApi = createApiInstance(getApiUrl("/ssh", 30003), "TUNNEL");
-
-  // File Manager Operations API (port 30004)
-  fileManagerApi = createApiInstance(
-    getApiUrl("/ssh/file_manager", 30004),
-    "FILE_MANAGER",
-  );
-
-  // Server Statistics API (port 30005)
-  statsApi = createApiInstance(getApiUrl("", 30005), "STATS");
 
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
 
-  // Dashboard API (port 30006)
-  dashboardApi = createApiInstance(getApiUrl("", 30006), "DASHBOARD");
-
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
-
-  // Docker Management API (port 30007)
-  dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
-
-  // Tmux Monitor API (port 30010) --- tmux-monitor ---
-  tmuxMonitorApi = createApiInstance(
-    getApiUrl("/tmux_monitor", 30010),
-    "TMUX_MONITOR",
-  );
-
-  // Homepage API (port 30012)
-  homepageApi = createApiInstance(getApiUrl("/homepage", 30012), "HOMEPAGE");
 }
 
-// Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
+// Host Management API (port 30001) - SSH and plugin protocols
 export let hostApi: AxiosInstance;
 // Backward compatibility
 export let sshHostApi: AxiosInstance;
 
-// Tunnel Management API (port 30003)
-export let tunnelApi: AxiosInstance;
-
-// File Manager Operations API (port 30004)
-export let fileManagerApi: AxiosInstance;
-
-// Server Statistics API (port 30005)
-export let statsApi: AxiosInstance;
-
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
 
-// Dashboard API (port 30006)
-export let dashboardApi: AxiosInstance;
-
 // RBAC API (port 30001)
 export let rbacApi: AxiosInstance;
-
-// Docker Management API (port 30007)
-export let dockerApi: AxiosInstance;
-
-// Tmux Monitor API (port 30010) --- tmux-monitor ---
-export let tmuxMonitorApi: AxiosInstance;
-
-// Homepage API (port 30012)
-export let homepageApi: AxiosInstance;
 
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();
@@ -1143,520 +858,28 @@ export function handleApiError(error: unknown, operation: string): never {
 
 // ============================================================================
 
-// ============================================================================
-// HOST-TO-HOST TRANSFER
-// ============================================================================
-
-export type TransferMethodPreference = "auto" | "tar" | "item_sftp";
-
-export interface TransferScanSummary {
-  fileCount: number;
-  totalBytes: number;
-  largestFileBytes: number;
-  incompressibleRatio: number;
-}
-
-export interface TransferMethodPreview {
-  methodPreference: TransferMethodPreference;
-  resolvedMethod: "tar" | "item_sftp";
-  reasonKey: string;
-  sourcePlatform: "unix" | "windows";
-  destPlatform: "unix" | "windows";
-  sourceHasTar: boolean;
-  destHasTar: boolean;
-  summary: TransferScanSummary;
-}
-
-export async function getTransferMethodPreview(
-  sourceSessionId: string,
-  sourcePaths: string[],
-  destSessionId: string,
-  destPath: string,
-  methodPreference?: TransferMethodPreference,
-): Promise<TransferMethodPreview> {
-  try {
-    const response = await fileManagerApi.post("/ssh/transferMethodPreview", {
-      sourceSessionId,
-      sourcePaths,
-      destSessionId,
-      destPath,
-      methodPreference: methodPreference ?? "auto",
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "preview transfer method");
-    throw error;
-  }
-}
-
-export interface TransferHopMetrics {
-  id: string;
-  mbPerSec?: number;
-}
-
-export interface TransferTimings {
-  prepareDestMs?: number;
-  compressMs?: number;
-  transferMs?: number;
-  extractMs?: number;
-  verifyMs?: number;
-  directBenchmarkMs?: number;
-  relayBenchmarkMs?: number;
-  sourceDeleteMs?: number;
-  totalMs?: number;
-  transferBytes?: number;
-  endToEndMbPerSec?: number;
-  hops?: TransferHopMetrics[];
-}
-
-export function getTransferProgressPercent(
-  status: TransferProgressResponse,
-): number | undefined {
-  if (
-    status.bytesTransferred !== undefined &&
-    status.totalBytes !== undefined &&
-    status.totalBytes > 0
-  ) {
-    return Math.min(
-      100,
-      Math.round((status.bytesTransferred / status.totalBytes) * 100),
-    );
-  }
-  if (
-    status.itemsCompleted !== undefined &&
-    status.totalItems !== undefined &&
-    status.totalItems > 0
-  ) {
-    return Math.min(
-      100,
-      Math.round((status.itemsCompleted / status.totalItems) * 100),
-    );
-  }
-  return undefined;
-}
-
-export function formatTransferMbPerSec(
-  mbPerSec?: number,
-  _bytes?: number,
-  _ms?: number,
-): string {
-  if (mbPerSec === undefined || mbPerSec <= 0) return "";
-  if (mbPerSec < 1) return `${(mbPerSec * 1024).toFixed(0)} KB/s`;
-  return `${mbPerSec.toFixed(1)} MB/s`;
-}
-
-export function formatDurationMs(ms?: number): string {
-  if (ms === undefined) return "";
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.round((ms % 60000) / 1000);
-  return `${minutes}m ${seconds}s`;
-}
-
-interface TransferProgressTracker {
-  update(status: TransferProgressResponse): {
-    rate: number | undefined;
-    stalled: boolean;
-  };
-}
-
-export function createTransferProgressTracker(): TransferProgressTracker {
-  let lastBytes: number | undefined;
-  let lastTime: number | undefined;
-  let lastRate: number | undefined;
-  let lastActivityTime: number | undefined;
-  const STALL_THRESHOLD_MS = 5000;
-
-  return {
-    update(status) {
-      const now = Date.now();
-      const bytes = status.bytesTransferred;
-
-      if (
-        bytes !== undefined &&
-        lastBytes !== undefined &&
-        lastTime !== undefined
-      ) {
-        const deltaBytes = bytes - lastBytes;
-        const deltaMs = now - lastTime;
-        if (deltaMs > 0 && deltaBytes >= 0) {
-          lastRate = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
-          if (deltaBytes > 0) lastActivityTime = now;
-        }
-      } else if (bytes !== undefined) {
-        lastActivityTime = now;
-      }
-
-      lastBytes = bytes;
-      lastTime = now;
-
-      const stalled =
-        lastActivityTime !== undefined &&
-        now - lastActivityTime > STALL_THRESHOLD_MS &&
-        status.status === "running" &&
-        status.phase === "transferring";
-
-      return { rate: lastRate, stalled };
-    },
-  };
-}
-
-export interface TransferProgressResponse {
-  transferId: string;
-  status: "running" | "success" | "partial" | "error" | "cancelled";
-  phase:
-    | "compressing"
-    | "transferring"
-    | "benchmarking"
-    | "verifying"
-    | "extracting"
-    | "reconnecting";
-  bytesTransferred?: number;
-  totalBytes?: number;
-  itemsCompleted?: number;
-  totalItems?: number;
-  failedPaths?: string[];
-  message?: string;
-  method?: "stream" | "tar" | "item_sftp" | "direct_rsync";
-  sourcePaths?: string[];
-  destPath?: string;
-  sourceSessionId?: string;
-  destSessionId?: string;
-  startedAt?: number;
-  timings?: TransferTimings;
-  sourceDeleted?: boolean;
-  moveRequested?: boolean;
-  partialDestRemaining?: boolean;
-  cleanupCompleted?: boolean;
-  retryable?: boolean;
-  integrityVerified?: boolean;
-  parallelSegmentCount?: number;
-}
-
-export async function transferToHost(
-  sourceSessionId: string,
-  sourcePaths: string[],
-  destSessionId: string,
-  destPath: string,
-  move?: boolean,
-  methodPreference?: TransferMethodPreference,
-  parallelSegmentCount?: number,
-): Promise<{ transferId: string }> {
-  try {
-    fileLogger.info("Starting host transfer", {
-      operation: "host_transfer",
-      sourceSessionId,
-      destSessionId,
-      sourcePaths,
-      destPath,
-      move,
-      methodPreference,
-      parallelSegmentCount,
-    });
-
-    const response = await fileManagerApi.post("/ssh/transferToHost", {
-      sourceSessionId,
-      sourcePaths,
-      destSessionId,
-      destPath,
-      move,
-      methodPreference: methodPreference ?? "auto",
-      parallelSegmentCount,
-    });
-
-    return response.data;
-  } catch (error) {
-    fileLogger.error("Failed to start host transfer", error, {
-      operation: "host_transfer",
-      sourceSessionId,
-      destSessionId,
-      sourcePaths,
-    });
-    handleApiError(error, "transfer to host");
-    throw error;
-  }
-}
-
-export async function getTransferStatus(
-  transferId: string,
-): Promise<TransferProgressResponse> {
-  try {
-    const response = await fileManagerApi.get(
-      `/ssh/transferStatus/${transferId}`,
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get transfer status");
-    throw error;
-  }
-}
-
-export async function listActiveTransfers(): Promise<{
-  transfers: TransferProgressResponse[];
-}> {
-  try {
-    const response = await fileManagerApi.get("/ssh/activeTransfers");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "list active transfers");
-    throw error;
-  }
-}
-
-export async function cancelTransferToHost(transferId: string): Promise<void> {
-  try {
-    await fileManagerApi.post(`/ssh/transferCancel/${transferId}`);
-  } catch (error) {
-    fileLogger.warn("Transfer cancel request failed (non-fatal)", {
-      operation: "host_transfer",
-      transferId,
-      error,
-    });
-  }
-}
-
-export async function cleanupCancelledTransfer(
-  transferId: string,
-): Promise<{ removedPaths: string[]; failedPaths: string[] }> {
-  try {
-    const response = await fileManagerApi.post(
-      `/ssh/transferCleanup/${transferId}`,
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "clean up cancelled transfer");
-    throw error;
-  }
-}
-
-export async function retryTransferToHost(
-  transferId: string,
-): Promise<{ ok: boolean; transferId: string }> {
-  try {
-    const response = await fileManagerApi.post(
-      `/ssh/transferRetry/${transferId}`,
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "retry transfer");
-    throw error;
-  }
-}
-
-export async function pollTransferUntilComplete(
-  transferId: string,
-  onProgress?: (status: TransferProgressResponse) => void,
-  intervalMs = 500,
-): Promise<TransferProgressResponse> {
-  return new Promise((resolve, reject) => {
-    const poll = async () => {
-      try {
-        const status = await getTransferStatus(transferId);
-        onProgress?.(status);
-
-        if (
-          status.status === "success" ||
-          status.status === "partial" ||
-          status.status === "error" ||
-          status.status === "cancelled"
-        ) {
-          resolve(status);
-          return;
-        }
-
-        setTimeout(poll, intervalMs);
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    void poll();
-  });
-}
-
-// ============================================================================
-// FILE MANAGER DATA
-// ============================================================================
-
-export interface TransferDestination {
-  id: number;
-  userId: string;
-  sourceHostId: number;
-  destHostId: number;
-  destPath: string;
-  destPathLabel?: string;
-  lastUsed?: string;
-}
-
-export async function getTransferRecent(
-  sourceHostId: number,
-): Promise<TransferDestination[]> {
-  try {
-    const response = await authApi.get("/host/transfer/recent", {
-      params: { sourceHostId },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get transfer recent destinations");
-    throw error;
-  }
-}
-
-export async function addTransferRecent(
-  sourceHostId: number,
-  destHostId: number,
-  destPath: string,
-  destPathLabel?: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/host/transfer/recent", {
-      sourceHostId,
-      destHostId,
-      destPath,
-      destPathLabel,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "add transfer recent destination");
-    throw error;
-  }
-}
-
 export {
   getSSHHosts,
   createSSHHost,
   updateSSHHost,
-  wakeOnLan,
   bulkImportSSHHosts,
   importSSHConfigHosts,
-  discoverProxmoxGuests,
-  discoverProxmoxGuestsStream,
-  syncProxmoxGuests,
   bulkUpdateSSHHosts,
   reorderSSHHosts,
   deleteSSHHost,
   getSSHHostById,
   exportSSHHostWithCredentials,
   exportAllSSHHosts,
-  enableAutoStart,
-  disableAutoStart,
-  getAutoStartStatus,
   testProxyConnection,
 } from "@/api/ssh-host-management-api";
 
 export {
-  getTunnelStatuses,
-  subscribeTunnelStatuses,
-  getTunnelStatusByName,
-  connectTunnel,
-  disconnectTunnel,
-  cancelTunnel,
-  getC2STunnelPresets,
-  createC2STunnelPreset,
-  updateC2STunnelPreset,
-  deleteC2STunnelPreset,
-} from "@/api/tunnel-api";
-
-export {
-  getFileManagerRecent,
-  addFileManagerRecent,
-  removeFileManagerRecent,
-  getFileManagerPinned,
-  addFileManagerPinned,
-  removeFileManagerPinned,
-  getFileManagerShortcuts,
-  addFileManagerShortcut,
-  removeFileManagerShortcut,
-} from "@/api/file-manager-metadata-api";
-
-export {
-  connectSSH,
-  disconnectSSH,
-  verifySSHTOTP,
-  verifySSHWarpgate,
-  quickConnect,
-  getSSHStatus,
-  keepSSHAlive,
-  listSSHFiles,
-  identifySSHSymlink,
-  resolveSSHPath,
-  readSSHFile,
-  writeSSHFile,
-  uploadSSHFile,
-  downloadSSHFile,
-  downloadSSHFileStream,
-  createSSHFile,
-  createSSHFolder,
-  deleteSSHItem,
-  setSudoPassword,
-  copySSHItem,
-  renameSSHItem,
-  moveSSHItem,
-  changeSSHPermissions,
-  extractSSHArchive,
-  compressSSHFiles,
-  ensureSSHSessionForHost,
-  browseSSHDirectory,
-  type HostConnectionState,
-  type EnsureSSHSessionResult,
-  type BrowseSSHDirectoryResult,
-} from "@/api/ssh-file-operations-api";
-
-export {
-  getRecentFiles,
-  addRecentFile,
-  removeRecentFile,
-  getPinnedFiles,
-  addPinnedFile,
-  removePinnedFile,
-  getFolderShortcuts,
-  addFolderShortcut,
-  removeFolderShortcut,
-} from "@/api/file-manager-data-api";
-
-// Desktop-only local disk <-> remote transfers (dual-pane file manager).
-export {
-  uploadLocalFileToSession,
-  downloadSessionFileToLocal,
-  cancelLocalTransfer,
-  createLocalTransferId,
-  type LocalTransferProgressEvent,
-} from "@/api/local-transfer-api";
-
-export {
   getAllServerStatuses,
   getServerStatusById,
-  getServerMetricsById,
-  startMetricsPolling,
-  stopMetricsPolling,
-  sendMetricsHeartbeat,
-  registerMetricsViewer,
-  unregisterMetricsViewer,
-  submitMetricsTOTP,
   refreshServerPolling,
-  notifyHostCreatedOrUpdated,
-} from "@/api/host-metrics-status-api";
-
-export {
-  getHostMetricsLayout,
-  saveHostMetricsLayout,
-  getHostPlatform,
-  managerGet,
-  managerGetSub,
-  managerPost,
-  type PlatformInfo,
-} from "@/api/host-metrics-api";
-
-export {
-  getProxmoxStats,
-  startProxmoxStatsPolling,
-  stopProxmoxStatsPolling,
-  sendProxmoxStatsHeartbeat,
-  getProxmoxStatsHistory,
-  type ProxmoxStatsHistoryRow,
-  type ProxmoxStatsHistoryResponse,
-} from "@/api/proxmox-stats-api";
+  getStatusCheckSettings,
+  updateStatusCheckSettings,
+} from "@/api/host-status-api";
 
 export {
   getHostSidebarPreferences,
@@ -1671,14 +894,10 @@ export {
 export { getUiPreferences, saveUiPreferences } from "@/api/ui-preferences-api";
 
 export {
-  getGlobalMonitoringSettings,
-  updateGlobalMonitoringSettings,
   getLogLevel,
   updateLogLevel,
   getSessionTimeout,
   updateSessionTimeout,
-  getGuacamoleSettings,
-  updateGuacamoleSettings,
 } from "@/api/settings-api";
 
 // ============================================================================
@@ -1742,6 +961,7 @@ export async function loginUser(
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
       rememberMe: response.data.rememberMe,
+      is_external: response.data.is_external ?? response.data.is_oidc,
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
       token: response.data.token,
@@ -1793,18 +1013,6 @@ export async function getUserInfo(): Promise<UserInfo> {
   }
 }
 
-export async function getRemoteSyncUserInfo(): Promise<RemoteSyncUserInfo | null> {
-  if (!isElectron()) return null;
-  try {
-    // ?? null so a missing preload bridge matches the declared return type
-    // rather than resolving to undefined.
-    return ((await window.electronAPI?.invoke?.("get-remote-sync-user-info")) ??
-      null) as RemoteSyncUserInfo | null;
-  } catch {
-    return null;
-  }
-}
-
 export async function dismissDonationModal(): Promise<void> {
   try {
     await authApi.post("/users/me/dismiss-donation-modal");
@@ -1842,35 +1050,16 @@ export async function getRegistrationAllowed(): Promise<{ allowed: boolean }> {
   }
 }
 
-export async function getPasswordLoginAllowed(): Promise<{ allowed: boolean }> {
+export async function getPasswordLoginAllowed(): Promise<{
+  allowed: boolean;
+  /** Turned off by an admin but kept on because nothing else can sign in. */
+  forced?: boolean;
+}> {
   try {
     const response = await authApi.get("/users/password-login-allowed");
     return response.data;
   } catch (error) {
     handleApiError(error, "check password login status");
-  }
-}
-
-export async function getOIDCConfig(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/users/oidc-config");
-    return response.data;
-  } catch (error: unknown) {
-    const httpError = asHttpError(error);
-    console.warn(
-      "Failed to fetch OIDC config:",
-      httpError.response?.data?.error || httpError.message,
-    );
-    return null;
-  }
-}
-
-export async function getAdminOIDCConfig(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/users/oidc-config/admin");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch admin OIDC config");
   }
 }
 
@@ -2010,22 +1199,6 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
 }
 
-export async function getOIDCAuthorizeUrl(
-  rememberMe = false,
-  desktopCallbackPort?: number,
-  providerId?: number,
-  appCallbackUrl?: string,
-): Promise<OIDCAuthorize> {
-  try {
-    const response = await authApi.get("/users/oidc/authorize", {
-      params: { rememberMe, desktopCallbackPort, providerId, appCallbackUrl },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get OIDC authorize URL");
-  }
-}
-
 // ============================================================================
 export {
   getUserList,
@@ -2040,19 +1213,14 @@ export {
   deleteUser,
   deleteAccount,
   updateRegistrationAllowed,
-  getOidcAutoProvision,
-  updateOidcAutoProvision,
-  getOidcSilentLoginDefault,
-  updateOidcSilentLoginDefault,
+  getExternalAutoProvision,
+  updateExternalAutoProvision,
+  getSecondFactorAfterExternalLogin,
+  updateSecondFactorAfterExternalLogin,
   updatePasswordLoginAllowed,
   getPasswordResetAllowed,
   updatePasswordResetAllowed,
-  updateOIDCConfig,
-  disableOIDCConfig,
-  getCommandHistoryEnabled,
-  updateCommandHistoryEnabled,
   adminResetUserPassword,
-  adminDisableUserTotp,
   adminExportUserData,
   type ApiKey,
   type CreatedApiKey,
@@ -2072,20 +1240,9 @@ export {
   adminCreateUserCredential,
   adminUpdateUserCredential,
   adminDeleteUserCredential,
-  adminGetUserSnippets,
-  adminCreateUserSnippet,
-  adminUpdateUserSnippet,
-  adminDeleteUserSnippet,
 } from "@/api/admin-user-data-api";
 
 export {
-  setupTOTP,
-  enableTOTP,
-  disableTOTP,
-  verifyTOTPLogin,
-  generateBackupCodes,
-  getUserAlerts,
-  dismissAlert,
   getReleasesRSS,
   getVersionInfo,
   releaseUrlFrom,
@@ -2125,79 +1282,20 @@ export {
   deployCredentialToHost,
 } from "@/api/credentials-api";
 
-export {
-  getVaultProfiles,
-  createVaultProfile,
-  updateVaultProfile,
-  deleteVaultProfile,
-  type VaultProfilePayload,
-} from "@/api/vault-profiles-api";
-
 // ============================================================================
-// SNIPPETS API
-// ============================================================================
-
-export type {
-  NetworkTopologyNode,
-  NetworkTopologyEdge,
-  NetworkTopologyData,
-} from "@/api/snippets-api";
-export {
-  getSnippets,
-  createSnippet,
-  updateSnippet,
-  deleteSnippet,
-  executeSnippet,
-  getNetworkTopology,
-  saveNetworkTopology,
-  getSnippetFolders,
-  createSnippetFolder,
-  updateSnippetFolderMetadata,
-  renameSnippetFolder,
-  deleteSnippetFolder,
-  reorderSnippets,
-} from "@/api/snippets-api";
-
-// ============================================================================
-export type {
-  UptimeInfo,
-  RecentActivityItem,
-  ServiceLink,
-} from "@/api/dashboard-api";
+export type { UptimeInfo, RecentActivityItem } from "@/api/dashboard-api";
 export {
   getUptime,
   getRecentActivity,
   logActivity,
   resetRecentActivity,
-  getServiceLinks,
-  createServiceLink,
-  deleteServiceLink,
-  updateServiceLink,
 } from "@/api/dashboard-api";
 
 // ============================================================================
 export {
-  saveCommandToHistory,
-  getCommandHistory,
-  deleteCommandFromHistory,
-  clearCommandHistory,
-} from "@/api/command-history-api";
-
-export {
-  linkOIDCToPasswordAccount,
-  unlinkOIDCFromPasswordAccount,
-} from "@/api/oidc-account-api";
-
-export type {
-  GuacamoleTokenRequest,
-  GuacamoleTokenResponse,
-} from "@/api/guacamole-api";
-export {
-  getGuacamoleDpi,
-  getGuacamoleToken,
-  getGuacamoleTokenFromHost,
-  getGuacdStatus,
-} from "@/api/guacamole-api";
+  linkExternalToPasswordAccount,
+  unlinkExternalFromPasswordAccount,
+} from "@/api/external-account-api";
 
 // ============================================================================
 // RBAC MANAGEMENT
@@ -2220,41 +1318,13 @@ export {
   setHostAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
-  shareSnippet,
-  getSnippetAccess,
-  revokeSnippetAccess,
-  getSharedSnippets,
 } from "@/api/rbac-api";
 export type {
   SharePermissionLevel,
   ShareTarget,
   PermissionCatalogEntry,
+  PermissionCatalogItem,
 } from "@/api/rbac-api";
-
-// ============================================================================
-// DOCKER MANAGEMENT API
-// ============================================================================
-
-export {
-  connectDockerSession,
-  verifyDockerTOTP,
-  verifyDockerWarpgate,
-  disconnectDockerSession,
-  keepaliveDockerSession,
-  getDockerSessionStatus,
-  validateDockerAvailability,
-  listDockerContainers,
-  getDockerContainerDetails,
-  startDockerContainer,
-  stopDockerContainer,
-  restartDockerContainer,
-  pauseDockerContainer,
-  unpauseDockerContainer,
-  removeDockerContainer,
-  getContainerLogs,
-  downloadContainerLogs,
-  getContainerStats,
-} from "@/api/docker-api";
 
 export {
   getOpenTabs,
@@ -2271,31 +1341,3 @@ export {
   type ActiveSessionInfo,
   type UserPreferences,
 } from "@/api/open-tabs-api";
-
-// ============================================================================
-// TERMIX ID API
-// ============================================================================
-
-export {
-  getMyTermixId,
-  checkTermixIdHandle,
-  createTermixId,
-  updateTermixId,
-  deleteTermixId,
-  addTermixIdKey,
-  generateTermixIdKey,
-  setTermixIdKeyEnabled,
-  deleteTermixIdKey,
-  getMyCa,
-  createCa,
-  rotateCa,
-  deleteCa,
-  issueCertificate,
-  getLinkedCredentialIds,
-  type TermixIdentity,
-  type TermixIdentityKey,
-  type TermixIdMe,
-  type GeneratedKey,
-  type TermixIdCa,
-  type IssuedCertificate,
-} from "@/api/termix-id-api";

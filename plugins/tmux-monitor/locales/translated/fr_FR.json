@@ -1,0 +1,117 @@
+{
+  "hosts": {
+    "enableTmuxMonitor": "Activer le Moniteur Tmux",
+    "enableTmuxMonitorDesc": "Afficher cet hôte dans le Moniteur Tmux et ajouter ses actions tmux à la barre latérale",
+    "tabTmuxMonitor": "Moniteur tmux",
+    "docsLink": "Voir la documentation"
+  },
+  "nav": {
+    "tmuxMonitor": "Moniteur Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Moniteur tmux",
+    "tmuxMonitorDesc": "Surveiller les sessions tmux sur vos hôtes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser le moniteur Tmux",
+      "description": "Naviguez et contrôlez les sessions, fenêtres et volets tmux sur les hôtes dont le moniteur est activé."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activer le Moniteur Tmux",
+        "description": "Surveillez et connectez-vous aux sessions tmux exécutées sur cet hôte."
+      },
+      "mouseEnabled": {
+        "label": "Activer la prise en charge de la souris tmux",
+        "description": "Activez la prise en charge de la souris pour la session tmux lors de la connexion ou de la création d'une session. Les autres sessions et les paramètres globaux de tmux restent inchangés."
+      }
+    }
+  },
+  "tmuxMonitor": {
+    "title": "Moniteur tmux",
+    "failedToLoadHosts": "Échec du chargement des hôtes",
+    "failedToLoad": "Échec du chargement des sessions tmux",
+    "tmuxUnavailable": "tmux n'est pas installé sur cet hôte",
+    "noSessions": "Aucune session tmux sur cet hôte",
+    "noHostSelected": "Aucun hôte sélectionné",
+    "attached": "Attaché",
+    "detached": "Détaché",
+    "attach": "Attacher",
+    "editTags": "Modifier les tags",
+    "tagsHint": "Tags séparés par des virgules (ex. : YOLO, lab, training)",
+    "tagsSaved": "Tags enregistrés",
+    "tagsSaveFailed": "Échec de l'enregistrement des tags",
+    "searchPlaceholder": "Rechercher dans les sorties des sessions...",
+    "searchResults": "{{count}} correspondances",
+    "searchFailed": "Échec de la recherche",
+    "selectPaneHint": "Sélectionnez un volet pour prévisualiser sa sortie",
+    "closePreview": "Fermer l'aperçu",
+    "newSession": "Nouvelle session",
+    "newSessionHint": "Nom de session (lettres, chiffres, _ @ % + = -)",
+    "newSessionPlaceholder": "my-session",
+    "create": "Créer",
+    "sessionCreated": "Session « {{name}} » créée",
+    "sessionCreateFailed": "Échec de la création de la session",
+    "splitRight": "Diviser à droite",
+    "splitDown": "Diviser en bas",
+    "splitFailed": "Échec de la division du volet",
+    "newWindow": "Nouvelle fenêtre",
+    "windowCreateFailed": "Échec de la création de la fenêtre",
+    "attachSessionTooltip": "Attacher à {{session}}",
+    "refresh": "Actualiser",
+    "refreshFailed": "Échec de l'actualisation des sessions",
+    "collapseAll": "Réduire tout",
+    "expandAll": "Développer tout",
+    "moreActions": "Plus d'actions",
+    "sessionStats": "Statistiques de session",
+    "renameSessionTitle": "Renommer la session « {{name}} »",
+    "rename": "Renommer",
+    "sessionRenamed": "Session renommée en « {{name}} »",
+    "sessionRenameFailed": "Échec du renommage de la session",
+    "editTagsTitle": "Modifier les tags pour « {{name}} »",
+    "killPane": "Fermer le volet",
+    "resizeTree": "Faites glisser pour redimensionner, double-cliquez pour réinitialiser",
+    "reattach": "Rattacher (corrige un affichage brouillé)",
+    "killWindow": "Fermer la fenêtre",
+    "killWindowTitle": "Fermer la fenêtre {{index}} de « {{session}} » ?",
+    "killWindowBody": "Tous les volets et processus de cette fenêtre seront terminés. La fermeture de la dernière fenêtre met fin à la session.",
+    "windowKillFailed": "Échec de la fermeture de la fenêtre",
+    "statusActivity": "Activité",
+    "statusWindows": "Fenêtres",
+    "statusPanes": "Volets",
+    "statusTags": "Étiquettes",
+    "killPaneTitle": "Fermer le volet {{id}} ?",
+    "killPaneBody": "Le processus s’exécutant dans ce volet sera terminé. La fermeture du dernier volet ferme sa fenêtre.",
+    "paneKillFailed": "Échec de la fermeture du volet",
+    "killSessionTitle": "Fermer la session « {{name}} » ?",
+    "killSessionBody": "Toutes les fenêtres et processus en cours dans cette session seront terminés. Cette action est irréversible.",
+    "kill": "Fermer",
+    "sessionKilled": "Session « {{name}} » fermée",
+    "sessionKillFailed": "Échec de la fermeture de la session",
+    "hostUnreachable": "Impossible de se connecter à l’hôte. Vérifiez qu’il est en ligne et accessible.",
+    "noServer": "Aucun serveur tmux n’est exécuté sur cet hôte.",
+    "searchTruncated": "Résultats partiels. La recherche couvre les {{lines}} dernières lignes de chaque volet et au maximum {{panes}} volets.",
+    "closeSearchResults": "Fermer les résultats de recherche",
+    "retry": "Réessayer",
+    "noHosts": "Aucun hôte SSH disponible",
+    "noHostsHint": "Activez l'option Moniteur Tmux sur un hôte SSH (Gestionnaire d'hôtes, onglet Moniteur Tmux) pour surveiller ses sessions tmux.",
+    "tmuxInstallHint": "Installez-le sur l’hôte avec :",
+    "attachTooltip": "Ouvrir un terminal sur {{host}}",
+    "attachTooltipPane": "Ouvrez un terminal pour {{host}}, session tmux {{session}}",
+    "timeJustNow": "à l’instant",
+    "timeMinutes": "il y a {{count}} min",
+    "timeHours": "il y a {{count}} h",
+    "timeDays": "il y a {{count}} j",
+    "allHosts": "Tous les hôtes",
+    "singleHost": "hôte unique",
+    "hostScope": "portée du moniteur",
+    "filterHosts": "Filtrer les hôtes par nom ou adresse",
+    "selectHost": "Sélectionner l'hôte",
+    "toggleHost": "Développer ou réduire {{host}}",
+    "noMatchingHosts": "Aucun hôte correspondant",
+    "toggleSession": "Développer ou réduire {{session}}"
+  }
+}

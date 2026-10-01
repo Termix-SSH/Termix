@@ -28,6 +28,8 @@
     "noImplicitOverride": false,
     "noEmitOnError": false,
     "paths": {
+      "@termix/plugin-sdk/frontend": ["./packages/plugin-sdk/src/frontend.ts"],
+      "@termix/plugin-sdk/ui": ["./src/ui/plugin-host/sdk-ui.ts"],
       "@/types": ["./src/types/index.ts"],
       "@/types/*": ["./src/types/*"],
       "@/*": ["./src/ui/*"]

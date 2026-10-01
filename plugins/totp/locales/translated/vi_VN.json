@@ -1,0 +1,42 @@
+{
+  "title": "Authenticator App",
+  "factor": "Authenticator code",
+  "challenge": {
+    "enterCode": "Nhập mã xác minh",
+    "verify": "Xác minh mã",
+    "backupCodeHint": "You can also enter one of your backup codes."
+  },
+  "enrollment": {
+    "title": "Trình xác thực TOTP",
+    "docs": "Tài liệu",
+    "on": "2FA đã được bật",
+    "off": "Thêm bảo mật đăng nhập bổ sung",
+    "enable": "Bật",
+    "disable": "Tắt",
+    "addDevice": "Add device",
+    "addTitle": "Add authenticator device",
+    "addDescription": "Confirm with a code from your authenticator or a backup code to enroll another device with the same key.",
+    "addScanInstructions": "Scan this QR code with the additional authenticator. Existing authenticators will continue to work.",
+    "addSuccess": "Additional authenticator enrolled",
+    "addFailed": "Failed to add authenticator",
+    "codeRequired": "Enter a TOTP code or backup code",
+    "codePlaceholder": "TOTP code or backup code",
+    "setupTitle": "Thiết lập TOTP",
+    "setupFailed": "Không khởi động được cài đặt TOTP",
+    "qrCode": "Mã QR",
+    "secretCopied": "Đã sao chép mã bí mật vào clipboard",
+    "instructions": "Scan the QR code or enter the secret in your authenticator app, then enter the 6-digit code",
+    "continueVerify": "Tiếp tục xác minh",
+    "verifyTitle": "Xác minh mã",
+    "verify": "Xác minh",
+    "enter6Digits": "Nhập mã 6 chữ số",
+    "enabledSuccess": "Đã bật xác thực hai yếu tố",
+    "invalidCode": "Mã không hợp lệ, vui lòng thử lại",
+    "disableTitle": "Tắt 2FA",
+    "disabledSuccess": "Đã tắt xác thực hai yếu tố",
+    "disableFailed": "Không tắt được 2FA",
+    "backupTitle": "Mã dự phòng",
+    "downloadBackup": "Tải mã dự phòng",
+    "done": "Xong"
+  }
+}

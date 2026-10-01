@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "目覚め",
+    "sent": "Wake-on-LANパケットが送信されました",
+    "failed": "Wake-on-LANパケットの送信に失敗しました"
+  },
+  "permissions": {
+    "send": {
+      "title": "Wake-on-LANパケットを送信する",
+      "description": "マジックパケットをホストのMACアドレスに送信して、ホストを起動します。"
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "MACアドレス",
+        "description": "ホストのネットワークMACアドレス。Wake-on-LANパケットの送信に使用されます。",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "放送演説",
+        "description": "パケットの送信先となるサブネットブロードキャストアドレス。255.255.255.255 の場合は空欄のままにしてください。",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "loginWithSso": "Inicia la sessió amb SSO",
+  "loginWithProvider": "Inicia la sessió amb {{name}}",
+  "loading": "S'està carregant...",
+  "permissions": {
+    "manage": {
+      "title": "Gestionar proveïdors d'SSO",
+      "description": "Afegiu, canvieu i elimineu els proveïdors d'SSO amb què els usuaris poden iniciar la sessió."
+    }
+  },
+  "providers": {
+    "docsLink": "Veure documents",
+    "none": "No hi ha cap proveïdor d'SSO configurat.",
+    "add": "Afegeix un proveïdor",
+    "edit": "Edita el proveïdor",
+    "delete": "Suprimeix el proveïdor",
+    "deleteConfirm": "Voleu suprimir aquest proveïdor? Els usuaris associats no podran iniciar la sessió.",
+    "name": "Nom de visualització",
+    "namePlaceholder": "El meu proveïdor d'SSO",
+    "nameRequired": "Cal un nom de visualització",
+    "type": "Tipus de proveïdor",
+    "enabled": "Activat",
+    "save": "Desa el proveïdor",
+    "saving": "Desant...",
+    "saved": "Desat",
+    "saveFailed": "No s'ha pogut desar",
+    "deleted": "Suprimit",
+    "deleteFailed": "No s'ha pogut suprimir",
+    "loadFailed": "No s'han pogut carregar els proveïdors d'SSO",
+    "cancel": "Cancel·la",
+    "copy": "Còpia",
+    "copied": "Copiat",
+    "redirectUri": "URI de redirecció",
+    "redirectUriDesc": "Registra aquesta URL com a URL de redirecció o de devolució de trucada al teu proveïdor d'identitat.",
+    "legacyCallback": "Mantingueu l'URI de redirecció antiga",
+    "legacyCallbackDesc": "Aquest proveïdor es va configurar abans de Termix 2.9 i encara utilitza l'URI de redirecció antic, que continua funcionant. Per canviar al nou, afegiu primer {{uri}} al vostre proveïdor d'identitat i després desactiveu-lo.",
+    "authorizationUrl": "URL d'autorització: {{url}}"
+  },
+  "fields": {
+    "clientId": "ID de client",
+    "clientSecret": "Secret del client",
+    "secretKeep": "S'ha desat un secret. Deixa aquest espai buit per conservar-lo.",
+    "issuerUrl": "URL de l'emissor",
+    "authUrl": "URL d'autorització",
+    "tokenUrl": "URL del testimoni",
+    "userIdentifier": "Ruta d'identificació d'usuari",
+    "displayName": "Camí del nom de visualització",
+    "scopes": "Àmbits",
+    "userinfoUrl": "Substitueix l'URL d'informació de l'usuari",
+    "groupClaim": "Reclamació de grup",
+    "groupClaimDesc": "Opcional. La ruta de reclamació que conté els grups de l'usuari. Per defecte, s'utilitzen grups, rols i, a continuació, grup. Feu servir això per a proveïdors amb una reclamació personalitzada (per exemple, Zitadel).",
+    "allowedUsers": "Usuaris permesos",
+    "allowedUsersDesc": "Un correu electrònic per línia. Deixeu-ho en blanc per permetre-ho tot.",
+    "adminGroup": "Grup d'administradors",
+    "adminGroupDesc": "Els usuaris d'aquest grup tenen dret d'administrador. Deixeu-ho en blanc per desactivar la sincronització del grup.",
+    "caCert": "Certificat CA personalitzat",
+    "caCertDesc": "Opcional. Certificat CA codificat amb PEM per a proveïdors OIDC que utilitzen una CA privada o autosignada. Deixeu-ho en blanc per utilitzar el magatzem de confiança del sistema."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Inicia la sessió amb SSO automàticament",
+      "description": "Envia els visitants directament al primer proveïdor d'SSO en comptes de mostrar el formulari d'inici de sessió. La variable d'entorn OIDC_SILENT_LOGIN_DEFAULT ho anul·la."
+    }
+  }
+}

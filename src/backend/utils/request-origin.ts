@@ -109,7 +109,7 @@ export function getRequestOrigin(req: Request | IncomingMessage): string {
   return `${protocol}://${host}`;
 }
 
-export function getRequestOriginWithForceHTTPS(
+function getRequestOriginWithForceHTTPS(
   req: Request | IncomingMessage,
 ): string {
   if (process.env.OIDC_FORCE_HTTPS === "true") {

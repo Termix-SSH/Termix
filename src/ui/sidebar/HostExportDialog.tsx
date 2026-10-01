@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../lib/error-message.js";
+import { usePluginStore } from "@/plugin-host/plugin-store";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, Search } from "lucide-react";
@@ -17,6 +18,7 @@ import { exportAllSSHHosts, type SSHHostWithStatus } from "@/main-axios";
 import { isFolder } from "@/sidebar/SidebarTree";
 import {
   buildExportPayload,
+  pluginSecretKeys,
   hostKey,
   maskSecrets,
   type ExportPayload,
@@ -27,9 +29,8 @@ const GROUPS: { key: FieldGroup; label: string }[] = [
   { key: "connection", label: "groupConnection" },
   { key: "notes", label: "groupNotes" },
   { key: "tags", label: "groupTags" },
-  { key: "tunnels", label: "groupTunnels" },
+  { key: "proxy", label: "groupProxy" },
   { key: "jumpHosts", label: "groupJumpHosts" },
-  { key: "quickActions", label: "groupQuickActions" },
   { key: "featureFlags", label: "groupFeatureFlags" },
   { key: "advanced", label: "groupAdvanced" },
 ];
@@ -38,9 +39,8 @@ const DEFAULT_GROUPS: FieldGroup[] = [
   "connection",
   "notes",
   "tags",
-  "tunnels",
+  "proxy",
   "jumpHosts",
-  "quickActions",
   "featureFlags",
   "advanced",
 ];
@@ -137,6 +137,15 @@ export function HostExportDialog({
     };
   }, [open, withCredentials, t]);
 
+  const { records: pluginRecords } = usePluginStore();
+  const pluginSecrets = useMemo(
+    () =>
+      pluginSecretKeys(
+        [...pluginRecords.values()].map((record) => record.summary),
+      ),
+    [pluginRecords],
+  );
+
   const payload = useMemo(() => {
     if (!raw) return null;
     return buildExportPayload(
@@ -144,12 +153,13 @@ export function HostExportDialog({
       scope === "all" ? null : selectedKeys,
       groups,
       withCredentials,
+      pluginSecrets,
     );
-  }, [raw, scope, selectedKeys, groups, withCredentials]);
+  }, [raw, scope, selectedKeys, groups, withCredentials, pluginSecrets]);
 
   const preview = useMemo(() => {
     if (!payload) return "";
-    const masked = maskSecrets(payload);
+    const masked = maskSecrets(payload, pluginSecrets);
     if (masked.hosts.length <= PREVIEW_HOST_LIMIT) {
       return JSON.stringify(masked, null, 2);
     }
@@ -165,7 +175,7 @@ export function HostExportDialog({
         count: payload.hosts.length - PREVIEW_HOST_LIMIT,
       })
     );
-  }, [payload, t]);
+  }, [payload, pluginSecrets, t]);
 
   function toggleGroup(group: FieldGroup) {
     setGroups((prev) => {
@@ -310,16 +320,23 @@ export function HostExportDialog({
         </div>
 
         <div className="shrink-0 text-xs text-muted-foreground">
-          {count === 0
-            ? t("hosts.export.noneSelected")
-            : `${t("hosts.export.summary", {
-                selected: count,
-                total: exportableHosts.length,
-              })} · ${
-                withCredentials
+          {count === 0 ? (
+            t("hosts.export.noneSelected")
+          ) : (
+            <span className="flex flex-wrap gap-x-3">
+              <span>
+                {t("hosts.export.summary", {
+                  selected: count,
+                  total: exportableHosts.length,
+                })}
+              </span>
+              <span>
+                {withCredentials
                   ? t("hosts.export.credentialsIncluded")
-                  : t("hosts.export.credentialsExcluded")
-              }`}
+                  : t("hosts.export.credentialsExcluded")}
+              </span>
+            </span>
+          )}
         </div>
 
         <DialogFooter className="shrink-0">

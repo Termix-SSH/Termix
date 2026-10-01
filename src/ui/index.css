@@ -1,5 +1,9 @@
+/* Plugin utilities (termix-plugin build) rank above base, below core's own. */
+@layer properties, termix-plugin-properties, theme, base, components,
+  termix-plugin-utilities, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./theme.css";
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/400-italic.css";
@@ -42,61 +46,6 @@
   font-weight: 700;
   font-style: italic;
   font-display: swap;
-}
-
-@custom-variant dark (&:is(.dark *));
-@custom-variant dracula (&:is(.dracula *));
-@custom-variant catppuccin (&:is(.catppuccin *));
-@custom-variant nord (&:is(.nord *));
-@custom-variant solarized (&:is(.solarized *));
-@custom-variant tokyo-night (&:is(.tokyo-night *));
-@custom-variant one-dark (&:is(.one-dark *));
-@custom-variant gruvbox (&:is(.gruvbox *));
-
-@theme inline {
-  --font-heading: var(--font-mono);
-  --font-mono: var(--font-ui, "JetBrains Mono Variable", monospace);
-  --color-accent-brand: var(--accent-brand);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-dim: var(--surface-dim);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
@@ -484,6 +433,132 @@
   }
 }
 
+/* Icons sized with the size prop carry width/height attributes in px, which
+   the interface size setting cannot reach. These restate them in CSS, where
+   they become rem like every other length. A size class on the icon wins. */
+@layer base {
+  svg.lucide[width="8"] {
+    width: 8px;
+    height: 8px;
+  }
+  svg.lucide[width="9"] {
+    width: 9px;
+    height: 9px;
+  }
+  svg.lucide[width="10"] {
+    width: 10px;
+    height: 10px;
+  }
+  svg.lucide[width="11"] {
+    width: 11px;
+    height: 11px;
+  }
+  svg.lucide[width="12"] {
+    width: 12px;
+    height: 12px;
+  }
+  svg.lucide[width="13"] {
+    width: 13px;
+    height: 13px;
+  }
+  svg.lucide[width="14"] {
+    width: 14px;
+    height: 14px;
+  }
+  svg.lucide[width="15"] {
+    width: 15px;
+    height: 15px;
+  }
+  svg.lucide[width="16"] {
+    width: 16px;
+    height: 16px;
+  }
+  svg.lucide[width="17"] {
+    width: 17px;
+    height: 17px;
+  }
+  svg.lucide[width="18"] {
+    width: 18px;
+    height: 18px;
+  }
+  svg.lucide[width="19"] {
+    width: 19px;
+    height: 19px;
+  }
+  svg.lucide[width="20"] {
+    width: 20px;
+    height: 20px;
+  }
+  svg.lucide[width="21"] {
+    width: 21px;
+    height: 21px;
+  }
+  svg.lucide[width="22"] {
+    width: 22px;
+    height: 22px;
+  }
+  svg.lucide[width="23"] {
+    width: 23px;
+    height: 23px;
+  }
+  svg.lucide[width="24"] {
+    width: 24px;
+    height: 24px;
+  }
+  svg.lucide[width="25"] {
+    width: 25px;
+    height: 25px;
+  }
+  svg.lucide[width="26"] {
+    width: 26px;
+    height: 26px;
+  }
+  svg.lucide[width="27"] {
+    width: 27px;
+    height: 27px;
+  }
+  svg.lucide[width="28"] {
+    width: 28px;
+    height: 28px;
+  }
+  svg.lucide[width="29"] {
+    width: 29px;
+    height: 29px;
+  }
+  svg.lucide[width="30"] {
+    width: 30px;
+    height: 30px;
+  }
+  svg.lucide[width="31"] {
+    width: 31px;
+    height: 31px;
+  }
+  svg.lucide[width="32"] {
+    width: 32px;
+    height: 32px;
+  }
+  svg.lucide[width="36"] {
+    width: 36px;
+    height: 36px;
+  }
+  svg.lucide[width="40"] {
+    width: 40px;
+    height: 40px;
+  }
+  svg.lucide[width="48"] {
+    width: 48px;
+    height: 48px;
+  }
+  svg.lucide[width="64"] {
+    width: 64px;
+    height: 64px;
+  }
+  svg.lucide[width="96"] {
+    width: 96px;
+    height: 96px;
+  }
+}
+
 /* Font size scale applied to html element */
 html.fs-xs {
   font-size: 12px;
@@ -507,28 +582,6 @@ html.fs-xl {
   }
 }
 
-@utility scrollbar-none {
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@utility thin-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: oklch(1 0 0 / 15%) transparent;
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 15%);
-    border-radius: 2px;
-  }
-}
-
 @keyframes blink {
   0%,
   100% {
@@ -537,10 +590,6 @@ html.fs-xl {
   50% {
     opacity: 0;
   }
-}
-
-.terminal-toolbar-collapsed-shell {
-  position: relative;
 }
 
 /* Motion communicates state and hierarchy. Keep it off the terminal glyph layer. */

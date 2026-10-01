@@ -1,0 +1,350 @@
+{
+  "remoteDesktop": {
+    "connecting": "正在連線至 {{type}} 工作階段…",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
+    "connectionError": "連線錯誤",
+    "connectionFailed": "連線失敗",
+    "failedToConnect": "無法取得連線權杖",
+    "hostNotFound": "找不到主機",
+    "noHostSelected": "未選擇主機",
+    "reconnect": "重新連線",
+    "retry": "重試",
+    "guacdUnavailable": "遠端桌面服務 (guacd) 無法使用。請確保 guacd 正在執行且可存取，並已在管理員設定中正確設定。",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "connect": "連線",
+    "ctrlAltDel": "Ctrl+Alt+Del",
+    "files": {
+      "title": "Drive Files",
+      "parent": "Parent directory",
+      "refresh": "重新整理",
+      "empty": "此資料夾為空",
+      "listFailed": "Failed to read this folder",
+      "download": "下載",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "正在上傳 {{name}}...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
+    },
+    "toolbar": {
+      "ctrlAltDel": "Ctrl+Alt+Del",
+      "winL": "Win+L (鎖定螢幕)",
+      "winKey": "Windows 鍵",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift",
+      "win": "Win",
+      "stickyActive": "{{key}} (已鎖定 - 點擊釋放)",
+      "stickyInactive": "{{key}} (點擊鎖定)",
+      "esc": "Escape",
+      "tab": "Tab",
+      "home": "Home",
+      "end": "End",
+      "pageUp": "Page Up",
+      "pageDown": "Page Down",
+      "arrowUp": "上箭頭",
+      "arrowDown": "下箭頭",
+      "arrowLeft": "左箭頭",
+      "arrowRight": "右箭頭",
+      "fnToggle": "功能鍵",
+      "reconnect": "重新連線工作階段",
+      "collapse": "收合工具列",
+      "expand": "展開工具列",
+      "dragHandle": "拖曳以重新定位",
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
+      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+  },
+  "hosts": {
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
+    "guac": {
+      "toolbar": "Toolbar",
+      "connection": "連線",
+      "authentication": "驗證",
+      "storedCredential": "已儲存的憑證",
+      "authMethod": "驗證方法",
+      "authTypeDirect": "直接",
+      "authTypeCredential": "憑證",
+      "authTypeNone": "取消全選",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
+      "selectCredential": "選取憑證…",
+      "connectionSettings": "連線設定",
+      "displaySettings": "顯示設定",
+      "audioSettings": "音訊設定",
+      "rdpPerformance": "RDP 效能",
+      "deviceRedirection": "裝置重新導向",
+      "session": "工作階段",
+      "gateway": "閘道",
+      "remoteApp": "RemoteApp",
+      "clipboard": "剪貼簿",
+      "sessionRecording": "工作階段錄製",
+      "wakeOnLan": "Wake-on-LAN",
+      "vncSettings": "VNC 設定",
+      "terminalSettings": "終端機設定",
+      "rdpPort": "RDP 連接埠",
+      "username": "使用者名稱",
+      "password": "密碼",
+      "passwordSaved": "Password saved, type to change",
+      "domain": "網域",
+      "securityMode": "安全模式",
+      "width": "寬度",
+      "height": "高度",
+      "dpi": "DPI",
+      "clientName": "用戶端名稱",
+      "initialProgram": "初始程式",
+      "serverLayout": "伺服器鍵盤配置",
+      "timezone": "時區",
+      "loadBalanceInfo": "負載平衡資訊 / Cookie",
+      "loadBalanceInfoDesc": "用於 RDS 伺服器陣列負載平衡的 RD 連線代理 Cookie (例如 tsv://MS Terminal Services Plugin.1.CollectionName)",
+      "guacdProxy": "guacd 代理",
+      "guacdHostname": "guacd 主機",
+      "guacdHostnamePlaceholder": "全域預設",
+      "guacdPort": "guacd 連接埠",
+      "guacdProxyDesc": "覆寫此連線的全域 guacd 執行個體。留空以使用全域設定的 guacd。",
+      "gatewayHostname": "閘道主機名稱",
+      "gatewayPort": "閘道連接埠",
+      "gatewayUsername": "閘道使用者名稱",
+      "gatewayPassword": "閘道密碼",
+      "gatewayDomain": "閘道網域",
+      "remoteAppProgram": "RemoteApp 程式",
+      "workingDirectory": "工作目錄",
+      "arguments": "引數",
+      "normalizeLineEndings": "正規化行尾符號",
+      "macAddress": "MAC 位址",
+      "broadcastAddress": "廣播位址",
+      "udpPort": "UDP 連接埠",
+      "waitTimeS": "等待時間 (秒)",
+      "driveName": "磁碟機名稱",
+      "drivePath": "磁碟機路徑",
+      "ignoreCertificate": "忽略憑證",
+      "ignoreCertificateDesc": "允許連線至使用自行簽署憑證的主機",
+      "forceLossless": "強制無損",
+      "forceLosslessDesc": "強制使用無損影像編碼（品質較高，頻寬需求較大）",
+      "disableAudio": "停用音訊",
+      "disableAudioDesc": "將遠端工作階段的音訊全部靜音",
+      "enableAudioInput": "啟用音訊輸入（麥克風）",
+      "enableAudioInputDesc": "將本機麥克風轉送至遠端工作階段",
+      "wallpaper": "桌面背景",
+      "wallpaperDesc": "顯示桌面背景（停用可提升效能）",
+      "theming": "佈景主題",
+      "themingDesc": "啟用視覺主題與樣式",
+      "fontSmoothing": "字型平滑處理",
+      "fontSmoothingDesc": "啟用 ClearType 字型轉譯",
+      "fullWindowDrag": "全視窗拖曳",
+      "fullWindowDragDesc": "拖曳時顯示視窗內容",
+      "desktopComposition": "桌面合成",
+      "desktopCompositionDesc": "啟用 Aero 玻璃效果",
+      "menuAnimations": "選單動畫",
+      "menuAnimationsDesc": "啟用選單淡入淡出及滑動動畫",
+      "disableBitmapCaching": "停用點陣圖快取",
+      "disableBitmapCachingDesc": "關閉點陣圖快取（可能有助於解決顯示問題）",
+      "disableOffscreenCaching": "停用螢幕外快取",
+      "disableOffscreenCachingDesc": "關閉螢幕外快取",
+      "disableGlyphCaching": "停用字符快取",
+      "disableGlyphCachingDesc": "關閉字符快取",
+      "enableGfx": "啟用 GFX",
+      "enableGfxDesc": "使用 RemoteFX 圖形管線",
+      "enablePrinting": "啟用列印功能",
+      "enablePrintingDesc": "將本機印表機重新導向至遠端工作階段",
+      "enableDriveRedirection": "啟用磁碟機重新導向",
+      "enableDriveRedirectionDesc": "在遠端工作階段中將本機資料夾對應為磁碟機",
+      "createDrivePath": "建立磁碟機路徑",
+      "createDrivePathDesc": "如果資料夾不存在則自動建立",
+      "disableDownload": "停用下載",
+      "disableDownloadDesc": "防止從遠端工作階段下載檔案",
+      "disableUpload": "停用上傳",
+      "disableUploadDesc": "防止將檔案上傳至遠端工作階段",
+      "enableTouch": "啟用觸控",
+      "enableTouchDesc": "啟用觸控輸入轉送",
+      "consoleSession": "主控台工作階段",
+      "consoleSessionDesc": "連線至主控台 (工作階段 0) 而非新工作階段",
+      "sendWolPacket": "傳送 WOL 封包",
+      "sendWolPacketDesc": "在連線前傳送魔術封包以喚醒此主機",
+      "disableCopy": "停用複製",
+      "disableCopyDesc": "防止從遠端工作階段複製文字",
+      "disablePaste": "停用貼上",
+      "disablePasteDesc": "防止將文字貼上至遠端工作階段",
+      "createPathIfMissing": "若路徑不存在則建立",
+      "createPathIfMissingDesc": "自動建立錄製目錄",
+      "excludeOutput": "排除輸出",
+      "excludeOutputDesc": "不錄製螢幕輸出 (僅中繼資料)",
+      "excludeMouse": "排除滑鼠",
+      "excludeMouseDesc": "不錄製滑鼠移動",
+      "includeKeystrokes": "包含按鍵輸入",
+      "includeKeystrokesDesc": "除了螢幕輸出外，也錄製原始按鍵輸入",
+      "vncPort": "VNC 連接埠",
+      "vncPassword": "VNC 密碼",
+      "vncUsernameOptional": "使用者名稱 (選用)",
+      "vncLeaveBlank": "若不需要則留空",
+      "cursorMode": "游標模式",
+      "swapRedBlue": "交換紅/藍",
+      "swapRedBlueDesc": "交換紅色與藍色色版 (修正某些色彩問題)",
+      "readOnly": "唯讀",
+      "readOnlyDesc": "僅檢視遠端螢幕，不傳送任何輸入",
+      "telnetPort": "Telnet 連接埠",
+      "terminalType": "終端機類型",
+      "fontName": "字型名稱",
+      "fontSize": "字型大小",
+      "colorScheme": "色彩配置",
+      "backspaceKey": "退格鍵",
+      "colorDepth": "色彩深度",
+      "resizeMethod": "調整尺寸方法",
+      "driveNamePlaceholder": "Termix Drive"
+    },
+    "remoteDesktop": "遠端桌面",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "虛擬網路",
+    "unencryptedShell": "未加密殼層",
+    "remoteDesktopNotes": "筆記",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "檢視文件",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+  },
+  "onboarding": {
+    "feature_desktop": "Remote desktop",
+    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "色彩深度",
+        "description": "Used for RDP hosts that leave it on their default."
+      },
+      "resizeMethod": {
+        "label": "調整尺寸方法",
+        "description": "How the remote screen follows the window size."
+      },
+      "resizeDisplayUpdate": "Display Update",
+      "resizeReconnect": "重新連線",
+      "inherit": "Inherit",
+      "on": "開啟",
+      "off": "關閉",
+      "forceLossless": {
+        "label": "強制無損",
+        "description": "強制使用無損影像編碼（品質較高，頻寬需求較大）"
+      },
+      "enableWallpaper": {
+        "label": "桌面背景",
+        "description": "顯示桌面背景（停用可提升效能）"
+      },
+      "enableFontSmoothing": {
+        "label": "字型平滑處理",
+        "description": "啟用 ClearType 字型轉譯"
+      },
+      "enableDesktopComposition": {
+        "label": "桌面合成",
+        "description": "啟用 Aero 玻璃效果"
+      },
+      "disableAudio": {
+        "label": "停用音訊",
+        "description": "將遠端工作階段的音訊全部靜音"
+      },
+      "enablePrinting": {
+        "label": "啟用列印功能",
+        "description": "將本機印表機重新導向至遠端工作階段"
+      },
+      "enableDrive": {
+        "label": "啟用磁碟機重新導向",
+        "description": "在遠端工作階段中將本機資料夾對應為磁碟機"
+      },
+      "disableCopy": {
+        "label": "停用複製",
+        "description": "防止從遠端工作階段複製文字"
+      },
+      "disablePaste": {
+        "label": "停用貼上",
+        "description": "防止將文字貼上至遠端工作階段"
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
+    },
+    "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
+      "guacdUrl": {
+        "label": "guacd URL",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
+      }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "遠端桌面"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+    }
+  },
+  "errors": {
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+  }
+}

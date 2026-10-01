@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Gasheermetrieke"
+  },
+  "hostMetrics": {
+    "cpu": "SVE",
+    "memory": "Geheue",
+    "disk": "Skyf",
+    "network": "Netwerk",
+    "uptime": "Optyd",
+    "processes": "Prosesse",
+    "available": "Beskikbaar",
+    "free": "Gratis",
+    "connecting": "Verbind...",
+    "connectionFailed": "Kon nie aan bediener koppel nie",
+    "naCpus": "N/A SVE(s)",
+    "cpuCores_one": "{{count}} Kern",
+    "cpuCores_other": "{{count}} Kerne",
+    "cpuUsage": "SVE-gebruik",
+    "memoryUsage": "Geheuegebruik",
+    "diskUsage": "Skyfgebruik",
+    "selectFilesystem": "Kies lêerstelsel",
+    "temperature": "Temperatuur",
+    "highestTemperature": "Hoogste temperatuur",
+    "primaryTemperatureSensor": "Primêre sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "Geen NVIDIA GPU bespeur nie. Installeer die NVIDIA-drywer (dit verskaf nvidia-smi) om GPU-metrieke te sien.",
+      "driver": "Bestuurder {{version}}",
+      "utilization": "Benutting",
+      "memory": "VRAM",
+      "temperature": "Temperatuur",
+      "power": "Krag",
+      "fan": "Waaier",
+      "processes": "GPU-prosesse",
+      "noProcesses": "Geen prosesse gebruik die GPU nie"
+    },
+    "failedToFetchHostConfig": "Kon nie gasheerkonfigurasie haal nie",
+    "serverOffline": "Bediener vanlyn",
+    "cannotFetchMetrics": "Kan nie statistieke van vanlyn bediener haal nie",
+    "totpFailed": "TOTP-verifikasie het misluk",
+    "noneAuthNotSupported": "Host Metrics ondersteun nie die 'geen'-verifikasietipe nie.",
+    "noHostSelected": "Geen gasheer gekies nie",
+    "load": "Laai",
+    "systemInfo": "Stelselinligting",
+    "hostname": "Gasheernaam",
+    "operatingSystem": "Bedryfstelsel",
+    "kernel": "Kern",
+    "seconds": "sekondes",
+    "networkInterfaces": "Netwerkkoppelvlakke",
+    "noInterfacesFound": "Geen netwerkkoppelvlakke gevind nie",
+    "noProcessesFound": "Geen prosesse gevind nie",
+    "processesTotal": "totaal",
+    "processesRunning": "hardloop",
+    "loginStats": "SSH-aanmeldingstatistieke",
+    "noRecentLoginData": "Geen onlangse aanmelddata nie",
+    "ports": {
+      "title": "Luisterpoorte",
+      "protocol": "Protokol",
+      "port": "Hawe",
+      "address": "Adres",
+      "process": "Proses",
+      "search": "Soek poorte...",
+      "allProtocols": "Alles",
+      "noData": "Geen luisterpoorte data nie"
+    },
+    "firewall": {
+      "title": "Firewall",
+      "inactive": "Onaktief",
+      "policy": "Beleid",
+      "rules": "reëls",
+      "noRules": "Geen reëls in hierdie ketting nie",
+      "noData": "Geen firewalldata beskikbaar nie",
+      "action": "Aksie",
+      "protocol": "Proto",
+      "port": "Hawe",
+      "source": "Bron",
+      "anywhere": "Enige plek",
+      "chains": "kettings"
+    },
+    "loadAvg": "Laai Gem.",
+    "swap": "Ruil",
+    "architecture": "Argitektuur",
+    "refresh": "Verfris",
+    "retry": "Probeer weer",
+    "customize": "Pasmaak uitleg",
+    "reset": "Herstel",
+    "tabLive": "Lewendig",
+    "editModeInstructions": "Sleep kaarte om te herrangskik, sleep die onderste rand om die grootte te verander, en gebruik die breedteknoppie om 'n kaart se omvang te verander. Voeg kaarte hieronder by of verwyder hulle.",
+    "managers": {
+      "services": "Dienste",
+      "processInspector": "Prosesinspekteur",
+      "logViewer": "Logkyker",
+      "cron": "Cron-werk",
+      "packages": "Pakkette",
+      "ssl": "SSL-sertifikate",
+      "firewall": "Firewall",
+      "users": "Gebruikers en Toestemmings",
+      "healthCheck": "Gesondheidstoetse",
+      "diskBreakdown": "Skyfverdeling",
+      "systemdTimers": "Tydtellers",
+      "topMemory": "Top volgens geheue",
+      "noData": "Geen data nie",
+      "sudoHint": "Stel 'n sudo-wagwoord vir hierdie gasheer in die gasheerredigeerder om bevoorregte aksies moontlik te maak.",
+      "filter": "Filter...",
+      "start": "Begin",
+      "stop": "Stop",
+      "restart": "Herbegin",
+      "actionDone": "{{name}} opgedateer",
+      "actionFailed": "Aksie het misluk",
+      "signalSent": "Sein gestuur na PID {{pid}}",
+      "killHint": "Klik: beëindig (SIGTERM). Regskliek: forseer doodmaak (SIGKILL).",
+      "working": "Werk...",
+      "update": "Opdatering",
+      "upgradeAll": "Gradeer alles op",
+      "allUpToDate": "Alles is op datum",
+      "save": "Stoor",
+      "command": "Bevel",
+      "enabled": "Geaktiveer",
+      "cronSaved": "Crontab opgedateer",
+      "clients": "Kliënte",
+      "dryRun": "Droë lopie",
+      "renew": "Hernu",
+      "noAcmeClient": "Geen ACME-kliënt (certbot of acme.sh) op hierdie gasheer gevind nie.",
+      "addInputRule": "Voeg INPUT-reël by",
+      "firewallWarning": "Veranderinge is slegs looptyd totdat dit voortduur. Wees versigtig om jouself nie uit te sluit nie.",
+      "ruleApplied": "Reël toegepas",
+      "invalidPort": "Voer 'n geldige poort in (1-65535)",
+      "newUsername": "Nuwe gebruikersnaam",
+      "addUser": "Voeg by",
+      "deleteUser": "Vee gebruiker uit",
+      "noHealthChecks": "Geen gesondheidskontroles is nog opgestel nie.",
+      "follow": "Volg",
+      "noLogData": "Geen loguitvoer nie.",
+      "tree": "Boom",
+      "enableDisable": "Aktiveer/deaktiveer tydens opstart",
+      "grantSudo": "Gee sudo toe",
+      "revokeSudo": "Herroep sudo",
+      "sslIssueCert": "Uitgawesertifikaat",
+      "sslExpired": "Verstryk",
+      "sslInDays": "in {{days}}d",
+      "sslNeedDomain": "Voer ten minste een domein in",
+      "sslIssued": "Sertifikaat uitgereik",
+      "sslDomainsPlaceholder": "voorbeeld.com, www.voorbeeld.com",
+      "sslHttpStandalone": "HTTP (losstaande)",
+      "sslHttpWebroot": "HTTP (webwortel)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "DNS-verskaffer (bv. cloudflare)",
+      "sslIssueHint": "DNS-verskaffer se geloofsbriewe moet reeds op die gasheer gekonfigureer wees.",
+      "sslRevoke": "Herroep sertifikaat",
+      "sslRevoked": "Sertifikaat herroep",
+      "sslRevokeConfirm": "Herroep en verwyder die sertifikaat \"{{name}}\"? Dit kan nie ongedaan gemaak word nie.",
+      "healthRun": "Hardloop",
+      "healthName": "Naam",
+      "healthTarget": "Gasheer / adres",
+      "healthAddCheck": "Voeg tjek by",
+      "healthSaved": "Gesondheidskontroles gestoor",
+      "healthMissingFields": "Elke tjek benodig 'n naam en teiken",
+      "logFile": "Lêer",
+      "logUnit": "Eenheid",
+      "logCustomPath": "Pasgemaakte pad onder /var/log (opsioneel)",
+      "logGrep": "Filterlyne...",
+      "firewallPersist": "Behou reëls",
+      "firewallPersisted": "Firewall-reëls het voortgeduur",
+      "wireguard": "Draadbeskerming",
+      "wgNotInstalled": "WireGuard is nie op hierdie gasheer geïnstalleer nie",
+      "wgNoInterfaces": "Geen WireGuard-koppelvlakke gekonfigureer nie",
+      "wgInterfaceUp": "Bring op",
+      "wgInterfaceDown": "Bring af",
+      "wgBringingUp": "Bring {{name}} op...",
+      "wgBringingDown": "Bring {{name}} af...",
+      "wgInterfaceUpDone": "{{name}} is op",
+      "wgInterfaceDownDone": "{{name}} is af",
+      "wgListenPort": "Hawe",
+      "wgPublicKey": "Publieke sleutel",
+      "wgEndpoint": "Eindpunt",
+      "wgAllowedIPs": "Toegelate IP's",
+      "wgLastHandshake": "Laaste handdruk",
+      "wgHandshakeNever": "Nooit",
+      "wgTransfer": "Oordrag",
+      "wgNoPeers": "Geen eweknieë nie"
+    }
+  },
+  "metricsHistory": {
+    "title": "Metrieke Geskiedenis",
+    "historySuffix": "Geskiedenis",
+    "cpuMemoryDisk": "SVE / Geheue / Skyf",
+    "network": "Netwerk",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "Geen geskiedenisdata beskikbaar vir hierdie tydperk nie.",
+    "custom": "Pasgemaak",
+    "to": "om",
+    "apply": "Dien toe",
+    "viewHistory": "Bekyk Geskiedenis"
+  },
+  "hosts": {
+    "tabHostMetrics": "Gasheermetrieke",
+    "metricsCollectionLabel": "Metrieke-versameling",
+    "enableMetricsLabel": "Aktiveer Metrieke",
+    "enableMetricsDesc": "Versamel SVE-, RAM-, skyf- en ander statistieke van hierdie gasheer",
+    "useGlobalMetrics": "Gebruik globale interval",
+    "useGlobalMetricsDesc": "Oorskryf met die bedienerwye metrieke-interval",
+    "metricsIntervalS": "Metrieke Interval (s)",
+    "metricsIntervalDesc2": "Sekondes tussen metrieke momentopnames",
+    "excludedMountsLabel": "Uitgesluite Monterings",
+    "monitoredMountsLabel": "Pasgemaakte gemonitorde paaie",
+    "monitoredMountsDesc": "Voeg paaie by wat nie as aparte monterings blootgestel word nie, insluitend bind-gemonteerde Home Assistant-paaie soos /config.",
+    "monitoredMountPathPlaceholder": "Pad (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Etiket (opsioneel)",
+    "addMonitoredMount": "Voeg pad by",
+    "excludedMountsDesc": "Versteek spesifieke koppelpunte of lêerstelseltipes (bv. nfs, cifs) van skyfgebruik en waarskuwings vir hierdie gasheer.",
+    "excludedMountsPlaceholder": "Monteerpad (/mnt/nas) of lêerstelseltipe (nfs, cifs)",
+    "excludedMountsEmpty": "Geen koppelstukke uitgesluit nie. Alle opgespoorde lêerstelsels word getoon.",
+    "addExcludedMount": "Voeg by",
+    "visibleWidgets": "Sigbare Widgets",
+    "widgetsMovedToHostMetrics": "Kaarte word nou direk in die Gasheermetrieke-oortjie bygevoeg, gerangskik en herskaal. Maak Gasheermetrieke vir hierdie gasheer oop en gebruik Pasmaak om te kies watter kaarte gewys word.",
+    "hostNotFound": "Gasheer nie gevind nie",
+    "loadingHost": "Laai gasheer..."
+  },
+  "onboarding": {
+    "feature_metrics": "Metrieke en waarskuwings",
+    "feature_metrics_desc": "Volg die SVE, geheue en skyf oor tyd en word gewaarsku wanneer hulle sleg word."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Metrieke Geskiedenis Behoud",
+    "metricsHistoryRetentionRange": "1 tot 90 dae",
+    "days": "dae"
+  },
+  "homepage": {
+    "noData": "Geen data beskikbaar nie",
+    "showCurrentValue": "Wys huidige waarde",
+    "chartMetric": "Metrieke",
+    "metricRange": "Reikwydte",
+    "host": "Gasheer",
+    "loading": "Laai tans...",
+    "metricCpu": "SVE",
+    "metricDisk": "Skyf",
+    "metricHostname": "Gasheernaam",
+    "metricKernel": "Kern",
+    "metricMemory": "Geheue",
+    "metricNetwork": "Netwerk",
+    "metricOs": "OS",
+    "metricProcesses": "Prosesse",
+    "metricProcessesRunning": "hardloop",
+    "metricProcessesTotal": "totaal",
+    "metricUptime": "Optyd",
+    "metricsNotAvailable": "Metrieke nie beskikbaar nie",
+    "noHostSelected": "Geen gasheer gekies nie",
+    "selectHost": "Kies 'n gasheer..."
+  },
+  "terminalStatus": {
+    "unavailable": "Regstreekse statistieke is nie beskikbaar nie"
+  },
+  "dashboard": {
+    "cpu": "SVE",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Skyf"
+  },
+  "terminal": {
+    "connected": "Verbonde"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik gasheermetrieke",
+      "description": "Bekyk gasheerstatistieke en gebruik die gasheerbestuurders (dienste, pakkette, firewall en meer) op gashere wat jy kan bereik."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrieke-interval (sekondes)",
+        "description": "Hoe gereeld 'n gasheer wat besigtig word, gemonster word, tensy die gasheer sy eie interval stel."
+      },
+      "historyRetentionDays": {
+        "label": "Geskiedenisbewaring (dae)",
+        "description": "Hoe lank word metrieke-monsters vir die geskiedenisgrafieke gehou."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrieke aan vir nuwe gashere",
+        "description": "Of nuwe gashere begin met metrieke-insameling aangeskakel."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperatuureenheid",
+        "description": "Hoe temperature in Host Metrics getoon word.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Versamel statistieke"
+      },
+      "metricsInterval": {
+        "label": "Metrieke-interval (sekondes)"
+      },
+      "enabledWidgets": {
+        "label": "Geaktiveerde widgets"
+      },
+      "excludedMounts": {
+        "label": "Uitgesluite monterings"
+      },
+      "monitoredMounts": {
+        "label": "Gemonitorde paaie"
+      }
+    }
+  }
+}

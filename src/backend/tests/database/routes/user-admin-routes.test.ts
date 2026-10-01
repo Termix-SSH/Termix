@@ -11,12 +11,13 @@ const state = vi.hoisted(() => ({
       isAdmin: boolean;
       isOidc: boolean;
       passwordHash: string | null;
-      totpEnabled: boolean;
     }
   >(),
   unlockedUsers: new Set<string>(),
   updates: [] as { id: string; changes: Record<string, unknown> }[],
   auditCalls: [] as Record<string, unknown>[],
+  secondFactors: [] as { userId: string; pluginId: string; factorId: string }[],
+  trustedDevicesCleared: [] as string[],
 }));
 
 vi.mock("../../../database/db/index.js", () => ({ db: {} }));
@@ -89,10 +90,45 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     switchUserRoleName: async () => {},
     assignRoleNameToUser: async () => {},
   }),
+  createCurrentUserAuthRepository: () => ({
+    listSecondFactors: async (userId: string) =>
+      state.secondFactors.filter((row) => row.userId === userId),
+    listUserIdsWithSecondFactors: async () =>
+      new Set(state.secondFactors.map((row) => row.userId)),
+    removeSecondFactor: async (
+      userId: string,
+      pluginId: string,
+      factorId: string,
+    ) => {
+      state.secondFactors = state.secondFactors.filter(
+        (row) =>
+          !(
+            row.userId === userId &&
+            row.pluginId === pluginId &&
+            row.factorId === factorId
+          ),
+      );
+      return true;
+    },
+    clearSecondFactors: async (userId: string) => {
+      const before = state.secondFactors.length;
+      state.secondFactors = state.secondFactors.filter(
+        (row) => row.userId !== userId,
+      );
+      return before - state.secondFactors.length;
+    },
+  }),
+  createCurrentTrustedDeviceRepository: () => ({
+    deleteByUserId: async (userId: string) => {
+      state.trustedDevicesCleared.push(userId);
+    },
+  }),
+  getCurrentSettingValue: () => null,
 }));
 
 const { registerUserAdminRoutes } =
   await import("../../../database/routes/user-admin-routes.js");
+const { registerSecondFactor } = await import("../../../auth/registry.js");
 
 // Capture the handlers registered on the router so we can invoke them directly
 // without spinning up an HTTP server.
@@ -180,6 +216,8 @@ async function invoke(
 
 beforeEach(() => {
   state.currentUserId = "admin1";
+  state.secondFactors = [];
+  state.trustedDevicesCleared = [];
   state.users = new Map([
     [
       "admin1",
@@ -189,7 +227,6 @@ beforeEach(() => {
         isAdmin: true,
         isOidc: false,
         passwordHash: "hash",
-        totpEnabled: false,
       },
     ],
     [
@@ -200,7 +237,6 @@ beforeEach(() => {
         isAdmin: false,
         isOidc: false,
         passwordHash: "hash",
-        totpEnabled: true,
       },
     ],
     [
@@ -211,7 +247,6 @@ beforeEach(() => {
         isAdmin: false,
         isOidc: false,
         passwordHash: "hash",
-        totpEnabled: false,
       },
     ],
   ]);
@@ -221,15 +256,19 @@ beforeEach(() => {
 });
 
 describe("GET /list", () => {
-  it("includes data_unlocked and totp_enabled for admin callers", async () => {
+  it("includes data_unlocked and second_factor_enabled for admin callers", async () => {
+    state.secondFactors = [
+      { userId: "target1", pluginId: "totp", factorId: "totp" },
+    ];
     const res = await invoke("get", "/list");
     expect(res.statusCode).toBe(200);
     const users = (res.jsonBody as { users: Record<string, unknown>[] }).users;
     const target = users.find((u) => u.userId === "target1")!;
     expect(target.data_unlocked).toBe(true);
-    expect(target.totp_enabled).toBe(true);
+    expect(target.second_factor_enabled).toBe(true);
     const locked = users.find((u) => u.userId === "locked1")!;
     expect(locked.data_unlocked).toBe(false);
+    expect(locked.second_factor_enabled).toBe(false);
   });
 
   it("omits management fields for non-admin callers", async () => {
@@ -237,7 +276,7 @@ describe("GET /list", () => {
     const res = await invoke("get", "/list");
     const users = (res.jsonBody as { users: Record<string, unknown>[] }).users;
     expect(users[0].data_unlocked).toBeUndefined();
-    expect(users[0].totp_enabled).toBeUndefined();
+    expect(users[0].second_factor_enabled).toBeUndefined();
   });
 
   it("returns every user when no limit is given", async () => {
@@ -299,46 +338,6 @@ describe("GET /list", () => {
   });
 });
 
-describe("POST /admin/totp/disable", () => {
-  it("clears TOTP fields for the target and audits", async () => {
-    const res = await invoke("post", "/admin/totp/disable", {
-      body: { userId: "target1" },
-    });
-    expect(res.statusCode).toBe(200);
-    const update = state.updates.find((u) => u.id === "target1");
-    expect(update?.changes).toMatchObject({
-      totpSecret: null,
-      totpEnabled: false,
-      totpBackupCodes: null,
-    });
-    expect(
-      state.auditCalls.some((c) => c.action === "admin_disable_totp"),
-    ).toBe(true);
-  });
-
-  it("403s when the caller is not an admin", async () => {
-    state.currentUserId = "target1";
-    const res = await invoke("post", "/admin/totp/disable", {
-      body: { userId: "locked1" },
-    });
-    expect(res.statusCode).toBe(403);
-  });
-
-  it("400s when TOTP is not enabled for the target", async () => {
-    const res = await invoke("post", "/admin/totp/disable", {
-      body: { userId: "locked1" },
-    });
-    expect(res.statusCode).toBe(400);
-  });
-
-  it("404s for an unknown target", async () => {
-    const res = await invoke("post", "/admin/totp/disable", {
-      body: { userId: "ghost" },
-    });
-    expect(res.statusCode).toBe(404);
-  });
-});
-
 describe("GET /admin/export/:userId", () => {
   it("423s when the target's data is locked", async () => {
     const res = await invoke("get", "/admin/export/:userId", {
@@ -354,5 +353,74 @@ describe("GET /admin/export/:userId", () => {
       params: { userId: "admin1" },
     });
     expect(res.statusCode).toBe(403);
+  });
+});
+
+describe("DELETE /admin/:userId/second-factors", () => {
+  it("clears every factor, including one whose plugin is gone, and audits", async () => {
+    const reset = vi.fn(async () => {});
+    const dispose = registerSecondFactor({
+      id: "totp",
+      pluginId: "totp",
+      labelKey: "factor",
+      isEnrolled: async () => false,
+      verify: async () => false,
+      reset,
+    });
+    state.secondFactors = [
+      { userId: "target1", pluginId: "totp", factorId: "totp" },
+      { userId: "target1", pluginId: "gone-plugin", factorId: "yubikey" },
+      { userId: "locked1", pluginId: "totp", factorId: "totp" },
+    ];
+    const res = await invoke("delete", "/admin/:userId/second-factors", {
+      params: { userId: "target1" },
+    });
+    dispose();
+    expect(res.statusCode).toBe(200);
+    expect(state.secondFactors).toEqual([
+      { userId: "locked1", pluginId: "totp", factorId: "totp" },
+    ]);
+    expect(state.trustedDevicesCleared).toContain("target1");
+    // The running plugin's own reset dropped its secret.
+    expect(reset).toHaveBeenCalledWith("target1");
+    const audit = state.auditCalls.find(
+      (c) => c.action === "admin_reset_second_factors",
+    );
+    expect(audit).toMatchObject({ resourceId: "target1", success: true });
+    expect(JSON.parse(audit!.details as string).removed).toEqual(
+      expect.arrayContaining([
+        { pluginId: "gone-plugin", factorId: "yubikey" },
+      ]),
+    );
+  });
+
+  it("lists factors with their availability", async () => {
+    state.secondFactors = [
+      { userId: "target1", pluginId: "gone-plugin", factorId: "yubikey" },
+    ];
+    const res = await invoke("get", "/admin/:userId/second-factors", {
+      params: { userId: "target1" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.jsonBody as { factors: unknown[] }).factors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ factorId: "yubikey", available: false }),
+      ]),
+    );
+  });
+
+  it("403s when the caller is not an admin", async () => {
+    state.currentUserId = "target1";
+    const res = await invoke("delete", "/admin/:userId/second-factors", {
+      params: { userId: "locked1" },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("404s for an unknown target", async () => {
+    const res = await invoke("delete", "/admin/:userId/second-factors", {
+      params: { userId: "ghost" },
+    });
+    expect(res.statusCode).toBe(404);
   });
 });

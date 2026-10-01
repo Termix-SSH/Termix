@@ -5,7 +5,9 @@ const require = createRequire(import.meta.url);
 const { transform, collectKeyColumns } =
   require("./generate-dialect-schema.cjs") as {
     transform: (source: string, dialect: "postgres" | "mysql") => string;
-    collectKeyColumns: (source: string) => Set<string>;
+    collectKeyColumns: (source: string) => {
+      keyed: Map<string, Set<string>>;
+    };
   };
 
 const SOURCE = `import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
@@ -36,21 +38,36 @@ export const folders = sqliteTable("folders", {
 `;
 
 describe("collectKeyColumns", () => {
-  it("finds columns that must be indexable", () => {
-    const keyed = collectKeyColumns(SOURCE);
+  it("finds columns that must be indexable, per table", () => {
+    const { keyed } = collectKeyColumns(SOURCE);
 
     // primary key, unique, and both ends of the foreign key
-    expect(keyed.has("id")).toBe(true);
-    expect(keyed.has("sync_id")).toBe(true);
-    expect(keyed.has("user_id")).toBe(true);
+    expect(keyed.get("users")?.has("id")).toBe(true);
+    expect(keyed.get("folders")?.has("sync_id")).toBe(true);
+    expect(keyed.get("folders")?.has("user_id")).toBe(true);
   });
 
   it("leaves ordinary strings alone", () => {
-    const keyed = collectKeyColumns(SOURCE);
+    const { keyed } = collectKeyColumns(SOURCE);
 
-    expect(keyed.has("username")).toBe(false);
-    expect(keyed.has("name")).toBe(false);
-    expect(keyed.has("cert")).toBe(false);
+    expect(keyed.get("users")?.has("username")).toBe(false);
+    expect(keyed.get("folders")?.has("name")).toBe(false);
+    expect(keyed.get("folders")?.has("cert")).toBe(false);
+  });
+
+  it("does not key a column because another table indexes the same name", () => {
+    const { keyed } = collectKeyColumns(`
+export const a = sqliteTable("a", {
+  label: text("label"),
+}, (table) => [index("idx_a_label").on(table.label)]);
+
+export const b = sqliteTable("b", {
+  label: text("label"),
+});
+`);
+
+    expect(keyed.get("a")?.has("label")).toBe(true);
+    expect(keyed.get("b")?.has("label")).toBe(false);
   });
 });
 
@@ -123,6 +140,27 @@ describe("mysql output", () => {
   it("makes key columns varchar — MySQL cannot index unbounded TEXT", () => {
     expect(out).toContain('varchar("user_id", { length: 255 })');
     expect(out).toContain('text("name")');
+  });
+
+  it("keeps closed scopes compact in four-column setting indexes", () => {
+    const source = `import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+export const pluginSettings = sqliteTable("plugin_settings", {
+  pluginId: text("plugin_id").notNull(),
+  scope: text("scope", { enum: ["admin", "user", "host", "secret"] }).notNull(),
+  scopeId: text("scope_id"),
+  key: text("key").notNull(),
+}, (table) => [uniqueIndex("scope_key").on(table.pluginId, table.scope, table.scopeId, table.key)]);
+`;
+    const mysql = transform(source, "mysql");
+    expect(mysql).toContain(
+      'mysqlEnum("scope", ["admin", "user", "host", "secret"])',
+    );
+    for (const name of ["plugin_id", "scope_id", "key"]) {
+      expect(mysql).toContain(`varchar("${name}", { length: 255 })`);
+    }
+    expect(transform(source, "postgres")).toContain(
+      'varchar("scope", { length: 255, enum: ["admin", "user", "host", "secret"] })',
+    );
   });
 });
 

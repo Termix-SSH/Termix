@@ -58,7 +58,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/input";
 
-export const FOLDER_ICON_MAP: Record<string, LucideIcon> = {
+const FOLDER_ICON_MAP: Record<string, LucideIcon> = {
   folder: Folder,
   "folder-open": FolderOpen,
   "folder-git": FolderGit2,
@@ -113,12 +113,12 @@ export const FOLDER_ICON_MAP: Record<string, LucideIcon> = {
   smartphone: Smartphone,
 };
 
-export const FOLDER_ICON_IDS = Object.keys(FOLDER_ICON_MAP);
+const FOLDER_ICON_IDS = Object.keys(FOLDER_ICON_MAP);
 
 export const DEFAULT_FOLDER_ICON = "folder";
 export const DEFAULT_FOLDER_COLOR = "#f59145";
 
-export const SUGGESTED_FOLDER_COLORS = [
+const SUGGESTED_FOLDER_COLORS = [
   "#f59145",
   "#ef4444",
   "#eab308",
@@ -146,7 +146,7 @@ export function FolderIconEl({
 
 const HEX_RE = /^#([0-9a-fA-F]{6})$/;
 
-export function isValidHex(value: string): boolean {
+function isValidHex(value: string): boolean {
   return HEX_RE.test(value.trim());
 }
 

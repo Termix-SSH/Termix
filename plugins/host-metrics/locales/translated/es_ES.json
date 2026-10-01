@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Métricas del host"
+  },
+  "hostMetrics": {
+    "cpu": "CPU",
+    "memory": "Memoria",
+    "disk": "Disco",
+    "network": "Red",
+    "uptime": "Tiempo de actividad",
+    "processes": "Procesos",
+    "available": "Disponible",
+    "free": "Libre",
+    "connecting": "Conectando...",
+    "connectionFailed": "Error al conectar con el servidor",
+    "naCpus": "CPU(s) N/D",
+    "cpuCores_one": "{{count}} núcleo",
+    "cpuCores_other": "{{count}} núcleos",
+    "cpuUsage": "Uso de CPU",
+    "memoryUsage": "Uso de memoria",
+    "diskUsage": "Uso del disco",
+    "selectFilesystem": "Seleccionar sistema de archivos",
+    "temperature": "Temperatura",
+    "highestTemperature": "Temperatura más alta",
+    "primaryTemperatureSensor": "Sensor primario",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No se ha detectado ninguna GPU NVIDIA. Instale el controlador NVIDIA (que incluye nvidia-smi) para ver las métricas de la GPU.",
+      "driver": "Conductor {{version}}",
+      "utilization": "Utilización",
+      "memory": "VRAM",
+      "temperature": "Temperatura",
+      "power": "Fuerza",
+      "fan": "Admirador",
+      "processes": "procesos de GPU",
+      "noProcesses": "Ningún proceso está utilizando la GPU."
+    },
+    "failedToFetchHostConfig": "Error al obtener la configuración del host",
+    "serverOffline": "Servidor fuera de línea",
+    "cannotFetchMetrics": "No se pueden obtener métricas de un servidor fuera de línea",
+    "totpFailed": "Error en la verificación TOTP",
+    "noneAuthNotSupported": "Host Metrics no admite el tipo de autenticación 'none'.",
+    "noHostSelected": "Ningún host seleccionado",
+    "load": "Carga",
+    "systemInfo": "Información del sistema",
+    "hostname": "Nombre de host",
+    "operatingSystem": "Sistema operativo",
+    "kernel": "Kernel",
+    "seconds": "segundos",
+    "networkInterfaces": "Interfaces de red",
+    "noInterfacesFound": "No se encontraron interfaces de red",
+    "noProcessesFound": "No se encontraron procesos",
+    "processesTotal": "total",
+    "processesRunning": "en ejecución",
+    "loginStats": "Estadísticas de inicio de sesión SSH",
+    "noRecentLoginData": "No hay datos de inicio de sesión recientes",
+    "ports": {
+      "title": "Puertos en escucha",
+      "protocol": "Protocolo",
+      "port": "Puerto",
+      "address": "Dirección",
+      "process": "Proceso",
+      "search": "Buscar puertos...",
+      "allProtocols": "Todos",
+      "noData": "No hay datos de puertos en escucha"
+    },
+    "firewall": {
+      "title": "Cortafuegos",
+      "inactive": "Inactivo",
+      "policy": "Política",
+      "rules": "reglas",
+      "noRules": "No hay reglas en esta cadena",
+      "noData": "No hay datos del cortafuegos disponibles",
+      "action": "Acción",
+      "protocol": "Proto",
+      "port": "Puerto",
+      "source": "Origen",
+      "anywhere": "Cualquier origen",
+      "chains": "cadenas"
+    },
+    "loadAvg": "Carga Promedio",
+    "swap": "Swap",
+    "architecture": "Arquitectura",
+    "refresh": "Refrescar",
+    "retry": "Reintentar",
+    "customize": "Personalizar diseño",
+    "reset": "Restablecer",
+    "tabLive": "En vivo",
+    "editModeInstructions": "Arrastre las tarjetas para reorganizarlas, arrastre el borde inferior para redimensionarlas, y use el botón de ancho para cambiar el ancho de una tarjeta. Añada o elimine tarjetas a continuación.",
+    "managers": {
+      "services": "Servicios",
+      "processInspector": "Inspector de procesos",
+      "logViewer": "Visor de registros",
+      "cron": "Tareas Cron",
+      "packages": "Paquetes",
+      "ssl": "Certificados SSL",
+      "firewall": "Firewall",
+      "users": "Usuarios y permisos",
+      "healthCheck": "Comprobaciones de estado",
+      "diskBreakdown": "Desglose de disco",
+      "systemdTimers": "Temporizadores",
+      "topMemory": "Top por memoria",
+      "noData": "Sin datos",
+      "sudoHint": "Establezca una contraseña de sudo para este host en el editor del host para habilitar acciones privilegiadas.",
+      "filter": "Filtrar...",
+      "start": "Iniciar",
+      "stop": "Detener",
+      "restart": "Reiniciar",
+      "actionDone": "{{name}} actualizado",
+      "actionFailed": "Acción fallida",
+      "signalSent": "Señal enviada a PID {{pid}}",
+      "killHint": "Clic: terminar (SIGTERM). Clic derecho: forzar cierre (SIGKILL).",
+      "working": "Trabajando...",
+      "update": "Actualizar",
+      "upgradeAll": "Actualizar todo",
+      "allUpToDate": "Todo está actualizado",
+      "save": "Guardar",
+      "command": "Comando",
+      "enabled": "Activado",
+      "cronSaved": "Crontab actualizado",
+      "clients": "Clientes",
+      "dryRun": "Simulación",
+      "renew": "Renovar",
+      "noAcmeClient": "No se encontró ningún cliente ACME (certbot o acme.sh) en este host.",
+      "addInputRule": "Añadir regla INPUT",
+      "firewallWarning": "Los cambios son solo en tiempo de ejecución hasta que se persisten. Tenga cuidado de no quedarse bloqueado fuera.",
+      "ruleApplied": "Regla aplicada",
+      "invalidPort": "Introduzca un puerto válido (1-65535)",
+      "newUsername": "Nuevo nombre de usuario",
+      "addUser": "Añadir",
+      "deleteUser": "Eliminar usuario",
+      "noHealthChecks": "Aún no se han configurado comprobaciones de estado.",
+      "follow": "Seguir",
+      "noLogData": "Sin salida de registro.",
+      "tree": "Árbol",
+      "enableDisable": "Activar / desactivar al arrancar",
+      "grantSudo": "Conceder sudo",
+      "revokeSudo": "Revocar sudo",
+      "sslIssueCert": "Emitir certificado",
+      "sslExpired": "Caducado",
+      "sslInDays": "en {{days}}d",
+      "sslNeedDomain": "Introduzca al menos un dominio",
+      "sslIssued": "Certificado emitido",
+      "sslDomainsPlaceholder": "example.com, www.example.com",
+      "sslHttpStandalone": "HTTP (standalone)",
+      "sslHttpWebroot": "HTTP (webroot)",
+      "sslDns": "DNS",
+      "sslDnsProvider": "Proveedor DNS (p. ej. cloudflare)",
+      "sslIssueHint": "Las credenciales del proveedor DNS ya deben estar configuradas en el host.",
+      "sslRevoke": "Revocar certificado",
+      "sslRevoked": "Certificado revocado",
+      "sslRevokeConfirm": "¿Revocar y eliminar el certificado \"{{name}}\"? Esta acción no se puede deshacer.",
+      "healthRun": "Ejecutar",
+      "healthName": "Nombre",
+      "healthTarget": "Host / dirección",
+      "healthAddCheck": "Añadir verificación",
+      "healthSaved": "Verificaciones de estado guardadas",
+      "healthMissingFields": "Cada verificación necesita un nombre y un destino",
+      "logFile": "Archivo",
+      "logUnit": "Unidad",
+      "logCustomPath": "Ruta personalizada bajo /var/log (opcional)",
+      "logGrep": "Filtrar líneas...",
+      "firewallPersist": "Persistir reglas",
+      "firewallPersisted": "Reglas del firewall persistidas",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard no está instalado en este host",
+      "wgNoInterfaces": "No hay interfaces WireGuard configuradas",
+      "wgInterfaceUp": "Activar",
+      "wgInterfaceDown": "Desactivar",
+      "wgBringingUp": "Activando {{name}}...",
+      "wgBringingDown": "Desactivando {{name}}...",
+      "wgInterfaceUpDone": "{{name}} está activado",
+      "wgInterfaceDownDone": "{{name}} está desactivado",
+      "wgListenPort": "Puerto",
+      "wgPublicKey": "Clave pública",
+      "wgEndpoint": "Endpoint",
+      "wgAllowedIPs": "IPs permitidas",
+      "wgLastHandshake": "Último handshake",
+      "wgHandshakeNever": "Nunca",
+      "wgTransfer": "Transferencia",
+      "wgNoPeers": "Sin pares"
+    }
+  },
+  "metricsHistory": {
+    "title": "Historial de Métricas",
+    "historySuffix": "Historial",
+    "cpuMemoryDisk": "CPU / Memoria / Disco",
+    "network": "Red",
+    "download": "RX",
+    "upload": "TX",
+    "noData": "No hay datos de historial disponibles para este rango de tiempo.",
+    "custom": "Personalizado",
+    "to": "a",
+    "apply": "Aplicar",
+    "viewHistory": "Ver Historial"
+  },
+  "hosts": {
+    "tabHostMetrics": "Métricas del host",
+    "metricsCollectionLabel": "Recopilación de métricas",
+    "enableMetricsLabel": "Habilitar métricas",
+    "enableMetricsDesc": "Recopilar CPU, RAM, disco y otras métricas de este host.",
+    "useGlobalMetrics": "Usar intervalo global",
+    "useGlobalMetricsDesc": "Sobrescribir con el intervalo de métricas global del servidor.",
+    "metricsIntervalS": "Intervalo de métricas (s)",
+    "metricsIntervalDesc2": "Segundos entre instantáneas de métricas.",
+    "excludedMountsLabel": "Monturas excluidas",
+    "monitoredMountsLabel": "Rutas personalizadas monitorizadas",
+    "monitoredMountsDesc": "Agregue rutas que no estén expuestas como montajes separados, incluidas las rutas de Home Assistant montadas mediante enlace, como /config.",
+    "monitoredMountPathPlaceholder": "Ruta (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Etiqueta (opcional)",
+    "addMonitoredMount": "Agregar ruta",
+    "excludedMountsDesc": "Oculta puntos de montaje o tipos de sistema de archivos específicos (por ejemplo, nfs, cifs) del uso del disco y las alertas para este host.",
+    "excludedMountsPlaceholder": "Ruta de montaje (/mnt/nas) o tipo de sistema de archivos (nfs, cifs)",
+    "excludedMountsEmpty": "No se excluye ningún punto de montaje. Se muestran todos los sistemas de archivos detectados.",
+    "addExcludedMount": "Añadir",
+    "visibleWidgets": "Widgets visibles",
+    "widgetsMovedToHostMetrics": "Ahora las tarjetas se añaden, organizan y redimensionan directamente en la pestaña Métricas del host. Abre Métricas del host para este host y usa Personalizar para elegir qué tarjetas se muestran.",
+    "hostNotFound": "Host no encontrado",
+    "loadingHost": "Cargando host..."
+  },
+  "onboarding": {
+    "feature_metrics": "Métricas y alertas",
+    "feature_metrics_desc": "Realiza un seguimiento del rendimiento de la CPU, la memoria y el disco duro a lo largo del tiempo, y recibe alertas cuando alguno falle."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Retención del historial de métricas",
+    "metricsHistoryRetentionRange": "De 1 a 90 días",
+    "days": "días"
+  },
+  "homepage": {
+    "noData": "Sin datos disponibles",
+    "showCurrentValue": "Mostrar valor actual",
+    "chartMetric": "Métrica",
+    "metricRange": "Rango",
+    "host": "Host",
+    "loading": "Cargando...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disco",
+    "metricHostname": "Nombre de host",
+    "metricKernel": "Kernel",
+    "metricMemory": "Memoria",
+    "metricNetwork": "Red",
+    "metricOs": "SO",
+    "metricProcesses": "Procesos",
+    "metricProcessesRunning": "en ejecución",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Tiempo de actividad",
+    "metricsNotAvailable": "Métricas no disponibles",
+    "noHostSelected": "Ningún host seleccionado",
+    "selectHost": "Seleccionar un host..."
+  },
+  "terminalStatus": {
+    "unavailable": "Estadísticas en directo no disponibles"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disco"
+  },
+  "terminal": {
+    "connected": "Conectado"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizar métricas de host",
+      "description": "Consulta las métricas del host y utiliza los administradores de host (servicios, paquetes, cortafuegos y más) en los hosts a los que puedas acceder."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Intervalo de métricas (segundos)",
+        "description": "Con qué frecuencia se muestrea el host que se está visualizando, a menos que el host establezca su propio intervalo."
+      },
+      "historyRetentionDays": {
+        "label": "Retención del historial (días)",
+        "description": "¿Cuánto tiempo se conservan las muestras de métricas para los gráficos históricos?"
+      },
+      "enabledForNewHosts": {
+        "label": "Métricas activadas para nuevos anfitriones",
+        "description": "Si los nuevos hosts comienzan con la recopilación de métricas activada."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Unidad de temperatura",
+        "description": "Cómo se muestran las temperaturas en las métricas del host.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Recopilar métricas"
+      },
+      "metricsInterval": {
+        "label": "Intervalo de métricas (segundos)"
+      },
+      "enabledWidgets": {
+        "label": "Widgets habilitados"
+      },
+      "excludedMounts": {
+        "label": "Monturas excluidas"
+      },
+      "monitoredMounts": {
+        "label": "Senderos vigilados"
+      }
+    }
+  }
+}

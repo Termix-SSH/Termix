@@ -1,6 +1,6 @@
 <!-- SUMMARY -->
 
-A side-by-side local and remote file manager for desktop, a new tab for transferring files straight between two servers, collaboration rooms, Step CA and 1Password credential support, per-host Web Endpoints, credential sharing with users and roles, and a large batch of connection, sync, and remote desktop fixes.
+A new plugin system powering every feature, a dedicated sync page with more control over what syncs, one inbox for all alerts, a redesigned split screen, admin, user and folder host defaults, host maintenance mode, and a large batch of file manager, terminal, and remote desktop fixes.
 
 <!-- /SUMMARY -->
 
@@ -12,102 +12,90 @@ https://youtu.be/lngaePO96tM
 
 <!-- UPDATE_LOG -->
 
-- Added a side-by-side local and remote view to the desktop file manager
-- Added a dedicated tab for transferring files directly between two servers
-- Added a dedicated Port Forwarding tab to the desktop app sidebar
-- Added inline autosuggestions in the terminal using command history
-- Added collaboration rooms for sharing a terminal or remote desktop session with a group
-- Added Step CA as an SSH authentication type
-- Added 1Password Connect as a credential source for SSH
-- Added the ability to share credentials with specific users and roles
-- Added automatic sharing for hosts added to an already-shared folder
-- Added per-host Web Endpoints
-- Added quick connect for RDP and VNC
-- Added a button to pin the sidebar rail open instead of it auto-collapsing
-- Added a compact snippet list option
-- Added copy/paste support to the local terminal
-- Added a terminal copy-on-select option
-- Added tab switching and command palette actions to custom keybindings
-- Added selectable host temperature sensors
-- Added accessible interface font choices
-- Added VNC display zoom controls
-- Added more actions to the host right-click context menu
-- Added white label branding for admins
-- Added support for additional TOTP authenticator apps
-- Added the ability to open RDP, VNC, and Telnet sessions directly from the desktop app
-- Improved file manager navigation
-- Improved motion and transition animations throughout the app
-- Improved macOS packaging and terminal keyboard shortcuts
-- Improved the terminal AI assistant with a toggle for terminal context
-- Began plugin backend work (cut cross feature imports, added plugin DB tables, made the rail/tab system use registries, and updated nginx and manifests for plugins)
+- Rebuilt Termix around a plugin system, with features like the terminal, file manager, tunnels, Docker, Proxmox, remote desktop, metrics, automations, AI and every login method now shipped as signed plugins on a shared SDK
+- Moved desktop sync to its own page in the sidebar, with options to choose what syncs, keep single hosts or folders on the device only, and resolve conflicts
+- Added a recent servers list when linking the desktop app
+- Combined all alerts into one inbox with popups, Termix announcements and a new email channel
+- Redesigned split screen with free-form panes and a pane picker
+- Redesigned host defaults so they can be set at the admin, user or folder level and are inherited by hosts unless overridden
+- Added per-host maintenance mode and recurring schedules to automations
+- Added optional auto reconnect for dropped SSH sessions and a button to reconnect all disconnected terminal tabs
+- Added a duplicate tab action and a reconnect session keybinding
+- Added a host click setting to either focus an existing tab or always open a new one
+- Added keyboard type-ahead search to the host list
+- Added tighter compact host rows with inline tags
+- Added an option to show tab numbers
+- Added an option to hide folder paths above nested folders
+- Added a list of the fixed app shortcuts to the keyboard shortcuts screen
+- Added terminal toolbar position, start state and fade settings per host
+- Added a host setting to turn off password prompt auto-fill
+- Added the option to apply a saved custom theme in connection defaults
+- Added FortiToken push 2FA support for SSH
+- Added a unified multi-host tmux monitor view and a per-host tmux mouse toggle
+- Added fleet sharing
+- Added a list view to Docker management and support for the OrbStack Docker socket on macOS
+- Added network graph sync between the desktop app and the server
+- Added homepage canvas layout sync across devices
+- Added RDP display zoom controls
+- Added an option to skip the move to trash confirmation in the file manager
+- Made the file manager open in the remote login directory by default
+- Added add host and copy IP actions for Tailscale devices
+- Added inline credential sharing in the sidebar, matching host sharing
+- Made the Windows desktop shortcut optional in the installer
+- Redesigned the snippets panel to match the host list
+- Redesigned the session log player controls
+- Host status now shows online once the port answers and only warns when a login fails
+- Faster SFTP downloads
+- Faster UI loading with less jitter and lag across tabs, the dashboard and the network graph
 
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
 
-- Private AI custom endpoints failing to connect
-- Proxmox credential guest imports not working correctly
-- Fleet command results layout being broken
-- Synced client tunnel endpoints not matching the source host
-- Proxmox jump host settings not persisting after a sync
-- Command palette keyboard navigation not working correctly
-- Split layout selection not being restored
-- macOS VNC connections failing to establish
-- Rapid VNC scroll wheel input queuing up and making the remote desktop keep scrolling after you stop
-- Remote desktop connections timing out unexpectedly
-- RDP clipboard paste not working across some browsers
-- Process inspector command column showing truncated commands
-- RDP drive redirection uploads failing on the default deployment
-- A terminal session that expired silently reconnected without explaining Auto-Tmux as an option
-- Host status wrongly showing as offline when nothing was actively watching it
-- Shared RDP users not being prompted for credentials when required
-- Protected file reads failing without a sudo retry
-- Host status polling unnecessarily authenticating over SSH
-- Some host protocol settings being dropped when left unset
-- Remote sync reauthentication failures not being surfaced to the user
-- Dashboard metrics sessions not recovering after expiring
-- RDP file uploads to redirected drives failing
-- Connection toolbar visibility being inconsistent
-- Host list scroll position resetting incorrectly after editing a host
-- Live SSH sessions not being reflected in host status
-- Vault authentication not working in the file manager
-- Running snippets and commands on shared hosts being blocked
-- Chunked file uploads failing due to a contract mismatch
-- Bulk uploads failing partway through
-- Local echo not being disabled on the terminal alternate screen
-- Invalid timezones in the clock widget crashing the homepage
-- Connection origin setting not being preserved when editing a host
-- Local login notifications not appearing after a remote sync
-- Passkey login not working in the desktop app
-- Proxmox guest discovery commands failing without elevated permissions
-- File transfer completion toasts staying on screen permanently
-- SSH key type not being clearable once set
-- Local echo appearing during password prompts inside other programs
-- The desktop app hanging on a loading screen with no message when the embedded backend's port was in use
-- Backend ports silently failing to bind, leaving a feature dead with no error in the logs
-- Imported host settings and jump host references being lost or broken after import
-- SSH agent forwarding breaking after certain unsupported extensions
-- Sidebar host tree continuing to render while hidden, wasting resources
-- macOS Alt+digit tab shortcuts producing characters instead of switching tabs
-- macOS Option key producing Meta/escape sequences instead of special characters by default
-- Dashboard not opening the correct remote desktop protocol
-- Version checks overwriting the local version number on failure
-- SFTP directory creation relying on shell access
-- GPU acceleration opt-out setting being ignored on desktop
-- Remote-only hosts leaking into local tab persistence on desktop
-- Host metrics not being collected correctly on macOS and Windows hosts
-- CORS rejecting requests by default when no allowed origins were configured
-- Streamed SFTP uploads not completing correctly
-- The SSH connection pool not enforcing its connection limits, letting stale connections pile up
-- Local connections to shared hosts being blocked
-- Client-to-server tunnels using the wrong bind or target address in some setups
-- SSH host key changes not being surfaced as a warning
-- Nested subhost parent references breaking after a remote sync
-- Termix ID certificates missing principals needed for some servers to accept them
-- TOTP being skipped without a fully verified WebAuthn check
-- SSH connections not verifying the resolved server's host identity
-- The OPKSSH binary not having its integrity verified before use
-- Several transitive dependency security advisories
-- Various HTTP and application trust boundary hardening (CSP, Docker, config defaults)
+- TOTP not being prompted for jump hosts in the terminal, file manager, metrics and client tunnels
+- SSH host names resolving to IPv6 when IPv4 was available
+- Host key updates not syncing between devices
+- Host metrics returning 404 on the first connect
+- Host metrics using too much CPU on the backend
+- Host metrics showing image and firmware filesystems
+- Sudo password not auto-filling
+- Tunnels failing with shared credentials
+- Imported jump host references breaking
+- Hard to read terminal selection with the light theme
+- Terminal input arriving out of order with local echo on
+- Terminal image uploads failing when the image library was unavailable
+- File manager saves failing or corrupting files, with no sudo prompt on protected files
+- Sending a single file between servers failing
+- Disk usage showing the wrong mount or not refreshing with the directory
+- File uploads not cancelling and continuing to write on the server
+- Ctrl/Cmd+F file search not working in the file manager
+- File drops from the OS not working over existing rows
+- No download progress in file viewers
+- Text in Markdown previews not being selectable
+- Inline rename, compact mode and narrow list layout issues in the file manager
+- Remote desktop not using the host's saved guacd endpoint
+- Remote desktop asking for clipboard access unprompted
+- Remote desktop keys staying held after switching windows
+- Session share links on desktop pointing at the local app instead of the server
+- Shared terminal sizes and participant presence not syncing in session sharing
+- Meeting guests not being shown to members, and guests seeing the full roster
+- Session sharing not handing over cleanly after a takeover
+- AI responses getting cut off mid stream
+- AI provider settings not syncing to linked devices
+- Proxmox guest sync and startup snippet sync not working
+- LDAP logins losing the bind DN from the directory
+- Homepage service checks failing for allowed private addresses
+- Sidebar search showing overlapping hosts when grouped by tags
+- Sidebar rows not resizing after changing density, and compact rows hiding host addresses
+- Split screen layouts failing to create over plain HTTP
+- Double Shift opening the command palette by accident
+- Fleet detail buttons overflowing the sidebar
+- Recent activity cutting off host names too early
+- Docker container logs using the wrong background color
+- Version number missing on desktop when the server was offline
+- Desktop app not starting reliably, not quitting with active connections, and the Linux tray icon failing to load
+- Mac App Store builds being blocked by the single instance lock
+- Untranslated text in toasts and other parts of the UI
+- Several dependency security advisories
 
 <!-- /BUG_FIXES -->

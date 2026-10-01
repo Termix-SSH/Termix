@@ -1,22 +1,11 @@
 import { AxiosError } from "axios";
-import {
-  authApi,
-  getAllServerStatuses,
-  handleApiError,
-  sshHostApi,
-} from "@/main-axios";
+import { getAllServerStatuses, handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
 import type { ServerStatus, SSHHostWithStatus } from "@/main-axios";
-import type { ProxmoxDiscoverResult, ProxmoxSyncResult } from "@/types/proxmox";
 import {
   getCachedSSHHosts,
   invalidateHostsAndStatusCaches,
 } from "@/lib/hosts-request-cache";
-import { requestRemoteSync } from "@/lib/remote-sync-trigger";
-import {
-  getConnectedRemoteApi,
-  markRemoteSharedHosts,
-} from "@/lib/remote-server-api";
 
 // SSH HOST MANAGEMENT
 // ============================================================================
@@ -28,22 +17,7 @@ export type GetSSHHostsOptions = {
 
 async function loadSSHHostsFromApi(): Promise<SSHHost[]> {
   const hostsResponse = await sshHostApi.get("/db/host");
-  const localHosts = Array.isArray(hostsResponse.data)
-    ? hostsResponse.data
-    : [];
-  const remoteApi = await getConnectedRemoteApi();
-  if (!remoteApi) return localHosts;
-
-  try {
-    const remoteResponse = await remoteApi.get("/host/db/host");
-    const remoteSharedHosts = Array.isArray(remoteResponse.data)
-      ? markRemoteSharedHosts(remoteResponse.data)
-      : [];
-    return [...localHosts, ...remoteSharedHosts];
-  } catch {
-    // Keep the last locally synced host set usable while the server is offline.
-    return localHosts;
-  }
+  return Array.isArray(hostsResponse.data) ? hostsResponse.data : [];
 }
 
 export async function getSSHHosts(
@@ -88,12 +62,10 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
         headers: { "Content-Type": "multipart/form-data" },
       });
       invalidateHostsAndStatusCaches();
-      void requestRemoteSync();
       return response.data;
     }
     const response = await sshHostApi.post("/db/host", hostData);
     invalidateHostsAndStatusCaches();
-    void requestRemoteSync();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create SSH host");
@@ -114,24 +86,13 @@ export async function updateSSHHost(
         headers: { "Content-Type": "multipart/form-data" },
       });
       invalidateHostsAndStatusCaches();
-      void requestRemoteSync();
       return response.data;
     }
     const response = await sshHostApi.put(`/db/host/${hostId}`, hostData);
     invalidateHostsAndStatusCaches();
-    void requestRemoteSync();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update SSH host");
-  }
-}
-
-export async function wakeOnLan(hostId: number): Promise<{ success: boolean }> {
-  try {
-    const response = await sshHostApi.post(`/db/host/${hostId}/wake`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "wake on LAN");
   }
 }
 
@@ -183,90 +144,6 @@ export async function importSSHConfigHosts(
   }
 }
 
-export async function discoverProxmoxGuests(
-  hostId: number,
-): Promise<ProxmoxDiscoverResult> {
-  try {
-    const response = await authApi.post(
-      "/proxmox/discover",
-      { hostId },
-      { timeout: 120000 },
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "discover Proxmox guests");
-  }
-}
-
-export function discoverProxmoxGuestsStream(
-  hostId: number,
-  handlers: {
-    onProgress?: (done: number, total: number) => void;
-    onResult: (result: ProxmoxDiscoverResult) => void;
-    onError: (message: string) => void;
-  },
-): () => void {
-  const baseURL = (authApi.defaults.baseURL || "").replace(/\/$/, "");
-  const source = new EventSource(
-    `${baseURL}/proxmox/discover/stream?hostId=${encodeURIComponent(
-      String(hostId),
-    )}`,
-    { withCredentials: true },
-  );
-  let settled = false;
-  const close = () => {
-    settled = true;
-    source.close();
-  };
-  source.addEventListener("progress", (event) => {
-    try {
-      const data = JSON.parse((event as MessageEvent).data);
-      handlers.onProgress?.(data.done, data.total);
-    } catch {
-      // ignore malformed progress frames
-    }
-  });
-  source.addEventListener("result", (event) => {
-    close();
-    try {
-      handlers.onResult(JSON.parse((event as MessageEvent).data));
-    } catch {
-      handlers.onError("Failed to parse discovery result");
-    }
-  });
-  source.addEventListener("fail", (event) => {
-    close();
-    let message = "Discovery failed";
-    try {
-      message = JSON.parse((event as MessageEvent).data).message || message;
-    } catch {
-      // keep default message
-    }
-    handlers.onError(message);
-  });
-  source.onerror = () => {
-    if (settled) return;
-    close();
-    handlers.onError("Discovery connection lost");
-  };
-  return close;
-}
-
-export async function syncProxmoxGuests(
-  hostId: number,
-): Promise<ProxmoxSyncResult> {
-  try {
-    const response = await authApi.post(
-      "/proxmox/sync",
-      { hostId },
-      { timeout: 120000 },
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "sync Proxmox guests");
-  }
-}
-
 export async function bulkUpdateSSHHosts(
   hostIds: number[],
   updates: Record<string, unknown>,
@@ -301,7 +178,6 @@ export async function deleteSSHHost(
   try {
     const response = await sshHostApi.delete(`/db/host/${hostId}`);
     invalidateHostsAndStatusCaches();
-    void requestRemoteSync();
     return response.data;
   } catch (error) {
     handleApiError(error, "delete SSH host");
@@ -352,54 +228,6 @@ export async function exportAllSSHHosts(options?: {
     return response.data;
   } catch (error) {
     handleApiError(error, "export all SSH hosts");
-  }
-}
-
-// ============================================================================
-// SSH AUTOSTART MANAGEMENT
-// ============================================================================
-
-export async function enableAutoStart(
-  sshConfigId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post("/autostart/enable", {
-      sshConfigId,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "enable autostart");
-  }
-}
-
-export async function disableAutoStart(
-  sshConfigId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.delete("/autostart/disable", {
-      data: { sshConfigId },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "disable autostart");
-  }
-}
-
-export async function getAutoStartStatus(): Promise<{
-  autostart_configs: Array<{
-    sshConfigId: number;
-    host: string;
-    port: number;
-    username: string;
-    authType: string;
-  }>;
-  total_count: number;
-}> {
-  try {
-    const response = await sshHostApi.get("/autostart/status");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch autostart status");
   }
 }
 

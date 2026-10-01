@@ -1,0 +1,25 @@
+{
+  "id": "sample-plugin",
+  "name": "Sample",
+  "version": "1.0.0",
+  "description": "A sample.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["kv:own", "ui:surface"],
+  "contributes": {
+    "permissions": [
+      {
+        "name": "admin.users.manage",
+        "titleKey": "permissions.admin.users.manage.title",
+        "descriptionKey": "permissions.admin.users.manage.description"
+      }
+    ]
+  }
+}

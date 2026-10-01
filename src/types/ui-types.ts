@@ -1,7 +1,12 @@
-import type { GuacamoleConfig } from "./guacamole-config.js";
-import type { TerminalConfig, WebUiConfig } from "./index.js";
-import type { StatsConfig } from "./stats-widgets.js";
+import type {
+  HostProtocolAuthSummary,
+  HostSshOptions,
+  HostTerminalConfig,
+  SSHAuthType,
+} from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
+import type { DefaultOverrides } from "./host-defaults.js";
+import type { QuickConnectLogin } from "@termix/plugin-sdk/frontend";
 
 export type Host = {
   id: string;
@@ -25,20 +30,9 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "stepca"
-    | "tailscale"
-    | "vault"
-    | "agent";
-  useWarpgate?: boolean;
+  authType: SSHAuthType;
   shareSshAuth?: boolean;
   credentialId?: string;
-  vaultProfileId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
   hasPassword?: boolean;
@@ -50,18 +44,17 @@ export type Host = {
   keyPassword?: string;
   keyType?: string;
   notes?: string;
-  macAddress?: string;
-  wolBroadcastAddress?: string;
   pin?: boolean;
+  /** Quick connect only: core can save this host as-is. */
+  quickConnectSavable?: boolean;
+  /** A Quick Connect host's plugin protocol login, never saved. */
+  quickConnectLogin?: QuickConnectLogin;
   sortOrder?: number | null;
 
-  enableTerminal: boolean;
-  enableCommandHistory: boolean;
-  enableSessionLogging?: boolean;
-  allowSessionSharing?: boolean;
   /** Stable identity across a desktop/server sync pair. */
   syncId?: string | null;
-  terminalConfig?: Partial<TerminalConfig>;
+  terminalConfig?: HostTerminalConfig;
+  sshOptions?: HostSshOptions;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -84,107 +77,21 @@ export type Host = {
     delay: number;
   }[];
 
-  enableTunnel: boolean;
-  serverTunnels: {
-    mode: "local" | "remote" | "dynamic";
-    localAddress?: string;
-    remoteAddress?: string;
-    bindHost?: string;
-    targetHost?: string;
-    sourcePort: number;
-    endpointHost: string;
-    endpointPort: number;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-  }[];
-
-  enableFileManager: boolean;
-  scpLegacy?: boolean;
-  defaultPath?: string;
-
-  enableDocker: boolean;
-  dockerConfig?: {
-    runtime?: "docker" | "podman";
-  } | null;
-  enableWebUi?: boolean;
-  webUiConfig?: WebUiConfig | null;
-  enableProxmox: boolean;
-  enableTmuxMonitor: boolean;
-  enableTerminalToolbar: boolean;
-  enableAiAssistant: boolean;
-  proxmoxConfig?: {
-    source?: {
-      source: "proxmox";
-      sourceHostId: number;
-      node: string;
-      vmid: number;
-      type: "qemu" | "lxc";
-      lastSeenAt?: string;
-      lastStatus?: string;
-      missingSince?: string | null;
-    };
-    defaultCredentialId: number | null;
-    defaultAuthType?: string;
-    windowsPatterns: string;
-    dockerPatterns: string;
-    preferredPrefixes: string;
-    autoSyncEnabled?: boolean;
-    syncIntervalMinutes?: number;
-    markMissingGuests?: boolean;
-    lastSyncAt?: string;
-    lastSyncStatus?: "success" | "error";
-    lastSyncError?: string | null;
-    lastSyncResult?: {
-      created: number;
-      updated: number;
-      markedMissing: number;
-      skipped: number;
-      errors: string[];
-    };
-  } | null;
-  enableProxmoxStats: boolean;
-  proxmoxStatsConfig?: {
-    nodeName?: string | null;
-    pollInterval?: number;
-    enabledCards?: string[];
-  } | null;
-
-  statsConfig?: StatsConfig;
-  quickActions: { name: string; snippetId: string }[];
+  statusCheckEnabled?: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval?: number | null;
 
   enableSsh: boolean;
-  enableRdp: boolean;
-  enableVnc: boolean;
-  enableTelnet: boolean;
 
   sshPort: number;
-  rdpPort: number;
-  vncPort: number;
-  telnetPort: number;
 
-  rdpAuthType?: "direct" | "credential" | "none";
-  rdpCredentialId?: string;
-  rdpUser?: string;
-  rdpPassword?: string;
-  hasRdpPassword?: boolean;
-  domain?: string;
-  security?: string;
-  ignoreCert?: boolean;
+  /** Each plugin protocol's login, secrets left out. */
+  protocolAuth?: Record<string, HostProtocolAuthSummary>;
 
-  vncAuthType?: "direct" | "credential";
-  vncCredentialId?: string;
-  vncPassword?: string;
-  hasVncPassword?: boolean;
-  vncUser?: string;
-
-  telnetAuthType?: "direct" | "credential";
-  telnetCredentialId?: string;
-  telnetUser?: string;
-  telnetPassword?: string;
-  hasTelnetPassword?: boolean;
-
-  guacamoleConfig?: GuacamoleConfig;
+  /** Host-scope plugin settings, keyed by plugin id. Secrets are redacted. */
+  pluginSettings?: Record<string, Record<string, unknown>>;
+  /** Host default keys this host sets itself, per namespace. */
+  defaultOverrides?: DefaultOverrides | null;
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;
@@ -192,6 +99,13 @@ export type Host = {
   permissionLevel?: SharePermissionLevel;
   sharedExpiresAt?: string;
   ownerUsername?: string;
+  /**
+   * A read-only copy of a host shared with the account this desktop is
+   * linked to. It arrives through sync and is managed on the server.
+   */
+  sharedCopy?: boolean;
+  /** Desktop only: kept on this device, never synced to the server. */
+  localOnly?: boolean;
 };
 
 export type SharePermissionLevel = "connect" | "view" | "edit" | "manage";
@@ -217,26 +131,6 @@ export type Credential = {
   permissionLevel?: "use" | "manage";
 };
 
-// HashiCorp Vault SSH signer profile — shareable connection settings only
-// (no secrets). Users authenticate to Vault via OIDC at connect time.
-export type VaultProfile = {
-  id: string;
-  name: string;
-  description?: string;
-  folder?: string;
-  tags?: string[];
-  vaultAddr: string;
-  vaultNamespace?: string;
-  oidcMount?: string;
-  oidcRole?: string;
-  sshMount?: string;
-  sshRole: string;
-  validPrincipals?: string;
-  keyType?: string;
-  shared: boolean;
-  owned: boolean;
-};
-
 export type HostFolder = {
   name: string;
   children: (Host | HostFolder)[];
@@ -245,41 +139,15 @@ export type HostFolder = {
   icon?: string;
   credentialId?: number | null;
   sortOrder?: number | null;
+  localOnly?: boolean;
 };
 
-export type KnownTabType =
+/** Core's own tab types. Plugins register theirs at runtime. */
+type KnownTabType =
   | "dashboard"
-  | "terminal"
-  | "local-terminal"
-  | "rdp"
-  | "vnc"
-  | "telnet"
-  | "host-metrics"
-  | "proxmox-stats"
-  | "files"
   | "host-manager"
   | "user-profile"
   | "admin-settings"
-  | "docker"
-  | "tunnel"
-  | "sftp"
-  | "web-endpoint"
-  | "network_graph"
-  | "tmux_monitor" // --- tmux-monitor ---
-  | "serial"
-  | "homepage"
-  | "fleet-inventory"
-  // Rail panels that can also open full-width in the main area.
-  | "termix-id"
-  | "alerts"
-  | "session-logs"
-  | "snippets"
-  | "macros"
-  | "history"
-  | "ssh-tools"
-  | "automations"
-  | "ai"
-  | "collab"
   | "split-screen";
 
 /**
@@ -292,14 +160,6 @@ export type KnownTabType =
  */
 export type TabType = KnownTabType | (string & {});
 
-export type SerialConfig = {
-  path: string;
-  baudRate: number;
-  dataBits: 5 | 6 | 7 | 8;
-  stopBits: 1 | 2;
-  parity: "none" | "even" | "odd";
-};
-
 export type Tab = {
   id: string;
   instanceId: string;
@@ -309,21 +169,10 @@ export type Tab = {
   host?: Host;
   openedAt: number;
   restoredSessionId?: string | null;
-  /** Set when this tab joins someone else's live shared session instead of connecting/attaching its own. */
-  joinSharedSessionId?: string | null;
-  joinShareId?: string | null;
-  initialFilePath?: string;
-  /** Directory to open a Files tab into, distinct from initialFilePath (a specific file to open in an editor window). */
-  initialPath?: string;
-  /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
-  fleetId?: number;
-  /** Which web endpoint this tab shows. Only set when type is "web-endpoint". */
-  endpointId?: string;
-  /** Which collab room a collab tab is showing. */
-  collabRoomId?: string;
-  serialConfig?: SerialConfig;
-  /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
-  splitConfig?: SplitTabConfig;
+  /** Payload owned by the tab's plugin, e.g. which fleet or endpoint it shows. */
+  data?: Record<string, unknown>;
+  /** Present only on a split-screen container tab. Pane tab ids reference live child tabs. */
+  split?: SplitState;
   /** Hides this session from the top-level tab bar while it belongs to a split tab. */
   parentSplitTabId?: string;
   terminalRef?: import("react").RefObject<{
@@ -333,24 +182,24 @@ export type Tab = {
     subscribeOutput?: (listener: (data: string) => void) => () => void;
     paste?: (text: string) => void;
     reconnect?: () => void;
+    /** Start a manual reconnect only when disconnected and idle; return whether it started. */
+    reconnectIfDisconnected?: () => boolean;
     fit?: () => void;
     notifyResize?: () => void;
     refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
-    openShareModal?: () => void;
-    canShare?: () => boolean;
+    focus?: () => void;
   } | null>;
 };
 
+/** Core cards are named here; plugin cards add their own ids. */
 export type DashboardCardId =
   | "stats_bar"
   | "counters_bar"
   | "quick_actions"
   | "host_status"
   | "recent_activity"
-  | "network_graph"
-  | "service_links"
-  | "homepage_preview";
+  | (string & {});
 
 export type DashboardCardConfig = {
   id: DashboardCardId;
@@ -361,18 +210,15 @@ export type DashboardCardConfig = {
 
 export type AdminSection =
   | "general"
-  | "sso"
   | "users"
   | "sessions"
   | "roles"
   | "host-defaults"
-  | "image-storage"
   | "branding"
   | "database"
   | "api-keys"
   | "audit-log"
-  | "ssl"
-  | "touch-input";
+  | "ssl";
 export type ThemeId =
   | "dark"
   | "light"
@@ -392,112 +238,86 @@ export type UiFontId =
   | "source-code-pro"
   | "caskaydia-cove";
 
-export type ToolsTab =
-  "ssh-tools" | "snippets" | "macros" | "history" | "split-screen";
-export type SplitMode =
-  | "none"
-  | "2-way"
-  | "2-way-horizontal"
-  | "3-way"
-  | "3-way-horizontal"
-  | "4-way"
-  | "5-way"
-  | "6-way";
+/** A tools panel view: a rail panel a plugin registered. */
+export type ToolsTab = string & {};
 
-export type SplitTabConfig = {
-  mode: Exclude<SplitMode, "none">;
-  paneTabIds: (string | null)[];
-  rowSizes: number[];
-  rowColSizes: number[][];
-};
+/** "row" lays children side by side, "column" stacks them. */
+export type SplitDirection = "row" | "column";
+
+export interface PaneNode {
+  kind: "pane";
+  id: string;
+  tabId: string | null;
+}
+
+export interface SplitNode {
+  kind: "split";
+  id: string;
+  direction: SplitDirection;
+  children: LayoutNode[];
+  /** Percent of the parent per child, summing to 100. */
+  sizes: number[];
+}
+
+export type LayoutNode = PaneNode | SplitNode;
+
+/** The layout of one split tab. */
+export interface SplitState {
+  root: LayoutNode;
+  focusedPaneId: string;
+  /** A pane shown alone, filling the split, until unzoomed. */
+  zoomedPaneId?: string | null;
+}
 
 export type WorkspaceTabSnapshot = {
   /** Stable key within the saved tab list, not the live Tab.id (which is regenerated on every open). */
   slotId: string;
   type: TabType;
-  /** Set for host-bound tab types, resolved by Host.syncId on apply. Never set for "serial". */
+  /** Set for host-bound tab types, resolved by Host.syncId on apply. */
   hostSyncId?: string | null;
   /** Denormalized snapshot for display and graceful-skip messaging if the host is later deleted. */
   hostNameSnapshot?: string | null;
   label: string;
   customLabel?: string;
+  /** Read from payloads saved before tabs carried `data`. */
   initialFilePath?: string;
   initialPath?: string;
   fleetId?: number;
-  /** Only present when type === "serial". Fully self-contained, no host resolution needed. */
-  serialConfig?: SerialConfig;
+  /** The tab's plugin payload. */
+  data?: Record<string, unknown>;
 };
 
 /** One dock's arrangement. `view` is a RailView, or null when the dock is closed. */
-export type WorkspaceDockState = {
+type WorkspaceDockState = {
   view: string | null;
   open: boolean;
   width: number;
 };
 
+/** One split tab in a saved layout, its pane tab ids swapped for slotIds. */
+export type WorkspaceSplitSnapshot = {
+  slotId: string;
+  label: string;
+  root: LayoutNode;
+  focusedPaneId: string;
+};
+
 export type WorkspacePayload = {
-  version: 1;
+  version: 1 | 2;
   tabs: WorkspaceTabSnapshot[];
+  /** A tab's slotId, or a split's. */
   activeSlotId: string | null;
-  splitMode: SplitMode;
-  /** Indexed identically to AppShell's paneTabIds (length 6), holding slotId instead of a live Tab.id. */
-  paneTabIds: (string | null)[];
-  rowSizes: number[];
-  rowColSizes: number[][];
+  /** Every split tab. Version 2 and later. */
+  splits?: WorkspaceSplitSnapshot[];
+  /** Version 1: the one split, as a fixed mode. */
+  splitMode?: string;
+  /** Version 1: indexed by the mode's pane order, holding slotIds. */
+  paneTabIds?: (string | null)[];
+  rowSizes?: number[];
+  rowColSizes?: number[][];
   /** Sidebar arrangement, so a workspace restores the whole layout and not just tabs. */
   sidebar?: {
     left: WorkspaceDockState;
     right: WorkspaceDockState;
   };
-};
-
-export type WorkspaceKind = "manual" | "last_session";
-
-export type Workspace = {
-  id: number;
-  userId: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  kind: WorkspaceKind;
-  isDefault: boolean;
-  payload: WorkspacePayload;
-  syncId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  lastUsedAt: string | null;
-  tabCount: number;
-};
-
-export type Snippet = {
-  id: number;
-  name: string;
-  description?: string;
-  content: string;
-  folder: string | null;
-  order: number;
-  hostIds?: number[];
-  isNote?: boolean;
-};
-
-export const FOLDER_ICONS = [
-  "folder",
-  "server",
-  "cloud",
-  "database",
-  "box",
-  "network",
-  "copy",
-  "settings",
-  "cpu",
-  "globe",
-] as const;
-export type FolderIconId = (typeof FOLDER_ICONS)[number];
-
-export type SnippetFolder = {
-  id: number;
-  name: string;
-  color: string;
-  icon: FolderIconId;
-  open: boolean;
 };

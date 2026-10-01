@@ -1,0 +1,211 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Automatizálások megtekintése",
+      "description": "Tekintse meg az automatizálásokat és azok előzményeit."
+    },
+    "create": {
+      "title": "Automatizálások létrehozása",
+      "description": "Új automatizálások hozzáadása."
+    },
+    "edit": {
+      "title": "Automatizálások szerkesztése",
+      "description": "Módosítsa a meglévő automatizálásokat."
+    },
+    "delete": {
+      "title": "Automatizálások törlése",
+      "description": "Automatizálások eltávolítása."
+    },
+    "run": {
+      "title": "Automatizálások futtatása",
+      "description": "Automatizálás manuális indítása."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "automations": {
+        "title": "Automatizálások",
+        "tabAutomations": "Automatizálások",
+        "tabRuns": "Futások",
+        "tabChannels": "Csatornák",
+        "createAutomation": "Új automatizálás",
+        "backToAutomations": "Vissza az automatizálásokhoz",
+        "createTitle": "Új automatizálás",
+        "editTitle": "Szerkesztési automatizálás",
+        "empty": "Még nincsenek automatizálások. Hozz létre egyet, amely egy mérőszámra, ütemezésre vagy eseményre reagál.",
+        "emptyRuns": "Még nincsenek futások.",
+        "channelsHint": "A csatornák a Riasztások menüpontban vannak beállítva.",
+        "noChannelsHint": "Az értesítés mindig a beérkező levelek mappájába érkezik. Adj hozzá csatornákat az Értesítések részben, hogy máshová is elküldhesd.",
+        "nameLabel": "Név",
+        "namePlaceholder": "pl. /data törlése, amikor megtelik",
+        "nameRequired": "Név megadása kötelező",
+        "descriptionLabel": "Leírás",
+        "descriptionPlaceholder": "Opcionális leírás",
+        "enabledLabel": "Engedélyezve",
+        "concurrencyLabel": "Ha már fut",
+        "concurrencyHint": "Mi a teendő, ha ez ismét aktiválódik, mielőtt az utolsó futtatás befejeződött?",
+        "concurrency": {
+          "skip": "Kihagyja az új futást",
+          "queue": "Várj és fuss utána",
+          "allow": "Futtassa mindkettőt egyszerre"
+        },
+        "save": "Megtakarítás",
+        "created": "Automatizálás létrehozva",
+        "updated": "Automatizálás mentve",
+        "deleted": "Automatizálás törölve",
+        "deleteConfirm": "Törli ezt az automatizálást? A futási előzményei is törlődnek.",
+        "runNow": "Futtatás most",
+        "testRun": "Próbaüzem",
+        "testRunHint": "Minden lépést lefuttat, de a Termixen kívül semmihez sem ér hozzá.",
+        "runStarted": "Futtatás elkezdve",
+        "runFinished": "Futtatás befejezve: {{status}}",
+        "trigger": "Trigger",
+        "steps": "Lépések",
+        "addStep": "Lépés hozzáadása",
+        "removeStep": "Lépés eltávolítása",
+        "moveUp": "Feljebb mozgatás",
+        "moveDown": "Lejjebb mozgatás",
+        "noSteps": "Még nincsenek lépések. Írj be egyet, ami leírja, hogy minek kellene történnie.",
+        "webhookTokenTitle": "Webhook URL-címe",
+        "webhookTokenDescription": "Ez egyszer jelenik meg. Mentsd el most, később nem lesz elérhető.",
+        "copy": "Másolat",
+        "copied": "Másolva",
+        "viewJson": "JSON",
+        "viewBuilder": "Építész",
+        "viewGraph": "Grafikon",
+        "lastRun": "Utolsó futás",
+        "never": "Soha",
+        "duration": "{{seconds}}s",
+        "stepOutput": "Kimenet",
+        "stepError": "Hiba",
+        "dryRunBadge": "Próbaüzem",
+        "hostSelector": {
+          "trigger": "Kiváltó gazdagép",
+          "host": "Adott gazdagép",
+          "fleet": "Flotta",
+          "all": "Minden házigazda"
+        },
+        "triggerKinds": {
+          "metric_threshold": "Metrikus küszöbérték",
+          "host_status": "A host fel- vagy lekapcsolódik",
+          "health_check": "Egészségügyi ellenőrzés változásai",
+          "schedule": "Ütemterv szerint",
+          "docker_event": "Konténeresemény",
+          "internal_event": "Termix esemény",
+          "webhook": "Bejövő webhook"
+        },
+        "stepTypes": {
+          "notify": "Értesítés küldése",
+          "http": "URL hívása",
+          "run_snippet": "Kódrészlet futtatása",
+          "run_command": "Parancs futtatása",
+          "docker": "Egy konténer vezérlése",
+          "tunnel": "Irányíts egy alagutat",
+          "wol": "Ébresszen fel egy házigazdát",
+          "wait": "Várjon",
+          "set_var": "Változó beállítása",
+          "if": "Ha / egyébként",
+          "run_automation": "Futtasson egy másik automatizálást",
+          "stop": "Stop"
+        },
+        "statuses": {
+          "running": "Futás",
+          "success": "Siker",
+          "failed": "Sikertelen",
+          "timeout": "Időtúllépés történt",
+          "skipped": "Kihagyva",
+          "cancelled": "Lemondva"
+        },
+        "fields": {
+          "host": "Házigazda",
+          "metric": "Metrika",
+          "mount": "Csatlakozási pont",
+          "operator": "Van",
+          "value": "Érték",
+          "forSeconds": "Fenntartott (másodperc)",
+          "cooldown": "Lehűlési idő (perc)",
+          "cron": "Cron kifejezés",
+          "intervalSeconds": "Minden (másodperc)",
+          "timezone": "Időzóna",
+          "timezoneServer": "Szerveridő",
+          "timezoneHint": "A Cron idők leolvasása ebben a zónában történik. Nem vonatkozik az intervallumos ütemtervekre.",
+          "container": "Tartály",
+          "command": "Parancs",
+          "url": "URL-cím",
+          "method": "Módszer",
+          "body": "Test",
+          "channels": "Küldés ide is",
+          "title": "Cím",
+          "message": "Üzenet",
+          "snippet": "Töredék",
+          "seconds": "Másodperc",
+          "conditionLeftPlaceholder": "Ellenőrizendő érték",
+          "conditionRightPlaceholder": "Összevet",
+          "variableName": "Változó neve",
+          "variableValue": "Érték",
+          "elevated": "Futtassa a sudo paranccsal",
+          "onError": "Ha ez nem sikerül",
+          "allowPrivateNetwork": "Helyi hálózati címek engedélyezése",
+          "allowPrivateNetworkHint": "Szükséges egy saját tárhelyen futó szolgáltatáshoz a helyi hálózaton. Alapértelmezés szerint ki van kapcsolva, hogy megakadályozza a belső címekre irányuló kéréseket."
+        },
+        "onError": {
+          "stop": "Állítsd meg a futást",
+          "continue": "Folytat"
+        },
+        "needsPlugin": "Szükségletek {{plugin}}",
+        "needsPluginHint": "Ez az automatizálás kimarad, amíg a szükséges funkció újra elérhetővé nem válik.",
+        "offBadge": "Le",
+        "docsLink": "Dokumentumok megtekintése",
+        "ago": {
+          "seconds": "{{count}}másodperccel ezelőtt",
+          "minutes": "{{count}}perccel ezelőtt",
+          "hours": "{{count}}órával ezelőtt",
+          "days": "{{count}}nappal ezelőtt"
+        }
+      }
+    }
+  },
+  "nav": {
+    "automations": "Automatizálások"
+  },
+  "onboarding": {
+    "feature_automations": "Automatizálások",
+    "feature_automations_desc": "Automatikusan futtassa a lépéseket, amikor valami történik, és kapjon értesítést."
+  },
+  "maintenance": {
+    "title": "Karbantartás",
+    "description": "A folyamatban lévő munka alatt szüneteltesse a hoszt állapot-, egészség-, metrika-, konténer- és alagút-leválasztási automatizálásokat. A monitorozás, a manuális futtatások és az ütemezett automatizálások továbbra is működnek.",
+    "denied": "Nincs jogosultsága a karbantartás megtekintésére.",
+    "sharedReadOnly": "Ezt a gazdagépet megosztották veled. Csak a tulajdonosa módosíthatja a karbantartási beállításokat.",
+    "failed": "A karbantartás frissítése nem sikerült.",
+    "active": "Karbantartás aktív",
+    "estimated": "Várható befejezés",
+    "noAutoEnd": "A becslés nem fejezi be a karbantartást. A munka befejezésekor explicit módon fejezze be.",
+    "endConfirm": "Befejezi a karbantartást, és folytatja az eseményvezérelt automatizálásokat ennél a gazdagépnél?",
+    "confirmEnd": "Vég megerősítése",
+    "cancel": "Mégsem",
+    "end": "Karbantartás vége",
+    "action": "Akció",
+    "startNow": "Kezdés most",
+    "schedule": "Későbbi időpontra ütemezhető",
+    "reason": "Ok",
+    "startUtc": "Első indítás (UTC)",
+    "repeat": "Ismétlés",
+    "once": "Egyszer",
+    "weekly": "Heti",
+    "monthly": "Havi",
+    "utcHelp": "Az ütemtervek az év során UTC-t használják. A havi ütemtervek kihagyják a kiválasztott nap nélküli hónapokat. A tervezett ablakok nem fedhetik át egymást; a túlterheléses karbantartás a későbbi ablakokban is folytatódik.",
+    "duration": "Becsült időtartam (perc)",
+    "grace": "Türelmi időszak (perc)",
+    "notify": "Értesítsen egyszer, ha a becslés és a türelmi időszak után is offline állapotban van",
+    "addSchedule": "Ütemezés hozzáadása",
+    "schedules": "Ütemtervek",
+    "noSchedules": "Nincsenek karbantartási ütemtervek.",
+    "completed": "Már elkezdődött",
+    "minutes_one": "{{count}} perc",
+    "minutes_other": "{{count}} perc",
+    "remove": "Ütemezés eltávolítása",
+    "loadFailed": "Nem sikerült frissíteni a karbantartási állapotot. A változtatások le vannak tiltva, amíg be nem töltődik.",
+    "loading": "Karbantartási állapot betöltése…"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "loginWithSso": "Mit SSO anmelden",
+  "loginWithProvider": "Anmeldung mit {{name}}",
+  "loading": "Laden...",
+  "permissions": {
+    "manage": {
+      "title": "SSO-Anbieter verwalten",
+      "description": "Fügen Sie SSO-Anbieter hinzu, ändern oder entfernen Sie diese, mit denen sich Benutzer anmelden können."
+    }
+  },
+  "providers": {
+    "docsLink": "Dokumentation ansehen",
+    "none": "Keine SSO-Anbieter konfiguriert.",
+    "add": "Anbieter hinzufügen",
+    "edit": "Anbieter bearbeiten",
+    "delete": "Anbieter löschen",
+    "deleteConfirm": "Diesen Anbieter löschen? Zugehörige Benutzer können sich nicht mehr anmelden.",
+    "name": "Anzeigename",
+    "namePlaceholder": "Mein SSO-Anbieter",
+    "nameRequired": "Ein Anzeigename ist erforderlich.",
+    "type": "Anbietertyp",
+    "enabled": "Aktiviert",
+    "save": "Anbieter speichern",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleted": "Gelöscht",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "loadFailed": "SSO-Anbieter konnten nicht geladen werden",
+    "cancel": "Abbrechen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "redirectUri": "Umleitungs-URI",
+    "redirectUriDesc": "Registrieren Sie diese URL als Weiterleitungs- oder Rückruf-URL bei Ihrem Identitätsanbieter.",
+    "legacyCallback": "Behalte die alte Umleitungs-URI bei.",
+    "legacyCallbackDesc": "Dieser Anbieter wurde vor Termix 2.9 eingerichtet und verwendet noch die alte Umleitungs-URI, die weiterhin funktioniert. Um zur neuen URI zu wechseln, fügen Sie zunächst {{uri}} in Ihrem Identitätsanbieter hinzu und deaktivieren Sie diese Option anschließend.",
+    "authorizationUrl": "Autorisierungs-URL: {{url}}"
+  },
+  "fields": {
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Secret",
+    "secretKeep": "Ein Geheimnis ist gewahrt. Lassen Sie dieses Feld leer, um es zu bewahren.",
+    "issuerUrl": "Issuer-URL",
+    "authUrl": "Autorisierungs-URL",
+    "tokenUrl": "Token-URL",
+    "userIdentifier": "Benutzerkennungspfad",
+    "displayName": "Anzeigename-Pfad",
+    "scopes": "Scopes",
+    "userinfoUrl": "Userinfo-URL überschreiben",
+    "groupClaim": "Gruppen-Claim",
+    "groupClaimDesc": "Optional. Der Claim-Pfad, der die Gruppen des Benutzers enthält. Standardmäßig groups, roles, dann group. Verwenden Sie dies für Anbieter mit einem benutzerdefinierten Claim (z. B. Zitadel).",
+    "allowedUsers": "Zugelassene Benutzer",
+    "allowedUsersDesc": "Eine E-Mail pro Zeile. Leer lassen, um alle zuzulassen.",
+    "adminGroup": "Admin-Gruppe",
+    "adminGroupDesc": "Benutzer in dieser Gruppe erhalten Admin-Berechtigungen. Leer lassen, um die Gruppensynchronisierung zu deaktivieren.",
+    "caCert": "Benutzerdefiniertes CA-Zertifikat",
+    "caCertDesc": "Optional. PEM-kodiertes CA-Zertifikat für OIDC-Anbieter, die eine private oder selbstsignierte Zertifizierungsstelle verwenden. Leer lassen, um den System-Vertrauensspeicher zu verwenden."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Automatische Anmeldung mit SSO",
+      "description": "Besucher werden direkt zum ersten SSO-Anbieter weitergeleitet, anstatt das Anmeldeformular anzuzeigen. Die Umgebungsvariable OIDC_SILENT_LOGIN_DEFAULT überschreibt dies."
+    }
+  }
+}

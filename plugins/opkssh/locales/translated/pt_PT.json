@@ -1,0 +1,32 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Inicie sessão neste anfitrião usando o seu fornecedor de identidade em vez de uma palavra-passe ou chave. Requer que o OPKSSH esteja configurado no servidor.",
+    "docs": "Ver docs"
+  },
+  "dialog": {
+    "title": "Autenticação OPKSSH necessária",
+    "description": "Conclua a autenticação no seu navegador para continuar. Esta sessão permanecerá válida por 24 horas.",
+    "openBrowser": "Abrir navegador para autenticar",
+    "waiting": "A aguardar autenticação no navegador...",
+    "authenticating": "A processar autenticação...",
+    "signInWith": "Iniciar sessão com {{provider}}"
+  },
+  "errors": {
+    "authFailed": "A autenticação falhou. Verifique as suas credenciais e tente novamente.",
+    "timeout": "A autenticação expirou. Tente novamente."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
+  },
+  "hosts": {
+    "filterAuthOpkssh": "OPKSSH"
+  }
+}

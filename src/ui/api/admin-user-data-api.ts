@@ -99,14 +99,7 @@ export async function adminDeleteUserHost(
 export async function adminGetHostPassword(
   targetUserId: string,
   hostId: number,
-  field:
-    | "password"
-    | "sudoPassword"
-    | "rdpPassword"
-    | "vncPassword"
-    | "telnetPassword"
-    | "key"
-    | "keyPassword" = "password",
+  field: "password" | "sudoPassword" | "key" | "keyPassword" = "password",
 ): Promise<string | null> {
   try {
     const response = await sshHostApi.get(
@@ -188,61 +181,5 @@ export async function adminDeleteUserCredential(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "delete user's credential");
-  }
-}
-
-export async function adminGetUserSnippets(
-  targetUserId: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/snippets", {
-      headers: adminHeaders(targetUserId),
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "fetch user's snippets");
-  }
-}
-
-export async function adminCreateUserSnippet(
-  targetUserId: string,
-  snippetData: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/snippets", snippetData, {
-      headers: adminHeaders(targetUserId),
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "create snippet for user");
-  }
-}
-
-export async function adminUpdateUserSnippet(
-  targetUserId: string,
-  snippetId: number,
-  snippetData: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.put(`/snippets/${snippetId}`, snippetData, {
-      headers: adminHeaders(targetUserId),
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "update user's snippet");
-  }
-}
-
-export async function adminDeleteUserSnippet(
-  targetUserId: string,
-  snippetId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.delete(`/snippets/${snippetId}`, {
-      headers: adminHeaders(targetUserId),
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "delete user's snippet");
   }
 }

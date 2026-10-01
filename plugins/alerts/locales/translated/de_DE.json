@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Benachrichtigungen"
+  },
+  "permissions": {
+    "use": {
+      "title": "Warnmeldungen verwenden",
+      "description": "Erhalten Sie Benachrichtigungen in Ihrem Posteingang und leiten Sie diese an Ihre eigenen Kanäle weiter."
+    }
+  },
+  "onboarding": {
+    "feature": "Alarme",
+    "featureDesc": "Alle Benachrichtigungen in einem Posteingang, auf Wunsch auch per Discord, ntfy, E-Mail oder Webhook."
+  },
+  "settings": {
+    "group": {
+      "general": "Allgemein",
+      "email": "E-Mail"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix-Ankündigungen",
+        "description": "Neuigkeiten vom Termix-Team, wie Sicherheitshinweise und Releases, werden direkt in den Posteingang aller Nutzer angezeigt."
+      },
+      "retentionDays": {
+        "label": "Benachrichtigungen beibehalten für (Tage)",
+        "description": "Ältere Benachrichtigungen werden aus jedem Posteingang entfernt."
+      },
+      "smtpHost": {
+        "label": "SMTP-Server",
+        "description": "Für E-Mail-Kanäle erforderlich. Leer lassen, um E-Mails zu deaktivieren.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "SMTP-Port",
+        "description": "Üblicherweise Port 587 mit STARTTLS oder Port 465 mit TLS."
+      },
+      "smtpSecure": {
+        "label": "Verwenden Sie TLS von Anfang an",
+        "description": "Aktivieren Sie die Option für Port 465. Lassen Sie sie für Port 587 deaktiviert, da dieser automatisch auf TLS umstellt."
+      },
+      "smtpUser": {
+        "label": "SMTP-Benutzername",
+        "description": "Lassen Sie dieses Feld leer, wenn der Server keine Anmeldung benötigt."
+      },
+      "smtpPassword": {
+        "label": "SMTP-Passwort",
+        "description": "Verschlüsselt gespeichert."
+      },
+      "smtpFrom": {
+        "label": "Von Adresse",
+        "description": "Die Absenderbenachrichtigungen stammen von",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Warnmeldungen",
+        "description": "Welche neuen Benachrichtigungen erscheinen während der Nutzung von Termix? Sie landen immer im Posteingang.",
+        "all": "Alle Benachrichtigungen",
+        "warning": "Warnungen und kritische",
+        "critical": "Nur für kritische Zwecke",
+        "off": "Keine"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Posteingang",
+    "channels": "Kanäle",
+    "rules": "Lieferregeln"
+  },
+  "severity": {
+    "info": "Info",
+    "success": "Erfolgreich",
+    "warning": "Warnung",
+    "critical": "Kritisch"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Offen",
+    "view": "Anzeigen",
+    "unread": "Ungelesen",
+    "deliveryFailed_one": "{{count}} Kanal fehlgeschlagen",
+    "deliveryFailed_other": "{{count}} Kanäle fehlgeschlagen",
+    "markRead": "Als gelesen markieren",
+    "markUnread": "Als ungelesen markieren",
+    "markAllRead": "Alle als gelesen markieren",
+    "delete": "Löschen",
+    "clearRead": "Lesebenachrichtigungen löschen",
+    "cleared_one": "Gelöschte {{count}} Warnung",
+    "cleared_other": "Gelöschte {{count}} Benachrichtigungen",
+    "filterAll": "Alle",
+    "filterUnread": "Ungelesen",
+    "anySeverity": "Jegliche Schwere",
+    "anySource": "Jede Quelle",
+    "openAll": "In einem Tab öffnen",
+    "empty": "Bisher keine Benachrichtigungen.",
+    "emptyUnread": "Sie sind nun auf dem neuesten Stand.",
+    "loadMore": "Mehr laden"
+  },
+  "channels": {
+    "intro": "Kanäle sind die Wege, über die Benachrichtigungen außerhalb von Termix weitergeleitet werden können. Zustellungsregeln legen fest, welche Benachrichtigungen diese Kanäle nutzen.",
+    "add": "Kanal hinzufügen",
+    "edit": "Kanal bearbeiten",
+    "test": "Senden Sie einen Test",
+    "testSent": "Testalarm gesendet",
+    "testFailed": "Test fehlgeschlagen: {{error}}",
+    "deleteConfirm": "Kanal \"{{name}} \" löschen?",
+    "deleted": "Kanal gelöscht",
+    "empty": "Noch keine Kanäle.",
+    "enabled": "Aktiviert",
+    "needsSave": "Dieser Kanal muss erneut geöffnet und gespeichert werden, bevor er senden kann.",
+    "name": "Name",
+    "nameRequired": "Name ist erforderlich",
+    "type": "Typ",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discord",
+      "email": "E-Mail"
+    },
+    "emailUnavailable": "Für E-Mails wird ein SMTP-Server benötigt, der vom Administrator in den Benachrichtigungseinstellungen eingerichtet wird.",
+    "webhookUrl": "URL",
+    "webhookHint": "Erhält für jede Benachrichtigung einen JSON-Body.",
+    "method": "Verfahren",
+    "headers": "Überschriften",
+    "headersHint": "Ein Eintrag pro Zeile, z. B. Name: Wert.",
+    "ntfyServer": "Server-URL",
+    "ntfyTopic": "Topic",
+    "ntfyToken": "Zugriffstoken (optional)",
+    "discordUrl": "Discord-Webhook-URL",
+    "discordHint": "In den Kanaleinstellungen von Discord, unter Integrationen.",
+    "discordUsername": "Anzeigename (optional)",
+    "discordAvatar": "Avatar-URL (optional)",
+    "emailTo": "Senden an",
+    "emailHint": "Mehrere Adressen werden durch Kommas getrennt.",
+    "privateNetwork": "Erlauben Sie eine private Netzwerkadresse",
+    "privateNetworkHint": "Funktioniert nur für Hosts, die ein Administrator in der Liste der privaten Endpunkte zulässt."
+  },
+  "rules": {
+    "intro": "Eine Zustellungsregel sendet passende Benachrichtigungen an Ihre Kanäle. Benachrichtigungen bleiben außerdem immer im Posteingang erhalten.",
+    "add": "Regel hinzufügen",
+    "edit": "Bearbeitungsregel",
+    "empty": "Da es noch keine Regeln gibt, werden Benachrichtigungen nur im Posteingang angezeigt.",
+    "needChannel": "Füge zuerst einen Kanal hinzu.",
+    "enabled": "Aktiviert",
+    "name": "Name",
+    "nameRequired": "Name ist erforderlich",
+    "match": "Zu sendende Benachrichtigungen",
+    "matchHint": "* für alles, Automatisierungen.* für alles von Automatisierungen oder eine ganz bestimmte Art.",
+    "minSeverity": "Mindestens",
+    "channels": "Senden an",
+    "channelRequired": "Wählen Sie mindestens einen Kanal aus",
+    "deleteConfirm": "Regel \"{{name}} \" löschen?",
+    "everything": "Alles",
+    "summary": "{{match}}, {{severity}} oder höher, bis {{channels}}"
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "delete": "Löschen"
+  },
+  "widget": {
+    "name": "Alarm-Feed",
+    "description": "Ihre neuesten Benachrichtigungen mit einer schnellen Möglichkeit, sie als gelesen zu markieren.",
+    "maxItems": "Maximale Anzahl an Artikeln",
+    "showRead": "Lesebenachrichtigungen anzeigen",
+    "allClear": "Alles in Ordnung",
+    "loading": "Laden..."
+  }
+}

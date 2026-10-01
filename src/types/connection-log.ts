@@ -1,3 +1,7 @@
+/**
+ * Where a connection is. Core's SSH pipeline uses the named stages; a plugin
+ * may log its own (such as "guac_ready") and they pass through unchanged.
+ */
 export type ConnectionStage =
   | "dns"
   | "tcp"
@@ -9,29 +13,7 @@ export type ConnectionStage =
   | "proxy"
   | "jump"
   | "validation"
-  | "docker_connecting"
-  | "docker_auth"
-  | "docker_session"
-  | "docker_ready"
-  | "stats_connecting"
-  | "stats_totp"
-  | "stats_polling"
-  | "stats_heartbeat"
-  | "tunnel_connecting"
-  | "tunnel_source"
-  | "tunnel_endpoint"
-  | "tunnel_forwarding"
-  | "tunnel_retry"
-  | "tunnel_connected"
-  | "sftp_connecting"
-  | "sftp_auth"
-  | "sftp_connected"
-  | "guac_token"
-  | "guac_guacd"
-  | "guac_connecting"
-  | "guac_handshake"
-  | "guac_ready"
-  | "guac_disconnected";
+  | (string & {});
 
 export type LogEntry = {
   id: string;
@@ -41,7 +23,3 @@ export type LogEntry = {
   message: string;
   details?: Record<string, unknown> | string;
 };
-
-export interface ConnectionLogResponse {
-  connectionLogs?: LogEntry[];
-}

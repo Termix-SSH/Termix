@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "Flotten ansehen",
+      "description": "Flotten, ihre Mitglieder und ihren Bestand ansehen."
+    },
+    "manage": {
+      "title": "Flottenmanagement",
+      "description": "Flotten erstellen, bearbeiten und löschen, Mitgliedschaften ändern und Flotten mit anderen Benutzern oder Rollen teilen."
+    },
+    "execute": {
+      "title": "Flottenaktionen durchführen",
+      "description": "Führe Befehle und Paketaktionen über eine ganze Flotte hinweg aus und übertrage Dateien zu und von den Mitgliedshosts."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "Flotten",
+        "createFleet": "Flotte erstellen",
+        "createFleetTitle": "Flotte erstellen",
+        "editFleetTitle": "Flotte bearbeiten",
+        "createFleetDescription": "Eine Flotte ist eine benannte Gruppe von Hosts, gegen die Sie als Einheit Aktionen ausführen können.",
+        "nameLabel": "Name",
+        "namePlaceholder": "z.B. Webserver",
+        "nameRequired": "Flottenname erforderlich",
+        "descriptionLabel": "Beschreibung",
+        "descriptionPlaceholder": "Optionale Beschreibung",
+        "colorLabel": "Farbe",
+        "tagRulesLabel": "Tag-Regeln",
+        "tagRulesPlaceholder": "Produktweb, Rand",
+        "tagRulesHint": "Hosts, die über eines dieser Tags verfügen, werden automatisch mit einbezogen, ebenso wie manuell hinzugefügte Hosts.",
+        "fleetCreated": "Flotte erstellt",
+        "fleetUpdated": "Flotte aktualisiert",
+        "fleetDeleted": "Flotte gelöscht",
+        "saveFailed": "Es gelang nicht, die Flotte zu retten.",
+        "deleteFailed": "Flotte konnte nicht gelöscht werden",
+        "loadFailed": "Flotten konnten nicht geladen werden",
+        "deleteFleetTitle": "Flotte löschen",
+        "deleteFleetDescription": "Möchten Sie wirklich \"{{name}}\" löschen? Dadurch werden die Mitgliedshosts selbst nicht gelöscht.",
+        "searchFleets": "Flotten durchsuchen...",
+        "noFleets": "Noch keine Flotten vorhanden. Erstellen Sie eine, um loszulegen.",
+        "memberCount": "{{count}} Host",
+        "memberCount_other": "{{count}} Hosts",
+        "manageMembers": "Mitglieder verwalten",
+        "manageMembersTitle": "Flottenmitglieder verwalten",
+        "manageMembersDescription": "Hosts können der statischen Mitgliedschaft dieser Flotte hinzugefügt oder daraus entfernt werden. Hosts, die den Tag-Regeln entsprechen, sind immer enthalten.",
+        "searchHosts": "Hosts suchen...",
+        "noHostsFound": "Keine Hosts gefunden",
+        "noMembers": "Diese Flotte hat noch keine Mitglieder. Füge Hosts hinzu oder lege eine Tag-Regel fest.",
+        "membersLoadFailed": "Flottenmitglieder konnten nicht geladen werden",
+        "memberUpdateFailed": "Aktualisierung der Flottenmitgliedschaft fehlgeschlagen",
+        "tabRun": "Befehl ausführen",
+        "tabTransfer": "Dateien übertragen",
+        "tabInventory": "Inventar",
+        "openInventoryTab": "Im vollständigen Tab öffnen",
+        "tabPackages": "Pakete",
+        "runOnFleet": "Run on Fleet",
+        "commandPlaceholder": "uptime && df -h",
+        "commandRequired": "Ein Befehl ist erforderlich",
+        "commandInputsLabel": "Befehlseingaben",
+        "commandSucceeded": "Der Befehl wurde auf allen Hosts erfolgreich ausgeführt.",
+        "commandPartialFailure": "{{failed}} von {{total}} Hosts fehlgeschlagen",
+        "commandFailed": "Befehl konnte nicht ausgeführt werden",
+        "resultSuccess": "Erfolgreich",
+        "resultFailed": "Fehlgeschlagen",
+        "push": "Drücken",
+        "pull": "Ziehen",
+        "remotePathLabel": "Remote-Pfad",
+        "remotePathRequired": "Ein Remote-Pfad ist erforderlich",
+        "fileLabel": "Datei",
+        "fileRequired": "Eine Datei wird benötigt",
+        "pushHint": "Die ausgewählte Datei wird auf jedem Host der Flotte unter genau diesem Pfad gespeichert.",
+        "pullHint": "Die Datei unter diesem Pfad wird von jedem Host gelesen und als einzelne ZIP-Datei heruntergeladen, ein Ordner pro Host.",
+        "transferComplete": "Übertragung abgeschlossen",
+        "transferFailed": "Übertragung fehlgeschlagen",
+        "refreshInventory": "Inventar aktualisieren",
+        "inventoryLoadFailed": "Fehler beim Laden des Inventars",
+        "inventoryRefreshed": "Bestand aktualisiert",
+        "inventoryRefreshFailed": "Aktualisierung des Inventars fehlgeschlagen",
+        "inventoryNoData": "Noch keine Bestandsdaten vorhanden – aktualisieren Sie die Seite, um sie abzurufen.",
+        "inventoryHost": "Host",
+        "inventoryCollectedCount": "{{count}}/{{total}} gesammelt",
+        "inventoryOs": "Betriebssystem",
+        "inventoryKernel": "Kernel",
+        "inventoryArch": "Bogen",
+        "inventoryUptime": "Betriebszeit",
+        "inventoryPackageManager": "Paketmanager",
+        "inventoryCollectedAt": "Gesammelt",
+        "packageActionLabel": "Aktion",
+        "packageInstall": "Installieren",
+        "packageRemove": "Entfernen",
+        "packageUpgradeAll": "Alle Pakete aktualisieren",
+        "packageNameLabel": "Paketname",
+        "packageNameRequired": "Ein Paketname ist erforderlich.",
+        "packageHint": "Erfordert Administratorrechte pro Host und verwendet das gespeicherte sudo-Passwort des Hosts für die Rechteerweiterung.",
+        "shareFleet": "Flotte teilen",
+        "shareFleetTitle": "Teilen \"{{name}}\"",
+        "shareFleetDescription": "Teilt die aktuellen Hosts dieser Flotte mit den ausgewählten Benutzern oder Rollen. Hosts, die später zur Flotte hinzugefügt werden, werden nicht automatisch geteilt – teilen Sie die Flotte erneut, um sie einzubeziehen.",
+        "shareSelectionRequired": "Wählen Sie mindestens einen Benutzer oder eine Rolle aus.",
+        "fleetSharedSuccessfully": "Gemeinsam genutzte {{shared}} von {{total}} Hosts in dieser Flotte",
+        "failedToShareFleet": "Flottenteilung gescheitert",
+        "noMembersToShare": "Diese Flotte hat noch keine Mitgliedshosts, die geteilt werden können."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "Flotten"
+  },
+  "hosts": {
+    "docsLink": "Dokumentation anzeigen",
+    "sharing": {
+      "customHoursPlaceholder": "Stunden bis zum Zugriffsablauf",
+      "expiry": {
+        "never": "Nie",
+        "oneHour": "1 Stunde",
+        "oneDay": "24 Stunden",
+        "sevenDays": "7 Tage",
+        "thirtyDays": "30 Tage",
+        "custom": "Benutzerdefiniert"
+      },
+      "expiryLabel": "Zugriffsablauf",
+      "levels": {
+        "connect": {
+          "label": "Verbinden",
+          "description": "Nur Sitzungen öffnen: Terminal, Remotedesktop, Dateimanager, Tunnel und Docker. Kein Zugriff auf die Hostkonfiguration."
+        },
+        "view": {
+          "label": "Anzeigen",
+          "description": "Verbinden sowie Hostkonfiguration anzeigen. Geheimnisse werden nie angezeigt."
+        },
+        "edit": {
+          "label": "Bearbeiten",
+          "description": "Sie können die Einstellungen für Hosts ohne Authentifizierung anzeigen und bearbeiten. Die SSH-Authentifizierung des Besitzers bleibt privat und ist nur für den Besitzer zugänglich."
+        },
+        "manage": {
+          "label": "Verwalten",
+          "description": "Bearbeiten sowie Host für andere freigeben, Berechtigungsstufen ändern und Zugriff entziehen."
+        }
+      },
+      "noMatches": "Keine Treffer gefunden",
+      "permissionLevelLabel": "Berechtigungsstufe",
+      "rolesTab": "Rollen",
+      "searchPlaceholder": "Benutzer oder Rollen suchen...",
+      "shareButton": "Teilen",
+      "shareWithCount": "Teilen ({{count}})",
+      "usersTab": "Benutzer"
+    }
+  }
+}

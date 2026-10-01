@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Anmeldung mit LDAP",
+  "loginWithProvider": "Anmeldung mit {{name}}",
+  "loading": "Laden...",
+  "requiredField": "Dieses Feld ist erforderlich",
+  "username": "LDAP-Benutzername",
+  "password": "LDAP-Passwort",
+  "signIn": "Anmelden",
+  "permissions": {
+    "manage": {
+      "title": "LDAP-Verzeichnisse verwalten",
+      "description": "LDAP-Verzeichnisse hinzufügen, ändern und entfernen, mit denen sich Benutzer anmelden können."
+    }
+  },
+  "providers": {
+    "docsLink": "Dokumentation ansehen",
+    "none": "Es sind keine LDAP-Verzeichnisse konfiguriert.",
+    "add": "Verzeichnis hinzufügen",
+    "edit": "Verzeichnis bearbeiten",
+    "delete": "Verzeichnis löschen",
+    "deleteConfirm": "Soll dieses Verzeichnis gelöscht werden? Benutzer, die sich damit anmelden, können sich dann nicht mehr anmelden.",
+    "name": "Anzeigename",
+    "namePlaceholder": "Firmenverzeichnis",
+    "nameRequired": "Ein Anzeigename ist erforderlich.",
+    "enabled": "Aktiviert",
+    "save": "Speicherverzeichnis",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleted": "Gelöscht",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "loadFailed": "LDAP-Verzeichnisse konnten nicht geladen werden",
+    "cancel": "Abbrechen"
+  },
+  "fields": {
+    "host": "LDAP-Host",
+    "port": "Port",
+    "useTls": "TLS verwenden (LDAPS)",
+    "bindDn": "Bind-DN",
+    "bindPassword": "Bind-Passwort",
+    "secretKeep": "Ein Passwort wurde gespeichert. Lassen Sie dieses Feld leer, um es zu behalten.",
+    "userSearchBase": "Benutzer-Suchbasis",
+    "userSearchFilter": "Benutzersuchfilter",
+    "usernameAttr": "Benutzernamen-Attribut",
+    "displayNameAttr": "Anzeigename-Attribut",
+    "groupSearchBase": "Gruppen-Suchbasis",
+    "adminGroup": "Admin-Gruppe",
+    "allowedUsers": "Zugelassene Benutzer"
+  }
+}

@@ -32,13 +32,18 @@ export type HostDensity = "comfortable" | "compact";
 
 export type HostTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 
+/** What clicking a host does when it already has an open tab. */
+export type HostClickBehavior =
+  "newTab" | "focusExisting" | "focusExistingDoubleClickNew";
+
 export interface HostSidebarFilterState {
   status: ("online" | "offline" | "pinned")[];
-  authType: (
-    "password" | "key" | "credential" | "none" | "opkssh" | "stepca"
-  )[];
-  protocol: ("ssh" | "rdp" | "vnc" | "telnet")[];
-  features: ("terminal" | "fileManager" | "tunnel" | "docker")[];
+  /** SSH auth type ids; plugins add their own. */
+  authType: string[];
+  /** "ssh" or a plugin protocol id. */
+  protocol: string[];
+  /** Plugin ids whose host switch must be on. */
+  features: string[];
   tags: string[];
 }
 
@@ -49,6 +54,9 @@ export interface HostSidebarDisplayPreferences {
   statusColorScheme: StatusColorScheme;
   /** When true, a host row needs a double click to launch its session. */
   openOnDoubleClick: boolean;
+  /** When false, nested folders hide the parent-path breadcrumb before their name. */
+  showFolderPaths: boolean;
+  hostClickBehavior: HostClickBehavior;
 }
 
 export interface HostSidebarPreferences {
@@ -84,32 +92,19 @@ const TRAY_TRIGGERS: HostTrayTrigger[] = [
   "click",
   "actionsOnly",
 ];
+const HOST_CLICK_BEHAVIORS: HostClickBehavior[] = [
+  "newTab",
+  "focusExisting",
+  "focusExistingDoubleClickNew",
+];
 const STATUS_COLOR_SCHEMES: StatusColorScheme[] = ["accent", "status"];
 const FILTER_STATUS: HostSidebarFilterState["status"] = [
   "online",
   "offline",
   "pinned",
 ];
-const FILTER_AUTH_TYPE: HostSidebarFilterState["authType"] = [
-  "password",
-  "key",
-  "credential",
-  "none",
-  "opkssh",
-  "stepca",
-];
-const FILTER_PROTOCOL: HostSidebarFilterState["protocol"] = [
-  "ssh",
-  "rdp",
-  "vnc",
-  "telnet",
-];
-const FILTER_FEATURES: HostSidebarFilterState["features"] = [
-  "terminal",
-  "fileManager",
-  "tunnel",
-  "docker",
-];
+/** Same shape as a manifest's auth type, protocol and plugin ids. */
+const AUTH_TYPE_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 
 export function defaultHostSidebarPreferences(): HostSidebarPreferences {
   return {
@@ -130,6 +125,8 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       trayTrigger: "always",
       statusColorScheme: "accent",
       openOnDoubleClick: false,
+      showFolderPaths: true,
+      hostClickBehavior: "newTab",
     },
   };
 }
@@ -172,9 +169,15 @@ export function sanitizeHostSidebarPreferences(
   const filtersObj = (obj.filters ?? {}) as Record<string, unknown>;
   const filters: HostSidebarFilterState = {
     status: sanitizeEnumArray(filtersObj.status, FILTER_STATUS),
-    authType: sanitizeEnumArray(filtersObj.authType, FILTER_AUTH_TYPE),
-    protocol: sanitizeEnumArray(filtersObj.protocol, FILTER_PROTOCOL),
-    features: sanitizeEnumArray(filtersObj.features, FILTER_FEATURES),
+    authType: sanitizeStringArray(filtersObj.authType).filter((value) =>
+      AUTH_TYPE_PATTERN.test(value),
+    ),
+    protocol: sanitizeStringArray(filtersObj.protocol).filter((value) =>
+      AUTH_TYPE_PATTERN.test(value),
+    ),
+    features: sanitizeStringArray(filtersObj.features).filter((value) =>
+      AUTH_TYPE_PATTERN.test(value),
+    ),
     tags: sanitizeStringArray(filtersObj.tags),
   };
 
@@ -203,6 +206,15 @@ export function sanitizeHostSidebarPreferences(
       typeof displayObj.openOnDoubleClick === "boolean"
         ? displayObj.openOnDoubleClick
         : defaults.display.openOnDoubleClick,
+    showFolderPaths:
+      typeof displayObj.showFolderPaths === "boolean"
+        ? displayObj.showFolderPaths
+        : defaults.display.showFolderPaths,
+    hostClickBehavior: HOST_CLICK_BEHAVIORS.includes(
+      displayObj.hostClickBehavior as HostClickBehavior,
+    )
+      ? (displayObj.hostClickBehavior as HostClickBehavior)
+      : defaults.display.hostClickBehavior,
   };
 
   return {

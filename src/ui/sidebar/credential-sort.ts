@@ -55,7 +55,7 @@ export function sortCredentials(
 
 export function credentialPassesFilters(
   cred: Credential,
-  filters: { type: ("password" | "key")[]; tags: string[] },
+  filters: { type: string[]; tags: string[] },
 ): boolean {
   if (filters.type.length > 0 && !filters.type.includes(cred.type))
     return false;

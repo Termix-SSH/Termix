@@ -1,0 +1,312 @@
+{
+  "nav": {
+    "hostMetrics": "Метрики на хоста"
+  },
+  "hostMetrics": {
+    "cpu": "Процесор",
+    "memory": "Памет",
+    "disk": "Диск",
+    "network": "Мрежа",
+    "uptime": "Време на работа",
+    "processes": "Процеси",
+    "available": "Налично",
+    "free": "Безплатно",
+    "connecting": "Свързване...",
+    "connectionFailed": "Неуспешно свързване със сървъра",
+    "naCpus": "Няма процесор(и)",
+    "cpuCores_one": "{{count}} Ядро",
+    "cpuCores_other": "{{count}} Ядра",
+    "cpuUsage": "Използване на процесора",
+    "memoryUsage": "Използване на паметта",
+    "diskUsage": "Използване на диска",
+    "selectFilesystem": "Изберете файлова система",
+    "temperature": "Температура",
+    "highestTemperature": "Най-висока температура",
+    "primaryTemperatureSensor": "Първичен сензор",
+    "gpu": {
+      "title": "Графичен процесор",
+      "noDevice": "Не е открит графичен процесор NVIDIA. Инсталирайте драйвера на NVIDIA (той предоставя nvidia-smi), за да видите показателите на графичния процесор.",
+      "driver": "Шофьор {{version}}",
+      "utilization": "Употреба",
+      "memory": "Видео памет (VRAM)",
+      "temperature": "Температура",
+      "power": "Мощност",
+      "fan": "Вентилатор",
+      "processes": "Процеси на графичния процесор",
+      "noProcesses": "Няма процеси, които да използват графичния процесор"
+    },
+    "failedToFetchHostConfig": "Неуспешно извличане на конфигурацията на хоста",
+    "serverOffline": "Сървърът е офлайн",
+    "cannotFetchMetrics": "Не могат да се извлекат показатели от офлайн сървър",
+    "totpFailed": "Проверката на TOTP не бе успешна",
+    "noneAuthNotSupported": "Метриките на хоста не поддържат тип удостоверяване „няма“.",
+    "noHostSelected": "Няма избран хост",
+    "load": "Зареждане",
+    "systemInfo": "Системна информация",
+    "hostname": "Име на хост",
+    "operatingSystem": "Операционна система",
+    "kernel": "Ядро",
+    "seconds": "секунди",
+    "networkInterfaces": "Мрежови интерфейси",
+    "noInterfacesFound": "Не са намерени мрежови интерфейси",
+    "noProcessesFound": "Не са намерени процеси",
+    "processesTotal": "общо",
+    "processesRunning": "бягане",
+    "loginStats": "Статистика за SSH вход",
+    "noRecentLoginData": "Няма скорошни данни за вход",
+    "ports": {
+      "title": "Портове за слушане",
+      "protocol": "Протокол",
+      "port": "Порт",
+      "address": "Адрес",
+      "process": "Процес",
+      "search": "Търсене на портове...",
+      "allProtocols": "Всички",
+      "noData": "Няма данни за портове за слушане"
+    },
+    "firewall": {
+      "title": "Защитна стена",
+      "inactive": "Неактивен",
+      "policy": "Политика",
+      "rules": "правила",
+      "noRules": "Няма правила в тази верига",
+      "noData": "Няма налични данни за защитната стена",
+      "action": "Действие",
+      "protocol": "Прото",
+      "port": "Порт",
+      "source": "Източник",
+      "anywhere": "Навсякъде",
+      "chains": "вериги"
+    },
+    "loadAvg": "Зареждане на средно",
+    "swap": "Размяна",
+    "architecture": "Архитектура",
+    "refresh": "Обновяване",
+    "retry": "Опитай отново",
+    "customize": "Персонализиране на оформлението",
+    "reset": "Нулиране",
+    "tabLive": "На живо",
+    "editModeInstructions": "Плъзнете картите, за да ги пренаредите, плъзнете долния ръб, за да промените размера им, и използвайте бутона за ширина, за да промените обхвата на картата. Добавете или премахнете карти по-долу.",
+    "managers": {
+      "services": "Услуги",
+      "processInspector": "Инспектор на процеси",
+      "logViewer": "Преглед на лог файлове",
+      "cron": "Cron задачи",
+      "packages": "Пакети",
+      "ssl": "SSL сертификати",
+      "firewall": "Защитна стена",
+      "users": "Потребители и разрешения",
+      "healthCheck": "Проверки на състоянието",
+      "diskBreakdown": "Разбивка на диска",
+      "systemdTimers": "Таймери",
+      "topMemory": "Най-горе по памет",
+      "noData": "Няма данни",
+      "sudoHint": "Задайте парола за sudo за този хост в редактора на хостове, за да активирате привилегировани действия.",
+      "filter": "Филтър...",
+      "start": "Старт",
+      "stop": "Спри",
+      "restart": "Рестартиране",
+      "actionDone": "{{name}} актуализирано",
+      "actionFailed": "Действието е неуспешно",
+      "signalSent": "Сигнал, изпратен към PID {{pid}}",
+      "killHint": "Щракване: прекратяване (SIGTERM). Щракване с десен бутон: принудително прекъсване (SIGKILL).",
+      "working": "Работа...",
+      "update": "Актуализация",
+      "upgradeAll": "Надстройте всички",
+      "allUpToDate": "Всичко е актуално",
+      "save": "Запазване",
+      "command": "Команда",
+      "enabled": "Активирано",
+      "cronSaved": "Crontab е актуализиран",
+      "clients": "Клиенти",
+      "dryRun": "Сухо изпълнение",
+      "renew": "Подновяване",
+      "noAcmeClient": "Не е намерен ACME клиент (certbot или acme.sh) на този хост.",
+      "addInputRule": "Добавяне на правило INPUT",
+      "firewallWarning": "Промените са само по време на изпълнение, докато не бъдат запазени. Внимавайте да не се заключите.",
+      "ruleApplied": "Правилото е приложено",
+      "invalidPort": "Въведете валиден порт (1-65535)",
+      "newUsername": "Ново потребителско име",
+      "addUser": "Добавяне",
+      "deleteUser": "Изтриване на потребител",
+      "noHealthChecks": "Все още няма конфигурирани проверки за състоянието.",
+      "follow": "Следвай",
+      "noLogData": "Няма изходен лог.",
+      "tree": "Дърво",
+      "enableDisable": "Активиране/деактивиране при зареждане",
+      "grantSudo": "Грант sudo",
+      "revokeSudo": "Отмяна на sudo",
+      "sslIssueCert": "Издаване на сертификат",
+      "sslExpired": "Изтекъл",
+      "sslInDays": "в {{days}}дни",
+      "sslNeedDomain": "Въведете поне един домейн",
+      "sslIssued": "Издаден сертификат",
+      "sslDomainsPlaceholder": "пример.com, www.example.com",
+      "sslHttpStandalone": "HTTP (самостоятелен)",
+      "sslHttpWebroot": "HTTP (уебкорен)",
+      "sslDns": "ДНС",
+      "sslDnsProvider": "DNS доставчик (напр. cloudflare)",
+      "sslIssueHint": "Идентификационните данни на DNS доставчика трябва вече да са конфигурирани на хоста.",
+      "sslRevoke": "Анулиране на сертификат",
+      "sslRevoked": "Сертификатът е отменен",
+      "sslRevokeConfirm": "Да се отмени и премахне сертификатът „{{name}}“? Това не може да бъде отменено.",
+      "healthRun": "Бягане",
+      "healthName": "Име",
+      "healthTarget": "Хост / адрес",
+      "healthAddCheck": "Добавяне на чек",
+      "healthSaved": "Запазени са здравни проверки",
+      "healthMissingFields": "Всяка проверка се нуждае от име и цел",
+      "logFile": "Файл",
+      "logUnit": "Единица",
+      "logCustomPath": "Персонализиран път в /var/log (по избор)",
+      "logGrep": "Филтърни линии...",
+      "firewallPersist": "Запазване на правилата",
+      "firewallPersisted": "Правилата на защитната стена се запазиха",
+      "wireguard": "WireGuard",
+      "wgNotInstalled": "WireGuard не е инсталиран на този хост",
+      "wgNoInterfaces": "Няма конфигурирани WireGuard интерфейси",
+      "wgInterfaceUp": "Доведете",
+      "wgInterfaceDown": "Свалете",
+      "wgBringingUp": "Извеждане на {{name}} нагоре...",
+      "wgBringingDown": "Сваляне на {{name}}...",
+      "wgInterfaceUpDone": "{{name}} е нагоре",
+      "wgInterfaceDownDone": "{{name}} не работи",
+      "wgListenPort": "Порт",
+      "wgPublicKey": "Публичен ключ",
+      "wgEndpoint": "Крайна точка",
+      "wgAllowedIPs": "Разрешени IP адреси",
+      "wgLastHandshake": "Последно ръкостискане",
+      "wgHandshakeNever": "Никога",
+      "wgTransfer": "Трансфер",
+      "wgNoPeers": "Няма връстници"
+    }
+  },
+  "metricsHistory": {
+    "title": "История на показателите",
+    "historySuffix": "История",
+    "cpuMemoryDisk": "Процесор / Памет / Диск",
+    "network": "Мрежа",
+    "download": "Рецепта",
+    "upload": "Тексас",
+    "noData": "Няма налични исторически данни за този период от време.",
+    "custom": "Персонализирано",
+    "to": "до",
+    "apply": "Приложи",
+    "viewHistory": "Преглед на историята"
+  },
+  "hosts": {
+    "tabHostMetrics": "Метрики на хоста",
+    "metricsCollectionLabel": "Колекция от показатели",
+    "enableMetricsLabel": "Активиране на показатели",
+    "enableMetricsDesc": "Събиране на данни за процесора, RAM, диска и други показатели от този хост",
+    "useGlobalMetrics": "Използване на глобален интервал",
+    "useGlobalMetricsDesc": "Замяна с интервала на показателите за целия сървър",
+    "metricsIntervalS": "Интервал(и) на показателите",
+    "metricsIntervalDesc2": "Секунди между моментните снимки на показателите",
+    "excludedMountsLabel": "Изключени монтировки",
+    "monitoredMountsLabel": "Персонализирани наблюдавани пътища",
+    "monitoredMountsDesc": "Добавете пътища, които не са изложени като отделни монтирания, включително пътища за монтиран Home Assistant чрез свързване, като например /config.",
+    "monitoredMountPathPlaceholder": "Път (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Етикет (по избор)",
+    "addMonitoredMount": "Добавяне на път",
+    "excludedMountsDesc": "Скриване на специфични точки на монтиране или типове файлови системи (напр. nfs, cifs) от използването на диска и предупрежденията за този хост.",
+    "excludedMountsPlaceholder": "Път за монтиране (/mnt/nas) или тип файлова система (nfs, cifs)",
+    "excludedMountsEmpty": "Няма изключени монтирания. Показват се всички открити файлови системи.",
+    "addExcludedMount": "Добавяне",
+    "visibleWidgets": "Видими джаджи",
+    "widgetsMovedToHostMetrics": "Картите вече се добавят, подреждат и преоразмеряват директно в раздела „Показатели за хоста“. Отворете „Показатели за хоста“ за този хост и използвайте „Персонализиране“, за да изберете кои карти да се показват.",
+    "hostNotFound": "Хостът не е намерен",
+    "loadingHost": "Зареждане на хоста..."
+  },
+  "onboarding": {
+    "feature_metrics": "Показатели и сигнали",
+    "feature_metrics_desc": "Проследявайте процесора, паметта и диска с течение на времето и получавайте известия, когато се повредят."
+  },
+  "admin": {
+    "metricsHistoryRetention": "Запазване на историята на показателите",
+    "metricsHistoryRetentionRange": "от 1 до 90 дни",
+    "days": "дни"
+  },
+  "homepage": {
+    "noData": "Няма налични данни",
+    "showCurrentValue": "Показване на текущата стойност",
+    "chartMetric": "Метричен",
+    "metricRange": "Диапазон",
+    "host": "Домакин",
+    "loading": "Зареждане...",
+    "metricCpu": "Процесор",
+    "metricDisk": "Диск",
+    "metricHostname": "Име на хост",
+    "metricKernel": "Ядро",
+    "metricMemory": "Памет",
+    "metricNetwork": "Мрежа",
+    "metricOs": "ОС",
+    "metricProcesses": "Процеси",
+    "metricProcessesRunning": "бягане",
+    "metricProcessesTotal": "общо",
+    "metricUptime": "Време на работа",
+    "metricsNotAvailable": "Показателите не са налични",
+    "noHostSelected": "Няма избран хост",
+    "selectHost": "Изберете хост..."
+  },
+  "terminalStatus": {
+    "unavailable": "Статистически данни в реално време не са налични"
+  },
+  "dashboard": {
+    "cpu": "Процесор",
+    "ram": "RAM памет"
+  },
+  "dashboardTab": {
+    "disk": "Диск"
+  },
+  "terminal": {
+    "connected": "Свързан"
+  },
+  "permissions": {
+    "use": {
+      "title": "Използвайте показатели за хоста",
+      "description": "Преглеждайте показателите на хоста и използвайте мениджърите на хостове (услуги, пакети, защитна стена и други) на хостовете, до които можете да достигнете."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Интервал на показателите (секунди)",
+        "description": "Колко често се семплира даден хост, освен ако хостът не зададе свой собствен интервал."
+      },
+      "historyRetentionDays": {
+        "label": "Запазване на историята (дни)",
+        "description": "Колко дълго се съхраняват извадки от показатели за историческите графики."
+      },
+      "enabledForNewHosts": {
+        "label": "Метрики за нови хостове",
+        "description": "Дали новите хостове започват с включено събиране на показатели."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Температурна единица",
+        "description": "Как се показват температурите в Host Metrics.",
+        "celsius": "Целзий",
+        "fahrenheit": "Фаренхайт"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Събиране на показатели"
+      },
+      "metricsInterval": {
+        "label": "Интервал на показателите (секунди)"
+      },
+      "enabledWidgets": {
+        "label": "Активирани джаджи"
+      },
+      "excludedMounts": {
+        "label": "Изключени монтировки"
+      },
+      "monitoredMounts": {
+        "label": "Мониторирани пътища"
+      }
+    }
+  }
+}

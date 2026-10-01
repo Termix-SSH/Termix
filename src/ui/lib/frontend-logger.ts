@@ -4,7 +4,6 @@ export interface LogContext {
   operation?: string;
   userId?: string;
   hostId?: number;
-  tunnelName?: string;
   sessionId?: string;
   requestId?: string;
   duration?: number;
@@ -53,7 +52,6 @@ class FrontendLogger {
       if (context.operation) contextParts.push(context.operation);
       if (context.userId) contextParts.push(`user:${context.userId}`);
       if (context.hostId) contextParts.push(`host:${context.hostId}`);
-      if (context.tunnelName) contextParts.push(`tunnel:${context.tunnelName}`);
       if (context.sessionId) contextParts.push(`session:${context.sessionId}`);
       if (context.responseTime) contextParts.push(`${context.responseTime}ms`);
       if (context.status) contextParts.push(`status:${context.status}`);
@@ -159,10 +157,6 @@ class FrontendLogger {
 
   ssh(message: string, context?: LogContext): void {
     this.info(`SSH: ${message}`, { ...context, operation: "ssh" });
-  }
-
-  tunnel(message: string, context?: LogContext): void {
-    this.info(`TUNNEL: ${message}`, { ...context, operation: "tunnel" });
   }
 
   file(message: string, context?: LogContext): void {
@@ -375,10 +369,14 @@ class FrontendLogger {
 export const apiLogger = new FrontendLogger("API", "🌐", "#3b82f6");
 export const authLogger = new FrontendLogger("AUTH", "🔐", "#dc2626");
 export const sshLogger = new FrontendLogger("SSH", "🖥️", "#1e3a8a");
-export const tunnelLogger = new FrontendLogger("TUNNEL", "📡", "#1e3a8a");
 export const fileLogger = new FrontendLogger("FILE", "📁", "#1e3a8a");
-export const statsLogger = new FrontendLogger("STATS", "📊", "#22c55e");
-export const systemLogger = new FrontendLogger("SYSTEM", "🚀", "#1e3a8a");
 export const dashboardLogger = new FrontendLogger("DASHBOARD", "📊", "#ec4899");
 
-export const logger = systemLogger;
+/** A named console logger, for plugins that want the same log format. */
+export function createFrontendLogger(
+  serviceName: string,
+  serviceIcon = "🧩",
+  serviceColor = "#6b7280",
+) {
+  return new FrontendLogger(serviceName, serviceIcon, serviceColor);
+}

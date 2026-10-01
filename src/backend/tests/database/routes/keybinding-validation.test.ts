@@ -1,9 +1,43 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect } from "vitest";
 import {
   isValidKeyCombo,
   isValidKeybindingAction,
   isValidKeybinding,
+  setKeybindingActionSource,
 } from "../../../database/routes/keybinding-validation.js";
+
+// What installed plugins declare in contributes.keybindingActions.
+beforeEach(() => {
+  setKeybindingActionSource(() => [
+    { pluginId: "terminal-fixture", id: "copy" },
+    { pluginId: "terminal-fixture", id: "paste" },
+    {
+      pluginId: "terminal-fixture",
+      id: "sendControlCode",
+      params: {
+        controlCode: { type: "string", required: true, pattern: "^[a-zA-Z]$" },
+      },
+    },
+    {
+      pluginId: "terminal-fixture",
+      id: "sendText",
+      params: {
+        text: { type: "string", required: true },
+        appendEnter: { type: "boolean" },
+      },
+    },
+    {
+      pluginId: "commands-fixture",
+      id: "runSnippet",
+      params: {
+        snippetId: { type: "string", required: true, pattern: "^[0-9]+$" },
+        appendEnter: { type: "boolean" },
+      },
+    },
+  ]);
+});
+
+afterEach(() => setKeybindingActionSource(() => []));
 
 const validCombo = {
   key: "c",
@@ -36,15 +70,26 @@ describe("isValidKeybindingAction", () => {
     expect(isValidKeybindingAction({ type: "paste" })).toBe(true);
   });
 
-  it.each(["nextTab", "previousTab", "openCommandPalette"])(
+  it.each(["nextTab", "previousTab", "openCommandPalette", "reconnectSession"])(
     "accepts the global %s action",
     (type) => {
       expect(isValidKeybindingAction({ type })).toBe(true);
     },
   );
 
-  it("rejects an unknown action type", () => {
-    expect(isValidKeybindingAction({ type: "explode" })).toBe(false);
+  it("keeps a type no installed plugin declares, if it looks sane", () => {
+    expect(isValidKeybindingAction({ type: "gone.action", arg: "x" })).toBe(
+      true,
+    );
+    expect(isValidKeybindingAction({ type: "gone", nested: { a: 1 } })).toBe(
+      false,
+    );
+    expect(isValidKeybindingAction({ type: "bad type!" })).toBe(false);
+    expect(isValidKeybindingAction({ type: 5 })).toBe(false);
+  });
+
+  it("refuses a parameter the declaration does not list", () => {
+    expect(isValidKeybindingAction({ type: "copy", text: "x" })).toBe(false);
   });
 
   it("requires text for sendText", () => {
@@ -72,6 +117,9 @@ describe("isValidKeybindingAction", () => {
       isValidKeybindingAction({ type: "runSnippet", snippetId: "42" }),
     ).toBe(true);
     expect(isValidKeybindingAction({ type: "runSnippet" })).toBe(false);
+    expect(
+      isValidKeybindingAction({ type: "runSnippet", snippetId: "abc" }),
+    ).toBe(false);
   });
 });
 

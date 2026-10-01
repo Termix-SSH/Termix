@@ -1,0 +1,150 @@
+{
+  "permissions": {
+    "view": {
+      "title": "צפה בציי רכב",
+      "description": "ראה ציי רכב, חבריהם ומלאי."
+    },
+    "manage": {
+      "title": "ניהול ציי רכב",
+      "description": "צור, ערוך ומחק ציי רכב, שנה חברות ושתף ציי רכב עם משתמשים או תפקידים אחרים."
+    },
+    "execute": {
+      "title": "הפעל פעולות צי",
+      "description": "הפעל פקודות ופעולות חבילה ברחבי צי, והעבר קבצים אל המארחים החברים בו וממנה."
+    }
+  },
+  "newUi": {
+    "sidebar": {
+      "fleets": {
+        "title": "ציי רכב",
+        "createFleet": "צור צי",
+        "createFleetTitle": "צור צי",
+        "editFleetTitle": "עריכת צי",
+        "createFleetDescription": "צי הוא קבוצה בעלת שם של מארחים שניתן להפעיל פעולות נגדם כיחידה.",
+        "nameLabel": "שֵׁם",
+        "namePlaceholder": "לדוגמה, שרתי אינטרנט",
+        "nameRequired": "נדרש שם צי",
+        "descriptionLabel": "תֵאוּר",
+        "descriptionPlaceholder": "תיאור אופציונלי",
+        "colorLabel": "צֶבַע",
+        "tagRulesLabel": "כללי תגיות",
+        "tagRulesPlaceholder": "רשת דחיפה, קצה",
+        "tagRulesHint": "מארחים עם אחד מהתגים הללו נכללים אוטומטית, בנוסף למארחים שנוספו ידנית.",
+        "fleetCreated": "צי נוצר",
+        "fleetUpdated": "הצי עודכן",
+        "fleetDeleted": "הצי נמחק",
+        "saveFailed": "נכשלה הצלת הצי",
+        "deleteFailed": "מחיקת הצי נכשלה",
+        "loadFailed": "טעינת ציי רכב נכשלה",
+        "deleteFleetTitle": "מחיקת צי",
+        "deleteFleetDescription": "האם אתה בטוח שברצונך למחוק את \"{{name}}\"? פעולה זו אינה מוחקת את המארחים החברים עצמם.",
+        "searchFleets": "חיפוש ציי רכב...",
+        "noFleets": "אין עדיין ציי רכב. צור אחד כדי להתחיל.",
+        "memberCount": "מארח {{count}}",
+        "memberCount_other": "{{count}} hosts",
+        "manageMembers": "ניהול חברים",
+        "manageMembersTitle": "ניהול חברי צי",
+        "manageMembersDescription": "פתח או הסר מארחים מהחברות הסטטית של צי זה. מארחים שתואמים לפי כללי תג תמיד כלולים.",
+        "searchHosts": "חיפוש מארחים...",
+        "noHostsFound": "לא נמצאו מארחים",
+        "noMembers": "לצי הזה עדיין אין חברים. הוסף מארחים או הגדר כלל תגיות.",
+        "membersLoadFailed": "טעינת חברי הצי נכשלה",
+        "memberUpdateFailed": "נכשל עדכון חברות הצי",
+        "tabRun": "הפעל את הפקודה",
+        "tabTransfer": "העברת קבצים",
+        "tabInventory": "מְלַאי",
+        "openInventoryTab": "פתח בכרטיסייה המלאה",
+        "tabPackages": "חבילות",
+        "runOnFleet": "רוץ על הצי",
+        "commandPlaceholder": "זמן פעולה ו-df -h",
+        "commandRequired": "נדרשת פקודה",
+        "commandInputsLabel": "קלטי פקודה",
+        "commandSucceeded": "הפקודה הצליחה בכל המארחים",
+        "commandPartialFailure": "{{failed}} מתוך {{total}} מארחים נכשלו",
+        "commandFailed": "נכשל בהפעלת הפקודה",
+        "resultSuccess": "הַצלָחָה",
+        "resultFailed": "נִכשָׁל",
+        "push": "לִדחוֹף",
+        "pull": "מְשׁוֹך",
+        "remotePathLabel": "נתיב מרוחק",
+        "remotePathRequired": "נדרש נתיב מרוחק",
+        "fileLabel": "קוֹבֶץ",
+        "fileRequired": "נדרש קובץ",
+        "pushHint": "הקובץ שנבחר נכתב בדיוק לנתיב הזה בכל מחשב מארח בצי.",
+        "pullHint": "הקובץ בנתיב זה נקרא מכל מארח ומורד כקובץ zip יחיד, תיקייה אחת לכל מארח.",
+        "transferComplete": "ההעברה הושלמה",
+        "transferFailed": "ההעברה נכשלה",
+        "refreshInventory": "רענון המלאי",
+        "inventoryLoadFailed": "טעינת המלאי נכשלה",
+        "inventoryRefreshed": "רענון המלאי",
+        "inventoryRefreshFailed": "רענון המלאי נכשל",
+        "inventoryNoData": "אין עדיין נתוני מלאי - רענן כדי לאסוף אותם.",
+        "inventoryHost": "מְאָרֵחַ",
+        "inventoryCollectedCount": "נאסף {{count}}/{{total}}",
+        "inventoryOs": "מערכת הפעלה",
+        "inventoryKernel": "גַרעִין",
+        "inventoryArch": "קֶשֶׁת",
+        "inventoryUptime": "זמן פעולה",
+        "inventoryPackageManager": "מנהל החבילות",
+        "inventoryCollectedAt": "נאסף",
+        "packageActionLabel": "פְּעוּלָה",
+        "packageInstall": "לְהַתְקִין",
+        "packageRemove": "לְהַסִיר",
+        "packageUpgradeAll": "שדרגו את כל החבילות",
+        "packageNameLabel": "שם החבילה",
+        "packageNameRequired": "נדרש שם חבילה",
+        "packageHint": "דורש גישת ניהול לכל מחשב מארח ועולה באמצעות סיסמת ה-sudo המאוחסנת של המארח.",
+        "shareFleet": "שתף צי",
+        "shareFleetTitle": "שתף \"{{name}}\"",
+        "shareFleetDescription": "משתף את המארחים החברים הנוכחיים של צי זה עם המשתמשים או התפקידים שנבחרו. מארחים שנוספו לצי מאוחר יותר לא ישותפו אוטומטית - שתף שוב כדי לכלול אותם.",
+        "shareSelectionRequired": "בחר לפחות משתמש או תפקיד אחד",
+        "fleetSharedSuccessfully": "משותף {{shared}} של {{total}} מארח(ים) בצי זה",
+        "failedToShareFleet": "שיתוף הצי נכשל",
+        "noMembersToShare": "לצי הזה עדיין אין מארחים חברים לשיתוף."
+      }
+    }
+  },
+  "nav": {
+    "fleets": "ציי רכב"
+  },
+  "hosts": {
+    "docsLink": "הצג מסמכים",
+    "sharing": {
+      "customHoursPlaceholder": "שעות עד לפקיעת הגישה",
+      "expiry": {
+        "never": "לְעוֹלָם לֹא",
+        "oneHour": "שעה אחת",
+        "oneDay": "24 שעות",
+        "sevenDays": "7 ימים",
+        "thirtyDays": "30 ימים",
+        "custom": "מִנְהָג"
+      },
+      "expiryLabel": "פקיעת גישה",
+      "levels": {
+        "connect": {
+          "label": "לְחַבֵּר",
+          "description": "הפעלות פתוחות בלבד: טרמינל, שולחן עבודה מרוחק, מנהל קבצים, מנהרות ו-Docker. אין גישה לתצורת המארח."
+        },
+        "view": {
+          "label": "נוֹף",
+          "description": "התחבר, בנוסף ראה את תצורת המארח. סודות לעולם אינם מוצגים."
+        },
+        "edit": {
+          "label": "לַעֲרוֹך",
+          "description": "הצג ושנה הגדרות של מארח שאינו קשור לאימות. אימות ה-SSH של הבעלים נשאר פרטי ולבעלים בלבד."
+        },
+        "manage": {
+          "label": "לְנַהֵל",
+          "description": "עריכה, בנוסף לשיתוף המארח עם אחרים, שינוי רמות הרשאה וביטול גישה."
+        }
+      },
+      "noMatches": "לא נמצאו התאמות",
+      "permissionLevelLabel": "רמת הרשאה",
+      "rolesTab": "תפקידים",
+      "searchPlaceholder": "חיפוש משתמשים או תפקידים...",
+      "shareButton": "לַחֲלוֹק",
+      "shareWithCount": "שתף ({{count}})",
+      "usersTab": "משתמשים"
+    }
+  }
+}

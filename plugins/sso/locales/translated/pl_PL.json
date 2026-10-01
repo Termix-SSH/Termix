@@ -1,0 +1,65 @@
+{
+  "loginWithSso": "Sign in with SSO",
+  "loginWithProvider": "Zaloguj się za pomocą {{name}}",
+  "loading": "Ładowanie...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
+  "providers": {
+    "docsLink": "Zobacz dokumentację",
+    "none": "Nie skonfigurowano dostawców SSO.",
+    "add": "Dodaj dostawcę",
+    "edit": "Edytuj dostawcę",
+    "delete": "Usuń dostawcę",
+    "deleteConfirm": "Usunąć tego dostawcę? Powiązani użytkownicy nie będą mogli się zalogować.",
+    "name": "Nazwa wyświetlana",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
+    "type": "Typ dostawcy",
+    "enabled": "Włączona",
+    "save": "Zapisz dostawcę",
+    "saving": "Zapisywanie...",
+    "saved": "Zapisano",
+    "saveFailed": "Nie udało się zapisać",
+    "deleted": "Usunięto",
+    "deleteFailed": "Nie udało się usunąć",
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "Anuluj",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
+  },
+  "fields": {
+    "clientId": "Identyfikator klienta",
+    "clientSecret": "Sekret klienta",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "issuerUrl": "Adres URL wystawcy",
+    "authUrl": "Adres URL autoryzacji",
+    "tokenUrl": "Adres URL tokena",
+    "userIdentifier": "Ścieżka identyfikatora użytkownika",
+    "displayName": "Ścieżka nazwy wyświetlanej",
+    "scopes": "Zakresy",
+    "userinfoUrl": "Zastąp adres URL informacji o użytkowniku",
+    "groupClaim": "Claim grupy",
+    "groupClaimDesc": "Opcjonalnie. Ścieżka claimu zawierającego grupy użytkownika. Domyślnie: groups, roles, potem group. Użyj tego dla dostawców z niestandardowym claimem (np. Zitadel).",
+    "allowedUsers": "Dozwoleni użytkownicy",
+    "allowedUsersDesc": "Jeden adres e-mail w każdym wierszu. Pozostaw puste, aby zezwolić na wszystkie.",
+    "adminGroup": "Grupa administratorów",
+    "adminGroupDesc": "Użytkownicy w tej grupie otrzymują uprawnienia administratora. Pozostaw puste, aby wyłączyć synchronizację grupy.",
+    "caCert": "Niestandardowy certyfikat CA",
+    "caCertDesc": "Opcjonalnie. Certyfikat CA w formacie PEM dla dostawców OIDC korzystających z prywatnego lub samopodpisanego CA. Pozostaw puste, aby użyć systemowego magazynu zaufanych certyfikatów."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
+  }
+}

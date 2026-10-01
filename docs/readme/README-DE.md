@@ -367,9 +367,9 @@ Du kannst den Termix-Server auf einem VPS laufen lassen statt im eigenen Netz. L
 
 ## Telemetrie
 
-Termix schickt einmal am Tag ein kleines anonymes Signal, damit ich sehen kann, wie viele Instanzen laufen und welche Funktionen genutzt werden. Enthalten sind eine zufällige Instanz-ID, wie viele Benutzer und Hosts du hast, die App-Version und welche Funktionen (Terminal, Dateimanager, Tunnel, Docker usw.) in den letzten 24 Stunden benutzt wurden. Niemals enthalten sind Benutzernamen, Hostnamen, IP-Adressen, Zugangsdaten oder irgendetwas anderes, das dich oder deine Server identifiziert.
+Termix schickt einmal am Tag einen kleinen anonymen Bericht, damit ich sehe, wie viele Instanzen laufen und welche Funktionen genutzt werden. Er enthält eine zufällige Instanz-ID, die App-Version und wie viele Benutzer und Hosts du hast. Er kann außerdem deine Plattform enthalten (Betriebssystem, Architektur, Node.js-Version, Datenbanktyp und ob du Docker, die Desktop-App oder einen normalen Server nutzt), wie oft jede Art von Tab geöffnet wurde und wie viele SSH-Logins es gab, sowie welche eingebauten Funktionen laufen. Er enthält nie Benutzernamen, Hostnamen, IP-Adressen, Zugangsdaten oder sonst etwas, das dich oder deine Server erkennbar macht.
 
-Es ist standardmäßig an. Schalte es in den Administrationseinstellungen unter Allgemein aus oder setze `ENABLE_TELEMETRY=false`, bevor du Termix überhaupt startest.
+Es ist standardmäßig an. Schalte es in den Administrationseinstellungen unter Usage Statistics aus oder wähle dort, was gesendet wird. Dort kannst du dir auch den genauen Bericht vorab ansehen. Jeder Benutzer kann seine eigene Funktionsnutzung in seinem Profil ausschließen. `ENABLE_TELEMETRY=false` schaltet es aus und sperrt den Schalter.
 
 <br />
 

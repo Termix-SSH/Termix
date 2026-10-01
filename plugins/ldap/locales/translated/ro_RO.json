@@ -1,0 +1,50 @@
+{
+  "loginWithLdap": "Conectați-vă cu LDAP",
+  "loginWithProvider": "Autentificare cu {{name}}",
+  "loading": "Încărcare...",
+  "requiredField": "Acest câmp este obligatoriu",
+  "username": "Nume de utilizator LDAP",
+  "password": "Parolă LDAP",
+  "signIn": "Conectare",
+  "permissions": {
+    "manage": {
+      "title": "Gestionarea directoarelor LDAP",
+      "description": "Adăugați, modificați și eliminați directoarele LDAP cu care utilizatorii se pot conecta."
+    }
+  },
+  "providers": {
+    "docsLink": "Vizualizați documentele",
+    "none": "Nu sunt configurate directoare LDAP.",
+    "add": "Adăugați directorul",
+    "edit": "Editați directorul",
+    "delete": "Ștergeți directorul",
+    "deleteConfirm": "Ștergeți acest director? Utilizatorii care se conectează cu acesta nu se vor putea conecta.",
+    "name": "Numele de afișare",
+    "namePlaceholder": "Directorul companiilor",
+    "nameRequired": "Este obligatoriu un nume afișat",
+    "enabled": "Activat",
+    "save": "Salvați directorul",
+    "saving": "Economisire...",
+    "saved": "Salvat",
+    "saveFailed": "Salvarea nu a reușit",
+    "deleted": "Șters",
+    "deleteFailed": "Ștergerea nu a reușit",
+    "loadFailed": "Nu s-au putut încărca directoarele LDAP",
+    "cancel": "Anula"
+  },
+  "fields": {
+    "host": "Gazdă LDAP",
+    "port": "Port",
+    "useTls": "Utilizați TLS (LDAPS)",
+    "bindDn": "Legați DN-ul",
+    "bindPassword": "Parolă de legare",
+    "secretKeep": "O parolă este salvată. Lăsați acest câmp gol pentru a o păstra.",
+    "userSearchBase": "Baza de căutare a utilizatorilor",
+    "userSearchFilter": "Filtru de căutare utilizator",
+    "usernameAttr": "Atribut nume utilizator",
+    "displayNameAttr": "Atributul numelui afișat",
+    "groupSearchBase": "Baza de căutare a grupului",
+    "adminGroup": "Grup de administratori",
+    "allowedUsers": "Utilizatori permiși"
+  }
+}
