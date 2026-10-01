@@ -21,13 +21,12 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const NEW_ACCOUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Existing users must never be ambushed by onboarding. A user with no
- * ui_preferences row who registered more than a day ago predates this feature,
- * so they are handed a completed onboarding state. This is a read-time default
- * rather than a migration write: nothing is persisted until the user actually
- * changes something, so it stays correct on a fresh database too.
+ * Existing users must never be ambushed by onboarding. A user who never
+ * finished it and registered more than a day ago predates this feature, so
+ * they are handed a completed onboarding state. This also repairs rows that an
+ * earlier PUT wrote with the not-completed default.
  */
-function withOnboardingBackfill(
+export function withOnboardingBackfill(
   preferences: UiPreferences,
   registeredAt: string | null | undefined,
 ): UiPreferences {
@@ -36,7 +35,7 @@ function withOnboardingBackfill(
     Number.isFinite(registeredMs) &&
     Date.now() - registeredMs < NEW_ACCOUNT_WINDOW_MS;
 
-  if (isNewAccount) return preferences;
+  if (isNewAccount || preferences.onboarding.completedAt) return preferences;
 
   return {
     ...preferences,
@@ -65,18 +64,16 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
     const existing =
       await createCurrentUiPreferenceRepository().findByUserId(userId);
 
-    if (existing) {
-      return res.json({
-        preferences: sanitizeUiPreferences(JSON.parse(existing.data)),
-      });
+    const stored = existing
+      ? sanitizeUiPreferences(JSON.parse(existing.data))
+      : defaultUiPreferences();
+    if (stored.onboarding.completedAt) {
+      return res.json({ preferences: stored });
     }
 
     const user = await createCurrentUserRepository().findById(userId);
     return res.json({
-      preferences: withOnboardingBackfill(
-        defaultUiPreferences(),
-        user?.registeredAt,
-      ),
+      preferences: withOnboardingBackfill(stored, user?.registeredAt),
     });
   } catch (e) {
     databaseLogger.error("Failed to get UI preferences", e, {
@@ -117,9 +114,15 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const repository = createCurrentUiPreferenceRepository();
     const existing = await repository.findByUserId(userId);
-    const base = existing
+    const stored = existing
       ? sanitizeUiPreferences(JSON.parse(existing.data))
       : defaultUiPreferences();
+    const base = stored.onboarding.completedAt
+      ? stored
+      : withOnboardingBackfill(
+          stored,
+          (await createCurrentUserRepository().findById(userId))?.registeredAt,
+        );
 
     const body = req.body as Record<string, unknown>;
 
