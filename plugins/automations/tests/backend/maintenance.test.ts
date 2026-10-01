@@ -28,14 +28,29 @@ const input = {
 };
 
 describe("host maintenance", () => {
-  it("scopes reads and edits to the host owner and enforces edit permission", async () => {
+  it("shows a shared host the owner's maintenance read only and enforces edit permission", async () => {
+    // The mock serves every host to every user, as if alice shared host 1.
     server = await startServer({ hosts: [host(1), host(2, "bob")] });
-    expect(
-      (await server.request("POST", "/maintenance/1", { body: input })).status,
-    ).toBe(200);
-    expect(
-      (await server.request("GET", "/maintenance", { user: "bob" })).body,
-    ).toEqual([]);
+    const started = await server.request("POST", "/maintenance/1", {
+      body: input,
+    });
+    expect(started.status).toBe(200);
+    expect(started.body).toMatchObject({ owned: true });
+
+    const listed = (
+      await server.request("GET", "/maintenance", { user: "bob" })
+    ).body as Array<{
+      hostId: number;
+      state: { owned: boolean; active: unknown };
+    }>;
+    expect(listed).toHaveLength(1);
+    expect(listed[0].hostId).toBe(1);
+    expect(listed[0].state.owned).toBe(false);
+    expect(listed[0].state.active).toBeTruthy();
+
+    const read = await server.request("GET", "/maintenance/1", { user: "bob" });
+    expect(read.status).toBe(200);
+    expect(read.body).toMatchObject({ owned: false });
     expect(
       (
         await server.request("POST", "/maintenance/1", {
@@ -43,9 +58,9 @@ describe("host maintenance", () => {
           body: { action: "end" },
         })
       ).status,
-    ).toBe(404);
+    ).toBe(403);
     expect(
-      (await server.request("GET", "/maintenance/1", { user: "bob" })).status,
+      (await server.request("GET", "/maintenance/99", { user: "bob" })).status,
     ).toBe(404);
     expect(
       (await server.request("POST", "/maintenance/1x", { body: input })).status,

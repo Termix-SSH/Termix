@@ -13,6 +13,7 @@ export function registerMaintenanceRoutes(
    * /plugin-api/automations/maintenance:
    *   get:
    *     summary: List maintenance windows on the caller's hosts
+   *     description: Covers hosts the caller owns and hosts shared with them. A shared host carries its owner's maintenance with owned set to false.
    *     tags: [Automations]
    *     responses:
    *       200: { description: Maintenance state per host. }
@@ -26,14 +27,25 @@ export function registerMaintenanceRoutes(
         const user = ctx.currentActor();
         if (!user)
           return res.status(401).json({ error: "Authentication required" });
-        const hosts = new Set(
-          (await ctx.hosts.list())
-            .filter((host) => host.userId === user)
-            .map((host) => host.id),
-        );
-        res.json(
-          (await service.list(user)).filter((row) => hosts.has(row.hostId)),
-        );
+        // Maintenance belongs to the host's owner, so a shared host shows
+        // the owner's windows, read only.
+        const hostsByOwner = new Map<string, Set<number>>();
+        for (const host of await ctx.hosts.list()) {
+          const ids = hostsByOwner.get(host.userId) ?? new Set<number>();
+          ids.add(host.id);
+          hostsByOwner.set(host.userId, ids);
+        }
+        const rows = [];
+        for (const [owner, ids] of hostsByOwner) {
+          for (const row of await service.list(owner)) {
+            if (!ids.has(row.hostId)) continue;
+            rows.push({
+              hostId: row.hostId,
+              state: { ...row.state, owned: owner === user },
+            });
+          }
+        }
+        res.json(rows);
       } catch (error) {
         ctx.log.error("Failed to list maintenance", error as Error);
         res.status(500).json({ error: "Failed to list maintenance" });
@@ -49,9 +61,17 @@ export function registerMaintenanceRoutes(
       return res.status(401).json({ error: "Authentication required" });
     try {
       const host = await ctx.hosts.get(hostId);
-      if (!host || host.userId !== user)
-        return res.status(404).json({ error: "Host not found" });
-      if (!mutate) return res.json(await service.read(user, hostId));
+      if (!host) return res.status(404).json({ error: "Host not found" });
+      const owned = host.userId === user;
+      if (!mutate)
+        return res.json({
+          ...(await service.read(host.userId, hostId)),
+          owned,
+        });
+      if (!owned)
+        return res
+          .status(403)
+          .json({ error: "Only the host's owner can change maintenance" });
       const state = await service.edit(
         user,
         hostId,
@@ -65,7 +85,7 @@ export function registerMaintenanceRoutes(
         resourceName: host.name || host.ip,
         success: true,
       });
-      res.json(state);
+      res.json({ ...state, owned: true });
     } catch (error) {
       // Validation failures have no side effects; storage failures remain errors.
       if (error instanceof MaintenanceInputError) {
@@ -87,8 +107,8 @@ export function registerMaintenanceRoutes(
    *         required: true
    *         schema: { type: integer }
    *     responses:
-   *       200: { description: The active window, if any, and the planned ones. }
-   *       404: { description: Not one of the caller's hosts. }
+   *       200: { description: The active window, if any, and the planned ones. owned is false on a host shared with the caller. }
+   *       404: { description: A host the caller cannot see. }
    */
   router.get(
     "/maintenance/:hostId",
@@ -100,7 +120,7 @@ export function registerMaintenanceRoutes(
    * /plugin-api/automations/maintenance/{hostId}:
    *   post:
    *     summary: Start, schedule, end or remove maintenance on a host
-   *     description: While a host is in maintenance its downtime does not raise alerts. Past the estimated end plus the grace period, it can alert again.
+   *     description: While a host is in maintenance, automations with host status, health check, metric, Docker or tunnel triggers do not fire for it. Manual, scheduled, webhook and login triggers still run. Past the estimated end plus the grace period, an optional overdue alert is sent.
    *     tags: [Automations]
    *     parameters:
    *       - in: path
@@ -124,7 +144,8 @@ export function registerMaintenanceRoutes(
    *     responses:
    *       200: { description: The new maintenance state. }
    *       400: { description: Invalid action or plan. }
-   *       404: { description: Not one of the caller's hosts. }
+   *       403: { description: The host was shared with the caller; only its owner can change maintenance. }
+   *       404: { description: A host the caller cannot see. }
    */
   router.post(
     "/maintenance/:hostId",

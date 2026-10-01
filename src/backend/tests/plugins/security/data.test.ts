@@ -169,14 +169,21 @@ describe("the migration checker", () => {
       for (const dialect of ["sqlite", "postgres", "mysql"]) {
         const dir = path.join(plugins, id, "migrations", dialect);
         if (!fs.existsSync(dir)) continue;
-        for (const file of fs.readdirSync(dir)) {
-          if (!file.endsWith(".sql")) continue;
-          const sql = fs.readFileSync(path.join(dir, file), "utf8");
+        const files = fs
+          .readdirSync(dir)
+          .filter((file) => file.endsWith(".sql"))
+          .sort();
+        const sqls = files.map((file) =>
+          fs.readFileSync(path.join(dir, file), "utf8"),
+        );
+        // The runner lets a later migration drop an index an earlier one made.
+        const ownedIndexes = collectOwnedIndexes(id, sqls, legacy);
+        files.forEach((file, index) => {
           expect(
-            findUnownedTableWrites(id, sql, legacy),
+            findUnownedTableWrites(id, sqls[index], legacy, ownedIndexes),
             `${id}/${dialect}/${file}`,
           ).toEqual([]);
-        }
+        });
       }
     }
   });

@@ -198,7 +198,10 @@ export const maintenanceTable = defineTable(
   },
   {
     uniques: [
-      { name: "maintenance_host_owner", columns: ["userId", "hostId"] },
+      {
+        name: "idx_automation_maintenance_host_owner",
+        columns: ["userId", "hostId"],
+      },
     ],
   },
 );

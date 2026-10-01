@@ -41,7 +41,7 @@ function VisibleBadge({
   return (
     <Badge
       variant="outline"
-      title={`${active.reasons.join("; ")}\n${active.estimatedEnd}`}
+      title={`${active.reasons.join("; ")}\n${new Date(active.estimatedEnd).toLocaleString()}`}
     >
       {title}
     </Badge>
@@ -72,9 +72,11 @@ function MaintenanceEditor({
   store: MaintenanceStore;
 }) {
   const { t } = useTranslation();
-  const canEdit = usePermission("edit");
+  const canEditPermission = usePermission("edit");
   const states = useSyncExternalStore(store.subscribe, store.snapshot);
   const state = states[Number(host.id)];
+  // A shared host shows its owner's maintenance, read only.
+  const canEdit = canEditPermission && state?.owned !== false;
   const [mode, setMode] = useState<"start" | "schedule">("start");
   const [reason, setReason] = useState("");
   const [start, setStart] = useState("");
@@ -173,6 +175,11 @@ function MaintenanceEditor({
               </Button>
             ))}
         </section>
+      )}
+      {state?.owned === false && (
+        <p className="text-sm text-muted-foreground">
+          {t("maintenance.sharedReadOnly")}
+        </p>
       )}
       {canEdit && (
         <form onSubmit={submit} className="space-y-4 border p-4">

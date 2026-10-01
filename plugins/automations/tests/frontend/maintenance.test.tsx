@@ -71,6 +71,13 @@ describe("maintenance UI", () => {
     expect(view.queryByRole("button", { name: "End maintenance" })).toBeNull();
     expect(view.queryByLabelText("Reason")).toBeNull();
   });
+  it("shows a shared host's maintenance read only even with edit permission", async () => {
+    const view = await render(apiFor({ ...active, owned: false }));
+    await waitFor(() => expect(view.getByText("OS upgrade")).toBeTruthy());
+    expect(view.getByText(locales.maintenance.sharedReadOnly)).toBeTruthy();
+    expect(view.queryByRole("button", { name: "End maintenance" })).toBeNull();
+    expect(view.queryByLabelText("Reason")).toBeNull();
+  });
   it("submits a recurring UTC schedule with its grace period", async () => {
     const api = apiFor(emptyMaintenance());
     const view = await render(api);

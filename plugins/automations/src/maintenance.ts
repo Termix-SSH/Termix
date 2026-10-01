@@ -23,6 +23,8 @@ export interface ActiveMaintenance {
 export interface HostMaintenance {
   active: ActiveMaintenance | null;
   plans: MaintenancePlan[];
+  /** Set on API responses: false when the host was shared with the caller. */
+  owned?: boolean;
 }
 
 export const emptyMaintenance = (): HostMaintenance => ({

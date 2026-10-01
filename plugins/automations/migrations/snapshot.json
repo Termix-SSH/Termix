@@ -24,7 +24,7 @@
       },
       "indexes": [
         {
-          "name": "maintenance_host_owner",
+          "name": "idx_automation_maintenance_host_owner",
           "columns": ["userId", "hostId"],
           "unique": true
         }

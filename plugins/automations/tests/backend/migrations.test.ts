@@ -224,4 +224,36 @@ describe("adopting the automation tables", () => {
     expect(count(db, "p_automations_automations")).toBe(0);
     expect(count(db, "p_automations_run_steps")).toBe(0);
   });
+
+  it("creates host maintenance with one row per owner and host, removed with either", async () => {
+    db = await createTestDb(pluginDir, {
+      before: (sqlite) => sqlite.exec(NOTIFICATION_CHANNELS_DDL),
+    });
+
+    const maintenanceIndexes = indexes(db, "p_automations_host_maintenance");
+    expect(maintenanceIndexes).toContain(
+      "idx_automation_maintenance_host_owner",
+    );
+    expect(maintenanceIndexes).not.toContain("maintenance_host_owner");
+
+    db.sqlite.exec(`
+      INSERT INTO users (id, username) VALUES ('alice', 'alice');
+      INSERT INTO ssh_data (id) VALUES (1);
+      INSERT INTO ssh_data (id) VALUES (2);
+      INSERT INTO p_automations_host_maintenance (user_id, host_id, state) VALUES ('alice', 1, '{}');
+      INSERT INTO p_automations_host_maintenance (user_id, host_id, state) VALUES ('alice', 2, '{}');
+    `);
+    expect(() =>
+      db.sqlite
+        .prepare(
+          "INSERT INTO p_automations_host_maintenance (user_id, host_id, state) VALUES ('alice', 1, '{}')",
+        )
+        .run(),
+    ).toThrow();
+
+    db.sqlite.prepare("DELETE FROM ssh_data WHERE id = 1").run();
+    expect(count(db, "p_automations_host_maintenance")).toBe(1);
+    db.sqlite.prepare("DELETE FROM users WHERE id = 'alice'").run();
+    expect(count(db, "p_automations_host_maintenance")).toBe(0);
+  });
 });

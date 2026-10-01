@@ -21,11 +21,16 @@ export function createMaintenanceStore(api: PluginApiClient) {
           "/maintenance",
         );
       if (!disposed && version === revision) {
-        error = "";
-        loaded = true;
-        snapshot = Object.fromEntries(
+        const next = Object.fromEntries(
           data.map(({ hostId, state }) => [hostId, state]),
         );
+        // Most polls change nothing; skip the emit so badges do not re-render.
+        const unchanged =
+          loaded && !error && JSON.stringify(next) === JSON.stringify(snapshot);
+        error = "";
+        loaded = true;
+        if (unchanged) return;
+        snapshot = next;
         emit();
       }
     } catch {

@@ -176,6 +176,7 @@
     "title": "Maintenance",
     "description": "Pause host status, health, metric, container and tunnel-disconnection automations while work is in progress. Monitoring, manual runs and scheduled automations continue.",
     "denied": "You do not have permission to view maintenance.",
+    "sharedReadOnly": "This host was shared with you. Only its owner can change maintenance.",
     "failed": "Maintenance could not be updated.",
     "active": "Maintenance active",
     "estimated": "Estimated completion",
