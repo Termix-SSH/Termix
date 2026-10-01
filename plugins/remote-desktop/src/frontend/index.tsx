@@ -141,7 +141,7 @@ function RemoteDisplay({
   );
 }
 
-function SectionNotes({ protocol }: { protocol: Protocol }) {
+function SectionNotes() {
   const { t } = useTranslation();
   return (
     <SectionCard
@@ -149,7 +149,7 @@ function SectionNotes({ protocol }: { protocol: Protocol }) {
       icon={<Info className="size-3.5" />}
     >
       <div className="flex flex-col gap-2 py-3 text-xs text-muted-foreground">
-        {protocol === "rdp" && <p>{t("hosts.userDefaultsNote")}</p>}
+        <p>{t("hosts.userDefaultsNote")}</p>
         {isElectron() && <p>{t("hosts.connectionOriginNote")}</p>}
       </div>
     </SectionCard>
@@ -219,7 +219,7 @@ function RdpSection(props: HostEditorSectionProps) {
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
-      <SectionNotes protocol="rdp" />
+      <SectionNotes />
     </>
   );
 }
@@ -237,7 +237,7 @@ function VncSection(props: HostEditorSectionProps) {
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
-      <SectionNotes protocol="vnc" />
+      <SectionNotes />
     </>
   );
 }
@@ -253,7 +253,7 @@ function TelnetSection(props: HostEditorSectionProps) {
         credentials={props.credentials as never}
       />
       <ToolbarCard form={form} setField={setField} />
-      <SectionNotes protocol="telnet" />
+      <SectionNotes />
     </>
   );
 }

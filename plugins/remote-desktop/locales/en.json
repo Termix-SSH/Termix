@@ -86,6 +86,9 @@
       "authentication": "Authentication",
       "storedCredential": "Stored Credential",
       "authMethod": "Auth Method",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Credential",
+      "authTypeNone": "None",
       "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
       "selectCredential": "Select a credential...",
       "connectionSettings": "Connection Settings",
@@ -218,7 +221,7 @@
     "virtualNetwork": "Virtual Network",
     "unencryptedShell": "Unencrypted shell",
     "remoteDesktopNotes": "Notes",
-    "userDefaultsNote": "Settings left on their default use your Remote Desktop defaults from Settings.",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
     "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
     "docsLink": "View docs",
     "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
