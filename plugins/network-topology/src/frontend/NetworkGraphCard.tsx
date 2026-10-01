@@ -103,7 +103,27 @@ interface NetworkGraphCardProps {
 
 type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
 
+// Resolving a CSS var forces a style recalc, and node SVGs are costly to
+// rebuild, so both are cached until the theme changes.
+const cssVarCache = new Map<string, string>();
+const nodeSvgCache = new Map<string, string>();
+
+function clearThemeCaches(): void {
+  cssVarCache.clear();
+  nodeSvgCache.clear();
+}
+
 function resolveCssVar(varName: string, fallback: string): string {
+  const key = varName + "|" + fallback;
+  let value = cssVarCache.get(key);
+  if (value === undefined) {
+    value = readCssVar(varName, fallback);
+    cssVarCache.set(key, value);
+  }
+  return value;
+}
+
+function readCssVar(varName: string, fallback: string): string {
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue(varName)
     .trim();
@@ -128,6 +148,29 @@ const NODE_W = 220;
 const NODE_H = 88;
 
 function buildNodeSvg(
+  name: string,
+  ip: string,
+  tags: string[],
+  status: string,
+): string {
+  const key = JSON.stringify([
+    name,
+    ip,
+    tags,
+    status,
+    getHostStatusColorScheme(),
+    window.devicePixelRatio,
+  ]);
+  let svg = nodeSvgCache.get(key);
+  if (svg === undefined) {
+    if (nodeSvgCache.size > 1000) nodeSvgCache.clear();
+    svg = renderNodeSvg(name, ip, tags, status);
+    nodeSvgCache.set(key, svg);
+  }
+  return svg;
+}
+
+function renderNodeSvg(
   name: string,
   ip: string,
   tags: string[],
@@ -201,7 +244,7 @@ function buildNodeSvg(
   );
 }
 
-export function NetworkGraphCard({
+export const NetworkGraphCard = React.memo(function NetworkGraphCard({
   embedded = true,
   onOpenInNewTab,
   isVisible = true,
@@ -217,7 +260,10 @@ export function NetworkGraphCard({
   // This avoids the "bb is undefined" crash when the card is hidden via display:none.
   const [containerReady, setContainerReady] = useState(false);
 
+  // What cytoscape is seeded with on load. Edits go straight to cytoscape, and
+  // graphVersion tells the lists below to re-read it.
   const [elements, setElements] = useState<NetworkElement[]>([]);
+  const [graphVersion, bumpGraphVersion] = useReducer((x: number) => x + 1, 0);
   const [hostMap, setHostMap] = useState<HostMap>({});
 
   const [loading, setLoading] = useState(true);
@@ -252,8 +298,6 @@ export function NetworkGraphCard({
     type: null,
   });
 
-  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-
   useEffect(() => {
     if (containerReady) return;
     const el = cyContainerRef.current;
@@ -280,14 +324,19 @@ export function NetworkGraphCard({
     (liveHosts as HostWithStatus[]).forEach((h) => (newMap[String(h.id)] = h));
     setHostMap(newMap);
 
-    if (!cyRef.current) return;
-    cyRef.current.nodes().forEach((node) => {
-      if (node.isParent()) return;
-      const h = newMap[node.data("id")];
-      if (h) {
-        node.data("status", h.status ?? "unknown");
-        node.data("tags", h.tags ?? []);
-      }
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.batch(() => {
+      cy.nodes().forEach((node) => {
+        if (node.isParent()) return;
+        const h = newMap[node.data("id")];
+        if (!h) return;
+        const status = h.status ?? "unknown";
+        const tags = h.tags ?? [];
+        if (node.data("status") !== status) node.data("status", status);
+        if (JSON.stringify(node.data("tags") ?? []) !== JSON.stringify(tags))
+          node.data("tags", tags);
+      });
     });
   }, [liveHosts]);
 
@@ -303,6 +352,7 @@ export function NetworkGraphCard({
     document.addEventListener("mousedown", onClickOutside, true);
 
     const themeObserver = new MutationObserver(() => {
+      clearThemeCaches();
       if (cyRef.current) applyStyle(cyRef.current);
     });
     themeObserver.observe(document.documentElement, {
@@ -486,9 +536,13 @@ export function NetworkGraphCard({
       .update();
   }, []);
 
+  // react-cytoscapejs calls this after every render, so set up each instance once.
+  const initializedCyRef = useRef<cytoscape.Core | null>(null);
   const handleNodeInit = useCallback(
     (cy: cytoscape.Core) => {
       cyRef.current = cy;
+      if (initializedCyRef.current === cy) return;
+      initializedCyRef.current = cy;
       if (embedded) {
         cy.nodes().forEach((n) => {
           n.ungrabify();
@@ -536,6 +590,10 @@ export function NetworkGraphCard({
         setContextMenu((p) => (p.visible ? { ...p, visible: false } : p)),
       );
       cy.on("free", "node", () => !embedded && debouncedSave());
+      cy.on("add remove", () => bumpGraphVersion());
+      cy.on("data", "node", (evt) => {
+        if (evt.target.isParent()) bumpGraphVersion();
+      });
       cy.on("boxselect", "node", () => {
         const sel = cy.$("node:selected");
         if (sel.length === 1) setSelectedNodeId(sel[0].id());
@@ -640,11 +698,8 @@ export function NetworkGraphCard({
           y: 100 + Math.random() * 200,
         },
       });
-      applyStyle(cyRef.current);
-      await saveCurrentLayout();
-      setElements([...(cyRef.current.elements().jsons() as NetworkElement[])]);
-      forceUpdate();
       setShowAddNodeDialog(false);
+      await saveCurrentLayout();
     } catch {
       setError(t("networkGraph.failedToAddNode"));
     }
@@ -656,11 +711,9 @@ export function NetworkGraphCard({
     cyRef.current.add({
       data: { id: groupId, label: newGroupName, color: newGroupColor },
     });
-    await saveCurrentLayout();
-    setElements([...(cyRef.current.elements().jsons() as NetworkElement[])]);
-    forceUpdate();
     setShowAddGroupDialog(false);
     setNewGroupName("");
+    await saveCurrentLayout();
   };
 
   const handleUpdateGroup = async () => {
@@ -734,9 +787,16 @@ export function NetworkGraphCard({
     }
   };
 
+  // The live graph, re-read whenever cytoscape adds or removes something.
+  const graphElements = useMemo<NetworkElement[]>(() => {
+    const cy = cyRef.current;
+    if (!cy) return elements;
+    return cy.elements().map((el) => ({ data: el.data() })) as NetworkElement[];
+  }, [elements, graphVersion]);
+
   const availableGroups = useMemo(
     () =>
-      elements
+      graphElements
         .filter(
           (el) =>
             !el.data.source && !el.data.target && !el.data.ip && el.data.id,
@@ -745,26 +805,26 @@ export function NetworkGraphCard({
           id: el.data.id!,
           label: el.data.label || el.data.id!,
         })),
-    [elements],
+    [graphElements],
   );
 
   const availableNodesForConnection = useMemo(
     () =>
-      elements
+      graphElements
         .filter((el) => !el.data.source && !el.data.target)
         .map((el) => ({
           id: el.data.id!,
           label: el.data.label || el.data.id!,
         })),
-    [elements],
+    [graphElements],
   );
 
   const availableHostsForAdd = useMemo(() => {
     const hostList = liveHosts as HostWithStatus[];
     if (!cyRef.current) return hostList;
-    const existing = new Set(elements.map((e) => e.data.id));
+    const existing = new Set(graphElements.map((e) => e.data.id));
     return hostList.filter((h) => !existing.has(String(h.id)));
-  }, [liveHosts, elements]);
+  }, [liveHosts, graphElements]);
 
   const btnCls =
     "h-7 w-7 p-0 rounded-sm border-0 hover:bg-muted/60 transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground";
@@ -879,7 +939,7 @@ export function NetworkGraphCard({
           maxZoom={3}
         />
       )}
-      {!loading && elements.length === 0 && (
+      {!loading && graphElements.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
           <Network className="size-8 text-muted-foreground/30" />
           <p className="text-xs text-muted-foreground/50">
@@ -1304,7 +1364,7 @@ export function NetworkGraphCard({
   }
 
   /* embedded card */
-  const nodeCount = elements.filter((e) => !e.data.source).length;
+  const nodeCount = graphElements.filter((e) => !e.data.source).length;
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0 min-h-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
@@ -1363,4 +1423,4 @@ export function NetworkGraphCard({
       {dialogs}
     </Card>
   );
-}
+});

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from "react";
 import { Network } from "lucide-react";
 import type {
   DashboardCardProps,
@@ -13,11 +14,20 @@ function GraphTab({ isVisible }: TabProps) {
 }
 
 function GraphCard({ isVisible, shell }: DashboardCardProps) {
+  // A stable callback lets the memoized graph skip dashboard re-renders.
+  const shellRef = useRef(shell);
+  useEffect(() => {
+    shellRef.current = shell;
+  });
+  const openInNewTab = useCallback(
+    () => shellRef.current.openSingletonTab(VIEW_ID),
+    [],
+  );
   return (
     <NetworkGraphCard
       embedded={true}
       isVisible={isVisible}
-      onOpenInNewTab={() => shell.openSingletonTab(VIEW_ID)}
+      onOpenInNewTab={openInNewTab}
     />
   );
 }
