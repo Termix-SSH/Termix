@@ -7,7 +7,7 @@
     "disconnectBtn": "Deconecta",
     "enableTunneling": "Activează tunelarea",
     "enableTunnelingDesc": "Activează funcționalitatea tunelului SSH pentru această gazdă",
-    "endpointHost": "Gazdă punct final",
+    "endpointHost": "Gazdă terminală",
     "endpointHostPlaceholder": "Aceeași gazdă, gazdă SSH sau gazdă/IP accesibil",
     "endpointPort": "Portul punctului final",
     "failedToConnectTunnel": "Conectarea nu a reușit",
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Presetările sunt instantanee explicite; încărcarea uneia înlocuiește lista de tuneluri de clienți locali a acestui client desktop.",
     "c2sPresetToLoad": "Presetare pentru încărcare",
     "c2sTunnelPresets": "Presetări tunel client",
-    "c2sTunnelPresetsUnavailable": "Presetările tunelului client sunt disponibile numai în clientul desktop."
+    "c2sTunnelPresetsUnavailable": "Presetările tunelului client sunt disponibile numai în clientul desktop.",
+    "c2sPresetRenameError": "Nu s-a putut redenumi presetarea",
+    "c2sPresetDeleteError": "Nu s-a putut șterge presetarea"
   },
   "tunnels": {
     "attempt": "Încercare {{current}} din {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "Local (-L)",
     "typeRemote": "Telecomandă (-R)",
     "working": "Lucru...",
+    "activeCount": "{{connected}}/{{total}} activ",
+    "listensOn": "Legat la localhost:{{port}}",
+    "socksProxy": "Proxy SOCKS5",
+    "waiting": "Aşteptare",
+    "remoteSessionExpired": "Sesiunea de sincronizare la distanță a expirat. Reconectați sincronizarea la distanță și încercați din nou.",
+    "activeTunnels": "Tuneluri active",
     "start": "Început",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Autentificarea tunelului",
+    "authRetry": "Codul anterior nu a fost acceptat. Introduceți un cod nou.",
+    "authAnswer": "Răspuns de autentificare",
+    "authContinue": "Continua"
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește tuneluri",
+      "description": "Porniți, opriți și urmăriți tunelurile SSH și salvați presetările tunelului client."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activează tunelurile",
+        "description": "Configurați tuneluri SSH prin această gazdă."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tuneluri",

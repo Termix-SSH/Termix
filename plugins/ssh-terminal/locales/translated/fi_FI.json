@@ -44,6 +44,7 @@
     "reconnect": "Yhdistä uudelleen",
     "reconnected": "Yhdistäminen uudelleen onnistui",
     "reconnecting": "Yhdistetään uudelleen... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Yhteys katkennut, yhdistetään uudelleen...",
     "searchCaseSensitive": "Ottelukotelo",
     "searchClose": "Sulje (Esc)",
     "searchNext": "Seuraava osuma (Enter)",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "Leikepöydän lukeminen epäonnistui. Varmista, että leikepöydän käyttöoikeudet on myönnetty.",
     "clipboardWriteFailed": "Kopiointi leikepöydälle epäonnistui. Varmista, että sivua käytetään HTTPS:n tai paikallisen isännän kautta.",
     "connected": "Yhdistetty",
-    "totpCodeLabel": "Vahvistuskoodi"
+    "totpCodeLabel": "Vahvistuskoodi",
+    "duplicateTab": "Kopioi välilehti",
+    "imageChooseFile": "Valitse kuvatiedosto",
+    "imageUploaded": "Kuva ladattu: {{path}}",
+    "imageClipboardUnavailable": "Tämä selain ei voi lukea kuvia leikepöydältä",
+    "imageClipboardEmpty": "Leikepöydältä ei löytynyt kuvaa",
+    "localShell": "Paikallinen päätekuori",
+    "autocompleteHintComplete": "Vahvista painamalla Tab- tai Enter-näppäintä",
+    "autocompleteHintNavigate": "↑↓ navigoidaksesi",
+    "autocompleteHintClose": "Sulje Esc-näppäin"
   },
   "terminalToolbar": {
     "detachTmux": "Irrota tmux",
@@ -108,7 +118,10 @@
     "searchPlaceholder": "Hakuhistoria...",
     "clearAll": "Tyhjennä kaikki",
     "noHistoryEntries": "Ei historiamerkintöjä",
-    "trackingDisabled": "Historian seuranta on poistettu käytöstä"
+    "trackingDisabled": "Historian seuranta on poistettu käytöstä",
+    "trackingDisabledHint": "Ota komentohistoria käyttöön tämän isännän SSH-pääte-välilehdellä.",
+    "commandCount_one": "{{count}} -komento",
+    "commandCount_other": "{{count}} -komennot"
   },
   "touchInput": {
     "enabled": "Ota kosketussyöttö käyttöön",
@@ -139,7 +152,7 @@
     "testFailed": "Kuvan tallennuksen testaus epäonnistui",
     "testConnected": "Pääteistunto on yhdistetty.",
     "testNotConnected": "Tällä instanssi-ID:llä ei ole yhdistettyä pääteistuntoa.",
-    "testSelectedMode": "Lataus käyttäisi seuraavaa: {{mode}}",
+    "testSelectedMode": "Lataus käyttäisi: {{mode}}",
     "testLocalVisible": "Paikallinen hakemisto on näkyvissä yhdistetyssä isännässä.",
     "testLocalNotVisible": "Paikallinen hakemisto EI ole näkyvissä yhdistetyssä isännässä."
   },
@@ -147,15 +160,21 @@
     "admin": {
       "group": {
         "touch": "Kosketussyöttö",
-        "images": "Kuvien tallennus"
+        "images": "Kuvien tallennus",
+        "sessions": "Istunnot",
+        "newHosts": "Uudet isännät"
       },
       "sessionTimeoutMinutes": {
         "label": "Pääteistunnon pysyvyys",
-        "description": "Kuinka kauan irrotettua päätelaitetta pidetään toiminnassa palvelimella ennen sen sulkemista. Min 1 · Max 1440 minuuttia. Jos istunnon on kestettävä tätä pidempään, ota automaattinen Tmux käyttöön isännässä."
+        "description": "Kuinka kauan irrotettua päätelaitetta pidetään toiminnassa palvelimella ennen sen sulkemista. Vähintään 1, enintään 1440 minuuttia. Jos istunnon on kestettävä tätä pidempään, ota automaattinen Tmux käyttöön isännässä."
       },
       "commandHistoryEnabled": {
         "label": "Komentohistoria",
         "description": "Salli komentohistorian tallennus. Kun tämä on poistettu käytöstä, historiaa ei tallenneta isäntäkohtaisista asetuksista riippumatta."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Uusien isäntien komentohistoria",
+        "description": "Aloittavatko uudet isännät komentohistorian ollessa käytössä."
       },
       "imageStorageMode": {
         "label": "Tallennustila",
@@ -165,24 +184,50 @@
         "remoteSftp": "Etäkäyttö (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Paikallinen hakemisto"
+        "label": "Paikallinen hakemisto",
+        "description": "Absoluuttinen polku Termix-taustajärjestelmässä, johon paikallinen tila kirjoittaa kuvat. Ei koskaan näytetä tallennuksen jälkeen. Tyhjänä käytetään TERMIX_IMAGE_DIR-hakemistoa."
       },
       "imageHostPath": {
         "label": "Isäntäpolku",
         "description": "Pääteagenttien vastaanottaman paikallisen hakemiston isäntäpuolen näkymä."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)"
+        "label": "TTL (ms)",
+        "description": "Kuinka kauan ladattua kuvaa säilytetään millisekunteina. Tyhjänä käytetään TERMIX_IMAGE_TTL_MS tai yksi tunti."
       },
       "imageMaxCount": {
-        "label": "Kuvien enimmäismäärä"
+        "label": "Kuvien enimmäismäärä",
+        "description": "Useimmat kuvat tallennetaan kerralla. Tyhjinä käytetään TERMIX_MAX_IMAGE_COUNT tai 100."
       },
       "imageMaxBytes": {
-        "label": "Tallennustilan enimmäismäärä tavuja"
+        "label": "Tallennustilan enimmäismäärä tavuja",
+        "description": "Suurin osa kuvista tallennetaan tavuittain kerralla. Tyhjä tallennustila käyttää TERMIX_MAX_IMAGE_STORAGE_BYTES-muistia tai 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Säilytä istunnot katkaisun jälkeen",
+        "description": "Pidä irrotettu päätelaite toiminnassa palvelimella yllä mainitun ajan, jotta sen välilehden uudelleen avaaminen jatkaa siitä, mihin se jäi."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
         "description": "Aja uusien isäntien päätteitä tmuxin sisällä, jotta istunnot selviävät katkaisuista (tarvitsee tmuxin isännässä)"
+      },
+      "newHostTheme": {
+        "label": "Teema uusille isännille",
+        "description": "Pääteteema, jolla uusi isäntä aloittaa."
+      },
+      "newHostFontFamily": {
+        "label": "Fontti uusille isännille",
+        "description": "Uuden isännän aloittama päätefontti."
+      },
+      "newHostFontSize": {
+        "label": "Uusien isäntien fonttikoko",
+        "description": "Uuden isännän aloittama päätefonttikoko pikseleinä."
+      },
+      "newHostCursorStyle": {
+        "label": "Kohdistimen tyyli uusille isännille"
+      },
+      "newHostCursorBlink": {
+        "label": "Vilkkuva kursori uusille isännille"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "Ota käyttöön päätetyökalurivi",
         "description": "Näytä aktiiviseen terminaaliin kiinnitetty pikakäyttöinen työkalupalkki tämän isännän työkaluille ja reaaliaikaisille tilastoille"
       },
+      "terminalToolbarPosition": {
+        "label": "Työkalurivin sijainti",
+        "description": "Missä työkalupalkki sijaitsee terminaalissa. Voit edelleen vetää sen sieltä pois.",
+        "bottom": "Alhaalla keskellä",
+        "bottomLeft": "Vasen alakulma",
+        "bottomRight": "Oikeassa alakulmassa",
+        "top": "Ylhäällä keskellä",
+        "topLeft": "Ylhäällä vasemmalla",
+        "topRight": "Oikeassa yläkulmassa"
+      },
+      "terminalToolbarStartState": {
+        "label": "Työkalurivin aloitustila",
+        "description": "Avautuuko työkalupalkki laajennettuna vai pienennettynä, kun päätelaite muodostaa yhteyden",
+        "expanded": "Laajennettu",
+        "collapsed": "Minimoitu"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Työkalurivin näyttötila",
+        "description": "Työkalurivin painikkeiden näyttötapa. Viimeksi käytetty säilyttää työkalurivillä tekemäsi valinnan.",
+        "remember": "Viimeksi käytetty",
+        "icon": "Vain kuvake",
+        "labeled": "Kuvakkeet ja otsikot",
+        "expanded": "Laajennettu tilastoilla"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Näytä reaaliaikaiset tilastot",
+        "description": "Näytä reaaliaikaiset isäntätilastot työkalupalkin painikkeiden yläpuolella laajennetussa tilassa"
+      },
+      "terminalToolbarFade": {
+        "label": "Häivytä, kun käytössä",
+        "description": "Häivytä työkalupalkki, kunnes viet hiiren osoittimen sen päälle"
+      },
       "enableCommandHistory": {
         "label": "Komentohistoria",
         "description": "Tallenna tässä terminaalissa suoritettavat komennot historiaa ja automaattista täydennystä varten"
       },
       "enableTerminal": {
-        "label": "Ota terminaali käyttöön"
+        "label": "Ota terminaali käyttöön",
+        "description": "Tarjoa SSH-terminaalia tälle isännälle."
+      },
+      "inheritAppearance": {
+        "label": "Käytä käyttäjän oletusasetuksia"
+      },
+      "theme": {
+        "label": "Teema"
+      },
+      "cursorBlink": {
+        "label": "Vilkkuva kursori"
+      },
+      "cursorStyle": {
+        "label": "Kohdistimen tyyli"
+      },
+      "fontSize": {
+        "label": "Fonttikoko"
+      },
+      "fontFamily": {
+        "label": "Fontti"
+      },
+      "scrollback": {
+        "label": "Vieritä taaksepäin"
+      },
+      "letterSpacing": {
+        "label": "Kirjainväli"
+      },
+      "lineHeight": {
+        "label": "Viivan korkeus"
+      },
+      "bellStyle": {
+        "label": "Kello"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimikontrastisuhde"
+      },
+      "backgroundImage": {
+        "label": "Taustakuva"
+      },
+      "backgroundImageOpacity": {
+        "label": "Taustakuvan läpinäkyvyys"
+      },
+      "customThemeColors": {
+        "label": "Mukautetut teeman värit"
+      },
+      "rightClickSelectsWord": {
+        "label": "Hiiren kakkospainikkeella valitaan sana"
+      },
+      "macOptionIsMeta": {
+        "label": "Vaihtoehto on Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Pikavieritysnäppäin"
+      },
+      "fastScrollSensitivity": {
+        "label": "Nopea vieritysnopeus"
+      },
+      "backspaceMode": {
+        "label": "Askelpalautin"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh-komento"
+      },
+      "autoTmux": {
+        "label": "Automaattinen tmux"
+      },
+      "useSSHTitle": {
+        "label": "Käytä SSH-otsikkoa"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntaksikorostus"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntaksikorostusluokat"
+      },
+      "linkClickBehavior": {
+        "label": "Linkin klikkaus"
+      },
+      "localEcho": {
+        "label": "Paikallinen kaiku"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Tarjoudu täyttämään salasanakehotteet"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Täytä sudo-kehotteet"
+      },
+      "autoReconnect": {
+        "label": "Yhdistä uudelleen automaattisesti"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "Päätelinkin napsautus",
         "description": "Oletuskäyttäytyminen linkkejä napsautettaessa terminaalissa"
+      },
+      "customThemes": {
+        "label": "Tallennetut teemat"
       }
     }
   },
   "palette": {
     "localTerminal": "Paikallinen terminaali"
   },
+  "permissions": {
+    "sessions": {
+      "title": "Käytä reaaliaikaisia pääteistuntoja",
+      "description": "Sallii muiden ominaisuuksien, kuten istuntojen jakamisen ja tallennuksen, pääsyn reaaliaikaisiin pääteistuntoihin."
+    },
+    "history": {
+      "title": "Lue komentohistoria",
+      "description": "Antaa muiden ominaisuuksien, kuten tekoälyavustaja, lukea komentohistoriaasi."
+    }
+  },
   "hosts": {
+    "tabTerminal": "Terminaali",
     "addHost": "Lisää isäntä",
     "applyGlobalThemeTooltip": "Käytä tätä teemaa",
     "backgroundImageDesc": "Valinnainen URL-osoite päätelaitteen taustakuvalle",
     "backgroundImageLabel": "Taustakuvan URL-osoite",
     "backgroundImageOpacityLabel": "Taustakuvan läpinäkyvyys",
     "backspaceMode": "Askelpalautintila",
+    "backspaceModeControlH": "Kontrolli-H (BS)",
     "backspaceModeLabel": "Askelpalautintila",
+    "backspaceModeNormal": "Normaali (DEL)",
     "behaviorAndAdvanced": "Käyttäytyminen ja edistyneet",
     "bellStyle": "Kellotyyli",
+    "bellStyleBoth": "Molemmat",
     "bellStyleLabel": "Kellotyyli",
+    "bellStyleNone": "Ei mitään",
+    "bellStyleSound": "Ääni",
+    "bellStyleVisual": "Visuaalinen",
     "colorTheme": "Väriteema",
     "cursorBlink": "Kohdistimen vilkkuminen",
     "cursorBlinking": "Kohdistimen vilkkuminen",
     "cursorBlinkingDesc": "Ota käyttöön päätekohdistimen vilkkuva animaatio",
     "cursorStyle": "Kohdistimen tyyli",
+    "cursorStyleBar": "Baari",
+    "cursorStyleBlock": "Lohko",
     "cursorStyleLabel": "Kohdistimen tyyli",
+    "cursorStyleUnderline": "Korostaa",
     "customThemeAnsiColors": "ANSI-värit",
     "customThemeBackground": "Tausta",
     "customThemeBlack": "Musta",
@@ -264,7 +455,10 @@
     "enableAutoTmux": "Ota automaattinen Tmux käyttöön",
     "enableAutoTmuxDesc": "Pidä komentotulkkisi ja kaikki siinä käynnissä olevat toiminnot toiminnassa yhteyskatkosten ja selaimen uudelleenkäynnistysten aikana suorittamalla se tmuxin sisällä (tmuxin on oltava asennettuna isäntäkoneelle)",
     "fastScrollModifier": "Nopea vieritysmuokkain",
+    "fastScrollModifierAlt": "Vaihtoehto",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "Nopea vieritysmuokkain",
+    "fastScrollModifierShift": "Siirtää",
     "fastScrollSensitivity": "Nopea vieritysherkkyys",
     "fastScrollSensitivityLabel": "Nopea vieritysherkkyys",
     "fontFamily": "Fonttiperhe",
@@ -280,13 +474,11 @@
     "lineHeight": "Viivan korkeus",
     "lineHeightLabel": "Viivan korkeus",
     "linkClickBehaviorConfirm": "Näytä ponnahdusikkuna avaamista tai kopioimista varten",
-    "linkClickBehaviorDefault": "Oletus (noudata sovelluksen asetuksia)",
     "linkClickBehaviorDesc": "Määrittää, mitä tapahtuu, kun napsautat linkkiä terminaalissa. Käytä 'Oletus'-asetusta noudattaaksesi sovellustason asetuksia.",
     "linkClickBehaviorDirect": "Avaa suoraan",
     "linkClickBehaviorLabel": "Linkin klikkauskäyttäytyminen",
     "loadingHost": "Ladataan isäntää...",
     "localEchoAuto": "Automaattinen",
-    "localEchoDefault": "Käytä yleistä asetusta",
     "localEchoDesc": "Ennusta turvalliset tulostettavat näppäinpainallukset paikallisesti hitailla yhteyksillä. Salasanakehotteita ja ohjaussyötettä ei koskaan toisteta.",
     "localEchoLabel": "Paikallinen kaiku",
     "localEchoOff": "Pois",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "Moshin komento",
     "noSavedThemes": "Ei vielä tallennettuja teemoja",
     "none": "Ei mitään",
+    "passwordPromptAutoFillDesc": "Tarjoudu täyttämään tallennetun salasanan, kun pääte kysyy sitä. Poista käytöstä, jos et halua koskaan täyttää salasanaa automaattisesti tällä isännöintikoneella.",
+    "passwordPromptAutoFillLabel": "Tarjouksen salasanan automaattinen täyttö",
+    "autoReconnectLabel": "Automaattinen uudelleenyhdistämistoiminto",
+    "autoReconnectDesc": "Yhdistää uudelleen itsestään, kun SSH-yhteys katkeaa, esimerkiksi verkkokatkoksen tai nukkumistilan jälkeen. Säilyttää taaksepäin vierityksen.",
     "rightClickSelectsWord": "Hiiren kakkospainikkeen napsautus valitsee sanan",
     "rightClickSelectsWordLabel": "Napsauta hiiren kakkospainikkeella ja valitsee sanan",
     "rightClickSelectsWordShortDesc": "Valitse kohdistimen alla oleva sana hiiren kakkospainikkeella",
@@ -328,7 +524,39 @@
     "theme": "Teema",
     "themePreview": "Teeman esikatselu",
     "useSSHTitleDesc": "Päivitä välilehden otsikko komentotulkin ikkunan otsikosta isäntänimen sijaan",
-    "useSSHTitleLabel": "Käytä SSH-ikkunan otsikkoa"
+    "useSSHTitleLabel": "Käytä SSH-ikkunan otsikkoa",
+    "enableTunnel": "Ota tunneli käyttöön",
+    "enableFileManager": "Ota tiedostonhallinta käyttöön",
+    "enableDocker": "Ota Docker käyttöön",
+    "startupSnippet": "Käynnistyskoodinpätkä",
+    "quickActions": "Pikatoiminnot",
+    "proxmoxLastSyncStatus": {
+      "success": "Menestys"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} ohitettu (IP-osoitetta ei löytynyt)",
+    "proxmoxStatsUrlCopied": "Proxmox-tilastojen URL-osoite kopioitu leikepöydälle",
+    "rdpUrlCopied": "RDP-URL-osoite kopioitu",
+    "vncUrlCopied": "VNC-URL-osoite kopioitu",
+    "filterAuthStepca": "Vaihe CA",
+    "guac": {
+      "noCredential": "Ei tunnistetietoja (suorat tunnistetiedot alla)",
+      "authTypeDirect": "Suoraan",
+      "authTypeCredential": "Valtakirja",
+      "authTypeNone": "Ei mitään",
+      "recordingPath": "Tallennuspolku",
+      "recordingName": "Tallenteen nimi",
+      "saveHostFirst": "Tallenna ensin isäntä.",
+      "sharingOptionsAfterSave": "Jakamisvaihtoehdot ovat käytettävissä isännän tallentamisen jälkeen.",
+      "permissionLevel": "Käyttöoikeustaso",
+      "typeHeader": "Tyyppi",
+      "targetHeader": "Kohde",
+      "permissionHeader": "Lupa",
+      "cancelBtn": "Peruuttaa",
+      "savingBtn": "Tallennetaan...",
+      "updateHostBtn": "Päivitä isäntä",
+      "addHostBtn": "Lisää isäntä"
+    },
+    "filterAuthVault": "Holvi"
   },
   "nav": {
     "history": "Historia",
@@ -354,16 +582,6 @@
     "startRecording": "Aloita tallennus",
     "stopRecording": "Lopeta tallennus"
   },
-  "terminalDefaults": {
-    "clearAll": "Tyhjennä kaikki",
-    "description": "Aseta arvot, jotka jokainen isäntä perii, ellei se korvaa niitä.",
-    "dialogDescription": "Nämä koskevat isäntiä, jotka jättävät asetuksen asettamatta. Mikä tahansa isännälle asetettu arvo voittaa.",
-    "inherit": "Periä",
-    "manage": "Hallitse",
-    "off": "Pois",
-    "on": "Päällä",
-    "title": "Yhteysoletukset"
-  },
   "keybindings": {
     "copy": "Kopioi valinta",
     "paste": "Liitä",
@@ -374,7 +592,17 @@
     "appendEnterLabel": "Paina Enter lähetyksen jälkeen",
     "clipboardPermissionNote": "Saattaa pyytää leikepöydän käyttöoikeutta ensimmäisellä käyttökerralla joissakin selaimissa.",
     "textRequired": "Kirjoita lähetettävä teksti",
-    "controlCodeRequired": "Syötä yksi kirjain ohjauskoodille"
+    "controlCodeRequired": "Syötä yksi kirjain ohjauskoodille",
+    "builtIn": {
+      "copyCtrlC": "Kopioi valinta (Ctrl+C, vain kun tekstiä on valittuna)",
+      "copyCtrlShiftC": "Kopioi valinta (Ctrl+Shift+C)",
+      "copyCmdC": "Kopioi valinta (Cmd+C)",
+      "pasteCtrlShiftV": "Liitä leikepöydältä (Ctrl+Shift+V)",
+      "ctrlW": "Lähetä Ctrl+W komentotulkkiin (estetty sulkemasta selainvälilehteä)",
+      "ctrlT": "Lähetä Ctrl+T komentotulkille (estetty avaamasta selainvälilehteä)",
+      "ctrlN": "Lähetä Ctrl+N komentotulkille (estetty avaamasta selainikkunaa)",
+      "ctrlQ": "Lähetä Ctrl+Q komentotulkille (estetty sulkemasta selainta)"
+    }
   },
   "macros": {
     "title": "Makrot",

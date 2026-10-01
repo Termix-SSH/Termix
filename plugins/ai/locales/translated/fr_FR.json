@@ -1,11 +1,53 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Utilisez l'assistant",
+      "description": "Ouvrez l'assistant et posez-lui des questions."
+    },
+    "manage_providers": {
+      "title": "Gérer les fournisseurs",
+      "description": "Ajoutez, modifiez et supprimez les fournisseurs d'IA et leurs clés API."
+    },
+    "apply_proposals": {
+      "title": "Soumettre les propositions",
+      "description": "Laissez l'assistant effectuer les modifications qu'il suggère."
+    },
+    "services.use": {
+      "title": "Utiliser l'IA d'autres fonctionnalités",
+      "description": "D'autres fonctionnalités peuvent appeler l'assistant en votre nom."
+    },
+    "secrets.share": {
+      "title": "Partagez la clé API",
+      "description": "D'autres fonctionnalités peuvent utiliser la clé API IA stockée sans la voir."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "L'assistant IA est désactivé sur ce serveur.",
+    "providersNeedOptIn": "Activez l'assistant IA ci-dessus pour ajouter des fournisseurs.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "Assistant IA",
+        "description": "Autoriser les utilisateurs à activer l'assistant IA. Lorsqu'il est désactivé, l'assistant est masqué et inaccessible à tous."
+      },
+      "privateEndpoints": {
+        "label": "Hôtes d'IA privés autorisés",
+        "description": "Sur votre réseau privé, configurez des hôtes vers lesquels les utilisateurs peuvent orienter un fournisseur, comme un serveur Ollama auto-hébergé. Placez un hôte sur chaque ligne."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Activer l'assistant IA",
+        "description": "Autoriser l'assistant IA à vous aider dans le terminal de cet hôte. Désactivé par défaut ; l'IA doit être activée pour votre compte."
+      }
+    }
+  },
   "ai": {
     "title": "Assistant",
     "send": "Envoyer",
-    "stop": "Arrêt",
-    "save": "Sauvegarder",
+    "stop": "Stop",
+    "save": "Enregistrer",
     "cancel": "Annuler",
-    "running": "en cours d'exécution",
+    "running": "en cours",
     "approve": "Approuver",
     "reject": "Rejeter",
     "inputPlaceholder": "Renseignez-vous sur vos serveurs ou décrivez un changement à proposer.",
@@ -31,7 +73,7 @@
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
     "providerOpenaiCompatible": "Compatible avec OpenAI",
-    "toolArguments": "Saisir",
+    "toolArguments": "Entrée",
     "toolResult": "Résultat",
     "statusApplied": "Appliqué",
     "statusRejected": "Rejeté",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Renseignez-vous sur cet hôte...",
     "noProvidersConfigured": "Aucun fournisseur d'IA n'est encore configuré. Ajoutez-en un dans l'onglet Assistant IA.",
     "runsInOpenTerminal": "S'exécute dans votre session de terminal ouverte.",
-    "runInTerminal": "Courir"
+    "runInTerminal": "Exécuter",
+    "terminalContextPrefill": "Voici la sortie de mon terminal :\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Autorisez d'autres fonctionnalités à utiliser votre clé API de fournisseur d'IA pour leurs propres requêtes. Cette clé n'est jamais copiée et vous pouvez la révoquer à tout moment."
+    }
   },
   "nav": {
     "ai": "IA"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Allumez-le",
     "aiEnableDesc": "Ajoute un assistant qui analyse votre configuration et suggère des modifications que vous approuvez. Nécessite un fournisseur que vous désignez, comme un Ollama local.",
     "aiNote": "Aucun message n'est envoyé tant que vous n'avez pas ajouté de fournisseur et envoyé un message."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "Assistant IA",
-        "description": "Autoriser les utilisateurs à activer l'assistant IA. Lorsqu'il est désactivé, l'assistant est masqué et inaccessible à tous."
-      },
-      "privateEndpoints": {
-        "label": "Hôtes d'IA privés autorisés"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Activer l'assistant IA",
-        "description": "Autoriser l'assistant IA à vous aider dans le terminal de cet hôte. Désactivé par défaut ; l'IA doit être activée pour votre compte."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Voir la documentation"

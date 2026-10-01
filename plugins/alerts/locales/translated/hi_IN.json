@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "अलर्ट्स"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use alerts",
+      "description": "Get alerts in the inbox and send them to your own channels."
+    }
+  },
+  "onboarding": {
+    "feature": "अलर्ट",
+    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+  },
+  "settings": {
+    "group": {
+      "general": "सामान्य",
+      "email": "ईमेल"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix announcements",
+        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+      },
+      "retentionDays": {
+        "label": "Keep alerts for (days)",
+        "description": "Older alerts are removed from every inbox."
+      },
+      "smtpHost": {
+        "label": "SMTP server",
+        "description": "Needed for email channels. Leave empty to turn email off.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "SMTP port",
+        "description": "Usually 587 with STARTTLS or 465 with TLS."
+      },
+      "smtpSecure": {
+        "label": "Use TLS from the start",
+        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+      },
+      "smtpUser": {
+        "label": "SMTP username",
+        "description": "Leave empty if the server does not need a login."
+      },
+      "smtpPassword": {
+        "label": "SMTP password",
+        "description": "Stored encrypted."
+      },
+      "smtpFrom": {
+        "label": "From address",
+        "description": "The sender alerts come from.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Alert popups",
+        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
+        "all": "All alerts",
+        "warning": "Warnings and critical",
+        "critical": "Critical only",
+        "off": "कोई नहीं"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Inbox",
+    "channels": "चैनल",
+    "rules": "Delivery rules"
+  },
+  "severity": {
+    "info": "जानकारी",
+    "success": "सफल",
+    "warning": "चेतावनी",
+    "critical": "Critical"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "खोलें",
+    "view": "देखें",
+    "unread": "Unread",
+    "deliveryFailed_one": "{{count}} channel failed",
+    "deliveryFailed_other": "{{count}} channels failed",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "markAllRead": "Mark all as read",
+    "delete": "हटाएँ",
+    "clearRead": "Delete read alerts",
+    "cleared_one": "Deleted {{count}} alert",
+    "cleared_other": "Deleted {{count}} alerts",
+    "filterAll": "सभी",
+    "filterUnread": "Unread",
+    "anySeverity": "Any severity",
+    "anySource": "Any source",
+    "openAll": "Open in a tab",
+    "empty": "No alerts yet.",
+    "emptyUnread": "You are all caught up.",
+    "loadMore": "Load more"
+  },
+  "channels": {
+    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
+    "add": "Add channel",
+    "edit": "Edit channel",
+    "test": "Send a test",
+    "testSent": "Test alert sent",
+    "testFailed": "Test failed: {{error}}",
+    "deleteConfirm": "Delete the channel \"{{name}}\"?",
+    "deleted": "Channel deleted",
+    "empty": "No channels yet.",
+    "enabled": "सक्षम",
+    "needsSave": "This channel needs to be opened and saved again before it can send.",
+    "name": "नाम",
+    "nameRequired": "नाम आवश्यक है",
+    "type": "प्रकार",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discord",
+      "email": "ईमेल"
+    },
+    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "webhookUrl": "URL",
+    "webhookHint": "Gets a JSON body for every alert.",
+    "method": "Method",
+    "headers": "Headers",
+    "headersHint": "One per line, like Name: value.",
+    "ntfyServer": "सर्वर URL",
+    "ntfyTopic": "विषय",
+    "ntfyToken": "Access token (optional)",
+    "discordUrl": "Discord webhook URL",
+    "discordHint": "From the channel's settings in Discord, under Integrations.",
+    "discordUsername": "Display name (optional)",
+    "discordAvatar": "Avatar URL (optional)",
+    "emailTo": "Send to",
+    "emailHint": "Separate more than one address with commas.",
+    "privateNetwork": "Allow a private network address",
+    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+  },
+  "rules": {
+    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
+    "add": "Add rule",
+    "edit": "Edit rule",
+    "empty": "No rules yet, so alerts only show up in the inbox.",
+    "needChannel": "Add a channel first.",
+    "enabled": "सक्षम",
+    "name": "नाम",
+    "nameRequired": "नाम आवश्यक है",
+    "match": "Alerts to send",
+    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
+    "minSeverity": "At least",
+    "channels": "Send to",
+    "channelRequired": "Pick at least one channel",
+    "deleteConfirm": "Delete the rule \"{{name}}\"?",
+    "everything": "Everything",
+    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+  },
+  "actions": {
+    "cancel": "रद्द करें",
+    "save": "सहेजें",
+    "saving": "सहेजा जा रहा है...",
+    "delete": "हटाएँ"
+  },
+  "widget": {
+    "name": "अलर्ट फीड",
+    "description": "Your latest alerts, with a quick way to mark them read",
+    "maxItems": "Max items",
+    "showRead": "Show read alerts",
+    "allClear": "सब ठीक है",
+    "loading": "लोड हो रहा है..."
+  }
+}

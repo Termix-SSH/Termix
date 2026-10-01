@@ -1,31 +1,48 @@
 {
   "hosts": {
-    "filterAuthStepca": "Langkah CA"
+    "filterAuthStepca": "Step CA"
   },
   "editor": {
-    "label": "Langkah CA",
-    "description": "Masuk melalui penyedia identitas Anda dan biarkan Step CA Anda menerbitkan sertifikat SSH berumur pendek untuk host ini. URL CA, sidik jari root, dan penyedia OIDC diatur oleh administrator di bawah Pengaturan Admin.",
-    "docs": "Lihat dokumen"
+    "label": "Step CA",
+    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "docs": "View docs"
   },
   "dialog": {
-    "openBrowser": "Buka Browser untuk Melakukan Otentikasi",
-    "waiting": "Menunggu otentikasi di browser...",
-    "authenticating": "Memproses otentikasi..."
+    "title": "Step CA Authentication Required",
+    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "openBrowser": "Open Browser to Authenticate",
+    "waiting": "Waiting for authentication in browser...",
+    "authenticating": "Processing authentication..."
   },
   "errors": {
-    "authFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
-    "timeout": "Autentikasi habis waktu. Silakan coba lagi."
+    "authFailed": "Authentication failed. Please check your credentials and try again.",
+    "timeout": "Authentication timed out. Please try again."
   },
   "settings": {
+    "caUrl": {
+      "label": "CA URL",
+      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "placeholder": "https://ca.internal:9000"
+    },
     "fingerprint": {
-      "label": "Sidik jari akar (SHA-256)"
+      "label": "Root fingerprint (SHA-256)",
+      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
     },
     "provisioner": {
-      "label": "Nama penyedia OIDC"
+      "label": "OIDC provisioner name",
+      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
     },
     "privateEndpoints": {
-      "label": "Host CA Langkah pribadi yang diizinkan",
-      "description": "Host privat yang dapat dihubungi oleh alur sertifikat Step CA adalah: CA itu sendiri dan, jika internal, penyedia identitas Anda. Pisahkan mereka dengan koma."
+      "label": "Allowed private Step CA hosts",
+      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+    },
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
     }
   }
 }

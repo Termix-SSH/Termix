@@ -3,8 +3,31 @@
     "sessionLogs": "Sessionslogfiler"
   },
   "hosts": {
-    "enableSessionRecording": "Sessionslogning",
+    "enableSessionRecording": "Sessionsoptagelse",
     "enableSessionRecordingDesc": "Optag output fra terminalsessionen til senere gennemgang"
+  },
+  "permissions": {
+    "view": {
+      "title": "Se sessionsoptagelser",
+      "description": "Se og afspil dine egne sessionsoptagelser."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Opbevaring (dage)",
+        "description": "Hvor længe en sessionsoptagelse gemmes, før den slettes automatisk."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Aktivér sessionsoptagelse",
+        "description": "Optag terminaloutput for denne vært, så du kan afspille det eller downloade det senere."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Indspilning"
   },
   "sessionLogs": {
     "title": "Sessionslogfiler",
@@ -21,6 +44,17 @@
     "copied": "Kopieret!",
     "loadError": "Kunne ikke indlæse sessionslogfiler",
     "deleteError": "Kunne ikke slette sessionsloggen",
-    "filterByHost": "Filtrer efter vært..."
+    "filterByHost": "Filtrer efter vært...",
+    "back": "Tilbage",
+    "empty": "(tom)",
+    "noResults": "Ingen resultater for \"{{query}}\"",
+    "hostFallback": "Vært {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Optagelsestidslinje",
+    "speed": "Afspilningshastighed",
+    "play": "Afspil optagelse",
+    "pause": "Pause optagelse"
   }
 }

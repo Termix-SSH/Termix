@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Aufwachen",
+    "sent": "Wake-on-LAN-Paket gesendet",
+    "failed": "Das Senden des Wake-on-LAN-Pakets ist fehlgeschlagen."
+  },
+  "permissions": {
+    "send": {
+      "title": "Wake-on-LAN-Pakete senden",
+      "description": "Wecken Sie einen Host auf, indem Sie ein magisches Paket an seine MAC-Adresse senden."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "MAC-Adresse",
+        "description": "Die Netzwerk-MAC-Adresse des Hosts, die zum Senden von Wake-on-LAN-Paketen verwendet wird.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Rundfunkadresse",
+        "description": "Die Subnetz-Broadcastadresse, an die das Paket gesendet werden soll. Für 255.255.255.255 leer lassen.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

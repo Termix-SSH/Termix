@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Se automatiseringer",
+      "description": "Se automatiseringerne og deres historik."
+    },
+    "create": {
+      "title": "Opret automatiseringer",
+      "description": "Tilføj nye automatiseringer."
+    },
+    "edit": {
+      "title": "Rediger automatiseringer",
+      "description": "Ændr eksisterende automatiseringer."
+    },
+    "delete": {
+      "title": "Slet automatiseringer",
+      "description": "Fjern automatiseringer."
+    },
+    "run": {
+      "title": "Kør automatiseringer",
+      "description": "Udløs en automatisering manuelt."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Rediger automatisering",
         "empty": "Ingen automatiseringer endnu. Opret en for at reagere på en metric, en tidsplan eller en begivenhed.",
         "emptyRuns": "Ingen løb endnu.",
-        "emptyChannels": "Ingen kanaler endnu. Tilføj en for at sende notifikationer et sted hen.",
-        "noChannelsHint": "Ingen kanaler er konfigureret endnu. Tilføj en i fanen Kanaler.",
-        "addChannel": "Tilføj kanal",
-        "testChannel": "Prøve",
-        "channelTestSent": "Testnotifikation sendt",
-        "channelTestFailed": "Testnotifikation mislykkedes",
-        "channelDeleted": "Kanal slettet",
-        "deleteChannelConfirm": "Vil du slette denne kanal? Automatiseringer, der bruger den, vil stoppe med at sende dig notifikationer.",
+        "channelsHint": "Kanaler er konfigureret i advarsler",
+        "noChannelsHint": "Beskeden sendes altid til din indbakke. Tilføj kanaler i Beskeder for også at sende den et andet sted hen.",
         "nameLabel": "Navn",
         "namePlaceholder": "f.eks. Ryd op i /data når den fyldes op",
         "nameRequired": "Navn er påkrævet",
@@ -79,7 +95,7 @@
           "webhook": "Indgående webhook"
         },
         "stepTypes": {
-          "notify": "Send en notifikation",
+          "notify": "Send en alarm",
           "http": "Kald en URL",
           "run_snippet": "Kør et uddrag",
           "run_command": "Kør en kommando",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Metode",
           "body": "Legeme",
-          "channels": "Kanaler",
+          "channels": "Send også til",
           "title": "Titel",
           "message": "Besked",
           "snippet": "Uddrag",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Stop løbet",
           "continue": "Fortsæt"
+        },
+        "needsPlugin": "Behøver {{plugin}}",
+        "needsPluginHint": "Denne automatisering springes over, indtil den nødvendige funktion er tilgængelig igen.",
+        "offBadge": "Slukket",
+        "docsLink": "Se dokumenter",
+        "ago": {
+          "seconds": "For {{count}}sekunder siden",
+          "minutes": "For {{count}}minutter siden",
+          "hours": "For {{count}}timer siden",
+          "days": "for {{count}}dage siden"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatiseringer",
     "feature_automations_desc": "Kør trin automatisk, når der sker noget, og få besked."
+  },
+  "maintenance": {
+    "title": "Opretholdelse",
+    "description": "Sæt automatiseringer for værtsstatus, tilstand, metrikker, containere og tunnelfrakobling på pause, mens arbejdet er i gang. Overvågning, manuelle kørsel og planlagte automatiseringer fortsætter.",
+    "denied": "Du har ikke tilladelse til at se vedligeholdelsen.",
+    "sharedReadOnly": "Denne vært blev delt med dig. Kun dens ejer kan ændre vedligeholdelsen.",
+    "failed": "Vedligeholdelsen kunne ikke opdateres.",
+    "active": "Vedligeholdelse aktiv",
+    "estimated": "Forventet færdiggørelse",
+    "noAutoEnd": "Estimatet afslutter ikke vedligeholdelsen. Afslut den eksplicit, når arbejdet er færdigt.",
+    "endConfirm": "Vil du afslutte vedligeholdelsen og genoptage hændelsesudløste automatiseringer for denne vært?",
+    "confirmEnd": "Bekræft slut",
+    "cancel": "Ophæve",
+    "end": "Afslut vedligeholdelse",
+    "action": "Handling",
+    "startNow": "Start nu",
+    "schedule": "Planlæg til senere",
+    "reason": "Årsag",
+    "startUtc": "Første start (UTC)",
+    "repeat": "Gentage",
+    "once": "Engang",
+    "weekly": "Ugentlig",
+    "monthly": "Månedlig",
+    "utcHelp": "Tidsplaner bruger UTC hele året. Månedlige tidsplaner springer måneder over uden den valgte dag. Planlagte vinduer kan ikke overlappe hinanden; overstyring af vedligeholdelse fortsætter på tværs af senere vinduer.",
+    "duration": "Estimeret varighed (minutter)",
+    "grace": "Frist (minutter)",
+    "notify": "Giv én besked, hvis du stadig er offline efter estimatet plus den henstandsperiode",
+    "addSchedule": "Tilføj tidsplan",
+    "schedules": "Tidsplaner",
+    "noSchedules": "Ingen vedligeholdelsesplaner.",
+    "completed": "Allerede startet",
+    "minutes_one": "{{count}} minut",
+    "minutes_other": "{{count}} minutter",
+    "remove": "Fjern tidsplan",
+    "loadFailed": "Vedligeholdelsesstatus kunne ikke opdateres. Ændringer er deaktiveret, indtil den kan indlæses.",
+    "loading": "Indlæser vedligeholdelsesstatus…"
   }
 }

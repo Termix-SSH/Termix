@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Pàgina d'inici",
     "addWidget": "Afegeix un widget",
+    "noWidgetsInCategory": "No hi ha widgets en aquesta categoria",
     "editWidget": "Edita el widget",
     "zoomIn": "Ampliar zoom",
     "zoomOut": "Allunyar",
@@ -59,6 +60,9 @@
     "maxItems": "Màxim d'elements",
     "showDescription": "Mostra la descripció",
     "widgetRssName": "Canal RSS",
+    "rssNoFeedUrl": "Configura una URL de feed a la configuració del widget",
+    "rssLoadError": "No s'ha pogut carregar el feed",
+    "rssNoItems": "Sense elements",
     "noHostSelected": "No s'ha seleccionat cap amfitrió",
     "displayedMetrics": "Mètriques mostrades",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "Mode compacte",
     "selectHosts": "Selecciona els amfitrions",
     "listLayout": "Llista",
-    "gridLayout": "Graella"
+    "gridLayout": "Graella",
+    "configureUrl": "Defineix una URL a la configuració del widget",
+    "embeddedContent": "Contingut incrustat",
+    "noBookmarks": "Sense marcadors",
+    "noSections": "No s'han configurat seccions",
+    "noServices": "No hi ha serveis configurats",
+    "configureLocation": "Defineix una ubicació a la configuració del widget",
+    "bannerTextPlaceholder": "Text del bàner",
+    "serviceNamePlaceholder": "El meu servei"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitzeu la pàgina d'inici",
+      "description": "Visualitza i edita els enllaços del servei de llenç i tauler de control de la pàgina d'inici."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Amfitrions privats permesos",
+      "description": "Noms d'amfitrió/IP privats o de bucle exactes per als widgets d'estat del ping i de l'API personalitzada. Separeu les entrades amb comes o salts de línia; ometeu esquemes, ports i camins. Els blocs buits bloquegen les destinacions privades."
+    },
+    "privateCertificateAuthority": {
+      "label": "Autoritat de certificació privada (PEM)",
+      "description": "Paquet opcional de CA de confiança per a amfitrions de la llista permesa. La verificació del certificat roman habilitada. Deixeu-ho en blanc per utilitzar el magatzem de confiança del sistema."
+    }
   }
 }

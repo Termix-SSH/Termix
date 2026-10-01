@@ -3,7 +3,8 @@
     "profile": "Profil de signature Vault",
     "selectProfile": "Sélectionner un profil Vault...",
     "hint": "Les paramètres proviennent du profil partagé ; vous vous connecterez à Vault via OIDC lors de la connexion. Aucun secret n'est stocké.",
-    "docs": "Voir la documentation"
+    "docs": "Documentation",
+    "sharedProfile": "{{name}} (partagé)"
   },
   "profiles": {
     "new": "Nouveau profil",
@@ -27,12 +28,42 @@
     "save": "Enregistrer le profil",
     "validationError": "Le nom, l'adresse Vault et le rôle de signataire SSH sont requis",
     "none": "Aucun profil Vault pour le moment",
-    "sharedBadge": "partagé"
+    "sharedBadge": "partagé",
+    "edit": "Modifier",
+    "delete": "Supprimer"
+  },
+  "hosts": {
+    "filterAuthVault": "Sauter"
   },
   "dialog": {
     "title": "Connexion à Vault requise",
     "description": "Une fenêtre s'est ouverte pour vous connecter à HashiCorp Vault. Terminez la connexion dans cette fenêtre ; cette connexion continuera automatiquement.",
     "failed": "Échec de l'authentification Vault. Veuillez réessayer.",
     "reopen": "Rouvrir la fenêtre de connexion"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser la signature SSH Vault",
+      "description": "Créez des profils de signataire Vault et connectez-vous aux hôtes qui utilisent Vault."
+    },
+    "share": {
+      "title": "Profils Share Vault",
+      "description": "Marquez un profil de signataire Vault comme partagé afin que chaque utilisateur puisse le sélectionner."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "URI de redirection",
+      "description": "Ajoutez cette URL à allowed_redirect_uris dans chaque rôle OIDC Vault avec lequel Termix se connecte."
+    },
+    "legacyCallback": {
+      "label": "Utilisez l'ancienne URI de redirection",
+      "description": "Continuez à envoyer /vault/oidc/callback, l'URI de redirection utilisée avant la version 2.9. Désactivez-la une fois que vos rôles Vault autoriseront la nouvelle."
+    },
+    "host": {
+      "profileId": {
+        "label": "Profil du signataire Vault"
+      }
+    }
   }
 }

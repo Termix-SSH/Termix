@@ -31,7 +31,7 @@
         "applyConfirmButton": "Espace de travail à appliquer",
         "updateWithCurrent": "Mise à jour avec les données actuelles",
         "updateWithCurrentConfirm": "Remplacer «{{name}}» par votre disposition de tabulation actuelle ?",
-        "rename": "Rebaptiser",
+        "rename": "Renommer",
         "duplicate": "Double",
         "duplicateNameSuffix": "{{name}} (copie)",
         "setDefault": "Définir comme valeur par défaut",
@@ -41,7 +41,13 @@
         "lastSessionDescription": "Mise à jour automatique avec votre dernière configuration d'onglets. Appliquez-la pour retrouver ce que vous aviez ouvert.",
         "lastUsed": "Dernière utilisation {{time}}",
         "neverUsed": "Jamais postulé",
-        "tabsSkipped": "Espace de travail appliqué — {{count}} onglet(s) ignoré(s) (l'hôte n'existe plus) : {{names}}"
+        "tabsSkipped": "L'espace de travail a été appliqué, mais {{count}} onglets ont été ignorés car leur hôte n'existe plus : {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}il y a s",
+          "minutes": "il y a {{count}} min",
+          "hours": "il y a {{count}} h",
+          "days": "il y a {{count}} j"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Espaces de travail",
     "workflow_workspaces_desc": "Enregistrez une série d'onglets ouverts et rouvrez l'ensemble de la mise en page plus tard."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser les espaces de travail",
+      "description": "Enregistrez, appliquez et gérez les mises en page d'onglets enregistrées."
+    }
   },
   "hosts": {
     "docsLink": "Voir la documentation"

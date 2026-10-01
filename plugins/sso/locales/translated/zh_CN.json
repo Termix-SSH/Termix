@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Sign in with SSO",
   "loginWithProvider": "使用{{name}}登录",
   "loading": "加载中...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
   "providers": {
     "docsLink": "查看文档",
     "none": "未配置 SSO 提供商。",
@@ -9,6 +16,8 @@
     "delete": "删除提供商",
     "deleteConfirm": "删除此提供商？关联用户将无法登录。",
     "name": "显示名称",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
     "type": "提供商类型",
     "enabled": "已启用",
     "save": "保存提供商",
@@ -17,11 +26,20 @@
     "saveFailed": "保存失败",
     "deleted": "已删除",
     "deleteFailed": "删除失败",
-    "cancel": "取消"
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "取消",
+    "copy": "复制",
+    "copied": "已复制",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
   },
   "fields": {
     "clientId": "客户端 ID",
     "clientSecret": "客户端密钥",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
     "issuerUrl": "颁发者 URL",
     "authUrl": "授权 URL",
     "tokenUrl": "令牌 URL",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "此组的用户将被授予管理员权限。留空可禁用组同步。",
     "caCert": "自定义 CA 证书",
     "caCertDesc": "可选。PEM 编码的 CA 证书，用于使用私有或自签名 CA 的 OIDC 提供商。留空则使用系统信任存储。"
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
   }
 }

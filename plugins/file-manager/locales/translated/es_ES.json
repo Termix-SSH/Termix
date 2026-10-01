@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Archivos",
+    "sftp": "SFTP",
+    "openFileManager": "Abrir gestor de archivos"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilice el administrador de archivos",
+      "description": "Explora, edita y transfiere archivos a través de SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Habilitar Gestor de archivos",
+        "description": "Explore y edite archivos en este servidor a través de SFTP."
+      },
+      "defaultPath": {
+        "label": "Ruta predeterminada"
+      },
+      "scpLegacy": {
+        "label": "Modo SCP heredado"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferencias simultáneas de archivos",
+        "description": "¿Cuántos archivos sube o descarga simultáneamente el gestor local/remoto? Reduzca este valor si su servidor limita los canales SFTP."
+      },
+      "confirmBeforeTrash": {
+        "label": "Confirme antes de mover los archivos a la papelera.",
+        "description": "Pregunte antes de mover archivos remotos a la papelera. La eliminación permanente aún requiere confirmación."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Gestor de archivos"
+  },
   "fileManager": {
     "noHostSelected": "Ningún host seleccionado",
     "initializingEditor": "Inicializando editor...",
@@ -34,6 +72,7 @@
     "rename": "Renombrar",
     "uploading": "Subiendo...",
     "uploadingFile": "Subiendo {{name}}...",
+    "uploadingChunk": "Cargando {{name}}: {{percent}}% (parte {{chunk}} de {{total}})",
     "fileName": "Nombre del archivo",
     "folderName": "Nombre de la carpeta",
     "fileUploadedSuccessfully": "Archivo \"{{name}}\" subido correctamente",
@@ -68,8 +107,8 @@
     "localRevealInFileManager": "Mostrar en el administrador de archivos del sistema",
     "localCannotOpenFolder": "No se puede abrir la carpeta",
     "localItemCount": "{{count}} elementos",
-    "localSelectedCount": "{{count}} seleccionado",
-    "back": "Atrás",
+    "localSelectedCount": "{{count}} seleccionados",
+    "back": "Volver",
     "forward": "Adelante",
     "up": "Arriba",
     "kind": "Amable",
@@ -83,14 +122,14 @@
     "localUploadFailed": "Error al cargar la página",
     "localUploadPartial": "Se subieron {{done}} archivos, {{failed}} falló.",
     "localDownloadComplete": "Archivo(s) descargado(s) {{count}}",
-    "localDownloadFailed": "Falló la descarga.",
+    "localDownloadFailed": "Error en la descarga",
     "localDownloadPartial": "Se descargaron {{done}} archivos, {{failed}} falló.",
     "localReplaceExistingPrompt": "Ya existen {{count}} elementos en esta carpeta. ¿Desea reemplazarlos?",
     "localReplace": "Reemplazar",
     "localSkipExisting": "Saltar",
     "localSkippedExisting": "Se omitieron {{count}} elementos existentes",
     "localUnsafeNamesSkipped": "Se omitieron {{count}} elementos cuyos nombres no se pueden usar en este ordenador.",
-    "localOpen": "Abierto",
+    "localOpen": "Abrir",
     "localOpenFolder": "Abrir carpeta",
     "localUploadToRemote": "Subir al servidor",
     "localUploadToRemoteMany": "Sube {{count}} elementos al servidor",
@@ -178,7 +217,7 @@
     "trashDeleteFailed": "No se pudo eliminar el elemento de forma permanente.",
     "trashEmptyAction": "Vaciar la basura",
     "trashEmptyConfirm": "¿Eliminar permanentemente todos los elementos de la Papelera? Esta acción es irreversible.",
-    "trashEmptied": "Basura vaciada",
+    "trashEmptied": "Vaciado de basura",
     "trashRetention": "Limpieza automática después de (días)",
     "trashRetentionSaved": "Se ha actualizado la retención de basura.",
     "trashRetentionFailed": "Error al actualizar la retención de la papelera",
@@ -290,6 +329,7 @@
     "connecting": "Conectando...",
     "connectedSuccessfully": "Conectado correctamente",
     "totpVerificationFailed": "Error en la verificación TOTP",
+    "browserSignInFailed": "Error al iniciar sesión. Inténtalo de nuevo.",
     "authenticationFailed": "Error de autenticación",
     "incorrectPassphrase": "Frase de contraseña incorrecta. Inténtelo de nuevo.",
     "verificationCodePrompt": "Código de verificación:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "No se puede cargar el PDF",
     "pdfLoadError": "Se produjo un error al cargar este archivo PDF.",
     "loadingPdf": "Cargando PDF...",
-    "loadingPage": "Cargando página..."
+    "loadingPage": "Cargando página...",
+    "cancel": "Cancelar",
+    "copiedItems_one": "Copiado {{count}} elemento",
+    "copiedItems_other": "Elementos copiados {{count}}",
+    "deleteCopiedFileFailed": "No se pudo eliminar la copia de {{name}}: {{error}}",
+    "dragMovedItems_one": "Se movió el elemento {{count}} a {{target}}",
+    "dragMovedItems_other": "Se movieron {{count}} elementos a {{target}}",
+    "moveBackFileFailed": "No se pudo mover {{name}} hacia atrás: {{error}}",
+    "terminal": "Terminal: {{host}} ({{path}})",
+    "dragToDesktop": "Arrastrando {{name}} al escritorio",
+    "dragFilesToDesktop": "Arrastrar archivos {{count}} al escritorio",
+    "folderDragUnsupported": "Todavía no se admite arrastrar carpetas al escritorio.",
+    "saveToDesktopFailed": "Error al guardar: {{error}}",
+    "dragFailedDetail": "Error al arrastrar: {{error}}",
+    "videoUnsupported": "Tu navegador no puede reproducir este formato de vídeo.",
+    "downloadToPlay": "Descárgalo para jugarlo en otro lugar.",
+    "cannotPreviewType": "No se puede previsualizar este tipo de archivo.",
+    "cannotPreviewTypeHint": "Este tipo de archivo no tiene vista previa. Descárguelo para abrirlo en otra aplicación."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -334,7 +391,7 @@
     "sourceServer": "Servidor de origen",
     "destinationServer": "Servidor de destino",
     "selectHost": "Seleccione el host",
-    "noHostSelected": "No se ha seleccionado ningún host.",
+    "noHostSelected": "Ningún host seleccionado",
     "move": "Mover",
     "copy": "Copiar",
     "upload": "Subir",
@@ -346,22 +403,22 @@
     "modified": "Modificado",
     "size": "Tamaño",
     "noFiles": "No hay archivos",
-    "open": "Abierto",
+    "open": "Abrir",
     "up": "Arriba",
-    "refresh": "Refrescar",
+    "refresh": "Actualizar",
     "copyToTarget": "Copiar al directorio de destino",
-    "rename": "Rebautizar",
-    "delete": "Borrar",
+    "rename": "Renombrar",
+    "delete": "Eliminar",
     "editPermissions": "Editar permisos",
     "createNewFolder": "Crear nueva carpeta",
     "deleteSelectedItems": "Eliminar elementos seleccionados",
     "deleteConfirm": "¿Eliminar {{count}} elemento seleccionado?",
     "deleteConfirm_other": "¿Eliminar {{count}} elementos seleccionados?",
     "cancel": "Cancelar",
-    "save": "Ahorrar",
+    "save": "Guardar",
     "folderCreated": "Carpeta creada",
     "itemRenamed": "Artículo renombrado",
-    "actionFailed": "La acción fracasó",
+    "actionFailed": "Acción fallida",
     "itemsDeleted": "{{count}} elemento eliminado",
     "itemsDeleted_other": "{{count}} elementos eliminados",
     "deleteFailed": "Error al eliminar",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Gestor de archivos",
-    "tabFiles": "Archivos",
-    "enableFileManagerMonitor": "Habilitar Gestor de archivos",
-    "enableFileManagerMonitorDesc": "Explorar y gestionar archivos en este host mediante SFTP",
-    "scpLegacyLabel": "Modo SCP heredado",
-    "scpLegacyDesc": "Usar transferencia de archivos heredada para servidores que no admiten el subsistema SFTP (p. ej., servidores SSH integrados o mínimos).",
-    "defaultPathLabel": "Ruta predeterminada",
-    "fileManagerPathHint": "Directorio que se abre al iniciar el gestor de archivos para este host.",
     "fileManagerUrlCopied": "URL del gestor de archivos copiada",
     "copyFileManagerUrlAction": "Copiar URL del gestor de archivos",
     "docsLink": "Ver documentación",
     "hostNotFound": "Host no encontrado",
     "loadingHost": "Cargando host..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Habilitar Gestor de archivos"
-      },
-      "defaultPath": {
-        "label": "Ruta predeterminada"
-      },
-      "scpLegacy": {
-        "label": "Modo SCP heredado"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Transferencias simultáneas de archivos",
-        "description": "¿Cuántos archivos sube o descarga simultáneamente el gestor local/remoto? Reduzca este valor si su servidor limita los canales SFTP."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Archivos"
   },
   "onboarding": {
     "feature_files": "Gestor de archivos",
@@ -437,7 +464,7 @@
     "destinationPath": "Ruta de destino",
     "destMustBeDirectory": "El destino debe ser un directorio para transferencias de múltiples elementos",
     "goUp": "Subir",
-    "hostAuthRequired": "Se requiere autenticación — abre primero el Gestor de Archivos en este host",
+    "hostAuthRequired": "Se requiere autenticación. Abra primero el administrador de archivos en este host.",
     "hostConnecting": "Conectando…",
     "hostConnectionFailed": "Conexión fallida",
     "hostDisconnected": "No conectado",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Has elegido SFTP por archivo.",
       "user_tar": "Has elegido archivo tar.",
-      "tar_unavailable": "Tar no está disponible en uno o ambos hosts; se usará SFTP por archivo.",
-      "windows_host": "Hay un host Windows implicado; no se usa tar.",
-      "auto_multi_large": "Auto: múltiples archivos incluido uno grande ({{largestSize}}) con datos comprimibles; tar los agrupa en una sola transferencia.",
-      "auto_single_large_in_archive": "Auto: un archivo grande ({{largestSize}}) en este conjunto; SFTP por archivo.",
-      "auto_many_incompressible": "Auto: datos mayoritariamente incompresibles; SFTP por archivo.",
-      "auto_many_files": "Auto: muchos archivos ({{fileCount}}); tar reduce la sobrecarga por archivo.",
+      "tar_unavailable": "Tar no está disponible en uno o ambos hosts, por lo que se utilizará SFTP por archivo.",
+      "windows_host": "Se trata de un sistema operativo Windows, por lo que no se utiliza tar.",
+      "auto_multi_large": "Automático: varios archivos, incluido un archivo grande ({{largestSize}}) con datos comprimibles. Tar los agrupa en una sola transferencia.",
+      "auto_single_large_in_archive": "Automático: un archivo grande ({{largestSize}}) en este conjunto, por lo que SFTP por archivo.",
+      "auto_many_incompressible": "Automático: datos mayormente incompresibles, por lo que se utiliza SFTP por archivo.",
+      "auto_many_files": "Automático: muchos archivos ({{fileCount}}), tar reduce la sobrecarga por archivo.",
       "auto_default": "Auto: SFTP por archivo para este conjunto."
     },
     "methodTar": "Archivo Tar",
@@ -471,7 +498,7 @@
     "metricsCompress": "Compresión en origen: {{duration}}",
     "metricsExtract": "Extracción en destino: {{duration}}",
     "metricsPrepare": "Preparar destino: {{duration}}",
-    "metricsRouteBenchmark": "Sondeo de ruta: directo: {{direct}}, retransmisión: {{relay}}",
+    "metricsRouteBenchmark": "Sondeo de ruta: directo {{direct}}, relé {{relay}}",
     "metricsSourceDelete": "Eliminación del origen: {{duration}}",
     "metricsTotal": "Total: {{duration}}",
     "metricsTransfer": "Extremo a extremo: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "Transferencia fallida",
     "transferFailedRetryHint": "Se conservaron datos parciales en el destino. El reintento se reanudará cuando se restablezca la conexión.",
     "transferPartialHint": "No se pudo transferir: {{paths}}",
-    "transferSuccess": "Transferencia completada"
+    "transferSuccess": "Transferencia completada",
+    "metricsHopSourceRead": "Origen → servidor: {{throughput}}",
+    "metricsHopDestSftpWrite": "Servidor → destino (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Servidor → destino (local): {{throughput}}"
   }
 }

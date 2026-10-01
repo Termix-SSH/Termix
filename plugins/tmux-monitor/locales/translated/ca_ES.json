@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Monitor Tmux"
-  },
   "hosts": {
     "enableTmuxMonitor": "Activa el monitor Tmux",
     "enableTmuxMonitorDesc": "Mostra aquest host al monitor Tmux i afegeix les seves accions tmux a la barra lateral",
+    "tabTmuxMonitor": "Monitor Tmux",
     "docsLink": "Veure documents"
+  },
+  "nav": {
+    "tmuxMonitor": "Monitor Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Monitor Tmux",
+    "tmuxMonitorDesc": "Supervisa les sessions tmux a través dels teus amfitrions"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza el monitor Tmux",
+      "description": "Navega i controla les sessions, finestres i panells de tmux als hosts amb el monitor habilitat."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activa el monitor Tmux",
+        "description": "Vigila i connecta't a les sessions tmux que s'executen en aquest amfitrió."
+      },
+      "mouseEnabled": {
+        "label": "Habilita la compatibilitat amb el ratolí tmux",
+        "description": "Aplica la compatibilitat amb el ratolí a la sessió de tmux en connectar o crear una sessió. La resta de sessions i la configuració global de tmux no canvien."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Monitor Tmux",
@@ -50,10 +73,10 @@
     "sessionRenameFailed": "No s'ha pogut canviar el nom de la sessió",
     "editTagsTitle": "Edita les etiquetes per a \"{{name}}\"",
     "killPane": "Tauler de tancament",
-    "resizeTree": "Arrossega per canviar la mida — fes doble clic per restablir",
+    "resizeTree": "Arrossegueu per canviar la mida, feu doble clic per restablir",
     "reattach": "Torna a connectar (corregeix una vista distorsionada)",
     "killWindow": "Finestra de tancament",
-    "killWindowTitle": "Finestra de tancament {{index}} de \"{{session}}\"?",
+    "killWindowTitle": "Tancar la finestra {{index}} de \"{{session}}\"?",
     "killWindowBody": "Tots els panells i processos d'aquesta finestra finalitzaran. Tancar l'última finestra finalitza la sessió.",
     "windowKillFailed": "No s'ha pogut tancar la finestra",
     "statusActivity": "Activitat",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "No s'ha pogut tancar la sessió",
     "hostUnreachable": "No s'ha pogut connectar amb l'amfitrió. Comproveu que estigui en línia i accessible.",
     "noServer": "No hi ha cap servidor tmux en execució en aquest host.",
-    "searchTruncated": "Resultats parcials: la cerca cobreix les últimes {{lines}} línies de cada panell i com a màxim {{panes}} panells.",
+    "searchTruncated": "Resultats parcials. La cerca cobreix les últimes {{lines}} línies de cada panell i com a màxim {{panes}} panells.",
     "closeSearchResults": "Tanca els resultats de la cerca",
     "retry": "Torna-ho a intentar",
     "noHosts": "No hi ha hosts SSH disponibles",
-    "noHostsHint": "Activeu l'opció Monitor de Tmux en un host SSH (Gestor d'amfitrions → pestanya Terminal) per monitoritzar les seves sessions tmux.",
+    "noHostsHint": "Activeu l'opció Monitor de Tmux en un amfitrió SSH (Gestor d'amfitrions, pestanya Monitor de Tmux) per supervisar les seves sessions tmux.",
     "tmuxInstallHint": "Instal·leu-lo a l'amfitrió amb:",
     "attachTooltip": "Obre un terminal a {{host}}",
-    "attachTooltipPane": "Obre un terminal a {{host}} — sessió tmux {{session}}",
+    "attachTooltipPane": "Obre un terminal a {{host}}, sessió tmux {{session}}",
     "timeJustNow": "ara mateix",
     "timeMinutes": "fa {{count}}minuts",
     "timeHours": "fa {{count}}h",
-    "timeDays": "fa {{count}}dies"
+    "timeDays": "fa {{count}}dies",
+    "allHosts": "Tots els amfitrions",
+    "singleHost": "Amfitrió únic",
+    "hostScope": "Supervisar l'abast",
+    "filterHosts": "Filtra els amfitrions per nom o adreça",
+    "selectHost": "Selecciona l'amfitrió",
+    "toggleHost": "Expandeix o contrau {{host}}",
+    "noMatchingHosts": "No hi ha amfitrions coincidents",
+    "toggleSession": "Expandeix o contrau {{session}}"
   }
 }

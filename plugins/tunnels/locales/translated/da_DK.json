@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Forudindstillinger er eksplicitte snapshots; indlæsning af en erstatter denne desktopklients lokale klienttunnelliste.",
     "c2sPresetToLoad": "Forudindstilling til indlæsning",
     "c2sTunnelPresets": "Klienttunnelforudindstillinger",
-    "c2sTunnelPresetsUnavailable": "Forudindstillinger for klienttunnel er kun tilgængelige i desktopklienten."
+    "c2sTunnelPresetsUnavailable": "Forudindstillinger for klienttunnel er kun tilgængelige i desktopklienten.",
+    "c2sPresetRenameError": "Kunne ikke omdøbe forudindstillingen",
+    "c2sPresetDeleteError": "Kunne ikke slette forudindstillingen"
   },
   "tunnels": {
     "attempt": "Forsøg {{current}} af {{max}}",
@@ -90,7 +92,7 @@
     "endpointPort": "Endepunktsport",
     "endpointSshHost": "Endpoint SSH-vært",
     "endpointSshHostPlaceholder": "Vælg en konfigureret vært",
-    "endpointSshHostRequired": "Vælg en endpoint SSH-vært for hver klienttunnel.",
+    "endpointSshHostRequired": "Vælg en SSH-vært for slutpunktet for hver klienttunnel.",
     "error": "Fejl",
     "forwardDescriptionClientDynamic": "SOCKS på lokal port {{sourcePort}}.",
     "forwardDescriptionClientLocal": "Lokal {{sourcePort}} → fjern {{endpointPort}}.",
@@ -139,8 +141,32 @@
     "typeLocal": "Lokal (-L)",
     "typeRemote": "Fjernbetjening (-R)",
     "working": "Arbejder...",
+    "activeCount": "{{connected}}/{{total}} aktiv",
+    "listensOn": "Bundet til localhost:{{port}}",
+    "socksProxy": "SOCKS5-proxy",
+    "waiting": "Venter",
+    "remoteSessionExpired": "Fjernsynkroniseringssessionen er udløbet. Genopret forbindelse til fjernsynkronisering, og prøv igen.",
+    "activeTunnels": "Aktive tunneler",
     "start": "Starte",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Tunnelgodkendelse",
+    "authRetry": "Den tidligere kode blev ikke accepteret. Indtast en ny kode.",
+    "authAnswer": "Godkendelsessvar",
+    "authContinue": "Fortsætte"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug tunneler",
+      "description": "Start, stop og overvåg SSH-tunneler, og gem forudindstillinger for klienttunneler."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktivér tunneler",
+        "description": "Opsæt SSH-tunneler gennem denne vært."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tunneler",

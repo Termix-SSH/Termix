@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Bron en doel moeten verschillend zijn.",
     "exportJSON": "Exporteer JSON",
     "importJSON": "JSON importeren",
-    "terminal": "Terminal",
-    "fileManager": "Bestandsbeheerder",
-    "tunnel": "Tunnel",
-    "docker": "Docker",
     "serverStats": "Hoststatistieken",
-    "hostMetrics": "Hoststatistieken",
     "noNodes": "Nog geen knooppunten"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} knooppunten"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik een netwerkgrafiek",
+      "description": "Bekijk en bewerk de netwerktopologiegrafiek."
+    }
   },
   "hosts": {
     "docsLink": "Documenten bekijken"

@@ -3,8 +3,31 @@
     "sessionLogs": "세션 로그"
   },
   "hosts": {
-    "enableSessionRecording": "세션 로깅",
+    "enableSessionRecording": "세션 녹화",
     "enableSessionRecordingDesc": "나중에 검토할 수 있도록 터미널 세션 출력을 기록합니다"
+  },
+  "permissions": {
+    "view": {
+      "title": "세션 녹화 영상을 시청하세요",
+      "description": "자신이 녹음한 세션 내용을 보고 재생해 보세요."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "보유 기간(일)",
+        "description": "세션 녹화 파일이 자동으로 삭제되기 전까지 보관되는 기간은 얼마인가요?"
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "세션 녹화를 활성화합니다.",
+        "description": "이 호스트의 터미널 출력을 기록하여 나중에 재생하거나 다운로드할 수 있도록 합니다."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "녹음"
   },
   "sessionLogs": {
     "title": "세션 로그",
@@ -21,6 +44,17 @@
     "copied": "복사됨!",
     "loadError": "세션 로그 로드 실패",
     "deleteError": "세션 로그 삭제 실패",
-    "filterByHost": "호스트로 필터링..."
+    "filterByHost": "호스트로 필터링...",
+    "back": "뒤로",
+    "empty": "(비어 있음)",
+    "noResults": "\"{{query}} \"에 대한 검색 결과가 없습니다.",
+    "hostFallback": "호스트 {{id}}",
+    "sessionFallback": "세션 {{id}}"
+  },
+  "player": {
+    "timeline": "녹음 타임라인",
+    "speed": "재생 속도",
+    "play": "재생 녹음",
+    "pause": "녹화 일시 중지"
   }
 }

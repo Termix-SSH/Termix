@@ -41,7 +41,13 @@
         "lastSessionDescription": "מתעדכן אוטומטית עם סידור הכרטיסיות האחרון שלך. השתמש בו כדי לשחזר את מה שהיה פתוח.",
         "lastUsed": "בשימוש אחרון {{time}}",
         "neverUsed": "מעולם לא יושם",
-        "tabsSkipped": "סביבת עבודה הוחלת — דילגו על כרטיסיות {{count}} (המארח כבר לא קיים): {{names}}"
+        "tabsSkipped": "סביבת עבודה הוחלת, אך הכרטיסיות {{count}} דילגו עליהן מכיוון שהמארח שלהן כבר לא קיים: {{names}}",
+        "timeAgo": {
+          "seconds": "לפני {{count}}שניות",
+          "minutes": "לפני {{count}}דקות",
+          "hours": "{{count}}h ago",
+          "days": "{{count}}d ago"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "סביבות עבודה",
     "workflow_workspaces_desc": "שמור קבוצת כרטיסיות פתוחות ופתח מחדש את כל הפריסה מאוחר יותר."
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש בסביבות עבודה",
+      "description": "שמור, החל ונהל פריסות של כרטיסיות שנשמרו."
+    }
   },
   "hosts": {
     "docsLink": "הצג מסמכים"

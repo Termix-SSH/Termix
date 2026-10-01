@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Visualizza le flotte",
+      "description": "Visualizza le flotte, i loro membri e l'inventario."
+    },
+    "manage": {
+      "title": "Gestire le flotte",
+      "description": "Crea, modifica ed elimina flotte, cambia i membri e condividi le flotte con altri utenti o ruoli."
+    },
+    "execute": {
+      "title": "Esegui azioni della flotta",
+      "description": "Esegui comandi e azioni sui pacchetti su un'intera flotta e trasferisci file da e verso gli host membri."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -11,7 +25,7 @@
         "namePlaceholder": "ad esempio, server web",
         "nameRequired": "Il nome della flotta è obbligatorio",
         "descriptionLabel": "Descrizione",
-        "descriptionPlaceholder": "Descrizione facoltativa",
+        "descriptionPlaceholder": "Descrizione opzionale",
         "colorLabel": "Colore",
         "tagRulesLabel": "Regole dei tag",
         "tagRulesPlaceholder": "prod-web, edge",
@@ -65,21 +79,28 @@
         "inventoryRefreshed": "Inventario aggiornato",
         "inventoryRefreshFailed": "Impossibile aggiornare l'inventario",
         "inventoryNoData": "Nessun dato di inventario disponibile al momento: aggiorna la pagina per visualizzarlo.",
-        "inventoryHost": "Ospite",
+        "inventoryHost": "Host",
         "inventoryCollectedCount": "{{count}}/{{total}} raccolto",
-        "inventoryOs": "Sistema operativo",
+        "inventoryOs": "OS",
         "inventoryKernel": "Kernel",
         "inventoryArch": "Arco",
-        "inventoryUptime": "Tempo di attività",
+        "inventoryUptime": "Uptime",
         "inventoryPackageManager": "Responsabile del pacchetto",
         "inventoryCollectedAt": "Raccolto",
         "packageActionLabel": "Azione",
         "packageInstall": "Installare",
-        "packageRemove": "Rimuovere",
+        "packageRemove": "Rimuovi",
         "packageUpgradeAll": "Aggiorna tutti i pacchetti",
         "packageNameLabel": "Nome del pacchetto",
         "packageNameRequired": "È richiesto un nome per il pacchetto",
-        "packageHint": "Richiede l'accesso a livello di gestione per host ed eleva i privilegi utilizzando la password sudo memorizzata sull'host."
+        "packageHint": "Richiede l'accesso a livello di gestione per host ed eleva i privilegi utilizzando la password sudo memorizzata sull'host.",
+        "shareFleet": "Condividi la flotta",
+        "shareFleetTitle": "Condividi \"{{name}}\"",
+        "shareFleetDescription": "Condivide gli host attualmente membri di questa flotta con gli utenti o i ruoli selezionati. Gli host aggiunti alla flotta in un secondo momento non vengono condivisi automaticamente: è necessario ripetere la condivisione per includerli.",
+        "shareSelectionRequired": "Seleziona almeno un utente o un ruolo",
+        "fleetSharedSuccessfully": "Condiviso {{shared}} di {{total}} host(i) in questa flotta",
+        "failedToShareFleet": "Impossibile condividere la flotta",
+        "noMembersToShare": "Questa flotta non ha ancora host membri da condividere."
       }
     }
   },

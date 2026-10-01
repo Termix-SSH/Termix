@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "소스와 대상은 달라야 합니다.",
     "exportJSON": "JSON 내보내기",
     "importJSON": "JSON 가져오기",
-    "terminal": "터미널",
-    "fileManager": "파일 관리자",
-    "tunnel": "터널",
-    "docker": "Docker",
     "serverStats": "호스트 메트릭",
-    "hostMetrics": "호스트 메트릭",
     "noNodes": "아직 노드 없음"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}}개 노드"
+  },
+  "permissions": {
+    "use": {
+      "title": "네트워크 그래프를 사용하세요",
+      "description": "네트워크 토폴로지 그래프를 보고 편집할 수 있습니다."
+    }
   },
   "hosts": {
     "docsLink": "문서 보기"

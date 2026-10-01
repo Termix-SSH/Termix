@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Bron en teiken moet verskillend wees",
     "exportJSON": "Voer JSON uit",
     "importJSON": "Voer JSON in",
-    "terminal": "Terminaal",
-    "fileManager": "Lêerbestuurder",
-    "tunnel": "Tonnel",
-    "docker": "Docker",
     "serverStats": "Gasheermetrieke",
-    "hostMetrics": "Gasheermetrieke",
     "noNodes": "Geen nodusse nog nie"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} nodusse"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik netwerkgrafiek",
+      "description": "Bekyk en wysig die netwerktopologiegrafiek."
+    }
   },
   "hosts": {
     "docsLink": "Bekyk dokumente"

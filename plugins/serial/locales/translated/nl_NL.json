@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Serieel"
+  },
   "serial": {
     "title": "Serieel",
     "portLabel": "Haven",
@@ -22,8 +25,5 @@
     "notSupported": "Voor seriële verbindingen is een browser met Web Serial API-ondersteuning vereist (Chrome, Edge of Firefox 151+), of de Termix-desktopapp.",
     "hideHint": "Je kunt het tabblad 'Serienummer' verbergen via Gebruikersprofiel > Uiterlijk > Zijbalk > Navigatie.",
     "browserPickerHint": "Klik op Verbinden en uw browser opent een poortkiezer waarmee u het apparaat kunt selecteren."
-  },
-  "nav": {
-    "serial": "Serieel"
   }
 }

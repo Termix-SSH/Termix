@@ -4,10 +4,12 @@
   },
   "editor": {
     "label": "Paso CA",
-    "description": "Inicie sesión a través de su proveedor de identidad y permita que su CA de Step emita un certificado SSH de corta duración para este host. La URL de la CA, la huella digital raíz y el proveedor OIDC se configuran mediante un administrador en la sección de Configuración de administración.",
+    "description": "Inicie sesión a través de su proveedor de identidad y permita que Step CA emita un certificado SSH de corta duración para este host. La URL de la CA, la huella digital raíz y el proveedor OIDC los configura un administrador en la sección Step CA de la configuración de administración.",
     "docs": "Ver documentación"
   },
   "dialog": {
+    "title": "Se requiere autenticación de CA.",
+    "description": "Para continuar, complete la autenticación en su navegador. El certificado seguirá siendo válido mientras su autoridad de certificación lo permita.",
     "openBrowser": "Abrir navegador para autenticarse",
     "waiting": "Esperando autenticación en el navegador...",
     "authenticating": "Procesando autenticación..."
@@ -17,15 +19,30 @@
     "timeout": "La autenticación expiró. Inténtalo de nuevo."
   },
   "settings": {
+    "caUrl": {
+      "label": "URL de CA",
+      "description": "La URL HTTPS de su CA de Smallstep. Deje la URL de la CA, la huella digital y el aprovisionador vacíos para desactivar Step CA.",
+      "placeholder": "https://ca.internal:9000"
+    },
     "fingerprint": {
-      "label": "Huella digital de la raíz (SHA-256)"
+      "label": "Huella digital de la raíz (SHA-256)",
+      "description": "La huella digital del certificado raíz, como se muestra en el paso ca bootstrap."
     },
     "provisioner": {
-      "label": "nombre del proveedor OIDC"
+      "label": "nombre del proveedor OIDC",
+      "description": "Nombre del proveedor OIDC de la CA. A continuación, seleccione \"Step CA\" como tipo de autenticación del host."
     },
     "privateEndpoints": {
       "label": "Hosts de CA de paso privado permitidos",
-      "description": "Los hosts privados con los que puede contactar el flujo de certificados de Step CA son: la propia CA y, si es interna, su proveedor de identidad. Sepárelos con comas."
+      "description": "Los hosts privados con los que puede contactar el flujo de certificados de Step CA son: la propia CA y, si es interna, su proveedor de identidad. Sepárelos con comas o saltos de línea."
+    },
+    "redirectUri": {
+      "label": "URI de redirección",
+      "description": "Registre esta URL como una URI de redireccionamiento permitida con el proveedor de identidad que se encuentra detrás del aprovisionador OIDC."
+    },
+    "legacyCallback": {
+      "label": "Utilice la URI de redireccionamiento antigua",
+      "description": "Sigue enviando /host/step-ca-callback, la URI de redireccionamiento que se usaba antes de la versión 2.9. Desactívala una vez que tu proveedor de identidad permita la nueva."
     }
   }
 }

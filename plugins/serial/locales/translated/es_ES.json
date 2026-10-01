@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Serial"
+  },
   "serial": {
     "title": "Serial",
     "portLabel": "Puerto",
@@ -22,8 +25,5 @@
     "notSupported": "Las conexiones serie requieren un navegador compatible con Web Serial API (Chrome, Edge o Firefox 151+), o la aplicación de escritorio Termix.",
     "hideHint": "Puedes ocultar la pestaña Serial en Perfil de usuario > Apariencia > Barra lateral > Navegación.",
     "browserPickerHint": "Haz clic en Conectar y el navegador abrirá un selector de puertos para elegir el dispositivo."
-  },
-  "nav": {
-    "serial": "Serial"
   }
 }

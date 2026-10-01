@@ -41,7 +41,13 @@
         "lastSessionDescription": "Outomaties opgedateer met jou mees onlangse oortjie-rangskikking. Pas dit toe om te herstel wat jy oop gehad het.",
         "lastUsed": "Laas gebruik {{time}}",
         "neverUsed": "Nooit toegepas nie",
-        "tabsSkipped": "Werkruimte toegepas — {{count}} oortjie(s) oorgeslaan (gasheer bestaan nie meer nie): {{names}}"
+        "tabsSkipped": "Werkruimte toegepas, maar {{count}} oortjie(s) is oorgeslaan omdat hul gasheer nie meer bestaan nie: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s gelede",
+          "minutes": "{{count}}m gelede",
+          "hours": "{{count}}uur gelede",
+          "days": "{{count}}dae gelede"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Werkruimtes",
     "workflow_workspaces_desc": "Stoor 'n stel oop oortjies en heropen die hele uitleg later."
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik werkruimtes",
+      "description": "Stoor, pas toe en bestuur gestoorde oortjie-uitlegte."
+    }
   },
   "hosts": {
     "docsLink": "Bekyk dokumente"

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Métricas do Servidor"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Memória",
@@ -16,21 +19,21 @@
     "cpuUsage": "Utilização da CPU",
     "memoryUsage": "Utilização da memória",
     "diskUsage": "Utilização do disco",
-    "selectFilesystem": "Selecione o sistema de ficheiros",
+    "selectFilesystem": "Select filesystem",
     "temperature": "Temperatura",
     "highestTemperature": "Temperatura máxima",
-    "primaryTemperatureSensor": "Sensor primário",
+    "primaryTemperatureSensor": "Primary sensor",
     "gpu": {
       "title": "GPU",
-      "noDevice": "Nenhuma GPU NVIDIA detetada. Instale o controlador da NVIDIA (que fornece o nvidia-smi) para visualizar as métricas da GPU.",
-      "driver": "Motorista {{version}}",
-      "utilization": "Utilização",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
       "memory": "VRAM",
       "temperature": "Temp",
-      "power": "Poder",
-      "fan": "Fã",
-      "processes": "processos da GPU",
-      "noProcesses": "Nenhum processo está a utilizar a GPU."
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
     },
     "failedToFetchHostConfig": "Falha ao obter a configuração do servidor",
     "serverOffline": "Servidor offline",
@@ -160,7 +163,6 @@
       "firewallPersist": "Persistir regras",
       "firewallPersisted": "Regras de firewall persistidas",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "O WireGuard não está instalado neste host",
       "wgNoInterfaces": "Nenhuma interface WireGuard configurada",
       "wgInterfaceUp": "Ativar",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Último handshake",
       "wgHandshakeNever": "Nunca",
       "wgTransfer": "Transferência",
-      "tsNotInstalled": "O Tailscale não está instalado neste host",
-      "tsRunning": "A executar",
-      "tsStopped": "Parado",
-      "tsEnable": "Ligar",
-      "tsDisable": "Desligar",
-      "tsEnabling": "A ligar ao Tailscale...",
-      "tsDisabling": "A desligar do Tailscale...",
-      "tsEnabled": "Tailscale ligado",
-      "tsDisabled": "Tailscale desligado",
-      "tsIPs": "IPs do Tailscale",
-      "tsPeers": "Pares",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Nó de saída",
-      "tsExitNodeActive": "Nó de saída ativo",
-      "tsHostname": "Nome do host"
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "Aplicar",
     "viewHistory": "Ver Histórico"
   },
-  "nav": {
-    "hostMetrics": "Métricas do Servidor"
-  },
   "hosts": {
     "tabHostMetrics": "Métricas do Host",
     "metricsCollectionLabel": "Recolha de Métricas",
@@ -219,15 +203,15 @@
     "useGlobalMetricsDesc": "Substituir pelo intervalo de métricas global do servidor",
     "metricsIntervalS": "Intervalo de Métricas (s)",
     "metricsIntervalDesc2": "Segundos entre cada registo de métricas",
-    "excludedMountsLabel": "Suportes excluídos",
-    "monitoredMountsLabel": "Caminhos monitorizados personalizados",
-    "monitoredMountsDesc": "Adicione caminhos que não estejam expostos como montagens separadas, incluindo caminhos do Home Assistant montados através de bind, como /config.",
-    "monitoredMountPathPlaceholder": "Caminho (/config, /mnt/data)",
-    "monitoredMountLabelPlaceholder": "Rótulo (opcional)",
-    "addMonitoredMount": "Adicionar caminho",
-    "excludedMountsDesc": "Ocultar pontos de montagem ou tipos de sistema de ficheiros específicos (por exemplo, NFS, CIFS) da utilização do disco e dos alertas para este host.",
-    "excludedMountsPlaceholder": "Caminho de montagem (/mnt/nas) ou tipo de sistema de ficheiros (nfs, cifs)",
-    "excludedMountsEmpty": "Nenhuma montagem excluída. Todos os sistemas de ficheiros detetados são apresentados.",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Etiqueta (opcional)",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
     "addExcludedMount": "Adicionar",
     "visibleWidgets": "Widgets Visíveis",
     "widgetsMovedToHostMetrics": "Os cartões são agora adicionados, organizados e redimensionados diretamente no separador Métricas do Host. Abra as Métricas do Host para este host e use Personalizar para escolher quais os cartões a mostrar.",
@@ -235,8 +219,8 @@
     "loadingHost": "A carregar o host..."
   },
   "onboarding": {
-    "feature_metrics": "Métricas e alertas",
-    "feature_metrics_desc": "Monitorize a utilização de CPU, memória e disco ao longo do tempo e receba alertas quando apresentam problemas."
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
   },
   "admin": {
     "metricsHistoryRetention": "Retenção do histórico de métricas",
@@ -265,6 +249,9 @@
     "noHostSelected": "Nenhum anfitrião selecionado",
     "selectHost": "Selecionar um host..."
   },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Ligado"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

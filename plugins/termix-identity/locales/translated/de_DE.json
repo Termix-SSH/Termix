@@ -23,7 +23,7 @@
     "provisionLabel": "Server bereitstellen",
     "publishTitle": "Öffentlichen Schlüssel veröffentlichen",
     "generate": "Generieren",
-    "generateTooltip": "Ed25519-Schlüsselpaar generieren — veröffentlicht den öffentlichen Schlüssel und lädt den privaten Schlüssel auf Ihr Gerät herunter",
+    "generateTooltip": "Erzeugt ein Ed25519-Schlüsselpaar. Veröffentlicht den öffentlichen Schlüssel und lädt den privaten Schlüssel auf Ihr Gerät herunter.",
     "saveToVault": "In Anmeldeinformationen speichern",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Bezeichnung (optional)",
@@ -32,7 +32,7 @@
     "keyPublished": "Schlüssel veröffentlicht",
     "addKeyFailed": "Fehler beim Hinzufügen des Schlüssels",
     "generatedSaved": "Schlüsselpaar generiert und in Ihrem Anmeldeinformations-Tresor gespeichert. Privater Schlüssel ebenfalls heruntergeladen.",
-    "generatedOnly": "Schlüsselpaar generiert — privater Schlüssel heruntergeladen (wird nur einmal angezeigt).",
+    "generatedOnly": "Schlüsselpaar generiert. Privater Schlüssel heruntergeladen (wird nur einmal angezeigt).",
     "generateFailed": "Fehler beim Generieren des Schlüssels",
     "imported": "Schlüssel aus Anmeldeinformationen importiert",
     "importFailed": "Schlüsselimport fehlgeschlagen",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Vertrauen auf einem Server (als root ausführen)",
     "caRotate": "Rotieren",
     "caRotateConfirm": "CA rotieren? Alle von ihr signierten Zertifikate werden nicht mehr akzeptiert und müssen neu ausgestellt werden.",
-    "caRotated": "CA rotiert — vorherige Zertifikate widerrufen",
+    "caRotated": "Die Zertifizierungsstelle wurde gewechselt. Vorherige Zertifikate wurden widerrufen.",
     "caRotateFailed": "Rotieren der CA fehlgeschlagen",
     "caDelete": "CA entfernen",
     "caDeleteConfirm": "Zertifizierungsstelle entfernen?",
@@ -66,12 +66,21 @@
     "issueCert": "Zertifikat",
     "issueCertTooltip": "Ein SSH-Zertifikat für diesen Schlüssel ausstellen, signiert von Ihrer CA",
     "certIssued": "Zertifikat ausgestellt und heruntergeladen",
-    "certIssueFailed": "Ausstellung des Zertifikats fehlgeschlagen"
+    "certIssueFailed": "Ausstellung des Zertifikats fehlgeschlagen",
+    "docsLink": "Dokumentation ansehen",
+    "principalsLabel": "SSH-Prinzipale",
+    "principalsPlaceholder": "SSH-Prinzipal(e), z. B. root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
-    "idBadge": "AUSWEIS"
+    "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Termix-ID verwenden",
+      "description": "Sichern Sie sich einen öffentlichen Benutzernamen, veröffentlichen Sie SSH-Schlüssel und betreiben Sie eine Zertifizierungsstelle."
+    }
   }
 }

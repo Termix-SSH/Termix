@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Vågne",
+    "sent": "Wake-on-LAN-pakke sendt",
+    "failed": "Kunne ikke sende Wake-on-LAN-pakken"
+  },
+  "permissions": {
+    "send": {
+      "title": "Send Wake-on-LAN-pakker",
+      "description": "Væk en vært ved at sende en magisk pakke til dens MAC-adresse."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "MAC-adresse",
+        "description": "Værtens netværks MAC-adresse, der bruges til at sende Wake-on-LAN-pakker.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Udsendelsesadresse",
+        "description": "Subnet-udsendelsesadressen, som pakken skal sendes til. Lad feltet 255.255.255.255 stå tomt.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Cerca usuaris...",
     "noUsersFound": "No s'han trobat usuaris",
     "linkCreated": "Enllaç de compartició creat",
+    "linkNeedsServer": "Els enllaços per compartir només funcionen per a sessions en un servidor Termix. Connecteu aquest amfitrió a través del vostre servidor enllaçat per compartir-lo amb un enllaç.",
     "linkCopied": "Enllaç copiat al porta-retalls",
     "copyLink": "Copia l'enllaç",
     "shareCreated": "Sessió compartida. Apareixerà a la pestanya Connexions.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Enllaç",
     "userShareBadge": "Usuari: {{username}}",
     "loadSharesFailed": "No s'han pogut carregar les comparticions actives",
+    "remoteDisplayUnavailable": "L'escriptori remot no està disponible ara mateix.",
+    "sharedWithMe": "Sessions compartides amb mi",
     "customHoursPlaceholder": "Hores fins que caduca l'accés"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Membres",
     "membersPanel": "Membres de la sala i sol·licituds de control",
     "membersWithCount": "Membres ({{count}})",
+    "guestsWithCount": "Convidats ({{count}})",
+    "removeGuests": "Elimina els convidats",
+    "anonymousGuest": "Convidat",
     "online": "en línia",
     "offline": "fora de línia",
     "you": "(tu)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Aquest enllaç de convidat no és vàlid o la reunió ha finalitzat."
     },
     "reopenFromPanel": "Aquesta pestanya de reunió ha caducat. Torna a obrir la sala des del tauler Reunions.",
+    "retry": "Torna-ho a intentar",
     "requestControl": "Sol·licitud de control",
     "cancelControlRequest": "Cancel·la la sol·licitud",
     "controlQueue": "Sol·licituds de control",
@@ -130,7 +137,10 @@
     "youArePresenting": "Esteu presentant en una altra pestanya. Deixeu de presentar per cedir l'escenari.",
     "created": "Sala creada",
     "invited": "Membres convidats",
-    "roomTab": "Reunió"
+    "roomTab": "Reunió",
+    "serverChanged": "El servidor de reunions ha canviat. Torna a obrir aquesta reunió des del tauler Reunions.",
+    "hostNotSynced": "Sincronitza aquest amfitrió amb el servidor de reunions abans de presentar.",
+    "linkRequiresServer": "Enllaça aquest escriptori a un servidor de Termix i crea-hi la reunió per compartir un enllaç web."
   },
   "nav": {
     "collab": "Reunions"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Comparteix sessions i uneix-te a sales",
+      "description": "Comparteix sessions en directe mitjançant un enllaç o amb altres usuaris, i crea sales de col·laboració i uneix-te-hi."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Personalitzat"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Compartit amb mi",
+    "sharedBy": "Compartit per {{username}}",
+    "join": "Uneix-te",
+    "sharedSessionLabel": "{{hostName}} (compartit)"
   }
 }

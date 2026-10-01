@@ -21,6 +21,11 @@
     "ports": "Porturi",
     "noPorts": "Fără porturi",
     "start": "Început",
+    "stop": "Stop",
+    "status": "Stare",
+    "actions": "Acțiuni",
+    "cardView": "Vizualizare card",
+    "listView": "Vizualizare listă",
     "confirmRemoveContainer": "Sigur doriți să eliminați containerul „{{name}}”? Această acțiune nu poate fi anulată.",
     "runningContainerWarning": "Avertisment: Acest container rulează în prezent. Eliminarea sa va opri mai întâi containerul.",
     "loadingContainers": "Se încarcă containerele...",
@@ -41,7 +46,7 @@
     "noLogsMatching": "Niciun jurnal care să corespundă cu „{{query}}”",
     "noLogsAvailable": "Nu sunt disponibile jurnale",
     "noContainersFound": "Nu s-au găsit containere",
-    "noContainersFoundHint": "Nu există containere Docker disponibile pe această gazdă.",
+    "noContainersFoundHint": "Nu există containere Docker disponibile pe această gazdă",
     "searchPlaceholder": "Căutați containere...",
     "allStatuses": "Toate stările",
     "stateRunning": "Funcţionare",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Containerul trebuie să ruleze pentru a accesa consola.",
     "verificationCodePrompt": "Introduceți codul de verificare",
     "totpVerificationFailed": "Verificarea TOTP a eșuat. Vă rugăm să încercați din nou.",
+    "browserSignInFailed": "Conectarea a eșuat. Vă rugăm să încercați din nou.",
     "connectedTo": "Conectat la {{containerName}}",
     "disconnected": "Deconectat",
     "consoleError": "Eroare consolă",
@@ -93,7 +99,10 @@
     "logs": "Jurnalele",
     "stats": "Statistici",
     "consoleTab": "Consolă",
-    "startContainerToAccess": "Porniți containerul pentru a accesa consola"
+    "startContainerToAccess": "Porniți containerul pentru a accesa consola",
+    "noHostSelected": "Nicio gazdă selectată",
+    "failedToFetchLogs": "Nu s-au putut prelua jurnalele: {{error}}",
+    "failedToDownloadLogs": "Descărcarea jurnalelor a eșuat: {{error}}"
   },
   "nav": {
     "docker": "Docher"
@@ -102,10 +111,22 @@
     "feature_docker": "Docher",
     "feature_docker_desc": "Vizualizați containere, citiți jurnale și urmăriți statistici pe orice gazdă care rulează Docker."
   },
+  "terminal": {
+    "retry": "Reîncercați",
+    "clipboardReadFailed": "Citirea din clipboard nu a reușit. Asigurați-vă că permisiunile de acces la clipboard sunt acordate.",
+    "clipboardWriteFailed": "Copierea în clipboard nu a reușit. Asigurați-vă că pagina este servită prin HTTPS sau localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește Docker",
+      "description": "Deschideți managerul Docker și consolele containerelor pe gazdele cu Docker activat."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Activează Docker"
+        "label": "Activează Docker",
+        "description": "Gestionați containerele de pe această gazdă."
       },
       "containerRuntime": {
         "label": "Runtime de container",
@@ -122,9 +143,5 @@
     "docsLink": "Vizualizați documentele",
     "hostNotFound": "Gazdă negăsită",
     "loadingHost": "Se încarcă gazda..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Citirea din clipboard nu a reușit. Asigurați-vă că permisiunile de acces la clipboard sunt acordate.",
-    "clipboardWriteFailed": "Copierea în clipboard nu a reușit. Asigurați-vă că pagina este servită prin HTTPS sau localhost."
   }
 }

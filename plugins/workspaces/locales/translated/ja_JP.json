@@ -25,13 +25,13 @@
         "noWorkspaces": "まだワークスペースが保存されていません。まずは現在のタブの配置を保存してください。",
         "tabCount": "{{count}} タブ",
         "tabCount_other": "{{count}} タブ",
-        "apply": "適用する",
+        "apply": "適用",
         "applyConfirmTitle": "ワークスペースを適用する",
         "applyConfirmDescription": "\"{{name}}\" を適用すると、現在のタブが閉じられ、このワークスペースに保存されているレイアウトに置き換えられます。現在のレイアウトに対する未保存の変更は失われます。",
         "applyConfirmButton": "ワークスペースを適用する",
         "updateWithCurrent": "最新情報に更新",
         "updateWithCurrentConfirm": "「{{name}}」を現在のタブ配列で上書きしますか？",
-        "rename": "名前を変更する",
+        "rename": "名前変更",
         "duplicate": "重複",
         "duplicateNameSuffix": "{{name}} (コピー)",
         "setDefault": "デフォルトとして設定",
@@ -41,7 +41,13 @@
         "lastSessionDescription": "最新のタブ配置に合わせて自動的に更新されます。適用すると、以前開いていたウィンドウが復元されます。",
         "lastUsed": "最後に使用されたのは {{time}} です。",
         "neverUsed": "一度も応募したことがない",
-        "tabsSkipped": "ワークスペースが適用されました — {{count}} タブがスキップされました (ホストが存在しなくなりました): {{names}}"
+        "tabsSkipped": "ワークスペースは適用されましたが、ホストが存在しなくなったため、 {{count}} 個のタブがスキップされました: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}秒前",
+          "minutes": "{{count}}分前",
+          "hours": "{{count}}時間前",
+          "days": "{{count}}日前"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "ワークスペース",
     "workflow_workspaces_desc": "開いているタブのセットを保存し、後でレイアウト全体を再度開くことができます。"
+  },
+  "permissions": {
+    "use": {
+      "title": "ワークスペースを使用する",
+      "description": "保存したタブレイアウトを保存、適用、管理できます。"
+    }
   },
   "hosts": {
     "docsLink": "ドキュメントを表示"

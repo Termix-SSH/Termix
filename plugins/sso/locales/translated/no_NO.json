@@ -1,41 +1,65 @@
 {
-  "loginWithProvider": "Logg inn med {{name}}",
-  "loading": "Laster inn...",
+  "loginWithSso": "Sign in with SSO",
+  "loginWithProvider": "Login with {{name}}",
+  "loading": "Laster...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
   "providers": {
-    "docsLink": "Vis dokumenter",
-    "none": "Ingen SSO-leverandører er konfigurert.",
-    "add": "Legg til leverandør",
-    "edit": "Rediger leverandør",
-    "delete": "Slett leverandør",
-    "deleteConfirm": "Vil du slette denne leverandøren? Tilknyttede brukere vil ikke kunne logge inn.",
-    "name": "Visningsnavn",
-    "type": "Leverandørtype",
+    "docsLink": "View docs",
+    "none": "No SSO providers configured.",
+    "add": "Add Provider",
+    "edit": "Edit Provider",
+    "delete": "Delete Provider",
+    "deleteConfirm": "Delete this provider? Associated users will be unable to login.",
+    "name": "Display Name",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
+    "type": "Provider Type",
     "enabled": "Aktivert",
-    "save": "Lagre leverandør",
+    "save": "Save Provider",
     "saving": "Lagrer...",
-    "saved": "Lagret",
+    "saved": "Saved",
     "saveFailed": "Kunne ikke lagre",
-    "deleted": "Slettet",
+    "deleted": "Deleted",
     "deleteFailed": "Kunne ikke slette",
-    "cancel": "Kansellere"
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "Avbryt",
+    "copy": "Kopier",
+    "copied": "Copied",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
   },
   "fields": {
     "clientId": "Klient-ID",
     "clientSecret": "Klienthemmelighet",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
     "issuerUrl": "Utsteder-URL",
     "authUrl": "Autorisasjons-URL",
     "tokenUrl": "Token-URL",
-    "userIdentifier": "Brukeridentifikatorsti",
+    "userIdentifier": "Sti til brukeridentifikator",
     "displayName": "Sti til visningsnavn",
-    "scopes": "Omfang",
-    "userinfoUrl": "Overstyr brukerinfo-URL",
-    "groupClaim": "Gruppekrav",
-    "groupClaimDesc": "Valgfritt. Kravbanen som inneholder brukerens grupper. Standardinnstillingen er grupper, roller og deretter gruppe. Bruk dette for leverandører med et tilpasset krav (f.eks. Zitadel).",
-    "allowedUsers": "Tillatte brukere",
-    "allowedUsersDesc": "Én e-post per linje. La stå tomt for å tillate alle.",
-    "adminGroup": "Admingruppe",
-    "adminGroupDesc": "Brukere i denne gruppen har administratorrettigheter. La feltet stå tomt for å deaktivere gruppesynkronisering.",
-    "caCert": "Tilpasset CA-sertifikat",
-    "caCertDesc": "Valgfritt. PEM-kodet CA-sertifikat for OIDC-leverandører som bruker en privat eller selvsignert CA. La stå tomt for å bruke systemets klareringslager."
+    "scopes": "Scopes",
+    "userinfoUrl": "Override Userinfo URL",
+    "groupClaim": "Group Claim",
+    "groupClaimDesc": "Optional. The claim path that contains the user's groups. Defaults to groups, roles, then group. Use this for providers with a custom claim (e.g. Zitadel).",
+    "allowedUsers": "Allowed Users",
+    "allowedUsersDesc": "One email per line. Leave empty to allow all.",
+    "adminGroup": "Admin Group",
+    "adminGroupDesc": "Users in this group are granted admin. Leave empty to disable group sync.",
+    "caCert": "Custom CA Certificate",
+    "caCertDesc": "Optional. PEM-encoded CA certificate for OIDC providers using a private or self-signed CA. Leave empty to use the system trust store."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
   }
 }

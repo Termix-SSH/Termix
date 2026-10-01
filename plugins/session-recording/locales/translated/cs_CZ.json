@@ -3,8 +3,31 @@
     "sessionLogs": "Protokoly relací"
   },
   "hosts": {
-    "enableSessionRecording": "Protokolování relací",
+    "enableSessionRecording": "Nahrávání relace",
     "enableSessionRecordingDesc": "Zaznamenejte výstup terminálové relace pro pozdější kontrolu"
+  },
+  "permissions": {
+    "view": {
+      "title": "Zobrazit záznamy relací",
+      "description": "Prohlížejte a přehrávejte si vlastní nahrávky z relací."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retenční doba (dny)",
+        "description": "Jak dlouho je záznam relace uchováván, než je automaticky smazán."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Povolit nahrávání relace",
+        "description": "Nahrajte výstup terminálu pro tento hostitel, abyste si ho mohli později přehrát nebo stáhnout."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Záznam"
   },
   "sessionLogs": {
     "title": "Protokoly relací",
@@ -21,6 +44,17 @@
     "copied": "Zkopírováno!",
     "loadError": "Nepodařilo se načíst protokoly relací",
     "deleteError": "Nepodařilo se smazat protokol relace",
-    "filterByHost": "Filtrovat podle hostitele..."
+    "filterByHost": "Filtrovat podle hostitele...",
+    "back": "Zadní",
+    "empty": "(prázdný)",
+    "noResults": "Žádné výsledky pro výraz „{{query}}“",
+    "hostFallback": "Hostitel {{id}}",
+    "sessionFallback": "Relace {{id}}"
+  },
+  "player": {
+    "timeline": "Časová osa nahrávání",
+    "speed": "Rychlost přehrávání",
+    "play": "Přehrát nahrávku",
+    "pause": "Pozastavit nahrávání"
   }
 }

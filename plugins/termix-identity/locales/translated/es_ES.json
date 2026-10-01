@@ -23,7 +23,7 @@
     "provisionLabel": "Aprovisionar un servidor",
     "publishTitle": "Publicar una clave pública",
     "generate": "Generar",
-    "generateTooltip": "Generar un par de claves Ed25519: publica la clave pública y descarga la clave privada en tu dispositivo",
+    "generateTooltip": "Genera un par de claves Ed25519. Publica la clave pública y descarga la clave privada en tu dispositivo.",
     "saveToVault": "Guardar en credenciales",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Etiqueta (opcional)",
@@ -32,7 +32,7 @@
     "keyPublished": "Clave publicada",
     "addKeyFailed": "Error al añadir clave",
     "generatedSaved": "Par de claves generado y guardado en tu almacén de credenciales. También se descargó la clave privada.",
-    "generatedOnly": "Par de claves generado: clave privada descargada (se muestra solo una vez).",
+    "generatedOnly": "Par de claves generado. Clave privada descargada (se muestra solo una vez).",
     "generateFailed": "Error al generar clave",
     "imported": "Clave importada desde la credencial",
     "importFailed": "Error al importar la clave",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Confiar en un servidor (ejecutar como root)",
     "caRotate": "Rotar",
     "caRotateConfirm": "¿Rotar la CA? Todos los certificados que ha firmado dejarán de ser aceptados y deberán volver a emitirse.",
-    "caRotated": "CA rotada — certificados anteriores revocados",
+    "caRotated": "Se ha rotado la autoridad de certificación. Se han revocado los certificados anteriores.",
     "caRotateFailed": "Error al rotar la CA",
     "caDelete": "Eliminar CA",
     "caDeleteConfirm": "¿Eliminar la autoridad de certificación?",
@@ -66,12 +66,21 @@
     "issueCert": "Certificado",
     "issueCertTooltip": "Emitir un certificado SSH para esta clave, firmado por su CA",
     "certIssued": "Certificado emitido y descargado",
-    "certIssueFailed": "Error al emitir el certificado"
+    "certIssueFailed": "Error al emitir el certificado",
+    "docsLink": "Ver documentación",
+    "principalsLabel": "Principios de SSH",
+    "principalsPlaceholder": "Entidad principal de SSH, por ejemplo, root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
-    "idBadge": "IDENTIFICACIÓN"
+    "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilice el ID de Termix.",
+      "description": "Reclama un identificador público, publica claves SSH y gestiona una autoridad de certificación."
+    }
   }
 }

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Værtsmålinger"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Hukommelse",
@@ -160,7 +163,6 @@
       "firewallPersist": "Vedvarende regler",
       "firewallPersisted": "Firewallregler bevares",
       "wireguard": "WireGuard",
-      "tailscale": "Haleskala",
       "wgNotInstalled": "WireGuard er ikke installeret på denne vært",
       "wgNoInterfaces": "Ingen WireGuard-grænseflader konfigureret",
       "wgInterfaceUp": "Bring op",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Sidste håndtryk",
       "wgHandshakeNever": "Aldrig",
       "wgTransfer": "Overførsel",
-      "tsNotInstalled": "Tailscale er ikke installeret på denne vært",
-      "tsRunning": "Løb",
-      "tsStopped": "Stoppet",
-      "tsEnable": "Forbinde",
-      "tsDisable": "Afbryde",
-      "tsEnabling": "Forbinder til Tailscale...",
-      "tsDisabling": "Afbryder forbindelsen til Tailscale...",
-      "tsEnabled": "Haleskala forbundet",
-      "tsDisabled": "Haleskalaen er afbrudt",
-      "tsIPs": "Haleskalerings-IP'er",
-      "tsPeers": "Peers",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Udgangsnode",
-      "tsExitNodeActive": "Afslut node aktiv",
-      "tsHostname": "Værtsnavn"
+      "wgNoPeers": "Ingen ligemænd"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "til",
     "apply": "Anvende",
     "viewHistory": "Vis historik"
-  },
-  "nav": {
-    "hostMetrics": "Værtsmålinger"
   },
   "hosts": {
     "tabHostMetrics": "Værtsmålinger",
@@ -265,6 +249,9 @@
     "noHostSelected": "Ingen vært valgt",
     "selectHost": "Vælg en vært..."
   },
+  "terminalStatus": {
+    "unavailable": "Livestatistik ikke tilgængelig"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "VÆDDER"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Forbundet"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug værtsmålinger",
+      "description": "Se værtsmålinger og brug værtsadministratorerne (tjenester, pakker, firewall og mere) på værter, du kan nå."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Måleinterval (sekunder)",
+        "description": "Hvor ofte en vært, der vises, samples, medmindre værten angiver sit eget interval."
+      },
+      "historyRetentionDays": {
+        "label": "Historikopbevaring (dage)",
+        "description": "Hvor længe metrikker gemmes til historikdiagrammerne."
+      },
+      "enabledForNewHosts": {
+        "label": "Målinger aktiveret for nye værter",
+        "description": "Om nye værter starter med indsamling af metrics aktiveret."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperaturenhed",
+        "description": "Hvordan temperaturer vises i Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Indsaml målinger"
+      },
+      "metricsInterval": {
+        "label": "Måleinterval (sekunder)"
+      },
+      "enabledWidgets": {
+        "label": "Aktiverede widgets"
+      },
+      "excludedMounts": {
+        "label": "Ekskluderede monteringer"
+      },
+      "monitoredMounts": {
+        "label": "Overvågede stier"
+      }
+    }
   }
 }

@@ -23,7 +23,7 @@
     "provisionLabel": "Szerver kiépítése",
     "publishTitle": "Nyilvános kulcs közzététele",
     "generate": "Generálás",
-    "generateTooltip": "Ed25519 kulcspár generálása — közzéteszi a nyilvános kulcsot és letölti a privát kulcsot az eszközére",
+    "generateTooltip": "Ed25519 kulcspár generálása. A nyilvános kulcs közzététele és a privát kulcs letöltése az eszközre.",
     "saveToVault": "Hitelesítő adatok mentése",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... felhasználó@hoszt",
     "labelPlaceholder": "Címke (opcionális)",
@@ -32,7 +32,7 @@
     "keyPublished": "Kulcs közzétéve",
     "addKeyFailed": "Nem sikerült hozzáadni a kulcsot",
     "generatedSaved": "Kulcspár generálva és mentve a hitelesítő adatok tárolására szolgáló tárolóba. A privát kulcs is letöltődött.",
-    "generatedOnly": "Kulcspár generálva — privát kulcs letöltve (csak egyszer jelenik meg).",
+    "generatedOnly": "Kulcspár generálva. Privát kulcs letöltve (csak egyszer jelenik meg).",
     "generateFailed": "Nem sikerült kulcsot generálni",
     "imported": "Kulcs importálva a hitelesítő adatokból",
     "importFailed": "Nem sikerült importálni a kulcsot",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Megbízhatóság egy szerveren (root felhasználóként futtatva)",
     "caRotate": "Forog",
     "caRotateConfirm": "Lecseréli a hitelesítésszolgáltatót? Az általa aláírt tanúsítványok elfogadása megszűnik, és újra kell kiállítani őket.",
-    "caRotated": "CA lecserélve – korábbi tanúsítványok visszavonva",
+    "caRotated": "A hitelesítésszolgáltató lecserélve. Korábbi tanúsítványok visszavonva.",
     "caRotateFailed": "Nem sikerült elforgatni a CA-t",
     "caDelete": "CA eltávolítása",
     "caDeleteConfirm": "Eltávolítja a hitelesítésszolgáltatót?",
@@ -66,12 +66,21 @@
     "issueCert": "Bizonyítvány",
     "issueCertTooltip": "Állítson ki egy SSH tanúsítványt ehhez a kulcshoz, amelyet a hitelesítésszolgáltató aláírt",
     "certIssued": "Kiállított és letöltött tanúsítvány",
-    "certIssueFailed": "Nem sikerült kiállítani a tanúsítványt"
+    "certIssueFailed": "Nem sikerült kiállítani a tanúsítványt",
+    "docsLink": "Dokumentumok megtekintése",
+    "principalsLabel": "SSH-megbízhatóak",
+    "principalsPlaceholder": "SSH azonosító(k), pl. root"
   },
   "nav": {
     "termixId": "azonosító"
   },
   "credentials": {
     "idBadge": "azonosító"
+  },
+  "permissions": {
+    "use": {
+      "title": "Termix azonosító használata",
+      "description": "Igényelj egy nyilvános azonosítót, tedd közzé az SSH kulcsokat és futtass egy hitelesítésszolgáltatót."
+    }
   }
 }

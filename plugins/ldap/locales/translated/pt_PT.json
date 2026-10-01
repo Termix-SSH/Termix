@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "Sign in with LDAP",
   "loginWithProvider": "Iniciar sessão com {{name}}",
   "loading": "A carregar...",
   "requiredField": "Este campo é obrigatório",
   "username": "Nome de utilizador LDAP",
   "password": "Palavra-passe LDAP",
   "signIn": "Iniciar sessão",
+  "permissions": {
+    "manage": {
+      "title": "Manage LDAP directories",
+      "description": "Add, change and remove the LDAP directories people can sign in with."
+    }
+  },
   "providers": {
     "docsLink": "Ver docs",
-    "name": "Nome de apresentação",
+    "none": "No LDAP directories configured.",
+    "add": "Add Directory",
+    "edit": "Edit Directory",
+    "delete": "Delete Directory",
+    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "name": "Nome de exibição",
+    "namePlaceholder": "Company directory",
+    "nameRequired": "A display name is required",
     "enabled": "Ativado",
+    "save": "Save Directory",
     "saving": "A guardar...",
     "saved": "Guardado",
     "saveFailed": "Falha ao guardar",
     "deleted": "Eliminado",
     "deleteFailed": "Falha ao eliminar",
+    "loadFailed": "Failed to load LDAP directories",
     "cancel": "Cancelar"
   },
   "fields": {
@@ -22,12 +38,13 @@
     "useTls": "Usar TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Palavra-passe de Bind",
+    "secretKeep": "A password is saved. Leave this empty to keep it.",
     "userSearchBase": "Base de pesquisa de utilizadores",
     "userSearchFilter": "Filtro de pesquisa de utilizadores",
     "usernameAttr": "Atributo de nome de utilizador",
     "displayNameAttr": "Atributo de nome de apresentação",
     "groupSearchBase": "Base de pesquisa de grupos",
-    "adminGroup": "Grupo de administradores",
+    "adminGroup": "Grupo de administração",
     "allowedUsers": "Utilizadores permitidos"
   }
 }

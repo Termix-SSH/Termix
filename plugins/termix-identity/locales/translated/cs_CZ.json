@@ -23,7 +23,7 @@
     "provisionLabel": "Zřízení serveru",
     "publishTitle": "Publikovat veřejný klíč",
     "generate": "Generovat",
-    "generateTooltip": "Generování páru klíčů Ed25519 – publikuje veřejný klíč a stáhne soukromý klíč do vašeho zařízení",
+    "generateTooltip": "Vygeneruje pár klíčů Ed25519. Publikuje veřejný klíč a stáhne soukromý klíč do vašeho zařízení.",
     "saveToVault": "Uložit do přihlašovacích údajů",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... uživatel@hostitel",
     "labelPlaceholder": "Štítek (volitelné)",
@@ -32,7 +32,7 @@
     "keyPublished": "Klíč zveřejněn",
     "addKeyFailed": "Přidání klíče se nezdařilo",
     "generatedSaved": "Pár klíčů byl vygenerován a uložen do úložiště vašich přihlašovacích údajů. Soukromý klíč byl také stažen.",
-    "generatedOnly": "Vygenerovaný pár klíčů — stažený soukromý klíč (zobrazí se pouze jednou).",
+    "generatedOnly": "Vygenerován pár klíčů. Soukromý klíč stažen (zobrazen pouze jednou).",
     "generateFailed": "Nepodařilo se vygenerovat klíč",
     "imported": "Klíč importován z přihlašovacích údajů",
     "importFailed": "Import klíče se nezdařilo",
@@ -56,22 +56,31 @@
     "caTrustLabel": "Důvěra na serveru (spuštěno jako root)",
     "caRotate": "Střídat",
     "caRotateConfirm": "Rotovat certifikační autoritu? Každý certifikát, který podepsala, přestane být akceptován a bude nutné jej znovu vydat.",
-    "caRotated": "CA rotována – předchozí certifikáty zrušeny",
+    "caRotated": "CA rotována. Předchozí certifikáty zrušeny.",
     "caRotateFailed": "Nepodařilo se otočit CA",
     "caDelete": "Odebrat certifikační autoritu (CA)",
     "caDeleteConfirm": "Odebrat certifikační autoritu?",
     "caDeleted": "CA odstraněna",
-    "caDeleteFailed": "Nepodařilo se odebrat certifikační autoritu (CA).",
+    "caDeleteFailed": "Nepodařilo se odstranit certifikační autoritu (CA).",
     "caValidityLabel": "Platnost certifikátu (dny)",
     "issueCert": "Osvědčení",
     "issueCertTooltip": "Vystavte pro tento klíč SSH certifikát podepsaný vaší certifikační autoritou.",
     "certIssued": "Certifikát vydán a stažen",
-    "certIssueFailed": "Vydání certifikátu se nezdařilo"
+    "certIssueFailed": "Vydání certifikátu se nezdařilo",
+    "docsLink": "Zobrazit dokumenty",
+    "principalsLabel": "SSH principy",
+    "principalsPlaceholder": "SSH principál(i), např. root"
   },
   "nav": {
     "termixId": "Průkaz totožnosti"
   },
   "credentials": {
     "idBadge": "Průkaz totožnosti"
+  },
+  "permissions": {
+    "use": {
+      "title": "Použít Termix ID",
+      "description": "Získejte veřejný handle, publikujte SSH klíče a spusťte certifikační autoritu."
+    }
   }
 }

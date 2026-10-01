@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux монитор"
-  },
   "hosts": {
     "enableTmuxMonitor": "Активиране на Tmux монитор",
     "enableTmuxMonitorDesc": "Показване на този хост в Tmux монитора и добавяне на неговите tmux действия към страничната лента",
+    "tabTmuxMonitor": "Tmux монитор",
     "docsLink": "Преглед на документи"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux монитор"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux монитор",
+    "tmuxMonitorDesc": "Следете tmux сесиите на вашите хостове"
+  },
+  "permissions": {
+    "use": {
+      "title": "Използвайте Tmux монитор",
+      "description": "Преглеждайте и контролирайте tmux сесии, прозорци и панели на хостове с активиран монитор."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Активиране на Tmux монитор",
+        "description": "Гледайте и се прикачете към tmux сесии, изпълнявани на този хост."
+      },
+      "mouseEnabled": {
+        "label": "Активиране на поддръжката на мишката от tmux",
+        "description": "Прилагайте поддръжка на мишка към tmux сесията при прикачване или създаване на сесия. Другите сесии и глобалните tmux настройки остават непроменени."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux монитор",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Преименуването на сесията не бе успешно",
     "editTagsTitle": "Редактиране на етикети за „{{name}}“",
     "killPane": "Панелът за убиване",
-    "resizeTree": "Плъзнете, за да промените размера — щракнете двукратно, за да нулирате",
+    "resizeTree": "Плъзнете, за да промените размера, щракнете двукратно, за да нулирате",
     "reattach": "Повторно прикрепване (коригира неправилен изглед)",
     "killWindow": "Прозорец за затваряне",
     "killWindowTitle": "Да завършим ли прозореца {{index}} от \"{{session}}\"?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Неуспешно прекратяване на сесията",
     "hostUnreachable": "Не можах да се свържа с хоста. Проверете дали е онлайн и достъпен.",
     "noServer": "На този хост не работи tmux сървър.",
-    "searchTruncated": "Частични резултати — търсенето обхваща последните {{lines}} реда от всеки панел и най-много {{panes}} панела.",
+    "searchTruncated": "Частични резултати. Търсенето обхваща последните {{lines}} реда от всеки панел и най-много {{panes}} панела.",
     "closeSearchResults": "Затвори резултатите от търсенето",
     "retry": "Опитай отново",
     "noHosts": "Няма налични SSH хостове",
-    "noHostsHint": "Активирайте опцията Tmux Monitor на SSH хост (Host Manager → раздел Terminal), за да наблюдавате неговите tmux сесии.",
+    "noHostsHint": "Активирайте опцията Tmux Monitor на SSH хост (Host Manager, раздел Tmux Monitor), за да наблюдавате неговите tmux сесии.",
     "tmuxInstallHint": "Инсталирайте го на хоста с:",
     "attachTooltip": "Отворете терминал до {{host}}",
-    "attachTooltipPane": "Отворете терминал към {{host}} — tmux сесия {{session}}",
+    "attachTooltipPane": "Отворете терминал към {{host}}, tmux сесия {{session}}",
     "timeJustNow": "точно сега",
     "timeMinutes": "преди {{count}}мин.",
     "timeHours": "преди {{count}}ч",
-    "timeDays": "преди {{count}}дни"
+    "timeDays": "преди {{count}}дни",
+    "allHosts": "Всички хостове",
+    "singleHost": "Единичен хост",
+    "hostScope": "Обхват на монитора",
+    "filterHosts": "Филтриране на хостове по име или адрес",
+    "selectHost": "Изберете хост",
+    "toggleHost": "Разгъване или свиване {{host}}",
+    "noMatchingHosts": "Няма съответстващи хостове",
+    "toggleSession": "Разгъване или свиване {{session}}"
   }
 }

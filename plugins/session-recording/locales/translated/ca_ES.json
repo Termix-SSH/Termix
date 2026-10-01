@@ -3,8 +3,31 @@
     "sessionLogs": "Registres de sessió"
   },
   "hosts": {
-    "enableSessionRecording": "Registre de sessions",
+    "enableSessionRecording": "Gravació de sessions",
     "enableSessionRecordingDesc": "Enregistra la sortida de la sessió de terminal per a una revisió posterior"
+  },
+  "permissions": {
+    "view": {
+      "title": "Veure enregistraments de sessions",
+      "description": "Veure i reproduir els enregistraments de les teves pròpies sessions."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retenció (dies)",
+        "description": "Quant de temps es conserva una gravació de sessió abans que s'elimini automàticament."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Activa l'enregistrament de la sessió",
+        "description": "Enregistra la sortida del terminal per a aquest host per poder reproduir-la o descarregar-la més tard."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Enregistrament"
   },
   "sessionLogs": {
     "title": "Registres de sessió",
@@ -21,6 +44,17 @@
     "copied": "Copiat!",
     "loadError": "No s'han pogut carregar els registres de sessió",
     "deleteError": "No s'ha pogut suprimir el registre de sessió",
-    "filterByHost": "Filtra per amfitrió..."
+    "filterByHost": "Filtra per amfitrió...",
+    "back": "Enrere",
+    "empty": "(buit)",
+    "noResults": "No hi ha resultats per a \"{{query}}\"",
+    "hostFallback": "Amfitrió {{id}}",
+    "sessionFallback": "Sessió {{id}}"
+  },
+  "player": {
+    "timeline": "Cronologia de gravació",
+    "speed": "Velocitat de reproducció",
+    "play": "Reprodueix la gravació",
+    "pause": "Pausa l'enregistrament"
   }
 }

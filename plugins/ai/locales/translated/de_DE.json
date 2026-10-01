@@ -1,11 +1,53 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Nutzen Sie den Assistenten",
+      "description": "Öffne den Assistenten und stelle ihm Fragen."
+    },
+    "manage_providers": {
+      "title": "Anbieter verwalten",
+      "description": "KI-Anbieter und ihre API-Schlüssel hinzufügen, bearbeiten und entfernen."
+    },
+    "apply_proposals": {
+      "title": "Vorschläge einreichen",
+      "description": "Lassen Sie den Assistenten die von ihm vorgeschlagenen Änderungen durchführen."
+    },
+    "services.use": {
+      "title": "Nutzen Sie KI aus anderen Funktionen",
+      "description": "Andere Funktionen rufen möglicherweise in Ihrem Namen den Assistenten auf."
+    },
+    "secrets.share": {
+      "title": "Teilen Sie den API-Schlüssel",
+      "description": "Andere Funktionen verwenden möglicherweise den gespeicherten KI-API-Schlüssel, ohne ihn anzuzeigen."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "Der KI-Assistent ist auf diesem Server deaktiviert.",
+    "providersNeedOptIn": "Aktivieren Sie den obenstehenden KI-Assistenten, um Anbieter hinzuzufügen.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "KI-Assistent",
+        "description": "Ermöglichen Sie den Nutzern, den KI-Assistenten zu aktivieren. Solange diese Option deaktiviert ist, ist der Assistent für alle ausgeblendet und gesperrt."
+      },
+      "privateEndpoints": {
+        "label": "Zulässige private KI-Hosts",
+        "description": "Hosts in Ihrem privaten Netzwerk, auf die Benutzer einen Provider verweisen können, wie z. B. ein selbst gehostetes Ollama. Fügen Sie in jede Zeile einen Host ein."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "KI-Assistent aktivieren",
+        "description": "Erlauben Sie dem KI-Assistenten, im Terminal dieses Hosts Hilfe zu leisten. Standardmäßig deaktiviert; die KI muss weiterhin für Ihr Konto aktiviert sein."
+      }
+    }
+  },
   "ai": {
     "title": "Assistent",
     "send": "Schicken",
     "stop": "Stoppen",
     "save": "Speichern",
-    "cancel": "Stornieren",
-    "running": "läuft",
+    "cancel": "Abbrechen",
+    "running": "laufend",
     "approve": "Genehmigen",
     "reject": "Ablehnen",
     "inputPlaceholder": "Erkundigen Sie sich nach Ihren Servern oder beschreiben Sie einen Änderungsvorschlag.",
@@ -31,7 +73,7 @@
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
     "providerOpenaiCompatible": "OpenAI-kompatibel",
-    "toolArguments": "Eingang",
+    "toolArguments": "Eingabe",
     "toolResult": "Ergebnis",
     "statusApplied": "Angewandt",
     "statusRejected": "Abgelehnt",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Erkundigen Sie sich nach diesem Gastgeber...",
     "noProvidersConfigured": "Es ist noch kein KI-Anbieter konfiguriert. Fügen Sie einen im Tab „KI-Assistent“ hinzu.",
     "runsInOpenTerminal": "Wird in Ihrer geöffneten Terminal-Sitzung ausgeführt.",
-    "runInTerminal": "Laufen"
+    "runInTerminal": "Ausführen",
+    "terminalContextPrefill": "Hier ist meine Terminalausgabe:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Erlauben Sie anderen Funktionen, Ihren API-Schlüssel Ihres KI-Anbieters für ihre eigenen Anfragen zu verwenden. Der Schlüssel wird niemals kopiert, und Sie können diese Berechtigung jederzeit widerrufen."
+    }
   },
   "nav": {
     "ai": "KI"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Schalte es ein",
     "aiEnableDesc": "Fügt einen Assistenten hinzu, der Ihre Einstellungen analysiert und Ihnen von Ihnen genehmigte Änderungen vorschlägt. Benötigt einen von Ihnen angegebenen Anbieter, z. B. einen lokalen Ollama-Händler.",
     "aiNote": "Es wird nichts gesendet, bis Sie einen Anbieter hinzufügen und eine Nachricht senden."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "KI-Assistent",
-        "description": "Ermöglichen Sie den Nutzern, den KI-Assistenten zu aktivieren. Solange diese Option deaktiviert ist, ist der Assistent für alle ausgeblendet und gesperrt."
-      },
-      "privateEndpoints": {
-        "label": "Zulässige private KI-Hosts"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "KI-Assistent aktivieren",
-        "description": "Erlauben Sie dem KI-Assistenten, im Terminal dieses Hosts Hilfe zu leisten. Standardmäßig deaktiviert; die KI muss weiterhin für Ihr Konto aktiviert sein."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Dokumentation anzeigen"

@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux-näyttö"
-  },
   "hosts": {
     "enableTmuxMonitor": "Ota Tmux-monitori käyttöön",
     "enableTmuxMonitorDesc": "Näytä tämä isäntä Tmux-monitorissa ja lisää sen tmux-toiminnot sivupalkkiin",
+    "tabTmuxMonitor": "Tmux-näyttö",
     "docsLink": "Näytä dokumentit"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux-näyttö"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux-näyttö",
+    "tmuxMonitorDesc": "Valvo tmux-istuntoja eri isännilläsi"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä Tmux-näyttöä",
+      "description": "Selaa ja hallitse tmux-istuntoja, ikkunoita ja ruutuja isännillä, joissa monitori on käytössä."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Ota Tmux-monitori käyttöön",
+        "description": "Tarkkaile ja liitä tällä isännöllä käynnissä olevia tmux-istuntoja."
+      },
+      "mouseEnabled": {
+        "label": "Ota käyttöön tmux-hiiren tuki",
+        "description": "Käytä hiiritukea tmux-istuntoon istunnon liittämisen tai luomisen yhteydessä. Muut istunnot ja yleiset tmux-asetukset pysyvät ennallaan."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux-näyttö",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Istunnon uudelleennimeäminen epäonnistui",
     "editTagsTitle": "Muokkaa tunnisteita kohteelle \"{{name}}\"",
     "killPane": "Tappaa ruutu",
-    "resizeTree": "Muuta kokoa vetämällä – kaksoisnapsauttamalla voit palauttaa sen",
+    "resizeTree": "Muuta kokoa vetämällä, palauta se kaksoisnapsauttamalla",
     "reattach": "Kiinnitä uudelleen (korjaa vääristyneen näkymän)",
     "killWindow": "Tapa ikkuna",
     "killWindowTitle": "Tappaa ikkuna {{index}} kohteelle \"{{session}}\"?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Istunnon lopettaminen epäonnistui",
     "hostUnreachable": "Yhteyden muodostaminen isäntään ei onnistu. Tarkista, että se on verkossa ja tavoitettavissa.",
     "noServer": "Tällä isännöinnillä ei ole käynnissä tmux-palvelinta.",
-    "searchTruncated": "Osittaisia tuloksia — haku kattaa kunkin ruudun viimeiset {{lines}} rivit ja enintään {{panes}} ruutua.",
+    "searchTruncated": "Osittaisia tuloksia. Haku kattaa kunkin ruudun viimeiset {{lines}} rivit ja enintään {{panes}} ruutua.",
     "closeSearchResults": "Sulje hakutulokset",
     "retry": "Yritä uudelleen",
     "noHosts": "Ei SSH-isäntiä saatavilla",
-    "noHostsHint": "Ota Tmux Monitor -asetus käyttöön SSH-isännässä (Isäntähallinta → Pääte-välilehti) sen tmux-istuntojen valvomiseksi.",
+    "noHostsHint": "Ota Tmux Monitor -asetus käyttöön SSH-isännässä (Isäntähallinta, Tmux Monitor -välilehti) valvoaksesi sen tmux-istuntoja.",
     "tmuxInstallHint": "Asenna se isäntäkoneelle komennolla:",
     "attachTooltip": "Avaa pääte ja kohdista {{host}}",
-    "attachTooltipPane": "Avaa pääteohjelma ja kohdista {{host}} — tmux-istunto {{session}}",
+    "attachTooltipPane": "Avaa pääteohjelma ja kohdista session {{host}}, tmux-session {{session}}",
     "timeJustNow": "juuri nyt",
     "timeMinutes": "{{count}}minuuttia sitten",
     "timeHours": "{{count}}tuntia sitten",
-    "timeDays": "{{count}}d sitten"
+    "timeDays": "{{count}}d sitten",
+    "allHosts": "Kaikki isännät",
+    "singleHost": "Yksi isäntä",
+    "hostScope": "Näytön laajuus",
+    "filterHosts": "Suodata isännät nimen tai osoitteen mukaan",
+    "selectHost": "Valitse isäntä",
+    "toggleHost": "Laajenna tai kutista {{host}}",
+    "noMatchingHosts": "Ei vastaavia isäntiä",
+    "toggleSession": "Laajenna tai kutista {{session}}"
   }
 }

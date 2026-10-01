@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Folosește asistentul",
+      "description": "Deschide asistentul și pune-i întrebări."
+    },
+    "manage_providers": {
+      "title": "Gestionați furnizorii",
+      "description": "Adăugați, editați și eliminați furnizorii de inteligență artificială și cheile API ale acestora."
+    },
+    "apply_proposals": {
+      "title": "Aplicați propunerile",
+      "description": "Lăsați asistentul să efectueze modificările sugerate de acesta."
+    },
+    "services.use": {
+      "title": "Folosește inteligența artificială din alte funcții",
+      "description": "Alte funcții pot apela asistentul în numele tău."
+    },
+    "secrets.share": {
+      "title": "Partajați cheia API",
+      "description": "Alte funcții pot utiliza cheia API AI stocată fără a o vedea."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "Asistentul AI este dezactivat pe acest server.",
+    "providersNeedOptIn": "Activează asistentul AI de mai sus pentru a adăuga furnizori.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "Asistent AI",
+        "description": "Permiteți utilizatorilor să activeze asistentul AI. Cât timp această opțiune este dezactivată, asistentul este ascuns și blocat pentru toată lumea."
+      },
+      "privateEndpoints": {
+        "label": "Gazde private AI permise",
+        "description": "Gazde din rețeaua ta privată către care utilizatorii pot direcționa un furnizor, cum ar fi un Ollama auto-găzduit. Pune câte o gazdă pe fiecare linie."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Activează Asistentul AI",
+        "description": "Permiteți asistentului AI să vă ajute în terminalul acestei gazde. Dezactivat în mod implicit, dar este nevoie ca AI să fie activat pentru contul dvs."
+      }
+    }
+  },
   "ai": {
     "title": "Asistent",
     "send": "Trimite",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Întreabă despre această gazdă...",
     "noProvidersConfigured": "Încă nu este configurat niciun furnizor de inteligență artificială. Adăugați unul în fila Asistent de inteligență artificială.",
     "runsInOpenTerminal": "Rulează în sesiunea de terminal deschisă.",
-    "runInTerminal": "Aleargă"
+    "runInTerminal": "Aleargă",
+    "terminalContextPrefill": "Iată ieșirea terminalului meu:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Permiteți altor funcții să utilizeze cheia API a furnizorului dvs. de inteligență artificială pentru propriile solicitări. Cheia nu este niciodată copiată și puteți revoca această opțiune oricând."
+    }
   },
   "nav": {
     "ai": "IA"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Pornește-l",
     "aiEnableDesc": "Adaugă un asistent care citește configurația și sugerează modificări pe care le aprobi. Necesită un furnizor furnizat de tine, cum ar fi un Ollama local.",
     "aiNote": "Nimic nu este trimis nicăieri până nu adăugați un furnizor și nu trimiteți un mesaj."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "Asistent AI",
-        "description": "Permiteți utilizatorilor să activeze asistentul AI. Cât timp este dezactivat, asistentul este ascuns și blocat pentru toată lumea."
-      },
-      "privateEndpoints": {
-        "label": "Gazde private AI permise"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Activează Asistentul AI",
-        "description": "Permiteți asistentului AI să vă ajute în terminalul acestei gazde. Dezactivat în mod implicit, dar este nevoie ca AI să fie activat pentru contul dvs."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Vizualizați documentele"

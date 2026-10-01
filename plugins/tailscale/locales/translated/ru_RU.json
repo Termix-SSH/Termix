@@ -1,21 +1,79 @@
 {
+  "permissions": {
+    "devices.view": {
+      "title": "View tailnet devices",
+      "description": "See the devices on the connected tailnet."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "Tailscale API",
+      "devices": "Tailnet"
+    },
+    "apiKey": {
+      "label": "API key",
+      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API base URL",
+      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Device list",
+      "checking": "Checking the tailnet...",
+      "noKey": "No API key set yet.",
+      "error": "Could not reach the tailnet. Check the API key.",
+      "count": "{{count}} device reachable",
+      "count_other": "{{count}} devices reachable",
+      "refresh": "Check"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
   "hosts": {
-    "tailscaleUsernameHint": "Это должен быть пользователь Unix, которому предоставлена идентификация Tailscale в списке контроля доступа SSH сети TailNet, а не обязательно root.",
+    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
     "tailscaleDeviceSelect": "Выберите устройство Tailscale",
     "tailscaleDeviceSelectPlaceholder": "Выберите устройство...",
     "tailscaleNoApiKey": "Ключ API Tailscale не настроен. Добавьте его в настройках администратора, чтобы включить обнаружение устройств.",
     "tailscaleDocsLink": "Документация",
     "tailscaleLoadingDevices": "Загрузка устройств...",
-    "tailscaleDeviceLoadFailed": "Не удалось загрузить устройства Tailscale. Проверьте URL-адрес API и сетевое соединение.",
+    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
     "tailscaleNoDevices": "В вашем tailnet не найдено устройств.",
-    "tailscaleDeviceAutoFill": "При выборе устройства IP-адрес хоста будет заполнен автоматически."
+    "tailscaleDeviceAutoFill": "При выборе устройства IP-адрес хоста будет заполнен автоматически.",
+    "tailscaleAddHost": "Add host",
+    "tailscaleCopyIp": "Copy Tailscale IP",
+    "tailscaleIpCopied": "IP copied",
+    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Требуется аутентификация Tailscale",
-    "tailscaleCheckDescription": "Для работы Tailscale SSH требуется дополнительная проверка. Для продолжения выполните аутентификацию в браузере.",
-    "tailscaleCheckOpenBrowser": "Откройте браузер для аутентификации.",
-    "tailscaleCheckWaiting": "Ожидание аутентификации Tailscale...",
-    "tailscaleCheckTimeout": "Время ожидания аутентификации Tailscale истекло. Пожалуйста, попробуйте еще раз."
+    "tailscaleCheckRequired": "Tailscale Authentication Required",
+    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckOpenBrowser": "Открыть браузер для аутентификации",
+    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
+    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "Обновить",
+    "retry": "Повторить",
+    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "noData": "Нет данных",
+    "filter": "Фильтр...",
+    "tsNotInstalled": "Tailscale не установлен на этом хосте",
+    "tsRunning": "Запущен",
+    "tsStopped": "Остановлен",
+    "tsEnable": "Соединить",
+    "tsDisable": "Отключить",
+    "tsEnabling": "Подключение к Tailscale...",
+    "tsDisabling": "Отключение от Tailscale...",
+    "tsEnabled": "Tailscale подключён",
+    "tsDisabled": "Tailscale отключён",
+    "tsExitNode": "Выходной узел",
+    "tsExitNodeActive": "Выходной узел активен"
   },
   "newUi": {
     "sidebar": {

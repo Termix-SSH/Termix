@@ -1,88 +1,117 @@
 {
-  "ai": {
-    "title": "सहायक",
-    "send": "भेजना",
-    "stop": "रुकना",
-    "save": "बचाना",
-    "cancel": "रद्द करना",
-    "running": "दौड़ना",
-    "approve": "मंज़ूरी देना",
-    "reject": "अस्वीकार करना",
-    "inputPlaceholder": "अपने सर्वरों के बारे में पूछें, या प्रस्तावित परिवर्तन का वर्णन करें।",
-    "selectProvider": "एक प्रदाता का चयन करें",
-    "providerSettings": "प्रदाता सेटिंग्स",
-    "addProvider": "प्रदाता जोड़ें",
-    "editProvider": "प्रदाता संपादित करें",
-    "removeProvider": "प्रदाता को हटाएँ",
-    "providerType": "प्रदाता",
-    "providerLabel": "नाम",
-    "providerLabelPlaceholder": "उदाहरण के लिए: स्थानीय ओलामा",
-    "baseUrl": "सर्वर पता",
-    "apiKey": "एपीआई कुंजी",
-    "defaultModel": "डिफ़ॉल्ट मॉडल",
-    "defaultModelPlaceholder": "उदाहरण के लिए: llama3.1 या claude-opus-5",
-    "labelRequired": "इस प्रदाता को एक नाम दें",
-    "providerSaveFailed": "प्रदाता को बचाया नहीं जा सका",
-    "providerUpdated": "प्रदाता ने अपडेट किया",
-    "providerDeleteFailed": "प्रदाता को हटाया नहीं जा सका",
-    "privateEndpointHint": "आपके निजी नेटवर्क पर मौजूद पतों के लिए पहले एक प्रशासक द्वारा होस्ट को अनुमति देना आवश्यक है।",
-    "providerOllama": "ओलामा",
-    "providerAnthropic": "anthropic",
-    "providerOpenai": "ओपनएआई",
-    "providerGemini": "गूगल जेमिनी",
-    "providerOpenaiCompatible": "OpenAI संगत",
-    "toolArguments": "इनपुट",
-    "toolResult": "परिणाम",
-    "statusApplied": "लागू किया गया",
-    "statusRejected": "अस्वीकार कर दिया",
-    "proposalApplied": "परिवर्तन लागू हो गया",
-    "proposalApplyFailed": "परिवर्तन लागू नहीं हो सका",
-    "proposalRejectFailed": "परिवर्तन को अस्वीकार नहीं किया जा सका",
-    "enableTitle": "एआई सहायक को सक्रिय करें",
-    "enableDescription": "सहायक को आपकी सेटअप प्रक्रिया पढ़ने दें और वह आपके अनुमोदन के लिए परिवर्तन सुझाएगा।",
-    "readOnlyCommands": "केवल पढ़ने योग्य डायग्नोस्टिक कमांड की अनुमति दें",
-    "readOnlyCommandsDescription": "सहायक बिना पूछे ही df और uptime जैसे कुछ सुरक्षित कमांड चला सकता है। सर्वर में कोई भी बदलाव करने का प्रस्ताव हमेशा पहले दिया जाता है।",
-    "modelDetectFailed": "प्रदाता से संपर्क नहीं हो सका, इसलिए यह एक सामान्य सूची है। आप किसी भी मॉडल का नाम टाइप कर सकते हैं।",
-    "modelCustom": "मॉडल का नाम दर्ज करें",
-    "modelRefresh": "सूची रीफ़्रेश करें",
-    "modelPlaceholder": "कोई मॉडल चुनें या टाइप करें",
-    "attachHint": "किसी होस्ट, स्निपेट या ऑटोमेशन को संदर्भित करने के लिए @ टाइप करें। आपके अनुमोदन के लिए परिवर्तन प्रस्तावित किए जा रहे हैं।",
-    "runCommandTitle": "कमांड चलाएँ",
-    "assistant": "एआई सहायक",
-    "terminalPanelEmpty": "इस होस्ट के बारे में असिस्टेंट से पूछें। किसी भी स्थिति में बदलाव के लिए पहले आपकी स्वीकृति आवश्यक है।",
-    "terminalPanelPlaceholder": "इस होस्ट के बारे में पूछें...",
-    "noProvidersConfigured": "अभी तक कोई एआई प्रदाता कॉन्फ़िगर नहीं किया गया है। एआई सहायक टैब में एक जोड़ें।",
-    "runsInOpenTerminal": "यह आपके खुले टर्मिनल सत्र में चलता है।",
-    "runInTerminal": "दौड़ना"
-  },
-  "nav": {
-    "ai": "ऐ"
-  },
-  "onboarding": {
-    "aiTitle": "एआई सहायक",
-    "aiIntro": "टर्मिक्स में एक वैकल्पिक एआई सहायक शामिल हो सकता है। आप इसे बाद में अपनी सेटिंग्स में बदल सकते हैं।",
-    "aiSkipTitle": "इसे बंद कर दो",
-    "aiSkipDesc": "टर्मिक्स अभी की तरह ही काम करता है। असिस्टेंट छिपा रहता है।",
-    "aiEnableTitle": "इसे चालू करें",
-    "aiEnableDesc": "यह एक सहायक सुविधा जोड़ता है जो आपके सेटअप को पढ़ता है और आपके द्वारा स्वीकृत किए जाने वाले परिवर्तनों का सुझाव देता है। इसके लिए आपको एक प्रदाता उपलब्ध कराना होगा, जैसे कि स्थानीय ओलामा।",
-    "aiNote": "जब तक आप कोई प्रदाता नहीं जोड़ते और संदेश नहीं भेजते, तब तक कुछ भी कहीं नहीं भेजा जाता।"
+  "permissions": {
+    "use": {
+      "title": "Use the assistant",
+      "description": "Open the assistant and ask it things."
+    },
+    "manage_providers": {
+      "title": "Manage providers",
+      "description": "Add, edit and remove the AI providers and their API keys."
+    },
+    "apply_proposals": {
+      "title": "Apply proposals",
+      "description": "Let the assistant carry out the changes it suggests."
+    },
+    "services.use": {
+      "title": "Use AI from other features",
+      "description": "Other features may call the assistant on your behalf."
+    },
+    "secrets.share": {
+      "title": "Share the API key",
+      "description": "Other features may use the stored AI API key without seeing it."
+    }
   },
   "settings": {
+    "assistantUnavailable": "The AI assistant is turned off on this server.",
+    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
     "admin": {
       "globallyEnabled": {
-        "label": "एआई सहायक",
-        "description": "उपयोगकर्ताओं को एआई सहायक चालू करने की अनुमति दें। जब यह बंद होगा, तो सहायक सभी के लिए छिपा हुआ और अवरुद्ध रहेगा।"
+        "label": "AI assistant",
+        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
       },
       "privateEndpoints": {
-        "label": "निजी एआई होस्ट की अनुमति दी गई"
+        "label": "Allowed private AI hosts",
+        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "एआई असिस्टेंट को सक्षम करें",
-        "description": "इस होस्ट के टर्मिनल में एआई सहायक को मदद करने की अनुमति दें। यह डिफ़ॉल्ट रूप से बंद है, लेकिन आपके खाते के लिए एआई को सक्षम करना आवश्यक है।"
+        "label": "Enable AI Assistant",
+        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
       }
     }
+  },
+  "ai": {
+    "title": "Assistant",
+    "send": "Send",
+    "stop": "स्टॉप",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "running": "चल रहे",
+    "approve": "Approve",
+    "reject": "Reject",
+    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
+    "selectProvider": "Select a provider",
+    "providerSettings": "Provider settings",
+    "addProvider": "Add provider",
+    "editProvider": "Edit provider",
+    "removeProvider": "Remove provider",
+    "providerType": "Provider",
+    "providerLabel": "नाम",
+    "providerLabelPlaceholder": "For example: Local Ollama",
+    "baseUrl": "Server address",
+    "apiKey": "API key",
+    "defaultModel": "Default model",
+    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
+    "labelRequired": "Give this provider a name",
+    "providerSaveFailed": "Could not save the provider",
+    "providerUpdated": "Provider updated",
+    "providerDeleteFailed": "Could not remove the provider",
+    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerOllama": "Ollama",
+    "providerAnthropic": "Anthropic",
+    "providerOpenai": "OpenAI",
+    "providerGemini": "Google Gemini",
+    "providerOpenaiCompatible": "OpenAI compatible",
+    "toolArguments": "इनपुट",
+    "toolResult": "Result",
+    "statusApplied": "Applied",
+    "statusRejected": "Rejected",
+    "proposalApplied": "Change applied",
+    "proposalApplyFailed": "Could not apply the change",
+    "proposalRejectFailed": "Could not reject the change",
+    "enableTitle": "Enable the AI assistant",
+    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
+    "readOnlyCommands": "Allow read-only diagnostic commands",
+    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
+    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
+    "modelCustom": "Enter a model name",
+    "modelRefresh": "Refresh list",
+    "modelPlaceholder": "Choose or type a model",
+    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
+    "runCommandTitle": "Run command",
+    "assistant": "AI Assistant",
+    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
+    "terminalPanelPlaceholder": "Ask about this host...",
+    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
+    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "runInTerminal": "चलाएं",
+    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+    }
+  },
+  "nav": {
+    "ai": "AI"
+  },
+  "onboarding": {
+    "aiTitle": "AI assistant",
+    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
+    "aiSkipTitle": "Leave it off",
+    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
+    "aiEnableTitle": "Turn it on",
+    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
+    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
   },
   "hosts": {
     "docsLink": "दस्तावेज़ देखें"

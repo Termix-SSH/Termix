@@ -18,7 +18,7 @@
     "linkModeDescription": "Toute personne disposant de ce lien peut s'inscrire, aucun compte n'est requis.",
     "userModeDescription": "Partagez cette session avec un utilisateur spécifique qui y a déjà accès. S'il n'y a pas encore accès, partagez-lui d'abord l'hôte ou utilisez un lien. Une fois partagée, la session apparaîtra dans son onglet Connexions.",
     "permissionLevel": {
-      "label": "Niveau d'autorisation",
+      "label": "Niveau de permission",
       "readOnly": "Lecture seule",
       "readOnlyDescription": "Je peux suivre la session en direct, mais je ne peux ni écrire ni interagir.",
       "readWrite": "Lecture-écriture",
@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Rechercher des utilisateurs...",
     "noUsersFound": "Aucun utilisateur trouvé",
     "linkCreated": "Lien de partage créé",
+    "linkNeedsServer": "Les liens de partage ne fonctionnent que pour les sessions sur un serveur Termix. Connectez-vous à cet hôte via votre serveur lié pour le partager avec un lien.",
     "linkCopied": "Lien copié dans le presse-papiers",
     "copyLink": "Copier le lien",
     "shareCreated": "Session partagée. Elle apparaîtra dans leur onglet Connexions.",
@@ -44,10 +45,12 @@
     "revokeFailed": "Échec de la révocation de l'action",
     "joinCount": "{{count}} rejoindre",
     "joinCount_other": "{{count}} rejoint",
-    "expiresAt": "Expire {{date}}",
+    "expiresAt": "Expire le {{date}}",
     "linkShareBadge": "Lien",
     "userShareBadge": "Utilisateur : {{username}}",
     "loadSharesFailed": "Échec du chargement des actions actives",
+    "remoteDisplayUnavailable": "Le bureau à distance n'est pas disponible pour le moment.",
+    "sharedWithMe": "Séances partagées avec moi",
     "customHoursPlaceholder": "Heures jusqu'à l'expiration de l'accès"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Membres",
     "membersPanel": "Membres de la salle et demandes de contrôle",
     "membersWithCount": "Membres ({{count}})",
+    "guestsWithCount": "Invités ({{count}})",
+    "removeGuests": "Retirer les invités",
+    "anonymousGuest": "Invité",
     "online": "en ligne",
     "offline": "hors ligne",
     "you": "(toi)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Ce lien invité est invalide ou la réunion est terminée."
     },
     "reopenFromPanel": "Cette réunion a expiré. Veuillez rouvrir la salle depuis le panneau Réunions.",
+    "retry": "Réessayer",
     "requestControl": "Contrôle des demandes",
     "cancelControlRequest": "Demande d'annulation",
     "controlQueue": "Demandes de contrôle",
@@ -130,7 +137,10 @@
     "youArePresenting": "Vous présentez dans un autre onglet. Arrêtez votre présentation pour laisser la parole à quelqu'un d'autre.",
     "created": "Pièce créée",
     "invited": "Les membres invités",
-    "roomTab": "Réunion"
+    "roomTab": "Réunion",
+    "serverChanged": "Le serveur de réunion a changé. Veuillez rouvrir cette réunion depuis le panneau Réunions.",
+    "hostNotSynced": "Synchronisez cet hôte avec le serveur de réunion avant la présentation.",
+    "linkRequiresServer": "Connectez cet ordinateur de bureau à un serveur Termix et créez-y la réunion pour partager un lien web."
   },
   "nav": {
     "collab": "Réunions"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Partagez des sessions et rejoignez des salles",
+      "description": "Partagez les sessions en direct par lien ou avec d'autres utilisateurs, et créez et rejoignez des espaces de collaboration."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Personnalisé"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Partagé avec moi",
+    "sharedBy": "Partagé par {{username}}",
+    "join": "Rejoindre",
+    "sharedSessionLabel": "{{hostName}} (partagé)"
   }
 }

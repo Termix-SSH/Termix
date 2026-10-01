@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux-skærm"
-  },
   "hosts": {
     "enableTmuxMonitor": "Aktivér Tmux-skærm",
     "enableTmuxMonitorDesc": "Vis denne vært i Tmux Monitor og tilføj dens tmux-handlinger til sidebjælken",
+    "tabTmuxMonitor": "Tmux-skærm",
     "docsLink": "Se dokumenter"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux-skærm"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux-skærm",
+    "tmuxMonitorDesc": "Overvåg tmux-sessioner på tværs af dine værter"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug Tmux Monitor",
+      "description": "Gennemse og styr tmux-sessioner, vinduer og ruder på værter med skærmen aktiveret."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktivér Tmux-skærm",
+        "description": "Se og tilslut til tmux-sessioner, der kører på denne vært."
+      },
+      "mouseEnabled": {
+        "label": "Aktivér tmux-museunderstøttelse",
+        "description": "Anvend museunderstøttelse til tmux-sessionen, når du tilknytter eller opretter en session. Andre sessioner og globale tmux-indstillinger forbliver uændrede."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux-skærm",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Kunne ikke omdøbe sessionen",
     "editTagsTitle": "Rediger tags for \"{{name}}\"",
     "killPane": "Dræb ruden",
-    "resizeTree": "Træk for at ændre størrelse — dobbeltklik for at nulstille",
+    "resizeTree": "Træk for at ændre størrelsen, dobbeltklik for at nulstille",
     "reattach": "Genmonter (rettelser på en forvrænget visning)",
     "killWindow": "Dræb vinduet",
     "killWindowTitle": "Luk vindue {{index}} af \"{{session}}\"?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Kunne ikke afslutte sessionen",
     "hostUnreachable": "Kunne ikke oprette forbindelse til værten. Kontroller, at den er online og tilgængelig.",
     "noServer": "Der kører ingen tmux-server på denne vært.",
-    "searchTruncated": "Delvise resultater — søgningen dækker de sidste {{lines}} linjer i hver rude og højst {{panes}} ruder.",
+    "searchTruncated": "Delvise resultater. Søgningen dækker de sidste {{lines}} linjer i hver rude og højst {{panes}} ruder.",
     "closeSearchResults": "Luk søgeresultater",
     "retry": "Prøv igen",
     "noHosts": "Ingen SSH-værter tilgængelige",
-    "noHostsHint": "Aktivér Tmux Monitor-indstillingen på en SSH-vært (Værtsadministrator → Terminal-fanen) for at overvåge dens tmux-sessioner.",
+    "noHostsHint": "Aktivér Tmux Monitor-indstillingen på en SSH-vært (Værtsadministrator, fanen Tmux Monitor) for at overvåge dens tmux-sessioner.",
     "tmuxInstallHint": "Installer det på værten med:",
     "attachTooltip": "Åbn en terminal til {{host}}",
-    "attachTooltipPane": "Åbn en terminal til {{host}} — tmux-session {{session}}",
+    "attachTooltipPane": "Åbn en terminal til {{host}}, tmux-session {{session}}",
     "timeJustNow": "lige nu",
     "timeMinutes": "For {{count}}minutter siden",
     "timeHours": "For {{count}}timer siden",
-    "timeDays": "for {{count}}dage siden"
+    "timeDays": "for {{count}}dage siden",
+    "allHosts": "Alle værter",
+    "singleHost": "Enkelt vært",
+    "hostScope": "Overvågningsområde",
+    "filterHosts": "Filtrer værter efter navn eller adresse",
+    "selectHost": "Vælg vært",
+    "toggleHost": "Udvid eller skjul {{host}}",
+    "noMatchingHosts": "Ingen matchende værter",
+    "toggleSession": "Udvid eller skjul {{session}}"
   }
 }

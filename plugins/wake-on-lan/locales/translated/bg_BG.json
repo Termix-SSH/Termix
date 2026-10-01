@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Уейк",
+    "sent": "Изпратен пакет Wake-on-LAN",
+    "failed": "Неуспешно изпращане на пакет Wake-on-LAN"
+  },
+  "permissions": {
+    "send": {
+      "title": "Изпращане на пакети Wake-on-LAN",
+      "description": "Събудете хост, като изпратите магически пакет до неговия MAC адрес."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "MAC адрес",
+        "description": "MAC адресът на мрежата на хоста, използван за изпращане на Wake-on-LAN пакети.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Адрес за излъчване",
+        "description": "Адресът за излъчване на подмрежата, до който да се изпрати пакетът. Оставете празно за 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

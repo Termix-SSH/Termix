@@ -1,0 +1,27 @@
+{
+  "hint": "Vous pouvez coller une référence 1Password (op://vault/item/field) à la place du mot de passe. Elle sera récupérée depuis votre source de mots de passe lors de la connexion.",
+  "manage": "Gérer les sources secrètes",
+  "title": "Sources secrètes",
+  "description": "Termix utilise des gestionnaires de mots de passe externes pour lire les secrets lors de la connexion. Actuellement, il s'agit de 1Password Connect (hébergé sur place). Le jeton d'accès est stocké chiffré avec votre clé de données.",
+  "new": "Nouvelle source",
+  "nameLabel": "Nom amical",
+  "urlLabel": "URL du serveur de connexion",
+  "tokenLabel": "Jeton d'accès Connect",
+  "tokenKeep": "Laissez vide pour conserver le jeton actuel",
+  "sharedLabel": "Partager avec tous les utilisateurs (administrateurs uniquement, résolution effectuée lorsque vous êtes connecté)",
+  "shared": "partagé",
+  "test": "Tester",
+  "testOk": "Connecté, {{count}} coffre(s) visible(s)",
+  "testFailed": "Le test de connexion a échoué.",
+  "required": "Le nom, l'URL du serveur et le jeton sont requis.",
+  "saved": "Source secrète sauvegardée",
+  "deleted": "Source secrète supprimée",
+  "settings": {
+    "admin": {
+      "privateEndpoints": {
+        "label": "liste blanche des points de terminaison privés",
+        "description": "Hôtes privés ou de bouclage auxquels une source secrète peut accéder, un par ligne. Un serveur 1Password Connect auto-hébergé nécessite généralement sa propre adresse indiquée ici."
+      }
+    }
+  }
+}

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Mètriques de l'amfitrió"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Memòria",
@@ -160,7 +163,6 @@
       "firewallPersist": "Regles de persistència",
       "firewallPersisted": "Les regles del tallafocs van persistir",
       "wireguard": "WireGuard",
-      "tailscale": "Escala de cua",
       "wgNotInstalled": "WireGuard no està instal·lat en aquest host.",
       "wgNoInterfaces": "No hi ha cap interfície de WireGuard configurada",
       "wgInterfaceUp": "Porta a col·lació",
@@ -168,7 +170,7 @@
       "wgBringingUp": "S'està mostrant {{name}}...",
       "wgBringingDown": "Baixant {{name}}...",
       "wgInterfaceUpDone": "{{name}} està activat",
-      "wgInterfaceDownDone": "{{name}} està apagat",
+      "wgInterfaceDownDone": "{{name}} està inactiu",
       "wgListenPort": "Port",
       "wgPublicKey": "Clau pública",
       "wgEndpoint": "Punt final",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Última encaixada de mans",
       "wgHandshakeNever": "Mai",
       "wgTransfer": "Transferència",
-      "tsNotInstalled": "Tailscale no està instal·lat en aquest amfitrió",
-      "tsRunning": "Córrer",
-      "tsStopped": "Aturat",
-      "tsEnable": "Connecta",
-      "tsDisable": "Desconnecta",
-      "tsEnabling": "Connectant a Tailscale...",
-      "tsDisabling": "Desconnectant de Tailscale...",
-      "tsEnabled": "Escala de cua connectada",
-      "tsDisabled": "Escala de cua desconnectada",
-      "tsIPs": "IP de cua escala",
-      "tsPeers": "Compañers",
-      "tsOnline": "En línia",
-      "tsOffline": "Fora de línia",
-      "tsExitNode": "Node de sortida",
-      "tsExitNodeActive": "Node de sortida actiu",
-      "tsHostname": "Nom d'amfitrió"
+      "wgNoPeers": "Sense iguals"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "a",
     "apply": "Aplica",
     "viewHistory": "Veure l'historial"
-  },
-  "nav": {
-    "hostMetrics": "Mètriques de l'amfitrió"
   },
   "hosts": {
     "tabHostMetrics": "Mètriques de l'amfitrió",
@@ -265,6 +249,9 @@
     "noHostSelected": "No s'ha seleccionat cap amfitrió",
     "selectHost": "Seleccioneu un amfitrió..."
   },
+  "terminalStatus": {
+    "unavailable": "Estadístiques en directe no disponibles"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Connectat"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza les mètriques de l'amfitrió",
+      "description": "Visualitza les mètriques de l'amfitrió i utilitza els gestors d'amfitrió (serveis, paquets, tallafocs i més) als amfitrions als quals pots accedir."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Interval de mètriques (segons)",
+        "description": "Amb quina freqüència es mostreja un amfitrió que es visualitza, tret que l'amfitrió estableixi el seu propi interval."
+      },
+      "historyRetentionDays": {
+        "label": "Retenció de l'historial (dies)",
+        "description": "Quant de temps es conserven les mostres de mètriques per als gràfics d'historial."
+      },
+      "enabledForNewHosts": {
+        "label": "Mètriques activades per a nous amfitrions",
+        "description": "Si els nous amfitrions comencen amb la recopilació de mètriques activada."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Unitat de temperatura",
+        "description": "Com es mostren les temperatures a les mètriques de l'amfitrió.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Recopilar mètriques"
+      },
+      "metricsInterval": {
+        "label": "Interval de mètriques (segons)"
+      },
+      "enabledWidgets": {
+        "label": "Widgets activats"
+      },
+      "excludedMounts": {
+        "label": "Muntatges exclosos"
+      },
+      "monitoredMounts": {
+        "label": "Camins monitoritzats"
+      }
+    }
   }
 }

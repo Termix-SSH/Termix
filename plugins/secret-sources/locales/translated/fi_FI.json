@@ -1,0 +1,27 @@
+{
+  "hint": "Voit liittää 1Password-viitteen (op://vault/item/field) salaisuuden sijaan. Se noudetaan salaisuuden lähteestäsi yhteyden muodostamisen yhteydessä.",
+  "manage": "Hallitse salaisia lähteitä",
+  "title": "Salaiset lähteet",
+  "description": "Ulkoiset salasananhallintaohjelmat Termix lukevat salaisuudet yhteyden muodostamisen yhteydessä. Tällä hetkellä käytössä on 1Password Connect (itse isännöity). Käyttöoikeustunnus tallennetaan salattuna dataavaimellasi.",
+  "new": "Uusi lähde",
+  "nameLabel": "Ystävällinen nimi",
+  "urlLabel": "Yhdistä palvelimen URL-osoite",
+  "tokenLabel": "Yhdistä käyttöoikeustunnus",
+  "tokenKeep": "Jätä tyhjäksi säilyttääksesi nykyisen tunnuksen",
+  "sharedLabel": "Jaa kaikkien käyttäjien kanssa (vain järjestelmänvalvojille, ratkeaa, kun olet kirjautuneena sisään)",
+  "shared": "jaettu",
+  "test": "Testata",
+  "testOk": "Yhdistetty, {{count}} holvia näkyvissä",
+  "testFailed": "Yhteystesti epäonnistui",
+  "required": "Nimi, palvelimen URL-osoite ja tunnus vaaditaan",
+  "saved": "Salainen lähde tallennettu",
+  "deleted": "Salainen lähde poistettu",
+  "settings": {
+    "admin": {
+      "privateEndpoints": {
+        "label": "Yksityisten päätepisteiden sallittujen luettelo",
+        "description": "Yksityiset tai loopback-isännät, joihin salainen lähde voi tavoittaa, yksi riviä kohden. Itse isännöity 1Password Connect -palvelin tarvitsee yleensä oman osoitteensa, joka luetellaan tässä."
+      }
+    }
+  }
+}

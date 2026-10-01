@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "A forrásnak és a célnak eltérőnek kell lennie",
     "exportJSON": "JSON exportálása",
     "importJSON": "JSON importálása",
-    "terminal": "Terminál",
-    "fileManager": "Fájlkezelő",
-    "tunnel": "Alagút",
-    "docker": "Dokkmunkás",
     "serverStats": "Gazdagép-metrikák",
-    "hostMetrics": "Gazdagép-metrikák",
     "noNodes": "Még nincsenek csomópontok"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} csomópontok"
+  },
+  "permissions": {
+    "use": {
+      "title": "Hálózati gráf használata",
+      "description": "A hálózati topológia grafikonjának megtekintése és szerkesztése."
+    }
   },
   "hosts": {
     "docsLink": "Dokumentumok megtekintése"

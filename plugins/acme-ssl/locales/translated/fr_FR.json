@@ -1,29 +1,58 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Gérer les certificats ACME",
+      "description": "Consultez l'état du certificat et demandez un nouveau certificat dès maintenant."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Renouvellement automatique",
+      "description": "Vérifiez deux fois par jour et obtenez un nouveau certificat s'il n'y en a pas, s'il ne couvre pas le domaine ou s'il expire dans les 30 jours."
+    },
     "domain": {
       "label": "Domaine",
-      "placeholder": "termix.example.com",
-      "description": "Le nom de domaine public pour le certificat."
+      "description": "Le nom de domaine public pour le certificat.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "E-mail",
+      "description": "Adresse électronique de contact pour le compte ACME et les avis d'expiration.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "Autorité de certification",
+      "description": "Où obtenir le certificat ? Utilisez un environnement de test pour effectuer des tests sans atteindre les limites de requêtes de Let's Encrypt.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (phase de test)",
+      "custom": "Répertoire ACME personnalisé"
+    },
+    "directoryUrl": {
+      "label": "URL du répertoire ACME",
+      "description": "Uniquement pour une autorité de certification personnalisée. Doit être une URL HTTPS."
+    },
     "challengeType": {
-      "label": "Type de challenge",
-      "cloudflare": "DNS (Cloudflare) - nécessite un jeton API Cloudflare"
+      "label": "Type de défi",
+      "description": "Comment prouver que vous êtes propriétaire du domaine.",
+      "http": "HTTP – nécessite que le port 80 soit accessible depuis Internet",
+      "cloudflare": "DNS (Cloudflare) - nécessite un jeton d'API Cloudflare"
     },
     "cloudflareToken": {
-      "label": "Jeton API Cloudflare",
+      "label": "Jeton d'API Cloudflare",
       "description": "Jeton limité avec l'autorisation Zone:DNS:Edit pour votre domaine."
     }
   },
   "status": {
     "title": "Statut du certificat",
     "none": "Aucun certificat",
+    "names": "Couvertures {{names}}",
+    "issuer": "Émis par {{issuer}}",
     "expires": "Expire le {{date}}",
     "lastIssued": "Dernière émission le {{date}}",
-    "request": "Émettre / Renouveler le certificat",
-    "requesting": "Demande de certificat en cours..."
+    "lastError": "Dernière tentative échouée : {{error}}",
+    "missing": "Configurez le domaine, l'adresse e-mail et les champs requis par votre type de défi, puis enregistrez, avant de demander un certificat.",
+    "request": "Demandez votre certificat dès maintenant",
+    "requesting": "Demande de certificat en cours...",
+    "issued": "Certificat délivré et installé"
   }
 }

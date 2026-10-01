@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Monitor Tmux"
-  },
   "hosts": {
     "enableTmuxMonitor": "Abilita Monitor Tmux",
     "enableTmuxMonitorDesc": "Mostra questo host nel Monitor Tmux e aggiungi le sue azioni tmux alla barra laterale",
+    "tabTmuxMonitor": "Monitor Tmux",
     "docsLink": "Visualizza documentazione"
+  },
+  "nav": {
+    "tmuxMonitor": "Monitor Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Monitor Tmux",
+    "tmuxMonitorDesc": "Monitora le sessioni tmux sui tuoi host"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare Tmux Monitor",
+      "description": "Esplora e controlla sessioni, finestre e pannelli tmux sugli host con il monitor abilitato."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Abilita Monitor Tmux",
+        "description": "Monitora e connettiti alle sessioni tmux in esecuzione su questo host."
+      },
+      "mouseEnabled": {
+        "label": "Abilita il supporto per il mouse in tmux",
+        "description": "Applica il supporto del mouse alla sessione tmux quando la colleghi o la crei. Le altre sessioni e le impostazioni globali di tmux rimangono invariate."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Monitor Tmux",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Rinomina della sessione non riuscita",
     "editTagsTitle": "Modifica tag per \"{{name}}\"",
     "killPane": "Termina riquadro",
-    "resizeTree": "Trascina per ridimensionare — doppio clic per ripristinare",
+    "resizeTree": "Trascina per ridimensionare, fai doppio clic per ripristinare",
     "reattach": "Ricollega (risolve una visualizzazione alterata)",
     "killWindow": "Termina finestra",
     "killWindowTitle": "Terminare la finestra {{index}} di \"{{session}}\"?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Terminazione della sessione non riuscita",
     "hostUnreachable": "Impossibile connettersi all'host. Verifica che sia online e raggiungibile.",
     "noServer": "Nessun server tmux in esecuzione su questo host.",
-    "searchTruncated": "Risultati parziali — la ricerca copre le ultime {{lines}} righe di ogni riquadro e al massimo {{panes}} riquadri.",
+    "searchTruncated": "Risultati parziali. La ricerca copre le ultime {{lines}} righe di ciascun riquadro e al massimo {{panes}} riquadri.",
     "closeSearchResults": "Chiudi risultati ricerca",
     "retry": "Riprova",
     "noHosts": "Nessun host SSH disponibile",
-    "noHostsHint": "Abilita l'opzione Monitor Tmux su un host SSH (Gestione host → scheda Terminale) per monitorare le sue sessioni tmux.",
+    "noHostsHint": "Abilita l'opzione Tmux Monitor su un host SSH (Gestione host, scheda Tmux Monitor) per monitorare le sue sessioni tmux.",
     "tmuxInstallHint": "Installalo sull'host con:",
     "attachTooltip": "Apri un terminale su {{host}}",
-    "attachTooltipPane": "Apri un terminale su {{host}} — sessione tmux {{session}}",
+    "attachTooltipPane": "Apri un terminale su {{host}}, sessione tmux {{session}}",
     "timeJustNow": "adesso",
     "timeMinutes": "{{count}}m fa",
     "timeHours": "{{count}}h fa",
-    "timeDays": "{{count}}d fa"
+    "timeDays": "{{count}}d fa",
+    "allHosts": "Tutti gli host",
+    "singleHost": "Host singolo",
+    "hostScope": "Monitorare l'ambito",
+    "filterHosts": "Filtra gli host per nome o indirizzo",
+    "selectHost": "Seleziona l'host",
+    "toggleHost": "Espandi o comprimi {{host}}",
+    "noMatchingHosts": "Nessun host corrispondente",
+    "toggleSession": "Espandi o comprimi {{session}}"
   }
 }

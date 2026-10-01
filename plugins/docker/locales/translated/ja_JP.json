@@ -21,6 +21,11 @@
     "ports": "ポート",
     "noPorts": "ポートなし",
     "start": "起動",
+    "stop": "ストップ",
+    "status": "状態",
+    "actions": "行動",
+    "cardView": "カードビュー",
+    "listView": "リストビュー",
     "confirmRemoveContainer": "コンテナ '{{name}}' を削除してもよろしいですか？ この操作は元に戻せません。",
     "runningContainerWarning": "警告: このコンテナは現在実行中です。削除すると、まずコンテナが停止されます。",
     "loadingContainers": "コンテナを読み込み中...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "コンソールにアクセスするにはコンテナが実行中である必要があります",
     "verificationCodePrompt": "認証コードを入力してください",
     "totpVerificationFailed": "TOTP認証に失敗しました。もう一度お試しください。",
+    "browserSignInFailed": "ログインに失敗しました。もう一度お試しください。",
     "connectedTo": "{{containerName}}に接続しました",
     "disconnected": "切断されました",
     "consoleError": "コンソールエラー",
@@ -93,19 +99,34 @@
     "logs": "ログ",
     "stats": "統計",
     "consoleTab": "コンソール",
-    "startContainerToAccess": "コンテナを起動してコンソールにアクセスしてください"
+    "startContainerToAccess": "コンテナを起動してコンソールにアクセスしてください",
+    "noHostSelected": "ホストが選択されていません",
+    "failedToFetchLogs": "ログの取得に失敗しました: {{error}}",
+    "failedToDownloadLogs": "ログのダウンロードに失敗しました: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
-    "feature_docker": "ドッカー",
+    "feature_docker": "Docker",
     "feature_docker_desc": "Dockerを実行している任意のホスト上で、コンテナの表示、ログの読み取り、統計情報の監視が可能です。"
+  },
+  "terminal": {
+    "retry": "再試行",
+    "clipboardReadFailed": "クリップボードからの読み取りに失敗しました。クリップボードのアクセス許可が付与されていることを確認してください。",
+    "clipboardWriteFailed": "クリップボードへのコピーに失敗しました。ページがHTTPSまたはlocalhostで提供されていることを確認してください。"
+  },
+  "permissions": {
+    "use": {
+      "title": "Dockerを使用する",
+      "description": "Dockerが有効になっているホスト上で、Dockerマネージャーとコンテナコンソールを開きます。"
+    }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "Docker有効化"
+        "label": "Dockerを有効化",
+        "description": "このホスト上のコンテナを管理します。"
       },
       "containerRuntime": {
         "label": "コンテナランタイム",
@@ -122,9 +143,5 @@
     "docsLink": "ドキュメントを表示",
     "hostNotFound": "ホストが見つかりません",
     "loadingHost": "ホストを読み込み中..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "クリップボードからの読み取りに失敗しました。クリップボードのアクセス許可が付与されていることを確認してください。",
-    "clipboardWriteFailed": "クリップボードへのコピーに失敗しました。ページがHTTPSまたはlocalhostで提供されていることを確認してください。"
   }
 }

@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux 監控器"
-  },
   "hosts": {
     "enableTmuxMonitor": "啟用 Tmux 監控器",
     "enableTmuxMonitorDesc": "在 Tmux 監控器中顯示此主機，並將其 tmux 操作新增至側邊欄",
+    "tabTmuxMonitor": "Tmux 監視器",
     "docsLink": "檢視文件"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux 監控器"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux 監視器",
+    "tmuxMonitorDesc": "監控您所有主機的 tmux 會話"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Tmux Monitor",
+      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "啟用 Tmux 監控器",
+        "description": "Watch and attach to tmux sessions running on this host."
+      },
+      "mouseEnabled": {
+        "label": "Enable tmux mouse support",
+        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux 監視器",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "重新命名會話失敗",
     "editTagsTitle": "編輯「{{name}}」的標籤",
     "killPane": "終止窗格",
-    "resizeTree": "拖曳調整大小 — 雙擊重設",
+    "resizeTree": "Drag to resize, double-click to reset",
     "reattach": "重新附加（修復亂碼畫面）",
     "killWindow": "終止視窗",
     "killWindowTitle": "終止「{{session}}」的視窗 {{index}}？",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "無法終止工作階段",
     "hostUnreachable": "無法連線至主機。請檢查主機是否在線上且可連線。",
     "noServer": "此主機上沒有正在執行的 tmux 伺服器。",
-    "searchTruncated": "部分結果 — 搜尋範圍涵蓋每個窗格的最後 {{lines}} 行，且最多 {{panes}} 個窗格。",
+    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
     "closeSearchResults": "關閉搜尋結果",
     "retry": "重試",
     "noHosts": "沒有可用的 SSH 主機",
-    "noHostsHint": "在 SSH 主機上啟用 Tmux 監控選項（主機管理員 → 終端機頁籤），以監控其 tmux 工作階段。",
+    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
     "tmuxInstallHint": "在主機上使用以下指令安裝：",
     "attachTooltip": "開啟連至 {{host}} 的終端機",
-    "attachTooltipPane": "開啟連至 {{host}} 的終端機 — tmux 工作階段 {{session}}",
+    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
     "timeJustNow": "剛剛",
     "timeMinutes": "{{count}} 分鐘前",
     "timeHours": "{{count}} 小時前",
-    "timeDays": "{{count}} 天前"
+    "timeDays": "{{count}} 天前",
+    "allHosts": "所有主機",
+    "singleHost": "Single host",
+    "hostScope": "Monitor scope",
+    "filterHosts": "Filter hosts by name or address",
+    "selectHost": "Select host",
+    "toggleHost": "Expand or collapse {{host}}",
+    "noMatchingHosts": "No matching hosts",
+    "toggleSession": "Expand or collapse {{session}}"
   }
 }

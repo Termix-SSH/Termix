@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Soubory",
+    "sftp": "SFTP",
+    "openFileManager": "Otevřít Správce souborů"
+  },
+  "permissions": {
+    "use": {
+      "title": "Používejte správce souborů",
+      "description": "Procházejte, upravujte a přenášejte soubory přes SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Povolit Správce souborů",
+        "description": "Procházejte a upravujte soubory na tomto hostiteli přes SFTP."
+      },
+      "defaultPath": {
+        "label": "Výchozí cesta"
+      },
+      "scpLegacy": {
+        "label": "Starší režim SCP"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Současné přenosy souborů",
+        "description": "Kolik souborů souběžně nahrává nebo stahuje lokální/vzdálený správce. Snižte tuto hodnotu, pokud váš server omezuje SFTP kanály."
+      },
+      "confirmBeforeTrash": {
+        "label": "Potvrďte před přesunutím souborů do koše",
+        "description": "Před přesunutím vzdálených souborů do koše se zeptat. Trvalé smazání stále vyžaduje potvrzení."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Správce souborů"
+  },
   "fileManager": {
     "noHostSelected": "Nebyl vybrán žádný hostitel",
     "initializingEditor": "Inicializace editoru...",
@@ -34,13 +72,14 @@
     "rename": "Přejmenovat",
     "uploading": "Nahrávání...",
     "uploadingFile": "Nahrávání {{name}}...",
+    "uploadingChunk": "Nahrávání {{name}}: {{percent}}% (část {{chunk}} z {{total}})",
     "fileName": "Název souboru",
     "folderName": "Název složky",
     "fileUploadedSuccessfully": "Soubor „{{name}}“ byl úspěšně nahrán",
     "failedToUploadFile": "Nahrávání souboru se nezdařilo",
     "uploadingFolderFiles": "Nahrávání {{count}} souborů...",
     "uploadedFolderFiles": "Úspěšně nahráno {{count}} souborů",
-    "uploadedFolderPartial": "Nahrání souboru (souborů) {{uploaded}} se nezdařilo. {{failed}}",
+    "uploadedFolderPartial": "Nahrání souboru {{uploaded}} , {{failed}} se nezdařilo",
     "fileDownloadedSuccessfully": "Soubor „{{name}}“ byl úspěšně stažen",
     "failedToDownloadFile": "Stažení souboru se nezdařilo",
     "fileCreatedSuccessfully": "Soubor „{{name}}“ byl úspěšně vytvořen",
@@ -81,7 +120,7 @@
     "localNothingToTransfer": "Nic k převodu",
     "localUploadComplete": "Nahráno {{count}} souborů",
     "localUploadFailed": "Nahrávání se nezdařilo",
-    "localUploadPartial": "Nahrání souboru (souborů) {{done}} se nezdařilo. {{failed}}",
+    "localUploadPartial": "Nahrání souboru {{done}} , {{failed}} se nezdařilo",
     "localDownloadComplete": "Staženo {{count}} souborů",
     "localDownloadFailed": "Stahování se nezdařilo",
     "localDownloadPartial": "Stažení souboru (souborů) {{done}} se nezdařilo. {{failed}}",
@@ -139,7 +178,7 @@
     "failedToCopyFolderLink": "Nepodařilo se zkopírovat odkaz na složku",
     "movedItems": "Přesunuto {{count}} položek",
     "failedToDeleteItem": "Položku se nepodařilo smazat",
-    "itemRenamedSuccessfully": "{{type}} byl úspěšně přejmenován",
+    "itemRenamedSuccessfully": "{{type}} přejmenováno úspěšně",
     "failedToRenameItem": "Přejmenování položky se nezdařilo",
     "download": "Stáhnout",
     "openExternalEditor": "Otevřít externě",
@@ -290,6 +329,7 @@
     "connecting": "Spojovací...",
     "connectedSuccessfully": "Úspěšné připojení",
     "totpVerificationFailed": "Ověření TOTP se nezdařilo",
+    "browserSignInFailed": "Přihlášení se nezdařilo. Zkuste to prosím znovu.",
     "authenticationFailed": "Ověření se nezdařilo",
     "incorrectPassphrase": "Nesprávné heslo. Zkuste to prosím znovu.",
     "verificationCodePrompt": "Ověřovací kód:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "Nelze načíst PDF",
     "pdfLoadError": "Při načítání tohoto PDF souboru došlo k chybě.",
     "loadingPdf": "Načítání PDF...",
-    "loadingPage": "Načítání stránky..."
+    "loadingPage": "Načítání stránky...",
+    "cancel": "Zrušit",
+    "copiedItems_one": "Zkopírována položka {{count}}",
+    "copiedItems_other": "Zkopírováno {{count}} položek",
+    "deleteCopiedFileFailed": "Nelze smazat kopii {{name}}: {{error}}",
+    "dragMovedItems_one": "Položka {{count}} přesunuta do {{target}}",
+    "dragMovedItems_other": "Přesunuto {{count}} položek do {{target}}",
+    "moveBackFileFailed": "Nelze přesunout {{name}} zpět: {{error}}",
+    "terminal": "Terminál: {{host}} ({{path}})",
+    "dragToDesktop": "Přetažení {{name}} na plochu",
+    "dragFilesToDesktop": "Přetažení souborů {{count}} na plochu",
+    "folderDragUnsupported": "Přetahování složek na plochu zatím není podporováno",
+    "saveToDesktopFailed": "Uložení se nezdařilo: {{error}}",
+    "dragFailedDetail": "Přetažení se nezdařilo: {{error}}",
+    "videoUnsupported": "Váš prohlížeč tento formát videa nepřehrává.",
+    "downloadToPlay": "Stáhněte si pro přehrávání jinde",
+    "cannotPreviewType": "Nelze zobrazit náhled tohoto typu souboru",
+    "cannotPreviewTypeHint": "Tento typ souboru nemá náhled. Stáhněte si jej a otevřete jej v jiné aplikaci."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Správce souborů",
-    "tabFiles": "Soubory",
-    "enableFileManagerMonitor": "Povolit Správce souborů",
-    "enableFileManagerMonitorDesc": "Procházení a správa souborů na tomto hostiteli přes SFTP",
-    "scpLegacyLabel": "Starší režim SCP",
-    "scpLegacyDesc": "Pro servery, které nepodporují subsystém SFTP (např. vestavěné nebo minimální SSH servery), použijte starší přenos souborů.",
-    "defaultPathLabel": "Výchozí cesta",
-    "fileManagerPathHint": "Adresář, který se má otevřít při spuštění správce souborů pro tento hostitel.",
     "fileManagerUrlCopied": "URL adresa Správce souborů zkopírována",
     "copyFileManagerUrlAction": "Kopírovat URL Správce souborů",
     "docsLink": "Zobrazit dokumenty",
     "hostNotFound": "Hostitel nenalezen",
     "loadingHost": "Načítání hostitele..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Povolit Správce souborů"
-      },
-      "defaultPath": {
-        "label": "Výchozí cesta"
-      },
-      "scpLegacy": {
-        "label": "Starší režim SCP"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Současné přenosy souborů",
-        "description": "Kolik souborů souběžně nahrává nebo stahuje lokální/vzdálený správce. Snižte tuto hodnotu, pokud váš server omezuje SFTP kanály."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Soubory"
   },
   "onboarding": {
     "feature_files": "Správce souborů",
@@ -437,7 +464,7 @@
     "destinationPath": "Cílová cesta",
     "destMustBeDirectory": "Cíl musí být adresář pro přenosy více položek.",
     "goUp": "Jdi nahoru",
-    "hostAuthRequired": "Vyžadováno ověření – nejprve otevřete Správce souborů na tomto hostiteli.",
+    "hostAuthRequired": "Vyžaduje se ověření. Nejprve otevřete Správce souborů na tomto hostiteli.",
     "hostConnecting": "Připojování…",
     "hostConnectionFailed": "Připojení se nezdařilo",
     "hostDisconnected": "Nepřipojeno",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Zvolili jste SFTP pro jednotlivé soubory.",
       "user_tar": "Zvolili jste archiv tar.",
-      "tar_unavailable": "Tar není k dispozici na jednom nebo obou hostitelích — místo toho bude použit protokol SFTP pro jednotlivé soubory.",
-      "windows_host": "Je zapojen hostitelský systém Windows – tar se nepoužívá.",
-      "auto_multi_large": "Automaticky: více souborů včetně velkého souboru ({{largestSize}}) s komprimovatelnými daty — tar se sbalí do jednoho přenosu.",
-      "auto_single_large_in_archive": "Automaticky: jeden velký soubor ({{largestSize}}) v této sadě – SFTP pro každý soubor.",
-      "auto_many_incompressible": "Auto: většinou nekomprimovatelná data – SFTP pro jednotlivé soubory.",
-      "auto_many_files": "Automaticky: mnoho souborů ({{fileCount}}) – tar snižuje režii pro každý soubor.",
+      "tar_unavailable": "Tar není k dispozici na jednom nebo obou hostitelích, takže se místo toho použije SFTP pro jednotlivé soubory.",
+      "windows_host": "Je zapojen hostitelský systém Windows, takže se nepoužívá tar.",
+      "auto_multi_large": "Auto: více souborů včetně velkého souboru ({{largestSize}}) s komprimovatelnými daty. Tar je sloučí do jednoho přenosu.",
+      "auto_single_large_in_archive": "Auto: jeden velký soubor ({{largestSize}}) v této sadě, takže SFTP pro jednotlivé soubory.",
+      "auto_many_incompressible": "Auto: většinou nekomprimovatelná data, takže SFTP pro jednotlivé soubory.",
+      "auto_many_files": "Automaticky: mnoho souborů ({{fileCount}}), tar snižuje režii pro každý soubor.",
       "auto_default": "Automaticky: SFTP pro jednotlivé soubory pro tuto sadu."
     },
     "methodTar": "Archiv Tar",
@@ -471,7 +498,7 @@
     "metricsCompress": "Komprimovat u zdroje: {{duration}}",
     "metricsExtract": "Extrahovat v cíli: {{duration}}",
     "metricsPrepare": "Připravit cíl: {{duration}}",
-    "metricsRouteBenchmark": "Sonda trasy — přímá: {{direct}}, relé: {{relay}}",
+    "metricsRouteBenchmark": "Sonda trasy: přímá {{direct}}, reléová {{relay}}",
     "metricsSourceDelete": "Odebrat ze zdroje: {{duration}}",
     "metricsTotal": "Celkem: {{duration}}",
     "metricsTransfer": "Konec od konce: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "Přenos se nezdařil",
     "transferFailedRetryHint": "V cíli byla uložena částečná data. Po obnovení připojení bude pokus pokračovat.",
     "transferPartialHint": "Nepodařilo se přenést: {{paths}}",
-    "transferSuccess": "Převod dokončen"
+    "transferSuccess": "Převod dokončen",
+    "metricsHopSourceRead": "Zdroj → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → cíl (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → cíl (lokální): {{throughput}}"
   }
 }

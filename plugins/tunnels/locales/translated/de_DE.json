@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Voreinstellungen sind explizite Snapshots; das Laden einer Voreinstellung ersetzt die lokale Client-Tunnel-Liste dieses Desktop-Clients.",
     "c2sPresetToLoad": "Zu ladende Voreinstellung",
     "c2sTunnelPresets": "Client-Tunnel-Voreinstellungen",
-    "c2sTunnelPresetsUnavailable": "Client-Tunnel-Voreinstellungen sind nur im Desktop-Client verfügbar."
+    "c2sTunnelPresetsUnavailable": "Client-Tunnel-Voreinstellungen sind nur im Desktop-Client verfügbar.",
+    "c2sPresetRenameError": "Die Voreinstellung konnte nicht umbenannt werden.",
+    "c2sPresetDeleteError": "Die Voreinstellung konnte nicht gelöscht werden."
   },
   "tunnels": {
     "attempt": "Versuch {{current}} von {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "Lokal (-L)",
     "typeRemote": "Remote (-R)",
     "working": "In Bearbeitung...",
+    "activeCount": "{{connected}}/{{total}} aktiv",
+    "listensOn": "An localhost gebunden:{{port}}",
+    "socksProxy": "SOCKS5-Proxy",
+    "waiting": "Warten",
+    "remoteSessionExpired": "Die Remote-Synchronisierungssitzung ist abgelaufen. Stellen Sie die Remote-Synchronisierung erneut her und versuchen Sie es noch einmal.",
+    "activeTunnels": "Aktive Tunnel",
     "start": "Start",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Tunnelauthentifizierung",
+    "authRetry": "Der vorherige Code wurde nicht akzeptiert. Geben Sie einen neuen Code ein.",
+    "authAnswer": "Authentifizierungsantwort",
+    "authContinue": "Weiter"
+  },
+  "permissions": {
+    "use": {
+      "title": "Nutze Tunnel",
+      "description": "Starten, stoppen und überwachen Sie SSH-Tunnel und speichern Sie Client-Tunnel-Voreinstellungen."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tunnel aktivieren",
+        "description": "Richten Sie SSH-Tunnel über diesen Host ein."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tunnel",

@@ -1,14 +1,23 @@
 {
+  "loginWithSso": "Se connecter avec l'authentification unique",
   "loginWithProvider": "Se connecter avec {{name}}",
   "loading": "Chargement...",
+  "permissions": {
+    "manage": {
+      "title": "Gérer les fournisseurs SSO",
+      "description": "Ajouter, modifier et supprimer les fournisseurs d'authentification unique (SSO) avec lesquels les utilisateurs peuvent se connecter."
+    }
+  },
   "providers": {
-    "docsLink": "Documentation",
+    "docsLink": "Voir la documentation",
     "none": "Aucun fournisseur SSO configuré.",
     "add": "Ajouter un fournisseur",
     "edit": "Modifier le fournisseur",
     "delete": "Supprimer le fournisseur",
     "deleteConfirm": "Supprimer ce fournisseur ? Les utilisateurs associés ne pourront plus se connecter.",
-    "name": "Nom d’affichage",
+    "name": "Nom affiché",
+    "namePlaceholder": "Mon fournisseur SSO",
+    "nameRequired": "Un nom d'affichage est requis.",
     "type": "Type de fournisseur",
     "enabled": "Activé",
     "save": "Enregistrer le fournisseur",
@@ -17,11 +26,20 @@
     "saveFailed": "Échec de l'enregistrement",
     "deleted": "Supprimé",
     "deleteFailed": "Échec de la suppression",
-    "cancel": "Annuler"
+    "loadFailed": "Échec du chargement des fournisseurs SSO",
+    "cancel": "Annuler",
+    "copy": "Copier",
+    "copied": "Copié",
+    "redirectUri": "URI de redirection",
+    "redirectUriDesc": "Enregistrez cette URL comme URL de redirection ou de rappel auprès de votre fournisseur d'identité.",
+    "legacyCallback": "Conserver l'ancienne URI de redirection",
+    "legacyCallbackDesc": "Ce fournisseur a été configuré avant Termix 2.9 et utilise toujours l'ancienne URI de redirection, qui reste fonctionnelle. Pour passer à la nouvelle, ajoutez d'abord {{uri}} à votre fournisseur d'identité, puis désactivez-le.",
+    "authorizationUrl": "URL d'autorisation : {{url}}"
   },
   "fields": {
     "clientId": "ID client",
     "clientSecret": "Secret client",
+    "secretKeep": "Un secret est préservé. Laissez cet emplacement vide pour le conserver.",
     "issuerUrl": "URL de l'émetteur",
     "authUrl": "URL d'autorisation",
     "tokenUrl": "URL du jeton",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Les utilisateurs de ce groupe ont les droits administrateur. Laissez vide pour désactiver la synchronisation de groupe.",
     "caCert": "Certificat CA personnalisé",
     "caCertDesc": "Facultatif. Certificat CA au format PEM pour les fournisseurs OIDC utilisant une CA privée ou auto-signée. Laissez vide pour utiliser le magasin de confiance du système."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Connectez-vous automatiquement avec l'authentification unique (SSO).",
+      "description": "Dirigez les visiteurs directement vers le premier fournisseur d'authentification unique (SSO) au lieu d'afficher le formulaire de connexion. La variable d'environnement OIDC_SILENT_LOGIN_DEFAULT remplace ce comportement."
+    }
   }
 }

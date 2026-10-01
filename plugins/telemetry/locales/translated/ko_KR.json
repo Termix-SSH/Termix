@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "사용 통계 관리",
+      "description": "전송되는 사용 통계를 확인하고, 지금 전송한 다음 인스턴스 ID를 재설정하세요."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "익명 사용 통계를 공유합니다",
+      "description": "Termix 개선에 도움이 되도록 하루에 한 번 익명의 간단한 요약 정보를 전송합니다. 사용자 이름, 호스트 이름, IP 주소 또는 자격 증명은 절대 포함되지 않습니다."
+    },
+    "includePlatform": {
+      "label": "플랫폼 정보를 포함하세요",
+      "description": "운영 체제, CPU 아키텍처, Node.js 버전, 데이터베이스 유형 및 Termix 설치 방식(Docker, 데스크톱 앱 또는 서버)."
+    },
+    "includeFeatureUsage": {
+      "label": "기능 사용법을 포함하세요",
+      "description": "각 탭이 열린 횟수와 마지막 보고 이후 SSH 로그인 횟수를 보여줍니다. 사용자는 프로필에서 해당 기능을 끌 수 있습니다."
+    },
+    "includePlugins": {
+      "label": "설치된 기능을 포함합니다",
+      "description": "어떤 내장 기능이 설치되어 실행 중인지 알려주세요."
+    },
+    "instanceId": {
+      "label": "인스턴스 ID"
+    },
+    "shareFeatureUsage": {
+      "label": "내 기능 사용량을 포함하세요",
+      "description": "익명 사용 통계에서 사용자가 어떤 종류의 탭을 여는지 집계합니다. 사용자 또는 호스트에 대한 정보는 전혀 전송되지 않습니다."
+    }
+  },
+  "status": {
+    "title": "상태",
+    "on": "사용량 통계를 하루에 한 번 공유합니다.",
+    "off": "사용량 통계를 공유하지 않음",
+    "lockedOn": "ENABLE_TELEMETRY 환경 변수에 의해 활성화됩니다. 해당 변수를 변경하십시오.",
+    "lockedOff": "ENABLE_TELEMETRY 환경 변수에 의해 비활성화됩니다. 해당 변수를 변경하십시오.",
+    "instanceId": "인스턴스 ID: {{id}}",
+    "noInstanceId": "아직 인스턴스 ID가 없습니다.",
+    "lastSent": "마지막으로 보낸 메시지 {{date}}",
+    "neverSent": "아직 보내지 않았습니다",
+    "nextSend": "다음 보고서 제출 예정일 {{date}}",
+    "lastError": "마지막 시도가 실패했습니다: {{error}}",
+    "preview": "미리보기 보고서",
+    "sendNow": "지금 보내기",
+    "sending": "배상...",
+    "sent": "사용량 통계가 전송되었습니다.",
+    "notSent": "사용 통계 기능이 꺼져 있어서 아무것도 전송되지 않았습니다.",
+    "resetId": "인스턴스 ID 재설정",
+    "resetIdConfirm": "인스턴스 ID를 재설정하시겠습니까? 향후 보고서는 새 설치처럼 보일 것입니다.",
+    "resetIdDone": "인스턴스 ID 재설정",
+    "previewTitle": "다음 보고서",
+    "previewDescription": "지금 당장 보내질 내용이 바로 이것입니다.",
+    "close": "닫기",
+    "loadFailed": "사용량 통계 상태를 불러올 수 없습니다."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "hint": "Du kan indsætte en 1Password-reference (op://vault/item/field) i stedet for hemmeligheden. Den hentes fra din hemmelige kilde, når du opretter forbindelse.",
+  "manage": "Administrer hemmelige kilder",
+  "title": "Hemmelige kilder",
+  "description": "Eksterne adgangskodeadministratorer. Termix læser hemmeligheder fra ved tilslutning. I øjeblikket 1Password Connect (selvhostet). Adgangstokenet gemmes krypteret med din datanøgle.",
+  "new": "Ny kilde",
+  "nameLabel": "Venligt navn",
+  "urlLabel": "URL til forbindelsesserver",
+  "tokenLabel": "Forbind adgangstoken",
+  "tokenKeep": "Lad feltet stå tomt for at beholde det aktuelle token",
+  "sharedLabel": "Del med alle brugere (kun administratorer, løses mens du er logget ind)",
+  "shared": "delt",
+  "test": "Prøve",
+  "testOk": "Forbundet, {{count}} boks(e) synlig(e)",
+  "testFailed": "Forbindelsestest mislykkedes",
+  "required": "Navn, server-URL og token er påkrævet",
+  "saved": "Hemmelig kilde gemt",
+  "deleted": "Hemmelig kilde slettet",
+  "settings": {
+    "admin": {
+      "privateEndpoints": {
+        "label": "Tilladelsesliste for privat slutpunkt",
+        "description": "Private eller loopback-værter, som en hemmelig kilde kan nå, én pr. linje. En selvhostet 1Password Connect-server skal normalt have sin egen adresse angivet her."
+      }
+    }
+  }
+}

@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "ファイル",
+    "sftp": "SFTP",
+    "openFileManager": "ファイルマネージャーを開く"
+  },
+  "permissions": {
+    "use": {
+      "title": "ファイルマネージャーを使用する",
+      "description": "SFTP経由でファイルを閲覧、編集、転送できます。"
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "ファイルマネージャーを有効にする",
+        "description": "SFTP経由でこのホスト上のファイルを閲覧および編集できます。"
+      },
+      "defaultPath": {
+        "label": "デフォルトパス"
+      },
+      "scpLegacy": {
+        "label": "SCP レガシーモード"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "同時ファイル転送",
+        "description": "ローカル/リモートマネージャーが同時にアップロードまたはダウンロードできるファイルの数を指定します。サーバーがSFTPチャネルを制限している場合は、この値を小さくしてください。"
+      },
+      "confirmBeforeTrash": {
+        "label": "ファイルをゴミ箱に移動する前に確認してください",
+        "description": "リモートファイルをゴミ箱に移動する前に、必ず確認してください。完全削除の場合も確認が必要です。"
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "ファイルマネージャー"
+  },
   "fileManager": {
     "noHostSelected": "ホストが選択されていません",
     "initializingEditor": "エディターを初期化中...",
@@ -34,6 +72,7 @@
     "rename": "名前を変更",
     "uploading": "アップロード中...",
     "uploadingFile": "{{name}} をアップロード中...",
+    "uploadingChunk": "{{name}}をアップロード中 : {{percent}}% ( {{chunk}} の一部、 {{total}})",
     "fileName": "ファイル名",
     "folderName": "フォルダ名",
     "fileUploadedSuccessfully": "ファイル \"{{name}}\" のアップロードが完了しました",
@@ -58,7 +97,7 @@
     "dragFilesToUpload": "ここにファイルをドロップしてアップロード",
     "dropToUploadHere": "ここにアップロードしてください",
     "dropToDownloadHere": "ここからダウンロードしてください",
-    "localFiles": "地元",
+    "localFiles": "ローカル",
     "showLocalFiles": "ローカルファイルを表示する（分割表示）",
     "hideLocalFiles": "ローカルファイルを非表示にする",
     "localHome": "ホームフォルダ",
@@ -68,7 +107,7 @@
     "localRevealInFileManager": "システムファイルマネージャで表示",
     "localCannotOpenFolder": "フォルダーを開けません",
     "localItemCount": "{{count}} アイテム",
-    "localSelectedCount": "{{count}} 選択済み",
+    "localSelectedCount": "{{count}} 件選択中",
     "back": "戻る",
     "forward": "フォワード",
     "up": "上",
@@ -86,11 +125,11 @@
     "localDownloadFailed": "ダウンロードに失敗しました",
     "localDownloadPartial": "{{done}} 個のファイルをダウンロードしましたが、 {{failed}} 失敗しました。",
     "localReplaceExistingPrompt": "このフォルダには既に{{count}} 個のアイテムが存在します。置き換えますか？",
-    "localReplace": "交換する",
+    "localReplace": "置換",
     "localSkipExisting": "スキップ",
     "localSkippedExisting": "既存のアイテムをスキップしました {{count}}",
     "localUnsafeNamesSkipped": "このコンピューターでは名前を使用できない {{count}} 個のアイテムをスキップしました",
-    "localOpen": "開ける",
+    "localOpen": "開く",
     "localOpenFolder": "フォルダーを開く",
     "localUploadToRemote": "サーバーにアップロード",
     "localUploadToRemoteMany": "{{count}} 個のアイテムをサーバーにアップロードします",
@@ -106,7 +145,7 @@
     "goToParentFolder": "親フォルダへ移動",
     "resizeSidebar": "サイドバーのサイズを変更するにはドラッグしてください（ダブルクリックでリセットできます）。",
     "resizeLocalPane": "ローカルペインのサイズを変更するにはドラッグしてください（ダブルクリックでリセットできます）。",
-    "columns": "コラム",
+    "columns": "列",
     "columnsHint": "右クリックして列を選択",
     "emptyFolder": "このフォルダーは空です",
     "searchFiles": "ファイルを検索...",
@@ -169,7 +208,7 @@
     "trashDescription": "削除されたアイテムは、このホスト上で {{days}} 日間保持されます。",
     "trashLoadFailed": "ゴミ箱の読み込みに失敗しました",
     "trashEmpty": "ゴミ箱は空です",
-    "trashRestore": "復元する",
+    "trashRestore": "復元",
     "trashRestored": "復元済み {{name}}",
     "trashRestoreFailed": "アイテムの復元に失敗しました。元のパスが既に存在している可能性があります。",
     "trashDeletePermanently": "完全に削除する",
@@ -290,6 +329,7 @@
     "connecting": "接続中...",
     "connectedSuccessfully": "接続しました",
     "totpVerificationFailed": "TOTP検証に失敗しました",
+    "browserSignInFailed": "ログインに失敗しました。もう一度お試しください。",
     "authenticationFailed": "認証に失敗しました",
     "incorrectPassphrase": "パスフレーズが間違っています。もう一度お試しください。",
     "verificationCodePrompt": "認証コード:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "PDFを読み込めません",
     "pdfLoadError": "このPDFファイルの読み込み中にエラーが発生しました。",
     "loadingPdf": "PDFを読み込み中...",
-    "loadingPage": "ページを読み込み中..."
+    "loadingPage": "ページを読み込み中...",
+    "cancel": "キャンセル",
+    "copiedItems_one": "{{count}} アイテムをコピーしました",
+    "copiedItems_other": "{{count}} 個のアイテムをコピーしました",
+    "deleteCopiedFileFailed": "{{name}}のコピーを削除できませんでした: {{error}}",
+    "dragMovedItems_one": "{{count}} アイテムを {{target}} に移動しました。",
+    "dragMovedItems_other": "{{count}} 個のアイテムを {{target}}に移動しました。",
+    "moveBackFileFailed": "{{name}} を {{error}} に戻すことができませんでした。",
+    "terminal": "端末: {{host}} ({{path}})",
+    "dragToDesktop": "{{name}} をデスクトップにドラッグ",
+    "dragFilesToDesktop": "{{count}} ファイルをデスクトップにドラッグしています",
+    "folderDragUnsupported": "フォルダをデスクトップにドラッグする機能はまだサポートされていません。",
+    "saveToDesktopFailed": "保存に失敗しました: {{error}}",
+    "dragFailedDetail": "ドラッグに失敗しました: {{error}}",
+    "videoUnsupported": "お使いのブラウザはこの動画フォーマットを再生できません。",
+    "downloadToPlay": "他の場所でプレイするにはダウンロードしてください",
+    "cannotPreviewType": "このファイルタイプはプレビューできません",
+    "cannotPreviewTypeHint": "このファイル形式にはプレビュー機能がありません。ダウンロードして別のアプリで開いてください。"
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -335,23 +392,23 @@
     "destinationServer": "宛先サーバー",
     "selectHost": "ホストを選択",
     "noHostSelected": "ホストが選択されていません",
-    "move": "動く",
+    "move": "移動",
     "copy": "コピー",
     "upload": "アップロード",
     "itemsSelected": "{{count}} アイテムが選択されました",
     "itemsSelected_other": "{{count}} 個のアイテムが選択されました",
-    "ready": "準備ができて",
-    "loadingHosts": "ホストを読み込んでいます...",
+    "ready": "準備完了",
+    "loadingHosts": "ホストを読み込み中...",
     "name": "名前",
-    "modified": "修正済み",
+    "modified": "更新日時",
     "size": "サイズ",
     "noFiles": "ファイルなし",
-    "open": "開ける",
+    "open": "開く",
     "up": "上",
-    "refresh": "更新",
+    "refresh": "再読み込み",
     "copyToTarget": "ターゲットディレクトリにコピー",
-    "rename": "名前を変更する",
-    "delete": "消去",
+    "rename": "名前変更",
+    "delete": "削除",
     "editPermissions": "権限の編集",
     "createNewFolder": "新しいフォルダーを作成する",
     "deleteSelectedItems": "選択したアイテムを削除",
@@ -361,7 +418,7 @@
     "save": "保存",
     "folderCreated": "フォルダが作成されました",
     "itemRenamed": "アイテム名が変更されました",
-    "actionFailed": "アクションが失敗しました",
+    "actionFailed": "アクションに失敗しました",
     "itemsDeleted": "{{count}} アイテムが削除されました",
     "itemsDeleted_other": "{{count}} 個のアイテムが削除されました",
     "deleteFailed": "削除に失敗しました",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "ファイルマネージャー",
-    "tabFiles": "ファイル",
-    "enableFileManagerMonitor": "ファイルマネージャーを有効にする",
-    "enableFileManagerMonitorDesc": "このホストのファイルを SFTP で閲覧・管理します",
-    "scpLegacyLabel": "SCP レガシーモード",
-    "scpLegacyDesc": "SFTP サブシステムをサポートしないサーバー（組み込みや最小構成の SSH サーバーなど）に対してレガシーファイル転送を使用します",
-    "defaultPathLabel": "デフォルトパス",
-    "fileManagerPathHint": "このホストのファイルマネージャー起動時に開くディレクトリ",
     "fileManagerUrlCopied": "ファイルマネージャーURLをコピーしました",
     "copyFileManagerUrlAction": "ファイルマネージャー URL をコピー",
     "docsLink": "ドキュメントを表示",
     "hostNotFound": "ホストが見つかりません",
     "loadingHost": "ホストを読み込み中..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "ファイルマネージャーを有効にする"
-      },
-      "defaultPath": {
-        "label": "デフォルトパス"
-      },
-      "scpLegacy": {
-        "label": "SCP レガシーモード"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "同時ファイル転送",
-        "description": "ローカル/リモートマネージャーが同時にアップロードまたはダウンロードできるファイルの数を指定します。サーバーがSFTPチャネルを制限している場合は、この値を小さくしてください。"
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "ファイル"
   },
   "onboarding": {
     "feature_files": "ファイルマネージャー",
@@ -437,7 +464,7 @@
     "destinationPath": "転送先パス",
     "destMustBeDirectory": "複数アイテムの転送では転送先はディレクトリである必要があります",
     "goUp": "上へ",
-    "hostAuthRequired": "認証が必要です — まずこのホストでファイルマネージャを開いてください",
+    "hostAuthRequired": "認証が必要です。まずこのホストでファイルマネージャを開いてください。",
     "hostConnecting": "接続中…",
     "hostConnectionFailed": "接続に失敗しました",
     "hostDisconnected": "未接続",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "ファイルごとのSFTPを選択しました。",
       "user_tar": "tarアーカイブを選択しました。",
-      "tar_unavailable": "一方または両方のホストでtarが利用できないため、代わりにファイルごとのSFTPが使用されます。",
-      "windows_host": "Windows ホストが含まれているため、tar は使用されません。",
-      "auto_multi_large": "自動: 複数ファイルに大きな圧縮可能なファイル ({{largestSize}}) が含まれるため、tarで1回の転送にまとめます。",
-      "auto_single_large_in_archive": "自動: このセットに1つの大きなファイル ({{largestSize}}) があるため、ファイルごとのSFTPです。",
-      "auto_many_incompressible": "自動: ほとんど圧縮不可能なデータのため、ファイルごとのSFTPです。",
-      "auto_many_files": "自動: 多数のファイル ({{fileCount}}) があるため、tarでファイルごとのオーバーヘッドを削減します。",
+      "tar_unavailable": "片方または両方のホストでtarが利用できないため、代わりにファイル単位のSFTPが使用されます。",
+      "windows_host": "Windowsホストが関係しているため、tarコマンドは使用しません。",
+      "auto_multi_large": "自動: 圧縮可能なデータを含む、大きなファイル ({{largestSize}}) を含む複数のファイル。tar はそれらを 1 つの転送にまとめます。",
+      "auto_single_large_in_archive": "自動: このセットには大きなファイルが 1 つ ({{largestSize}}) 含まれているため、ファイルごとの SFTP です。",
+      "auto_many_incompressible": "自動: ほとんどが非圧縮データなので、ファイル単位のSFTPを使用します。",
+      "auto_many_files": "Auto: 多数のファイル ({{fileCount}}) 、tar はファイルごとのオーバーヘッドを削減します。",
       "auto_default": "自動: このセットではファイルごとのSFTPです。"
     },
     "methodTar": "Tar アーカイブ",
@@ -471,7 +498,7 @@
     "metricsCompress": "送信元での圧縮: {{duration}}",
     "metricsExtract": "送信先で展開: {{duration}}",
     "metricsPrepare": "転送先の準備: {{duration}}",
-    "metricsRouteBenchmark": "ルートプローブ — 直接: {{direct}}、リレー: {{relay}}",
+    "metricsRouteBenchmark": "経路プローブ: 直接 {{direct}}、リレー {{relay}}",
     "metricsSourceDelete": "送信元から削除: {{duration}}",
     "metricsTotal": "合計: {{duration}}",
     "metricsTransfer": "エンドツーエンド: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "転送に失敗しました",
     "transferFailedRetryHint": "部分的なデータが宛先に保持されました。接続が復旧したら再試行が再開されます。",
     "transferPartialHint": "転送できませんでした: {{paths}}",
-    "transferSuccess": "転送が完了しました"
+    "transferSuccess": "転送が完了しました",
+    "metricsHopSourceRead": "送信元 → サーバー: {{throughput}}",
+    "metricsHopDestSftpWrite": "サーバー → 送信先 (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "サーバー → 送信先 (ローカル): {{throughput}}"
   }
 }

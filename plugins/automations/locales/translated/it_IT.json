@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Visualizza le automazioni",
+      "description": "Visualizza le automazioni e la loro cronologia."
+    },
+    "create": {
+      "title": "Creare automazioni",
+      "description": "Aggiungi nuove automazioni."
+    },
+    "edit": {
+      "title": "Automazioni di modifica",
+      "description": "Modifica le automazioni esistenti."
+    },
+    "delete": {
+      "title": "Eliminazione delle automazioni",
+      "description": "Rimuovi le automazioni."
+    },
+    "run": {
+      "title": "Eseguire automazioni",
+      "description": "Attivare un'automazione manualmente."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,19 +34,13 @@
         "editTitle": "Automazione di modifica",
         "empty": "Nessuna automazione ancora disponibile. Creane una per reagire a una metrica, a una pianificazione o a un evento.",
         "emptyRuns": "Nessuna corsa ancora.",
-        "emptyChannels": "Nessun canale ancora. Aggiungine uno per inviare notifiche da qualche parte.",
-        "noChannelsHint": "Nessun canale configurato al momento. Aggiungine uno nella scheda Canali.",
-        "addChannel": "Aggiungi canale",
-        "testChannel": "Test",
-        "channelTestSent": "Notifica di test inviata",
-        "channelTestFailed": "Notifica di prova non riuscita",
-        "channelDeleted": "Canale eliminato",
-        "deleteChannelConfirm": "Eliminare questo canale? Le automazioni che lo utilizzano smetteranno di inviare notifiche.",
+        "channelsHint": "I canali sono configurati negli avvisi",
+        "noChannelsHint": "L'avviso viene sempre inviato alla tua casella di posta. Aggiungi i canali agli avvisi per inviarlo anche ad altri destinatari.",
         "nameLabel": "Nome",
         "namePlaceholder": "Ad esempio, pulire /data quando è pieno",
-        "nameRequired": "Il nome è obbligatorio",
+        "nameRequired": "Nome obbligatorio",
         "descriptionLabel": "Descrizione",
-        "descriptionPlaceholder": "Descrizione facoltativa",
+        "descriptionPlaceholder": "Descrizione opzionale",
         "enabledLabel": "Abilitato",
         "concurrencyLabel": "Se è già in esecuzione",
         "concurrencyHint": "Cosa fare se questo problema si ripresenta prima che l'ultima esecuzione sia terminata.",
@@ -43,7 +59,7 @@
         "testRunHint": "Esegue ogni passaggio ma non tocca nulla al di fuori di Termix.",
         "runStarted": "Corsa iniziata",
         "runFinished": "Corsa terminata: {{status}}",
-        "trigger": "Grilletto",
+        "trigger": "Trigger",
         "steps": "Passaggi",
         "addStep": "Aggiungi passaggio",
         "removeStep": "Rimuovere il passaggio",
@@ -60,7 +76,7 @@
         "lastRun": "Prima corsa",
         "never": "Mai",
         "duration": "{{seconds}}s",
-        "stepOutput": "Produzione",
+        "stepOutput": "Output",
         "stepError": "Errore",
         "dryRunBadge": "Esecuzione del test",
         "hostSelector": {
@@ -79,7 +95,7 @@
           "webhook": "Webhook in entrata"
         },
         "stepTypes": {
-          "notify": "Invia una notifica",
+          "notify": "Invia un avviso",
           "http": "Chiamare un medico",
           "run_snippet": "Esegui uno snippet",
           "run_command": "Eseguire un comando",
@@ -90,10 +106,10 @@
           "set_var": "Imposta una variabile",
           "if": "Se / altrimenti",
           "run_automation": "Esegui un'altra automazione",
-          "stop": "Fermare"
+          "stop": "Stop"
         },
         "statuses": {
-          "running": "Corsa",
+          "running": "In esecuzione",
           "success": "Successo",
           "failed": "Fallito",
           "timeout": "Tempo scaduto",
@@ -101,13 +117,13 @@
           "cancelled": "Annullato"
         },
         "fields": {
-          "host": "Ospite",
-          "metric": "metrico",
+          "host": "Host",
+          "metric": "Metrica",
           "mount": "Punto di appoggio",
           "operator": "È",
           "value": "Valore",
           "forSeconds": "Sostenuto per (secondi)",
-          "cooldown": "Tempo di raffreddamento (minuti)",
+          "cooldown": "Cooldown (minuti)",
           "cron": "espressione Cron",
           "intervalSeconds": "Ogni (secondi)",
           "timezone": "Fuso orario",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Metodo",
           "body": "Corpo",
-          "channels": "Canali",
+          "channels": "Invia anche a",
           "title": "Titolo",
           "message": "Messaggio",
           "snippet": "Frammento",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Ferma la corsa",
           "continue": "Proseguire"
+        },
+        "needsPlugin": "Bisogno {{plugin}}",
+        "needsPluginHint": "Questa automazione viene saltata finché la funzionalità necessaria non sarà nuovamente disponibile.",
+        "offBadge": "Disattivo",
+        "docsLink": "Vedi documenti",
+        "ago": {
+          "seconds": "{{count}}secondi fa",
+          "minutes": "{{count}}m fa",
+          "hours": "{{count}}h fa",
+          "days": "{{count}}d fa"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automazioni",
     "feature_automations_desc": "Esegui automaticamente i passaggi quando si verifica un evento e ricevi una notifica."
+  },
+  "maintenance": {
+    "title": "Manutenzione",
+    "description": "Metti in pausa le automazioni relative allo stato dell'host, all'integrità, alle metriche, ai container e alla disconnessione del tunnel durante l'esecuzione dei lavori. Il monitoraggio, le esecuzioni manuali e le automazioni pianificate continuano.",
+    "denied": "Non hai l'autorizzazione per visualizzare gli interventi di manutenzione.",
+    "sharedReadOnly": "Questo host è stato condiviso con te. Solo il proprietario può modificarne la manutenzione.",
+    "failed": "Impossibile aggiornare la manutenzione.",
+    "active": "Manutenzione attiva",
+    "estimated": "Completamento previsto",
+    "noAutoEnd": "Il preventivo non conclude la manutenzione. La sua conclusione va esplicitamente al termine dei lavori.",
+    "endConfirm": "Terminare la manutenzione e riprendere le automazioni attivate da eventi per questo host?",
+    "confirmEnd": "Conferma fine",
+    "cancel": "Annulla",
+    "end": "Manutenzione finale",
+    "action": "Azione",
+    "startNow": "Inizia ora",
+    "schedule": "Programma per dopo",
+    "reason": "Motivo",
+    "startUtc": "Primo inizio (UTC)",
+    "repeat": "Ripetere",
+    "once": "Una volta",
+    "weekly": "Settimanale",
+    "monthly": "Mensile",
+    "utcHelp": "Le pianificazioni utilizzano il fuso orario UTC durante tutto l'anno. Le pianificazioni mensili saltano i mesi in cui non è selezionato il giorno. Le finestre temporali pianificate non possono sovrapporsi; la manutenzione straordinaria si estende anche alle finestre successive.",
+    "duration": "Durata stimata (minuti)",
+    "grace": "Periodo di grazia (minuti)",
+    "notify": "Avvisami una volta se rimani ancora offline dopo il periodo stimato più il periodo di tolleranza.",
+    "addSchedule": "Aggiungi programma",
+    "schedules": "Orari",
+    "noSchedules": "Nessun programma di manutenzione.",
+    "completed": "iniziato",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minuti",
+    "remove": "Rimuovere la pianificazione",
+    "loadFailed": "Impossibile aggiornare lo stato della manutenzione. Le modifiche sono disabilitate fino al caricamento.",
+    "loading": "Caricamento dello stato di manutenzione…"
   }
 }

@@ -56,13 +56,15 @@
     "c2sPresetLoadError": "Asiakasohjelman tunnelin esiasetusten lataaminen epäonnistui",
     "c2sPresetLoaded": "Asiakastunnelin esiasetus ladattu paikallisesti",
     "c2sPresetName": "Esiasetetun nimen",
-    "c2sPresetNamePlaceholder": "Asiakkaan esiasetettu nimi",
+    "c2sPresetNamePlaceholder": "Asiakkaan esiasetetun nimen",
     "c2sPresetRenamed": "Asiakastunnelin esiasetettu nimi",
     "c2sPresetSaved": "Asiakastunnelin esiasetus tallennettu",
     "c2sPresetSyncNote": "Esiasetukset ovat eksplisiittisiä tilannevedoksia; yhden lataaminen korvaa tämän työpöytäasiakkaan paikallisen asiakastunneliluettelon.",
     "c2sPresetToLoad": "Ladattava esiasetus",
     "c2sTunnelPresets": "Asiakastunnelin esiasetukset",
-    "c2sTunnelPresetsUnavailable": "Asiakasohjelman tunnelin esiasetukset ovat käytettävissä vain työpöytäsovelluksessa."
+    "c2sTunnelPresetsUnavailable": "Asiakasohjelman tunnelin esiasetukset ovat käytettävissä vain työpöytäsovelluksessa.",
+    "c2sPresetRenameError": "Esiasetuksen uudelleennimeäminen epäonnistui",
+    "c2sPresetDeleteError": "Esiasetuksen poistaminen epäonnistui"
   },
   "tunnels": {
     "attempt": "Yritys {{current}} / {{max}}",
@@ -90,7 +92,7 @@
     "endpointPort": "Päätepisteen portti",
     "endpointSshHost": "Päätepisteen SSH-isäntä",
     "endpointSshHostPlaceholder": "Valitse määritetty isäntä",
-    "endpointSshHostRequired": "Valitse kullekin asiakastunnelille SSH-päätepisteisäntä.",
+    "endpointSshHostRequired": "Valitse kullekin asiakastunnelille SSH-päätepisteen isäntä.",
     "error": "Virhe",
     "forwardDescriptionClientDynamic": "SOCKS paikallisessa portissa {{sourcePort}}.",
     "forwardDescriptionClientLocal": "Paikallinen {{sourcePort}} → etäinen {{endpointPort}}.",
@@ -115,7 +117,7 @@
     "localSaveError": "Paikallisten asiakastunnelien tallentaminen epäonnistui",
     "localSaved": "Asiakastunnelit tallennettu",
     "manualControlError": "Tunnelin tilan päivittäminen epäonnistui.",
-    "maxRetries": "Uudelleenyritysten enimmäismäärä",
+    "maxRetries": "Maks. uudelleenyritykset",
     "mode": "Tila",
     "nextRetryIn": "Seuraava uudelleenyritys {{seconds}} sekunnin kuluttua",
     "noClientTunnels": "Tälle työpöydälle ei ole määritetty asiakastunneleita.",
@@ -139,8 +141,32 @@
     "typeLocal": "Paikallinen (-L)",
     "typeRemote": "Kauko-ohjain (-R)",
     "working": "Työskentely...",
+    "activeCount": "{{connected}}/{{total}} aktiivinen",
+    "listensOn": "Sidottu paikalliseen isäntään:{{port}}",
+    "socksProxy": "SOCKS5-välityspalvelin",
+    "waiting": "Odotus",
+    "remoteSessionExpired": "Etäsynkronointi-istunto on vanhentunut. Yhdistä etäsynkronointi uudelleen ja yritä uudelleen.",
+    "activeTunnels": "Aktiiviset tunnelit",
     "start": "Aloita",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Tunnelin todennus",
+    "authRetry": "Edellinen koodi ei hyväksytty. Syötä uusi koodi.",
+    "authAnswer": "Todennusvastaus",
+    "authContinue": "Jatkaa"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä tunneleita",
+      "description": "Käynnistä, pysäytä ja tarkkaile SSH-tunneleita ja tallenna asiakastunnelien esiasetukset."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Ota tunnelit käyttöön",
+        "description": "Luo SSH-tunneleita tämän isännän kautta."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tunnelit",

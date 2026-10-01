@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Le preimpostazioni sono snapshot espliciti; caricandone una si sostituisce l'elenco dei tunnel client locali di questo desktop.",
     "c2sPresetToLoad": "Preimpostazione da caricare",
     "c2sTunnelPresets": "Preimpostazioni tunnel client",
-    "c2sTunnelPresetsUnavailable": "Le preimpostazioni tunnel client sono disponibili solo nel client desktop."
+    "c2sTunnelPresetsUnavailable": "Le preimpostazioni tunnel client sono disponibili solo nel client desktop.",
+    "c2sPresetRenameError": "Impossibile rinominare il preset",
+    "c2sPresetDeleteError": "Impossibile eliminare il preset"
   },
   "tunnels": {
     "attempt": "Tentativo {{current}} di {{max}}",
@@ -139,11 +141,35 @@
     "typeLocal": "Locale (-L)",
     "typeRemote": "Remoto (-R)",
     "working": "In corso...",
+    "activeCount": "{{connected}}/{{total}} attivo",
+    "listensOn": "Collegato a localhost:{{port}}",
+    "socksProxy": "proxy SOCKS5",
+    "waiting": "In attesa",
+    "remoteSessionExpired": "La sessione di sincronizzazione remota è scaduta. Riconnettiti alla sincronizzazione remota e riprova.",
+    "activeTunnels": "Tunnel attivi",
     "start": "Avvia",
-    "stop": "Ferma"
+    "stop": "Ferma",
+    "authTitle": "Autenticazione del tunnel",
+    "authRetry": "Il codice precedente non è stato accettato. Inserisci un nuovo codice.",
+    "authAnswer": "Risposta di autenticazione",
+    "authContinue": "Continua"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare i tunnel",
+      "description": "Avvia, arresta e monitora i tunnel SSH e salva le impostazioni predefinite dei tunnel client."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Abilita i tunnel",
+        "description": "Configura i tunnel SSH attraverso questo host."
+      }
+    }
   },
   "onboarding": {
-    "feature_tunnels": "Gallerie",
-    "feature_tunnels_desc": "Inoltrare le porte attraverso un server per raggiungere servizi non esposti."
+    "feature_tunnels": "Tunnel",
+    "feature_tunnels_desc": "Inoltra le porte attraverso un server per raggiungere servizi non esposti."
   }
 }

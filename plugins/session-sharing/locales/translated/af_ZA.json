@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Soek gebruikers...",
     "noUsersFound": "Geen gebruikers gevind nie",
     "linkCreated": "Deel skakel geskep",
+    "linkNeedsServer": "Deelskakels werk slegs vir sessies op 'n Termix-bediener. Koppel hierdie gasheer deur jou gekoppelde bediener om dit met 'n skakel te deel.",
     "linkCopied": "Skakel gekopieer na knipbord",
     "copyLink": "Kopieer skakel",
     "shareCreated": "Sessie gedeel. Dit sal in hul Verbindings-oortjie verskyn.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Skakel",
     "userShareBadge": "Gebruiker: {{username}}",
     "loadSharesFailed": "Kon nie aktiewe delings laai nie",
+    "remoteDisplayUnavailable": "Afstandswerkskerm is tans nie beskikbaar nie.",
+    "sharedWithMe": "Sessies met my gedeel",
     "customHoursPlaceholder": "Ure totdat toegang verval"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Lede",
     "membersPanel": "Kamerlede en beheerversoeke",
     "membersWithCount": "Lede ({{count}})",
+    "guestsWithCount": "Gaste ({{count}})",
+    "removeGuests": "Verwyder gaste",
+    "anonymousGuest": "Gas",
     "online": "aanlyn",
     "offline": "vanlyn",
     "you": "(jy)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Hierdie gasskakel is ongeldig of die vergadering het geëindig"
     },
     "reopenFromPanel": "Hierdie vergadering-oortjie het verval. Maak die kamer weer oop vanaf die Vergaderings-paneel.",
+    "retry": "Probeer weer",
     "requestControl": "Versoekbeheer",
     "cancelControlRequest": "Kanselleer versoek",
     "controlQueue": "Beheerversoeke",
@@ -130,7 +137,10 @@
     "youArePresenting": "Jy bied aan in 'n ander oortjie. Stop die aanbieding om die verhoog oor te dra.",
     "created": "Kamer geskep",
     "invited": "Lede genooi",
-    "roomTab": "Vergadering"
+    "roomTab": "Vergadering",
+    "serverChanged": "Die vergaderingsbediener het verander. Maak hierdie vergadering weer oop vanaf die Vergaderingspaneel.",
+    "hostNotSynced": "Sinkroniseer hierdie gasheer met die vergaderingbediener voor die aanbieding.",
+    "linkRequiresServer": "Koppel hierdie lessenaar aan 'n Termix-bediener en skep die vergadering daar om 'n webskakel te deel."
   },
   "nav": {
     "collab": "Vergaderings"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Deel sessies en sluit aan by kamers",
+      "description": "Deel regstreekse sessies per skakel of met ander gebruikers, en skep en sluit aan by samewerkingskamers."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Pasgemaak"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Met my gedeel",
+    "sharedBy": "Gedeel deur {{username}}",
+    "join": "Sluit aan",
+    "sharedSessionLabel": "{{hostName}} (gedeel)"
   }
 }

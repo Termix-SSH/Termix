@@ -3,8 +3,31 @@
     "sessionLogs": "سجلات الجلسات"
   },
   "hosts": {
-    "enableSessionRecording": "تسجيل الجلسات",
+    "enableSessionRecording": "تسجيل الجلسة",
     "enableSessionRecordingDesc": "تسجيل مخرجات الجلسة الطرفية للمراجعة لاحقاً"
+  },
+  "permissions": {
+    "view": {
+      "title": "عرض تسجيلات الجلسات",
+      "description": "شاهد واستمع إلى تسجيلات جلساتك الخاصة."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "مدة الاحتفاظ (بالأيام)",
+        "description": "ما هي المدة التي يتم فيها الاحتفاظ بتسجيل الجلسة قبل حذفه تلقائيًا؟"
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "تفعيل تسجيل الجلسة",
+        "description": "سجل مخرجات الطرفية لهذا المضيف حتى تتمكن من تشغيلها أو تنزيلها لاحقًا."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "تسجيل"
   },
   "sessionLogs": {
     "title": "سجلات الجلسات",
@@ -21,6 +44,17 @@
     "copied": "تم النسخ!",
     "loadError": "فشل في تحميل سجلات الجلسات",
     "deleteError": "فشل في حذف سجل الجلسة",
-    "filterByHost": "تصفية حسب المضيف..."
+    "filterByHost": "تصفية حسب المضيف...",
+    "back": "رجوع",
+    "empty": "(فارغ)",
+    "noResults": "لا توجد نتائج للبحث عن \"{{query}}\"",
+    "hostFallback": "المضيف {{id}}",
+    "sessionFallback": "الجلسة {{id}}"
+  },
+  "player": {
+    "timeline": "الجدول الزمني للتسجيل",
+    "speed": "سرعة التشغيل",
+    "play": "تشغيل التسجيل",
+    "pause": "إيقاف التسجيل مؤقتًا"
   }
 }

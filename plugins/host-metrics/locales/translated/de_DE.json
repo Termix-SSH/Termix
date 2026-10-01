@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Host-Metriken"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Arbeitsspeicher",
@@ -160,7 +163,6 @@
       "firewallPersist": "Regeln dauerhaft speichern",
       "firewallPersisted": "Firewall-Regeln dauerhaft gespeichert",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard ist auf diesem Host nicht installiert",
       "wgNoInterfaces": "Keine WireGuard-Schnittstellen konfiguriert",
       "wgInterfaceUp": "Aktivieren",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Letzter Handshake",
       "wgHandshakeNever": "Nie",
       "wgTransfer": "Übertragung",
-      "tsNotInstalled": "Tailscale ist auf diesem Host nicht installiert",
-      "tsRunning": "Aktiv",
-      "tsStopped": "Gestoppt",
-      "tsEnable": "Verbinden",
-      "tsDisable": "Trennen",
-      "tsEnabling": "Verbinde mit Tailscale...",
-      "tsDisabling": "Trenne von Tailscale...",
-      "tsEnabled": "Tailscale verbunden",
-      "tsDisabled": "Tailscale getrennt",
-      "tsIPs": "Tailscale-IPs",
-      "tsPeers": "Peers",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Exit-Knoten",
-      "tsExitNodeActive": "Exit-Knoten aktiv",
-      "tsHostname": "Hostname"
+      "wgNoPeers": "Keine Konkurrenten"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "Anwenden",
     "viewHistory": "Verlauf anzeigen"
   },
-  "nav": {
-    "hostMetrics": "Host-Metriken"
-  },
   "hosts": {
     "tabHostMetrics": "Host-Metriken",
     "metricsCollectionLabel": "Metrikerfassung",
@@ -223,7 +207,7 @@
     "monitoredMountsLabel": "Benutzerdefinierte überwachte Pfade",
     "monitoredMountsDesc": "Fügen Sie Pfade hinzu, die nicht als separate Mounts verfügbar sind, einschließlich bind-gebundener Home Assistant-Pfade wie /config.",
     "monitoredMountPathPlaceholder": "Pfad (/config, /mnt/data)",
-    "monitoredMountLabelPlaceholder": "Etikett (optional)",
+    "monitoredMountLabelPlaceholder": "Bezeichnung (optional)",
     "addMonitoredMount": "Pfad hinzufügen",
     "excludedMountsDesc": "Bestimmte Mountpunkte oder Dateisystemtypen (z. B. nfs, cifs) können von der Festplattennutzung und Warnmeldungen für diesen Host ausgeblendet werden.",
     "excludedMountsPlaceholder": "Mount-Pfad (/mnt/nas) oder Dateisystemtyp (nfs, cifs)",
@@ -265,6 +249,9 @@
     "noHostSelected": "Kein Host ausgewählt",
     "selectHost": "Host auswählen..."
   },
+  "terminalStatus": {
+    "unavailable": "Live-Statistiken nicht verfügbar"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Verbunden"
+  },
+  "permissions": {
+    "use": {
+      "title": "Hostmetriken verwenden",
+      "description": "Sehen Sie sich Host-Metriken an und nutzen Sie die Host-Manager (Dienste, Pakete, Firewall und mehr) auf Hosts, die Sie erreichen können."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrikintervall (Sekunden)",
+        "description": "Wie oft ein angezeigter Host abgetastet wird, es sei denn, der Host legt sein eigenes Intervall fest."
+      },
+      "historyRetentionDays": {
+        "label": "Aufbewahrungsdauer (Tage)",
+        "description": "Wie lange die Messwertbeispiele für die Verlaufsdiagramme aufbewahrt werden."
+      },
+      "enabledForNewHosts": {
+        "label": "Metriken für neue Hosts aktiviert",
+        "description": "Ob neue Hosts mit aktivierter Metrikenerfassung starten."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperatureinheit",
+        "description": "Wie Temperaturen in Host Metrics angezeigt werden.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Kennzahlen erfassen"
+      },
+      "metricsInterval": {
+        "label": "Metrikintervall (Sekunden)"
+      },
+      "enabledWidgets": {
+        "label": "Aktivierte Widgets"
+      },
+      "excludedMounts": {
+        "label": "Ausgeschlossene Halterungen"
+      },
+      "monitoredMounts": {
+        "label": "Überwachte Pfade"
+      }
+    }
   }
 }

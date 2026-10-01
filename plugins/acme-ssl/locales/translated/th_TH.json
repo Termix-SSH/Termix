@@ -1,29 +1,58 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Manage ACME certificates",
+      "description": "See the certificate status and request a new certificate now."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Renew automatically",
+      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+    },
     "domain": {
-      "label": "โดเมน",
-      "placeholder": "เทอร์มิกซ์.ตัวอย่าง.com",
-      "description": "ชื่อโดเมนสาธารณะสำหรับใบรับรอง"
+      "label": "Domain",
+      "description": "The public domain name for the certificate.",
+      "placeholder": "termix.example.com"
     },
     "email": {
-      "label": "อีเมล",
+      "label": "Email",
+      "description": "Contact email for the ACME account and expiry notices.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "Certificate authority",
+      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (staging)",
+      "custom": "Custom ACME directory"
+    },
+    "directoryUrl": {
+      "label": "ACME directory URL",
+      "description": "Only for a custom certificate authority. Must be an https URL."
+    },
     "challengeType": {
-      "label": "ประเภทความท้าทาย",
-      "cloudflare": "DNS (Cloudflare) - ต้องใช้โทเค็น API ของ Cloudflare"
+      "label": "Challenge type",
+      "description": "How to prove you own the domain.",
+      "http": "HTTP - needs port 80 reachable from the internet",
+      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
     },
     "cloudflareToken": {
-      "label": "โทเค็น API ของ Cloudflare",
-      "description": "โทเค็นแบบจำกัดขอบเขตพร้อมสิทธิ์ Zone:DNS:Edit สำหรับโดเมนของคุณ"
+      "label": "Cloudflare API token",
+      "description": "Scoped token with Zone:DNS:Edit permission for your domain."
     }
   },
   "status": {
-    "title": "สถานะใบรับรอง",
-    "none": "ไม่มีใบรับรอง",
-    "expires": "หมดอายุ {{date}}",
-    "lastIssued": "ออกครั้งล่าสุด {{date}}",
-    "request": "ออก/ต่ออายุใบรับรอง",
-    "requesting": "ขอใบรับรอง..."
+    "title": "Certificate status",
+    "none": "No certificate",
+    "names": "Covers {{names}}",
+    "issuer": "Issued by {{issuer}}",
+    "expires": "Expires {{date}}",
+    "lastIssued": "Last issued {{date}}",
+    "lastError": "Last attempt failed: {{error}}",
+    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
+    "request": "Request certificate now",
+    "requesting": "Requesting certificate...",
+    "issued": "Certificate issued and installed"
   }
 }

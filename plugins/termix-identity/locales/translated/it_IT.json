@@ -23,7 +23,7 @@
     "provisionLabel": "Provisiona un server",
     "publishTitle": "Pubblica una chiave pubblica",
     "generate": "Genera",
-    "generateTooltip": "Genera una coppia di chiavi Ed25519 — pubblica la chiave pubblica e scarica la chiave privata sul tuo dispositivo",
+    "generateTooltip": "Genera una coppia di chiavi Ed25519. Pubblica la chiave pubblica e scarica la chiave privata sul tuo dispositivo.",
     "saveToVault": "Salva nelle credenziali",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Etichetta (facoltativa)",
@@ -32,7 +32,7 @@
     "keyPublished": "Chiave pubblicata",
     "addKeyFailed": "Aggiunta chiave fallita",
     "generatedSaved": "Coppia di chiavi generata e salvata nell'archivio delle credenziali. Anche la chiave privata è stata scaricata.",
-    "generatedOnly": "Coppia di chiavi generata — chiave privata scaricata (visualizzata una sola volta).",
+    "generatedOnly": "Coppia di chiavi generata. Chiave privata scaricata (mostrata una sola volta).",
     "generateFailed": "Generazione chiave fallita",
     "imported": "Chiave importata dalla credenziale",
     "importFailed": "Importazione chiave non riuscita",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Rendi attendibile sul server (esegui come root)",
     "caRotate": "Ruota",
     "caRotateConfirm": "Ruotare la CA? Tutti i certificati da essa firmati smetteranno di essere accettati e dovranno essere riemessi.",
-    "caRotated": "CA ruotata — certificati precedenti revocati",
+    "caRotated": "CA ruotata. Certificati precedenti revocati.",
     "caRotateFailed": "Rotazione CA non riuscita",
     "caDelete": "Rimuovi CA",
     "caDeleteConfirm": "Rimuovere l'autorità di certificazione?",
@@ -66,12 +66,21 @@
     "issueCert": "Certificato",
     "issueCertTooltip": "Emetti un certificato SSH per questa chiave, firmato dalla tua CA",
     "certIssued": "Certificato emesso e scaricato",
-    "certIssueFailed": "Emissione certificato non riuscita"
+    "certIssueFailed": "Emissione certificato non riuscita",
+    "docsLink": "Vedi documenti",
+    "principalsLabel": "Principi SSH",
+    "principalsPlaceholder": "Principale(i) SSH, ad esempio root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
     "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare l'ID Termix",
+      "description": "Richiedi un handle pubblico, pubblica le chiavi SSH ed esegui un'autorità di certificazione."
+    }
   }
 }

@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Gérer les statistiques d'utilisation",
+      "description": "Consultez les statistiques d'utilisation envoyées, envoyez-les maintenant et réinitialisez l'ID de l'instance."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Partager des statistiques d'utilisation anonymes",
+      "description": "Envoie quotidiennement un court résumé anonyme pour contribuer à l'amélioration de Termix. Ce résumé ne contient jamais de noms d'utilisateur, de noms d'hôte, d'adresses IP ni d'identifiants."
+    },
+    "includePlatform": {
+      "label": "Inclure les informations de la plateforme",
+      "description": "Le système d'exploitation, l'architecture du processeur, la version de Node.js, le type de base de données et le mode d'installation de Termix (Docker, application de bureau ou serveur)."
+    },
+    "includeFeatureUsage": {
+      "label": "Inclure l'utilisation des fonctionnalités",
+      "description": "Nombre d'ouvertures de chaque type d'onglet et nombre de connexions SSH effectuées depuis le dernier rapport. Les utilisateurs peuvent désactiver ces informations dans leur profil."
+    },
+    "includePlugins": {
+      "label": "Inclure les fonctionnalités installées",
+      "description": "Quelles fonctionnalités intégrées sont installées et en cours d'exécution ?"
+    },
+    "instanceId": {
+      "label": "ID d'instance"
+    },
+    "shareFeatureUsage": {
+      "label": "Inclure mon utilisation des fonctionnalités",
+      "description": "Ce service enregistre les types d'onglets que vous ouvrez dans les statistiques d'utilisation anonymes. Aucune information vous concernant ni concernant vos hôtes n'est transmise."
+    }
+  },
+  "status": {
+    "title": "État",
+    "on": "Partage des statistiques d'utilisation une fois par jour",
+    "off": "Statistiques d'utilisation non partagées",
+    "lockedOn": "Activé par la variable d'environnement ENABLE_TELEMETRY. Modifiez-la à cet emplacement.",
+    "lockedOff": "Cette fonction est désactivée par la variable d'environnement ENABLE_TELEMETRY. Modifiez-la à cet endroit.",
+    "instanceId": "ID de l'instance : {{id}}",
+    "noInstanceId": "Aucun ID d'instance pour le moment",
+    "lastSent": "Dernier message envoyé {{date}}",
+    "neverSent": "Pas encore envoyé",
+    "nextSend": "Prochain rapport à rendre {{date}}",
+    "lastError": "Dernière tentative échouée : {{error}}",
+    "preview": "Aperçu du rapport",
+    "sendNow": "Envoyer maintenant",
+    "sending": "Envoi...",
+    "sent": "Statistiques d'utilisation envoyées",
+    "notSent": "Les statistiques d'utilisation sont désactivées, aucun envoi n'a été effectué.",
+    "resetId": "Réinitialiser l'ID de l'instance",
+    "resetIdConfirm": "Réinitialiser l'ID de l'instance ? Les prochains rapports ressembleront à une nouvelle installation.",
+    "resetIdDone": "Réinitialisation de l'ID d'instance",
+    "previewTitle": "Prochain rapport",
+    "previewDescription": "Voici exactement ce qui serait envoyé en ce moment.",
+    "close": "Fermer",
+    "loadFailed": "Impossible de charger l'état des statistiques d'utilisation"
+  }
+}

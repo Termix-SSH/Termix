@@ -1,477 +1,705 @@
 {
   "mobileKeyboard": {
-    "addQuickKey": "Toevoegen",
-    "arrowDown": "Pijl omlaag",
-    "arrowLeft": "Pijl naar links",
-    "arrowRight": "Pijl naar rechts",
-    "arrowUp": "Pijl omhoog",
+    "addQuickKey": "Add",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right",
+    "arrowUp": "Arrow Up",
     "backTab": "⇥",
     "ctrl": "Ctrl",
     "delete": "Del",
-    "done": "Klaar",
-    "editQuickKeys": "Sneltoetsen bewerken",
-    "end": "Einde",
+    "done": "Done",
+    "editQuickKeys": "Edit quick keys",
+    "end": "End",
     "esc": "Esc",
-    "home": "Thuis",
+    "home": "Home",
     "pageDown": "PgDn",
     "pageUp": "PgUp",
-    "paste": "Plakken",
-    "quickKeyPlaceholder": "bijv. sudo ",
-    "quickKeysDesc": "Tik op × om te verwijderen. Ondersteunt maximaal 8 tekens.",
-    "quickKeysTitle": "Sneltoetsen",
-    "removeQuickKey": "Verwijderen",
-    "resetDefaults": "Terugzetten naar standaardinstellingen",
-    "shift": "Verschuiving",
+    "paste": "Paste",
+    "quickKeyPlaceholder": "e.g. sudo ",
+    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
+    "quickKeysTitle": "Quick Keys",
+    "removeQuickKey": "Remove",
+    "resetDefaults": "Reset to defaults",
+    "shift": "Shift",
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Auto-Tmux inschakelen is mislukt.",
-    "autoTmuxEnabled": "Auto-Tmux ingeschakeld voor {{host}}. Dit geldt vanaf de volgende verbinding.",
-    "clipboardHttpWarning": "Kon het klembord niet lezen. Sommige browsers beperken de toegang tot het klembord buiten HTTPS - probeer in plaats daarvan Ctrl+V, of serveer Termix via HTTPS.",
-    "closeTab": "Dichtbij",
-    "connecting": "Verbinden...",
-    "connectionLost": "Verbinding verbroken",
-    "connectionRejected": "Verbinding geweigerd door de server. Controleer uw authenticatie- en netwerkconfiguratie.",
-    "connectionTimeout": "Verbindingstime-out",
-    "enableAutoTmuxAction": "Auto-Tmux inschakelen",
-    "hostKeyRejected": "SSH-hostsleutelverificatie geweigerd. Verbinding verbroken.",
-    "linkDialogCopy": "Kopiëren",
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "closeTab": "Close",
+    "connecting": "Connecting...",
+    "connectionLost": "Connection lost",
+    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
+    "connectionTimeout": "Connection timeout",
+    "enableAutoTmuxAction": "Enable Auto-Tmux",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
+    "linkDialogCopy": "Copy",
     "linkDialogOpen": "Open",
-    "linkDialogTitle": "Open link",
-    "maxReconnectAttemptsReached": "Maximaal aantal herverbindingspogingen bereikt",
-    "noHostSelected": "Geen host geselecteerd",
-    "passwordPromptFillTitle": "Voer het opgeslagen wachtwoord in op dit veld.",
-    "reconnect": "Opnieuw verbinding maken",
-    "reconnected": "De verbinding is succesvol hersteld.",
-    "reconnecting": "Opnieuw verbinding maken... ({{attempt}}/{{max}})",
-    "searchCaseSensitive": "Lucifersdoosje",
-    "searchClose": "Sluiten (Escape)",
-    "searchNext": "Volgende wedstrijd (Invoeren)",
-    "searchNoResults": "Geen resultaten",
-    "searchPlaceholder": "Vinden",
-    "searchPrevious": "Vorige wedstrijd (Shift+Enter)",
-    "searchRegex": "Gebruik een reguliere expressie.",
-    "searchResultCount": "{{index}} van {{count}}",
-    "searchWholeWord": "Combineer het hele woord",
-    "sessionExpiredNotice": "Je vorige sessie op {{host}} is na {{minutes}} minuten verlopen; de shell en alles wat erin draaide, is verdwenen. Schakel Auto-Tmux op deze host in om sessies actief te houden.",
-    "sessionExpiredNoticeNoMinutes": "Je vorige sessie op {{host}} is verlopen terwijl de verbinding verbroken was; de shell en alles wat daarin draaide, is verdwenen. Schakel Auto-Tmux in op deze host om sessies actief te houden.",
-    "sessionTakenOver": "De sessie is in een ander tabblad geopend. Opnieuw verbinding maken...",
-    "tmuxAttached": "Aangesloten klanten",
-    "tmuxAttachedCount": "{{count}} bevestigd",
-    "tmuxCopyHint": "Pas je selectie aan en druk op Enter om naar het klembord te kopiëren.",
-    "tmuxCreateNew": "Start een nieuwe sessie",
-    "tmuxDetached": "Losgekoppeld van de tmux-sessie",
-    "tmuxLastActivity": "Laatste activiteit",
-    "tmuxSessionAttached": "tmux-sessie gekoppeld: {{name}}",
-    "tmuxSessionCreated": "tmux-sessie aangemaakt: {{name}}",
-    "tmuxSessionPickerDesc": "Bestaande tmux-sessies gevonden op deze host. Selecteer er een om opnieuw verbinding te maken of een nieuwe sessie te creëren.",
-    "tmuxSessionPickerTitle": "tmux-sessies",
-    "tmuxTimeDays": "{{count}}dagen geleden",
-    "tmuxTimeHours": "{{count}}uur geleden",
-    "tmuxTimeJustNow": "zojuist",
-    "tmuxTimeMinutes": "{{count}}m geleden",
-    "tmuxUnavailable": "Tmux is niet geïnstalleerd op de externe host, er wordt teruggevallen op de standaard shell.",
-    "tmuxWindowCount": "{{count}} venster",
+    "linkDialogTitle": "Open Link",
+    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
+    "noHostSelected": "No host selected",
+    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
+    "reconnect": "Reconnect",
+    "reconnected": "Reconnected successfully",
+    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Connection lost, reconnecting...",
+    "searchCaseSensitive": "Match Case",
+    "searchClose": "Close (Escape)",
+    "searchNext": "Next Match (Enter)",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "Find",
+    "searchPrevious": "Previous Match (Shift+Enter)",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "Match Whole Word",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
+    "tmuxAttached": "Attached clients",
+    "tmuxAttachedCount": "{{count}} attached",
+    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
+    "tmuxCreateNew": "Start new session",
+    "tmuxDetached": "Detached from tmux session",
+    "tmuxLastActivity": "Last activity",
+    "tmuxSessionAttached": "tmux session attached: {{name}}",
+    "tmuxSessionCreated": "tmux session created: {{name}}",
+    "tmuxSessionPickerDesc": "Existing tmux sessions found on this host. Select one to reattach or create a new session.",
+    "tmuxSessionPickerTitle": "tmux Sessions",
+    "tmuxTimeDays": "{{count}}d ago",
+    "tmuxTimeHours": "{{count}}h ago",
+    "tmuxTimeJustNow": "just now",
+    "tmuxTimeMinutes": "{{count}}m ago",
+    "tmuxUnavailable": "tmux is not installed on the remote host, falling back to standard shell",
+    "tmuxWindowCount": "{{count}} window",
     "tmuxWindows": "Windows",
-    "unknownError": "Er is een onbekende fout opgetreden.",
-    "websocketAbnormalClose": "De verbinding is onverwacht verbroken. Dit kan te wijten zijn aan een probleem met de reverse proxy of de SSL-configuratie. Controleer de serverlogboeken.",
-    "websocketError": "WebSocket-verbindingsfout",
-    "clipboardReadFailed": "Het lezen van het klembord is mislukt. Zorg ervoor dat de juiste klembordrechten zijn verleend.",
-    "clipboardWriteFailed": "Kopiëren naar klembord mislukt. Zorg ervoor dat de pagina via HTTPS of localhost wordt aangeboden.",
-    "connected": "Aangesloten",
-    "totpCodeLabel": "Verificatiecode"
+    "unknownError": "Unknown error occurred",
+    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
+    "websocketError": "WebSocket connection error",
+    "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
+    "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
+    "connected": "Connected",
+    "totpCodeLabel": "Verification Code",
+    "duplicateTab": "Duplicate tab",
+    "imageChooseFile": "Choose an image file",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
   },
   "terminalToolbar": {
-    "detachTmux": "Ontkoppel tmux",
-    "detachTmuxDescription": "Ontkoppel de tmux-sessie",
-    "dismissError": "Afbeeldingsfout negeren",
-    "hideToolbar": "Werkbalk verbergen",
-    "image": "Acties met afbeeldingen (alleen afbeeldingen)",
-    "imageActionFailed": "Afbeeldingsactie mislukt",
-    "layout": "Werkbalkweergavemodus",
-    "layoutExpanded": "Uitgebreid met meetgegevens",
-    "layoutIcon": "Alleen pictogram",
-    "layoutLabeled": "Pictogrammen en labels",
-    "moveToolbar": "Verplaats de werkbalk",
-    "moveToolbarHint": "Sleep om de werkbalk te verplaatsen.",
-    "paste": "Plak afbeelding",
-    "pasteImage": "Plak een afbeelding vanuit het klembord (alleen afbeeldingen)",
-    "retry": "Opnieuw proberen",
-    "showToolbar": "Werkbalk uitklappen",
-    "upload": "Afbeelding uploaden",
-    "uploadImage": "Upload een afbeelding naar de host.",
-    "uploadingImage": "Bezig met uploaden..."
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
+    "retry": "Retry",
+    "showToolbar": "Expand toolbar",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
+    "uploadingImage": "Uploading..."
   },
   "history": {
-    "noTerminalSelected": "Geen terminal geselecteerd",
-    "noTerminalSelectedHint": "Open een SSH-terminaltabblad om de opdrachtgeschiedenis te bekijken.",
-    "searchPlaceholder": "Zoekgeschiedenis...",
-    "clearAll": "Alles wissen",
-    "noHistoryEntries": "Geen geschiedenisvermeldingen",
-    "trackingDisabled": "Geschiedenisregistratie is uitgeschakeld"
+    "noTerminalSelected": "No terminal selected",
+    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
+    "searchPlaceholder": "Search history...",
+    "clearAll": "Clear All",
+    "noHistoryEntries": "No history entries",
+    "trackingDisabled": "History tracking is disabled",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
   },
   "touchInput": {
-    "enabled": "Aanraakinvoer inschakelen",
-    "enabledDesc": "Schakel scrollen met één vinger in op terminals in.",
-    "momentumEnabled": "Activeer momentum",
-    "momentumEnabledDesc": "Scroll nog even kort verder na een veegbeweging.",
-    "advanced": "Geavanceerd",
-    "resetDefaults": "Terugzetten naar standaardinstellingen",
-    "dragThreshold": "Sleepdrempel",
-    "maxWheelDelta": "Maximale wieldelta",
-    "momentumSampleWindow": "Momentum-steekproefvenster",
-    "releaseGracePeriod": "Vrijlatingstermijn",
-    "minimumVelocity": "Minimale snelheid",
-    "maximumVelocity": "Maximale snelheid",
-    "maximumDuration": "Maximale duur",
-    "maximumTravel": "Maximale reis",
-    "decayTime": "Vervaltijd",
-    "pixelsPerTick": "Pixels per tik",
-    "maximumFrameInterval": "Maximale frame-interval",
-    "maximumTicksPerFrame": "Maximaal aantal ticks per frame"
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "Advanced",
+    "resetDefaults": "Reset to defaults",
+    "dragThreshold": "Drag threshold",
+    "maxWheelDelta": "Maximum wheel delta",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "Release grace period",
+    "minimumVelocity": "Minimum velocity",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "Maximum ticks per frame"
   },
   "imageStorage": {
-    "instanceId": "Terminal sessie instantie-ID",
-    "instanceIdDesc": "Instantie-ID van een van uw verbonden terminaltabbladen, gebruikt om de zichtbaarheid te testen.",
-    "selectedModeUnavailable": "Niet beschikbaar",
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
+    "selectedModeUnavailable": "Unavailable",
     "test": "Test",
-    "testing": "Testen...",
-    "testFailed": "Het testen van de beeldopslag is mislukt.",
-    "testConnected": "De terminalsessie is verbonden.",
-    "testNotConnected": "Er is geen verbonden terminalsessie met deze instantie-ID.",
-    "testSelectedMode": "Een upload zou het volgende gebruiken: {{mode}}",
-    "testLocalVisible": "De lokale map is zichtbaar vanaf de verbonden host.",
-    "testLocalNotVisible": "De lokale map is NIET zichtbaar vanaf de verbonden host."
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "An upload would use: {{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Aanraakinvoer",
-        "images": "Afbeeldingsopslag"
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "Sessions",
+        "newHosts": "New Hosts"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminalsessiepersistentie",
-        "description": "Hoe lang een losgekoppelde terminal actief blijft op de server voordat deze wordt gesloten. Min. 1 · Max. 1440 minuten. Voor sessies die langer dan deze tijd actief moeten blijven, schakelt u Auto-Tmux in op de host."
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
       },
       "commandHistoryEnabled": {
-        "label": "Commandogeschiedenis",
-        "description": "Sta het vastleggen van de opdrachtgeschiedenis toe. Indien uitgeschakeld, wordt de geschiedenis niet opgeslagen, ongeacht de instellingen per host."
+        "label": "Command History",
+        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
       },
       "imageStorageMode": {
-        "label": "Opslagmodus",
-        "description": "Hier worden geplakte en geüploade terminalafbeeldingen opgeslagen. Automatische selectie op basis van de verbinding, lokaal en extern (SFTP) zijn vastgelegd.",
+        "label": "Storage Mode",
+        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
         "auto": "Auto",
-        "local": "Lokaal",
-        "remoteSftp": "Op afstand (SFTP)"
+        "local": "Local",
+        "remoteSftp": "Remote (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Lokale map"
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Hostpad",
-        "description": "De weergave aan de hostzijde van de lokale directory die terminalagents ontvangen."
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)"
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
       },
       "imageMaxCount": {
-        "label": "Maximaal aantal afbeeldingen"
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
       },
       "imageMaxBytes": {
-        "label": "Maximale opslagcapaciteit in bytes"
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Start de terminals van nieuwe hosts binnen tmux, zodat sessies behouden blijven bij verbroken verbindingen (tmux moet op de host geïnstalleerd zijn)."
+        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+      },
+      "newHostTheme": {
+        "label": "Theme for new hosts",
+        "description": "The terminal theme a new host starts with."
+      },
+      "newHostFontFamily": {
+        "label": "Font for new hosts",
+        "description": "The terminal font a new host starts with."
+      },
+      "newHostFontSize": {
+        "label": "Font size for new hosts",
+        "description": "The terminal font size a new host starts with, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Cursor style for new hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinking cursor for new hosts"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Terminalwerkbalk inschakelen",
-        "description": "Toon een sneltoegangsbalk die is vastgezet aan de actieve terminal voor de tools en live statistieken van deze host."
+        "label": "Enable Terminal Toolbar",
+        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+      },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
       },
       "enableCommandHistory": {
-        "label": "Commandogeschiedenis",
-        "description": "Sla de commando's die in deze terminal worden uitgevoerd op voor de geschiedenis en automatisch aanvullen."
+        "label": "Command History",
+        "description": "Record commands run in this terminal for history and autocomplete"
       },
       "enableTerminal": {
-        "label": "Terminal inschakelen"
+        "label": "Enable Terminal",
+        "description": "Offer an SSH terminal for this host."
+      },
+      "inheritAppearance": {
+        "label": "Use user defaults"
+      },
+      "theme": {
+        "label": "Theme"
+      },
+      "cursorBlink": {
+        "label": "Blinking cursor"
+      },
+      "cursorStyle": {
+        "label": "Cursor style"
+      },
+      "fontSize": {
+        "label": "Font size"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Scrollback"
+      },
+      "letterSpacing": {
+        "label": "Letter spacing"
+      },
+      "lineHeight": {
+        "label": "Line height"
+      },
+      "bellStyle": {
+        "label": "Bell"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum contrast ratio"
+      },
+      "backgroundImage": {
+        "label": "Background image"
+      },
+      "backgroundImageOpacity": {
+        "label": "Background image opacity"
+      },
+      "customThemeColors": {
+        "label": "Custom theme colors"
+      },
+      "rightClickSelectsWord": {
+        "label": "Right click selects word"
+      },
+      "macOptionIsMeta": {
+        "label": "Option is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Fast scroll key"
+      },
+      "fastScrollSensitivity": {
+        "label": "Fast scroll speed"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh command"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Use the SSH title"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntax highlighting"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntax highlighting categories"
+      },
+      "linkClickBehavior": {
+        "label": "Link click"
+      },
+      "localEcho": {
+        "label": "Local echo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Offer to fill password prompts"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
       }
     },
     "user": {
       "commandAutocomplete": {
-        "label": "Opdracht automatisch aanvullen",
-        "description": "Toon automatisch aanvullen tijdens het typen als je op tab drukt."
+        "label": "Command Autocomplete",
+        "description": "Show autocomplete while typing if you press tab"
       },
       "localEcho": {
         "label": "Local Echo",
-        "description": "Verminder de waargenomen invoerlatentie met behulp van veilige lokale toetsaanslagvoorspelling."
+        "description": "Reduce perceived input latency using safe local keystroke prediction"
       },
       "linkClickBehavior": {
-        "label": "Terminallink Klik",
-        "description": "Standaardgedrag bij het klikken op links in de terminal"
+        "label": "Terminal Link Click",
+        "description": "Default behavior when clicking links in the terminal"
+      },
+      "customThemes": {
+        "label": "Saved themes"
       }
     }
   },
   "palette": {
-    "localTerminal": "Lokale terminal"
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
   },
   "hosts": {
-    "addHost": "Voeg een host toe",
-    "applyGlobalThemeTooltip": "Pas dit thema toe",
-    "backgroundImageDesc": "Optionele URL voor een achtergrondafbeelding voor de terminal",
-    "backgroundImageLabel": "URL van de achtergrondafbeelding",
-    "backgroundImageOpacityLabel": "Achtergrondafbeelding transparantie",
-    "backspaceMode": "Backspace-modus",
-    "backspaceModeLabel": "Backspace-modus",
-    "behaviorAndAdvanced": "Gedrag & Geavanceerd",
-    "bellStyle": "Klokstijl",
-    "bellStyleLabel": "Klokstijl",
-    "colorTheme": "Kleurenthema",
-    "cursorBlink": "Cursorknipperen",
-    "cursorBlinking": "Knipperende cursor",
-    "cursorBlinkingDesc": "Schakel de knipperanimatie voor de terminalcursor in.",
-    "cursorStyle": "Cursorstijl",
-    "cursorStyleLabel": "Cursorstijl",
-    "customThemeAnsiColors": "ANSI-kleuren",
-    "customThemeBackground": "Achtergrond",
-    "customThemeBlack": "Zwart",
-    "customThemeBlue": "Blauw",
-    "customThemeBrightBlack": "Helderzwart",
-    "customThemeBrightBlue": "Helderblauw",
-    "customThemeBrightCyan": "Helder cyaan",
-    "customThemeBrightGreen": "Felgroen",
-    "customThemeBrightMagenta": "Fel magenta",
-    "customThemeBrightRed": "Felrood",
-    "customThemeBrightWhite": "Helder wit",
-    "customThemeBrightYellow": "Felgeel",
-    "customThemeColors": "Aangepaste kleuren",
+    "tabTerminal": "Terminal",
+    "addHost": "Add Host",
+    "applyGlobalThemeTooltip": "Apply this theme",
+    "backgroundImageDesc": "Optional URL for a terminal background image",
+    "backgroundImageLabel": "Background Image URL",
+    "backgroundImageOpacityLabel": "Background Image Opacity",
+    "backspaceMode": "Backspace Mode",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "Backspace Mode",
+    "backspaceModeNormal": "Normal (DEL)",
+    "behaviorAndAdvanced": "Behavior & Advanced",
+    "bellStyle": "Bell Style",
+    "bellStyleBoth": "Both",
+    "bellStyleLabel": "Bell Style",
+    "bellStyleNone": "None",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "Visual",
+    "colorTheme": "Color Theme",
+    "cursorBlink": "Cursor Blink",
+    "cursorBlinking": "Cursor Blinking",
+    "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
+    "cursorStyle": "Cursor Style",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Block",
+    "cursorStyleLabel": "Cursor Style",
+    "cursorStyleUnderline": "Underline",
+    "customThemeAnsiColors": "ANSI Colors",
+    "customThemeBackground": "Background",
+    "customThemeBlack": "Black",
+    "customThemeBlue": "Blue",
+    "customThemeBrightBlack": "Bright Black",
+    "customThemeBrightBlue": "Bright Blue",
+    "customThemeBrightCyan": "Bright Cyan",
+    "customThemeBrightGreen": "Bright Green",
+    "customThemeBrightMagenta": "Bright Magenta",
+    "customThemeBrightRed": "Bright Red",
+    "customThemeBrightWhite": "Bright White",
+    "customThemeBrightYellow": "Bright Yellow",
+    "customThemeColors": "Custom Colors",
     "customThemeCursor": "Cursor",
-    "customThemeCursorAccent": "Cursoraccent",
-    "customThemeCyan": "Cyaan",
-    "customThemeForeground": "Voorgrond",
-    "customThemeGreen": "Groente",
+    "customThemeCursorAccent": "Cursor Accent",
+    "customThemeCyan": "Cyan",
+    "customThemeForeground": "Foreground",
+    "customThemeGreen": "Green",
     "customThemeMagenta": "Magenta",
-    "customThemeRed": "Rood",
-    "customThemeResetTooltip": "Terugzetten naar standaardinstellingen",
-    "customThemeSelection": "Selectie",
-    "customThemeWhite": "Wit",
-    "customThemeYellow": "Geel",
-    "deleteGlobalThemeTooltip": "Verwijder dit thema",
-    "docsLink": "Documenten bekijken",
-    "enableAutoMosh": "Auto-Mosh inschakelen",
-    "enableAutoMoshDesc": "Geef de voorkeur aan Mosh boven SSH indien beschikbaar.",
-    "enableAutoTmux": "Auto-Tmux inschakelen",
-    "enableAutoTmuxDesc": "Zorg ervoor dat je shell en alles wat daarin draait, blijft functioneren, ook na een verbindingsoverbreking of een herstart van de browser, door tmux te gebruiken (tmux moet wel op de host geïnstalleerd zijn).",
-    "fastScrollModifier": "Snel scrollen-modifier",
-    "fastScrollModifierLabel": "Snel scrollen-modifier",
-    "fastScrollSensitivity": "Snel scrollen gevoeligheid",
-    "fastScrollSensitivityLabel": "Snel scrollen gevoeligheid",
-    "fontFamily": "Lettertypefamilie",
-    "fontFamilyCustomHint": "Kies een van de meegeleverde lettertypen, of selecteer 'Aangepast' en typ de exacte naam van een lettertype dat al op uw systeem is geïnstalleerd (bijv. MesloLGS NF, Noto Sans Mono). Termix kan geen lettertypen voor u installeren; installeer ze eerst op uw besturingssysteem.",
-    "fontFamilyCustomOption": "Aangepast...",
-    "fontFamilyCustomPlaceholder": "Exacte lettertypenaam, bijvoorbeeld MesloLGS NF",
-    "fontFamilyLabel": "Lettertypefamilie",
-    "fontSize": "Lettergrootte",
-    "fontSizeLabel": "Lettergrootte",
-    "hostNotFound": "Host niet gevonden",
-    "letterSpacing": "Letterafstand",
-    "letterSpacingPx": "Letterafstand (px)",
-    "lineHeight": "Lijnhoogte",
-    "lineHeightLabel": "Lijnhoogte",
-    "linkClickBehaviorConfirm": "Toon pop-up om te openen of te kopiëren",
-    "linkClickBehaviorDefault": "Standaard (volg de app-instellingen)",
-    "linkClickBehaviorDesc": "Hiermee bepaal je wat er gebeurt wanneer je op een link in de terminal klikt. Gebruik 'Standaard' om de instelling op app-niveau te volgen.",
-    "linkClickBehaviorDirect": "Direct openen",
-    "linkClickBehaviorLabel": "Klikgedrag op links",
-    "loadingHost": "Host wordt geladen...",
-    "localEchoAuto": "Automatisch",
-    "localEchoDefault": "Gebruik de globale instelling",
-    "localEchoDesc": "Voorspel lokaal veilige toetsaanslagen, ook bij trage internetverbindingen. Wachtwoordprompts en besturingsinvoer worden nooit weergegeven.",
+    "customThemeRed": "Red",
+    "customThemeResetTooltip": "Reset to defaults",
+    "customThemeSelection": "Selection",
+    "customThemeWhite": "White",
+    "customThemeYellow": "Yellow",
+    "deleteGlobalThemeTooltip": "Delete this theme",
+    "docsLink": "View docs",
+    "enableAutoMosh": "Enable Auto-Mosh",
+    "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
+    "enableAutoTmux": "Enable Auto-Tmux",
+    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "fastScrollModifier": "Fast Scroll Modifier",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Fast Scroll Modifier",
+    "fastScrollModifierShift": "Shift",
+    "fastScrollSensitivity": "Fast Scroll Sensitivity",
+    "fastScrollSensitivityLabel": "Fast Scroll Sensitivity",
+    "fontFamily": "Font Family",
+    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
+    "fontFamilyCustomOption": "Custom...",
+    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyLabel": "Font Family",
+    "fontSize": "Font Size",
+    "fontSizeLabel": "Font Size",
+    "hostNotFound": "Host not found",
+    "letterSpacing": "Letter Spacing",
+    "letterSpacingPx": "Letter Spacing (px)",
+    "lineHeight": "Line Height",
+    "lineHeightLabel": "Line Height",
+    "linkClickBehaviorConfirm": "Show popup to open or copy",
+    "linkClickBehaviorDesc": "Controls what happens when you click a link in the terminal. Use 'Default' to follow the app-level setting.",
+    "linkClickBehaviorDirect": "Open directly",
+    "linkClickBehaviorLabel": "Link Click Behavior",
+    "loadingHost": "Loading host...",
+    "localEchoAuto": "Automatic",
+    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
     "localEchoLabel": "Local Echo",
-    "localEchoOff": "Uit",
-    "localEchoOn": "Altijd aan",
-    "macOptionIsMetaLabel": "Option-toets verzendt metadata",
-    "macOptionIsMetaShortDesc": "Schakel het typen van speciale tekens (zoals @ of |) met de Option/Alt-toets op macOS uit in plaats van Meta te verzenden.",
-    "moshCommand": "MOSH-commando",
+    "localEchoOff": "Off",
+    "localEchoOn": "Always on",
+    "macOptionIsMetaLabel": "Option Key Sends Meta",
+    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "moshCommand": "MOSH Command",
     "moshCommandLabel": "Mosh Command",
-    "noSavedThemes": "Nog geen opgeslagen thema's",
-    "none": "Geen",
-    "rightClickSelectsWord": "Rechtsklikken selecteert Word",
-    "rightClickSelectsWordLabel": "Rechtsklikken selecteert Word",
-    "rightClickSelectsWordShortDesc": "Selecteer het woord onder de cursor door met de rechtermuisknop te klikken.",
-    "saveAsGlobalTheme": "Opslaan als globaal thema",
-    "saveGlobalThemeError": "Het opslaan van het thema is mislukt.",
-    "saveGlobalThemeNamePrompt": "Geef dit thema een naam.",
-    "saveGlobalThemeSuccess": "Thema opgeslagen",
-    "savedThemesLabel": "Opgeslagen thema's",
-    "scrollbackBufferLabel": "Terugscrollbuffer",
-    "scrollbackMaxLines": "Maximaal aantal regels dat in de geschiedenis wordt bewaard",
-    "sudoPasswordAutoFill": "Sudo-wachtwoord automatisch invullen",
-    "sudoPasswordAutoFillDesc": "Sla een sudo-wachtwoord op, zodat hoststatistieken, terminalprompts en andere programma's automatisch geprivilegieerde opdrachten kunnen uitvoeren.",
-    "sudoPasswordAutoFillLabel": "Sudo-wachtwoord automatisch invullen",
-    "syntaxCategoryIpAddresses": "IP-adressen",
+    "noSavedThemes": "No saved themes yet",
+    "none": "None",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "rightClickSelectsWord": "Right Click Selects Word",
+    "rightClickSelectsWordLabel": "Right-click Selects Word",
+    "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
+    "saveAsGlobalTheme": "Save as Global Theme",
+    "saveGlobalThemeError": "Failed to save theme",
+    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
+    "saveGlobalThemeSuccess": "Theme saved",
+    "savedThemesLabel": "Saved Themes",
+    "scrollbackBufferLabel": "Scrollback Buffer",
+    "scrollbackMaxLines": "Maximum number of lines kept in history",
+    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
+    "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
+    "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
+    "syntaxCategoryIpAddresses": "IP Addresses",
     "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
-    "syntaxCategoryLogLevels": "Logniveaus",
-    "syntaxCategoryLogLevelsDesc": "fout, waarschuwing, info, debug, fataal",
-    "syntaxCategoryNumbers": "Gelabelde nummers",
-    "syntaxCategoryNumbersDesc": "poort 8080, uitgang 1, status 404",
-    "syntaxCategoryPaths": "Bestandspaden",
+    "syntaxCategoryLogLevels": "Log Levels",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "Labeled Numbers",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "File Paths",
     "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
-    "syntaxCategoryTimestamps": "Tijdstempels",
+    "syntaxCategoryTimestamps": "Timestamps",
     "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
-    "syntaxCategoryUrls": "URL's",
+    "syntaxCategoryUrls": "URLs",
     "syntaxCategoryUrlsDesc": "https://example.com",
-    "syntaxHighlightingDesc": "Kleur de terminaluitvoer (fouten, paden, IP-adressen, tijdstempels) in.",
-    "syntaxHighlightingLabel": "Syntaxmarkering",
-    "terminalAppearance": "Terminale verschijning",
-    "theme": "Thema",
-    "themePreview": "Themavoorbeeld",
-    "useSSHTitleDesc": "Werk de tabtitel bij met de venstertitel van de shell in plaats van de hostnaam.",
-    "useSSHTitleLabel": "Gebruik SSH-venstertitel"
+    "syntaxHighlightingDesc": "Colorize terminal output (errors, paths, IPs, timestamps)",
+    "syntaxHighlightingLabel": "Syntax Highlighting",
+    "terminalAppearance": "Terminal Appearance",
+    "theme": "Theme",
+    "themePreview": "Theme Preview",
+    "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
+    "useSSHTitleLabel": "Use SSH Window Title",
+    "enableTunnel": "Enable Tunnel",
+    "enableFileManager": "Enable File Manager",
+    "enableDocker": "Enable Docker",
+    "startupSnippet": "Startup Snippet",
+    "quickActions": "Quick Actions",
+    "proxmoxLastSyncStatus": {
+      "success": "Success"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "RDP URL copied",
+    "vncUrlCopied": "VNC URL copied",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "No credential (direct credentials below)",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Credential",
+      "authTypeNone": "None",
+      "recordingPath": "Recording Path",
+      "recordingName": "Recording Name",
+      "saveHostFirst": "Save the host first.",
+      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
+      "permissionLevel": "Permission Level",
+      "typeHeader": "Type",
+      "targetHeader": "Target",
+      "permissionHeader": "Permission",
+      "cancelBtn": "Cancel",
+      "savingBtn": "Saving...",
+      "updateHostBtn": "Update Host",
+      "addHostBtn": "Add Host"
+    },
+    "filterAuthVault": "Vault"
   },
   "nav": {
-    "history": "Geschiedenis",
-    "localTerminal": "Lokale terminal",
-    "sshTools": "SSH-tools",
+    "history": "History",
+    "localTerminal": "Local Terminal",
+    "sshTools": "SSH Tools",
     "terminal": "Terminal",
-    "macros": "Macro's"
+    "macros": "Macros"
   },
   "sshTools": {
-    "broadcastInputPlaceholder": "Typ hier om toetsaanslagen te verzenden...",
-    "copyOnSelect": "Geselecteerde tekst automatisch kopiëren",
-    "enableRightClickCopyPaste": "Schakel kopiëren/plakken via rechtermuisklik in.",
-    "fillPassword": "Voer het wachtwoord in",
-    "fillPasswordMissing": "Er is geen opgeslagen wachtwoord voor de geselecteerde terminal(s) {{count}}",
-    "fillPasswordSuccess": "Wachtwoord ingevuld in de terminal(s) {{count}}",
-    "keyRecordingTitle": "Toonopname",
-    "noTerminalTabsOpen": "Geen terminaltabbladen geopend",
-    "recordToTerminals": "Opnemen naar terminals",
-    "selectAll": "Alle",
-    "selectNone": "Geen",
-    "selectTerminalsAbove": "Selecteer de terminals hierboven",
-    "settingsTitle": "Instellingen",
-    "startRecording": "Start opnemen",
-    "stopRecording": "Stop met opnemen"
-  },
-  "terminalDefaults": {
-    "clearAll": "Alles wissen",
-    "description": "Stel waarden in die elke host overneemt, tenzij deze ze overschrijft.",
-    "dialogDescription": "Dit geldt voor hosts die een instelling niet hebben ingesteld. Alles wat op een host is ingesteld, heeft voorrang.",
-    "inherit": "Erven",
-    "manage": "Beheren",
-    "off": "Uit",
-    "on": "Op",
-    "title": "Verbindingsstandaarden"
+    "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
+    "copyOnSelect": "Copy selected text automatically",
+    "enableRightClickCopyPaste": "Enable right-click copy/paste",
+    "fillPassword": "Fill password",
+    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
+    "fillPasswordSuccess": "Filled password into {{count}} terminal(s)",
+    "keyRecordingTitle": "Key Recording",
+    "noTerminalTabsOpen": "No terminal tabs open",
+    "recordToTerminals": "Record to terminals",
+    "selectAll": "All",
+    "selectNone": "None",
+    "selectTerminalsAbove": "Select terminals above",
+    "settingsTitle": "Settings",
+    "startRecording": "Start Recording",
+    "stopRecording": "Stop Recording"
   },
   "keybindings": {
-    "copy": "Selectie kopiëren",
-    "paste": "Plakken",
-    "sendControlCode": "Verzend het Ctrl+letter-signaal",
-    "sendText": "Sms verzenden",
-    "controlCodeLabel": "Brief",
-    "textLabel": "Tekst om te verzenden",
-    "appendEnterLabel": "Druk op Enter na het verzenden.",
-    "clipboardPermissionNote": "In sommige browsers kan bij het eerste gebruik om toestemming voor het gebruik van het klembord worden gevraagd.",
-    "textRequired": "Voer de tekst in die u wilt verzenden",
-    "controlCodeRequired": "Voer één letter in als besturingscode."
+    "copy": "Copy selection",
+    "paste": "Paste",
+    "sendControlCode": "Send Ctrl+letter signal",
+    "sendText": "Send text",
+    "controlCodeLabel": "Letter",
+    "textLabel": "Text to send",
+    "appendEnterLabel": "Press Enter after sending",
+    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+    "textRequired": "Enter the text to send",
+    "controlCodeRequired": "Enter a single letter for the control code",
+    "builtIn": {
+      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+      "copyCmdC": "Copy selection (Cmd+C)",
+      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+    }
   },
   "macros": {
-    "title": "Macro's",
-    "description": "Voer een opgeslagen reeks commando's uit in een terminal en reageer op wat de server terugstuurt.",
-    "target": "Doel",
-    "noTerminal": "Geen terminal geopend",
-    "empty": "Nog geen macro's",
-    "emptyHint": "Maak een macro om een terminalproces te automatiseren, zoals inloggen, een service herstarten of prompts beantwoorden.",
-    "create": "Nieuwe macro",
-    "back": "Terug naar macro's",
-    "name": "Naam",
-    "namePlaceholder": "Webserver opnieuw opstarten",
-    "nameRequired": "Geef de macro een naam voordat je hem opslaat.",
-    "descriptionLabel": "Beschrijving",
-    "descriptionPlaceholder": "Wat deze macro doet (optioneel)",
-    "unsaved": "Niet-opgeslagen wijzigingen",
-    "save": "Redden",
-    "saved": "Macro opgeslagen",
-    "saveFailed": "Het lukte niet om de macro op te slaan.",
-    "delete": "Verwijderen",
-    "deleteTitle": "Deze macro verwijderen?",
-    "deleteBody": "\"{{name}}\" wordt permanent verwijderd. Dit kan niet ongedaan gemaakt worden.",
-    "deleted": "Macro verwijderd",
-    "cancel": "Annuleren",
-    "run": "Loop",
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "Target",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
+    "name": "Name",
+    "namePlaceholder": "Restart web server",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "Unsaved changes",
+    "save": "Save",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "Delete",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "Cancel",
+    "run": "Run",
     "stop": "Stop",
-    "running": "Rennen...",
-    "completed": "Macro voltooid",
-    "failed": "Macro mislukt",
-    "loadFailed": "Macro's konden niet worden geladen.",
-    "needTerminal": "Open en verbind eerst een terminal.",
-    "noSteps": "Deze macro bevat nog geen stappen. Voeg er hieronder een toe.",
-    "addStep": "Voeg stap toe",
-    "stepNumber": "Stap {{number}}",
-    "removeStep": "Verwijder stap",
-    "confirmRunTitle": "Voer deze macro uit?",
-    "confirmRunBody": "\"{{name}}\" zal commando's naar {{host}} sturen.",
-    "confirmRunAction": "Macro uitvoeren",
+    "running": "Running...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
     "stepTypes": {
       "send": {
-        "label": "Verzend commando",
-        "help": "Typt tekst in de terminal, net alsof je die zelf hebt ingetypt."
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
       },
       "wait": {
-        "label": "Wacht op uitvoer",
-        "help": "Het programma pauzeert totdat de server de door u opgegeven tekst afdrukt, zoals bij een wachtwoordprompt."
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
       },
       "delay": {
-        "label": "Pauze",
-        "help": "Wacht een vaste tijdsduur voordat de volgende stap wordt uitgevoerd."
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
       },
       "if": {
-        "label": "Als de uitvoer het volgende bevat:",
-        "help": "Controleert alles wat de server tot nu toe heeft afgedrukt en voert vervolgens een van de twee vertakkingen uit."
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
       },
       "repeat": {
-        "label": "Herhalen",
-        "help": "Voert de stappen binnenin een vast aantal keren uit."
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
       }
     },
     "send": {
-      "text": "Opdracht of tekst",
+      "text": "Command or text",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Druk op Enter na het verzenden.",
-      "pressEnterHelp": "Schakel deze optie uit om tekst te typen zonder deze te verzenden."
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
     },
     "wait": {
-      "pattern": "Wacht tot de uitvoer het volgende bevat:",
-      "patternPlaceholder": "wachtwoord:",
-      "timeout": "Geef het op na",
-      "onTimeout": "Als het nooit verschijnt",
-      "stop": "Stop de macro",
-      "continue": "Ga toch door."
+      "pattern": "Wait until the output contains",
+      "patternPlaceholder": "password:",
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "Keep going anyway"
     },
     "delay": {
-      "duration": "Wachten op"
+      "duration": "Wait for"
     },
     "ifStep": {
-      "pattern": "Als de uitvoer het volgende bevat:",
-      "patternPlaceholder": "Actief: actief (lopend)",
-      "then": "Doe dan dit",
-      "else": "Doe anders dit",
-      "emptyBranch": "Geen treden"
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
     },
     "repeat": {
-      "count": "Aantal keren",
-      "times": "tijden"
+      "count": "Number of times",
+      "times": "times"
     },
     "match": {
-      "useRegex": "Overeenkomst met een reguliere expressie",
-      "useRegexHelp": "Laat dit weg zodat de tekst exact overeenkomt met de geschreven tekst.",
-      "invalidRegex": "Dit is geen geldige reguliere expressie; het wordt als platte tekst herkend."
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "Leave this off to match the text exactly as written.",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
     },
-    "seconds": "seconden",
+    "seconds": "seconds",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "Externe server vereist. Verbind een externe server in de instellingen om dit verbindingstype te gebruiken."
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

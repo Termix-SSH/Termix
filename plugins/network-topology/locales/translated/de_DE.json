@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Quelle und Ziel müssen unterschiedlich sein",
     "exportJSON": "JSON exportieren",
     "importJSON": "JSON importieren",
-    "terminal": "Terminal",
-    "fileManager": "Dateimanager",
-    "tunnel": "Tunnel",
-    "docker": "Docker",
     "serverStats": "Host-Metriken",
-    "hostMetrics": "Host-Metriken",
     "noNodes": "Noch keine Knoten"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} Knoten"
+  },
+  "permissions": {
+    "use": {
+      "title": "Netzwerkdiagramm verwenden",
+      "description": "Netzwerktopologiediagramm anzeigen und bearbeiten."
+    }
   },
   "hosts": {
     "docsLink": "Dokumentation anzeigen"

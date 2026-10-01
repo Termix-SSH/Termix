@@ -1,23 +1,31 @@
 {
+  "title": "Authenticator App",
+  "factor": "Authenticator code",
   "challenge": {
     "enterCode": "Introduza o código de verificação",
-    "verify": "Verificar código"
+    "verify": "Verificar Código",
+    "backupCodeHint": "You can also enter one of your backup codes."
   },
   "enrollment": {
     "title": "Autenticador TOTP",
+    "docs": "Documentação",
     "on": "2FA está ativada",
     "off": "Adicionar segurança extra de início de sessão",
     "enable": "Ativar",
     "disable": "Desativar",
-    "addDevice": "Adicionar dispositivo",
-    "addTitle": "Adicionar dispositivo autenticador",
-    "addScanInstructions": "Digitalize este código QR com o autenticador adicional. Os autenticadores existentes continuarão a funcionar.",
-    "addSuccess": "Autenticador adicional registado",
-    "addFailed": "Falha ao adicionar autenticador",
+    "addDevice": "Add device",
+    "addTitle": "Add authenticator device",
+    "addDescription": "Confirm with a code from your authenticator or a backup code to enroll another device with the same key.",
+    "addScanInstructions": "Scan this QR code with the additional authenticator. Existing authenticators will continue to work.",
+    "addSuccess": "Additional authenticator enrolled",
+    "addFailed": "Failed to add authenticator",
+    "codeRequired": "Enter a TOTP code or backup code",
+    "codePlaceholder": "TOTP code or backup code",
     "setupTitle": "Configurar TOTP",
     "setupFailed": "Falha ao iniciar a configuração de TOTP",
     "qrCode": "Código QR",
     "secretCopied": "Segredo copiado para a área de transferência",
+    "instructions": "Scan the QR code or enter the secret in your authenticator app, then enter the 6-digit code",
     "continueVerify": "Continuar para Verificação",
     "verifyTitle": "Verificar Código",
     "verify": "Verificar",
@@ -29,6 +37,6 @@
     "disableFailed": "Falha ao desativar 2FA",
     "backupTitle": "Códigos de Backup",
     "downloadBackup": "Descarregar Códigos de Backup",
-    "done": "Concluído"
+    "done": "Concluir"
   }
 }

@@ -44,6 +44,7 @@
     "reconnect": "Reconectați-vă",
     "reconnected": "Reconectare cu succes",
     "reconnecting": "Se reconecta... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Conexiune pierdută, se reconectare...",
     "searchCaseSensitive": "Potrivire caz",
     "searchClose": "Închide (Escape)",
     "searchNext": "Următorul meci (Introduce)",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "Citirea din clipboard nu a reușit. Asigurați-vă că permisiunile de acces la clipboard sunt acordate.",
     "clipboardWriteFailed": "Copierea în clipboard nu a reușit. Asigurați-vă că pagina este servită prin HTTPS sau localhost.",
     "connected": "Conectat",
-    "totpCodeLabel": "Cod de verificare"
+    "totpCodeLabel": "Cod de verificare",
+    "duplicateTab": "Filă duplicată",
+    "imageChooseFile": "Alegeți un fișier de imagine",
+    "imageUploaded": "Imagine încărcată: {{path}}",
+    "imageClipboardUnavailable": "Acest browser nu poate citi imagini din clipboard",
+    "imageClipboardEmpty": "Nu s-a găsit nicio imagine în clipboard",
+    "localShell": "Shell terminal local",
+    "autocompleteHintComplete": "Tab sau Enter pentru a finaliza",
+    "autocompleteHintNavigate": "↑↓ pentru navigare",
+    "autocompleteHintClose": "Esc pentru a închide"
   },
   "terminalToolbar": {
     "detachTmux": "Detașați tmux",
@@ -108,7 +118,10 @@
     "searchPlaceholder": "Istoricul căutărilor...",
     "clearAll": "Ștergeți tot",
     "noHistoryEntries": "Nicio intrare în istoric",
-    "trackingDisabled": "Urmărirea istoricului este dezactivată"
+    "trackingDisabled": "Urmărirea istoricului este dezactivată",
+    "trackingDisabledHint": "Activează Istoricul comenzilor în fila Terminal SSH a acestei gazde.",
+    "commandCount_one": "Comanda {{count}}",
+    "commandCount_other": "Comenzi {{count}}"
   },
   "touchInput": {
     "enabled": "Activează introducerea tactilă",
@@ -147,15 +160,21 @@
     "admin": {
       "group": {
         "touch": "Intrare tactilă",
-        "images": "Stocarea imaginilor"
+        "images": "Stocarea imaginilor",
+        "sessions": "Sesiuni",
+        "newHosts": "Gazde noi"
       },
       "sessionTimeoutMinutes": {
         "label": "Persistența sesiunii terminale",
-        "description": "Cât timp este menținut activ pe server un terminal deconectat înainte de a fi închis. Min 1 · Max 1440 de minute. Pentru sesiunile care trebuie să dureze mai mult decât această durată, activați Auto-Tmux pe gazdă."
+        "description": "Cât timp este menținut activ pe server un terminal deconectat înainte de a fi închis. Min 1, max 1440 de minute. Pentru sesiunile care trebuie să depășească această durată, activați Auto-Tmux pe gazdă."
       },
       "commandHistoryEnabled": {
         "label": "Istoricul comenzilor",
         "description": "Permite înregistrarea istoricului comenzilor. Când este dezactivată, istoricul nu este salvat, indiferent de setările pentru fiecare gazdă."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Istoricul comenzilor pentru gazde noi",
+        "description": "Dacă noile gazde încep cu istoricul comenzilor activat."
       },
       "imageStorageMode": {
         "label": "Mod de stocare",
@@ -165,24 +184,50 @@
         "remoteSftp": "La distanță (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Director local"
+        "label": "Director local",
+        "description": "Calea absolută pe backend-ul Termix unde modul local scrie imagini. Nu este afișată niciodată după salvare. O valoare goală folosește TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
         "label": "Calea gazdă",
         "description": "Vizualizarea din partea gazdei a directorului local pe care îl primesc agenții terminalului."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)"
+        "label": "TTL (ms)",
+        "description": "Cât timp este păstrată o imagine încărcată, în milisecunde. Valoarea \"gol\" folosește TERMIX_IMAGE_TTL_MS sau o oră."
       },
       "imageMaxCount": {
-        "label": "Număr maxim de imagini"
+        "label": "Număr maxim de imagini",
+        "description": "Majoritatea imaginilor sunt păstrate simultan. Valoarea goală folosește TERMIX_MAX_IMAGE_COUNT sau 100."
       },
       "imageMaxBytes": {
-        "label": "Capacitate maximă de stocare în octeți"
+        "label": "Capacitate maximă de stocare în octeți",
+        "description": "Majoritatea octeților de imagini sunt păstrați simultan. Spațiul gol utilizează TERMIX_MAX_IMAGE_STORAGE_BYTES sau 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Păstrați sesiunile după deconectare",
+        "description": "Mențineți un terminal deconectat activ pe server pentru timpul indicat mai sus, astfel încât redeschiderea filei sale să reia de unde a rămas."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
         "description": "Rulează terminalele noilor gazde în interiorul tmux, astfel încât sesiunile să supraviețuiască deconectărilor (necesită tmux pe gazdă)"
+      },
+      "newHostTheme": {
+        "label": "Temă pentru gazde noi",
+        "description": "Tema terminalului cu care începe o nouă gazdă."
+      },
+      "newHostFontFamily": {
+        "label": "Font pentru gazde noi",
+        "description": "Fontul terminalului cu care începe o nouă gazdă."
+      },
+      "newHostFontSize": {
+        "label": "Dimensiunea fontului pentru gazdele noi",
+        "description": "Dimensiunea fontului terminalului cu care începe o nouă gazdă, în pixeli."
+      },
+      "newHostCursorStyle": {
+        "label": "Stilul cursorului pentru gazde noi"
+      },
+      "newHostCursorBlink": {
+        "label": "Cursor intermitent pentru gazde noi"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "Activează bara de instrumente Terminal",
         "description": "Afișează o bară de instrumente cu acces rapid atașată la terminalul activ pentru instrumentele și statisticile live ale acestei gazde"
       },
+      "terminalToolbarPosition": {
+        "label": "Poziția barei de instrumente",
+        "description": "Unde se află bara de instrumente în terminal. O puteți trage în continuare de acolo.",
+        "bottom": "Centru jos",
+        "bottomLeft": "Stânga jos",
+        "bottomRight": "Dreapta jos",
+        "top": "Centru sus",
+        "topLeft": "Stânga sus",
+        "topRight": "Dreapta sus"
+      },
+      "terminalToolbarStartState": {
+        "label": "Starea de pornire a barei de instrumente",
+        "description": "Dacă bara de instrumente se deschide extinsă sau minimizată atunci când terminalul se conectează",
+        "expanded": "Extins",
+        "collapsed": "Minimizat"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Mod de afișare a barei de instrumente",
+        "description": "Cum sunt afișate butoanele barei de instrumente. Ultima utilizare păstrează tot ce ați selectat în bara de instrumente.",
+        "remember": "Ultima utilizare",
+        "icon": "Numai pictogramă",
+        "labeled": "Pictograme și etichete",
+        "expanded": "Extins cu statistici"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Afișați statistici live",
+        "description": "Afișează statisticile gazdei live deasupra butoanelor barei de instrumente în modul extins"
+      },
+      "terminalToolbarFade": {
+        "label": "Estompare în timpul inactivității",
+        "description": "Atenuează bara de instrumente până când treci cu mouse-ul peste ea"
+      },
       "enableCommandHistory": {
         "label": "Istoricul comenzilor",
         "description": "Înregistrați comenzile executate în acest terminal pentru istoric și completare automată"
       },
       "enableTerminal": {
-        "label": "Activează terminalul"
+        "label": "Activează terminalul",
+        "description": "Oferiți un terminal SSH pentru această gazdă."
+      },
+      "inheritAppearance": {
+        "label": "Folosește setările implicite ale utilizatorului"
+      },
+      "theme": {
+        "label": "Temă"
+      },
+      "cursorBlink": {
+        "label": "Cursor intermitent"
+      },
+      "cursorStyle": {
+        "label": "Stilul cursorului"
+      },
+      "fontSize": {
+        "label": "Dimensiunea fontului"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Derulare înapoi"
+      },
+      "letterSpacing": {
+        "label": "Spațierea literelor"
+      },
+      "lineHeight": {
+        "label": "Înălțimea liniei"
+      },
+      "bellStyle": {
+        "label": "Clopot"
+      },
+      "minimumContrastRatio": {
+        "label": "Raport minim de contrast"
+      },
+      "backgroundImage": {
+        "label": "Imagine de fundal"
+      },
+      "backgroundImageOpacity": {
+        "label": "Opacitatea imaginii de fundal"
+      },
+      "customThemeColors": {
+        "label": "Culori personalizate ale temei"
+      },
+      "rightClickSelectsWord": {
+        "label": "Clic dreapta selectează cuvântul"
+      },
+      "macOptionIsMeta": {
+        "label": "Opțiunea este Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Tastă de derulare rapidă"
+      },
+      "fastScrollSensitivity": {
+        "label": "Viteză mare de derulare"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Comandă Mosh"
+      },
+      "autoTmux": {
+        "label": "Multiplicator automat"
+      },
+      "useSSHTitle": {
+        "label": "Folosește titlul SSH"
+      },
+      "syntaxHighlighting": {
+        "label": "Evidențierea sintaxei"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Categorii de evidențiere a sintaxei"
+      },
+      "linkClickBehavior": {
+        "label": "Clic pe link"
+      },
+      "localEcho": {
+        "label": "Ecou local"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Oferiți-vă să completați solicitările de parolă"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Completați solicitările sudo"
+      },
+      "autoReconnect": {
+        "label": "Reconectare automată"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "Clic pe linkul terminalului",
         "description": "Comportament implicit la clic pe linkuri în terminal"
+      },
+      "customThemes": {
+        "label": "Teme salvate"
       }
     }
   },
   "palette": {
     "localTerminal": "Terminal local"
   },
+  "permissions": {
+    "sessions": {
+      "title": "Folosește sesiuni de terminal live",
+      "description": "Permite ca alte funcții, cum ar fi partajarea sesiunilor și înregistrarea, să ajungă la sesiunile live ale terminalului."
+    },
+    "history": {
+      "title": "Citiți istoricul comenzilor",
+      "description": "Permite altor funcții, cum ar fi asistentul AI, să citească istoricul comenzilor tale."
+    }
+  },
   "hosts": {
+    "tabTerminal": "Terminal",
     "addHost": "Adăugați gazdă",
     "applyGlobalThemeTooltip": "Aplică această temă",
     "backgroundImageDesc": "URL opțional pentru o imagine de fundal a terminalului",
     "backgroundImageLabel": "URL-ul imaginii de fundal",
     "backgroundImageOpacityLabel": "Opacitatea imaginii de fundal",
     "backspaceMode": "Mod Backspace",
+    "backspaceModeControlH": "Control-H (BS)",
     "backspaceModeLabel": "Mod Backspace",
+    "backspaceModeNormal": "Normal (ȘTERGERE)",
     "behaviorAndAdvanced": "Comportament și Avansat",
     "bellStyle": "Stil clopot",
+    "bellStyleBoth": "Ambele",
     "bellStyleLabel": "Stil clopot",
+    "bellStyleNone": "Nici unul",
+    "bellStyleSound": "Sunet",
+    "bellStyleVisual": "Vizual",
     "colorTheme": "Temă de culoare",
     "cursorBlink": "Clipire cursor",
     "cursorBlinking": "Cursorul clipește",
     "cursorBlinkingDesc": "Activează animația intermitentă pentru cursorul terminalului",
     "cursorStyle": "Stilul cursorului",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Bloc",
     "cursorStyleLabel": "Stilul cursorului",
+    "cursorStyleUnderline": "Subliniere",
     "customThemeAnsiColors": "Culori ANSI",
     "customThemeBackground": "Fundal",
     "customThemeBlack": "Negru",
@@ -264,7 +455,10 @@
     "enableAutoTmux": "Activează Auto-Tmux",
     "enableAutoTmuxDesc": "Mențineți shell-ul și tot ce rulează în el în funcțiune după deconectări și reporniri ale browserului, rulând în interiorul tmux (tmux trebuie să fie instalat pe gazdă).",
     "fastScrollModifier": "Modificator de derulare rapidă",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "Modificator de derulare rapidă",
+    "fastScrollModifierShift": "Schimbare",
     "fastScrollSensitivity": "Sensibilitate rapidă la derulare",
     "fastScrollSensitivityLabel": "Sensibilitate rapidă la derulare",
     "fontFamily": "Familie de fonturi",
@@ -280,13 +474,11 @@
     "lineHeight": "Înălțimea liniei",
     "lineHeightLabel": "Înălțimea liniei",
     "linkClickBehaviorConfirm": "Afișează o fereastră pop-up pentru deschidere sau copiere",
-    "linkClickBehaviorDefault": "Implicit (urmați setările aplicației)",
     "linkClickBehaviorDesc": "Controlează ce se întâmplă când dai clic pe un link în terminal. Folosește „Implicit” pentru a urma setarea la nivel de aplicație.",
     "linkClickBehaviorDirect": "Deschideți direct",
-    "linkClickBehaviorLabel": "Comportamentul clicurilor pe link",
+    "linkClickBehaviorLabel": "Comportamentul clicurilor pe linkuri",
     "loadingHost": "Se încarcă gazda...",
     "localEchoAuto": "Automat",
-    "localEchoDefault": "Folosește setarea globală",
     "localEchoDesc": "Preziceți local apăsările de taste imprimabile în siguranță pe conexiuni lente. Solicitările de parolă și intrările de control nu sunt niciodată reluate.",
     "localEchoLabel": "Ecou local",
     "localEchoOff": "Dezactivat",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "Comandamentul Mosh",
     "noSavedThemes": "Nicio temă salvată încă",
     "none": "Nici unul",
+    "passwordPromptAutoFillDesc": "Oferiți-vă să completați parola salvată atunci când terminalul vă solicită una. Dezactivați pentru a nu completa niciodată automat nicio parolă pe această gazdă.",
+    "passwordPromptAutoFillLabel": "Completare automată parolă",
+    "autoReconnectLabel": "Reconectare automată",
+    "autoReconnectDesc": "Se reconectează automat când conexiunea SSH se întrerupe, de exemplu după o eroare de rețea sau o setare în repaus. Păstrează derularea înapoi.",
     "rightClickSelectsWord": "Clic dreapta selectează cuvântul",
     "rightClickSelectsWordLabel": "Clic dreapta Selectează Word",
     "rightClickSelectsWordShortDesc": "Selectați cuvântul de sub cursor prin clic dreapta",
@@ -328,7 +524,39 @@
     "theme": "Temă",
     "themePreview": "Previzualizare temă",
     "useSSHTitleDesc": "Actualizează titlul filei din titlul ferestrei shell-ului în loc de numele gazdei",
-    "useSSHTitleLabel": "Folosește titlul ferestrei SSH"
+    "useSSHTitleLabel": "Folosește titlul ferestrei SSH",
+    "enableTunnel": "Activează tunelul",
+    "enableFileManager": "Activează Managerul de fișiere",
+    "enableDocker": "Activează Docker",
+    "startupSnippet": "Fragment de pornire",
+    "quickActions": "Acțiuni rapide",
+    "proxmoxLastSyncStatus": {
+      "success": "Succes"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} omis (nu a fost găsită nicio adresă IP)",
+    "proxmoxStatsUrlCopied": "URL-ul statisticilor Proxmox a fost copiat în clipboard",
+    "rdpUrlCopied": "Adresa URL RDP copiată",
+    "vncUrlCopied": "Adresa URL VNC copiată",
+    "filterAuthStepca": "Pasul CA",
+    "guac": {
+      "noCredential": "Fără acreditări (acreditările directe sunt mai jos)",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Acreditare",
+      "authTypeNone": "Nici unul",
+      "recordingPath": "Calea de înregistrare",
+      "recordingName": "Nume înregistrare",
+      "saveHostFirst": "Salvează mai întâi gazda.",
+      "sharingOptionsAfterSave": "Opțiunile de partajare sunt disponibile după ce gazda a fost salvată.",
+      "permissionLevel": "Nivel de permisiune",
+      "typeHeader": "Tip",
+      "targetHeader": "Ţintă",
+      "permissionHeader": "Permisiune",
+      "cancelBtn": "Anula",
+      "savingBtn": "Economisire...",
+      "updateHostBtn": "Actualizați gazda",
+      "addHostBtn": "Adăugați gazdă"
+    },
+    "filterAuthVault": "Seif"
   },
   "nav": {
     "history": "Istorie",
@@ -354,27 +582,27 @@
     "startRecording": "Începeți înregistrarea",
     "stopRecording": "Opriți înregistrarea"
   },
-  "terminalDefaults": {
-    "clearAll": "Ștergeți tot",
-    "description": "Setați valorile pe care fiecare gazdă le moștenește, cu excepția cazului în care le suprascrie.",
-    "dialogDescription": "Acestea se aplică gazdelor care lasă o setare neconfigurată. Orice setare este setată pe o gazdă este câștigătoare.",
-    "inherit": "Moşteni",
-    "manage": "Gestionează",
-    "off": "Dezactivat",
-    "on": "Pe",
-    "title": "Setări implicite ale conexiunii"
-  },
   "keybindings": {
     "copy": "Copiați selecția",
     "paste": "Pastă",
     "sendControlCode": "Trimite semnal Ctrl+literă",
-    "sendText": "Trimiteți mesaj text",
+    "sendText": "Trimiteți mesaj",
     "controlCodeLabel": "Scrisoare",
     "textLabel": "Text de trimis",
     "appendEnterLabel": "Apăsați Enter după trimitere",
     "clipboardPermissionNote": "În unele browsere, este posibil să solicite permisiunea pentru clipboard la prima utilizare.",
     "textRequired": "Introduceți textul de trimis",
-    "controlCodeRequired": "Introduceți o singură literă pentru codul de control"
+    "controlCodeRequired": "Introduceți o singură literă pentru codul de control",
+    "builtIn": {
+      "copyCtrlC": "Copiază selecția (Ctrl+C, numai când este selectat text)",
+      "copyCtrlShiftC": "Copiere selecție (Ctrl+Shift+C)",
+      "copyCmdC": "Copiere selecție (Cmd+C)",
+      "pasteCtrlShiftV": "Lipire din clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Trimite Ctrl+W către shell (blocat de la închiderea filei browserului)",
+      "ctrlT": "Trimite Ctrl+T către shell (blocat la deschiderea filei browserului)",
+      "ctrlN": "Trimite Ctrl+N către shell (blocat de la deschiderea ferestrei browserului)",
+      "ctrlQ": "Trimite Ctrl+Q către shell (blocat la închiderea browserului)"
+    }
   },
   "macros": {
     "title": "Macrocomenzi",
@@ -382,7 +610,7 @@
     "target": "Ţintă",
     "noTerminal": "Niciun terminal deschis",
     "empty": "Încă nu există macrocomenzi",
-    "emptyHint": "Creați o macrocomandă pentru a automatiza un flux de lucru în terminal, cum ar fi conectarea, repornirea unui serviciu sau răspunsul la solicitări.",
+    "emptyHint": "Creați o macrocomandă pentru a automatiza un flux de operare în terminal, cum ar fi conectarea, repornirea unui serviciu sau răspunsul la solicitări.",
     "create": "Macrocomandă nouă",
     "back": "Înapoi la macrocomenzi",
     "name": "Nume",

@@ -23,7 +23,7 @@
     "provisionLabel": "Palvelimen valmistelu",
     "publishTitle": "Julkaise julkinen avain",
     "generate": "Luo",
-    "generateTooltip": "Luo Ed25519-avainpari — julkaisee julkisen avaimen ja lataa yksityisen avaimen laitteellesi",
+    "generateTooltip": "Luo Ed25519-avainparin. Julkaisee julkisen avaimen ja lataa yksityisen avaimen laitteellesi.",
     "saveToVault": "Tallenna tunnistetietoihin",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... käyttäjä@isäntä",
     "labelPlaceholder": "Tarra (valinnainen)",
@@ -32,7 +32,7 @@
     "keyPublished": "Avain julkaistu",
     "addKeyFailed": "Avaimen lisääminen epäonnistui",
     "generatedSaved": "Avainpari luotiin ja tallennettiin tunnistetietoholviisi. Myös yksityinen avain ladattiin.",
-    "generatedOnly": "Avainpari luotu — yksityinen avain ladattu (näytetään vain kerran).",
+    "generatedOnly": "Avainpari luotu. Yksityinen avain ladattu (näytetään vain kerran).",
     "generateFailed": "Avaimen luominen epäonnistui",
     "imported": "Avain tuotu tunnistetiedoista",
     "importFailed": "Avaimen tuonti epäonnistui",
@@ -56,22 +56,31 @@
     "caTrustLabel": "Luota palvelimeen (aja root-käyttäjänä)",
     "caRotate": "Kiertää",
     "caRotateConfirm": "Kierrätetäänkö varmentajaa? Kaikki sen allekirjoittamat varmenteet lakkaavat olemasta hyväksyttäviä ja ne on myönnettävä uudelleen.",
-    "caRotated": "Varmentaja vaihdettu – aiemmat varmenteet peruutettu",
+    "caRotated": "Varmennetoimittaja vaihdettu. Aiemmat varmenteet peruttu.",
     "caRotateFailed": "CA:n vaihtaminen epäonnistui",
     "caDelete": "Poista CA",
     "caDeleteConfirm": "Poistetaanko varmenteen myöntäjä?",
     "caDeleted": "CA poistettu",
     "caDeleteFailed": "CA:n poistaminen epäonnistui",
-    "caValidityLabel": "Sertifikaatin voimassaolo (päivää)",
+    "caValidityLabel": "Sertifikaatin voimassaolo (päivinä)",
     "issueCert": "Todistus",
     "issueCertTooltip": "Myönnä tälle avaimelle SSH-varmenne, jonka CA on allekirjoittanut",
     "certIssued": "Todistus myönnetty ja ladattu",
-    "certIssueFailed": "Varmenteen myöntäminen epäonnistui"
+    "certIssueFailed": "Varmenteen myöntäminen epäonnistui",
+    "docsLink": "Näytä dokumentit",
+    "principalsLabel": "SSH-pääasialliset",
+    "principalsPlaceholder": "SSH-päähenkilö(t), esim. juuri"
   },
   "nav": {
     "termixId": "Henkilöllisyystodistus"
   },
   "credentials": {
     "idBadge": "Henkilöllisyystodistus"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä Termix-tunnusta",
+      "description": "Varaa julkinen kahva, julkaise SSH-avaimet ja suorita varmenneviranomainen."
+    }
   }
 }

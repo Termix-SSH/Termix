@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Veure flotes",
+      "description": "Veure flotes, els seus membres i l'inventari."
+    },
+    "manage": {
+      "title": "Gestionar flotes",
+      "description": "Crea, edita i elimina flotes, canvia la pertinença i comparteix flotes amb altres usuaris o rols."
+    },
+    "execute": {
+      "title": "Executar accions de flota",
+      "description": "Executa ordres i crea accions de paquets a través d'una flota i transfereix fitxers des de i cap als seus amfitrions membres."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Actualitza tots els paquets",
         "packageNameLabel": "Nom del paquet",
         "packageNameRequired": "Cal un nom de paquet",
-        "packageHint": "Requereix accés de nivell d'administració per host i eleva els privilegis mitjançant la contrasenya sudo emmagatzemada per l'host."
+        "packageHint": "Requereix accés de nivell d'administració per host i eleva els privilegis mitjançant la contrasenya sudo emmagatzemada per l'host.",
+        "shareFleet": "Comparteix flota",
+        "shareFleetTitle": "Comparteix \"{{name}}\"",
+        "shareFleetDescription": "Comparteix els amfitrions membres actuals d'aquesta flota amb els usuaris o rols seleccionats. Els amfitrions afegits a la flota més tard no es comparteixen automàticament; torneu a compartir per incloure'ls.",
+        "shareSelectionRequired": "Seleccioneu com a mínim un usuari o rol",
+        "fleetSharedSuccessfully": "S'han compartit {{shared}} de {{total}} hosts en aquesta flota",
+        "failedToShareFleet": "No s'ha pogut compartir la flota",
+        "noMembersToShare": "Aquesta flota encara no té amfitrions membres per compartir."
       }
     }
   },

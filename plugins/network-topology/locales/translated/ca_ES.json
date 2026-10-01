@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "La font i la destinació han de ser diferents",
     "exportJSON": "Exporta JSON",
     "importJSON": "Importa JSON",
-    "terminal": "Terminal",
-    "fileManager": "Gestor de fitxers",
-    "tunnel": "Túnel",
-    "docker": "Docker",
     "serverStats": "Mètriques de l'amfitrió",
-    "hostMetrics": "Mètriques de l'amfitrió",
     "noNodes": "Encara no hi ha nodes"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "nodes {{count}}"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza el gràfic de xarxa",
+      "description": "Visualitza i edita el gràfic de topologia de xarxa."
+    }
   },
   "hosts": {
     "docsLink": "Veure documents"

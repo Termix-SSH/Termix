@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Sorozatszám"
+  },
   "serial": {
     "title": "Sorozatszám",
     "portLabel": "Kikötő",
@@ -22,8 +25,5 @@
     "notSupported": "A soros kapcsolatokhoz Web Serial API-t támogató böngésző (Chrome, Edge vagy Firefox 151+), vagy a Termix asztali alkalmazás szükséges.",
     "hideHint": "A Sorozat fület elrejtheted a Felhasználói profil > Megjelenés > Oldalsáv > Navigáció alatt.",
     "browserPickerHint": "Kattintson a Csatlakozás gombra, és a böngészője megnyit egy portválasztót az eszköz kiválasztásához."
-  },
-  "nav": {
-    "serial": "Sorozatszám"
   }
 }

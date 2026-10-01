@@ -73,17 +73,22 @@
       "fitToScreen": "Aan het scherm aanpassen",
       "switchToTrackpad": "Schakel over naar de trackpadmodus (sleep om de cursor te verplaatsen, tik om te klikken).",
       "switchToTouch": "Schakel over naar de aanraakmodus (tik direct op de plek waar u wilt klikken)."
-    }
+    },
+    "disabled": "Extern bureaublad is uitgeschakeld. Een beheerder kan dit inschakelen in de instellingen."
   },
   "hosts": {
     "nativeRdpOpened": "Geopend in Windows Remote Desktop",
     "nativeRdpFailed": "Het openen van Windows Remote Desktop is mislukt.",
     "openNativeRdp": "Openen in Windows Extern bureaublad",
     "guac": {
+      "toolbar": "Werkbalk",
       "connection": "Verbinding",
       "authentication": "Authenticatie",
       "storedCredential": "Opgeslagen inloggegevens",
       "authMethod": "Authenticatiemethode",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Referentie",
+      "authTypeNone": "Geen",
       "authTypeNoneDesc": "Er worden geen inloggegevens opgeslagen. U wordt bij elke verbinding gevraagd om een gebruikersnaam en wachtwoord; deze worden niet bewaard.",
       "selectCredential": "Selecteer een certificaat...",
       "connectionSettings": "Verbindingsinstellingen",
@@ -206,7 +211,8 @@
       "colorScheme": "Kleurenschema",
       "backspaceKey": "Backspace-toets",
       "colorDepth": "Kleurdiepte",
-      "resizeMethod": "Formaatwijzigingsmethode"
+      "resizeMethod": "Formaatwijzigingsmethode",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Extern bureaublad",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtueel netwerk",
     "unencryptedShell": "Niet-versleutelde shell",
-    "docsLink": "Documenten bekijken"
+    "remoteDesktopNotes": "Notities",
+    "userDefaultsNote": "Instellingen die u ongewijzigd laat, volgen de standaardinstellingen van uw host.",
+    "connectionOriginNote": "In de desktop-app gebruiken RDP, VNC en Telnet de externe server, tenzij de host is ingesteld op 'Dit apparaat'. In dat geval is een guacd-proxy nodig die deze machine kan bereiken. Stel er een in via de instellingen voor Extern bureaublad of per host onder guacd-proxy.",
+    "docsLink": "Documenten bekijken",
+    "connectionOriginGuacamoleNote": "RDP, VNC en Telnet gebruiken de externe server, tenzij u 'Dit apparaat' selecteert. In dat geval is een guacd-server nodig die deze machine kan bereiken. Stel er een in bij de guacd-URL-instellingen of per host onder guacd-proxy."
   },
   "onboarding": {
     "feature_desktop": "Extern bureaublad",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Kleurdiepte"
+        "label": "Kleurdiepte",
+        "description": "Gebruikt voor RDP-hosts die dit standaard ingeschakeld laten."
       },
       "resizeMethod": {
-        "label": "Formaatwijzigingsmethode"
+        "label": "Formaatwijzigingsmethode",
+        "description": "Hoe het scherm op afstand de venstergrootte aanpast."
       },
       "resizeDisplayUpdate": "Weergave bijwerken",
       "resizeReconnect": "Opnieuw verbinding maken",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Plakken uitschakelen",
         "description": "Voorkom dat tekst in de externe sessie wordt geplakt."
-      }
+      },
+      "group": "Standaardinstellingen voor Remote Desktop",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
     },
     "admin": {
+      "enabled": {
+        "label": "Schakel Extern bureaublad in.",
+        "description": "Sta RDP-, VNC- en Telnet-verbindingen toe via guacd."
+      },
       "guacdUrl": {
-        "label": "guacd URL"
+        "label": "guacd URL",
+        "description": "Waar guacd luistert, als host:poort. De omgevingsvariabelen GUACD_URL, GUACD_HOST en GUACD_PORT overschrijven dit.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP-poort"
+      },
+      "vncPort": {
+        "label": "VNC-poort"
+      },
+      "telnetPort": {
+        "label": "Telnet-poort"
+      },
+      "rdpSecurity": {
+        "label": "RDP-beveiligingsmodus"
+      },
+      "rdpIgnoreCert": {
+        "label": "Certificaatfouten negeren"
+      },
+      "guacamoleConfig": {
+        "label": "GUACD-instellingen"
+      },
+      "enableToolbar": {
+        "label": "Werkbalk voor extern bureaublad",
+        "description": "Toon de werkbalk in RDP-, VNC- en Telnet-sessies."
+      },
+      "displayGroup": "Weergave",
+      "displayDefaultsTab": "Extern bureaublad"
+    }
+  },
+  "palette": {
+    "connectRdp": "Verbinden via RDP",
+    "connectVnc": "Verbinden met VNC",
+    "connectTelnet": "Verbinden via Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Externe bureaubladsessies delen",
+      "description": "Zorg ervoor dat sessiedeling en samenwerkingsruimtes de RDP-, VNC- en Telnet-sessies van deze gebruiker aan anderen kunnen tonen."
     }
   },
   "errors": {

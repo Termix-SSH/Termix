@@ -21,6 +21,11 @@
     "ports": "منافذ",
     "noPorts": "لا توجد منافذ",
     "start": "ابدأ",
+    "stop": "التوقف",
+    "status": "الحالة",
+    "actions": "الإجراءات",
+    "cardView": "عرض البطاقة",
+    "listView": "عرض القائمة",
     "confirmRemoveContainer": "هل أنت متأكد من رغبتك في إزالة الحاوية '{{name}}'؟ لا يمكن التراجع عن هذا الإجراء.",
     "runningContainerWarning": "تحذير: هذه الحاوية قيد التشغيل حالياً. ستؤدي إزالتها إلى إيقافها أولاً.",
     "loadingContainers": "جارٍ تحميل الحاويات...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "يجب أن تكون الحاوية قيد التشغيل للوصول إلى وحدة التحكم",
     "verificationCodePrompt": "أدخل رمز التحقق",
     "totpVerificationFailed": "فشل التحقق من TOTP. يرجى المحاولة مرة أخرى.",
+    "browserSignInFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.",
     "connectedTo": "متصل بـ {{containerName}}",
     "disconnected": "تم قطع الاتصال",
     "consoleError": "خطأ في وحدة التحكم",
@@ -93,19 +99,34 @@
     "logs": "السجلات",
     "stats": "الإحصائيات",
     "consoleTab": "وحدة التحكم",
-    "startContainerToAccess": "ابدأ تشغيل الحاوية للوصول إلى وحدة التحكم"
+    "startContainerToAccess": "ابدأ تشغيل الحاوية للوصول إلى وحدة التحكم",
+    "noHostSelected": "لم يتم تحديد أي جهاز مضيف",
+    "failedToFetchLogs": "فشل في جلب السجلات: {{error}}",
+    "failedToDownloadLogs": "فشل تنزيل السجلات: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
-    "feature_docker": "عامل ميناء",
+    "feature_docker": "Docker",
     "feature_docker_desc": "اطلع على الحاويات، واقرأ السجلات، وراقب الإحصائيات على أي مضيف يعمل بنظام Docker."
+  },
+  "terminal": {
+    "retry": "إعادة المحاولة",
+    "clipboardReadFailed": "فشلت القراءة من الحافظة. تأكد من منح أذونات الحافظة.",
+    "clipboardWriteFailed": "فشل النسخ إلى الحافظة. تأكد من تقديم الصفحة عبر HTTPS أو localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدم Docker",
+      "description": "افتح مدير Docker ووحدات تحكم الحاويات على المضيفين الذين تم تمكين Docker عليهم."
+    }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "تمكين Docker"
+        "label": "تفعيل Docker",
+        "description": "إدارة الحاويات على هذا المضيف."
       },
       "containerRuntime": {
         "label": "بيئة تشغيل الحاويات",
@@ -122,9 +143,5 @@
     "docsLink": "عرض المستندات",
     "hostNotFound": "المضيف غير موجود",
     "loadingHost": "جارٍ تحميل المضيف..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "فشلت القراءة من الحافظة. تأكد من منح أذونات الحافظة.",
-    "clipboardWriteFailed": "فشل النسخ إلى الحافظة. تأكد من تقديم الصفحة عبر HTTPS أو localhost."
   }
 }

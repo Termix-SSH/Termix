@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "Kirjaudu sisään LDAP-tunnuksella",
   "loginWithProvider": "Kirjaudu sisään tunnuksella {{name}}",
   "loading": "Ladataan...",
   "requiredField": "Tämä kenttä on pakollinen",
   "username": "LDAP-käyttäjätunnus",
   "password": "LDAP-salasana",
   "signIn": "Kirjaudu sisään",
+  "permissions": {
+    "manage": {
+      "title": "Hallitse LDAP-hakemistoja",
+      "description": "Lisää, muuta ja poista LDAP-hakemistoja, joilla käyttäjät voivat kirjautua sisään."
+    }
+  },
   "providers": {
     "docsLink": "Näytä dokumentit",
+    "none": "LDAP-hakemistoja ei ole määritetty.",
+    "add": "Lisää hakemisto",
+    "edit": "Muokkaa hakemistoa",
+    "delete": "Poista hakemisto",
+    "deleteConfirm": "Poistetaanko tämä hakemisto? Käyttäjät, jotka kirjautuvat sisään sillä, eivät voi kirjautua sisään.",
     "name": "Näyttönimi",
+    "namePlaceholder": "Yrityshakemisto",
+    "nameRequired": "Näyttönimi on pakollinen",
     "enabled": "Käytössä",
+    "save": "Tallenna hakemisto",
     "saving": "Tallennetaan...",
     "saved": "Tallennettu",
     "saveFailed": "Tallennus epäonnistui",
     "deleted": "Poistettu",
     "deleteFailed": "Poistaminen epäonnistui",
+    "loadFailed": "LDAP-hakemistojen lataaminen epäonnistui",
     "cancel": "Peruuttaa"
   },
   "fields": {
@@ -22,6 +38,7 @@
     "useTls": "Käytä TLS:ää (LDAPS)",
     "bindDn": "Sido DN",
     "bindPassword": "Sido salasana",
+    "secretKeep": "Salasana on tallennettu. Jätä tämä tyhjäksi, jos haluat säilyttää sen.",
     "userSearchBase": "Käyttäjähakupohja",
     "userSearchFilter": "Käyttäjän hakusuodatin",
     "usernameAttr": "Käyttäjätunnusattribuutti",

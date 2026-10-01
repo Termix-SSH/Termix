@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Administrer brugsstatistik",
+      "description": "Se hvilke brugsstatistikker der sendes, send dem nu, og nulstil instans-ID'et."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Del anonym brugsstatistik",
+      "description": "Sender et lille anonymt resumé én gang om dagen for at forbedre Termix. Det inkluderer aldrig brugernavne, værtsnavne, IP-adresser eller legitimationsoplysninger."
+    },
+    "includePlatform": {
+      "label": "Inkluder platformoplysninger",
+      "description": "Operativsystemet, CPU-arkitekturen, Node.js-versionen, databasetypen og hvordan Termix er installeret (Docker, desktop-app eller server)."
+    },
+    "includeFeatureUsage": {
+      "label": "Inkluder brug af funktioner",
+      "description": "Hvor mange gange hver type fane blev åbnet, og hvor mange SSH-logins der er sket siden den sidste rapport. Brugere kan deaktivere deres egen del i deres profil."
+    },
+    "includePlugins": {
+      "label": "Inkluder installerede funktioner",
+      "description": "Hvilke indbyggede funktioner er installeret og kører."
+    },
+    "instanceId": {
+      "label": "Instans-ID"
+    },
+    "shareFeatureUsage": {
+      "label": "Inkluder min brug af funktioner",
+      "description": "Tæller hvilke typer faner du åbner i den anonyme brugsstatistik. Der sendes intet om dig eller dine værter."
+    }
+  },
+  "status": {
+    "title": "Status",
+    "on": "Deler brugsstatistik én gang om dagen",
+    "off": "Deler ikke brugsstatistik",
+    "lockedOn": "Aktiveret af miljøvariablen ENABLE_TELEMETRY. Rediger den der.",
+    "lockedOff": "Slået fra af miljøvariablen ENABLE_TELEMETRY. Rediger den der.",
+    "instanceId": "Instans-ID: {{id}}",
+    "noInstanceId": "Intet instans-ID endnu",
+    "lastSent": "Sidst sendt {{date}}",
+    "neverSent": "Ikke sendt endnu",
+    "nextSend": "Næste rapport forfalder {{date}}",
+    "lastError": "Sidste forsøg mislykkedes: {{error}}",
+    "preview": "Forhåndsvisning af rapport",
+    "sendNow": "Send nu",
+    "sending": "Sender...",
+    "sent": "Brugsstatistik sendt",
+    "notSent": "Brugsstatistikker er slået fra, intet blev sendt",
+    "resetId": "Nulstil instans-ID",
+    "resetIdConfirm": "Nulstil instans-ID'et? Fremtidige rapporter vil se ud som en ny installation.",
+    "resetIdDone": "Nulstilling af instans-ID",
+    "previewTitle": "Næste rapport",
+    "previewDescription": "Det er præcis, hvad der ville blive sendt lige nu.",
+    "close": "Tæt",
+    "loadFailed": "Kunne ikke indlæse status for brugsstatistik"
+  }
+}

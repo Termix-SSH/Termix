@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Startseite",
     "addWidget": "Widget hinzufügen",
+    "noWidgetsInCategory": "Keine Widgets in dieser Kategorie",
     "editWidget": "Widget bearbeiten",
     "zoomIn": "Vergrößern",
     "zoomOut": "Verkleinern",
@@ -59,6 +60,9 @@
     "maxItems": "Max. Einträge",
     "showDescription": "Beschreibung anzeigen",
     "widgetRssName": "RSS-Feed",
+    "rssNoFeedUrl": "Konfigurieren Sie eine Feed-URL in den Widget-Einstellungen.",
+    "rssLoadError": "Zuführung konnte nicht geladen werden",
+    "rssNoItems": "Keine Artikel",
     "noHostSelected": "Kein Host ausgewählt",
     "displayedMetrics": "Angezeigte Metriken",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "Kompaktmodus",
     "selectHosts": "Hosts auswählen",
     "listLayout": "Liste",
-    "gridLayout": "Raster"
+    "gridLayout": "Raster",
+    "configureUrl": "Legen Sie in den Widget-Einstellungen eine URL fest.",
+    "embeddedContent": "Eingebetteter Inhalt",
+    "noBookmarks": "Keine Lesezeichen",
+    "noSections": "Keine Abschnitte eingerichtet",
+    "noServices": "Keine Dienste eingerichtet",
+    "configureLocation": "Legen Sie in den Widget-Einstellungen einen Standort fest.",
+    "bannerTextPlaceholder": "Bannertext",
+    "serviceNamePlaceholder": "Mein Service"
+  },
+  "permissions": {
+    "use": {
+      "title": "Nutzen Sie die Startseite",
+      "description": "Homepage-Canvas und Dashboard-Servicelinks anzeigen und bearbeiten."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Zulässige private Gastgeber",
+      "description": "Exakte private oder Loopback-Hostnamen/IPs für Ping-Status- und benutzerdefinierte API-Widgets. Einträge durch Kommas oder Zeilenumbrüche trennen; Schemas, Ports und Pfade weglassen. Leere Blöcke private Ziele."
+    },
+    "privateCertificateAuthority": {
+      "label": "Private Zertifizierungsstelle (PEM)",
+      "description": "Optionales Paket vertrauenswürdiger Zertifizierungsstellen für zugelassene Hosts. Die Zertifikatsprüfung bleibt aktiviert. Lassen Sie dieses Feld leer, um den System-Truststore zu verwenden."
+    }
   }
 }

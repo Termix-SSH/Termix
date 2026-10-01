@@ -1,29 +1,58 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Manage ACME certificates",
+      "description": "See the certificate status and request a new certificate now."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Renew automatically",
+      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+    },
     "domain": {
       "label": "Домен",
-      "placeholder": "termix.example.com",
-      "description": "Общедоступное доменное имя для сертификата."
+      "description": "Общедоступное доменное имя для сертификата.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "Email",
+      "description": "Contact email for the ACME account and expiry notices.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "Центр сертификации",
+      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (staging)",
+      "custom": "Custom ACME directory"
+    },
+    "directoryUrl": {
+      "label": "ACME directory URL",
+      "description": "Only for a custom certificate authority. Must be an https URL."
+    },
     "challengeType": {
-      "label": "Тип проверки",
-      "cloudflare": "DNS (Cloudflare) — требуется API-токен Cloudflare"
+      "label": "Challenge type",
+      "description": "How to prove you own the domain.",
+      "http": "HTTP - needs port 80 reachable from the internet",
+      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
     },
     "cloudflareToken": {
-      "label": "API-токен Cloudflare",
+      "label": "Cloudflare API token",
       "description": "Токен с ограниченной областью действия и разрешением Zone:DNS:Edit для вашего домена."
     }
   },
   "status": {
-    "title": "Статус сертификата",
+    "title": "Certificate status",
     "none": "Сертификат отсутствует",
+    "names": "Covers {{names}}",
+    "issuer": "Issued by {{issuer}}",
     "expires": "Истекает {{date}}",
     "lastIssued": "Последний выпуск {{date}}",
-    "request": "Выпустить / Обновить сертификат",
-    "requesting": "Запрос сертификата..."
+    "lastError": "Last attempt failed: {{error}}",
+    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
+    "request": "Request certificate now",
+    "requesting": "Запрос сертификата...",
+    "issued": "Certificate issued and installed"
   }
 }

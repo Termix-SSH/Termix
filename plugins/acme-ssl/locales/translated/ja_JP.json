@@ -1,17 +1,41 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "ACME証明書を管理する",
+      "description": "証明書のステータスを確認し、新しい証明書を今すぐリクエストしてください。"
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "自動更新",
+      "description": "1日に2回確認し、証明書がない場合、ドメインをカバーしていない場合、または有効期限が30日以内に切れる場合は、新しい証明書を取得してください。"
+    },
     "domain": {
       "label": "ドメイン",
-      "placeholder": "termix.example.com",
-      "description": "証明書の公開ドメイン名。"
+      "description": "証明書の公開ドメイン名。",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "メールアドレス",
+      "description": "ACMEアカウントおよび有効期限通知に関する連絡先メールアドレス。",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "認証局",
+      "description": "証明書の入手方法。Let's Encryptのレート制限に抵触しないよう、ステージング環境を使用してテストしてください。",
+      "letsencrypt": "レッツ・エンクリプト",
+      "letsencryptStaging": "Let's Encrypt（ステージング環境）",
+      "custom": "カスタムACMEディレクトリ"
+    },
+    "directoryUrl": {
+      "label": "ACMEディレクトリURL",
+      "description": "カスタム認証局のみ対象です。URLはhttpsでなければなりません。"
+    },
     "challengeType": {
-      "label": "チャレンジタイプ",
-      "cloudflare": "DNS（Cloudflare）- Cloudflare APIトークンが必要です"
+      "label": "チャレンジの種類",
+      "description": "ドメインの所有権を証明する方法。",
+      "http": "HTTP - インターネットからアクセス可能なポート80が必要です",
+      "cloudflare": "DNS（Cloudflare） - Cloudflare APIトークンが必要です"
     },
     "cloudflareToken": {
       "label": "Cloudflare APIトークン",
@@ -19,11 +43,16 @@
     }
   },
   "status": {
-    "title": "証明書ステータス",
+    "title": "証明書のステータス",
     "none": "証明書なし",
+    "names": "カバー {{names}}",
+    "issuer": "{{issuer}} によって発行されました",
     "expires": "有効期限 {{date}}",
     "lastIssued": "最終発行日 {{date}}",
-    "request": "証明書を発行/更新",
-    "requesting": "証明書をリクエスト中..."
+    "lastError": "最後の試行が失敗しました: {{error}}",
+    "missing": "証明書をリクエストする前に、ドメイン、メールアドレス、およびチャレンジタイプに必要なフィールドを設定して保存してください。",
+    "request": "今すぐ証明書を申請する",
+    "requesting": "証明書をリクエスト中...",
+    "issued": "証明書が発行され、インストールされました。"
   }
 }

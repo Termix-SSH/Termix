@@ -2,7 +2,7 @@
   "editor": {
     "label": "OPKSSH",
     "description": "パスワードや鍵の代わりに、IDプロバイダーを使用してこのホストにサインインします。サーバーにOPKSSHのセットアップが必要です。",
-    "docs": "ドキュメントを表示"
+    "docs": "ドキュメントを見る"
   },
   "dialog": {
     "title": "OPKSSH認証が必要です",
@@ -15,6 +15,16 @@
   "errors": {
     "authFailed": "認証に失敗しました。資格情報を確認して再試行してください。",
     "timeout": "認証がタイムアウトしました。もう一度お試しください。"
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "リダイレクトURI",
+      "description": "OPKSSHの設定で、このURLを許可されたリダイレクトURIとしてすべてのIDプロバイダーに登録してください。"
+    },
+    "legacyCallback": {
+      "label": "古いリダイレクトURIを使用する",
+      "description": "バージョン2.9以前に使用されていたリダイレクトURIである/host/opkssh-callbackを送信し続けてください。IDプロバイダーが新しいURIを許可したら、この設定を無効にしてください。"
+    }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Isännän mittarit"
+  },
   "hostMetrics": {
     "cpu": "Suoritin",
     "memory": "Muisti",
@@ -90,7 +93,7 @@
       "logViewer": "Lokikatseluohjelma",
       "cron": "Cron-työt",
       "packages": "Paketit",
-      "ssl": "SSL-sertifikaatit",
+      "ssl": "SSL-varmenteet",
       "firewall": "Palomuuri",
       "users": "Käyttäjät ja käyttöoikeudet",
       "healthCheck": "Terveystarkastukset",
@@ -152,7 +155,7 @@
       "healthTarget": "Isäntä / osoite",
       "healthAddCheck": "Lisää shekki",
       "healthSaved": "Terveystarkastukset tallennettu",
-      "healthMissingFields": "Jokaisella tarkistuksella on oltava nimi ja kohde",
+      "healthMissingFields": "Jokaisella tarkastuksella on oltava nimi ja kohde",
       "logFile": "Tiedosto",
       "logUnit": "Yksikkö",
       "logCustomPath": "Mukautettu polku /var/log-hakemistossa (valinnainen)",
@@ -160,7 +163,6 @@
       "firewallPersist": "Säilytä säännöt",
       "firewallPersisted": "Palomuurisäännöt säilyivät",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuardia ei ole asennettu tälle koneelle",
       "wgNoInterfaces": "Ei WireGuard-liitäntöjä määritettynä",
       "wgInterfaceUp": "Tuo esiin",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Viimeinen kädenpuristus",
       "wgHandshakeNever": "Ei koskaan",
       "wgTransfer": "Siirtää",
-      "tsNotInstalled": "Tailscalea ei ole asennettu tälle isännälle",
-      "tsRunning": "Juoksu",
-      "tsStopped": "Pysähtynyt",
-      "tsEnable": "Yhdistä",
-      "tsDisable": "Katkaise yhteys",
-      "tsEnabling": "Yhdistetään Tailscaleen...",
-      "tsDisabling": "Yhteyden katkaiseminen Tailscaleen...",
-      "tsEnabled": "Tailscale yhdistetty",
-      "tsDisabled": "Tailscale irrotettu",
-      "tsIPs": "Tailscale IP-osoitteet",
-      "tsPeers": "Vertaiset",
-      "tsOnline": "Verkossa",
-      "tsOffline": "Offline-tilassa",
-      "tsExitNode": "Poistumissolmu",
-      "tsExitNodeActive": "Poistumissolmu aktiivinen",
-      "tsHostname": "Isäntänimi"
+      "wgNoPeers": "Ei vertaisia"
     }
   },
   "metricsHistory": {
@@ -199,16 +186,13 @@
     "historySuffix": "Historia",
     "cpuMemoryDisk": "CPU / Muisti / Levy",
     "network": "Verkko",
-    "download": "Vastaanotto",
+    "download": "Vastaanottaja",
     "upload": "Teksas",
     "noData": "Tältä aikaväliltä ei ole saatavilla historiatietoja.",
     "custom": "Mukautettu",
     "to": "että",
     "apply": "Käytä",
     "viewHistory": "Näytä historia"
-  },
-  "nav": {
-    "hostMetrics": "Isännän mittarit"
   },
   "hosts": {
     "tabHostMetrics": "Isännän mittarit",
@@ -265,6 +249,9 @@
     "noHostSelected": "Ei valittua isäntää",
     "selectHost": "Valitse isäntä..."
   },
+  "terminalStatus": {
+    "unavailable": "Live-tilastot eivät ole saatavilla"
+  },
   "dashboard": {
     "cpu": "Suoritin",
     "ram": "RAM-muistia"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Yhdistetty"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä isäntämittareita",
+      "description": "Tarkastele isäntätietokoneen mittareita ja käytä isäntätietokoneiden hallintaohjelmia (palvelut, paketit, palomuuri ja paljon muuta) tavoitettavilla isännillä."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Mittariväli (sekunteina)",
+        "description": "Kuinka usein tarkasteltavasta isännästä otetaan näytteitä, ellei isäntä aseta omaa aikaväliä."
+      },
+      "historyRetentionDays": {
+        "label": "Historian säilytys (päivää)",
+        "description": "Kuinka kauan historiakaavioiden mittareiden näytteitä säilytetään."
+      },
+      "enabledForNewHosts": {
+        "label": "Mittarit käytössä uusille isännille",
+        "description": "Aloittavatko uudet isännät mittaustietojen kerääminen käytössä."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Lämpötilayksikkö",
+        "description": "Miten lämpötilat näytetään isäntämetriikoissa.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Kerää mittareita"
+      },
+      "metricsInterval": {
+        "label": "Mittariväli (sekunteina)"
+      },
+      "enabledWidgets": {
+        "label": "Käytössä olevat widgetit"
+      },
+      "excludedMounts": {
+        "label": "Poissuljetut kiinnikkeet"
+      },
+      "monitoredMounts": {
+        "label": "Valvotut polut"
+      }
+    }
   }
 }

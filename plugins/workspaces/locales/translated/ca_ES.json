@@ -41,7 +41,13 @@
         "lastSessionDescription": "Actualitzat automàticament amb la disposició de pestanyes més recent. Aplica-ho per recuperar el que tenies obert.",
         "lastUsed": "Últim ús {{time}}",
         "neverUsed": "Mai aplicat",
-        "tabsSkipped": "Espai de treball aplicat — {{count}} pestanyes omeses (l'amfitrió ja no existeix): {{names}}"
+        "tabsSkipped": "L'espai de treball s'ha aplicat, però s'han omès les pestanyes {{count}} perquè el seu amfitrió ja no existeix: {{names}}",
+        "timeAgo": {
+          "seconds": "Fa {{count}}segons",
+          "minutes": "fa {{count}}minuts",
+          "hours": "fa {{count}}h",
+          "days": "fa {{count}}dies"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Espais de treball",
     "workflow_workspaces_desc": "Desa un conjunt de pestanyes obertes i torna a obrir tot el disseny més tard."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza els espais de treball",
+      "description": "Desa, aplica i gestiona els dissenys de pestanyes desats."
+    }
   },
   "hosts": {
     "docsLink": "Veure documents"

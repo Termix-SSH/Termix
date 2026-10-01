@@ -33,7 +33,7 @@
     "connectionLost": "انقطع الاتصال",
     "connectionRejected": "تم رفض الاتصال من قبل الخادم. يرجى التحقق من المصادقة وإعدادات الشبكة.",
     "connectionTimeout": "انتهت مهلة الاتصال",
-    "enableAutoTmuxAction": "تفعيل خاصية Auto-Tmux",
+    "enableAutoTmuxAction": "تمكين tmux التلقائي",
     "hostKeyRejected": "تم رفض التحقق من مفتاح مضيف SSH. تم إلغاء الاتصال.",
     "linkDialogCopy": "نسخ",
     "linkDialogOpen": "فتح",
@@ -44,6 +44,7 @@
     "reconnect": "إعادة الاتصال",
     "reconnected": "تمت إعادة الاتصال بنجاح",
     "reconnecting": "جارٍ إعادة الاتصال... ({{attempt}}/{{max}})",
+    "autoReconnecting": "انقطع الاتصال، جارٍ إعادة الاتصال...",
     "searchCaseSensitive": "علبة كبريت",
     "searchClose": "إغلاق (الهروب)",
     "searchNext": "المباراة التالية (إدخال)",
@@ -52,7 +53,7 @@
     "searchPrevious": "المباراة السابقة (Shift+Enter)",
     "searchRegex": "استخدم التعبير النمطي",
     "searchResultCount": "{{index}} من {{count}}",
-    "searchWholeWord": "تطابق الكلمة الكاملة",
+    "searchWholeWord": "مطابقة الكلمة الكاملة",
     "sessionExpiredNotice": "انتهت صلاحية جلستك السابقة على {{host}} بعد {{minutes}} دقيقة من قطع الاتصال؛ تم إغلاق نافذة الأوامر وأي شيء يعمل بداخلها. فعّل خاصية Auto-Tmux على هذا المضيف للحفاظ على استمرارية الجلسات.",
     "sessionExpiredNoticeNoMinutes": "انتهت صلاحية جلستك السابقة على {{host}} أثناء انقطاع الاتصال؛ تم حذف واجهة سطر الأوامر وأي شيء كان يعمل بداخلها. فعّل خاصية Auto-Tmux على هذا المضيف للحفاظ على استمرارية الجلسات.",
     "sessionTakenOver": "تم فتح الجلسة في علامة تبويب أخرى. جارٍ إعادة الاتصال...",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "فشلت القراءة من الحافظة. تأكد من منح أذونات الحافظة.",
     "clipboardWriteFailed": "فشل النسخ إلى الحافظة. تأكد من تقديم الصفحة عبر HTTPS أو localhost.",
     "connected": "متصل",
-    "totpCodeLabel": "رمز التحقق"
+    "totpCodeLabel": "رمز التحقق",
+    "duplicateTab": "علامة تبويب مكررة",
+    "imageChooseFile": "اختر ملف صورة",
+    "imageUploaded": "تم تحميل الصورة: {{path}}",
+    "imageClipboardUnavailable": "لا يستطيع هذا المتصفح قراءة الصور من الحافظة",
+    "imageClipboardEmpty": "لم يتم العثور على أي صورة في الحافظة",
+    "localShell": "واجهة سطر الأوامر المحلية",
+    "autocompleteHintComplete": "اضغط على زر Tab أو Enter لإكمال العملية",
+    "autocompleteHintNavigate": "↑↓ للتنقل",
+    "autocompleteHintClose": "اضغط على زر Esc للإغلاق"
   },
   "terminalToolbar": {
     "detachTmux": "افصل tmux",
@@ -100,7 +110,7 @@
     "showToolbar": "توسيع شريط الأدوات",
     "upload": "تحميل صورة",
     "uploadImage": "قم بتحميل صورة إلى المضيف",
-    "uploadingImage": "جارٍ التحميل..."
+    "uploadingImage": "جارٍ الرفع..."
   },
   "history": {
     "noTerminalSelected": "لا توجد طرفية محددة",
@@ -108,15 +118,18 @@
     "searchPlaceholder": "ابحث في السجل...",
     "clearAll": "مسح الكل",
     "noHistoryEntries": "لا توجد مدخلات سجل",
-    "trackingDisabled": "تتبع السجل معطل"
+    "trackingDisabled": "تتبع السجل معطل",
+    "trackingDisabledHint": "قم بتشغيل سجل الأوامر في علامة تبويب SSH Terminal الخاصة بهذا المضيف.",
+    "commandCount_one": "الأمر {{count}}",
+    "commandCount_other": "{{count}} أوامر"
   },
   "touchInput": {
     "enabled": "تفعيل إدخال اللمس",
     "enabledDesc": "السماح بالتمرير بلمسة إصبع واحدة في المحطات الطرفية",
     "momentumEnabled": "تفعيل الزخم",
-    "momentumEnabledDesc": "استمر في التمرير لفترة وجيزة بعد التمرير",
+    "momentumEnabledDesc": "استمر في التمرير لفترة وجيزة بعد التمرير السريع",
     "advanced": "متقدم",
-    "resetDefaults": "إعادة ضبط الإعدادات الافتراضية",
+    "resetDefaults": "استعادة الإعدادات الافتراضية",
     "dragThreshold": "عتبة السحب",
     "maxWheelDelta": "أقصى دلتا للعجلة",
     "momentumSampleWindow": "نافذة عينة الزخم",
@@ -134,7 +147,7 @@
     "instanceId": "معرّف مثيل جلسة الطرفية",
     "instanceIdDesc": "معرف مثيل إحدى علامات تبويب الطرفية المتصلة، المستخدمة لاختبار الرؤية.",
     "selectedModeUnavailable": "غير متاح",
-    "test": "امتحان",
+    "test": "اختبار",
     "testing": "جارٍ الاختبار...",
     "testFailed": "فشل اختبار تخزين الصور",
     "testConnected": "تم الاتصال بجلسة الطرفية.",
@@ -147,42 +160,74 @@
     "admin": {
       "group": {
         "touch": "إدخال اللمس",
-        "images": "تخزين الصور"
+        "images": "تخزين الصور",
+        "sessions": "الجلسات",
+        "newHosts": "مضيفون جدد"
       },
       "sessionTimeoutMinutes": {
         "label": "استمرار جلسة الطرفية",
-        "description": "مدة بقاء طرفية غير متصلة على الخادم قبل إغلاقها. الحد الأدنى: دقيقة واحدة، الحد الأقصى: 1440 دقيقة. بالنسبة للجلسات التي يجب أن تستمر لفترة أطول من ذلك، فعّل خاصية Auto-Tmux على المضيف."
+        "description": "مدة بقاء طرفية غير متصلة على الخادم قبل إغلاقها. الحد الأدنى دقيقة واحدة، والحد الأقصى 1440 دقيقة. بالنسبة للجلسات التي يجب أن تستمر لفترة أطول من ذلك، فعّل خاصية Auto-Tmux على المضيف."
       },
       "commandHistoryEnabled": {
         "label": "سجل الأوامر",
         "description": "السماح بتسجيل سجل الأوامر. عند التعطيل، لا يتم حفظ السجل بغض النظر عن إعدادات كل جهاز."
       },
+      "commandHistoryForNewHosts": {
+        "label": "سجل الأوامر للمضيفين الجدد",
+        "description": "هل تبدأ الأجهزة المضيفة الجديدة بخاصية تفعيل سجل الأوامر؟"
+      },
       "imageStorageMode": {
         "label": "وضع التخزين",
         "description": "يتم حفظ الصور الطرفية الملصقة والمرفوعة في هذا المكان. يتم تثبيت عمليات الاختيار التلقائي حسب الاتصال، سواء كان محليًا أو عن بُعد (SFTP).",
-        "auto": "آلي",
+        "auto": "تلقائي",
         "local": "محلي",
         "remoteSftp": "عن بعد (SFTP)"
       },
       "imageLocalDir": {
-        "label": "الدليل المحلي"
+        "label": "الدليل المحلي",
+        "description": "المسار المطلق في نظام Termix الخلفي حيث يتم كتابة الصور في الوضع المحلي. لا يظهر هذا المسار بعد الحفظ. يستخدم المسار الفارغ TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
         "label": "مسار المضيف",
         "description": "عرض الدليل المحلي من جانب المضيف الذي تتلقاه وكلاء المحطة الطرفية."
       },
       "imageTtlMs": {
-        "label": "مدة البقاء (بالمللي ثانية)"
+        "label": "مدة البقاء (بالمللي ثانية)",
+        "description": "مدة الاحتفاظ بالصورة المرفوعة، بالمللي ثانية. يستخدم الخيار الفارغ قيمة TERMIX_IMAGE_TTL_MS أو ساعة واحدة."
       },
       "imageMaxCount": {
-        "label": "الحد الأقصى لعدد الصور"
+        "label": "الحد الأقصى لعدد الصور",
+        "description": "يتم الاحتفاظ بمعظم الصور دفعة واحدة. يستخدم الوضع الفارغ TERMIX_MAX_IMAGE_COUNT أو 100."
       },
       "imageMaxBytes": {
-        "label": "الحد الأقصى لحجم التخزين بالبايت"
+        "label": "الحد الأقصى لحجم التخزين بالبايت",
+        "description": "يتم الاحتفاظ بمعظم بايتات الصور دفعة واحدة. يستخدم الملف الفارغ TERMIX_MAX_IMAGE_STORAGE_BYTES أو 5 جيجابايت."
+      },
+      "sessionPersistence": {
+        "label": "حافظ على جلساتك منفصلة",
+        "description": "أبقِ نافذة طرفية غير متصلة بالخادم مفتوحة للمدة المذكورة أعلاه، بحيث يؤدي إعادة فتح علامة التبويب الخاصة بها إلى استئناف العمل من حيث توقفت."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
         "description": "قم بتشغيل طرفيات المضيفين الجدد داخل tmux حتى تستمر الجلسات في حالة انقطاع الاتصال (يتطلب tmux على المضيف)."
+      },
+      "newHostTheme": {
+        "label": "قالب للمضيفين الجدد",
+        "description": "السمة الطرفية التي يبدأ بها المضيف الجديد."
+      },
+      "newHostFontFamily": {
+        "label": "خط المضيفين الجدد",
+        "description": "خط الطرفية الذي يبدأ به المضيف الجديد."
+      },
+      "newHostFontSize": {
+        "label": "حجم الخط للمضيفين الجدد",
+        "description": "حجم خط الطرفية الذي يبدأ به المضيف الجديد، بالبكسل."
+      },
+      "newHostCursorStyle": {
+        "label": "نمط المؤشر للمضيفين الجدد"
+      },
+      "newHostCursorBlink": {
+        "label": "مؤشر وامض للمضيفين الجدد"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "تفعيل شريط أدوات الطرفية",
         "description": "اعرض شريط أدوات سريع الوصول مثبتًا على الطرفية النشطة لأدوات هذا المضيف وإحصائياته المباشرة."
       },
+      "terminalToolbarPosition": {
+        "label": "موضع شريط الأدوات",
+        "description": "مكان وجود شريط الأدوات في الطرفية. لا يزال بإمكانك سحبه من هناك.",
+        "bottom": "أسفل المنتصف",
+        "bottomLeft": "أسفل اليسار",
+        "bottomRight": "أسفل اليمين",
+        "top": "أعلى المنتصف",
+        "topLeft": "أعلى اليسار",
+        "topRight": "أعلى اليمين"
+      },
+      "terminalToolbarStartState": {
+        "label": "حالة بدء شريط الأدوات",
+        "description": "سواء تم فتح شريط الأدوات موسعًا أو مصغرًا عند اتصال الجهاز الطرفي",
+        "expanded": "موسع",
+        "collapsed": "مُصغّر"
+      },
+      "terminalToolbarDisplay": {
+        "label": "وضع عرض شريط الأدوات",
+        "description": "كيفية عرض أزرار شريط الأدوات. آخر استخدام يحفظ ما تم تحديده في شريط الأدوات.",
+        "remember": "آخر استخدام",
+        "icon": "أيقونة فقط",
+        "labeled": "الرموز والملصقات",
+        "expanded": "مُوسّع بالإحصائيات"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "عرض الإحصائيات المباشرة",
+        "description": "عرض إحصائيات المضيف المباشرة أعلى أزرار شريط الأدوات في الوضع الموسع"
+      },
+      "terminalToolbarFade": {
+        "label": "يتلاشى عند الخمول",
+        "description": "قم بإخفاء شريط الأدوات حتى تُمرر مؤشر الماوس فوقه"
+      },
       "enableCommandHistory": {
         "label": "سجل الأوامر",
         "description": "تسجيل الأوامر المنفذة في هذه الطرفية للسجل والإكمال التلقائي"
       },
       "enableTerminal": {
-        "label": "تمكين الطرفية"
+        "label": "تفعيل الطرفية",
+        "description": "قم بتوفير طرفية SSH لهذا المضيف."
+      },
+      "inheritAppearance": {
+        "label": "استخدم الإعدادات الافتراضية للمستخدم"
+      },
+      "theme": {
+        "label": "المظهر"
+      },
+      "cursorBlink": {
+        "label": "مؤشر وامض"
+      },
+      "cursorStyle": {
+        "label": "نمط المؤشر"
+      },
+      "fontSize": {
+        "label": "حجم الخط"
+      },
+      "fontFamily": {
+        "label": "نوع الخط"
+      },
+      "scrollback": {
+        "label": "ارجع للخلف"
+      },
+      "letterSpacing": {
+        "label": "تباعد الأحرف"
+      },
+      "lineHeight": {
+        "label": "ارتفاع السطر"
+      },
+      "bellStyle": {
+        "label": "جرس"
+      },
+      "minimumContrastRatio": {
+        "label": "نسبة التباين الدنيا"
+      },
+      "backgroundImage": {
+        "label": "صورة الخلفية"
+      },
+      "backgroundImageOpacity": {
+        "label": "شفافية صورة الخلفية"
+      },
+      "customThemeColors": {
+        "label": "ألوان مخصصة للثيم"
+      },
+      "rightClickSelectsWord": {
+        "label": "النقر بزر الماوس الأيمن يحدد الكلمة"
+      },
+      "macOptionIsMeta": {
+        "label": "الخيار هو ميتا"
+      },
+      "fastScrollModifier": {
+        "label": "مفتاح التمرير السريع"
+      },
+      "fastScrollSensitivity": {
+        "label": "سرعة تمرير سريعة"
+      },
+      "backspaceMode": {
+        "label": "مسافة للخلف"
+      },
+      "autoMosh": {
+        "label": "أوتو موش"
+      },
+      "moshCommand": {
+        "label": "أمر موش"
+      },
+      "autoTmux": {
+        "label": "tmux تلقائي"
+      },
+      "useSSHTitle": {
+        "label": "استخدم عنوان SSH"
+      },
+      "syntaxHighlighting": {
+        "label": "تمييز بناء الجملة"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "فئات تمييز بناء الجملة"
+      },
+      "linkClickBehavior": {
+        "label": "انقر على الرابط"
+      },
+      "localEcho": {
+        "label": "صدى محلي"
+      },
+      "passwordPromptAutoFill": {
+        "label": "عرض المساعدة في ملء خانات إدخال كلمة المرور"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "املأ مطالبات sudo"
+      },
+      "autoReconnect": {
+        "label": "إعادة الاتصال تلقائياً"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "سلوك النقر على الروابط في الطرفية",
         "description": "السلوك الافتراضي عند النقر على الروابط في الطرفية"
+      },
+      "customThemes": {
+        "label": "السمات المحفوظة"
       }
     }
   },
   "palette": {
     "localTerminal": "المحطة المحلية"
   },
+  "permissions": {
+    "sessions": {
+      "title": "استخدم جلسات طرفية مباشرة",
+      "description": "يتيح ذلك لميزات أخرى، مثل مشاركة الجلسات وتسجيلها، الوصول إلى جلسات طرفية مباشرة."
+    },
+    "history": {
+      "title": "قراءة سجل الأوامر",
+      "description": "يتيح ذلك لميزات أخرى، مثل مساعد الذكاء الاصطناعي، قراءة سجل أوامرك."
+    }
+  },
   "hosts": {
+    "tabTerminal": "الطرفية",
     "addHost": "إضافة مضيف",
     "applyGlobalThemeTooltip": "قم بتطبيق هذا القالب",
     "backgroundImageDesc": "رابط اختياري لصورة خلفية الطرفية",
     "backgroundImageLabel": "رابط صورة الخلفية",
     "backgroundImageOpacityLabel": "شفافية صورة الخلفية",
     "backspaceMode": "نمط الحذف",
+    "backspaceModeControlH": "التحكم-H (BS)",
     "backspaceModeLabel": "وضع المسح الخلفي",
+    "backspaceModeNormal": "عادي (حذف)",
     "behaviorAndAdvanced": "السلوك والمتقدم",
     "bellStyle": "نمط الجرس",
+    "bellStyleBoth": "كلاهما",
     "bellStyleLabel": "نمط الجرس",
+    "bellStyleNone": "لا شيء",
+    "bellStyleSound": "صوت",
+    "bellStyleVisual": "مرئي",
     "colorTheme": "نظام الألوان",
     "cursorBlink": "وميض المؤشر",
     "cursorBlinking": "وميض المؤشر",
     "cursorBlinkingDesc": "تمكين تأثير وميض المؤشر في الطرفية",
     "cursorStyle": "نمط المؤشر",
+    "cursorStyleBar": "حاجِز",
+    "cursorStyleBlock": "حاجز",
     "cursorStyleLabel": "نمط المؤشر",
+    "cursorStyleUnderline": "ضع خطاً تحته",
     "customThemeAnsiColors": "ألوان ANSI",
     "customThemeBackground": "الخلفية",
     "customThemeBlack": "أسود",
@@ -264,7 +455,10 @@
     "enableAutoTmux": "تمكين tmux التلقائي",
     "enableAutoTmuxDesc": "حافظ على تشغيل shell وأي شيء يعمل بداخله أثناء انقطاع الاتصال وإعادة تشغيل المتصفح عن طريق التشغيل داخل tmux (يجب تثبيت tmux على المضيف).",
     "fastScrollModifier": "مُعدِّل التمرير السريع",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "مفتاح التمرير السريع",
+    "fastScrollModifierShift": "Shift",
     "fastScrollSensitivity": "حساسية التمرير السريع",
     "fastScrollSensitivityLabel": "حساسية التمرير السريع",
     "fontFamily": "عائلة الخط",
@@ -280,16 +474,14 @@
     "lineHeight": "ارتفاع السطر",
     "lineHeightLabel": "ارتفاع السطر",
     "linkClickBehaviorConfirm": "إظهار نافذة منبثقة للفتح أو النسخ",
-    "linkClickBehaviorDefault": "افتراضي (اتباع إعداد التطبيق)",
     "linkClickBehaviorDesc": "يتحكم في ما يحدث عند النقر على رابط في الطرفية. استخدم 'افتراضي' لاتباع إعداد التطبيق العام.",
     "linkClickBehaviorDirect": "فتح مباشرةً",
     "linkClickBehaviorLabel": "سلوك النقر على الرابط",
     "loadingHost": "جارٍ تحميل المضيف...",
     "localEchoAuto": "معادلة",
-    "localEchoDefault": "استخدم الإعدادات العامة",
     "localEchoDesc": "توقع ضغطات المفاتيح الآمنة القابلة للطباعة محليًا على الاتصالات البطيئة. لا يتم عرض مطالبات كلمة المرور أو مدخلات التحكم على الشاشة.",
     "localEchoLabel": "صدى محلي",
-    "localEchoOff": "عن",
+    "localEchoOff": "غير مفعلة",
     "localEchoOn": "متصل دائمًا",
     "macOptionIsMetaLabel": "مفتاح الخيار يرسل البيانات الوصفية",
     "macOptionIsMetaShortDesc": "تعطيل كتابة الأحرف الخاصة (مثل @ أو |) باستخدام مفتاح Option/Alt على نظام macOS بدلاً من إرسال Meta",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "أمر Mosh",
     "noSavedThemes": "لم يتم حفظ أي سمات بعد",
     "none": "لا يوجد",
+    "passwordPromptAutoFillDesc": "اعرض إدخال كلمة المرور المحفوظة عندما يطلبها الجهاز. قم بإيقاف تشغيل هذه الخاصية لمنع إدخال أي كلمة مرور تلقائيًا على هذا الجهاز.",
+    "passwordPromptAutoFillLabel": "عرض خاصية التعبئة التلقائية لكلمة المرور",
+    "autoReconnectLabel": "إعادة الاتصال التلقائي",
+    "autoReconnectDesc": "يُعيد الاتصال تلقائيًا عند انقطاع اتصال SSH، كما يحدث بعد انقطاع مؤقت في الشبكة أو وضع السكون. ويحتفظ بسجل التمرير.",
     "rightClickSelectsWord": "النقر باليمين يحدد الكلمة",
     "rightClickSelectsWordLabel": "تحديد الكلمة بالنقر الأيمن",
     "rightClickSelectsWordShortDesc": "تحديد الكلمة تحت المؤشر عند النقر بالزر الأيمن",
@@ -328,7 +524,39 @@
     "theme": "السمة",
     "themePreview": "معاينة السمة",
     "useSSHTitleDesc": "تحديث عنوان التبويب من عنوان نافذة الصدفة بدلاً من اسم المضيف",
-    "useSSHTitleLabel": "استخدام عنوان نافذة SSH"
+    "useSSHTitleLabel": "استخدام عنوان نافذة SSH",
+    "enableTunnel": "تمكين النفق",
+    "enableFileManager": "تمكين مدير الملفات",
+    "enableDocker": "تمكين Docker",
+    "startupSnippet": "مقتطف بدء التشغيل",
+    "quickActions": "إجراءات سريعة",
+    "proxmoxLastSyncStatus": {
+      "success": "نجاح"
+    },
+    "proxmoxResultSkippedNoIp": "تم تخطي {{count}} (لم يتم العثور على عنوان IP)",
+    "proxmoxStatsUrlCopied": "تم نسخ رابط إحصائيات Proxmox إلى الحافظة",
+    "rdpUrlCopied": "تم نسخ رابط RDP",
+    "vncUrlCopied": "تم نسخ رابط VNC",
+    "filterAuthStepca": "الخطوة ج",
+    "guac": {
+      "noCredential": "لا توجد بيانات اعتماد (بيانات اعتماد مباشرة أدناه)",
+      "authTypeDirect": "مباشر",
+      "authTypeCredential": "بيانات الاعتماد",
+      "authTypeNone": "لا شيء",
+      "recordingPath": "مسار التسجيل",
+      "recordingName": "اسم التسجيل",
+      "saveHostFirst": "احفظ المضيف أولاً.",
+      "sharingOptionsAfterSave": "خيارات المشاركة متاحة بعد حفظ المضيف.",
+      "permissionLevel": "مستوى الصلاحية",
+      "typeHeader": "النوع",
+      "targetHeader": "الهدف",
+      "permissionHeader": "الصلاحية",
+      "cancelBtn": "إلغاء",
+      "savingBtn": "جارٍ الحفظ...",
+      "updateHostBtn": "تحديث المضيف",
+      "addHostBtn": "إضافة مضيف"
+    },
+    "filterAuthVault": "قبو"
   },
   "nav": {
     "history": "السجل",
@@ -348,21 +576,11 @@
     "noTerminalTabsOpen": "لا توجد علامات تبويب طرفية مفتوحة",
     "recordToTerminals": "التسجيل إلى الطرفيات",
     "selectAll": "الكل",
-    "selectNone": "بلا",
+    "selectNone": "لا شيء",
     "selectTerminalsAbove": "اختر الطرفيات أعلاه",
     "settingsTitle": "الإعدادات",
     "startRecording": "بدء التسجيل",
     "stopRecording": "إيقاف التسجيل"
-  },
-  "terminalDefaults": {
-    "clearAll": "مسح الكل",
-    "description": "قم بتعيين القيم التي يرثها كل مضيف ما لم يقم بتجاوزها.",
-    "dialogDescription": "تنطبق هذه الشروط على الأجهزة المضيفة التي تترك إعدادًا غير مُحدد. أي إعداد مُحدد على الجهاز المضيف هو الذي يُعتمد.",
-    "inherit": "يرث",
-    "manage": "يدير",
-    "off": "عن",
-    "on": "على",
-    "title": "الإعدادات الافتراضية للاتصال"
   },
   "keybindings": {
     "copy": "تحديد النص",
@@ -374,33 +592,43 @@
     "appendEnterLabel": "اضغط على زر الإدخال بعد الإرسال",
     "clipboardPermissionNote": "قد يطلب منك بعض المتصفحات منح إذن الوصول إلى الحافظة عند الاستخدام الأول.",
     "textRequired": "أدخل النص المراد إرساله",
-    "controlCodeRequired": "أدخل حرفًا واحدًا لرمز التحكم"
+    "controlCodeRequired": "أدخل حرفًا واحدًا لرمز التحكم",
+    "builtIn": {
+      "copyCtrlC": "نسخ التحديد (Ctrl+C، فقط عند تحديد نص)",
+      "copyCtrlShiftC": "نسخ التحديد (Ctrl+Shift+C)",
+      "copyCmdC": "نسخ التحديد (Cmd+C)",
+      "pasteCtrlShiftV": "لصق من الحافظة (Ctrl+Shift+V)",
+      "ctrlW": "إرسال Ctrl+W إلى سطر الأوامر (محظور من إغلاق علامة تبويب المتصفح)",
+      "ctrlT": "إرسال Ctrl+T إلى سطر الأوامر (محظور من فتح علامة تبويب المتصفح)",
+      "ctrlN": "أرسل Ctrl+N إلى سطر الأوامر (محظور من فتح نافذة المتصفح)",
+      "ctrlQ": "أرسل Ctrl+Q إلى سطر الأوامر (تم منعك من إغلاق المتصفح)"
+    }
   },
   "macros": {
     "title": "وحدات الماكرو",
     "description": "قم بتشغيل سلسلة من الأوامر المحفوظة في طرفية، وتفاعل مع ما يرسله الخادم.",
-    "target": "هدف",
+    "target": "الهدف",
     "noTerminal": "لا يوجد طرفية مفتوحة",
     "empty": "لا توجد وحدات ماكرو حتى الآن",
     "emptyHint": "أنشئ ماكرو لأتمتة تدفق طرفية، مثل تسجيل الدخول أو إعادة تشغيل خدمة أو الإجابة على المطالبات.",
     "create": "ماكرو جديد",
     "back": "العودة إلى وحدات الماكرو",
-    "name": "اسم",
+    "name": "الاسم",
     "namePlaceholder": "أعد تشغيل خادم الويب",
     "nameRequired": "قم بتسمية الماكرو قبل حفظه",
-    "descriptionLabel": "وصف",
+    "descriptionLabel": "الوصف",
     "descriptionPlaceholder": "ما يفعله هذا الماكرو (اختياري)",
-    "unsaved": "التغييرات غير المحفوظة",
-    "save": "يحفظ",
+    "unsaved": "تغييرات غير محفوظة",
+    "save": "حفظ",
     "saved": "تم حفظ الماكرو",
     "saveFailed": "تعذر حفظ الماكرو",
-    "delete": "يمسح",
+    "delete": "حذف",
     "deleteTitle": "هل تريد حذف هذا الماكرو؟",
     "deleteBody": "سيتم حذف \"{{name}}\" نهائياً. لا يمكن التراجع عن هذا الإجراء.",
     "deleted": "تم حذف الماكرو",
-    "cancel": "يلغي",
-    "run": "يجري",
-    "stop": "قف",
+    "cancel": "إلغاء",
+    "run": "تشغيل",
+    "stop": "التوقف",
     "running": "جري...",
     "completed": "اللمسة النهائية الدقيقة",
     "failed": "فشل الماكرو",
@@ -443,7 +671,7 @@
     },
     "wait": {
       "pattern": "انتظر حتى يحتوي الناتج على",
-      "patternPlaceholder": "كلمة المرور:",
+      "patternPlaceholder": "كلمة مرور:",
       "timeout": "الاستسلام بعد",
       "onTimeout": "إذا لم يظهر أبداً",
       "stop": "أوقف الماكرو",

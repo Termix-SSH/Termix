@@ -21,6 +21,11 @@
     "ports": "Porty",
     "noPorts": "Žádné porty",
     "start": "Start",
+    "stop": "Zastávka",
+    "status": "Postavení",
+    "actions": "Akce",
+    "cardView": "Zobrazení karty",
+    "listView": "Seznam",
     "confirmRemoveContainer": "Opravdu chcete odstranit kontejner '{{name}}'? Tuto akci nelze vrátit zpět.",
     "runningContainerWarning": "Varování: Tento kontejner je aktuálně spuštěný. Jeho odstraněním se nejprve zastaví.",
     "loadingContainers": "Nakládání kontejnerů...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Pro přístup ke konzoli musí být kontejner spuštěný.",
     "verificationCodePrompt": "Zadejte ověřovací kód",
     "totpVerificationFailed": "Ověření TOTP se nezdařilo. Zkuste to prosím znovu.",
+    "browserSignInFailed": "Přihlášení se nezdařilo. Zkuste to prosím znovu.",
     "connectedTo": "Připojeno k {{containerName}}",
     "disconnected": "Odpojeno",
     "consoleError": "Chyba konzole",
@@ -93,7 +99,10 @@
     "logs": "Protokoly",
     "stats": "Statistiky",
     "consoleTab": "Utěšit",
-    "startContainerToAccess": "Spusťte kontejner pro přístup ke konzoli"
+    "startContainerToAccess": "Spusťte kontejner pro přístup ke konzoli",
+    "noHostSelected": "Nebyl vybrán žádný hostitel",
+    "failedToFetchLogs": "Nepodařilo se načíst protokoly: {{error}}",
+    "failedToDownloadLogs": "Stažení protokolů se nezdařilo: {{error}}"
   },
   "nav": {
     "docker": "Přístavní dělník"
@@ -102,10 +111,22 @@
     "feature_docker": "Přístavní dělník",
     "feature_docker_desc": "Zobrazujte kontejnery, čtěte protokoly a sledujte statistiky na jakémkoli hostiteli s Dockerem."
   },
+  "terminal": {
+    "retry": "Zkusit znovu",
+    "clipboardReadFailed": "Čtení ze schránky se nezdařilo. Ujistěte se, že máte povolena přístup ke schránce.",
+    "clipboardWriteFailed": "Kopírování do schránky se nezdařilo. Ujistěte se, že stránka je zobrazována přes HTTPS nebo localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Použijte Docker",
+      "description": "Otevřete správce Dockeru a konzole kontejnerů na hostitelích s povoleným Dockerem."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Povolit Docker"
+        "label": "Povolit Docker",
+        "description": "Spravovat kontejnery na tomto hostiteli."
       },
       "containerRuntime": {
         "label": "Běh kontejneru",
@@ -122,9 +143,5 @@
     "docsLink": "Zobrazit dokumenty",
     "hostNotFound": "Hostitel nenalezen",
     "loadingHost": "Načítání hostitele..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Čtení ze schránky se nezdařilo. Ujistěte se, že máte povolena přístup ke schránce.",
-    "clipboardWriteFailed": "Kopírování do schránky se nezdařilo. Ujistěte se, že stránka je zobrazována přes HTTPS nebo localhost."
   }
 }

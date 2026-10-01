@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux 모니터"
-  },
   "hosts": {
     "enableTmuxMonitor": "Tmux 모니터 활성화",
     "enableTmuxMonitorDesc": "Tmux 모니터에 이 호스트를 표시하고 tmux 작업을 사이드바에 추가합니다.",
+    "tabTmuxMonitor": "Tmux 모니터",
     "docsLink": "문서 보기"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux 모니터"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux 모니터",
+    "tmuxMonitorDesc": "호스트 전반의 Tmux 세션 모니터링"
+  },
+  "permissions": {
+    "use": {
+      "title": "Tmux 모니터를 사용하세요",
+      "description": "모니터가 활성화된 호스트에서 tmux 세션, 창 및 패널을 탐색하고 제어합니다."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tmux 모니터 활성화",
+        "description": "이 호스트에서 실행 중인 tmux 세션을 시청하고 참여하세요."
+      },
+      "mouseEnabled": {
+        "label": "tmux 마우스 지원을 활성화합니다.",
+        "description": "tmux 세션을 연결하거나 생성할 때 해당 세션에 마우스 지원을 적용합니다. 다른 세션 및 tmux의 전역 설정은 변경되지 않습니다."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux 모니터",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "세션 이름 변경 실패",
     "editTagsTitle": "\"{{name}}\"의 태그 편집",
     "killPane": "Pane 종료",
-    "resizeTree": "드래그로 크기 조정 — 더블클릭하여 초기화",
+    "resizeTree": "드래그하여 크기를 조절하고, 두 번 클릭하여 원래대로 되돌립니다.",
     "reattach": "재연결 (화면 깨짐 복구)",
     "killWindow": "창 종료",
     "killWindowTitle": "{{session}}의 창 {{index}}을(를) 종료하시겠습니까?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "세션 종료 실패",
     "hostUnreachable": "호스트에 연결할 수 없습니다. 온라인 상태이고 연결 가능한지 확인하세요.",
     "noServer": "이 호스트에서 tmux 서버가 실행 중이 아닙니다.",
-    "searchTruncated": "일부 결과 — 각 Pane의 마지막 {{lines}}줄과 최대 {{panes}}개의 Pane을 검색합니다.",
+    "searchTruncated": "부분적인 결과입니다. 검색은 각 패널의 마지막 {{lines}} 줄과 최대 {{panes}} 개의 패널을 대상으로 합니다.",
     "closeSearchResults": "검색 결과 닫기",
     "retry": "재시도",
     "noHosts": "사용 가능한 SSH 호스트가 없습니다.",
-    "noHostsHint": "SSH 호스트에서 Tmux Monitor 옵션을 활성화하여 (호스트 관리자 → 터미널 탭) tmux 세션을 모니터링하세요.",
+    "noHostsHint": "SSH 호스트에서 Tmux 모니터 옵션을 활성화하면(호스트 관리자, Tmux 모니터 탭) 해당 호스트의 Tmux 세션을 모니터링할 수 있습니다.",
     "tmuxInstallHint": "호스트에 설치하려면:",
     "attachTooltip": "{{host}}에 터미널 열기",
-    "attachTooltipPane": "{{host}}에 터미널 열기 — tmux 세션 {{session}}",
+    "attachTooltipPane": "터미널을 {{host}}로 열고 tmux 세션 {{session}}를 엽니다.",
     "timeJustNow": "방금",
     "timeMinutes": "{{count}}분 전",
     "timeHours": "{{count}}시간 전",
-    "timeDays": "{{count}}일 전"
+    "timeDays": "{{count}}일 전",
+    "allHosts": "모든 호스트",
+    "singleHost": "단일 호스트",
+    "hostScope": "모니터링 범위",
+    "filterHosts": "호스트를 이름 또는 주소로 필터링합니다.",
+    "selectHost": "호스트를 선택하세요",
+    "toggleHost": "펼치거나 접으세요 {{host}}",
+    "noMatchingHosts": "일치하는 호스트가 없습니다.",
+    "toggleSession": "펼치거나 접으세요 {{session}}"
   }
 }

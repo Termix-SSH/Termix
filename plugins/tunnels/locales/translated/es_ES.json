@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Los preajustes son instantáneas explícitas; cargar uno reemplaza la lista de túneles de cliente local de este cliente de escritorio.",
     "c2sPresetToLoad": "Preajuste a cargar",
     "c2sTunnelPresets": "Preajustes de túneles de cliente",
-    "c2sTunnelPresetsUnavailable": "Los preajustes de túneles de cliente solo están disponibles en el cliente de escritorio."
+    "c2sTunnelPresetsUnavailable": "Los preajustes de túneles de cliente solo están disponibles en el cliente de escritorio.",
+    "c2sPresetRenameError": "No se pudo cambiar el nombre del preajuste.",
+    "c2sPresetDeleteError": "No se pudo eliminar el preajuste."
   },
   "tunnels": {
     "attempt": "Intento {{current}} de {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "Local (-L)",
     "typeRemote": "Remoto (-R)",
     "working": "Trabajando...",
+    "activeCount": "{{connected}}/{{total}} activo",
+    "listensOn": "Vinculado a localhost:{{port}}",
+    "socksProxy": "proxy SOCKS5",
+    "waiting": "Espera",
+    "remoteSessionExpired": "La sesión de sincronización remota ha caducado. Vuelva a conectar la sincronización remota e inténtelo de nuevo.",
+    "activeTunnels": "Túneles activos",
     "start": "Iniciar",
-    "stop": "Detener"
+    "stop": "Detener",
+    "authTitle": "Autenticación de túnel",
+    "authRetry": "El código anterior no fue aceptado. Introduzca un nuevo código.",
+    "authAnswer": "Respuesta de autenticación",
+    "authContinue": "Continuar"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizar túneles",
+      "description": "Inicia, detén y supervisa los túneles SSH, y guarda las configuraciones predefinidas de los túneles de cliente."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Habilitar túneles",
+        "description": "Configure túneles SSH a través de este host."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Túneles",

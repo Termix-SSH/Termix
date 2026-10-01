@@ -1,90 +1,119 @@
 {
-  "ai": {
-    "title": "Асистент",
-    "send": "Пошаљи",
-    "stop": "Заустави",
-    "save": "Сачувај",
-    "cancel": "Откажи",
-    "running": "трчање",
-    "approve": "Одобри",
-    "reject": "Одбиј",
-    "inputPlaceholder": "Питајте о својим серверима или опишите промену коју желите да предложите",
-    "selectProvider": "Изаберите добављача",
-    "providerSettings": "Подешавања добављача",
-    "addProvider": "Додај добављача",
-    "editProvider": "Измени добављача",
-    "removeProvider": "Уклони добављача",
-    "providerType": "Провајдер",
-    "providerLabel": "Име",
-    "providerLabelPlaceholder": "На пример: Локална Олама",
-    "baseUrl": "Адреса сервера",
-    "apiKey": "API кључ",
-    "defaultModel": "Подразумевани модел",
-    "defaultModelPlaceholder": "На пример: llama3.1 или claude-opus-5",
-    "labelRequired": "Дајте име овом добављачу",
-    "providerSaveFailed": "Није могуће сачувати добављача",
-    "providerUpdated": "Провајдер је ажуриран",
-    "providerDeleteFailed": "Није могуће уклонити добављача",
-    "privateEndpointHint": "Адресе на вашој приватној мрежи прво треба да дозволе администратору хоста.",
-    "providerOllama": "Олама",
-    "providerAnthropic": "Антропски",
-    "providerOpenai": "OpenAI",
-    "providerGemini": "Гугл Џемини",
-    "providerOpenaiCompatible": "Компатибилно са OpenAI-ом",
-    "toolArguments": "Унос",
-    "toolResult": "Резултат",
-    "statusApplied": "Примењено",
-    "statusRejected": "Одбијено",
-    "proposalApplied": "Промена је примењена",
-    "proposalApplyFailed": "Није могуће применити промену",
-    "proposalRejectFailed": "Није могуће одбити промену",
-    "enableTitle": "Омогућите вештачку интелигенцију (AI) асистента",
-    "enableDescription": "Нека асистент прочита ваша подешавања и предложи измене које ћете одобрити.",
-    "readOnlyCommands": "Дозволи дијагностичке команде само за читање",
-    "readOnlyCommandsDescription": "Асистент може да покрене кратку листу безбедних команди као што су df и uptime без сваког питања. Све што мења сервер се увек прво предлаже.",
-    "modelDetectFailed": "Нисмо могли да контактирамо добављача, тако да је ово општа листа. Можете да унесете било који назив модела.",
-    "modelCustom": "Унесите назив модела",
-    "modelRefresh": "Освежи листу",
-    "modelPlaceholder": "Изаберите или унесите модел",
-    "attachHint": "Унесите @ да бисте референцирали хост, исечак кода или аутоматизацију. Промене се предлажу да бисте их одобрили.",
-    "runCommandTitle": "Покрени команду",
-    "assistant": "АИ асистент",
-    "terminalPanelEmpty": "Питајте асистента о овом домаћину. Све што мења стање прво захтева ваше одобрење.",
-    "terminalPanelPlaceholder": "Питајте о овом домаћину...",
-    "noProvidersConfigured": "Још увек није конфигурисан ниједан добављач вештачке интелигенције. Додајте га на картици помоћника за вештачку интелигенцију.",
-    "runsInOpenTerminal": "Покреће се у вашој отвореној терминалној сесији.",
-    "runInTerminal": "Трчи"
-  },
-  "nav": {
-    "ai": "Вештачка интелигенција"
-  },
-  "onboarding": {
-    "aiTitle": "Асистент за вештачку интелигенцију",
-    "aiIntro": "Termix може да укључи опционог AI асистента. Ово можете касније променити у подешавањима.",
-    "aiSkipTitle": "Остави то искључено",
-    "aiSkipDesc": "Термикс ради као и сада. Асистент остаје скривен.",
-    "aiEnableTitle": "Укључи га",
-    "aiEnableDesc": "Додаје асистента који чита ваша подешавања и предлаже измене које одобравате. Потребан је добављач кога ви обезбедите, као што је локални Олама.",
-    "aiNote": "Ништа се не шаље нигде док не додате провајдера и не пошаљете поруку."
+  "permissions": {
+    "use": {
+      "title": "Use the assistant",
+      "description": "Open the assistant and ask it things."
+    },
+    "manage_providers": {
+      "title": "Manage providers",
+      "description": "Add, edit and remove the AI providers and their API keys."
+    },
+    "apply_proposals": {
+      "title": "Apply proposals",
+      "description": "Let the assistant carry out the changes it suggests."
+    },
+    "services.use": {
+      "title": "Use AI from other features",
+      "description": "Other features may call the assistant on your behalf."
+    },
+    "secrets.share": {
+      "title": "Share the API key",
+      "description": "Other features may use the stored AI API key without seeing it."
+    }
   },
   "settings": {
+    "assistantUnavailable": "The AI assistant is turned off on this server.",
+    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
     "admin": {
       "globallyEnabled": {
-        "label": "Асистент за вештачку интелигенцију",
-        "description": "Дозволите корисницима да укључе вештачку интелигенцију асистента. Док је ово искључено, асистент је скривен и блокиран за све."
+        "label": "AI assistant",
+        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
       },
       "privateEndpoints": {
-        "label": "Дозвољени приватни AI хостови"
+        "label": "Allowed private AI hosts",
+        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Омогући AI асистент",
-        "description": "Дозволите вештачкој интелигенцији да помогне у терминалу овог хоста. Искључено је подразумевано, а и даље је потребно да вештачка интелигенција буде омогућена за ваш налог."
+        "label": "Enable AI Assistant",
+        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
       }
     }
   },
+  "ai": {
+    "title": "Assistant",
+    "send": "Send",
+    "stop": "Stop",
+    "save": "Save",
+    "cancel": "Cancel",
+    "running": "running",
+    "approve": "Approve",
+    "reject": "Reject",
+    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
+    "selectProvider": "Select a provider",
+    "providerSettings": "Provider settings",
+    "addProvider": "Add provider",
+    "editProvider": "Edit provider",
+    "removeProvider": "Remove provider",
+    "providerType": "Provider",
+    "providerLabel": "Name",
+    "providerLabelPlaceholder": "For example: Local Ollama",
+    "baseUrl": "Server address",
+    "apiKey": "API key",
+    "defaultModel": "Default model",
+    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
+    "labelRequired": "Give this provider a name",
+    "providerSaveFailed": "Could not save the provider",
+    "providerUpdated": "Provider updated",
+    "providerDeleteFailed": "Could not remove the provider",
+    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerOllama": "Ollama",
+    "providerAnthropic": "Anthropic",
+    "providerOpenai": "OpenAI",
+    "providerGemini": "Google Gemini",
+    "providerOpenaiCompatible": "OpenAI compatible",
+    "toolArguments": "Input",
+    "toolResult": "Result",
+    "statusApplied": "Applied",
+    "statusRejected": "Rejected",
+    "proposalApplied": "Change applied",
+    "proposalApplyFailed": "Could not apply the change",
+    "proposalRejectFailed": "Could not reject the change",
+    "enableTitle": "Enable the AI assistant",
+    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
+    "readOnlyCommands": "Allow read-only diagnostic commands",
+    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
+    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
+    "modelCustom": "Enter a model name",
+    "modelRefresh": "Refresh list",
+    "modelPlaceholder": "Choose or type a model",
+    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
+    "runCommandTitle": "Run command",
+    "assistant": "AI Assistant",
+    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
+    "terminalPanelPlaceholder": "Ask about this host...",
+    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
+    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "runInTerminal": "Run",
+    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+    }
+  },
+  "nav": {
+    "ai": "AI"
+  },
+  "onboarding": {
+    "aiTitle": "AI assistant",
+    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
+    "aiSkipTitle": "Leave it off",
+    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
+    "aiEnableTitle": "Turn it on",
+    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
+    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+  },
   "hosts": {
-    "docsLink": "Прикажи документе"
+    "docsLink": "View docs"
   }
 }

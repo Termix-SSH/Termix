@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Sarjanumero"
+  },
   "serial": {
     "title": "Sarjanumero",
     "portLabel": "Portti",
@@ -22,8 +25,5 @@
     "notSupported": "Sarjaliikenne vaatii selaimen, jossa on Web Serial API -tuki (Chrome, Edge tai Firefox 151+), tai Termix-työpöytäsovelluksen.",
     "hideHint": "Voit piilottaa Sarja-välilehden kohdassa Käyttäjäprofiili > Ulkoasu > Sivupalkki > Navigointi.",
     "browserPickerHint": "Napsauta Yhdistä, niin selaimesi avaa porttivalitsimen laitteen valitsemiseksi."
-  },
-  "nav": {
-    "serial": "Sarjanumero"
   }
 }

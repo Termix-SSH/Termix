@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "호스트 메트릭"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "메모리",
@@ -160,7 +163,6 @@
       "firewallPersist": "규칙 영구 저장",
       "firewallPersisted": "방화벽 규칙이 영구 저장되었습니다",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "이 호스트에 WireGuard가 설치되어 있지 않습니다",
       "wgNoInterfaces": "구성된 WireGuard 인터페이스가 없습니다",
       "wgInterfaceUp": "올리기",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "마지막 핸드셰이크",
       "wgHandshakeNever": "없음",
       "wgTransfer": "전송",
-      "tsNotInstalled": "이 호스트에 Tailscale이 설치되어 있지 않습니다",
-      "tsRunning": "실행 중",
-      "tsStopped": "중지됨",
-      "tsEnable": "연결",
-      "tsDisable": "연결 해제",
-      "tsEnabling": "Tailscale에 연결 중...",
-      "tsDisabling": "Tailscale 연결 해제 중...",
-      "tsEnabled": "Tailscale 연결됨",
-      "tsDisabled": "Tailscale 연결 해제됨",
-      "tsIPs": "Tailscale IP",
-      "tsPeers": "피어",
-      "tsOnline": "온라인",
-      "tsOffline": "오프라인",
-      "tsExitNode": "출구 노드",
-      "tsExitNodeActive": "출구 노드 활성",
-      "tsHostname": "호스트명"
+      "wgNoPeers": "동료 없음"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "적용",
     "viewHistory": "기록 보기"
   },
-  "nav": {
-    "hostMetrics": "호스트 메트릭"
-  },
   "hosts": {
     "tabHostMetrics": "호스트 메트릭",
     "metricsCollectionLabel": "메트릭 수집",
@@ -223,12 +207,12 @@
     "monitoredMountsLabel": "사용자 지정 모니터링 경로",
     "monitoredMountsDesc": "/config와 같이 바인드 마운트된 Home Assistant 경로를 포함하여 별도의 마운트로 노출되지 않는 경로를 추가합니다.",
     "monitoredMountPathPlaceholder": "경로(/config, /mnt/data)",
-    "monitoredMountLabelPlaceholder": "라벨 (선택 사항)",
+    "monitoredMountLabelPlaceholder": "레이블 (선택 사항)",
     "addMonitoredMount": "경로를 추가합니다",
     "excludedMountsDesc": "이 호스트의 디스크 사용량 및 알림에서 특정 마운트 지점 또는 파일 시스템 유형(예: NFS, CIFS)을 숨깁니다.",
     "excludedMountsPlaceholder": "마운트 경로(/mnt/nas) 또는 파일 시스템 유형(nfs, cifs)",
     "excludedMountsEmpty": "마운트된 항목을 제외하지 않습니다. 감지된 모든 파일 시스템이 표시됩니다.",
-    "addExcludedMount": "추가하다",
+    "addExcludedMount": "추가",
     "visibleWidgets": "표시 위젯",
     "widgetsMovedToHostMetrics": "카드는 이제 호스트 메트릭 탭에서 직접 추가, 정렬 및 크기 조정됩니다. 이 호스트의 호스트 메트릭을 열고 사용자 정의를 사용하여 표시할 카드를 선택하세요.",
     "hostNotFound": "호스트를 찾을 수 없습니다",
@@ -265,6 +249,9 @@
     "noHostSelected": "선택된 호스트 없음",
     "selectHost": "호스트 선택..."
   },
+  "terminalStatus": {
+    "unavailable": "실시간 통계를 사용할 수 없습니다."
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "연결됨"
+  },
+  "permissions": {
+    "use": {
+      "title": "호스트 메트릭 사용",
+      "description": "접속 가능한 호스트에서 호스트 지표를 확인하고 호스트 관리자(서비스, 패키지, 방화벽 등)를 사용하세요."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "측정 간격(초)",
+        "description": "호스트가 자체 간격을 설정하지 않는 한, 보고 있는 호스트를 샘플링하는 빈도입니다."
+      },
+      "historyRetentionDays": {
+        "label": "기록 보존 기간(일)",
+        "description": "기록 차트를 위해 측정값 샘플을 보관하는 기간은 얼마나 되나요?"
+      },
+      "enabledForNewHosts": {
+        "label": "새 호스트에 대한 메트릭 활성화",
+        "description": "새 호스트가 메트릭 수집 기능을 켠 상태로 시작하는지 여부."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "온도 단위",
+        "description": "호스트 메트릭스에서 온도가 표시되는 방식입니다.",
+        "celsius": "섭씨",
+        "fahrenheit": "화씨"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "측정 지표 수집"
+      },
+      "metricsInterval": {
+        "label": "측정 간격(초)"
+      },
+      "enabledWidgets": {
+        "label": "활성화된 위젯"
+      },
+      "excludedMounts": {
+        "label": "제외된 마운트"
+      },
+      "monitoredMounts": {
+        "label": "모니터링되는 경로"
+      }
+    }
   }
 }

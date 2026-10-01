@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Nutzungsstatistiken verwalten",
+      "description": "Prüfen Sie, welche Nutzungsstatistiken gesendet werden, senden Sie diese jetzt und setzen Sie die Instanz-ID zurück."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Anonyme Nutzungsstatistiken teilen",
+      "description": "Sendet einmal täglich eine kurze, anonyme Zusammenfassung, um Termix zu verbessern. Diese enthält niemals Benutzernamen, Hostnamen, IP-Adressen oder Anmeldeinformationen."
+    },
+    "includePlatform": {
+      "label": "Plattforminformationen einbeziehen",
+      "description": "Das Betriebssystem, die CPU-Architektur, die Node.js-Version, der Datenbanktyp und die Art der Termix-Installation (Docker, Desktop-App oder Server)."
+    },
+    "includeFeatureUsage": {
+      "label": "Nutzung der Funktionen einschließen",
+      "description": "Wie oft die einzelnen Tab-Arten geöffnet wurden und wie viele SSH-Logins seit dem letzten Bericht stattgefunden haben. Benutzer können diese Funktionen in ihrem Profil deaktivieren."
+    },
+    "includePlugins": {
+      "label": "Installierte Funktionen einschließen",
+      "description": "Welche integrierten Funktionen sind installiert und aktiv?"
+    },
+    "instanceId": {
+      "label": "Instanz-ID"
+    },
+    "shareFeatureUsage": {
+      "label": "Meine Funktionsnutzung einbeziehen",
+      "description": "Erfasst in anonymen Nutzungsstatistiken, welche Tab-Arten Sie öffnen. Es werden keine Informationen über Sie oder Ihre Hosts übermittelt."
+    }
+  },
+  "status": {
+    "title": "Status",
+    "on": "Nutzungsstatistiken werden einmal täglich veröffentlicht",
+    "off": "Nutzungsstatistiken werden nicht weitergegeben",
+    "lockedOn": "Wird durch die Umgebungsvariable ENABLE_TELEMETRY aktiviert. Ändern Sie sie dort.",
+    "lockedOff": "Wird durch die Umgebungsvariable ENABLE_TELEMETRY deaktiviert. Ändern Sie dies dort.",
+    "instanceId": "Instanz-ID: {{id}}",
+    "noInstanceId": "Noch keine Instanz-ID",
+    "lastSent": "Zuletzt gesendet {{date}}",
+    "neverSent": "Noch nicht gesendet",
+    "nextSend": "Nächster Bericht fällig {{date}}",
+    "lastError": "Letzter Versuch fehlgeschlagen: {{error}}",
+    "preview": "Vorschaubericht",
+    "sendNow": "Jetzt senden",
+    "sending": "Senden...",
+    "sent": "Nutzungsstatistiken gesendet",
+    "notSent": "Nutzungsstatistiken sind deaktiviert, es wurden keine Daten gesendet",
+    "resetId": "Instanz-ID zurücksetzen",
+    "resetIdConfirm": "Soll die Instanz-ID zurückgesetzt werden? Zukünftige Berichte werden wie eine Neuinstallation aussehen.",
+    "resetIdDone": "Instanz-ID zurückgesetzt",
+    "previewTitle": "Nächster Bericht",
+    "previewDescription": "Genau das würde jetzt verschickt werden.",
+    "close": "Schließen",
+    "loadFailed": "Die Nutzungsstatistik konnte nicht geladen werden."
+  }
+}

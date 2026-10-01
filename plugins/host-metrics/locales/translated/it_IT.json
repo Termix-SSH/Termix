@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Metriche host"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Memoria",
@@ -160,7 +163,6 @@
       "firewallPersist": "Rendi permanenti le regole",
       "firewallPersisted": "Regole del firewall rese permanenti",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard non è installato su questo host",
       "wgNoInterfaces": "Nessuna interfaccia WireGuard configurata",
       "wgInterfaceUp": "Attiva",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Ultimo handshake",
       "wgHandshakeNever": "Mai",
       "wgTransfer": "Trasferimento",
-      "tsNotInstalled": "Tailscale non è installato su questo host",
-      "tsRunning": "In esecuzione",
-      "tsStopped": "Arrestato",
-      "tsEnable": "Connetti",
-      "tsDisable": "Disconnetti",
-      "tsEnabling": "Connessione a Tailscale in corso...",
-      "tsDisabling": "Disconnessione da Tailscale in corso...",
-      "tsEnabled": "Tailscale connesso",
-      "tsDisabled": "Tailscale disconnesso",
-      "tsIPs": "IP Tailscale",
-      "tsPeers": "Peer",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Nodo di uscita",
-      "tsExitNodeActive": "Nodo di uscita attivo",
-      "tsHostname": "Nome host"
+      "wgNoPeers": "Senza eguali"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "a",
     "apply": "Applica",
     "viewHistory": "Visualizza cronologia"
-  },
-  "nav": {
-    "hostMetrics": "Metriche host"
   },
   "hosts": {
     "tabHostMetrics": "Metriche host",
@@ -228,7 +212,7 @@
     "excludedMountsDesc": "Nascondi specifici punti di montaggio o tipi di filesystem (ad esempio nfs, cifs) dall'utilizzo del disco e dagli avvisi per questo host.",
     "excludedMountsPlaceholder": "Percorso di montaggio (/mnt/nas) o tipo di filesystem (nfs, cifs)",
     "excludedMountsEmpty": "Nessun mount escluso. Vengono mostrati tutti i filesystem rilevati.",
-    "addExcludedMount": "Aggiungere",
+    "addExcludedMount": "Aggiungi",
     "visibleWidgets": "Widget visibili",
     "widgetsMovedToHostMetrics": "Le schede ora vengono aggiunte, disposte e ridimensionate direttamente nella scheda Metriche host. Apri Metriche host per questo host e usa Personalizza per scegliere quali schede mostrare.",
     "hostNotFound": "Host non trovato",
@@ -265,6 +249,9 @@
     "noHostSelected": "Nessun host selezionato",
     "selectHost": "Seleziona un host..."
   },
+  "terminalStatus": {
+    "unavailable": "Statistiche in tempo reale non disponibili"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Connesso"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare le metriche dell'host",
+      "description": "Visualizza le metriche dell'host e utilizza i gestori host (servizi, pacchetti, firewall e altro) sugli host raggiungibili."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Intervallo delle metriche (secondi)",
+        "description": "Con quale frequenza viene campionato un host visualizzato, a meno che l'host non imposti un intervallo personalizzato."
+      },
+      "historyRetentionDays": {
+        "label": "Conservazione della cronologia (giorni)",
+        "description": "Per quanto tempo vengono conservati i campioni delle metriche per i grafici storici."
+      },
+      "enabledForNewHosts": {
+        "label": "Metriche attivate per i nuovi host",
+        "description": "Se i nuovi host iniziano con la raccolta di metriche attivata."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Unità di temperatura",
+        "description": "Come vengono visualizzate le temperature nelle metriche dell'host.",
+        "celsius": "Centigrado",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Raccogliere metriche"
+      },
+      "metricsInterval": {
+        "label": "Intervallo delle metriche (secondi)"
+      },
+      "enabledWidgets": {
+        "label": "Widget abilitati"
+      },
+      "excludedMounts": {
+        "label": "Montature escluse"
+      },
+      "monitoredMounts": {
+        "label": "Percorsi monitorati"
+      }
+    }
   }
 }

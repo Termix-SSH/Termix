@@ -2,57 +2,69 @@
   "newUi": {
     "sidebar": {
       "workspaces": {
-        "title": "Радни простори",
-        "saveCurrent": "Сачувај тренутно",
-        "saveCurrentTitle": "Сачувај тренутни радни простор",
-        "saveCurrentDescription": "Сачувајте сваку отворену картицу, подељени распоред и распоред окна као нови именовани радни простор.",
-        "nameLabel": "Име",
-        "namePlaceholder": "нпр. Отклањање грешака у производном систему",
-        "nameRequired": "Назив радног простора је обавезан",
-        "colorLabel": "Боја",
-        "workspaceCreated": "Радни простор сачуван",
-        "workspaceUpdated": "Радни простор је ажуриран",
-        "workspaceDeleted": "Радни простор је обрисан",
-        "workspaceDuplicated": "Радни простор је дуплиран",
-        "saveFailed": "Чување радног простора није успело",
-        "updateFailed": "Ажурирање радног простора није успело",
-        "deleteFailed": "Брисање радног простора није успело",
-        "duplicateFailed": "Дуплирање радног простора није успело",
-        "loadFailed": "Учитавање радних простора није успело",
-        "applyFailed": "Примена радног простора није успела",
-        "deleteWorkspaceTitle": "Обриши радни простор",
-        "deleteWorkspaceDescription": "Да ли сте сигурни да желите да обришете „{{name}}“? Ова радња се не може поништити.",
-        "noWorkspaces": "Још увек нема сачуваних радних простора. Сачувајте тренутни распоред картица да бисте започели.",
-        "tabCount": "{{count}} картица",
-        "tabCount_other": "{{count}} картице",
-        "apply": "Примени",
-        "applyConfirmTitle": "Примени радни простор",
-        "applyConfirmDescription": "Применом „{{name}}“ затворићете тренутне картице и заменити их сачуваним распоредом овог радног простора. Несачуване измене тренутног распореда биће изгубљене.",
-        "applyConfirmButton": "Примени радни простор",
-        "updateWithCurrent": "Ажурирај са Тренутним",
-        "updateWithCurrentConfirm": "Преписати „{{name}}“ тренутним распоредом табулатора?",
-        "rename": "Преименуј",
-        "duplicate": "Дупликат",
-        "duplicateNameSuffix": "{{name}} (копија)",
-        "setDefault": "Постави као подразумевано",
-        "unsetDefault": "Уклони као подразумевано",
-        "defaultBadge": "Подразумевано",
-        "lastSession": "Последња сесија",
-        "lastSessionDescription": "Аутоматски се ажурира са вашим најновијим распоредом картица. Примените га да бисте вратили оно што сте имали отворено.",
-        "lastUsed": "Последња употреба {{time}}",
-        "neverUsed": "Никада примењено",
-        "tabsSkipped": "Примењен радни простор — {{count}} прескочених картица (хост више не постоји): {{names}}"
+        "title": "Workspaces",
+        "saveCurrent": "Save Current",
+        "saveCurrentTitle": "Save Current Workspace",
+        "saveCurrentDescription": "Save every open tab, split layout, and pane arrangement as a new named workspace.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g., Prod Debugging",
+        "nameRequired": "Workspace name is required",
+        "colorLabel": "Color",
+        "workspaceCreated": "Workspace saved",
+        "workspaceUpdated": "Workspace updated",
+        "workspaceDeleted": "Workspace deleted",
+        "workspaceDuplicated": "Workspace duplicated",
+        "saveFailed": "Failed to save workspace",
+        "updateFailed": "Failed to update workspace",
+        "deleteFailed": "Failed to delete workspace",
+        "duplicateFailed": "Failed to duplicate workspace",
+        "loadFailed": "Failed to load workspaces",
+        "applyFailed": "Failed to apply workspace",
+        "deleteWorkspaceTitle": "Delete Workspace",
+        "deleteWorkspaceDescription": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+        "noWorkspaces": "No saved workspaces yet. Save your current tab arrangement to get started.",
+        "tabCount": "{{count}} tab",
+        "tabCount_other": "{{count}} tabs",
+        "apply": "Apply",
+        "applyConfirmTitle": "Apply Workspace",
+        "applyConfirmDescription": "Applying \"{{name}}\" will close your current tabs and replace them with this workspace's saved arrangement. Unsaved changes to your current layout will be lost.",
+        "applyConfirmButton": "Apply Workspace",
+        "updateWithCurrent": "Update with Current",
+        "updateWithCurrentConfirm": "Overwrite \"{{name}}\" with your current tab arrangement?",
+        "rename": "Rename",
+        "duplicate": "Duplicate",
+        "duplicateNameSuffix": "{{name}} (copy)",
+        "setDefault": "Set as Default",
+        "unsetDefault": "Remove as Default",
+        "defaultBadge": "Default",
+        "lastSession": "Last Session",
+        "lastSessionDescription": "Automatically updated with your most recent tab arrangement. Apply it to recover what you had open.",
+        "lastUsed": "Last used {{time}}",
+        "neverUsed": "Never applied",
+        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}}m ago",
+          "hours": "{{count}}h ago",
+          "days": "{{count}}d ago"
+        }
       }
     }
   },
   "nav": {
-    "workspaces": "Радни простори"
+    "workspaces": "Workspaces"
   },
   "onboarding": {
-    "workflow_workspaces": "Радни простори",
-    "workflow_workspaces_desc": "Сачувајте скуп отворених картица и поново отворите цео распоред касније."
+    "workflow_workspaces": "Workspaces",
+    "workflow_workspaces_desc": "Save a set of open tabs and reopen the whole layout later."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use workspaces",
+      "description": "Save, apply and manage saved tab layouts."
+    }
   },
   "hosts": {
-    "docsLink": "Прикажи документе"
+    "docsLink": "View docs"
   }
 }

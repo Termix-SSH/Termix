@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "View automations",
+      "description": "See the automations and their history."
+    },
+    "create": {
+      "title": "Create automations",
+      "description": "Add new automations."
+    },
+    "edit": {
+      "title": "Edit automations",
+      "description": "Change existing automations."
+    },
+    "delete": {
+      "title": "Delete automations",
+      "description": "Remove automations."
+    },
+    "run": {
+      "title": "Run automations",
+      "description": "Trigger an automation by hand."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Edytuj automatyzację",
         "empty": "Brak jeszcze automatyzacji. Utwórz automatyzację, która będzie reagować na metrykę, harmonogram lub zdarzenie.",
         "emptyRuns": "Brak uruchomień.",
-        "emptyChannels": "Brak kanałów. Dodaj jeden, aby wysyłać powiadomienia.",
-        "noChannelsHint": "Nie skonfigurowano jeszcze żadnych kanałów. Dodaj jeden w zakładce Kanały.",
-        "addChannel": "Dodaj kanał",
-        "testChannel": "Test",
-        "channelTestSent": "Wysłano powiadomienie testowe",
-        "channelTestFailed": "Powiadomienie testowe nie powiodło się",
-        "channelDeleted": "Kanał usunięty",
-        "deleteChannelConfirm": "Usunąć ten kanał? Automatyzacje z niego korzystające przestaną wysyłać powiadomienia.",
+        "channelsHint": "Channels are set up in Alerts",
+        "noChannelsHint": "The alert always goes to your inbox. Add channels in Alerts to also send it somewhere else.",
         "nameLabel": "Nazwa",
         "namePlaceholder": "np. Wyczyść /data, gdy się zapełni",
         "nameRequired": "Nazwa jest wymagana",
@@ -79,7 +95,7 @@
           "webhook": "Przychodzący webhook"
         },
         "stepTypes": {
-          "notify": "Wyślij powiadomienie",
+          "notify": "Send an alert",
           "http": "Wywołaj adres URL",
           "run_snippet": "Uruchom snippet",
           "run_command": "Uruchom polecenie",
@@ -118,7 +134,7 @@
           "url": "Adres URL",
           "method": "Metoda",
           "body": "Treść",
-          "channels": "Kanały",
+          "channels": "Also send to",
           "title": "Tytuł",
           "message": "Wiadomość",
           "snippet": "Snippet",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Zatrzymaj uruchomienie",
           "continue": "Kontynuuj"
+        },
+        "needsPlugin": "Needs {{plugin}}",
+        "needsPluginHint": "This automation is skipped until the feature it needs is available again.",
+        "offBadge": "Wył.",
+        "docsLink": "Zobacz dokumentację",
+        "ago": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}} min temu",
+          "hours": "{{count}} godz. temu",
+          "days": "{{count}} dni temu"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatyzacje",
     "feature_automations_desc": "Uruchamiaj kroki automatycznie, gdy coś się wydarzy, i otrzymuj powiadomienia."
+  },
+  "maintenance": {
+    "title": "Konserwacja",
+    "description": "Pause host status, health, metric, container and tunnel-disconnection automations while work is in progress. Monitoring, manual runs and scheduled automations continue.",
+    "denied": "You do not have permission to view maintenance.",
+    "sharedReadOnly": "This host was shared with you. Only its owner can change maintenance.",
+    "failed": "Maintenance could not be updated.",
+    "active": "Maintenance active",
+    "estimated": "Estimated completion",
+    "noAutoEnd": "The estimate does not end maintenance. End it explicitly when the work is complete.",
+    "endConfirm": "End maintenance and resume event-triggered automations for this host?",
+    "confirmEnd": "Confirm end",
+    "cancel": "Anuluj",
+    "end": "End maintenance",
+    "action": "Akcja",
+    "startNow": "Start now",
+    "schedule": "Schedule for later",
+    "reason": "Reason",
+    "startUtc": "First start (UTC)",
+    "repeat": "Powtórz",
+    "once": "Once",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "utcHelp": "Schedules use UTC throughout the year. Monthly schedules skip months without the selected day. Planned windows cannot overlap; overrunning maintenance continues across later windows.",
+    "duration": "Estimated duration (minutes)",
+    "grace": "Grace period (minutes)",
+    "notify": "Notify once if still offline after the estimate plus grace period",
+    "addSchedule": "Add schedule",
+    "schedules": "Schedules",
+    "noSchedules": "No maintenance schedules.",
+    "completed": "Already started",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "remove": "Remove schedule",
+    "loadFailed": "Could not refresh maintenance status. Changes are disabled until it can be loaded.",
+    "loading": "Loading maintenance status…"
   }
 }

@@ -33,7 +33,7 @@
     "loadingHost": "Đang tải máy chủ..."
   },
   "nav": {
-    "portForwarding": "Chuyển tiếp",
+    "portForwarding": "Forwarding",
     "tunnels": "Đường hầm"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (lắng nghe cục bộ)",
     "localTargetHost": "127.0.0.1 (đích trên máy này)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1 (lắng nghe trên điểm cuối)",
-    "remoteTargetHost": "127.0.0.1 (mục tiêu từ điểm cuối)",
+    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
+    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1 (Trình nghe SOCKS)"
   },
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Cài đặt sẵn là ảnh chụp tức thời; tải một cài đặt sẽ thay thế danh sách đường hầm máy khách cục bộ trên máy này.",
     "c2sPresetToLoad": "Cài đặt sẵn để tải",
     "c2sTunnelPresets": "Cài đặt sẵn Đường hầm Máy khách",
-    "c2sTunnelPresetsUnavailable": "Cài đặt sẵn đường hầm máy khách chỉ khả dụng trên ứng dụng máy tính."
+    "c2sTunnelPresetsUnavailable": "Cài đặt sẵn đường hầm máy khách chỉ khả dụng trên ứng dụng máy tính.",
+    "c2sPresetRenameError": "Failed to rename the preset",
+    "c2sPresetDeleteError": "Failed to delete the preset"
   },
   "tunnels": {
     "attempt": "Lần thử {{current}} / {{max}}",
@@ -83,8 +85,8 @@
     "createFirstTunnelMessage": "Bạn chưa tạo đường hầm SSH nào. Hãy cấu hình kết nối đường hầm trong Trình quản lý máy chủ để bắt đầu.",
     "currentHostPort": "Cổng máy hiện tại",
     "destination": "Điểm đến",
-    "destinationAddress": "Địa chỉ đích",
-    "destinationPort": "Cảng đích",
+    "destinationAddress": "Destination Address",
+    "destinationPort": "Destination Port",
     "disconnected": "Đã ngắt kết nối",
     "duplicateAutoStartBind": "Chỉ một đường hầm máy khách tự động có thể sử dụng {{bind}}.",
     "endpointPort": "Cổng điểm cuối",
@@ -99,18 +101,18 @@
     "forwardDescriptionServerLocal": "Máy chủ hiện tại {{sourcePort}} → điểm cuối {{endpointPort}}.",
     "forwardDescriptionServerRemote": "Điểm cuối {{endpointPort}} → máy chủ hiện tại {{sourcePort}}.",
     "host": "Máy chủ",
-    "intermediateHost": "Máy chủ trung gian",
+    "intermediateHost": "Intermediate Host",
     "invalidBindIp": "IP cục bộ phải là địa chỉ IPv4 hợp lệ.",
     "invalidEndpointPort": "Cổng điểm cuối phải nằm trong khoảng 1 đến 65535.",
     "invalidLocalPort": "Cổng cục bộ phải nằm trong khoảng 1 đến 65535.",
     "invalidLocalTargetIp": "IP đích cục bộ phải là địa chỉ IPv4 hợp lệ.",
     "invalidLocalTargetPort": "Cổng đích cục bộ phải nằm trong khoảng 1 đến 65535.",
-    "invalidRemoteAddress": "Cần có địa chỉ từ xa.",
+    "invalidRemoteAddress": "Remote address is required.",
     "invalidRemotePort": "Cổng từ xa phải nằm trong khoảng 1 đến 65535.",
     "lastError": "Lỗi cuối cùng",
     "lastStarted": "Lần bắt đầu cuối",
     "lastTested": "Lần kiểm tra cuối",
-    "localAddress": "Địa chỉ địa phương",
+    "localAddress": "Local Address",
     "localPort": "Cổng cục bộ",
     "localSaveError": "Lưu đường hầm máy khách cục bộ thất bại",
     "localSaved": "Đã lưu đường hầm máy khách",
@@ -122,14 +124,14 @@
     "noHostSelected": "Chưa chọn máy chủ",
     "noSshTunnels": "Không có đường hầm SSH",
     "port": "Cổng",
-    "remoteBindAddress": "Địa chỉ liên kết từ xa",
+    "remoteBindAddress": "Remote Bind Address",
     "remoteHost": "Máy chủ từ xa",
     "remotePort": "Cổng từ xa",
     "retryInterval": "Khoảng thời gian thử lại (giây)",
     "route": "Tuyến:",
     "summaryClientDynamic": "{{localHost}}:{{localPort}} → SOCKS qua {{endpoint}}",
-    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} qua {{endpoint}}",
-    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} trên {{endpoint}} → {{localHost}}:{{localPort}}",
+    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} via {{endpoint}}",
+    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} on {{endpoint}} → {{localHost}}:{{localPort}}",
     "test": "Kiểm tra",
     "tunnelName": "Tên đường hầm",
     "tunnelTestFailed": "Kiểm tra đường hầm thất bại",
@@ -139,11 +141,35 @@
     "typeLocal": "Cục bộ (-L)",
     "typeRemote": "Từ xa (-R)",
     "working": "Đang làm việc...",
+    "activeCount": "{{connected}}/{{total}} active",
+    "listensOn": "Bound to localhost:{{port}}",
+    "socksProxy": "SOCKS5 proxy",
+    "waiting": "Waiting",
+    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeTunnels": "Đường hầm hoạt động",
     "start": "Bắt đầu",
-    "stop": "Dừng"
+    "stop": "Dừng",
+    "authTitle": "Tunnel authentication",
+    "authRetry": "The previous code was not accepted. Enter a new code.",
+    "authAnswer": "Authentication response",
+    "authContinue": "Tiếp tục"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use tunnels",
+      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Enable tunnels",
+        "description": "Set up SSH tunnels through this host."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Đường hầm",
-    "feature_tunnels_desc": "Chuyển tiếp cổng thông qua máy chủ để truy cập các dịch vụ không được công khai."
+    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
   }
 }

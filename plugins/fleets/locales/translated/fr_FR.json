@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Consulter les flottes",
+      "description": "Consultez les flottes, leurs membres et leur inventaire."
+    },
+    "manage": {
+      "title": "Gérer les flottes",
+      "description": "Créer, modifier et supprimer des flottes, changer les membres et partager des flottes avec d'autres utilisateurs ou rôles."
+    },
+    "execute": {
+      "title": "Actions de la flotte",
+      "description": "Exécutez des commandes et des actions de paquetage sur l'ensemble d'une flotte, et transférez des fichiers vers et depuis ses hôtes membres."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -40,7 +54,7 @@
         "tabTransfer": "Transférer des fichiers",
         "tabInventory": "Inventaire",
         "openInventoryTab": "Ouvrir dans l'onglet complet",
-        "tabPackages": "Colis",
+        "tabPackages": "Paquets",
         "runOnFleet": "Exécuter sur la flotte",
         "commandPlaceholder": "disponibilité && df -h",
         "commandRequired": "Une commande est requise",
@@ -49,12 +63,12 @@
         "commandPartialFailure": "{{failed}} des hôtes {{total}} ont échoué",
         "commandFailed": "Échec de l'exécution de la commande",
         "resultSuccess": "Succès",
-        "resultFailed": "Échoué",
+        "resultFailed": "Échec",
         "push": "Pousser",
         "pull": "Tirer",
         "remotePathLabel": "Chemin distant",
         "remotePathRequired": "Un chemin distant est nécessaire",
-        "fileLabel": "Déposer",
+        "fileLabel": "Fichier",
         "fileRequired": "Un fichier est requis",
         "pushHint": "Le fichier sélectionné est enregistré à cet emplacement précis sur chaque hôte du parc.",
         "pullHint": "Le fichier situé à cet emplacement est lu depuis chaque hôte et téléchargé sous forme d'un seul fichier zip, un dossier par hôte.",
@@ -67,7 +81,7 @@
         "inventoryNoData": "Aucune donnée d'inventaire pour le moment - actualisez la page pour la récupérer.",
         "inventoryHost": "Hôte",
         "inventoryCollectedCount": "{{count}}/{{total}} collecté",
-        "inventoryOs": "Système d'exploitation",
+        "inventoryOs": "OS",
         "inventoryKernel": "Noyau",
         "inventoryArch": "Cambre",
         "inventoryUptime": "Disponibilité",
@@ -75,11 +89,18 @@
         "inventoryCollectedAt": "Collecté",
         "packageActionLabel": "Action",
         "packageInstall": "Installer",
-        "packageRemove": "Retirer",
+        "packageRemove": "Supprimer",
         "packageUpgradeAll": "Mettez à niveau tous les forfaits",
         "packageNameLabel": "Nom du paquet",
         "packageNameRequired": "Un nom de paquet est requis.",
-        "packageHint": "Nécessite un accès de niveau administrateur par hôte et élève les privilèges à l'aide du mot de passe sudo stocké sur l'hôte."
+        "packageHint": "Nécessite un accès de niveau administrateur par hôte et élève les privilèges à l'aide du mot de passe sudo stocké sur l'hôte.",
+        "shareFleet": "Flotte partagée",
+        "shareFleetTitle": "Partager \"{{name}}\"",
+        "shareFleetDescription": "Permet de partager les hôtes membres actuels de cette flotte avec les utilisateurs ou rôles sélectionnés. Les hôtes ajoutés ultérieurement à la flotte ne sont pas partagés automatiquement ; veuillez renouveler le partage pour les inclure.",
+        "shareSelectionRequired": "Sélectionnez au moins un utilisateur ou un rôle",
+        "fleetSharedSuccessfully": "Partagé {{shared}} de {{total}} hôtes dans cette flotte",
+        "failedToShareFleet": "Échec du partage de la flotte",
+        "noMembersToShare": "Cette flotte ne compte pas encore d'hôtes membres à partager."
       }
     }
   },

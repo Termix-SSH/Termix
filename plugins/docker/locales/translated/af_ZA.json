@@ -21,6 +21,11 @@
     "ports": "Hawens",
     "noPorts": "Geen poorte nie",
     "start": "Begin",
+    "stop": "Stop",
+    "status": "Status",
+    "actions": "Aksies",
+    "cardView": "Kaartaansig",
+    "listView": "Lysaansig",
     "confirmRemoveContainer": "Is jy seker jy wil die houer '{{name}}' verwyder? Hierdie aksie kan nie ongedaan gemaak word nie.",
     "runningContainerWarning": "Waarskuwing: Hierdie houer loop tans. As dit verwyder word, sal die houer eers gestop word.",
     "loadingContainers": "Laai houers...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Die houer moet loop om toegang tot die konsole te verkry",
     "verificationCodePrompt": "Voer verifikasiekode in",
     "totpVerificationFailed": "TOTP-verifikasie het misluk. Probeer asseblief weer.",
+    "browserSignInFailed": "Aanmelding het misluk. Probeer asseblief weer.",
     "connectedTo": "Gekoppel aan {{containerName}}",
     "disconnected": "Ontkoppel",
     "consoleError": "Konsolefout",
@@ -93,7 +99,10 @@
     "logs": "Logboeke",
     "stats": "Statistiek",
     "consoleTab": "Konsole",
-    "startContainerToAccess": "Begin die houer om toegang tot die konsole te verkry"
+    "startContainerToAccess": "Begin die houer om toegang tot die konsole te verkry",
+    "noHostSelected": "Geen gasheer gekies nie",
+    "failedToFetchLogs": "Kon nie logboeke haal nie: {{error}}",
+    "failedToDownloadLogs": "Kon nie logboeke aflaai nie: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Sien houers, lees logs en kyk na statistieke op enige gasheer wat Docker gebruik."
   },
+  "terminal": {
+    "retry": "Probeer weer",
+    "clipboardReadFailed": "Kon nie vanaf knipbord lees nie. Maak seker dat knipbordtoestemmings toegestaan is.",
+    "clipboardWriteFailed": "Kon nie na knipbord kopieer nie. Maak seker dat die bladsy oor HTTPS of localhost bedien word."
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik Docker",
+      "description": "Maak die Docker-bestuurder en houerkonsoles op gashere oop met Docker geaktiveer."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Aktiveer Docker"
+        "label": "Aktiveer Docker",
+        "description": "Bestuur houers op hierdie gasheer."
       },
       "containerRuntime": {
         "label": "Houerlooptyd",
@@ -122,9 +143,5 @@
     "docsLink": "Bekyk dokumente",
     "hostNotFound": "Gasheer nie gevind nie",
     "loadingHost": "Laai gasheer..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Kon nie vanaf knipbord lees nie. Maak seker dat knipbordtoestemmings toegestaan is.",
-    "clipboardWriteFailed": "Kon nie na knipbord kopieer nie. Maak seker dat die bladsy oor HTTPS of localhost bedien word."
   }
 }

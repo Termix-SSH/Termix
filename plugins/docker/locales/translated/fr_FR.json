@@ -21,6 +21,11 @@
     "ports": "Ports",
     "noPorts": "Aucun port",
     "start": "Démarrer",
+    "stop": "Stop",
+    "status": "État",
+    "actions": "Actes",
+    "cardView": "Vue de carte",
+    "listView": "Vue liste",
     "confirmRemoveContainer": "Êtes-vous sûr de vouloir supprimer le conteneur '{{name}}' ? Cette action est irréversible.",
     "runningContainerWarning": "Attention : Ce conteneur est en cours d'exécution. Sa suppression l'arrêtera d'abord.",
     "loadingContainers": "Chargement des conteneurs...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Le conteneur doit être en cours d'exécution pour accéder à la console",
     "verificationCodePrompt": "Saisissez le code de vérification",
     "totpVerificationFailed": "La vérification TOTP a échoué. Veuillez réessayer.",
+    "browserSignInFailed": "Échec de la connexion. Veuillez réessayer.",
     "connectedTo": "Connecté à {{containerName}}",
     "disconnected": "Déconnecté",
     "consoleError": "Erreur de la console",
@@ -93,7 +99,10 @@
     "logs": "Journaux",
     "stats": "Stats",
     "consoleTab": "Console",
-    "startContainerToAccess": "Démarrez le conteneur pour accéder à la console"
+    "startContainerToAccess": "Démarrez le conteneur pour accéder à la console",
+    "noHostSelected": "Aucun hôte sélectionné",
+    "failedToFetchLogs": "Échec de la récupération des journaux : {{error}}",
+    "failedToDownloadLogs": "Échec du téléchargement des journaux : {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Consultez les conteneurs, lisez les journaux et surveillez les statistiques sur n'importe quel hôte exécutant Docker."
   },
+  "terminal": {
+    "retry": "Réessayer",
+    "clipboardReadFailed": "Échec de la lecture du presse-papiers. Assurez-vous que les autorisations du presse-papiers sont accordées.",
+    "clipboardWriteFailed": "Échec de la copie dans le presse-papiers. Assurez-vous que la page est servie en HTTPS ou localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilisez Docker",
+      "description": "Ouvrez les consoles du gestionnaire Docker et des conteneurs sur les hôtes sur lesquels Docker est activé."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Activer Docker"
+        "label": "Activer Docker",
+        "description": "Gérer les conteneurs sur cet hôte."
       },
       "containerRuntime": {
         "label": "Moteur d'exécution de conteneurs",
@@ -122,9 +143,5 @@
     "docsLink": "Voir la documentation",
     "hostNotFound": "Hôte introuvable",
     "loadingHost": "Chargement de l'hôte..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Échec de la lecture du presse-papiers. Assurez-vous que les autorisations du presse-papiers sont accordées.",
-    "clipboardWriteFailed": "Échec de la copie dans le presse-papiers. Assurez-vous que la page est servie en HTTPS ou localhost."
   }
 }

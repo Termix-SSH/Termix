@@ -7,7 +7,7 @@
     "negotiating": "交渉中 {{type}} 握手...",
     "sessionReady": "{{type}} セッション準備完了",
     "connectionError": "接続エラー",
-    "connectionFailed": "接続失敗",
+    "connectionFailed": "接続に失敗しました",
     "failedToConnect": "接続トークンの取得に失敗しました",
     "hostNotFound": "ホストが見つかりません",
     "noHostSelected": "ホストが選択されていません",
@@ -16,13 +16,13 @@
     "guacdUnavailable": "リモートデスクトップサービス (guacd) が利用できません。guacd が実行中でアクセス可能であり、管理者設定で正しく構成されていることを確認してください。",
     "credentialPromptTitle": "RDP認証情報を入力してください",
     "credentialPromptDescription": "このホストは、接続時に認証情報の入力を求めるように設定されています。認証情報は今回のセッションのみで使用され、保存されません。",
-    "connect": "接続する",
+    "connect": "接続",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
       "title": "ドライブファイル",
       "parent": "親ディレクトリ",
-      "refresh": "更新",
-      "empty": "このフォルダは空です",
+      "refresh": "再読み込み",
+      "empty": "このフォルダーは空です",
       "listFailed": "このフォルダの読み取りに失敗しました",
       "download": "ダウンロード",
       "downloadFailed": "ダウンロードに失敗しました {{name}}",
@@ -54,13 +54,13 @@
       "esc": "Escape",
       "tab": "Tab",
       "home": "Home",
-      "end": "End",
+      "end": "エンド",
       "pageUp": "Page Up",
       "pageDown": "Page Down",
-      "arrowUp": "Arrow Up",
-      "arrowDown": "Arrow Down",
-      "arrowLeft": "Arrow Left",
-      "arrowRight": "Arrow Right",
+      "arrowUp": "↑",
+      "arrowDown": "↓",
+      "arrowLeft": "←",
+      "arrowRight": "→",
       "fnToggle": "ファンクションキー",
       "reconnect": "セッション再接続",
       "collapse": "ツールバーを折りたたむ",
@@ -73,17 +73,22 @@
       "fitToScreen": "画面に合わせる",
       "switchToTrackpad": "トラックパッドモードに切り替える（ドラッグでカーソルを移動、タップでクリック）",
       "switchToTouch": "タッチモードに切り替える（クリックしたい場所を直接タップする）"
-    }
+    },
+    "disabled": "リモートデスクトップは無効になっています。管理者は設定画面で有効にできます。"
   },
   "hosts": {
     "nativeRdpOpened": "Windowsリモートデスクトップで開きました",
     "nativeRdpFailed": "Windowsリモートデスクトップを開くことができませんでした",
     "openNativeRdp": "Windowsリモートデスクトップで開く",
     "guac": {
+      "toolbar": "ツールバー",
       "connection": "接続",
       "authentication": "認証",
       "storedCredential": "保存された認証情報",
       "authMethod": "認証方法",
+      "authTypeDirect": "直接",
+      "authTypeCredential": "認証情報",
+      "authTypeNone": "すべて解除",
       "authTypeNoneDesc": "認証情報は保存されません。接続するたびにユーザー名とパスワードの入力を求められますが、それらは保存されません。",
       "selectCredential": "認証情報を選択...",
       "connectionSettings": "接続設定",
@@ -206,7 +211,8 @@
       "colorScheme": "カラースキーム",
       "backspaceKey": "バックスペースキー",
       "colorDepth": "色深度",
-      "resizeMethod": "リサイズ方法"
+      "resizeMethod": "リサイズ方法",
+      "driveNamePlaceholder": "ターミックスドライブ"
     },
     "remoteDesktop": "リモートデスクトップ",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "仮想ネットワーク",
     "unencryptedShell": "暗号化されていないシェル",
-    "docsLink": "ドキュメントを表示"
+    "remoteDesktopNotes": "メモ",
+    "userDefaultsNote": "変更しない設定は、ホストのデフォルト設定に従います。",
+    "connectionOriginNote": "デスクトップアプリでは、ホストが「このデバイス」に設定されていない限り、RDP、VNC、Telnetはリモートサーバーを使用します。「このデバイス」に設定するには、このマシンがアクセスできるguacdが必要です。リモートデスクトップの設定、またはguacdプロキシでホストごとに設定してください。",
+    "docsLink": "ドキュメントを表示",
+    "connectionOriginGuacamoleNote": "RDP、VNC、Telnetは、リモートサーバーを使用します。「このデバイス」を選択した場合は、このマシンからアクセスできるguacdが必要です。guacd URL設定で設定するか、guacdプロキシでホストごとに設定してください。"
   },
   "onboarding": {
     "feature_desktop": "リモートデスクトップ",
@@ -223,15 +233,17 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "色深度"
+        "label": "色深度",
+        "description": "デフォルト設定のままになっているRDPホストで使用されます。"
       },
       "resizeMethod": {
-        "label": "リサイズ方法"
+        "label": "リサイズ方法",
+        "description": "リモート画面がウィンドウサイズに追従する仕組み。"
       },
       "resizeDisplayUpdate": "ディスプレイの更新",
       "resizeReconnect": "再接続",
       "inherit": "継承する",
-      "on": "の上",
+      "on": "オン",
       "off": "オフ",
       "forceLossless": {
         "label": "ロスレスを強制",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "貼り付けを無効にする",
         "description": "リモートセッションへのテキスト貼り付けを禁止します"
-      }
+      },
+      "group": "リモートデスクトップのデフォルト設定",
+      "colorDepth16": "16ビット",
+      "colorDepth24": "24ビット",
+      "colorDepth32": "32ビット"
     },
     "admin": {
+      "enabled": {
+        "label": "リモートデスクトップを有効にする",
+        "description": "guacd を介して RDP、VNC、および Telnet 接続を許可する。"
+      },
       "guacdUrl": {
-        "label": "guacd URL"
+        "label": "guacd URL",
+        "description": "guacd がリッスンする場所をホスト:ポートとして指定します。GUACD_URL、GUACD_HOST、GUACD_PORT 環境変数によって、この設定は上書きされます。",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDPポート"
+      },
+      "vncPort": {
+        "label": "VNCポート"
+      },
+      "telnetPort": {
+        "label": "Telnetポート"
+      },
+      "rdpSecurity": {
+        "label": "RDPセキュリティモード"
+      },
+      "rdpIgnoreCert": {
+        "label": "証明書エラーを無視する"
+      },
+      "guacamoleConfig": {
+        "label": "guacd 設定"
+      },
+      "enableToolbar": {
+        "label": "リモートデスクトップツールバー",
+        "description": "RDP、VNC、Telnetセッションでツールバーを表示する。"
+      },
+      "displayGroup": "画面",
+      "displayDefaultsTab": "リモートデスクトップ"
+    }
+  },
+  "palette": {
+    "connectRdp": "RDPで接続する",
+    "connectVnc": "VNCで接続する",
+    "connectTelnet": "Telnetで接続する"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "リモートデスクトップセッションを共有する",
+      "description": "セッション共有とコラボレーションルームで、このユーザーのRDP、VNC、およびTelnetセッションを他のユーザーに表示できるようにする。"
     }
   },
   "errors": {

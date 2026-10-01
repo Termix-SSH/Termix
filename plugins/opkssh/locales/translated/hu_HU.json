@@ -16,6 +16,16 @@
     "authFailed": "Sikertelen hitelesítés. Kérjük, ellenőrizze a hitelesítő adatait, és próbálja újra.",
     "timeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra."
   },
+  "settings": {
+    "redirectUri": {
+      "label": "Átirányítási URI",
+      "description": "Regisztrálja ezt az URL-t engedélyezett átirányítási URI-ként az OPKSSH konfigurációjában található összes identitásszolgáltatónál."
+    },
+    "legacyCallback": {
+      "label": "Használja a régi átirányítási URI-t",
+      "description": "Továbbra is küldd a /host/opkssh-callback címet, a 2.9 előtt használt átirányítási URI-t. Kapcsold ki ezt, amint az identitásszolgáltatóid engedélyezik az újat."
+    }
+  },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
   }

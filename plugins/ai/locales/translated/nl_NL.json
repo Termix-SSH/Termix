@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Gebruik de assistent",
+      "description": "Open de assistent en stel er vragen aan."
+    },
+    "manage_providers": {
+      "title": "Beheer aanbieders",
+      "description": "AI-providers en hun API-sleutels toevoegen, bewerken en verwijderen."
+    },
+    "apply_proposals": {
+      "title": "Dien voorstellen in",
+      "description": "Laat de assistent de voorgestelde wijzigingen doorvoeren."
+    },
+    "services.use": {
+      "title": "Gebruik AI van andere functies",
+      "description": "Andere functies kunnen de assistent namens u inschakelen."
+    },
+    "secrets.share": {
+      "title": "Deel de API-sleutel",
+      "description": "Andere functies kunnen de opgeslagen AI API-sleutel gebruiken zonder deze te zien."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "De AI-assistent is op deze server uitgeschakeld.",
+    "providersNeedOptIn": "Schakel de AI-assistent hierboven in om aanbieders toe te voegen.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI-assistent",
+        "description": "Gebruikers kunnen de AI-assistent inschakelen. Wanneer deze is uitgeschakeld, is de assistent verborgen en voor iedereen geblokkeerd."
+      },
+      "privateEndpoints": {
+        "label": "Toegestane privé-AI-hosts",
+        "description": "Hosts op uw privénetwerk waarnaar gebruikers een provider kunnen verwijzen, zoals een zelfgehoste Ollama. Plaats één host per lijn."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AI-assistent inschakelen",
+        "description": "Sta de AI-assistent toe om te helpen in de terminal van deze host. Standaard uitgeschakeld, maar AI moet nog steeds voor uw account zijn ingeschakeld."
+      }
+    }
+  },
   "ai": {
     "title": "Assistent",
     "send": "Versturen",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Vraag naar deze host...",
     "noProvidersConfigured": "Er is nog geen AI-provider geconfigureerd. Voeg er een toe via het tabblad AI-assistent.",
     "runsInOpenTerminal": "Wordt uitgevoerd in uw geopende terminalsessie.",
-    "runInTerminal": "Loop"
+    "runInTerminal": "Loop",
+    "terminalContextPrefill": "Hier is mijn terminaluitvoer:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Laat andere functies uw API-sleutel van de AI-provider gebruiken voor hun eigen verzoeken. De sleutel wordt nooit gekopieerd en u kunt deze op elk moment intrekken."
+    }
   },
   "nav": {
     "ai": "AI"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Schakel het in.",
     "aiEnableDesc": "Voegt een assistent toe die je instellingen leest en wijzigingen voorstelt die je kunt goedkeuren. Vereist een leverancier die je zelf aanlevert, zoals een lokale Ollama.",
     "aiNote": "Er wordt niets verzonden totdat je een provider toevoegt en een bericht verstuurt."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "AI-assistent",
-        "description": "Gebruikers kunnen de AI-assistent inschakelen. Wanneer deze is uitgeschakeld, is de assistent verborgen en voor iedereen geblokkeerd."
-      },
-      "privateEndpoints": {
-        "label": "Toegestane privé-AI-hosts"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "AI-assistent inschakelen",
-        "description": "Sta de AI-assistent toe om te helpen in de terminal van deze host. Standaard uitgeschakeld, maar AI moet nog steeds voor uw account zijn ingeschakeld."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Documenten bekijken"

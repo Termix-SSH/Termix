@@ -2,55 +2,67 @@
   "newUi": {
     "sidebar": {
       "workspaces": {
-        "title": "Рабочие места",
-        "saveCurrent": "Сохранить текущий",
-        "saveCurrentTitle": "Сохранить текущее рабочее пространство",
-        "saveCurrentDescription": "Сохраните все открытые вкладки, разделенные окна и расположение панелей в виде новых именованных рабочих областей.",
-        "nameLabel": "Имя",
-        "namePlaceholder": "например, отладка в рабочей среде.",
-        "nameRequired": "Название рабочей области обязательно для ввода.",
+        "title": "Workspaces",
+        "saveCurrent": "Save Current",
+        "saveCurrentTitle": "Save Current Workspace",
+        "saveCurrentDescription": "Save every open tab, split layout, and pane arrangement as a new named workspace.",
+        "nameLabel": "Название",
+        "namePlaceholder": "e.g., Prod Debugging",
+        "nameRequired": "Workspace name is required",
         "colorLabel": "Цвет",
-        "workspaceCreated": "Рабочее пространство сохранено",
-        "workspaceUpdated": "Рабочее пространство обновлено",
-        "workspaceDeleted": "Рабочее пространство удалено",
-        "workspaceDuplicated": "Рабочее пространство дублировано",
-        "saveFailed": "Не удалось сохранить рабочее пространство.",
-        "updateFailed": "Не удалось обновить рабочее пространство.",
-        "deleteFailed": "Не удалось удалить рабочее пространство.",
-        "duplicateFailed": "Не удалось создать дубликат рабочего пространства.",
-        "loadFailed": "Не удалось загрузить рабочие пространства.",
-        "applyFailed": "Не удалось применить рабочее пространство",
-        "deleteWorkspaceTitle": "Удалить рабочее пространство",
-        "deleteWorkspaceDescription": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие необратимо.",
-        "noWorkspaces": "Пока нет сохраненных рабочих пространств. Сохраните текущее расположение вкладок, чтобы начать работу.",
-        "tabCount": "{{count}} вкладка",
-        "tabCount_other": "{{count}} вкладки",
-        "apply": "Применять",
-        "applyConfirmTitle": "Применить рабочее пространство",
-        "applyConfirmDescription": "Применение \"{{name}}\" закроет текущие вкладки и заменит их сохраненным расположением элементов в этом рабочем пространстве. Несохраненные изменения текущего расположения будут потеряны.",
-        "applyConfirmButton": "Применить рабочее пространство",
-        "updateWithCurrent": "Обновить с учетом текущих изменений",
-        "updateWithCurrentConfirm": "Заменить \"{{name}}\" на текущую компоновку вкладок?",
+        "workspaceCreated": "Workspace saved",
+        "workspaceUpdated": "Workspace updated",
+        "workspaceDeleted": "Workspace deleted",
+        "workspaceDuplicated": "Workspace duplicated",
+        "saveFailed": "Failed to save workspace",
+        "updateFailed": "Failed to update workspace",
+        "deleteFailed": "Failed to delete workspace",
+        "duplicateFailed": "Failed to duplicate workspace",
+        "loadFailed": "Failed to load workspaces",
+        "applyFailed": "Failed to apply workspace",
+        "deleteWorkspaceTitle": "Delete Workspace",
+        "deleteWorkspaceDescription": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+        "noWorkspaces": "No saved workspaces yet. Save your current tab arrangement to get started.",
+        "tabCount": "{{count}} tab",
+        "tabCount_other": "{{count}} tabs",
+        "apply": "Применить",
+        "applyConfirmTitle": "Apply Workspace",
+        "applyConfirmDescription": "Applying \"{{name}}\" will close your current tabs and replace them with this workspace's saved arrangement. Unsaved changes to your current layout will be lost.",
+        "applyConfirmButton": "Apply Workspace",
+        "updateWithCurrent": "Update with Current",
+        "updateWithCurrentConfirm": "Overwrite \"{{name}}\" with your current tab arrangement?",
         "rename": "Переименовать",
-        "duplicate": "Дубликат",
-        "duplicateNameSuffix": "{{name}} (копия)",
-        "setDefault": "Установить как значение по умолчанию",
-        "unsetDefault": "Удалить как значение по умолчанию",
-        "defaultBadge": "По умолчанию",
-        "lastSession": "Последняя сессия",
-        "lastSessionDescription": "Автоматическое обновление с учетом вашего последнего расположения вкладок. Примените изменения, чтобы восстановить открытые ранее вкладки.",
-        "lastUsed": "Последнее использование {{time}}",
-        "neverUsed": "Никогда не подавал заявку",
-        "tabsSkipped": "Рабочая область применена — {{count}} вкладки пропущены (хост больше не существует): {{names}}"
+        "duplicate": "Duplicate",
+        "duplicateNameSuffix": "{{name}} (copy)",
+        "setDefault": "Set as Default",
+        "unsetDefault": "Remove as Default",
+        "defaultBadge": "Default",
+        "lastSession": "Last Session",
+        "lastSessionDescription": "Automatically updated with your most recent tab arrangement. Apply it to recover what you had open.",
+        "lastUsed": "Last used {{time}}",
+        "neverUsed": "Never applied",
+        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}}м назад",
+          "hours": "{{count}}ч назад",
+          "days": "{{count}}д назад"
+        }
       }
     }
   },
   "nav": {
-    "workspaces": "Рабочие места"
+    "workspaces": "Workspaces"
   },
   "onboarding": {
-    "workflow_workspaces": "Рабочие места",
-    "workflow_workspaces_desc": "Сохраните набор открытых вкладок и откройте весь интерфейс позже."
+    "workflow_workspaces": "Workspaces",
+    "workflow_workspaces_desc": "Save a set of open tabs and reopen the whole layout later."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use workspaces",
+      "description": "Save, apply and manage saved tab layouts."
+    }
   },
   "hosts": {
     "docsLink": "Документация"

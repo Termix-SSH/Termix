@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Metriky hostitele"
+  },
   "hostMetrics": {
     "cpu": "Procesor",
     "memory": "Paměť",
@@ -52,9 +55,9 @@
     "loginStats": "Statistiky přihlášení SSH",
     "noRecentLoginData": "Žádné nedávné přihlašovací údaje",
     "ports": {
-      "title": "Poslouchající porty",
+      "title": "Naslouchající porty",
       "protocol": "Protokol",
-      "port": "Přístav",
+      "port": "Port",
       "address": "Adresa",
       "process": "Proces",
       "search": "Hledat porty...",
@@ -70,7 +73,7 @@
       "noData": "Nejsou k dispozici žádná data firewallu",
       "action": "Akce",
       "protocol": "Proto",
-      "port": "Přístav",
+      "port": "Port",
       "source": "Zdroj",
       "anywhere": "Kdekoli",
       "chains": "řetězy"
@@ -160,7 +163,6 @@
       "firewallPersist": "Pravidla pro trvalé uložení",
       "firewallPersisted": "Pravidla firewallu přetrvávala",
       "wireguard": "WireGuard",
-      "tailscale": "Koncová stupnice",
       "wgNotInstalled": "WireGuard není na tomto hostiteli nainstalován",
       "wgNoInterfaces": "Žádná nakonfigurovaná rozhraní WireGuard",
       "wgInterfaceUp": "Vychovat",
@@ -169,29 +171,14 @@
       "wgBringingDown": "Snižování {{name}}...",
       "wgInterfaceUpDone": "{{name}} je aktivní",
       "wgInterfaceDownDone": "{{name}} je nefunkční",
-      "wgListenPort": "Přístav",
+      "wgListenPort": "Port",
       "wgPublicKey": "Veřejný klíč",
       "wgEndpoint": "Koncový bod",
       "wgAllowedIPs": "Povolené IP adresy",
       "wgLastHandshake": "Poslední podání ruky",
       "wgHandshakeNever": "Nikdy",
       "wgTransfer": "Převod",
-      "tsNotInstalled": "Tailscale není na tomto hostiteli nainstalován",
-      "tsRunning": "Běh",
-      "tsStopped": "Zastaveno",
-      "tsEnable": "Připojit",
-      "tsDisable": "Odpojit",
-      "tsEnabling": "Připojování k Tailscale...",
-      "tsDisabling": "Odpojování od Tailscale...",
-      "tsEnabled": "Koncová váha připojena",
-      "tsDisabled": "Tailscale odpojeno",
-      "tsIPs": "IP adresy Tailscale",
-      "tsPeers": "Vrstevníci",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Východový uzel",
-      "tsExitNodeActive": "Výstupní uzel je aktivní",
-      "tsHostname": "Název hostitele"
+      "wgNoPeers": "Žádní vrstevníci"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "na",
     "apply": "Použít",
     "viewHistory": "Zobrazit historii"
-  },
-  "nav": {
-    "hostMetrics": "Metriky hostitele"
   },
   "hosts": {
     "tabHostMetrics": "Metriky hostitele",
@@ -265,6 +249,9 @@
     "noHostSelected": "Nebyl vybrán žádný hostitel",
     "selectHost": "Vyberte hostitele..."
   },
+  "terminalStatus": {
+    "unavailable": "Živé statistiky nejsou k dispozici"
+  },
   "dashboard": {
     "cpu": "Procesor",
     "ram": "BERAN"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Připojeno"
+  },
+  "permissions": {
+    "use": {
+      "title": "Používejte metriky hostitele",
+      "description": "Zobrazte si metriky hostitelů a používejte správce hostitelů (služby, balíčky, firewall a další) na hostitelích, ke kterým máte přístup."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Interval metrik (sekundy)",
+        "description": "Jak často je vzorkován zobrazený hostitel, pokud si hostitel nenastaví vlastní interval."
+      },
+      "historyRetentionDays": {
+        "label": "Uchování historie (dny)",
+        "description": "Jak dlouho se uchovávají vzorky metrik pro historické grafy."
+      },
+      "enabledForNewHosts": {
+        "label": "Metriky pro nové hostitele",
+        "description": "Zda noví hostitelé začínají se zapnutým sběrem metrik."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Jednotka teploty",
+        "description": "Jak se teploty zobrazují v metrikách hostitele.",
+        "celsius": "Celsia",
+        "fahrenheit": "Fahrenheita"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Shromažďování metrik"
+      },
+      "metricsInterval": {
+        "label": "Interval metrik (sekundy)"
+      },
+      "enabledWidgets": {
+        "label": "Povolené widgety"
+      },
+      "excludedMounts": {
+        "label": "Vyloučené držáky"
+      },
+      "monitoredMounts": {
+        "label": "Sledované cesty"
+      }
+    }
   }
 }

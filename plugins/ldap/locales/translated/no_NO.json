@@ -1,33 +1,50 @@
 {
-  "loginWithProvider": "Logg inn med {{name}}",
-  "loading": "Laster inn...",
+  "loginWithLdap": "Sign in with LDAP",
+  "loginWithProvider": "Login with {{name}}",
+  "loading": "Laster...",
   "requiredField": "Dette feltet er obligatorisk",
-  "username": "LDAP-brukernavn",
-  "password": "LDAP-passord",
-  "signIn": "Logg inn",
+  "username": "LDAP Username",
+  "password": "LDAP Password",
+  "signIn": "Sign In",
+  "permissions": {
+    "manage": {
+      "title": "Manage LDAP directories",
+      "description": "Add, change and remove the LDAP directories people can sign in with."
+    }
+  },
   "providers": {
-    "docsLink": "Vis dokumenter",
-    "name": "Visningsnavn",
+    "docsLink": "View docs",
+    "none": "No LDAP directories configured.",
+    "add": "Add Directory",
+    "edit": "Edit Directory",
+    "delete": "Delete Directory",
+    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "name": "Display Name",
+    "namePlaceholder": "Company directory",
+    "nameRequired": "A display name is required",
     "enabled": "Aktivert",
+    "save": "Save Directory",
     "saving": "Lagrer...",
-    "saved": "Lagret",
+    "saved": "Saved",
     "saveFailed": "Kunne ikke lagre",
-    "deleted": "Slettet",
+    "deleted": "Deleted",
     "deleteFailed": "Kunne ikke slette",
-    "cancel": "Kansellere"
+    "loadFailed": "Failed to load LDAP directories",
+    "cancel": "Avbryt"
   },
   "fields": {
-    "host": "LDAP-vert",
-    "port": "Havn",
-    "useTls": "Bruk TLS (LDAPS)",
+    "host": "LDAP Host",
+    "port": "Port",
+    "useTls": "Use TLS (LDAPS)",
     "bindDn": "Bind DN",
-    "bindPassword": "Bind passord",
-    "userSearchBase": "Brukersøkbase",
-    "userSearchFilter": "Brukersøkfilter",
-    "usernameAttr": "Brukernavnattributt",
-    "displayNameAttr": "Visningsnavnattributt",
-    "groupSearchBase": "Gruppesøkbase",
-    "adminGroup": "Admingruppe",
-    "allowedUsers": "Tillatte brukere"
+    "bindPassword": "Bind Password",
+    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "userSearchBase": "User Search Base",
+    "userSearchFilter": "User Search Filter",
+    "usernameAttr": "Username Attribute",
+    "displayNameAttr": "Display Name Attribute",
+    "groupSearchBase": "Group Search Base",
+    "adminGroup": "Admin Group",
+    "allowedUsers": "Allowed Users"
   }
 }

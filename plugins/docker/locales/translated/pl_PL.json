@@ -21,6 +21,11 @@
     "ports": "Porty",
     "noPorts": "Brak portów",
     "start": "Start",
+    "stop": "Stop",
+    "status": "Status",
+    "actions": "Actions",
+    "cardView": "Card view",
+    "listView": "List view",
     "confirmRemoveContainer": "Czy na pewno chcesz usunąć kontener „{{name}}”? Tej czynności nie można cofnąć.",
     "runningContainerWarning": "Ostrzeżenie: Ten kontener jest obecnie uruchomiony. Jego usunięcie spowoduje najpierw jego zatrzymanie.",
     "loadingContainers": "Ładowanie kontenerów...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Aby uzyskać dostęp do konsoli, kontener musi być uruchomiony",
     "verificationCodePrompt": "Wprowadź kod weryfikacyjny",
     "totpVerificationFailed": "Weryfikacja TOTP nie powiodła się. Spróbuj ponownie.",
+    "browserSignInFailed": "Sign-in failed. Please try again.",
     "connectedTo": "Połączono z {{containerName}}",
     "disconnected": "Rozłączono",
     "consoleError": "Błąd konsoli",
@@ -93,7 +99,10 @@
     "logs": "Logi",
     "stats": "Statystyki",
     "consoleTab": "Konsola",
-    "startContainerToAccess": "Uruchom kontener, aby uzyskać dostęp do konsoli"
+    "startContainerToAccess": "Uruchom kontener, aby uzyskać dostęp do konsoli",
+    "noHostSelected": "Nie wybrano hosta",
+    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
+    "failedToDownloadLogs": "Failed to download logs: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Przeglądaj kontenery, czytaj logi i śledź statystyki na dowolnym hoście, na którym działa Docker."
   },
+  "terminal": {
+    "retry": "Ponów",
+    "clipboardReadFailed": "Nie udało się odczytać danych ze schowka. Upewnij się, że uprawnienia do schowka zostały przyznane.",
+    "clipboardWriteFailed": "Nie udało się skopiować do schowka. Upewnij się, że strona jest serwowana przez HTTPS lub localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Docker",
+      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Włącz Docker"
+        "label": "Włącz Docker",
+        "description": "Manage containers on this host."
       },
       "containerRuntime": {
         "label": "Środowisko wykonawcze kontenera",
@@ -122,9 +143,5 @@
     "docsLink": "Zobacz dokumentację",
     "hostNotFound": "Nie znaleziono hosta",
     "loadingHost": "Ładowanie hosta..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Nie udało się odczytać danych ze schowka. Upewnij się, że uprawnienia do schowka zostały przyznane.",
-    "clipboardWriteFailed": "Nie udało się skopiować do schowka. Upewnij się, że strona jest serwowana przez HTTPS lub localhost."
   }
 }

@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Manage usage statistics",
+      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Share anonymous usage statistics",
+      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+    },
+    "includePlatform": {
+      "label": "Include platform info",
+      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+    },
+    "includeFeatureUsage": {
+      "label": "Include feature usage",
+      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+    },
+    "includePlugins": {
+      "label": "Include installed features",
+      "description": "Which built-in features are installed and running."
+    },
+    "instanceId": {
+      "label": "Instance ID"
+    },
+    "shareFeatureUsage": {
+      "label": "Include my feature usage",
+      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+    }
+  },
+  "status": {
+    "title": "Trạng thái",
+    "on": "Sharing usage statistics once a day",
+    "off": "Not sharing usage statistics",
+    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
+    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
+    "instanceId": "Instance ID: {{id}}",
+    "noInstanceId": "No instance ID yet",
+    "lastSent": "Last sent {{date}}",
+    "neverSent": "Not sent yet",
+    "nextSend": "Next report due {{date}}",
+    "lastError": "Last attempt failed: {{error}}",
+    "preview": "Preview report",
+    "sendNow": "Send now",
+    "sending": "Sending...",
+    "sent": "Usage statistics sent",
+    "notSent": "Usage statistics are turned off, nothing was sent",
+    "resetId": "Reset instance ID",
+    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
+    "resetIdDone": "Instance ID reset",
+    "previewTitle": "Next report",
+    "previewDescription": "This is exactly what would be sent right now.",
+    "close": "Đóng",
+    "loadFailed": "Could not load the usage statistics status"
+  }
+}

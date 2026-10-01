@@ -44,6 +44,7 @@
     "reconnect": "התחבר מחדש",
     "reconnected": "התחבר מחדש בהצלחה",
     "reconnecting": "מתחבר מחדש... ({{attempt}}/{{max}})",
+    "autoReconnecting": "החיבור אבד, מתחבר מחדש...",
     "searchCaseSensitive": "מארז התאמה",
     "searchClose": "סגור (Escape)",
     "searchNext": "המשחק הבא (Enter)",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "הקריאה מהלוח נכשלה. ודא שהרשאות הלוח ניתנות.",
     "clipboardWriteFailed": "ההעתקה ללוח נכשלה. ודא שהדף מוגש דרך HTTPS או localhost.",
     "connected": "מְחוּבָּר",
-    "totpCodeLabel": "קוד אימות"
+    "totpCodeLabel": "קוד אימות",
+    "duplicateTab": "לשכפל את הכרטיסייה",
+    "imageChooseFile": "בחר קובץ תמונה",
+    "imageUploaded": "תמונה שהועלתה: {{path}}",
+    "imageClipboardUnavailable": "דפדפן זה אינו יכול לקרוא תמונות מהלוח",
+    "imageClipboardEmpty": "לא נמצאה תמונה בלוח",
+    "localShell": "מעטפת הטרמינל המקומית",
+    "autocompleteHintComplete": "Tab או Enter כדי להשלים",
+    "autocompleteHintNavigate": "↑↓ כדי לנווט",
+    "autocompleteHintClose": "Esc כדי לסגור"
   },
   "terminalToolbar": {
     "detachTmux": "ניתוק tmux",
@@ -108,7 +118,10 @@
     "searchPlaceholder": "היסטוריית חיפוש...",
     "clearAll": "נקה הכל",
     "noHistoryEntries": "אין רשומות היסטוריה",
-    "trackingDisabled": "מעקב אחר היסטוריה מושבת"
+    "trackingDisabled": "מעקב אחר היסטוריה מושבת",
+    "trackingDisabledHint": "הפעל את היסטוריית הפקודות בכרטיסייה מסוף SSH של מחשב מארח זה.",
+    "commandCount_one": "פקודה {{count}}",
+    "commandCount_other": "פקודות {{count}}"
   },
   "touchInput": {
     "enabled": "הפעל קלט מגע",
@@ -147,15 +160,21 @@
     "admin": {
       "group": {
         "touch": "קלט מגע",
-        "images": "אחסון תמונות"
+        "images": "אחסון תמונות",
+        "sessions": "מפגשים",
+        "newHosts": "מארחים חדשים"
       },
       "sessionTimeoutMinutes": {
         "label": "התמדה של סשן מסוף",
-        "description": "כמה זמן מסוף מנותק נשאר פעיל בשרת לפני שהוא נסגר. מינימום 1 · מקסימום 1440 דקות. עבור סשנים שחייבים לשרוד יותר מ-10 דקות, הפעל את Auto-Tmux במארח."
+        "description": "כמה זמן מסוף מנותק נשאר פעיל בשרת לפני שהוא נסגר. מינימום 1, מקסימום 1440 דקות. עבור סשנים שחייבים לשרוד יותר מ-10 דקות, הפעל את Auto-Tmux במארח."
       },
       "commandHistoryEnabled": {
         "label": "היסטוריית פקודות",
         "description": "אפשר רישום היסטוריית פקודות. כאשר האפשרות מושבתת, ההיסטוריה לא נשמרת ללא קשר להגדרות של כל מחשב מארח."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "היסטוריית פקודות עבור מארחים חדשים",
+        "description": "האם מחשבי שרת חדשים מתחילים עם היסטוריית פקודות מופעלת."
       },
       "imageStorageMode": {
         "label": "מצב אחסון",
@@ -165,24 +184,50 @@
         "remoteSftp": "מרחוק (SFTP)"
       },
       "imageLocalDir": {
-        "label": "ספרייה מקומית"
+        "label": "ספרייה מקומית",
+        "description": "נתיב מוחלט בקצה האחורי של Termix שבו מצב מקומי כותב תמונות. לעולם לא מוצג לאחר שמירה. ריק משתמש ב-TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
         "label": "נתיב המארח",
         "description": "תצוגת המארח של הספרייה המקומית שמקבלים סוכני הטרמינל."
       },
       "imageTtlMs": {
-        "label": "TTL (אלפיות שנייה)"
+        "label": "TTL (אלפיות שנייה)",
+        "description": "כמה זמן נשמרת תמונה שהועלתה, במילישניות. ריק משתמש ב-TERMIX_IMAGE_TTL_MS או שעה אחת."
       },
       "imageMaxCount": {
-        "label": "ספירת תמונות מקסימלית"
+        "label": "ספירת תמונות מקסימלית",
+        "description": "רוב התמונות נשמרות בבת אחת. ריק משתמש ב-TERMIX_MAX_IMAGE_COUNT או 100."
       },
       "imageMaxBytes": {
-        "label": "מספר בייטים מקסימלי לאחסון"
+        "label": "מספר בייטים מקסימלי לאחסון",
+        "description": "רוב הבייטים של תמונות נשמרים בבת אחת. ריק משתמש ב-TERMIX_MAX_IMAGE_STORAGE_BYTES או 5 ג'יגה-בייט."
+      },
+      "sessionPersistence": {
+        "label": "שמירת סשנים לאחר ניתוק",
+        "description": "יש להשאיר מסוף מנותק פעיל בשרת למשך הזמן הנ\"ל, כך שפתיחה מחדש של הכרטיסייה שלו תמשיך מהנקודה שבה היא הפסיקה."
       },
       "newHostAutoTmux": {
         "label": "אוטו-טימוקס",
         "description": "הפעלת טרמינלים של מארחים חדשים בתוך tmux כך שההפעלות ישרדו ניתוקים (צריך tmux על המארח)"
+      },
+      "newHostTheme": {
+        "label": "ערכת נושא למארחים חדשים",
+        "description": "ערכת הנושא של הטרמינל שאיתה מתחיל מארח חדש."
+      },
+      "newHostFontFamily": {
+        "label": "גופן עבור מארחים חדשים",
+        "description": "גופן הטרמינל שבו מתחיל מארח חדש."
+      },
+      "newHostFontSize": {
+        "label": "גודל גופן עבור מארחים חדשים",
+        "description": "גודל הגופן של הטרמינל שבו מתחיל מארח חדש, בפיקסלים."
+      },
+      "newHostCursorStyle": {
+        "label": "סגנון סמן עבור מארחים חדשים"
+      },
+      "newHostCursorBlink": {
+        "label": "סמן מהבהב עבור מארחים חדשים"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "הפעלת סרגל הכלים של הטרמינל",
         "description": "הצג סרגל כלים לגישה מהירה המעוגן למסוף הפעיל עבור הכלים והסטטיסטיקות החיות של מארח זה"
       },
+      "terminalToolbarPosition": {
+        "label": "מיקום סרגל הכלים",
+        "description": "היכן שסרגל הכלים נמצא בטרמינל. עדיין ניתן לגרור אותו משם.",
+        "bottom": "מרכז תחתון",
+        "bottomLeft": "למטה משמאל",
+        "bottomRight": "למטה מימין",
+        "top": "מרכז עליון",
+        "topLeft": "למעלה משמאל",
+        "topRight": "למעלה מימין"
+      },
+      "terminalToolbarStartState": {
+        "label": "מצב התחלה של סרגל הכלים",
+        "description": "האם סרגל הכלים נפתח מורחב או ממוזער כאשר הטרמינל מתחבר",
+        "expanded": "מוּרחָב",
+        "collapsed": "ממוזער"
+      },
+      "terminalToolbarDisplay": {
+        "label": "מצב תצוגה בסרגל הכלים",
+        "description": "כיצד מוצגים כפתורי סרגל הכלים. האפשרות \"השימוש האחרון\" שומרת על כל מה שבחרת בסרגל הכלים.",
+        "remember": "בשימוש אחרון",
+        "icon": "סמל בלבד",
+        "labeled": "סמלים ותוויות",
+        "expanded": "מורחב עם סטטיסטיקות"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "הצג סטטיסטיקות בזמן אמת",
+        "description": "הצג סטטיסטיקות של מארח חי מעל לחצני סרגל הכלים במצב מורחב"
+      },
+      "terminalToolbarFade": {
+        "label": "דעיכה כאשר במצב סרק",
+        "description": "העמעם את סרגל הכלים עד שתעביר את העכבר מעליו"
+      },
       "enableCommandHistory": {
         "label": "היסטוריית פקודות",
         "description": "פקודות הקלטה פועלות בטרמינל זה לצורך היסטוריה והשלמה אוטומטית"
       },
       "enableTerminal": {
-        "label": "הפעלת טרמינל"
+        "label": "הפעלת טרמינל",
+        "description": "הצע מסוף SSH עבור מארח זה."
+      },
+      "inheritAppearance": {
+        "label": "השתמש בברירות מחדל של המשתמש"
+      },
+      "theme": {
+        "label": "נוֹשֵׂא"
+      },
+      "cursorBlink": {
+        "label": "סמן מהבהב"
+      },
+      "cursorStyle": {
+        "label": "סגנון הסמן"
+      },
+      "fontSize": {
+        "label": "גודל גופן"
+      },
+      "fontFamily": {
+        "label": "גוֹפָן"
+      },
+      "scrollback": {
+        "label": "גלילה אחורה"
+      },
+      "letterSpacing": {
+        "label": "ריווח אותיות"
+      },
+      "lineHeight": {
+        "label": "גובה הקו"
+      },
+      "bellStyle": {
+        "label": "פַּעֲמוֹן"
+      },
+      "minimumContrastRatio": {
+        "label": "יחס ניגודיות מינימלי"
+      },
+      "backgroundImage": {
+        "label": "תמונת רקע"
+      },
+      "backgroundImageOpacity": {
+        "label": "אטימות תמונת הרקע"
+      },
+      "customThemeColors": {
+        "label": "צבעי ערכת נושא מותאמים אישית"
+      },
+      "rightClickSelectsWord": {
+        "label": "לחיצה ימנית בוחרת מילה"
+      },
+      "macOptionIsMeta": {
+        "label": "האפשרות היא מטא"
+      },
+      "fastScrollModifier": {
+        "label": "מקש גלילה מהירה"
+      },
+      "fastScrollSensitivity": {
+        "label": "מהירות גלילה מהירה"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "אוטו מוש"
+      },
+      "moshCommand": {
+        "label": "פקודת מוש"
+      },
+      "autoTmux": {
+        "label": "אוטומטי tmux"
+      },
+      "useSSHTitle": {
+        "label": "השתמש בכותרת SSH"
+      },
+      "syntaxHighlighting": {
+        "label": "הדגשת תחביר"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "קטגוריות של הדגשת תחביר"
+      },
+      "linkClickBehavior": {
+        "label": "לחיצה על קישור"
+      },
+      "localEcho": {
+        "label": "הד מקומי"
+      },
+      "passwordPromptAutoFill": {
+        "label": "הצעה למלא בקשות לסיסמה"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "מלאו הנחיות סודו"
+      },
+      "autoReconnect": {
+        "label": "התחבר מחדש באופן אוטומטי"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "לחיצה על קישור הטרמינל",
         "description": "אופן הפעולה המוגדר כברירת מחדל בעת לחיצה על קישורים בטרמינל"
+      },
+      "customThemes": {
+        "label": "ערכות נושא שנשמרו"
       }
     }
   },
   "palette": {
     "localTerminal": "מסוף מקומי"
   },
+  "permissions": {
+    "sessions": {
+      "title": "השתמש בהפעלות מסוף חיות",
+      "description": "מאפשר לתכונות אחרות, כגון שיתוף והקלטת סשנים, להגיע לסשנים החיים שלך במסוף."
+    },
+    "history": {
+      "title": "קרא היסטוריית פקודות",
+      "description": "מאפשר לתכונות אחרות, כגון עוזר הבינה המלאכותית, לקרוא את היסטוריית הפקודות שלך."
+    }
+  },
   "hosts": {
+    "tabTerminal": "מָסוֹף",
     "addHost": "הוסף מארח",
     "applyGlobalThemeTooltip": "החל ערכת נושא זו",
     "backgroundImageDesc": "כתובת URL אופציונלית לתמונת רקע של הטרמינל",
     "backgroundImageLabel": "כתובת אתר של תמונת רקע",
     "backgroundImageOpacityLabel": "אטימות תמונת הרקע",
     "backspaceMode": "מצב Backspace",
+    "backspaceModeControlH": "שליטה-H (BS)",
     "backspaceModeLabel": "מצב Backspace",
+    "backspaceModeNormal": "רגיל (DEL)",
     "behaviorAndAdvanced": "התנהגות ומתקדם",
     "bellStyle": "סגנון בל",
-    "bellStyleLabel": "סגנון פעמון",
+    "bellStyleBoth": "שְׁנֵיהֶם",
+    "bellStyleLabel": "סגנון בל",
+    "bellStyleNone": "אַף לֹא אֶחָד",
+    "bellStyleSound": "קוֹל",
+    "bellStyleVisual": "חָזוּתִי",
     "colorTheme": "ערכת צבעים",
     "cursorBlink": "מצמוץ סמן",
     "cursorBlinking": "סמן מהבהב",
     "cursorBlinkingDesc": "הפעל אנימציה מהבהבת עבור סמן הטרמינל",
     "cursorStyle": "סגנון הסמן",
+    "cursorStyleBar": "בַּר",
+    "cursorStyleBlock": "לַחסוֹם",
     "cursorStyleLabel": "סגנון הסמן",
+    "cursorStyleUnderline": "לָשִׂים דָגֵשׁ",
     "customThemeAnsiColors": "צבעי ANSI",
     "customThemeBackground": "רֶקַע",
     "customThemeBlack": "שָׁחוֹר",
@@ -263,8 +454,11 @@
     "enableAutoMoshDesc": "העדיפו Mosh על פני SSH אם זמין",
     "enableAutoTmux": "הפעל את Auto-Tmux",
     "enableAutoTmuxDesc": "שמרו על המעטפת שלכם וכל דבר שפועל בה בחיים גם לאחר ניתוקים והפעלות מחדש של הדפדפן על ידי הפעלתה בתוך tmux (tmux חייב להיות מותקן על המארח)",
-    "fastScrollModifier": "שינוי גלילה מהירה",
-    "fastScrollModifierLabel": "שינוי גלילה מהירה",
+    "fastScrollModifier": "משנה גלילה מהירה",
+    "fastScrollModifierAlt": "אלט",
+    "fastScrollModifierCtrl": "קונטרול",
+    "fastScrollModifierLabel": "משנה גלילה מהירה",
+    "fastScrollModifierShift": "מִשׁמֶרֶת",
     "fastScrollSensitivity": "רגישות גלילה מהירה",
     "fastScrollSensitivityLabel": "רגישות גלילה מהירה",
     "fontFamily": "משפחת גופנים",
@@ -280,13 +474,11 @@
     "lineHeight": "גובה הקו",
     "lineHeightLabel": "גובה הקו",
     "linkClickBehaviorConfirm": "הצג קופץ לפתיחה או להעתקה",
-    "linkClickBehaviorDefault": "ברירת מחדל (הגדרת מעקב אחר אפליקציה)",
     "linkClickBehaviorDesc": "שולט במה שקורה כשלוחצים על קישור בטרמינל. השתמשו ב'ברירת מחדל' כדי לעקוב אחר ההגדרה ברמת האפליקציה.",
     "linkClickBehaviorDirect": "פתח ישירות",
     "linkClickBehaviorLabel": "התנהגות לחיצה על קישור",
     "loadingHost": "טוען מארח...",
     "localEchoAuto": "אוֹטוֹמָטִי",
-    "localEchoDefault": "השתמש בהגדרה גלובלית",
     "localEchoDesc": "חזה הקשות מקלדת להדפסה בטוחות באופן מקומי בחיבורים איטיים. בקשות סיסמה וקלט בקרה לעולם לא יוחזרו.",
     "localEchoLabel": "הד מקומי",
     "localEchoOff": "כבוי",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "פיקוד מוש",
     "noSavedThemes": "עדיין אין ערכות נושא שנשמרו",
     "none": "אַף לֹא אֶחָד",
+    "passwordPromptAutoFillDesc": "הצע למלא את הסיסמה השמורה כאשר הטרמינל מבקש אחת. כבה כדי שלא ימלאו אוטומטית אף סיסמה במארח זה.",
+    "passwordPromptAutoFillLabel": "מילוי אוטומטי של סיסמת ההצעה",
+    "autoReconnectLabel": "חיבור מחדש אוטומטי",
+    "autoReconnectDesc": "מתחבר מחדש מעצמו כאשר חיבור ה-SSH נותק, כמו לאחר תקלה ברשת או שינה. שומר על גלילה לאחור.",
     "rightClickSelectsWord": "לחיצה ימנית בוחרת מילה",
     "rightClickSelectsWordLabel": "לחיצה ימנית בוחרת מילה",
     "rightClickSelectsWordShortDesc": "בחר את המילה שמתחת לסמן בלחיצה ימנית",
@@ -328,7 +524,39 @@
     "theme": "נוֹשֵׂא",
     "themePreview": "תצוגה מקדימה של ערכת נושא",
     "useSSHTitleDesc": "עדכן את כותרת הכרטיסייה מכותרת החלון של המעטפת במקום שם המארח",
-    "useSSHTitleLabel": "השתמש בכותרת חלון SSH"
+    "useSSHTitleLabel": "השתמש בכותרת חלון SSH",
+    "enableTunnel": "הפעלת מנהרה",
+    "enableFileManager": "הפעל את מנהל הקבצים",
+    "enableDocker": "הפעל את Docker",
+    "startupSnippet": "קטע הפעלה",
+    "quickActions": "פעולות מהירות",
+    "proxmoxLastSyncStatus": {
+      "success": "הַצלָחָה"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} דילג (לא נמצאה כתובת IP)",
+    "proxmoxStatsUrlCopied": "כתובת האתר של סטטיסטיקות Proxmox הועתקה ללוח",
+    "rdpUrlCopied": "כתובת ה-URL של RDP הועתקה",
+    "vncUrlCopied": "כתובת האתר של VNC הועתקה",
+    "filterAuthStepca": "שלב CA",
+    "guac": {
+      "noCredential": "אין אישורים (אישורים ישירים מופיעים למטה)",
+      "authTypeDirect": "יָשִׁיר",
+      "authTypeCredential": "תְעוּדָה",
+      "authTypeNone": "אַף לֹא אֶחָד",
+      "recordingPath": "נתיב ההקלטה",
+      "recordingName": "שם ההקלטה",
+      "saveHostFirst": "שמור את המארח תחילה.",
+      "sharingOptionsAfterSave": "אפשרויות שיתוף זמינות לאחר שמירת המארח.",
+      "permissionLevel": "רמת הרשאה",
+      "typeHeader": "סוּג",
+      "targetHeader": "יַעַד",
+      "permissionHeader": "רְשׁוּת",
+      "cancelBtn": "לְבַטֵל",
+      "savingBtn": "חִסָכוֹן...",
+      "updateHostBtn": "עדכון מארח",
+      "addHostBtn": "הוסף מארח"
+    },
+    "filterAuthVault": "קִמרוֹן"
   },
   "nav": {
     "history": "הִיסטוֹרִיָה",
@@ -354,16 +582,6 @@
     "startRecording": "התחל הקלטה",
     "stopRecording": "הפסקת ההקלטה"
   },
-  "terminalDefaults": {
-    "clearAll": "נקה הכל",
-    "description": "הגדר ערכים שכל מארח יורש אלא אם כן הוא עוקף אותם.",
-    "dialogDescription": "אלה חלים על מארחים שמשאירים הגדרה לא מוגדרת. כל דבר שמוגדר על מארח מנצח.",
-    "inherit": "לָרֶשֶׁת",
-    "manage": "לְנַהֵל",
-    "off": "כבוי",
-    "on": "עַל",
-    "title": "ברירות מחדל של חיבור"
-  },
   "keybindings": {
     "copy": "העתקת הבחירה",
     "paste": "לְהַדבִּיק",
@@ -374,7 +592,17 @@
     "appendEnterLabel": "לחץ על Enter לאחר השליחה",
     "clipboardPermissionNote": "ייתכן שתבקש הרשאה ללוח בעת השימוש הראשון בדפדפנים מסוימים.",
     "textRequired": "הזן את הטקסט לשליחה",
-    "controlCodeRequired": "הזן אות אחת עבור קוד הבקרה"
+    "controlCodeRequired": "הזן אות אחת עבור קוד הבקרה",
+    "builtIn": {
+      "copyCtrlC": "העתקת הבחירה (Ctrl+C, רק כאשר הטקסט נבחר)",
+      "copyCtrlShiftC": "העתקת בחירה (Ctrl+Shift+C)",
+      "copyCmdC": "העתקת בחירה (Cmd+C)",
+      "pasteCtrlShiftV": "הדבקה מהלוח (Ctrl+Shift+V)",
+      "ctrlW": "שלח Ctrl+W ל-shell (חסום מסגירת לשונית דפדפן)",
+      "ctrlT": "שלח Ctrl+T ל-shell (חסום פתיחת כרטיסיית דפדפן)",
+      "ctrlN": "שלח Ctrl+N ל-shell (חסום פתיחת חלון דפדפן)",
+      "ctrlQ": "שלח Ctrl+Q ל-shell (חסום את סגירת הדפדפן)"
+    }
   },
   "macros": {
     "title": "פקודות מאקרו",

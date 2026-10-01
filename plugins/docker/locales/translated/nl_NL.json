@@ -21,6 +21,11 @@
     "ports": "Havens",
     "noPorts": "Geen poorten",
     "start": "Begin",
+    "stop": "Stop",
+    "status": "Status",
+    "actions": "Acties",
+    "cardView": "Kaartweergave",
+    "listView": "Lijstweergave",
     "confirmRemoveContainer": "Weet je zeker dat je de container '{{name}}' wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "runningContainerWarning": "Waarschuwing: Deze container is momenteel actief. Als u deze verwijdert, wordt de container eerst gestopt.",
     "loadingContainers": "Containers laden...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "De container moet actief zijn om toegang te krijgen tot de console.",
     "verificationCodePrompt": "Voer de verificatiecode in.",
     "totpVerificationFailed": "TOTP-verificatie mislukt. Probeer het opnieuw.",
+    "browserSignInFailed": "Aanmelden is mislukt. Probeer het opnieuw.",
     "connectedTo": "Verbonden met {{containerName}}",
     "disconnected": "Verbinding verbroken",
     "consoleError": "Consolefout",
@@ -93,7 +99,10 @@
     "logs": "Logboeken",
     "stats": "Statistieken",
     "consoleTab": "Troosten",
-    "startContainerToAccess": "Start de container om toegang te krijgen tot de console."
+    "startContainerToAccess": "Start de container om toegang te krijgen tot de console.",
+    "noHostSelected": "Geen host geselecteerd",
+    "failedToFetchLogs": "Het ophalen van logbestanden is mislukt: {{error}}",
+    "failedToDownloadLogs": "Het downloaden van logbestanden is mislukt: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Bekijk containers, lees logboeken en bekijk statistieken op elke host waarop Docker draait."
   },
+  "terminal": {
+    "retry": "Opnieuw proberen",
+    "clipboardReadFailed": "Het lezen van het klembord is mislukt. Zorg ervoor dat de juiste klembordrechten zijn verleend.",
+    "clipboardWriteFailed": "Kopiëren naar klembord mislukt. Zorg ervoor dat de pagina via HTTPS of localhost wordt aangeboden."
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik Docker",
+      "description": "Open de Docker Manager en de containerconsoles op hosts waarop Docker is ingeschakeld."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Docker inschakelen"
+        "label": "Docker inschakelen",
+        "description": "Beheer containers op deze host."
       },
       "containerRuntime": {
         "label": "Container Runtime",
@@ -122,9 +143,5 @@
     "docsLink": "Documenten bekijken",
     "hostNotFound": "Host niet gevonden",
     "loadingHost": "Host wordt geladen..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Het lezen van het klembord is mislukt. Zorg ervoor dat de juiste klembordrechten zijn verleend.",
-    "clipboardWriteFailed": "Kopiëren naar klembord mislukt. Zorg ervoor dat de pagina via HTTPS of localhost wordt aangeboden."
   }
 }

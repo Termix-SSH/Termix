@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Avvisi"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare gli avvisi",
+      "description": "Ricevi notifiche nella casella di posta e inoltrale ai tuoi canali."
+    }
+  },
+  "onboarding": {
+    "feature": "Avvisi",
+    "featureDesc": "Tutte le notifiche in un'unica casella di posta, inviate anche a Discord, ntfy, via email o tramite webhook, a seconda delle tue preferenze."
+  },
+  "settings": {
+    "group": {
+      "general": "Generale",
+      "email": "Email"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Comunicazioni di Termix",
+        "description": "Mostra le notizie del team Termix, come avvisi di sicurezza e rilasci, direttamente nella casella di posta di tutti."
+      },
+      "retentionDays": {
+        "label": "Mantieni gli avvisi per (giorni)",
+        "description": "Gli avvisi più vecchi vengono rimossi da tutte le caselle di posta."
+      },
+      "smtpHost": {
+        "label": "server SMTP",
+        "description": "Necessario per i canali email. Lasciare vuoto per disattivare le email.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "porta SMTP",
+        "description": "Solitamente 587 con STARTTLS o 465 con TLS."
+      },
+      "smtpSecure": {
+        "label": "Utilizzare TLS fin dall'inizio",
+        "description": "Attivare la porta 465. Disattivare la porta 587, che si aggiorna automaticamente a TLS."
+      },
+      "smtpUser": {
+        "label": "nome utente SMTP",
+        "description": "Lascia vuoto se il server non richiede l'accesso tramite login."
+      },
+      "smtpPassword": {
+        "label": "password SMTP",
+        "description": "Archiviato in forma crittografata."
+      },
+      "smtpFrom": {
+        "label": "Da indirizzo",
+        "description": "Gli avvisi del mittente provengono da.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "popup di avviso",
+        "description": "Quali nuovi avvisi compaiono mentre usi Termix? Arrivano sempre nella tua casella di posta.",
+        "all": "Tutti gli avvisi",
+        "warning": "avvertimenti e critici",
+        "critical": "Solo critico",
+        "off": "Nessuno"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Posta in arrivo",
+    "channels": "Canali",
+    "rules": "Regole di consegna"
+  },
+  "severity": {
+    "info": "Info",
+    "success": "Successo",
+    "warning": "Attenzione",
+    "critical": "Critico"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Apri",
+    "view": "Visualizza",
+    "unread": "Non letto",
+    "deliveryFailed_one": "{{count}} canale non riuscito",
+    "deliveryFailed_other": "{{count}} canali non funzionanti",
+    "markRead": "Segna come letto",
+    "markUnread": "Segna come non letto",
+    "markAllRead": "Segna tutto come letto",
+    "delete": "Elimina",
+    "clearRead": "Elimina gli avvisi di lettura",
+    "cleared_one": "Avviso eliminato {{count}}",
+    "cleared_other": "Avvisi eliminati {{count}}",
+    "filterAll": "Tutte",
+    "filterUnread": "Non letto",
+    "anySeverity": "Qualsiasi gravità",
+    "anySource": "Qualsiasi fonte",
+    "openAll": "Apri in una scheda",
+    "empty": "Nessun avviso per ora.",
+    "emptyUnread": "Sei al corrente di tutto.",
+    "loadMore": "Carica altro"
+  },
+  "channels": {
+    "intro": "I canali sono i punti in cui gli avvisi possono essere inviati al di fuori di Termix. Le regole di consegna selezionano quali avvisi li utilizzano.",
+    "add": "Aggiungi canale",
+    "edit": "Modifica canale",
+    "test": "Invia un test",
+    "testSent": "Avviso di prova inviato",
+    "testFailed": "Test fallito: {{error}}",
+    "deleteConfirm": "Eliminare il canale \"{{name}}\"?",
+    "deleted": "Canale eliminato",
+    "empty": "Ancora nessun canale disponibile.",
+    "enabled": "Abilitato",
+    "needsSave": "Questo canale deve essere aperto e salvato nuovamente prima di poter inviare messaggi.",
+    "name": "Nome",
+    "nameRequired": "Nome obbligatorio",
+    "type": "Tipo",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discord",
+      "email": "Email"
+    },
+    "emailUnavailable": "Per l'invio di email è necessario un server SMTP, che l'amministratore configura nelle impostazioni degli avvisi.",
+    "webhookUrl": "URL",
+    "webhookHint": "Recupera un corpo JSON per ogni avviso.",
+    "method": "Metodo",
+    "headers": "Intestazioni",
+    "headersHint": "Uno per riga, ad esempio Nome: valore.",
+    "ntfyServer": "URL server",
+    "ntfyTopic": "Argomento",
+    "ntfyToken": "Token di accesso (facoltativo)",
+    "discordUrl": "URL del webhook di Discord",
+    "discordHint": "Dalle impostazioni del canale su Discord, alla voce Integrazioni.",
+    "discordUsername": "Nome visualizzato (facoltativo)",
+    "discordAvatar": "URL dell'avatar (facoltativo)",
+    "emailTo": "Invia a",
+    "emailHint": "Separare gli indirizzi con delle virgole.",
+    "privateNetwork": "Consentire un indirizzo di rete privato",
+    "privateNetworkHint": "Funziona solo per gli host che un amministratore consente nell'elenco degli endpoint privati."
+  },
+  "rules": {
+    "intro": "Una regola di consegna invia avvisi corrispondenti ai tuoi canali. Gli avvisi rimangono sempre anche nella posta in arrivo.",
+    "add": "Aggiungi regola",
+    "edit": "Modifica regola",
+    "empty": "Non ci sono ancora regole, quindi gli avvisi vengono visualizzati solo nella casella di posta.",
+    "needChannel": "Aggiungi prima un canale.",
+    "enabled": "Abilitato",
+    "name": "Nome",
+    "nameRequired": "Nome obbligatorio",
+    "match": "Avvisi da inviare",
+    "matchHint": "* per tutto, automazioni.* per tutto ciò che riguarda le automazioni, o un tipo specifico.",
+    "minSeverity": "Almeno",
+    "channels": "Invia a",
+    "channelRequired": "Scegli almeno un canale",
+    "deleteConfirm": "Eliminare la regola \"{{name}}\"?",
+    "everything": "Qualunque cosa",
+    "summary": "{{match}}, {{severity}} o superiore, a {{channels}}"
+  },
+  "actions": {
+    "cancel": "Annulla",
+    "save": "Salva",
+    "saving": "Salvando...",
+    "delete": "Elimina"
+  },
+  "widget": {
+    "name": "Feed degli avvisi",
+    "description": "I tuoi ultimi avvisi, con un modo rapido per contrassegnarli come letti.",
+    "maxItems": "Numero massimo di elementi",
+    "showRead": "Mostra gli avvisi di lettura",
+    "allClear": "Tutto a posto",
+    "loading": "Caricamento in corso..."
+  }
+}

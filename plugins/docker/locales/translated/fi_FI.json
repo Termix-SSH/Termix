@@ -21,6 +21,11 @@
     "ports": "Portit",
     "noPorts": "Ei portteja",
     "start": "Aloita",
+    "stop": "Stop",
+    "status": "Status",
+    "actions": "Toiminnot",
+    "cardView": "Korttinäkymä",
+    "listView": "Listanäkymä",
     "confirmRemoveContainer": "Haluatko varmasti poistaa säilön '{{name}}'? Tätä toimintoa ei voi perua.",
     "runningContainerWarning": "Varoitus: Tämä säilö on parhaillaan käynnissä. Sen poistaminen pysäyttää säilön ensin.",
     "loadingContainers": "Konttien lastaus...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Kontin on oltava käynnissä, jotta konsoliin pääsee käsiksi.",
     "verificationCodePrompt": "Syötä vahvistuskoodi",
     "totpVerificationFailed": "TOTP-vahvistus epäonnistui. Yritä uudelleen.",
+    "browserSignInFailed": "Kirjautuminen epäonnistui. Yritä uudelleen.",
     "connectedTo": "Yhdistetty kohteeseen {{containerName}}",
     "disconnected": "Yhteys katkennut",
     "consoleError": "Konsolivirhe",
@@ -93,7 +99,10 @@
     "logs": "Lokit",
     "stats": "Tilastot",
     "consoleTab": "Konsoli",
-    "startContainerToAccess": "Käynnistä säilö päästäksesi konsoliin"
+    "startContainerToAccess": "Käynnistä säilö päästäksesi konsoliin",
+    "noHostSelected": "Ei valittua isäntää",
+    "failedToFetchLogs": "Lokien nouto epäonnistui: {{error}}",
+    "failedToDownloadLogs": "Lokien lataus epäonnistui: {{error}}"
   },
   "nav": {
     "docker": "Satamatyöläinen"
@@ -102,10 +111,22 @@
     "feature_docker": "Satamatyöläinen",
     "feature_docker_desc": "Katso säilöjä, lue lokeja ja seuraa tilastoja millä tahansa Dockeria käyttävällä isännällä."
   },
+  "terminal": {
+    "retry": "Yritä uudelleen",
+    "clipboardReadFailed": "Leikepöydän lukeminen epäonnistui. Varmista, että leikepöydän käyttöoikeudet on myönnetty.",
+    "clipboardWriteFailed": "Kopiointi leikepöydälle epäonnistui. Varmista, että sivua käytetään HTTPS:n tai paikallisen isännän kautta."
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä Dockeria",
+      "description": "Avaa Docker-hallinta ja säilökonsolit isännillä, joissa Docker on käytössä."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Ota Docker käyttöön"
+        "label": "Ota Docker käyttöön",
+        "description": "Hallitse säilöjä tällä isännöinnillä."
       },
       "containerRuntime": {
         "label": "Säilön suoritusaika",
@@ -122,9 +143,5 @@
     "docsLink": "Näytä dokumentit",
     "hostNotFound": "Isäntää ei löydy",
     "loadingHost": "Ladataan isäntää..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Leikepöydän lukeminen epäonnistui. Varmista, että leikepöydän käyttöoikeudet on myönnetty.",
-    "clipboardWriteFailed": "Kopiointi leikepöydälle epäonnistui. Varmista, että sivua käytetään HTTPS:n tai paikallisen isännän kautta."
   }
 }

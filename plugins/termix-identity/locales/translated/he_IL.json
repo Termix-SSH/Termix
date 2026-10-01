@@ -23,7 +23,7 @@
     "provisionLabel": "הקצאת שרת",
     "publishTitle": "פרסום מפתח ציבורי",
     "generate": "לִיצוֹר",
-    "generateTooltip": "צור זוג מפתחות Ed25519 - מפרסם את המפתח הציבורי ומוריד את המפתח הפרטי למכשיר שלך",
+    "generateTooltip": "צור זוג מפתחות Ed25519. מפרסם את המפתח הציבורי ומוריד את המפתח הפרטי למכשיר שלך.",
     "saveToVault": "שמור אל אישורים",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... משתמש@מארח",
     "labelPlaceholder": "תווית (אופציונלי)",
@@ -32,7 +32,7 @@
     "keyPublished": "מפתח פורסם",
     "addKeyFailed": "הוספת המפתח נכשלה",
     "generatedSaved": "זוג המפתחות נוצר ונשמר בכספת האישורים שלך. המפתח הפרטי גם הורד.",
-    "generatedOnly": "נוצר זוג מפתחות - הורד מפתח פרטי (מוצג פעם אחת בלבד).",
+    "generatedOnly": "נוצר זוג מפתחות. הורד מפתח פרטי (מוצג פעם אחת בלבד).",
     "generateFailed": "יצירת המפתח נכשלה",
     "imported": "מפתח יובא מהאישור",
     "importFailed": "ייבוא המפתח נכשל",
@@ -56,7 +56,7 @@
     "caTrustLabel": "אמון בשרת (הפעלה כ-root)",
     "caRotate": "לְסוֹבֵב",
     "caRotateConfirm": "לסובב את רשות האישור? כל אישור שהיא חתמה עליו יפסיק להתקבל ויהיה צורך להנפיק אותו מחדש.",
-    "caRotated": "רשות אישורים (CA) סיבובית - אישורים קודמים בוטלו",
+    "caRotated": "רשות האישור הסתובבה. אישורים קודמים בוטלו.",
     "caRotateFailed": "נכשל בסבב CA",
     "caDelete": "הסר את CA",
     "caDeleteConfirm": "להסיר את רשות האישורים?",
@@ -66,12 +66,21 @@
     "issueCert": "תְעוּדָה",
     "issueCertTooltip": "הנפק אישור SSH עבור מפתח זה, חתום על ידי רשות האישור שלך",
     "certIssued": "תעודה הונפקה והורדה",
-    "certIssueFailed": "הנפקת האישור נכשלה"
+    "certIssueFailed": "הנפקת האישור נכשלה",
+    "docsLink": "הצג מסמכים",
+    "principalsLabel": "עקרונות SSH",
+    "principalsPlaceholder": "עיקרי SSH, למשל root"
   },
   "nav": {
     "termixId": "תְעוּדַת זֶהוּת"
   },
   "credentials": {
     "idBadge": "תְעוּדַת זֶהוּת"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש במזהה טרמיקס",
+      "description": "תבע ערך מזהה ציבורי, פרסם מפתחות SSH והפעל רשות אישורים."
+    }
   }
 }

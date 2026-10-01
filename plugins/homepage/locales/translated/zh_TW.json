@@ -18,6 +18,7 @@
   "homepage": {
     "title": "首頁",
     "addWidget": "新增小工具",
+    "noWidgetsInCategory": "No widgets in this category",
     "editWidget": "編輯小工具",
     "zoomIn": "放大",
     "zoomOut": "縮小",
@@ -38,7 +39,7 @@
     "description": "描述",
     "color": "顏色",
     "timezone": "時區",
-    "invalidTimezone": "時區無效。請使用 IANA 名稱，例如 America/New_York。",
+    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
     "showSeconds": "顯示秒數",
     "format12h": "12 小時制",
     "content": "內容",
@@ -59,6 +60,9 @@
     "maxItems": "最大項目數",
     "showDescription": "顯示描述",
     "widgetRssName": "RSS 摘要",
+    "rssNoFeedUrl": "Configure a feed URL in widget settings",
+    "rssLoadError": "Could not load feed",
+    "rssNoItems": "No items",
     "noHostSelected": "未選取主機",
     "displayedMetrics": "顯示的指標",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "精簡模式",
     "selectHosts": "選取主機",
     "listLayout": "清單",
-    "gridLayout": "格線"
+    "gridLayout": "格線",
+    "configureUrl": "Set a URL in the widget settings",
+    "embeddedContent": "Embedded content",
+    "noBookmarks": "No bookmarks",
+    "noSections": "No sections set up",
+    "noServices": "No services set up",
+    "configureLocation": "Set a location in the widget settings",
+    "bannerTextPlaceholder": "Banner text",
+    "serviceNamePlaceholder": "My service"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use the homepage",
+      "description": "View and edit the homepage canvas and dashboard service links."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Allowed private hosts",
+      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+    },
+    "privateCertificateAuthority": {
+      "label": "Private certificate authority (PEM)",
+      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+    }
   }
 }

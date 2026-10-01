@@ -21,6 +21,11 @@
     "ports": "端口",
     "noPorts": "无端口",
     "start": "启动",
+    "stop": "停止",
+    "status": "状态",
+    "actions": "操作",
+    "cardView": "Card view",
+    "listView": "List view",
     "confirmRemoveContainer": "确定要移除容器 '{{name}}' 吗？此操作无法撤销。",
     "runningContainerWarning": "警告：此容器正在运行。移除操作将先停止容器。",
     "loadingContainers": "正在加载容器...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "访问控制台需要容器处于运行状态",
     "verificationCodePrompt": "输入验证码",
     "totpVerificationFailed": "TOTP 验证失败，请重试。",
+    "browserSignInFailed": "Sign-in failed. Please try again.",
     "connectedTo": "已连接到 {{containerName}}",
     "disconnected": "已断开连接",
     "consoleError": "控制台错误",
@@ -93,7 +99,10 @@
     "logs": "日志",
     "stats": "统计",
     "consoleTab": "控制台",
-    "startContainerToAccess": "启动容器以访问控制台"
+    "startContainerToAccess": "启动容器以访问控制台",
+    "noHostSelected": "未选择主机",
+    "failedToFetchLogs": "获取日志失败：{{error}}",
+    "failedToDownloadLogs": "日志下载失败：{{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "在任何运行 Docker 的主机上查看容器、读取日志及监控运行状态。"
   },
+  "terminal": {
+    "retry": "重试",
+    "clipboardReadFailed": "从剪贴板读取失败。请确保已授予剪贴板权限。",
+    "clipboardWriteFailed": "复制到剪贴板失败。请确保页面通过 HTTPS 或 localhost 提供服务。"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Docker",
+      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "启用 Docker"
+        "label": "启用 Docker",
+        "description": "Manage containers on this host."
       },
       "containerRuntime": {
         "label": "容器运行时",
@@ -116,15 +137,11 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   },
   "hosts": {
     "docsLink": "查看文档",
     "hostNotFound": "未找到主机",
     "loadingHost": "正在加载主机..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "从剪贴板读取失败。请确保已授予剪贴板权限。",
-    "clipboardWriteFailed": "复制到剪贴板失败。请确保页面通过 HTTPS 或 localhost 提供服务。"
   }
 }

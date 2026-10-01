@@ -1,18 +1,22 @@
 {
-  "title": "รหัสผ่าน",
-  "signIn": "ลงชื่อเข้าใช้ด้วยรหัสผ่าน",
-  "loginFailed": "การเข้าสู่ระบบด้วยรหัสผ่านล้มเหลว",
-  "description": "ใช้ข้อมูลรับรอง WebAuthn/FIDO2 เพื่อเข้าสู่ระบบโดยไม่ต้องใช้รหัสผ่าน",
-  "namePlaceholder": "ชื่อรหัสผ่าน",
+  "title": "Passkeys",
+  "signIn": "Sign in with passkey",
+  "loginFailed": "Passkey login failed",
+  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
+  "namePlaceholder": "Passkey name",
+  "defaultName": "Passkey",
   "uv": {
-    "preferred": "ที่ต้องการ",
-    "required": "ที่จำเป็น",
-    "discouraged": "ท้อใจ"
+    "preferred": "Preferred",
+    "required": "Required",
+    "discouraged": "Discouraged"
   },
-  "add": "เพิ่มรหัสผ่าน",
-  "none": "ไม่มีการลงทะเบียนรหัสผ่านใดๆ",
-  "added": "เพิ่มรหัสผ่านแล้ว",
-  "addFailed": "ไม่สามารถเพิ่มรหัสผ่านได้",
-  "deleted": "รหัสผ่านถูกลบแล้ว",
-  "deleteFailed": "ไม่สามารถลบรหัสผ่านได้"
+  "add": "Add Passkey",
+  "none": "No passkeys registered.",
+  "added": "Passkey added",
+  "addFailed": "Failed to add passkey",
+  "delete": "Delete passkey",
+  "deleted": "Passkey deleted",
+  "deleteFailed": "Failed to delete passkey",
+  "unknownDevice": "unknown",
+  "synced": "synced"
 }

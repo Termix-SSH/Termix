@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Zobrazit automatizace",
+      "description": "Podívejte se na automatizace a jejich historii."
+    },
+    "create": {
+      "title": "Vytvářejte automatizace",
+      "description": "Přidejte nové automatizace."
+    },
+    "edit": {
+      "title": "Upravit automatizace",
+      "description": "Změňte stávající automatizace."
+    },
+    "delete": {
+      "title": "Smazat automatizace",
+      "description": "Odstraňte automatizace."
+    },
+    "run": {
+      "title": "Spouštění automatizací",
+      "description": "Ručně spusťte automatizaci."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Upravit automatizaci",
         "empty": "Zatím žádné automatizace. Vytvořte si automatizaci, která bude reagovat na metriku, plán nebo událost.",
         "emptyRuns": "Zatím žádné běhy.",
-        "emptyChannels": "Zatím žádné kanály. Přidejte jeden, abyste někam mohli odesílat oznámení.",
-        "noChannelsHint": "Zatím nejsou nastaveny žádné kanály. Přidejte jeden na kartě Kanály.",
-        "addChannel": "Přidat kanál",
-        "testChannel": "Test",
-        "channelTestSent": "Testovací oznámení odesláno",
-        "channelTestFailed": "Testovací oznámení selhalo",
-        "channelDeleted": "Kanál smazán",
-        "deleteChannelConfirm": "Smazat tento kanál? Automatizace, které ho používají, přestanou zasílat upozornění.",
+        "channelsHint": "Kanály se nastavují v části Upozornění",
+        "noChannelsHint": "Upozornění se vždy dostane do vaší schránky. Přidejte si do Upozornění kanály, aby se odesílalo i někam jinam.",
         "nameLabel": "Jméno",
         "namePlaceholder": "např. Vyčistit /data, když se zaplní",
         "nameRequired": "Jméno je povinné",
@@ -79,7 +95,7 @@
           "webhook": "Příchozí webhook"
         },
         "stepTypes": {
-          "notify": "Odeslat oznámení",
+          "notify": "Odeslat upozornění",
           "http": "Zavolat URL",
           "run_snippet": "Spustit úryvek",
           "run_command": "Spusťte příkaz",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Metoda",
           "body": "Tělo",
-          "channels": "Kanály",
+          "channels": "Také poslat na",
           "title": "Titul",
           "message": "Zpráva",
           "snippet": "Úryvek",
@@ -127,7 +143,7 @@
           "conditionRightPlaceholder": "Porovnat s",
           "variableName": "Název proměnné",
           "variableValue": "Hodnota",
-          "elevated": "Spusťte pomocí sudo",
+          "elevated": "Spustit se sudo",
           "onError": "Pokud se to nepodaří",
           "allowPrivateNetwork": "Povolit lokální síťové adresy",
           "allowPrivateNetworkHint": "Vyžadováno pro službu hostovanou na vašem lokálním serveru (LAN). Ve výchozím nastavení vypnuto, aby se zabránilo požadavkům na interní adresy."
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Zastav běh",
           "continue": "Pokračovat"
+        },
+        "needsPlugin": "Potřeby {{plugin}}",
+        "needsPluginHint": "Tato automatizace se přeskočí, dokud nebude znovu k dispozici funkce, kterou potřebuje.",
+        "offBadge": "Vypnuto",
+        "docsLink": "Zobrazit dokumenty",
+        "ago": {
+          "seconds": "Před {{count}}s",
+          "minutes": "{{count}}před m",
+          "hours": "{{count}}před hodinami",
+          "days": "Před {{count}}dny"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatizace",
     "feature_automations_desc": "Automaticky spouštět kroky, když se něco stane, a dostávat upozornění."
+  },
+  "maintenance": {
+    "title": "Údržba",
+    "description": "Během probíhající práce pozastavte automatizaci stavu hostitele, jeho kondice, metrik, kontejnerů a odpojení tunelů. Monitorování, ruční spuštění a plánované automatizace pokračují.",
+    "denied": "Nemáte oprávnění k zobrazení údržby.",
+    "sharedReadOnly": "Tento hostitel byl s vámi sdílen. Pouze jeho majitel může změnit údržbu.",
+    "failed": "Údržbu se nepodařilo aktualizovat.",
+    "active": "Údržba aktivní",
+    "estimated": "Předpokládané dokončení",
+    "noAutoEnd": "Odhad údržby neukončuje. Ukončete ji explicitně po dokončení prací.",
+    "endConfirm": "Ukončit údržbu a obnovit automatizace spouštěné událostmi pro tohoto hostitele?",
+    "confirmEnd": "Potvrdit konec",
+    "cancel": "Zrušit",
+    "end": "Ukončení údržby",
+    "action": "Akce",
+    "startNow": "Začněte hned",
+    "schedule": "Naplánovat na později",
+    "reason": "Důvod",
+    "startUtc": "První spuštění (UTC)",
+    "repeat": "Opakovat",
+    "once": "Jednou",
+    "weekly": "Týdně",
+    "monthly": "Měsíční",
+    "utcHelp": "Harmonogramy používají po celý rok UTC. Měsíční harmonogramy přeskakují měsíce bez vybraného dne. Plánovaná okna se nemohou překrývat; údržba překročením se provádí i v pozdějších oknech.",
+    "duration": "Odhadovaná doba trvání (minuty)",
+    "grace": "Dodatečná lhůta (minuty)",
+    "notify": "Upozornit jednou, pokud je stále offline po uplynutí odhadované doby plus lhůty.",
+    "addSchedule": "Přidat rozvrh",
+    "schedules": "Rozvrhy",
+    "noSchedules": "Žádné plány údržby.",
+    "completed": "Již začalo",
+    "minutes_one": "{{count}} minuta",
+    "minutes_other": "{{count}} minut",
+    "remove": "Odebrat plán",
+    "loadFailed": "Nepodařilo se obnovit stav údržby. Změny jsou zakázány, dokud nebude možné jej načíst.",
+    "loading": "Načítání stavu údržby…"
   }
 }

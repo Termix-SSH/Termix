@@ -41,7 +41,13 @@
         "lastSessionDescription": "Opdateres automatisk med din seneste faneopsætning. Anvend den til at gendanne det, du havde åbent.",
         "lastUsed": "Sidst brugt {{time}}",
         "neverUsed": "Aldrig anvendt",
-        "tabsSkipped": "Arbejdsområde anvendt — {{count}} faneblad(er) sprunget over (værten findes ikke længere): {{names}}"
+        "tabsSkipped": "Arbejdsområde anvendt, men {{count}} faneblad(er) blev sprunget over, fordi deres vært ikke længere findes: {{names}}",
+        "timeAgo": {
+          "seconds": "For {{count}}sekunder siden",
+          "minutes": "For {{count}}minutter siden",
+          "hours": "For {{count}}timer siden",
+          "days": "for {{count}}dage siden"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Arbejdsområder",
     "workflow_workspaces_desc": "Gem et sæt åbne faner, og åbn hele layoutet igen senere."
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug arbejdsområder",
+      "description": "Gem, anvend og administrer gemte fanebladlayouts."
+    }
   },
   "hosts": {
     "docsLink": "Se dokumenter"

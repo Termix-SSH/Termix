@@ -1,0 +1,27 @@
+{
+  "hint": "You can paste a 1Password reference (op://vault/item/field) instead of the secret. It is fetched from your secret source when connecting.",
+  "manage": "Manage secret sources",
+  "title": "Secret sources",
+  "description": "External password managers Termix reads secrets from at connect time. Currently 1Password Connect (self-hosted). The access token is stored encrypted with your data key.",
+  "new": "New source",
+  "nameLabel": "Friendly name",
+  "urlLabel": "Connect server URL",
+  "tokenLabel": "Connect access token",
+  "tokenKeep": "Leave empty to keep the current token",
+  "sharedLabel": "Share with all users (admins only, resolves while you are signed in)",
+  "shared": "shared",
+  "test": "Test",
+  "testOk": "Connected, {{count}} vault(s) visible",
+  "testFailed": "Connection test failed",
+  "required": "Name, server URL and token are required",
+  "saved": "Secret source saved",
+  "deleted": "Secret source deleted",
+  "settings": {
+    "admin": {
+      "privateEndpoints": {
+        "label": "Private endpoint allowlist",
+        "description": "Private or loopback hosts a secret source may reach, one per line. A self-hosted 1Password Connect server usually needs its own address listed here."
+      }
+    }
+  }
+}

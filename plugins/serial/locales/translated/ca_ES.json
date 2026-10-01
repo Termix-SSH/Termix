@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Sèrie"
+  },
   "serial": {
     "title": "Sèrie",
     "portLabel": "Port",
@@ -22,8 +25,5 @@
     "notSupported": "Les connexions en sèrie requereixen un navegador compatible amb l'API Web Serial (Chrome, Edge o Firefox 151+) o l'aplicació d'escriptori Termix.",
     "hideHint": "Podeu amagar la pestanya Sèrie a Perfil d'usuari > Aparença > Barra lateral > Navegació.",
     "browserPickerHint": "Feu clic a Connecta i el navegador obrirà un selector de ports per triar el dispositiu."
-  },
-  "nav": {
-    "serial": "Sèrie"
   }
 }

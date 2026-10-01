@@ -41,7 +41,13 @@
         "lastSessionDescription": "Päivittyy automaattisesti viimeisimmän välilehtijärjestyksen mukaan. Käytä sitä palauttaaksesi avoimena olleen sisällön.",
         "lastUsed": "Viimeksi käytetty {{time}}",
         "neverUsed": "Ei koskaan sovellettu",
-        "tabsSkipped": "Työtilaa käytetty — {{count}} välilehteä ohitettu (isäntä ei enää ole olemassa): {{names}}"
+        "tabsSkipped": "Työtilaa käytettiin, mutta {{count}} välilehteä ohitettiin, koska niiden isäntää ei enää ole: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s sitten",
+          "minutes": "{{count}}minuuttia sitten",
+          "hours": "{{count}}tuntia sitten",
+          "days": "{{count}}d sitten"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Työtilat",
     "workflow_workspaces_desc": "Tallenna joukko avoimia välilehtiä ja avaa koko asettelu uudelleen myöhemmin."
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä työtiloja",
+      "description": "Tallenna, käytä ja hallinnoi tallennettuja välilehtiasetteluja."
+    }
   },
   "hosts": {
     "docsLink": "Näytä dokumentit"

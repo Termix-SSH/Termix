@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Kezdőlap",
     "addWidget": "Widget hozzáadása",
+    "noWidgetsInCategory": "Nincsenek widgetek ebben a kategóriában",
     "editWidget": "Widget szerkesztése",
     "zoomIn": "Nagyítás",
     "zoomOut": "Kicsinyítés",
@@ -59,6 +60,9 @@
     "maxItems": "Max. tételek",
     "showDescription": "Leírás megjelenítése",
     "widgetRssName": "RSS-hírcsatorna",
+    "rssNoFeedUrl": "Hírcsatorna URL-címének konfigurálása a widget beállításaiban",
+    "rssLoadError": "Nem sikerült betölteni a hírcsatornát",
+    "rssNoItems": "Nincsenek elemek",
     "noHostSelected": "Nincs kiválasztva gazdagép",
     "displayedMetrics": "Megjelenített mutatók",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "Kompakt mód",
     "selectHosts": "Válasszon hosztokat",
     "listLayout": "Lista",
-    "gridLayout": "Rács"
+    "gridLayout": "Rács",
+    "configureUrl": "URL-cím beállítása a widget beállításaiban",
+    "embeddedContent": "Beágyazott tartalom",
+    "noBookmarks": "Nincsenek könyvjelzők",
+    "noSections": "Nincsenek beállított szakaszok",
+    "noServices": "Nincsenek szolgáltatások beállítva",
+    "configureLocation": "Helyszín beállítása a widget beállításaiban",
+    "bannerTextPlaceholder": "Banner szöveg",
+    "serviceNamePlaceholder": "A szolgáltatásom"
+  },
+  "permissions": {
+    "use": {
+      "title": "Használja a kezdőlapot",
+      "description": "A kezdőlap vásznának és az irányítópult szolgáltatáshivatkozásainak megtekintése és szerkesztése."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Engedélyezett privát tárhelyszolgáltatók",
+      "description": "Pontos privát vagy loopback hostnevek/IP-címek a Ping Status és az Egyéni API widgetekhez. A bejegyzéseket vesszővel vagy új sorral válassza el; hagyja ki a sémákat, portokat és elérési utakat. Üres blokkok a privát célállomások."
+    },
+    "privateCertificateAuthority": {
+      "label": "Magán hitelesítésszolgáltató (PEM)",
+      "description": "Opcionális megbízható CA csomag az engedélyezőlistán szereplő gazdagépekhez. A tanúsítvány-ellenőrzés továbbra is engedélyezve marad. Hagyja üresen a rendszer megbízható tárolójának használatához."
+    }
   }
 }

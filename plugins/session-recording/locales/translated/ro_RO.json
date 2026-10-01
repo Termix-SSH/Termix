@@ -3,8 +3,31 @@
     "sessionLogs": "Jurnalele de sesiune"
   },
   "hosts": {
-    "enableSessionRecording": "Înregistrarea sesiunilor",
+    "enableSessionRecording": "Înregistrarea sesiunii",
     "enableSessionRecordingDesc": "Înregistrați ieșirea sesiunii terminale pentru o revizuire ulterioară"
+  },
+  "permissions": {
+    "view": {
+      "title": "Vizualizați înregistrările sesiunilor",
+      "description": "Vizualizați și redați propriile înregistrări ale sesiunilor."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retenție (zile)",
+        "description": "Cât timp este păstrată o înregistrare a sesiunii înainte de a fi ștearsă automat."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Activează înregistrarea sesiunii",
+        "description": "Înregistrați ieșirea terminalului pentru această gazdă, astfel încât să o puteți reda sau descărca mai târziu."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Înregistrare"
   },
   "sessionLogs": {
     "title": "Jurnalele de sesiune",
@@ -21,6 +44,17 @@
     "copied": "Copiat!",
     "loadError": "Nu s-au putut încărca jurnalele de sesiune",
     "deleteError": "Nu s-a putut șterge jurnalul sesiunii",
-    "filterByHost": "Filtrare după gazdă..."
+    "filterByHost": "Filtrare după gazdă...",
+    "back": "Spate",
+    "empty": "(gol)",
+    "noResults": "Niciun rezultat pentru „{{query}}”",
+    "hostFallback": "Gazdă {{id}}",
+    "sessionFallback": "Sesiune {{id}}"
+  },
+  "player": {
+    "timeline": "Cronologia înregistrării",
+    "speed": "Viteză de redare",
+    "play": "Redă înregistrarea",
+    "pause": "Întrerupe înregistrarea"
   }
 }

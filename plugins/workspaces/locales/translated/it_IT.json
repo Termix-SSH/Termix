@@ -25,13 +25,13 @@
         "noWorkspaces": "Nessun spazio di lavoro salvato al momento. Salva la disposizione attuale delle schede per iniziare.",
         "tabCount": "{{count}} tab",
         "tabCount_other": "{{count}} schede",
-        "apply": "Fare domanda a",
+        "apply": "Applica",
         "applyConfirmTitle": "Applica l'area di lavoro",
         "applyConfirmDescription": "Applicando \"{{name}}\" chiuderai le schede correnti e le sostituirai con la disposizione salvata di quest'area di lavoro. Le modifiche non salvate al layout corrente andranno perse.",
         "applyConfirmButton": "Applica l'area di lavoro",
         "updateWithCurrent": "Aggiorna con la versione attuale",
         "updateWithCurrentConfirm": "Sovrascrivi \"{{name}}\" con la tua attuale disposizione delle schede?",
-        "rename": "Rinominare",
+        "rename": "Rinomina",
         "duplicate": "Duplicato",
         "duplicateNameSuffix": "{{name}} (copia)",
         "setDefault": "Imposta come predefinito",
@@ -41,7 +41,13 @@
         "lastSessionDescription": "Si aggiorna automaticamente con la disposizione delle schede più recente. Applicala per ripristinare quelle che avevi aperte.",
         "lastUsed": "Ultimo utilizzo {{time}}",
         "neverUsed": "mai applicato",
-        "tabsSkipped": "Area di lavoro applicata — {{count}} scheda(e) saltata(e) (l'host non esiste più): {{names}}"
+        "tabsSkipped": "Area di lavoro applicata, ma le schede {{count}} sono state ignorate perché il loro host non esiste più: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}secondi fa",
+          "minutes": "{{count}}m fa",
+          "hours": "{{count}}h fa",
+          "days": "{{count}}d fa"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Spazi di lavoro",
     "workflow_workspaces_desc": "Salva le schede aperte e riapri l'intero layout in seguito."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare gli spazi di lavoro",
+      "description": "Salva, applica e gestisci i layout delle schede salvati."
+    }
   },
   "hosts": {
     "docsLink": "Visualizza documentazione"

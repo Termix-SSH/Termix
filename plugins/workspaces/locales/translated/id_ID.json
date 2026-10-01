@@ -2,57 +2,69 @@
   "newUi": {
     "sidebar": {
       "workspaces": {
-        "title": "Ruang kerja",
-        "saveCurrent": "Simpan Saat Ini",
-        "saveCurrentTitle": "Simpan Ruang Kerja Saat Ini",
-        "saveCurrentDescription": "Simpan setiap tab yang terbuka, tata letak terpisah, dan susunan panel sebagai ruang kerja baru yang diberi nama.",
-        "nameLabel": "Nama",
-        "namePlaceholder": "misalnya, Debugging Produksi",
-        "nameRequired": "Nama ruang kerja wajib diisi.",
-        "colorLabel": "Warna",
-        "workspaceCreated": "Ruang kerja tersimpan",
-        "workspaceUpdated": "Ruang kerja diperbarui",
-        "workspaceDeleted": "Ruang kerja dihapus",
-        "workspaceDuplicated": "Ruang kerja diduplikasi",
-        "saveFailed": "Gagal menyimpan ruang kerja",
-        "updateFailed": "Gagal memperbarui ruang kerja",
-        "deleteFailed": "Gagal menghapus ruang kerja.",
-        "duplicateFailed": "Gagal menduplikasi ruang kerja.",
-        "loadFailed": "Gagal memuat ruang kerja",
-        "applyFailed": "Gagal menerapkan ruang kerja",
-        "deleteWorkspaceTitle": "Hapus Ruang Kerja",
-        "deleteWorkspaceDescription": "Apakah Anda yakin ingin menghapus \"{{name}}\"? Tindakan ini tidak dapat dibatalkan.",
-        "noWorkspaces": "Belum ada ruang kerja yang tersimpan. Simpan susunan tab Anda saat ini untuk memulai.",
+        "title": "Workspaces",
+        "saveCurrent": "Save Current",
+        "saveCurrentTitle": "Save Current Workspace",
+        "saveCurrentDescription": "Save every open tab, split layout, and pane arrangement as a new named workspace.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g., Prod Debugging",
+        "nameRequired": "Workspace name is required",
+        "colorLabel": "Color",
+        "workspaceCreated": "Workspace saved",
+        "workspaceUpdated": "Workspace updated",
+        "workspaceDeleted": "Workspace deleted",
+        "workspaceDuplicated": "Workspace duplicated",
+        "saveFailed": "Failed to save workspace",
+        "updateFailed": "Failed to update workspace",
+        "deleteFailed": "Failed to delete workspace",
+        "duplicateFailed": "Failed to duplicate workspace",
+        "loadFailed": "Failed to load workspaces",
+        "applyFailed": "Failed to apply workspace",
+        "deleteWorkspaceTitle": "Delete Workspace",
+        "deleteWorkspaceDescription": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+        "noWorkspaces": "No saved workspaces yet. Save your current tab arrangement to get started.",
         "tabCount": "{{count}} tab",
-        "tabCount_other": "{{count}} tab",
-        "apply": "Menerapkan",
-        "applyConfirmTitle": "Terapkan Ruang Kerja",
-        "applyConfirmDescription": "Menerapkan \"{{name}}\" akan menutup tab Anda saat ini dan menggantinya dengan susunan yang tersimpan di ruang kerja ini. Perubahan yang belum disimpan pada tata letak Anda saat ini akan hilang.",
-        "applyConfirmButton": "Terapkan Ruang Kerja",
-        "updateWithCurrent": "Perbarui dengan yang Terbaru",
-        "updateWithCurrentConfirm": "Timpa \"{{name}}\" dengan susunan tab Anda saat ini?",
-        "rename": "Ganti nama",
-        "duplicate": "Duplikat",
-        "duplicateNameSuffix": "{{name}} (salinan)",
-        "setDefault": "Tetapkan sebagai Default",
-        "unsetDefault": "Hapus sebagai Default",
-        "defaultBadge": "Bawaan",
-        "lastSession": "Sesi Terakhir",
-        "lastSessionDescription": "Diperbarui secara otomatis dengan susunan tab terbaru Anda. Terapkan untuk memulihkan tab yang sebelumnya Anda buka.",
-        "lastUsed": "Terakhir digunakan {{time}}",
-        "neverUsed": "Tidak pernah melamar",
-        "tabsSkipped": "Ruang kerja diterapkan — {{count}} tab dilewati (host tidak lagi ada): {{names}}"
+        "tabCount_other": "{{count}} tabs",
+        "apply": "Apply",
+        "applyConfirmTitle": "Apply Workspace",
+        "applyConfirmDescription": "Applying \"{{name}}\" will close your current tabs and replace them with this workspace's saved arrangement. Unsaved changes to your current layout will be lost.",
+        "applyConfirmButton": "Apply Workspace",
+        "updateWithCurrent": "Update with Current",
+        "updateWithCurrentConfirm": "Overwrite \"{{name}}\" with your current tab arrangement?",
+        "rename": "Rename",
+        "duplicate": "Duplicate",
+        "duplicateNameSuffix": "{{name}} (copy)",
+        "setDefault": "Set as Default",
+        "unsetDefault": "Remove as Default",
+        "defaultBadge": "Default",
+        "lastSession": "Last Session",
+        "lastSessionDescription": "Automatically updated with your most recent tab arrangement. Apply it to recover what you had open.",
+        "lastUsed": "Last used {{time}}",
+        "neverUsed": "Never applied",
+        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}} menit lalu",
+          "hours": "{{count}} jam lalu",
+          "days": "{{count}} detik lalu"
+        }
       }
     }
   },
   "nav": {
-    "workspaces": "Ruang kerja"
+    "workspaces": "Workspaces"
   },
   "onboarding": {
-    "workflow_workspaces": "Ruang kerja",
-    "workflow_workspaces_desc": "Simpan sekumpulan tab yang terbuka dan buka kembali seluruh tata letak nanti."
+    "workflow_workspaces": "Workspaces",
+    "workflow_workspaces_desc": "Save a set of open tabs and reopen the whole layout later."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use workspaces",
+      "description": "Save, apply and manage saved tab layouts."
+    }
   },
   "hosts": {
-    "docsLink": "Lihat dokumen"
+    "docsLink": "View docs"
   }
 }

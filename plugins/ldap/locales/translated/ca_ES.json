@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "Inicia la sessió amb LDAP",
   "loginWithProvider": "Inicia la sessió amb {{name}}",
   "loading": "S'està carregant...",
   "requiredField": "Aquest camp és obligatori",
   "username": "Nom d'usuari LDAP",
   "password": "Contrasenya LDAP",
   "signIn": "Inicia la sessió",
+  "permissions": {
+    "manage": {
+      "title": "Gestiona els directoris LDAP",
+      "description": "Afegiu, canvieu i elimineu els directoris LDAP amb què les persones poden iniciar sessió."
+    }
+  },
   "providers": {
     "docsLink": "Veure documents",
+    "none": "No hi ha cap directori LDAP configurat.",
+    "add": "Afegeix un directori",
+    "edit": "Edita el directori",
+    "delete": "Suprimeix el directori",
+    "deleteConfirm": "Voleu suprimir aquest directori? Els usuaris que hi iniciïn la sessió no podran iniciar la sessió.",
     "name": "Nom de visualització",
+    "namePlaceholder": "Directori d'empreses",
+    "nameRequired": "Cal un nom de visualització",
     "enabled": "Activat",
+    "save": "Desa el directori",
     "saving": "Desant...",
     "saved": "Desat",
     "saveFailed": "No s'ha pogut desar",
     "deleted": "Suprimit",
     "deleteFailed": "No s'ha pogut suprimir",
+    "loadFailed": "No s'han pogut carregar els directoris LDAP",
     "cancel": "Cancel·la"
   },
   "fields": {
@@ -22,6 +38,7 @@
     "useTls": "Utilitza TLS (LDAPS)",
     "bindDn": "Vinculació de nom de domini",
     "bindPassword": "Contrasenya de vinculació",
+    "secretKeep": "S'ha desat una contrasenya. Deixeu-ho en blanc per conservar-la.",
     "userSearchBase": "Base de cerca d'usuaris",
     "userSearchFilter": "Filtre de cerca d'usuaris",
     "usernameAttr": "Atribut de nom d'usuari",

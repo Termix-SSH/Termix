@@ -19,11 +19,11 @@
     "deleted": "ID-ul Termix a fost șters",
     "deleteFailed": "Ștergerea ID-ului Termix a eșuat.",
     "copyFailed": "Copierea a eșuat",
-    "resolverUrlLabel": "URL-ul rezolvitorului public",
-    "provisionLabel": "Furnizarea unui server",
+    "resolverUrlLabel": "URL-ul rezolverului public",
+    "provisionLabel": "Furnizați un server",
     "publishTitle": "Publicați o cheie publică",
     "generate": "Genera",
-    "generateTooltip": "Generează o pereche de chei Ed25519 — publică cheia publică și descarcă cheia privată pe dispozitivul tău",
+    "generateTooltip": "Generează o pereche de chei Ed25519. Publică cheia publică și descarcă cheia privată pe dispozitivul tău.",
     "saveToVault": "Salvați în acreditări",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... utilizator@gazdă",
     "labelPlaceholder": "Etichetă (opțional)",
@@ -32,7 +32,7 @@
     "keyPublished": "Cheie publicată",
     "addKeyFailed": "Cheia nu a putut fi adăugată",
     "generatedSaved": "Perechea de chei a fost generată și salvată în seiful de acreditări. Cheia privată a fost, de asemenea, descărcată.",
-    "generatedOnly": "Pereche de chei generată — cheie privată descărcată (afișată o singură dată).",
+    "generatedOnly": "Pereche de chei generată. Cheie privată descărcată (afișată o singură dată).",
     "generateFailed": "Cheia nu a putut fi generată",
     "imported": "Cheie importată din credențiale",
     "importFailed": "Importarea cheii a eșuat",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Încredere pe un server (executare ca root)",
     "caRotate": "Roti",
     "caRotateConfirm": "Rotiți CA-ul? Fiecare certificat semnat de aceasta nu va mai fi acceptat și va trebui emis din nou.",
-    "caRotated": "CA rotită — certificatele anterioare revocate",
+    "caRotated": "CA a fost rotată. Certificatele anterioare au fost revocate.",
     "caRotateFailed": "Nu s-a putut roti CA",
     "caDelete": "Eliminați CA-ul",
     "caDeleteConfirm": "Eliminați autoritatea de certificare?",
@@ -66,12 +66,21 @@
     "issueCert": "Certificat",
     "issueCertTooltip": "Emiteți un certificat SSH pentru această cheie, semnat de CA-ul dvs.",
     "certIssued": "Certificat emis și descărcat",
-    "certIssueFailed": "Nu s-a putut emite certificatul"
+    "certIssueFailed": "Nu s-a putut emite certificatul",
+    "docsLink": "Vizualizați documentele",
+    "principalsLabel": "Principali SSH",
+    "principalsPlaceholder": "Principal(i) SSH, de exemplu root"
   },
   "nav": {
     "termixId": "ID-ul"
   },
   "credentials": {
     "idBadge": "ID-ul"
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește ID-ul Termix",
+      "description": "Revendicați un handle public, publicați chei SSH și rulați o autoritate de certificare."
+    }
   }
 }

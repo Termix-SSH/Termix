@@ -1,63 +1,64 @@
 {
   "networkGraph": {
     "addHost": "Adicionar host",
-    "addGroup": "Adicionar grupo",
-    "addLink": "Adicionar link",
-    "zoomIn": "Ampliar",
-    "zoomOut": "Diminuir o zoom",
-    "resetView": "Redefinir visualização",
-    "selectHost": "Selecione o host",
-    "chooseHost": "Escolha um anfitrião...",
-    "parentGroup": "Grupo de Pais",
-    "noGroup": "Nenhum grupo",
-    "groupName": "Nome do grupo",
-    "color": "Cor",
-    "source": "Fonte",
-    "target": "Alvo",
-    "moveToGroup": "Mover para o grupo",
-    "selectGroup": "Selecione o grupo...",
-    "addConnection": "Adicionar conexão",
-    "hostDetails": "Detalhes do anfitrião",
-    "removeFromGroup": "Remover do grupo",
-    "addHostHere": "Adicione o host aqui",
-    "editGroup": "Editar grupo",
-    "delete": "Excluir",
+    "addGroup": "Add Group",
+    "addLink": "Add Link",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetView": "Reset View",
+    "selectHost": "Select Host",
+    "chooseHost": "Choose a host...",
+    "parentGroup": "Parent Group",
+    "noGroup": "No Group",
+    "groupName": "Group Name",
+    "color": "Color",
+    "source": "Source",
+    "target": "Target",
+    "moveToGroup": "Move to Group",
+    "selectGroup": "Select group...",
+    "addConnection": "Add Connection",
+    "hostDetails": "Host Details",
+    "removeFromGroup": "Remove from Group",
+    "addHostHere": "Add Host Here",
+    "editGroup": "Edit Group",
+    "delete": "Apagar",
     "add": "Adicionar",
     "create": "Criar",
-    "move": "Mover",
+    "move": "Move",
     "connect": "Conectar",
-    "createGroup": "Criar grupo",
-    "selectSourcePlaceholder": "Selecione a fonte...",
-    "selectTargetPlaceholder": "Selecione o alvo...",
-    "invalidFile": "Arquivo inválido",
-    "hostAlreadyExists": "O host já está na topologia.",
-    "connectionExists": "A conexão já existe.",
-    "unknown": "Desconhecido",
-    "name": "Nome",
+    "createGroup": "Create Group",
+    "selectSourcePlaceholder": "Select Source...",
+    "selectTargetPlaceholder": "Select Target...",
+    "invalidFile": "Invalid File",
+    "hostAlreadyExists": "Host is already in the topology",
+    "connectionExists": "Connection already exists",
+    "unknown": "Unknown",
+    "name": "Name",
     "ip": "IP",
     "status": "Status",
-    "failedToAddNode": "Falha ao adicionar nó",
-    "sourceDifferentFromTarget": "A origem e o destino devem ser diferentes.",
-    "exportJSON": "Exportar JSON",
-    "importJSON": "Importar JSON",
-    "terminal": "terminal",
-    "fileManager": "Gerenciador de arquivos",
-    "tunnel": "Túnel",
-    "docker": "Docker",
-    "serverStats": "Métricas do host",
-    "hostMetrics": "Métricas do host",
-    "noNodes": "Ainda não há nós."
+    "failedToAddNode": "Failed to add node",
+    "sourceDifferentFromTarget": "Source and target must be different",
+    "exportJSON": "Export JSON",
+    "importJSON": "Import JSON",
+    "serverStats": "Métricas do Host",
+    "noNodes": "No nodes yet"
   },
   "nav": {
-    "networkGraph": "Gráfico de rede"
+    "networkGraph": "Gráfico da Rede"
   },
   "dashboard": {
-    "networkGraph": "Gráfico de rede"
+    "networkGraph": "Gráfico da Rede"
   },
   "dashboardTab": {
-    "nodes": "{{count}} nós"
+    "nodes": "{{count}} nodes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use network graph",
+      "description": "View and edit the network topology graph."
+    }
   },
   "hosts": {
-    "docsLink": "Ver documentos"
+    "docsLink": "Documentação"
   }
 }

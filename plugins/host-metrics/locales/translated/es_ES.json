@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Métricas del host"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Memoria",
@@ -160,7 +163,6 @@
       "firewallPersist": "Persistir reglas",
       "firewallPersisted": "Reglas del firewall persistidas",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard no está instalado en este host",
       "wgNoInterfaces": "No hay interfaces WireGuard configuradas",
       "wgInterfaceUp": "Activar",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Último handshake",
       "wgHandshakeNever": "Nunca",
       "wgTransfer": "Transferencia",
-      "tsNotInstalled": "Tailscale no está instalado en este host",
-      "tsRunning": "Ejecutándose",
-      "tsStopped": "Detenido",
-      "tsEnable": "Conectar",
-      "tsDisable": "Desconectar",
-      "tsEnabling": "Conectando a Tailscale...",
-      "tsDisabling": "Desconectando de Tailscale...",
-      "tsEnabled": "Tailscale conectado",
-      "tsDisabled": "Tailscale desconectado",
-      "tsIPs": "IPs de Tailscale",
-      "tsPeers": "Pares",
-      "tsOnline": "En línea",
-      "tsOffline": "Desconectado",
-      "tsExitNode": "Nodo de salida",
-      "tsExitNodeActive": "Nodo de salida activo",
-      "tsHostname": "Nombre de host"
+      "wgNoPeers": "Sin pares"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "a",
     "apply": "Aplicar",
     "viewHistory": "Ver Historial"
-  },
-  "nav": {
-    "hostMetrics": "Métricas del host"
   },
   "hosts": {
     "tabHostMetrics": "Métricas del host",
@@ -228,7 +212,7 @@
     "excludedMountsDesc": "Oculta puntos de montaje o tipos de sistema de archivos específicos (por ejemplo, nfs, cifs) del uso del disco y las alertas para este host.",
     "excludedMountsPlaceholder": "Ruta de montaje (/mnt/nas) o tipo de sistema de archivos (nfs, cifs)",
     "excludedMountsEmpty": "No se excluye ningún punto de montaje. Se muestran todos los sistemas de archivos detectados.",
-    "addExcludedMount": "Agregar",
+    "addExcludedMount": "Añadir",
     "visibleWidgets": "Widgets visibles",
     "widgetsMovedToHostMetrics": "Ahora las tarjetas se añaden, organizan y redimensionan directamente en la pestaña Métricas del host. Abre Métricas del host para este host y usa Personalizar para elegir qué tarjetas se muestran.",
     "hostNotFound": "Host no encontrado",
@@ -265,6 +249,9 @@
     "noHostSelected": "Ningún host seleccionado",
     "selectHost": "Seleccionar un host..."
   },
+  "terminalStatus": {
+    "unavailable": "Estadísticas en directo no disponibles"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Conectado"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizar métricas de host",
+      "description": "Consulta las métricas del host y utiliza los administradores de host (servicios, paquetes, cortafuegos y más) en los hosts a los que puedas acceder."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Intervalo de métricas (segundos)",
+        "description": "Con qué frecuencia se muestrea el host que se está visualizando, a menos que el host establezca su propio intervalo."
+      },
+      "historyRetentionDays": {
+        "label": "Retención del historial (días)",
+        "description": "¿Cuánto tiempo se conservan las muestras de métricas para los gráficos históricos?"
+      },
+      "enabledForNewHosts": {
+        "label": "Métricas activadas para nuevos anfitriones",
+        "description": "Si los nuevos hosts comienzan con la recopilación de métricas activada."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Unidad de temperatura",
+        "description": "Cómo se muestran las temperaturas en las métricas del host.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Recopilar métricas"
+      },
+      "metricsInterval": {
+        "label": "Intervalo de métricas (segundos)"
+      },
+      "enabledWidgets": {
+        "label": "Widgets habilitados"
+      },
+      "excludedMounts": {
+        "label": "Monturas excluidas"
+      },
+      "monitoredMounts": {
+        "label": "Senderos vigilados"
+      }
+    }
   }
 }

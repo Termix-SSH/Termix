@@ -20,6 +20,8 @@
     "webUiEndpointLabel": "Punt final {{number}}",
     "webUiIntegration": "Interfície d'usuari web",
     "webUiEndpointsSection": "Punts finals",
+    "webUiNoEndpoints": "Encara no hi ha cap punt final web. Fes servir Afegeix punt final per crear-ne un.",
+    "webUiEndpointsDisabled": "Activeu la interfície web que hi ha a sobre per afegir punts finals.",
     "webUiRequirementsText": "El navegador obre un punt final directe, de manera que el seu port ha de ser accessible des d'aquí. Termix obre un túnel SSH a través de la connexió SSH d'aquest host, de manera que el port només ha de ser accessible des de l'host.",
     "enableWebUi": "Habilita els punts finals web",
     "enableWebUiDesc": "Obriu les interfícies web d'aquest amfitrió des de la barra lateral.",

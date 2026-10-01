@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Käytä avustajaa",
+      "description": "Avaa avustaja ja kysy siltä asioita."
+    },
+    "manage_providers": {
+      "title": "Hallinnoi palveluntarjoajia",
+      "description": "Lisää, muokkaa ja poista tekoälypalveluntarjoajia ja niiden API-avaimia."
+    },
+    "apply_proposals": {
+      "title": "Käytä ehdotuksia",
+      "description": "Anna avustajan suorittaa ehdottamansa muutokset."
+    },
+    "services.use": {
+      "title": "Käytä tekoälyä muista ominaisuuksista",
+      "description": "Muut ominaisuudet saattavat soittaa avustajalle puolestasi."
+    },
+    "secrets.share": {
+      "title": "Jaa API-avain",
+      "description": "Muut ominaisuudet saattavat käyttää tallennettua tekoälyn API-avainta näkemättä sitä."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "Tekoälyavustaja on pois päältä tällä palvelimella.",
+    "providersNeedOptIn": "Ota yllä oleva tekoälyavustaja käyttöön lisätäksesi palveluntarjoajia.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "Tekoälyavustaja",
+        "description": "Salli käyttäjien ottaa tekoälyavustaja käyttöön. Kun tämä on pois päältä, avustaja on piilotettu ja estetty kaikilta."
+      },
+      "privateEndpoints": {
+        "label": "Sallitut yksityiset tekoälyisännät",
+        "description": "Yksityisen verkon isännät, joihin käyttäjät voivat ohjata palveluntarjoajan, kuten itse isännöity Ollama. Aseta yksi isäntä kullekin riville."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Ota tekoälyavustaja käyttöön",
+        "description": "Salli tekoälyavustaja auttaa tämän isännän terminaalissa. Oletusarvoisesti pois päältä, mutta tekoälyn on silti oltava käytössä tililläsi."
+      }
+    }
+  },
   "ai": {
     "title": "Assistentti",
     "send": "Lähetä",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Kysy tästä isännöitsijästä...",
     "noProvidersConfigured": "Tekoälypalveluntarjoajaa ei ole vielä määritetty. Lisää sellainen tekoälyavustaja-välilehdellä.",
     "runsInOpenTerminal": "Suoritetaan avoimessa pääteistunnossa.",
-    "runInTerminal": "Juokse"
+    "runInTerminal": "Juokse",
+    "terminalContextPrefill": "Tässä on päätteen tuloste:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Anna muiden ominaisuuksien käyttää tekoälypalveluntarjoajasi API-avainta omiin pyyntöihinsä. Avainta ei koskaan kopioida, ja voit peruuttaa tämän milloin tahansa."
+    }
   },
   "nav": {
     "ai": "Tekoäly"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Käynnistä se",
     "aiEnableDesc": "Lisää avustajan, joka lukee asetuksesi ja ehdottaa hyväksymiäsi muutoksia. Edellyttää toimittamaasi palveluntarjoajaa, kuten paikallisen Ollaman.",
     "aiNote": "Mitään ei lähetetä mihinkään ennen kuin lisäät palveluntarjoajan ja lähetät viestin."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "Tekoälyavustaja",
-        "description": "Salli käyttäjien ottaa tekoälyavustaja käyttöön. Kun tämä on pois päältä, avustaja on piilotettu ja estetty kaikilta."
-      },
-      "privateEndpoints": {
-        "label": "Sallitut yksityiset tekoälyisännät"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Ota tekoälyavustaja käyttöön",
-        "description": "Salli tekoälyavustaja auttaa tämän isännän terminaalissa. Oletusarvoisesti pois päältä, mutta tekoälyn on silti oltava käytössä tililläsi."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Näytä dokumentit"

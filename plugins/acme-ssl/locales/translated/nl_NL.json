@@ -1,16 +1,40 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Beheer ACME-certificaten",
+      "description": "Bekijk de certificaatstatus en vraag nu een nieuw certificaat aan."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Automatisch verlengen",
+      "description": "Controleer tweemaal per dag en vraag een nieuw certificaat aan als er geen certificaat is, het huidige certificaat het domein niet dekt of het huidige certificaat binnen 30 dagen verloopt."
+    },
     "domain": {
       "label": "Domein",
-      "placeholder": "termix.example.com",
-      "description": "De publieke domeinnaam voor het certificaat."
+      "description": "De publieke domeinnaam voor het certificaat.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "E-mail",
+      "description": "Contact-e-mailadres voor het ACME-account en meldingen over vervaldatums.",
       "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "Certificeringsinstantie",
+      "description": "Waar kan ik het certificaat verkrijgen? Gebruik een testomgeving om te testen zonder de limieten van Let's Encrypt te overschrijden.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (testomgeving)",
+      "custom": "Aangepaste ACME-directory"
+    },
+    "directoryUrl": {
+      "label": "ACME-directory-URL",
+      "description": "Alleen voor een aangepaste certificeringsinstantie. Moet een https-URL zijn."
     },
     "challengeType": {
       "label": "Uitdagingstype",
+      "description": "Hoe bewijs je dat je de domeinnaam bezit?",
+      "http": "HTTP - vereist poort 80 die bereikbaar is vanaf internet.",
       "cloudflare": "DNS (Cloudflare) - vereist een Cloudflare API-token"
     },
     "cloudflareToken": {
@@ -21,9 +45,14 @@
   "status": {
     "title": "Certificaatstatus",
     "none": "Geen certificaat",
+    "names": "Omslagen {{names}}",
+    "issuer": "Uitgegeven door {{issuer}}",
     "expires": "Verloopt {{date}}",
     "lastIssued": "Laatst uitgegeven {{date}}",
-    "request": "Certificaat aanvragen/verlengen",
-    "requesting": "Certificaat aanvragen..."
+    "lastError": "Laatste poging mislukt: {{error}}",
+    "missing": "Stel het domein, het e-mailadres en de velden in die uw uitdagingstype vereist, sla de wijzigingen op en vraag vervolgens een certificaat aan.",
+    "request": "Vraag nu uw certificaat aan",
+    "requesting": "Certificaat aanvragen...",
+    "issued": "Certificaat afgegeven en geïnstalleerd"
   }
 }

@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "File",
+    "sftp": "SFTP",
+    "openFileManager": "Apri Gestione file"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare il gestore file",
+      "description": "Sfoglia, modifica e trasferisci file tramite SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Abilita File Manager",
+        "description": "È possibile visualizzare e modificare i file su questo host tramite SFTP."
+      },
+      "defaultPath": {
+        "label": "Percorso predefinito"
+      },
+      "scpLegacy": {
+        "label": "Modalità SCP legacy"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Trasferimenti simultanei di file",
+        "description": "Quanti file il gestore locale/remoto affiancato carica o scarica contemporaneamente. Riduci questo valore se il tuo server limita i canali SFTP."
+      },
+      "confirmBeforeTrash": {
+        "label": "Conferma prima di spostare i file nel cestino",
+        "description": "Chiedi conferma prima di spostare i file remoti nel cestino. Anche la cancellazione definitiva richiede conferma."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Gestore file"
+  },
   "fileManager": {
     "noHostSelected": "Nessun host selezionato",
     "initializingEditor": "Inizializzazione editor...",
@@ -34,13 +72,14 @@
     "rename": "Rinomina",
     "uploading": "Caricamento in corso...",
     "uploadingFile": "Caricamento di {{name}}...",
+    "uploadingChunk": "Caricamento di {{name}}: {{percent}}% (parte {{chunk}} di {{total}})",
     "fileName": "Nome file",
     "folderName": "Nome cartella",
     "fileUploadedSuccessfully": "File \"{{name}}\" caricato con successo",
     "failedToUploadFile": "Caricamento file non riuscito",
     "uploadingFolderFiles": "Caricamento del/dei file {{count}} in corso...",
     "uploadedFolderFiles": "File caricati con successo {{count}}",
-    "uploadedFolderPartial": "Caricamento del/i file {{uploaded}} non riuscito/i {{failed}}",
+    "uploadedFolderPartial": "Uploaded {{uploaded}} file(s), {{failed}} failed",
     "fileDownloadedSuccessfully": "File \"{{name}}\" scaricato con successo",
     "failedToDownloadFile": "Scaricamento file non riuscito",
     "fileCreatedSuccessfully": "File \"{{name}}\" creato con successo",
@@ -68,7 +107,7 @@
     "localRevealInFileManager": "Mostra nel gestore file di sistema",
     "localCannotOpenFolder": "Impossibile aprire la cartella",
     "localItemCount": "{{count}} elementi",
-    "localSelectedCount": "{{count}} selezionato",
+    "localSelectedCount": "{{count}} selezionati",
     "back": "Indietro",
     "forward": "Inoltrare",
     "up": "Su",
@@ -81,16 +120,16 @@
     "localNothingToTransfer": "Nulla da trasferire",
     "localUploadComplete": "Caricato/i file {{count}}",
     "localUploadFailed": "Caricamento non riuscito",
-    "localUploadPartial": "Caricamento del/i file {{done}} non riuscito/i {{failed}}",
+    "localUploadPartial": "Uploaded {{done}} file(s), {{failed}} failed",
     "localDownloadComplete": "Scaricato il/i file {{count}}",
     "localDownloadFailed": "Download non riuscito",
     "localDownloadPartial": "Scaricamento del/dei file {{done}} , {{failed}} non riuscito",
     "localReplaceExistingPrompt": "{{count}} L'elemento/gli elementi esistono già in questa cartella. Sostituirli?",
-    "localReplace": "Sostituire",
+    "localReplace": "Sostituisci",
     "localSkipExisting": "Saltare",
     "localSkippedExisting": "Saltato {{count}} elemento/i esistente/i",
     "localUnsafeNamesSkipped": "Saltati {{count}} elementi i cui nomi non possono essere utilizzati su questo computer",
-    "localOpen": "Aprire",
+    "localOpen": "Apri",
     "localOpenFolder": "Apri la cartella",
     "localUploadToRemote": "Carica sul server",
     "localUploadToRemoteMany": "Carica {{count}} elementi sul server",
@@ -163,13 +202,13 @@
     "confirmDeleteMultipleItemsWithFolders": "Sei sicuro di voler eliminare definitivamente {{count}} elementi? Sono incluse cartelle e il loro contenuto.",
     "confirmDeleteFolder": "Sei sicuro di voler eliminare definitivamente la cartella \"{{name}}\" e tutto il suo contenuto?",
     "permanentDeleteWarning": "Questa azione non può essere annullata. Gli elementi verranno eliminati definitivamente dal server.",
-    "moveToTrashWarning": "L'articolo o gli articoli verranno spostati nel Cestino Termix e potranno essere ripristinati prima della scadenza del periodo di conservazione.",
+    "moveToTrashWarning": "L'articolo o gli articoli verranno spostati nel Cestino di Termix e potranno essere ripristinati prima della scadenza del periodo di conservazione.",
     "itemsMovedToTrash": "{{count}} elemento/i spostato/i nel Cestino",
     "trash": "Spazzatura",
     "trashDescription": "Gli elementi eliminati vengono conservati per {{days}} giorni su questo host.",
     "trashLoadFailed": "Impossibile caricare il Cestino",
     "trashEmpty": "Il cestino è vuoto",
-    "trashRestore": "Ripristinare",
+    "trashRestore": "Ripristina",
     "trashRestored": "Ripristinato {{name}}",
     "trashRestoreFailed": "Impossibile ripristinare l'elemento. Il percorso originale potrebbe già esistere.",
     "trashDeletePermanently": "Eliminare definitivamente",
@@ -290,6 +329,7 @@
     "connecting": "Connessione in corso...",
     "connectedSuccessfully": "Connesso con successo",
     "totpVerificationFailed": "Verifica TOTP non riuscita",
+    "browserSignInFailed": "Accesso non riuscito. Riprova.",
     "authenticationFailed": "Autenticazione non riuscita",
     "incorrectPassphrase": "Frase di accesso non corretta. Riprova.",
     "verificationCodePrompt": "Codice di verifica:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "Impossibile caricare il PDF",
     "pdfLoadError": "Si è verificato un errore durante il caricamento del file PDF.",
     "loadingPdf": "Caricamento PDF in corso...",
-    "loadingPage": "Caricamento pagina in corso..."
+    "loadingPage": "Caricamento pagina in corso...",
+    "cancel": "Annulla",
+    "copiedItems_one": "Elemento copiato {{count}}",
+    "copiedItems_other": "Elementi copiati {{count}}",
+    "deleteCopiedFileFailed": "Impossibile eliminare la copia di {{name}}: {{error}}",
+    "dragMovedItems_one": "Elemento {{count}} spostato in {{target}}",
+    "dragMovedItems_other": "Spostati {{count}} elementi in {{target}}",
+    "moveBackFileFailed": "Impossibile spostare {{name}} indietro: {{error}}",
+    "terminal": "Terminale: {{host}} ({{path}})",
+    "dragToDesktop": "Trascinando {{name}} sul desktop",
+    "dragFilesToDesktop": "Trascinamento dei file {{count}} sul desktop",
+    "folderDragUnsupported": "Il trascinamento delle cartelle sul desktop non è ancora supportato.",
+    "saveToDesktopFailed": "Salvataggio non riuscito: {{error}}",
+    "dragFailedDetail": "Trascinamento non riuscito: {{error}}",
+    "videoUnsupported": "Il tuo browser non è in grado di riprodurre questo formato video.",
+    "downloadToPlay": "Scaricalo per riprodurlo altrove",
+    "cannotPreviewType": "Impossibile visualizzare l'anteprima di questo tipo di file",
+    "cannotPreviewTypeHint": "Questo tipo di file non ha un'anteprima. Scaricalo per aprirlo in un'altra applicazione."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -335,33 +392,33 @@
     "destinationServer": "Server di destinazione",
     "selectHost": "Seleziona l'host",
     "noHostSelected": "Nessun host selezionato",
-    "move": "Mossa",
+    "move": "Sposta",
     "copy": "Copia",
-    "upload": "Caricamento",
+    "upload": "Carica",
     "itemsSelected": "{{count}} elemento selezionato",
     "itemsSelected_other": "{{count}} elementi selezionati",
     "ready": "Pronto",
-    "loadingHosts": "Caricamento host in corso...",
+    "loadingHosts": "Caricamento host...",
     "name": "Nome",
     "modified": "Modificato",
-    "size": "Misurare",
+    "size": "Dimensione",
     "noFiles": "Nessun file",
-    "open": "Aprire",
+    "open": "Apri",
     "up": "Su",
-    "refresh": "Rinfrescato",
+    "refresh": "Aggiorna",
     "copyToTarget": "Copia nella directory di destinazione",
-    "rename": "Rinominare",
-    "delete": "Eliminare",
+    "rename": "Rinomina",
+    "delete": "Elimina",
     "editPermissions": "Modifica autorizzazioni",
     "createNewFolder": "Crea una nuova cartella",
     "deleteSelectedItems": "Elimina gli elementi selezionati",
     "deleteConfirm": "Eliminare l'elemento selezionato {{count}}?",
     "deleteConfirm_other": "Eliminare gli elementi selezionati {{count}}?",
-    "cancel": "Cancellare",
+    "cancel": "Annulla",
     "save": "Salva",
     "folderCreated": "Cartella creata",
     "itemRenamed": "Elemento rinominato",
-    "actionFailed": "L'azione è fallita",
+    "actionFailed": "Azione non riuscita",
     "itemsDeleted": "{{count}} elemento eliminato",
     "itemsDeleted_other": "{{count}} elementi eliminati",
     "deleteFailed": "Eliminazione non riuscita",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "File Manager",
-    "tabFiles": "File",
-    "enableFileManagerMonitor": "Abilita File Manager",
-    "enableFileManagerMonitorDesc": "Sfoglia e gestisci i file su questo host tramite SFTP",
-    "scpLegacyLabel": "Modalità SCP legacy",
-    "scpLegacyDesc": "Usa il trasferimento file legacy per server che non supportano il sottosistema SFTP (ad es. server SSH embedded o minimali).",
-    "defaultPathLabel": "Percorso predefinito",
-    "fileManagerPathHint": "La directory da aprire all'avvio del file manager per questo host.",
     "fileManagerUrlCopied": "URL file manager copiato",
     "copyFileManagerUrlAction": "Copia URL File Manager",
     "docsLink": "Visualizza documentazione",
     "hostNotFound": "Host non trovato",
     "loadingHost": "Caricamento host..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Abilita File Manager"
-      },
-      "defaultPath": {
-        "label": "Percorso predefinito"
-      },
-      "scpLegacy": {
-        "label": "Modalità SCP legacy"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Trasferimenti simultanei di file",
-        "description": "Quanti file il gestore locale/remoto affiancato carica o scarica contemporaneamente. Riduci questo valore se il tuo server limita i canali SFTP."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "File"
   },
   "onboarding": {
     "feature_files": "Gestore file",
@@ -437,7 +464,7 @@
     "destinationPath": "Percorso di destinazione",
     "destMustBeDirectory": "La destinazione deve essere una directory per il trasferimento di più elementi",
     "goUp": "Salire",
-    "hostAuthRequired": "Autenticazione richiesta — aprire prima File Manager su questo host",
+    "hostAuthRequired": "Autenticazione richiesta. Apri prima il File Manager su questo host",
     "hostConnecting": "Connessione in corso…",
     "hostConnectionFailed": "Connessione non riuscita",
     "hostDisconnected": "Non connesso",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Hai scelto SFTP per-file.",
       "user_tar": "Hai scelto archivio tar.",
-      "tar_unavailable": "Tar non è disponibile su uno o entrambi gli host — verrà utilizzato SFTP per-file.",
-      "windows_host": "È coinvolto un host Windows — tar non viene utilizzato.",
-      "auto_multi_large": "Auto: più file, incluso un file grande ({{largestSize}}) con dati comprimibili — tar li raggruppa in un unico trasferimento.",
-      "auto_single_large_in_archive": "Auto: un file grande ({{largestSize}}) in questo set — SFTP per-file.",
-      "auto_many_incompressible": "Auto: dati per lo più incomprimibili — SFTP per-file.",
-      "auto_many_files": "Auto: molti file ({{fileCount}}) — tar riduce il sovraccarico per-file.",
+      "tar_unavailable": "Tar non è disponibile su uno o entrambi gli host, quindi verrà utilizzato SFTP per singolo file.",
+      "windows_host": "Poiché si tratta di un sistema host Windows, non viene utilizzato il comando tar.",
+      "auto_multi_large": "Automatico: più file, incluso un file di grandi dimensioni ({{largestSize}}) con dati comprimibili. Tar li raggruppa in un unico trasferimento.",
+      "auto_single_large_in_archive": "Automatico: un file di grandi dimensioni ({{largestSize}}) in questo set, quindi SFTP per file.",
+      "auto_many_incompressible": "Automatico: dati perlopiù incomprimibili, quindi SFTP file per file.",
+      "auto_many_files": "Auto: molti file ({{fileCount}}), tar riduce l'overhead per file.",
       "auto_default": "Auto: SFTP per-file per questo set."
     },
     "methodTar": "Archivio Tar",
@@ -471,7 +498,7 @@
     "metricsCompress": "Compressione sul sorgente: {{duration}}",
     "metricsExtract": "Estrazione sulla destinazione: {{duration}}",
     "metricsPrepare": "Prepara destinazione: {{duration}}",
-    "metricsRouteBenchmark": "Sondaggio di percorso — diretto: {{direct}}, relè: {{relay}}",
+    "metricsRouteBenchmark": "Sondaggio di percorso: diretto {{direct}}, relè {{relay}}",
     "metricsSourceDelete": "Rimozione dal sorgente: {{duration}}",
     "metricsTotal": "Totale: {{duration}}",
     "metricsTransfer": "End-to-end: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "Trasferimento non riuscito",
     "transferFailedRetryHint": "I dati parziali sono stati conservati sulla destinazione. Il nuovo tentativo riprenderà quando la connessione sarà ripristinata.",
     "transferPartialHint": "Impossibile trasferire: {{paths}}",
-    "transferSuccess": "Trasferimento completato"
+    "transferSuccess": "Trasferimento completato",
+    "metricsHopSourceRead": "Sorgente → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → dest (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → dest (locale): {{throughput}}"
   }
 }

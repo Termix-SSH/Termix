@@ -3,7 +3,8 @@
     "profile": "Vault 签名者配置文件",
     "selectProfile": "选择 Vault 配置文件...",
     "hint": "设置来自共享配置文件；连接时将使用 OIDC 登录 Vault。不会存储任何机密。",
-    "docs": "查看文档"
+    "docs": "查看文档",
+    "sharedProfile": "{{name}}（共享）"
   },
   "profiles": {
     "new": "新建配置文件",
@@ -27,12 +28,42 @@
     "save": "保存配置文件",
     "validationError": "名称、Vault 地址和 SSH 签名者角色为必填项",
     "none": "暂无 Vault 配置文件。",
-    "sharedBadge": "共享"
+    "sharedBadge": "已共享",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "hosts": {
+    "filterAuthVault": "Vault"
   },
   "dialog": {
     "title": "需要 Vault 登录",
     "description": "已打开窗口以登录 HashiCorp Vault。在该处完成登录；此连接将自动继续。",
     "failed": "Vault 认证失败，请重试。",
     "reopen": "重新打开登录窗口"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Vault SSH signing",
+      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+    },
+    "share": {
+      "title": "Share Vault profiles",
+      "description": "Mark a Vault signer profile as shared so every user can pick it."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault signer profile"
+      }
+    }
   }
 }

@@ -4,10 +4,12 @@
   },
   "editor": {
     "label": "Schritt CA",
-    "description": "Melden Sie sich über Ihren Identitätsanbieter an und lassen Sie Ihre Step-Zertifizierungsstelle ein kurzlebiges SSH-Zertifikat für diesen Host ausstellen. Die URL der Zertifizierungsstelle, der Root-Fingerabdruck und der OIDC-Provisioner werden von einem Administrator unter „Admin-Einstellungen“ festgelegt.",
-    "docs": "Dokumentation anzeigen"
+    "description": "Melden Sie sich über Ihren Identitätsanbieter an und lassen Sie Ihre Step-Zertifizierungsstelle ein kurzlebiges SSH-Zertifikat für diesen Host ausstellen. Die CA-URL, der Root-Fingerabdruck und der OIDC-Provisioner werden von einem Administrator im Step-CA-Bereich der Administratoreinstellungen festgelegt.",
+    "docs": "Dokumentation ansehen"
   },
   "dialog": {
+    "title": "Schritt CA-Authentifizierung erforderlich",
+    "description": "Schließen Sie die Authentifizierung in Ihrem Browser ab, um fortzufahren. Das Zertifikat bleibt so lange gültig, wie Ihre Zertifizierungsstelle dies zulässt.",
     "openBrowser": "Browser zum Authentifizieren öffnen",
     "waiting": "Warten auf Authentifizierung im Browser...",
     "authenticating": "Authentifizierung wird verarbeitet..."
@@ -17,15 +19,30 @@
     "timeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut."
   },
   "settings": {
+    "caUrl": {
+      "label": "CA-URL",
+      "description": "Die HTTPS-URL Ihrer Smallstep-Zertifizierungsstelle. Lassen Sie die Felder für die Zertifizierungsstellen-URL, den Fingerabdruck und den Provisioner leer, um die Step-Zertifizierungsstelle zu deaktivieren.",
+      "placeholder": "https://ca.internal:9000"
+    },
     "fingerprint": {
-      "label": "Root-Fingerabdruck (SHA-256)"
+      "label": "Root-Fingerabdruck (SHA-256)",
+      "description": "Der Fingerabdruck des Stammzertifikats, wie er durch den Schritt CA-Bootstrap angezeigt wird."
     },
     "provisioner": {
-      "label": "OIDC-Provisionername"
+      "label": "OIDC-Provisionername",
+      "description": "Der Name des OIDC-Provisioners der Zertifizierungsstelle. Wählen Sie anschließend „Step CA“ als Authentifizierungstyp des Hosts aus."
     },
     "privateEndpoints": {
       "label": "Zulässige private Step CA-Hosts",
-      "description": "Private Hosts, mit denen der Step CA-Zertifikatsfluss in Kontakt treten kann, kontaktieren möglicherweise die Zertifizierungsstelle selbst und, falls intern, Ihren Identitätsanbieter. Trennen Sie diese durch Kommas."
+      "description": "Private Hosts, die vom Step CA-Zertifikatsfluss kontaktiert werden, können Folgendes kontaktieren: die Zertifizierungsstelle selbst und, falls intern, Ihren Identitätsanbieter. Trennen Sie diese durch Kommas oder Zeilenumbrüche."
+    },
+    "redirectUri": {
+      "label": "Umleitungs-URI",
+      "description": "Registrieren Sie diese URL als zulässige Umleitungs-URI beim Identitätsanbieter hinter dem OIDC-Provisioner."
+    },
+    "legacyCallback": {
+      "label": "Verwenden Sie die alte Umleitungs-URI.",
+      "description": "Senden Sie weiterhin /host/step-ca-callback, die Umleitungs-URI, die vor Version 2.9 verwendet wurde. Deaktivieren Sie diese Funktion, sobald Ihr Identitätsanbieter die neue URI zulässt."
     }
   }
 }

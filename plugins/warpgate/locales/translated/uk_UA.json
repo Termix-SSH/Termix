@@ -2,8 +2,8 @@
   "settings": {
     "host": {
       "useWarpgate": {
-        "label": "Брама Варпгейту",
-        "description": "Цей хост підключається через проксі-сервер Warpgate SSH. Termix автоматично обробить процес затвердження на основі браузера після автентифікації."
+        "label": "Warpgate Gateway",
+        "description": "This host connects through a Warpgate SSH proxy. Termix will handle the browser-based approval flow automatically after authenticating."
       }
     }
   }

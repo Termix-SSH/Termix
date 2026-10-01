@@ -16,6 +16,16 @@
     "authFailed": "驗證失敗。請檢查您的憑證並再試一次。",
     "timeout": "驗證逾時。請再試一次。"
   },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
+  },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
   }

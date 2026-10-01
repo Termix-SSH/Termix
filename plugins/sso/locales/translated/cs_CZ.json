@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Přihlásit se pomocí SSO",
   "loginWithProvider": "Přihlaste se pomocí {{name}}",
   "loading": "Načítání...",
+  "permissions": {
+    "manage": {
+      "title": "Správa poskytovatelů jednotného přihlašování (SSO)",
+      "description": "Přidávat, měnit a odebírat poskytovatele SSO, přes které se lidé mohou přihlašovat."
+    }
+  },
   "providers": {
     "docsLink": "Zobrazit dokumenty",
     "none": "Nejsou nakonfigurováni žádní poskytovatelé jednotného přihlašování (SSO).",
@@ -9,19 +16,30 @@
     "delete": "Smazat poskytovatele",
     "deleteConfirm": "Smazat tohoto poskytovatele? Přidružení uživatelé se nebudou moci přihlásit.",
     "name": "Zobrazovaný název",
+    "namePlaceholder": "Můj poskytovatel SSO",
+    "nameRequired": "Je vyžadováno zobrazované jméno",
     "type": "Typ poskytovatele",
     "enabled": "Povoleno",
     "save": "Uložit poskytovatele",
-    "saving": "Ukládání...",
+    "saving": "Ukládání…",
     "saved": "Uloženo",
     "saveFailed": "Uložení se nezdařilo",
     "deleted": "Smazáno",
-    "deleteFailed": "Nepodařilo se smazat",
-    "cancel": "Zrušit"
+    "deleteFailed": "Smazání se nezdařilo",
+    "loadFailed": "Načtení poskytovatelů SSO se nezdařilo",
+    "cancel": "Zrušit",
+    "copy": "Kopie",
+    "copied": "Zkopírováno",
+    "redirectUri": "URI přesměrování",
+    "redirectUriDesc": "Zaregistrujte tuto URL adresu jako URL adresu pro přesměrování nebo zpětné volání u svého poskytovatele identity.",
+    "legacyCallback": "Zachovat starý identifikátor URI přesměrování",
+    "legacyCallbackDesc": "Tento poskytovatel byl nastaven před verzí Termix 2.9 a stále používá starý URI pro přesměrování, který funguje. Chcete-li přejít na nového, nejprve přidejte do svého poskytovatele identity {{uri}} a poté tuto možnost vypněte.",
+    "authorizationUrl": "Autorizační URL: {{url}}"
   },
   "fields": {
     "clientId": "ID klienta",
     "clientSecret": "Tajemství klienta",
+    "secretKeep": "Tajný kód je uložen. Pro jeho zachování nechte toto pole prázdné.",
     "issuerUrl": "URL vydavatele",
     "authUrl": "Autorizační URL",
     "tokenUrl": "URL tokenu",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Uživatelé v této skupině mají oprávnění k administraci. Pro deaktivaci synchronizace skupiny ponechte pole prázdné.",
     "caCert": "Vlastní certifikát certifikační autority",
     "caCertDesc": "Volitelné. Certifikát certifikační autority s kódováním PEM pro poskytovatele OIDC používající soukromou nebo samopodepsanou certifikační autoritu. Pro použití systémového úložiště důvěryhodných certifikátů ponechte pole prázdné."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Automatické přihlášení pomocí SSO",
+      "description": "Odesílejte návštěvníky přímo k prvnímu poskytovateli SSO namísto zobrazení přihlašovacího formuláře. Proměnná prostředí OIDC_SILENT_LOGIN_DEFAULT toto přepíše."
+    }
   }
 }

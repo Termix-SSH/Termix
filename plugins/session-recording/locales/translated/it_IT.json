@@ -6,6 +6,29 @@
     "enableSessionRecording": "Registrazione sessione",
     "enableSessionRecordingDesc": "Registra l'output della sessione del terminale per la revisione successiva"
   },
+  "permissions": {
+    "view": {
+      "title": "Visualizza le registrazioni delle sessioni",
+      "description": "Visualizza e riproduci le registrazioni delle tue sessioni."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Tempo di ritenzione (giorni)",
+        "description": "Per quanto tempo viene conservata la registrazione di una sessione prima di essere eliminata automaticamente."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Abilita la registrazione della sessione",
+        "description": "Registra l'output del terminale per questo host in modo da poterlo riprodurre o scaricare in seguito."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Registrazione"
+  },
   "sessionLogs": {
     "title": "Registri di sessione",
     "noLogs": "Ancora nessun registro di sessione",
@@ -21,6 +44,17 @@
     "copied": "Copiato!",
     "loadError": "Impossibile caricare i registri di sessione",
     "deleteError": "Impossibile eliminare il registro di sessione",
-    "filterByHost": "Filtra per host..."
+    "filterByHost": "Filtra per host...",
+    "back": "Indietro",
+    "empty": "(vuoto)",
+    "noResults": "Nessun risultato per \"{{query}}\"",
+    "hostFallback": "Ospite {{id}}",
+    "sessionFallback": "Sessione {{id}}"
+  },
+  "player": {
+    "timeline": "Cronologia delle registrazioni",
+    "speed": "Velocità di riproduzione",
+    "play": "Riproduci la registrazione",
+    "pause": "Metti in pausa la registrazione"
   }
 }

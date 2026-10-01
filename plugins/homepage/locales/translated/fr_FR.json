@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Accueil",
     "addWidget": "Ajouter un widget",
+    "noWidgetsInCategory": "Aucun widget dans cette catégorie",
     "editWidget": "Modifier le widget",
     "zoomIn": "Zoom avant",
     "zoomOut": "Zoom arrière",
@@ -59,6 +60,9 @@
     "maxItems": "Nombre max d'éléments",
     "showDescription": "Afficher la description",
     "widgetRssName": "Flux RSS",
+    "rssNoFeedUrl": "Configurez l'URL du flux dans les paramètres du widget.",
+    "rssLoadError": "Impossible de charger le flux",
+    "rssNoItems": "Aucun article",
     "noHostSelected": "Aucun hôte sélectionné",
     "displayedMetrics": "Métriques affichées",
     "metricCpu": "CPU",
@@ -81,7 +85,7 @@
     "uptimeUnavailable": "Uptime non disponible",
     "uptimeLabel": "Uptime",
     "overviewVersion": "Version",
-    "overviewUpdateLabel": "Mise à jour",
+    "overviewUpdateLabel": "Mettre à jour",
     "overviewUpdateAvailable": "Mise à jour disponible",
     "overviewDatabase": "Base de données",
     "overviewUptime": "Uptime",
@@ -157,6 +161,30 @@
     "compactMode": "Mode compact",
     "selectHosts": "Sélectionner les hôtes",
     "listLayout": "Liste",
-    "gridLayout": "Grille"
+    "gridLayout": "Grille",
+    "configureUrl": "Définissez une URL dans les paramètres du widget",
+    "embeddedContent": "Contenu intégré",
+    "noBookmarks": "Aucun signet",
+    "noSections": "Aucune section n'est configurée.",
+    "noServices": "Aucun service configuré",
+    "configureLocation": "Définissez un emplacement dans les paramètres du widget",
+    "bannerTextPlaceholder": "Texte de la bannière",
+    "serviceNamePlaceholder": "Mon service"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilisez la page d'accueil",
+      "description": "Afficher et modifier les liens vers le canevas de la page d'accueil et le tableau de bord."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Hôtes privés autorisés",
+      "description": "Noms d'hôtes/adresses IP privés ou de bouclage exacts pour les widgets d'état Ping et d'API personnalisée. Séparez les entrées par des virgules ou des sauts de ligne ; omettez les schémas, les ports et les chemins. Laissez des blocs vides pour les destinations privées."
+    },
+    "privateCertificateAuthority": {
+      "label": "Autorité de certification privée (PEM)",
+      "description": "Ensemble d'autorités de certification de confiance optionnel pour les hôtes autorisés. La vérification des certificats reste activée. Laissez ce champ vide pour utiliser le magasin de certificats système."
+    }
   }
 }

@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Kilde og mål skal være forskellige",
     "exportJSON": "Eksportér JSON",
     "importJSON": "Importér JSON",
-    "terminal": "Terminal",
-    "fileManager": "Filhåndtering",
-    "tunnel": "Tunnel",
-    "docker": "Docker",
     "serverStats": "Værtsmålinger",
-    "hostMetrics": "Værtsmålinger",
     "noNodes": "Ingen noder endnu"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} noder"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug netværksgraf",
+      "description": "Se og rediger netværkstopologigrafen."
+    }
   },
   "hosts": {
     "docsLink": "Se dokumenter"

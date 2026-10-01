@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "होस्ट मेट्रिक्स"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "मेमोरी",
@@ -16,21 +19,21 @@
     "cpuUsage": "CPU उपयोग",
     "memoryUsage": "मेमोरी उपयोग",
     "diskUsage": "डिस्क उपयोग",
-    "selectFilesystem": "फ़ाइल सिस्टम का चयन करें",
+    "selectFilesystem": "Select filesystem",
     "temperature": "तापमान",
     "highestTemperature": "उच्चतम तापमान",
-    "primaryTemperatureSensor": "प्राथमिक सेंसर",
+    "primaryTemperatureSensor": "Primary sensor",
     "gpu": {
-      "title": "जीपीयू",
-      "noDevice": "कोई NVIDIA GPU नहीं मिला। GPU मेट्रिक्स देखने के लिए NVIDIA ड्राइवर (जो nvidia-smi प्रदान करता है) इंस्टॉल करें।",
-      "driver": "ड्राइवर {{version}}",
-      "utilization": "उपयोग",
-      "memory": "वीआरएएम",
-      "temperature": "अस्थायी",
-      "power": "शक्ति",
-      "fan": "पंखा",
-      "processes": "जीपीयू प्रक्रियाएँ",
-      "noProcesses": "कोई भी प्रक्रिया जीपीयू का उपयोग नहीं कर रही है।"
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
     },
     "failedToFetchHostConfig": "होस्ट कॉन्फ़िगरेशन प्राप्त करने में विफल",
     "serverOffline": "सर्वर ऑफ़लाइन",
@@ -160,7 +163,6 @@
       "firewallPersist": "नियम स्थायी करें",
       "firewallPersisted": "फ़ायरवॉल नियम स्थायी किए गए",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard इस होस्ट पर स्थापित नहीं है",
       "wgNoInterfaces": "कोई WireGuard इंटरफ़ेस कॉन्फ़िगर्ड नहीं हैं",
       "wgInterfaceUp": "चालू करें",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "अंतिम हैंडशेक",
       "wgHandshakeNever": "कभी नहीं",
       "wgTransfer": "ट्रांसफर",
-      "tsNotInstalled": "Tailscale इस होस्ट पर स्थापित नहीं है",
-      "tsRunning": "चालू",
-      "tsStopped": "बंद",
-      "tsEnable": "कनेक्ट करें",
-      "tsDisable": "डिस्कनेक्ट करें",
-      "tsEnabling": "Tailscale से कनेक्ट हो रहा है...",
-      "tsDisabling": "Tailscale से डिस्कनेक्ट हो रहा है...",
-      "tsEnabled": "Tailscale कनेक्टेड",
-      "tsDisabled": "Tailscale डिस्कनेक्टेड",
-      "tsIPs": "Tailscale IPs",
-      "tsPeers": "पीयर्स",
-      "tsOnline": "ऑनलाइन",
-      "tsOffline": "ऑफलाइन",
-      "tsExitNode": "एक्जिट नोड",
-      "tsExitNodeActive": "एक्जिट नोड सक्रिय",
-      "tsHostname": "होस्टनाम"
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "लागू करें",
     "viewHistory": "इतिहास देखें"
   },
-  "nav": {
-    "hostMetrics": "होस्ट मेट्रिक्स"
-  },
   "hosts": {
     "tabHostMetrics": "होस्ट मेट्रिक्स",
     "metricsCollectionLabel": "मेट्रिक्स संग्रह",
@@ -219,24 +203,24 @@
     "useGlobalMetricsDesc": "सर्वर-व्यापी मेट्रिक्स अंतराल से ओवरराइड करें",
     "metricsIntervalS": "मेट्रिक्स अंतराल (सेकंड)",
     "metricsIntervalDesc2": "मेट्रिक स्नैपशॉट के बीच सेकंड",
-    "excludedMountsLabel": "बहिष्कृत पर्वत",
-    "monitoredMountsLabel": "कस्टम मॉनिटर किए गए पथ",
-    "monitoredMountsDesc": "उन पथों को जोड़ें जो अलग-अलग माउंट के रूप में उजागर नहीं होते हैं, जिनमें बाइंड-माउंटेड होम असिस्टेंट पथ जैसे कि /config शामिल हैं।",
-    "monitoredMountPathPlaceholder": "पथ (/config, /mnt/data)",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
     "monitoredMountLabelPlaceholder": "लेबल (वैकल्पिक)",
-    "addMonitoredMount": "पथ जोड़ें",
-    "excludedMountsDesc": "इस होस्ट के लिए डिस्क उपयोग और अलर्ट से विशिष्ट माउंट पॉइंट या फ़ाइल सिस्टम प्रकार (जैसे nfs, cifs) को छिपाएँ।",
-    "excludedMountsPlaceholder": "माउंट पथ (/mnt/nas) या फ़ाइल सिस्टम प्रकार (nfs, cifs)",
-    "excludedMountsEmpty": "कोई भी माउंट बाहर नहीं रखा गया है। सभी पहचाने गए फ़ाइल सिस्टम दिखाए गए हैं।",
-    "addExcludedMount": "जोड़ना",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "जोड़ें",
     "visibleWidgets": "दृश्यमान विजेट्स",
     "widgetsMovedToHostMetrics": "कार्ड अब सीधे होस्ट मेट्रिक्स टैब में जोड़े, व्यवस्थित और आकार बदले जा सकते हैं। इस होस्ट के लिए होस्ट मेट्रिक्स खोलें और यह चुनने के लिए कस्टमाइज़ का उपयोग करें कि कौन से कार्ड दिखाए जाएँ।",
     "hostNotFound": "होस्ट नहीं मिला",
     "loadingHost": "होस्ट लोड हो रहा है..."
   },
   "onboarding": {
-    "feature_metrics": "मैट्रिक्स और अलर्ट",
-    "feature_metrics_desc": "समय के साथ सीपीयू, मेमोरी और डिस्क की स्थिति पर नज़र रखें और उनके खराब होने पर अलर्ट प्राप्त करें।"
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
   },
   "admin": {
     "metricsHistoryRetention": "मेट्रिक्स इतिहास प्रतिधारण",
@@ -265,6 +249,9 @@
     "noHostSelected": "कोई होस्ट चयनित नहीं",
     "selectHost": "होस्ट चुनें..."
   },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "कनेक्टेड"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

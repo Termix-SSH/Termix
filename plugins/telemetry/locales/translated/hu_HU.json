@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Használati statisztikák kezelése",
+      "description": "Nézd meg, milyen használati statisztikák küldődnek, küldd el őket most, és állítsd vissza a példányazonosítót."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Névtelen használati statisztikák megosztása",
+      "description": "Naponta egyszer küld egy rövid, névtelen összefoglalót a Termix fejlesztése érdekében. Soha nem tartalmaz felhasználóneveket, hostneveket, IP-címeket vagy hitelesítő adatokat."
+    },
+    "includePlatform": {
+      "label": "Platforminformációk hozzáadása",
+      "description": "Az operációs rendszer, a CPU architektúra, a Node.js verziója, az adatbázis típusa és a Termix telepítési módja (Docker, asztali alkalmazás vagy szerver)."
+    },
+    "includeFeatureUsage": {
+      "label": "Funkcióhasználat belefoglalása",
+      "description": "Hányszor nyitották meg az egyes laptípusokat, és hány SSH-bejelentkezés történt az utolsó jelentés óta. A felhasználók kikapcsolhatják a saját részüket a profiljukban."
+    },
+    "includePlugins": {
+      "label": "Telepített funkciók beillesztése",
+      "description": "Mely beépített funkciók vannak telepítve és futnak?"
+    },
+    "instanceId": {
+      "label": "Példányazonosító"
+    },
+    "shareFeatureUsage": {
+      "label": "Funkcióhasználatom belefoglalása",
+      "description": "Számolja, hogy milyen típusú lapokat nyit meg a névtelen használati statisztikákban. Semmi sem kerül elküldésre rólad vagy a tárhelyszolgáltatóidról."
+    }
+  },
+  "status": {
+    "title": "Állapot",
+    "on": "Használati statisztikák megosztása naponta egyszer",
+    "off": "Nem oszt meg használati statisztikákat",
+    "lockedOn": "Az ENABLE_TELEMETRY környezeti változóval bekapcsolva. Módosítsd ott.",
+    "lockedOff": "Az ENABLE_TELEMETRY környezeti változó kikapcsolta. Módosítsd ott.",
+    "instanceId": "Példányazonosító: {{id}}",
+    "noInstanceId": "Még nincs példányazonosító",
+    "lastSent": "Utolsó küldés {{date}}",
+    "neverSent": "Még nem küldték el",
+    "nextSend": "Következő jelentés határideje {{date}}",
+    "lastError": "Utolsó kísérlet sikertelen: {{error}}",
+    "preview": "Jelentés előnézete",
+    "sendNow": "Küldés most",
+    "sending": "Küldés...",
+    "sent": "Használati statisztikák elküldve",
+    "notSent": "A használati statisztikák ki vannak kapcsolva, semmi sem került elküldésre.",
+    "resetId": "Példányazonosító visszaállítása",
+    "resetIdConfirm": "Visszaállítja a példányazonosítót? A jövőbeli jelentések új telepítésként fognak kinézni.",
+    "resetIdDone": "Példányazonosító visszaállítása",
+    "previewTitle": "Következő jelentés",
+    "previewDescription": "Pontosan ezt küldenék most.",
+    "close": "Közeli",
+    "loadFailed": "Nem sikerült betölteni a használati statisztikák állapotát"
+  }
+}

@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Fitxers",
+    "sftp": "SFTP",
+    "openFileManager": "Obre el gestor de fitxers"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza el gestor de fitxers",
+      "description": "Navega, edita i transfereix fitxers a través de SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Habilita el gestor de fitxers",
+        "description": "Navega i edita fitxers en aquest amfitrió mitjançant SFTP."
+      },
+      "defaultPath": {
+        "label": "Camí predeterminat"
+      },
+      "scpLegacy": {
+        "label": "Mode Llegat de SCP"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferències simultànies de fitxers",
+        "description": "Quants fitxers puja o descarrega el gestor local/remot en paral·lel alhora. Redueix aquest valor si el teu servidor limita els canals SFTP."
+      },
+      "confirmBeforeTrash": {
+        "label": "Confirma abans de moure els fitxers a la paperera",
+        "description": "Pregunta abans de moure fitxers remots a la paperera. L'eliminació permanent encara requereix confirmació."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Gestor de fitxers"
+  },
   "fileManager": {
     "noHostSelected": "No s'ha seleccionat cap amfitrió",
     "initializingEditor": "Inicialitzant l'editor...",
@@ -34,13 +72,14 @@
     "rename": "Canvia el nom",
     "uploading": "S'està carregant...",
     "uploadingFile": "S'està carregant {{name}}...",
+    "uploadingChunk": "Pujant {{name}}: {{percent}}% (part {{chunk}} de {{total}})",
     "fileName": "Nom del fitxer",
     "folderName": "Nom de la carpeta",
     "fileUploadedSuccessfully": "El fitxer \"{{name}}\" s'ha carregat correctament",
     "failedToUploadFile": "No s'ha pogut carregar el fitxer",
     "uploadingFolderFiles": "S'estan pujant {{count}} fitxer(s)...",
-    "uploadedFolderFiles": "S'han carregat correctament els fitxers {{count}}",
-    "uploadedFolderPartial": "No s'ha pogut pujar el(s) fitxer(s) {{uploaded}} , {{failed}}",
+    "uploadedFolderFiles": "S'han carregat correctament {{count}} fitxers.",
+    "uploadedFolderPartial": "No s'han pogut pujar els fitxers {{uploaded}} i {{failed}}.",
     "fileDownloadedSuccessfully": "Fitxer \"{{name}}\" descarregat correctament",
     "failedToDownloadFile": "No s'ha pogut descarregar el fitxer",
     "fileCreatedSuccessfully": "Fitxer \"{{name}}\" creat correctament",
@@ -54,7 +93,7 @@
     "enterSudoPassword": "Introduïu la contrasenya sudo per continuar amb aquesta operació",
     "sudoPassword": "Contrasenya de Sudo",
     "sudoOperationFailed": "L'operació Sudo ha fallat.",
-    "sudoAuthFailed": "L'autenticació de Sudo ha fallat.",
+    "sudoAuthFailed": "L'autenticació del Sudo ha fallat.",
     "dragFilesToUpload": "Deixa anar els fitxers aquí per pujar-los",
     "dropToUploadHere": "Deixa anar per pujar aquí",
     "dropToDownloadHere": "Deixa anar per descarregar aquí",
@@ -73,7 +112,7 @@
     "forward": "Endavant",
     "up": "Amunt",
     "kind": "Amable",
-    "localUploadingProgress": "S'està carregant {{current}} de {{total}}",
+    "localUploadingProgress": "S'està pujant {{current}} de {{total}}",
     "localDownloadingProgress": "Descarregant {{current}} de {{total}}",
     "localTransferInFlight": "{{count}} alhora",
     "localPreparingDownload": "Preparant la descàrrega...",
@@ -81,7 +120,7 @@
     "localNothingToTransfer": "Res a transferir",
     "localUploadComplete": "Fitxer(s) {{count}} penjat(s)",
     "localUploadFailed": "La pujada ha fallat",
-    "localUploadPartial": "No s'ha pogut pujar el(s) fitxer(s) {{done}} , {{failed}}",
+    "localUploadPartial": "No s'han pogut pujar els fitxers {{done}} i {{failed}}.",
     "localDownloadComplete": "Fitxer(s) descarregat(s) {{count}}",
     "localDownloadFailed": "La descàrrega ha fallat",
     "localDownloadPartial": "No s'ha pogut descarregar el(s) fitxer(s) {{done}} , {{failed}}.",
@@ -212,7 +251,7 @@
     "noUndoableActions": "Sense accions desfaibles",
     "undoCopySuccess": "Operació de còpia desfeta: S'han suprimit {{count}} fitxers copiats",
     "undoCopyFailedDelete": "Error en desfer: no s'han pogut suprimir els fitxers copiats.",
-    "undoCopyFailedNoInfo": "Error en desfer: no s'ha pogut trobar la informació del fitxer copiat",
+    "undoCopyFailedNoInfo": "Error en desfer: no s'ha trobat la informació del fitxer copiat",
     "undoMoveSuccess": "Operació de moviment desfeta: S'han tornat a moure els fitxers {{count}} a la ubicació original.",
     "undoMoveFailedMove": "Desfer ha fallat: no s'han pogut moure cap fitxer enrere",
     "undoMoveFailedNoInfo": "Desfer ha fallat: no s'ha pogut trobar la informació del fitxer mogut",
@@ -247,7 +286,7 @@
     "fileNotFoundAndRemoved": "No s'ha trobat el fitxer \"{{name}}\" i s'ha eliminat dels fitxers recents/fixats.",
     "failedToLoadFile": "No s'ha pogut carregar el fitxer: {{error}}",
     "serverErrorOccurred": "S'ha produït un error del servidor. Torna-ho a provar més tard.",
-    "autoSaveFailed": "El desament automàtic ha fallat",
+    "autoSaveFailed": "Ha fallat el desament automàtic",
     "fileAutoSaved": "Fitxer desat automàticament",
     "moveFileFailed": "No s'ha pogut moure {{name}}",
     "moveOperationFailed": "L'operació de moviment ha fallat",
@@ -290,6 +329,7 @@
     "connecting": "Connectant...",
     "connectedSuccessfully": "Connexió correcta",
     "totpVerificationFailed": "La verificació TOTP ha fallat",
+    "browserSignInFailed": "L'inici de sessió ha fallat. Torna-ho a provar.",
     "authenticationFailed": "L'autenticació ha fallat",
     "incorrectPassphrase": "Contrasenya incorrecta. Si us plau, torneu-ho a intentar.",
     "verificationCodePrompt": "Codi de verificació:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "No es pot carregar el PDF",
     "pdfLoadError": "S'ha produït un error en carregar aquest fitxer PDF.",
     "loadingPdf": "S'està carregant el PDF...",
-    "loadingPage": "S'està carregant la pàgina..."
+    "loadingPage": "S'està carregant la pàgina...",
+    "cancel": "Cancel·la",
+    "copiedItems_one": "S'ha copiat l'element {{count}}",
+    "copiedItems_other": "S'han copiat {{count}} elements",
+    "deleteCopiedFileFailed": "No s'ha pogut suprimir la còpia de {{name}}: {{error}}",
+    "dragMovedItems_one": "S'ha mogut l'element {{count}} a {{target}}",
+    "dragMovedItems_other": "S'han mogut {{count}} elements a {{target}}",
+    "moveBackFileFailed": "No s'ha pogut moure {{name}} enrere: {{error}}",
+    "terminal": "Terminal: {{host}} ({{path}})",
+    "dragToDesktop": "Arrossegant {{name}} a l'escriptori",
+    "dragFilesToDesktop": "Arrossegar fitxers {{count}} a l'escriptori",
+    "folderDragUnsupported": "Encara no es pot arrossegar carpetes a l'escriptori.",
+    "saveToDesktopFailed": "No s'ha pogut desar: {{error}}",
+    "dragFailedDetail": "No s'ha pogut arrossegar: {{error}}",
+    "videoUnsupported": "El vostre navegador no pot reproduir aquest format de vídeo.",
+    "downloadToPlay": "Descarrega-ho per reproduir-ho en un altre lloc",
+    "cannotPreviewType": "No es pot previsualitzar aquest tipus de fitxer",
+    "cannotPreviewTypeHint": "Aquest tipus de fitxer no té vista prèvia. Baixeu-lo per obrir-lo en una altra aplicació."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Gestor de fitxers",
-    "tabFiles": "Fitxers",
-    "enableFileManagerMonitor": "Habilita el gestor de fitxers",
-    "enableFileManagerMonitorDesc": "Navega i gestiona fitxers en aquest amfitrió mitjançant SFTP",
-    "scpLegacyLabel": "Mode Llegat de SCP",
-    "scpLegacyDesc": "Feu servir la transferència de fitxers antiga per a servidors que no admeten el subsistema SFTP (per exemple, servidors SSH integrats o mínims).",
-    "defaultPathLabel": "Camí predeterminat",
-    "fileManagerPathHint": "El directori que s'obrirà quan s'iniciï el gestor de fitxers per a aquest amfitrió.",
     "fileManagerUrlCopied": "S'ha copiat l'URL del gestor de fitxers",
     "copyFileManagerUrlAction": "Copia l'URL del gestor de fitxers",
     "docsLink": "Veure documents",
     "hostNotFound": "No s'ha trobat l'amfitrió",
     "loadingHost": "S'està carregant l'amfitrió..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Habilita el gestor de fitxers"
-      },
-      "defaultPath": {
-        "label": "Camí predeterminat"
-      },
-      "scpLegacy": {
-        "label": "Mode Llegat de SCP"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Transferències simultànies de fitxers",
-        "description": "Quants fitxers puja o descarrega el gestor local/remot en paral·lel alhora. Redueix aquest valor si el teu servidor limita els canals SFTP."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Fitxers"
   },
   "onboarding": {
     "feature_files": "Gestor de fitxers",
@@ -437,7 +464,7 @@
     "destinationPath": "Camí de destinació",
     "destMustBeDirectory": "La destinació ha de ser un directori per a transferències de diversos elements",
     "goUp": "Puja",
-    "hostAuthRequired": "Cal autenticació: obriu primer el Gestor de fitxers en aquest amfitrió.",
+    "hostAuthRequired": "Cal autenticació. Obriu primer el Gestor de fitxers en aquest amfitrió.",
     "hostConnecting": "Connectant…",
     "hostConnectionFailed": "La connexió ha fallat",
     "hostDisconnected": "No connectat",
@@ -445,7 +472,7 @@
     "itemsSummary": "{{count}} elements",
     "jumpHostLimitation": "Tots dos hosts han de ser accessibles des del servidor Termix. No s'admet l'encaminament directe d'host a host.",
     "methodAuto": "Automàtic",
-    "methodAutoHint": "Tria SFTP tar o per fitxer en funció del nombre de fitxers, la mida i la compressibilitat. Els fitxers individuals sempre utilitzen SFTP en temps real.",
+    "methodAutoHint": "Tria tar o SFTP per fitxer en funció del nombre de fitxers, la mida i la compressibilitat. Els fitxers individuals sempre utilitzen SFTP en temps real.",
     "methodItemSftp": "SFTP per fitxer",
     "methodItemSftpHint": "Transfereix cada fitxer individualment per SFTP. Funciona en tots els hosts, inclòs Windows.",
     "methodItemSftpLimitation": "Cada fitxer utilitza el mateix flux SFTP com una còpia d'un sol fitxer, un darrere l'altre. El progrés es combina en tots els fitxers, de manera que la barra es mou lentament durant els fitxers grans.",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Heu triat SFTP per fitxer.",
       "user_tar": "Has triat l'arxiu tar.",
-      "tar_unavailable": "Tar no està disponible en un o tots dos hosts; s'utilitzarà SFTP per fitxer.",
-      "windows_host": "Hi ha un host de Windows implicat; no s'utilitza tar.",
-      "auto_multi_large": "Automàtic: diversos fitxers, inclòs un fitxer gran ({{largestSize}}) amb dades compressibles: paquets de fitxers tar en una sola transferència.",
-      "auto_single_large_in_archive": "Automàtic: un fitxer gran ({{largestSize}}) en aquest conjunt — SFTP per fitxer.",
-      "auto_many_incompressible": "Automàtic: dades majoritàriament incompressibles — SFTP per fitxer.",
-      "auto_many_files": "Automàtic: molts fitxers ({{fileCount}}) — tar redueix la sobrecàrrega per fitxer.",
+      "tar_unavailable": "Tar no està disponible en un o tots dos amfitrions, per tant, s'utilitzarà SFTP per fitxer.",
+      "windows_host": "Hi ha un host de Windows implicat, per tant no s'utilitza tar.",
+      "auto_multi_large": "Automàtic: diversos fitxers, inclòs un fitxer gran ({{largestSize}}) amb dades compressibles. Tar els agrupa en una sola transferència.",
+      "auto_single_large_in_archive": "Automàtic: un fitxer gran ({{largestSize}}) en aquest conjunt, per tant, SFTP per fitxer.",
+      "auto_many_incompressible": "Automàtic: dades majoritàriament incompressibles, per tant, SFTP per fitxer.",
+      "auto_many_files": "Automàtic: molts fitxers ({{fileCount}}), tar redueix la sobrecàrrega per fitxer.",
       "auto_default": "Automàtic: SFTP per fitxer per a aquest conjunt."
     },
     "methodTar": "Arxiu Tar",
@@ -471,7 +498,7 @@
     "metricsCompress": "Comprimir a la font: {{duration}}",
     "metricsExtract": "Extracte a la destinació: {{duration}}",
     "metricsPrepare": "Prepara la destinació: {{duration}}",
-    "metricsRouteBenchmark": "Sonda de ruta — directa: {{direct}}, relé: {{relay}}",
+    "metricsRouteBenchmark": "Sonda de ruta: directa {{direct}}, relé {{relay}}",
     "metricsSourceDelete": "Elimina de la font: {{duration}}",
     "metricsTotal": "Total: {{duration}}",
     "metricsTransfer": "Extrem a extrem: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "La transferència ha fallat",
     "transferFailedRetryHint": "S'han conservat dades parcials a la destinació. El reintent es reprendrà quan es restableixi la connexió.",
     "transferPartialHint": "No s'ha pogut transferir: {{paths}}",
-    "transferSuccess": "Transferència completada"
+    "transferSuccess": "Transferència completada",
+    "metricsHopSourceRead": "Font → servidor: {{throughput}}",
+    "metricsHopDestSftpWrite": "Servidor → destí (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Servidor → destí (local): {{throughput}}"
   }
 }

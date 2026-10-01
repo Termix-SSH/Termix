@@ -1,11 +1,53 @@
 {
+  "permissions": {
+    "use": {
+      "title": "アシスタントを使用する",
+      "description": "アシスタントを開いて、いろいろ質問してみてください。"
+    },
+    "manage_providers": {
+      "title": "プロバイダーを管理する",
+      "description": "AIプロバイダーとそのAPIキーを追加、編集、削除できます。"
+    },
+    "apply_proposals": {
+      "title": "提案を適用する",
+      "description": "アシスタントに提案された変更を実行させましょう。"
+    },
+    "services.use": {
+      "title": "他の機能からAIを活用する",
+      "description": "その他の機能によっては、あなたに代わってアシスタントを呼び出す場合があります。"
+    },
+    "secrets.share": {
+      "title": "APIキーを共有する",
+      "description": "他の機能は、保存されたAI APIキーを認識せずに使用する場合があります。"
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "このサーバーではAIアシスタントは無効になっています。",
+    "providersNeedOptIn": "上記のAIアシスタントをオンにして、プロバイダーを追加してください。",
+    "admin": {
+      "globallyEnabled": {
+        "label": "AIアシスタント",
+        "description": "ユーザーがAIアシスタントをオンにできるようにします。オフになっている間は、アシスタントは非表示になり、誰からも利用できなくなります。"
+      },
+      "privateEndpoints": {
+        "label": "プライベートAIホストを許可",
+        "description": "ユーザーがプロバイダに指定できる、プライベートネットワーク上のホスト（自己ホスト型のOllamaなど）。各行にホストを1つずつ記述してください。"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AIアシスタントを有効にする",
+        "description": "このホストのターミナルでAIアシスタントによる支援を許可します。デフォルトでは無効になっており、アカウントでAIを有効にする必要があります。"
+      }
+    }
+  },
   "ai": {
     "title": "アシスタント",
     "send": "送信",
-    "stop": "停止",
+    "stop": "ストップ",
     "save": "保存",
     "cancel": "キャンセル",
-    "running": "ランニング",
+    "running": "実行中",
     "approve": "承認する",
     "reject": "拒否する",
     "inputPlaceholder": "サーバーについて質問するか、変更案を説明する",
@@ -31,7 +73,7 @@
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
     "providerOpenaiCompatible": "OpenAI対応",
-    "toolArguments": "入力",
+    "toolArguments": "受信",
     "toolResult": "結果",
     "statusApplied": "適用済み",
     "statusRejected": "拒否されました",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "このホストについて質問する...",
     "noProvidersConfigured": "AIプロバイダーがまだ設定されていません。AIアシスタントタブで追加してください。",
     "runsInOpenTerminal": "開いているターミナルセッションで実行されます。",
-    "runInTerminal": "走る"
+    "runInTerminal": "実行",
+    "terminalContextPrefill": "これが私のターミナル出力です：\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "他の機能が、独自の要求にあなたのAIプロバイダーAPIキーを使用できるようにします。キーは決して複製されず、いつでも取り消すことができます。"
+    }
   },
   "nav": {
     "ai": "AI"
@@ -64,25 +110,8 @@
     "aiSkipTitle": "オフにしておく",
     "aiSkipDesc": "Termixは現状のまま動作します。アシスタントは非表示のままです。",
     "aiEnableTitle": "電源を入れる",
-    "aiEnableDesc": "設定内容を読み取り、承認した上で変更案を提案するアシスタント機能を追加します。ローカルのOllamaなど、お客様ご自身で手配するプロバイダーが必要です。",
+    "aiEnableDesc": "設定を読み取り、承認した変更を提案するアシスタント機能を追加します。ローカルのOllamaなど、お客様ご自身で手配するプロバイダーが必要です。",
     "aiNote": "プロバイダーを追加してメッセージを送信するまで、データはどこにも送信されません。"
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "AIアシスタント",
-        "description": "ユーザーがAIアシスタントをオンにできるようにします。オフになっている間は、アシスタントは非表示になり、誰からも利用できなくなります。"
-      },
-      "privateEndpoints": {
-        "label": "プライベートAIホストを許可"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "AIアシスタントを有効にする",
-        "description": "このホストのターミナルでAIアシスタントによる支援を許可します。デフォルトでは無効になっており、アカウントでAIを有効にする必要があります。"
-      }
-    }
   },
   "hosts": {
     "docsLink": "ドキュメントを表示"

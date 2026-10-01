@@ -23,7 +23,7 @@
     "provisionLabel": "Cung cấp máy chủ",
     "publishTitle": "Công bố khóa công khai",
     "generate": "Tạo",
-    "generateTooltip": "Tạo cặp khóa Ed25519 — công bố khóa công khai và tải khóa riêng về thiết bị của bạn",
+    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
     "saveToVault": "Lưu vào Kho thông tin",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Nhãn (tùy chọn)",
@@ -32,7 +32,7 @@
     "keyPublished": "Đã công bố khóa",
     "addKeyFailed": "Thêm khóa thất bại",
     "generatedSaved": "Đã tạo cặp khóa và lưu vào kho thông tin đăng nhập của bạn. Khóa riêng cũng đã được tải xuống.",
-    "generatedOnly": "Đã tạo cặp khóa — khóa riêng đã được tải xuống (chỉ hiển thị một lần).",
+    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
     "generateFailed": "Tạo khóa thất bại",
     "imported": "Đã nhập khóa từ thông tin đăng nhập",
     "importFailed": "Nhập khóa thất bại",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Tin cậy trên máy chủ (chạy với quyền root)",
     "caRotate": "Xoay",
     "caRotateConfirm": "Xoay CA? Mọi chứng chỉ do CA này ký sẽ không còn được chấp nhận và phải được cấp lại.",
-    "caRotated": "Đã xoay CA — các chứng chỉ trước bị thu hồi",
+    "caRotated": "CA rotated. Previous certificates revoked.",
     "caRotateFailed": "Xoay CA thất bại",
     "caDelete": "Gỡ bỏ CA",
     "caDeleteConfirm": "Gỡ bỏ cơ quan chứng thực?",
@@ -66,12 +66,21 @@
     "issueCert": "Chứng chỉ",
     "issueCertTooltip": "Cấp chứng chỉ SSH cho khóa này, được ký bởi CA của bạn",
     "certIssued": "Chứng chỉ đã được cấp và tải xuống",
-    "certIssueFailed": "Cấp chứng chỉ thất bại"
+    "certIssueFailed": "Cấp chứng chỉ thất bại",
+    "docsLink": "Xem tài liệu",
+    "principalsLabel": "SSH principals",
+    "principalsPlaceholder": "SSH principal(s), e.g. root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
-    "idBadge": "NHẬN DẠNG"
+    "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Termix ID",
+      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+    }
   }
 }

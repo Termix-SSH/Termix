@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Lähteen ja kohteen on oltava eri",
     "exportJSON": "Vie JSON",
     "importJSON": "Tuo JSON",
-    "terminal": "Terminaali",
-    "fileManager": "Tiedostonhallinta",
-    "tunnel": "Tunneli",
-    "docker": "Satamatyöläinen",
     "serverStats": "Isännän mittarit",
-    "hostMetrics": "Isännän mittarit",
     "noNodes": "Ei vielä solmuja"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} solmut"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä verkkokaaviota",
+      "description": "Tarkastele ja muokkaa verkon topologiakaaviota."
+    }
   },
   "hosts": {
     "docsLink": "Näytä dokumentit"

@@ -20,6 +20,8 @@
     "webUiEndpointLabel": "Eindpunt {{number}}",
     "webUiIntegration": "Web-UI",
     "webUiEndpointsSection": "Eindpunte",
+    "webUiNoEndpoints": "Geen web-eindpunte nog nie. Gebruik Voeg eindpunt by om een te skep.",
+    "webUiEndpointsDisabled": "Skakel Web UI hierbo aan om eindpunte by te voeg.",
     "webUiRequirementsText": "'n Direkte eindpunt word deur jou blaaier oopgemaak, dus moet die poort daarvan van hier af bereikbaar wees. 'n SSH-tonnel word eerder deur Termix oor hierdie gasheer se SSH-verbinding oopgemaak, dus hoef die poort slegs vanaf die gasheer bereikbaar te wees.",
     "enableWebUi": "Aktiveer web-eindpunte",
     "enableWebUiDesc": "Maak hierdie gasheer se webkoppelvlakke vanaf die sybalk oop.",

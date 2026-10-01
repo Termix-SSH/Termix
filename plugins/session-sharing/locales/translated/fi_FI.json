@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Hae käyttäjiä...",
     "noUsersFound": "Ei käyttäjiä löytynyt",
     "linkCreated": "Jaa linkki luotu",
+    "linkNeedsServer": "Jakolinkit toimivat vain Termix-palvelimella olevissa istunnoissa. Yhdistä tämä isäntä linkitetyn palvelimesi kautta jakaaksesi sen linkillä.",
     "linkCopied": "Linkki kopioitu leikepöydälle",
     "copyLink": "Kopioi linkki",
     "shareCreated": "Istunto jaettu. Se näkyy heidän Yhteydet-välilehdellä.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Linkki",
     "userShareBadge": "Käyttäjä: {{username}}",
     "loadSharesFailed": "Aktiivisten jakojen lataaminen epäonnistui",
+    "remoteDisplayUnavailable": "Etätyöpöytä ei ole käytettävissä juuri nyt.",
+    "sharedWithMe": "Kanssani jaetut sessiot",
     "customHoursPlaceholder": "Tuntia käyttöoikeuden vanhenemiseen"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Jäsenet",
     "membersPanel": "Huoneen jäsenet ja hallintapyynnöt",
     "membersWithCount": "Jäsenet ({{count}})",
+    "guestsWithCount": "Vieraat ({{count}})",
+    "removeGuests": "Poista vieraat",
+    "anonymousGuest": "Vieras",
     "online": "verkossa",
     "offline": "offline-tilassa",
     "you": "(sinä)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Tämä vieraslinkki on virheellinen tai kokous on päättynyt"
     },
     "reopenFromPanel": "Tämä kokousvälilehti vanheni. Avaa huone uudelleen Kokoukset-paneelista.",
+    "retry": "Yritä uudelleen",
     "requestControl": "Pyydä hallintaa",
     "cancelControlRequest": "Peruuta pyyntö",
     "controlQueue": "Ohjauspyynnöt",
@@ -130,7 +137,10 @@
     "youArePresenting": "Esität toisella välilehdellä. Lopeta esitys luovuttaaksesi esiintymispaikan.",
     "created": "Huone luotu",
     "invited": "Jäsenet kutsuttuina",
-    "roomTab": "Kokous"
+    "roomTab": "Kokous",
+    "serverChanged": "Kokouspalvelin muuttui. Avaa tämä kokous uudelleen Kokoukset-paneelista.",
+    "hostNotSynced": "Synkronoi tämä isäntä kokouspalvelimeen ennen esityksen aloittamista.",
+    "linkRequiresServer": "Linkitä tämä työpöytä Termix-palvelimeen ja luo kokous siellä jakaaksesi verkkolinkin."
   },
   "nav": {
     "collab": "Kokoukset"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Jaa istuntoja ja liity huoneisiin",
+      "description": "Jaa live-istuntoja linkin kautta tai muiden käyttäjien kanssa ja luo ja liity yhteistyöhuoneisiin."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Mukautettu"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Jaettu kanssani",
+    "sharedBy": "Jakanut {{username}}",
+    "join": "Liity",
+    "sharedSessionLabel": "{{hostName}} (jaettu)"
   }
 }

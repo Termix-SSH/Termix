@@ -3,7 +3,8 @@
     "profile": "Vault 署名者プロファイル",
     "selectProfile": "Vault プロファイルを選択...",
     "hint": "設定は共有プロファイルから取得され、接続時に OIDC で Vault にサインインします。シークレットは保存されません。",
-    "docs": "ドキュメントを表示"
+    "docs": "ドキュメントを見る",
+    "sharedProfile": "{{name}} (共有)"
   },
   "profiles": {
     "new": "新規プロファイル",
@@ -27,12 +28,42 @@
     "save": "プロファイルを保存",
     "validationError": "名前、Vaultアドレス、SSH署名ロールは必須です",
     "none": "まだVaultプロファイルがありません。",
-    "sharedBadge": "共有"
+    "sharedBadge": "共有",
+    "edit": "編集",
+    "delete": "削除"
+  },
+  "hosts": {
+    "filterAuthVault": "金庫"
   },
   "dialog": {
     "title": "Vault サインインが必要です",
     "description": "HashiCorp Vaultへのサインイン用のウィンドウが開きました。そこでサインインを完了すると、この接続は自動的に続行されます。",
     "failed": "Vault 認証に失敗しました。もう一度お試しください。",
     "reopen": "サインインウィンドウを再表示"
+  },
+  "permissions": {
+    "use": {
+      "title": "Vault SSH署名を使用する",
+      "description": "Vault署名者プロファイルを作成し、Vaultを使用しているホストに接続します。"
+    },
+    "share": {
+      "title": "Vault プロファイルを共有する",
+      "description": "Vault署名者プロファイルを共有としてマークすると、すべてのユーザーが選択できるようになります。"
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "リダイレクトURI",
+      "description": "Termixがサインインする各Vault OIDCロールのallowed_redirect_urisに、このURLを追加してください。"
+    },
+    "legacyCallback": {
+      "label": "古いリダイレクトURIを使用する",
+      "description": "バージョン2.9以前に使用されていたリダイレクトURIである/vault/oidc/callbackを送信し続けてください。Vaultロールで新しいURIが許可されたら、この設定を無効にしてください。"
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault署名者プロフィール"
+      }
+    }
   }
 }

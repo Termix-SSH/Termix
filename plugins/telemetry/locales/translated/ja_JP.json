@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "使用状況統計を管理する",
+      "description": "どのような使用統計情報が送信されるかを確認し、それらを今すぐ送信して、インスタンスIDをリセットしてください。"
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "匿名化された利用統計情報を共有する",
+      "description": "Termixの改善に役立てるため、1日に1回、匿名の簡単な要約を送信します。ユーザー名、ホスト名、IPアドレス、認証情報は一切含まれません。"
+    },
+    "includePlatform": {
+      "label": "プラットフォーム情報を含める",
+      "description": "オペレーティングシステム、CPUアーキテクチャ、Node.jsのバージョン、データベースの種類、およびTermixのインストール方法（Docker、デスクトップアプリ、またはサーバー）。"
+    },
+    "includeFeatureUsage": {
+      "label": "機能の使用状況を含める",
+      "description": "各タブが開かれた回数と、前回のレポート以降に発生したSSHログインの回数が表示されます。ユーザーは自分のプロファイル設定で、この表示をオフにすることができます。"
+    },
+    "includePlugins": {
+      "label": "インストール済みの機能を含める",
+      "description": "どの組み込み機能がインストールされ、実行されていますか。"
+    },
+    "instanceId": {
+      "label": "インスタンスID"
+    },
+    "shareFeatureUsage": {
+      "label": "私の機能使用状況を含める",
+      "description": "匿名利用統計情報において、開いているタブの種類をカウントします。あなたやホストに関する情報は一切送信されません。"
+    }
+  },
+  "status": {
+    "title": "状態",
+    "on": "利用統計情報を1日1回共有します",
+    "off": "利用統計を共有しない",
+    "lockedOn": "ENABLE_TELEMETRY環境変数で有効になります。そちらで設定を変更してください。",
+    "lockedOff": "ENABLE_TELEMETRY環境変数によって無効になっています。そちらで設定を変更してください。",
+    "instanceId": "インスタンスID: {{id}}",
+    "noInstanceId": "インスタンスIDはまだありません",
+    "lastSent": "最終送信 {{date}}",
+    "neverSent": "まだ送信されていません",
+    "nextSend": "次回の報告期限 {{date}}",
+    "lastError": "最後の試行が失敗しました: {{error}}",
+    "preview": "プレビューレポート",
+    "sendNow": "今すぐ送信",
+    "sending": "送信中...",
+    "sent": "使用統計情報が送信されました",
+    "notSent": "使用統計は無効になっています。何も送信されませんでした。",
+    "resetId": "インスタンスIDをリセット",
+    "resetIdConfirm": "インスタンスIDをリセットしましたか？今後のレポートは新規インストール時と同じように表示されます。",
+    "resetIdDone": "インスタンスIDがリセットされました",
+    "previewTitle": "次回のレポート",
+    "previewDescription": "これはまさに今送られてくる内容です。",
+    "close": "閉じる",
+    "loadFailed": "使用状況統計ステータスを読み込めませんでした"
+  }
+}

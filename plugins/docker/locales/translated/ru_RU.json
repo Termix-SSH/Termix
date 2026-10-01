@@ -21,6 +21,11 @@
     "ports": "Порты",
     "noPorts": "Нет портов",
     "start": "Запустить",
+    "stop": "Остановить",
+    "status": "Статус",
+    "actions": "Actions",
+    "cardView": "Card view",
+    "listView": "List view",
     "confirmRemoveContainer": "Вы уверены, что хотите удалить контейнер «{{name}}»? Это действие нельзя отменить.",
     "runningContainerWarning": "Предупреждение: этот контейнер в настоящее время работает. При удалении он будет сначала остановлен.",
     "loadingContainers": "Загрузка контейнеров...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Для доступа к консоли контейнер должен быть запущен",
     "verificationCodePrompt": "Введите код подтверждения",
     "totpVerificationFailed": "Ошибка проверки TOTP. Попробуйте еще раз.",
+    "browserSignInFailed": "Sign-in failed. Please try again.",
     "connectedTo": "Подключено к {{containerName}}",
     "disconnected": "Отключено",
     "consoleError": "Ошибка консоли",
@@ -93,19 +99,34 @@
     "logs": "Логи",
     "stats": "Статистика",
     "consoleTab": "Консоль",
-    "startContainerToAccess": "Запустите контейнер, чтобы получить доступ к консоли"
+    "startContainerToAccess": "Запустите контейнер, чтобы получить доступ к консоли",
+    "noHostSelected": "Хост не выбран",
+    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
+    "failedToDownloadLogs": "Failed to download logs: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
     "feature_docker": "Docker",
-    "feature_docker_desc": "Просматривайте контейнеры, читайте журналы и отслеживайте статистику на любом хосте, где запущен Docker."
+    "feature_docker_desc": "See containers, read logs and watch stats on any host running Docker."
+  },
+  "terminal": {
+    "retry": "Повторить",
+    "clipboardReadFailed": "Не удалось прочитать из буфера обмена. Убедитесь, что предоставлены разрешения на доступ к буферу обмена.",
+    "clipboardWriteFailed": "Не удалось скопировать в буфер обмена. Убедитесь, что страница загружена по HTTPS или с localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Docker",
+      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+    }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "Включить Docker"
+        "label": "Включить Docker",
+        "description": "Manage containers on this host."
       },
       "containerRuntime": {
         "label": "Среда выполнения контейнеров",
@@ -116,15 +137,11 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Требуется удаленный сервер. Для использования этого типа подключения подключите удаленный сервер в настройках."
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   },
   "hosts": {
     "docsLink": "Документация",
     "hostNotFound": "Хост не найден",
     "loadingHost": "Загрузка хоста..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Не удалось прочитать из буфера обмена. Убедитесь, что предоставлены разрешения на доступ к буферу обмена.",
-    "clipboardWriteFailed": "Не удалось скопировать в буфер обмена. Убедитесь, что страница загружена по HTTPS или с localhost."
   }
 }

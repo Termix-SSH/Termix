@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "プリセットは明示的なスナップショットです。読み込むと、このデスクトップクライアントのローカルクライアントトンネルリストが置き換えられます。",
     "c2sPresetToLoad": "読み込むプリセット",
     "c2sTunnelPresets": "クライアントトンネルプリセット",
-    "c2sTunnelPresetsUnavailable": "クライアントトンネルプリセットはデスクトップクライアントでのみ利用可能です。"
+    "c2sTunnelPresetsUnavailable": "クライアントトンネルプリセットはデスクトップクライアントでのみ利用可能です。",
+    "c2sPresetRenameError": "プリセットの名前変更に失敗しました",
+    "c2sPresetDeleteError": "プリセットの削除に失敗しました"
   },
   "tunnels": {
     "attempt": "試行 {{current}} / {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "ローカル (-L)",
     "typeRemote": "リモート (-R)",
     "working": "処理中...",
+    "activeCount": "{{connected}}/{{total}} アクティブ",
+    "listensOn": "localhostにバインドされています:{{port}}",
+    "socksProxy": "SOCKS5プロキシ",
+    "waiting": "待っている",
+    "remoteSessionExpired": "リモート同期セッションの有効期限が切れました。リモート同期に再接続して、もう一度お試しください。",
+    "activeTunnels": "アクティブトンネル",
     "start": "開始",
-    "stop": "停止"
+    "stop": "停止",
+    "authTitle": "トンネル認証",
+    "authRetry": "以前のコードは受け付けられませんでした。新しいコードを入力してください。",
+    "authAnswer": "認証応答",
+    "authContinue": "続行"
+  },
+  "permissions": {
+    "use": {
+      "title": "トンネルを利用する",
+      "description": "SSHトンネルの開始、停止、監視、およびクライアントトンネルのプリセットの保存が可能です。"
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "トンネルを有効にする",
+        "description": "このホスト経由でSSHトンネルを設定してください。"
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "トンネル",

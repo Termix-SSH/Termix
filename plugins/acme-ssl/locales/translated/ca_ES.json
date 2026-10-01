@@ -1,17 +1,41 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Gestionar certificats ACME",
+      "description": "Consulta l'estat del certificat i sol·licita'n un de nou ara."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Renovar automàticament",
+      "description": "Revisa dues vegades al dia i aconsegueix un certificat nou quan no n'hi ha cap, no cobreix el domini o caduca en 30 dies."
+    },
     "domain": {
       "label": "Domini",
-      "placeholder": "termix.example.com",
-      "description": "El nom de domini públic del certificat."
+      "description": "El nom de domini públic del certificat.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "Correu electrònic",
+      "description": "Correu electrònic de contacte per al compte ACME i avisos de caducitat.",
       "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "Autoritat de certificació",
+      "description": "On s'obté el certificat. Utilitzeu la configuració estadística per fer proves sense arribar als límits de velocitat de Let's Encrypt.",
+      "letsencrypt": "Xifrem",
+      "letsencryptStaging": "Xifrem (posada en escena)",
+      "custom": "Directori ACME personalitzat"
+    },
+    "directoryUrl": {
+      "label": "URL del directori ACME",
+      "description": "Només per a una autoritat de certificació personalitzada. Ha de ser una URL https."
     },
     "challengeType": {
       "label": "Tipus de repte",
-      "cloudflare": "DNS (Cloudflare): requereix un token d'API de Cloudflare"
+      "description": "Com demostrar que ets el propietari del domini.",
+      "http": "HTTP: necessita que el port 80 sigui accessible des d'Internet",
+      "cloudflare": "DNS (Cloudflare): necessita un token d'API de Cloudflare"
     },
     "cloudflareToken": {
       "label": "Token de l'API de Cloudflare",
@@ -21,9 +45,14 @@
   "status": {
     "title": "Estat del certificat",
     "none": "Sense certificat",
+    "names": "Cobertes {{names}}",
+    "issuer": "Publicat per {{issuer}}",
     "expires": "Caduca {{date}}",
     "lastIssued": "Última emissió {{date}}",
-    "request": "Emetre / Renovar el certificat",
-    "requesting": "Sol·licitant certificat..."
+    "lastError": "Últim intent fallit: {{error}}",
+    "missing": "Definiu el domini, el correu electrònic i els camps que necessita el vostre tipus de repte i, a continuació, deseu-ho abans de sol·licitar un certificat.",
+    "request": "Sol·licita el certificat ara",
+    "requesting": "Sol·licitant certificat...",
+    "issued": "Certificat emès i instal·lat"
   }
 }

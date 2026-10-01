@@ -1,11 +1,53 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Utilizzare l'assistente",
+      "description": "Apri l'assistente e ponigli delle domande."
+    },
+    "manage_providers": {
+      "title": "Gestire i fornitori",
+      "description": "Aggiungi, modifica e rimuovi i provider di intelligenza artificiale e le relative chiavi API."
+    },
+    "apply_proposals": {
+      "title": "Presentare proposte",
+      "description": "Lascia che l'assistente esegua le modifiche suggerite."
+    },
+    "services.use": {
+      "title": "Utilizzare l'intelligenza artificiale da altre funzionalità",
+      "description": "Altre funzioni potrebbero attivare l'assistente per tuo conto."
+    },
+    "secrets.share": {
+      "title": "Condividi la chiave API",
+      "description": "Altre funzionalità potrebbero utilizzare la chiave API AI memorizzata senza visualizzarla."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "L'assistente IA è disattivato su questo server.",
+    "providersNeedOptIn": "Attiva l'assistente AI qui sopra per aggiungere i fornitori.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "Assistente basato sull'intelligenza artificiale",
+        "description": "Consenti agli utenti di attivare l'assistente AI. Quando è disattivato, l'assistente è nascosto e bloccato per tutti."
+      },
+      "privateEndpoints": {
+        "label": "Host di IA privati consentiti",
+        "description": "Host sulla tua rete privata a cui gli utenti possono indirizzare un provider, come ad esempio un'installazione self-hosted di Ollama. Assegna un host a ciascuna linea."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Assistente AI per l'innovazione",
+        "description": "Consenti all'assistente IA di fornire assistenza nel terminale di questo host. Disattivato per impostazione predefinita, ma è necessario abilitare l'IA per il tuo account."
+      }
+    }
+  },
   "ai": {
     "title": "Assistente",
     "send": "Inviare",
-    "stop": "Fermare",
+    "stop": "Stop",
     "save": "Salva",
-    "cancel": "Cancellare",
-    "running": "corsa",
+    "cancel": "Annulla",
+    "running": "in esecuzione",
     "approve": "Approvare",
     "reject": "Rifiutare",
     "inputPlaceholder": "Chiedi informazioni sui tuoi server o descrivi una modifica da proporre",
@@ -31,7 +73,7 @@
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
     "providerOpenaiCompatible": "Compatibile con OpenAI",
-    "toolArguments": "Ingresso",
+    "toolArguments": "Input",
     "toolResult": "Risultato",
     "statusApplied": "Applicato",
     "statusRejected": "Respinto",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Chiedi informazioni su questo host...",
     "noProvidersConfigured": "Non è ancora configurato alcun provider di IA. Aggiungine uno nella scheda Assistente IA.",
     "runsInOpenTerminal": "Viene eseguito nella sessione del terminale aperta.",
-    "runInTerminal": "Correre"
+    "runInTerminal": "Esegui",
+    "terminalContextPrefill": "Ecco l'output del mio terminale:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Consenti ad altre funzionalità di utilizzare la tua chiave API del provider AI per le proprie richieste. La chiave non viene mai copiata e puoi revocarla in qualsiasi momento."
+    }
   },
   "nav": {
     "ai": "IA"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Accendilo",
     "aiEnableDesc": "Aggiunge un assistente che legge la tua configurazione e suggerisce modifiche che approvi. Richiede un provider che tu fornisca, come ad esempio un Ollama locale.",
     "aiNote": "Non viene inviato nulla finché non si aggiunge un provider e si invia un messaggio."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "Assistente basato sull'intelligenza artificiale",
-        "description": "Consenti agli utenti di attivare l'assistente AI. Quando è disattivato, l'assistente è nascosto e bloccato per tutti."
-      },
-      "privateEndpoints": {
-        "label": "Host di IA privati consentiti"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Assistente AI per l'innovazione",
-        "description": "Consenti all'assistente IA di fornire assistenza nel terminale di questo host. Disattivato per impostazione predefinita, ma è necessario abilitare l'IA per il tuo account."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Visualizza documentazione"

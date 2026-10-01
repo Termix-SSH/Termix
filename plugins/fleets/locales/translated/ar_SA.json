@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "عرض الأساطيل",
+      "description": "اطلع على الأساطيل وأعضائها ومخزونها."
+    },
+    "manage": {
+      "title": "إدارة الأساطيل",
+      "description": "إنشاء الأساطيل وتعديلها وحذفها، وتغيير العضوية، ومشاركة الأساطيل مع مستخدمين أو أدوار أخرى."
+    },
+    "execute": {
+      "title": "نفّذ عمليات الأسطول",
+      "description": "قم بتشغيل الأوامر وإجراءات الحزم عبر مجموعة من الأجهزة، ونقل الملفات من وإلى مضيفيها الأعضاء."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -7,12 +21,12 @@
         "createFleetTitle": "إنشاء أسطول",
         "editFleetTitle": "تعديل الأسطول",
         "createFleetDescription": "الأسطول عبارة عن مجموعة محددة من المضيفين يمكنك شنّ عمليات ضدهم كوحدة واحدة.",
-        "nameLabel": "اسم",
+        "nameLabel": "الاسم",
         "namePlaceholder": "مثال: خوادم الويب",
         "nameRequired": "اسم الأسطول مطلوب",
-        "descriptionLabel": "وصف",
+        "descriptionLabel": "الوصف",
         "descriptionPlaceholder": "وصف اختياري",
-        "colorLabel": "لون",
+        "colorLabel": "اللون",
         "tagRulesLabel": "قواعد الوسوم",
         "tagRulesPlaceholder": "موقع الإنتاج، الحافة",
         "tagRulesHint": "يتم تضمين المضيفين الذين يحملون أيًا من هذه العلامات تلقائيًا، بالإضافة إلى المضيفين الذين تمت إضافتهم يدويًا.",
@@ -27,11 +41,11 @@
         "searchFleets": "أساطيل البحث...",
         "noFleets": "لا توجد أساطيل حتى الآن. أنشئ أسطولاً للبدء.",
         "memberCount": "{{count}} المضيف",
-        "memberCount_other": "{{count}} المضيفون",
+        "memberCount_other": "{{count}} مضيفات",
         "manageMembers": "إدارة الأعضاء",
         "manageMembersTitle": "إدارة أعضاء الأسطول",
         "manageMembersDescription": "قم بتفعيل أو تعطيل عضوية المضيفين في هذه المجموعة الثابتة. يتم تضمين المضيفين الذين تتطابق قواعد الوسوم معهم دائمًا.",
-        "searchHosts": "ابحث عن المضيفين...",
+        "searchHosts": "ابحث عن مضيفين...",
         "noHostsFound": "لم يتم العثور على مضيفين",
         "noMembers": "لا يوجد أعضاء في هذا الأسطول حتى الآن. أضف مضيفين أو حدد قاعدة للوسوم.",
         "membersLoadFailed": "فشل تحميل أعضاء الأسطول",
@@ -40,7 +54,7 @@
         "tabTransfer": "نقل الملفات",
         "tabInventory": "جرد",
         "openInventoryTab": "افتح في علامة تبويب كاملة",
-        "tabPackages": "الطرود",
+        "tabPackages": "الحزم",
         "runOnFleet": "انطلق على الأسطول",
         "commandPlaceholder": "وقت التشغيل && df -h",
         "commandRequired": "يلزم إصدار أمر",
@@ -52,34 +66,41 @@
         "resultFailed": "فشل",
         "push": "يدفع",
         "pull": "يحذب",
-        "remotePathLabel": "مسار بعيد",
+        "remotePathLabel": "المسار البعيد",
         "remotePathRequired": "يلزم وجود مسار بعيد",
         "fileLabel": "ملف",
         "fileRequired": "الملف مطلوب",
         "pushHint": "يتم كتابة الملف المحدد في هذا المسار المحدد على كل مضيف في الأسطول.",
         "pullHint": "يتم قراءة الملف الموجود في هذا المسار من كل مضيف وتنزيله كملف مضغوط واحد، مجلد واحد لكل مضيف.",
-        "transferComplete": "اكتملت عملية النقل",
-        "transferFailed": "فشلت عملية النقل",
+        "transferComplete": "اكتمل النقل",
+        "transferFailed": "فشل النقل",
         "refreshInventory": "تحديث المخزون",
         "inventoryLoadFailed": "فشل تحميل المخزون",
         "inventoryRefreshed": "تم تحديث المخزون",
         "inventoryRefreshFailed": "فشل تحديث المخزون",
         "inventoryNoData": "لا توجد بيانات جرد حتى الآن - قم بتحديث الصفحة لجمعها.",
-        "inventoryHost": "يستضيف",
+        "inventoryHost": "المضيف",
         "inventoryCollectedCount": "تم جمع {{count}}/{{total}}",
         "inventoryOs": "نظام التشغيل",
         "inventoryKernel": "النواة",
         "inventoryArch": "قوس",
-        "inventoryUptime": "وقت التشغيل",
+        "inventoryUptime": "مدة التشغيل",
         "inventoryPackageManager": "مدير الحزم",
         "inventoryCollectedAt": "تم جمعها",
-        "packageActionLabel": "فعل",
+        "packageActionLabel": "الإجراء",
         "packageInstall": "ثَبَّتَ",
-        "packageRemove": "يزيل",
+        "packageRemove": "إزالة",
         "packageUpgradeAll": "قم بترقية جميع الحزم",
         "packageNameLabel": "اسم الحزمة",
         "packageNameRequired": "اسم الحزمة مطلوب",
-        "packageHint": "يتطلب الوصول على مستوى الإدارة لكل مضيف ويتم رفعه باستخدام كلمة مرور sudo المخزنة للمضيف."
+        "packageHint": "يتطلب الوصول على مستوى الإدارة لكل مضيف ويتم رفعه باستخدام كلمة مرور sudo المخزنة للمضيف.",
+        "shareFleet": "أسطول مشترك",
+        "shareFleetTitle": "شارك \"{{name}}\"",
+        "shareFleetDescription": "يُشارك هذا الأمر أجهزة الأعضاء الحالية في هذه المجموعة مع المستخدمين أو الأدوار المُحددة. لا تتم مشاركة الأجهزة التي تُضاف إلى المجموعة لاحقًا تلقائيًا - يُرجى إعادة المشاركة لإضافتها.",
+        "shareSelectionRequired": "اختر مستخدمًا واحدًا أو دورًا واحدًا على الأقل",
+        "fleetSharedSuccessfully": "مشترك {{shared}} من {{total}} مضيف (مضيفين) في هذه المجموعة",
+        "failedToShareFleet": "فشل في مشاركة الأسطول",
+        "noMembersToShare": "لا يوجد لدى هذا الأسطول مضيفون أعضاء للمشاركة حتى الآن."
       }
     }
   },

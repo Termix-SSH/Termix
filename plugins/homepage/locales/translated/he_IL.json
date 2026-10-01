@@ -18,6 +18,7 @@
   "homepage": {
     "title": "דף הבית",
     "addWidget": "הוסף ווידג'ט",
+    "noWidgetsInCategory": "אין ווידג'טים בקטגוריה זו",
     "editWidget": "עריכת ווידג'ט",
     "zoomIn": "לְהִתְמַקֵד",
     "zoomOut": "התקרבות",
@@ -55,10 +56,13 @@
     "temperatureUnit": "יחידת טמפרטורה",
     "showForecast": "הצג תחזית ל-3 ימים",
     "scrolling": "אפשר גלילה",
-    "feedUrl": "כתובת אתר של הזנה",
+    "feedUrl": "כתובת אתר של הפיד",
     "maxItems": "מקסימום פריטים",
     "showDescription": "הצג תיאור",
     "widgetRssName": "עדכון RSS",
+    "rssNoFeedUrl": "הגדרת כתובת URL של פיד בהגדרות הווידג'ט",
+    "rssLoadError": "לא ניתן היה לטעון את הפיד",
+    "rssNoItems": "אין פריטים",
     "noHostSelected": "לא נבחר מארח",
     "displayedMetrics": "מדדים מוצגים",
     "metricCpu": "מעבד",
@@ -157,6 +161,30 @@
     "compactMode": "מצב קומפקטי",
     "selectHosts": "בחר מארחים",
     "listLayout": "רְשִׁימָה",
-    "gridLayout": "רֶשֶׁת"
+    "gridLayout": "רֶשֶׁת",
+    "configureUrl": "הגדר כתובת URL בהגדרות הווידג'ט",
+    "embeddedContent": "תוכן מוטמע",
+    "noBookmarks": "אין סימניות",
+    "noSections": "לא הוגדרו מדורים",
+    "noServices": "לא הוגדרו שירותים",
+    "configureLocation": "הגדרת מיקום בהגדרות הווידג'ט",
+    "bannerTextPlaceholder": "טקסט באנר",
+    "serviceNamePlaceholder": "השירות שלי"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש בדף הבית",
+      "description": "הצג וערוך את הקישורים של בד הציור של דף הבית ושירות לוח המחוונים."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "מארחים פרטיים מורשים",
+      "description": "שמות מארחים/כתובות IP פרטיות או לולאה חוזרת מדויקות עבור סטטוס פינג ווידג'טים של API מותאם אישית. הפרד ערכים באמצעות פסיקים או שורות חדשות; השמט סכמות, יציאות ונתיבים. ריקון חסימות יעדים פרטיים."
+    },
+    "privateCertificateAuthority": {
+      "label": "רשות אישורים פרטית (PEM)",
+      "description": "חבילת CA מהימנה אופציונלית עבור מארחים ברשימת היתרים. אימות אישורים נשאר מופעל. השאר ריק כדי להשתמש במאגר האמון של המערכת."
+    }
   }
 }

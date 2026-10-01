@@ -3,7 +3,8 @@
     "profile": "Profilo firmatario Vault",
     "selectProfile": "Seleziona un profilo Vault...",
     "hint": "Le impostazioni provengono dal profilo condiviso; effettuerai l'accesso a Vault tramite OIDC quando ti connetti. Nessun segreto è memorizzato.",
-    "docs": "Visualizza documentazione"
+    "docs": "Vedi documenti",
+    "sharedProfile": "{{name}} (condiviso)"
   },
   "profiles": {
     "new": "Nuovo profilo",
@@ -27,12 +28,42 @@
     "save": "Salva profilo",
     "validationError": "Nome, indirizzo Vault e ruolo di firma SSH sono obbligatori",
     "none": "Nessun profilo Vault ancora.",
-    "sharedBadge": "condiviso"
+    "sharedBadge": "condiviso",
+    "edit": "Modifica",
+    "delete": "Elimina"
+  },
+  "hosts": {
+    "filterAuthVault": "Volta"
   },
   "dialog": {
     "title": "Accesso a Vault richiesto",
     "description": "Una finestra si è aperta per accedere a HashiCorp Vault. Completa l'accesso lì; la connessione continuerà automaticamente.",
     "failed": "Autenticazione Vault fallita. Riprova.",
     "reopen": "Riapri la finestra di accesso"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare la firma SSH di Vault",
+      "description": "Crea profili di firmatari Vault e connettiti agli host che utilizzano Vault."
+    },
+    "share": {
+      "title": "Condividi i profili di Vault",
+      "description": "Contrassegna il profilo di un firmatario di Vault come condiviso in modo che ogni utente possa selezionarlo."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "URI di reindirizzamento",
+      "description": "Aggiungi questo URL a allowed_redirect_uris in ogni ruolo OIDC di Vault con cui Termix effettua l'accesso."
+    },
+    "legacyCallback": {
+      "label": "Utilizzare il vecchio URI di reindirizzamento",
+      "description": "Continua a inviare /vault/oidc/callback, l'URI di reindirizzamento utilizzato prima della versione 2.9. Disattivalo non appena i tuoi ruoli Vault consentiranno il nuovo URI."
+    },
+    "host": {
+      "profileId": {
+        "label": "Profilo del firmatario della cassaforte"
+      }
+    }
   }
 }

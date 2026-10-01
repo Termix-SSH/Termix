@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Zdroj a cíl se musí lišit",
     "exportJSON": "Exportovat JSON",
     "importJSON": "Importovat JSON",
-    "terminal": "Terminál",
-    "fileManager": "Správce souborů",
-    "tunnel": "Tunel",
-    "docker": "Přístavní dělník",
     "serverStats": "Metriky hostitele",
-    "hostMetrics": "Metriky hostitele",
     "noNodes": "Zatím žádné uzly"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} uzlů"
+  },
+  "permissions": {
+    "use": {
+      "title": "Použít síťový graf",
+      "description": "Zobrazte a upravte graf topologie sítě."
+    }
   },
   "hosts": {
     "docsLink": "Zobrazit dokumenty"

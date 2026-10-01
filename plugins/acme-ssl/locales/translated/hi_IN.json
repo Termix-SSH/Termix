@@ -1,29 +1,58 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Manage ACME certificates",
+      "description": "See the certificate status and request a new certificate now."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Renew automatically",
+      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+    },
     "domain": {
       "label": "डोमेन",
-      "placeholder": "termix.example.com",
-      "description": "प्रमाणपत्र के लिए सार्वजनिक डोमेन नाम।"
+      "description": "प्रमाणपत्र के लिए सार्वजनिक डोमेन नाम।",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "ईमेल",
+      "description": "Contact email for the ACME account and expiry notices.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "प्रमाणपत्र प्राधिकरण",
+      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (staging)",
+      "custom": "Custom ACME directory"
+    },
+    "directoryUrl": {
+      "label": "ACME directory URL",
+      "description": "Only for a custom certificate authority. Must be an https URL."
+    },
     "challengeType": {
-      "label": "चुनौती प्रकार",
-      "cloudflare": "DNS (Cloudflare) - Cloudflare API टोकन आवश्यक है"
+      "label": "Challenge type",
+      "description": "How to prove you own the domain.",
+      "http": "HTTP - needs port 80 reachable from the internet",
+      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
     },
     "cloudflareToken": {
-      "label": "Cloudflare API टोकन",
+      "label": "Cloudflare API token",
       "description": "आपके डोमेन के लिए Zone:DNS:Edit अनुमति वाला स्कोप्ड टोकन।"
     }
   },
   "status": {
-    "title": "प्रमाणपत्र स्थिति",
+    "title": "Certificate status",
     "none": "कोई प्रमाणपत्र नहीं",
+    "names": "Covers {{names}}",
+    "issuer": "Issued by {{issuer}}",
     "expires": "{{date}} को समाप्त होगा",
     "lastIssued": "अंतिम जारी: {{date}}",
-    "request": "प्रमाणपत्र जारी करें / नवीनीकरण करें",
-    "requesting": "प्रमाणपत्र अनुरोध किया जा रहा है..."
+    "lastError": "Last attempt failed: {{error}}",
+    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
+    "request": "Request certificate now",
+    "requesting": "प्रमाणपत्र अनुरोध किया जा रहा है...",
+    "issued": "Certificate issued and installed"
   }
 }

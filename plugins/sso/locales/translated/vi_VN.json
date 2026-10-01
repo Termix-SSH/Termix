@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Sign in with SSO",
   "loginWithProvider": "Đăng nhập bằng {{name}}",
   "loading": "Đang tải...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
   "providers": {
     "docsLink": "Xem tài liệu",
     "none": "Chưa có nhà cung cấp SSO.",
@@ -9,6 +16,8 @@
     "delete": "Xóa nhà cung cấp",
     "deleteConfirm": "Xóa nhà cung cấp này? Người dùng liên kết sẽ không thể đăng nhập.",
     "name": "Tên hiển thị",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
     "type": "Loại nhà cung cấp",
     "enabled": "Đã bật",
     "save": "Lưu nhà cung cấp",
@@ -17,11 +26,20 @@
     "saveFailed": "Không thể lưu",
     "deleted": "Đã xóa",
     "deleteFailed": "Không thể xóa",
-    "cancel": "Hủy"
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "Hủy",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
   },
   "fields": {
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
     "issuerUrl": "Issuer URL",
     "authUrl": "URL ủy quyền",
     "tokenUrl": "Token URL",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Người dùng trong nhóm này được cấp quyền admin. Để trống để tắt đồng bộ nhóm.",
     "caCert": "Chứng chỉ CA tùy chỉnh",
     "caCertDesc": "Tùy chọn. Chứng chỉ CA mã hóa PEM cho các nhà cung cấp OIDC sử dụng CA riêng hoặc tự ký. Để trống để sử dụng kho tin cậy hệ thống."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
   }
 }

@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "ユーザーを検索...",
     "noUsersFound": "ユーザーが見つかりませんでした",
     "linkCreated": "共有リンクが作成されました",
+    "linkNeedsServer": "共有リンクは、Termixサーバー上のセッションでのみ機能します。リンクを使用してホストを共有するには、リンク先のサーバー経由でこのホストに接続してください。",
     "linkCopied": "リンクがクリップボードにコピーされました",
     "copyLink": "リンクをコピー",
     "shareCreated": "セッションが共有されました。相手の「接続」タブに表示されます。",
@@ -37,7 +38,7 @@
     "userLacksHostAccess": "そのユーザーはまだこのホストへのアクセス権を持っていません。まずホストを共有するか、代わりにリンクを使用してください。",
     "activeShares": "アクティブなシェア",
     "noActiveShares": "今セッションで有効な株式はありません",
-    "revoke": "取り消す",
+    "revoke": "無効化",
     "revokeConfirmTitle": "この共有を取り消しますか？",
     "revokeConfirmDescription": "この共有ファイルを使用している人は、即座にアクセス権を失います。",
     "revoked": "シェアが取り消されました",
@@ -48,6 +49,8 @@
     "linkShareBadge": "リンク",
     "userShareBadge": "ユーザー: {{username}}",
     "loadSharesFailed": "アクティブな共有の読み込みに失敗しました",
+    "remoteDisplayUnavailable": "現在、リモートデスクトップはご利用いただけません。",
+    "sharedWithMe": "私と共有されたセッション",
     "customHoursPlaceholder": "アクセス期限までの時間数"
   },
   "collab": {
@@ -56,11 +59,11 @@
     "persistentRoom": "永続的な部屋",
     "persistentRoomHint": "永続的な会議室は、会議終了後もリストに表示され、再利用できます。",
     "noRooms": "まだ会議室がありません。会議室を作成して会議を開始してください。",
-    "openRoom": "開ける",
+    "openRoom": "開く",
     "endRoom": "会議終了",
     "leaveRoom": "離れる",
-    "deleteMember": "取り除く",
-    "removeMember": "{{name}} を削除",
+    "deleteMember": "削除",
+    "removeMember": "{{name}}を削除",
     "removeMemberTitle": "このメンバーを削除しますか？",
     "removeMemberDescription": "{{name}} は直ちにこのルームへのアクセス権を失います。アクティブな SSH ビューアはすべて切断されます。",
     "invite": "招待する",
@@ -68,6 +71,9 @@
     "members": "メンバー",
     "membersPanel": "ルームメンバーと制御リクエスト",
     "membersWithCount": "メンバー（{{count}}）",
+    "guestsWithCount": "ゲスト ({{count}})",
+    "removeGuests": "ゲストを退出させる",
+    "anonymousGuest": "ゲスト",
     "online": "オンライン",
     "offline": "オフライン",
     "you": "（あなた）",
@@ -99,7 +105,7 @@
     "disableLinkConfirmTitle": "ゲストリンクを無効にしますか？",
     "disableLinkDescription": "匿名SSHビューアは直ちに切断され、現在の接続は機能しなくなります。",
     "linkCopied": "リンクをコピーしました",
-    "roles": "役割",
+    "roles": "ロール",
     "users": "ユーザー",
     "searchUsers": "ユーザーを検索",
     "endConfirmTitle": "この会議を終了しますか？",
@@ -115,6 +121,7 @@
       "linkInvalid": "このゲストリンクは無効であるか、ミーティングが終了しています"
     },
     "reopenFromPanel": "この会議タブの有効期限が切れました。会議パネルから会議室を再度開いてください。",
+    "retry": "再試行",
     "requestControl": "リクエスト制御",
     "cancelControlRequest": "キャンセルリクエスト",
     "controlQueue": "制御要求",
@@ -130,7 +137,10 @@
     "youArePresenting": "あなたは別のタブでプレゼンテーションを行っています。プレゼンテーションを中断して、ステージを譲ってください。",
     "created": "ルームが作成されました",
     "invited": "会員の皆様を招待いたします",
-    "roomTab": "ミーティング"
+    "roomTab": "ミーティング",
+    "serverChanged": "会議サーバーが変更されました。会議パネルからこの会議を再度開いてください。",
+    "hostNotSynced": "プレゼンテーションを行う前に、このホストを会議サーバーと同期させてください。",
+    "linkRequiresServer": "このデスクトップをTermixサーバーに接続し、そこで会議を作成してWebリンクを共有してください。"
   },
   "nav": {
     "collab": "会議"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "セッションを共有し、ルームに参加する",
+      "description": "ライブセッションをリンクまたは他のユーザーと共有したり、コラボレーションルームを作成・参加したりできます。"
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "カスタム"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "私と共有しました",
+    "sharedBy": "{{username}} によって共有されました",
+    "join": "参加する",
+    "sharedSessionLabel": "{{hostName}} (共有)"
   }
 }

@@ -1,11 +1,11 @@
 {
   "remoteDesktop": {
     "connecting": "正在连接到 {{type}} 会话...",
-    "checkingGuacd": "正在检查远程桌面服务...",
+    "checkingGuacd": "Checking remote desktop service...",
     "requestingToken": "Requesting {{type}} connection token...",
-    "openingSession": "正在开启 {{type}} 会话...",
+    "openingSession": "Opening {{type}} session...",
     "negotiating": "Negotiating {{type}} handshake...",
-    "sessionReady": "{{type}} 会话已准备就绪",
+    "sessionReady": "{{type}} session ready",
     "connectionError": "连接错误",
     "connectionFailed": "连接失败",
     "failedToConnect": "获取连接令牌失败",
@@ -14,37 +14,37 @@
     "reconnect": "重新连接",
     "retry": "重试",
     "guacdUnavailable": "远程桌面服务 (guacd) 不可用。请确保 guacd 正在运行并可访问，且在管理设置中正确配置。",
-    "credentialPromptTitle": "输入 RDP 凭据",
-    "credentialPromptDescription": "此主机设置为在连接时提示输入凭据。这些凭据仅用于当前会话，不会被保存。",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
     "connect": "连接",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
-      "title": "驱动器文件",
-      "parent": "父目录",
+      "title": "Drive Files",
+      "parent": "Parent directory",
       "refresh": "刷新",
-      "empty": "此文件夹为空。",
-      "listFailed": "读取此文件夹失败",
+      "empty": "此文件夹为空",
+      "listFailed": "Failed to read this folder",
       "download": "下载",
-      "downloadFailed": "下载失败 {{name}}",
-      "upload": "上传文件",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
       "uploading": "正在上传 {{name}}...",
-      "uploaded": "已上传 {{name}}",
-      "uploadFailed": "上传失败 {{name}}",
-      "uploadDisabled": "此连接已禁用上传功能",
-      "driveUnavailable": "上传文件前启用 RDP 驱动器重定向",
-      "driveNotWritable": "guacd 无法写入驱动器文件夹。请检查 GUACD_DRIVE_PATH（或主机驱动器路径）及其权限。",
-      "dropToUpload": "拖放文件即可上传"
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (锁定屏幕)",
       "winKey": "Windows 键",
-      "superL": "Super+L（锁屏）",
-      "superKey": "超级密钥",
-      "super": "极好的",
-      "cmdL": "Cmd+L（锁屏）",
-      "cmdKey": "命令键",
-      "cmd": "命令",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -66,25 +66,30 @@
       "collapse": "折叠工具栏",
       "expand": "展开工具栏",
       "dragHandle": "拖动以重新定位",
-      "hide": "本次会话期间隐藏。要永久禁用，请打开“主机设置”→“常规”→“连接工具栏”。",
-      "zoomIn": "放大",
-      "zoomOut": "缩小",
-      "resetZoom": "重置缩放",
-      "fitToScreen": "适应屏幕",
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
       "switchToTrackpad": "切换到触控板模式（拖动移动光标，轻点进行点击）",
-      "switchToTouch": "切换到触摸模式（直接点击你想点击的地方）"
-    }
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
   },
   "hosts": {
-    "nativeRdpOpened": "在 Windows 远程桌面中打开",
-    "nativeRdpFailed": "无法打开 Windows 远程桌面",
-    "openNativeRdp": "在 Windows 远程桌面中打开",
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
     "guac": {
+      "toolbar": "Toolbar",
       "connection": "连接",
       "authentication": "认证",
       "storedCredential": "已存储凭据",
       "authMethod": "认证方法",
-      "authTypeNoneDesc": "不会存储任何凭据。每次连接时，系统都会提示您输入用户名和密码；这些信息不会被保存。",
+      "authTypeDirect": "直接",
+      "authTypeCredential": "凭据",
+      "authTypeNone": "无",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
       "selectCredential": "选择凭据...",
       "connectionSettings": "连接设置",
       "displaySettings": "显示设置",
@@ -102,7 +107,7 @@
       "rdpPort": "RDP 端口",
       "username": "用户名",
       "password": "密码",
-      "passwordSaved": "密码已保存，输入即可更改",
+      "passwordSaved": "Password saved, type to change",
       "domain": "域",
       "securityMode": "安全模式",
       "width": "宽度",
@@ -206,7 +211,8 @@
       "colorScheme": "配色方案",
       "backspaceKey": "退格键",
       "colorDepth": "颜色深度",
-      "resizeMethod": "调整大小方法"
+      "resizeMethod": "调整大小方法",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "远程桌面",
     "tabRdp": "RDP",
@@ -214,23 +220,29 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "虚拟网络",
     "unencryptedShell": "未加密 Shell",
-    "docsLink": "查看文档"
+    "remoteDesktopNotes": "笔记",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "查看文档",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
   },
   "onboarding": {
-    "feature_desktop": "远程桌面",
+    "feature_desktop": "Remote desktop",
     "feature_desktop_desc": "像 SSH 一样，在标签页中直接打开 RDP、VNC 和 Telnet 会话。"
   },
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "颜色深度"
+        "label": "颜色深度",
+        "description": "Used for RDP hosts that leave it on their default."
       },
       "resizeMethod": {
-        "label": "调整大小方法"
+        "label": "调整大小方法",
+        "description": "How the remote screen follows the window size."
       },
-      "resizeDisplayUpdate": "显示更新",
+      "resizeDisplayUpdate": "Display Update",
       "resizeReconnect": "重新连接",
-      "inherit": "继承",
+      "inherit": "Inherit",
       "on": "开启",
       "off": "关闭",
       "forceLossless": {
@@ -268,15 +280,71 @@
       "disablePaste": {
         "label": "禁用粘贴",
         "description": "禁止粘贴文本到远程会话"
-      }
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
     },
     "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
       "guacdUrl": {
-        "label": "guacd URL"
+        "label": "guacd URL",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "远程桌面"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
     }
   },
   "errors": {
-    "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

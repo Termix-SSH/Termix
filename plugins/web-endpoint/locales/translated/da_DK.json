@@ -20,6 +20,8 @@
     "webUiEndpointLabel": "Endepunkt {{number}}",
     "webUiIntegration": "Webgrænseflade",
     "webUiEndpointsSection": "Endepunkter",
+    "webUiNoEndpoints": "Ingen web-slutpunkter endnu. Brug Tilføj slutpunkt til at oprette et.",
+    "webUiEndpointsDisabled": "Slå webgrænsefladen til ovenfor for at tilføje slutpunkter.",
     "webUiRequirementsText": "Et direkte slutpunkt åbnes af din browser, så dens port skal kunne nås herfra. En SSH-tunnel åbnes i stedet af Termix over denne værts SSH-forbindelse, så porten skal kun kunne nås fra værten.",
     "enableWebUi": "Aktivér webslutpunkter",
     "enableWebUiDesc": "Åbn denne værts webgrænseflader fra sidebjælken.",

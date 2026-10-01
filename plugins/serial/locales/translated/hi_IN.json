@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "सीरियल"
+  },
   "serial": {
     "title": "सीरियल",
     "portLabel": "पोर्ट",
@@ -22,8 +25,5 @@
     "notSupported": "सीरियल कनेक्शन के लिए Web Serial API समर्थन वाले ब्राउज़र (Chrome, Edge, या Firefox 151+) या Termix डेस्कटॉप ऐप की आवश्यकता है।",
     "hideHint": "आप सीरियल टैब को User Profile > Appearance > Sidebar > Navigation में छिपा सकते हैं।",
     "browserPickerHint": "Connect पर क्लिक करें और आपका ब्राउज़र डिवाइस चुनने के लिए एक पोर्ट पिकर खोलेगा।"
-  },
-  "nav": {
-    "serial": "सीरियल"
   }
 }

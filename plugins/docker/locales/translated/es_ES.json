@@ -21,6 +21,11 @@
     "ports": "Puertos",
     "noPorts": "Sin puertos",
     "start": "Iniciar",
+    "stop": "Parada",
+    "status": "Estado",
+    "actions": "Comportamiento",
+    "cardView": "Vista de la tarjeta",
+    "listView": "Vista de lista",
     "confirmRemoveContainer": "¿Está seguro de que desea eliminar el contenedor '{{name}}'? Esta acción no se puede deshacer.",
     "runningContainerWarning": "Advertencia: Este contenedor está actualmente en ejecución. Al eliminarlo, se detendrá primero.",
     "loadingContainers": "Cargando contenedores...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "El contenedor debe estar en ejecución para acceder a la consola",
     "verificationCodePrompt": "Introduzca el código de verificación",
     "totpVerificationFailed": "La verificación TOTP falló. Inténtelo de nuevo.",
+    "browserSignInFailed": "Error al iniciar sesión. Inténtalo de nuevo.",
     "connectedTo": "Conectado a {{containerName}}",
     "disconnected": "Desconectado",
     "consoleError": "Error de consola",
@@ -93,19 +99,34 @@
     "logs": "Registros",
     "stats": "Estadísticas",
     "consoleTab": "Consola",
-    "startContainerToAccess": "Inicie el contenedor para acceder a la consola"
+    "startContainerToAccess": "Inicie el contenedor para acceder a la consola",
+    "noHostSelected": "Ningún host seleccionado",
+    "failedToFetchLogs": "Error al obtener los registros: {{error}}",
+    "failedToDownloadLogs": "Error al descargar los registros: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
-    "feature_docker": "Estibador",
+    "feature_docker": "Docker",
     "feature_docker_desc": "Vea los contenedores, lea los registros y observe las estadísticas en cualquier host que ejecute Docker."
+  },
+  "terminal": {
+    "retry": "Reintentar",
+    "clipboardReadFailed": "No se pudo leer del portapapeles. Asegúrese de que los permisos del portapapeles estén concedidos.",
+    "clipboardWriteFailed": "Error al copiar al portapapeles. Asegúrese de que la página se sirva a través de HTTPS o en localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliza Docker",
+      "description": "Abra las consolas del administrador de Docker y de los contenedores en los hosts que tengan Docker habilitado."
+    }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "Activar Docker"
+        "label": "Activar Docker",
+        "description": "Administra los contenedores en este host."
       },
       "containerRuntime": {
         "label": "Runtime de contenedores",
@@ -122,9 +143,5 @@
     "docsLink": "Ver documentación",
     "hostNotFound": "Host no encontrado",
     "loadingHost": "Cargando host..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "No se pudo leer del portapapeles. Asegúrese de que los permisos del portapapeles estén concedidos.",
-    "clipboardWriteFailed": "Error al copiar al portapapeles. Asegúrese de que la página se sirva a través de HTTPS o en localhost."
   }
 }

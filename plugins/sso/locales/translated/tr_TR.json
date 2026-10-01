@@ -1,14 +1,23 @@
 {
+  "loginWithSso": "Sign in with SSO",
   "loginWithProvider": "{{name}} ile giriş yap",
   "loading": "Yükleniyor...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
   "providers": {
-    "docsLink": "Belgeleri görüntüle",
+    "docsLink": "Belgelere bak",
     "none": "Hiçbir SSO sağlayıcısı yapılandırılmamış.",
     "add": "Sağlayıcı Ekle",
     "edit": "Sağlayıcıyı Düzenle",
     "delete": "Sağlayıcıyı Sil",
     "deleteConfirm": "Bu sağlayıcı silinsin mi? İlişkili kullanıcılar oturum açamaz.",
     "name": "Görünen Ad",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
     "type": "Sağlayıcı Türü",
     "enabled": "Etkin",
     "save": "Sağlayıcıyı Kaydet",
@@ -17,11 +26,20 @@
     "saveFailed": "Kaydedilemedi",
     "deleted": "Silindi",
     "deleteFailed": "Silinemedi",
-    "cancel": "İptal"
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "İptal",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
   },
   "fields": {
     "clientId": "İstemci Kimliği",
     "clientSecret": "İstemci Sırrı",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
     "issuerUrl": "Sağlayıcı URL'si",
     "authUrl": "Yetkilendirme URL'si",
     "tokenUrl": "Belirteç URL'si",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Bu gruptaki kullanıcılara yönetici yetkisi verilir. Grup eşitlemeyi devre dışı bırakmak için boş bırakın.",
     "caCert": "Özel CA Sertifikası",
     "caCertDesc": "İsteğe bağlı. Özel veya kendinden imzalı CA kullanan OIDC sağlayıcıları için PEM kodlu CA sertifikası. Sistem güven deposunu kullanmak için boş bırakın."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
   }
 }

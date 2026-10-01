@@ -3,8 +3,31 @@
     "sessionLogs": "Istuntolokit"
   },
   "hosts": {
-    "enableSessionRecording": "Istuntojen lokitiedot",
+    "enableSessionRecording": "Istunnon tallennus",
     "enableSessionRecordingDesc": "Tallenna pääteistunnon tuloste myöhempää tarkastelua varten"
+  },
+  "permissions": {
+    "view": {
+      "title": "Näytä istuntotallenteet",
+      "description": "Katsele ja toista omia istuntotallenteitasi."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Säilytys (päivää)",
+        "description": "Kuinka kauan istuntotallennetta säilytetään ennen kuin se poistetaan automaattisesti."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Ota istunnon tallennus käyttöön",
+        "description": "Tallenna tämän isännän päätelaitteen lähtö, jotta voit toistaa sen tai ladata sen myöhemmin."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Äänitys"
   },
   "sessionLogs": {
     "title": "Istuntolokit",
@@ -21,6 +44,17 @@
     "copied": "Kopioitu!",
     "loadError": "Istuntolokien lataaminen epäonnistui",
     "deleteError": "Istuntolokitietojen poistaminen epäonnistui",
-    "filterByHost": "Suodata isännän mukaan..."
+    "filterByHost": "Suodata isännän mukaan...",
+    "back": "Takaisin",
+    "empty": "(tyhjä)",
+    "noResults": "Ei tuloksia haulle \"{{query}}\"",
+    "hostFallback": "Isäntä {{id}}",
+    "sessionFallback": "Istunto {{id}}"
+  },
+  "player": {
+    "timeline": "Tallennusaikajana",
+    "speed": "Toistonopeus",
+    "play": "Toista tallenne",
+    "pause": "Keskeytä tallennus"
   }
 }

@@ -9,7 +9,7 @@
     "enableTunnelingDesc": "Povolit funkci SSH tunelu pro tohoto hostitele",
     "endpointHost": "Koncový hostitel",
     "endpointHostPlaceholder": "Stejný hostitel, hostitel SSH nebo dostupný hostitel/IP adresa",
-    "endpointPort": "Koncový port",
+    "endpointPort": "Port koncového bodu",
     "failedToConnectTunnel": "Připojení se nezdařilo",
     "failedToDisconnectTunnel": "Odpojení se nezdařilo",
     "maxRetries": "Maximální počet opakování",
@@ -45,7 +45,7 @@
     "remoteBindHost": "127.0.0.1 (naslouchání na koncovém bodě)",
     "remoteTargetHost": "127.0.0.1 (cíl z koncového bodu)",
     "retryInterval": "10",
-    "socksListenerHost": "127.0.0.1 (posluchač SOCKS)"
+    "socksListenerHost": "127.0.0.1 (poslouchač SOCKS)"
   },
   "profile": {
     "c2sCurrentLocalConfig": "{{count}} lokálních klientských tunelů nakonfigurovaných na této ploše.",
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Předvolby jsou explicitní snímky; načtením jedné z nich se nahradí seznam tunelů lokálních klientů tohoto desktopového klienta.",
     "c2sPresetToLoad": "Předvolba k načtení",
     "c2sTunnelPresets": "Přednastavení klientského tunelu",
-    "c2sTunnelPresetsUnavailable": "Přednastavení tunelů klienta jsou k dispozici pouze v klientské verzi pro stolní počítače."
+    "c2sTunnelPresetsUnavailable": "Přednastavení tunelů klienta jsou k dispozici pouze v klientské verzi pro stolní počítače.",
+    "c2sPresetRenameError": "Nepodařilo se přejmenovat předvolbu",
+    "c2sPresetDeleteError": "Nepodařilo se smazat předvolbu"
   },
   "tunnels": {
     "attempt": "Pokus {{current}} z {{max}}",
@@ -87,10 +89,10 @@
     "destinationPort": "Cílový přístav",
     "disconnected": "Odpojeno",
     "duplicateAutoStartBind": "Pouze jeden automaticky spouštěný klientský tunel může používat {{bind}}.",
-    "endpointPort": "Koncový port",
+    "endpointPort": "Port koncového bodu",
     "endpointSshHost": "Koncový SSH hostitel",
     "endpointSshHostPlaceholder": "Vyberte nakonfigurovaného hostitele",
-    "endpointSshHostRequired": "Pro každý klientský tunel vyberte koncový bod SSH hostitele.",
+    "endpointSshHostRequired": "Vyberte koncový bod SSH pro každý klientský tunel.",
     "error": "Chyba",
     "forwardDescriptionClientDynamic": "SOCKS na lokálním portu {{sourcePort}}.",
     "forwardDescriptionClientLocal": "Místní {{sourcePort}} → vzdálený {{endpointPort}}.",
@@ -121,7 +123,7 @@
     "noClientTunnels": "Na této ploše nejsou nakonfigurovány žádné klientské tunely.",
     "noHostSelected": "Nebyl vybrán žádný hostitel",
     "noSshTunnels": "Žádné SSH tunely",
-    "port": "Přístav",
+    "port": "Port",
     "remoteBindAddress": "Adresa vzdálené vazby",
     "remoteHost": "Vzdálený hostitel",
     "remotePort": "Vzdálený port",
@@ -139,8 +141,32 @@
     "typeLocal": "Místní (-L)",
     "typeRemote": "Vzdálené (-R)",
     "working": "Pracovní...",
+    "activeCount": "{{connected}}/{{total}} aktivní",
+    "listensOn": "Vázáno na localhost:{{port}}",
+    "socksProxy": "Proxy SOCKS5",
+    "waiting": "Čekání",
+    "remoteSessionExpired": "Relace vzdálené synchronizace vypršela. Znovu se připojte k aplikaci Vzdálená synchronizace a zkuste to znovu.",
+    "activeTunnels": "Aktivní tunely",
     "start": "Start",
-    "stop": "Zastávka"
+    "stop": "Zastávka",
+    "authTitle": "Autentizace tunelu",
+    "authRetry": "Předchozí kód nebyl přijat. Zadejte nový kód.",
+    "authAnswer": "Odpověď na ověřování",
+    "authContinue": "Pokračovat"
+  },
+  "permissions": {
+    "use": {
+      "title": "Používejte tunely",
+      "description": "Spouštění, zastavování a sledování SSH tunelů a ukládání předvoleb klientských tunelů."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Povolit tunely",
+        "description": "Nastavte SSH tunely přes tento hostitel."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tunely",

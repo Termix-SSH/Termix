@@ -23,7 +23,7 @@
     "provisionLabel": "Provisionner un serveur",
     "publishTitle": "Publier une clé publique",
     "generate": "Générer",
-    "generateTooltip": "Générer une paire de clés Ed25519 — publie la clé publique et télécharge la clé privée sur votre appareil",
+    "generateTooltip": "Générez une paire de clés Ed25519. Publiez la clé publique et téléchargez la clé privée sur votre appareil.",
     "saveToVault": "Enregistrer dans les identifiants",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Libellé (facultatif)",
@@ -32,7 +32,7 @@
     "keyPublished": "Clé publiée",
     "addKeyFailed": "Échec de l'ajout de la clé",
     "generatedSaved": "Paire de clés générée et enregistrée dans votre coffre-fort d'identifiants. Clé privée également téléchargée.",
-    "generatedOnly": "Paire de clés générée — clé privée téléchargée (affichée une seule fois).",
+    "generatedOnly": "Paire de clés générée. Clé privée téléchargée (affichée une seule fois).",
     "generateFailed": "Échec de la génération de la clé",
     "imported": "Clé importée depuis l'identifiant",
     "importFailed": "Échec de l'importation de la clé",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Confiance sur un serveur (exécuter en tant que root)",
     "caRotate": "Renouveler",
     "caRotateConfirm": "Renouveler l'AC ? Tous les certificats qu'elle a signés ne seront plus acceptés et devront être réémis.",
-    "caRotated": "AC renouvelée — certificats précédents révoqués",
+    "caRotated": "L'autorité de certification a été renouvelée. Les certificats précédents ont été révoqués.",
     "caRotateFailed": "Échec du renouvellement de l'AC",
     "caDelete": "Supprimer l'AC",
     "caDeleteConfirm": "Supprimer l'autorité de certification ?",
@@ -66,12 +66,21 @@
     "issueCert": "Certificat",
     "issueCertTooltip": "Émettre un certificat SSH pour cette clé, signé par votre AC",
     "certIssued": "Certificat émis et téléchargé",
-    "certIssueFailed": "Échec de l'émission du certificat"
+    "certIssueFailed": "Échec de l'émission du certificat",
+    "docsLink": "Documentation",
+    "principalsLabel": "Principes de SSH",
+    "principalsPlaceholder": "Principal(s) SSH, par exemple racine"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
-    "idBadge": "IDENTIFIANT"
+    "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilisez votre identifiant Termix",
+      "description": "Réclamez un nom d'utilisateur public, publiez des clés SSH et gérez une autorité de certification."
+    }
   }
 }

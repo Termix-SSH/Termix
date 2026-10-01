@@ -3,8 +3,31 @@
     "sessionLogs": "יומני סשן"
   },
   "hosts": {
-    "enableSessionRecording": "רישום מושבים",
+    "enableSessionRecording": "הקלטת סשן",
     "enableSessionRecordingDesc": "הקלט את פלט הפעלת הטרמינל לצורך סקירה מאוחרת יותר"
+  },
+  "permissions": {
+    "view": {
+      "title": "צפה בהקלטות של הפגישה",
+      "description": "צפה והפעל את הקלטות ההקלטה שלך."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "שמירה (ימים)",
+        "description": "כמה זמן נשמרת הקלטת סשן לפני שהיא נמחקת אוטומטית."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "הפעל הקלטת סשן",
+        "description": "הקלט את פלט הטרמינל עבור מארח זה כדי שתוכל להשמיע אותו או להוריד אותו מאוחר יותר."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "הַקלָטָה"
   },
   "sessionLogs": {
     "title": "יומני סשן",
@@ -21,6 +44,17 @@
     "copied": "מוּעֲתָק!",
     "loadError": "טעינת יומני הסשן נכשלה",
     "deleteError": "נכשלה מחיקת יומן ההפעלה",
-    "filterByHost": "סנן לפי מארח..."
+    "filterByHost": "סנן לפי מארח...",
+    "back": "בְּחֲזָרָה",
+    "empty": "(רֵיק)",
+    "noResults": "אין תוצאות עבור \"{{query}}\"",
+    "hostFallback": "מארח {{id}}",
+    "sessionFallback": "סשן {{id}}"
+  },
+  "player": {
+    "timeline": "ציר זמן של הקלטה",
+    "speed": "מהירות השמעה",
+    "play": "הפעלת הקלטה",
+    "pause": "השהיית ההקלטה"
   }
 }

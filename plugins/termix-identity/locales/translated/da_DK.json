@@ -23,7 +23,7 @@
     "provisionLabel": "Klargør en server",
     "publishTitle": "Udgiv en offentlig nøgle",
     "generate": "Frembringe",
-    "generateTooltip": "Generer et Ed25519-nøglepar — publicerer den offentlige nøgle og downloader den private nøgle til din enhed",
+    "generateTooltip": "Generer et Ed25519-nøglepar. Udgiv den offentlige nøgle og downloader den private nøgle til din enhed.",
     "saveToVault": "Gem til legitimationsoplysninger",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... bruger@vært",
     "labelPlaceholder": "Etiket (valgfrit)",
@@ -32,7 +32,7 @@
     "keyPublished": "Nøgle udgivet",
     "addKeyFailed": "Kunne ikke tilføje nøgle",
     "generatedSaved": "Nøglepar genereret og gemt i din login-boks. Privat nøgle er også downloadet.",
-    "generatedOnly": "Nøglepar genereret — privat nøgle downloadet (vises kun én gang).",
+    "generatedOnly": "Nøglepar genereret. Privat nøgle downloadet (vises kun én gang).",
     "generateFailed": "Kunne ikke generere nøgle",
     "imported": "Nøgle importeret fra legitimationsoplysninger",
     "importFailed": "Nøglen kunne ikke importeres",
@@ -52,11 +52,11 @@
     "caEnable": "Aktivér CA",
     "caEnabled": "CA aktiveret",
     "caCreateFailed": "Kunne ikke aktivere CA",
-    "caPublicKeyLabel": "CA's offentlige nøgle",
+    "caPublicKeyLabel": "CA offentlig nøgle",
     "caTrustLabel": "Tillid til en server (kør som root)",
     "caRotate": "Rotere",
     "caRotateConfirm": "Roter CA'en? Alle certifikater, den har underskrevet, vil ikke længere blive accepteret og skal genudstedes.",
-    "caRotated": "CA roteret — tidligere certifikater tilbagekaldt",
+    "caRotated": "CA roteret. Tidligere certifikater tilbagekaldt.",
     "caRotateFailed": "Kunne ikke rotere CA",
     "caDelete": "Fjern CA",
     "caDeleteConfirm": "Fjern certifikatmyndigheden?",
@@ -66,12 +66,21 @@
     "issueCert": "Certifikat",
     "issueCertTooltip": "Udsted et SSH-certifikat til denne nøgle, underskrevet af din CA",
     "certIssued": "Certifikat udstedt og downloadet",
-    "certIssueFailed": "Kunne ikke udstede certifikat"
+    "certIssueFailed": "Kunne ikke udstede certifikat",
+    "docsLink": "Se dokumenter",
+    "principalsLabel": "SSH-principper",
+    "principalsPlaceholder": "SSH-principal(er), f.eks. root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
     "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug Termix-ID",
+      "description": "Gør krav på et offentligt handle, udgiv SSH-nøgler og kør en certifikatmyndighed."
+    }
   }
 }

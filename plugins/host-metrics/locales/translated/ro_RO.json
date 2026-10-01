@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Metrici ale gazdei"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Memorie",
@@ -160,7 +163,6 @@
       "firewallPersist": "Reguli persistente",
       "firewallPersisted": "Regulile firewall-ului au persistat",
       "wireguard": "WireGuard",
-      "tailscale": "Scară de coadă",
       "wgNotInstalled": "WireGuard nu este instalat pe această gazdă",
       "wgNoInterfaces": "Nicio interfață WireGuard configurată",
       "wgInterfaceUp": "A menționa",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Ultima strângere de mână",
       "wgHandshakeNever": "Nu",
       "wgTransfer": "Transfer",
-      "tsNotInstalled": "Tailscale nu este instalat pe această gazdă",
-      "tsRunning": "Funcţionare",
-      "tsStopped": "Oprit",
-      "tsEnable": "Conectează-te",
-      "tsDisable": "Deconecta",
-      "tsEnabling": "Conectare la Tailscale...",
-      "tsDisabling": "Deconectare de la Tailscale...",
-      "tsEnabled": "Scală de coadă conectată",
-      "tsDisabled": "Scală detașată",
-      "tsIPs": "IP-uri la scară mică",
-      "tsPeers": "Colegi",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Nod de ieșire",
-      "tsExitNodeActive": "Nod de ieșire activ",
-      "tsHostname": "Nume gazdă"
+      "wgNoPeers": "Fără colegi"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "la",
     "apply": "Aplică",
     "viewHistory": "Vizualizați istoricul"
-  },
-  "nav": {
-    "hostMetrics": "Metrici ale gazdei"
   },
   "hosts": {
     "tabHostMetrics": "Metrici ale gazdei",
@@ -265,6 +249,9 @@
     "noHostSelected": "Nicio gazdă selectată",
     "selectHost": "Selectați o gazdă..."
   },
+  "terminalStatus": {
+    "unavailable": "Statistici live indisponibile"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Conectat"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizați metricile gazdei",
+      "description": "Vizualizați metricile gazdei și utilizați managerii de gazdă (servicii, pachete, firewall și altele) pe gazdele pe care le puteți accesa."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Interval de metrici (secunde)",
+        "description": "Cât de des este eșantionată o gazdă vizualizată, cu excepția cazului în care gazda își stabilește propriul interval."
+      },
+      "historyRetentionDays": {
+        "label": "Păstrarea istoricului (zile)",
+        "description": "Cât timp sunt păstrate mostrele de metrici pentru graficele istorice."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrici activate pentru gazdele noi",
+        "description": "Dacă noile gazde încep cu colectarea de metrici activată."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Unitate de temperatură",
+        "description": "Cum sunt afișate temperaturile în Metricile gazdei.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Colectați valori metrice"
+      },
+      "metricsInterval": {
+        "label": "Interval de metrici (secunde)"
+      },
+      "enabledWidgets": {
+        "label": "Widgeturi activate"
+      },
+      "excludedMounts": {
+        "label": "Monturi excluse"
+      },
+      "monitoredMounts": {
+        "label": "Căi monitorizate"
+      }
+    }
   }
 }

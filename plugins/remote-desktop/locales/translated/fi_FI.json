@@ -73,17 +73,22 @@
       "fitToScreen": "Sovita näyttöön",
       "switchToTrackpad": "Vaihda ohjauslevytilaan (vedä siirtääksesi kohdistinta, napauta napsauttamalla)",
       "switchToTouch": "Vaihda kosketustilaan (napauta suoraan haluamaasi kohtaan)"
-    }
+    },
+    "disabled": "Etätyöpöytä on poistettu käytöstä. Ylläpitäjä voi ottaa sen käyttöön asetuksissa."
   },
   "hosts": {
     "nativeRdpOpened": "Avattu Windowsin etätyöpöydällä",
     "nativeRdpFailed": "Windowsin etätyöpöydän avaaminen epäonnistui",
     "openNativeRdp": "Avaa Windowsin etätyöpöydällä",
     "guac": {
+      "toolbar": "Työkalurivi",
       "connection": "Yhteys",
       "authentication": "Todennus",
       "storedCredential": "Tallennetut tunnistetiedot",
       "authMethod": "Todennustapa",
+      "authTypeDirect": "Suoraan",
+      "authTypeCredential": "Valtakirja",
+      "authTypeNone": "Ei mitään",
       "authTypeNoneDesc": "Tunnuksia ei tallenneta. Sinulta kysytään käyttäjätunnusta ja salasanaa aina, kun muodostat yhteyden; niitä ei tallenneta.",
       "selectCredential": "Valitse tunnistetiedot...",
       "connectionSettings": "Yhteysasetukset",
@@ -200,13 +205,14 @@
       "readOnly": "Vain lukuoikeus",
       "readOnlyDesc": "Katso etänäyttöä lähettämättä mitään syötettä",
       "telnetPort": "Telnet-portti",
-      "terminalType": "Liittimen tyyppi",
+      "terminalType": "Päätetyyppi",
       "fontName": "Fontin nimi",
       "fontSize": "Fonttikoko",
       "colorScheme": "Värimaailma",
       "backspaceKey": "Askelpalautin-näppäin",
       "colorDepth": "Värisyvyys",
-      "resizeMethod": "Koon muuttamismenetelmä"
+      "resizeMethod": "Koon muuttamismenetelmä",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Etätyöpöytä",
     "tabRdp": "Maaseudun kehittämisohjelma",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuaaliverkko",
     "unencryptedShell": "Salaamaton kuori",
-    "docsLink": "Näytä dokumentit"
+    "remoteDesktopNotes": "Muistiinpanoja",
+    "userDefaultsNote": "Muuttamatta jätetyt asetukset noudattavat isäntäsi oletusasetuksia.",
+    "connectionOriginNote": "Työpöytäsovelluksessa RDP, VNC ja Telnet käyttävät etäpalvelinta, ellei isäntäasetukseksi ole asetettu Tämä laite, jolloin tarvitaan GUACD, johon tämä kone voi tavoittaa. Aseta sellainen etätyöpöytäasetuksissa tai isäntäkohtaisesti GUACD-välityspalvelimen alla.",
+    "docsLink": "Näytä dokumentit",
+    "connectionOriginGuacamoleNote": "RDP, VNC ja Telnet käyttävät etäpalvelinta, ellet valitse \"Tämä laite\", jolloin tarvitset GUACD:n, johon tämä kone voi tavoittaa. Aseta sellainen GUACD:n URL-asetuksissa tai isäntäkohtaisesti GUACD-välityspalvelimen alla."
   },
   "onboarding": {
     "feature_desktop": "Etätyöpöytä",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Värisyvyys"
+        "label": "Värisyvyys",
+        "description": "Käytetään RDP-isännille, jotka jättävät sen oletusarvoiseksi."
       },
       "resizeMethod": {
-        "label": "Koon muuttamismenetelmä"
+        "label": "Koon muuttamismenetelmä",
+        "description": "Miten etänäyttö seuraa ikkunan kokoa."
       },
       "resizeDisplayUpdate": "Näyttöpäivitys",
       "resizeReconnect": "Yhdistä uudelleen",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Poista liittäminen käytöstä",
         "description": "Estä tekstin liittäminen etäistuntoon"
-      }
+      },
+      "group": "Etätyöpöydän oletusasetukset",
+      "colorDepth16": "16-bittinen",
+      "colorDepth24": "24-bittinen",
+      "colorDepth32": "32-bittinen"
     },
     "admin": {
+      "enabled": {
+        "label": "Ota etätyöpöytä käyttöön",
+        "description": "Salli RDP-, VNC- ja Telnet-yhteydet guacdin kautta."
+      },
       "guacdUrl": {
-        "label": "guacd-URL-osoite"
+        "label": "guacd-URL-osoite",
+        "description": "Missä guacd kuuntelee, muodossa host:port. GUACD_URL-, GUACD_HOST- ja GUACD_PORT-ympäristömuuttujat korvaavat tämän.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "Maaseudun kehittämisohjelma"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP-portti"
+      },
+      "vncPort": {
+        "label": "VNC-portti"
+      },
+      "telnetPort": {
+        "label": "Telnet-portti"
+      },
+      "rdpSecurity": {
+        "label": "RDP-suojaustila"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ohita varmennevirheet"
+      },
+      "guacamoleConfig": {
+        "label": "guacd-asetukset"
+      },
+      "enableToolbar": {
+        "label": "Etätyöpöydän työkalupalkki",
+        "description": "Näytä työkalupalkki RDP-, VNC- ja Telnet-istunnoissa."
+      },
+      "displayGroup": "Näyttö",
+      "displayDefaultsTab": "Etätyöpöytä"
+    }
+  },
+  "palette": {
+    "connectRdp": "Yhdistä RDP:hen",
+    "connectVnc": "Yhdistä VNC:hen",
+    "connectTelnet": "Yhdistä Telnetillä"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Jaa etätyöpöytäistuntoja",
+      "description": "Salli istuntojen jakamisen ja yhteistyöhuoneiden näyttää tämän käyttäjän RDP-, VNC- ja Telnet-istunnot muille."
     }
   },
   "errors": {

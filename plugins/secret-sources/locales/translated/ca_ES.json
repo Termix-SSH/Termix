@@ -1,0 +1,27 @@
+{
+  "hint": "Podeu enganxar una referència 1Password (op://vault/item/field) en comptes del secret. S'obté de la font del secret quan us connecteu.",
+  "manage": "Gestiona fonts secretes",
+  "title": "Fonts secretes",
+  "description": "Els gestors de contrasenyes externes Termix llegeixen els secrets en el moment de la connexió. Actualment 1Password Connect (autoallotjat). El testimoni d'accés s'emmagatzema xifrat amb la vostra clau de dades.",
+  "new": "Nova font",
+  "nameLabel": "Nom amigable",
+  "urlLabel": "URL de connexió del servidor",
+  "tokenLabel": "Connecta el testimoni d'accés",
+  "tokenKeep": "Deixeu-ho en blanc per mantenir el testimoni actual",
+  "sharedLabel": "Comparteix amb tots els usuaris (només administradors, resol mentre tens la sessió iniciada)",
+  "shared": "compartit",
+  "test": "Prova",
+  "testOk": "Connectat, {{count}} volta(es) visible(s)",
+  "testFailed": "La prova de connexió ha fallat",
+  "required": "El nom, l'URL del servidor i el testimoni són obligatoris",
+  "saved": "Font secreta desada",
+  "deleted": "Font secreta suprimida",
+  "settings": {
+    "admin": {
+      "privateEndpoints": {
+        "label": "Llista permesa de punts finals privats",
+        "description": "Amfitrions privats o de bucle que una font secreta pot assolir, un per línia. Un servidor 1Password Connect autoallotjat normalment necessita la seva pròpia adreça llistada aquí."
+      }
+    }
+  }
+}

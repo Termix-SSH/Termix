@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Gestiona les estadístiques d'ús",
+      "description": "Consulta quines estadístiques d'ús s'envien, envia-les ara i restableix l'ID de la instància."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Comparteix estadístiques d'ús anònimes",
+      "description": "Envia un petit resum anònim un cop al dia per ajudar a millorar Termix. Mai inclou noms d'usuari, noms d'amfitrió, adreces IP ni credencials."
+    },
+    "includePlatform": {
+      "label": "Inclou informació de la plataforma",
+      "description": "El sistema operatiu, l'arquitectura de la CPU, la versió de Node.js, el tipus de base de dades i com s'instal·la Termix (Docker, aplicació d'escriptori o servidor)."
+    },
+    "includeFeatureUsage": {
+      "label": "Inclou l'ús de la funció",
+      "description": "Quantes vegades s'ha obert cada tipus de pestanya i quants inicis de sessió SSH s'han produït des de l'últim informe. Els usuaris poden desactivar la seva pròpia part del seu perfil."
+    },
+    "includePlugins": {
+      "label": "Inclou les funcions instal·lades",
+      "description": "Quines funcions integrades estan instal·lades i en funcionament."
+    },
+    "instanceId": {
+      "label": "ID d'instància"
+    },
+    "shareFeatureUsage": {
+      "label": "Inclou el meu ús de funcions",
+      "description": "Compta quins tipus de pestanyes obriu a les estadístiques d'ús anònimes. No s'envia res sobre vosaltres ni sobre els vostres amfitrions."
+    }
+  },
+  "status": {
+    "title": "Estat",
+    "on": "Compartir estadístiques d'ús un cop al dia",
+    "off": "No comparteixen estadístiques d'ús",
+    "lockedOn": "Activat per la variable d'entorn ENABLE_TELEMETRY. Canvieu-ho allà.",
+    "lockedOff": "Desactivat per la variable d'entorn ENABLE_TELEMETRY. Canvieu-ho allà.",
+    "instanceId": "ID d'instància: {{id}}",
+    "noInstanceId": "Encara no hi ha cap ID d'instància",
+    "lastSent": "Últim enviament {{date}}",
+    "neverSent": "Encara no s'ha enviat",
+    "nextSend": "S'ha de fer el proper informe {{date}}",
+    "lastError": "Últim intent fallit: {{error}}",
+    "preview": "Informe de vista prèvia",
+    "sendNow": "Envia ara",
+    "sending": "Enviant...",
+    "sent": "Estadístiques d'ús enviades",
+    "notSent": "Les estadístiques d'ús estan desactivades, no s'ha enviat res.",
+    "resetId": "Restableix l'ID de la instància",
+    "resetIdConfirm": "Voleu restablir l'ID d'instància? Els informes futurs semblaran una instal·lació nova.",
+    "resetIdDone": "Restabliment de l'ID d'instància",
+    "previewTitle": "Informe següent",
+    "previewDescription": "Això és exactament el que s'enviaria ara mateix.",
+    "close": "Tanca",
+    "loadFailed": "No s'ha pogut carregar l'estat de les estadístiques d'ús."
+  }
+}

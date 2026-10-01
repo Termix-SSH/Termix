@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "חיפוש משתמשים...",
     "noUsersFound": "לא נמצאו משתמשים",
     "linkCreated": "קישור השיתוף נוצר",
+    "linkNeedsServer": "קישורי שיתוף פועלים רק עבור סשנים בשרת Termix. חבר מארח זה דרך השרת המקושר שלך כדי לשתף אותו עם קישור.",
     "linkCopied": "קישור שהועתק ללוח",
     "copyLink": "העתקת קישור",
     "shareCreated": "הסשן שותף. זה יופיע בלשונית החיבורים שלהם.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "לְקַשֵׁר",
     "userShareBadge": "משתמש: {{username}}",
     "loadSharesFailed": "נכשלה טעינת השיתופים הפעילים",
+    "remoteDisplayUnavailable": "שולחן עבודה מרוחק אינו זמין כרגע.",
+    "sharedWithMe": "מפגשים ששותפו איתי",
     "customHoursPlaceholder": "שעות עד לפקיעת הגישה"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "חברים",
     "membersPanel": "חברי חדר ובקשות בקרה",
     "membersWithCount": "חברים ({{count}})",
+    "guestsWithCount": "אורחים ({{count}})",
+    "removeGuests": "הסר אורחים",
+    "anonymousGuest": "אוֹרֵחַ",
     "online": "באינטרנט",
     "offline": "לא מקוון",
     "you": "(אַתָה)",
@@ -115,6 +121,7 @@
       "linkInvalid": "קישור האורח הזה אינו תקין או שהפגישה הסתיימה"
     },
     "reopenFromPanel": "פג תוקף כרטיסיית הפגישה הזו. פתח מחדש את החדר מחלונית הפגישות.",
+    "retry": "נסה שוב",
     "requestControl": "בקרת בקשות",
     "cancelControlRequest": "ביטול בקשה",
     "controlQueue": "בקשות בקרה",
@@ -130,7 +137,10 @@
     "youArePresenting": "אתה מציג בכרטיסייה אחרת. הפסק את ההצגה כדי להעביר את הבמה.",
     "created": "החדר נוצר",
     "invited": "חברים שהוזמנו",
-    "roomTab": "פְּגִישָׁה"
+    "roomTab": "פְּגִישָׁה",
+    "serverChanged": "שרת הפגישות השתנה. פתח מחדש פגישה זו מחלונית הפגישות.",
+    "hostNotSynced": "סנכרן מארח זה עם שרת הפגישה לפני ההצגה.",
+    "linkRequiresServer": "קשר שולחן עבודה זה לשרת Termix וצור שם את הפגישה כדי לשתף קישור אינטרנט."
   },
   "nav": {
     "collab": "פגישות"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "שתף מפגשים והצטרף לחדרים",
+      "description": "שתף מפגשים חיים באמצעות קישור או עם משתמשים אחרים, וצר והצטרף לחדרי שיתוף פעולה."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "מִנְהָג"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "שיתף איתי",
+    "sharedBy": "שותף על ידי {{username}}",
+    "join": "לְהִצְטַרֵף",
+    "sharedSessionLabel": "{{hostName}} (שותף)"
   }
 }

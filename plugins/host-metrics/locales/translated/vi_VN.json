@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Chỉ số máy chủ"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Bộ nhớ",
@@ -16,21 +19,21 @@
     "cpuUsage": "Mức sử dụng CPU",
     "memoryUsage": "Mức sử dụng bộ nhớ",
     "diskUsage": "Mức sử dụng ổ đĩa",
-    "selectFilesystem": "Chọn hệ thống tệp",
+    "selectFilesystem": "Select filesystem",
     "temperature": "Nhiệt độ",
     "highestTemperature": "Nhiệt độ cao nhất",
-    "primaryTemperatureSensor": "Cảm biến chính",
+    "primaryTemperatureSensor": "Primary sensor",
     "gpu": {
       "title": "GPU",
-      "noDevice": "Không phát hiện thấy GPU NVIDIA. Hãy cài đặt trình điều khiển NVIDIA (nó cung cấp lệnh nvidia-smi) để xem các thông số GPU.",
-      "driver": "Tài xế {{version}}",
-      "utilization": "Sử dụng",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
       "memory": "VRAM",
-      "temperature": "Nhiệt độ",
-      "power": "Quyền lực",
-      "fan": "Cái quạt",
-      "processes": "Các quy trình GPU",
-      "noProcesses": "Hiện không có tiến trình nào đang sử dụng GPU."
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
     },
     "failedToFetchHostConfig": "Không tải được cấu hình máy chủ",
     "serverOffline": "Máy chủ ngoại tuyến",
@@ -160,7 +163,6 @@
       "firewallPersist": "Lưu quy tắc",
       "firewallPersisted": "Đã lưu quy tắc tường lửa",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard chưa được cài đặt trên máy chủ này",
       "wgNoInterfaces": "Chưa cấu hình giao diện WireGuard nào",
       "wgInterfaceUp": "Khởi động",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Lần bắt tay cuối",
       "wgHandshakeNever": "Chưa bao giờ",
       "wgTransfer": "Truyền tải",
-      "tsNotInstalled": "Tailscale chưa được cài đặt trên máy chủ này",
-      "tsRunning": "Đang chạy",
-      "tsStopped": "Đã dừng",
-      "tsEnable": "Kết nối",
-      "tsDisable": "Ngắt kết nối",
-      "tsEnabling": "Đang kết nối đến Tailscale...",
-      "tsDisabling": "Đang ngắt kết nối khỏi Tailscale...",
-      "tsEnabled": "Đã kết nối Tailscale",
-      "tsDisabled": "Đã ngắt kết nối Tailscale",
-      "tsIPs": "IP Tailscale",
-      "tsPeers": "Các máy ngang hàng",
-      "tsOnline": "Trực tuyến",
-      "tsOffline": "Ngoại tuyến",
-      "tsExitNode": "Nút thoát",
-      "tsExitNodeActive": "Nút thoát đang hoạt động",
-      "tsHostname": "Tên máy chủ"
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "Áp dụng",
     "viewHistory": "Xem lịch sử"
   },
-  "nav": {
-    "hostMetrics": "Chỉ số máy chủ"
-  },
   "hosts": {
     "tabHostMetrics": "Số liệu máy chủ",
     "metricsCollectionLabel": "Thu thập số liệu",
@@ -219,24 +203,24 @@
     "useGlobalMetricsDesc": "Ghi đè bằng khoảng thời gian thu thập số liệu toàn máy chủ",
     "metricsIntervalS": "Khoảng thu thập số liệu (giây)",
     "metricsIntervalDesc2": "Số giây giữa các lần chụp số liệu",
-    "excludedMountsLabel": "Giá đỡ bị loại trừ",
-    "monitoredMountsLabel": "Đường dẫn được giám sát tùy chỉnh",
-    "monitoredMountsDesc": "Thêm các đường dẫn không được hiển thị dưới dạng các điểm gắn kết riêng biệt, bao gồm cả các đường dẫn Home Assistant được gắn kết bằng bind, chẳng hạn như /config.",
-    "monitoredMountPathPlaceholder": "Đường dẫn (/config, /mnt/data)",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
     "monitoredMountLabelPlaceholder": "Nhãn (tùy chọn)",
-    "addMonitoredMount": "Thêm đường dẫn",
-    "excludedMountsDesc": "Ẩn các điểm gắn kết hoặc loại hệ thống tập tin cụ thể (ví dụ: nfs, cifs) khỏi thông tin sử dụng ổ đĩa và cảnh báo cho máy chủ này.",
-    "excludedMountsPlaceholder": "Đường dẫn gắn kết (/mnt/nas) hoặc loại hệ thống tệp (nfs, cifs)",
-    "excludedMountsEmpty": "Không có điểm gắn kết nào bị loại trừ. Tất cả các hệ thống tập tin được phát hiện đều được hiển thị.",
-    "addExcludedMount": "Thêm vào",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "Thêm",
     "visibleWidgets": "Widget hiển thị",
     "widgetsMovedToHostMetrics": "Các thẻ hiện được thêm, sắp xếp và thay đổi kích thước trực tiếp trong tab Số liệu máy. Mở Số liệu máy cho máy này và dùng Tùy chỉnh để chọn thẻ hiển thị.",
     "hostNotFound": "Không tìm thấy máy chủ",
     "loadingHost": "Đang tải máy chủ..."
   },
   "onboarding": {
-    "feature_metrics": "Số liệu và cảnh báo",
-    "feature_metrics_desc": "Theo dõi hiệu năng CPU, bộ nhớ và ổ đĩa theo thời gian, và nhận cảnh báo khi chúng gặp sự cố."
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
   },
   "admin": {
     "metricsHistoryRetention": "Thời gian lưu trữ lịch sử số liệu",
@@ -265,6 +249,9 @@
     "noHostSelected": "Chưa chọn máy chủ",
     "selectHost": "Chọn máy chủ..."
   },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Đã kết nối"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

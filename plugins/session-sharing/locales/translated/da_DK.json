@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Søg efter brugere...",
     "noUsersFound": "Ingen brugere fundet",
     "linkCreated": "Delingslink oprettet",
+    "linkNeedsServer": "Delingslinks fungerer kun for sessioner på en Termix-server. Forbind denne vært via din linkede server for at dele den med et link.",
     "linkCopied": "Link kopieret til udklipsholder",
     "copyLink": "Kopiér link",
     "shareCreated": "Session delt. Den vises i fanen Forbindelser.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Forbindelse",
     "userShareBadge": "Bruger: {{username}}",
     "loadSharesFailed": "Kunne ikke indlæse aktive delinger",
+    "remoteDisplayUnavailable": "Fjernskrivebord er ikke tilgængeligt lige nu.",
+    "sharedWithMe": "Sessioner delt med mig",
     "customHoursPlaceholder": "Timer indtil adgangen udløber"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Medlemmer",
     "membersPanel": "Rummedlemmer og kontrolanmodninger",
     "membersWithCount": "Medlemmer ({{count}})",
+    "guestsWithCount": "Gæster ({{count}})",
+    "removeGuests": "Fjern gæster",
+    "anonymousGuest": "Gæst",
     "online": "online",
     "offline": "offline",
     "you": "(du)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Dette gæstelink er ugyldigt, eller mødet er afsluttet"
     },
     "reopenFromPanel": "Denne mødefane er udløbet. Genåbn rummet fra panelet Møder.",
+    "retry": "Prøv igen",
     "requestControl": "Anmod om kontrol",
     "cancelControlRequest": "Annuller anmodning",
     "controlQueue": "Kontrolanmodninger",
@@ -130,7 +137,10 @@
     "youArePresenting": "Du præsenterer i en anden fane. Stop præsentationen for at overdrage scenen.",
     "created": "Rum oprettet",
     "invited": "Medlemmer inviteret",
-    "roomTab": "Møde"
+    "roomTab": "Møde",
+    "serverChanged": "Mødeserveren er ændret. Genåbn dette møde fra panelet Møder.",
+    "hostNotSynced": "Synkroniser denne vært med mødeserveren før præsentation.",
+    "linkRequiresServer": "Forbind dette skrivebord til en Termix-server, og opret mødet der for at dele et weblink."
   },
   "nav": {
     "collab": "Møder"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Del sessioner og deltag i rum",
+      "description": "Del livesessioner via link eller med andre brugere, og opret og deltag i samarbejdsrum."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Skik"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Delt med mig",
+    "sharedBy": "Delt af {{username}}",
+    "join": "Deltag",
+    "sharedSessionLabel": "{{hostName}} (delt)"
   }
 }

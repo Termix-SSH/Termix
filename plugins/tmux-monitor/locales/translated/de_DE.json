@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux-Monitor"
-  },
   "hosts": {
     "enableTmuxMonitor": "Tmux-Monitor aktivieren",
     "enableTmuxMonitorDesc": "Diesen Host im Tmux-Monitor anzeigen und seine tmux-Aktionen zur Seitenleiste hinzufügen",
+    "tabTmuxMonitor": "Tmux-Monitor",
     "docsLink": "Dokumentation anzeigen"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux-Monitor"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux-Monitor",
+    "tmuxMonitorDesc": "Tmux-Sitzungen hostübergreifend überwachen"
+  },
+  "permissions": {
+    "use": {
+      "title": "Tmux Monitor verwenden",
+      "description": "Durchsuchen und steuern Sie tmux-Sitzungen, Fenster und Bereiche auf Hosts, bei denen der Monitor aktiviert ist."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tmux-Monitor aktivieren",
+        "description": "Auf diesem Host laufende tmux-Sitzungen beobachten und sich an sie anhängen."
+      },
+      "mouseEnabled": {
+        "label": "tmux-Mausunterstützung aktivieren",
+        "description": "Die Mausunterstützung wird beim Verbinden oder Erstellen einer tmux-Sitzung aktiviert. Andere Sitzungen und globale tmux-Einstellungen bleiben unverändert."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux-Monitor",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Fehler beim Umbenennen der Sitzung",
     "editTagsTitle": "Tags für \"{{name}}\" bearbeiten",
     "killPane": "Pane beenden",
-    "resizeTree": "Ziehen zum Ändern der Größe — Doppelklick zum Zurücksetzen",
+    "resizeTree": "Ziehen zum Ändern der Größe, Doppelklick zum Zurücksetzen",
     "reattach": "Erneut anhängen (behebt eine verzerrte Darstellung)",
     "killWindow": "Fenster beenden",
     "killWindowTitle": "Fenster {{index}} von \"{{session}}\" beenden?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Sitzung konnte nicht beendet werden",
     "hostUnreachable": "Verbindung zum Host konnte nicht hergestellt werden. Überprüfen Sie, ob er online und erreichbar ist.",
     "noServer": "Auf diesem Host läuft kein tmux-Server.",
-    "searchTruncated": "Teilergebnisse — die Suche umfasst die letzten {{lines}} Zeilen jeder Pane und maximal {{panes}} Panes.",
+    "searchTruncated": "Teilergebnisse. Die Suche umfasst die letzten {{lines}} Zeilen jedes Fensters und maximal {{panes}} Fenster.",
     "closeSearchResults": "Suchergebnisse schließen",
     "retry": "Erneut versuchen",
     "noHosts": "Keine SSH-Hosts verfügbar",
-    "noHostsHint": "Aktivieren Sie die Option Tmux Monitor für einen SSH-Host (Host-Manager → Terminal-Tab), um dessen tmux-Sitzungen zu überwachen.",
+    "noHostsHint": "Aktivieren Sie die Option „Tmux Monitor“ auf einem SSH-Host (Host Manager, Registerkarte „Tmux Monitor“), um dessen tmux-Sitzungen zu überwachen.",
     "tmuxInstallHint": "Installieren Sie es auf dem Host mit:",
     "attachTooltip": "Terminal zu {{host}} öffnen",
-    "attachTooltipPane": "Terminal zu {{host}} öffnen — tmux-Sitzung {{session}}",
+    "attachTooltipPane": "Öffne ein Terminal zu {{host}}, tmux session {{session}}",
     "timeJustNow": "gerade eben",
     "timeMinutes": "vor {{count}} Min.",
     "timeHours": "vor {{count}} Std.",
-    "timeDays": "vor {{count}} T."
+    "timeDays": "vor {{count}} T.",
+    "allHosts": "Alle Hosts",
+    "singleHost": "Einzelhost",
+    "hostScope": "Monitorbereich",
+    "filterHosts": "Hosts nach Namen oder Adresse filtern",
+    "selectHost": "Host auswählen",
+    "toggleHost": "Ein- oder Ausklappen {{host}}",
+    "noMatchingHosts": "Keine passenden Hosts gefunden",
+    "toggleSession": "Ein- oder Ausklappen {{session}}"
   }
 }

@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Sursa și ținta trebuie să fie diferite",
     "exportJSON": "Export JSON",
     "importJSON": "Import JSON",
-    "terminal": "Terminal",
-    "fileManager": "Manager de fișiere",
-    "tunnel": "Tunel",
-    "docker": "Docher",
     "serverStats": "Metrici ale gazdei",
-    "hostMetrics": "Metrici ale gazdei",
     "noNodes": "Încă nu există noduri"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "noduri {{count}}"
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește graficul de rețea",
+      "description": "Vizualizați și editați graficul topologiei rețelei."
+    }
   },
   "hosts": {
     "docsLink": "Vizualizați documentele"

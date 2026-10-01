@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Ana Sayfa",
     "addWidget": "Bileşen Ekle",
+    "noWidgetsInCategory": "No widgets in this category",
     "editWidget": "Bileşeni Düzenle",
     "zoomIn": "Yakınlaştır",
     "zoomOut": "Uzaklaştır",
@@ -38,7 +39,7 @@
     "description": "Açıklama",
     "color": "Renk",
     "timezone": "Zaman Dilimi",
-    "invalidTimezone": "Geçersiz saat dilimi. Lütfen America/New_York gibi bir IANA adı kullanın.",
+    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
     "showSeconds": "Saniyeleri göster",
     "format12h": "12 saatlik",
     "content": "İçerik",
@@ -59,6 +60,9 @@
     "maxItems": "Maksimum Öğe Sayısı",
     "showDescription": "Açıklamayı Göster",
     "widgetRssName": "RSS Akışı",
+    "rssNoFeedUrl": "Configure a feed URL in widget settings",
+    "rssLoadError": "Could not load feed",
+    "rssNoItems": "No items",
     "noHostSelected": "Sunucu seçilmedi",
     "displayedMetrics": "Gösterilen Metrikler",
     "metricCpu": "CPU",
@@ -81,7 +85,7 @@
     "uptimeUnavailable": "Çalışma süresi kullanılamıyor",
     "uptimeLabel": "Çalışma Süresi",
     "overviewVersion": "Sürüm",
-    "overviewUpdateLabel": "Güncelleme",
+    "overviewUpdateLabel": "Güncelle",
     "overviewUpdateAvailable": "Güncelleme mevcut",
     "overviewDatabase": "Veritabanı",
     "overviewUptime": "Çalışma Süresi",
@@ -157,6 +161,30 @@
     "compactMode": "Kompakt Mod",
     "selectHosts": "Sunucuları Seç",
     "listLayout": "Liste",
-    "gridLayout": "Izgara"
+    "gridLayout": "Izgara",
+    "configureUrl": "Set a URL in the widget settings",
+    "embeddedContent": "Embedded content",
+    "noBookmarks": "No bookmarks",
+    "noSections": "No sections set up",
+    "noServices": "No services set up",
+    "configureLocation": "Set a location in the widget settings",
+    "bannerTextPlaceholder": "Banner text",
+    "serviceNamePlaceholder": "My service"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use the homepage",
+      "description": "View and edit the homepage canvas and dashboard service links."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Allowed private hosts",
+      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+    },
+    "privateCertificateAuthority": {
+      "label": "Private certificate authority (PEM)",
+      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+    }
   }
 }

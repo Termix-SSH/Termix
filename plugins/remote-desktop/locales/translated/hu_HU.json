@@ -73,17 +73,22 @@
       "fitToScreen": "Képernyőhöz igazítás",
       "switchToTrackpad": "Váltás trackpad módra (húzással mozgathatja a kurzort, koppintással kattinthat)",
       "switchToTouch": "Váltás érintőképernyős módra (koppintson közvetlenül oda, ahová kattintani szeretne)"
-    }
+    },
+    "disabled": "A Távoli asztal ki van kapcsolva. Egy rendszergazda bekapcsolhatja a Beállításokban."
   },
   "hosts": {
     "nativeRdpOpened": "Megnyitva a Windows Távoli asztal alkalmazásban",
     "nativeRdpFailed": "Nem sikerült megnyitni a Windows távoli asztalt",
     "openNativeRdp": "Megnyitás a Windows távoli asztalon",
     "guac": {
+      "toolbar": "Eszköztár",
       "connection": "Kapcsolat",
       "authentication": "Hitelesítés",
       "storedCredential": "Tárolt hitelesítő adatok",
       "authMethod": "Aut. módszer",
+      "authTypeDirect": "Közvetlen",
+      "authTypeCredential": "Hitelesítő adat",
+      "authTypeNone": "Egyik sem",
       "authTypeNoneDesc": "Nincsenek tárolt hitelesítő adatok. Minden csatlakozáskor meg kell adnia a felhasználónevet és a jelszót; ezek nem kerülnek mentésre.",
       "selectCredential": "Válasszon hitelesítő adatot...",
       "connectionSettings": "Kapcsolati beállítások",
@@ -206,7 +211,8 @@
       "colorScheme": "Színséma",
       "backspaceKey": "Visszatörlés billentyű",
       "colorDepth": "Színmélység",
-      "resizeMethod": "Átméretezési módszer"
+      "resizeMethod": "Átméretezési módszer",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Távoli asztal",
     "tabRdp": "Vidékfejlesztési Program",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuális hálózat",
     "unencryptedShell": "Titkosítatlan shell",
-    "docsLink": "Dokumentumok megtekintése"
+    "remoteDesktopNotes": "Megjegyzések",
+    "userDefaultsNote": "A változatlanul hagyott beállítások a gazdagép alapértelmezett beállításait követik.",
+    "connectionOriginNote": "Az asztali alkalmazásban az RDP, a VNC és a Telnet a távoli szervert használja, kivéve, ha a gazdagép értéke „Ez az eszköz”, amelyhez egy olyan GUACD-re van szükség, amelyet ez a gép el tud érni. Állítson be egyet a Távoli asztal beállításaiban, vagy gazdagépenként a GUACD Proxy alatt.",
+    "docsLink": "Dokumentumok megtekintése",
+    "connectionOriginGuacamoleNote": "Az RDP, a VNC és a Telnet a távoli szervert használja, kivéve, ha az „Ez az eszköz” lehetőséget választod, amelyhez egy olyan GUACD-re van szükség, amelyet ez a gép el tud érni. Állíts be egyet a GUACD URL-beállításaiban, vagy hosztonként a GUACD Proxy alatt."
   },
   "onboarding": {
     "feature_desktop": "Távoli asztal",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Színmélység"
+        "label": "Színmélység",
+        "description": "Azoknál az RDP-gazdagépeknél használatos, amelyek az alapértelmezett értéken hagyják."
       },
       "resizeMethod": {
-        "label": "Átméretezési módszer"
+        "label": "Átméretezési módszer",
+        "description": "Hogyan követi a távoli képernyő az ablak méretét."
       },
       "resizeDisplayUpdate": "Kijelzőfrissítés",
       "resizeReconnect": "Újracsatlakozás",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Beillesztés letiltása",
         "description": "Szöveg beillesztésének megakadályozása a távoli munkamenetbe"
-      }
+      },
+      "group": "Távoli asztal alapértelmezett beállításai",
+      "colorDepth16": "16 bites",
+      "colorDepth24": "24 bites",
+      "colorDepth32": "32 bites"
     },
     "admin": {
+      "enabled": {
+        "label": "Távoli asztal engedélyezése",
+        "description": "RDP, VNC és Telnet kapcsolatok engedélyezése GUACD-n keresztül."
+      },
       "guacdUrl": {
-        "label": "guacd URL"
+        "label": "guacd URL",
+        "description": "Ahol a guacd figyel, host:portként. A GUACD_URL, GUACD_HOST és GUACD_PORT környezeti változók felülírják ezt.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "Vidékfejlesztési Program"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP-port"
+      },
+      "vncPort": {
+        "label": "VNC-port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP biztonsági mód"
+      },
+      "rdpIgnoreCert": {
+        "label": "Tanúsítványhibák figyelmen kívül hagyása"
+      },
+      "guacamoleConfig": {
+        "label": "guacd beállítások"
+      },
+      "enableToolbar": {
+        "label": "Távoli asztal eszköztár",
+        "description": "Eszköztár megjelenítése RDP, VNC és Telnet munkamenetekben."
+      },
+      "displayGroup": "Kijelző",
+      "displayDefaultsTab": "Távoli asztal"
+    }
+  },
+  "palette": {
+    "connectRdp": "Kapcsolódjon az RDP-hez",
+    "connectVnc": "Csatlakozás VNC-vel",
+    "connectTelnet": "Csatlakozás Telnet-hez"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Távoli asztali munkamenetek megosztása",
+      "description": "A munkamenet-megosztási és együttműködési szobák megjeleníthetik a felhasználó RDP-, VNC- és Telnet-munkameneteit mások számára."
     }
   },
   "errors": {

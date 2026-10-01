@@ -16,6 +16,16 @@
     "authFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
     "timeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar."
   },
+  "settings": {
+    "redirectUri": {
+      "label": "URI de redirecció",
+      "description": "Registra aquesta URL com a URI de redirecció permesa amb tots els proveïdors d'identitat de la configuració d'OPKSSH."
+    },
+    "legacyCallback": {
+      "label": "Utilitza l'URI de redirecció antiga",
+      "description": "Continua enviant /host/opkssh-callback, l'URI de redirecció utilitzat abans de la versió 2.9. Desactiva-ho un cop els proveïdors d'identitat permetin el nou."
+    }
+  },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
   }

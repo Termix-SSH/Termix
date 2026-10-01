@@ -3,7 +3,8 @@
     "profile": "Profil for underskriver af arkiv",
     "selectProfile": "Vælg en Vault-profil...",
     "hint": "Indstillingerne kommer fra den delte profil; du logger ind på Vault via OIDC, når du opretter forbindelse. Der gemmes ingen hemmeligheder.",
-    "docs": "Se dokumenter"
+    "docs": "Se dokumenter",
+    "sharedProfile": "{{name}} (delt)"
   },
   "profiles": {
     "new": "Ny profil",
@@ -27,12 +28,42 @@
     "save": "Gem profil",
     "validationError": "Navn, Vault-adresse og SSH-underskriverrolle er påkrævet",
     "none": "Ingen Vault-profiler endnu.",
-    "sharedBadge": "delt"
+    "sharedBadge": "delt",
+    "edit": "Redigere",
+    "delete": "Slet"
+  },
+  "hosts": {
+    "filterAuthVault": "Hvælving"
   },
   "dialog": {
     "title": "Login til Vault kræves",
     "description": "Et vindue er åbnet, hvor du kan logge ind på HashiCorp Vault. Fuldfør loginprocessen der; forbindelsen fortsætter automatisk.",
     "failed": "Godkendelse af arkiv mislykkedes. Prøv igen.",
     "reopen": "Genåbn loginvinduet"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug Vault SSH-signering",
+      "description": "Opret Vault-underskriverprofiler, og opret forbindelse til værter, der bruger Vault."
+    },
+    "share": {
+      "title": "Del Vault-profiler",
+      "description": "Marker en Vault-underskriverprofil som delt, så alle brugere kan vælge den."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Omdirigerings-URI",
+      "description": "Tilføj denne URL til allowed_redirect_uris i hver Vault OIDC-rolle, som Termix logger ind med."
+    },
+    "legacyCallback": {
+      "label": "Brug den gamle omdirigerings-URI",
+      "description": "Fortsæt med at sende /vault/oidc/callback, den omdirigerings-URI, der blev brugt før 2.9. Slå dette fra, når dine Vault-roller tillader den nye."
+    },
+    "host": {
+      "profileId": {
+        "label": "Profil for underskriver af Vault"
+      }
+    }
   }
 }

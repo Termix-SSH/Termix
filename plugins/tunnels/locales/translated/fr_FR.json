@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Les préréglages sont des instantanés explicites ; en charger un remplace la liste de tunnels client locaux de ce client de bureau.",
     "c2sPresetToLoad": "Préréglage à charger",
     "c2sTunnelPresets": "Préréglages de tunnel client",
-    "c2sTunnelPresetsUnavailable": "Les préréglages de tunnel client sont disponibles uniquement dans le client de bureau."
+    "c2sTunnelPresetsUnavailable": "Les préréglages de tunnel client sont disponibles uniquement dans le client de bureau.",
+    "c2sPresetRenameError": "Impossible de renommer le préréglage",
+    "c2sPresetDeleteError": "Échec de la suppression du préréglage"
   },
   "tunnels": {
     "attempt": "Tentative {{current}} sur {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "Local (-L)",
     "typeRemote": "Distant (-R)",
     "working": "En cours…",
+    "activeCount": "{{connected}}/{{total}} actif",
+    "listensOn": "Lié à localhost :{{port}}",
+    "socksProxy": "Proxy SOCKS5",
+    "waiting": "En attendant",
+    "remoteSessionExpired": "La session de synchronisation à distance a expiré. Veuillez vous reconnecter à la synchronisation à distance et réessayer.",
+    "activeTunnels": "Tunnels actifs",
     "start": "Démarrer",
-    "stop": "Arrêter"
+    "stop": "Arrêter",
+    "authTitle": "Authentification du tunnel",
+    "authRetry": "Le code précédent n'a pas été accepté. Veuillez saisir un nouveau code.",
+    "authAnswer": "Réponse d'authentification",
+    "authContinue": "Continuer"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilisez les tunnels",
+      "description": "Démarrer, arrêter et surveiller les tunnels SSH, et enregistrer les préréglages des tunnels clients."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activer les tunnels",
+        "description": "Configurez des tunnels SSH via cet hôte."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tunnels",

@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "LDAP으로 로그인",
   "loginWithProvider": "{{name}}으로 로그인",
   "loading": "로딩 중...",
   "requiredField": "필수 입력란입니다",
   "username": "LDAP 사용자 이름",
   "password": "LDAP 비밀번호",
   "signIn": "로그인",
+  "permissions": {
+    "manage": {
+      "title": "LDAP 디렉터리 관리",
+      "description": "사용자가 로그인할 수 있는 LDAP 디렉터리를 추가, 변경 및 삭제할 수 있습니다."
+    }
+  },
   "providers": {
     "docsLink": "문서 보기",
+    "none": "LDAP 디렉터리가 구성되지 않았습니다.",
+    "add": "디렉토리 추가",
+    "edit": "디렉토리 편집",
+    "delete": "디렉토리 삭제",
+    "deleteConfirm": "이 디렉토리를 삭제하시겠습니까? 그러면 이 디렉토리로 로그인하는 사용자는 더 이상 로그인할 수 없게 됩니다.",
     "name": "표시 이름",
+    "namePlaceholder": "회사 디렉토리",
+    "nameRequired": "표시 이름은 필수입니다.",
     "enabled": "사용",
+    "save": "디렉토리 저장",
     "saving": "저장 중...",
     "saved": "저장됨",
     "saveFailed": "저장 실패",
     "deleted": "삭제됨",
     "deleteFailed": "삭제 실패",
+    "loadFailed": "LDAP 디렉터리를 로드하는 데 실패했습니다.",
     "cancel": "취소"
   },
   "fields": {
@@ -22,6 +38,7 @@
     "useTls": "TLS 사용 (LDAPS)",
     "bindDn": "바인딩 DN",
     "bindPassword": "바인딩 암호",
+    "secretKeep": "비밀번호가 저장됩니다. 비밀번호를 유지하려면 이 필드를 비워 두세요.",
     "userSearchBase": "사용자 검색 기준",
     "userSearchFilter": "사용자 검색 필터",
     "usernameAttr": "사용자 이름 속성",

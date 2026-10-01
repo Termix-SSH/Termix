@@ -4,6 +4,7 @@
   "loginFailed": "Salasanan kirjautuminen epäonnistui",
   "description": "Kirjaudu sisään ilman salasanaa WebAuthn/FIDO2-tunnuksilla",
   "namePlaceholder": "Salasanan nimi",
+  "defaultName": "Salasana",
   "uv": {
     "preferred": "Ensisijainen",
     "required": "Pakollinen",
@@ -13,6 +14,9 @@
   "none": "Ei rekisteröityjä salasanoja.",
   "added": "Salasana lisätty",
   "addFailed": "Salasanan lisääminen epäonnistui",
+  "delete": "Poista salasana",
   "deleted": "Salasana poistettu",
-  "deleteFailed": "Salasanan poistaminen epäonnistui"
+  "deleteFailed": "Salasanan poistaminen epäonnistui",
+  "unknownDevice": "tuntematon",
+  "synced": "synkronoitu"
 }

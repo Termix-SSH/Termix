@@ -3,7 +3,8 @@
     "profile": "Vault İmzalayıcı Profili",
     "selectProfile": "Bir Vault profili seçin...",
     "hint": "Ayarlar paylaşılan profilden gelir; bağlandığınızda OIDC ile Vault'ta oturum açarsınız. Hiçbir gizli bilgi saklanmaz.",
-    "docs": "Dokümanları görüntüle"
+    "docs": "Belgelere bak",
+    "sharedProfile": "{{name}} (shared)"
   },
   "profiles": {
     "new": "Yeni profil",
@@ -27,12 +28,42 @@
     "save": "Profili kaydet",
     "validationError": "Ad, Vault adresi ve SSH imzalama rolü gereklidir",
     "none": "Henüz Vault profili yok.",
-    "sharedBadge": "paylaşılan"
+    "sharedBadge": "paylaşılan",
+    "edit": "Düzenle",
+    "delete": "Sil"
+  },
+  "hosts": {
+    "filterAuthVault": "Vault"
   },
   "dialog": {
     "title": "Vault Oturum Açması Gerekli",
     "description": "HashiCorp Vault'ta oturum açmak için bir pencere açıldı. Orada oturum açmayı tamamlayın; bu bağlantı otomatik olarak devam edecek.",
     "failed": "Vault kimlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
     "reopen": "Oturum açma penceresini yeniden aç"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Vault SSH signing",
+      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+    },
+    "share": {
+      "title": "Share Vault profiles",
+      "description": "Mark a Vault signer profile as shared so every user can pick it."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault signer profile"
+      }
+    }
   }
 }

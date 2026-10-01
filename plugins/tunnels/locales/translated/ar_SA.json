@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "الإعدادات المُسبَقة هي لقطات واضحة؛ تحميل أحدها يستبدل قائمة الأنفاق المحلية لعميل سطح المكتب هذا.",
     "c2sPresetToLoad": "الإعداد المُسبَق للتحميل",
     "c2sTunnelPresets": "إعدادات النفق المُسبَقة للعميل",
-    "c2sTunnelPresetsUnavailable": "إعدادات النفق المُسبَقة للعميل متاحة فقط في تطبيق سطح المكتب."
+    "c2sTunnelPresetsUnavailable": "إعدادات النفق المُسبَقة للعميل متاحة فقط في تطبيق سطح المكتب.",
+    "c2sPresetRenameError": "فشل في إعادة تسمية الإعداد المسبق",
+    "c2sPresetDeleteError": "فشل حذف الإعداد المسبق"
   },
   "tunnels": {
     "attempt": "محاولة {{current}} من {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "محلي (-L)",
     "typeRemote": "بعيد (-R)",
     "working": "جارٍ العمل...",
+    "activeCount": "{{connected}}/{{total}} نشط",
+    "listensOn": "مرتبط بالمضيف المحلي:{{port}}",
+    "socksProxy": "بروكسي SOCKS5",
+    "waiting": "منتظر",
+    "remoteSessionExpired": "انتهت صلاحية جلسة المزامنة عن بُعد. أعد الاتصال بالمزامنة عن بُعد وحاول مرة أخرى.",
+    "activeTunnels": "الأنفاق النشطة",
     "start": "تشغيل",
-    "stop": "إيقاف"
+    "stop": "إيقاف",
+    "authTitle": "مصادقة النفق",
+    "authRetry": "لم يتم قبول الرمز السابق. أدخل رمزاً جديداً.",
+    "authAnswer": "استجابة المصادقة",
+    "authContinue": "متابعة"
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدم الأنفاق",
+      "description": "ابدأ، أوقف، وراقب أنفاق SSH، واحفظ إعدادات نفق العميل المسبقة."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "تفعيل الأنفاق",
+        "description": "قم بإعداد أنفاق SSH عبر هذا المضيف."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "الأنفاق",
