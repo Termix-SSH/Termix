@@ -192,7 +192,9 @@ jobs:
         env:
           CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
 
+      # Off until the machine translation credits are topped up.
       - name: Pre-translate untranslated strings
+        if: false
         env:
           CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
         run: node scripts/crowdin-pretranslate.cjs
