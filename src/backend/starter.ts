@@ -274,9 +274,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       });
     }
 
-    const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
-    startAnalyticsHeartbeat();
-
     // After plugins, so their sync entities are registered before a pass.
     if (process.env.ELECTRON_EMBEDDED === "true") {
       try {

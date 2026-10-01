@@ -93,6 +93,10 @@
       "source": "workspace"
     },
     {
+      "id": "telemetry",
+      "source": "workspace"
+    },
+    {
       "id": "termix-identity",
       "source": "workspace"
     },

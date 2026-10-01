@@ -367,9 +367,9 @@ Puoi far girare il server Termix su un VPS invece che dentro la tua rete. Se Ter
 
 ## Telemetria
 
-Termix invia una volta al giorno un piccolo segnale anonimo, così posso vedere quante istanze sono attive e quali funzionalità vengono usate davvero. Contiene un ID istanza casuale, quanti utenti e host hai, la versione dell'app e quali funzionalità (terminale, gestore file, tunnel, docker, ecc.) sono state usate nelle ultime 24 ore. Non contiene mai nomi utente, nomi host, indirizzi IP, credenziali o qualsiasi altra cosa che identifichi te o i tuoi server.
+Termix invia una volta al giorno un piccolo report anonimo, così posso vedere quante istanze sono attive e quali funzioni vengono usate. Contiene un ID di istanza casuale, la versione dell'app e quanti utenti e host hai. Può includere anche la tua piattaforma (sistema operativo, architettura, versione di Node.js, tipo di database e se usi Docker, l'app desktop o un server normale), quante volte è stato aperto ogni tipo di scheda e quanti login SSH ci sono stati, e quali funzioni integrate sono attive. Non contiene mai nomi utente, nomi host, indirizzi IP, credenziali o altro che identifichi te o i tuoi server.
 
-È attivo di base. Puoi spegnerlo nelle impostazioni di amministrazione, sezione Generale, oppure impostare `ENABLE_TELEMETRY=false` prima ancora di avviare Termix.
+È attivo di base. Puoi spegnerlo o scegliere cosa include nelle impostazioni di amministrazione, sezione Usage Statistics, dove puoi anche vedere il report esatto prima dell'invio. Ogni utente può escludere il proprio uso delle funzioni dal suo profilo. Impostare `ENABLE_TELEMETRY=false` lo spegne e blocca l'interruttore.
 
 <br />
 

@@ -37,8 +37,6 @@ import {
   getUserRoles,
 } from "@/main-axios";
 import {
-  getAnalyticsEnabled,
-  updateAnalyticsEnabled,
   getBranding,
   updateBranding,
   type BrandingSettings,
@@ -121,8 +119,6 @@ export function AdminSettingsPanel({
   const [sessionTimeout, setSessionTimeout] = useState("24");
   const [statusInterval, setStatusInterval] = useState("60");
   const [logLevel, setLogLevel] = useState("info");
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
-  const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
 
@@ -286,7 +282,6 @@ export function AdminSettingsPanel({
         level,
         oidcProv,
         secondFactorExternal,
-        analytics,
         notificationEndpoints,
         branding,
       ] = await Promise.allSettled([
@@ -298,7 +293,6 @@ export function AdminSettingsPanel({
         getLogLevel(),
         getExternalAutoProvision(),
         getSecondFactorAfterExternalLogin(),
-        getAnalyticsEnabled(),
         getNotificationPrivateEndpoints(),
         getBranding(),
       ]);
@@ -323,10 +317,6 @@ export function AdminSettingsPanel({
       }
 
       if (level.status === "fulfilled") setLogLevel(level.value.level);
-      if (analytics.status === "fulfilled") {
-        setAnalyticsEnabled(analytics.value.enabled);
-        setAnalyticsLocked(analytics.value.locked ?? false);
-      }
       if (notificationEndpoints.status === "fulfilled") {
         setNotificationPrivateEndpoints(notificationEndpoints.value);
       }
@@ -404,18 +394,6 @@ export function AdminSettingsPanel({
     } catch {
       setAllowPasswordReset(!newVal);
       toast.error(t("admin.updatePasswordResetFailed"));
-    }
-  }
-
-  async function handleToggleAnalytics() {
-    if (analyticsLocked) return;
-    const newVal = !analyticsEnabled;
-    setAnalyticsEnabled(newVal);
-    try {
-      await updateAnalyticsEnabled(newVal);
-    } catch {
-      setAnalyticsEnabled(!newVal);
-      toast.error(t("admin.updateAnalyticsFailed"));
     }
   }
 
@@ -784,9 +762,6 @@ export function AdminSettingsPanel({
       <AdminGeneralSettingsSection
         open={openSections.has("general")}
         onToggle={() => toggle("general")}
-        analyticsEnabled={analyticsEnabled}
-        analyticsLocked={analyticsLocked}
-        handleToggleAnalytics={handleToggleAnalytics}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
         onSaveNotificationPrivateEndpoints={
           handleSaveNotificationPrivateEndpoints

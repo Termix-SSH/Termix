@@ -1958,6 +1958,20 @@ export interface PluginSystem {
   registerTlsRenewer: () => Promise<() => void>;
 }
 
+/** One installed plugin as ctx.plugins.list reports it. */
+export interface PluginSummary {
+  id: string;
+  version: string;
+  source: "bundled" | "user";
+  /** "active" when running; anything else means it is not. */
+  state: string;
+}
+
+/** The installed plugins. Needs plugins:read. */
+export interface PluginPlugins {
+  list: () => Promise<PluginSummary[]>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -1999,6 +2013,8 @@ export interface PluginContext {
   readonly process: PluginProcess;
   /** The server certificate. Needs system:tls. */
   readonly system: PluginSystem;
+  /** The installed plugins and whether each runs. Needs plugins:read. */
+  readonly plugins: PluginPlugins;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

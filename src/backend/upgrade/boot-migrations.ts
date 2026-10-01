@@ -20,6 +20,7 @@ import { runSshTerminalMacrosMigration } from "./ssh-terminal-macros-migration.j
 import { runSnippetsSettingsMigration } from "./snippets-settings-migration.js";
 import { runTmuxMonitorSettingsMigration } from "./tmux-monitor-settings-migration.js";
 import { runSessionSharingSettingsMigration } from "./session-sharing-settings-migration.js";
+import { runTelemetrySettingsMigration } from "./telemetry-settings-migration.js";
 import { runSessionRecordingSettingsMigration } from "./session-recording-settings-migration.js";
 import { runRemoteDesktopSettingsMigration } from "./remote-desktop-settings-migration.js";
 import { runHostMetricsSettingsMigration } from "./host-metrics-settings-migration.js";
@@ -67,6 +68,7 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runNotificationChannelMigration", runNotificationChannelMigration],
   ["runTermixIdentityCaMigration", runTermixIdentityCaMigration],
   ["runSsoSettingsMigration", runSsoSettingsMigration],
+  ["runTelemetrySettingsMigration", runTelemetrySettingsMigration],
   // Last: it reads what the moves above wrote.
   ["runHostDefaultsMigration", runHostDefaultsMigration],
 ];

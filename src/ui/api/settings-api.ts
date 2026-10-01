@@ -47,35 +47,6 @@ export async function updateSessionTimeout(
 // plugins/tailscale/src/frontend/tailscale-api.ts.
 
 // ============================================================================
-// ANALYTICS SETTINGS
-// ============================================================================
-
-export async function getAnalyticsEnabled(): Promise<{
-  enabled: boolean;
-  locked?: boolean;
-}> {
-  try {
-    const response = await authApi.get("/users/analytics-enabled");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch analytics enabled setting");
-  }
-}
-
-export async function updateAnalyticsEnabled(
-  enabled: boolean,
-): Promise<{ enabled: boolean }> {
-  try {
-    const response = await authApi.patch("/users/analytics-enabled", {
-      enabled,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update analytics enabled setting");
-  }
-}
-
-// ============================================================================
 // BRANDING SETTINGS
 // ============================================================================
 

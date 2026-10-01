@@ -114,8 +114,7 @@ ENV DATA_DIR=/app/data \
     OPKSSH_SHA256_AMD64=$OPKSSH_SHA256_AMD64 \
     OPKSSH_SHA256_ARM64=$OPKSSH_SHA256_ARM64 \
     PORT=8080 \
-    NODE_ENV=production \
-    POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
+    NODE_ENV=production
 
 RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
     update-ca-certificates && \

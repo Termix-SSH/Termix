@@ -68,6 +68,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("files:own", "low"),
   entry("secrets:own", "low"),
   entry("settings:read-core", "low"),
+  entry("plugins:read", "low"),
   entry("ui:surface", "low"),
 ] as const;
 

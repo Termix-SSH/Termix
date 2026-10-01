@@ -363,9 +363,9 @@ Bạn có thể chạy máy chủ Termix trên VPS thay vì trong mạng của m
 
 ## Dữ liệu sử dụng
 
-Termix gửi một tín hiệu nhỏ ẩn danh mỗi ngày một lần, để tôi biết có bao nhiêu bản đang chạy và tính năng nào thực sự được dùng. Nó gồm một mã bản cài ngẫu nhiên, số người dùng và máy chủ bạn có, phiên bản ứng dụng, và những tính năng (terminal, trình quản lý tệp, tunnel, docker, v.v.) đã dùng trong 24 giờ qua. Nó không bao giờ chứa tên người dùng, tên máy chủ, địa chỉ IP, thông tin đăng nhập hay bất cứ thứ gì nhận dạng bạn hoặc máy chủ của bạn.
+Mỗi ngày một lần, Termix gửi một báo cáo ẩn danh nhỏ để tôi biết có bao nhiêu bản cài đặt đang chạy và tính năng nào được dùng. Báo cáo gồm một ID ngẫu nhiên của bản cài đặt, phiên bản ứng dụng, và số người dùng cùng số máy chủ của bạn. Nó cũng có thể gồm nền tảng của bạn (hệ điều hành, kiến trúc, phiên bản Node.js, loại cơ sở dữ liệu, và bạn chạy bằng Docker, ứng dụng máy tính hay máy chủ thường), số lần mỗi loại tab được mở và số lần đăng nhập SSH, cùng các tính năng tích hợp đang chạy. Nó không bao giờ chứa tên người dùng, tên máy chủ, địa chỉ IP, thông tin đăng nhập hay bất cứ thứ gì có thể nhận ra bạn hoặc máy chủ của bạn.
 
-Mặc định là bật. Bạn tắt nó trong phần Cài đặt quản trị, mục Chung, hoặc đặt `ENABLE_TELEMETRY=false` trước cả khi khởi động Termix.
+Mặc định là bật. Bạn có thể tắt hoặc chọn nội dung gửi đi trong phần Cài đặt quản trị, mục Usage Statistics, và xem trước chính xác báo cáo sẽ được gửi. Mỗi người dùng có thể loại phần sử dụng tính năng của riêng mình trong hồ sơ. Đặt `ENABLE_TELEMETRY=false` sẽ tắt nó và khóa công tắc.
 
 <br />
 

@@ -78,6 +78,7 @@ import type {
   PluginBinarySpec,
   PluginTlsCertificateInfo,
   PluginTlsStatus,
+  PluginSummary,
   PluginKeyboardInteractiveHandler,
   PluginProcessHandle,
   PluginProcessOptions,
@@ -152,6 +153,8 @@ export interface FakeContextOptions {
    * from registerTlsRenewer calls.
    */
   tlsStatus?: Omit<PluginTlsStatus, "renewal">;
+  /** What ctx.plugins.list answers. Default: only this plugin, active. */
+  installedPlugins?: PluginSummary[];
   /**
    * Checks a ctx.system.writeTlsCertificate call. Throw to reject the pair.
    * Without it every pair is accepted and described with placeholder info.
@@ -1233,6 +1236,18 @@ export function createFakeContext(
       },
     },
 
+    plugins: {
+      list: async () =>
+        options.installedPlugins ?? [
+          {
+            id: pluginId,
+            version: "1.0.0",
+            source: "bundled",
+            state: "active",
+          },
+        ],
+    },
+
     system: {
       tlsStatus: async () => {
         tls.calls.push("tlsStatus");
@@ -1416,6 +1431,8 @@ export interface MockContextOptions {
   /** See FakeContextOptions. */
   tlsStatus?: FakeContextOptions["tlsStatus"];
   /** See FakeContextOptions. */
+  installedPlugins?: FakeContextOptions["installedPlugins"];
+  /** See FakeContextOptions. */
   validateTls?: FakeContextOptions["validateTls"];
   /** See FakeContextOptions. */
   refuseEnrollment?: string;
@@ -1441,7 +1458,7 @@ export interface MockPluginContext extends FakePluginContext {
  * topic outside the plugin's own namespace, settings:read-core on
  * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh,
  * notify:send on ctx.notify (notify:hub on serve), network:outbound on ctx.fetch, process:spawn on
- * ctx.process, system:tls on ctx.system, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
+ * ctx.process, system:tls on ctx.system, plugins:read on ctx.plugins, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
 export function createMockCtx(
@@ -1472,6 +1489,7 @@ export function createMockCtx(
     fetch: options.fetch,
     process: options.process,
     tlsStatus: options.tlsStatus,
+    installedPlugins: options.installedPlugins,
     validateTls: options.validateTls,
     refuseEnrollment: options.refuseEnrollment,
     baseUrl: options.baseUrl,
@@ -1835,6 +1853,13 @@ export function createMockCtx(
       ensureBinary: async (spec) => {
         require("process:spawn");
         return ctx.process.ensureBinary(spec);
+      },
+    },
+
+    plugins: {
+      list: async () => {
+        require("plugins:read");
+        return ctx.plugins.list();
       },
     },
 

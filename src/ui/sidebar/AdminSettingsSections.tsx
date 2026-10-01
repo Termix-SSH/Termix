@@ -10,9 +10,6 @@ import type { TlsStatus } from "@/api/tls-api";
 type GeneralSettingsSectionProps = {
   open: boolean;
   onToggle: () => void;
-  analyticsEnabled: boolean;
-  analyticsLocked: boolean;
-  handleToggleAnalytics: () => void;
   notificationPrivateEndpoints: string[];
   onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
   allowRegistration: boolean;
@@ -39,9 +36,6 @@ type GeneralSettingsSectionProps = {
 export function AdminGeneralSettingsSection({
   open,
   onToggle,
-  analyticsEnabled,
-  analyticsLocked,
-  handleToggleAnalytics,
   notificationPrivateEndpoints,
   onSaveNotificationPrivateEndpoints,
   allowRegistration,
@@ -74,20 +68,6 @@ export function AdminGeneralSettingsSection({
       onToggle={onToggle}
     >
       <div className="flex flex-col gap-0 pt-2">
-        <SettingRow
-          label={t("admin.analyticsEnabled")}
-          description={
-            analyticsLocked
-              ? t("admin.analyticsEnabledLockedDesc")
-              : t("admin.analyticsEnabledDesc")
-          }
-        >
-          <AdminToggle
-            on={analyticsEnabled}
-            onToggle={handleToggleAnalytics}
-            disabled={analyticsLocked}
-          />
-        </SettingRow>
         <div className="flex flex-col gap-1.5 py-2">
           <span className="text-xs font-medium">
             {t("admin.notificationPrivateEndpoints")}

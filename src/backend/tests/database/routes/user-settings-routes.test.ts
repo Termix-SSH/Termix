@@ -23,9 +23,6 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   logAudit: vi.fn(async () => {}),
   getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
 }));
-vi.mock("../../../utils/analytics.js", () => ({
-  getTelemetryEnvOverride: () => null,
-}));
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({
     get: async (key: string) => state.settings[key] ?? null,

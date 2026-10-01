@@ -363,9 +363,9 @@ Termix sunucusunu kendi ağınız yerine bir VPS üzerinde de çalıştırabilir
 
 ## Telemetri
 
-Termix günde bir kez küçük ve anonim bir sinyal gönderir; böylece kaç kurulumun çalıştığını ve hangi özelliklerin kullanıldığını görebiliyorum. İçinde rastgele bir kurulum kimliği, kaç kullanıcı ve sunucunuz olduğu, uygulama sürümü ve son 24 saatte hangi özelliklerin (terminal, dosya yöneticisi, tüneller, docker vb.) kullanıldığı yer alır. İçinde asla kullanıcı adları, sunucu adları, IP adresleri, kimlik bilgileri ya da sizi veya sunucularınızı tanımlayan başka bir şey bulunmaz.
+Termix, kaç kurulumun çalıştığını ve hangi özelliklerin kullanıldığını görebilmem için günde bir kez küçük ve anonim bir rapor gönderir. Raporda rastgele bir kurulum kimliği, uygulama sürümü ve kaç kullanıcı ile sunucunuz olduğu bulunur. Ayrıca platformunuzu (işletim sistemi, mimari, Node.js sürümü, veritabanı türü ve Docker, masaüstü uygulaması ya da normal bir sunucu kullanıp kullanmadığınız), her sekme türünün kaç kez açıldığını ve kaç SSH girişi yapıldığını, hangi yerleşik özelliklerin çalıştığını da içerebilir. Kullanıcı adları, sunucu adları, IP adresleri, kimlik bilgileri ya da sizi veya sunucularınızı tanıtacak hiçbir şey asla gönderilmez.
 
-Varsayılan olarak açıktır. Yönetici ayarlarında Genel bölümünden kapatabilir ya da Termix'i hiç başlatmadan önce `ENABLE_TELEMETRY=false` tanımlayabilirsiniz.
+Varsayılan olarak açıktır. Yönetici ayarlarında Usage Statistics bölümünden kapatabilir veya neleri içereceğini seçebilir, gönderilecek raporu olduğu gibi önizleyebilirsiniz. Her kullanıcı kendi özellik kullanımını profilinden hariç tutabilir. `ENABLE_TELEMETRY=false` tanımlamak onu kapatır ve anahtarı kilitler.
 
 <br />
 

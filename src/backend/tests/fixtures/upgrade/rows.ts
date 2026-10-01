@@ -901,6 +901,8 @@ export const ROWS: Record<string, Row[]> = {
     ["terminal_session_persistence_enabled", "false"],
     ["terminal_image_max_count", "7"],
     ["session_sharing_globally_enabled", "false"],
+    ["analytics_enabled", "false"],
+    ["analytics_instance_id", "d4-instance-id"],
     // Long enough that the fixture's recordings never age out.
     ["session_recording_retention_days", "3650"],
   ].map(([key, value]) => ({ key, value })),

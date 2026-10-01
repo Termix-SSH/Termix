@@ -1255,10 +1255,6 @@
     "secondFactorAfterExternalLoginDesc": "Off, an enrolled second factor is only asked for after password and other local logins, same as before. On, it is asked for after every login method, including SSO and LDAP.",
     "allowPasswordReset": "Allow Password Reset",
     "allowPasswordResetDesc": "Reset code via Docker logs",
-    "analyticsEnabled": "Share Anonymous Usage Statistics",
-    "analyticsEnabledDesc": "Sends an anonymous daily count of users, hosts, and feature usage to help improve Termix. No personal data or connection details are ever included.",
-    "analyticsEnabledLockedDesc": "This setting is locked by the ENABLE_TELEMETRY environment variable and cannot be changed here.",
-    "updateAnalyticsFailed": "Failed to update analytics setting",
     "auditForwardingTitle": "Forward to SIEM",
     "auditForwardingDesc": "Ship a copy of every audit entry to an external collector as NDJSON. Local logs stay the source of truth.",
     "auditForwardingEnvNotice": "An environment variable also configures forwarding; the URL saved here takes precedence.",
@@ -1871,6 +1867,10 @@
       "settings:read-core": {
         "title": "Read Termix settings",
         "consequence": "Server settings, not your hosts or credentials."
+      },
+      "plugins:read": {
+        "title": "See installed features",
+        "consequence": "It can see which features are installed and running."
       },
       "ui:surface": {
         "title": "Add its own screens",

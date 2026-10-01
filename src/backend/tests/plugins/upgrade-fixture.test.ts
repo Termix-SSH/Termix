@@ -543,6 +543,10 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
     expect(await settings(booted, "session-sharing", "admin")).toMatchObject({
       globallyEnabled: false,
     });
+    expect(await settings(booted, "telemetry", "admin")).toMatchObject({
+      enabled: false,
+      instanceId: "d4-instance-id",
+    });
     expect(await settings(booted, "acme-ssl", "admin")).toMatchObject({
       domain: "termix.d4.example",
       email: "d4@example.com",
