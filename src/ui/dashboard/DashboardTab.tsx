@@ -581,19 +581,21 @@ function RecentActivityCard({
                 const target = activityTarget(item.type);
                 if (host && target) onOpenTab(host, target.tab);
               }}
-              className="flex items-center justify-between px-4 py-2 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
+              className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span
                   className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.online ?? false, statusScheme, "dot", statusLoading)}`}
                 />
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold truncate max-w-24">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-semibold truncate">
                     {item.hostName}
                   </span>
-                  <div className="flex items-center gap-1 text-muted-foreground">
+                  <div className="flex items-center gap-1 min-w-0 text-muted-foreground">
                     {typeIcon(item.type)}
-                    <span className="text-[10px]">{typeLabel(item.type)}</span>
+                    <span className="text-[10px] truncate">
+                      {typeLabel(item.type)}
+                    </span>
                   </div>
                 </div>
               </div>
