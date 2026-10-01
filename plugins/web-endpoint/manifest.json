@@ -42,6 +42,7 @@
       "host": {
         "enableKey": "enableWebUi",
         "enableLabelKey": "hosts.enableWebUi",
+        "enableDescriptionKey": "hosts.enableWebUiDesc",
         "fields": [
           {
             "key": "webUiConfig",
