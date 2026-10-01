@@ -183,8 +183,6 @@ export function registerHostBulkRoutes(
    *   patch:
    *     summary: Bulk update partial fields on multiple SSH hosts
    *     tags: [SSH]
-   *     security:
-   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
