@@ -2,7 +2,6 @@ import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
 import Guacamole from "guacamole-common-js";
 import "@xterm/xterm/css/xterm.css";
 import { parseAsciicast, type Asciicast } from "./asciicast";
@@ -144,6 +143,7 @@ function PlaybackControls({
 
 function AsciicastPlayer({ blob }: { blob: Blob }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const recordingRef = useRef<Asciicast | null>(null);
   const positionRef = useRef(0);
@@ -178,7 +178,9 @@ function AsciicastPlayer({ blob }: { blob: Blob }) {
   }, []);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const screen = screenRef.current;
+    if (!container || !screen) return;
     const terminal = new Terminal({
       cursorBlink: false,
       disableStdin: true,
@@ -186,13 +188,24 @@ function AsciicastPlayer({ blob }: { blob: Blob }) {
       fontSize: 12,
       theme: { background: "#09090b" },
     });
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.open(containerRef.current);
+    terminal.open(screen);
     terminalRef.current = terminal;
-    const observer = new ResizeObserver(() => fitAddon.fit());
-    observer.observe(containerRef.current);
-    fitAddon.fit();
+    // The recording keeps its own size, scaled down to fit the panel.
+    const fit = () => {
+      const width = screen.offsetWidth;
+      const height = screen.offsetHeight;
+      if (!width || !height) return;
+      const scale = Math.min(
+        1,
+        container.clientWidth / width,
+        container.clientHeight / height,
+      );
+      screen.style.transform = `scale(${scale})`;
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(container);
+    observer.observe(screen);
+    const resizeListener = terminal.onResize(() => requestAnimationFrame(fit));
 
     blob
       .text()
@@ -207,6 +220,7 @@ function AsciicastPlayer({ blob }: { blob: Blob }) {
 
     return () => {
       observer.disconnect();
+      resizeListener.dispose();
       terminal.dispose();
       terminalRef.current = null;
     };
@@ -232,8 +246,13 @@ function AsciicastPlayer({ blob }: { blob: Blob }) {
 
   if (error) return <div className="p-4 text-xs text-destructive">{error}</div>;
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div ref={containerRef} className="min-h-0 flex-1 bg-[#09090b] p-2" />
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+      <div
+        ref={containerRef}
+        className="min-h-0 min-w-0 flex-1 overflow-hidden bg-[#09090b] p-2"
+      >
+        <div ref={screenRef} className="w-max origin-top-left" />
+      </div>
       <PlaybackControls
         playing={playing}
         position={position}
@@ -314,7 +333,7 @@ function GuacamolePlayer({ blob }: { blob: Blob }) {
 
   if (error) return <div className="p-4 text-xs text-destructive">{error}</div>;
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <div
         ref={containerRef}
         className="min-h-0 flex-1 overflow-hidden bg-black"

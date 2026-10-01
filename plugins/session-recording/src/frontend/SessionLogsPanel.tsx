@@ -517,7 +517,9 @@ export function SessionLogsPanel() {
         </div>
 
         {/* Log content */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div
+          className={`flex-1 min-h-0 min-w-0 ${viewBlob ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}
+        >
           {viewLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
