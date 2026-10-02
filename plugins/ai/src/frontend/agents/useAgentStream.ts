@@ -67,7 +67,7 @@ export function useAgentStream(
                 if (e.seq <= cursor) continue;
                 cursor = e.seq;
                 callbacks.current.event(e);
-                if (e.kind === "state") await refresh();
+                if (e.kind === "state" || e.kind === "error") await refresh();
                 if (e.kind === "status" && e.text === "stopped") return;
               }
             }
