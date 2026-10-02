@@ -196,15 +196,20 @@ export function registerInstallRoute(
           });
           try {
             await new Promise<void>((resolve, reject) => {
-              verification.client.forwardIn("127.0.0.1", 0, (error) =>
+              const deadline = setTimeout(
+                () => reject(Error("SSH forwarding verification timed out")),
+                15000,
+              );
+              verification.client.forwardIn("127.0.0.1", 0, (error) => {
+                clearTimeout(deadline);
                 error
                   ? reject(
                       Error(
                         "SSH configuration was checked, but a new connection still refused remote forwarding. Check authorized_keys restrictions and the active SSH server configuration.",
                       ),
                     )
-                  : resolve(),
-              );
+                  : resolve();
+              });
             });
             write({
               log: "Verified loopback remote forwarding on a new SSH connection\n",
