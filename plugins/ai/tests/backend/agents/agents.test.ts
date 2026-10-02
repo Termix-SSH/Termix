@@ -57,7 +57,7 @@ if(args[0]==='serve') {
    if(q.url==='/event'){r.writeHead(200,{'Content-Type':'text/event-stream'});r.write(': hello\n\n');stream=r;return;}
    r.setHeader('Content-Type','application/json');
    if(q.url==='/session')return r.end(JSON.stringify({id:'oc-session'}));
-   if(q.url.includes('prompt_async')){r.statusCode=204;r.end();setTimeout(()=>{stream.write('data: '+JSON.stringify({type:'message.part.updated',properties:{part:{id:'text-1',type:'text',sessionID:'oc-session'}}})+'\n\n');stream.write('data: '+JSON.stringify({type:'message.part.delta',properties:{sessionID:'oc-session',partID:'text-1',field:'text',delta:'verified'}})+'\n\n');stream.write('data: '+JSON.stringify({type:'session.idle',properties:{sessionID:'oc-session'}})+'\n\n');},30);return;}
+   if(q.url.includes('prompt_async')){let body='';for await(const d of q)body+=d;const parsed=JSON.parse(body);if(!parsed.parts.some(p=>p.type==='file' && p.mime==='image/png' && p.url==='data:image/png;base64,aW1hZ2U=')){r.statusCode=400;r.end('{}');return;}r.statusCode=204;r.end();setTimeout(()=>{stream.write('data: '+JSON.stringify({type:'message.part.updated',properties:{part:{id:'text-1',type:'text',sessionID:'oc-session'}}})+'\n\n');stream.write('data: '+JSON.stringify({type:'message.part.delta',properties:{sessionID:'oc-session',partID:'text-1',field:'text',delta:'verified'}})+'\n\n');stream.write('data: '+JSON.stringify({type:'session.idle',properties:{sessionID:'oc-session'}})+'\n\n');},30);return;}
    r.end('{}');
  }).listen(port,'127.0.0.1');
 } else rl.createInterface({input:process.stdin}).on('line',line=>{
@@ -65,12 +65,13 @@ if(args[0]==='serve') {
  if(args[0]==='app-server') {
   if(m.method==='initialize')emit({id:m.id,result:{}});
   if(m.method==='thread/start'||m.method==='thread/resume')emit({id:m.id,result:{thread:{id:'codex-thread'}}});
-  if(m.method==='turn/start'){emit({id:m.id,result:{}});emit({method:'item/agentMessage/delta',params:{delta:'verified'}});emit({method:'turn/completed',params:{turn:{status:'completed'}}});}
+  if(m.method==='turn/start'){if(!m.params.input.some(i=>i.type==='image' && i.url==='data:image/png;base64,aW1hZ2U='))throw Error('Missing Codex image');emit({id:m.id,result:{}});emit({method:'item/agentMessage/delta',params:{delta:'verified'}});emit({method:'turn/completed',params:{turn:{status:'completed'}}});}
  } else if(args.includes('--input-format')) {
-  if(m.type==='user')emit({type:'control_request',request_id:'approval',request:{subtype:'can_use_tool',tool_name:'Read',input:{path:'/tmp'}}});
+  if(m.type==='user'){if(!m.message.content.some(i=>i.type==='image' && i.source.media_type==='image/png' && i.source.data==='aW1hZ2U='))throw Error('Missing Claude image');}if(m.type==='user')emit({type:'control_request',request_id:'approval',request:{subtype:'can_use_tool',tool_name:'Read',input:{path:'/tmp'}}});
   if(m.type==='control_response'){emit({type:'stream_event',event:{type:'content_block_delta',delta:{type:'text_delta',text:'verified'}}});emit({type:'result',is_error:false});}
  } else if(m.type==='get_state') {emit({type:'response',id:m.id,success:true,data:{sessionId:'pi-session'}});
  } else if(m.type==='prompt') {
+  if(m.images?.[0]?.data!=='aW1hZ2U=' || m.images?.[0]?.mimeType!=='image/png')throw Error('Missing Pi image');
   emit({type:'message_update',assistantMessageEvent:{type:'text_delta',delta:'verified'}});emit({type:'agent_end'});
  }
 });
@@ -79,6 +80,8 @@ for (const agent of ["pi", "claude", "codex", "opencode"] as const) {
   it(`${agent}: native protocol streams a turn and returns to ready`, async () => {
     const dir = await mkdtemp(join(tmpdir(), "termix-agent-test-"));
     const executable = join(dir, "fake-agent");
+    const image = join(dir, "image.png");
+    await writeFile(image, "image");
     await writeFile(executable, fake, { mode: 0o700 });
     const child = spawn(process.execPath, ["-e", REMOTE_RUNNER], {
       env: { ...process.env, HOME: dir },
@@ -107,7 +110,11 @@ for (const agent of ["pi", "claude", "codex", "opencode"] as const) {
           if (m.kind === "status" && m.text === "ready") {
             if (!prompted) {
               prompted = true;
-              send({ type: "prompt", text: "hello" });
+              send({
+                type: "prompt",
+                text: "hello",
+                attachments: [{ path: image, mime: "image/png" }],
+              });
             } else {
               clearTimeout(timer);
               resolve();

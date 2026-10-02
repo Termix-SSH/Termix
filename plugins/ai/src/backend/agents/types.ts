@@ -2,12 +2,31 @@ export const AGENTS = ["pi", "opencode", "claude", "codex"] as const;
 export type AgentKind = (typeof AGENTS)[number];
 export interface AgentEvent {
   seq: number;
-  kind: "text" | "tool" | "permission" | "status" | "error" | "user";
+  kind: "text" | "tool" | "permission" | "status" | "error" | "user" | "state";
   text: string;
   requestId?: string;
   choices?: string[];
 }
+export interface AgentAttachment {
+  id: string;
+  name: string;
+  path: string;
+  mime: string;
+  size: number;
+}
+export interface QueuedPrompt {
+  id: string;
+  text: string;
+  attachmentIds: string[];
+}
 export interface AgentSession {
+  title?: string;
+  archived?: boolean;
+  draft?: string;
+  queue?: QueuedPrompt[];
+  queuePaused?: boolean;
+  attachments?: AgentAttachment[];
+
   id: string;
   userId: string;
   hostId: number;

@@ -2,7 +2,7 @@
 export const REMOTE_RUNNER = String.raw`
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const {spawn} = require('node:child_process'), readline = require('node:readline');
-let config, child, nativeId, turnId, serverUrl, ready = false, rpcId = 0;
+let config, child, nativeId, turnId, serverUrl, ready = false, running = false, rpcId = 0;
 const pending = new Map(), approvals = new Map();
 const emit = (kind, text, extra = {}) => process.stdout.write(JSON.stringify({kind,text,...extra})+'\n');
 const send = value => child.stdin.write(JSON.stringify(value)+'\n');
@@ -11,7 +11,7 @@ const request = (method, params) => new Promise((resolve,reject) => {
   pending.set(id,{resolve,reject,timer}); send({id,method,params});
 });
 function fail(error) { emit('error',error.message || String(error)); if(!ready) { if(child?.pid) {try{process.kill(-child.pid,'SIGTERM');}catch{}} process.stdin.destroy(); } }
-function done() { emit('status','ready'); }
+function done(initial=false) { if(!initial && !running) return; running=false; emit('status','ready'); }
 async function launch(args, env) {
   const managed=path.join(os.homedir(),'.local','share','termix-agent-runtime','agents',config.agent,'node_modules','.bin',config.agent);
   const executable=(!config.executable || config.executable===config.agent) && fs.existsSync(managed)?managed:(config.executable || config.agent);
@@ -105,7 +105,7 @@ async function start(c) {
   if(c.agent==='pi') {
     const agentDir=path.join(dir,'config');
     fs.mkdirSync(agentDir,{recursive:true,mode:0o700});
-    fs.writeFileSync(path.join(agentDir,'models.json'),JSON.stringify({providers:{termix:{baseUrl:base+'/v1',api:c.providerType==='anthropic'?'anthropic-messages':'openai-completions',apiKey:token,models:[{id:c.model,name:c.model,reasoning:false,input:['text'],contextWindow:131072,maxTokens:8192,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
+    fs.writeFileSync(path.join(agentDir,'models.json'),JSON.stringify({providers:{termix:{baseUrl:base+'/v1',api:c.providerType==='anthropic'?'anthropic-messages':'openai-completions',apiKey:token,models:[{id:c.model,name:c.model,reasoning:false,input:['text','image'],contextWindow:131072,maxTokens:8192,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
     await launch(['--mode','rpc','--provider','termix','--model',c.model,'--session',path.join(dir,'session.jsonl')],{PI_CODING_AGENT_DIR:agentDir});
     const state=await new Promise((resolve,reject)=>{const id=String(++rpcId),timer=setTimeout(()=>{pending.delete(id);reject(Error('Pi startup timed out'));},60000);pending.set(id,{resolve,reject,timer});send({id,type:'get_state'});});
     nativeId=state.sessionId;emit('native','',{nativeId});
@@ -135,18 +135,33 @@ async function start(c) {
     nativeId=c.nativeId || (await oc('POST','/session',{})).id;emit('native','',{nativeId});
     void ocEvents().catch(fail);
   }
-  ready=true;done();
+  ready=true;done(true);
 }
 async function handle(m) {
   if(m.type==='start') return start(m.config);
   if(m.type==='stop') {if(child?.pid) {try{process.kill(-child.pid,'SIGTERM');}catch{}};setTimeout(()=>process.exit(0),1500).unref();return;}
   if(!ready) throw Error('Agent is not ready');
   if(m.type==='prompt') {
+    running=true;
     emit('status','running');
-    if(config.agent==='pi') send({type:'prompt',message:m.text});
-    if(config.agent==='claude') send({type:'user',message:{role:'user',content:m.text},parent_tool_use_id:null,session_id:nativeId||''});
-    if(config.agent==='codex') await request('turn/start',{threadId:nativeId,input:[{type:'text',text:m.text}]});
-    if(config.agent==='opencode') await oc('POST','/session/'+nativeId+'/prompt_async',{model:{providerID:'termix',modelID:config.model},parts:[{type:'text',text:m.text}]});
+    try {
+      const attachments=m.attachments||[],images=[];
+      let text=m.text;
+      for(const a of attachments) {
+        if(a.mime.startsWith('image/')) {
+          const fd=fs.openSync(a.path,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);
+          try {
+            const stat=fs.fstatSync(fd);if(!stat.isFile() || stat.size>1024*1024) throw Error('Image exceeds 1 MiB or is no longer a regular file');
+            const data=Buffer.alloc(stat.size),size=fs.readSync(fd,data,0,data.length,0);
+            images.push({type:'image',data:data.subarray(0,size).toString('base64'),mimeType:a.mime});
+          } finally {fs.closeSync(fd);}
+        } else text+='\nAttached file on this host: '+JSON.stringify(a.path);
+      }
+      if(config.agent==='pi') send({type:'prompt',message:text,images});
+      if(config.agent==='claude') send({type:'user',message:{role:'user',content:[{type:'text',text:text||'Please inspect the attached images.'},...images.map(i=>({type:'image',source:{type:'base64',media_type:i.mimeType,data:i.data}}))]},parent_tool_use_id:null,session_id:nativeId||''});
+      if(config.agent==='codex') await request('turn/start',{threadId:nativeId,input:[{type:'text',text},...images.map(i=>({type:'image',url:'data:'+i.mimeType+';base64,'+i.data}))]});
+      if(config.agent==='opencode') await oc('POST','/session/'+nativeId+'/prompt_async',{model:{providerID:'termix',modelID:config.model},parts:[{type:'text',text},...images.map(i=>({type:'file',mime:i.mimeType,url:'data:'+i.mimeType+';base64,'+i.data}))]});
+    } catch(error) {fail(error);done();}
   }
   if(m.type==='cancel') {
     if(config.agent==='pi') send({type:'abort'});

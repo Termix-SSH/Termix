@@ -11,6 +11,7 @@ import {
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
+  patch: vi.fn(),
   fetch: vi.fn(),
   t: (key: string) => key,
 }));
@@ -31,6 +32,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   Element.prototype.scrollIntoView = vi.fn();
   mocks.post.mockResolvedValue({ data: {} });
+  mocks.patch.mockResolvedValue({ data: {} });
   mocks.fetch.mockImplementation(async () => new Response("", { status: 200 }));
 });
 afterEach(cleanup);
@@ -64,18 +66,17 @@ async function panel(status = "ready") {
   return textarea;
 }
 
-it("sends on Enter, clears the draft, and prevents duplicate sends while running", async () => {
+it("sends on Enter and clears the draft", async () => {
   const textarea = await panel();
   expect(fireEvent.keyDown(textarea, { key: "Enter" })).toBe(false);
   await waitFor(() =>
     expect(mocks.post).toHaveBeenCalledWith("/agents/test/input", {
       type: "prompt",
       text: "hello",
+      attachmentIds: [],
     }),
   );
   await waitFor(() => expect((textarea as HTMLTextAreaElement).value).toBe(""));
-  fireEvent.change(textarea, { target: { value: "second" } });
-  fireEvent.keyDown(textarea, { key: "Enter" });
   expect(mocks.post).toHaveBeenCalledTimes(1);
 });
 

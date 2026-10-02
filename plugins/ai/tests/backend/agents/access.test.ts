@@ -77,3 +77,53 @@ it("requires agent permission for forwarding configuration", async () => {
     ).status,
   ).toBe(403);
 });
+
+it("persists session metadata and queued drafts without exposing them to another user", async () => {
+  server = await startServer({ permissions: ["ai.agents"] });
+  await server.enableFor("user-1");
+  await server.enableFor("user-2");
+  const id = "22222222-2222-2222-2222-222222222222";
+  await server.mock.ctx.kv.set(`agent:user-1:${id}`, {
+    id,
+    userId: "user-1",
+    hostId: 1,
+    events: [],
+    updatedAt: new Date().toISOString(),
+  });
+  expect(
+    (
+      await server.request("PATCH", `/agents/${id}`, {
+        body: { title: "Private", draft: "Keep this draft" },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await server.request("POST", `/agents/${id}/queue`, {
+        body: { operation: "add", text: "queued" },
+      })
+    ).status,
+  ).toBe(200);
+  const s = (await server.request("GET", `/agents/${id}`)).body;
+  expect(s).toMatchObject({
+    title: "Private",
+    draft: "Keep this draft",
+    queue: [{ text: "queued" }],
+  });
+  for (const [method, path, body] of [
+    ["PATCH", `/agents/${id}`, { title: "hijack" }],
+    ["POST", `/agents/${id}/queue`, { operation: "add", text: "injected" }],
+    ["POST", `/agents/${id}/workspace`, { operation: "status" }],
+  ] as const)
+    expect(
+      (await server.request(method, path, { user: "user-2", body })).status,
+    ).toBe(400);
+  await server.request("PATCH", `/agents/${id}`, { body: { archived: true } });
+  expect((await server.request("POST", `/agents/${id}/resume`)).status).toBe(
+    400,
+  );
+  expect((await server.request("GET", `/agents/${id}`)).body).toMatchObject({
+    archived: true,
+    queuePaused: true,
+  });
+});

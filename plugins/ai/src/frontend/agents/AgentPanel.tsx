@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation, type TabProps } from "@termix/plugin-sdk/frontend";
-import { Button, Input, Textarea } from "@termix/plugin-sdk/ui";
-import { Bot, Plus, Send, Square, Play } from "lucide-react";
+import { Button, Input } from "@termix/plugin-sdk/ui";
+import { Bot, Plus, Square, Play } from "lucide-react";
+import { useAgentStream } from "./useAgentStream";
+import { SessionTools } from "./SessionTools";
+import { AgentComposer } from "./AgentComposer";
 import { InstallRuntime } from "./InstallRuntime";
 import { aiApp } from "../app-ref";
 import { AiMessage } from "../AiMessage";
@@ -40,14 +43,15 @@ export function AgentPanel({ host, sshHost }: TabProps) {
     [executable, setExecutable] = useState("");
   const [active, setActive] = useState<AgentSession | null>(null),
     [events, setEvents] = useState<AgentEvent[]>([]);
-  const [prompt, setPrompt] = useState(""),
-    [error, setError] = useState(""),
+  const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({}),
     [answered, setAnswered] = useState<Set<string>>(new Set());
   const [generation, setGeneration] = useState(0);
   const bottom = useRef<HTMLDivElement>(null);
   const composing = useRef(false);
+  const [search, setSearch] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const refresh = useCallback(async () => {
     const [p, s] = await Promise.all([
       getAiProviders(),
@@ -63,46 +67,29 @@ export function AgentPanel({ host, sshHost }: TabProps) {
     bottom.current?.scrollIntoView({ block: "end" });
   }, [events]);
   const activeId = active?.id;
-  useEffect(() => {
-    if (!activeId) return;
-    const controller = new AbortController();
-    const id = activeId;
-    void (async () => {
-      const response = await aiApp().fetch(`agents/${id}/events`, {
-        signal: controller.signal,
-      });
-      if (!response.ok || !response.body) throw Error(t("agents.streamFailed"));
-      const reader = response.body.getReader(),
-        decoder = new TextDecoder();
-      let buffer = "";
-      while (!controller.signal.aborted) {
-        const result = await reader.read();
-        if (result.done) break;
-        buffer += decoder.decode(result.value, { stream: true });
-        let end: number;
-        while ((end = buffer.indexOf("\n\n")) >= 0) {
-          const frame = buffer.slice(0, end);
-          buffer = buffer.slice(end + 2);
-          const line = frame.split("\n").find((l) => l.startsWith("data: "));
-          if (!line) continue;
-          const e: AgentEvent = JSON.parse(line.slice(6));
-          setEvents((old) =>
-            old.some((x) => x.seq === e.seq) ? old : [...old, e].slice(-2000),
-          );
-          if (e.kind === "status")
-            setActive((old) =>
-              old?.id === id
-                ? { ...old, status: e.text as AgentSession["status"] }
-                : old,
-            );
-          if (e.kind === "error") setError(e.text);
-        }
-      }
-    })().catch((e) => {
-      if (!controller.signal.aborted) setError(message(e));
-    });
-    return () => controller.abort();
-  }, [activeId, generation, t]);
+  const connection = useAgentStream(
+    activeId,
+    generation,
+    (s) => {
+      setActive((old) => (old?.id === s.id ? s : old));
+      setEvents((old) =>
+        [
+          ...s.events,
+          ...old.filter((e) => e.seq > (s.events.at(-1)?.seq ?? 0)),
+        ].slice(-2000),
+      );
+    },
+    (e) => {
+      setEvents((old) =>
+        old.some((x) => x.seq === e.seq) ? old : [...old, e].slice(-2000),
+      );
+      if (e.kind === "status")
+        setActive((old) =>
+          old ? { ...old, status: e.text as AgentSession["status"] } : old,
+        );
+      if (e.kind === "error") setError(e.text);
+    },
+  );
   async function action(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -181,20 +168,41 @@ export function AgentPanel({ host, sshHost }: TabProps) {
       )}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <aside className="max-h-40 overflow-auto border-b p-2 md:max-h-none md:w-56 md:border-r">
-          {sessions.map((s) => (
-            <button
-              key={s.id}
-              className={`mb-1 block w-full rounded p-2 text-left text-sm hover:bg-muted ${active?.id === s.id ? "bg-muted" : ""}`}
-              onClick={() => void select(s.id)}
-            >
-              <div>
-                {names[s.agent]} · {s.model}
-              </div>
-              <div className="truncate text-xs text-muted-foreground">
-                {s.cwd}
-              </div>
-            </button>
-          ))}
+          <Input
+            aria-label={t("agents.search")}
+            placeholder={t("agents.search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <label className="my-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
+            {t("agents.showArchived")}
+          </label>
+          {sessions
+            .filter(
+              (s) =>
+                !!s.archived === showArchived &&
+                [s.title, s.model, s.cwd]
+                  .join(" ")
+                  .toLowerCase()
+                  .includes(search.toLowerCase()),
+            )
+            .map((s) => (
+              <button
+                key={s.id}
+                className={`mb-1 block w-full rounded p-2 text-left text-sm hover:bg-muted ${active?.id === s.id ? "bg-muted" : ""}`}
+                onClick={() => void select(s.id)}
+              >
+                <div>{s.title || `${names[s.agent]} · ${s.model}`}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {s.cwd}
+                </div>
+              </button>
+            ))}
           {!sessions.length && (
             <p className="p-2 text-sm text-muted-foreground">
               {t("agents.noSessions")}
@@ -315,6 +323,30 @@ export function AgentPanel({ host, sshHost }: TabProps) {
           </form>
         ) : (
           <section className="flex min-h-0 flex-1 flex-col">
+            {connection !== "connected" && (
+              <p role="status" className="p-2 text-sm">
+                {t(`agents.${connection}`)}
+              </p>
+            )}
+            <SessionTools
+              onWorktree={(path) => {
+                setCwd(path);
+                setAgent(active.agent);
+                setProviderId(active.providerId);
+                setModel(active.model);
+                setExecutable(active.executable);
+                setActive(null);
+                setEvents([]);
+              }}
+              key={`tools-${active.id}`}
+              session={active}
+              busy={busy}
+              action={action}
+              onUpdated={async (s) => {
+                setActive(s);
+                await refresh();
+              }}
+            />
             <div className="flex flex-wrap items-center gap-2 border-b p-2 text-sm">
               <span>
                 {names[active.agent]} · {active.model} · {active.cwd} ·{" "}
@@ -350,145 +382,103 @@ export function AgentPanel({ host, sshHost }: TabProps) {
               </Button>
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
-              {transcript.map((e) => (
-                <div key={e.seq}>
-                  {e.kind === "text" || e.kind === "user" ? (
-                    <AiMessage
-                      role={e.kind === "user" ? "user" : "assistant"}
-                      content={e.text}
-                    />
-                  ) : e.kind === "permission" ? (
-                    <div className="space-y-2 rounded border p-3">
-                      <strong>{t("agents.approval")}</strong>
-                      <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs">
-                        {e.text}
-                      </pre>
-                      {e.choices?.length ? (
-                        <select
-                          className="w-full border bg-background p-2"
-                          value={answers[e.requestId!] ?? ""}
-                          onChange={(v) =>
-                            setAnswers((a) => ({
-                              ...a,
-                              [e.requestId!]: v.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">{t("agents.answer")}</option>
-                          {e.choices.map((c) => (
-                            <option key={c}>{c}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Input
-                          placeholder={t("agents.answer")}
-                          value={answers[e.requestId!] ?? ""}
-                          onChange={(v) =>
-                            setAnswers((a) => ({
-                              ...a,
-                              [e.requestId!]: v.target.value,
-                            }))
-                          }
-                        />
-                      )}
-                      {[true, false].map((allow) => (
-                        <Button
-                          key={String(allow)}
-                          size="sm"
-                          variant={allow ? "default" : "outline"}
-                          disabled={answered.has(e.requestId!)}
-                          onClick={() =>
-                            void action(async () => {
-                              await input({
-                                type: "answer",
-                                requestId: e.requestId,
-                                allow,
-                                value: answers[e.requestId!],
-                              });
-                              setAnswered((a) => new Set([...a, e.requestId!]));
-                            })
-                          }
-                        >
-                          {t(allow ? "agents.allow" : "agents.deny")}
-                        </Button>
-                      ))}
-                    </div>
-                  ) : e.kind === "tool" ? (
-                    <details className="rounded border p-2 text-xs">
-                      <summary className="cursor-pointer">
-                        {t("agents.tool")}
-                      </summary>
-                      <pre className="max-h-72 overflow-auto whitespace-pre-wrap">
-                        {e.text}
-                      </pre>
-                    </details>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {e.kind === "status"
-                        ? t(`agents.status.${e.text}`)
-                        : e.text}
-                    </p>
-                  )}
-                </div>
-              ))}
+              {transcript
+                .filter((e) => e.kind !== "state")
+                .map((e) => (
+                  <div key={e.seq}>
+                    {e.kind === "text" || e.kind === "user" ? (
+                      <AiMessage
+                        role={e.kind === "user" ? "user" : "assistant"}
+                        content={e.text}
+                      />
+                    ) : e.kind === "permission" ? (
+                      <div className="space-y-2 rounded border p-3">
+                        <strong>{t("agents.approval")}</strong>
+                        <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs">
+                          {e.text}
+                        </pre>
+                        {e.choices?.length ? (
+                          <select
+                            className="w-full border bg-background p-2"
+                            value={answers[e.requestId!] ?? ""}
+                            onChange={(v) =>
+                              setAnswers((a) => ({
+                                ...a,
+                                [e.requestId!]: v.target.value,
+                              }))
+                            }
+                          >
+                            <option value="">{t("agents.answer")}</option>
+                            {e.choices.map((c) => (
+                              <option key={c}>{c}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            placeholder={t("agents.answer")}
+                            value={answers[e.requestId!] ?? ""}
+                            onChange={(v) =>
+                              setAnswers((a) => ({
+                                ...a,
+                                [e.requestId!]: v.target.value,
+                              }))
+                            }
+                          />
+                        )}
+                        {[true, false].map((allow) => (
+                          <Button
+                            key={String(allow)}
+                            size="sm"
+                            variant={allow ? "default" : "outline"}
+                            disabled={answered.has(e.requestId!)}
+                            onClick={() =>
+                              void action(async () => {
+                                await input({
+                                  type: "answer",
+                                  requestId: e.requestId,
+                                  allow,
+                                  value: answers[e.requestId!],
+                                });
+                                setAnswered(
+                                  (a) => new Set([...a, e.requestId!]),
+                                );
+                              })
+                            }
+                          >
+                            {t(allow ? "agents.allow" : "agents.deny")}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : e.kind === "tool" ? (
+                      <details className="rounded border p-2 text-xs">
+                        <summary className="cursor-pointer">
+                          {t("agents.tool")}
+                        </summary>
+                        <pre className="max-h-72 overflow-auto whitespace-pre-wrap">
+                          {e.text}
+                        </pre>
+                      </details>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {e.kind === "status"
+                          ? t(`agents.status.${e.text}`)
+                          : e.text}
+                      </p>
+                    )}
+                  </div>
+                ))}
               <div ref={bottom} />
             </div>
-            <form
-              className="flex items-end gap-2 border-t p-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (busy || active.status !== "ready" || !prompt.trim()) return;
-                void action(async () => {
-                  await input({ type: "prompt", text: prompt });
-                  setPrompt("");
-                  setActive({ ...active, status: "running" });
-                });
+            <AgentComposer
+              key={`composer-${active.id}`}
+              session={active}
+              busy={busy}
+              action={action}
+              onComposition={(value) => {
+                composing.current = value;
               }}
-            >
-              <Textarea
-                aria-label={t("agents.prompt")}
-                placeholder={t("agents.prompt")}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onCompositionStart={() => {
-                  composing.current = true;
-                }}
-                onCompositionEnd={() => {
-                  composing.current = false;
-                }}
-                onKeyDown={(e) => {
-                  if (
-                    e.key !== "Enter" ||
-                    e.shiftKey ||
-                    e.ctrlKey ||
-                    e.altKey ||
-                    e.metaKey ||
-                    e.nativeEvent.isComposing ||
-                    e.nativeEvent.keyCode === 229 ||
-                    composing.current
-                  )
-                    return;
-                  e.preventDefault();
-                  if (!e.repeat) e.currentTarget.form?.requestSubmit();
-                }}
-                rows={3}
-              />
-              <Button
-                type="submit"
-                disabled={busy || active.status !== "ready" || !prompt.trim()}
-              >
-                <Send size={16} />
-                {t("agents.send")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy || active.status !== "running"}
-                onClick={() => void action(() => input({ type: "cancel" }))}
-              >
-                {t("agents.interrupt")}
-              </Button>
-            </form>
+              onUpdated={setActive}
+            />
           </section>
         )}
       </div>

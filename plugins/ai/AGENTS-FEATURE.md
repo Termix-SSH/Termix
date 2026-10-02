@@ -12,7 +12,7 @@ Agent state lives in the target user's `~/.local/state/termix-agents/<session-id
 
 The agent runs with the SSH user's authority. Claude/OpenCode/Codex approval requests are shown in the tab; Pi's ordinary tools run without per-tool approval. Pi extension prompts are forwarded. Structured native questions currently accept JSON answers. Root SSH gives the agent root privileges; select the account and directory accordingly. No global agent config is overwritten.
 
-The initial host action asks for the working directory explicitly; it does not infer one from terminal buffer text. This release does not add Git worktrees, file diff review, attachments, mobile-native UI, or cross-host session migration.
+The initial host action asks for the working directory explicitly; it does not infer one from terminal buffer text. Mobile-native UI and cross-host session migration are outside this release.
 
 ## Validation
 
@@ -35,3 +35,13 @@ The operation backs up sshd_config under `/etc/ssh/termix-agent-backups`, valida
 After configuration, Termix opens a fresh SSH connection and verifies an actual loopback remote listener before reporting success. Key-level forwarding restrictions or a different active server configuration therefore remain visible failures.
 
 The conversation composer sends with Enter and inserts a newline with Shift+Enter. Escape interrupts a running agent when focus is inside its panel. IME composition and repeated keydown events do not submit or interrupt; a failed send preserves the draft.
+
+## Conversation workflow
+
+- Enter sends an idle turn or queues a message while running. A session stores up to 20 queued messages, each editable/removable until dispatched. Dispatch is FIFO after completion; cancellation, archive, and remote errors pause the queue. Continue explicitly resumes it. A stopped session must be resumed first. Messages already dispatched are not automatically replayed after a transport failure.
+- Rename and search sessions by name/model/directory. Archive stops the remote process and pauses its queue; restore preserves its transcript. Composer drafts are saved per session after 500 ms and on tab/session unmount. Unsent attachments remain reusable in the session attachment picker.
+- Upload a file, paste an image into the composer, or reference a regular file within the working directory (symlinks outside it are rejected). Limits: 1 MiB per file, four per message, 100 per session. Uploads live in the remote user's private session directory. Image MIME is detected from bytes and sent through native Pi/Claude/Codex/OpenCode image inputs; the selected provider/model must support vision. Other files are referenced by their host path for the agent's tools. No file is sent to the model until a message using it is dispatched.
+- Git review lists changed/untracked files and shows unstaged and staged diffs, including deleted files. Worktree creation makes a new branch from HEAD in the remote user's Termix state directory. It preserves uncommitted changes in the original workspace, does not overwrite an existing branch, and offers a new session in the resulting directory. Repository hooks, external diff commands, and textconv are disabled for these operations. Worktrees are retained until the user removes them explicitly.
+- Browser event streams reconnect with bounded backoff and refresh a persisted snapshot before continuing from its sequence cursor. Duplicate events are suppressed and text is checkpointed every second. Access-denied sessions stop retrying. A server/SSH restart still requires Resume; the UI never replays a potentially executed command. The 2,000-event UI retention limit still applies.
+
+Tests cover FIFO/cancel behavior through the HTTP routes, cross-user metadata/attachment access, native image payloads for four CLI protocols, real temporary Git repositories, path/size boundaries, archive persistence, keyboard/IME handling, and dropped-stream recovery.

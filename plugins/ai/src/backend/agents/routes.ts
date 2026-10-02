@@ -18,8 +18,12 @@ import {
   validStart,
   type AgentEvent,
   type AgentSession,
+  type QueuedPrompt,
+  type AgentAttachment,
 } from "./types.js";
 import { registerInstallRoute } from "./install.js";
+import { workspaceOperation } from "./workspace.js";
+import { promptInput, updateSession, updateQueue } from "./session-state.js";
 import { REMOTE_RUNNER } from "./remote-runner.js";
 
 interface Live {
@@ -30,8 +34,10 @@ interface Live {
   approvals: Set<string>;
   saved: Promise<void>;
   stopping?: Promise<void>;
+  draining?: boolean;
+  flush?: ReturnType<typeof setTimeout>;
 }
-const MAX_BODY = 2 * 1024 * 1024;
+const MAX_BODY = 16 * 1024 * 1024;
 const PROVIDER_PATHS = new Set([
   "/chat/completions",
   "/responses",
@@ -76,6 +82,11 @@ export function registerAgentRoutes(
         res.end();
     }
     if (input.kind !== "text") void save(entry);
+    else if (!entry.flush)
+      entry.flush = setTimeout(() => {
+        entry.flush = undefined;
+        void save(entry);
+      }, 1000);
   };
   async function allowed(s: AgentSession) {
     return (
@@ -109,6 +120,7 @@ export function registerAgentRoutes(
         });
       }
       if (live.get(entry.session.id) === entry) live.delete(entry.session.id);
+      if (entry.flush) clearTimeout(entry.flush);
       entry.dispose();
       entry.session.status = "stopped";
       event(entry, { kind: "status", text: "stopped" });
@@ -125,6 +137,69 @@ export function registerAgentRoutes(
     for (const entry of live.values())
       if (entry.session.userId === id) stop(entry);
   });
+
+  async function persist(s: AgentSession) {
+    const entry = live.get(s.id);
+    s.updatedAt = new Date().toISOString();
+    if (entry) {
+      event(entry, { kind: "state", text: "" });
+      await save(entry);
+    } else await ctx.kv.set(key(s), s);
+  }
+  async function dispatch(entry: Live, prompt: QueuedPrompt) {
+    const s = entry.session;
+    if (s.status !== "ready" || entry.stopping || !entry.channel)
+      throw Error("Agent is not ready");
+    s.status = "running";
+    s.queue = s.queue?.filter((p) => p.id !== prompt.id);
+    event(entry, {
+      kind: "user",
+      text:
+        prompt.text +
+        (prompt.attachmentIds.length
+          ? "\n" +
+            prompt.attachmentIds
+              .map((id) => s.attachments!.find((a) => a.id === id)!.name)
+              .join("\n")
+          : ""),
+    });
+    event(entry, { kind: "status", text: "running" });
+    event(entry, { kind: "state", text: "" });
+    await save(entry);
+    entry.channel.write(
+      JSON.stringify({
+        type: "prompt",
+        text: prompt.text,
+        attachments: prompt.attachmentIds.map((id) =>
+          s.attachments!.find((a) => a.id === id),
+        ),
+      }) + "\n",
+    );
+  }
+  function drain(entry: Live) {
+    if (entry.draining || entry.stopping) return;
+    entry.draining = true;
+    void ctx
+      .asUser(entry.session.userId, async () => {
+        const s = entry.session;
+        if (!(await allowed(s))) return stop(entry);
+        if (
+          s.status === "ready" &&
+          !s.queuePaused &&
+          !s.archived &&
+          s.queue?.length &&
+          !entry.stopping
+        )
+          await dispatch(entry, s.queue[0]);
+      })
+      .catch((error) => {
+        entry.session.queuePaused = true;
+        event(entry, { kind: "error", text: String(error.message || error) });
+      })
+      .finally(() => {
+        entry.draining = false;
+      });
+  }
 
   async function start(s: AgentSession): Promise<Live> {
     const existing = live.get(s.id);
@@ -331,6 +406,7 @@ export function registerAgentRoutes(
               ["ready", "running", "stopped"].includes(m.text)
             )
               entry.session.status = m.text;
+            if (m.kind === "error") entry.session.queuePaused = true;
             if (m.kind === "permission" && typeof m.requestId === "string")
               entry.approvals.add(m.requestId);
             event(entry, {
@@ -339,6 +415,7 @@ export function registerAgentRoutes(
               requestId: m.requestId,
               choices: m.choices,
             });
+            if (m.kind === "status" && m.text === "ready") drain(entry);
           } catch {
             /* Ignore non-protocol startup chatter. */
           }
@@ -384,16 +461,30 @@ export function registerAgentRoutes(
 
   const gate = createAiGate(ctx.settings, () => ctx.currentActor());
   router.use("/agents", ctx.rbac.require("agents") as never, gate as never);
+  const mutations = new Map<string, Promise<unknown>>();
   const route =
     (fn: (req: Request, res: Response) => Promise<unknown>) =>
-    (req: Request, res: Response) =>
-      void fn(req, res).catch((error) => {
-        if (!res.headersSent)
-          res.status(400).json({
-            error:
-              error instanceof Error ? error.message : "Agent operation failed",
-          });
-      });
+    (req: Request, res: Response) => {
+      const id = req.method !== "GET" ? String(req.params.id ?? "") : "";
+      const previous = id ? mutations.get(id) : undefined;
+      const operation = (previous ?? Promise.resolve())
+        .catch(() => undefined)
+        .then(() => fn(req, res));
+      if (id) mutations.set(id, operation);
+      void operation
+        .catch((error) => {
+          if (!res.headersSent)
+            res.status(400).json({
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Agent operation failed",
+            });
+        })
+        .finally(() => {
+          if (id && mutations.get(id) === operation) mutations.delete(id);
+        });
+    };
   registerInstallRoute(router, ctx, (hostId) =>
     [...live.values()].some((entry) => entry.session.hostId === hostId),
   );
@@ -442,6 +533,59 @@ export function registerAgentRoutes(
       res.status(201).json({ id: s.id });
     }),
   );
+  router.post(
+    "/agents/:id/workspace",
+    route(async (req, res) => {
+      const s = await find(String(req.params.id));
+      const body = req.body ?? {};
+      if (
+        ["upload", "reference"].includes(body.operation) &&
+        (s.attachments?.length ?? 0) >= 100
+      )
+        throw Error("Maximum 100 attachments per session");
+      const result = await workspaceOperation(ctx, s, body);
+      if (["upload", "reference"].includes(body.operation)) {
+        s.attachments = [
+          ...(s.attachments ?? []),
+          result as unknown as AgentAttachment,
+        ];
+        await persist(s);
+      }
+      if (["upload", "worktree"].includes(body.operation))
+        await ctx.audit.record({
+          action: "agent_workspace_" + body.operation,
+          resourceId: String(s.hostId),
+          success: true,
+          details: JSON.stringify({ sessionId: s.id }),
+        });
+      res.json(result);
+    }),
+  );
+  router.patch(
+    "/agents/:id",
+    route(async (req, res) => {
+      const s = await find(String(req.params.id));
+      updateSession(s, req.body ?? {});
+      if (s.archived) {
+        s.queuePaused = true;
+        const entry = live.get(s.id);
+        if (entry) await stop(entry);
+      }
+      await persist(s);
+      res.json(s);
+    }),
+  );
+  router.post(
+    "/agents/:id/queue",
+    route(async (req, res) => {
+      const s = await find(String(req.params.id));
+      updateQueue(s, req.body ?? {});
+      await persist(s);
+      const entry = live.get(s.id);
+      if (entry) drain(entry);
+      res.json({ queue: s.queue ?? [], queuePaused: !!s.queuePaused });
+    }),
+  );
   router.get(
     "/agents/:id",
     route(async (req, res) => res.json(await find(String(req.params.id)))),
@@ -464,6 +608,9 @@ export function registerAgentRoutes(
           res.write(`id: ${e.seq}\ndata: ${JSON.stringify(e)}\n\n`);
       const entry = live.get(s.id);
       if (!entry) {
+        res.write(
+          `event: snapshot\ndata: ${JSON.stringify({ status: "stopped" })}\n\n`,
+        );
         res.end();
         return;
       }
@@ -479,6 +626,7 @@ export function registerAgentRoutes(
     "/agents/:id/resume",
     route(async (req, res) => {
       const s = await find(String(req.params.id));
+      if (s.archived) throw Error("Restore the archived session first");
       await start(s);
       res.json({ id: s.id });
     }),
@@ -491,17 +639,10 @@ export function registerAgentRoutes(
       if (!entry?.channel) throw Error("Resume the agent first");
       const { type, text, requestId, allow, value } = req.body ?? {};
       if (type === "prompt") {
-        if (
-          s.status !== "ready" ||
-          typeof text !== "string" ||
-          !text.trim() ||
-          text.length > 64000
-        )
-          throw Error(
-            "Wait for the current turn to finish or provide a shorter prompt",
-          );
-        s.status = "running";
-        event(entry, { kind: "user", text });
+        if (s.archived) throw Error("Restore the archived session first");
+        await dispatch(entry, promptInput(s, req.body));
+        res.json({ ok: true });
+        return;
       } else if (type === "answer") {
         if (
           !entry.approvals.has(requestId) ||
@@ -517,7 +658,10 @@ export function registerAgentRoutes(
           success: true,
           details: JSON.stringify({ sessionId: s.id, requestId, allow }),
         });
-      } else if (type !== "cancel") throw Error("Unknown input type");
+      } else if (type === "cancel") {
+        s.queuePaused = true;
+        await persist(s);
+      } else throw Error("Unknown input type");
       entry.channel.write(
         JSON.stringify({ type, text, requestId, allow, value }) + "\n",
       );
