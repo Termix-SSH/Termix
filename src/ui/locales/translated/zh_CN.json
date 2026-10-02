@@ -187,7 +187,9 @@
     "remove": "移除",
     "add": "添加",
     "update": "更新",
-    "noResults": "未找到结果"
+    "noResults": "未找到结果",
+    "scrollTabsLeft": "向左滚动标签页",
+    "scrollTabsRight": "向右滚动标签页"
   },
   "onboarding": {
     "stepCounter": "步骤 {{current}}/{{total}}",
