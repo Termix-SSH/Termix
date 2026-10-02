@@ -202,7 +202,7 @@ export function registerInstallRoute(
               );
               verification.client.forwardIn("127.0.0.1", 0, (error) => {
                 clearTimeout(deadline);
-                error
+                return error
                   ? reject(
                       Error(
                         "SSH configuration was checked, but a new connection still refused remote forwarding. Check authorized_keys restrictions and the active SSH server configuration.",
