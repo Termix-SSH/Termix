@@ -548,5 +548,8 @@
     "metricsHopSourceRead": "源 → 服务器：{{throughput}}",
     "metricsHopDestSftpWrite": "服务器 → 目标 (SFTP)：{{throughput}}",
     "metricsHopDestLocalWrite": "服务器 → 目标 (本地)：{{throughput}}"
+  },
+  "plugin": {
+    "name": "文件管理器"
   }
 }

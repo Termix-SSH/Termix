@@ -44,5 +44,8 @@
       "label": "使用旧版重定向 URI",
       "description": "继续发送 2.9 之前使用的重定向 URI /host/step-ca-callback。当身份提供商允许新 URI 后，可关闭此选项。"
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

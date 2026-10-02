@@ -548,5 +548,8 @@
     "metricsHopSourceRead": "Source → server: {{throughput}}",
     "metricsHopDestSftpWrite": "Server → dest (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Server → dest (local): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

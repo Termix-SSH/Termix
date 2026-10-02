@@ -46,5 +46,8 @@
     "groupSearchBase": "群组搜索基准",
     "adminGroup": "管理员组",
     "allowedUsers": "允许的用户"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

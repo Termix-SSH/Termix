@@ -65,5 +65,8 @@
         "label": "Vault 签名配置"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

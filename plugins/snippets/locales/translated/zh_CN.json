@@ -231,5 +231,8 @@
   "targetTerminals": "执行位置",
   "targetTerminalsHint": "可选，留空则使用当前标签页",
   "selectAll": "全部",
-  "selectNone": "全不选"
+  "selectNone": "全不选",
+  "plugin": {
+    "name": "代码片段"
+  }
 }

@@ -61,5 +61,8 @@
       "label": "自动使用 SSO 登录",
       "description": "将访客直接跳转到第一个 SSO 提供商，而不显示登录表单。OIDC_SILENT_LOGIN_DEFAULT 环境变量会覆盖此设置。"
     }
+  },
+  "plugin": {
+    "name": "单点登录"
   }
 }

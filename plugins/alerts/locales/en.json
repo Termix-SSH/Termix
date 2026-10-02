@@ -168,5 +168,8 @@
     "showRead": "Show read alerts",
     "allClear": "All clear",
     "loading": "Loading..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }
