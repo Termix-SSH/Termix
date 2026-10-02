@@ -56,7 +56,7 @@ if(args[0]==='serve') {
    if(q.url==='/event'){r.writeHead(200,{'Content-Type':'text/event-stream'});r.write(': hello\n\n');stream=r;return;}
    r.setHeader('Content-Type','application/json');
    if(q.url==='/session')return r.end(JSON.stringify({id:'oc-session'}));
-   if(q.url.includes('prompt_async')){r.statusCode=204;r.end();setTimeout(()=>{stream.write('data: '+JSON.stringify({type:'message.part.delta',properties:{sessionID:'oc-session',field:'text',delta:'verified'}})+'\n\n');stream.write('data: '+JSON.stringify({type:'session.idle',properties:{sessionID:'oc-session'}})+'\n\n');},30);return;}
+   if(q.url.includes('prompt_async')){r.statusCode=204;r.end();setTimeout(()=>{stream.write('data: '+JSON.stringify({type:'message.part.updated',properties:{part:{id:'text-1',type:'text',sessionID:'oc-session'}}})+'\n\n');stream.write('data: '+JSON.stringify({type:'message.part.delta',properties:{sessionID:'oc-session',partID:'text-1',field:'text',delta:'verified'}})+'\n\n');stream.write('data: '+JSON.stringify({type:'session.idle',properties:{sessionID:'oc-session'}})+'\n\n');},30);return;}
    r.end('{}');
  }).listen(port,'127.0.0.1');
 } else rl.createInterface({input:process.stdin}).on('line',line=>{

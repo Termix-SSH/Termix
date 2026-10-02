@@ -72,7 +72,7 @@ async function oc(method, route, body) {
 async function ocEvents() {
   const response=await fetch(serverUrl+'/event',{headers:{'x-opencode-directory':config.cwd}});
   if(!response.ok || !response.body) throw Error('OpenCode event stream unavailable');
-  let buffer='';const decoder=new TextDecoder();
+  let buffer='';const decoder=new TextDecoder(),partTypes=new Map();
   for await(const chunk of response.body) {
     buffer+=decoder.decode(chunk,{stream:true});
     let end;
@@ -83,7 +83,8 @@ async function ocEvents() {
       let e;try{e=JSON.parse(data);}catch{continue;}const p=e.properties||{};
       const sessionId=p.sessionID || p.part?.sessionID || p.info?.sessionID;
       if(sessionId!==nativeId) continue;
-      if(e.type==='message.part.delta' && p.field==='text') emit('text',p.delta);
+      if(e.type==='message.part.updated') partTypes.set(p.part.id,p.part.type);
+      if(e.type==='message.part.delta' && p.field==='text' && partTypes.get(p.partID)==='text') emit('text',p.delta);
       if(e.type==='message.part.updated' && p.part?.type==='tool') emit('tool',JSON.stringify(p.part));
       if(e.type==='session.idle' || (e.type==='session.status' && p.status?.type==='idle')) done();
       if(e.type==='session.error') {fail(Error(JSON.stringify(p.error)));done();}
@@ -100,10 +101,13 @@ async function start(c) {
   fs.mkdirSync(dir,{recursive:true,mode:0o700});
   const base=c.proxyUrl, token=c.token;
   if(c.agent==='pi') {
-    fs.writeFileSync(path.join(dir,'models.json'),JSON.stringify({providers:{termix:{baseUrl:base+'/v1',api:c.providerType==='anthropic'?'anthropic-messages':'openai-completions',apiKey:token,models:[{id:c.model,name:c.model,reasoning:false,input:['text'],contextWindow:131072,maxTokens:8192,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
-    await launch(['--mode','rpc','--provider','termix','--model',c.model,'--session',path.join(dir,'session.jsonl')],{PI_CODING_AGENT_DIR:dir});
+    const agentDir=path.join(dir,'config');
+    fs.mkdirSync(agentDir,{recursive:true,mode:0o700});
+    fs.writeFileSync(path.join(agentDir,'models.json'),JSON.stringify({providers:{termix:{baseUrl:base+'/v1',api:c.providerType==='anthropic'?'anthropic-messages':'openai-completions',apiKey:token,models:[{id:c.model,name:c.model,reasoning:false,input:['text'],contextWindow:131072,maxTokens:8192,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
+    await launch(['--mode','rpc','--provider','termix','--model',c.model,'--session',path.join(dir,'session.jsonl')],{PI_CODING_AGENT_DIR:agentDir});
     const state=await new Promise((resolve,reject)=>{const id=String(++rpcId),timer=setTimeout(()=>{pending.delete(id);reject(Error('Pi startup timed out'));},60000);pending.set(id,{resolve,reject,timer});send({id,type:'get_state'});});
     nativeId=state.sessionId;emit('native','',{nativeId});
+    emit('tool','Loaded '+state.messageCount+' messages from the Pi session');
   }
   if(c.agent==='claude') {
     const args=['--print','--verbose','--input-format','stream-json','--output-format','stream-json','--include-partial-messages','--permission-prompt-tool','stdio','--model',c.model];
