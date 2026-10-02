@@ -188,6 +188,31 @@ export function registerInstallRoute(
           channel!.once("error", reject);
           channel!.once("close", (code: number) => resolve(code ?? -1));
         });
+        if (operation === "forwarding" && exitCode === 0) {
+          const verification = await ctx.ssh.connect<Client>(hostId, {
+            purpose: "ai-agent-forwarding-verify",
+            profile: "session",
+            timeoutMs: 15000,
+          });
+          try {
+            await new Promise<void>((resolve, reject) => {
+              verification.client.forwardIn("127.0.0.1", 0, (error) =>
+                error
+                  ? reject(
+                      Error(
+                        "SSH configuration was checked, but a new connection still refused remote forwarding. Check authorized_keys restrictions and the active SSH server configuration.",
+                      ),
+                    )
+                  : resolve(),
+              );
+            });
+            write({
+              log: "Verified loopback remote forwarding on a new SSH connection\n",
+            });
+          } finally {
+            verification.dispose();
+          }
+        }
         await ctx.audit.record({
           action: `agent_${operation}`,
           resourceId: String(hostId),
