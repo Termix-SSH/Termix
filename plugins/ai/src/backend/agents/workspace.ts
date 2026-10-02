@@ -22,7 +22,8 @@ function main(m) {
     let ancestor=requested;
     if(missing) while(!fs.existsSync(ancestor) && path.dirname(ancestor)!==ancestor) ancestor=path.dirname(ancestor);
     const p=path.resolve(fs.realpathSync(ancestor),path.relative(ancestor,requested));
-    if(p!==cwd && !p.startsWith(cwd+path.sep)) throw Error('Choose a file inside the working directory');
+    const relative=path.relative(cwd,p);
+    if(relative==='..' || relative.startsWith('../') || path.isAbsolute(relative)) throw Error('Choose a file inside the working directory');
     return p;
   };
   function file(p) {
