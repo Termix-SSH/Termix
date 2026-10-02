@@ -404,8 +404,10 @@ export function registerAgentRoutes(
             if (
               m.kind === "status" &&
               ["ready", "running", "stopped"].includes(m.text)
-            )
+            ) {
+              if (entry.session.status === m.text) continue;
               entry.session.status = m.text;
+            }
             if (m.kind === "error") entry.session.queuePaused = true;
             if (m.kind === "permission" && typeof m.requestId === "string")
               entry.approvals.add(m.requestId);

@@ -60,6 +60,8 @@ it("shows staged, unstaged and untracked changes and creates an isolated branch"
   git("init");
   git("config", "user.name", "Test");
   git("config", "user.email", "test@example.com");
+  mkdirSync(join(cwd, "nested"));
+  writeFileSync(join(cwd, "nested", "deleted.txt"), "nested base\n");
   writeFileSync(join(cwd, "file.txt"), "base\n");
   git("add", ".");
   git("commit", "-m", "initial");
@@ -81,6 +83,10 @@ it("shows staged, unstaged and untracked changes and creates an isolated branch"
   expect(readFileSync(join(wt.path, "file.txt"), "utf8")).toBe("base\n");
   expect(readFileSync(join(cwd, "file.txt"), "utf8")).toBe("working\n");
   expect(() => run({ operation: "worktree", branch: "termix/test" })).toThrow();
+  rmSync(join(cwd, "nested"), { recursive: true });
+  expect(run({ operation: "diff", path: "nested/deleted.txt" }).diff).toContain(
+    "-nested base",
+  );
   rmSync(join(cwd, "file.txt"));
   expect(run({ operation: "diff", path: "file.txt" }).diff).toContain(
     "-staged",

@@ -16,9 +16,12 @@ function imageMime(data) {
 }
 function main(m) {
   const cwd=fs.realpathSync(m.cwd), body=m.body;
-  const inside=value=>{
+  const inside=(value,missing=false)=>{
     if(typeof value!=='string' || value.includes('\0')) throw Error('Invalid path');
-    const p=fs.realpathSync(path.resolve(cwd,value));
+    const requested=path.resolve(cwd,value);
+    let ancestor=requested;
+    if(missing) while(!fs.existsSync(ancestor) && path.dirname(ancestor)!==ancestor) ancestor=path.dirname(ancestor);
+    const p=path.resolve(fs.realpathSync(ancestor),path.relative(ancestor,requested));
     if(p!==cwd && !p.startsWith(cwd+path.sep)) throw Error('Choose a file inside the working directory');
     return p;
   };
@@ -49,16 +52,13 @@ function main(m) {
     return {id:require('node:crypto').randomUUID(),name:body.operation==='upload'?path.basename(body.name):path.basename(p),path:p,mime:imageMime(data),size:data.length};
   }
   if(body.operation==='status') {
+    const root=git(['rev-parse','--show-toplevel']).trim();
     const records=git(['status','--porcelain=v1','-z','--untracked-files=all']).split('\0'),files=[];
-    for(let i=0;i<records.length;i++){const row=records[i];if(!row) continue;files.push({status:row.slice(0,2),path:row.slice(3)});if(/[RC]/.test(row.slice(0,2))) i++;}
+    for(let i=0;i<records.length;i++){const row=records[i];if(!row) continue;const rel=path.relative(cwd,path.join(root,row.slice(3)));if(rel!=='..' && !rel.startsWith('../')) files.push({status:row.slice(0,2),path:rel});if(/[RC]/.test(row.slice(0,2))) i++;}
     return {files,branch:git(['branch','--show-current']),diff:git(['diff','--no-ext-diff','--no-textconv','--stat'])+git(['diff','--cached','--no-ext-diff','--no-textconv','--stat'])};
   }
   if(body.operation==='diff') {
-    if(typeof body.path!=='string' || body.path.includes('\0')) throw Error('Invalid file path');
-    const requested=path.resolve(cwd,body.path);
-    const p=fs.existsSync(requested)?inside(body.path):path.join(fs.realpathSync(path.dirname(requested)),path.basename(requested));
-    if(!p.startsWith(cwd+path.sep)) throw Error('Choose a file inside the working directory');
-    const rel=path.relative(cwd,p);if(fs.existsSync(p)) file(p);
+    const p=inside(body.path,true),rel=path.relative(cwd,p);if(fs.existsSync(p)) file(p);
     let tracked=true;try{git(['ls-files','--error-unmatch','--',rel]);}catch{tracked=false;}
     if(!tracked) {
       const data=file(p);

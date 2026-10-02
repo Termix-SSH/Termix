@@ -355,7 +355,7 @@ export function AgentPanel({ host, sshHost }: TabProps) {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={busy}
+                disabled={busy || active.archived}
                 onClick={() =>
                   void action(async () => {
                     await aiApp().api.post(`/agents/${active.id}/resume`);
