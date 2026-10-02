@@ -71,6 +71,7 @@ vi.mock("sonner", () => ({
 }));
 
 import { Auth } from "../../auth/Auth";
+import { startPreLoginPlugins } from "@/plugin-host/loader";
 import {
   registerLoginMethod,
   registerSecondFactor,
@@ -265,6 +266,30 @@ describe("login methods on the login screen", () => {
           rememberMe: false,
         }),
       );
+    } finally {
+      dispose();
+    }
+  });
+
+  it("recovers an unavailable second-factor UI without restarting the login", async () => {
+    window.history.replaceState({}, "", "/?second_factor=1&second_factors=pin");
+    render(<Auth onLogin={vi.fn()} />);
+    expect(await screen.findByText("auth.secondFactorNoUI")).toBeTruthy();
+    let dispose = () => {};
+    vi.mocked(startPreLoginPlugins).mockImplementationOnce(async () => {
+      dispose = registerSecondFactor({
+        id: "pin",
+        pluginId: "corp",
+        titleKey: "corp.pin",
+        component: () => <span>recovered challenge</span>,
+      });
+    });
+    try {
+      fireEvent.click(screen.getByText("auth.retrySecondFactorUI"));
+      expect(await screen.findByText("recovered challenge")).toBeTruthy();
+      expect(startPreLoginPlugins).toHaveBeenLastCalledWith({
+        retryFailed: true,
+      });
     } finally {
       dispose();
     }
