@@ -169,7 +169,13 @@
     "noServices": "尚未设置服务",
     "configureLocation": "请在组件设置中选择位置",
     "bannerTextPlaceholder": "横幅文字",
-    "serviceNamePlaceholder": "我的服务"
+    "serviceNamePlaceholder": "我的服务",
+    "emptyNote": "暂无笔记内容……",
+    "weatherLoadFailed": "无法加载“{{location}}”的天气",
+    "feelsLike": "体感温度 {{temperature}}",
+    "timezonePlaceholder": "Asia/Shanghai（留空使用本地时区）",
+    "notesPlaceholder": "在此填写笔记……",
+    "locationPlaceholder": "北京、上海、东京……"
   },
   "permissions": {
     "use": {

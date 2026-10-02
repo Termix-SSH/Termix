@@ -1,3 +1,4 @@
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { StickyNote } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
 import {
@@ -8,6 +9,7 @@ import {
 import { WidgetTitle } from "@termix/plugin-sdk/ui";
 
 function NotesWidget({ widget, config }: WidgetComponentProps<NotesConfig>) {
+  const { t } = useTranslation();
   const { content, backgroundColor } = config;
 
   return (
@@ -19,7 +21,9 @@ function NotesWidget({ widget, config }: WidgetComponentProps<NotesConfig>) {
       <div className="flex-1 overflow-auto p-3">
         <pre className="text-xs text-foreground whitespace-pre-wrap break-words font-sans leading-relaxed select-text w-full">
           {content || (
-            <span className="text-muted-foreground italic">Empty note...</span>
+            <span className="text-muted-foreground italic">
+              {t("homepage.emptyNote")}
+            </span>
           )}
         </pre>
       </div>

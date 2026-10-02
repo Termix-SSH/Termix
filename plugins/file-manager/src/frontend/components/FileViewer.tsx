@@ -350,7 +350,9 @@ export function FileViewer({
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Loading file...</p>
+          <p className="text-sm text-muted-foreground">
+            {t("fileManager.loadingFile")}
+          </p>
         </div>
       </div>
     );
@@ -446,7 +448,7 @@ export function FileViewer({
                   className="flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  Revert
+                  {t("fileManager.revert")}
                 </Button>
                 <Button
                   variant="default"
@@ -456,7 +458,7 @@ export function FileViewer({
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  Save
+                  {t("common.save")}
                 </Button>
               </>
             )}
@@ -647,14 +649,12 @@ export function FileViewer({
                   {isTooLarge ? (
                     <div className="bg-destructive/10 border border-destructive/30 rounded p-3 mb-4">
                       <p className="text-sm text-destructive font-medium">
-                        File is too large (&gt; 10MB) and cannot be opened as
-                        text for security reasons.
+                        {t("fileManager.fileTooLarge")}
                       </p>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground mb-4">
-                      Do you want to continue opening this file as text? This
-                      may slow down your browser.
+                      {t("fileManager.confirmOpenAsText")}
                     </p>
                   )}
                 </div>
@@ -669,7 +669,7 @@ export function FileViewer({
                     className="flex items-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
-                    Open as Text
+                    {t("fileManager.openAsText")}
                   </Button>
                 )}
                 <Button
@@ -686,7 +686,7 @@ export function FileViewer({
                   size="sm"
                   onClick={handleCancelOpenAsText}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             </div>
@@ -694,7 +694,9 @@ export function FileViewer({
         )}
 
         {fileTypeInfo.type === "image" && !showLargeFileWarning && (
-          <Suspense fallback={<PreviewFallback label="Loading image..." />}>
+          <Suspense
+            fallback={<PreviewFallback label={t("fileManager.loadingImage")} />}
+          >
             <ImagePreview
               content={content}
               fileName={file.name}
@@ -708,7 +710,9 @@ export function FileViewer({
           <div className="h-full flex flex-col">
             {isEditable ? (
               <Suspense
-                fallback={<PreviewFallback label="Loading editor..." />}
+                fallback={
+                  <PreviewFallback label={t("fileManager.loadingEditor")} />
+                }
               >
                 <CodeEditor
                   ref={editorRef}
@@ -857,12 +861,16 @@ export function FileViewer({
                     <div className="p-4">
                       <Suspense
                         fallback={
-                          <PreviewFallback label="Loading preview..." />
+                          <PreviewFallback
+                            label={t("fileManager.loadingPreview")}
+                          />
                         }
                       >
                         <MarkdownRenderer
                           compact
-                          content={editedContent || "Nothing to preview yet..."}
+                          content={
+                            editedContent || t("fileManager.emptyPreview")
+                          }
                         />
                       </Suspense>
                     </div>
@@ -872,7 +880,11 @@ export function FileViewer({
                 <div className="flex-1 overflow-auto thin-scrollbar p-6">
                   <div className="max-w-4xl mx-auto">
                     <Suspense
-                      fallback={<PreviewFallback label="Loading preview..." />}
+                      fallback={
+                        <PreviewFallback
+                          label={t("fileManager.loadingPreview")}
+                        />
+                      }
                     >
                       <MarkdownRenderer content={editedContent} />
                     </Suspense>
@@ -885,7 +897,7 @@ export function FileViewer({
 
         {fileTypeInfo.type === "pdf" && !showLargeFileWarning && (
           <Suspense
-            fallback={<PreviewFallback label="Loading PDF viewer..." />}
+            fallback={<PreviewFallback label={t("fileManager.loadingPdf")} />}
           >
             <PdfPreview
               content={content}
@@ -897,7 +909,7 @@ export function FileViewer({
 
         {fileTypeInfo.type === "audio" && !showLargeFileWarning && (
           <Suspense
-            fallback={<PreviewFallback label="Loading audio player..." />}
+            fallback={<PreviewFallback label={t("fileManager.loadingAudio")} />}
           >
             <AudioPreview
               file={file}
@@ -940,7 +952,7 @@ export function FileViewer({
           <span>{file.path}</span>
           {hasChanges && (
             <span className="text-orange-600 font-medium">
-              ● Unsaved changes
+              ● {t("common.unsavedChanges")}
             </span>
           )}
         </div>

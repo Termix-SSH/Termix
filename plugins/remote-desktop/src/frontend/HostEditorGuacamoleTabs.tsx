@@ -248,9 +248,11 @@ export function HostEditorRdpTab({
               value={form.security ?? "any"}
               onChange={(e) => setField("security", e.target.value)}
             >
-              <option value="any">Any</option>
+              <option value="any">{t("hosts.guac.options.any")}</option>
               <option value="nla">NLA</option>
-              <option value="nla-ext">NLA Extended</option>
+              <option value="nla-ext">
+                {t("hosts.guac.options.nlaExtended")}
+              </option>
               <option value="tls">TLS</option>
               <option value="vmconnect">VMConnect</option>
               <option value="rdp">RDP</option>
@@ -299,11 +301,11 @@ export function HostEditorRdpTab({
               value={form.guacamoleConfig["color-depth"] ?? "auto"}
               onChange={(e) => setGuacField("color-depth", e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="8">8-bit</option>
-              <option value="16">16-bit</option>
-              <option value="24">24-bit</option>
-              <option value="32">32-bit</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="8">{t("hosts.guac.options.color8")}</option>
+              <option value="16">{t("hosts.guac.options.color16")}</option>
+              <option value="24">{t("hosts.guac.options.color24")}</option>
+              <option value="32">{t("hosts.guac.options.color32")}</option>
             </Select2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -353,9 +355,13 @@ export function HostEditorRdpTab({
               value={form.guacamoleConfig["resize-method"] ?? "auto"}
               onChange={(e) => setGuacField("resize-method", e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="display-update">Display Update</option>
-              <option value="reconnect">Reconnect</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="display-update">
+                {t("hosts.guac.options.displayUpdate")}
+              </option>
+              <option value="reconnect">
+                {t("hosts.guac.options.reconnect")}
+              </option>
             </Select2>
           </div>
           <SettingRow
@@ -621,7 +627,7 @@ export function HostEditorRdpTab({
               value={form.guacamoleConfig["server-layout"] ?? "auto"}
               onChange={(e) => setGuacField("server-layout", e.target.value)}
             >
-              <option value="auto">Auto</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
               <option>en-us-qwerty</option>
               <option>en-gb-qwerty</option>
               <option>de-de-qwertz</option>
@@ -633,7 +639,7 @@ export function HostEditorRdpTab({
               <option>ja-jp-qwerty</option>
               <option>pt-br-qwerty</option>
               <option>es-es-qwerty</option>
-              <option>failsafe</option>
+              <option>{t("hosts.guac.options.failsafe")}</option>
             </Select2>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -771,10 +777,12 @@ export function HostEditorRdpTab({
                 setGuacField("normalize-clipboard", e.target.value)
               }
             >
-              <option value="auto">Auto</option>
-              <option value="preserve">Preserve</option>
-              <option value="unix">Unix (LF)</option>
-              <option value="windows">Windows (CRLF)</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="preserve">
+                {t("hosts.guac.options.preserve")}
+              </option>
+              <option value="unix">{t("hosts.guac.options.unix")}</option>
+              <option value="windows">{t("hosts.guac.options.windows")}</option>
             </Select2>
           </div>
           <SettingRow
@@ -1101,11 +1109,11 @@ export function HostEditorVncTab({
               value={form.guacamoleConfig["color-depth"] ?? "auto"}
               onChange={(e) => setGuacField("color-depth", e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="8">8-bit</option>
-              <option value="16">16-bit</option>
-              <option value="24">24-bit</option>
-              <option value="32">32-bit</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="8">{t("hosts.guac.options.color8")}</option>
+              <option value="16">{t("hosts.guac.options.color16")}</option>
+              <option value="24">{t("hosts.guac.options.color24")}</option>
+              <option value="32">{t("hosts.guac.options.color32")}</option>
             </Select2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1141,9 +1149,13 @@ export function HostEditorVncTab({
               value={form.guacamoleConfig["resize-method"] ?? "auto"}
               onChange={(e) => setGuacField("resize-method", e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="display-update">Display Update</option>
-              <option value="reconnect">Reconnect</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="display-update">
+                {t("hosts.guac.options.displayUpdate")}
+              </option>
+              <option value="reconnect">
+                {t("hosts.guac.options.reconnect")}
+              </option>
             </Select2>
           </div>
           <SettingRow
@@ -1189,9 +1201,9 @@ export function HostEditorVncTab({
               value={form.guacamoleConfig["cursor"] ?? "auto"}
               onChange={(e) => setGuacField("cursor", e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="local">Local</option>
-              <option value="remote">Remote</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="local">{t("hosts.guac.options.local")}</option>
+              <option value="remote">{t("hosts.guac.options.remote")}</option>
             </Select2>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -1203,7 +1215,7 @@ export function HostEditorVncTab({
               value={form.guacamoleConfig["server-layout"] ?? "auto"}
               onChange={(e) => setGuacField("server-layout", e.target.value)}
             >
-              <option value="auto">Auto</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
               <option>en-us-qwerty</option>
               <option>en-gb-qwerty</option>
               <option>de-de-qwertz</option>
@@ -1215,7 +1227,7 @@ export function HostEditorVncTab({
               <option>ja-jp-qwerty</option>
               <option>pt-br-qwerty</option>
               <option>es-es-qwerty</option>
-              <option>failsafe</option>
+              <option>{t("hosts.guac.options.failsafe")}</option>
             </Select2>
           </div>
           <SettingRow
@@ -1255,10 +1267,12 @@ export function HostEditorVncTab({
                 setGuacField("normalize-clipboard", e.target.value)
               }
             >
-              <option value="auto">Auto</option>
-              <option value="preserve">Preserve</option>
-              <option value="unix">Unix (LF)</option>
-              <option value="windows">Windows (CRLF)</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="preserve">
+                {t("hosts.guac.options.preserve")}
+              </option>
+              <option value="unix">{t("hosts.guac.options.unix")}</option>
+              <option value="windows">{t("hosts.guac.options.windows")}</option>
             </Select2>
           </div>
           <SettingRow
@@ -1614,7 +1628,7 @@ export function HostEditorTelnetTab({
               value={form.guacamoleConfig["terminal-type"] ?? "auto"}
               onChange={(e) => setGuacField("terminal-type", e.target.value)}
             >
-              <option value="auto">Auto</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
               <option value="xterm">xterm</option>
               <option value="xterm-256color">xterm-256color</option>
               <option value="vt100">VT100</option>
@@ -1652,11 +1666,19 @@ export function HostEditorTelnetTab({
               value={form.guacamoleConfig["color-scheme"] ?? "auto"}
               onChange={(e) => setGuacField("color-scheme", e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="black-white">Black on White</option>
-              <option value="white-black">White on Black</option>
-              <option value="gray-black">Gray on Black</option>
-              <option value="green-black">Green on Black</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
+              <option value="black-white">
+                {t("hosts.guac.options.blackOnWhite")}
+              </option>
+              <option value="white-black">
+                {t("hosts.guac.options.whiteOnBlack")}
+              </option>
+              <option value="gray-black">
+                {t("hosts.guac.options.grayOnBlack")}
+              </option>
+              <option value="green-black">
+                {t("hosts.guac.options.greenOnBlack")}
+              </option>
             </Select2>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -1668,7 +1690,7 @@ export function HostEditorTelnetTab({
               value={form.guacamoleConfig["backspace"] ?? "auto"}
               onChange={(e) => setGuacField("backspace", e.target.value)}
             >
-              <option value="auto">Auto</option>
+              <option value="auto">{t("hosts.guac.options.auto")}</option>
               <option value="127">DEL (127)</option>
               <option value="8">BS (8)</option>
             </Select2>

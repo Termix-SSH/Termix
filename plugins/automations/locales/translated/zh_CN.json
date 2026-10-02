@@ -207,5 +207,19 @@
     "remove": "移除计划",
     "loadFailed": "无法刷新维护状态，在成功加载之前无法更改设置。",
     "loading": "正在加载维护状态……"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "连接",
+          "disconnect": "断开连接",
+          "offline": "离线",
+          "online": "在线",
+          "failing": "故障",
+          "recovered": "已恢复"
+        }
+      }
+    }
   }
 }

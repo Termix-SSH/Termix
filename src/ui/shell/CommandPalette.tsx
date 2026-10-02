@@ -646,7 +646,9 @@ export function CommandPalette({
                   className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
                 >
                   <LifeBuoy className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Support</span>
+                  <span className="text-sm font-medium">
+                    {t("dashboard.support")}
+                  </span>
                 </CommandItem>
               </div>
             </CommandGroup>

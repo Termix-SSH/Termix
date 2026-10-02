@@ -189,7 +189,11 @@
     "update": "更新",
     "noResults": "未找到结果",
     "scrollTabsLeft": "向左滚动标签页",
-    "scrollTabsRight": "向右滚动标签页"
+    "scrollTabsRight": "向右滚动标签页",
+    "sidebar": "侧边栏",
+    "mobileSidebarDescription": "显示移动端侧边栏。",
+    "toggleSidebar": "切换侧边栏",
+    "search": "搜索……"
   },
   "onboarding": {
     "stepCounter": "步骤 {{current}}/{{total}}",
@@ -1121,7 +1125,13 @@
     "language": "语言",
     "keyPassword": "密钥密码",
     "pastePrivateKey": "在此粘贴您的私钥...",
-    "enterPassword": "输入您的密码"
+    "enterPassword": "输入您的密码",
+    "apiKeyName": "例如：CI 流水线",
+    "credentialName": "例如：生产环境 SSH 密钥",
+    "optionalDetails": "可选的详细说明……",
+    "sshUsername": "例如 root 或 deploy",
+    "hostAddress": "10.0.0.1 或 example.com",
+    "hostName": "例如：生产环境 Web 服务器"
   },
   "dashboard": {
     "title": "仪表盘",

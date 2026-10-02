@@ -169,7 +169,13 @@
     "noServices": "No services set up",
     "configureLocation": "Set a location in the widget settings",
     "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "serviceNamePlaceholder": "My service",
+    "emptyNote": "Empty note...",
+    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
+    "feelsLike": "Feels like {{temperature}}",
+    "timezonePlaceholder": "America/New_York (leave blank for local)",
+    "notesPlaceholder": "Write your notes here...",
+    "locationPlaceholder": "New York, London, Tokyo..."
   },
   "permissions": {
     "use": {
