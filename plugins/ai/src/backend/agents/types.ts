@@ -1,0 +1,53 @@
+export const AGENTS = ["pi", "opencode", "claude", "codex"] as const;
+export type AgentKind = (typeof AGENTS)[number];
+export interface AgentEvent {
+  seq: number;
+  kind: "text" | "tool" | "permission" | "status" | "error" | "user";
+  text: string;
+  requestId?: string;
+  choices?: string[];
+}
+export interface AgentSession {
+  id: string;
+  userId: string;
+  hostId: number;
+  providerId: number;
+  agent: AgentKind;
+  model: string;
+  cwd: string;
+  executable: string;
+  nativeId?: string;
+  status: "starting" | "ready" | "running" | "stopped" | "error";
+  events: AgentEvent[];
+  updatedAt: string;
+}
+export function compatible(agent: AgentKind, providerType: string): boolean {
+  if (agent === "claude") return providerType === "anthropic";
+  if (agent === "codex")
+    return ["openai", "openai_compatible"].includes(providerType);
+  return ["openai", "openai_compatible", "anthropic", "ollama"].includes(
+    providerType,
+  );
+}
+export function shellQuote(value: string): string {
+  return "'" + value.replaceAll("'", "'\\''") + "'";
+}
+export function validStart(value: Record<string, unknown>): boolean {
+  return (
+    AGENTS.includes(value.agent as AgentKind) &&
+    Number.isSafeInteger(value.hostId) &&
+    Number(value.hostId) > 0 &&
+    Number.isSafeInteger(value.providerId) &&
+    Number(value.providerId) > 0 &&
+    typeof value.model === "string" &&
+    value.model.length > 0 &&
+    value.model.length <= 200 &&
+    typeof value.cwd === "string" &&
+    value.cwd.startsWith("/") &&
+    value.cwd.length <= 4096 &&
+    !value.cwd.includes("\0") &&
+    (value.executable === undefined ||
+      (typeof value.executable === "string" &&
+        /^[\w./-]{1,1024}$/.test(value.executable)))
+  );
+}

@@ -115,5 +115,41 @@
   },
   "hosts": {
     "docsLink": "Documentação"
+  },
+  "agents": {
+    "title": "AI Agent",
+    "permissionTitle": "Run remote AI agents",
+    "permissionDescription": "Start coding agents on SSH hosts using configured AI providers. Agents can execute commands and change files as the SSH user.",
+    "new": "New session",
+    "description": "Run an agent in a directory on this host using a Termix AI provider.",
+    "runtime": "Agent",
+    "provider": "Termix provider",
+    "chooseProvider": "Choose a compatible provider",
+    "model": "Model",
+    "directory": "Working directory",
+    "executable": "Executable (optional absolute path)",
+    "requirements": "The host needs Node.js 20+ and the selected agent installed. SSH remote loopback forwarding must be allowed. Existing agent configurations are not overwritten.",
+    "responsesRequired": "Codex requires a Responses API endpoint. A Chat Completions-only endpoint cannot run Codex.",
+    "piPermissions": "Pi tools run with this SSH account’s permissions. Only launch in a directory you authorize the agent to modify.",
+    "start": "Start agent",
+    "resume": "Resume",
+    "stop": "Stop session",
+    "interrupt": "Interrupt turn",
+    "send": "Send",
+    "prompt": "Ask the agent to work in this directory…",
+    "noSessions": "No agent sessions for this host.",
+    "approval": "Agent needs your decision",
+    "answer": "Answer (JSON for structured questions)",
+    "allow": "Allow once",
+    "deny": "Deny",
+    "tool": "Tool activity",
+    "streamFailed": "Agent stream disconnected. Reopen the session to reconnect.",
+    "status": {
+      "starting": "Starting",
+      "ready": "Ready",
+      "running": "Working",
+      "stopped": "Stopped",
+      "error": "Error"
+    }
   }
 }
