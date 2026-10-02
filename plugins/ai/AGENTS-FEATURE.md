@@ -33,3 +33,5 @@ The separate **Enable Agent forwarding** button configures standard Linux/system
 The operation backs up sshd_config under `/etc/ssh/termix-agent-backups`, validates both syntax and effective rules before activation, and reloads the active SSH service. Failed activation/reload restores the previous configuration. Existing `DisableForwarding` policies are not overridden. Start/resume creates a new SSH connection after a successful change. Idempotency, preservation of local forwarding, invalid configuration rejection, and reload-failure rollback are covered by executable shell fixtures.
 
 After configuration, Termix opens a fresh SSH connection and verifies an actual loopback remote listener before reporting success. Key-level forwarding restrictions or a different active server configuration therefore remain visible failures.
+
+The conversation composer sends with Enter and inserts a newline with Shift+Enter. Escape interrupts a running agent when focus is inside its panel. IME composition and repeated keydown events do not submit or interrupt; a failed send preserves the draft.

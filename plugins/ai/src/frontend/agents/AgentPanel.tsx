@@ -47,6 +47,7 @@ export function AgentPanel({ host, sshHost }: TabProps) {
     [answered, setAnswered] = useState<Set<string>>(new Set());
   const [generation, setGeneration] = useState(0);
   const bottom = useRef<HTMLDivElement>(null);
+  const composing = useRef(false);
   const refresh = useCallback(async () => {
     const [p, s] = await Promise.all([
       getAiProviders(),
@@ -131,7 +132,25 @@ export function AgentPanel({ host, sshHost }: TabProps) {
     else transcript.push({ ...e });
   }
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
+    <div
+      className="flex h-full min-h-0 flex-col bg-background text-foreground"
+      onKeyDown={(e) => {
+        if (
+          e.key !== "Escape" ||
+          e.defaultPrevented ||
+          e.repeat ||
+          e.nativeEvent.isComposing ||
+          e.nativeEvent.keyCode === 229 ||
+          composing.current ||
+          busy ||
+          active?.status !== "running"
+        )
+          return;
+        e.preventDefault();
+        e.stopPropagation();
+        void action(() => input({ type: "cancel" }));
+      }}
+    >
       <header className="flex items-center gap-2 border-b p-3">
         <Bot size={18} />
         <strong>{t("agents.title")}</strong>
@@ -418,6 +437,7 @@ export function AgentPanel({ host, sshHost }: TabProps) {
               className="flex items-end gap-2 border-t p-3"
               onSubmit={(e) => {
                 e.preventDefault();
+                if (busy || active.status !== "ready" || !prompt.trim()) return;
                 void action(async () => {
                   await input({ type: "prompt", text: prompt });
                   setPrompt("");
@@ -430,6 +450,27 @@ export function AgentPanel({ host, sshHost }: TabProps) {
                 placeholder={t("agents.prompt")}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
+                onCompositionStart={() => {
+                  composing.current = true;
+                }}
+                onCompositionEnd={() => {
+                  composing.current = false;
+                }}
+                onKeyDown={(e) => {
+                  if (
+                    e.key !== "Enter" ||
+                    e.shiftKey ||
+                    e.ctrlKey ||
+                    e.altKey ||
+                    e.metaKey ||
+                    e.nativeEvent.isComposing ||
+                    e.nativeEvent.keyCode === 229 ||
+                    composing.current
+                  )
+                    return;
+                  e.preventDefault();
+                  if (!e.repeat) e.currentTarget.form?.requestSubmit();
+                }}
                 rows={3}
               />
               <Button
@@ -442,6 +483,7 @@ export function AgentPanel({ host, sshHost }: TabProps) {
               <Button
                 type="button"
                 variant="outline"
+                disabled={busy || active.status !== "running"}
                 onClick={() => void action(() => input({ type: "cancel" }))}
               >
                 {t("agents.interrupt")}
