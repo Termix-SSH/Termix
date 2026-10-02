@@ -155,6 +155,10 @@
     "installSource": "Official sources only: nodejs.org (SHA-256 verified) and registry.npmjs.org (locked package integrity). Installs for the SSH user in ~/.local/share/termix-agent-runtime; requires curl, tar, and Linux/macOS x64 or arm64. Does not change SSH forwarding policy.",
     "installSucceeded": "Installation verified. You can now start the agent; SSH loopback remote forwarding must also be allowed.",
     "installFailed": "Installation failed. Review the log and retry.",
-    "installLog": "Installation log"
+    "installLog": "Installation log",
+    "enableForwarding": "Enable Agent forwarding",
+    "forwardingScope": "Linux with systemd/OpenSSH; requires root or passwordless sudo. Backs up and validates SSH configuration, then reloads it. Only the current SSH account and observed connection source receive loopback remote forwarding; existing local forwarding is preserved. Failed changes are rolled back.",
+    "forwardingSucceeded": "SSH loopback remote forwarding is ready. Start or resume the agent to open a new SSH connection.",
+    "forwardingFailed": "SSH forwarding configuration failed. Review the log; no unvalidated configuration is kept."
   }
 }

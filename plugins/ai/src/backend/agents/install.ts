@@ -1,6 +1,7 @@
 import type { Router } from "express";
 import type { Client, ClientChannel } from "ssh2";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
+import { forwardingScript } from "./forwarding.js";
 import { AGENTS, shellQuote, type AgentKind } from "./types.js";
 
 export const PACKAGES: Record<AgentKind, string> = {
@@ -112,95 +113,108 @@ export function registerInstallRoute(
   isRunning: (hostId: number) => boolean,
 ) {
   const active = new Set<number>();
-  router.post("/agents/install", async (req, res) => {
-    const { hostId, agent } = req.body ?? {};
-    if (
-      !Number.isSafeInteger(hostId) ||
-      hostId < 1 ||
-      !AGENTS.includes(agent)
-    ) {
-      res.status(400).json({ error: "Choose a host and supported agent" });
-      return;
-    }
-    let dispose: (() => void) | undefined;
-    let channel: ClientChannel | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let acquired = false;
-    const write = (data: object) => {
-      if (!res.destroyed) res.write(JSON.stringify(data) + "\n");
-    };
-    try {
-      if (!(await ctx.hosts.checkAccess(hostId, "connect")).hasAccess)
-        throw Error("SSH access is required");
-      if (isRunning(hostId))
-        throw Error("Stop active agents on this host before installing");
-      if (active.has(hostId))
-        throw Error("An installation is already running on this host");
-      active.add(hostId);
-      acquired = true;
-      const connection = await ctx.ssh.connect<Client>(hostId, {
-        purpose: "ai-agent-install",
-        profile: "session",
-        timeoutMs: 15000,
-      });
-      dispose = connection.dispose;
-      if (res.destroyed) throw Error("Installation request disconnected");
-      channel = await new Promise<ClientChannel>((resolve, reject) =>
-        connection.client.exec(
-          "sh -lc " + shellQuote(installScript(agent)),
-          (err, ch) => (err ? reject(err) : resolve(ch)),
-        ),
-      );
-      if (res.destroyed) throw Error("Installation request disconnected");
-      res.set({
-        "Content-Type": "application/x-ndjson",
-        "Cache-Control": "no-store",
-        "X-Accel-Buffering": "no",
-      });
-      res.flushHeaders();
-      res.once("close", () => {
+  for (const operation of ["install", "forwarding"] as const)
+    router.post(`/agents/${operation}`, async (req, res) => {
+      const { hostId, agent } = req.body ?? {};
+      if (
+        !Number.isSafeInteger(hostId) ||
+        hostId < 1 ||
+        (operation === "install" && !AGENTS.includes(agent))
+      ) {
+        res.status(400).json({ error: "Choose a host and supported agent" });
+        return;
+      }
+      let dispose: (() => void) | undefined;
+      let channel: ClientChannel | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let acquired = false;
+      const write = (data: object) => {
+        if (!res.destroyed) res.write(JSON.stringify(data) + "\n");
+      };
+      try {
+        if (!(await ctx.hosts.checkAccess(hostId, "connect")).hasAccess)
+          throw Error("SSH access is required");
+        if (isRunning(hostId))
+          throw Error(
+            "Stop active agents on this host before changing its runtime or SSH policy",
+          );
+        if (active.has(hostId))
+          throw Error(
+            "Another agent setup operation is already running on this host",
+          );
+        active.add(hostId);
+        acquired = true;
+        const connection = await ctx.ssh.connect<Client>(hostId, {
+          purpose: `ai-agent-${operation}`,
+          profile: "session",
+          timeoutMs: 15000,
+        });
+        dispose = connection.dispose;
+        if (res.destroyed) throw Error("Agent setup request disconnected");
+        channel = await new Promise<ClientChannel>((resolve, reject) =>
+          connection.client.exec(
+            "sh -lc " +
+              shellQuote(
+                operation === "install"
+                  ? installScript(agent)
+                  : forwardingScript(),
+              ),
+            (err, ch) => (err ? reject(err) : resolve(ch)),
+          ),
+        );
+        if (res.destroyed) throw Error("Agent setup request disconnected");
+        res.set({
+          "Content-Type": "application/x-ndjson",
+          "Cache-Control": "no-store",
+          "X-Accel-Buffering": "no",
+        });
+        res.flushHeaders();
+        res.once("close", () => {
+          channel?.signal("TERM");
+          dispose?.();
+        });
+        let bytes = 0;
+        const log = (data: Buffer) => {
+          bytes += data.length;
+          if (bytes <= 256 * 1024) write({ log: data.toString() });
+        };
+        channel.on("data", log);
+        channel.stderr.on("data", log);
+        const exitCode = await new Promise<number>((resolve, reject) => {
+          timer = setTimeout(
+            () => reject(Error("Agent setup timed out after 10 minutes")),
+            600000,
+          );
+          channel!.once("error", reject);
+          channel!.once("close", (code: number) => resolve(code ?? -1));
+        });
+        await ctx.audit.record({
+          action: `agent_${operation}`,
+          resourceId: String(hostId),
+          success: exitCode === 0,
+          details: JSON.stringify({
+            agent: operation === "install" ? agent : undefined,
+            package:
+              operation === "install"
+                ? PACKAGES[agent as AgentKind]
+                : undefined,
+            exitCode,
+          }),
+        });
+        write({ done: true, success: exitCode === 0 });
+        res.end();
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Agent setup failed";
+        if (res.headersSent) {
+          write({ done: true, success: false, error: message });
+          res.end();
+        } else res.status(400).json({ error: message });
+      } finally {
+        clearTimeout(timer);
         channel?.signal("TERM");
         dispose?.();
-      });
-      let bytes = 0;
-      const log = (data: Buffer) => {
-        bytes += data.length;
-        if (bytes <= 256 * 1024) write({ log: data.toString() });
-      };
-      channel.on("data", log);
-      channel.stderr.on("data", log);
-      const exitCode = await new Promise<number>((resolve, reject) => {
-        timer = setTimeout(
-          () => reject(Error("Installation timed out after 10 minutes")),
-          600000,
-        );
-        channel!.once("error", reject);
-        channel!.once("close", (code: number) => resolve(code ?? -1));
-      });
-      await ctx.audit.record({
-        action: "agent_install",
-        resourceId: String(hostId),
-        success: exitCode === 0,
-        details: JSON.stringify({
-          agent,
-          package: PACKAGES[agent as AgentKind],
-          exitCode,
-        }),
-      });
-      write({ done: true, success: exitCode === 0 });
-      res.end();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Installation failed";
-      if (res.headersSent) {
-        write({ done: true, success: false, error: message });
-        res.end();
-      } else res.status(400).json({ error: message });
-    } finally {
-      clearTimeout(timer);
-      channel?.signal("TERM");
-      dispose?.();
-      if (acquired) active.delete(hostId);
-    }
-  });
+        if (acquired) active.delete(hostId);
+      }
+    });
 }

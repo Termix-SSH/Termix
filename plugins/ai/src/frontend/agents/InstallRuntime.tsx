@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Button } from "@termix/plugin-sdk/ui";
-import { Download } from "lucide-react";
+import { Download, Network } from "lucide-react";
 import { aiApp } from "../app-ref";
 import type { AgentKind } from "../../backend/agents/types";
 
@@ -21,22 +21,25 @@ export function InstallRuntime({
   const [result, setResult] = useState("");
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
-  async function install() {
+  async function install(operation: "install" | "forwarding") {
+    const failed =
+      operation === "install"
+        ? "agents.installFailed"
+        : "agents.forwardingFailed";
     setBusy(true);
     setLog("");
     setResult("");
     const controller = new AbortController();
     request.current = controller;
     try {
-      const response = await aiApp().fetch("agents/install", {
+      const response = await aiApp().fetch(`agents/${operation}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hostId, agent }),
         signal: controller.signal,
       });
-      if (!response.ok)
-        throw Error((await response.json()).error || t("agents.installFailed"));
-      if (!response.body) throw Error(t("agents.installFailed"));
+      if (!response.ok) throw Error((await response.json()).error || t(failed));
+      if (!response.body) throw Error(t(failed));
       const reader = response.body.getReader(),
         decoder = new TextDecoder();
       let buffer = "",
@@ -52,18 +55,21 @@ export function InstallRuntime({
           if (event.log) setLog((old) => (old + event.log).slice(-64000));
           if (event.done) {
             completed = true;
-            if (!event.success)
-              throw Error(event.error || t("agents.installFailed"));
-            setResult(t("agents.installSucceeded"));
+            if (!event.success) throw Error(event.error || t(failed));
+            setResult(
+              t(
+                operation === "install"
+                  ? "agents.installSucceeded"
+                  : "agents.forwardingSucceeded",
+              ),
+            );
           }
         }
       }
-      if (!completed) throw Error(t("agents.installFailed"));
+      if (!completed) throw Error(t(failed));
     } catch (error) {
       if (!controller.signal.aborted)
-        setResult(
-          error instanceof Error ? error.message : t("agents.installFailed"),
-        );
+        setResult(error instanceof Error ? error.message : t(failed));
     } finally {
       request.current = null;
       setBusy(false);
@@ -78,10 +84,22 @@ export function InstallRuntime({
         type="button"
         variant="outline"
         disabled={busy}
-        onClick={() => void install()}
+        onClick={() => void install("install")}
       >
         <Download size={14} />
         {t("agents.installRuntime")}
+      </Button>
+      <p className="text-xs text-muted-foreground">
+        {t("agents.forwardingScope")}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={busy}
+        onClick={() => void install("forwarding")}
+      >
+        <Network size={14} />
+        {t("agents.enableForwarding")}
       </Button>
       {result && (
         <p role="status" className="text-sm">

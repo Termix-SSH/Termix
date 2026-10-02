@@ -155,6 +155,10 @@
     "installSource": "仅从官方来源安装：nodejs.org（SHA-256 校验）、registry.npmjs.org（锁定依赖与完整性校验）。安装到当前 SSH 用户的 ~/.local/share/termix-agent-runtime；需要 curl、tar 和 Linux/macOS x64 或 arm64。不修改 SSH 转发策略。",
     "installSucceeded": "安装及版本校验成功。现在可以启动 Agent；SSH 还需允许回环地址远程转发。",
     "installFailed": "安装失败，请查看日志后重试。",
-    "installLog": "安装日志"
+    "installLog": "安装日志",
+    "enableForwarding": "一键启用 Agent 转发",
+    "forwardingScope": "需要 Linux、systemd/OpenSSH，以及 root 或免密 sudo。自动备份、校验并重载 SSH，仅为当前 SSH 账号与实际连接来源开放回环远程转发，保留已有本地转发权限。失败自动回滚。",
+    "forwardingSucceeded": "SSH 回环远程转发已就绪。请启动或恢复 Agent，建立新的 SSH 连接。",
+    "forwardingFailed": "SSH 转发配置失败，请查看日志；未通过校验的配置不会保留。"
   }
 }

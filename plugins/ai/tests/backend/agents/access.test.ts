@@ -66,3 +66,14 @@ it("rejects arbitrary installer names", async () => {
     ).status,
   ).toBe(400);
 });
+it("requires agent permission for forwarding configuration", async () => {
+  server = await startServer();
+  await server.enableFor("user-1");
+  expect(
+    (
+      await server.request("POST", "/agents/forwarding", {
+        body: { hostId: 1 },
+      })
+    ).status,
+  ).toBe(403);
+});
