@@ -6,7 +6,7 @@
  * user_preferences.confirm_snippet_execution and folders_collapsed become the
  * confirmExecution and foldersCollapsed user settings.
  *
- * The columns keep their values until 3.0.0 drops them.
+ * The columns keep their values until 26.10.0 drops them.
  *
  * Idempotent: a host that already has either host setting, and a user key
  * already set, are skipped, so this is safe on every boot.

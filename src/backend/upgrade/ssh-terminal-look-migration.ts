@@ -15,7 +15,7 @@
  * Per user, user_preferences.terminal_defaults, custom_themes and
  * command_autocomplete become user settings.
  *
- * The columns keep their values until 3.0.0 drops them.
+ * The columns keep their values until 26.10.0 drops them.
  *
  * Idempotent: a host that already has any of these rows, and a user key that
  * is already set, are skipped, so this is safe on every boot.

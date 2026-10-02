@@ -613,7 +613,7 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       username: user.username,
       is_admin: !!user.isAdmin,
       is_external: isExternalAccount(user),
-      // 2.8 name, kept until 3.0.0.
+      // 2.8 name, kept until 26.10.0.
       is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
       // Any second factor; the name is what 2.8 clients read.
@@ -1022,7 +1022,7 @@ router.patch(
   authenticateJWT,
   setExternalAutoProvision,
 );
-// 2.8 paths, kept until 3.0.0.
+// 2.8 paths, kept until 26.10.0.
 router.get("/oidc-auto-provision", getExternalAutoProvision);
 router.patch("/oidc-auto-provision", authenticateJWT, setExternalAutoProvision);
 

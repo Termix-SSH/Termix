@@ -202,7 +202,7 @@ with a real install, a real device or a repo outside this one.
 
 ## Left for later
 
-- 3.0.0: drop the migrated 2.8 settings rows (`guac_url`, `step_ca_url`,
+- 26.10.0: drop the migrated 2.8 settings rows (`guac_url`, `step_ca_url`,
   `global_metrics_interval` and the rest). The upgrade moves leave them in
   place so a downgrade to 2.8 still works; nothing reads them in 2.9.
 - Plugin repo split: knip still reports about 150 unused exports inside
@@ -225,4 +225,4 @@ with a real install, a real device or a repo outside this one.
   SSH password for an RDP login (2.8 behaviour, behind `credentials:read`);
   a remote desktop display token can be replayed within its five minute TTL
   (strict single use would break the touch mode switch and reconnect, which
-  reuse it). Revisit with signing and the install UI in 3.0.0.
+  reuse it). Revisit with signing and the install UI in 26.10.0.

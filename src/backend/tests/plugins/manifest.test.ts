@@ -119,8 +119,8 @@ describe("manifest v2 validation", () => {
   it("checks engine.termix against the core version", () => {
     expect(isTermixCompatible(">=2.9.0", "2.9.0")).toBe(true);
     expect(isTermixCompatible(">=2.9.0", "2.9.0-beta.3")).toBe(true);
-    expect(isTermixCompatible(">=3.0.0", "2.9.1")).toBe(false);
-    expect(isTermixCompatible(">=3.0.0", null)).toBe(true);
+    expect(isTermixCompatible(">=26.10.0", "2.9.1")).toBe(false);
+    expect(isTermixCompatible(">=26.10.0", null)).toBe(true);
   });
 
   it("fills in the entry point defaults", () => {

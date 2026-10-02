@@ -30,7 +30,7 @@ export function parseTerminalConfig(
  * terminal_config is merged into what is stored rather than replaced. The
  * 2.8 keys the editor no longer sends (the terminal's look, which the
  * ssh-terminal plugin copies into its host settings, and a sudo password 2.8
- * editors kept there) stay until 3.0.0 drops the column. A shared editor
+ * editors kept there) stay until 26.10.0 drops the column. A shared editor
  * never changes the owner's private keys in either JSON. Returns an error
  * for a terminalConfig that cannot be read.
  */

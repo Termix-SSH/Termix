@@ -53,7 +53,7 @@ describe("desktop update check", () => {
   it("stays quiet when up to date, ahead, or turned off", async () => {
     version.value = "2.9.1";
     await checkForDesktopUpdate();
-    version.value = "3.0.0";
+    version.value = "26.10.0";
     await checkForDesktopUpdate();
     version.value = "2.9.0";
     disabled.value = true;

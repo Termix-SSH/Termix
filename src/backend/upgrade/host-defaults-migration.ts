@@ -21,7 +21,7 @@
  * The classify pass that follows compares those against the new levels, so
  * nothing a user sees changes.
  *
- * The old rows stay in place for a downgrade until 3.0.0.
+ * The old rows stay in place for a downgrade until 26.10.0.
  */
 
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";

@@ -277,7 +277,7 @@ export interface PluginSettingsField {
   component?: string;
   /**
    * Deprecated and ignored: host defaults cover every host field now. Still
-   * accepted so an older manifest loads. Removed in 3.0.0.
+   * accepted so an older manifest loads. Removed in 26.10.0.
    */
   defaultFrom?: string;
   /**

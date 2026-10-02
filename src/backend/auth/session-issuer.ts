@@ -141,7 +141,7 @@ export async function issueSession(
       username: user.username,
       userId: user.id,
       is_external: isExternalAccount(user),
-      // 2.8 name, kept until 3.0.0.
+      // 2.8 name, kept until 26.10.0.
       is_oidc: !!user.isOidc,
       // Any second factor; the name is what 2.8 clients read.
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(

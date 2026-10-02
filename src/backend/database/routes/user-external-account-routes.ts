@@ -279,7 +279,7 @@ export function registerUserExternalAccountRoutes(
 
   router.post("/link-external-to-password", authenticateJWT, link);
   router.post("/unlink-external-from-password", authenticateJWT, unlink);
-  // 2.8 paths, kept until 3.0.0.
+  // 2.8 paths, kept until 26.10.0.
   router.post("/link-oidc-to-password", authenticateJWT, link);
   router.post("/unlink-oidc-from-password", authenticateJWT, unlink);
 }

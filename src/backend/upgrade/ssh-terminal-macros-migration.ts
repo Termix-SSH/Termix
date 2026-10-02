@@ -3,7 +3,7 @@
  * macros user setting. Macros a browser kept on its own (storage mode
  * "local") are moved by the plugin's frontend the first time the panel opens.
  *
- * The column keeps its value until 3.0.0 drops it.
+ * The column keeps its value until 26.10.0 drops it.
  *
  * Idempotent: a user whose macros setting is already set is skipped.
  */

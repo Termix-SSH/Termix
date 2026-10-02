@@ -66,7 +66,7 @@ const HOST_LOCAL_FIELDS = [
 ];
 
 /**
- * Columns kept until 3.0.0 that nothing reads any more: their values moved
+ * Columns kept until 26.10.0 that nothing reads any more: their values moved
  * into plugin host settings, which sync with the host's pluginSettings. They
  * stay off the wire so a stale local id never reaches the other side.
  */

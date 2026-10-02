@@ -5,7 +5,7 @@
  * instance keeps reporting under the same id.
  *
  * Idempotent: nothing is written where the plugin already has a row. The
- * legacy settings rows stay in place until 3.0.0. The plugin waits a few
+ * legacy settings rows stay in place until 26.10.0. The plugin waits a few
  * minutes before its first send, so this lands first.
  */
 
