@@ -23,11 +23,9 @@ export function registerHostTagRoutes(
           typeof tag !== "string" || !tag.trim() || tag.trim().length > 100,
       )
     ) {
-      res
-        .status(400)
-        .json({
-          error: "Expected up to 500 non-empty tags of at most 100 characters",
-        });
+      res.status(400).json({
+        error: "Expected up to 500 non-empty tags of at most 100 characters",
+      });
       return;
     }
     const normalized = [
