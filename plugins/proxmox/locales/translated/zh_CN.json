@@ -1,6 +1,6 @@
 {
   "nav": {
-    "proxmoxStats": "Proxmox Stats"
+    "proxmoxStats": "Proxmox 统计"
   },
   "proxmoxStats": {
     "tabTitle": "Proxmox Stats",

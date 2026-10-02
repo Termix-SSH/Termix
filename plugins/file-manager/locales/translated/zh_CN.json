@@ -438,7 +438,7 @@
     "loadingHost": "正在加载主机..."
   },
   "onboarding": {
-    "feature_files": "File manager",
+    "feature_files": "文件管理器",
     "feature_files_desc": "无需离开应用，即可通过 SFTP 浏览、上传、下载及编辑文件。"
   },
   "terminal": {

@@ -560,10 +560,10 @@
   },
   "nav": {
     "history": "历史记录",
-    "localTerminal": "Local Terminal",
+    "localTerminal": "本地终端",
     "sshTools": "SSH 工具",
     "terminal": "终端",
-    "macros": "Macros"
+    "macros": "宏"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "在此输入以广播按键...",
@@ -605,7 +605,7 @@
     }
   },
   "macros": {
-    "title": "Macros",
+    "title": "宏",
     "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
     "target": "目标",
     "noTerminal": "No terminal open",

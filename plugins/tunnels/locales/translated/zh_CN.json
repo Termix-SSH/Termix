@@ -33,7 +33,7 @@
     "loadingHost": "正在加载主机..."
   },
   "nav": {
-    "portForwarding": "Forwarding",
+    "portForwarding": "端口转发",
     "tunnels": "隧道"
   },
   "placeholders": {

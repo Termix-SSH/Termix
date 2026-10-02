@@ -10,7 +10,7 @@
   },
   "onboarding": {
     "feature": "告警",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "featureDesc": "在统一收件箱中查看所有告警，也可将它们发送到 Discord、ntfy、电子邮箱或 Webhook。"
   },
   "settings": {
     "group": {

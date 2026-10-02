@@ -24,8 +24,8 @@
   "newUi": {
     "sidebar": {
       "automations": {
-        "title": "Automations",
-        "tabAutomations": "Automations",
+        "title": "自动化",
+        "tabAutomations": "自动化",
         "tabRuns": "运行记录",
         "tabChannels": "通道",
         "createAutomation": "New Automation",
@@ -166,10 +166,10 @@
     }
   },
   "nav": {
-    "automations": "Automations"
+    "automations": "自动化"
   },
   "onboarding": {
-    "feature_automations": "Automations",
+    "feature_automations": "自动化",
     "feature_automations_desc": "触发特定事件时自动执行任务，并接收通知。"
   },
   "maintenance": {

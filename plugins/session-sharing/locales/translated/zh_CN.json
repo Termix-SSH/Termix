@@ -143,7 +143,7 @@
     "linkRequiresServer": "Link this desktop to a Termix server and create the meeting there to share a web link."
   },
   "nav": {
-    "collab": "Meetings"
+    "collab": "协作会话"
   },
   "settings": {
     "admin": {

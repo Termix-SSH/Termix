@@ -16,7 +16,7 @@
   "newUi": {
     "sidebar": {
       "fleets": {
-        "title": "Fleets",
+        "title": "主机组",
         "createFleet": "Create Fleet",
         "createFleetTitle": "Create Fleet",
         "editFleetTitle": "Edit Fleet",
@@ -105,7 +105,7 @@
     }
   },
   "nav": {
-    "fleets": "Fleets"
+    "fleets": "主机组"
   },
   "hosts": {
     "docsLink": "查看文档",

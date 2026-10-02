@@ -106,7 +106,7 @@
   },
   "onboarding": {
     "aiTitle": "AI 助手",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
+    "aiIntro": "Termix 提供可选的 AI 助手，你可以稍后在设置中更改。",
     "aiSkipTitle": "禁用",
     "aiSkipDesc": "Termix 正常工作，AI 助手将保持隐藏状态。",
     "aiEnableTitle": "启用",

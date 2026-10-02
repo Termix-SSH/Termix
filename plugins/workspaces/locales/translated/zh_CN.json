@@ -2,7 +2,7 @@
   "newUi": {
     "sidebar": {
       "workspaces": {
-        "title": "Workspaces",
+        "title": "工作区",
         "saveCurrent": "Save Current",
         "saveCurrentTitle": "Save Current Workspace",
         "saveCurrentDescription": "Save every open tab, split layout, and pane arrangement as a new named workspace.",
@@ -52,10 +52,10 @@
     }
   },
   "nav": {
-    "workspaces": "Workspaces"
+    "workspaces": "工作区"
   },
   "onboarding": {
-    "workflow_workspaces": "Workspaces",
+    "workflow_workspaces": "工作区",
     "workflow_workspaces_desc": "保存当前打开的标签页组合，方便之后一键恢复整个布局。"
   },
   "permissions": {

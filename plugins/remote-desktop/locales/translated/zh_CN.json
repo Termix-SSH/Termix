@@ -227,7 +227,7 @@
     "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
   },
   "onboarding": {
-    "feature_desktop": "Remote desktop",
+    "feature_desktop": "远程桌面",
     "feature_desktop_desc": "像 SSH 一样，在标签页中直接打开 RDP、VNC 和 Telnet 会话。"
   },
   "settings": {
