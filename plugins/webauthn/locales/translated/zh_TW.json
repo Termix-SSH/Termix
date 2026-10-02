@@ -4,7 +4,7 @@
   "loginFailed": "Passkey 登入失敗",
   "description": "使用 WebAuthn/FIDO2 憑證無需密碼即可登入",
   "namePlaceholder": "通行金鑰名稱",
-  "defaultName": "Passkey",
+  "defaultName": "通行金鑰",
   "uv": {
     "preferred": "偏好",
     "required": "需要",
@@ -14,9 +14,9 @@
   "none": "尚未註冊通行金鑰。",
   "added": "通行金鑰已新增",
   "addFailed": "無法新增通行金鑰",
-  "delete": "Delete passkey",
+  "delete": "刪除密碼",
   "deleted": "通行金鑰已刪除",
   "deleteFailed": "刪除通行密鑰失敗",
   "unknownDevice": "未知",
-  "synced": "synced"
+  "synced": "同步"
 }

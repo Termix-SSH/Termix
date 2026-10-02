@@ -1,60 +1,60 @@
 {
   "nav": {
-    "sessionLogs": "Session Logs"
+    "sessionLogs": "Log Sesi"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "Rekaman Sesi",
+    "enableSessionRecordingDesc": "Rekam output sesi terminal untuk ditinjau nanti."
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Lihat rekaman sesi",
+      "description": "Lihat dan putar kembali rekaman sesi Anda sendiri."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Retensi (hari)",
+        "description": "Berapa lama rekaman sesi disimpan sebelum dihapus secara otomatis."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Aktifkan perekaman sesi",
+        "description": "Rekam output terminal untuk host ini agar Anda dapat memutarnya kembali atau mengunduhnya nanti."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Rekaman"
   },
   "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
-    "back": "Back",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "title": "Log Sesi",
+    "noLogs": "Belum ada log sesi.",
+    "noLogsDesc": "Aktifkan pencatatan sesi pada host untuk memulai perekaman.",
+    "duration": "Lamanya",
+    "viewLog": "Lihat log",
+    "downloadLog": "Unduh",
+    "downloadAsText": "Unduh sebagai teks",
+    "deleteLog": "Menghapus",
+    "confirmDelete": "Hapus log sesi ini?",
+    "confirmDeleteDesc": "Tindakan ini tidak dapat dibatalkan.",
+    "copyContent": "Menyalin",
+    "copied": "Disalin!",
+    "loadError": "Gagal memuat log sesi",
+    "deleteError": "Gagal menghapus log sesi",
+    "filterByHost": "Saring berdasarkan host...",
+    "back": "Kembali",
+    "empty": "(kosong)",
+    "noResults": "Tidak ada hasil untuk \"{{query}}\"",
+    "hostFallback": "Tuan rumah {{id}}",
+    "sessionFallback": "Sesi {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Garis waktu perekaman",
+    "speed": "Kecepatan pemutaran",
+    "play": "Putar rekaman",
+    "pause": "Jeda perekaman"
   }
 }

@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "Керування сертифікатами ACME",
+      "description": "Перегляньте статус сертифіката та запросіть новий сертифікат зараз."
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "Автоматичне поновлення",
+      "description": "Перевіряйте двічі на день та отримуйте новий сертифікат, коли його немає, він не поширюється на домен або термін його дії закінчується протягом 30 днів."
     },
     "domain": {
-      "label": "Domain",
-      "description": "The public domain name for the certificate.",
+      "label": "Домен",
+      "description": "Ім'я публічного домену для сертифіката.",
       "placeholder": "termix.example.com"
     },
     "email": {
-      "label": "Email",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "label": "Електронна пошта",
+      "description": "Контактна електронна адреса для облікового запису ACME та повідомлень про закінчення терміну дії.",
       "placeholder": "admin@example.com"
     },
     "provider": {
-      "label": "Certificate authority",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
-      "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "label": "Центр сертифікації",
+      "description": "Де отримати сертифікат. Використовуйте проміжну версію для тестування без перевищення обмежень швидкості Let's Encrypt.",
+      "letsencrypt": "Давайте зашифруємо",
+      "letsencryptStaging": "Давайте зашифруємо (підготовка)",
+      "custom": "Користувацький каталог ACME"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "URL-адреса каталогу ACME",
+      "description": "Тільки для власного центру сертифікації. Має бути URL-адреса https."
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "Тип виклику",
+      "description": "Як довести, що ви є власником домену.",
+      "http": "HTTP – потрібен порт 80, доступний з Інтернету",
+      "cloudflare": "DNS (Cloudflare) – потрібен токен API Cloudflare"
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
-      "description": "Scoped token with Zone:DNS:Edit permission for your domain."
+      "label": "Токен API Cloudflare",
+      "description": "Токен з обмеженою областю дії та дозволом Zone:DNS:Edit для вашого домену."
     }
   },
   "status": {
-    "title": "Certificate status",
-    "none": "No certificate",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
-    "expires": "Expires {{date}}",
-    "lastIssued": "Last issued {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
-    "requesting": "Requesting certificate...",
-    "issued": "Certificate issued and installed"
+    "title": "Статус сертифіката",
+    "none": "Без сертифіката",
+    "names": "Обкладинки {{names}}",
+    "issuer": "Видано {{issuer}}",
+    "expires": "Термін дії закінчується {{date}}",
+    "lastIssued": "Останній виданий {{date}}",
+    "lastError": "Остання спроба не вдалася: {{error}}",
+    "missing": "Вкажіть домен, електронну пошту та поля, необхідні для вашого типу завдання, а потім збережіть зміни, перш ніж запитувати сертифікат.",
+    "request": "Замовити сертифікат зараз",
+    "requesting": "Запит сертифіката...",
+    "issued": "Сертифікат видано та встановлено"
   }
 }

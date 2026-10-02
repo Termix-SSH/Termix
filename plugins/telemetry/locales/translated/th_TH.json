@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "จัดการสถิติการใช้งาน",
+      "description": "ดูว่ามีการส่งข้อมูลสถิติการใช้งานอะไรบ้าง ส่งข้อมูลเหล่านั้นตอนนี้ แล้วรีเซ็ต Instance ID"
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "แบ่งปันสถิติการใช้งานแบบไม่ระบุตัวตน",
+      "description": "ส่งสรุปข้อมูลแบบไม่ระบุชื่อขนาดสั้นวันละครั้งเพื่อช่วยปรับปรุง Termix โดยจะไม่รวมชื่อผู้ใช้ ชื่อโฮสต์ ที่อยู่ IP หรือข้อมูลประจำตัวใดๆ ทั้งสิ้น"
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "ระบุข้อมูลแพลตฟอร์ม",
+      "description": "ระบบปฏิบัติการ สถาปัตยกรรม CPU เวอร์ชัน Node.js ประเภทฐานข้อมูล และวิธีการติดตั้ง Termix (Docker แอปเดสก์ท็อป หรือเซิร์ฟเวอร์)"
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "รวมถึงการใช้งานฟีเจอร์ต่างๆ",
+      "description": "จำนวนครั้งที่แท็บแต่ละประเภทถูกเปิด และจำนวนการเข้าสู่ระบบ SSH ที่เกิดขึ้นนับตั้งแต่รายงานครั้งล่าสุด ผู้ใช้สามารถปิดส่วนนี้ได้ด้วยตนเองในโปรไฟล์"
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "รวมคุณสมบัติที่ติดตั้งไว้",
+      "description": "มีฟีเจอร์ในตัวใดบ้างที่ติดตั้งและใช้งานอยู่"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "รหัสอินสแตนซ์"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "รวมการใช้งานฟีเจอร์ของฉันด้วย",
+      "description": "แอปนี้จะนับจำนวนแท็บที่คุณเปิดในสถิติการใช้งานแบบไม่ระบุตัวตน โดยไม่มีการส่งข้อมูลเกี่ยวกับตัวคุณหรือโฮสต์ของคุณแต่อย่างใด"
     }
   },
   "status": {
-    "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
-    "close": "Close",
-    "loadFailed": "Could not load the usage statistics status"
+    "title": "สถานะ",
+    "on": "เผยสถิติการใช้งานวันละครั้ง",
+    "off": "ไม่เปิดเผยสถิติการใช้งาน",
+    "lockedOn": "เปิดใช้งานโดยตัวแปรสภาพแวดล้อม ENABLE_TELEMETRY เปลี่ยนค่าที่นั่น",
+    "lockedOff": "ปิดใช้งานโดยตัวแปรสภาพแวดล้อม ENABLE_TELEMETRY เปลี่ยนค่าที่นั่น",
+    "instanceId": "รหัสอินสแตนซ์: {{id}}",
+    "noInstanceId": "ยังไม่มีหมายเลขประจำตัวอินสแตนซ์",
+    "lastSent": "ส่งครั้งล่าสุด {{date}}",
+    "neverSent": "ยังไม่ได้ส่ง",
+    "nextSend": "รายงานฉบับต่อไปส่งภายในวันที่ {{date}}",
+    "lastError": "ความพยายามครั้งล่าสุดล้มเหลว: {{error}}",
+    "preview": "รายงานฉบับย่อ",
+    "sendNow": "ส่งเลย",
+    "sending": "กำลังส่ง...",
+    "sent": "ส่งสถิติการใช้งานแล้ว",
+    "notSent": "สถิติการใช้งานถูกปิดใช้งาน ไม่มีการส่งใด ๆ",
+    "resetId": "รีเซ็ต ID อินสแตนซ์",
+    "resetIdConfirm": "รีเซ็ต Instance ID หรือไม่? รายงานในอนาคตจะแสดงผลเหมือนกับการติดตั้งใหม่",
+    "resetIdDone": "รีเซ็ต Instance ID",
+    "previewTitle": "รายงานฉบับต่อไป",
+    "previewDescription": "นี่คือสิ่งที่จะถูกส่งไปในตอนนี้อย่างแน่นอน",
+    "close": "ปิด",
+    "loadFailed": "ไม่สามารถโหลดสถานะสถิติการใช้งานได้"
   }
 }

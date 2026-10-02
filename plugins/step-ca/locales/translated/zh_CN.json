@@ -1,15 +1,15 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "步骤 CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "label": "步骤 CA",
+    "description": "通过您的身份提供商登录，并让您的 Step CA 为此主机颁发一个短期 SSH 证书。CA URL、根指纹和 OIDC 配置器由管理员在“管理设置”的 Step CA 部分中设置。",
     "docs": "查看文档"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "title": "步骤 CA 身份验证是必需的",
+    "description": "请在浏览器中完成身份验证以继续。证书的有效期取决于您的证书颁发机构 (CA) 的许可期限。",
     "openBrowser": "打开浏览器进行认证",
     "waiting": "等待浏览器认证...",
     "authenticating": "正在处理认证..."
@@ -21,28 +21,28 @@
   "settings": {
     "caUrl": {
       "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "description": "您的 SmallStep CA 的 HTTPS URL。如果将 CA URL、指纹和配置器留空，则禁用 Step CA。",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "根指纹（SHA-256）",
+      "description": "根证书指纹，如步骤 ca bootstrap 所示。"
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "OIDC配置器名称",
+      "description": "CA 的 OIDC 配置器的名称。然后选择“步骤 CA”作为主机的身份验证类型。"
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "允许的私有步骤 CA 主机",
+      "description": "步骤 CA 证书流程中的私有主机可能会联系：CA 本身，以及（如果是内部）您的身份提供商。请用逗号或换行符分隔它们。"
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "重定向 URI",
+      "description": "将此 URL 注册为 OIDC 配置器后面的身份提供商允许的重定向 URI。"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "使用旧的重定向 URI",
+      "description": "继续发送 /host/step-ca-callback，这是 2.9 版本之前使用的重定向 URI。一旦您的身份提供商允许使用新的重定向 URI，就将其关闭。"
     }
   }
 }

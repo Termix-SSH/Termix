@@ -23,7 +23,7 @@
     "provisionLabel": "सर्वर प्रोविज़न करें",
     "publishTitle": "सार्वजनिक कुंजी प्रकाशित करें",
     "generate": "जनरेट करें",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "Ed25519 कुंजी युग्म उत्पन्न करें। यह सार्वजनिक कुंजी प्रकाशित करता है और निजी कुंजी को आपके डिवाइस पर डाउनलोड करता है।",
     "saveToVault": "क्रेडेंशियल में सहेजें",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "लेबल (वैकल्पिक)",
@@ -32,7 +32,7 @@
     "keyPublished": "कुंजी प्रकाशित",
     "addKeyFailed": "कुंजी जोड़ने में विफल",
     "generatedSaved": "कुंजी युग्म जनरेट हुआ और आपके क्रेडेंशियल वॉल्ट में सहेजा गया। निजी कुंजी भी डाउनलोड की गई।",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "कुंजी युग्म उत्पन्न हो गया। निजी कुंजी डाउनलोड हो गई (केवल एक बार दिखाई गई)।",
     "generateFailed": "कुंजी जनरेट करने में विफल",
     "imported": "क्रेडेंशियल से कुंजी आयात की गई",
     "importFailed": "कुंजी आयात करने में विफल",
@@ -56,7 +56,7 @@
     "caTrustLabel": "सर्वर पर भरोसा करें (रूट के रूप में चलाएँ)",
     "caRotate": "रोटेट करें",
     "caRotateConfirm": "CA को रोटेट करें? इसके द्वारा हस्ताक्षरित प्रत्येक प्रमाणपत्र स्वीकार करना बंद कर दिया जाएगा और उन्हें फिर से जारी करना होगा।",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "सीए का तबादला हो गया। पिछले प्रमाणपत्र रद्द कर दिए गए।",
     "caRotateFailed": "CA रोटेट करने में विफल",
     "caDelete": "CA हटाएँ",
     "caDeleteConfirm": "प्रमाणपत्र प्राधिकरण हटाएँ?",
@@ -68,8 +68,8 @@
     "certIssued": "प्रमाणपत्र जारी और डाउनलोड किया गया",
     "certIssueFailed": "प्रमाणपत्र जारी करने में विफल",
     "docsLink": "दस्तावेज़ देखें",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "एसएसएच प्रिंसिपल",
+    "principalsPlaceholder": "SSH प्रिंसिपल(ओं), उदाहरण के लिए रूट"
   },
   "nav": {
     "termixId": "आईडी"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "टर्मिक्स आईडी का उपयोग करें",
+      "description": "एक सार्वजनिक हैंडल का दावा करें, एसएसएच कुंजी प्रकाशित करें और एक प्रमाणपत्र प्राधिकरण चलाएं।"
     }
   }
 }

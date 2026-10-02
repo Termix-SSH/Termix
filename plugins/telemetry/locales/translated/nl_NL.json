@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Beheer gebruiksstatistieken",
+      "description": "Bekijk welke gebruiksstatistieken worden verzonden, verzend ze nu en reset de instantie-ID."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Deel anonieme gebruiksstatistieken",
+      "description": "Verstuurt eenmaal per dag een korte, anonieme samenvatting om Termix te helpen verbeteren. Deze samenvatting bevat nooit gebruikersnamen, hostnamen, IP-adressen of inloggegevens."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Voeg platforminformatie toe",
+      "description": "Het besturingssysteem, de CPU-architectuur, de Node.js-versie, het type database en hoe Termix is geïnstalleerd (Docker, desktop-app of server)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Inclusief gebruik van functies",
+      "description": "Hoe vaak elk type tabblad is geopend en hoeveel SSH-aanmeldingen er hebben plaatsgevonden sinds het laatste rapport. Gebruikers kunnen dit onderdeel zelf uitschakelen in hun profiel."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Inclusief geïnstalleerde functies",
+      "description": "Welke ingebouwde functies zijn geïnstalleerd en actief?"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "Instantie-ID"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Voeg mijn functiegebruik toe",
+      "description": "Deze tool telt welke soorten tabbladen je opent in de anonieme gebruiksstatistieken. Er wordt niets over jou of je hostingprovider verzonden."
     }
   },
   "status": {
     "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
-    "close": "Close",
-    "loadFailed": "Could not load the usage statistics status"
+    "on": "Gebruiksstatistieken worden eenmaal per dag gedeeld.",
+    "off": "Gebruiksstatistieken worden niet gedeeld.",
+    "lockedOn": "Ingeschakeld via de omgevingsvariabele ENABLE_TELEMETRY. Wijzig deze daar.",
+    "lockedOff": "Uitgeschakeld door de omgevingsvariabele ENABLE_TELEMETRY. Wijzig deze daar.",
+    "instanceId": "Instantie-ID: {{id}}",
+    "noInstanceId": "Nog geen instantie-ID",
+    "lastSent": "Laatst verzonden {{date}}",
+    "neverSent": "Nog niet verzonden",
+    "nextSend": "Volgende rapport verschuldigd {{date}}",
+    "lastError": "Laatste poging mislukt: {{error}}",
+    "preview": "Voorbeeldrapport",
+    "sendNow": "Verzend nu",
+    "sending": "Verzenden...",
+    "sent": "Gebruiksstatistieken verzonden",
+    "notSent": "Gebruiksstatistieken zijn uitgeschakeld, er is niets verzonden.",
+    "resetId": "Instantie-ID opnieuw instellen",
+    "resetIdConfirm": "Is de instantie-ID gereset? Toekomstige rapporten zullen eruitzien alsof het een nieuwe installatie betreft.",
+    "resetIdDone": "Instantie-ID gereset",
+    "previewTitle": "Volgend rapport",
+    "previewDescription": "Dit is precies wat er nu verzonden zou worden.",
+    "close": "Dichtbij",
+    "loadFailed": "De status van de gebruiksstatistieken kon niet worden geladen."
   }
 }

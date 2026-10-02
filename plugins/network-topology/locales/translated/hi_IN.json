@@ -54,8 +54,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use network graph",
-      "description": "View and edit the network topology graph."
+      "title": "नेटवर्क ग्राफ़ का उपयोग करें",
+      "description": "नेटवर्क टोपोलॉजी ग्राफ को देखें और संपादित करें।"
     }
   },
   "hosts": {

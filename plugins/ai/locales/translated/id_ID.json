@@ -1,119 +1,119 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "Gunakan asisten",
+      "description": "Buka asisten dan ajukan pertanyaan kepadanya."
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "Mengelola penyedia",
+      "description": "Tambahkan, edit, dan hapus penyedia AI dan kunci API mereka."
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "Ajukan proposal",
+      "description": "Biarkan asisten tersebut menjalankan perubahan yang disarankannya."
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "Gunakan AI dari fitur lain.",
+      "description": "Fitur lainnya mungkin akan memanggil asisten atas nama Anda."
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "Bagikan kunci API",
+      "description": "Fitur lain mungkin menggunakan kunci API AI yang tersimpan tanpa mengetahuinya."
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "Asisten AI dinonaktifkan di server ini.",
+    "providersNeedOptIn": "Aktifkan asisten AI di atas untuk menambahkan penyedia.",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "Asisten AI",
+        "description": "Izinkan pengguna untuk mengaktifkan asisten AI. Saat dinonaktifkan, asisten akan disembunyikan dan diblokir untuk semua orang."
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "Host AI pribadi yang diizinkan",
+        "description": "Host di jaringan pribadi Anda yang dapat diarahkan pengguna ke penyedia layanan, seperti Ollama yang dihosting sendiri. Letakkan satu host di setiap baris."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "Aktifkan Asisten AI",
+        "description": "Izinkan asisten AI untuk membantu di terminal host ini. Secara default dinonaktifkan, dan AI tetap perlu diaktifkan untuk akun Anda."
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
-    "stop": "Stop",
-    "save": "Save",
-    "cancel": "Cancel",
-    "running": "running",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
-    "providerLabel": "Name",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "title": "Asisten",
+    "send": "Mengirim",
+    "stop": "Berhenti",
+    "save": "Menyimpan",
+    "cancel": "Membatalkan",
+    "running": "berlari",
+    "approve": "Menyetujui",
+    "reject": "Menolak",
+    "inputPlaceholder": "Tanyakan tentang server Anda, atau jelaskan perubahan yang ingin Anda usulkan.",
+    "selectProvider": "Pilih penyedia",
+    "providerSettings": "Pengaturan penyedia",
+    "addProvider": "Tambahkan penyedia",
+    "editProvider": "Penyedia pengeditan",
+    "removeProvider": "Hapus penyedia",
+    "providerType": "Penyedia",
+    "providerLabel": "Nama",
+    "providerLabelPlaceholder": "Contohnya: Ollama setempat",
+    "baseUrl": "Alamat server",
+    "apiKey": "Kunci API",
+    "defaultModel": "Model default",
+    "defaultModelPlaceholder": "Misalnya: llama3.1 atau claude-opus-5",
+    "labelRequired": "Beri nama penyedia ini",
+    "providerSaveFailed": "Penyedia layanan tidak dapat disimpan.",
+    "providerUpdated": "Penyedia diperbarui",
+    "providerDeleteFailed": "Penyedia layanan tidak dapat dihapus.",
+    "privateEndpointHint": "Alamat-alamat di jaringan pribadi Anda memerlukan izin administrator terlebih dahulu untuk host tersebut.",
     "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
+    "providerAnthropic": "Antropis",
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
-    "toolArguments": "Input",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
-    "runInTerminal": "Run",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "providerOpenaiCompatible": "Kompatibel dengan OpenAI",
+    "toolArguments": "Masukan",
+    "toolResult": "Hasil",
+    "statusApplied": "Terapan",
+    "statusRejected": "Ditolak",
+    "proposalApplied": "Perubahan diterapkan",
+    "proposalApplyFailed": "Perubahan tidak dapat diterapkan.",
+    "proposalRejectFailed": "Tidak bisa menolak perubahan tersebut",
+    "enableTitle": "Aktifkan asisten AI",
+    "enableDescription": "Biarkan asisten membaca pengaturan Anda dan menyarankan perubahan yang perlu Anda setujui.",
+    "readOnlyCommands": "Izinkan perintah diagnostik hanya baca.",
+    "readOnlyCommandsDescription": "Asisten dapat menjalankan daftar singkat perintah aman seperti df dan uptime tanpa bertanya setiap kali. Apa pun yang mengubah server selalu diusulkan terlebih dahulu.",
+    "modelDetectFailed": "Tidak dapat menghubungi penyedia, jadi ini adalah daftar umum. Anda dapat mengetikkan nama model apa pun.",
+    "modelCustom": "Masukkan nama model",
+    "modelRefresh": "Perbarui daftar",
+    "modelPlaceholder": "Pilih atau ketik model",
+    "attachHint": "Ketik @ untuk merujuk ke host, cuplikan kode, atau otomatisasi. Perubahan diajukan untuk Anda setujui.",
+    "runCommandTitle": "Jalankan perintah",
+    "assistant": "Asisten AI",
+    "terminalPanelEmpty": "Tanyakan kepada asisten tentang tuan rumah ini. Segala sesuatu yang berubah status memerlukan persetujuan Anda terlebih dahulu.",
+    "terminalPanelPlaceholder": "Tanyakan tentang tuan rumah ini...",
+    "noProvidersConfigured": "Belum ada penyedia AI yang dikonfigurasi. Tambahkan satu di tab asisten AI.",
+    "runsInOpenTerminal": "Berjalan di sesi terminal Anda yang sedang terbuka.",
+    "runInTerminal": "Berlari",
+    "terminalContextPrefill": "Berikut adalah output terminal saya:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "Izinkan fitur lain menggunakan kunci API penyedia AI Anda untuk permintaan mereka sendiri. Kunci tersebut tidak pernah disalin, dan Anda dapat mencabutnya kapan saja."
     }
   },
   "nav": {
     "ai": "AI"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "Asisten AI",
+    "aiIntro": "Termix dapat menyertakan asisten AI opsional. Anda dapat mengubahnya nanti di pengaturan Anda.",
+    "aiSkipTitle": "Biarkan saja",
+    "aiSkipDesc": "Termix berfungsi seperti sekarang. Asisten tetap tersembunyi.",
+    "aiEnableTitle": "Nyalakan",
+    "aiEnableDesc": "Menambahkan asisten yang membaca pengaturan Anda dan menyarankan perubahan yang Anda setujui. Membutuhkan penyedia yang Anda berikan, seperti Ollama lokal.",
+    "aiNote": "Tidak ada data yang dikirim ke mana pun sampai Anda menambahkan penyedia dan mengirim pesan."
   },
   "hosts": {
-    "docsLink": "View docs"
+    "docsLink": "Lihat dokumen"
   }
 }

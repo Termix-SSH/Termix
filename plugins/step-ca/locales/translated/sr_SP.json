@@ -1,48 +1,48 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "Корак CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
-    "docs": "View docs"
+    "label": "Корак CA",
+    "description": "Пријавите се преко свог добављача идентитета и дозволите свом Step CA да изда краткотрајни SSH сертификат за овај хост. CA URL, root отисак прста и OIDC provisioner подешава администратор у одељку Step CA у администраторским подешавањима.",
+    "docs": "Прикажи документе"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication..."
+    "title": "Потребна је аутентификација CA корака",
+    "description": "Завршите аутентификацију у прегледачу да бисте наставили. Сертификат остаје важећи онолико дуго колико вам то дозвољава ваш ЦА.",
+    "openBrowser": "Отворите прегледач за аутентификацију",
+    "waiting": "Чекање аутентификације у прегледачу...",
+    "authenticating": "Обрада аутентификације..."
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "Аутентификација није успела. Проверите своје акредитиве и покушајте поново.",
+    "timeout": "Временско ограничење за аутентификацију је истекло. Молимо покушајте поново."
   },
   "settings": {
     "caUrl": {
-      "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
-      "placeholder": "https://ca.internal:9000"
+      "label": "URL адреса у Калифорнији",
+      "description": "https URL вашег smallstep CA. Оставите CA URL, отисак прста и provisioner празне да бисте искључили Step CA.",
+      "placeholder": "хттпс://ца.интернал:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "Отисак коренског идентификатора (SHA-256)",
+      "description": "Отисак прста коренског сертификата, као што је приказано у кораку ca bootstrap."
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "Име OIDC провизора",
+      "description": "Име OIDC провизора CA. Затим изаберите „Корак CA“ као тип аутентификације хоста."
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "Дозвољени приватни хостови Step CA",
+      "description": "Приватни хостови које ток сертификата Step CA може контактирати: сам CA и, ако је интерно, ваш добављач идентитета. Раздвојите их зарезима или новим редовима."
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "URI за преусмеравање",
+      "description": "Региструјте ову URL адресу као дозвољени URI за преусмеравање код добављача идентитета иза OIDC провизора."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "Користите стари URI за преусмеравање",
+      "description": "Наставите да шаљете /host/step-ca-callback, URI за преусмеравање који је коришћен пре верзије 2.9. Искључите ово када ваш добављач идентитета дозволи нови."
     }
   }
 }

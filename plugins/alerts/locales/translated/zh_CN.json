@@ -4,13 +4,13 @@
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "使用提醒",
+      "description": "在收件箱中接收提醒，并将其发送到您自己的频道。"
     }
   },
   "onboarding": {
     "feature": "告警",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "featureDesc": "所有提醒都集中在一个收件箱中，您可以选择将其发送到 Discord、ntfy、电子邮件或 webhook。"
   },
   "settings": {
     "group": {
@@ -19,97 +19,97 @@
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Termix公告",
+        "description": "将 Termix 团队的新闻，例如安全通知和版本发布，发送到每个人的收件箱。"
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "保持警报（天）",
+        "description": "所有收件箱中都会删除较旧的提醒邮件。"
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "SMTP服务器",
+        "description": "需要用于电子邮件渠道。留空则关闭电子邮件功能。",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "SMTP端口",
+        "description": "通常使用 STARTTLS 的 587 端口或使用 TLS 的 465 端口。"
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "从一开始就使用TLS",
+        "description": "启用 465 端口。保持 587 端口关闭，该端口会自动升级到 TLS。"
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "SMTP 用户名",
+        "description": "如果服务器不需要登录，请留空。"
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "SMTP密码",
+        "description": "已加密存储。"
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
-        "placeholder": "Termix <alerts@example.com>"
+        "label": "来自地址",
+        "description": "发件人警报来自。",
+        "placeholder": "终端 <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
+        "label": "弹出式警报",
+        "description": "使用Termix时会弹出哪些新提醒？它们都会发送到您的收件箱。",
+        "all": "所有警报",
+        "warning": "警告和关键信息",
+        "critical": "仅限关键",
         "off": "全不选"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
+    "inbox": "收件箱",
     "channels": "通道",
-    "rules": "Delivery rules"
+    "rules": "配送规则"
   },
   "severity": {
     "info": "信息",
     "success": "成功",
     "warning": "警告",
-    "critical": "Critical"
+    "critical": "批判的"
   },
   "inbox": {
     "sourceTermix": "Termix",
     "openLink": "打开",
     "view": "查看",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
+    "unread": "未读",
+    "deliveryFailed_one": "{{count}} 通道失败",
+    "deliveryFailed_other": "{{count}} 通道失败",
+    "markRead": "标记为已读",
+    "markUnread": "标记为未读",
+    "markAllRead": "全部标记为已读",
     "delete": "删除",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
+    "clearRead": "删除已读提醒",
+    "cleared_one": "已删除 {{count}} 警报",
+    "cleared_other": "已删除 {{count}} 警报",
     "filterAll": "全部",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "filterUnread": "未读",
+    "anySeverity": "任何严重程度",
+    "anySource": "任何来源",
+    "openAll": "在标签页中打开",
+    "empty": "目前尚未收到任何警报。",
+    "emptyUnread": "你们都跟上了。",
+    "loadMore": "加载更多"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
+    "intro": "通道是警报可以发送到 Termix 外部的途径。发送规则决定哪些警报使用哪个通道。",
+    "add": "添加频道",
+    "edit": "编辑频道",
+    "test": "发送测试",
+    "testSent": "已发送测试警报",
+    "testFailed": "测试失败： {{error}}",
+    "deleteConfirm": "删除频道“{{name}}”？",
+    "deleted": "频道已删除",
+    "empty": "暂无频道。",
     "enabled": "已启用",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
+    "needsSave": "该通道需要重新打开并保存才能发送消息。",
     "name": "名称",
     "nameRequired": "名称为必填项",
     "type": "类型",
@@ -119,41 +119,41 @@
       "discord": "Discord",
       "email": "邮箱"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "emailUnavailable": "电子邮件需要 SMTP 服务器，管理员可以在“警报”设置中进行设置。",
     "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
+    "webhookHint": "获取每个警报的 JSON 正文。",
+    "method": "方法",
+    "headers": "标题",
+    "headersHint": "每行一个，格式为：名称:值。",
     "ntfyServer": "服务器 URL",
     "ntfyTopic": "主题",
-    "ntfyToken": "Access token (optional)",
+    "ntfyToken": "访问令牌（可选）",
     "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "discordHint": "在 Discord 的频道设置中，位于“集成”下。",
+    "discordUsername": "显示名称（可选）",
+    "discordAvatar": "头像网址（可选）",
+    "emailTo": "发送至",
+    "emailHint": "多个地址之间用逗号分隔。",
+    "privateNetwork": "允许使用专用网络地址",
+    "privateNetworkHint": "仅适用于管理员允许添加到私有端点列表中的主机。"
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
+    "intro": "发送规则会将匹配的提醒发送到您的渠道。提醒也会始终保留在收件箱中。",
+    "add": "添加规则",
+    "edit": "编辑规则",
+    "empty": "目前还没有规则，所以提醒只会显示在收件箱中。",
+    "needChannel": "请先添加频道。",
     "enabled": "已启用",
     "name": "名称",
     "nameRequired": "名称为必填项",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "match": "发送提醒",
+    "matchHint": "*适用于所有自动化操作。*适用于所有自动化操作，或某一特定类型。",
+    "minSeverity": "至少",
+    "channels": "发送至",
+    "channelRequired": "至少选择一个频道",
+    "deleteConfirm": "删除规则“{{name}}”？",
+    "everything": "一切",
+    "summary": "{{match}}、 {{severity}} 或更高，至 {{channels}}"
   },
   "actions": {
     "cancel": "取消",
@@ -163,9 +163,9 @@
   },
   "widget": {
     "name": "告警信息流",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
+    "description": "您最新的提醒，以及快速标记为已读的功能。",
+    "maxItems": "最大物品数",
+    "showRead": "显示已读提醒",
     "allClear": "一切正常",
     "loading": "加载中..."
   }

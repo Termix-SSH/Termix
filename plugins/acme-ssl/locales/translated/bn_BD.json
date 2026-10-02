@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "ACME সার্টিফিকেটগুলি পরিচালনা করুন",
+      "description": "সার্টিফিকেটের অবস্থা দেখুন এবং এখনই একটি নতুন সার্টিফিকেটের জন্য অনুরোধ করুন।"
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "স্বয়ংক্রিয়ভাবে নবায়ন করুন",
+      "description": "দিনে দুইবার পরীক্ষা করুন এবং যখন কোনো সার্টিফিকেট থাকবে না, সেটি ডোমেইনকে কভার করবে না, অথবা ৩০ দিনের মধ্যে এর মেয়াদ শেষ হয়ে যাবে, তখন একটি নতুন সার্টিফিকেট সংগ্রহ করুন।"
     },
     "domain": {
-      "label": "Domain",
-      "description": "The public domain name for the certificate.",
+      "label": "ডোমেইন",
+      "description": "সার্টিফিকেটটির পাবলিক ডোমেইন নাম।",
       "placeholder": "termix.example.com"
     },
     "email": {
-      "label": "Email",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "label": "ইমেল",
+      "description": "ACME অ্যাকাউন্ট এবং মেয়াদ শেষ হওয়ার বিজ্ঞপ্তির জন্য যোগাযোগের ইমেল।",
       "placeholder": "admin@example.com"
     },
     "provider": {
-      "label": "Certificate authority",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
-      "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "label": "শংসাপত্র কর্তৃপক্ষ",
+      "description": "সার্টিফিকেটটি কোথা থেকে পাবেন। Let's Encrypt-এর রেট লিমিট অতিক্রম না করে পরীক্ষা করার জন্য স্টেজিং ব্যবহার করুন।",
+      "letsencrypt": "আসুন এনক্রিপ্ট করি",
+      "letsencryptStaging": "লেটস এনক্রিপ্ট (স্টেজিং)",
+      "custom": "কাস্টম ACME ডিরেক্টরি"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "ACME ডিরেক্টরি URL",
+      "description": "শুধুমাত্র কাস্টম সার্টিফিকেট অথরিটির জন্য। অবশ্যই একটি https URL হতে হবে।"
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "চ্যালেঞ্জের ধরণ",
+      "description": "ডোমেইনটির মালিকানা কীভাবে প্রমাণ করবেন।",
+      "http": "HTTP - এর জন্য ইন্টারনেট থেকে পোর্ট ৮০ অ্যাক্সেসযোগ্য হতে হবে।",
+      "cloudflare": "ডিএনএস (ক্লাউডফ্লেয়ার) - একটি ক্লাউডফ্লেয়ার এপিআই টোকেন প্রয়োজন"
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
-      "description": "Scoped token with Zone:DNS:Edit permission for your domain."
+      "label": "ক্লাউডফ্লেয়ার এপিআই টোকেন",
+      "description": "আপনার ডোমেনের জন্য Zone:DNS:Edit অনুমতিসহ স্কোপড টোকেন।"
     }
   },
   "status": {
-    "title": "Certificate status",
-    "none": "No certificate",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
-    "expires": "Expires {{date}}",
-    "lastIssued": "Last issued {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
-    "requesting": "Requesting certificate...",
-    "issued": "Certificate issued and installed"
+    "title": "সার্টিফিকেটের অবস্থা",
+    "none": "কোন সার্টিফিকেট নেই",
+    "names": "{{names}} কভার করে",
+    "issuer": "{{issuer}} দ্বারা জারি করা হয়েছে",
+    "expires": "মেয়াদ শেষ হবে {{date}}",
+    "lastIssued": "সর্বশেষ প্রকাশিত {{date}}",
+    "lastError": "শেষ চেষ্টা ব্যর্থ: {{error}}",
+    "missing": "সার্টিফিকেটের জন্য অনুরোধ করার আগে, ডোমেইন, ইমেল এবং আপনার চ্যালেঞ্জ টাইপের জন্য প্রয়োজনীয় ফিল্ডগুলো সেট করুন, তারপর সেভ করুন।",
+    "request": "এখনই সার্টিফিকেটের জন্য অনুরোধ করুন",
+    "requesting": "সার্টিফিকেটের জন্য অনুরোধ...",
+    "issued": "সার্টিফিকেট ইস্যু এবং ইনস্টল করা হয়েছে"
   }
 }

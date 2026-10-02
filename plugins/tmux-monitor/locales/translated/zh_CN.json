@@ -14,19 +14,19 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Tmux Monitor",
-      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+      "title": "使用 Tmux Monitor",
+      "description": "浏览和控制已启用监视器的主机上的 tmux 会话、窗口和窗格。"
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "启用 Tmux 监控",
-        "description": "Watch and attach to tmux sessions running on this host."
+        "description": "监视并附加到在此主机上运行的 tmux 会话。"
       },
       "mouseEnabled": {
-        "label": "Enable tmux mouse support",
-        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+        "label": "启用 tmux 鼠标支持",
+        "description": "在附加或创建 tmux 会话时，为该会话启用鼠标支持。其他会话和全局 tmux 设置保持不变。"
       }
     }
   },
@@ -73,7 +73,7 @@
     "sessionRenameFailed": "重命名会话失败",
     "editTagsTitle": "编辑 \"{{name}}\" 的标签",
     "killPane": "终止窗格",
-    "resizeTree": "Drag to resize, double-click to reset",
+    "resizeTree": "拖动调整大小，双击重置",
     "reattach": "重新附加（修复显示错乱）",
     "killWindow": "终止窗口",
     "killWindowTitle": "终止会话 \"{{session}}\" 的窗口 {{index}}？",
@@ -93,25 +93,25 @@
     "sessionKillFailed": "终止会话失败",
     "hostUnreachable": "无法连接到主机。请检查主机是否在线且可访问。",
     "noServer": "此主机上未运行 tmux 服务器。",
-    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "searchTruncated": "部分结果。搜索范围涵盖每个窗格的最后 {{lines}} 行，最多涵盖 {{panes}} 个窗格。",
     "closeSearchResults": "关闭搜索结果",
     "retry": "重试",
     "noHosts": "没有可用的 SSH 主机",
-    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "noHostsHint": "在 SSH 主机上启用 Tmux 监视器选项（主机管理器，Tmux 监视器选项卡）以监视其 tmux 会话。",
     "tmuxInstallHint": "使用以下命令在主机上安装：",
     "attachTooltip": "打开到 {{host}} 的终端",
-    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "attachTooltipPane": "打开终端到 {{host}}，tmux 会话 {{session}}",
     "timeJustNow": "刚刚",
     "timeMinutes": "{{count}} 分钟前",
     "timeHours": "{{count}} 小时前",
     "timeDays": "{{count}} 天前",
     "allHosts": "所有主机",
-    "singleHost": "Single host",
-    "hostScope": "Monitor scope",
-    "filterHosts": "Filter hosts by name or address",
-    "selectHost": "Select host",
-    "toggleHost": "Expand or collapse {{host}}",
-    "noMatchingHosts": "No matching hosts",
-    "toggleSession": "Expand or collapse {{session}}"
+    "singleHost": "单主机",
+    "hostScope": "监控范围",
+    "filterHosts": "按名称或地址筛选主机",
+    "selectHost": "选择主机",
+    "toggleHost": "展开或收起 {{host}}",
+    "noMatchingHosts": "没有匹配的主机",
+    "toggleSession": "展开或收起 {{session}}"
   }
 }

@@ -23,9 +23,9 @@
     "start": "Start",
     "stop": "Stop",
     "status": "Status",
-    "actions": "Actions",
-    "cardView": "Card view",
-    "listView": "List view",
+    "actions": "Akcje",
+    "cardView": "Widok karty",
+    "listView": "Widok listy",
     "confirmRemoveContainer": "Czy na pewno chcesz usunąć kontener „{{name}}”? Tej czynności nie można cofnąć.",
     "runningContainerWarning": "Ostrzeżenie: Ten kontener jest obecnie uruchomiony. Jego usunięcie spowoduje najpierw jego zatrzymanie.",
     "loadingContainers": "Ładowanie kontenerów...",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "Aby uzyskać dostęp do konsoli, kontener musi być uruchomiony",
     "verificationCodePrompt": "Wprowadź kod weryfikacyjny",
     "totpVerificationFailed": "Weryfikacja TOTP nie powiodła się. Spróbuj ponownie.",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "Logowanie nie powiodło się. Spróbuj ponownie.",
     "connectedTo": "Połączono z {{containerName}}",
     "disconnected": "Rozłączono",
     "consoleError": "Błąd konsoli",
@@ -101,8 +101,8 @@
     "consoleTab": "Konsola",
     "startContainerToAccess": "Uruchom kontener, aby uzyskać dostęp do konsoli",
     "noHostSelected": "Nie wybrano hosta",
-    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
-    "failedToDownloadLogs": "Failed to download logs: {{error}}"
+    "failedToFetchLogs": "Nie udało się pobrać dzienników: {{error}}",
+    "failedToDownloadLogs": "Nie udało się pobrać dzienników: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "Użyj Dockera",
+      "description": "Otwórz menedżera Docker i konsole kontenerów na hostach z włączonym Dockerem."
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Włącz Docker",
-        "description": "Manage containers on this host."
+        "description": "Zarządzaj kontenerami na tym hoście."
       },
       "containerRuntime": {
         "label": "Środowisko wykonawcze kontenera",

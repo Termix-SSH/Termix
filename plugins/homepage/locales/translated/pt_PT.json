@@ -18,7 +18,7 @@
   "homepage": {
     "title": "Página Inicial",
     "addWidget": "Adicionar widget",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "Não existem widgets nesta categoria.",
     "editWidget": "Editar widget",
     "zoomIn": "Ampliar",
     "zoomOut": "Reduzir",
@@ -39,7 +39,7 @@
     "description": "Descrição",
     "color": "Cor",
     "timezone": "Fuso Horário",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "Fuso horário inválido. Utilize um nome IANA, como America/New_York.",
     "showSeconds": "Mostrar segundos",
     "format12h": "12 horas",
     "content": "Conteúdo",
@@ -60,9 +60,9 @@
     "maxItems": "Itens máx.",
     "showDescription": "Mostrar descrição",
     "widgetRssName": "Feed RSS",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "Configure um URL de feed nas definições do widget.",
+    "rssLoadError": "Não foi possível carregar o feed.",
+    "rssNoItems": "Nenhum item",
     "noHostSelected": "Nenhum anfitrião selecionado",
     "displayedMetrics": "Métricas Exibidas",
     "metricCpu": "CPU",
@@ -162,29 +162,29 @@
     "selectHosts": "Selecionar Hosts",
     "listLayout": "Lista",
     "gridLayout": "Grelha",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "Defina um URL nas definições do widget.",
+    "embeddedContent": "Conteúdo incorporado",
+    "noBookmarks": "Sem favoritos",
+    "noSections": "Nenhuma secção configurada",
+    "noServices": "Nenhum serviço configurado",
+    "configureLocation": "Defina uma localização nas definições do widget.",
+    "bannerTextPlaceholder": "Texto do banner",
+    "serviceNamePlaceholder": "O meu serviço"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Utilize a página inicial",
+      "description": "Visualize e edite os links de serviço da página inicial e do painel de controlo."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Hosts privados permitidos",
+      "description": "Introduza os nomes de host/IPs exatos, privados ou de loopback, para os widgets Ping Status e Custom API. Separe as entradas com vírgulas ou novas linhas; omita esquemas, portas e caminhos. Deixe os blocos vazios para destinos privados."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Autoridade de certificação privada (PEM)",
+      "description": "Pacote opcional de CAs fidedignas para hosts na lista de permissões. A verificação de certificados permanece ativada. Deixe em branco para utilizar o repositório de certificados fidedignos do sistema."
     }
   }
 }

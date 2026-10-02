@@ -1,60 +1,60 @@
 {
   "nav": {
-    "sessionLogs": "Session Logs"
+    "sessionLogs": "บันทึกเซสชัน"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "การบันทึกการประชุม",
+    "enableSessionRecordingDesc": "บันทึกผลลัพธ์จากเทอร์มินัลเพื่อตรวจสอบในภายหลัง"
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "ดูบันทึกการประชุม",
+      "description": "ดูและเล่นบันทึกการประชุมของคุณเองได้"
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "การเก็บรักษา (วัน)",
+        "description": "ระบบจะเก็บไฟล์บันทึกการประชุมไว้นานแค่ไหนก่อนที่จะลบออกโดยอัตโนมัติ"
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "เปิดใช้งานการบันทึกเซสชัน",
+        "description": "บันทึกข้อมูลที่แสดงบนเทอร์มินัลของโฮสต์นี้ เพื่อให้คุณสามารถเล่นซ้ำหรือดาวน์โหลดได้ในภายหลัง"
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "การบันทึก"
   },
   "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
-    "back": "Back",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "title": "บันทึกเซสชัน",
+    "noLogs": "ยังไม่มีบันทึกการใช้งานใดๆ",
+    "noLogsDesc": "เปิดใช้งานการบันทึกเซสชันบนโฮสต์เพื่อเริ่มการบันทึก",
+    "duration": "ระยะเวลา",
+    "viewLog": "ดูบันทึก",
+    "downloadLog": "ดาวน์โหลด",
+    "downloadAsText": "ดาวน์โหลดเป็นข้อความ",
+    "deleteLog": "ลบ",
+    "confirmDelete": "ลบบันทึกการใช้งานนี้หรือไม่?",
+    "confirmDeleteDesc": "การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "copyContent": "สำเนา",
+    "copied": "คัดลอกแล้ว!",
+    "loadError": "ไม่สามารถโหลดบันทึกเซสชันได้",
+    "deleteError": "ไม่สามารถลบบันทึกเซสชันได้",
+    "filterByHost": "กรองตามโฮสต์...",
+    "back": "กลับ",
+    "empty": "(ว่างเปล่า)",
+    "noResults": "ไม่พบผลลัพธ์สำหรับ \"{{query}}\"",
+    "hostFallback": "โฮสต์ {{id}}",
+    "sessionFallback": "เซสชั่น {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "ลำดับเวลาการบันทึก",
+    "speed": "ความเร็วในการเล่น",
+    "play": "เล่นการบันทึก",
+    "pause": "หยุดการบันทึกชั่วคราว"
   }
 }

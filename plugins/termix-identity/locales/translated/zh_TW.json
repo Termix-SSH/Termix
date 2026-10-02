@@ -23,7 +23,7 @@
     "provisionLabel": "佈建伺服器",
     "publishTitle": "發佈公開金鑰",
     "generate": "產生",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "產生 Ed25519 金鑰對。發佈公鑰並將私鑰下載到您的裝置。",
     "saveToVault": "儲存至憑證庫",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "標籤（選填）",
@@ -32,7 +32,7 @@
     "keyPublished": "金鑰已發佈",
     "addKeyFailed": "無法新增金鑰",
     "generatedSaved": "金鑰對已產生並儲存至您的憑證庫。私密金鑰也已下載。",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "密鑰對已產生。私鑰已下載（僅顯示一次）。",
     "generateFailed": "無法產生金鑰",
     "imported": "已從憑證匯入金鑰",
     "importFailed": "匯入金鑰失敗",
@@ -56,7 +56,7 @@
     "caTrustLabel": "在伺服器上信任（以 root 執行）",
     "caRotate": "輪替",
     "caRotateConfirm": "輪替 CA？所有由其簽署的憑證將不再被接受，必須重新簽發。",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "CA已輪調。之前的證書已被吊銷。",
     "caRotateFailed": "輪替 CA 失敗",
     "caDelete": "移除 CA",
     "caDeleteConfirm": "移除憑證授權中心？",
@@ -68,8 +68,8 @@
     "certIssued": "憑證已簽發並下載",
     "certIssueFailed": "簽發憑證失敗",
     "docsLink": "檢視文件",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "SSH主體",
+    "principalsPlaceholder": "SSH主體，例如root"
   },
   "nav": {
     "termixId": "ID"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "使用 Termix ID",
+      "description": "申請一個公開句柄，發布 SSH 金鑰並執行憑證授權單位。"
     }
   }
 }

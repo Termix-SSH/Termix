@@ -18,7 +18,7 @@
   "homepage": {
     "title": "主页",
     "addWidget": "添加小部件",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "此类别中没有小部件",
     "editWidget": "编辑小部件",
     "zoomIn": "放大",
     "zoomOut": "缩小",
@@ -39,7 +39,7 @@
     "description": "描述",
     "color": "颜色",
     "timezone": "时区",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "时区无效。请使用 IANA 名称，例如 America/New_York。",
     "showSeconds": "显示秒",
     "format12h": "12 小时制",
     "content": "内容",
@@ -60,9 +60,9 @@
     "maxItems": "最大条目数",
     "showDescription": "显示描述",
     "widgetRssName": "RSS 订阅源",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "在小部件设置中配置信息源 URL",
+    "rssLoadError": "无法加载饲料",
+    "rssNoItems": "无商品",
     "noHostSelected": "未选择主机",
     "displayedMetrics": "显示指标",
     "metricCpu": "CPU",
@@ -162,29 +162,29 @@
     "selectHosts": "选择主机",
     "listLayout": "列表",
     "gridLayout": "网格",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "在小部件设置中设置 URL",
+    "embeddedContent": "嵌入式内容",
+    "noBookmarks": "没有书签",
+    "noSections": "未设置任何部分。",
+    "noServices": "未设置任何服务。",
+    "configureLocation": "在小部件设置中设置位置",
+    "bannerTextPlaceholder": "横幅文字",
+    "serviceNamePlaceholder": "我的服务"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "使用主页",
+      "description": "查看和编辑首页画布和仪表盘服务链接。"
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "允许私人主机",
+      "description": "用于 Ping 状态和自定义 API 小部件的精确私有或环回主机名/IP 地址。条目之间用逗号或换行符分隔；省略协议、端口和路径。空值会阻止私有目标地址。"
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "私有证书颁发机构（PEM）",
+      "description": "可选的受信任 CA 证书包，适用于已列入允许列表的主机。证书验证功能仍然启用。留空则使用系统信任存储。"
     }
   }
 }

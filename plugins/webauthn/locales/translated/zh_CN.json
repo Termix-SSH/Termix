@@ -4,7 +4,7 @@
   "loginFailed": "通行密钥登录失败",
   "description": "使用 WebAuthn/FIDO2 凭据进行无密码登录",
   "namePlaceholder": "通行密钥名称",
-  "defaultName": "Passkey",
+  "defaultName": "通行密钥",
   "uv": {
     "preferred": "首选",
     "required": "必需",
@@ -14,9 +14,9 @@
   "none": "未注册通行密钥。",
   "added": "通行密钥已添加",
   "addFailed": "添加通行密钥失败",
-  "delete": "Delete passkey",
+  "delete": "删除密码",
   "deleted": "通行密钥已删除",
   "deleteFailed": "删除通行密钥失败",
   "unknownDevice": "未知",
-  "synced": "synced"
+  "synced": "同步"
 }

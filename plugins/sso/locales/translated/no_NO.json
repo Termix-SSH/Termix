@@ -1,65 +1,65 @@
 {
-  "loginWithSso": "Sign in with SSO",
-  "loginWithProvider": "Login with {{name}}",
+  "loginWithSso": "Logg inn med SSO",
+  "loginWithProvider": "Logg inn med {{name}}",
   "loading": "Laster...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "Administrer SSO-leverandører",
+      "description": "Legg til, endre og fjern SSO-leverandørene som folk kan logge på med."
     }
   },
   "providers": {
-    "docsLink": "View docs",
-    "none": "No SSO providers configured.",
-    "add": "Add Provider",
-    "edit": "Edit Provider",
-    "delete": "Delete Provider",
-    "deleteConfirm": "Delete this provider? Associated users will be unable to login.",
-    "name": "Display Name",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
-    "type": "Provider Type",
+    "docsLink": "Vis dokumenter",
+    "none": "Ingen SSO-leverandører er konfigurert.",
+    "add": "Legg til leverandør",
+    "edit": "Rediger leverandør",
+    "delete": "Slett leverandør",
+    "deleteConfirm": "Vil du slette denne leverandøren? Tilknyttede brukere vil ikke kunne logge inn.",
+    "name": "Visningsnavn",
+    "namePlaceholder": "Min SSO-leverandør",
+    "nameRequired": "Et visningsnavn er obligatorisk",
+    "type": "Leverandørtype",
     "enabled": "Aktivert",
-    "save": "Save Provider",
+    "save": "Lagre leverandør",
     "saving": "Lagrer...",
-    "saved": "Saved",
+    "saved": "Lagret",
     "saveFailed": "Kunne ikke lagre",
-    "deleted": "Deleted",
+    "deleted": "Slettet",
     "deleteFailed": "Kunne ikke slette",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "Kunne ikke laste inn SSO-leverandører",
     "cancel": "Avbryt",
     "copy": "Kopier",
-    "copied": "Copied",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "copied": "Kopiert",
+    "redirectUri": "Omdirigerings-URI",
+    "redirectUriDesc": "Registrer denne URL-en som omdirigerings- eller tilbakeringings-URL hos identitetsleverandøren din.",
+    "legacyCallback": "Behold den gamle omdirigerings-URI-en",
+    "legacyCallbackDesc": "Denne leverandøren ble satt opp før Termix 2.9 og bruker fortsatt den gamle omdirigerings-URI-en, som fortsatt fungerer. For å gå over til den nye, legg først til {{uri}} i identitetsleverandøren din, og slå deretter av dette.",
+    "authorizationUrl": "Autorisasjons-URL: {{url}}"
   },
   "fields": {
     "clientId": "Klient-ID",
     "clientSecret": "Klienthemmelighet",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "En hemmelighet er lagret. La dette feltet stå tomt for å beholde den.",
     "issuerUrl": "Utsteder-URL",
     "authUrl": "Autorisasjons-URL",
     "tokenUrl": "Token-URL",
     "userIdentifier": "Sti til brukeridentifikator",
     "displayName": "Sti til visningsnavn",
-    "scopes": "Scopes",
-    "userinfoUrl": "Override Userinfo URL",
-    "groupClaim": "Group Claim",
-    "groupClaimDesc": "Optional. The claim path that contains the user's groups. Defaults to groups, roles, then group. Use this for providers with a custom claim (e.g. Zitadel).",
-    "allowedUsers": "Allowed Users",
-    "allowedUsersDesc": "One email per line. Leave empty to allow all.",
-    "adminGroup": "Admin Group",
-    "adminGroupDesc": "Users in this group are granted admin. Leave empty to disable group sync.",
-    "caCert": "Custom CA Certificate",
-    "caCertDesc": "Optional. PEM-encoded CA certificate for OIDC providers using a private or self-signed CA. Leave empty to use the system trust store."
+    "scopes": "Omfang",
+    "userinfoUrl": "Overstyr brukerinfo-URL",
+    "groupClaim": "Gruppekrav",
+    "groupClaimDesc": "Valgfritt. Kravbanen som inneholder brukerens grupper. Standardinnstillingen er grupper, roller og deretter gruppe. Bruk dette for leverandører med et tilpasset krav (f.eks. Zitadel).",
+    "allowedUsers": "Tillatte brukere",
+    "allowedUsersDesc": "Én e-post per linje. La stå tomt for å tillate alle.",
+    "adminGroup": "Admingruppe",
+    "adminGroupDesc": "Brukere i denne gruppen har administratorrettigheter. La feltet stå tomt for å deaktivere gruppesynkronisering.",
+    "caCert": "Tilpasset CA-sertifikat",
+    "caCertDesc": "Valgfritt. PEM-kodet CA-sertifikat for OIDC-leverandører som bruker en privat eller selvsignert CA. La stå tomt for å bruke systemets klareringslager."
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "Logg inn med SSO automatisk",
+      "description": "Send besøkende direkte til den første SSO-leverandøren i stedet for å vise innloggingsskjemaet. Miljøvariabelen OIDC_SILENT_LOGIN_DEFAULT overstyrer dette."
     }
   }
 }

@@ -4,7 +4,7 @@
   "loginFailed": "Nie udało się zalogować za pomocą klucza dostępu",
   "description": "Używaj poświadczeń WebAuthn/FIDO2, aby logować się bez hasła",
   "namePlaceholder": "Nazwa klucza dostępu",
-  "defaultName": "Passkey",
+  "defaultName": "Klucz uniwersalny",
   "uv": {
     "preferred": "Preferowane",
     "required": "Wymagane",
@@ -14,9 +14,9 @@
   "none": "Nie zarejestrowano żadnych kluczy dostępu.",
   "added": "Dodano klucz dostępu",
   "addFailed": "Nie udało się dodać klucza dostępu",
-  "delete": "Delete passkey",
+  "delete": "Usuń klucz dostępu",
   "deleted": "Usunięto klucz dostępu",
   "deleteFailed": "Nie udało się usunąć klucza dostępu",
   "unknownDevice": "nieznany",
-  "synced": "synced"
+  "synced": "zsynchronizowany"
 }

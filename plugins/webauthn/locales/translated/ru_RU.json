@@ -4,7 +4,7 @@
   "loginFailed": "Вход по ключу не удался",
   "description": "Используйте учётные данные WebAuthn/FIDO2 для входа без пароля",
   "namePlaceholder": "Название ключа доступа",
-  "defaultName": "Passkey",
+  "defaultName": "Ключ доступа",
   "uv": {
     "preferred": "Предпочтительно",
     "required": "Обязательно",
@@ -14,9 +14,9 @@
   "none": "Нет зарегистрированных ключей доступа.",
   "added": "Ключ доступа добавлен",
   "addFailed": "Не удалось добавить ключ доступа",
-  "delete": "Delete passkey",
+  "delete": "Удалить пароль",
   "deleted": "Ключ доступа удалён",
   "deleteFailed": "Ошибка удаления ключа доступа",
   "unknownDevice": "неизвестно",
-  "synced": "synced"
+  "synced": "синхронизировано"
 }

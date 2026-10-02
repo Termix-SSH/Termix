@@ -33,7 +33,7 @@
     "loadingHost": "होस्ट लोड हो रहा है..."
   },
   "nav": {
-    "portForwarding": "Forwarding",
+    "portForwarding": "अग्रेषित करना",
     "tunnels": "टनल"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (स्थानीय रूप से सुनें)",
     "localTargetHost": "127.0.0.1 (इस कंप्यूटर पर लक्ष्य)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
-    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
+    "remoteBindHost": "127.0.0.1 (एंडपॉइंट पर सुनें)",
+    "remoteTargetHost": "127.0.0.1 (एंडपॉइंट से लक्ष्य)",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1 (SOCKS श्रोता)"
   },
@@ -63,8 +63,8 @@
     "c2sPresetToLoad": "लोड करने के लिए प्रीसेट",
     "c2sTunnelPresets": "क्लाइंट टनल प्रीसेट",
     "c2sTunnelPresetsUnavailable": "क्लाइंट टनल प्रीसेट केवल डेस्कटॉप क्लाइंट में उपलब्ध हैं।",
-    "c2sPresetRenameError": "Failed to rename the preset",
-    "c2sPresetDeleteError": "Failed to delete the preset"
+    "c2sPresetRenameError": "प्रीसेट का नाम बदलने में विफलता",
+    "c2sPresetDeleteError": "प्रीसेट को हटाने में विफल रहा"
   },
   "tunnels": {
     "attempt": "प्रयास {{current}} / {{max}}",
@@ -85,8 +85,8 @@
     "createFirstTunnelMessage": "आपने अभी तक कोई SSH टनल नहीं बनाई है। शुरू करने के लिए होस्ट प्रबंधक में टनल कनेक्शन कॉन्फ़िगर करें।",
     "currentHostPort": "वर्तमान होस्ट पोर्ट",
     "destination": "डेस्टिनेशन",
-    "destinationAddress": "Destination Address",
-    "destinationPort": "Destination Port",
+    "destinationAddress": "गंतव्य पता",
+    "destinationPort": "गंतव्य बंदरगाह",
     "disconnected": "डिस्कनेक्टेड",
     "duplicateAutoStartBind": "केवल एक स्वतः-आरंभ क्लाइंट टनल {{bind}} का उपयोग कर सकती है।",
     "endpointPort": "एंडपॉइंट पोर्ट",
@@ -101,18 +101,18 @@
     "forwardDescriptionServerLocal": "वर्तमान होस्ट {{sourcePort}} → एंडपॉइंट {{endpointPort}}।",
     "forwardDescriptionServerRemote": "एंडपॉइंट {{endpointPort}} → वर्तमान होस्ट {{sourcePort}}।",
     "host": "होस्ट",
-    "intermediateHost": "Intermediate Host",
+    "intermediateHost": "मध्यवर्ती मेजबान",
     "invalidBindIp": "स्थानीय आईपी एक मान्य IPv4 पता होना चाहिए।",
     "invalidEndpointPort": "एंडपॉइंट पोर्ट 1 और 65535 के बीच होना चाहिए।",
     "invalidLocalPort": "स्थानीय पोर्ट 1 और 65535 के बीच होना चाहिए।",
     "invalidLocalTargetIp": "स्थानीय लक्ष्य आईपी एक मान्य IPv4 पता होना चाहिए।",
     "invalidLocalTargetPort": "स्थानीय लक्ष्य पोर्ट 1 और 65535 के बीच होना चाहिए।",
-    "invalidRemoteAddress": "Remote address is required.",
+    "invalidRemoteAddress": "रिमोट एड्रेस आवश्यक है।",
     "invalidRemotePort": "दूरस्थ पोर्ट 1 और 65535 के बीच होना चाहिए।",
     "lastError": "अंतिम त्रुटि",
     "lastStarted": "अंतिम बार शुरू हुआ",
     "lastTested": "अंतिम बार परीक्षण किया गया",
-    "localAddress": "Local Address",
+    "localAddress": "स्थानीय पता",
     "localPort": "स्थानीय पोर्ट",
     "localSaveError": "स्थानीय क्लाइंट टनल सहेजने में विफल",
     "localSaved": "क्लाइंट टनलें सहेजी गईं",
@@ -124,13 +124,13 @@
     "noHostSelected": "कोई होस्ट चयनित नहीं",
     "noSshTunnels": "कोई SSH टनल नहीं",
     "port": "पोर्ट",
-    "remoteBindAddress": "Remote Bind Address",
+    "remoteBindAddress": "रिमोट बाइंड पता",
     "remoteHost": "दूरस्थ होस्ट",
     "remotePort": "दूरस्थ पोर्ट",
     "retryInterval": "पुनर्प्रयास अंतराल (सेकंड)",
     "route": "रूट:",
     "summaryClientDynamic": "{{localHost}}:{{localPort}} → SOCKS via {{endpoint}}",
-    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} via {{endpoint}}",
+    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} वाया {{endpoint}}",
     "summaryClientRemote": "{{remoteHost}}:{{remotePort}} on {{endpoint}} → {{localHost}}:{{localPort}}",
     "test": "परीक्षण करें",
     "tunnelName": "टनल का नाम",
@@ -141,35 +141,35 @@
     "typeLocal": "स्थानीय (-L)",
     "typeRemote": "दूरस्थ (-R)",
     "working": "कार्यरत...",
-    "activeCount": "{{connected}}/{{total}} active",
-    "listensOn": "Bound to localhost:{{port}}",
-    "socksProxy": "SOCKS5 proxy",
-    "waiting": "Waiting",
-    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeCount": "{{connected}}/{{total}} सक्रिय",
+    "listensOn": "लोकलहोस्ट से बंधा हुआ:{{port}}",
+    "socksProxy": "SOCKS5 प्रॉक्सी",
+    "waiting": "इंतज़ार में",
+    "remoteSessionExpired": "रिमोट सिंक सत्र समाप्त हो गया है। रिमोट सिंक से पुनः कनेक्ट करें और दोबारा प्रयास करें।",
     "activeTunnels": "सक्रिय टनल",
     "start": "शुरू करें",
     "stop": "बंद करें",
-    "authTitle": "Tunnel authentication",
-    "authRetry": "The previous code was not accepted. Enter a new code.",
-    "authAnswer": "Authentication response",
+    "authTitle": "टनल प्रमाणीकरण",
+    "authRetry": "पिछला कोड स्वीकार नहीं किया गया। कृपया नया कोड दर्ज करें।",
+    "authAnswer": "प्रमाणीकरण प्रतिक्रिया",
     "authContinue": "जारी रखें"
   },
   "permissions": {
     "use": {
-      "title": "Use tunnels",
-      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+      "title": "सुरंगों का उपयोग करें",
+      "description": "एसएसएच टनल को शुरू करें, रोकें और देखें, और क्लाइंट टनल प्रीसेट को सेव करें।"
     }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "Enable tunnels",
-        "description": "Set up SSH tunnels through this host."
+        "label": "सुरंगों को सक्षम करें",
+        "description": "इस होस्ट के माध्यम से SSH टनल स्थापित करें।"
       }
     }
   },
   "onboarding": {
     "feature_tunnels": "टनलें",
-    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
+    "feature_tunnels_desc": "सर्वर के माध्यम से पोर्ट को फॉरवर्ड करके उन सेवाओं तक पहुंचें जो उपलब्ध नहीं हैं।"
   }
 }

@@ -14,19 +14,19 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Tmux Monitor",
-      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+      "title": "使用 Tmux Monitor",
+      "description": "瀏覽和控制已啟用監視器的主機上的 tmux 會話、視窗和窗格。"
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "啟用 Tmux 監控器",
-        "description": "Watch and attach to tmux sessions running on this host."
+        "description": "監控並附加到在此主機上執行的 tmux 會話。"
       },
       "mouseEnabled": {
-        "label": "Enable tmux mouse support",
-        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+        "label": "啟用 tmux 滑鼠支持",
+        "description": "在附加或建立 tmux 會話時，為該會話啟用滑鼠支援。其他會話和全域 tmux 設定保持不變。"
       }
     }
   },
@@ -73,7 +73,7 @@
     "sessionRenameFailed": "重新命名會話失敗",
     "editTagsTitle": "編輯「{{name}}」的標籤",
     "killPane": "終止窗格",
-    "resizeTree": "Drag to resize, double-click to reset",
+    "resizeTree": "拖曳調整大小，雙擊重置",
     "reattach": "重新附加（修復亂碼畫面）",
     "killWindow": "終止視窗",
     "killWindowTitle": "終止「{{session}}」的視窗 {{index}}？",
@@ -93,25 +93,25 @@
     "sessionKillFailed": "無法終止工作階段",
     "hostUnreachable": "無法連線至主機。請檢查主機是否在線上且可連線。",
     "noServer": "此主機上沒有正在執行的 tmux 伺服器。",
-    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "searchTruncated": "部分結果。搜尋範圍涵蓋每個窗格的最後 {{lines}} 行，最多涵蓋 {{panes}} 個窗格。",
     "closeSearchResults": "關閉搜尋結果",
     "retry": "重試",
     "noHosts": "沒有可用的 SSH 主機",
-    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "noHostsHint": "在 SSH 主機上啟用 Tmux 監視器選項（主機管理器，Tmux 監視器標籤）以監視其 tmux 會話。",
     "tmuxInstallHint": "在主機上使用以下指令安裝：",
     "attachTooltip": "開啟連至 {{host}} 的終端機",
-    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "attachTooltipPane": "開啟終端機到 {{host}}，tmux 會話 {{session}}",
     "timeJustNow": "剛剛",
     "timeMinutes": "{{count}} 分鐘前",
     "timeHours": "{{count}} 小時前",
     "timeDays": "{{count}} 天前",
     "allHosts": "所有主機",
-    "singleHost": "Single host",
-    "hostScope": "Monitor scope",
-    "filterHosts": "Filter hosts by name or address",
-    "selectHost": "Select host",
-    "toggleHost": "Expand or collapse {{host}}",
-    "noMatchingHosts": "No matching hosts",
-    "toggleSession": "Expand or collapse {{session}}"
+    "singleHost": "單主機",
+    "hostScope": "監控範圍",
+    "filterHosts": "依名稱或位址篩選主機",
+    "selectHost": "選擇主機",
+    "toggleHost": "展開或收起 {{host}}",
+    "noMatchingHosts": "沒有符合的主機",
+    "toggleSession": "展開或收起 {{session}}"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "Entrar com LDAP",
   "loginWithProvider": "Iniciar sessão com {{name}}",
   "loading": "A carregar...",
   "requiredField": "Este campo é obrigatório",
@@ -8,28 +8,28 @@
   "signIn": "Iniciar sessão",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "Gerir diretórios LDAP",
+      "description": "Adicione, altere e remova os diretórios LDAP com os quais as pessoas podem iniciar sessão."
     }
   },
   "providers": {
     "docsLink": "Ver docs",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "Nenhum diretório LDAP configurado.",
+    "add": "Adicionar diretório",
+    "edit": "Editar diretório",
+    "delete": "Apagar diretório",
+    "deleteConfirm": "Apagar este diretório? Os utilizadores que fizerem login com ele já não poderão aceder à sua conta.",
     "name": "Nome de exibição",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Diretório de empresas",
+    "nameRequired": "É necessário um nome de utilizador.",
     "enabled": "Ativado",
-    "save": "Save Directory",
+    "save": "Guardar diretório",
     "saving": "A guardar...",
     "saved": "Guardado",
     "saveFailed": "Falha ao guardar",
     "deleted": "Eliminado",
     "deleteFailed": "Falha ao eliminar",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "Falha ao carregar os diretórios LDAP.",
     "cancel": "Cancelar"
   },
   "fields": {
@@ -38,7 +38,7 @@
     "useTls": "Usar TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Palavra-passe de Bind",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "Uma palavra-passe foi guardada. Deixe este campo em branco para a manter.",
     "userSearchBase": "Base de pesquisa de utilizadores",
     "userSearchFilter": "Filtro de pesquisa de utilizadores",
     "usernameAttr": "Atributo de nome de utilizador",

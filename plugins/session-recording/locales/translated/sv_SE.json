@@ -1,60 +1,60 @@
 {
   "nav": {
-    "sessionLogs": "Session Logs"
+    "sessionLogs": "Sessionsloggar"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "Sessionsinspelning",
+    "enableSessionRecordingDesc": "Spela in utdata från terminalsessionen för senare granskning"
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Visa inspelningar av sessionen",
+      "description": "Se och spela upp dina egna inspelningar av sessioner."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Lagringstid (dagar)",
+        "description": "Hur länge en sessionsinspelning sparas innan den raderas automatiskt."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Aktivera sessionsinspelning",
+        "description": "Spela in terminalutdata för den här värden så att du kan spela upp eller ladda ner den senare."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Inspelning"
   },
   "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
-    "back": "Back",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
+    "title": "Sessionsloggar",
+    "noLogs": "Inga sessionsloggar ännu",
+    "noLogsDesc": "Aktivera sessionsloggning på en värd för att starta inspelning",
+    "duration": "Varaktighet",
+    "viewLog": "Visa logg",
+    "downloadLog": "Ladda ner",
+    "downloadAsText": "Ladda ner som text",
+    "deleteLog": "Radera",
+    "confirmDelete": "Radera den här sessionsloggen?",
+    "confirmDeleteDesc": "Den här åtgärden kan inte ångras.",
+    "copyContent": "Kopiera",
+    "copied": "Kopierad!",
+    "loadError": "Misslyckades med att läsa in sessionsloggar",
+    "deleteError": "Misslyckades med att radera sessionsloggen",
+    "filterByHost": "Filtrera efter värd...",
+    "back": "Tillbaka",
+    "empty": "(tömma)",
+    "noResults": "Inga resultat för \"{{query}}\"",
+    "hostFallback": "Värd {{id}}",
     "sessionFallback": "Session {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Inspelningstidslinje",
+    "speed": "Uppspelningshastighet",
+    "play": "Spela upp inspelningen",
+    "pause": "Pausa inspelningen"
   }
 }

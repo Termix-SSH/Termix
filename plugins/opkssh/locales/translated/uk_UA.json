@@ -1,32 +1,32 @@
 {
   "editor": {
-    "label": "OPKSSH",
-    "description": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
-    "docs": "View docs"
+    "label": "ОПКШ",
+    "description": "Увійдіть на цей хост, використовуючи свого постачальника ідентифікаційних даних замість пароля чи ключа. Потрібно налаштувати OPKSSH на сервері.",
+    "docs": "Переглянути документи"
   },
   "dialog": {
-    "title": "OPKSSH Authentication Required",
-    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication...",
-    "signInWith": "Sign in with {{provider}}"
+    "title": "Потрібна автентифікація OPKSSH",
+    "description": "Щоб продовжити, завершіть автентифікацію у вашому браузері. Цей сеанс залишатиметься дійсним протягом 24 годин.",
+    "openBrowser": "Відкрийте браузер для автентифікації",
+    "waiting": "Очікування автентифікації у браузері...",
+    "authenticating": "Обробка автентифікації...",
+    "signInWith": "Увійти за допомогою {{provider}}"
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "Помилка автентифікації. Перевірте свої облікові дані та спробуйте ще раз.",
+    "timeout": "Час очікування автентифікації минув. Спробуйте ще раз."
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "URI перенаправлення",
+      "description": "Зареєструйте цю URL-адресу як дозволений URI перенаправлення у кожного постачальника ідентифікаційних даних у вашій конфігурації OPKSSH."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "Використовувати старий URI перенаправлення",
+      "description": "Продовжуйте надсилати /host/opkssh-callback, URI перенаправлення, який використовувався до версії 2.9. Вимкніть цю функцію, щойно ваші постачальники ідентифікації дозволять новий."
     }
   },
   "hosts": {
-    "filterAuthOpkssh": "OPKSSH"
+    "filterAuthOpkssh": "ОПКШ"
   }
 }

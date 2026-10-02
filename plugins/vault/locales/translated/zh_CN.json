@@ -33,7 +33,7 @@
     "delete": "删除"
   },
   "hosts": {
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "保险库"
   },
   "dialog": {
     "title": "需要 Vault 登录",
@@ -43,26 +43,26 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Vault SSH signing",
-      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+      "title": "使用 Vault SSH 签名",
+      "description": "创建 Vault 签名者配置文件并连接到使用 Vault 的主机。"
     },
     "share": {
-      "title": "Share Vault profiles",
-      "description": "Mark a Vault signer profile as shared so every user can pick it."
+      "title": "共享库配置文件",
+      "description": "将 Vault 签名者配置文件标记为共享，以便每个用户都可以选择它。"
     }
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+      "label": "重定向 URI",
+      "description": "将此 URL 添加到 Termix 登录的每个 Vault OIDC 角色的 allowed_redirect_uris 中。"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+      "label": "使用旧的重定向 URI",
+      "description": "继续发送 /vault/oidc/callback，这是 2.9 版本之前使用的重定向 URI。一旦您的 Vault 角色允许使用新的重定向 URI，就将其关闭。"
     },
     "host": {
       "profileId": {
-        "label": "Vault signer profile"
+        "label": "Vault 签名者个人资料"
       }
     }
   }

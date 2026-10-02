@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "Zaloguj się za pomocą LDAP",
   "loginWithProvider": "Zaloguj się za pomocą {{name}}",
   "loading": "Ładowanie...",
   "requiredField": "To pole jest wymagane",
@@ -8,28 +8,28 @@
   "signIn": "Zaloguj się",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "Zarządzaj katalogami LDAP",
+      "description": "Dodawaj, zmieniaj i usuwaj katalogi LDAP, do których użytkownicy mogą się logować."
     }
   },
   "providers": {
     "docsLink": "Zobacz dokumentację",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "Nie skonfigurowano żadnych katalogów LDAP.",
+    "add": "Dodaj katalog",
+    "edit": "Edytuj katalog",
+    "delete": "Usuń katalog",
+    "deleteConfirm": "Usunąć ten katalog? Użytkownicy, którzy się do niego zalogują, nie będą mogli się zalogować.",
     "name": "Nazwa wyświetlana",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Katalog firm",
+    "nameRequired": "Wymagana jest nazwa wyświetlana",
     "enabled": "Włączona",
-    "save": "Save Directory",
+    "save": "Zapisz katalog",
     "saving": "Zapisywanie...",
     "saved": "Zapisano",
     "saveFailed": "Nie udało się zapisać",
     "deleted": "Usunięto",
     "deleteFailed": "Nie udało się usunąć",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "Nie udało się załadować katalogów LDAP",
     "cancel": "Anuluj"
   },
   "fields": {
@@ -38,7 +38,7 @@
     "useTls": "Użyj TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Hasło Bind",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "Hasło zostało zapisane. Pozostaw to pole puste, aby je zachować.",
     "userSearchBase": "Baza wyszukiwania użytkowników",
     "userSearchFilter": "Filtr wyszukiwania użytkownika",
     "usernameAttr": "Atrybut nazwy użytkownika",

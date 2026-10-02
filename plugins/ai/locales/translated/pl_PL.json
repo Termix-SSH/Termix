@@ -1,29 +1,29 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "Użyj asystenta",
+      "description": "Otwórz asystenta i zadaj mu pytania."
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "Zarządzaj dostawcami",
+      "description": "Dodawaj, edytuj i usuwaj dostawców sztucznej inteligencji oraz ich klucze API."
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "Zastosuj propozycje",
+      "description": "Pozwól asystentowi wprowadzić sugerowane zmiany."
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "Użyj sztucznej inteligencji z innych funkcji",
+      "description": "Inne funkcje mogą umożliwiać wywoływanie asystenta w Twoim imieniu."
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "Udostępnij klucz API",
+      "description": "Inne funkcje mogą wykorzystywać zapisany klucz API AI, nawet go nie widząc."
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "Asystent AI jest wyłączony na tym serwerze.",
+    "providersNeedOptIn": "Włącz asystenta AI powyżej, aby dodać dostawców.",
     "admin": {
       "globallyEnabled": {
         "label": "Asystent AI",
@@ -31,13 +31,13 @@
       },
       "privateEndpoints": {
         "label": "Dozwolone prywatne hosty AI",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "description": "Hosty w Twojej sieci prywatnej, na które użytkownicy mogą wskazać dostawcę, na przykład samodzielnie hostowany Ollama. Umieść jednego hosta na każdej linii."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "Włącz asystenta AI",
+        "description": "Zezwól asystentowi AI na pomoc w terminalu tego hosta. Domyślnie wyłączone, ale nadal wymaga włączenia AI na Twoim koncie."
       }
     }
   },
@@ -90,15 +90,15 @@
     "modelPlaceholder": "Wybierz lub wpisz model",
     "attachHint": "Wpisz @, aby odwołać się do hosta, snippetu lub automatyzacji. Zmiany są proponowane do Twojego zatwierdzenia.",
     "runCommandTitle": "Uruchom polecenie",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "assistant": "Asystent AI",
+    "terminalPanelEmpty": "Zapytaj asystenta o tego hosta. Każda zmiana stanu wymaga Twojej zgody.",
+    "terminalPanelPlaceholder": "Zapytaj o tego gospodarza...",
+    "noProvidersConfigured": "Nie skonfigurowano jeszcze żadnego dostawcy AI. Dodaj go w zakładce Asystent AI.",
+    "runsInOpenTerminal": "Działa w otwartej sesji terminalowej.",
     "runInTerminal": "Uruchom",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "terminalContextPrefill": "Oto wynik mojego terminala:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "Pozwól innym funkcjom używać klucza API dostawcy sztucznej inteligencji do własnych żądań. Klucz nigdy nie jest kopiowany i możesz go w dowolnym momencie cofnąć."
     }
   },
   "nav": {

@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "查看会议录像",
+      "description": "查看并回放您自己的会话录像。"
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "保留时间（天）",
+        "description": "会话录像在自动删除前会保留多长时间？"
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "启用会话录制",
+        "description": "记录此主机的终端输出，以便稍后回放或下载。"
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "记录"
   },
   "sessionLogs": {
     "title": "会话日志",
@@ -36,7 +36,7 @@
     "duration": "持续时间",
     "viewLog": "查看日志",
     "downloadLog": "下载",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "下载为文本",
     "deleteLog": "删除",
     "confirmDelete": "删除此会话日志？",
     "confirmDeleteDesc": "此操作无法撤消。",
@@ -47,14 +47,14 @@
     "filterByHost": "按主机筛选...",
     "back": "返回",
     "empty": "(空)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "没有找到“{{query}}”的结果",
+    "hostFallback": "主机 {{id}}",
+    "sessionFallback": "会话 {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "录制时间线",
+    "speed": "播放速度",
+    "play": "播放录音",
+    "pause": "暂停录制"
   }
 }

@@ -1,14 +1,14 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "管理 ACME 证书",
+      "description": "查看证书状态并立即申请新证书。"
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "自动续订",
+      "description": "每天检查两次，如果没有证书、证书不涵盖该域名或证书将在 30 天内过期，则获取新证书。"
     },
     "domain": {
       "label": "域名",
@@ -17,42 +17,42 @@
     },
     "email": {
       "label": "邮箱",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "description": "ACME账户及到期通知的联系邮箱。",
       "placeholder": "admin@example.com"
     },
     "provider": {
       "label": "证书颁发机构",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "description": "证书获取途径。使用测试环境进行测试，避免超出 Let's Encrypt 的速率限制。",
       "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "letsencryptStaging": "Let's Encrypt（测试版）",
+      "custom": "自定义 ACME 目录"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "ACME目录URL",
+      "description": "仅适用于自定义证书颁发机构。必须是 https URL。"
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "挑战类型",
+      "description": "如何证明您拥有该域名。",
+      "http": "HTTP协议需要可通过互联网访问的80端口。",
+      "cloudflare": "DNS（Cloudflare）——需要 Cloudflare API 令牌"
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
+      "label": "Cloudflare API 令牌",
       "description": "具有您域名的 Zone:DNS:Edit 权限的限定作用域令牌。"
     }
   },
   "status": {
-    "title": "Certificate status",
+    "title": "证书状态",
     "none": "无证书",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
+    "names": "封面 {{names}}",
+    "issuer": "由 {{issuer}} 发行",
     "expires": "过期于 {{date}}",
     "lastIssued": "上次签发于 {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
+    "lastError": "最后一次尝试失败： {{error}}",
+    "missing": "设置域名、电子邮件和您的质询类型所需的字段，然后保存，再申请证书。",
+    "request": "立即申请证书",
     "requesting": "正在请求证书...",
-    "issued": "Certificate issued and installed"
+    "issued": "证书已颁发并安装"
   }
 }

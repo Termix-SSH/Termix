@@ -5,25 +5,25 @@
     "docs": "Documentação"
   },
   "dialog": {
-    "title": "OPKSSH Authentication Required",
-    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication...",
-    "signInWith": "Sign in with {{provider}}"
+    "title": "Autenticação OPKSSH necessária",
+    "description": "Para continuar, complete a autenticação no seu navegador. Esta sessão permanecerá válida por 24 horas.",
+    "openBrowser": "Abra o navegador para autenticar.",
+    "waiting": "Aguardando autenticação no navegador...",
+    "authenticating": "Processando autenticação...",
+    "signInWith": "Faça login com {{provider}}"
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "A autenticação falhou. Verifique suas credenciais e tente novamente.",
+    "timeout": "A autenticação expirou. Tente novamente."
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "URI de redirecionamento",
+      "description": "Registre este URL como um URI de redirecionamento permitido com cada provedor de identidade em sua configuração OPKSSH."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "Use o URI de redirecionamento antigo",
+      "description": "Continue enviando /host/opkssh-callback, o URI de redirecionamento usado antes da versão 2.9. Desative-o assim que seus provedores de identidade permitirem o novo URI."
     }
   },
   "hosts": {

@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Veja as gravações das sessões",
+      "description": "Veja e reproduza as gravações das suas próprias sessões."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Retenção (dias)",
+        "description": "Durante quanto tempo é mantida uma gravação de sessão antes de ser automaticamente eliminada."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Ativar gravação de sessão",
+        "description": "Grave a saída do terminal para este host para que possa reproduzi-la ou descarregá-la posteriormente."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Gravação"
   },
   "sessionLogs": {
     "title": "Registos de Sessão",
@@ -36,7 +36,7 @@
     "duration": "Duração",
     "viewLog": "Ver registo",
     "downloadLog": "Transferir",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "Descarregar como texto",
     "deleteLog": "Eliminar",
     "confirmDelete": "Eliminar este registo de sessão?",
     "confirmDeleteDesc": "Esta ação não pode ser desfeita.",
@@ -47,14 +47,14 @@
     "filterByHost": "Filtrar por host...",
     "back": "Voltar",
     "empty": "(vazio)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "Nenhum resultado para \"{{query}}\"",
+    "hostFallback": "Anfitrião {{id}}",
+    "sessionFallback": "Sessão {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Cronograma de gravação",
+    "speed": "Velocidade de reprodução",
+    "play": "Reproduzir gravação",
+    "pause": "Pausar gravação"
   }
 }

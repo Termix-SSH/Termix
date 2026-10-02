@@ -18,7 +18,7 @@
   "homepage": {
     "title": "Strona główna",
     "addWidget": "Dodaj widżet",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "Brak widgetów w tej kategorii",
     "editWidget": "Edytuj widżet",
     "zoomIn": "Powiększ",
     "zoomOut": "Oddal",
@@ -39,7 +39,7 @@
     "description": "Opis",
     "color": "Kolor",
     "timezone": "Strefa czasowa",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "Nieprawidłowa strefa czasowa. Użyj nazwy IANA, takiej jak America/New_York",
     "showSeconds": "Pokaż sekundy",
     "format12h": "12-godzinny",
     "content": "Treść",
@@ -60,9 +60,9 @@
     "maxItems": "Maksymalna liczba elementów",
     "showDescription": "Pokaż opis",
     "widgetRssName": "Kanał RSS",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "Skonfiguruj adres URL kanału w ustawieniach widżetu",
+    "rssLoadError": "Nie można załadować kanału",
+    "rssNoItems": "Brak pozycji",
     "noHostSelected": "Nie wybrano hosta",
     "displayedMetrics": "Wyświetlane metryki",
     "metricCpu": "Procesor",
@@ -162,29 +162,29 @@
     "selectHosts": "Wybierz hosty",
     "listLayout": "Lista",
     "gridLayout": "Siatka",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "Ustaw adres URL w ustawieniach widżetu",
+    "embeddedContent": "Osadzona treść",
+    "noBookmarks": "Brak zakładek",
+    "noSections": "Nie utworzono żadnych sekcji",
+    "noServices": "Brak skonfigurowanych usług",
+    "configureLocation": "Ustaw lokalizację w ustawieniach widżetu",
+    "bannerTextPlaceholder": "Tekst banera",
+    "serviceNamePlaceholder": "Moja usługa"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Użyj strony głównej",
+      "description": "Przeglądaj i edytuj płótno strony głównej oraz łącza do usług pulpitu nawigacyjnego."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Dozwolone prywatne hosty",
+      "description": "Dokładne prywatne lub pętli zwrotnej nazwy hostów/adresy IP dla statusu pingowania i widżetów niestandardowego API. Oddziel wpisy przecinkami lub znakami nowej linii; pomiń schematy, porty i ścieżki. Puste bloki prywatnych miejsc docelowych."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Prywatny urząd certyfikacji (PEM)",
+      "description": "Opcjonalny pakiet zaufanego urzędu certyfikacji dla hostów z listy dozwolonych. Weryfikacja certyfikatu pozostaje włączona. Pozostaw puste, aby korzystać z systemowego magazynu zaufanych certyfikatów."
     }
   }
 }

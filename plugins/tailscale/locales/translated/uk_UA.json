@@ -1,85 +1,85 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "Переглянути пристрої для хвостової мережі",
+      "description": "Перегляньте пристрої в підключеній мережі Tailnet."
     }
   },
   "settings": {
     "group": {
-      "api": "Tailscale API",
-      "devices": "Tailnet"
+      "api": "API Tailscale",
+      "devices": "Хвостова сітка"
     },
     "apiKey": {
-      "label": "API key",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "label": "Ключ API",
+      "description": "Використовується для переліку пристроїв у вашій мережі Tailnet. Працює з ключем Tailscale або Headscale.",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "Базова URL-адреса API",
+      "description": "Залиште порожнім для Tailscale. Встановіть це значення, щоб воно вказувало на екземпляр Headscale.",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "Список пристроїв",
+      "checking": "Перевірка задньої сітки...",
+      "noKey": "Ключ API ще не встановлено.",
+      "error": "Не вдалося зв'язатися з tailnet. Перевірте ключ API.",
+      "count": "{{count}} пристрій доступний",
+      "count_other": "{{count}} пристроїв доступно",
+      "refresh": "Перевірити"
     }
   },
   "nav": {
-    "tailscale": "Tailscale"
+    "tailscale": "Хвостова шкала"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
-    "tailscaleDeviceSelect": "Select Tailscale device",
-    "tailscaleDeviceSelectPlaceholder": "Select a device...",
-    "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
-    "tailscaleDocsLink": "View docs",
-    "tailscaleLoadingDevices": "Loading devices...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
-    "tailscaleNoDevices": "No devices found in your tailnet.",
-    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
-    "filterAuthTailscale": "Tailscale"
+    "tailscaleUsernameHint": "Це має бути користувач Unix, якому надано ідентифікатор Tailscale у SSH ACL tailnet, не обов'язково root.",
+    "tailscaleDeviceSelect": "Виберіть пристрій Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Виберіть пристрій...",
+    "tailscaleNoApiKey": "Ключ API Tailscale не налаштовано. Додайте його в налаштуваннях адміністратора, щоб увімкнути виявлення пристроїв.",
+    "tailscaleDocsLink": "Переглянути документи",
+    "tailscaleLoadingDevices": "Завантаження пристроїв...",
+    "tailscaleDeviceLoadFailed": "Не вдалося завантажити пристрої Tailscale. Перевірте URL-адресу API та мережеве з’єднання.",
+    "tailscaleNoDevices": "У вашій мережі не знайдено жодних пристроїв.",
+    "tailscaleDeviceAutoFill": "Вибір пристрою призведе до автоматичного заповнення IP-адреси хоста.",
+    "tailscaleAddHost": "Додати хоста",
+    "tailscaleCopyIp": "Копіювати IP-адресу Tailscale",
+    "tailscaleIpCopied": "IP-адресу скопійовано",
+    "tailscaleIpCopyFailed": "Не вдалося скопіювати IP-адресу",
+    "filterAuthTailscale": "Хвостова шкала"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
-    "tailscaleCheckOpenBrowser": "Open Browser to Authenticate",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
-    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+    "tailscaleCheckRequired": "Потрібна автентифікація Tailscale",
+    "tailscaleCheckDescription": "Для Tailscale SSH потрібна додаткова перевірка. Щоб продовжити, автентифікуйтеся у своєму браузері.",
+    "tailscaleCheckOpenBrowser": "Відкрийте браузер для автентифікації",
+    "tailscaleCheckWaiting": "Очікування автентифікації Tailscale...",
+    "tailscaleCheckTimeout": "Час очікування автентифікації Tailscale минув. Будь ласка, спробуйте ще раз."
   },
   "manager": {
-    "title": "Tailscale",
-    "refresh": "Refresh",
-    "retry": "Retry",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
-    "noData": "No data available",
-    "filter": "Filter...",
-    "tsNotInstalled": "Tailscale is not installed on this host",
-    "tsRunning": "Running",
-    "tsStopped": "Stopped",
-    "tsEnable": "Connect",
-    "tsDisable": "Disconnect",
-    "tsEnabling": "Connecting to Tailscale...",
-    "tsDisabling": "Disconnecting from Tailscale...",
-    "tsEnabled": "Tailscale connected",
-    "tsDisabled": "Tailscale disconnected",
-    "tsExitNode": "Exit node",
-    "tsExitNodeActive": "Exit node active"
+    "title": "Хвостова шкала",
+    "refresh": "Оновити",
+    "retry": "Повторити спробу",
+    "sudoHint": "Встановіть пароль sudo для цього хоста, щоб дозволити дії з підвищеними правами.",
+    "noData": "Дані недоступні",
+    "filter": "Фільтр...",
+    "tsNotInstalled": "Tailscale не встановлено на цьому хості",
+    "tsRunning": "Біг",
+    "tsStopped": "Зупинено",
+    "tsEnable": "Підключитися",
+    "tsDisable": "Відключитися",
+    "tsEnabling": "Підключення до Tailscale...",
+    "tsDisabling": "Відключення від Tailscale...",
+    "tsEnabled": "Підключено хвостову шкалу",
+    "tsDisabled": "Хвостова шкала відключена",
+    "tsExitNode": "Вихідний вузол",
+    "tsExitNodeActive": "Вихідний вузол активний"
   },
   "newUi": {
     "sidebar": {
       "quickConnect": {
-        "connectToTerminal": "Connect to Terminal",
-        "usernameLabel": "Username"
+        "connectToTerminal": "Підключення до терміналу",
+        "usernameLabel": "Ім'я користувача"
       }
     }
   }

@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "Đăng nhập bằng SSO",
   "loginWithProvider": "Đăng nhập bằng {{name}}",
   "loading": "Đang tải...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "Quản lý các nhà cung cấp SSO",
+      "description": "Thêm, thay đổi và xóa các nhà cung cấp SSO mà người dùng có thể sử dụng để đăng nhập."
     }
   },
   "providers": {
@@ -16,8 +16,8 @@
     "delete": "Xóa nhà cung cấp",
     "deleteConfirm": "Xóa nhà cung cấp này? Người dùng liên kết sẽ không thể đăng nhập.",
     "name": "Tên hiển thị",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Nhà cung cấp SSO của tôi",
+    "nameRequired": "Tên hiển thị là bắt buộc",
     "type": "Loại nhà cung cấp",
     "enabled": "Đã bật",
     "save": "Lưu nhà cung cấp",
@@ -26,20 +26,20 @@
     "saveFailed": "Không thể lưu",
     "deleted": "Đã xóa",
     "deleteFailed": "Không thể xóa",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "Không thể tải nhà cung cấp SSO",
     "cancel": "Hủy",
     "copy": "Sao chép",
     "copied": "Đã sao chép",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "URI chuyển hướng",
+    "redirectUriDesc": "Hãy đăng ký URL này làm URL chuyển hướng hoặc URL gọi lại trong nhà cung cấp định danh của bạn.",
+    "legacyCallback": "Giữ nguyên URI chuyển hướng cũ.",
+    "legacyCallbackDesc": "Nhà cung cấp này được thiết lập trước Termix 2.9 và vẫn sử dụng URI chuyển hướng cũ, vẫn hoạt động bình thường. Để chuyển sang URI mới, trước tiên hãy thêm {{uri}} vào nhà cung cấp định danh của bạn, sau đó tắt chức năng này đi.",
+    "authorizationUrl": "URL xác thực: {{url}}"
   },
   "fields": {
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "Một bí mật đã được giữ kín. Hãy để trống phần này để bảo vệ nó.",
     "issuerUrl": "Issuer URL",
     "authUrl": "URL ủy quyền",
     "tokenUrl": "Token URL",
@@ -58,8 +58,8 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "Đăng nhập tự động bằng SSO",
+      "description": "Hãy chuyển hướng khách truy cập trực tiếp đến nhà cung cấp SSO đầu tiên thay vì hiển thị biểu mẫu đăng nhập. Biến môi trường OIDC_SILENT_LOGIN_DEFAULT sẽ ghi đè lên cài đặt này."
     }
   }
 }

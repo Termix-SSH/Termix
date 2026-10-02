@@ -1,48 +1,48 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "স্টেপ সিএ"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
-    "docs": "View docs"
+    "label": "স্টেপ সিএ",
+    "description": "আপনার আইডেন্টিটি প্রোভাইডারের মাধ্যমে সাইন ইন করুন এবং আপনার স্টেপ সিএ-কে এই হোস্টের জন্য একটি স্বল্পস্থায়ী এসএসএইচ সার্টিফিকেট ইস্যু করতে দিন। সিএ ইউআরএল, রুট ফিঙ্গারপ্রিন্ট এবং ওআইডিসি প্রোভিশনার একজন অ্যাডমিনিস্ট্রেটর দ্বারা অ্যাডমিন সেটিংস-এর স্টেপ সিএ সেকশনে সেট করা হয়।",
+    "docs": "নথি দেখুন"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication..."
+    "title": "ধাপ CA প্রমাণীকরণ আবশ্যক",
+    "description": "চালিয়ে যাওয়ার জন্য আপনার ব্রাউজারে প্রমাণীকরণ সম্পন্ন করুন। আপনার CA যতক্ষণ অনুমতি দেয়, ততক্ষণ সার্টিফিকেটটি বৈধ থাকবে।",
+    "openBrowser": "প্রমাণীকরণের জন্য ব্রাউজার খুলুন",
+    "waiting": "ব্রাউজারে প্রমাণীকরণের জন্য অপেক্ষা করা হচ্ছে...",
+    "authenticating": "প্রমাণীকরণ প্রক্রিয়া চলছে..."
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "প্রমাণীকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আপনার পরিচয়পত্র যাচাই করে আবার চেষ্টা করুন।",
+    "timeout": "প্রমাণীকরণের সময়সীমা শেষ হয়ে গেছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
   },
   "settings": {
     "caUrl": {
       "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "description": "আপনার smallstep CA-এর https URL। Step CA বন্ধ করতে CA URL, fingerprint এবং provisioner খালি রাখুন।",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "রুট ফিঙ্গারপ্রিন্ট (SHA-256)",
+      "description": "রুট সার্টিফিকেটের ফিঙ্গারপ্রিন্ট, যা ca bootstrap ধাপে দেখানো হয়েছে।"
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "OIDC সরবরাহকারীর নাম",
+      "description": "CA-এর OIDC প্রোভিশনারের নাম। তারপর হোস্টের অথেনটিকেশন টাইপ হিসেবে \"স্টেপ CA\" বেছে নিন।"
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "ব্যক্তিগত স্টেপ সিএ হোস্টদের অনুমতি দেওয়া হয়েছে",
+      "description": "স্টেপ সিএ সার্টিফিকেট ফ্লো যেসব প্রাইভেট হোস্টের সাথে যোগাযোগ করতে পারে, সেগুলো হলো: স্বয়ং সিএ (CA) এবং, যদি অভ্যন্তরীণ হয়, আপনার আইডেন্টিটি প্রোভাইডার। এদেরকে কমা অথবা নতুন লাইন দিয়ে আলাদা করুন।"
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "পুনঃনির্দেশ URI",
+      "description": "OIDC প্রোভিশনারের পেছনের আইডেন্টিটি প্রোভাইডারের কাছে এই URL-টিকে একটি অনুমোদিত রিডাইরেক্ট URI হিসেবে নিবন্ধন করুন।"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "পুরানো রিডাইরেক্ট ইউআরআই ব্যবহার করুন",
+      "description": "/host/step-ca-callback, অর্থাৎ ২.৯-এর আগে ব্যবহৃত রিডাইরেক্ট ইউআরআইটি পাঠানো চালিয়ে যান। আপনার আইডেন্টিটি প্রোভাইডার নতুনটির অনুমতি দিলে এটি বন্ধ করে দিন।"
     }
   }
 }

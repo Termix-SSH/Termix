@@ -1,15 +1,15 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "Шаг CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "label": "Шаг CA",
+    "description": "Войдите в систему через своего поставщика идентификации и позвольте вашему центру сертификации Step CA выдать краткосрочный SSH-сертификат для этого хоста. URL-адрес центра сертификации, отпечаток корневого сертификата и средство подготовки OIDC задаются администратором в разделе Step CA в настройках администратора.",
     "docs": "Документация"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "title": "Требуется аутентификация центра сертификации (CA) на этапе Step.",
+    "description": "Для продолжения необходимо пройти полную аутентификацию в браузере. Сертификат остается действительным до тех пор, пока это разрешает ваш центр сертификации.",
     "openBrowser": "Открыть браузер для аутентификации",
     "waiting": "Ожидание аутентификации в браузере...",
     "authenticating": "Обработка аутентификации..."
@@ -21,28 +21,28 @@
   "settings": {
     "caUrl": {
       "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "description": "URL-адрес вашего центра сертификации smallstep с протоколом HTTPS. Оставьте поля URL-адреса центра сертификации, отпечатка и инициализатора пустыми, чтобы отключить центр сертификации step.",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "Отпечаток корневого ключа (SHA-256)",
+      "description": "Отпечаток корневого сертификата, как показано на шаге загрузки ca."
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "имя поставщика OIDC",
+      "description": "Имя средства подготовки OIDC центра сертификации. Затем выберите \"Step CA\" в качестве типа аутентификации хоста."
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "Разрешены частные хосты Step CA",
+      "description": "Частные хосты, для которых процесс сертификации Step CA может взаимодействовать с центром сертификации, могут связываться с самим центром сертификации и, если он внутренний, с вашим поставщиком идентификации. Разделяйте их запятыми или переносами строк."
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "URI перенаправления",
+      "description": "Зарегистрируйте этот URL-адрес в качестве разрешенного URI перенаправления у поставщика идентификационных данных, стоящего за устройством предоставления OIDC."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "Используйте старый URI перенаправления.",
+      "description": "Продолжайте отправлять /host/step-ca-callback, URI перенаправления, использовавшийся до версии 2.9. Отключите эту функцию, как только ваш поставщик идентификации разрешит использование нового URI."
     }
   }
 }

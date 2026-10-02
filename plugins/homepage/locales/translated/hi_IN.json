@@ -18,7 +18,7 @@
   "homepage": {
     "title": "होमपेज",
     "addWidget": "विजेट जोड़ें",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "इस श्रेणी में कोई विजेट नहीं हैं",
     "editWidget": "विजेट संपादित करें",
     "zoomIn": "ज़ूम इन",
     "zoomOut": "ज़ूम आउट",
@@ -39,7 +39,7 @@
     "description": "विवरण",
     "color": "रंग",
     "timezone": "समय क्षेत्र",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "समय क्षेत्र अमान्य है। कृपया IANA नाम का उपयोग करें, जैसे कि America/New_York",
     "showSeconds": "सेकंड दिखाएँ",
     "format12h": "12-घंटे",
     "content": "सामग्री",
@@ -60,9 +60,9 @@
     "maxItems": "अधिकतम आइटम",
     "showDescription": "विवरण दिखाएं",
     "widgetRssName": "RSS फ़ीड",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "विजेट सेटिंग में फ़ीड URL कॉन्फ़िगर करें",
+    "rssLoadError": "फ़ीड लोड नहीं हो सका",
+    "rssNoItems": "कोई आइटम नहीं",
     "noHostSelected": "कोई होस्ट चयनित नहीं",
     "displayedMetrics": "प्रदर्शित मेट्रिक्स",
     "metricCpu": "CPU",
@@ -162,29 +162,29 @@
     "selectHosts": "होस्ट चुनें",
     "listLayout": "सूची",
     "gridLayout": "ग्रिड",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "विजेट सेटिंग में एक URL सेट करें",
+    "embeddedContent": "अंतर्निहित सामग्री",
+    "noBookmarks": "कोई बुकमार्क नहीं",
+    "noSections": "कोई अनुभाग स्थापित नहीं किया गया है",
+    "noServices": "कोई सेवा स्थापित नहीं की गई",
+    "configureLocation": "विजेट सेटिंग में स्थान निर्धारित करें",
+    "bannerTextPlaceholder": "बैनर पाठ",
+    "serviceNamePlaceholder": "मेरी सेवा"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "होमपेज का उपयोग करें",
+      "description": "होमपेज कैनवास और डैशबोर्ड सेवा लिंक देखें और संपादित करें।"
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "निजी होस्ट की अनुमति है",
+      "description": "पिंग स्टेटस और कस्टम API विजेट के लिए सटीक निजी या लूपबैक होस्टनाम/IP पते। प्रविष्टियों को अल्पविराम या नई लाइन से अलग करें; स्कीम, पोर्ट और पथ को छोड़ दें। खाली ब्लॉक निजी गंतव्यों के लिए हैं।"
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "निजी प्रमाणपत्र प्राधिकरण (पीईएम)",
+      "description": "अनुमत होस्टों के लिए वैकल्पिक विश्वसनीय CA बंडल। प्रमाणपत्र सत्यापन सक्षम रहता है। सिस्टम ट्रस्ट स्टोर का उपयोग करने के लिए इसे खाली छोड़ दें।"
     }
   }
 }

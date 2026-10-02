@@ -41,9 +41,9 @@
         "lastSessionDescription": "Automatycznie aktualizowany o najnowszy układ kart. Zastosuj go, aby przywrócić to, co było otwarte.",
         "lastUsed": "Ostatnio użyte {{time}}",
         "neverUsed": "Nigdy nie zastosowano",
-        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "tabsSkipped": "Zastosowano obszar roboczy, ale {{count}} kart zostało pominiętych, ponieważ ich host już nie istnieje: {{names}}",
         "timeAgo": {
-          "seconds": "{{count}}s ago",
+          "seconds": "{{count}}s temu",
           "minutes": "{{count}} min temu",
           "hours": "{{count}} godz. temu",
           "days": "{{count}} dni temu"
@@ -60,8 +60,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use workspaces",
-      "description": "Save, apply and manage saved tab layouts."
+      "title": "Użyj obszarów roboczych",
+      "description": "Zapisz, zastosuj i zarządzaj zapisanymi układami kart."
     }
   },
   "hosts": {

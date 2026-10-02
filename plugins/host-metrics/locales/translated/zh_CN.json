@@ -19,21 +19,21 @@
     "cpuUsage": "CPU 使用率",
     "memoryUsage": "内存使用率",
     "diskUsage": "磁盘使用率",
-    "selectFilesystem": "Select filesystem",
+    "selectFilesystem": "选择文件系统",
     "temperature": "温度",
     "highestTemperature": "最高温度",
-    "primaryTemperatureSensor": "Primary sensor",
+    "primaryTemperatureSensor": "主传感器",
     "gpu": {
       "title": "GPU",
-      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
-      "driver": "Driver {{version}}",
-      "utilization": "Utilization",
-      "memory": "VRAM",
-      "temperature": "Temp",
-      "power": "Power",
-      "fan": "Fan",
-      "processes": "GPU processes",
-      "noProcesses": "No processes are using the GPU"
+      "noDevice": "未检测到NVIDIA GPU。请安装NVIDIA驱动程序（它提供nvidia-smi）以查看GPU指标。",
+      "driver": "司机 {{version}}",
+      "utilization": "利用率",
+      "memory": "显存",
+      "temperature": "温度",
+      "power": "力量",
+      "fan": "扇子",
+      "processes": "GPU 进程",
+      "noProcesses": "没有进程正在使用 GPU"
     },
     "failedToFetchHostConfig": "获取主机配置失败",
     "serverOffline": "服务器离线",
@@ -178,7 +178,7 @@
       "wgLastHandshake": "上次握手",
       "wgHandshakeNever": "从未",
       "wgTransfer": "传输",
-      "wgNoPeers": "No peers"
+      "wgNoPeers": "没有对手"
     }
   },
   "metricsHistory": {
@@ -204,14 +204,14 @@
     "metricsIntervalS": "指标间隔（秒）",
     "metricsIntervalDesc2": "指标快照之间的秒数",
     "excludedMountsLabel": "排除的挂载点",
-    "monitoredMountsLabel": "Custom monitored paths",
-    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
-    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountsLabel": "自定义监控路径",
+    "monitoredMountsDesc": "添加未作为单独挂载点公开的路径，包括绑定挂载的 Home Assistant 路径，例如 /config。",
+    "monitoredMountPathPlaceholder": "路径（/config，/mnt/data）",
     "monitoredMountLabelPlaceholder": "标签（可选）",
-    "addMonitoredMount": "Add path",
-    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
-    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
-    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addMonitoredMount": "添加路径",
+    "excludedMountsDesc": "隐藏此主机磁盘使用情况和警报中的特定挂载点或文件系统类型（例如 nfs、cifs）。",
+    "excludedMountsPlaceholder": "挂载路径（/mnt/nas）或文件系统类型（nfs、cifs）",
+    "excludedMountsEmpty": "未排除任何挂载点。显示所有检测到的文件系统。",
     "addExcludedMount": "添加",
     "visibleWidgets": "可见小部件",
     "widgetsMovedToHostMetrics": "卡片现在可在“主机指标”选项卡中直接添加、排列和调整大小。打开此主机的“主机指标”，使用“自定义”选择要显示的卡片。",
@@ -250,7 +250,7 @@
     "selectHost": "选择主机..."
   },
   "terminalStatus": {
-    "unavailable": "Live stats unavailable"
+    "unavailable": "实时统计数据不可用"
   },
   "dashboard": {
     "cpu": "CPU",
@@ -264,48 +264,48 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Host Metrics",
-      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+      "title": "使用主机指标",
+      "description": "查看主机指标并使用您可以访问的主机上的主机管理器（服务、软件包、防火墙等）。"
     }
   },
   "settings": {
     "admin": {
       "metricsInterval": {
-        "label": "Metrics interval (seconds)",
-        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+        "label": "指标间隔（秒）",
+        "description": "除非主机自行设置间隔，否则将对正在查看的主机进行采样的频率。"
       },
       "historyRetentionDays": {
-        "label": "History retention (days)",
-        "description": "How long metrics samples are kept for the history charts."
+        "label": "历史数据保留时间（天）",
+        "description": "历史图表中的指标样本保留多长时间？"
       },
       "enabledForNewHosts": {
-        "label": "Metrics on for new hosts",
-        "description": "Whether new hosts start with metrics collection turned on."
+        "label": "新主机指标",
+        "description": "新主机是否默认开启指标收集功能。"
       }
     },
     "user": {
       "temperatureUnit": {
-        "label": "Temperature unit",
-        "description": "How temperatures are shown in Host Metrics.",
-        "celsius": "Celsius",
-        "fahrenheit": "Fahrenheit"
+        "label": "温度单位",
+        "description": "主机指标中如何显示温度。",
+        "celsius": "摄氏度",
+        "fahrenheit": "华氏度"
       }
     },
     "host": {
       "metricsEnabled": {
-        "label": "Collect metrics"
+        "label": "收集指标"
       },
       "metricsInterval": {
-        "label": "Metrics interval (seconds)"
+        "label": "指标间隔（秒）"
       },
       "enabledWidgets": {
-        "label": "Enabled widgets"
+        "label": "已启用的小部件"
       },
       "excludedMounts": {
-        "label": "Excluded mounts"
+        "label": "排除的安装点"
       },
       "monitoredMounts": {
-        "label": "Monitored paths"
+        "label": "监控路径"
       }
     }
   }

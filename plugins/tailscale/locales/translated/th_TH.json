@@ -1,85 +1,85 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "ดูอุปกรณ์เทลเน็ต",
+      "description": "ดูอุปกรณ์ต่างๆ บนเครือข่ายหางที่เชื่อมต่ออยู่"
     }
   },
   "settings": {
     "group": {
-      "api": "Tailscale API",
-      "devices": "Tailnet"
+      "api": "API เทลสเกล",
+      "devices": "เทลเน็ต"
     },
     "apiKey": {
-      "label": "API key",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "label": "คีย์ API",
+      "description": "ใช้สำหรับแสดงรายการอุปกรณ์ในเครือข่ายหาง (tailnet) ของคุณ ใช้งานได้กับคีย์ Tailscale หรือ Headscale",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "URL พื้นฐานของ API",
+      "description": "เว้นช่อง Tailscale ว่างไว้ ตั้งค่าให้ชี้ไปยังอินสแตนซ์ Headscale",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "รายการอุปกรณ์",
+      "checking": "กำลังตรวจสอบสายเชื่อมต่อ...",
+      "noKey": "ยังไม่ได้ตั้งค่าคีย์ API",
+      "error": "ไม่สามารถเชื่อมต่อกับ tailnet ได้ โปรดตรวจสอบคีย์ API",
+      "count": "{{count}} อุปกรณ์สามารถเข้าถึงได้",
+      "count_other": "อุปกรณ์ {{count}} ที่สามารถเข้าถึงได้",
+      "refresh": "ตรวจสอบ"
     }
   },
   "nav": {
-    "tailscale": "Tailscale"
+    "tailscale": "เกล็ดหาง"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
-    "tailscaleDeviceSelect": "Select Tailscale device",
-    "tailscaleDeviceSelectPlaceholder": "Select a device...",
-    "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
-    "tailscaleDocsLink": "View docs",
-    "tailscaleLoadingDevices": "Loading devices...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
-    "tailscaleNoDevices": "No devices found in your tailnet.",
-    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
-    "filterAuthTailscale": "Tailscale"
+    "tailscaleUsernameHint": "ผู้ใช้งานนี้ต้องเป็นผู้ใช้ Unix ที่ได้รับสิทธิ์การใช้งาน Tailscale ใน SSH ACL ของ tailnet ไม่จำเป็นต้องเป็น root เสมอไป",
+    "tailscaleDeviceSelect": "เลือกอุปกรณ์ Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "เลือกอุปกรณ์...",
+    "tailscaleNoApiKey": "ไม่ได้กำหนดค่าคีย์ API ของ Tailscale ไว้ โปรดเพิ่มคีย์ใน การตั้งค่าผู้ดูแลระบบ เพื่อเปิดใช้งานการค้นหาอุปกรณ์",
+    "tailscaleDocsLink": "ดูเอกสาร",
+    "tailscaleLoadingDevices": "กำลังโหลดอุปกรณ์...",
+    "tailscaleDeviceLoadFailed": "ไม่สามารถโหลดอุปกรณ์ Tailscale ได้ โปรดตรวจสอบ URL API และการเชื่อมต่อเครือข่าย",
+    "tailscaleNoDevices": "ไม่พบอุปกรณ์ใดๆ ในเครือข่ายของคุณ",
+    "tailscaleDeviceAutoFill": "การเลือกอุปกรณ์จะทำให้ระบบกรอกที่อยู่ IP ของโฮสต์โดยอัตโนมัติ",
+    "tailscaleAddHost": "เพิ่มโฮสต์",
+    "tailscaleCopyIp": "คัดลอก Tailscale IP",
+    "tailscaleIpCopied": "คัดลอก IP แล้ว",
+    "tailscaleIpCopyFailed": "ไม่สามารถคัดลอก IP ได้",
+    "filterAuthTailscale": "เกล็ดหาง"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
-    "tailscaleCheckOpenBrowser": "Open Browser to Authenticate",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
-    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+    "tailscaleCheckRequired": "ต้องยืนยันตัวตนด้วย Tailscale",
+    "tailscaleCheckDescription": "การเชื่อมต่อ Tailscale SSH ต้องการการตรวจสอบเพิ่มเติม โปรดยืนยันตัวตนในเบราว์เซอร์ของคุณเพื่อดำเนินการต่อ",
+    "tailscaleCheckOpenBrowser": "เปิดเบราว์เซอร์เพื่อยืนยันตัวตน",
+    "tailscaleCheckWaiting": "กำลังรอการยืนยันตัวตนจาก Tailscale...",
+    "tailscaleCheckTimeout": "การตรวจสอบสิทธิ์ Tailscale หมดเวลา โปรดลองอีกครั้ง"
   },
   "manager": {
-    "title": "Tailscale",
-    "refresh": "Refresh",
-    "retry": "Retry",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
-    "noData": "No data available",
-    "filter": "Filter...",
-    "tsNotInstalled": "Tailscale is not installed on this host",
-    "tsRunning": "Running",
-    "tsStopped": "Stopped",
-    "tsEnable": "Connect",
-    "tsDisable": "Disconnect",
-    "tsEnabling": "Connecting to Tailscale...",
-    "tsDisabling": "Disconnecting from Tailscale...",
-    "tsEnabled": "Tailscale connected",
-    "tsDisabled": "Tailscale disconnected",
-    "tsExitNode": "Exit node",
-    "tsExitNodeActive": "Exit node active"
+    "title": "เกล็ดหาง",
+    "refresh": "รีเฟรช",
+    "retry": "ลองใหม่อีกครั้ง",
+    "sudoHint": "ตั้งรหัสผ่าน sudo สำหรับโฮสต์นี้เพื่ออนุญาตการดำเนินการในระดับสิทธิ์สูง",
+    "noData": "ไม่มีข้อมูล",
+    "filter": "กรอง...",
+    "tsNotInstalled": "Tailscale ไม่ได้ติดตั้งอยู่ในเครื่องนี้",
+    "tsRunning": "วิ่ง",
+    "tsStopped": "หยุด",
+    "tsEnable": "เชื่อมต่อ",
+    "tsDisable": "ตัดการเชื่อมต่อ",
+    "tsEnabling": "กำลังเชื่อมต่อกับ Tailscale...",
+    "tsDisabling": "กำลังตัดการเชื่อมต่อจาก Tailscale...",
+    "tsEnabled": "เกล็ดหางเชื่อมต่อ",
+    "tsDisabled": "เกล็ดหางหลุด",
+    "tsExitNode": "โหนดทางออก",
+    "tsExitNodeActive": "โหนดทางออกทำงานอยู่"
   },
   "newUi": {
     "sidebar": {
       "quickConnect": {
-        "connectToTerminal": "Connect to Terminal",
-        "usernameLabel": "Username"
+        "connectToTerminal": "เชื่อมต่อกับเทอร์มินัล",
+        "usernameLabel": "ชื่อผู้ใช้"
       }
     }
   }

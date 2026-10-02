@@ -1,172 +1,172 @@
 {
   "nav": {
-    "alerts": "Alerts"
+    "alerts": "การแจ้งเตือน"
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "ใช้การแจ้งเตือน",
+      "description": "รับการแจ้งเตือนในกล่องข้อความขาเข้า และส่งต่อไปยังช่องทางของคุณเองได้"
     }
   },
   "onboarding": {
-    "feature": "Alerts",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "feature": "การแจ้งเตือน",
+    "featureDesc": "การแจ้งเตือนทั้งหมดจะถูกส่งไปยังกล่องข้อความเดียว และส่งต่อไปยัง Discord, NTFI, อีเมล หรือ Webhook ตามที่คุณต้องการ"
   },
   "settings": {
     "group": {
-      "general": "General",
-      "email": "Email"
+      "general": "ทั่วไป",
+      "email": "อีเมล"
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "ประกาศจาก Termix",
+        "description": "แสดงข่าวสารจากทีม Termix เช่น ประกาศด้านความปลอดภัยและการอัปเดตต่างๆ ในกล่องจดหมายของทุกคน"
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "ตั้งค่าการแจ้งเตือนเป็นเวลา (วัน)",
+        "description": "การแจ้งเตือนเก่าๆ จะถูกลบออกจากกล่องจดหมายทุกกล่อง"
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "เซิร์ฟเวอร์ SMTP",
+        "description": "จำเป็นสำหรับช่องทางการส่งอีเมล เว้นว่างไว้เพื่อปิดการใช้งานอีเมล",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "พอร์ต SMTP",
+        "description": "โดยทั่วไปจะใช้พอร์ต 587 สำหรับ STARTTLS หรือ 465 สำหรับ TLS"
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "ใช้ TLS ตั้งแต่เริ่มต้น",
+        "description": "เปิดใช้งานสำหรับพอร์ต 465 ปิดใช้งานสำหรับพอร์ต 587 ซึ่งจะอัปเกรดเป็น TLS โดยอัตโนมัติ"
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "ชื่อผู้ใช้ SMTP",
+        "description": "เว้นว่างไว้หากเซิร์ฟเวอร์ไม่ต้องการการเข้าสู่ระบบ"
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "รหัสผ่าน SMTP",
+        "description": "จัดเก็บในรูปแบบเข้ารหัส"
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
-        "placeholder": "Termix <alerts@example.com>"
+        "label": "จากที่อยู่",
+        "description": "การแจ้งเตือนจากผู้ส่งมาจาก...",
+        "placeholder": "เทอร์มิกซ์ <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
-        "off": "None"
+        "label": "ป๊อปอัปแจ้งเตือน",
+        "description": "มีการแจ้งเตือนใหม่ๆ อะไรบ้างที่จะปรากฏขึ้นขณะที่คุณใช้งาน Termix การแจ้งเตือนเหล่านั้นจะถูกส่งไปยังกล่องจดหมายเข้าเสมอ",
+        "all": "การแจ้งเตือนทั้งหมด",
+        "warning": "คำเตือนและข้อสำคัญ",
+        "critical": "เฉพาะกรณีวิกฤติเท่านั้น",
+        "off": "ไม่มี"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
-    "channels": "Channels",
-    "rules": "Delivery rules"
+    "inbox": "กล่องขาเข้า",
+    "channels": "ช่องต่างๆ",
+    "rules": "กฎการจัดส่ง"
   },
   "severity": {
-    "info": "Info",
-    "success": "Success",
-    "warning": "Warning",
-    "critical": "Critical"
+    "info": "ข้อมูล",
+    "success": "ความสำเร็จ",
+    "warning": "คำเตือน",
+    "critical": "วิกฤต"
   },
   "inbox": {
-    "sourceTermix": "Termix",
-    "openLink": "Open",
-    "view": "View",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
-    "delete": "Delete",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "sourceTermix": "เทอร์มิกซ์",
+    "openLink": "เปิด",
+    "view": "ดู",
+    "unread": "ยังไม่ได้อ่าน",
+    "deliveryFailed_one": "{{count}} ช่องทางล้มเหลว",
+    "deliveryFailed_other": "{{count}} ช่องทางล้มเหลว",
+    "markRead": "ทำเครื่องหมายว่าอ่านแล้ว",
+    "markUnread": "ทำเครื่องหมายว่ายังไม่ได้อ่าน",
+    "markAllRead": "ทำเครื่องหมายว่าอ่านแล้วทั้งหมด",
+    "delete": "ลบ",
+    "clearRead": "ลบการแจ้งเตือนการอ่าน",
+    "cleared_one": "ลบการแจ้งเตือน {{count}} แล้ว",
+    "cleared_other": "ลบการแจ้งเตือน {{count}} แล้ว",
+    "filterAll": "ทั้งหมด",
+    "filterUnread": "ยังไม่ได้อ่าน",
+    "anySeverity": "ความรุนแรงใดๆ",
+    "anySource": "แหล่งที่มาใดๆ",
+    "openAll": "เปิดในแท็บใหม่",
+    "empty": "ยังไม่มีการแจ้งเตือนใดๆ",
+    "emptyUnread": "คุณได้รับข้อมูลครบถ้วนแล้ว",
+    "loadMore": "โหลดเพิ่มเติม"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
-    "enabled": "Enabled",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "type": "Type",
+    "intro": "ช่องทางต่างๆ คือที่ที่การแจ้งเตือนสามารถส่งออกไปภายนอก Termix ได้ กฎการส่งจะเลือกว่าการแจ้งเตือนใดควรใช้ช่องทางเหล่านั้น",
+    "add": "เพิ่มช่องทาง",
+    "edit": "แก้ไขช่อง",
+    "test": "ส่งทดสอบ",
+    "testSent": "ส่งการแจ้งเตือนการทดสอบแล้ว",
+    "testFailed": "การทดสอบล้มเหลว: {{error}}",
+    "deleteConfirm": "ลบช่อง \"{{name}}\"?",
+    "deleted": "ช่องถูกลบแล้ว",
+    "empty": "ยังไม่มีช่องทางใด ๆ",
+    "enabled": "เปิดใช้งาน",
+    "needsSave": "ต้องเปิดและบันทึกช่องทางนี้อีกครั้งก่อนจึงจะสามารถส่งได้",
+    "name": "ชื่อ",
+    "nameRequired": "ต้องระบุชื่อ",
+    "type": "พิมพ์",
     "types": {
-      "webhook": "Webhook",
+      "webhook": "เว็บฮุค",
       "ntfy": "ntfy",
-      "discord": "Discord",
-      "email": "Email"
+      "discord": "ดิสคอร์ด",
+      "email": "อีเมล"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "emailUnavailable": "อีเมลจำเป็นต้องมีเซิร์ฟเวอร์ SMTP ซึ่งผู้ดูแลระบบจะตั้งค่าไว้ในการตั้งค่าการแจ้งเตือน",
     "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
-    "ntfyServer": "Server URL",
-    "ntfyTopic": "Topic",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "webhookHint": "จะได้รับข้อมูล JSON สำหรับการแจ้งเตือนทุกครั้ง",
+    "method": "วิธี",
+    "headers": "ส่วนหัว",
+    "headersHint": "หนึ่งรายการต่อบรรทัด เช่น ชื่อ: ค่า",
+    "ntfyServer": "URL ของเซิร์ฟเวอร์",
+    "ntfyTopic": "หัวข้อ",
+    "ntfyToken": "โทเค็นการเข้าถึง (ไม่บังคับ)",
+    "discordUrl": "URL เว็บฮุคของ Discord",
+    "discordHint": "จากเมนูการตั้งค่าของช่องใน Discord ในส่วน \"การผสานรวม\"",
+    "discordUsername": "ชื่อที่แสดง (ไม่บังคับ)",
+    "discordAvatar": "URL รูปประจำตัว (ไม่บังคับ)",
+    "emailTo": "ส่งไปยัง",
+    "emailHint": "คั่นที่อยู่มากกว่าหนึ่งรายการด้วยเครื่องหมายจุลภาค",
+    "privateNetwork": "อนุญาตให้ใช้ที่อยู่เครือข่ายส่วนตัว",
+    "privateNetworkHint": "ใช้ได้เฉพาะกับโฮสต์ที่ผู้ดูแลระบบอนุญาตในรายการปลายทางส่วนตัวเท่านั้น"
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
-    "enabled": "Enabled",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "intro": "กฎการส่งจะส่งการแจ้งเตือนที่ตรงกันไปยังช่องทางต่างๆ ของคุณ การแจ้งเตือนเหล่านี้จะยังคงอยู่ในกล่องจดหมายเข้าเสมอ",
+    "add": "เพิ่มกฎ",
+    "edit": "แก้ไขกฎ",
+    "empty": "ยังไม่มีการกำหนดกฎเกณฑ์ใดๆ ดังนั้นการแจ้งเตือนจะปรากฏเฉพาะในกล่องจดหมายเข้าเท่านั้น",
+    "needChannel": "เพิ่มช่องทางก่อน",
+    "enabled": "เปิดใช้งาน",
+    "name": "ชื่อ",
+    "nameRequired": "ต้องระบุชื่อ",
+    "match": "การแจ้งเตือนที่จะส่ง",
+    "matchHint": "*สำหรับทุกสิ่งทุกอย่าง ระบบอัตโนมัติ* สำหรับทุกสิ่งทุกอย่างจากระบบอัตโนมัติ หรือระบบอัตโนมัติแบบใดแบบหนึ่งโดยเฉพาะ",
+    "minSeverity": "อย่างน้อย",
+    "channels": "ส่งไปยัง",
+    "channelRequired": "เลือกอย่างน้อยหนึ่งช่อง",
+    "deleteConfirm": "ลบกฎ \"{{name}} \" ออกหรือไม่?",
+    "everything": "ทุกอย่าง",
+    "summary": "{{match}}, {{severity}} หรือสูงกว่า ไปจนถึง {{channels}}"
   },
   "actions": {
-    "cancel": "Cancel",
-    "save": "Save",
-    "saving": "Saving...",
-    "delete": "Delete"
+    "cancel": "ยกเลิก",
+    "save": "บันทึก",
+    "saving": "ประหยัด...",
+    "delete": "ลบ"
   },
   "widget": {
-    "name": "Alert Feed",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
-    "allClear": "All clear",
-    "loading": "Loading..."
+    "name": "ฟีดแจ้งเตือน",
+    "description": "การแจ้งเตือนล่าสุดของคุณ พร้อมวิธีทำเครื่องหมายว่าอ่านแล้วอย่างรวดเร็ว",
+    "maxItems": "ไอเทมสูงสุด",
+    "showRead": "แสดงการแจ้งเตือนการอ่าน",
+    "allClear": "ทุกอย่างเรียบร้อย",
+    "loading": "กำลังโหลด..."
   }
 }

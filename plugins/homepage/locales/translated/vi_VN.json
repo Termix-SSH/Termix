@@ -18,7 +18,7 @@
   "homepage": {
     "title": "Trang chủ",
     "addWidget": "Thêm widget",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "Không có tiện ích nào trong danh mục này.",
     "editWidget": "Sửa widget",
     "zoomIn": "Phóng to",
     "zoomOut": "Thu nhỏ",
@@ -39,7 +39,7 @@
     "description": "Mô tả",
     "color": "Màu sắc",
     "timezone": "Múi giờ",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "Múi giờ không hợp lệ. Hãy sử dụng tên IANA như America/New_York.",
     "showSeconds": "Hiển thị giây",
     "format12h": "12 giờ",
     "content": "Nội dung",
@@ -60,9 +60,9 @@
     "maxItems": "Số mục tối đa",
     "showDescription": "Hiển thị mô tả",
     "widgetRssName": "Nguồn RSS",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "Cấu hình URL nguồn cấp dữ liệu trong cài đặt tiện ích.",
+    "rssLoadError": "Không thể tải nguồn cấp dữ liệu",
+    "rssNoItems": "Không có mặt hàng nào",
     "noHostSelected": "Chưa chọn máy chủ",
     "displayedMetrics": "Chỉ số hiển thị",
     "metricCpu": "CPU",
@@ -162,29 +162,29 @@
     "selectHosts": "Chọn máy chủ",
     "listLayout": "Danh sách",
     "gridLayout": "Lưới",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "Đặt URL trong cài đặt tiện ích.",
+    "embeddedContent": "Nội dung nhúng",
+    "noBookmarks": "Không có dấu trang",
+    "noSections": "Chưa có phần nào được thiết lập.",
+    "noServices": "Chưa có dịch vụ nào được thiết lập.",
+    "configureLocation": "Chọn vị trí trong cài đặt tiện ích.",
+    "bannerTextPlaceholder": "Văn bản biểu ngữ",
+    "serviceNamePlaceholder": "Dịch vụ của tôi"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Sử dụng trang chủ",
+      "description": "Xem và chỉnh sửa giao diện trang chủ và các liên kết dịch vụ trên bảng điều khiển."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Cho phép chủ nhà riêng",
+      "description": "Nhập chính xác tên máy chủ/địa chỉ IP riêng hoặc loopback cho tiện ích Ping Status và Custom API. Phân tách các mục bằng dấu phẩy hoặc xuống dòng; bỏ qua lược đồ, cổng và đường dẫn. Để trống các mục đích riêng tư."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Cơ quan cấp chứng chỉ tư nhân (PEM)",
+      "description": "Gói CA đáng tin cậy tùy chọn cho các máy chủ được phép. Quá trình xác minh chứng chỉ vẫn được bật. Để trống để sử dụng kho lưu trữ chứng chỉ tin cậy của hệ thống."
     }
   }
 }

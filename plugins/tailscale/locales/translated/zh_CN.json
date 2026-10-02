@@ -1,66 +1,66 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "查看尾网设备",
+      "description": "查看已连接尾网上的设备。"
     }
   },
   "settings": {
     "group": {
       "api": "Tailscale API",
-      "devices": "Tailnet"
+      "devices": "尾网"
     },
     "apiKey": {
       "label": "API 密钥",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "description": "用于列出尾网中的设备。可与 Tailscale 或 Headscale 密钥配合使用。",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "API 基本 URL",
+      "description": "留空表示 Tailscale。设置此项可指向 Headscale 实例。",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "设备列表",
+      "checking": "检查尾网……",
+      "noKey": "尚未设置 API 密钥。",
+      "error": "无法连接到尾网。请检查API密钥。",
+      "count": "{{count}} 设备可达",
+      "count_other": "{{count}} 设备可达",
+      "refresh": "查看"
     }
   },
   "nav": {
     "tailscale": "Tailscale"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleUsernameHint": "这必须是您在 Tailscale 身份中被授予的 Unix 用户，但不一定是 root 用户。",
     "tailscaleDeviceSelect": "选择 Tailscale 设备",
     "tailscaleDeviceSelectPlaceholder": "选择设备...",
     "tailscaleNoApiKey": "未配置 Tailscale API 密钥。请在管理设置中添加一个以启用设备发现。",
     "tailscaleDocsLink": "查看文档",
     "tailscaleLoadingDevices": "正在加载设备...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleDeviceLoadFailed": "加载 Tailscale 设备失败。请检查 API URL 和网络连接。",
     "tailscaleNoDevices": "在您的 tailnet 中未找到设备。",
     "tailscaleDeviceAutoFill": "选择设备将自动填充主机 IP 地址。",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "tailscaleAddHost": "添加主机",
+    "tailscaleCopyIp": "复制 Tailscale IP",
+    "tailscaleIpCopied": "IP地址已复制",
+    "tailscaleIpCopyFailed": "无法复制IP地址",
     "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckRequired": "需要 Tailscale 身份验证",
+    "tailscaleCheckDescription": "Tailscale SSH 需要进行额外的验证。请在浏览器中进行身份验证以继续。",
     "tailscaleCheckOpenBrowser": "打开浏览器进行认证",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
+    "tailscaleCheckWaiting": "正在等待 Tailscale 身份验证……",
     "tailscaleCheckTimeout": "Tailscale 身份验证超时，请重试。"
   },
   "manager": {
     "title": "Tailscale",
     "refresh": "刷新",
     "retry": "重试",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "sudoHint": "为该主机设置 sudo 密码以允许执行提升权限的操作。",
     "noData": "暂无数据",
     "filter": "筛选...",
     "tsNotInstalled": "此主机未安装 Tailscale",

@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Zarządzaj statystykami użytkowania",
+      "description": "Zobacz, jakie statystyki użytkowania są wysyłane, wyślij je teraz i zresetuj identyfikator instancji."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Udostępnij anonimowe statystyki użytkowania",
+      "description": "Wysyła raz dziennie krótkie, anonimowe podsumowanie, aby pomóc w ulepszaniu Termix. Nigdy nie zawiera nazw użytkowników, nazw hostów, adresów IP ani danych uwierzytelniających."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Uwzględnij informacje o platformie",
+      "description": "System operacyjny, architektura procesora, wersja Node.js, typ bazy danych i sposób instalacji Termix (Docker, aplikacja stacjonarna lub serwer)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Uwzględnij użycie funkcji",
+      "description": "Ile razy otwierano poszczególne zakładki i ile logowań SSH miało miejsce od ostatniego raportu. Użytkownicy mogą wyłączyć tę funkcję w swoim profilu."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Uwzględnij zainstalowane funkcje",
+      "description": "Jakie wbudowane funkcje są zainstalowane i uruchomione."
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "Identyfikator instancji"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Uwzględnij moje wykorzystanie funkcji",
+      "description": "Zlicza rodzaje otwieranych przez Ciebie kart w anonimowych statystykach użytkowania. Nie są wysyłane żadne informacje o Tobie ani o Twoich hostach."
     }
   },
   "status": {
     "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "Udostępnianie statystyk użytkowania raz dziennie",
+    "off": "Nieudostępnianie statystyk użytkowania",
+    "lockedOn": "Włączane przez zmienną środowiskową ENABLE_TELEMETRY. Zmień to w tym miejscu.",
+    "lockedOff": "Wyłączone przez zmienną środowiskową ENABLE_TELEMETRY. Zmień ją w tym miejscu.",
+    "instanceId": "Identyfikator instancji: {{id}}",
+    "noInstanceId": "Brak jeszcze identyfikatora instancji",
+    "lastSent": "Ostatnio wysłano {{date}}",
+    "neverSent": "Jeszcze nie wysłano",
+    "nextSend": "Następny raport należy przesłać {{date}}",
+    "lastError": "Ostatnia próba nieudana: {{error}}",
+    "preview": "Podgląd raportu",
+    "sendNow": "Wyślij teraz",
+    "sending": "Przesyłka...",
+    "sent": "Wysłano statystyki użytkowania",
+    "notSent": "Statystyki użytkowania są wyłączone, nic nie zostało wysłane",
+    "resetId": "Zresetuj identyfikator instancji",
+    "resetIdConfirm": "Zresetować identyfikator instancji? Przyszłe raporty będą wyglądać jak nowa instalacja.",
+    "resetIdDone": "Resetowanie identyfikatora instancji",
+    "previewTitle": "Następny raport",
+    "previewDescription": "Dokładnie to samo zostałoby wysłane w tej chwili.",
     "close": "Zamknij",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "Nie można załadować statusu statystyk użytkowania"
   }
 }

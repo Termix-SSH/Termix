@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "使用 LDAP 登入",
   "loginWithProvider": "使用 {{name}} 登入",
   "loading": "載入中...",
   "requiredField": "此欄位為必填",
@@ -8,28 +8,28 @@
   "signIn": "登入",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "管理 LDAP 目錄",
+      "description": "新增、變更和刪除使用者可用於登入的 LDAP 目錄。"
     }
   },
   "providers": {
     "docsLink": "檢視文件",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "未配置 LDAP 目錄。",
+    "add": "新增目錄",
+    "edit": "編輯目錄",
+    "delete": "刪除目錄",
+    "deleteConfirm": "刪除此目錄？使用此目錄登入的使用者將無法登入。",
     "name": "顯示名稱",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "公司名錄",
+    "nameRequired": "必須填寫顯示名稱。",
     "enabled": "已啟用",
-    "save": "Save Directory",
+    "save": "儲存目錄",
     "saving": "儲存中…",
     "saved": "已儲存",
     "saveFailed": "儲存失敗",
     "deleted": "已刪除",
     "deleteFailed": "刪除失敗",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "LDAP 目錄載入失敗",
     "cancel": "取消"
   },
   "fields": {
@@ -38,7 +38,7 @@
     "useTls": "使用 TLS (LDAPS)",
     "bindDn": "綁定 DN",
     "bindPassword": "綁定密碼",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "密碼已儲存。留空則不保存。",
     "userSearchBase": "使用者搜尋基底",
     "userSearchFilter": "使用者搜尋篩選器",
     "usernameAttr": "使用者名稱屬性",

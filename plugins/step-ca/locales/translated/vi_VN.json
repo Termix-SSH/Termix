@@ -1,15 +1,15 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "Bước CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "label": "Bước CA",
+    "description": "Đăng nhập thông qua nhà cung cấp danh tính của bạn và cho phép Step CA cấp chứng chỉ SSH có thời hạn ngắn cho máy chủ này. URL CA, dấu vân tay gốc và trình cung cấp OIDC được quản trị viên thiết lập trong phần Step CA của Cài đặt quản trị.",
     "docs": "Xem tài liệu"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "title": "Bước xác thực CA bắt buộc",
+    "description": "Hoàn tất xác thực trên trình duyệt của bạn để tiếp tục. Chứng chỉ sẽ có hiệu lực miễn là CA của bạn cho phép.",
     "openBrowser": "Mở trình duyệt để xác thực",
     "waiting": "Đang chờ xác thực trên trình duyệt...",
     "authenticating": "Đang xử lý xác thực..."
@@ -20,29 +20,29 @@
   },
   "settings": {
     "caUrl": {
-      "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "label": "URL CA",
+      "description": "URL HTTPS của CA Smallstep của bạn. Để trống URL CA, dấu vân tay và trình cung cấp để tắt CA Smallstep.",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "Dấu vân tay gốc (SHA-256)",
+      "description": "Dấu vân tay của chứng chỉ gốc, như được hiển thị bởi bước ca bootstrap."
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "Tên trình cung cấp OIDC",
+      "description": "Tên của trình cung cấp OIDC của CA. Sau đó chọn \"Step CA\" làm loại xác thực của máy chủ."
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "Cho phép máy chủ Step CA riêng tư",
+      "description": "Các máy chủ riêng mà quy trình chứng chỉ CA từng bước có thể liên hệ: chính CA và, nếu là máy chủ nội bộ, nhà cung cấp danh tính của bạn. Phân tách chúng bằng dấu phẩy hoặc xuống dòng."
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "URI chuyển hướng",
+      "description": "Đăng ký URL này như một URI chuyển hướng được cho phép với nhà cung cấp danh tính đứng sau trình cung cấp OIDC."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "Sử dụng URI chuyển hướng cũ.",
+      "description": "Tiếp tục gửi /host/step-ca-callback, URI chuyển hướng được sử dụng trước phiên bản 2.9. Tắt chức năng này khi nhà cung cấp định danh của bạn cho phép sử dụng URI mới."
     }
   }
 }
