@@ -284,6 +284,22 @@
       "weather": {
         "name": "Weather",
         "description": "Live weather for any location"
+      },
+      "docker_widget": {
+        "name": "Docker Manager",
+        "description": "Embedded Docker container manager for a configured host"
+      },
+      "file_manager_widget": {
+        "name": "File Manager",
+        "description": "Embedded SFTP file manager for a configured host"
+      },
+      "tunnel_widget": {
+        "name": "Tunnel Manager",
+        "description": "Embedded SSH tunnel manager for a configured host"
+      },
+      "metrics_chart": {
+        "name": "Metrics Chart",
+        "description": "Historical CPU, memory, disk, or network chart for a host"
       }
     }
   },

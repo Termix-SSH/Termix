@@ -284,6 +284,22 @@
       "weather": {
         "name": "天气",
         "description": "显示指定地点的实时天气"
+      },
+      "docker_widget": {
+        "name": "Docker 管理器",
+        "description": "用于管理指定主机 Docker 容器的内嵌管理器"
+      },
+      "file_manager_widget": {
+        "name": "文件管理器",
+        "description": "用于管理指定主机文件的内嵌 SFTP 管理器"
+      },
+      "tunnel_widget": {
+        "name": "隧道管理器",
+        "description": "用于管理指定主机 SSH 隧道的内嵌管理器"
+      },
+      "metrics_chart": {
+        "name": "指标图表",
+        "description": "显示主机 CPU、内存、磁盘或网络的历史指标图表"
       }
     }
   },
