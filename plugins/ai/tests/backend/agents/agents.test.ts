@@ -50,6 +50,7 @@ const fake = String.raw`#!/usr/bin/env node
 const fs=require('fs'),http=require('http'),rl=require('readline');
 const emit=m=>console.log(JSON.stringify(m));
 const args=process.argv.slice(2);
+if(args.includes('--session') && require('path').dirname(args[args.indexOf('--session')+1])===process.env.PI_CODING_AGENT_DIR) {console.error('Pi migrates session files from its config root');process.exit(1);}
 if(args[0]==='serve') {
  let stream;const port=Number(args[args.indexOf('--port')+1]);
  http.createServer(async(q,r)=>{
