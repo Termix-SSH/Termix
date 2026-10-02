@@ -44,3 +44,25 @@ it("does not expose another user's persisted session or allow a malformed launch
   });
   expect(invalid.status).toBe(400);
 });
+it("gates installation before SSH and rejects caller-supplied commands", async () => {
+  server = await startServer();
+  await server.enableFor("user-1");
+  expect(
+    (
+      await server.request("POST", "/agents/install", {
+        body: { hostId: 1, agent: "pi" },
+      })
+    ).status,
+  ).toBe(403);
+});
+it("rejects arbitrary installer names", async () => {
+  server = await startServer({ permissions: ["ai.agents"] });
+  await server.enableFor("user-1");
+  expect(
+    (
+      await server.request("POST", "/agents/install", {
+        body: { hostId: 1, agent: "pi; id" },
+      })
+    ).status,
+  ).toBe(400);
+});

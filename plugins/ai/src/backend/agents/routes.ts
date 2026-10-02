@@ -19,6 +19,7 @@ import {
   type AgentEvent,
   type AgentSession,
 } from "./types.js";
+import { registerInstallRoute } from "./install.js";
 import { REMOTE_RUNNER } from "./remote-runner.js";
 
 interface Live {
@@ -278,12 +279,18 @@ export function registerAgentRoutes(
     try {
       port = await new Promise<number>((resolve, reject) =>
         connection.client.forwardIn("127.0.0.1", 0, (err, p) =>
-          err ? reject(err) : resolve(p),
+          err
+            ? reject(
+                Error(
+                  "SSH remote forwarding was refused. Allow loopback remote forwarding for this SSH account (AllowTcpForwarding remote and PermitListen 127.0.0.1:*). Installing an agent does not change SSH policy.",
+                ),
+              )
+            : resolve(p),
         ),
       );
       const source = Buffer.from(REMOTE_RUNNER).toString("base64");
       const command =
-        "exec node -e " +
+        'export PATH="$HOME/.local/share/termix-agent-runtime/node/bin:$PATH"; command -v node >/dev/null || { echo "Node.js is missing. Use Install runtime first." >&2; exit 1; }; exec node -e ' +
         shellQuote(`eval(Buffer.from('${source}','base64').toString())`);
       const channel = await new Promise<ClientChannel>((resolve, reject) =>
         connection.client.exec("sh -lc " + shellQuote(command), (err, ch) =>
@@ -387,6 +394,9 @@ export function registerAgentRoutes(
               error instanceof Error ? error.message : "Agent operation failed",
           });
       });
+  registerInstallRoute(router, ctx, (hostId) =>
+    [...live.values()].some((entry) => entry.session.hostId === hostId),
+  );
   router.get(
     "/agents",
     route(async (_req, res) => {

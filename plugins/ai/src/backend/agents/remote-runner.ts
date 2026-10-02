@@ -13,7 +13,9 @@ const request = (method, params) => new Promise((resolve,reject) => {
 function fail(error) { emit('error',error.message || String(error)); if(!ready) { if(child?.pid) {try{process.kill(-child.pid,'SIGTERM');}catch{}} process.stdin.destroy(); } }
 function done() { emit('status','ready'); }
 async function launch(args, env) {
-  child=spawn(config.executable || config.agent,args,{cwd:config.cwd,env:{...process.env,...env},stdio:['pipe','pipe','pipe'],detached:true});
+  const managed=path.join(os.homedir(),'.local','share','termix-agent-runtime','agents',config.agent,'node_modules','.bin',config.agent);
+  const executable=(!config.executable || config.executable===config.agent) && fs.existsSync(managed)?managed:(config.executable || config.agent);
+  child=spawn(executable,args,{cwd:config.cwd,env:{...process.env,...env},stdio:['pipe','pipe','pipe'],detached:true});
   child.on('error',fail);
   child.on('exit',(code)=>{emit('status','stopped');process.exitCode=code||0;process.stdin.destroy();});
   child.stderr.on('data',d=>emit('tool',d.toString().slice(0,8000)));
@@ -112,7 +114,7 @@ async function start(c) {
   if(c.agent==='claude') {
     const args=['--print','--verbose','--input-format','stream-json','--output-format','stream-json','--include-partial-messages','--permission-prompt-tool','stdio','--model',c.model];
     if(c.nativeId) args.push('--resume',c.nativeId);
-    await launch(args,{ANTHROPIC_BASE_URL:base,ANTHROPIC_API_KEY:token,ANTHROPIC_AUTH_TOKEN:'',CLAUDE_CONFIG_DIR:dir});
+    await launch(args,{ANTHROPIC_BASE_URL:base,ANTHROPIC_API_KEY:token,ANTHROPIC_AUTH_TOKEN:'',CLAUDE_CONFIG_DIR:dir,DISABLE_UPDATES:'1',DISABLE_AUTOUPDATER:'1'});
   }
   if(c.agent==='codex') {
     await launch(['app-server','-c','model_provider="termix"','-c','model_providers.termix.name="Termix"','-c','model_providers.termix.base_url='+JSON.stringify(base+'/v1'),'-c','model_providers.termix.env_key="TERMIX_AGENT_TOKEN"','-c','model_providers.termix.wire_api="responses"'],{CODEX_HOME:dir,TERMIX_AGENT_TOKEN:token});
@@ -123,7 +125,7 @@ async function start(c) {
   if(c.agent==='opencode') {
     const net=require('node:net');const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
     serverUrl='http://127.0.0.1:'+port;
-    const settings={model:'termix/'+c.model,provider:{termix:{npm:c.providerType==='anthropic'?'@ai-sdk/anthropic':'@ai-sdk/openai-compatible',name:'Termix',options:{baseURL:base+'/v1',apiKey:token},models:{[c.model]:{name:c.model}}}},permission:'ask'};
+    const settings={autoupdate:false,model:'termix/'+c.model,provider:{termix:{npm:c.providerType==='anthropic'?'@ai-sdk/anthropic':'@ai-sdk/openai-compatible',name:'Termix',options:{baseURL:base+'/v1',apiKey:token},models:{[c.model]:{name:c.model}}}},permission:'ask'};
     emit('tool','Starting OpenCode server');
     await launch(['serve','--hostname','127.0.0.1','--port',String(port)],{OPENCODE_CONFIG_CONTENT:JSON.stringify(settings),XDG_DATA_HOME:dir,XDG_CONFIG_HOME:dir});
     emit('tool','Waiting for OpenCode health');

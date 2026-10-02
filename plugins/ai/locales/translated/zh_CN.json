@@ -128,7 +128,7 @@
     "model": "模型",
     "directory": "工作目录",
     "executable": "可执行文件（可选绝对路径）",
-    "requirements": "主机需要 Node.js 20+ 及所选 Agent，并允许 SSH 回环地址远程转发。不覆盖已有 Agent 配置。",
+    "requirements": "主机需要 Node.js 22.19+ 及所选 Agent，并允许 SSH 回环地址远程转发。不覆盖已有 Agent 配置。",
     "responsesRequired": "Codex 需要 Responses API；仅支持 Chat Completions 的接口无法用于 Codex。",
     "piPermissions": "Pi 工具使用当前 SSH 账号权限执行。请只在允许 Agent 修改的目录中启动。",
     "start": "启动 Agent",
@@ -150,6 +150,11 @@
       "running": "执行中",
       "stopped": "已停止",
       "error": "出错"
-    }
+    },
+    "installRuntime": "安装所选 Agent 和 Node.js",
+    "installSource": "仅从官方来源安装：nodejs.org（SHA-256 校验）、registry.npmjs.org（锁定依赖与完整性校验）。安装到当前 SSH 用户的 ~/.local/share/termix-agent-runtime；需要 curl、tar 和 Linux/macOS x64 或 arm64。不修改 SSH 转发策略。",
+    "installSucceeded": "安装及版本校验成功。现在可以启动 Agent；SSH 还需允许回环地址远程转发。",
+    "installFailed": "安装失败，请查看日志后重试。",
+    "installLog": "安装日志"
   }
 }

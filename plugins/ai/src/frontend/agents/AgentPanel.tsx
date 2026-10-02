@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation, type TabProps } from "@termix/plugin-sdk/frontend";
 import { Button, Input, Textarea } from "@termix/plugin-sdk/ui";
 import { Bot, Plus, Send, Square, Play } from "lucide-react";
+import { InstallRuntime } from "./InstallRuntime";
 import { aiApp } from "../app-ref";
 import { AiMessage } from "../AiMessage";
 import { getAiProviders, type AiProvider } from "../ai-api";
@@ -282,6 +283,12 @@ export function AgentPanel({ host, sshHost }: TabProps) {
             {agent === "pi" && (
               <p className="text-sm">{t("agents.piPermissions")}</p>
             )}
+            <InstallRuntime
+              hostId={hostId}
+              agent={agent}
+              busy={busy}
+              setBusy={setBusy}
+            />
             <Button disabled={busy || !providerId || !model} type="submit">
               <Play size={14} />
               {t("agents.start")}

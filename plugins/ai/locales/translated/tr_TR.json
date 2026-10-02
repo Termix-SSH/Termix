@@ -128,7 +128,7 @@
     "model": "Model",
     "directory": "Working directory",
     "executable": "Executable (optional absolute path)",
-    "requirements": "The host needs Node.js 20+ and the selected agent installed. SSH remote loopback forwarding must be allowed. Existing agent configurations are not overwritten.",
+    "requirements": "The host needs Node.js 22.19+ and the selected agent installed. SSH remote loopback forwarding must be allowed. Existing agent configurations are not overwritten.",
     "responsesRequired": "Codex requires a Responses API endpoint. A Chat Completions-only endpoint cannot run Codex.",
     "piPermissions": "Pi tools run with this SSH account’s permissions. Only launch in a directory you authorize the agent to modify.",
     "start": "Start agent",
@@ -150,6 +150,11 @@
       "running": "Working",
       "stopped": "Stopped",
       "error": "Error"
-    }
+    },
+    "installRuntime": "Install selected agent and Node.js",
+    "installSource": "Official sources only: nodejs.org (SHA-256 verified) and registry.npmjs.org (locked package integrity). Installs for the SSH user in ~/.local/share/termix-agent-runtime; requires curl, tar, and Linux/macOS x64 or arm64. Does not change SSH forwarding policy.",
+    "installSucceeded": "Installation verified. You can now start the agent; SSH loopback remote forwarding must also be allowed.",
+    "installFailed": "Installation failed. Review the log and retry.",
+    "installLog": "Installation log"
   }
 }
