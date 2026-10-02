@@ -68,6 +68,7 @@ if(args[0]==='serve') {
  } else if(args.includes('--input-format')) {
   if(m.type==='user')emit({type:'control_request',request_id:'approval',request:{subtype:'can_use_tool',tool_name:'Read',input:{path:'/tmp'}}});
   if(m.type==='control_response'){emit({type:'stream_event',event:{type:'content_block_delta',delta:{type:'text_delta',text:'verified'}}});emit({type:'result',is_error:false});}
+ } else if(m.type==='get_state') {emit({type:'response',id:m.id,success:true,data:{sessionId:'pi-session'}});
  } else if(m.type==='prompt') {
   emit({type:'message_update',assistantMessageEvent:{type:'text_delta',delta:'verified'}});emit({type:'agent_end'});
  }

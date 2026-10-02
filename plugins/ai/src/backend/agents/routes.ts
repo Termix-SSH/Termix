@@ -28,6 +28,7 @@ interface Live {
   subscribers: Set<Response>;
   approvals: Set<string>;
   saved: Promise<void>;
+  stopping?: Promise<void>;
 }
 const MAX_BODY = 2 * 1024 * 1024;
 const PROVIDER_PATHS = new Set([
@@ -92,15 +93,28 @@ export function registerAgentRoutes(
       throw Error("Agent session is not accessible");
     return live.has(id) ? s : { ...s, status: "stopped" };
   }
-  function stop(entry: Live) {
-    if (!live.has(entry.session.id)) return;
-    live.delete(entry.session.id);
-    entry.channel?.write(JSON.stringify({ type: "stop" }) + "\n");
-    entry.dispose();
-    entry.session.status = "stopped";
-    event(entry, { kind: "status", text: "stopped" });
-    for (const res of entry.subscribers) res.end();
-    void save(entry);
+  function stop(entry: Live): Promise<void> {
+    if (entry.stopping) return entry.stopping;
+    if (live.get(entry.session.id) !== entry) return Promise.resolve();
+    entry.stopping = (async () => {
+      if (entry.channel && !entry.channel.destroyed) {
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 2000);
+          entry.channel!.once("close", () => {
+            clearTimeout(timer);
+            resolve();
+          });
+          entry.channel!.write(JSON.stringify({ type: "stop" }) + "\n");
+        });
+      }
+      if (live.get(entry.session.id) === entry) live.delete(entry.session.id);
+      entry.dispose();
+      entry.session.status = "stopped";
+      event(entry, { kind: "status", text: "stopped" });
+      for (const res of entry.subscribers) res.end();
+      await save(entry);
+    })();
+    return entry.stopping;
   }
   ctx.disposables.add(() => {
     for (const entry of live.values()) stop(entry);
@@ -112,7 +126,9 @@ export function registerAgentRoutes(
   });
 
   async function start(s: AgentSession): Promise<Live> {
-    if (live.has(s.id)) return live.get(s.id)!;
+    const existing = live.get(s.id);
+    if (existing?.stopping) await existing.stopping;
+    else if (existing) return existing;
     if (
       [...live.values()].filter((e) => e.session.userId === s.userId).length >=
       4
@@ -234,6 +250,13 @@ export function registerAgentRoutes(
       }
       proxy.emit("connection", accept());
     });
+    const startup = setTimeout(() => {
+      if (entry.session.status === "starting") {
+        event(entry, { kind: "error", text: "Agent startup timed out" });
+        void stop(entry);
+      }
+    }, 60000);
+    startup.unref();
     const expiry = setTimeout(() => stop(entry), 8 * 60 * 60 * 1000);
     expiry.unref();
     const accessTimer = setInterval(() => {
@@ -245,6 +268,7 @@ export function registerAgentRoutes(
     }, 30000);
     accessTimer.unref();
     entry.dispose = () => {
+      clearTimeout(startup);
       clearTimeout(expiry);
       clearInterval(accessTimer);
       for (const c of aborters) c.abort();
@@ -495,7 +519,7 @@ export function registerAgentRoutes(
     route(async (req, res) => {
       const s = await find(String(req.params.id));
       const entry = live.get(s.id);
-      if (entry) stop(entry);
+      if (entry) await stop(entry);
       res.json({ ok: true });
     }),
   );
@@ -504,7 +528,7 @@ export function registerAgentRoutes(
     route(async (req, res) => {
       const s = await find(String(req.params.id));
       const entry = live.get(s.id);
-      if (entry) stop(entry);
+      if (entry) await stop(entry);
       await entry?.saved;
       await ctx.kv.delete(key(s));
       res.json({ ok: true });

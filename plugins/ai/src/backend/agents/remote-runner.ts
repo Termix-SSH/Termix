@@ -24,6 +24,7 @@ async function launch(args, env) {
 }
 function receive(m) {
   if(config.agent==='pi') {
+    if(m.type==='response' && pending.has(m.id)) {const p=pending.get(m.id);pending.delete(m.id);clearTimeout(p.timer);m.success?p.resolve(m.data):p.reject(Error(m.error));return;}
     if(m.type==='assistant_message_event' || m.type==='message_update') {
       const e=m.assistantMessageEvent || m.event;
       if(e?.type==='text_delta') emit('text',e.delta);
@@ -64,7 +65,7 @@ function receive(m) {
   }
 }
 async function oc(method, route, body) {
-  const r=await fetch(serverUrl+route,{method,headers:{'Content-Type':'application/json','x-opencode-directory':config.cwd},body:body===undefined?undefined:JSON.stringify(body)});
+  const r=await fetch(serverUrl+route,{method,headers:{'Content-Type':'application/json','x-opencode-directory':config.cwd},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(5000)});
   if(!r.ok) throw Error('OpenCode '+route+' returned '+r.status);
   return r.status===204?null:r.json();
 }
@@ -93,6 +94,7 @@ async function ocEvents() {
 }
 async function start(c) {
   config=c;
+  emit('tool','Starting '+c.agent+' in '+c.cwd);
   if(!fs.statSync(c.cwd).isDirectory()) throw Error('Working directory does not exist');
   const dir=path.join(os.homedir(),'.local','state','termix-agents',c.id);
   fs.mkdirSync(dir,{recursive:true,mode:0o700});
@@ -100,6 +102,8 @@ async function start(c) {
   if(c.agent==='pi') {
     fs.writeFileSync(path.join(dir,'models.json'),JSON.stringify({providers:{termix:{baseUrl:base+'/v1',api:c.providerType==='anthropic'?'anthropic-messages':'openai-completions',apiKey:token,models:[{id:c.model,name:c.model,reasoning:false,input:['text'],contextWindow:131072,maxTokens:8192,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
     await launch(['--mode','rpc','--provider','termix','--model',c.model,'--session',path.join(dir,'session.jsonl')],{PI_CODING_AGENT_DIR:dir});
+    const state=await new Promise((resolve,reject)=>{const id=String(++rpcId),timer=setTimeout(()=>{pending.delete(id);reject(Error('Pi startup timed out'));},60000);pending.set(id,{resolve,reject,timer});send({id,type:'get_state'});});
+    nativeId=state.sessionId;emit('native','',{nativeId});
   }
   if(c.agent==='claude') {
     const args=['--print','--verbose','--input-format','stream-json','--output-format','stream-json','--include-partial-messages','--permission-prompt-tool','stdio','--model',c.model];
@@ -116,9 +120,12 @@ async function start(c) {
     const net=require('node:net');const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
     serverUrl='http://127.0.0.1:'+port;
     const settings={model:'termix/'+c.model,provider:{termix:{npm:c.providerType==='anthropic'?'@ai-sdk/anthropic':'@ai-sdk/openai-compatible',name:'Termix',options:{baseURL:base+'/v1',apiKey:token},models:{[c.model]:{name:c.model}}}},permission:'ask'};
+    emit('tool','Starting OpenCode server');
     await launch(['serve','--hostname','127.0.0.1','--port',String(port)],{OPENCODE_CONFIG_CONTENT:JSON.stringify(settings),XDG_DATA_HOME:dir,XDG_CONFIG_HOME:dir});
+    emit('tool','Waiting for OpenCode health');
     let available=false;for(let i=0;i<100;i++){try{await oc('GET','/global/health');available=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}
     if(!available) throw Error('OpenCode startup timed out');
+    emit('tool','Opening OpenCode session');
     nativeId=c.nativeId || (await oc('POST','/session',{})).id;emit('native','',{nativeId});
     void ocEvents().catch(fail);
   }
