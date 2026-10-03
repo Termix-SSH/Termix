@@ -96,6 +96,34 @@ function describeHost(host: number | PluginSshHost): string {
   return typeof host === "number" ? `host ${host}` : `host ${host.id}`;
 }
 
+const OVERRIDE_FIELDS = [
+  "password",
+  "key",
+  "privateKey",
+  "keyPassword",
+  "passphrase",
+] as const;
+
+/**
+ * A secret the plugin set on its copy (a password the user just typed) wins
+ * over the stored one; everything else comes from what core resolved.
+ */
+function withOverrides(
+  resolved: SshConnectHost,
+  given: PluginSshHost,
+): SshConnectHost {
+  if (given === (resolved as unknown)) return resolved;
+  const source = given as unknown as Record<string, unknown>;
+  const set = OVERRIDE_FIELDS.filter(
+    (field) => typeof source[field] === "string" && source[field] !== "",
+  );
+  if (set.length === 0) return resolved;
+  const merged = { ...resolved } as unknown as Record<string, unknown>;
+  for (const field of set) merged[field] = source[field];
+  if (typeof source.authType === "string") merged.authType = source.authType;
+  return merged as unknown as SshConnectHost;
+}
+
 const LOGIN_FAILED =
   /all configured authentication methods failed|permission denied|authentication failed/i;
 
@@ -134,8 +162,37 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     { host: SshConnectHost; userId: string }
   >();
 
-  const remember = (key: object, host: SshConnectHost, userId: string) =>
-    resolvedHosts.set(key, { host, userId });
+  // Plugins often copy a host before connecting ({ ...host, port }). Spread
+  // copies enumerable symbol keys, so the copy keeps this tag. Its value is an
+  // opaque token, not the host, so the secrets stay out of the plugin's reach.
+  const tag = Symbol("resolvedHost");
+  const tokens = new WeakMap<
+    object,
+    { host: SshConnectHost; userId: string }
+  >();
+
+  const remember = (key: object, host: SshConnectHost, userId: string) => {
+    const entry = { host, userId };
+    resolvedHosts.set(key, entry);
+    const token = Object.freeze({});
+    tokens.set(token, entry);
+    if (Object.isExtensible(key)) {
+      Object.defineProperty(key, tag, {
+        value: token,
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  };
+
+  const lookup = (host: object) => {
+    const known = resolvedHosts.get(host);
+    if (known) return known;
+    const token = (host as Record<symbol, unknown>)[tag];
+    return token && typeof token === "object"
+      ? tokens.get(token as object)
+      : undefined;
+  };
 
   const handOut = (host: SshConnectHost, userId: string): PluginSshHost => {
     const redacted = redactHostSecrets(
@@ -148,9 +205,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   /** The acting user for a call about this host. */
   const userFor = (host: number | PluginSshHost | undefined): string =>
     actingUser(
-      host && typeof host === "object"
-        ? resolvedHosts.get(host)?.userId
-        : undefined,
+      host && typeof host === "object" ? lookup(host)?.userId : undefined,
     );
 
   /**
@@ -163,8 +218,8 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     userId: string,
   ): number | SshConnectHost => {
     if (typeof host === "number") return host;
-    const known = resolvedHosts.get(host);
-    if (known) return known.host;
+    const known = lookup(host);
+    if (known) return withOverrides(known.host, host);
     return { ...(host as unknown as SshConnectHost), userId };
   };
 
@@ -173,8 +228,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
    * auth or host key failure counts: a timeout says nothing about the login.
    */
   const reportLogin = (host: number | PluginSshHost, error?: unknown) => {
-    const hostId =
-      typeof host === "number" ? host : resolvedHosts.get(host)?.host.id;
+    const hostId = typeof host === "number" ? host : lookup(host)?.host.id;
     if (!Number.isInteger(hostId) || hostId <= 0) return;
     let outcome: { ok: boolean; hostKeyChanged?: boolean } = { ok: true };
     if (error !== undefined) {
