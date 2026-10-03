@@ -70,6 +70,7 @@ export function tcpPingThroughJumpHost(
   host: string,
   port: number,
   timeoutMs = 5000,
+  keepOpen = false,
 ): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
@@ -78,7 +79,7 @@ export function tcpPingThroughJumpHost(
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      jumpClient.end();
+      if (!keepOpen) jumpClient.end();
       resolve(result);
     };
 

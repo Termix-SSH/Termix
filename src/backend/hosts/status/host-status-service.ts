@@ -7,8 +7,10 @@
  * failed (a session, a ctx.ssh connection or a plugin's
  * ctx.hosts.status.reportLogin said so). It clears on the next working login,
  * when the host is edited, or when a changed host key is accepted. Probing
- * never logs in: on RADIUS or Duo backed devices a login fires a real 2FA
- * push, every interval.
+ * never logs in to the host itself: on RADIUS or Duo backed devices a login
+ * fires a real 2FA push, every interval. A host behind jump hosts is probed
+ * through a chain, which does log in to the hops, so hosts that share a hop
+ * list share one chain (jump-probe-pool.ts).
  *
  * Polling is demand driven. A user asking for statuses starts polling their
  * own hosts; nothing is probed for a user who never opened the app.
@@ -28,7 +30,8 @@ import {
   type HostStatus,
 } from "./host-status.js";
 import { ConcurrentLimiter } from "./limiter.js";
-import { tcpPing, tcpPingThroughJumpHost } from "./tcp-ping.js";
+import { tcpPing } from "./tcp-ping.js";
+import { JumpProbePool } from "./jump-probe-pool.js";
 
 export const GLOBAL_STATUS_INTERVAL_KEY = "global_status_check_interval";
 export const DEFAULT_STATUS_INTERVAL = 60;
@@ -111,6 +114,11 @@ export function toStatusTarget(row: HostStatusTargetRow): StatusTarget {
   };
 }
 
+const jumpProbes = new JumpProbePool(async (jumpHosts, userId) => {
+  const { createJumpHostChain } = await import("../jump-host-chain.js");
+  return createJumpHostChain(jumpHosts, userId);
+});
+
 const defaultDeps: HostStatusDeps = {
   loadTargets: async (filter) =>
     (
@@ -129,16 +137,8 @@ const defaultDeps: HostStatusDeps = {
   },
   hasActiveSession: (hostId) => hostSessionStatus.hasActiveSession(hostId),
   ping: (host, port) => tcpPing(host, port, 5000),
-  pingThroughJumpHosts: async (target, port) => {
-    const { createJumpHostChain } = await import("../jump-host-chain.js");
-    const client = await createJumpHostChain(
-      target.jumpHosts,
-      target.userId,
-    ).catch(() => null);
-    return client
-      ? tcpPingThroughJumpHost(client, target.ip, port, 5000)
-      : false;
-  },
+  pingThroughJumpHosts: (target, port) =>
+    jumpProbes.ping(target.jumpHosts, target.userId, target.ip, port, 5000),
   globalInterval: () => {
     const value = Number(getCurrentSettingValue(GLOBAL_STATUS_INTERVAL_KEY));
     return Number.isInteger(value) && value >= 5

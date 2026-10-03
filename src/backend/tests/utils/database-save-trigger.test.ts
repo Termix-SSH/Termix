@@ -71,6 +71,17 @@ describe("DatabaseSaveTrigger", () => {
     expect(DatabaseSaveTrigger.getStatus().pendingSave).toBe(false);
   });
 
+  it("saves within the max wait even while writes keep coming", async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    for (let second = 0; second < 40; second++) {
+      void DatabaseSaveTrigger.triggerSave("sample");
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("queues a force save behind an in-flight save", async () => {
     let finishFirstSave: (() => void) | undefined;
     const firstSave = new Promise<void>((resolve) => {

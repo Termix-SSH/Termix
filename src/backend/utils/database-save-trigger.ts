@@ -2,12 +2,16 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { getErrorMessage } from "./error-message.js";
 import { databaseLogger } from "./logger.js";
 
+const DEBOUNCE_MS = 2000;
+const MAX_DEBOUNCE_WAIT_MS = 30_000;
+
 export class DatabaseSaveTrigger {
   private static saveFunction: (() => Promise<void>) | null = null;
   private static isInitialized = false;
   private static pendingSave = false;
   private static activeSave: Promise<void> | null = null;
   private static saveTimeout: NodeJS.Timeout | null = null;
+  private static firstTriggerAt: number | null = null;
   private static _dirty = false;
   private static batch = new AsyncLocalStorage<{
     open: boolean;
@@ -49,8 +53,18 @@ export class DatabaseSaveTrigger {
       clearTimeout(this.saveTimeout);
     }
 
+    // Each call pushes the save back, so steady writes (samples every few
+    // seconds) would keep it from ever running. Cap how long it can wait.
+    const now = Date.now();
+    this.firstTriggerAt ??= now;
+    const delay = Math.max(
+      0,
+      Math.min(DEBOUNCE_MS, this.firstTriggerAt + MAX_DEBOUNCE_WAIT_MS - now),
+    );
+
     this.saveTimeout = setTimeout(async () => {
       this.saveTimeout = null;
+      this.firstTriggerAt = null;
 
       try {
         await this.runSave();
@@ -62,7 +76,7 @@ export class DatabaseSaveTrigger {
           error: getErrorMessage(error),
         });
       }
-    }, 2000);
+    }, delay);
   }
 
   /**
@@ -109,6 +123,7 @@ export class DatabaseSaveTrigger {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
+    this.firstTriggerAt = null;
 
     try {
       await this.runSave();
@@ -169,6 +184,7 @@ export class DatabaseSaveTrigger {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
+    this.firstTriggerAt = null;
 
     this.pendingSave = false;
     this.activeSave = null;
