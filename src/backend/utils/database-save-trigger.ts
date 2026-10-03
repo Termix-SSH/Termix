@@ -18,6 +18,11 @@ export class DatabaseSaveTrigger {
     return this._dirty;
   }
 
+  /** Informational changes join the next periodic or critical save. */
+  static markDirty(): void {
+    if (this.isInitialized) this._dirty = true;
+  }
+
   static markClean(): void {
     this._dirty = false;
   }
@@ -129,6 +134,7 @@ export class DatabaseSaveTrigger {
     this.pendingSave = false;
     this.activeSave = null;
     this.isInitialized = false;
+    this._dirty = false;
     this.saveFunction = null;
   }
 }
