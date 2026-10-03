@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Az előbeállítások explicit pillanatképek; egyik betöltése felülírja az asztali kliens helyi kliens alagútlistáját.",
     "c2sPresetToLoad": "Betöltendő előbeállítás",
     "c2sTunnelPresets": "Kliens alagút előbeállításai",
-    "c2sTunnelPresetsUnavailable": "Az ügyfélalagút-előbeállítások csak az asztali kliensben érhetők el."
+    "c2sTunnelPresetsUnavailable": "Az ügyfélalagút-előbeállítások csak az asztali kliensben érhetők el.",
+    "c2sPresetRenameError": "Nem sikerült átnevezni az előbeállítást",
+    "c2sPresetDeleteError": "Nem sikerült törölni az előbeállítást"
   },
   "tunnels": {
     "attempt": "{{current}} kísérlet a {{max}}-ből",
@@ -139,8 +141,32 @@
     "typeLocal": "Helyi (-L)",
     "typeRemote": "Távoli (-R)",
     "working": "Dolgozó...",
+    "activeCount": "{{connected}}/{{total}} aktív",
+    "listensOn": "Localhosthoz kötve:{{port}}",
+    "socksProxy": "SOCKS5 proxy",
+    "waiting": "Várakozás",
+    "remoteSessionExpired": "A távoli szinkronizálási munkamenet lejárt. Csatlakoztassa újra a távoli szinkronizálást, és próbálja újra.",
+    "activeTunnels": "Aktív alagutak",
     "start": "Indul",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Alagút-hitelesítés",
+    "authRetry": "Az előző kódot nem fogadták el. Adjon meg egy új kódot.",
+    "authAnswer": "Hitelesítési válasz",
+    "authContinue": "Folytatás"
+  },
+  "permissions": {
+    "use": {
+      "title": "Használjon alagutakat",
+      "description": "SSH alagutak indítása, leállítása és figyelése, valamint kliens alagút-előbeállítások mentése."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Alagutak engedélyezése",
+        "description": "SSH alagutakat kell beállítani ezen a hoszton keresztül."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Alagutak",

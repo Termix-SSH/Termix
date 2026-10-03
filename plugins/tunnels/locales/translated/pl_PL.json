@@ -33,7 +33,7 @@
     "loadingHost": "Ładowanie hosta..."
   },
   "nav": {
-    "portForwarding": "Przekierowanie",
+    "portForwarding": "Forwarding",
     "tunnels": "Tunele"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (nasłuch lokalny)",
     "localTargetHost": "127.0.0.1 (cel na tym komputerze)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1 (nasłuchiwanie na punkcie końcowym)",
-    "remoteTargetHost": "127.0.0.1 (cel z punktu końcowego)",
+    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
+    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1 (nasłuch SOCKS)"
   },
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Zestawy to jawne migawki; wczytanie zestawu zastępuje listę lokalnych tuneli klienta w tej aplikacji.",
     "c2sPresetToLoad": "Zestaw do wczytania",
     "c2sTunnelPresets": "Zestawy tuneli klienta",
-    "c2sTunnelPresetsUnavailable": "Zestawy tuneli klienta są dostępne tylko w aplikacji desktopowej."
+    "c2sTunnelPresetsUnavailable": "Zestawy tuneli klienta są dostępne tylko w aplikacji desktopowej.",
+    "c2sPresetRenameError": "Failed to rename the preset",
+    "c2sPresetDeleteError": "Failed to delete the preset"
   },
   "tunnels": {
     "attempt": "Próba {{current}} z {{max}}",
@@ -83,8 +85,8 @@
     "createFirstTunnelMessage": "Nie utworzono jeszcze żadnych tuneli SSH. Skonfiguruj połączenia tunelowe w Menedżerze hostów, aby zacząć.",
     "currentHostPort": "Aktualny port hosta",
     "destination": "Cel",
-    "destinationAddress": "Adres docelowy",
-    "destinationPort": "Port docelowy",
+    "destinationAddress": "Destination Address",
+    "destinationPort": "Destination Port",
     "disconnected": "Rozłączono",
     "duplicateAutoStartBind": "Tylko jeden tunel klienta z automatycznym uruchomieniem może używać {{bind}}.",
     "endpointPort": "Port końcowy",
@@ -99,18 +101,18 @@
     "forwardDescriptionServerLocal": "Aktualny host {{sourcePort}} → punkt końcowy {{endpointPort}}.",
     "forwardDescriptionServerRemote": "Punkt końcowy {{endpointPort}} → bieżący host {{sourcePort}}.",
     "host": "Host",
-    "intermediateHost": "Żywiciel pośredni",
+    "intermediateHost": "Intermediate Host",
     "invalidBindIp": "Lokalny adres IP musi być prawidłowym adresem IPv4.",
     "invalidEndpointPort": "Port końcowy musi mieścić się w zakresie od 1 do 65535.",
     "invalidLocalPort": "Port lokalny musi mieścić się w zakresie od 1 do 65535.",
     "invalidLocalTargetIp": "Lokalny adres IP docelowy musi być prawidłowym adresem IPv4.",
     "invalidLocalTargetPort": "Lokalny port docelowy musi mieścić się w zakresie od 1 do 65535.",
-    "invalidRemoteAddress": "Wymagany jest adres zdalny.",
+    "invalidRemoteAddress": "Remote address is required.",
     "invalidRemotePort": "Port zdalny musi mieścić się w zakresie od 1 do 65535.",
     "lastError": "Ostatni błąd",
     "lastStarted": "Ostatnio uruchomiony",
     "lastTested": "Ostatnio testowane",
-    "localAddress": "Adres lokalny",
+    "localAddress": "Local Address",
     "localPort": "Port lokalny",
     "localSaveError": "Nie udało się zapisać lokalnych tuneli klienta",
     "localSaved": "Zapisano tunele klienta",
@@ -122,14 +124,14 @@
     "noHostSelected": "Nie wybrano hosta",
     "noSshTunnels": "Brak tuneli SSH",
     "port": "Port",
-    "remoteBindAddress": "Zdalny adres powiązania",
+    "remoteBindAddress": "Remote Bind Address",
     "remoteHost": "Zdalny host",
     "remotePort": "Zdalny port",
     "retryInterval": "Interwał ponawiania (sekundy)",
     "route": "Trasa:",
     "summaryClientDynamic": "{{localHost}}:{{localPort}} → SOCKS przez {{endpoint}}",
-    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} przez {{endpoint}}",
-    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} na {{endpoint}} → {{localHost}}:{{localPort}}",
+    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} via {{endpoint}}",
+    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} on {{endpoint}} → {{localHost}}:{{localPort}}",
     "test": "Test",
     "tunnelName": "Nazwa tunelu",
     "tunnelTestFailed": "Test tunelu nie powiódł się",
@@ -139,8 +141,32 @@
     "typeLocal": "Lokalny (-L)",
     "typeRemote": "Zdalny (-R)",
     "working": "Przetwarzanie...",
+    "activeCount": "{{connected}}/{{total}} active",
+    "listensOn": "Bound to localhost:{{port}}",
+    "socksProxy": "SOCKS5 proxy",
+    "waiting": "Waiting",
+    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeTunnels": "Aktywne tunele",
     "start": "Start",
-    "stop": "Zatrzymaj"
+    "stop": "Zatrzymaj",
+    "authTitle": "Tunnel authentication",
+    "authRetry": "The previous code was not accepted. Enter a new code.",
+    "authAnswer": "Authentication response",
+    "authContinue": "Kontynuuj"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use tunnels",
+      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Enable tunnels",
+        "description": "Set up SSH tunnels through this host."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tunele",

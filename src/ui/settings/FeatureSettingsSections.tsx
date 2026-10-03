@@ -77,9 +77,12 @@ export function FeatureSettingsSection({
   open: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <AccordionSection
-      label={plugin.name}
+      label={t(pluginKey(plugin.id, "plugin.name"), {
+        defaultValue: plugin.name,
+      })}
       icon={<PluginIcon name={plugin.icon} className="size-3.5" />}
       open={open}
       onToggle={onToggle}
@@ -206,7 +209,11 @@ function FeatureSettingsForm({
     <div className="flex flex-col gap-2 pt-2">
       {!running && (
         <div className="border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500">
-          {t("settings.featureUnavailable", { name: plugin.name })}
+          {t("settings.featureUnavailable", {
+            name: t(pluginKey(plugin.id, "plugin.name"), {
+              defaultValue: plugin.name,
+            }),
+          })}
         </div>
       )}
 

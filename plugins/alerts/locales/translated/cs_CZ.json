@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Upozornění"
+  },
+  "permissions": {
+    "use": {
+      "title": "Používejte upozornění",
+      "description": "Získejte upozornění do složky Doručená pošta a odesílejte je na své vlastní kanály."
+    }
+  },
+  "onboarding": {
+    "feature": "Upozornění",
+    "featureDesc": "Všechna upozornění v jedné schránce, odeslaná na Discord, ntfy, e-mail nebo webhook, pokud chcete."
+  },
+  "settings": {
+    "group": {
+      "general": "Obecné",
+      "email": "E-mail"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Oznámení Termixu",
+        "description": "Zobrazujte novinky od týmu Termix, jako jsou bezpečnostní oznámení a vydání, ve schránce všech uživatelů."
+      },
+      "retentionDays": {
+        "label": "Uchovávat upozornění po dobu (dnů)",
+        "description": "Starší upozornění jsou odstraněna ze všech složek doručené pošty."
+      },
+      "smtpHost": {
+        "label": "SMTP server",
+        "description": "Požadováno pro e-mailové kanály. Pro vypnutí e-mailu ponechte prázdné.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "SMTP port",
+        "description": "Obvykle 587 se STARTTLS nebo 465 s TLS."
+      },
+      "smtpSecure": {
+        "label": "Používejte TLS od začátku",
+        "description": "Zapněte pro port 465. Nechte vypnuto pro port 587, který se sám upgraduje na TLS."
+      },
+      "smtpUser": {
+        "label": "Uživatelské jméno SMTP",
+        "description": "Pokud server nevyžaduje přihlášení, nechte pole prázdné."
+      },
+      "smtpPassword": {
+        "label": "Heslo k SMTP",
+        "description": "Uloženo zašifrovaně."
+      },
+      "smtpFrom": {
+        "label": "Odesílatel",
+        "description": "Upozornění odesílatele pocházejí od.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Vyskakovací okna s upozorněními",
+        "description": "Která nová upozornění se zobrazují při používání Termixu. Vždy se dostanou do doručené pošty.",
+        "all": "Všechna upozornění",
+        "warning": "Varování a kritické",
+        "critical": "Pouze kritické",
+        "off": "Žádný"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Doručená pošta",
+    "channels": "Kanály",
+    "rules": "Pravidla doručení"
+  },
+  "severity": {
+    "info": "Informace",
+    "success": "Úspěch",
+    "warning": "Varování",
+    "critical": "Kritický"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "OTEVŘENO",
+    "view": "Pohled",
+    "unread": "Nepřečtený",
+    "deliveryFailed_one": "Kanál {{count}} selhal",
+    "deliveryFailed_other": "{{count}} kanálů selhalo",
+    "markRead": "Označit jako přečtené",
+    "markUnread": "Označit jako nepřečtené",
+    "markAllRead": "Označit vše jako přečtené",
+    "delete": "Vymazat",
+    "clearRead": "Smazat upozornění na přečtení",
+    "cleared_one": "Smazáno upozornění {{count}}",
+    "cleared_other": "Smazaná {{count}} upozornění",
+    "filterAll": "Vše",
+    "filterUnread": "Nepřečtený",
+    "anySeverity": "Jakákoli závažnost",
+    "anySource": "Jakýkoli zdroj",
+    "openAll": "Otevřít v kartě",
+    "empty": "Zatím žádná upozornění.",
+    "emptyUnread": "Všechno máte v obraze.",
+    "loadMore": "Načíst další"
+  },
+  "channels": {
+    "intro": "Kanály jsou místem, kudy mohou upozornění odesílat mimo Termix. Pravidla doručování vybírají, která upozornění je používají.",
+    "add": "Přidat kanál",
+    "edit": "Upravit kanál",
+    "test": "Odeslat test",
+    "testSent": "Testovací upozornění odesláno",
+    "testFailed": "Test selhal: {{error}}",
+    "deleteConfirm": "Smazat kanál „{{name}}“?",
+    "deleted": "Kanál smazán",
+    "empty": "Zatím žádné kanály.",
+    "enabled": "Povoleno",
+    "needsSave": "Tento kanál je nutné před odesláním znovu otevřít a uložit.",
+    "name": "Jméno",
+    "nameRequired": "Jméno je povinné",
+    "type": "Typ",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Svár",
+      "email": "E-mail"
+    },
+    "emailUnavailable": "E-mail potřebuje SMTP server, který administrátor nastaví v nastavení Upozornění.",
+    "webhookUrl": "URL",
+    "webhookHint": "Získá tělo JSON pro každé upozornění.",
+    "method": "Metoda",
+    "headers": "Záhlaví",
+    "headersHint": "Jeden na řádek, například Název: hodnota.",
+    "ntfyServer": "URL serveru",
+    "ntfyTopic": "Téma",
+    "ntfyToken": "Přístupový token (volitelné)",
+    "discordUrl": "URL webhooku na Discordu",
+    "discordHint": "V nastavení kanálu na Discordu, v sekci Integrace.",
+    "discordUsername": "Zobrazovaný název (volitelné)",
+    "discordAvatar": "URL adresa avatara (volitelné)",
+    "emailTo": "Odeslat",
+    "emailHint": "Více adres oddělte čárkami.",
+    "privateNetwork": "Povolit adresu privátní sítě",
+    "privateNetworkHint": "Funguje pouze pro hostitele, které správce povolí v seznamu privátních koncových bodů."
+  },
+  "rules": {
+    "intro": "Pravidlo doručování odesílá odpovídající upozornění do vašich kanálů. Upozornění vždy zůstávají také ve složce Doručená pošta.",
+    "add": "Přidat pravidlo",
+    "edit": "Upravit pravidlo",
+    "empty": "Zatím žádná pravidla, takže upozornění se zobrazují pouze ve schránce.",
+    "needChannel": "Nejprve přidejte kanál.",
+    "enabled": "Povoleno",
+    "name": "Jméno",
+    "nameRequired": "Jméno je povinné",
+    "match": "Upozornění k odeslání",
+    "matchHint": "* pro všechno, automatizace.* pro všechno od automatizací nebo jeden přesný druh.",
+    "minSeverity": "Alespoň",
+    "channels": "Odeslat",
+    "channelRequired": "Vyberte alespoň jeden kanál",
+    "deleteConfirm": "Smazat pravidlo „{{name}}“?",
+    "everything": "Všechno",
+    "summary": "{{match}}, {{severity}} nebo vyšší, na {{channels}}"
+  },
+  "actions": {
+    "cancel": "Zrušit",
+    "save": "Uložit",
+    "saving": "Ukládání…",
+    "delete": "Vymazat"
+  },
+  "widget": {
+    "name": "Zdroj upozornění",
+    "description": "Vaše nejnovější upozornění s rychlým způsobem, jak je označit jako přečtené",
+    "maxItems": "Maximální počet položek",
+    "showRead": "Zobrazit upozornění na přečtení",
+    "allClear": "Všechno čisté",
+    "loading": "Načítání..."
+  }
+}

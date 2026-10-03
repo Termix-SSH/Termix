@@ -33,7 +33,7 @@
     "loadingHost": "正在載入主機..."
   },
   "nav": {
-    "portForwarding": "轉發",
+    "portForwarding": "Forwarding",
     "tunnels": "隧道"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (本機監聽)",
     "localTargetHost": "127.0.0.1 (此電腦上的目標)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1（監聽端點）",
-    "remoteTargetHost": "127.0.0.1（來自端點的目標）",
+    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
+    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1（SOCKS 監聽器）"
   },
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "預設組是明確的快照；載入預設組將會取代此桌面用戶端的本機用戶端通道清單。",
     "c2sPresetToLoad": "要載入的預設組",
     "c2sTunnelPresets": "用戶端通道預設組",
-    "c2sTunnelPresetsUnavailable": "用戶端通道預設組僅在桌面用戶端中可用。"
+    "c2sTunnelPresetsUnavailable": "用戶端通道預設組僅在桌面用戶端中可用。",
+    "c2sPresetRenameError": "Failed to rename the preset",
+    "c2sPresetDeleteError": "Failed to delete the preset"
   },
   "tunnels": {
     "attempt": "嘗試 {{current}}/{{max}}",
@@ -83,8 +85,8 @@
     "createFirstTunnelMessage": "您尚未建立任何 SSH 通道。請在主機管理員中設定通道連線以開始使用。",
     "currentHostPort": "目前主機連接埠",
     "destination": "目的地",
-    "destinationAddress": "目的地地址",
-    "destinationPort": "目的港",
+    "destinationAddress": "Destination Address",
+    "destinationPort": "Destination Port",
     "disconnected": "已離線",
     "duplicateAutoStartBind": "只有一個自動啟動的用戶端通道可以使用 {{bind}}。",
     "endpointPort": "端點連接埠",
@@ -99,18 +101,18 @@
     "forwardDescriptionServerLocal": "目前主機 {{sourcePort}} → 端點 {{endpointPort}}。",
     "forwardDescriptionServerRemote": "端點 {{endpointPort}} → 目前主機 {{sourcePort}}。",
     "host": "主機",
-    "intermediateHost": "中間宿主",
+    "intermediateHost": "Intermediate Host",
     "invalidBindIp": "本機 IP 必須是有效的 IPv4 位址。",
     "invalidEndpointPort": "端點連接埠必須介於 1 到 65535 之間。",
     "invalidLocalPort": "本機連接埠必須介於 1 到 65535 之間。",
     "invalidLocalTargetIp": "本機目標 IP 必須是有效的 IPv4 位址。",
     "invalidLocalTargetPort": "本機目標連接埠必須介於 1 到 65535 之間。",
-    "invalidRemoteAddress": "需要遠端位址。",
+    "invalidRemoteAddress": "Remote address is required.",
     "invalidRemotePort": "遠端連接埠必須介於 1 到 65535 之間。",
     "lastError": "上次錯誤",
     "lastStarted": "上次啟動",
     "lastTested": "上次測試",
-    "localAddress": "本地地址",
+    "localAddress": "Local Address",
     "localPort": "本機連接埠",
     "localSaveError": "無法儲存本機用戶端通道",
     "localSaved": "用戶端通道已儲存",
@@ -122,7 +124,7 @@
     "noHostSelected": "未選取主機",
     "noSshTunnels": "無 SSH 通道",
     "port": "連接埠",
-    "remoteBindAddress": "遠端綁定位址",
+    "remoteBindAddress": "Remote Bind Address",
     "remoteHost": "遠端主機",
     "remotePort": "遠端連接埠",
     "retryInterval": "重試間隔（秒）",
@@ -139,11 +141,35 @@
     "typeLocal": "本機 (-L)",
     "typeRemote": "遠端 (-R)",
     "working": "處理中...",
+    "activeCount": "{{connected}}/{{total}} active",
+    "listensOn": "Bound to localhost:{{port}}",
+    "socksProxy": "SOCKS5 proxy",
+    "waiting": "Waiting",
+    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeTunnels": "活動通道",
     "start": "啟動",
-    "stop": "停止"
+    "stop": "停止",
+    "authTitle": "Tunnel authentication",
+    "authRetry": "The previous code was not accepted. Enter a new code.",
+    "authAnswer": "Authentication response",
+    "authContinue": "繼續"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use tunnels",
+      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Enable tunnels",
+        "description": "Set up SSH tunnels through this host."
+      }
+    }
   },
   "onboarding": {
-    "feature_tunnels": "隧道",
-    "feature_tunnels_desc": "透過伺服器轉送連接埠以存取未公開的服務。"
+    "feature_tunnels": "通道",
+    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
   }
 }

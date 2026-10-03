@@ -250,13 +250,21 @@ export function TriggerCard({
             <SelectContent>
               {trigger.kind === "host_status" ? (
                 <>
-                  <SelectItem value="offline">offline</SelectItem>
-                  <SelectItem value="online">online</SelectItem>
+                  <SelectItem value="offline">
+                    {t("ui.sidebar.automations.options.offline")}
+                  </SelectItem>
+                  <SelectItem value="online">
+                    {t("ui.sidebar.automations.options.online")}
+                  </SelectItem>
                 </>
               ) : (
                 <>
-                  <SelectItem value="failing">failing</SelectItem>
-                  <SelectItem value="recovered">recovered</SelectItem>
+                  <SelectItem value="failing">
+                    {t("ui.sidebar.automations.options.failing")}
+                  </SelectItem>
+                  <SelectItem value="recovered">
+                    {t("ui.sidebar.automations.options.recovered")}
+                  </SelectItem>
                 </>
               )}
             </SelectContent>

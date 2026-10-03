@@ -33,7 +33,7 @@
     "loadingHost": "Host yükleniyor..."
   },
   "nav": {
-    "portForwarding": "İletme",
+    "portForwarding": "Forwarding",
     "tunnels": "Tüneller"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (yerel olarak dinle)",
     "localTargetHost": "127.0.0.1 (bu bilgisayardaki hedef)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1 (uç noktada dinleme)",
-    "remoteTargetHost": "127.0.0.1 (uç noktadan hedef)",
+    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
+    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1 (SOCKS dinleyici)"
   },
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Ön ayarlar belirli anlık görüntülerdir; birini yüklemek, bu masaüstü istemcinin yerel istemci tünel listesini değiştirir.",
     "c2sPresetToLoad": "Yüklenecek Ön Ayar",
     "c2sTunnelPresets": "İstemci Tünel Ön Ayarları",
-    "c2sTunnelPresetsUnavailable": "İstemci tünel ön ayarları yalnızca masaüstü istemcisinde kullanılabilir."
+    "c2sTunnelPresetsUnavailable": "İstemci tünel ön ayarları yalnızca masaüstü istemcisinde kullanılabilir.",
+    "c2sPresetRenameError": "Failed to rename the preset",
+    "c2sPresetDeleteError": "Failed to delete the preset"
   },
   "tunnels": {
     "attempt": "Deneme {{current}}/{{max}}",
@@ -83,8 +85,8 @@
     "createFirstTunnelMessage": "Henüz hiç SSH tüneli oluşturmadınız. Başlamak için Ana Bilgisayar Yöneticisi'nde tünel bağlantılarını yapılandırın.",
     "currentHostPort": "Geçerli Sunucu Portu",
     "destination": "Hedef",
-    "destinationAddress": "Hedef Adresi",
-    "destinationPort": "Varış Limanı",
+    "destinationAddress": "Destination Address",
+    "destinationPort": "Destination Port",
     "disconnected": "Bağlantı kesildi",
     "duplicateAutoStartBind": "Yalnızca bir otomatik başlatmalı istemci tüneli {{bind}} kullanabilir.",
     "endpointPort": "Uç Nokta Portu",
@@ -99,18 +101,18 @@
     "forwardDescriptionServerLocal": "Geçerli sunucu {{sourcePort}} → uç nokta {{endpointPort}}.",
     "forwardDescriptionServerRemote": "Uç nokta {{endpointPort}} → geçerli sunucu {{sourcePort}}.",
     "host": "Host",
-    "intermediateHost": "Ara Ev Sahibi",
+    "intermediateHost": "Intermediate Host",
     "invalidBindIp": "Yerel IP geçerli bir IPv4 adresi olmalıdır.",
     "invalidEndpointPort": "Uç nokta portu 1 ile 65535 arasında olmalıdır.",
     "invalidLocalPort": "Yerel port 1 ile 65535 arasında olmalıdır.",
     "invalidLocalTargetIp": "Yerel hedef IP geçerli bir IPv4 adresi olmalıdır.",
     "invalidLocalTargetPort": "Yerel hedef portu 1 ile 65535 arasında olmalıdır.",
-    "invalidRemoteAddress": "Uzak adres gereklidir.",
+    "invalidRemoteAddress": "Remote address is required.",
     "invalidRemotePort": "Uzak port 1 ile 65535 arasında olmalıdır.",
     "lastError": "Son hata",
     "lastStarted": "Son başlatma",
     "lastTested": "Son test",
-    "localAddress": "Yerel Adres",
+    "localAddress": "Local Address",
     "localPort": "Yerel Port",
     "localSaveError": "Yerel istemci tünelleri kaydedilemedi",
     "localSaved": "İstemci tünelleri kaydedildi",
@@ -122,7 +124,7 @@
     "noHostSelected": "Hiçbir host seçilmedi",
     "noSshTunnels": "SSH Tüneli yok",
     "port": "Port",
-    "remoteBindAddress": "Uzak Bağlantı Adresi",
+    "remoteBindAddress": "Remote Bind Address",
     "remoteHost": "Uzak Sunucu",
     "remotePort": "Uzak Port",
     "retryInterval": "Yeniden Deneme Aralığı (saniye)",
@@ -139,11 +141,35 @@
     "typeLocal": "Yerel (-L)",
     "typeRemote": "Uzak (-R)",
     "working": "Çalışıyor...",
+    "activeCount": "{{connected}}/{{total}} active",
+    "listensOn": "Bound to localhost:{{port}}",
+    "socksProxy": "SOCKS5 proxy",
+    "waiting": "Waiting",
+    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeTunnels": "Etkin Tüneller",
     "start": "Başlat",
-    "stop": "Durdur"
+    "stop": "Durdur",
+    "authTitle": "Tunnel authentication",
+    "authRetry": "The previous code was not accepted. Enter a new code.",
+    "authAnswer": "Authentication response",
+    "authContinue": "Devam"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use tunnels",
+      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Enable tunnels",
+        "description": "Set up SSH tunnels through this host."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tüneller",
-    "feature_tunnels_desc": "Sunucu üzerinden port yönlendirmesi yaparak, erişime açık olmayan hizmetlere ulaşabilirsiniz."
+    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
   }
 }

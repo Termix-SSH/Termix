@@ -1,50 +1,50 @@
 {
   "remoteDesktop": {
     "connecting": "{{type}} सत्र से कनेक्ट हो रहा है...",
-    "checkingGuacd": "रिमोट डेस्कटॉप सेवा की जाँच की जा रही है...",
-    "requestingToken": "{{type}} कनेक्शन टोकन का अनुरोध किया जा रहा है...",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
     "openingSession": "Opening {{type}} session...",
-    "negotiating": "बातचीत चल रही है {{type}} हाथ मिलाना...",
-    "sessionReady": "{{type}} सत्र तैयार है",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
     "connectionError": "कनेक्शन त्रुटि",
     "connectionFailed": "कनेक्शन विफल",
     "failedToConnect": "कनेक्शन टोकन प्राप्त करने में विफल",
     "hostNotFound": "होस्ट नहीं मिला",
-    "noHostSelected": "कोई होस्ट चयनित नहीं",
-    "reconnect": "रीकनेक्ट",
+    "noHostSelected": "कोई होस्ट चयनित नहीं है",
+    "reconnect": "पुनः कनेक्ट करें",
     "retry": "पुनः प्रयास करें",
     "guacdUnavailable": "रिमोट डेस्कटॉप सेवा (guacd) उपलब्ध नहीं है। कृपया सुनिश्चित करें कि guacd चल रहा है और पहुंच योग्य है और एडमिन सेटिंग्स में ठीक से कॉन्फ़िगर किया गया है।",
-    "credentialPromptTitle": "आरडीपी क्रेडेंशियल दर्ज करें",
-    "credentialPromptDescription": "इस होस्ट पर कनेक्ट होने पर क्रेडेंशियल मांगे जाएंगे। ये क्रेडेंशियल केवल इसी सेशन के लिए उपयोग किए जाएंगे और सेव नहीं किए जाएंगे।",
-    "connect": "जोड़ना",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "connect": "कनेक्ट",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
-      "title": "ड्राइव फ़ाइलें",
-      "parent": "मूल निर्देशिका",
-      "refresh": "ताज़ा करना",
+      "title": "Drive Files",
+      "parent": "Parent directory",
+      "refresh": "ताज़ा करें",
       "empty": "यह फ़ोल्डर खाली है",
-      "listFailed": "इस फ़ोल्डर को पढ़ने में विफल रहा",
-      "download": "डाउनलोड करना",
-      "downloadFailed": "डाउनलोड करने में विफल {{name}}",
-      "upload": "फाइलें अपलोड करें",
-      "uploading": "अपलोड हो रहा है {{name}}...",
-      "uploaded": "अपलोड किया गया {{name}}",
-      "uploadFailed": "अपलोड करने में विफल {{name}}",
-      "uploadDisabled": "इस कनेक्शन के लिए अपलोड अक्षम हैं।",
-      "driveUnavailable": "फ़ाइलें अपलोड करने से पहले RDP ड्राइव रीडायरेक्शन को सक्षम करें",
-      "driveNotWritable": "GUACD ड्राइव फ़ोल्डर में लिख नहीं सकता। कृपया GUACD_DRIVE_PATH (या होस्ट का ड्राइव पाथ) और उसकी अनुमतियाँ जाँचें।",
-      "dropToUpload": "अपलोड करने के लिए फ़ाइलें ड्रॉप करें"
+      "listFailed": "Failed to read this folder",
+      "download": "डाउनलोड",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "{{name}} अपलोड हो रहा है...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (लॉक स्क्रीन)",
       "winKey": "विंडोज की",
-      "superL": "सुपर+एल (लॉक स्क्रीन)",
-      "superKey": "सुपर कुंजी",
-      "super": "बहुत अच्छा",
-      "cmdL": "Cmd+L (लॉक स्क्रीन)",
-      "cmdKey": "कमांड कुंजी",
-      "cmd": "अध्यक्ष एवं प्रबंध निदेशक",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -54,37 +54,42 @@
       "esc": "Escape",
       "tab": "Tab",
       "home": "Home",
-      "end": "End",
+      "end": "एंड",
       "pageUp": "Page Up",
       "pageDown": "Page Down",
-      "arrowUp": "Arrow Up",
-      "arrowDown": "Arrow Down",
-      "arrowLeft": "Arrow Left",
-      "arrowRight": "Arrow Right",
+      "arrowUp": "ऊपर तीर",
+      "arrowDown": "नीचे तीर",
+      "arrowLeft": "बाएँ तीर",
+      "arrowRight": "दाएँ तीर",
       "fnToggle": "फ़ंक्शन कुंजियाँ",
       "reconnect": "सत्र पुनः कनेक्ट करें",
       "collapse": "टूलबार समेटें",
       "expand": "टूलबार विस्तारित करें",
       "dragHandle": "स्थान बदलने के लिए खींचें",
-      "hide": "इस सत्र के लिए इसे छुपाएं। इसे स्थायी रूप से अक्षम करने के लिए, होस्ट सेटिंग्स → सामान्य → कनेक्शन टूलबार खोलें।",
-      "zoomIn": "ज़ूम इन",
-      "zoomOut": "ज़ूम आउट",
-      "resetZoom": "ज़ूम रीसेट करें",
-      "fitToScreen": "स्क्रीनिंग के लिए उपयुक्त",
-      "switchToTrackpad": "ट्रैकपैड मोड पर स्विच करें (कर्सर को स्थानांतरित करने के लिए ड्रैग करें, क्लिक करने के लिए टैप करें)",
-      "switchToTouch": "टच मोड पर स्विच करें (जहां क्लिक करना चाहते हैं वहां सीधे टैप करें)"
-    }
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
+      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
   },
   "hosts": {
-    "nativeRdpOpened": "विंडोज़ रिमोट डेस्कटॉप में खोला गया",
-    "nativeRdpFailed": "विंडोज़ रिमोट डेस्कटॉप खोलने में विफल",
-    "openNativeRdp": "विंडोज़ रिमोट डेस्कटॉप में खोलें",
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
     "guac": {
+      "toolbar": "Toolbar",
       "connection": "कनेक्शन",
       "authentication": "प्रमाणीकरण",
       "storedCredential": "संग्रहीत क्रेडेंशियल",
       "authMethod": "प्रमाणीकरण विधि",
-      "authTypeNoneDesc": "कोई भी क्रेडेंशियल स्टोर नहीं किए जाते हैं। हर बार कनेक्ट करते समय आपसे उपयोगकर्ता नाम और पासवर्ड मांगा जाएगा; वे सहेजे नहीं जाते हैं।",
+      "authTypeDirect": "सीधा",
+      "authTypeCredential": "क्रेडेंशियल",
+      "authTypeNone": "कोई नहीं",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
       "selectCredential": "एक क्रेडेंशियल चुनें...",
       "connectionSettings": "कनेक्शन सेटिंग्स",
       "displaySettings": "प्रदर्शन सेटिंग्स",
@@ -102,7 +107,7 @@
       "rdpPort": "RDP पोर्ट",
       "username": "उपयोगकर्ता नाम",
       "password": "पासवर्ड",
-      "passwordSaved": "पासवर्ड सहेज लिया गया है, बदलने के लिए टाइप करें",
+      "passwordSaved": "Password saved, type to change",
       "domain": "डोमेन",
       "securityMode": "सुरक्षा मोड",
       "width": "चौड़ाई",
@@ -206,7 +211,8 @@
       "colorScheme": "रंग योजना",
       "backspaceKey": "बैकस्पेस कुंजी",
       "colorDepth": "रंग गहराई",
-      "resizeMethod": "रीसाइज़ विधि"
+      "resizeMethod": "रीसाइज़ विधि",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "दूरस्थ डेस्कटॉप",
     "tabRdp": "RDP",
@@ -214,24 +220,30 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "वर्चुअल नेटवर्क",
     "unencryptedShell": "अनएन्क्रिप्टेड शेल",
-    "docsLink": "दस्तावेज़ देखें"
+    "remoteDesktopNotes": "नोट्स",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "दस्तावेज़ देखें",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
   },
   "onboarding": {
-    "feature_desktop": "दूरवर्ती डेस्कटॉप",
-    "feature_desktop_desc": "RDP, VNC और Telnet सेशन को SSH की तरह ही एक टैब में खोलें।"
+    "feature_desktop": "Remote desktop",
+    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
   },
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "रंग गहराई"
+        "label": "रंग गहराई",
+        "description": "Used for RDP hosts that leave it on their default."
       },
       "resizeMethod": {
-        "label": "रीसाइज़ विधि"
+        "label": "रीसाइज़ विधि",
+        "description": "How the remote screen follows the window size."
       },
-      "resizeDisplayUpdate": "डिस्प्ले अपडेट",
-      "resizeReconnect": "रिकनेक्ट",
-      "inherit": "इनहेरिट",
-      "on": "पर",
+      "resizeDisplayUpdate": "Display Update",
+      "resizeReconnect": "पुनः कनेक्ट करें",
+      "inherit": "Inherit",
+      "on": "चालू",
       "off": "बंद",
       "forceLossless": {
         "label": "दोषरहित बाध्य करें",
@@ -268,15 +280,71 @@
       "disablePaste": {
         "label": "पेस्ट अक्षम करें",
         "description": "रिमोट सत्र में टेक्स्ट पेस्ट करना रोकें"
-      }
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
     },
     "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
       "guacdUrl": {
-        "label": "guacd URL"
+        "label": "guacd URL",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "दूरस्थ डेस्कटॉप"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
     }
   },
   "errors": {
-    "remoteServerRequired": "रिमोट सर्वर आवश्यक है। इस कनेक्शन प्रकार का उपयोग करने के लिए सेटिंग्स में जाकर रिमोट सर्वर कनेक्ट करें।"
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

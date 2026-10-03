@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "Sign in with LDAP",
   "loginWithProvider": "Войти через {{name}}",
   "loading": "Загрузка...",
   "requiredField": "Обязательное поле",
   "username": "Имя пользователя LDAP",
   "password": "Пароль LDAP",
   "signIn": "Войти",
+  "permissions": {
+    "manage": {
+      "title": "Manage LDAP directories",
+      "description": "Add, change and remove the LDAP directories people can sign in with."
+    }
+  },
   "providers": {
     "docsLink": "Документация",
+    "none": "No LDAP directories configured.",
+    "add": "Add Directory",
+    "edit": "Edit Directory",
+    "delete": "Delete Directory",
+    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
     "name": "Отображаемое имя",
+    "namePlaceholder": "Company directory",
+    "nameRequired": "A display name is required",
     "enabled": "Включено",
-    "saving": "Сохранение...",
+    "save": "Save Directory",
+    "saving": "Сохранение…",
     "saved": "Сохранено",
     "saveFailed": "Не удалось сохранить",
     "deleted": "Удалено",
     "deleteFailed": "Не удалось удалить",
+    "loadFailed": "Failed to load LDAP directories",
     "cancel": "Отмена"
   },
   "fields": {
@@ -22,6 +38,7 @@
     "useTls": "Использовать TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Пароль привязки",
+    "secretKeep": "A password is saved. Leave this empty to keep it.",
     "userSearchBase": "База поиска пользователей",
     "userSearchFilter": "Фильтр поиска пользователей",
     "usernameAttr": "Атрибут имени пользователя",

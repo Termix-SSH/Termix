@@ -2,55 +2,67 @@
   "newUi": {
     "sidebar": {
       "workspaces": {
-        "title": "Không gian làm việc",
-        "saveCurrent": "Lưu hiện tại",
-        "saveCurrentTitle": "Lưu không gian làm việc hiện tại",
-        "saveCurrentDescription": "Lưu tất cả các tab đang mở, bố cục chia màn hình và cách sắp xếp khung cửa sổ dưới dạng một không gian làm việc mới có tên.",
+        "title": "Workspaces",
+        "saveCurrent": "Save Current",
+        "saveCurrentTitle": "Save Current Workspace",
+        "saveCurrentDescription": "Save every open tab, split layout, and pane arrangement as a new named workspace.",
         "nameLabel": "Tên",
-        "namePlaceholder": "Ví dụ: Gỡ lỗi sản phẩm",
-        "nameRequired": "Tên không gian làm việc là bắt buộc",
+        "namePlaceholder": "e.g., Prod Debugging",
+        "nameRequired": "Workspace name is required",
         "colorLabel": "Màu sắc",
-        "workspaceCreated": "Không gian làm việc đã được lưu",
-        "workspaceUpdated": "Không gian làm việc đã được cập nhật",
-        "workspaceDeleted": "Không gian làm việc đã bị xóa",
-        "workspaceDuplicated": "Không gian làm việc được sao chép",
-        "saveFailed": "Không thể lưu không gian làm việc",
-        "updateFailed": "Không thể cập nhật không gian làm việc",
-        "deleteFailed": "Không thể xóa không gian làm việc",
-        "duplicateFailed": "Không thể sao chép không gian làm việc",
-        "loadFailed": "Không thể tải không gian làm việc",
-        "applyFailed": "Không thể áp dụng không gian làm việc",
-        "deleteWorkspaceTitle": "Xóa không gian làm việc",
-        "deleteWorkspaceDescription": "Bạn có chắc chắn muốn xóa \"{{name}}\" không? Thao tác này không thể hoàn tác.",
-        "noWorkspaces": "Chưa có không gian làm việc nào được lưu. Hãy lưu cách bố trí tab hiện tại của bạn để bắt đầu.",
+        "workspaceCreated": "Workspace saved",
+        "workspaceUpdated": "Workspace updated",
+        "workspaceDeleted": "Workspace deleted",
+        "workspaceDuplicated": "Workspace duplicated",
+        "saveFailed": "Failed to save workspace",
+        "updateFailed": "Failed to update workspace",
+        "deleteFailed": "Failed to delete workspace",
+        "duplicateFailed": "Failed to duplicate workspace",
+        "loadFailed": "Failed to load workspaces",
+        "applyFailed": "Failed to apply workspace",
+        "deleteWorkspaceTitle": "Delete Workspace",
+        "deleteWorkspaceDescription": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+        "noWorkspaces": "No saved workspaces yet. Save your current tab arrangement to get started.",
         "tabCount": "{{count}} tab",
-        "tabCount_other": "{{count}} tab",
+        "tabCount_other": "{{count}} tabs",
         "apply": "Áp dụng",
-        "applyConfirmTitle": "Áp dụng Không gian làm việc",
-        "applyConfirmDescription": "Áp dụng \"{{name}}\" sẽ đóng các tab hiện tại của bạn và thay thế chúng bằng bố cục đã lưu của không gian làm việc này. Các thay đổi chưa được lưu đối với bố cục hiện tại của bạn sẽ bị mất.",
-        "applyConfirmButton": "Áp dụng Không gian làm việc",
-        "updateWithCurrent": "Cập nhật với thông tin hiện tại",
-        "updateWithCurrentConfirm": "Bạn có muốn ghi đè \"{{name}}\" bằng cách sắp xếp tab hiện tại của mình không?",
+        "applyConfirmTitle": "Apply Workspace",
+        "applyConfirmDescription": "Applying \"{{name}}\" will close your current tabs and replace them with this workspace's saved arrangement. Unsaved changes to your current layout will be lost.",
+        "applyConfirmButton": "Apply Workspace",
+        "updateWithCurrent": "Update with Current",
+        "updateWithCurrentConfirm": "Overwrite \"{{name}}\" with your current tab arrangement?",
         "rename": "Đổi tên",
-        "duplicate": "Nhân bản",
+        "duplicate": "Duplicate",
         "duplicateNameSuffix": "{{name}} (copy)",
-        "setDefault": "Đặt làm mặc định",
-        "unsetDefault": "Xóa khỏi danh sách mặc định",
-        "defaultBadge": "Mặc định",
-        "lastSession": "Phiên cuối cùng",
-        "lastSessionDescription": "Tự động cập nhật với cách sắp xếp tab gần đây nhất của bạn. Áp dụng để khôi phục các tab bạn đã mở trước đó.",
-        "lastUsed": "Lần sử dụng cuối cùng {{time}}",
-        "neverUsed": "Chưa từng ứng tuyển",
-        "tabsSkipped": "Không gian làm việc đã được áp dụng — {{count}} tab đã bị bỏ qua (máy chủ không còn tồn tại): {{names}}"
+        "setDefault": "Set as Default",
+        "unsetDefault": "Remove as Default",
+        "defaultBadge": "Default",
+        "lastSession": "Last Session",
+        "lastSessionDescription": "Automatically updated with your most recent tab arrangement. Apply it to recover what you had open.",
+        "lastUsed": "Last used {{time}}",
+        "neverUsed": "Never applied",
+        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}} phút trước",
+          "hours": "{{count}} giờ trước",
+          "days": "{{count}} ngày trước"
+        }
       }
     }
   },
   "nav": {
-    "workspaces": "Không gian làm việc"
+    "workspaces": "Workspaces"
   },
   "onboarding": {
-    "workflow_workspaces": "Không gian làm việc",
-    "workflow_workspaces_desc": "Lưu lại một nhóm các tab đang mở và mở lại toàn bộ bố cục sau."
+    "workflow_workspaces": "Workspaces",
+    "workflow_workspaces_desc": "Save a set of open tabs and reopen the whole layout later."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use workspaces",
+      "description": "Save, apply and manage saved tab layouts."
+    }
   },
   "hosts": {
     "docsLink": "Xem tài liệu"

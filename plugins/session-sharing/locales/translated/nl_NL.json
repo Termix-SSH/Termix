@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Gebruikers doorzoeken...",
     "noUsersFound": "Geen gebruikers gevonden",
     "linkCreated": "Deellink aangemaakt",
+    "linkNeedsServer": "Deellinks werken alleen voor sessies op een Termix-server. Verbind deze host via uw gekoppelde server om deze met een link te delen.",
     "linkCopied": "Link gekopieerd naar het klembord.",
     "copyLink": "Kopieer link",
     "shareCreated": "De sessie is gedeeld. Deze verschijnt in hun tabblad 'Verbindingen'.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Link",
     "userShareBadge": "Gebruiker: {{username}}",
     "loadSharesFailed": "Het laden van actieve aandelen is mislukt.",
+    "remoteDisplayUnavailable": "Externe bureaubladtoegang is momenteel niet beschikbaar.",
+    "sharedWithMe": "Sessies die met mij zijn gedeeld",
     "customHoursPlaceholder": "Aantal uren tot de toegang verloopt"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Leden",
     "membersPanel": "Kamerleden en beheerverzoeken",
     "membersWithCount": "Leden ({{count}})",
+    "guestsWithCount": "Gasten ({{count}})",
+    "removeGuests": "Verwijder gasten",
+    "anonymousGuest": "Gast",
     "online": "online",
     "offline": "offline",
     "you": "(Jij)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Deze gastlink is ongeldig of de vergadering is afgelopen."
     },
     "reopenFromPanel": "Dit vergadertabblad is verlopen. Heropen de ruimte via het paneel Vergaderingen.",
+    "retry": "Opnieuw proberen",
     "requestControl": "Verzoekbeheer",
     "cancelControlRequest": "Verzoek annuleren",
     "controlQueue": "Controleverzoeken",
@@ -130,7 +137,10 @@
     "youArePresenting": "Je presenteert momenteel in een ander tabblad. Stop met presenteren en geef het woord aan iemand anders.",
     "created": "Kamer gecreëerd",
     "invited": "Leden uitgenodigd",
-    "roomTab": "Ontmoeting"
+    "roomTab": "Ontmoeting",
+    "serverChanged": "De vergaderserver is gewijzigd. Heropen deze vergadering via het paneel Vergaderingen.",
+    "hostNotSynced": "Synchroniseer deze host met de vergaderserver voordat u de presentatie geeft.",
+    "linkRequiresServer": "Koppel dit bureaublad aan een Termix-server en maak daar de vergadering aan om een weblink te delen."
   },
   "nav": {
     "collab": "Vergaderingen"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Deel sessies en neem deel aan chatrooms.",
+      "description": "Deel live sessies via een link of met andere gebruikers, en creëer en neem deel aan samenwerkingsruimtes."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Aangepast"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Met mij gedeeld",
+    "sharedBy": "Gedeeld door {{username}}",
+    "join": "Meedoen",
+    "sharedSessionLabel": "{{hostName}} (gedeeld)"
   }
 }

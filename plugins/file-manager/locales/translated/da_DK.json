@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Filer",
+    "sftp": "SFTP",
+    "openFileManager": "Åbn Filhåndtering"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug filhåndtering",
+      "description": "Gennemse, rediger og overfør filer via SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktivér Filhåndtering",
+        "description": "Gennemse og rediger filer på denne vært via SFTP."
+      },
+      "defaultPath": {
+        "label": "Standardsti"
+      },
+      "scpLegacy": {
+        "label": "SCP Legacy-tilstand"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Samtidige filoverførsler",
+        "description": "Hvor mange filer den side om side lokale/fjernstyrede administrator uploader eller downloader på samme tid. Sænk dette, hvis din server begrænser SFTP-kanaler."
+      },
+      "confirmBeforeTrash": {
+        "label": "Bekræft før du flytter filer til papirkurven",
+        "description": "Spørg før du flytter eksterne filer til papirkurven. Permanent sletning kræver stadig bekræftelse."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Filhåndtering"
+  },
   "fileManager": {
     "noHostSelected": "Ingen vært valgt",
     "initializingEditor": "Initialiserer editor...",
@@ -34,6 +72,7 @@
     "rename": "Omdøb",
     "uploading": "Uploader...",
     "uploadingFile": "Uploader {{name}}...",
+    "uploadingChunk": "Uploader {{name}}: {{percent}}% (del {{chunk}} af {{total}})",
     "fileName": "Filnavn",
     "folderName": "Mappenavn",
     "fileUploadedSuccessfully": "Filen \"{{name}}\" er blevet uploadet",
@@ -290,6 +329,7 @@
     "connecting": "Forbinder...",
     "connectedSuccessfully": "Forbindelsen er oprettet",
     "totpVerificationFailed": "TOTP-bekræftelse mislykkedes",
+    "browserSignInFailed": "Log ind mislykkedes. Prøv igen.",
     "authenticationFailed": "Godkendelse mislykkedes",
     "incorrectPassphrase": "Forkert adgangskode. Prøv igen.",
     "verificationCodePrompt": "Bekræftelseskode:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "Kan ikke indlæse PDF'en",
     "pdfLoadError": "Der opstod en fejl under indlæsning af denne PDF-fil.",
     "loadingPdf": "Indlæser PDF...",
-    "loadingPage": "Indlæser side..."
+    "loadingPage": "Indlæser side...",
+    "cancel": "Ophæve",
+    "copiedItems_one": "Kopieret {{count}} element",
+    "copiedItems_other": "Kopierede {{count}} elementer",
+    "deleteCopiedFileFailed": "Kunne ikke slette kopien af {{name}}: {{error}}",
+    "dragMovedItems_one": "Flyttede {{count}} element til {{target}}",
+    "dragMovedItems_other": "Flyttede {{count}} elementer til {{target}}",
+    "moveBackFileFailed": "Kunne ikke flytte {{name}} tilbage: {{error}}",
+    "terminal": "Terminal: {{host}} ({{path}})",
+    "dragToDesktop": "Træk {{name}} til skrivebordet",
+    "dragFilesToDesktop": "Træk {{count}} filer til skrivebordet",
+    "folderDragUnsupported": "Det understøttes endnu ikke at trække mapper til skrivebordet",
+    "saveToDesktopFailed": "Gemning mislykkedes: {{error}}",
+    "dragFailedDetail": "Træk mislykkedes: {{error}}",
+    "videoUnsupported": "Din browser kan ikke afspille dette videoformat.",
+    "downloadToPlay": "Download for at afspille det et andet sted",
+    "cannotPreviewType": "Kan ikke forhåndsvise denne filtype",
+    "cannotPreviewTypeHint": "Denne filtype har ingen forhåndsvisning. Download den for at åbne den i en anden app."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Filhåndtering",
-    "tabFiles": "Filer",
-    "enableFileManagerMonitor": "Aktivér Filhåndtering",
-    "enableFileManagerMonitorDesc": "Gennemse og administrer filer på denne vært via SFTP",
-    "scpLegacyLabel": "SCP Legacy-tilstand",
-    "scpLegacyDesc": "Brug ældre filoverførsel til servere, der ikke understøtter SFTP-undersystemet (f.eks. integrerede eller minimale SSH-servere).",
-    "defaultPathLabel": "Standardsti",
-    "fileManagerPathHint": "Den mappe, der skal åbnes, når filhåndteringen starter for denne vært.",
     "fileManagerUrlCopied": "URL'en til filhåndtering er kopieret",
     "copyFileManagerUrlAction": "Kopiér URL til filhåndtering",
     "docsLink": "Se dokumenter",
     "hostNotFound": "Værten blev ikke fundet",
     "loadingHost": "Indlæser vært..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Aktivér Filhåndtering"
-      },
-      "defaultPath": {
-        "label": "Standardsti"
-      },
-      "scpLegacy": {
-        "label": "SCP Legacy-tilstand"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Samtidige filoverførsler",
-        "description": "Hvor mange filer den side om side lokale/fjernstyrede administrator uploader eller downloader på samme tid. Sænk dette, hvis din server begrænser SFTP-kanaler."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Filer"
   },
   "onboarding": {
     "feature_files": "Filhåndtering",
@@ -437,7 +464,7 @@
     "destinationPath": "Destinationssti",
     "destMustBeDirectory": "Destinationen skal være en mappe for overførsler af flere elementer",
     "goUp": "Gå op",
-    "hostAuthRequired": "Godkendelse kræves — åbn først Filhåndtering på denne vært",
+    "hostAuthRequired": "Godkendelse kræves. Åbn først Filhåndtering på denne vært",
     "hostConnecting": "Forbinder…",
     "hostConnectionFailed": "Forbindelsen mislykkedes",
     "hostDisconnected": "Ikke forbundet",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Du valgte SFTP pr. fil.",
       "user_tar": "Du valgte tar-arkivet.",
-      "tar_unavailable": "Tar er ikke tilgængelig på en eller begge værter — SFTP pr. fil vil blive brugt i stedet.",
-      "windows_host": "En Windows-vært er involveret — tar bruges ikke.",
-      "auto_multi_large": "Auto: flere filer inklusive en stor fil ({{largestSize}}) med komprimerbare data — tar samler filer i én overførsel.",
-      "auto_single_large_in_archive": "Auto: én stor fil ({{largestSize}}) i dette sæt — SFTP pr. fil.",
-      "auto_many_incompressible": "Auto: for det meste inkomprimerbare data — SFTP pr. fil.",
-      "auto_many_files": "Auto: mange filer ({{fileCount}}) — tar reducerer overhead pr. fil.",
+      "tar_unavailable": "Tar er ikke tilgængelig på den ene eller begge værter, så SFTP pr. fil vil blive brugt i stedet.",
+      "windows_host": "En Windows-vært er involveret, så tar bruges ikke.",
+      "auto_multi_large": "Auto: flere filer inklusive en stor fil ({{largestSize}}) med komprimerbare data. Tar samler dem i én overførsel.",
+      "auto_single_large_in_archive": "Auto: én stor fil ({{largestSize}}) i dette sæt, så SFTP pr. fil.",
+      "auto_many_incompressible": "Auto: for det meste inkomprimerbare data, så SFTP pr. fil.",
+      "auto_many_files": "Auto: mange filer ({{fileCount}}), tar reducerer overhead pr. fil.",
       "auto_default": "Auto: SFTP pr. fil for dette sæt."
     },
     "methodTar": "Tar-arkiv",
@@ -471,7 +498,7 @@
     "metricsCompress": "Komprimer på kilde: {{duration}}",
     "metricsExtract": "Udtræk på destination: {{duration}}",
     "metricsPrepare": "Forbered destination: {{duration}}",
-    "metricsRouteBenchmark": "Rutesonde — direkte: {{direct}}, relæ: {{relay}}",
+    "metricsRouteBenchmark": "Ruteprobe: direkte {{direct}}, relæ {{relay}}",
     "metricsSourceDelete": "Fjern fra kilde: {{duration}}",
     "metricsTotal": "I alt: {{duration}}",
     "metricsTransfer": "End-to-end: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "Overførslen mislykkedes",
     "transferFailedRetryHint": "Delvise data blev gemt på destinationen. Forsøget genoptages, når forbindelsen er tilbage.",
     "transferPartialHint": "Kunne ikke overføre: {{paths}}",
-    "transferSuccess": "Overførsel fuldført"
+    "transferSuccess": "Overførsel fuldført",
+    "metricsHopSourceRead": "Kilde → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → destination (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → destination (lokal): {{throughput}}"
   }
 }

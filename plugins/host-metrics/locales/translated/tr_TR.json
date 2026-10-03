@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Sunucu Metrikleri"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Bellek",
@@ -16,21 +19,21 @@
     "cpuUsage": "CPU Kullanımı",
     "memoryUsage": "Bellek Kullanımı",
     "diskUsage": "Disk Kullanımı",
-    "selectFilesystem": "Dosya sistemini seçin",
+    "selectFilesystem": "Select filesystem",
     "temperature": "Sıcaklık",
     "highestTemperature": "En yüksek sıcaklık",
-    "primaryTemperatureSensor": "Birincil sensör",
+    "primaryTemperatureSensor": "Primary sensor",
     "gpu": {
       "title": "GPU",
-      "noDevice": "NVIDIA GPU algılanmadı. GPU ölçümlerini görmek için NVIDIA sürücüsünü (nvidia-smi içerir) yükleyin.",
-      "driver": "Sürücü {{version}}",
-      "utilization": "Kullanım",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
       "memory": "VRAM",
-      "temperature": "Geçici",
-      "power": "Güç",
+      "temperature": "Temp",
+      "power": "Power",
       "fan": "Fan",
-      "processes": "GPU işlemleri",
-      "noProcesses": "GPU'yu kullanan hiçbir işlem yok."
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
     },
     "failedToFetchHostConfig": "Host yapılandırması alınamadı",
     "serverOffline": "Sunucu Çevrimdışı",
@@ -160,7 +163,6 @@
       "firewallPersist": "Kuralları kalıcı yap",
       "firewallPersisted": "Güvenlik duvarı kuralları kalıcı hale getirildi",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "Bu sunucuda WireGuard yüklü değil",
       "wgNoInterfaces": "Yapılandırılmış WireGuard arayüzü yok",
       "wgInterfaceUp": "Başlat",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Son el sıkışma",
       "wgHandshakeNever": "Hiçbir zaman",
       "wgTransfer": "Transfer",
-      "tsNotInstalled": "Bu sunucuda Tailscale yüklü değil",
-      "tsRunning": "Çalışıyor",
-      "tsStopped": "Durduruldu",
-      "tsEnable": "Bağlan",
-      "tsDisable": "Bağlantıyı Kes",
-      "tsEnabling": "Tailscale'e bağlanıyor...",
-      "tsDisabling": "Tailscale bağlantısı kesiliyor...",
-      "tsEnabled": "Tailscale bağlandı",
-      "tsDisabled": "Tailscale bağlantısı kesildi",
-      "tsIPs": "Tailscale IP'leri",
-      "tsPeers": "Eşler",
-      "tsOnline": "Çevrimiçi",
-      "tsOffline": "Çevrimdışı",
-      "tsExitNode": "Çıkış düğümü",
-      "tsExitNodeActive": "Çıkış düğümü etkin",
-      "tsHostname": "Ana bilgisayar adı"
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "Uygula",
     "viewHistory": "Geçmişi Görüntüle"
   },
-  "nav": {
-    "hostMetrics": "Sunucu Metrikleri"
-  },
   "hosts": {
     "tabHostMetrics": "Sunucu Metrikleri",
     "metricsCollectionLabel": "Metrik Toplama",
@@ -219,24 +203,24 @@
     "useGlobalMetricsDesc": "Sunucu geneli metrik aralığını geçersiz kıl",
     "metricsIntervalS": "Metrik Aralığı (sn)",
     "metricsIntervalDesc2": "Metrik anlık görüntüleri arasındaki saniye",
-    "excludedMountsLabel": "Hariç Tutulan Montajlar",
-    "monitoredMountsLabel": "Özel olarak izlenen yollar",
-    "monitoredMountsDesc": "/config gibi Home Assistant'a bağlanan yollar da dahil olmak üzere, ayrı bağlama noktaları olarak gösterilmeyen yolları ekleyin.",
-    "monitoredMountPathPlaceholder": "Yol (/config, /mnt/data)",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
     "monitoredMountLabelPlaceholder": "Etiket (isteğe bağlı)",
-    "addMonitoredMount": "Yol ekle",
-    "excludedMountsDesc": "Bu sunucu için disk kullanımı ve uyarılarından belirli bağlama noktalarını veya dosya sistemi türlerini (örneğin nfs, cifs) gizleyin.",
-    "excludedMountsPlaceholder": "Bağlama yolu (/mnt/nas) veya dosya sistemi türü (nfs, cifs)",
-    "excludedMountsEmpty": "Hiçbir bağlama noktası hariç tutulmadı. Tespit edilen tüm dosya sistemleri gösteriliyor.",
-    "addExcludedMount": "Eklemek",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "Ekle",
     "visibleWidgets": "Görünür Widget'lar",
     "widgetsMovedToHostMetrics": "Kartlar artık doğrudan Sunucu Metrikleri sekmesinde eklenir, düzenlenir ve yeniden boyutlandırılır. Bu sunucu için Sunucu Metrikleri'ni açın ve hangi kartların gösterileceğini seçmek için Özelleştir'i kullanın.",
     "hostNotFound": "Host bulunamadı",
     "loadingHost": "Host yükleniyor..."
   },
   "onboarding": {
-    "feature_metrics": "Ölçümler ve uyarılar",
-    "feature_metrics_desc": "İşlemci, bellek ve disk performansını zaman içinde takip edin ve arızalandıklarında uyarı alın."
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
   },
   "admin": {
     "metricsHistoryRetention": "Metrik Geçmişi Saklama",
@@ -265,6 +249,9 @@
     "noHostSelected": "Sunucu seçilmedi",
     "selectHost": "Bir sunucu seçin..."
   },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Bağlandı"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "קביעות מוגדרות מראש הן תמונות בזק מפורשות; טעינת אחת מהן מחליפה את רשימת מנהרות הלקוחות המקומיות של לקוח שולחן העבודה הזה.",
     "c2sPresetToLoad": "הגדרה מראש לטעינה",
     "c2sTunnelPresets": "קביעות מוגדרות מראש של מנהרת לקוח",
-    "c2sTunnelPresetsUnavailable": "הגדרות קבועות מראש של מנהרת לקוח זמינות רק בלקוח שולחן העבודה."
+    "c2sTunnelPresetsUnavailable": "הגדרות קבועות מראש של מנהרת לקוח זמינות רק בלקוח שולחן העבודה.",
+    "c2sPresetRenameError": "נכשל שינוי שם הפריסט",
+    "c2sPresetDeleteError": "מחיקת הפריסט נכשלה"
   },
   "tunnels": {
     "attempt": "ניסיון {{current}} של {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "מקומי (-L)",
     "typeRemote": "מרחוק (-R)",
     "working": "עובד...",
+    "activeCount": "{{connected}}/{{total}} פעיל",
+    "listensOn": "קשור למארח מקומי:{{port}}",
+    "socksProxy": "פרוקסי SOCKS5",
+    "waiting": "הַמתָנָה",
+    "remoteSessionExpired": "פג תוקף סיום הסנכרון מרחוק. התחבר מחדש לסנכרון מרחוק ונסה שוב.",
+    "activeTunnels": "מנהרות פעילות",
     "start": "הַתחָלָה",
-    "stop": "לְהַפְסִיק"
+    "stop": "לְהַפְסִיק",
+    "authTitle": "אימות מנהרה",
+    "authRetry": "הקוד הקודם לא התקבל. הזן קוד חדש.",
+    "authAnswer": "תגובת אימות",
+    "authContinue": "לְהַמשִׁיך"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמשו במנהרות",
+      "description": "הפעל, עצור וצפה במנהרות SSH, ושמור הגדרות קבועות מראש של מנהרות לקוח."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "הפעלת מנהרות",
+        "description": "הגדר מנהרות SSH דרך מארח זה."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "מנהרות",

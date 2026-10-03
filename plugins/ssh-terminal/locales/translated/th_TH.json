@@ -1,477 +1,705 @@
 {
   "mobileKeyboard": {
-    "addQuickKey": "เพิ่ม",
-    "arrowDown": "ลูกศรลง",
-    "arrowLeft": "ลูกศรซ้าย",
-    "arrowRight": "ลูกศรขวา",
-    "arrowUp": "ลูกศรขึ้น",
+    "addQuickKey": "Add",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right",
+    "arrowUp": "Arrow Up",
     "backTab": "⇥",
     "ctrl": "Ctrl",
-    "delete": "เดล",
-    "done": "เสร็จแล้ว",
-    "editQuickKeys": "แก้ไขปุ่มลัด",
-    "end": "จบ",
-    "esc": "เอส",
-    "home": "บ้าน",
-    "pageDown": "พีจีดีเอ็น",
-    "pageUp": "พีจีอัพ",
-    "paste": "แปะ",
-    "quickKeyPlaceholder": "เช่น sudo ",
-    "quickKeysDesc": "แตะ × เพื่อลบ รองรับได้สูงสุด 8 ตัวอักษร",
-    "quickKeysTitle": "ปุ่มลัด",
-    "removeQuickKey": "ลบ",
-    "resetDefaults": "รีเซ็ตเป็นการตั้งค่าเริ่มต้น",
-    "shift": "กะ",
-    "tab": "แท็บ"
+    "delete": "Del",
+    "done": "Done",
+    "editQuickKeys": "Edit quick keys",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Paste",
+    "quickKeyPlaceholder": "e.g. sudo ",
+    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
+    "quickKeysTitle": "Quick Keys",
+    "removeQuickKey": "Remove",
+    "resetDefaults": "Reset to defaults",
+    "shift": "Shift",
+    "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "ไม่สามารถเปิดใช้งาน Auto-Tmux ได้",
-    "autoTmuxEnabled": "เปิดใช้งาน Auto-Tmux สำหรับ {{host}}แล้ว จะมีผลตั้งแต่การเชื่อมต่อครั้งถัดไป",
-    "clipboardHttpWarning": "ไม่สามารถอ่านข้อมูลในคลิปบอร์ดได้ เบราว์เซอร์บางตัวจำกัดการเข้าถึงคลิปบอร์ดนอก HTTPS - ลองใช้ Ctrl+V แทน หรือใช้งาน Termix ผ่าน HTTPS",
-    "closeTab": "ปิด",
-    "connecting": "กำลังเชื่อมต่อ...",
-    "connectionLost": "การเชื่อมต่อขาดหาย",
-    "connectionRejected": "เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ โปรดตรวจสอบการยืนยันตัวตนและการกำหนดค่าเครือข่ายของคุณ",
-    "connectionTimeout": "หมดเวลาการเชื่อมต่อ",
-    "enableAutoTmuxAction": "เปิดใช้งาน Auto-Tmux",
-    "hostKeyRejected": "การตรวจสอบคีย์โฮสต์ SSH ถูกปฏิเสธ การเชื่อมต่อถูกยกเลิก",
-    "linkDialogCopy": "สำเนา",
-    "linkDialogOpen": "เปิด",
-    "linkDialogTitle": "เปิดลิงก์",
-    "maxReconnectAttemptsReached": "จำนวนครั้งการเชื่อมต่อใหม่สูงสุดครบแล้ว",
-    "noHostSelected": "ไม่ได้เลือกโฮสต์",
-    "passwordPromptFillTitle": "กรอกรหัสผ่านที่บันทึกไว้ลงในช่องนี้ใช่หรือไม่?",
-    "reconnect": "เชื่อมต่อใหม่",
-    "reconnected": "เชื่อมต่อสำเร็จแล้ว",
-    "reconnecting": "กำลังเชื่อมต่อใหม่... ({{attempt}}/{{max}})",
-    "searchCaseSensitive": "กล่องไม้ขีดไฟ",
-    "searchClose": "ปิด (หนี)",
-    "searchNext": "การแข่งขันถัดไป (กดเข้าร่วม)",
-    "searchNoResults": "ไม่พบผลลัพธ์",
-    "searchPlaceholder": "หา",
-    "searchPrevious": "การแข่งขันครั้งก่อนหน้า (Shift+Enter)",
-    "searchRegex": "ใช้ Regular Expression",
-    "searchResultCount": "{{index}} ของ {{count}}",
-    "searchWholeWord": "จับคู่คำทั้งหมด",
-    "sessionExpiredNotice": "เซสชันก่อนหน้าของคุณบน {{host}} หมดอายุหลังจาก {{minutes}} นาทีถูกตัดการเชื่อมต่อ เชลล์และทุกสิ่งที่กำลังทำงานอยู่ภายในนั้นหายไปแล้ว โปรดเปิดใช้งาน Auto-Tmux บนโฮสต์นี้เพื่อรักษาสถานะเซสชันให้คงอยู่",
-    "sessionExpiredNoticeNoMinutes": "เซสชันก่อนหน้าของคุณบน {{host}} หมดอายุขณะที่ไม่ได้เชื่อมต่อ เชลล์และทุกอย่างที่กำลังทำงานอยู่ภายในนั้นหายไปแล้ว โปรดเปิดใช้งาน Auto-Tmux บนโฮสต์นี้เพื่อรักษาสถานะเซสชันให้คงอยู่",
-    "sessionTakenOver": "เซสชั่นนี้เปิดอยู่ในแท็บอื่น กำลังเชื่อมต่อใหม่...",
-    "tmuxAttached": "ลูกค้าที่แนบมาด้วย",
-    "tmuxAttachedCount": "{{count}} แนบมาด้วย",
-    "tmuxCopyHint": "ปรับตำแหน่งที่เลือกแล้วกด Enter เพื่อคัดลอกไปยังคลิปบอร์ด",
-    "tmuxCreateNew": "เริ่มเซสชั่นใหม่",
-    "tmuxDetached": "ตัดการเชื่อมต่อจากเซสชัน tmux แล้ว",
-    "tmuxLastActivity": "กิจกรรมล่าสุด",
-    "tmuxSessionAttached": "การเชื่อมต่อเซสชัน tmux: {{name}}",
-    "tmuxSessionCreated": "สร้างเซสชัน tmux แล้ว: {{name}}",
-    "tmuxSessionPickerDesc": "พบเซสชัน tmux ที่มีอยู่แล้วในโฮสต์นี้ เลือกหนึ่งเซสชันเพื่อเชื่อมต่อใหม่หรือสร้างเซสชันใหม่",
-    "tmuxSessionPickerTitle": "เซสชัน tmux",
-    "tmuxTimeDays": "{{count}}วันก่อน",
-    "tmuxTimeHours": "{{count}}ชั่วโมงที่แล้ว",
-    "tmuxTimeJustNow": "เมื่อสักครู่นี้เอง",
-    "tmuxTimeMinutes": "{{count}}นาทีที่แล้ว",
-    "tmuxUnavailable": "tmux ไม่ได้ติดตั้งอยู่บนโฮสต์ระยะไกล จึงใช้เชลล์มาตรฐานแทน",
-    "tmuxWindowCount": "{{count}} หน้าต่าง",
-    "tmuxWindows": "วินโดวส์",
-    "unknownError": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
-    "websocketAbnormalClose": "การเชื่อมต่อถูกตัดโดยไม่คาดคิด อาจเกิดจากปัญหาเกี่ยวกับรีเวิร์สพร็อกซีหรือการกำหนดค่า SSL โปรดตรวจสอบบันทึกของเซิร์ฟเวอร์",
-    "websocketError": "ข้อผิดพลาดในการเชื่อมต่อ WebSocket",
-    "clipboardReadFailed": "ไม่สามารถอ่านข้อมูลจากคลิปบอร์ดได้ โปรดตรวจสอบให้แน่ใจว่าได้ให้สิทธิ์การเข้าถึงคลิปบอร์ดแล้ว",
-    "clipboardWriteFailed": "ไม่สามารถคัดลอกไปยังคลิปบอร์ดได้ โปรดตรวจสอบให้แน่ใจว่าหน้าเว็บนั้นให้บริการผ่าน HTTPS หรือ localhost",
-    "connected": "เชื่อมต่อแล้ว",
-    "totpCodeLabel": "รหัสยืนยัน"
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "closeTab": "Close",
+    "connecting": "Connecting...",
+    "connectionLost": "Connection lost",
+    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
+    "connectionTimeout": "Connection timeout",
+    "enableAutoTmuxAction": "Enable Auto-Tmux",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
+    "linkDialogCopy": "Copy",
+    "linkDialogOpen": "Open",
+    "linkDialogTitle": "Open Link",
+    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
+    "noHostSelected": "No host selected",
+    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
+    "reconnect": "Reconnect",
+    "reconnected": "Reconnected successfully",
+    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Connection lost, reconnecting...",
+    "searchCaseSensitive": "Match Case",
+    "searchClose": "Close (Escape)",
+    "searchNext": "Next Match (Enter)",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "Find",
+    "searchPrevious": "Previous Match (Shift+Enter)",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "Match Whole Word",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
+    "tmuxAttached": "Attached clients",
+    "tmuxAttachedCount": "{{count}} attached",
+    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
+    "tmuxCreateNew": "Start new session",
+    "tmuxDetached": "Detached from tmux session",
+    "tmuxLastActivity": "Last activity",
+    "tmuxSessionAttached": "tmux session attached: {{name}}",
+    "tmuxSessionCreated": "tmux session created: {{name}}",
+    "tmuxSessionPickerDesc": "Existing tmux sessions found on this host. Select one to reattach or create a new session.",
+    "tmuxSessionPickerTitle": "tmux Sessions",
+    "tmuxTimeDays": "{{count}}d ago",
+    "tmuxTimeHours": "{{count}}h ago",
+    "tmuxTimeJustNow": "just now",
+    "tmuxTimeMinutes": "{{count}}m ago",
+    "tmuxUnavailable": "tmux is not installed on the remote host, falling back to standard shell",
+    "tmuxWindowCount": "{{count}} window",
+    "tmuxWindows": "Windows",
+    "unknownError": "Unknown error occurred",
+    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
+    "websocketError": "WebSocket connection error",
+    "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
+    "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
+    "connected": "Connected",
+    "totpCodeLabel": "Verification Code",
+    "duplicateTab": "Duplicate tab",
+    "imageChooseFile": "Choose an image file",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
   },
   "terminalToolbar": {
-    "detachTmux": "ถอด tmux ออก",
-    "detachTmuxDescription": "ยกเลิกการเชื่อมต่อเซสชัน tmux",
-    "dismissError": "แก้ไขข้อผิดพลาดเกี่ยวกับรูปภาพ",
-    "hideToolbar": "ซ่อนแถบเครื่องมือ",
-    "image": "การดำเนินการกับรูปภาพ (เฉพาะรูปภาพ)",
-    "imageActionFailed": "การดำเนินการรูปภาพล้มเหลว",
-    "layout": "โหมดแสดงแถบเครื่องมือ",
-    "layoutExpanded": "ขยายเพิ่มเติมด้วยตัวชี้วัด",
-    "layoutIcon": "เฉพาะไอคอน",
-    "layoutLabeled": "ไอคอนและป้ายกำกับ",
-    "moveToolbar": "ย้ายแถบเครื่องมือ",
-    "moveToolbarHint": "ลากเพื่อจัดตำแหน่งแถบเครื่องมือใหม่",
-    "paste": "วางรูปภาพ",
-    "pasteImage": "วางภาพจากคลิปบอร์ด (เฉพาะภาพ)",
-    "retry": "ลองใหม่อีกครั้ง",
-    "showToolbar": "ขยายแถบเครื่องมือ",
-    "upload": "อัปโหลดรูปภาพ",
-    "uploadImage": "อัปโหลดรูปภาพไปยังโฮสต์",
-    "uploadingImage": "กำลังอัปโหลด..."
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
+    "retry": "Retry",
+    "showToolbar": "Expand toolbar",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
+    "uploadingImage": "Uploading..."
   },
   "history": {
-    "noTerminalSelected": "ไม่ได้เลือกเทอร์มินัล",
-    "noTerminalSelectedHint": "เปิดแท็บเทอร์มินัล SSH เพื่อดูประวัติคำสั่ง",
-    "searchPlaceholder": "ประวัติการค้นหา...",
-    "clearAll": "ล้างทั้งหมด",
-    "noHistoryEntries": "ไม่มีรายการประวัติ",
-    "trackingDisabled": "ปิดใช้งานการติดตามประวัติแล้ว"
+    "noTerminalSelected": "No terminal selected",
+    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
+    "searchPlaceholder": "Search history...",
+    "clearAll": "Clear All",
+    "noHistoryEntries": "No history entries",
+    "trackingDisabled": "History tracking is disabled",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
   },
   "touchInput": {
-    "enabled": "เปิดใช้งานการป้อนข้อมูลแบบสัมผัส",
-    "enabledDesc": "อนุญาตให้เลื่อนหน้าจอด้วยนิ้วเดียวในเทอร์มินัล",
-    "momentumEnabled": "เปิดใช้งานโมเมนตัม",
-    "momentumEnabledDesc": "เลื่อนหน้าจอต่ออีกสักครู่หลังจากปัดนิ้ว",
-    "advanced": "ขั้นสูง",
-    "resetDefaults": "รีเซ็ตเป็นการตั้งค่าเริ่มต้น",
-    "dragThreshold": "เกณฑ์การลาก",
-    "maxWheelDelta": "เดลต้าล้อสูงสุด",
-    "momentumSampleWindow": "หน้าต่างตัวอย่างโมเมนตัม",
-    "releaseGracePeriod": "ระยะเวลาผ่อนผันการปล่อยตัว",
-    "minimumVelocity": "ความเร็วต่ำสุด",
-    "maximumVelocity": "ความเร็วสูงสุด",
-    "maximumDuration": "ระยะเวลาสูงสุด",
-    "maximumTravel": "การเดินทางสูงสุด",
-    "decayTime": "เวลาการเสื่อมสภาพ",
-    "pixelsPerTick": "พิกเซลต่อติ๊ก",
-    "maximumFrameInterval": "ช่วงเวลาเฟรมสูงสุด",
-    "maximumTicksPerFrame": "จำนวนขีดสูงสุดต่อเฟรม"
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "Advanced",
+    "resetDefaults": "Reset to defaults",
+    "dragThreshold": "Drag threshold",
+    "maxWheelDelta": "Maximum wheel delta",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "Release grace period",
+    "minimumVelocity": "Minimum velocity",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "Maximum ticks per frame"
   },
   "imageStorage": {
-    "instanceId": "รหัสอินสแตนซ์เซสชันเทอร์มินัล",
-    "instanceIdDesc": "รหัสอินสแตนซ์ของแท็บเทอร์มินัลที่เชื่อมต่ออยู่แท็บหนึ่ง ใช้สำหรับทดสอบการมองเห็น",
-    "selectedModeUnavailable": "ไม่พร้อมใช้งาน",
-    "test": "ทดสอบ",
-    "testing": "กำลังทดสอบ...",
-    "testFailed": "การทดสอบการจัดเก็บรูปภาพล้มเหลว",
-    "testConnected": "การเชื่อมต่อเซสชันเทอร์มินัลเสร็จสมบูรณ์แล้ว",
-    "testNotConnected": "ไม่มีเซสชันเทอร์มินัลที่เชื่อมต่อกับรหัสอินสแตนซ์นี้",
-    "testSelectedMode": "การอัปโหลดจะใช้รูปแบบ: {{mode}}",
-    "testLocalVisible": "ไดเร็กทอรีภายในเครื่องสามารถมองเห็นได้จากโฮสต์ที่เชื่อมต่ออยู่",
-    "testLocalNotVisible": "ไดเร็กทอรีภายในเครื่องจะไม่สามารถมองเห็นได้จากโฮสต์ที่เชื่อมต่ออยู่"
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
+    "selectedModeUnavailable": "Unavailable",
+    "test": "Test",
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "An upload would use: {{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "การป้อนข้อมูลด้วยระบบสัมผัส",
-        "images": "การจัดเก็บรูปภาพ"
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "Sessions",
+        "newHosts": "New Hosts"
       },
       "sessionTimeoutMinutes": {
-        "label": "การคงอยู่ของเซสชันเทอร์มินัล",
-        "description": "ระยะเวลาที่เทอร์มินัลที่ไม่ได้เชื่อมต่อจะยังคงทำงานอยู่บนเซิร์ฟเวอร์ก่อนที่จะถูกปิด ต่ำสุด 1 นาที สูงสุด 1440 นาที สำหรับเซสชันที่ต้องใช้งานนานกว่านี้ ให้เปิดใช้งาน Auto-Tmux บนโฮสต์"
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
       },
       "commandHistoryEnabled": {
-        "label": "ประวัติคำสั่ง",
-        "description": "อนุญาตให้บันทึกประวัติคำสั่ง เมื่อปิดใช้งาน ประวัติจะไม่ถูกบันทึกไม่ว่าการตั้งค่าต่อโฮสต์จะเป็นอย่างไรก็ตาม"
+        "label": "Command History",
+        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
       },
       "imageStorageMode": {
-        "label": "โหมดจัดเก็บข้อมูล",
-        "description": "ตำแหน่งที่จะบันทึกภาพเทอร์มินัลที่คัดลอกและอัปโหลด การเลือกอัตโนมัติตามการเชื่อมต่อ ทั้งแบบโลคอลและรีโมต (SFTP) จะถูกกำหนดไว้ตายตัว",
-        "auto": "อัตโนมัติ",
-        "local": "ท้องถิ่น",
-        "remoteSftp": "รีโมท (SFTP)"
+        "label": "Storage Mode",
+        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "auto": "Auto",
+        "local": "Local",
+        "remoteSftp": "Remote (SFTP)"
       },
       "imageLocalDir": {
-        "label": "ไดเร็กทอรีท้องถิ่น"
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "เส้นทางโฮสต์",
-        "description": "มุมมองฝั่งโฮสต์ของไดเร็กทอรีท้องถิ่นที่เอเจนต์เทอร์มินัลได้รับ"
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
       },
       "imageTtlMs": {
-        "label": "ทีทีแอล (มิลลิวินาที)"
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
       },
       "imageMaxCount": {
-        "label": "จำนวนภาพสูงสุด"
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
       },
       "imageMaxBytes": {
-        "label": "พื้นที่จัดเก็บสูงสุด (ไบต์)"
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
       },
       "newHostAutoTmux": {
-        "label": "ออโต้-ทมักซ์",
-        "description": "เรียกใช้เทอร์มินัลของโฮสต์ใหม่ภายใน tmux เพื่อให้เซสชันยังคงใช้งานได้แม้การเชื่อมต่อถูกตัด (ต้องมี tmux บนโฮสต์)"
+        "label": "Auto-Tmux",
+        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+      },
+      "newHostTheme": {
+        "label": "Theme for new hosts",
+        "description": "The terminal theme a new host starts with."
+      },
+      "newHostFontFamily": {
+        "label": "Font for new hosts",
+        "description": "The terminal font a new host starts with."
+      },
+      "newHostFontSize": {
+        "label": "Font size for new hosts",
+        "description": "The terminal font size a new host starts with, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Cursor style for new hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinking cursor for new hosts"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "เปิดใช้งานแถบเครื่องมือเทอร์มินัล",
-        "description": "แสดงแถบเครื่องมือเข้าถึงด่วนที่ตรึงอยู่กับเทอร์มินัลที่ใช้งานอยู่ สำหรับเครื่องมือและสถิติแบบเรียลไทม์ของโฮสต์นี้"
+        "label": "Enable Terminal Toolbar",
+        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+      },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
       },
       "enableCommandHistory": {
-        "label": "ประวัติคำสั่ง",
-        "description": "บันทึกคำสั่งที่เรียกใช้ในเทอร์มินัลนี้เพื่อดูประวัติและฟังก์ชันเติมคำอัตโนมัติ"
+        "label": "Command History",
+        "description": "Record commands run in this terminal for history and autocomplete"
       },
       "enableTerminal": {
-        "label": "เปิดใช้งานเทอร์มินัล"
+        "label": "Enable Terminal",
+        "description": "Offer an SSH terminal for this host."
+      },
+      "inheritAppearance": {
+        "label": "Use user defaults"
+      },
+      "theme": {
+        "label": "Theme"
+      },
+      "cursorBlink": {
+        "label": "Blinking cursor"
+      },
+      "cursorStyle": {
+        "label": "Cursor style"
+      },
+      "fontSize": {
+        "label": "Font size"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Scrollback"
+      },
+      "letterSpacing": {
+        "label": "Letter spacing"
+      },
+      "lineHeight": {
+        "label": "Line height"
+      },
+      "bellStyle": {
+        "label": "Bell"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum contrast ratio"
+      },
+      "backgroundImage": {
+        "label": "Background image"
+      },
+      "backgroundImageOpacity": {
+        "label": "Background image opacity"
+      },
+      "customThemeColors": {
+        "label": "Custom theme colors"
+      },
+      "rightClickSelectsWord": {
+        "label": "Right click selects word"
+      },
+      "macOptionIsMeta": {
+        "label": "Option is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Fast scroll key"
+      },
+      "fastScrollSensitivity": {
+        "label": "Fast scroll speed"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh command"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Use the SSH title"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntax highlighting"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntax highlighting categories"
+      },
+      "linkClickBehavior": {
+        "label": "Link click"
+      },
+      "localEcho": {
+        "label": "Local echo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Offer to fill password prompts"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
       }
     },
     "user": {
       "commandAutocomplete": {
-        "label": "การเติมคำสั่งอัตโนมัติ",
-        "description": "แสดงคำแนะนำอัตโนมัติขณะพิมพ์ หากคุณกดปุ่ม Tab"
+        "label": "Command Autocomplete",
+        "description": "Show autocomplete while typing if you press tab"
       },
       "localEcho": {
-        "label": "เสียงสะท้อนในท้องถิ่น",
-        "description": "ลดความรู้สึกหน่วงในการป้อนข้อมูลโดยใช้การคาดเดาการกดแป้นพิมพ์ในพื้นที่อย่างปลอดภัย"
+        "label": "Local Echo",
+        "description": "Reduce perceived input latency using safe local keystroke prediction"
       },
       "linkClickBehavior": {
-        "label": "คลิกลิงก์เทอร์มินัล",
-        "description": "พฤติกรรมเริ่มต้นเมื่อคลิกลิงก์ในเทอร์มินัล"
+        "label": "Terminal Link Click",
+        "description": "Default behavior when clicking links in the terminal"
+      },
+      "customThemes": {
+        "label": "Saved themes"
       }
     }
   },
   "palette": {
-    "localTerminal": "สถานีปลายทางท้องถิ่น"
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
   },
   "hosts": {
-    "addHost": "เพิ่มโฮสต์",
-    "applyGlobalThemeTooltip": "ใช้ธีมนี้",
-    "backgroundImageDesc": "URL สำหรับภาพพื้นหลังของเทอร์มินัล (ไม่บังคับ)",
-    "backgroundImageLabel": "URL ของภาพพื้นหลัง",
-    "backgroundImageOpacityLabel": "ความโปร่งใสของภาพพื้นหลัง",
-    "backspaceMode": "โหมดลบ",
-    "backspaceModeLabel": "โหมดลบ",
-    "behaviorAndAdvanced": "พฤติกรรมและขั้นสูง",
-    "bellStyle": "สไตล์เบลล์",
-    "bellStyleLabel": "สไตล์เบลล์",
-    "colorTheme": "ธีมสี",
-    "cursorBlink": "เคอร์เซอร์กระพริบ",
-    "cursorBlinking": "เคอร์เซอร์กะพริบ",
-    "cursorBlinkingDesc": "เปิดใช้งานแอนิเมชั่นกระพริบสำหรับเคอร์เซอร์เทอร์มินัล",
-    "cursorStyle": "รูปแบบเคอร์เซอร์",
-    "cursorStyleLabel": "รูปแบบเคอร์เซอร์",
-    "customThemeAnsiColors": "สี ANSI",
-    "customThemeBackground": "พื้นหลัง",
-    "customThemeBlack": "สีดำ",
-    "customThemeBlue": "สีฟ้า",
-    "customThemeBrightBlack": "สีดำสนิท",
-    "customThemeBrightBlue": "สีน้ำเงินสดใส",
-    "customThemeBrightCyan": "สีฟ้าสดใส",
-    "customThemeBrightGreen": "สีเขียวสดใส",
-    "customThemeBrightMagenta": "สีม่วงแดงสดใส",
-    "customThemeBrightRed": "สีแดงสด",
-    "customThemeBrightWhite": "สีขาวสว่าง",
-    "customThemeBrightYellow": "สีเหลืองสดใส",
-    "customThemeColors": "สีที่กำหนดเอง",
-    "customThemeCursor": "เคอร์เซอร์",
-    "customThemeCursorAccent": "เคอร์เซอร์เน้นเสียง",
-    "customThemeCyan": "สีฟ้าอมเขียว",
-    "customThemeForeground": "พื้นหน้า",
-    "customThemeGreen": "สีเขียว",
-    "customThemeMagenta": "แมเจนต้า",
-    "customThemeRed": "สีแดง",
-    "customThemeResetTooltip": "รีเซ็ตเป็นการตั้งค่าเริ่มต้น",
-    "customThemeSelection": "การคัดเลือก",
-    "customThemeWhite": "สีขาว",
-    "customThemeYellow": "สีเหลือง",
-    "deleteGlobalThemeTooltip": "ลบธีมนี้",
-    "docsLink": "ดูเอกสาร",
-    "enableAutoMosh": "เปิดใช้งาน Auto-Mosh",
-    "enableAutoMoshDesc": "หากมีตัวเลือก ให้เลือกใช้ Mosh แทน SSH",
-    "enableAutoTmux": "เปิดใช้งาน Auto-Tmux",
-    "enableAutoTmuxDesc": "รักษาการทำงานของเชลล์และโปรแกรมใดๆ ที่ทำงานอยู่ภายในเชลล์ให้คงอยู่ต่อไปแม้การตัดการเชื่อมต่อหรือการรีสตาร์ทเบราว์เซอร์ โดยการเรียกใช้คำสั่งภายใน tmux (ต้องติดตั้ง tmux บนเครื่องโฮสต์)",
-    "fastScrollModifier": "ตัวแก้ไขการเลื่อนเร็ว",
-    "fastScrollModifierLabel": "ตัวแก้ไขการเลื่อนเร็ว",
-    "fastScrollSensitivity": "ความไวในการเลื่อนเร็ว",
-    "fastScrollSensitivityLabel": "ความไวในการเลื่อนเร็ว",
-    "fontFamily": "ตระกูลฟอนต์",
-    "fontFamilyCustomHint": "เลือกฟอนต์ที่มีให้ในชุด หรือเลือกแบบกำหนดเอง แล้วพิมพ์ชื่อฟอนต์ที่ติดตั้งอยู่ในระบบของคุณให้ถูกต้อง (เช่น MesloLGS NF, Noto Sans Mono) Termix ไม่สามารถติดตั้งฟอนต์ให้คุณได้ คุณต้องติดตั้งฟอนต์ลงในระบบปฏิบัติการของคุณก่อน",
-    "fontFamilyCustomOption": "กำหนดเอง...",
-    "fontFamilyCustomPlaceholder": "ชื่อฟอนต์ที่ถูกต้อง เช่น MesloLGS NF",
-    "fontFamilyLabel": "ตระกูลฟอนต์",
-    "fontSize": "ขนาดตัวอักษร",
-    "fontSizeLabel": "ขนาดตัวอักษร",
-    "hostNotFound": "ไม่พบโฮสต์",
-    "letterSpacing": "ระยะห่างระหว่างตัวอักษร",
-    "letterSpacingPx": "ระยะห่างระหว่างตัวอักษร (พิกเซล)",
-    "lineHeight": "ความสูงของเส้น",
-    "lineHeightLabel": "ความสูงของเส้น",
-    "linkClickBehaviorConfirm": "แสดงหน้าต่างป๊อปอัพเพื่อเปิดหรือคัดลอก",
-    "linkClickBehaviorDefault": "ค่าเริ่มต้น (ตามการตั้งค่าของแอป)",
-    "linkClickBehaviorDesc": "ควบคุมสิ่งที่เกิดขึ้นเมื่อคุณคลิกลิงก์ในเทอร์มินัล ใช้ 'ค่าเริ่มต้น' เพื่อใช้การตั้งค่าระดับแอป",
-    "linkClickBehaviorDirect": "เปิดโดยตรง",
-    "linkClickBehaviorLabel": "พฤติกรรมการคลิกลิงก์",
-    "loadingHost": "กำลังโหลดโฮสต์...",
-    "localEchoAuto": "อัตโนมัติ",
-    "localEchoDefault": "ใช้การตั้งค่าทั่วโลก",
-    "localEchoDesc": "คาดการณ์การกดแป้นพิมพ์ที่ปลอดภัยสำหรับการพิมพ์ในเครื่องบนการเชื่อมต่อที่ช้า ข้อความแจ้งให้ป้อนรหัสผ่านและการป้อนข้อมูลควบคุมจะไม่ถูกแสดงซ้ำ",
-    "localEchoLabel": "เสียงสะท้อนในท้องถิ่น",
-    "localEchoOff": "ปิด",
-    "localEchoOn": "เปิดใช้งานตลอดเวลา",
-    "macOptionIsMetaLabel": "ปุ่ม Option Key ส่งข้อมูล Meta",
-    "macOptionIsMetaShortDesc": "ปิดใช้งานการพิมพ์อักขระพิเศษ (เช่น @ หรือ |) ด้วยปุ่ม Option/Alt บน macOS แทนการส่งข้อมูล Meta",
-    "moshCommand": "กองบัญชาการ MOSH",
-    "moshCommandLabel": "ม็อช คอมมานโด",
-    "noSavedThemes": "ยังไม่มีธีมที่บันทึกไว้",
-    "none": "ไม่มี",
-    "rightClickSelectsWord": "คลิกขวาแล้วเลือก Word",
-    "rightClickSelectsWordLabel": "คลิกขวา เลือก Word",
-    "rightClickSelectsWordShortDesc": "เลือกคำที่อยู่ใต้เคอร์เซอร์เมื่อคลิกขวา",
-    "saveAsGlobalTheme": "บันทึกเป็นธีมทั่วโลก",
-    "saveGlobalThemeError": "ไม่สามารถบันทึกธีมได้",
-    "saveGlobalThemeNamePrompt": "ตั้งชื่อให้กับธีมนี้",
-    "saveGlobalThemeSuccess": "บันทึกธีมแล้ว",
-    "savedThemesLabel": "ธีมที่บันทึกไว้",
-    "scrollbackBufferLabel": "บัฟเฟอร์การเลื่อนกลับ",
-    "scrollbackMaxLines": "จำนวนบรรทัดสูงสุดที่เก็บไว้ในประวัติ",
-    "sudoPasswordAutoFill": "การกรอกรหัสผ่านอัตโนมัติของ Sudo",
-    "sudoPasswordAutoFillDesc": "บันทึกรหัสผ่าน sudo เพื่อให้โปรแกรมตรวจสอบข้อมูลโฮสต์ ข้อความแจ้งเตือนในเทอร์มินัล และโปรแกรมอื่นๆ สามารถเรียกใช้คำสั่งที่มีสิทธิ์พิเศษได้โดยอัตโนมัติ",
-    "sudoPasswordAutoFillLabel": "การกรอกรหัสผ่านอัตโนมัติของ Sudo",
-    "syntaxCategoryIpAddresses": "ที่อยู่ IP",
+    "tabTerminal": "Terminal",
+    "addHost": "Add Host",
+    "applyGlobalThemeTooltip": "Apply this theme",
+    "backgroundImageDesc": "Optional URL for a terminal background image",
+    "backgroundImageLabel": "Background Image URL",
+    "backgroundImageOpacityLabel": "Background Image Opacity",
+    "backspaceMode": "Backspace Mode",
+    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeLabel": "Backspace Mode",
+    "backspaceModeNormal": "Normal (DEL)",
+    "behaviorAndAdvanced": "Behavior & Advanced",
+    "bellStyle": "Bell Style",
+    "bellStyleBoth": "Both",
+    "bellStyleLabel": "Bell Style",
+    "bellStyleNone": "None",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "Visual",
+    "colorTheme": "Color Theme",
+    "cursorBlink": "Cursor Blink",
+    "cursorBlinking": "Cursor Blinking",
+    "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
+    "cursorStyle": "Cursor Style",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Block",
+    "cursorStyleLabel": "Cursor Style",
+    "cursorStyleUnderline": "Underline",
+    "customThemeAnsiColors": "ANSI Colors",
+    "customThemeBackground": "Background",
+    "customThemeBlack": "Black",
+    "customThemeBlue": "Blue",
+    "customThemeBrightBlack": "Bright Black",
+    "customThemeBrightBlue": "Bright Blue",
+    "customThemeBrightCyan": "Bright Cyan",
+    "customThemeBrightGreen": "Bright Green",
+    "customThemeBrightMagenta": "Bright Magenta",
+    "customThemeBrightRed": "Bright Red",
+    "customThemeBrightWhite": "Bright White",
+    "customThemeBrightYellow": "Bright Yellow",
+    "customThemeColors": "Custom Colors",
+    "customThemeCursor": "Cursor",
+    "customThemeCursorAccent": "Cursor Accent",
+    "customThemeCyan": "Cyan",
+    "customThemeForeground": "Foreground",
+    "customThemeGreen": "Green",
+    "customThemeMagenta": "Magenta",
+    "customThemeRed": "Red",
+    "customThemeResetTooltip": "Reset to defaults",
+    "customThemeSelection": "Selection",
+    "customThemeWhite": "White",
+    "customThemeYellow": "Yellow",
+    "deleteGlobalThemeTooltip": "Delete this theme",
+    "docsLink": "View docs",
+    "enableAutoMosh": "Enable Auto-Mosh",
+    "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
+    "enableAutoTmux": "Enable Auto-Tmux",
+    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "fastScrollModifier": "Fast Scroll Modifier",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
+    "fastScrollModifierLabel": "Fast Scroll Modifier",
+    "fastScrollModifierShift": "Shift",
+    "fastScrollSensitivity": "Fast Scroll Sensitivity",
+    "fastScrollSensitivityLabel": "Fast Scroll Sensitivity",
+    "fontFamily": "Font Family",
+    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
+    "fontFamilyCustomOption": "Custom...",
+    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyLabel": "Font Family",
+    "fontSize": "Font Size",
+    "fontSizeLabel": "Font Size",
+    "hostNotFound": "Host not found",
+    "letterSpacing": "Letter Spacing",
+    "letterSpacingPx": "Letter Spacing (px)",
+    "lineHeight": "Line Height",
+    "lineHeightLabel": "Line Height",
+    "linkClickBehaviorConfirm": "Show popup to open or copy",
+    "linkClickBehaviorDesc": "Controls what happens when you click a link in the terminal. Use 'Default' to follow the app-level setting.",
+    "linkClickBehaviorDirect": "Open directly",
+    "linkClickBehaviorLabel": "Link Click Behavior",
+    "loadingHost": "Loading host...",
+    "localEchoAuto": "Automatic",
+    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
+    "localEchoLabel": "Local Echo",
+    "localEchoOff": "Off",
+    "localEchoOn": "Always on",
+    "macOptionIsMetaLabel": "Option Key Sends Meta",
+    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "moshCommand": "MOSH Command",
+    "moshCommandLabel": "Mosh Command",
+    "noSavedThemes": "No saved themes yet",
+    "none": "None",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "rightClickSelectsWord": "Right Click Selects Word",
+    "rightClickSelectsWordLabel": "Right-click Selects Word",
+    "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
+    "saveAsGlobalTheme": "Save as Global Theme",
+    "saveGlobalThemeError": "Failed to save theme",
+    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
+    "saveGlobalThemeSuccess": "Theme saved",
+    "savedThemesLabel": "Saved Themes",
+    "scrollbackBufferLabel": "Scrollback Buffer",
+    "scrollbackMaxLines": "Maximum number of lines kept in history",
+    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
+    "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
+    "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
+    "syntaxCategoryIpAddresses": "IP Addresses",
     "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
-    "syntaxCategoryLogLevels": "ระดับการบันทึก",
-    "syntaxCategoryLogLevelsDesc": "ข้อผิดพลาด, คำเตือน, ข้อมูล, ดีบัก, ร้ายแรง",
-    "syntaxCategoryNumbers": "หมายเลขกำกับ",
-    "syntaxCategoryNumbersDesc": "พอร์ต 8080 ทางออก 1 สถานะ 404",
-    "syntaxCategoryPaths": "เส้นทางไฟล์",
+    "syntaxCategoryLogLevels": "Log Levels",
+    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
+    "syntaxCategoryNumbers": "Labeled Numbers",
+    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
+    "syntaxCategoryPaths": "File Paths",
     "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
-    "syntaxCategoryTimestamps": "ไทม์สแตมป์",
-    "syntaxCategoryTimestampsDesc": "[12:34:56], 15 มกราคม 2024",
-    "syntaxCategoryUrls": "URL",
+    "syntaxCategoryTimestamps": "Timestamps",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
+    "syntaxCategoryUrls": "URLs",
     "syntaxCategoryUrlsDesc": "https://example.com",
-    "syntaxHighlightingDesc": "ใส่สีให้กับข้อมูลที่แสดงในเทอร์มินัล (ข้อผิดพลาด เส้นทาง ที่อยู่ IP และเวลา)",
-    "syntaxHighlightingLabel": "การเน้นไวยากรณ์",
-    "terminalAppearance": "ลักษณะปลายทาง",
-    "theme": "ธีม",
-    "themePreview": "ตัวอย่างธีม",
-    "useSSHTitleDesc": "เปลี่ยนชื่อแท็บโดยใช้ชื่อหน้าต่างของเชลล์แทนชื่อโฮสต์",
-    "useSSHTitleLabel": "ใช้ชื่อหน้าต่าง SSH"
+    "syntaxHighlightingDesc": "Colorize terminal output (errors, paths, IPs, timestamps)",
+    "syntaxHighlightingLabel": "Syntax Highlighting",
+    "terminalAppearance": "Terminal Appearance",
+    "theme": "Theme",
+    "themePreview": "Theme Preview",
+    "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
+    "useSSHTitleLabel": "Use SSH Window Title",
+    "enableTunnel": "Enable Tunnel",
+    "enableFileManager": "Enable File Manager",
+    "enableDocker": "Enable Docker",
+    "startupSnippet": "Startup Snippet",
+    "quickActions": "Quick Actions",
+    "proxmoxLastSyncStatus": {
+      "success": "Success"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "RDP URL copied",
+    "vncUrlCopied": "VNC URL copied",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "No credential (direct credentials below)",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Credential",
+      "authTypeNone": "None",
+      "recordingPath": "Recording Path",
+      "recordingName": "Recording Name",
+      "saveHostFirst": "Save the host first.",
+      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
+      "permissionLevel": "Permission Level",
+      "typeHeader": "Type",
+      "targetHeader": "Target",
+      "permissionHeader": "Permission",
+      "cancelBtn": "Cancel",
+      "savingBtn": "Saving...",
+      "updateHostBtn": "Update Host",
+      "addHostBtn": "Add Host"
+    },
+    "filterAuthVault": "Vault"
   },
   "nav": {
-    "history": "ประวัติศาสตร์",
-    "localTerminal": "สถานีปลายทางท้องถิ่น",
-    "sshTools": "เครื่องมือ SSH",
-    "terminal": "เทอร์มินัล",
-    "macros": "มาโคร"
+    "history": "History",
+    "localTerminal": "Local Terminal",
+    "sshTools": "SSH Tools",
+    "terminal": "Terminal",
+    "macros": "Macros"
   },
   "sshTools": {
-    "broadcastInputPlaceholder": "พิมพ์ที่นี่เพื่อถ่ายทอดการกดแป้นพิมพ์...",
-    "copyOnSelect": "คัดลอกข้อความที่เลือกโดยอัตโนมัติ",
-    "enableRightClickCopyPaste": "เปิดใช้งานการคัดลอก/วางโดยคลิกขวา",
-    "fillPassword": "กรอกรหัสผ่าน",
-    "fillPasswordMissing": "ไม่มีรหัสผ่านที่บันทึกไว้สำหรับเทอร์มินัลที่เลือก {{count}} เครื่อง",
-    "fillPasswordSuccess": "กรอกรหัสผ่านลงในเทอร์มินัล {{count}} แล้ว",
-    "keyRecordingTitle": "การบันทึกคีย์",
-    "noTerminalTabsOpen": "ไม่มีแท็บเทอร์มินัลเปิดอยู่",
-    "recordToTerminals": "บันทึกไปยังเทอร์มินัล",
-    "selectAll": "ทั้งหมด",
-    "selectNone": "ไม่มี",
-    "selectTerminalsAbove": "เลือกเทอร์มินัลด้านบน",
-    "settingsTitle": "การตั้งค่า",
-    "startRecording": "เริ่มบันทึก",
-    "stopRecording": "หยุดบันทึก"
-  },
-  "terminalDefaults": {
-    "clearAll": "ล้างทั้งหมด",
-    "description": "กำหนดค่าต่างๆ ที่โฮสต์ทุกตัวจะได้รับสืบทอด เว้นแต่ว่าโฮสต์นั้นจะกำหนดค่าใหม่เอง",
-    "dialogDescription": "ข้อกำหนดเหล่านี้ใช้กับโฮสต์ที่ไม่ได้ตั้งค่าใดๆ ไว้ การตั้งค่าใดๆ บนโฮสต์จะมีผลเหนือกว่า",
-    "inherit": "สืบทอด",
-    "manage": "จัดการ",
-    "off": "ปิด",
-    "on": "บน",
-    "title": "ค่าเริ่มต้นการเชื่อมต่อ"
+    "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
+    "copyOnSelect": "Copy selected text automatically",
+    "enableRightClickCopyPaste": "Enable right-click copy/paste",
+    "fillPassword": "Fill password",
+    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
+    "fillPasswordSuccess": "Filled password into {{count}} terminal(s)",
+    "keyRecordingTitle": "Key Recording",
+    "noTerminalTabsOpen": "No terminal tabs open",
+    "recordToTerminals": "Record to terminals",
+    "selectAll": "All",
+    "selectNone": "None",
+    "selectTerminalsAbove": "Select terminals above",
+    "settingsTitle": "Settings",
+    "startRecording": "Start Recording",
+    "stopRecording": "Stop Recording"
   },
   "keybindings": {
-    "copy": "คัดลอกการเลือก",
-    "paste": "แปะ",
-    "sendControlCode": "ส่งสัญญาณ Ctrl+ตัวอักษร",
-    "sendText": "ส่งข้อความ",
-    "controlCodeLabel": "จดหมาย",
-    "textLabel": "ข้อความที่จะส่ง",
-    "appendEnterLabel": "กด Enter หลังจากส่งแล้ว",
-    "clipboardPermissionNote": "ในบางเบราว์เซอร์ อาจขออนุญาตคัดลอกและวางข้อมูลลงในคลิปบอร์ดเมื่อใช้งานครั้งแรก",
-    "textRequired": "ป้อนข้อความที่จะส่ง",
-    "controlCodeRequired": "ป้อนตัวอักษรตัวเดียวสำหรับรหัสควบคุม"
+    "copy": "Copy selection",
+    "paste": "Paste",
+    "sendControlCode": "Send Ctrl+letter signal",
+    "sendText": "Send text",
+    "controlCodeLabel": "Letter",
+    "textLabel": "Text to send",
+    "appendEnterLabel": "Press Enter after sending",
+    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+    "textRequired": "Enter the text to send",
+    "controlCodeRequired": "Enter a single letter for the control code",
+    "builtIn": {
+      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+      "copyCmdC": "Copy selection (Cmd+C)",
+      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+    }
   },
   "macros": {
-    "title": "มาโคร",
-    "description": "เรียกใช้ชุดคำสั่งที่บันทึกไว้ในเทอร์มินัล แล้วตอบสนองต่อสิ่งที่เซิร์ฟเวอร์ส่งกลับมา",
-    "target": "เป้า",
-    "noTerminal": "ไม่มีเทอร์มินัลเปิดอยู่",
-    "empty": "ยังไม่มีมาโคร",
-    "emptyHint": "สร้างมาโครเพื่อทำให้กระบวนการทำงานบนเทอร์มินัลเป็นไปโดยอัตโนมัติ เช่น การล็อกอิน การรีสตาร์ทบริการ หรือการตอบคำถามต่างๆ",
-    "create": "มาโครใหม่",
-    "back": "กลับไปที่มาโคร",
-    "name": "ชื่อ",
-    "namePlaceholder": "รีสตาร์ทเว็บเซิร์ฟเวอร์",
-    "nameRequired": "ตั้งชื่อมาโครก่อนบันทึก",
-    "descriptionLabel": "คำอธิบาย",
-    "descriptionPlaceholder": "มาโครนี้ทำอะไร (ไม่บังคับ)",
-    "unsaved": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
-    "save": "บันทึก",
-    "saved": "บันทึกมาโครแล้ว",
-    "saveFailed": "ไม่สามารถบันทึกมาโครได้",
-    "delete": "ลบ",
-    "deleteTitle": "ลบมาโครนี้?",
-    "deleteBody": "\"{{name}}\" จะถูกลบอย่างถาวร ไม่สามารถกู้คืนได้",
-    "deleted": "มาโครถูกลบแล้ว",
-    "cancel": "ยกเลิก",
-    "run": "วิ่ง",
-    "stop": "หยุด",
-    "running": "วิ่ง...",
-    "completed": "มาโครเสร็จสิ้น",
-    "failed": "มาโครล้มเหลว",
-    "loadFailed": "ไม่สามารถโหลดมาโครได้",
-    "needTerminal": "เปิดและเชื่อมต่อเทอร์มินัลก่อน",
-    "noSteps": "มาโครนี้ยังไม่มีขั้นตอนใดๆ เพิ่มขั้นตอนด้านล่าง",
-    "addStep": "เพิ่มขั้นตอน",
-    "stepNumber": "ขั้นตอน {{number}}",
-    "removeStep": "ลบขั้นตอน",
-    "confirmRunTitle": "เรียกใช้มาโครนี้หรือไม่?",
-    "confirmRunBody": "\"{{name}}\" จะส่งคำสั่งไปยัง {{host}}",
-    "confirmRunAction": "เรียกใช้มาโคร",
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "Target",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
+    "name": "Name",
+    "namePlaceholder": "Restart web server",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "Unsaved changes",
+    "save": "Save",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "Delete",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "Cancel",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
     "stepTypes": {
       "send": {
-        "label": "ส่งคำสั่ง",
-        "help": "พิมพ์ข้อความลงในเทอร์มินัล เหมือนกับที่คุณพิมพ์ข้อความนั้นด้วยตนเอง"
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
       },
       "wait": {
-        "label": "รอผลลัพธ์",
-        "help": "หยุดรอจนกว่าเซิร์ฟเวอร์จะแสดงข้อความที่คุณระบุ เช่นเดียวกับการขอให้ป้อนรหัสผ่าน"
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
       },
       "delay": {
-        "label": "หยุดชั่วคราว",
-        "help": "รอเป็นระยะเวลาที่กำหนดก่อนดำเนินการขั้นตอนต่อไป"
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
       },
       "if": {
-        "label": "หากผลลัพธ์ประกอบด้วย",
-        "help": "ตรวจสอบทุกอย่างที่เซิร์ฟเวอร์ได้พิมพ์ออกมาแล้ว จากนั้นจึงเลือกดำเนินการตามหนึ่งในสองทางเลือก"
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
       },
       "repeat": {
-        "label": "ทำซ้ำ",
-        "help": "ดำเนินการตามขั้นตอนภายในตามจำนวนครั้งที่กำหนด"
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
       }
     },
     "send": {
-      "text": "คำสั่งหรือข้อความ",
+      "text": "Command or text",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "กด Enter หลังจากส่งแล้ว",
-      "pressEnterHelp": "ปิดตัวเลือกนี้เพื่อพิมพ์ข้อความโดยไม่ต้องกดส่ง"
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
     },
     "wait": {
-      "pattern": "รอจนกว่าผลลัพธ์จะประกอบด้วย",
-      "patternPlaceholder": "รหัสผ่าน:",
-      "timeout": "ยอมแพ้หลังจาก",
-      "onTimeout": "หากมันไม่ปรากฏเลย",
-      "stop": "หยุดมาโคร",
-      "continue": "อย่าหยุดแค่นี้"
+      "pattern": "Wait until the output contains",
+      "patternPlaceholder": "password:",
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "Keep going anyway"
     },
     "delay": {
-      "duration": "รอสักครู่"
+      "duration": "Wait for"
     },
     "ifStep": {
-      "pattern": "หากผลลัพธ์ประกอบด้วย",
-      "patternPlaceholder": "สถานะ: กำลังทำกิจกรรม (วิ่ง)",
-      "then": "จากนั้นให้ทำแบบนี้",
-      "else": "หรือทำแบบนี้ก็ได้",
-      "emptyBranch": "ไม่มีขั้นตอน"
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
     },
     "repeat": {
-      "count": "จำนวนครั้ง",
-      "times": "ครั้ง"
+      "count": "Number of times",
+      "times": "times"
     },
     "match": {
-      "useRegex": "จับคู่ด้วยนิพจน์ปกติ",
-      "useRegexHelp": "ไม่ต้องใส่ส่วนนี้เพื่อให้ตรงกับข้อความที่เขียนไว้ทุกประการ",
-      "invalidRegex": "ไม่ใช่รูปแบบนิพจน์ปกติที่ถูกต้อง ระบบจะถือว่าเป็นข้อความธรรมดา"
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "Leave this off to match the text exactly as written.",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
     },
-    "seconds": "วินาที",
+    "seconds": "seconds",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "จำเป็นต้องใช้เซิร์ฟเวอร์ระยะไกล เชื่อมต่อเซิร์ฟเวอร์ระยะไกลในการตั้งค่าเพื่อใช้ประเภทการเชื่อมต่อนี้"
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

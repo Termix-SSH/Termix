@@ -13,6 +13,8 @@ export class SessionRepository {
   constructor(
     private readonly context: DatabaseContext,
     private readonly onWrite?: () => void | Promise<void>,
+    private readonly onActivity:
+      (() => void | Promise<void>) | undefined = onWrite,
   ) {}
 
   async create(session: NewSessionRecord): Promise<SessionRecord> {
@@ -63,7 +65,7 @@ export class SessionRepository {
       .where(and(eq(sessions.id, id), lte(sessions.lastActiveAt, cutoff)));
 
     if (rowsAffected(result) === 0) return false;
-    await this.afterWrite();
+    await this.onActivity?.();
     return true;
   }
 

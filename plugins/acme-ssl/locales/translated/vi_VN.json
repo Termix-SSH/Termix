@@ -1,29 +1,58 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Manage ACME certificates",
+      "description": "See the certificate status and request a new certificate now."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Renew automatically",
+      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+    },
     "domain": {
       "label": "Tên miền",
-      "placeholder": "termix.example.com",
-      "description": "Tên miền công khai để cấp chứng chỉ."
+      "description": "Tên miền công khai để cấp chứng chỉ.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "Email",
+      "description": "Contact email for the ACME account and expiry notices.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "Cơ quan chứng thực",
+      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (staging)",
+      "custom": "Custom ACME directory"
+    },
+    "directoryUrl": {
+      "label": "ACME directory URL",
+      "description": "Only for a custom certificate authority. Must be an https URL."
+    },
     "challengeType": {
-      "label": "Loại thử thách",
-      "cloudflare": "DNS (Cloudflare) - yêu cầu Token API Cloudflare"
+      "label": "Challenge type",
+      "description": "How to prove you own the domain.",
+      "http": "HTTP - needs port 80 reachable from the internet",
+      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
     },
     "cloudflareToken": {
-      "label": "Token API Cloudflare",
+      "label": "Cloudflare API token",
       "description": "Token có phạm vi với quyền Zone:DNS:Edit cho tên miền của bạn."
     }
   },
   "status": {
-    "title": "Trạng thái chứng chỉ",
+    "title": "Certificate status",
     "none": "Không có chứng chỉ",
+    "names": "Covers {{names}}",
+    "issuer": "Issued by {{issuer}}",
     "expires": "Hết hạn {{date}}",
     "lastIssued": "Cấp lần cuối {{date}}",
-    "request": "Cấp / Gia hạn chứng chỉ",
-    "requesting": "Đang yêu cầu chứng chỉ..."
+    "lastError": "Last attempt failed: {{error}}",
+    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
+    "request": "Request certificate now",
+    "requesting": "Đang yêu cầu chứng chỉ...",
+    "issued": "Certificate issued and installed"
   }
 }

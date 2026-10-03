@@ -1,16 +1,40 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Gestionați certificatele ACME",
+      "description": "Vedeți starea certificatului și solicitați un certificat nou acum."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Reînnoire automată",
+      "description": "Verificați de două ori pe zi și obțineți un certificat nou atunci când nu există, nu acoperă domeniul sau expiră în termen de 30 de zile."
+    },
     "domain": {
       "label": "Domeniu",
-      "placeholder": "termix.example.com",
-      "description": "Numele de domeniu public pentru certificat."
+      "description": "Numele de domeniu public pentru certificat.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "E-mail",
+      "description": "Adresă de e-mail de contact pentru contul ACME și notificări de expirare.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "Autoritatea de certificare",
+      "description": "Unde se obține certificatul. Folosește staging-ul pentru a testa fără a atinge limitele de rată Let's Encrypt.",
+      "letsencrypt": "Să criptăm",
+      "letsencryptStaging": "Să criptăm (punct în scenă)",
+      "custom": "Director ACME personalizat"
+    },
+    "directoryUrl": {
+      "label": "URL-ul directorului ACME",
+      "description": "Numai pentru o autoritate de certificare personalizată. Trebuie să fie o adresă URL https."
+    },
     "challengeType": {
-      "label": "Tipul provocării",
+      "label": "Tipul de provocare",
+      "description": "Cum să dovedești că deții domeniul.",
+      "http": "HTTP - necesită ca portul 80 să fie accesibil de pe internet",
       "cloudflare": "DNS (Cloudflare) - necesită un token API Cloudflare"
     },
     "cloudflareToken": {
@@ -21,9 +45,14 @@
   "status": {
     "title": "Starea certificatului",
     "none": "Fără certificat",
+    "names": "Acoperă {{names}}",
+    "issuer": "Emis de {{issuer}}",
     "expires": "Expiră la {{date}}",
     "lastIssued": "Ultima emisiune {{date}}",
-    "request": "Emitere / Reînnoire certificat",
-    "requesting": "Se solicită certificatul..."
+    "lastError": "Ultima încercare a eșuat: {{error}}",
+    "missing": "Setați domeniul, adresa de e-mail și câmpurile necesare tipului dvs. de provocare, apoi salvați, înainte de a solicita un certificat.",
+    "request": "Solicitați certificatul acum",
+    "requesting": "Se solicită certificatul...",
+    "issued": "Certificat emis și instalat"
   }
 }

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "串口"
+  },
   "serial": {
     "title": "串口",
     "portLabel": "端口",
@@ -22,8 +25,5 @@
     "notSupported": "串口连接需要支持 Web Serial API 的浏览器（Chrome、Edge 或 Firefox 151+），或者 Termix 桌面应用。",
     "hideHint": "您可以在用户资料 > 外观 > 侧边栏 > 导航中隐藏串口标签页。",
     "browserPickerHint": "点击连接，您的浏览器将打开端口选择器以选择设备。"
-  },
-  "nav": {
-    "serial": "串口"
   }
 }

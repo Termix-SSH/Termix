@@ -9,16 +9,16 @@
       "ownerLabel": "مالك المضيف"
     },
     "modalTitle": "جلسة مشاركة",
-    "shareButton": "يشارك",
+    "shareButton": "مشاركة",
     "notReadyToShare": "الجلسة غير جاهزة للمشاركة بعد",
     "modeTab": {
       "link": "وصلة",
-      "user": "مستخدم"
+      "user": "المستخدم"
     },
     "linkModeDescription": "يمكن لأي شخص لديه هذا الرابط الانضمام، ولا يلزم وجود حساب.",
     "userModeDescription": "شارك الملف مع مستخدم محدد لديه صلاحية الوصول إلى هذا المضيف. إذا لم يكن لديه صلاحية الوصول بعد، فشارك معه المضيف أولاً أو استخدم رابطًا. بمجرد المشاركة، ستظهر الجلسة في علامة تبويب \"الاتصالات\" الخاصة به.",
     "permissionLevel": {
-      "label": "مستوى الإذن",
+      "label": "مستوى الصلاحية",
       "readOnly": "للقراءة فقط",
       "readOnlyDescription": "يمكنني مشاهدة الجلسة مباشرة ولكن لا يمكنني الكتابة أو التفاعل.",
       "readWrite": "القراءة والكتابة",
@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "ابحث عن المستخدمين...",
     "noUsersFound": "لم يتم العثور على مستخدمين",
     "linkCreated": "تم إنشاء رابط المشاركة",
+    "linkNeedsServer": "لا تعمل روابط المشاركة إلا مع الجلسات الموجودة على خادم Termix. قم بتوصيل هذا المضيف عبر خادمك المرتبط لمشاركته باستخدام رابط.",
     "linkCopied": "تم نسخ الرابط إلى الحافظة",
     "copyLink": "نسخ الوصلة",
     "shareCreated": "تمت مشاركة الجلسة. ستظهر في علامة تبويب \"الاتصالات\" الخاصة بهم.",
@@ -37,17 +38,19 @@
     "userLacksHostAccess": "لا يملك هذا المستخدم صلاحية الوصول إلى هذا المضيف بعد. شارك المضيف معه أولاً، أو استخدم رابطاً بدلاً من ذلك.",
     "activeShares": "الأسهم النشطة",
     "noActiveShares": "لا توجد أسهم نشطة لهذه الجلسة",
-    "revoke": "إلغاء",
+    "revoke": "إبطال",
     "revokeConfirmTitle": "إلغاء هذه الحصة؟",
     "revokeConfirmDescription": "أي شخص يستخدم هذا الملف المشترك سيفقد الوصول إليه فوراً.",
     "revoked": "تم إلغاء الحصة",
     "revokeFailed": "فشل في إلغاء المشاركة",
     "joinCount": "{{count}} انضم",
     "joinCount_other": "{{count}} ينضم",
-    "expiresAt": "تاريخ الانتهاء {{date}}",
+    "expiresAt": "تنتهي في {{date}}",
     "linkShareBadge": "وصلة",
     "userShareBadge": "المستخدم: {{username}}",
     "loadSharesFailed": "فشل تحميل المشاركات النشطة",
+    "remoteDisplayUnavailable": "خدمة سطح المكتب البعيد غير متاحة حاليًا.",
+    "sharedWithMe": "الجلسات التي تمت مشاركتها معي",
     "customHoursPlaceholder": "عدد الساعات حتى انتهاء صلاحية الوصول"
   },
   "collab": {
@@ -56,10 +59,10 @@
     "persistentRoom": "غرفة مستمرة",
     "persistentRoomHint": "تبقى الغرف الدائمة مدرجة بعد انتهاء الاجتماع ويمكن إعادة استخدامها.",
     "noRooms": "لا توجد غرف اجتماعات بعد. أنشئ غرفة لبدء اجتماع.",
-    "openRoom": "يفتح",
+    "openRoom": "فتح",
     "endRoom": "انتهاء الاجتماع",
     "leaveRoom": "يترك",
-    "deleteMember": "يزيل",
+    "deleteMember": "إزالة",
     "removeMember": "إزالة {{name}}",
     "removeMemberTitle": "هل تريد حذف هذا العضو؟",
     "removeMemberDescription": "سيفقد المستخدم {{name}} إمكانية الوصول إلى هذه الغرفة فورًا. وسيتم فصل أي برنامج عرض SSH نشط.",
@@ -68,17 +71,20 @@
     "members": "أعضاء",
     "membersPanel": "أعضاء الغرفة وطلبات التحكم",
     "membersWithCount": "الأعضاء ({{count}})",
+    "guestsWithCount": "الضيوف ({{count}})",
+    "removeGuests": "إزالة الضيوف",
+    "anonymousGuest": "ضيف",
     "online": "متصل",
-    "offline": "غير متصل بالإنترنت",
+    "offline": "غير متصل",
     "you": "(أنت)",
-    "hostBadge": "يستضيف",
+    "hostBadge": "المضيف",
     "presenterBadge": "تقديم",
     "present": "حاضر",
     "presentTitle": "اصعد إلى المسرح",
-    "presentHost": "يستضيف",
-    "searchHosts": "البحث عن المضيفين",
+    "presentHost": "المضيف",
+    "searchHosts": "ابحث عن مضيفين",
     "noHostsFound": "لم يتم العثور على مضيفين متاحين.",
-    "presentProtocol": "بروتوكول",
+    "presentProtocol": "البروتوكول",
     "stopPresenting": "توقف عن التقديم",
     "takeOver": "تولي زمام الأمور",
     "takeOverConfirmTitle": "هل تريد استبدال العرض التقديمي الحالي؟",
@@ -115,6 +121,7 @@
       "linkInvalid": "رابط الضيف هذا غير صالح أو انتهى الاجتماع"
     },
     "reopenFromPanel": "انتهت صلاحية علامة تبويب هذا الاجتماع. أعد فتح الغرفة من لوحة الاجتماعات.",
+    "retry": "إعادة المحاولة",
     "requestControl": "التحكم في الطلبات",
     "cancelControlRequest": "إلغاء الطلب",
     "controlQueue": "طلبات التحكم",
@@ -130,7 +137,10 @@
     "youArePresenting": "أنت تعرض المحتوى في علامة تبويب أخرى. توقف عن العرض لتسليم المنصة.",
     "created": "تم إنشاء الغرفة",
     "invited": "الأعضاء المدعوون",
-    "roomTab": "مقابلة"
+    "roomTab": "مقابلة",
+    "serverChanged": "تم تغيير خادم الاجتماع. أعد فتح هذا الاجتماع من لوحة الاجتماعات.",
+    "hostNotSynced": "قم بمزامنة هذا المضيف مع خادم الاجتماع قبل العرض التقديمي.",
+    "linkRequiresServer": "قم بربط هذا الجهاز بخادم Termix وقم بإنشاء الاجتماع هناك لمشاركة رابط الويب."
   },
   "nav": {
     "collab": "الاجتماعات"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "شارك الجلسات وانضم إلى الغرف",
+      "description": "شارك الجلسات المباشرة عبر رابط أو مع مستخدمين آخرين، وقم بإنشاء غرف تعاون والانضمام إليها."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "مخصص"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "تمت مشاركته معي",
+    "sharedBy": "تمت المشاركة بواسطة {{username}}",
+    "join": "ينضم",
+    "sharedSessionLabel": "{{hostName}} (مشترك)"
   }
 }

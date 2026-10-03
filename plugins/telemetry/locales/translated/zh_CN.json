@@ -1,0 +1,61 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "管理使用统计",
+      "description": "查看将发送的使用统计、立即发送统计以及重置实例 ID。"
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "共享匿名使用统计",
+      "description": "每天发送一份简短的匿名汇总，以帮助改进 Termix。不会包含用户名、主机名、IP 地址或凭据。"
+    },
+    "includePlatform": {
+      "label": "包含平台信息",
+      "description": "操作系统、CPU 架构、Node.js 版本、数据库类型和 Termix 安装方式（Docker、桌面应用或服务器）。"
+    },
+    "includeFeatureUsage": {
+      "label": "包含功能使用情况",
+      "description": "自上次报告以来各类标签页的打开次数和 SSH 登录次数。用户可在个人资料中关闭自己的统计。"
+    },
+    "includePlugins": {
+      "label": "包含已安装功能",
+      "description": "已安装并运行的内置功能。"
+    },
+    "instanceId": {
+      "label": "实例 ID"
+    },
+    "shareFeatureUsage": {
+      "label": "包含我的功能使用情况",
+      "description": "在匿名使用统计中记录你打开的标签页类型，不会发送有关你或你的主机的信息。"
+    }
+  },
+  "status": {
+    "title": "状态",
+    "on": "每天共享一次使用统计",
+    "off": "不共享使用统计",
+    "lockedOn": "已通过 ENABLE_TELEMETRY 环境变量开启，请修改该变量以更改设置。",
+    "lockedOff": "已通过 ENABLE_TELEMETRY 环境变量关闭，请修改该变量以更改设置。",
+    "instanceId": "实例 ID：{{id}}",
+    "noInstanceId": "尚无实例 ID",
+    "lastSent": "上次发送时间：{{date}}",
+    "neverSent": "尚未发送",
+    "nextSend": "下次报告时间：{{date}}",
+    "lastError": "上次尝试失败：{{error}}",
+    "preview": "预览报告",
+    "sendNow": "立即发送",
+    "sending": "发送中……",
+    "sent": "使用统计已发送",
+    "notSent": "使用统计已关闭，未发送任何内容",
+    "resetId": "重置实例 ID",
+    "resetIdConfirm": "重置实例 ID？后续报告将被视为来自新的安装实例。",
+    "resetIdDone": "实例 ID 已重置",
+    "previewTitle": "下次报告",
+    "previewDescription": "这是现在发送时将包含的完整内容。",
+    "close": "关闭",
+    "loadFailed": "无法加载使用统计状态"
+  },
+  "plugin": {
+    "name": "使用统计"
+  }
+}

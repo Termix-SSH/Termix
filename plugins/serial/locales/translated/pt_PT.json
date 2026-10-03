@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Serial"
+  },
   "serial": {
     "title": "Serial",
     "portLabel": "Porta",
@@ -22,8 +25,5 @@
     "notSupported": "As ligações série requerem um navegador com suporte à Web Serial API (Chrome, Edge ou Firefox 151+) ou a aplicação de ambiente de trabalho Termix.",
     "hideHint": "Pode ocultar o separador Série em Perfil do Utilizador > Aparência > Barra Lateral > Navegação.",
     "browserPickerHint": "Clique em Ligar e o seu navegador abrirá um seletor de porta para escolher o dispositivo."
-  },
-  "nav": {
-    "serial": "Serial"
   }
 }

@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Správa statistik používání",
+      "description": "Podívejte se, jaké statistiky využití se odesílají, odešlete je hned a resetujte ID instance."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Sdílení anonymních statistik používání",
+      "description": "Jednou denně odesílá krátké anonymní shrnutí, které pomáhá vylepšovat Termix. Nikdy neobsahuje uživatelská jména, názvy hostitelů, IP adresy ani přihlašovací údaje."
+    },
+    "includePlatform": {
+      "label": "Zahrnout informace o platformě",
+      "description": "Operační systém, architektura CPU, verze Node.js, typ databáze a způsob instalace Termixu (Docker, desktopová aplikace nebo server)."
+    },
+    "includeFeatureUsage": {
+      "label": "Zahrnout využití funkcí",
+      "description": "Kolikrát byl každý typ karty otevřen a kolikrát došlo k přihlášení přes SSH od poslední zprávy. Uživatelé si mohou tuto část ve svém profilu vypnout."
+    },
+    "includePlugins": {
+      "label": "Zahrnout nainstalované funkce",
+      "description": "Které vestavěné funkce jsou nainstalovány a spuštěny."
+    },
+    "instanceId": {
+      "label": "ID instance"
+    },
+    "shareFeatureUsage": {
+      "label": "Zahrnout využití mých funkcí",
+      "description": "V anonymních statistikách používání se počítá, jaké typy karet otevřete. Neodesílá se nic o vás ani o vašich hostitelích."
+    }
+  },
+  "status": {
+    "title": "Postavení",
+    "on": "Sdílení statistik užívání jednou denně",
+    "off": "Nesdílení statistik používání",
+    "lockedOn": "Zapíná se proměnnou prostředí ENABLE_TELEMETRY. Změňte ji tam.",
+    "lockedOff": "Vypnuto proměnnou prostředí ENABLE_TELEMETRY. Změňte to tam.",
+    "instanceId": "ID instance: {{id}}",
+    "noInstanceId": "Zatím žádné ID instance",
+    "lastSent": "Naposledy odesláno {{date}}",
+    "neverSent": "Zatím neodesláno",
+    "nextSend": "Další termín pro hlášení {{date}}",
+    "lastError": "Poslední pokus se nezdařil: {{error}}",
+    "preview": "Náhled zprávy",
+    "sendNow": "Odeslat nyní",
+    "sending": "Odesílání...",
+    "sent": "Odeslané statistiky užívání",
+    "notSent": "Statistiky používání jsou vypnuté, nic nebylo odesláno",
+    "resetId": "Obnovit ID instance",
+    "resetIdConfirm": "Obnovit ID instance? Budoucí sestavy budou vypadat jako nová instalace.",
+    "resetIdDone": "Reset ID instance",
+    "previewTitle": "Další zpráva",
+    "previewDescription": "Přesně tohle by bylo teď odesláno.",
+    "close": "Blízko",
+    "loadFailed": "Nepodařilo se načíst stav statistik využití"
+  }
+}

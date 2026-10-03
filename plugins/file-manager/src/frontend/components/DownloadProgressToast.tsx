@@ -1,9 +1,10 @@
 import { formatTransferMbPerSec } from "../api/transfer-api";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import type { TranslateFn } from "@termix/plugin-sdk/frontend";
 import { ArrowDownToLine } from "lucide-react";
 import { TransferProgressBar } from "./TransferProgressBar";
 
 interface DownloadProgressToastProps {
+  t: TranslateFn;
   fileName: string;
   loaded: number;
   total?: number;
@@ -25,12 +26,12 @@ function formatBytes(bytes: number): string {
 }
 
 export function DownloadProgressToast({
+  t,
   fileName,
   loaded,
   total,
   mbPerSec,
 }: DownloadProgressToastProps) {
-  const { t } = useTranslation();
   const percent =
     total !== undefined && total > 0
       ? Math.min(100, Math.round((loaded / total) * 100))

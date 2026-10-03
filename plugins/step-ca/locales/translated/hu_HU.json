@@ -4,10 +4,12 @@
   },
   "editor": {
     "label": "CA lépés",
-    "description": "Jelentkezzen be az identitásszolgáltatóján keresztül, és hagyja, hogy a lépéses hitelesítésszolgáltatója rövid életű SSH-tanúsítványt állítson ki ehhez a gazdagéphez. A hitelesítésszolgáltató URL-címét, a root ujjlenyomatát és az OIDC-kiszolgálót a rendszergazda állítja be az Adminisztrátori beállítások alatt.",
+    "description": "Jelentkezzen be az identitásszolgáltatóján keresztül, és hagyja, hogy a Step CA rövid életű SSH-tanúsítványt állítson ki ehhez a gazdagéphez. A CA URL-címét, a root ujjlenyomatát és az OIDC-kiszolgálót a rendszergazda állítja be az Adminisztrátori beállítások Step CA szakaszában.",
     "docs": "Dokumentumok megtekintése"
   },
   "dialog": {
+    "title": "Lépés CA hitelesítés szükséges",
+    "description": "A folytatáshoz fejezze be a hitelesítést a böngészőjében. A tanúsítvány mindaddig érvényes, ameddig a hitelesítésszolgáltató engedélyezi.",
     "openBrowser": "Böngésző megnyitása a hitelesítéshez",
     "waiting": "Várakozás a böngésző hitelesítésére...",
     "authenticating": "Hitelesítés feldolgozása..."
@@ -17,15 +19,30 @@
     "timeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra."
   },
   "settings": {
+    "caUrl": {
+      "label": "Kaliforniai URL",
+      "description": "A smallstep CA https URL-címe. A Step CA kikapcsolásához hagyja üresen a CA URL-címét, az ujjlenyomatot és a kibocsátót.",
+      "placeholder": "https://ca.internal:9000"
+    },
     "fingerprint": {
-      "label": "Gyökér ujjlenyomat (SHA-256)"
+      "label": "Gyökér ujjlenyomat (SHA-256)",
+      "description": "A főtanúsítvány ujjlenyomata, ahogyan azt a ca. lépés bootstrap mutatja."
     },
     "provisioner": {
-      "label": "OIDC-szolgáltató neve"
+      "label": "OIDC-szolgáltató neve",
+      "description": "A hitelesítésszolgáltató OIDC-szolgáltatójának neve. Ezután válassza a „Step CA” lehetőséget a gazdagép hitelesítési típusaként."
     },
     "privateEndpoints": {
       "label": "Engedélyezett privát Step CA-hosztok",
-      "description": "A Step CA tanúsítványfolyamat által érintett privát hosztok a következőkkel vehetik fel a kapcsolatot: maga a CA, és ha belső, akkor az identitásszolgáltató. Vesszővel válassza el őket."
+      "description": "A Step CA tanúsítványfolyamat által érintett privát hosztok a következőkkel vehetik fel a kapcsolatot: magával a CA-val, és ha belső, akkor az identitásszolgáltatóval. Válaszd el őket vesszővel vagy új sorral."
+    },
+    "redirectUri": {
+      "label": "Átirányítási URI",
+      "description": "Regisztrálja ezt az URL-címet engedélyezett átirányítási URI-ként az OIDC-kiszolgáló mögötti identitásszolgáltatónál."
+    },
+    "legacyCallback": {
+      "label": "Használja a régi átirányítási URI-t",
+      "description": "Továbbra is küldd a /host/step-ca-callback átirányítási URI-t, amely a 2.9 előtt használt. Kapcsold ki ezt, amint az identitásszolgáltatód engedélyezi az újat."
     }
   }
 }

@@ -1,17 +1,41 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "管理 ACME 证书",
+      "description": "查看证书状态并立即申请新证书。"
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "自动续期",
+      "description": "每天检查两次。在没有证书、证书未覆盖域名或将在 30 天内过期时申请新证书。"
+    },
     "domain": {
       "label": "域名",
-      "placeholder": "termix.example.com",
-      "description": "证书的公共域名。"
+      "description": "证书的公共域名。",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "邮箱",
+      "description": "用于 ACME 账户和到期通知的联系邮箱。",
       "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "证书颁发机构",
+      "description": "证书申请来源。测试时使用测试环境，以免触发 Let's Encrypt 频率限制。",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt（测试环境）",
+      "custom": "自定义 ACME 目录"
+    },
+    "directoryUrl": {
+      "label": "ACME 目录 URL",
+      "description": "仅用于自定义证书颁发机构，必须为 HTTPS URL。"
     },
     "challengeType": {
       "label": "验证类型",
-      "cloudflare": "DNS (Cloudflare) - 需要 Cloudflare API 令牌"
+      "description": "用于证明域名所有权的方式。",
+      "http": "HTTP：需要互联网能够访问端口 80",
+      "cloudflare": "DNS（Cloudflare）：需要 Cloudflare API 令牌"
     },
     "cloudflareToken": {
       "label": "Cloudflare API 令牌",
@@ -21,9 +45,17 @@
   "status": {
     "title": "证书状态",
     "none": "无证书",
+    "names": "覆盖域名：{{names}}",
+    "issuer": "签发者：{{issuer}}",
     "expires": "过期于 {{date}}",
     "lastIssued": "上次签发于 {{date}}",
-    "request": "签发 / 续期证书",
-    "requesting": "正在请求证书..."
+    "lastError": "上次尝试失败：{{error}}",
+    "missing": "请先设置域名、邮箱及所选验证方式需要的字段，保存后再申请证书。",
+    "request": "立即申请证书",
+    "requesting": "正在请求证书...",
+    "issued": "证书已签发并安装"
+  },
+  "plugin": {
+    "name": "ACME 证书"
   }
 }

@@ -23,7 +23,7 @@
     "provisionLabel": "サーバーをプロビジョニング",
     "publishTitle": "公開鍵を公開",
     "generate": "生成",
-    "generateTooltip": "Ed25519キーペアを生成 — 公開鍵を公開し、秘密鍵をデバイスにダウンロードします",
+    "generateTooltip": "Ed25519キーペアを生成します。公開鍵を公開し、秘密鍵をデバイスにダウンロードします。",
     "saveToVault": "認証情報に保存",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "ラベル（任意）",
@@ -32,7 +32,7 @@
     "keyPublished": "キーが公開されました",
     "addKeyFailed": "キーの追加に失敗しました",
     "generatedSaved": "キーペアが生成され、認証情報ボールトに保存されました。秘密鍵もダウンロードされました。",
-    "generatedOnly": "キーペアが生成されました — 秘密鍵がダウンロードされました（一度だけ表示されます）。",
+    "generatedOnly": "鍵ペアが生成されました。秘密鍵がダウンロードされました（一度だけ表示されます）。",
     "generateFailed": "キーの生成に失敗しました",
     "imported": "キーが認証情報からインポートされました",
     "importFailed": "鍵のインポートに失敗しました",
@@ -56,7 +56,7 @@
     "caTrustLabel": "サーバーで信頼する（root で実行）",
     "caRotate": "ローテーション",
     "caRotateConfirm": "CA をローテーションしますか？署名されたすべての証明書の受け入れが停止され、再発行が必要になります。",
-    "caRotated": "CA がローテーションされました — 以前の証明書は失効しました",
+    "caRotated": "認証局が交代しました。以前の証明書は失効しました。",
     "caRotateFailed": "CA のローテーションに失敗しました",
     "caDelete": "CA を削除",
     "caDeleteConfirm": "認証局を削除しますか？",
@@ -66,12 +66,21 @@
     "issueCert": "証明書",
     "issueCertTooltip": "この鍵に対して、CA が署名した SSH 証明書を発行します",
     "certIssued": "証明書が発行され、ダウンロードされました",
-    "certIssueFailed": "証明書の発行に失敗しました"
+    "certIssueFailed": "証明書の発行に失敗しました",
+    "docsLink": "ドキュメントを見る",
+    "principalsLabel": "SSHの原則",
+    "principalsPlaceholder": "SSHプリンシパル（例：root）"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
     "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Termix IDを使用する",
+      "description": "公開ハンドルを取得し、SSHキーを公開して、認証局を実行します。"
+    }
   }
 }

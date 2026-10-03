@@ -159,7 +159,7 @@ export async function createHostMetricsRepository(db: PluginDatabase) {
             )
           : scope,
       );
-      await db.persist();
+      await db.persist({ lazy: true });
     },
 
     async listHealth(

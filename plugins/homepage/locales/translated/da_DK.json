@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Hjemmeside",
     "addWidget": "Tilføj widget",
+    "noWidgetsInCategory": "Ingen widgets i denne kategori",
     "editWidget": "Rediger widget",
     "zoomIn": "Zoom ind",
     "zoomOut": "Zoom ud",
@@ -59,6 +60,9 @@
     "maxItems": "Maks. antal varer",
     "showDescription": "Vis beskrivelse",
     "widgetRssName": "RSS-feed",
+    "rssNoFeedUrl": "Konfigurer en feed-URL i widgetindstillinger",
+    "rssLoadError": "Kunne ikke indlæse feedet",
+    "rssNoItems": "Ingen varer",
     "noHostSelected": "Ingen vært valgt",
     "displayedMetrics": "Viste målinger",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "Kompakt tilstand",
     "selectHosts": "Vælg værter",
     "listLayout": "Liste",
-    "gridLayout": "Gitter"
+    "gridLayout": "Gitter",
+    "configureUrl": "Angiv en URL i widgetindstillingerne",
+    "embeddedContent": "Indlejret indhold",
+    "noBookmarks": "Ingen bogmærker",
+    "noSections": "Ingen sektioner er oprettet",
+    "noServices": "Ingen tjenester konfigureret",
+    "configureLocation": "Angiv en placering i widgetindstillingerne",
+    "bannerTextPlaceholder": "Bannertekst",
+    "serviceNamePlaceholder": "Min tjeneste"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug hjemmesiden",
+      "description": "Se og rediger links til startsidens lærred og dashboardtjenester."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Tilladte private værter",
+      "description": "Præcise private eller loopback-værtsnavne/IP'er for Ping-status og brugerdefinerede API-widgets. Adskil poster med kommaer eller nye linjer; udelad skemaer, porte og stier. Tøm blokering af private destinationer."
+    },
+    "privateCertificateAuthority": {
+      "label": "Privat certifikatmyndighed (PEM)",
+      "description": "Valgfri pakke med betroede CA'er til værter på tilladelseslisten. Certifikatbekræftelse forbliver aktiveret. Lad være tomt for at bruge systemets tillidslager."
+    }
   }
 }

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "시리얼"
+  },
   "serial": {
     "title": "시리얼",
     "portLabel": "포트",
@@ -22,8 +25,5 @@
     "notSupported": "시리얼 연결에는 Web Serial API를 지원하는 브라우저(Chrome, Edge, Firefox 151+) 또는 Termix 데스크톱 앱이 필요합니다.",
     "hideHint": "Serial 탭은 사용자 프로필 > 모양 > 사이드바 > 탐색에서 숨길 수 있습니다.",
     "browserPickerHint": "연결 버튼을 클릭하면 브라우저에서 장치 선택을 위한 포트 선택기가 열립니다."
-  },
-  "nav": {
-    "serial": "시리얼"
   }
 }

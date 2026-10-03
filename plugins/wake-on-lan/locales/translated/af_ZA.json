@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Wakker word",
+    "sent": "Wake-on-LAN-pakket gestuur",
+    "failed": "Kon nie Wake-on-LAN-pakket stuur nie"
+  },
+  "permissions": {
+    "send": {
+      "title": "Stuur Wake-on-LAN-pakkette",
+      "description": "Maak 'n gasheer wakker deur 'n magiese pakket na sy MAC-adres te stuur."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "MAC-adres",
+        "description": "Die gasheer se netwerk MAC-adres, wat gebruik word om Wake-on-LAN-pakkette te stuur.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Uitsaaiadres",
+        "description": "Die subnet-uitsaaiadres om die pakkie na te stuur. Los leeg vir 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@
     "serverTunnelsSection": "Túnels de servidor",
     "sourcePort": "Port d'origen",
     "tabTunnels": "Túnels",
-    "tunnelConnecting": "Túnel que connecta...",
+    "tunnelConnecting": "Connexió de túnels...",
     "tunnelDisconnected": "Túnel desconnectat",
     "tunnelLabel": "Túnel {{number}}",
     "tunnelModeDynamicDesc": "Crea un proxy SOCKS5 en un port local per al reenviament dinàmic de ports.",
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Els preajustaments són instantànies explícites; carregar-ne una substitueix la llista de túnels de clients locals d'aquest client d'escriptori.",
     "c2sPresetToLoad": "Predefinició per carregar",
     "c2sTunnelPresets": "Preajustos del túnel del client",
-    "c2sTunnelPresetsUnavailable": "Els preajustos del túnel del client només estan disponibles al client d'escriptori."
+    "c2sTunnelPresetsUnavailable": "Els preajustos del túnel del client només estan disponibles al client d'escriptori.",
+    "c2sPresetRenameError": "No s'ha pogut canviar el nom de la configuració predefinida",
+    "c2sPresetDeleteError": "No s'ha pogut suprimir la configuració predefinida"
   },
   "tunnels": {
     "attempt": "Intent {{current}} de {{max}}",
@@ -75,7 +77,7 @@
     "clientAutoStartDesc": "S'inicia quan s'obre aquest client d'escriptori i roman connectat.",
     "clientManualStartDesc": "Feu servir Start i Stop des d'aquesta fila. Termix no l'obrirà automàticament.",
     "clientRemoteServerNote": "El reenviament remot pot requerir AllowTcpForwarding i GatewayPorts al servidor SSH del punt final. El port remot es tanca quan aquest escriptori es desconnecta.",
-    "clientTunnelStarted": "Túnel del client iniciat",
+    "clientTunnelStarted": "S'ha iniciat el túnel del client",
     "clientTunnelStopped": "Túnel del client aturat",
     "clientTunnels": "Túnels de client",
     "connected": "Connectat",
@@ -87,7 +89,7 @@
     "destinationPort": "Port de destinació",
     "disconnected": "Desconnectat",
     "duplicateAutoStartBind": "Només un túnel de client d'inici automàtic pot utilitzar {{bind}}.",
-    "endpointPort": "Port del punt final",
+    "endpointPort": "Port de punt final",
     "endpointSshHost": "Amfitrió SSH de punt final",
     "endpointSshHostPlaceholder": "Seleccioneu un amfitrió configurat",
     "endpointSshHostRequired": "Seleccioneu un host SSH de punt final per a cada túnel de client.",
@@ -139,8 +141,32 @@
     "typeLocal": "Local (-L)",
     "typeRemote": "Comandament a distància (-R)",
     "working": "Treballant...",
+    "activeCount": "{{connected}}/{{total}} actiu",
+    "listensOn": "Enllaçat a localhost:{{port}}",
+    "socksProxy": "Proxy SOCKS5",
+    "waiting": "Esperant",
+    "remoteSessionExpired": "La sessió de sincronització remota ha caducat. Torneu a connectar la sincronització remota i torneu-ho a provar.",
+    "activeTunnels": "Túnels actius",
     "start": "Inici",
-    "stop": "Atura"
+    "stop": "Atura",
+    "authTitle": "Autenticació de túnel",
+    "authRetry": "No s'ha acceptat el codi anterior. Introduïu-ne un de nou.",
+    "authAnswer": "Resposta d'autenticació",
+    "authContinue": "Continua"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza túnels",
+      "description": "Inicia, atura i supervisa túnels SSH i desa els preajustos del túnel del client."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Habilita els túnels",
+        "description": "Configura túnels SSH a través d'aquest host."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Túnels",

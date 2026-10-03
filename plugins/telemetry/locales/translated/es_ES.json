@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Gestionar las estadísticas de uso",
+      "description": "Consulta qué estadísticas de uso se envían, envíalas ahora y restablece el ID de instancia."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Compartir estadísticas de uso anónimas",
+      "description": "Envía un breve resumen anónimo una vez al día para ayudar a mejorar Termix. Nunca incluye nombres de usuario, nombres de host, direcciones IP ni credenciales."
+    },
+    "includePlatform": {
+      "label": "Incluir información de la plataforma",
+      "description": "El sistema operativo, la arquitectura de la CPU, la versión de Node.js, el tipo de base de datos y cómo está instalado Termix (Docker, aplicación de escritorio o servidor)."
+    },
+    "includeFeatureUsage": {
+      "label": "Incluir el uso de la función",
+      "description": "Cuántas veces se abrió cada tipo de pestaña y cuántos inicios de sesión SSH se produjeron desde el último informe. Los usuarios pueden desactivar esta sección en su perfil."
+    },
+    "includePlugins": {
+      "label": "Incluir características instaladas",
+      "description": "¿Qué funciones integradas están instaladas y en funcionamiento?"
+    },
+    "instanceId": {
+      "label": "ID de instancia"
+    },
+    "shareFeatureUsage": {
+      "label": "Incluir mi uso de la función",
+      "description": "Registra qué tipos de pestañas abres en las estadísticas de uso anónimas. No se envía ninguna información sobre ti ni sobre tu servidor."
+    }
+  },
+  "status": {
+    "title": "Estado",
+    "on": "Compartir estadísticas de uso una vez al día.",
+    "off": "No compartimos las estadísticas de uso.",
+    "lockedOn": "Se activa mediante la variable de entorno ENABLE_TELEMETRY. Cámbiela allí.",
+    "lockedOff": "Desactivado por la variable de entorno ENABLE_TELEMETRY. Cámbiela allí.",
+    "instanceId": "ID de instancia: {{id}}",
+    "noInstanceId": "Aún no hay ID de instancia",
+    "lastSent": "Último envío {{date}}",
+    "neverSent": "Aún no se ha enviado",
+    "nextSend": "Próximo informe pendiente {{date}}",
+    "lastError": "Último intento fallido: {{error}}",
+    "preview": "Vista previa del informe",
+    "sendNow": "Enviar ahora",
+    "sending": "Envío...",
+    "sent": "Estadísticas de uso enviadas",
+    "notSent": "Las estadísticas de uso están desactivadas, no se envió nada.",
+    "resetId": "Restablecer ID de instancia",
+    "resetIdConfirm": "¿Restablecer el ID de instancia? Los informes futuros se verán como una instalación nueva.",
+    "resetIdDone": "Restablecimiento del ID de instancia",
+    "previewTitle": "Siguiente informe",
+    "previewDescription": "Esto es exactamente lo que se enviaría ahora mismo.",
+    "close": "Cerrar",
+    "loadFailed": "No se pudo cargar el estado de las estadísticas de uso."
+  }
+}

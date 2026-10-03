@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Moniteur Tmux"
-  },
   "hosts": {
     "enableTmuxMonitor": "Activer le Moniteur Tmux",
     "enableTmuxMonitorDesc": "Afficher cet hôte dans le Moniteur Tmux et ajouter ses actions tmux à la barre latérale",
+    "tabTmuxMonitor": "Moniteur tmux",
     "docsLink": "Voir la documentation"
+  },
+  "nav": {
+    "tmuxMonitor": "Moniteur Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Moniteur tmux",
+    "tmuxMonitorDesc": "Surveiller les sessions tmux sur vos hôtes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser le moniteur Tmux",
+      "description": "Naviguez et contrôlez les sessions, fenêtres et volets tmux sur les hôtes dont le moniteur est activé."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activer le Moniteur Tmux",
+        "description": "Surveillez et connectez-vous aux sessions tmux exécutées sur cet hôte."
+      },
+      "mouseEnabled": {
+        "label": "Activer la prise en charge de la souris tmux",
+        "description": "Activez la prise en charge de la souris pour la session tmux lors de la connexion ou de la création d'une session. Les autres sessions et les paramètres globaux de tmux restent inchangés."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Moniteur tmux",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Échec du renommage de la session",
     "editTagsTitle": "Modifier les tags pour « {{name}} »",
     "killPane": "Fermer le volet",
-    "resizeTree": "Faire glisser pour redimensionner — double-cliquer pour réinitialiser",
+    "resizeTree": "Faites glisser pour redimensionner, double-cliquez pour réinitialiser",
     "reattach": "Rattacher (corrige un affichage brouillé)",
     "killWindow": "Fermer la fenêtre",
     "killWindowTitle": "Fermer la fenêtre {{index}} de « {{session}} » ?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Échec de la fermeture de la session",
     "hostUnreachable": "Impossible de se connecter à l’hôte. Vérifiez qu’il est en ligne et accessible.",
     "noServer": "Aucun serveur tmux n’est exécuté sur cet hôte.",
-    "searchTruncated": "Résultats partiels — la recherche couvre les {{lines}} dernières lignes de chaque volet et jusqu’à {{panes}} volets.",
+    "searchTruncated": "Résultats partiels. La recherche couvre les {{lines}} dernières lignes de chaque volet et au maximum {{panes}} volets.",
     "closeSearchResults": "Fermer les résultats de recherche",
     "retry": "Réessayer",
     "noHosts": "Aucun hôte SSH disponible",
-    "noHostsHint": "Activez l’option Tmux Monitor sur un hôte SSH (Gestionnaire d’hôtes → onglet Terminal) pour surveiller ses sessions tmux.",
+    "noHostsHint": "Activez l'option Moniteur Tmux sur un hôte SSH (Gestionnaire d'hôtes, onglet Moniteur Tmux) pour surveiller ses sessions tmux.",
     "tmuxInstallHint": "Installez-le sur l’hôte avec :",
     "attachTooltip": "Ouvrir un terminal sur {{host}}",
-    "attachTooltipPane": "Ouvrir un terminal sur {{host}} — session tmux {{session}}",
+    "attachTooltipPane": "Ouvrez un terminal pour {{host}}, session tmux {{session}}",
     "timeJustNow": "à l’instant",
     "timeMinutes": "il y a {{count}} min",
     "timeHours": "il y a {{count}} h",
-    "timeDays": "il y a {{count}} j"
+    "timeDays": "il y a {{count}} j",
+    "allHosts": "Tous les hôtes",
+    "singleHost": "hôte unique",
+    "hostScope": "portée du moniteur",
+    "filterHosts": "Filtrer les hôtes par nom ou adresse",
+    "selectHost": "Sélectionner l'hôte",
+    "toggleHost": "Développer ou réduire {{host}}",
+    "noMatchingHosts": "Aucun hôte correspondant",
+    "toggleSession": "Développer ou réduire {{session}}"
   }
 }

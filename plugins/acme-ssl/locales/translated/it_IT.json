@@ -1,29 +1,58 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Gestire i certificati ACME",
+      "description": "Verifica lo stato del certificato e richiedine uno nuovo ora."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Rinnovo automatico",
+      "description": "Controlla due volte al giorno e richiedi un nuovo certificato se non ne trovi uno, se non copre il dominio o se scade entro 30 giorni."
+    },
     "domain": {
       "label": "Dominio",
-      "placeholder": "termix.example.com",
-      "description": "Il nome di dominio pubblico per il certificato."
+      "description": "Il nome di dominio pubblico per il certificato.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "Email",
+      "description": "Indirizzo email per contattare l'account ACME e per ricevere avvisi di scadenza.",
       "placeholder": "admin@example.com"
     },
+    "provider": {
+      "label": "Autorità di certificazione",
+      "description": "Dove ottenere il certificato. Utilizza un ambiente di staging per effettuare dei test senza superare i limiti di frequenza di Let's Encrypt.",
+      "letsencrypt": "Let's Encrypt",
+      "letsencryptStaging": "Let's Encrypt (staging)",
+      "custom": "Elenco personalizzato ACME"
+    },
+    "directoryUrl": {
+      "label": "URL della directory ACME",
+      "description": "Solo per un'autorità di certificazione personalizzata. Deve essere un URL HTTPS."
+    },
     "challengeType": {
-      "label": "Tipo di challenge",
-      "cloudflare": "DNS (Cloudflare) - richiede un token API Cloudflare"
+      "label": "Tipo di sfida",
+      "description": "Come dimostrare di essere il proprietario del dominio.",
+      "http": "HTTP - richiede che la porta 80 sia raggiungibile da Internet",
+      "cloudflare": "DNS (Cloudflare) - richiede un token API di Cloudflare"
     },
     "cloudflareToken": {
-      "label": "Token API Cloudflare",
+      "label": "Token API di Cloudflare",
       "description": "Token con autorizzazione Zone:DNS:Edit per il tuo dominio."
     }
   },
   "status": {
     "title": "Stato del certificato",
     "none": "Nessun certificato",
+    "names": "Copertine {{names}}",
+    "issuer": "Emesso da {{issuer}}",
     "expires": "Scade il {{date}}",
     "lastIssued": "Ultimo rilascio il {{date}}",
-    "request": "Emetti / Rinnova certificato",
-    "requesting": "Richiesta certificato in corso..."
+    "lastError": "Ultimo tentativo fallito: {{error}}",
+    "missing": "Imposta il dominio, l'indirizzo email e i campi richiesti dal tuo tipo di sfida, quindi salva prima di richiedere un certificato.",
+    "request": "Richiedi subito il certificato",
+    "requesting": "Richiesta certificato in corso...",
+    "issued": "Certificato rilasciato e installato"
   }
 }

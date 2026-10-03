@@ -275,7 +275,13 @@ async function discoverProxmoxGuestsForHost(
     timeoutMs: 35000,
     overrides: { tryKeyboard: false, readyTimeout: 30000 },
   });
-  const hostWithSudo: PluginSshHostWithSudo = host;
+  // connect() always hands back a redacted host; the sudo password comes
+  // from resolveHost, which needs credentials:read.
+  const full = await ctx.ssh.resolveHost(parsedHostId);
+  const hostWithSudo: PluginSshHostWithSudo = {
+    ...host,
+    sudoPassword: (full?.sudoPassword as string | undefined) ?? undefined,
+  };
   const hostCredentialId = (hostWithSudo.credentialId as number | null) ?? null;
 
   try {

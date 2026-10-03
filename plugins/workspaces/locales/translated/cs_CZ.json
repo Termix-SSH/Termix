@@ -41,7 +41,13 @@
         "lastSessionDescription": "Automaticky aktualizováno s vaším posledním uspořádáním karet. Použijte tuto funkci k obnovení toho, co jste měli otevřené.",
         "lastUsed": "Naposledy použité {{time}}",
         "neverUsed": "Nikdy nepoužíváno",
-        "tabsSkipped": "Použitý pracovní prostor — {{count}} přeskočeno (hostitel již neexistuje): {{names}}"
+        "tabsSkipped": "Pracovní prostor byl použit, ale {{count}} karet bylo přeskočeno, protože jejich hostitel již neexistuje: {{names}}",
+        "timeAgo": {
+          "seconds": "Před {{count}}s",
+          "minutes": "{{count}}před m",
+          "hours": "{{count}}před hodinami",
+          "days": "Před {{count}}dny"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Pracovní prostory",
     "workflow_workspaces_desc": "Uložte si sadu otevřených karet a celé rozvržení si znovu otevřete později."
+  },
+  "permissions": {
+    "use": {
+      "title": "Používejte pracovní prostory",
+      "description": "Ukládat, používat a spravovat uložená rozvržení karet."
+    }
   },
   "hosts": {
     "docsLink": "Zobrazit dokumenty"

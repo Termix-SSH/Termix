@@ -4,7 +4,7 @@ import {
   getTransferProgressPercent,
   type TransferProgressResponse,
 } from "../api/transfer-api";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import type { TranslateFn } from "@termix/plugin-sdk/frontend";
 import {
   Archive,
   ArchiveRestore,
@@ -16,6 +16,7 @@ import {
 import { TransferProgressBar } from "./TransferProgressBar";
 
 interface TransferProgressToastProps {
+  t: TranslateFn;
   status: TransferProgressResponse;
   liveMbPerSec?: number;
   stalled?: boolean;
@@ -25,6 +26,7 @@ interface TransferProgressToastProps {
 }
 
 export function TransferProgressToast({
+  t,
   status,
   liveMbPerSec,
   stalled = false,
@@ -32,7 +34,6 @@ export function TransferProgressToast({
   onCancel,
   cancelling = false,
 }: TransferProgressToastProps) {
-  const { t } = useTranslation();
   const percent = getTransferProgressPercent(status);
 
   let title = t("transfer.progressTransferring");

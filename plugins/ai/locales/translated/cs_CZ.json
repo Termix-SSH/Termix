@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Použijte asistenta",
+      "description": "Otevřete asistenta a zeptejte se ho na něco."
+    },
+    "manage_providers": {
+      "title": "Spravovat poskytovatele",
+      "description": "Přidávejte, upravujte a odebírejte poskytovatele umělé inteligence a jejich klíče API."
+    },
+    "apply_proposals": {
+      "title": "Použít návrhy",
+      "description": "Nechte asistenta provést změny, které navrhuje."
+    },
+    "services.use": {
+      "title": "Používejte umělou inteligenci z jiných funkcí",
+      "description": "Jiné funkce mohou zavolat asistenta za vás."
+    },
+    "secrets.share": {
+      "title": "Sdílení klíče API",
+      "description": "Jiné funkce mohou používat uložený klíč API AI, aniž by ho viděly."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "Asistent s umělou inteligencí je na tomto serveru vypnutý.",
+    "providersNeedOptIn": "Zapněte výše uvedeného asistenta s umělou inteligencí a přidejte poskytovatele.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "Asistent s umělou inteligencí",
+        "description": "Umožněte uživatelům zapnout asistenta s umělou inteligencí. Pokud je tato funkce vypnutá, asistent je skrytý a blokovaný pro všechny."
+      },
+      "privateEndpoints": {
+        "label": "Povolení soukromí hostitelé s umělou inteligencí",
+        "description": "Hostitelé ve vaší privátní síti, na které mohou uživatelé odkazovat poskytovatele, například Ollama hostovaná na vlastním serveru. Na každý řádek uveďte jednoho hostitele."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Povolit asistenta s umělou inteligencí",
+        "description": "Povolit asistentovi s umělou inteligencí pomáhat v terminálu tohoto hostitele. Ve výchozím nastavení vypnuto, ale stále vyžaduje, aby byla pro váš účet povolena umělá inteligence."
+      }
+    }
+  },
   "ai": {
     "title": "Asistent",
     "send": "Poslat",
@@ -34,7 +76,7 @@
     "toolArguments": "Vstup",
     "toolResult": "Výsledek",
     "statusApplied": "Aplikovaný",
-    "statusRejected": "Zamítnuto",
+    "statusRejected": "Odmítnuto",
     "proposalApplied": "Změna použita",
     "proposalApplyFailed": "Změnu se nepodařilo použít",
     "proposalRejectFailed": "Změnu se nepodařilo odmítnout",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Zeptejte se na tohoto hostitele...",
     "noProvidersConfigured": "Zatím není nakonfigurován žádný poskytovatel AI. Přidejte ho na kartě Asistent AI.",
     "runsInOpenTerminal": "Spustí se ve vaší otevřené terminálové relaci.",
-    "runInTerminal": "Běh"
+    "runInTerminal": "Běh",
+    "terminalContextPrefill": "Zde je můj terminálový výstup:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Umožněte ostatním funkcím používat váš klíč API poskytovatele AI pro jejich vlastní požadavky. Klíč se nikdy nekopíruje a jeho použití můžete kdykoli zrušit."
+    }
   },
   "nav": {
     "ai": "Umělá inteligence"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Zapněte to",
     "aiEnableDesc": "Přidá asistenta, který si přečte vaše nastavení a navrhne změny, které schválíte. Vyžaduje poskytovatele, kterého dodáte, například místní Ollamu.",
     "aiNote": "Nic se nikam neodesílá, dokud nepřidáte poskytovatele a neodešlete zprávu."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "Asistent s umělou inteligencí",
-        "description": "Umožněte uživatelům zapnout asistenta s umělou inteligencí. Pokud je tato funkce vypnutá, asistent je skrytý a blokovaný pro všechny."
-      },
-      "privateEndpoints": {
-        "label": "Povolení soukromí hostitelé s umělou inteligencí"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Povolit asistenta s umělou inteligencí",
-        "description": "Povolit asistentovi s umělou inteligencí pomáhat v terminálu tohoto hostitele. Ve výchozím nastavení vypnuto, ale stále vyžaduje, aby byla pro váš účet povolena umělá inteligence."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Zobrazit dokumenty"

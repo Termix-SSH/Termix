@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Bestuur gebruikstatistieke",
+      "description": "Kyk watter gebruikstatistieke gestuur word, stuur dit nou en herstel die instansie-ID."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Deel anonieme gebruiksstatistieke",
+      "description": "Stuur een keer per dag 'n klein anonieme opsomming om Termix te help verbeter. Dit sluit nooit gebruikersname, gasheername, IP-adresse of geloofsbriewe in nie."
+    },
+    "includePlatform": {
+      "label": "Sluit platforminligting in",
+      "description": "Die bedryfstelsel, SVE-argitektuur, Node.js-weergawe, databasistipe en hoe Termix geïnstalleer is (Docker, rekenaarprogram of bediener)."
+    },
+    "includeFeatureUsage": {
+      "label": "Sluit funksiegebruik in",
+      "description": "Hoeveel keer elke soort oortjie oopgemaak is en hoeveel SSH-aanmeldings plaasgevind het sedert die laaste verslag. Gebruikers kan hul eie deel in hul profiel afskakel."
+    },
+    "includePlugins": {
+      "label": "Sluit geïnstalleerde funksies in",
+      "description": "Watter ingeboude funksies is geïnstalleer en loop."
+    },
+    "instanceId": {
+      "label": "Instansie-ID"
+    },
+    "shareFeatureUsage": {
+      "label": "Sluit my funksiegebruik in",
+      "description": "Tel watter soort oortjies jy oopmaak in die anonieme gebruiksstatistieke. Niks oor jou of jou gashere word gestuur nie."
+    }
+  },
+  "status": {
+    "title": "Status",
+    "on": "Deel gebruikstatistieke een keer per dag",
+    "off": "Deel nie gebruikstatistieke nie",
+    "lockedOn": "Aangeskakel deur die ENABLE_TELEMETRY omgewingveranderlike. Verander dit daar.",
+    "lockedOff": "Afgeskakel deur die ENABLE_TELEMETRY omgewingveranderlike. Verander dit daar.",
+    "instanceId": "Instansie-ID: {{id}}",
+    "noInstanceId": "Geen instansie-ID nog nie",
+    "lastSent": "Laas gestuur {{date}}",
+    "neverSent": "Nog nie gestuur nie",
+    "nextSend": "Volgende verslag verskuldig {{date}}",
+    "lastError": "Laaste poging het misluk: {{error}}",
+    "preview": "Voorskouverslag",
+    "sendNow": "Stuur nou",
+    "sending": "Stuur tans...",
+    "sent": "Gebruikstatistieke gestuur",
+    "notSent": "Gebruiksstatistieke is afgeskakel, niks is gestuur nie",
+    "resetId": "Stel instansie-ID terug",
+    "resetIdConfirm": "Stel die instansie-ID terug? Toekomstige verslae sal soos 'n nuwe installasie lyk.",
+    "resetIdDone": "Instansie-ID herstel",
+    "previewTitle": "Volgende verslag",
+    "previewDescription": "Dit is presies wat nou gestuur sou word.",
+    "close": "Maak toe",
+    "loadFailed": "Kon nie die gebruikstatistiekstatus laai nie"
+  }
+}

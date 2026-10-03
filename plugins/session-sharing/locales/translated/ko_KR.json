@@ -9,7 +9,7 @@
       "ownerLabel": "호스트 소유자"
     },
     "modalTitle": "공유 세션",
-    "shareButton": "공유하다",
+    "shareButton": "공유",
     "notReadyToShare": "세션을 공유할 준비가 아직 되지 않았습니다.",
     "modeTab": {
       "link": "링크",
@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "사용자 검색...",
     "noUsersFound": "사용자를 찾을 수 없습니다.",
     "linkCreated": "공유 링크가 생성되었습니다",
+    "linkNeedsServer": "공유 링크는 Termix 서버의 세션에서만 작동합니다. 링크를 사용하여 공유하려면 연결된 서버를 통해 이 호스트에 연결하십시오.",
     "linkCopied": "링크가 클립보드에 복사되었습니다",
     "copyLink": "링크 복사",
     "shareCreated": "세션이 공유되었습니다. 상대방의 연결 탭에 표시됩니다.",
@@ -44,10 +45,12 @@
     "revokeFailed": "공유 취소에 실패했습니다",
     "joinCount": "{{count}} 참여",
     "joinCount_other": "{{count}} 참여",
-    "expiresAt": "만료일 {{date}}",
+    "expiresAt": "만료일: {{date}}",
     "linkShareBadge": "링크",
     "userShareBadge": "사용자: {{username}}",
     "loadSharesFailed": "활성 공유 항목을 로드하는 데 실패했습니다.",
+    "remoteDisplayUnavailable": "현재 원격 데스크톱을 사용할 수 없습니다.",
+    "sharedWithMe": "나와 공유된 세션",
     "customHoursPlaceholder": "액세스 만료까지 시간"
   },
   "collab": {
@@ -56,11 +59,11 @@
     "persistentRoom": "지속적인 방",
     "persistentRoomHint": "회의가 끝난 후에도 지정된 회의실 목록에 남아 재사용할 수 있습니다.",
     "noRooms": "아직 회의실이 없습니다. 회의를 시작하려면 회의실을 만드세요.",
-    "openRoom": "열려 있는",
+    "openRoom": "열기",
     "endRoom": "회의 종료",
     "leaveRoom": "떠나다",
-    "deleteMember": "제거하다",
-    "removeMember": "{{name}}를 제거하세요",
+    "deleteMember": "제거",
+    "removeMember": "{{name}} 제거",
     "removeMemberTitle": "이 회원을 삭제하시겠습니까?",
     "removeMemberDescription": "{{name}} 사용자는 즉시 이 방에 대한 접근 권한을 잃게 됩니다. 활성화된 SSH 뷰어는 모두 연결이 끊어집니다.",
     "invite": "초대하다",
@@ -68,17 +71,20 @@
     "members": "회원들",
     "membersPanel": "회의실 구성원 및 제어 요청",
     "membersWithCount": "멤버({{count}})",
+    "guestsWithCount": "손님 ({{count}})",
+    "removeGuests": "손님을 제거하세요",
+    "anonymousGuest": "손님",
     "online": "온라인",
     "offline": "오프라인",
     "you": "(너)",
-    "hostBadge": "주인",
+    "hostBadge": "호스트",
     "presenterBadge": "소개합니다",
     "present": "현재의",
     "presentTitle": "무대에 오르세요",
-    "presentHost": "주인",
+    "presentHost": "호스트",
     "searchHosts": "호스트 검색",
     "noHostsFound": "사용 가능한 호스트를 찾을 수 없습니다.",
-    "presentProtocol": "규약",
+    "presentProtocol": "프로토콜",
     "stopPresenting": "프레젠테이션을 중단하세요",
     "takeOver": "인수하세요",
     "takeOverConfirmTitle": "현재 프레젠테이션을 교체하시겠습니까?",
@@ -98,10 +104,10 @@
     "rotateLinkDescription": "현재 연결은 즉시 작동을 멈춥니다. 연결된 SSH 게스트는 연결이 끊어집니다.",
     "disableLinkConfirmTitle": "게스트 링크를 비활성화하시겠습니까?",
     "disableLinkDescription": "익명 SSH 뷰어는 즉시 연결이 끊어지고 현재 링크가 작동을 멈춥니다.",
-    "linkCopied": "링크 복사됨",
+    "linkCopied": "링크가 복사되었습니다",
     "roles": "역할",
     "users": "사용자",
-    "searchUsers": "검색 사용자",
+    "searchUsers": "사용자 검색",
     "endConfirmTitle": "이 회의를 종료하시겠습니까?",
     "endDescription": "{{name}} 는 모든 사용자에게 종료되며 다시 열 수 없습니다.",
     "endPersistentDescription": "{{name}} 에서 진행 중이던 프레젠테이션이 종료됩니다. 해당 공간은 재사용 가능합니다.",
@@ -115,6 +121,7 @@
       "linkInvalid": "게스트 링크가 유효하지 않거나 회의가 종료되었습니다."
     },
     "reopenFromPanel": "이 회의 탭이 만료되었습니다. 회의 패널에서 회의실을 다시 여세요.",
+    "retry": "재시도",
     "requestControl": "요청 제어",
     "cancelControlRequest": "취소 요청",
     "controlQueue": "제어 요청",
@@ -130,7 +137,10 @@
     "youArePresenting": "다른 탭에서 프레젠테이션을 진행하고 계십니다. 프레젠테이션을 중지하고 다음 사람에게 넘겨주세요.",
     "created": "방이 생성되었습니다",
     "invited": "회원 초대",
-    "roomTab": "회의"
+    "roomTab": "회의",
+    "serverChanged": "회의 서버가 변경되었습니다. 회의 패널에서 이 회의를 다시 여세요.",
+    "hostNotSynced": "발표하기 전에 이 호스트를 회의 서버와 동기화하세요.",
+    "linkRequiresServer": "이 데스크톱을 Termix 서버에 연결하고, 그곳에서 웹 링크를 공유하는 회의를 생성하세요."
   },
   "nav": {
     "collab": "회의"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "세션을 공유하고 회의실에 참여하세요",
+      "description": "링크를 통해 또는 다른 사용자와 실시간 세션을 공유하고, 공동 작업 공간을 만들고 참여하세요."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "사용자 지정"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "나와 공유됨",
+    "sharedBy": "{{username}}님이 공유",
+    "join": "가입하다",
+    "sharedSessionLabel": "{{hostName}} (공유됨)"
   }
 }

@@ -4,6 +4,7 @@
   "loginFailed": "Wagwoord-aanmelding het misluk",
   "description": "Gebruik WebAuthn/FIDO2-bewyse om aan te meld sonder 'n wagwoord",
   "namePlaceholder": "Wagwoordnaam",
+  "defaultName": "Wagwoord",
   "uv": {
     "preferred": "Verkies",
     "required": "Vereis",
@@ -13,6 +14,9 @@
   "none": "Geen wagwoorde geregistreer nie.",
   "added": "Wagwoord bygevoeg",
   "addFailed": "Kon nie wagwoord byvoeg nie",
+  "delete": "Vee wagwoord uit",
   "deleted": "Wagwoord verwyder",
-  "deleteFailed": "Kon nie wagwoord verwyder nie"
+  "deleteFailed": "Kon nie wagwoord verwyder nie",
+  "unknownDevice": "onbekend",
+  "synced": "gesinkroniseer"
 }

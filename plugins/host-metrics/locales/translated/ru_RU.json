@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Метрики хоста"
+  },
   "hostMetrics": {
     "cpu": "ЦП",
     "memory": "Память",
@@ -16,21 +19,21 @@
     "cpuUsage": "Использование ЦП",
     "memoryUsage": "Использование памяти",
     "diskUsage": "Использование диска",
-    "selectFilesystem": "Выберите файловую систему",
+    "selectFilesystem": "Select filesystem",
     "temperature": "Температура",
     "highestTemperature": "Максимальная температура",
-    "primaryTemperatureSensor": "Основной датчик",
+    "primaryTemperatureSensor": "Primary sensor",
     "gpu": {
       "title": "GPU",
-      "noDevice": "Графический процессор NVIDIA не обнаружен. Установите драйвер NVIDIA (он включает nvidia-smi), чтобы увидеть показатели графического процессора.",
-      "driver": "Водитель {{version}}",
-      "utilization": "Использование",
-      "memory": "ВПМ",
-      "temperature": "Температура",
-      "power": "Власть",
-      "fan": "Вентилятор",
-      "processes": "процессы графического процессора",
-      "noProcesses": "Никакие процессы не используют графический процессор."
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
     },
     "failedToFetchHostConfig": "Не удалось получить конфигурацию хоста",
     "serverOffline": "Сервер недоступен",
@@ -160,7 +163,6 @@
       "firewallPersist": "Сохранить правила",
       "firewallPersisted": "Правила брандмауэра сохранены",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard не установлен на этом хосте",
       "wgNoInterfaces": "Не настроено ни одного интерфейса WireGuard",
       "wgInterfaceUp": "Поднять",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Последнее рукопожатие",
       "wgHandshakeNever": "Никогда",
       "wgTransfer": "Передано",
-      "tsNotInstalled": "Tailscale не установлен на этом хосте",
-      "tsRunning": "Запущен",
-      "tsStopped": "Остановлен",
-      "tsEnable": "Подключить",
-      "tsDisable": "Отключить",
-      "tsEnabling": "Подключение к Tailscale...",
-      "tsDisabling": "Отключение от Tailscale...",
-      "tsEnabled": "Tailscale подключён",
-      "tsDisabled": "Tailscale отключён",
-      "tsIPs": "IP-адреса Tailscale",
-      "tsPeers": "Пиры",
-      "tsOnline": "Онлайн",
-      "tsOffline": "Офлайн",
-      "tsExitNode": "Выходной узел",
-      "tsExitNodeActive": "Выходной узел активен",
-      "tsHostname": "Имя хоста"
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "Применить",
     "viewHistory": "Просмотреть историю"
   },
-  "nav": {
-    "hostMetrics": "Метрики хоста"
-  },
   "hosts": {
     "tabHostMetrics": "Метрики хоста",
     "metricsCollectionLabel": "Сбор метрик",
@@ -219,24 +203,24 @@
     "useGlobalMetricsDesc": "Переопределить глобальным интервалом сбора метрик сервера",
     "metricsIntervalS": "Интервал сбора метрик (с)",
     "metricsIntervalDesc2": "Секунд между снимками метрик",
-    "excludedMountsLabel": "Исключенные крепления",
-    "monitoredMountsLabel": "Пользовательские контролируемые пути",
-    "monitoredMountsDesc": "Добавьте пути, которые не отображаются как отдельные точки монтирования, включая пути Home Assistant, смонтированные с помощью bind-mount, например, /config.",
-    "monitoredMountPathPlaceholder": "Путь (/config, /mnt/data)",
-    "monitoredMountLabelPlaceholder": "Этикетка (необязательно)",
-    "addMonitoredMount": "Добавить путь",
-    "excludedMountsDesc": "Скрыть определенные точки монтирования или типы файловых систем (например, nfs, cifs) от информации об использовании диска и оповещений для этого хоста.",
-    "excludedMountsPlaceholder": "Путь монтирования (/mnt/nas) или тип файловой системы (nfs, cifs)",
-    "excludedMountsEmpty": "Исключены все точки монтирования. Отображаются все обнаруженные файловые системы.",
-    "addExcludedMount": "Добавлять",
+    "excludedMountsLabel": "Excluded Mounts",
+    "monitoredMountsLabel": "Custom monitored paths",
+    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
+    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "monitoredMountLabelPlaceholder": "Метка (необязательно)",
+    "addMonitoredMount": "Add path",
+    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
+    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
+    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addExcludedMount": "Добавить",
     "visibleWidgets": "Видимые виджеты",
     "widgetsMovedToHostMetrics": "Карточки теперь добавляются, упорядочиваются и изменяются в размере непосредственно на вкладке «Метрики хоста». Откройте метрики для этого хоста и используйте «Настроить», чтобы выбрать отображаемые карточки.",
     "hostNotFound": "Хост не найден",
     "loadingHost": "Загрузка хоста..."
   },
   "onboarding": {
-    "feature_metrics": "Метрики и оповещения",
-    "feature_metrics_desc": "Отслеживайте состояние процессора, памяти и диска с течением времени и получайте оповещения при возникновении неполадок."
+    "feature_metrics": "Metrics and alerts",
+    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
   },
   "admin": {
     "metricsHistoryRetention": "Срок хранения метрик",
@@ -265,6 +249,9 @@
     "noHostSelected": "Хост не выбран",
     "selectHost": "Выберите хост..."
   },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Подключено"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

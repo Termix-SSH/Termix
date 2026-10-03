@@ -1,7 +1,10 @@
 {
+  "nav": {
+    "serial": "Seriál"
+  },
   "serial": {
     "title": "Seriál",
-    "portLabel": "Přístav",
+    "portLabel": "Port",
     "portPlaceholder": "/dev/ttyUSB0 nebo COM3",
     "baudRateLabel": "Přenosová rychlost",
     "dataBitsLabel": "Data",
@@ -22,8 +25,5 @@
     "notSupported": "Sériová připojení vyžadují prohlížeč s podporou webového sériového API (Chrome, Edge nebo Firefox 151+) nebo desktopovou aplikaci Termix.",
     "hideHint": "Kartu Sériové číslo můžete skrýt v části Profil uživatele > Vzhled > Postranní panel > Navigace.",
     "browserPickerHint": "Klikněte na tlačítko Připojit a prohlížeč otevře výběr portu pro výběr zařízení."
-  },
-  "nav": {
-    "serial": "Seriál"
   }
 }

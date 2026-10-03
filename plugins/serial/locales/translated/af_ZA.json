@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Reeks"
+  },
   "serial": {
     "title": "Reeks",
     "portLabel": "Hawe",
@@ -22,8 +25,5 @@
     "notSupported": "Seriële verbindings vereis 'n blaaier met Web Serial API-ondersteuning (Chrome, Edge of Firefox 151+), of die Termix-lessenaarprogram.",
     "hideHint": "Jy kan die Seriële oortjie versteek onder Gebruikersprofiel > Voorkoms > Sybalk > Navigasie.",
     "browserPickerHint": "Klik op Verbind en jou blaaier sal 'n poortkieser oopmaak om die toestel te kies."
-  },
-  "nav": {
-    "serial": "Reeks"
   }
 }

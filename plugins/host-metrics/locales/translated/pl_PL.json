@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Metryki hosta"
+  },
   "hostMetrics": {
     "cpu": "Procesor",
     "memory": "Pamięć",
@@ -19,18 +22,18 @@
     "selectFilesystem": "Wybierz system plików",
     "temperature": "Temperatura",
     "highestTemperature": "Najwyższa temperatura",
-    "primaryTemperatureSensor": "Główny czujnik",
+    "primaryTemperatureSensor": "Primary sensor",
     "gpu": {
-      "title": "Procesor graficzny",
-      "noDevice": "Nie wykryto procesora graficznego NVIDIA. Zainstaluj sterownik NVIDIA (zawiera on nvidia-smi), aby wyświetlić dane dotyczące procesora graficznego.",
-      "driver": "Kierowca {{version}}",
-      "utilization": "Wykorzystanie",
-      "memory": "Pamięć VRAM",
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
       "temperature": "Temp",
-      "power": "Moc",
-      "fan": "Wentylator",
-      "processes": "Procesy GPU",
-      "noProcesses": "Żaden proces nie wykorzystuje procesora GPU"
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
     },
     "failedToFetchHostConfig": "Nie udało się pobrać konfiguracji hosta",
     "serverOffline": "Serwer offline",
@@ -160,7 +163,6 @@
       "firewallPersist": "Utrwal reguły",
       "firewallPersisted": "Utrwalono reguły zapory",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard nie jest zainstalowany na tym hoście",
       "wgNoInterfaces": "Brak skonfigurowanych interfejsów WireGuard",
       "wgInterfaceUp": "Podnieś",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Ostatni handshake",
       "wgHandshakeNever": "Nigdy",
       "wgTransfer": "Transfer",
-      "tsNotInstalled": "Tailscale nie jest zainstalowany na tym hoście",
-      "tsRunning": "Działa",
-      "tsStopped": "Zatrzymany",
-      "tsEnable": "Połącz",
-      "tsDisable": "Odłącz",
-      "tsEnabling": "Łączenie z Tailscale...",
-      "tsDisabling": "Rozłączanie z Tailscale...",
-      "tsEnabled": "Tailscale połączony",
-      "tsDisabled": "Tailscale rozłączony",
-      "tsIPs": "Adresy IP Tailscale",
-      "tsPeers": "Peery",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Węzeł wyjściowy",
-      "tsExitNodeActive": "Węzeł wyjściowy aktywny",
-      "tsHostname": "Nazwa hosta"
+      "wgNoPeers": "No peers"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "do",
     "apply": "Zastosuj",
     "viewHistory": "Wyświetl historię"
-  },
-  "nav": {
-    "hostMetrics": "Metryki hosta"
   },
   "hosts": {
     "tabHostMetrics": "Metryki hosta",
@@ -265,6 +249,9 @@
     "noHostSelected": "Nie wybrano hosta",
     "selectHost": "Wybierz hosta..."
   },
+  "terminalStatus": {
+    "unavailable": "Statystyki na żywo niedostępne"
+  },
   "dashboard": {
     "cpu": "Procesor",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Połączono"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

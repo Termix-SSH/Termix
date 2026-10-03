@@ -1,16 +1,40 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "Správa certifikátů ACME",
+      "description": "Zkontrolujte stav certifikátu a požádejte o nový certifikát."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "Automaticky obnovit",
+      "description": "Kontrolujte dvakrát denně a požádejte o nový certifikát, pokud žádný neexistuje, pokud se nevztahuje na danou doménu nebo pokud jeho platnost vyprší do 30 dnů."
+    },
     "domain": {
       "label": "Doména",
-      "placeholder": "termix.example.com",
-      "description": "Název veřejné domény pro certifikát."
+      "description": "Název veřejné domény pro certifikát.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "E-mail",
+      "description": "Kontaktní e-mail pro účet ACME a oznámení o vypršení platnosti.",
       "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "Certifikační autorita",
+      "description": "Kde získat certifikát. Použijte staging k testování bez překročení limitů rychlosti Let's Encrypt.",
+      "letsencrypt": "Pojďme šifrovat",
+      "letsencryptStaging": "Pojďme šifrovat (příprava)",
+      "custom": "Vlastní adresář ACME"
+    },
+    "directoryUrl": {
+      "label": "URL adresáře ACME",
+      "description": "Pouze pro vlastní certifikační autoritu. Musí se jednat o URL adresu typu https."
     },
     "challengeType": {
       "label": "Typ výzvy",
+      "description": "Jak prokázat, že jste vlastníkem domény.",
+      "http": "HTTP - vyžaduje dostupnost portu 80 z internetu",
       "cloudflare": "DNS (Cloudflare) – vyžaduje token Cloudflare API"
     },
     "cloudflareToken": {
@@ -21,9 +45,14 @@
   "status": {
     "title": "Stav certifikátu",
     "none": "Žádný certifikát",
+    "names": "Kryty {{names}}",
+    "issuer": "Vydáno uživatelem {{issuer}}",
     "expires": "Platnost vyprší {{date}}",
     "lastIssued": "Naposledy vydáno {{date}}",
-    "request": "Vydání / Obnova certifikátu",
-    "requesting": "Žádost o certifikát..."
+    "lastError": "Poslední pokus se nezdařil: {{error}}",
+    "missing": "Před vyžádáním certifikátu nastavte doménu, e-mail a pole, která váš typ výzvy vyžaduje, a poté je uložte.",
+    "request": "Vyžádejte si certifikát nyní",
+    "requesting": "Žádost o certifikát...",
+    "issued": "Certifikát vydán a nainstalován"
   }
 }

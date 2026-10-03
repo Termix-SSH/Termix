@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "ホストメトリクス"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "メモリ",
@@ -160,7 +163,6 @@
       "firewallPersist": "ルールを永続化",
       "firewallPersisted": "ファイアウォールルールが永続化されました",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "このホストにWireGuardがインストールされていません",
       "wgNoInterfaces": "WireGuardインターフェースが設定されていません",
       "wgInterfaceUp": "起動",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "最終ハンドシェイク",
       "wgHandshakeNever": "なし",
       "wgTransfer": "転送量",
-      "tsNotInstalled": "このホストにTailscaleがインストールされていません",
-      "tsRunning": "実行中",
-      "tsStopped": "停止中",
-      "tsEnable": "接続",
-      "tsDisable": "切断",
-      "tsEnabling": "Tailscaleに接続中...",
-      "tsDisabling": "Tailscaleから切断中...",
-      "tsEnabled": "Tailscale接続済み",
-      "tsDisabled": "Tailscale切断済み",
-      "tsIPs": "Tailscale IP",
-      "tsPeers": "ピア",
-      "tsOnline": "オンライン",
-      "tsOffline": "オフライン",
-      "tsExitNode": "Exitノード",
-      "tsExitNodeActive": "Exitノード有効",
-      "tsHostname": "ホスト名"
+      "wgNoPeers": "同業他社なし"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "～",
     "apply": "適用",
     "viewHistory": "履歴を表示"
-  },
-  "nav": {
-    "hostMetrics": "ホストメトリクス"
   },
   "hosts": {
     "tabHostMetrics": "ホストメトリクス",
@@ -265,6 +249,9 @@
     "noHostSelected": "ホストが選択されていません",
     "selectHost": "ホストを選択..."
   },
+  "terminalStatus": {
+    "unavailable": "ライブ統計は利用できません"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "接続中"
+  },
+  "permissions": {
+    "use": {
+      "title": "ホストメトリクスを使用する",
+      "description": "アクセス可能なホストに対して、ホストのメトリクスを表示したり、ホストマネージャ（サービス、パッケージ、ファイアウォールなど）を使用したりできます。"
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "測定間隔（秒）",
+        "description": "ホストが独自の間隔を設定しない限り、閲覧対象のホストがサンプリングされる頻度。"
+      },
+      "historyRetentionDays": {
+        "label": "履歴保持期間（日数）",
+        "description": "履歴チャートのメトリクスサンプルはどのくらいの期間保持されますか。"
+      },
+      "enabledForNewHosts": {
+        "label": "新規ホスト向けのメトリクスが有効になっています",
+        "description": "新しいホストがメトリクス収集を有効にした状態で起動するかどうか。"
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "温度単位",
+        "description": "ホストメトリクスにおける温度の表示方法。",
+        "celsius": "摂氏",
+        "fahrenheit": "華氏"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "指標を収集する"
+      },
+      "metricsInterval": {
+        "label": "測定間隔（秒）"
+      },
+      "enabledWidgets": {
+        "label": "有効なウィジェット"
+      },
+      "excludedMounts": {
+        "label": "除外されたマウント"
+      },
+      "monitoredMounts": {
+        "label": "監視対象経路"
+      }
+    }
   }
 }

@@ -16,18 +16,18 @@
     "guacdUnavailable": "Le service de bureau à distance (guacd) n'est pas disponible. Veuillez vous assurer que guacd est en cours d'exécution, accessible et correctement configuré dans les paramètres administrateur.",
     "credentialPromptTitle": "Saisir les informations d'identification RDP",
     "credentialPromptDescription": "Cet hôte est configuré pour demander des identifiants lors de la connexion. Ces identifiants sont utilisés uniquement pour cette session et ne sont pas enregistrés.",
-    "connect": "Connecter",
+    "connect": "Se connecter",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
       "title": "Fichiers Drive",
       "parent": "Répertoire parent",
-      "refresh": "Rafraîchir",
-      "empty": "Ce dossier est vide.",
+      "refresh": "Actualiser",
+      "empty": "Ce dossier est vide",
       "listFailed": "Impossible de lire ce dossier",
       "download": "Télécharger",
       "downloadFailed": "Échec du téléchargement {{name}}",
       "upload": "Téléverser des fichiers",
-      "uploading": "Téléchargement en cours {{name}}...",
+      "uploading": "Téléversement de {{name}}...",
       "uploaded": "Téléchargé {{name}}",
       "uploadFailed": "Échec du chargement {{name}}",
       "uploadDisabled": "Les chargements sont désactivés pour cette connexion.",
@@ -73,17 +73,22 @@
       "fitToScreen": "Ajuster à l'écran",
       "switchToTrackpad": "Passez en mode pavé tactile (glissez pour déplacer le curseur, appuyez pour cliquer)",
       "switchToTouch": "Passez en mode tactile (appuyez directement à l'endroit où vous souhaitez cliquer)."
-    }
+    },
+    "disabled": "Le Bureau à distance est désactivé. Un administrateur peut l'activer dans les paramètres."
   },
   "hosts": {
     "nativeRdpOpened": "Ouvert dans Bureau à distance Windows",
     "nativeRdpFailed": "Impossible d'ouvrir le Bureau à distance Windows",
     "openNativeRdp": "Ouvrir dans le Bureau à distance Windows",
     "guac": {
+      "toolbar": "barre d'outils",
       "connection": "Connexion",
       "authentication": "Authentification",
       "storedCredential": "Identifiant enregistré",
       "authMethod": "Méthode d'authentification",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Identifiant",
+      "authTypeNone": "Aucune",
       "authTypeNoneDesc": "Aucune information d'identification n'est stockée. Un nom d'utilisateur et un mot de passe vous seront demandés à chaque connexion ; ils ne sont pas enregistrés.",
       "selectCredential": "Sélectionner un identifiant...",
       "connectionSettings": "Paramètres de connexion",
@@ -206,7 +211,8 @@
       "colorScheme": "Schéma de couleurs",
       "backspaceKey": "Touche Backspace",
       "colorDepth": "Profondeur de couleur",
-      "resizeMethod": "Méthode de redimensionnement"
+      "resizeMethod": "Méthode de redimensionnement",
+      "driveNamePlaceholder": "Lecteur Termix"
     },
     "remoteDesktop": "Bureau à distance",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Réseau virtuel",
     "unencryptedShell": "Shell non chiffré",
-    "docsLink": "Voir la documentation"
+    "remoteDesktopNotes": "Notes",
+    "userDefaultsNote": "Les paramètres que vous laissez inchangés suivent les valeurs par défaut de votre hôte.",
+    "connectionOriginNote": "Sur l'application de bureau, RDP, VNC et Telnet utilisent le serveur distant, sauf si l'hôte est configuré sur « Cet appareil », auquel cas un proxy guacd accessible par cette machine est nécessaire. Configurez-en un dans les paramètres du Bureau à distance ou pour chaque hôte dans les paramètres du proxy guacd.",
+    "docsLink": "Voir la documentation",
+    "connectionOriginGuacamoleNote": "RDP, VNC et Telnet utilisent le serveur distant, sauf si vous sélectionnez « Cet appareil », auquel cas un serveur guacd accessible par cette machine est nécessaire. Configurez-en un dans les paramètres d'URL guacd ou par hôte dans les paramètres de proxy guacd."
   },
   "onboarding": {
     "feature_desktop": "Bureau à distance",
@@ -223,16 +233,18 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Profondeur de couleur"
+        "label": "Profondeur de couleur",
+        "description": "Utilisé pour les hôtes RDP qui conservent leurs paramètres par défaut."
       },
       "resizeMethod": {
-        "label": "Méthode de redimensionnement"
+        "label": "Méthode de redimensionnement",
+        "description": "Comment l'écran distant s'adapte à la taille de la fenêtre."
       },
       "resizeDisplayUpdate": "Mise à jour de l'affichage",
-      "resizeReconnect": "Reconnect",
+      "resizeReconnect": "Reconnecter",
       "inherit": "Hériter",
-      "on": "Sur",
-      "off": "Désactivé",
+      "on": "Activée",
+      "off": "Désactivée",
       "forceLossless": {
         "label": "Forcer sans perte",
         "description": "Forcer l'encodage d'image sans perte (meilleure qualité, plus de bande passante)"
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Désactiver le collage",
         "description": "Empêcher le collage de texte dans la session distante"
-      }
+      },
+      "group": "Paramètres par défaut du Bureau à distance",
+      "colorDepth16": "16 bits",
+      "colorDepth24": "24 bits",
+      "colorDepth32": "32 bits"
     },
     "admin": {
+      "enabled": {
+        "label": "Activer le bureau à distance",
+        "description": "Autoriser les connexions RDP, VNC et Telnet via guacd."
+      },
       "guacdUrl": {
-        "label": "URL guacd"
+        "label": "URL guacd",
+        "description": "L'adresse d'écoute de guacd est indiquée par l'hôte et le port. Les variables d'environnement GUACD_URL, GUACD_HOST et GUACD_PORT prévalent sur ce comportement.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "Port RDP"
+      },
+      "vncPort": {
+        "label": "port VNC"
+      },
+      "telnetPort": {
+        "label": "Port Telnet"
+      },
+      "rdpSecurity": {
+        "label": "Mode de sécurité RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignorer les erreurs de certificat"
+      },
+      "guacamoleConfig": {
+        "label": "paramètres guacd"
+      },
+      "enableToolbar": {
+        "label": "barre d'outils de bureau à distance",
+        "description": "Afficher la barre d'outils dans les sessions RDP, VNC et Telnet."
+      },
+      "displayGroup": "Afficher",
+      "displayDefaultsTab": "Bureau à distance"
+    }
+  },
+  "palette": {
+    "connectRdp": "Se connecter via RDP",
+    "connectVnc": "Se connecter avec VNC",
+    "connectTelnet": "Se connecter avec Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Sessions de bureau à distance partagées",
+      "description": "Autoriser le partage de session et les salles de collaboration à afficher les sessions RDP, VNC et Telnet de cet utilisateur aux autres."
     }
   },
   "errors": {

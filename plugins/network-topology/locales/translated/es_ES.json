@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "El origen y el destino deben ser diferentes",
     "exportJSON": "Exportar JSON",
     "importJSON": "Importar JSON",
-    "terminal": "Terminal",
-    "fileManager": "Gestor de archivos",
-    "tunnel": "Túnel",
-    "docker": "Docker",
     "serverStats": "Métricas del host",
-    "hostMetrics": "Métricas del host",
     "noNodes": "Aún no hay nodos"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} nodos"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilice un gráfico de red.",
+      "description": "Visualice y edite el gráfico de topología de red."
+    }
   },
   "hosts": {
     "docsLink": "Ver documentación"

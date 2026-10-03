@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "자동화 보기",
+      "description": "자동화 기능과 그 이력을 확인하세요."
+    },
+    "create": {
+      "title": "자동화를 생성하세요",
+      "description": "새로운 자동화를 추가하세요."
+    },
+    "edit": {
+      "title": "자동화 편집",
+      "description": "기존 자동화 설정을 변경하세요."
+    },
+    "delete": {
+      "title": "자동화 삭제",
+      "description": "자동화 기능을 제거하세요."
+    },
+    "run": {
+      "title": "자동화 실행",
+      "description": "자동화 기능을 수동으로 실행합니다."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,20 +34,14 @@
         "editTitle": "편집 자동화",
         "empty": "아직 자동화가 설정되어 있지 않습니다. 지표, 일정 또는 이벤트에 반응하는 자동화를 생성하세요.",
         "emptyRuns": "아직 실행된 적이 없습니다.",
-        "emptyChannels": "아직 채널이 없습니다. 알림을 보낼 채널을 추가하세요.",
-        "noChannelsHint": "아직 채널이 설정되지 않았습니다. 채널 탭에서 채널을 추가하세요.",
-        "addChannel": "채널 추가",
-        "testChannel": "시험",
-        "channelTestSent": "테스트 알림이 전송되었습니다.",
-        "channelTestFailed": "테스트 알림 실패",
-        "channelDeleted": "채널이 삭제되었습니다",
-        "deleteChannelConfirm": "이 채널을 삭제하시겠습니까? 그러면 해당 채널을 사용하는 자동화 기능이 더 이상 알림을 보내지 않게 됩니다.",
+        "channelsHint": "알림에 채널이 설정됩니다.",
+        "noChannelsHint": "알림은 항상 받은 편지함으로 전송됩니다. 알림 설정에서 채널을 추가하면 다른 곳으로도 알림을 보낼 수 있습니다.",
         "nameLabel": "이름",
-        "namePlaceholder": "예: /data 폴더가 가득 차면 정리합니다.",
-        "nameRequired": "이름은 필수 입력 사항입니다.",
+        "namePlaceholder": "예: /data 디렉토리가 가득 차면 정리합니다.",
+        "nameRequired": "이름은 필수입니다",
         "descriptionLabel": "설명",
-        "descriptionPlaceholder": "선택적 설명",
-        "enabledLabel": "활성화됨",
+        "descriptionPlaceholder": "선택 사항 설명",
+        "enabledLabel": "사용",
         "concurrencyLabel": "이미 실행 중인 경우",
         "concurrencyHint": "마지막 실행이 완료되기 전에 이 문제가 다시 발생할 경우 어떻게 해야 할까요?",
         "concurrency": {
@@ -33,7 +49,7 @@
           "queue": "기다렸다가 실행하세요",
           "allow": "두 가지를 동시에 실행하세요"
         },
-        "save": "구하다",
+        "save": "저장",
         "created": "자동화 생성됨",
         "updated": "자동화 저장됨",
         "deleted": "자동화 삭제됨",
@@ -43,7 +59,7 @@
         "testRunHint": "모든 단계를 실행하지만 Termix 외부의 어떤 것도 건드리지 않습니다.",
         "runStarted": "실행 시작됨",
         "runFinished": "실행 완료: {{status}}",
-        "trigger": "방아쇠",
+        "trigger": "트리거",
         "steps": "단계",
         "addStep": "단계 추가",
         "removeStep": "제거 단계",
@@ -51,16 +67,16 @@
         "moveDown": "아래로 이동",
         "noSteps": "아직 단계가 없습니다. 어떤 일이 일어나야 하는지 설명하는 단계를 추가하세요.",
         "webhookTokenTitle": "웹훅 URL",
-        "webhookTokenDescription": "이 내용은 한 번만 표시됩니다. 지금 저장하세요. 나중에 불러올 수 없습니다.",
+        "webhookTokenDescription": "이 내용은 한 번만 표시됩니다. 지금 저장하세요. 나중에 다시 불러올 수 없습니다.",
         "copy": "복사",
         "copied": "복사됨",
         "viewJson": "JSON",
         "viewBuilder": "건축업자",
         "viewGraph": "그래프",
         "lastRun": "마지막 실행",
-        "never": "절대",
+        "never": "없음",
         "duration": "{{seconds}}s",
-        "stepOutput": "산출",
+        "stepOutput": "출력",
         "stepError": "오류",
         "dryRunBadge": "테스트 실행",
         "hostSelector": {
@@ -79,7 +95,7 @@
           "webhook": "수신 웹훅"
         },
         "stepTypes": {
-          "notify": "알림 보내기",
+          "notify": "알림을 보내세요",
           "http": "URL을 호출합니다",
           "run_snippet": "코드 조각을 실행하세요",
           "run_command": "명령어를 실행하세요",
@@ -90,24 +106,24 @@
           "set_var": "변수를 설정하세요",
           "if": "만약 / 그렇지 않다면",
           "run_automation": "다른 자동화를 실행합니다",
-          "stop": "멈추다"
+          "stop": "스톱"
         },
         "statuses": {
-          "running": "달리기",
+          "running": "실행 중",
           "success": "성공",
-          "failed": "실패한",
+          "failed": "실패",
           "timeout": "시간 초과됨",
           "skipped": "건너뛰었습니다",
           "cancelled": "취소"
         },
         "fields": {
-          "host": "주인",
-          "metric": "미터법",
+          "host": "호스트",
+          "metric": "메트릭",
           "mount": "마운트 포인트",
           "operator": "~이다",
           "value": "값",
           "forSeconds": "(초) 동안 지속됨",
-          "cooldown": "재사용 대기 시간(분)",
+          "cooldown": "쿨다운 (분)",
           "cron": "크론 발현",
           "intervalSeconds": "매 (초)",
           "timezone": "시간대",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "방법",
           "body": "몸",
-          "channels": "채널",
+          "channels": "또한 다음에도 보내주세요",
           "title": "제목",
           "message": "메시지",
           "snippet": "단편",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "달리기를 멈춰라",
           "continue": "계속하세요"
+        },
+        "needsPlugin": "{{plugin}}가 필요합니다",
+        "needsPluginHint": "이 자동화 작업은 필요한 기능이 다시 사용 가능해질 때까지 건너뛰어집니다.",
+        "offBadge": "꺼짐",
+        "docsLink": "문서 보기",
+        "ago": {
+          "seconds": "{{count}}초 전",
+          "minutes": "{{count}}분 전",
+          "hours": "{{count}}시간 전",
+          "days": "{{count}}일 전"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "자동화",
     "feature_automations_desc": "어떤 상황이 발생하면 자동으로 단계를 실행하고 알림을 받으세요."
+  },
+  "maintenance": {
+    "title": "유지 관리",
+    "description": "작업이 진행되는 동안 호스트 상태, 상태 모니터링, 메트릭 모니터링, 컨테이너 모니터링 및 터널 연결 해제 자동화가 일시 중지됩니다. 모니터링, 수동 실행 및 예약된 자동화는 계속 실행됩니다.",
+    "denied": "유지보수 화면을 볼 권한이 없습니다.",
+    "sharedReadOnly": "이 호스트는 귀하와 공유되었습니다. 유지 관리 변경은 호스트 소유자만 할 수 있습니다.",
+    "failed": "유지보수 업데이트를 할 수 없습니다.",
+    "active": "유지보수 중",
+    "estimated": "예상 완료일",
+    "noAutoEnd": "견적은 유지보수를 종료하는 것이 아닙니다. 작업이 완료되면 명시적으로 유지보수를 종료하십시오.",
+    "endConfirm": "이 호스트에 대한 유지 관리를 종료하고 이벤트 기반 자동화를 다시 시작하시겠습니까?",
+    "confirmEnd": "종료 확인",
+    "cancel": "취소",
+    "end": "유지보수 종료",
+    "action": "작업",
+    "startNow": "지금 시작하세요",
+    "schedule": "나중에 일정 잡기",
+    "reason": "이유",
+    "startUtc": "첫 시작 (UTC)",
+    "repeat": "반복하다",
+    "once": "한 번",
+    "weekly": "주간",
+    "monthly": "월간 간행물",
+    "utcHelp": "일정은 연중 UTC를 기준으로 합니다. 월별 일정은 선택한 날짜가 없는 달은 건너뜁니다. 계획된 기간은 겹칠 수 없으며, 연장된 유지 보수 작업은 이후 기간에도 계속됩니다.",
+    "duration": "예상 소요 시간(분)",
+    "grace": "유예 기간(분)",
+    "notify": "예상 시간 및 유예 기간이 지난 후에도 오프라인 상태인 경우 한 번만 알림을 보내주세요.",
+    "addSchedule": "일정을 추가하세요",
+    "schedules": "일정",
+    "noSchedules": "정기 유지보수 일정이 없습니다.",
+    "completed": "이미 시작했습니다",
+    "minutes_one": "{{count}} 분",
+    "minutes_other": "{{count}} 분",
+    "remove": "일정을 삭제합니다",
+    "loadFailed": "점검 상태를 새로 고칠 수 없습니다. 점검 상태가 로드될 때까지 변경 사항이 적용되지 않습니다.",
+    "loading": "유지보수 상태 로딩 중…"
   }
 }

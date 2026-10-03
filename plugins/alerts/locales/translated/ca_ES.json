@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Alertes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza alertes",
+      "description": "Rep alertes a la safata d'entrada i envia-les als teus propis canals."
+    }
+  },
+  "onboarding": {
+    "feature": "Alertes",
+    "featureDesc": "Totes les alertes en una safata d'entrada, enviades a Discord, ntfy, correu electrònic o un webhook si ho desitges."
+  },
+  "settings": {
+    "group": {
+      "general": "General",
+      "email": "Correu electrònic"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Anuncis de Termix",
+        "description": "Mostra notícies de l'equip de Termix, com ara avisos de seguretat i llançaments, a la safata d'entrada de tothom."
+      },
+      "retentionDays": {
+        "label": "Mantén les alertes durant (dies)",
+        "description": "Les alertes més antigues s'eliminen de totes les safates d'entrada."
+      },
+      "smtpHost": {
+        "label": "Servidor SMTP",
+        "description": "Necessari per als canals de correu electrònic. Deixeu-ho en blanc per desactivar el correu electrònic.",
+        "placeholder": "smtp.exemple.com"
+      },
+      "smtpPort": {
+        "label": "Port SMTP",
+        "description": "Normalment 587 amb STARTTLS o 465 amb TLS."
+      },
+      "smtpSecure": {
+        "label": "Utilitza TLS des del principi",
+        "description": "Activeu el port 465. Deixeu-lo desactivat per al 587, que s'actualitza a TLS pel seu compte."
+      },
+      "smtpUser": {
+        "label": "Nom d'usuari SMTP",
+        "description": "Deixeu-ho en blanc si el servidor no necessita cap inici de sessió."
+      },
+      "smtpPassword": {
+        "label": "Contrasenya SMTP",
+        "description": "Emmagatzemat xifrat."
+      },
+      "smtpFrom": {
+        "label": "Adreça de remitent",
+        "description": "Les alertes del remitent provenen de.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Finestres emergents d'alerta",
+        "description": "Quines noves alertes apareixen mentre fas servir Termix. Sempre arriben a la safata d'entrada.",
+        "all": "Totes les alertes",
+        "warning": "Avisos i crítics",
+        "critical": "Només crític",
+        "off": "Cap"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Safata d'entrada",
+    "channels": "Canals",
+    "rules": "Normes de lliurament"
+  },
+  "severity": {
+    "info": "Informació",
+    "success": "Èxit",
+    "warning": "Avís",
+    "critical": "Crític"
+  },
+  "inbox": {
+    "sourceTermix": "Tèrmix",
+    "openLink": "Obre",
+    "view": "Vista",
+    "unread": "No llegit",
+    "deliveryFailed_one": "El canal {{count}} ha fallat",
+    "deliveryFailed_other": "Els canals {{count}} han fallat",
+    "markRead": "Marca com a llegit",
+    "markUnread": "Marca com a no llegit",
+    "markAllRead": "Marca-ho tot com a llegit",
+    "delete": "Suprimeix",
+    "clearRead": "Suprimeix les alertes de lectura",
+    "cleared_one": "Alerta suprimida {{count}}",
+    "cleared_other": "Alertes suprimides {{count}}",
+    "filterAll": "Tot",
+    "filterUnread": "No llegit",
+    "anySeverity": "Qualsevol gravetat",
+    "anySource": "Qualsevol font",
+    "openAll": "Obre en una pestanya",
+    "empty": "Encara no hi ha alertes.",
+    "emptyUnread": "Esteu tots atrapats.",
+    "loadMore": "Carrega'n més"
+  },
+  "channels": {
+    "intro": "Els canals són on les alertes poden sortir de Termix. Les regles de lliurament trien quines alertes els utilitzen.",
+    "add": "Afegeix un canal",
+    "edit": "Edita el canal",
+    "test": "Envia una prova",
+    "testSent": "Alerta de prova enviada",
+    "testFailed": "Prova fallida: {{error}}",
+    "deleteConfirm": "Voleu eliminar el canal \"{{name}}\"?",
+    "deleted": "Canal suprimit",
+    "empty": "Encara no hi ha canals.",
+    "enabled": "Activat",
+    "needsSave": "Cal obrir i desar de nou aquest canal abans de poder enviar.",
+    "name": "Nom",
+    "nameRequired": "El nom és obligatori",
+    "type": "Tipus",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discòrdia",
+      "email": "Correu electrònic"
+    },
+    "emailUnavailable": "El correu electrònic necessita un servidor SMTP, que un administrador configura a la configuració d'Alertes.",
+    "webhookUrl": "URL",
+    "webhookHint": "Obté un cos JSON per a cada alerta.",
+    "method": "Mètode",
+    "headers": "Capçaleres",
+    "headersHint": "Un per línia, com ara Nom: valor.",
+    "ntfyServer": "URL del servidor",
+    "ntfyTopic": "Tema",
+    "ntfyToken": "Token d'accés (opcional)",
+    "discordUrl": "URL del webhook de Discord",
+    "discordHint": "Des de la configuració del canal a Discord, a Integracions.",
+    "discordUsername": "Nom per mostrar (opcional)",
+    "discordAvatar": "URL de l'avatar (opcional)",
+    "emailTo": "Enviar a",
+    "emailHint": "Separeu més d'una adreça amb comes.",
+    "privateNetwork": "Permetre una adreça de xarxa privada",
+    "privateNetworkHint": "Només funciona per a hosts que un administrador permet a la llista de punts finals privats."
+  },
+  "rules": {
+    "intro": "Una regla de lliurament envia alertes coincidents als vostres canals. Les alertes també sempre romanen a la safata d'entrada.",
+    "add": "Afegeix una regla",
+    "edit": "Edita la regla",
+    "empty": "Encara no hi ha regles, així que les alertes només apareixen a la safata d'entrada.",
+    "needChannel": "Afegeix primer un canal.",
+    "enabled": "Activat",
+    "name": "Nom",
+    "nameRequired": "El nom és obligatori",
+    "match": "Alertes per enviar",
+    "matchHint": "* per a tot, automatitzacions. * per a tot, des d'automatitzacions o un tipus exacte.",
+    "minSeverity": "Almenys",
+    "channels": "Enviar a",
+    "channelRequired": "Trieu com a mínim un canal",
+    "deleteConfirm": "Voleu suprimir la regla \"{{name}}\"?",
+    "everything": "Tot",
+    "summary": "{{match}}, {{severity}} o superior, a {{channels}}"
+  },
+  "actions": {
+    "cancel": "Cancel·la",
+    "save": "Desa",
+    "saving": "Desant...",
+    "delete": "Suprimeix"
+  },
+  "widget": {
+    "name": "Canal d'alertes",
+    "description": "Les teves darreres alertes, amb una manera ràpida de marcar-les com a llegides",
+    "maxItems": "Màxim d'elements",
+    "showRead": "Mostra les alertes de lectura",
+    "allClear": "Tot clar",
+    "loading": "S'està carregant..."
+  }
+}

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Метрики на хоста"
+  },
   "hostMetrics": {
     "cpu": "Процесор",
     "memory": "Памет",
@@ -160,7 +163,6 @@
       "firewallPersist": "Запазване на правилата",
       "firewallPersisted": "Правилата на защитната стена се запазиха",
       "wireguard": "WireGuard",
-      "tailscale": "Задна скала",
       "wgNotInstalled": "WireGuard не е инсталиран на този хост",
       "wgNoInterfaces": "Няма конфигурирани WireGuard интерфейси",
       "wgInterfaceUp": "Доведете",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Последно ръкостискане",
       "wgHandshakeNever": "Никога",
       "wgTransfer": "Трансфер",
-      "tsNotInstalled": "Tailscale не е инсталиран на този хост",
-      "tsRunning": "Бягане",
-      "tsStopped": "Спряно",
-      "tsEnable": "Свържете се",
-      "tsDisable": "Изключване",
-      "tsEnabling": "Свързване с Tailscale...",
-      "tsDisabling": "Изключване от Tailscale...",
-      "tsEnabled": "Свързана опашка",
-      "tsDisabled": "Задната скала е изключена",
-      "tsIPs": "IP адреси на Tailscale",
-      "tsPeers": "Връстници",
-      "tsOnline": "Онлайн",
-      "tsOffline": "Офлайн",
-      "tsExitNode": "Изходен възел",
-      "tsExitNodeActive": "Изходният възел е активен",
-      "tsHostname": "Име на хост"
+      "wgNoPeers": "Няма връстници"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "до",
     "apply": "Приложи",
     "viewHistory": "Преглед на историята"
-  },
-  "nav": {
-    "hostMetrics": "Метрики на хоста"
   },
   "hosts": {
     "tabHostMetrics": "Метрики на хоста",
@@ -265,6 +249,9 @@
     "noHostSelected": "Няма избран хост",
     "selectHost": "Изберете хост..."
   },
+  "terminalStatus": {
+    "unavailable": "Статистически данни в реално време не са налични"
+  },
   "dashboard": {
     "cpu": "Процесор",
     "ram": "RAM памет"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Свързан"
+  },
+  "permissions": {
+    "use": {
+      "title": "Използвайте показатели за хоста",
+      "description": "Преглеждайте показателите на хоста и използвайте мениджърите на хостове (услуги, пакети, защитна стена и други) на хостовете, до които можете да достигнете."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Интервал на показателите (секунди)",
+        "description": "Колко често се семплира даден хост, освен ако хостът не зададе свой собствен интервал."
+      },
+      "historyRetentionDays": {
+        "label": "Запазване на историята (дни)",
+        "description": "Колко дълго се съхраняват извадки от показатели за историческите графики."
+      },
+      "enabledForNewHosts": {
+        "label": "Метрики за нови хостове",
+        "description": "Дали новите хостове започват с включено събиране на показатели."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Температурна единица",
+        "description": "Как се показват температурите в Host Metrics.",
+        "celsius": "Целзий",
+        "fahrenheit": "Фаренхайт"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Събиране на показатели"
+      },
+      "metricsInterval": {
+        "label": "Интервал на показателите (секунди)"
+      },
+      "enabledWidgets": {
+        "label": "Активирани джаджи"
+      },
+      "excludedMounts": {
+        "label": "Изключени монтировки"
+      },
+      "monitoredMounts": {
+        "label": "Мониторирани пътища"
+      }
+    }
   }
 }

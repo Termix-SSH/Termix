@@ -1,4 +1,38 @@
 {
+  "permissions": {
+    "devices.view": {
+      "title": "عرض أجهزة Tailnet",
+      "description": "اطلع على الأجهزة الموجودة على شبكة الاتصال اللاسلكية."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "واجهة برمجة تطبيقات Tailscale",
+      "devices": "شبكة الذيل"
+    },
+    "apiKey": {
+      "label": "مفتاح API",
+      "description": "يُستخدم لعرض قائمة الأجهزة الموجودة على شبكتك المحلية. يعمل مع مفتاح Tailscale أو Headscale.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "عنوان URL الأساسي لواجهة برمجة التطبيقات",
+      "description": "اترك حقل \"مقياس الذيل\" فارغًا. اضبط هذا الحقل ليشير إلى مثيل \"مقياس الرأس\".",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "قائمة الأجهزة",
+      "checking": "فحص شبكة الذيل...",
+      "noKey": "لم يتم تعيين مفتاح API بعد.",
+      "error": "تعذر الوصول إلى شبكة الوصول. يرجى التحقق من مفتاح واجهة برمجة التطبيقات (API).",
+      "count": "{{count}} الجهاز قابل للوصول",
+      "count_other": "{{count}} الأجهزة التي يمكن الوصول إليها",
+      "refresh": "يفحص"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
   "hosts": {
     "tailscaleUsernameHint": "يجب أن يكون هذا مستخدمًا لنظام Unix، حيث يتم منح هوية Tailscale الخاصة بك في قائمة التحكم بالوصول SSH الخاصة بشبكة tailnet، وليس بالضرورة المستخدم الجذر.",
     "tailscaleDeviceSelect": "اختيار جهاز Tailscale",
@@ -8,14 +42,38 @@
     "tailscaleLoadingDevices": "جارٍ تحميل الأجهزة...",
     "tailscaleDeviceLoadFailed": "فشل تحميل أجهزة Tailscale. يرجى التحقق من عنوان URL الخاص بواجهة برمجة التطبيقات (API) واتصال الشبكة.",
     "tailscaleNoDevices": "لم يتم العثور على أجهزة في tailnet الخاص بك.",
-    "tailscaleDeviceAutoFill": "سيؤدي تحديد جهاز إلى تعبئة عنوان IP للمضيف تلقائيًا."
+    "tailscaleDeviceAutoFill": "سيؤدي تحديد جهاز إلى تعبئة عنوان IP للمضيف تلقائيًا.",
+    "tailscaleAddHost": "إضافة مضيف",
+    "tailscaleCopyIp": "نسخ عنوان IP الخاص بـ Tailscale",
+    "tailscaleIpCopied": "تم نسخ عنوان IP",
+    "tailscaleIpCopyFailed": "تعذر نسخ عنوان IP",
+    "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "يلزم التحقق من الهوية على مستوى ذيل الطائرة",
+    "tailscaleCheckRequired": "يلزم التحقق من الهوية على مستوى الذيل",
     "tailscaleCheckDescription": "يتطلب Tailscale SSH إجراء فحص إضافي. قم بتسجيل الدخول إلى متصفحك للمتابعة.",
     "tailscaleCheckOpenBrowser": "افتح المتصفح للمصادقة",
     "tailscaleCheckWaiting": "في انتظار مصادقة Tailscale...",
     "tailscaleCheckTimeout": "انتهت مهلة مصادقة Tailscale. يرجى المحاولة مرة أخرى."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "sudoHint": "قم بتعيين كلمة مرور sudo لهذا المضيف للسماح بإجراءات ذات صلاحيات إدارية.",
+    "noData": "لا توجد بيانات",
+    "filter": "تصفية...",
+    "tsNotInstalled": "Tailscale غير مثبت على هذا المضيف",
+    "tsRunning": "قيد التشغيل",
+    "tsStopped": "متوقف",
+    "tsEnable": "اتصال",
+    "tsDisable": "افصل",
+    "tsEnabling": "جارٍ الاتصال بـ Tailscale...",
+    "tsDisabling": "جارٍ قطع الاتصال بـ Tailscale...",
+    "tsEnabled": "Tailscale متصل",
+    "tsDisabled": "Tailscale غير متصل",
+    "tsExitNode": "عقدة خروج",
+    "tsExitNodeActive": "عقدة خروج نشطة"
   },
   "newUi": {
     "sidebar": {

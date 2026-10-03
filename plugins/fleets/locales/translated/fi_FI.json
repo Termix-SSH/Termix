@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Näytä laivastot",
+      "description": "Katso laivastot, niiden jäsenet ja varastot."
+    },
+    "manage": {
+      "title": "Hallitse ajoneuvokalustoja",
+      "description": "Luo, muokkaa ja poista ajoneuvokantoja, muuta jäsenyyksiä ja jaa ajoneuvokantoja muiden käyttäjien tai roolien kanssa."
+    },
+    "execute": {
+      "title": "Suorita laivaston toiminnot",
+      "description": "Suorita komentoja ja paketoi toimintoja koko laivastossa ja siirrä tiedostoja sen jäsenpalvelimiin ja niistä pois."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Päivitä kaikki paketit",
         "packageNameLabel": "Paketin nimi",
         "packageNameRequired": "Paketin nimi on pakollinen",
-        "packageHint": "Vaatii hallintatason käyttöoikeudet isäntäkohtaisesti ja nostaa käyttöoikeuksia isännän tallennetulla sudo-salasanalla."
+        "packageHint": "Vaatii hallintatason käyttöoikeudet isäntäkohtaisesti ja nostaa käyttöoikeuksia isännän tallennetulla sudo-salasanalla.",
+        "shareFleet": "Jaa laivasto",
+        "shareFleetTitle": "Jaa \"{{name}}\"",
+        "shareFleetDescription": "Jakaa tämän laivaston nykyiset jäsenisännät valittujen käyttäjien tai roolien kanssa. Myöhemmin laivastoon lisättyjä isäntiä ei jaeta automaattisesti – jaa uudelleen sisällyttääksesi ne.",
+        "shareSelectionRequired": "Valitse vähintään yksi käyttäjä tai rooli",
+        "fleetSharedSuccessfully": "Jaettu {{shared}} / {{total}} isäntäkoneesta tässä laivastossa",
+        "failedToShareFleet": "Kaluston jakaminen epäonnistui",
+        "noMembersToShare": "Tällä laivueella ei ole vielä jaettavia jäsenisäntiä."
       }
     }
   },

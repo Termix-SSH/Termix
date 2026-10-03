@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Seriel"
+  },
   "serial": {
     "title": "Seriel",
     "portLabel": "Havn",
@@ -22,8 +25,5 @@
     "notSupported": "Serielle forbindelser kræver en browser med Web Serial API-understøttelse (Chrome, Edge eller Firefox 151+) eller Termix-desktopappen.",
     "hideHint": "Du kan skjule fanen Seriel under Brugerprofil > Udseende > Sidebjælke > Navigation.",
     "browserPickerHint": "Klik på Opret forbindelse, og din browser åbner en portvælger, hvor du kan vælge enheden."
-  },
-  "nav": {
-    "serial": "Seriel"
   }
 }

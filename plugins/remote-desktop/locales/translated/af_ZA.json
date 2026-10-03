@@ -73,17 +73,22 @@
       "fitToScreen": "Pas by skerm",
       "switchToTrackpad": "Skakel oor na raakvlakmodus (sleep om wyser te beweeg, tik om te klik)",
       "switchToTouch": "Skakel oor na raakmodus (tik direk waar jy wil klik)"
-    }
+    },
+    "disabled": "Afstandslessenaar is afgeskakel. 'n Administrateur kan dit in Instellings aanskakel."
   },
   "hosts": {
     "nativeRdpOpened": "Geopen in Windows Afstandslessenaar",
     "nativeRdpFailed": "Kon nie Windows Remote Desktop oopmaak nie",
     "openNativeRdp": "Maak oop in Windows Afstandslessenaar",
     "guac": {
+      "toolbar": "Nutsbalk",
       "connection": "Verbinding",
       "authentication": "Verifikasie",
       "storedCredential": "Gestoorde geloofsbriewe",
       "authMethod": "Magtigingsmetode",
+      "authTypeDirect": "Direkte",
+      "authTypeCredential": "Geloofsbrief",
+      "authTypeNone": "Geen",
       "authTypeNoneDesc": "Geen aanmeldingsbesonderhede word gestoor nie. Jy sal elke keer as jy koppel vir 'n gebruikersnaam en wagwoord gevra word; hulle word nie gestoor nie.",
       "selectCredential": "Kies 'n geloofsbrief...",
       "connectionSettings": "Verbindingsinstellings",
@@ -120,7 +125,7 @@
       "guacdPort": "guacd-hawe",
       "guacdProxyDesc": "Ignoreer die globale guacd-instansie vir hierdie verbinding. Los leeg om die globaal gekonfigureerde guacd te gebruik.",
       "gatewayHostname": "Gateway-gasheernaam",
-      "gatewayPort": "Poortpoort",
+      "gatewayPort": "Gateway-poort",
       "gatewayUsername": "Gateway-gebruikersnaam",
       "gatewayPassword": "Gateway-wagwoord",
       "gatewayDomain": "Gateway-domein",
@@ -161,7 +166,7 @@
       "disableGlyphCaching": "Deaktiveer glifkasgeheue",
       "disableGlyphCachingDesc": "Skakel glifkasgeheue af",
       "enableGfx": "Aktiveer GFX",
-      "enableGfxDesc": "Gebruik RemoteFX grafiese pyplyn",
+      "enableGfxDesc": "Gebruik RemoteFX-grafikapyplyn",
       "enablePrinting": "Aktiveer drukwerk",
       "enablePrintingDesc": "Herlei plaaslike drukkers na die afgeleë sessie",
       "enableDriveRedirection": "Aktiveer dryfherleiding",
@@ -206,7 +211,8 @@
       "colorScheme": "Kleurskema",
       "backspaceKey": "Terugspasie-sleutel",
       "colorDepth": "Kleurdiepte",
-      "resizeMethod": "Vergrootingsmetode"
+      "resizeMethod": "Vergrootingsmetode",
+      "driveNamePlaceholder": "Termix-rylaan"
     },
     "remoteDesktop": "Afstandslessenaar",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuele Netwerk",
     "unencryptedShell": "Ongeënkripteerde dop",
-    "docsLink": "Bekyk dokumente"
+    "remoteDesktopNotes": "Notas",
+    "userDefaultsNote": "Instellings wat jy onveranderd laat, volg jou gasheer se verstekwaardes.",
+    "connectionOriginNote": "Op die lessenaar-app gebruik RDP, VNC en Telnet die afstandbediener tensy die gasheer op Hierdie toestel gestel is, wat 'n guacd benodig wat hierdie masjien kan bereik. Stel een in die Afstandslessenaar-instellings, of per gasheer onder guacd Proxy.",
+    "docsLink": "Bekyk dokumente",
+    "connectionOriginGuacamoleNote": "RDP, VNC en Telnet gebruik die afstandbediener tensy jy \"Hierdie toestel\" kies, wat 'n guacd benodig wat hierdie masjien kan bereik. Stel een in die guacd URL-instelling, of per gasheer onder guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Afstandlessenaar",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Kleurdiepte"
+        "label": "Kleurdiepte",
+        "description": "Gebruik vir RDP-gashere wat dit op hul verstekwaarde laat."
       },
       "resizeMethod": {
-        "label": "Vergrootingsmetode"
+        "label": "Vergrootingsmetode",
+        "description": "Hoe die afstandskerm die venstergrootte volg."
       },
       "resizeDisplayUpdate": "Skermopdatering",
       "resizeReconnect": "Herkoppel",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Deaktiveer plak",
         "description": "Voorkom die plak van teks in die afgeleë sessie"
-      }
+      },
+      "group": "Afstandslessenaar-verstekwaardes",
+      "colorDepth16": "16-bis",
+      "colorDepth24": "24-bis",
+      "colorDepth32": "32-bis"
     },
     "admin": {
+      "enabled": {
+        "label": "Aktiveer Afstandslessenaar",
+        "description": "Laat RDP-, VNC- en Telnet-verbindings deur guacd toe."
+      },
       "guacdUrl": {
-        "label": "guacd-URL"
+        "label": "guacd-URL",
+        "description": "Waar guacd luister, as host:port. Die GUACD_URL, GUACD_HOST en GUACD_PORT omgewingveranderlikes oorskryf dit.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP-poort"
+      },
+      "vncPort": {
+        "label": "VNC-poort"
+      },
+      "telnetPort": {
+        "label": "Telnet-poort"
+      },
+      "rdpSecurity": {
+        "label": "RDP-sekuriteitsmodus"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignoreer sertifikaatfoute"
+      },
+      "guacamoleConfig": {
+        "label": "guacd-instellings"
+      },
+      "enableToolbar": {
+        "label": "Afstandswerkskerm-nutsbalk",
+        "description": "Wys die nutsbalk in RDP-, VNC- en Telnet-sessies."
+      },
+      "displayGroup": "Vertoon",
+      "displayDefaultsTab": "Afstandslessenaar"
+    }
+  },
+  "palette": {
+    "connectRdp": "Verbind met RDP",
+    "connectVnc": "Verbind met VNC",
+    "connectTelnet": "Verbind met Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Deel afstandlessenaarsessies",
+      "description": "Laat sessiedeling en samewerkingskamers hierdie gebruiker se RDP-, VNC- en Telnet-sessies aan ander wys."
     }
   },
   "errors": {

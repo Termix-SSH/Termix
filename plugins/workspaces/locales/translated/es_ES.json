@@ -31,17 +31,23 @@
         "applyConfirmButton": "Aplicar espacio de trabajo",
         "updateWithCurrent": "Actualizar con la versión actual",
         "updateWithCurrentConfirm": "¿Sobrescribir \"{{name}}\" con tu disposición de tabulación actual?",
-        "rename": "Rebautizar",
+        "rename": "Renombrar",
         "duplicate": "Duplicado",
         "duplicateNameSuffix": "{{name}} (copiar)",
         "setDefault": "Establecer como predeterminado",
         "unsetDefault": "Eliminar como predeterminado",
         "defaultBadge": "Por defecto",
         "lastSession": "Última sesión",
-        "lastSessionDescription": "Se actualiza automáticamente con la última configuración de pestañas. Aplícala para recuperar lo que tenías abierto.",
+        "lastSessionDescription": "Se actualiza automáticamente con la configuración de pestañas más reciente. Aplícala para recuperar lo que tenías abierto.",
         "lastUsed": "Último uso {{time}}",
         "neverUsed": "Nunca se ha aplicado",
-        "tabsSkipped": "Espacio de trabajo aplicado: {{count}} pestaña(s) omitida(s) (el host ya no existe): {{names}}"
+        "tabsSkipped": "Se aplicó el espacio de trabajo, pero se omitieron las pestañas {{count}} porque su host ya no existe: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}hace s",
+          "minutes": "hace {{count}}m",
+          "hours": "hace {{count}}h",
+          "days": "hace {{count}}d"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Espacios de trabajo",
     "workflow_workspaces_desc": "Guarda un conjunto de pestañas abiertas y vuelve a abrir toda la interfaz más tarde."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizar espacios de trabajo",
+      "description": "Guarda, aplica y gestiona las configuraciones de pestañas guardadas."
+    }
   },
   "hosts": {
     "docsLink": "Ver documentación"

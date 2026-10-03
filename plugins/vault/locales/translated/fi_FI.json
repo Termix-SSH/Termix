@@ -3,7 +3,8 @@
     "profile": "Varaston allekirjoittajan profiili",
     "selectProfile": "Valitse holviprofiili...",
     "hint": "Asetukset tulevat jaetusta profiilista; kirjaudut Holviin OIDC:n kautta, kun muodostat yhteyden. Salaisuuksia ei tallenneta.",
-    "docs": "Näytä dokumentit"
+    "docs": "Näytä dokumentit",
+    "sharedProfile": "{{name}} (jaettu)"
   },
   "profiles": {
     "new": "Uusi profiili",
@@ -27,12 +28,42 @@
     "save": "Tallenna profiili",
     "validationError": "Nimi, holvin osoite ja SSH-allekirjoittajan rooli vaaditaan",
     "none": "Ei vielä holviprofiileja.",
-    "sharedBadge": "jaettu"
+    "sharedBadge": "jaettu",
+    "edit": "Muokata",
+    "delete": "Poistaa"
+  },
+  "hosts": {
+    "filterAuthVault": "Holvi"
   },
   "dialog": {
     "title": "Holviin kirjautuminen vaaditaan",
     "description": "Ikkuna HashiCorp-holviin kirjautumista varten on avautunut. Kirjaudu sisään siinä. Yhteys jatkuu automaattisesti.",
     "failed": "Holvin todennus epäonnistui. Yritä uudelleen.",
     "reopen": "Avaa kirjautumisikkuna uudelleen"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä Vaultin SSH-allekirjoitusta",
+      "description": "Luo Vault-allekirjoittajaprofiileja ja muodosta yhteys Vaultia käyttäviin isäntiin."
+    },
+    "share": {
+      "title": "Jaa holviprofiileja",
+      "description": "Merkitse Vault-allekirjoittajan profiili jaetuksi, jotta jokainen käyttäjä voi valita sen."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Uudelleenohjauksen URI",
+      "description": "Lisää tämä URL-osoite allowed_redirect_uris-kohtaan jokaisessa Vault OIDC -roolissa, jolla Termix kirjautuu sisään."
+    },
+    "legacyCallback": {
+      "label": "Käytä vanhaa uudelleenohjaus-URI:ta",
+      "description": "Lähetä edelleen /vault/oidc/callback-osoitetta, joka on ennen versiota 2.9 käytetty uudelleenohjaus-URI. Poista tämä käytöstä, kun Vault-roolisi sallivat uuden osoitteen."
+    },
+    "host": {
+      "profileId": {
+        "label": "Varaston allekirjoittajan profiili"
+      }
+    }
   }
 }

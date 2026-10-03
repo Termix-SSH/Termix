@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Trezi",
+    "sent": "Pachet Wake-on-LAN trimis",
+    "failed": "Nu s-a putut trimite pachetul Wake-on-LAN"
+  },
+  "permissions": {
+    "send": {
+      "title": "Trimiteți pachete Wake-on-LAN",
+      "description": "Trezește o gazdă prin trimiterea unui pachet magic la adresa sa MAC."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "Adresă MAC",
+        "description": "Adresa MAC a rețelei gazdă, utilizată pentru a trimite pachete Wake-on-LAN.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Adresă de difuzare",
+        "description": "Adresa de difuzare a subrețelei către care se va trimite pachetul. Lăsați necompletată pentru 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

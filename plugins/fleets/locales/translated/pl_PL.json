@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "View fleets",
+      "description": "See fleets, their members and inventory."
+    },
+    "manage": {
+      "title": "Manage fleets",
+      "description": "Create, edit and delete fleets, change membership, and share fleets with other users or roles."
+    },
+    "execute": {
+      "title": "Run fleet actions",
+      "description": "Run commands and package actions across a fleet, and transfer files to and from its member hosts."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Uaktualnij wszystkie pakiety",
         "packageNameLabel": "Nazwa pakietu",
         "packageNameRequired": "Wymagana jest nazwa pakietu",
-        "packageHint": "Wymaga dostępu na poziomie zarządzania na każdym hoście i podnosi uprawnienia zapisanym hasłem sudo hosta."
+        "packageHint": "Wymaga dostępu na poziomie zarządzania na każdym hoście i podnosi uprawnienia zapisanym hasłem sudo hosta.",
+        "shareFleet": "Share Fleet",
+        "shareFleetTitle": "Share \"{{name}}\"",
+        "shareFleetDescription": "Shares this fleet's current member hosts with the selected users or roles. Hosts added to the fleet later are not shared automatically - share again to include them.",
+        "shareSelectionRequired": "Select at least one user or role",
+        "fleetSharedSuccessfully": "Shared {{shared}} of {{total}} host(s) in this fleet",
+        "failedToShareFleet": "Failed to share fleet",
+        "noMembersToShare": "This fleet has no member hosts to share yet."
       }
     }
   },

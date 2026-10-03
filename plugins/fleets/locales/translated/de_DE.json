@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Flotten ansehen",
+      "description": "Flotten, ihre Mitglieder und ihren Bestand ansehen."
+    },
+    "manage": {
+      "title": "Flottenmanagement",
+      "description": "Flotten erstellen, bearbeiten und löschen, Mitgliedschaften ändern und Flotten mit anderen Benutzern oder Rollen teilen."
+    },
+    "execute": {
+      "title": "Flottenaktionen durchführen",
+      "description": "Führe Befehle und Paketaktionen über eine ganze Flotte hinweg aus und übertrage Dateien zu und von den Mitgliedshosts."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -48,7 +62,7 @@
         "commandSucceeded": "Der Befehl wurde auf allen Hosts erfolgreich ausgeführt.",
         "commandPartialFailure": "{{failed}} von {{total}} Hosts fehlgeschlagen",
         "commandFailed": "Befehl konnte nicht ausgeführt werden",
-        "resultSuccess": "Erfolg",
+        "resultSuccess": "Erfolgreich",
         "resultFailed": "Fehlgeschlagen",
         "push": "Drücken",
         "pull": "Ziehen",
@@ -63,9 +77,9 @@
         "refreshInventory": "Inventar aktualisieren",
         "inventoryLoadFailed": "Fehler beim Laden des Inventars",
         "inventoryRefreshed": "Bestand aktualisiert",
-        "inventoryRefreshFailed": "Fehler beim Aktualisieren des Inventars",
+        "inventoryRefreshFailed": "Aktualisierung des Inventars fehlgeschlagen",
         "inventoryNoData": "Noch keine Bestandsdaten vorhanden – aktualisieren Sie die Seite, um sie abzurufen.",
-        "inventoryHost": "Gastgeber",
+        "inventoryHost": "Host",
         "inventoryCollectedCount": "{{count}}/{{total}} gesammelt",
         "inventoryOs": "Betriebssystem",
         "inventoryKernel": "Kernel",
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Alle Pakete aktualisieren",
         "packageNameLabel": "Paketname",
         "packageNameRequired": "Ein Paketname ist erforderlich.",
-        "packageHint": "Erfordert Administratorrechte pro Host und verwendet das gespeicherte sudo-Passwort des Hosts für die Rechteerweiterung."
+        "packageHint": "Erfordert Administratorrechte pro Host und verwendet das gespeicherte sudo-Passwort des Hosts für die Rechteerweiterung.",
+        "shareFleet": "Flotte teilen",
+        "shareFleetTitle": "Teilen \"{{name}}\"",
+        "shareFleetDescription": "Teilt die aktuellen Hosts dieser Flotte mit den ausgewählten Benutzern oder Rollen. Hosts, die später zur Flotte hinzugefügt werden, werden nicht automatisch geteilt – teilen Sie die Flotte erneut, um sie einzubeziehen.",
+        "shareSelectionRequired": "Wählen Sie mindestens einen Benutzer oder eine Rolle aus.",
+        "fleetSharedSuccessfully": "Gemeinsam genutzte {{shared}} von {{total}} Hosts in dieser Flotte",
+        "failedToShareFleet": "Flottenteilung gescheitert",
+        "noMembersToShare": "Diese Flotte hat noch keine Mitgliedshosts, die geteilt werden können."
       }
     }
   },

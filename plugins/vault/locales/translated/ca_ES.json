@@ -3,7 +3,8 @@
     "profile": "Perfil del signant de la caixa forta",
     "selectProfile": "Seleccioneu un perfil de Vault...",
     "hint": "La configuració prové del perfil compartit; iniciaràs la sessió a Vault mitjançant OIDC quan et connectis. No s'emmagatzemen secrets.",
-    "docs": "Veure documents"
+    "docs": "Veure documents",
+    "sharedProfile": "{{name}} (compartit)"
   },
   "profiles": {
     "new": "Nou perfil",
@@ -27,12 +28,42 @@
     "save": "Desa el perfil",
     "validationError": "El nom, l'adreça de la caixa forta i el rol de signant SSH són obligatoris.",
     "none": "Encara no hi ha perfils de Vault.",
-    "sharedBadge": "compartit"
+    "sharedBadge": "compartit",
+    "edit": "Edita",
+    "delete": "Suprimeix"
+  },
+  "hosts": {
+    "filterAuthVault": "Volta"
   },
   "dialog": {
     "title": "Cal iniciar sessió a la caixa forta",
     "description": "S'ha obert una finestra per iniciar la sessió a HashiCorp Vault. Completeu l'inici de sessió allà; aquesta connexió continuarà automàticament.",
     "failed": "L'autenticació de la caixa forta ha fallat. Torna-ho a provar.",
     "reopen": "Torna a obrir la finestra d'inici de sessió"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza la signatura SSH de Vault",
+      "description": "Crea perfils de signant del Vault i connecta't a amfitrions que utilitzen el Vault."
+    },
+    "share": {
+      "title": "Comparteix els perfils de Vault",
+      "description": "Marca un perfil de signant de Vault com a compartit perquè tots els usuaris el puguin triar."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "URI de redirecció",
+      "description": "Afegiu aquesta URL a allowed_redirect_uris a cada rol OIDC de Vault amb què Termix inicia la sessió."
+    },
+    "legacyCallback": {
+      "label": "Utilitza l'URI de redirecció antiga",
+      "description": "Continua enviant /vault/oidc/callback, l'URI de redirecció que s'utilitzava abans de la versió 2.9. Desactiva-ho un cop els rols de Vault permetin el nou."
+    },
+    "host": {
+      "profileId": {
+        "label": "Perfil del signant de la caixa forta"
+      }
+    }
   }
 }

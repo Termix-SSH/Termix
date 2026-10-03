@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "Voorinstellings is eksplisiete kiekies; die laai van een vervang hierdie lessenaarkliënt se plaaslike kliënttonnellys.",
     "c2sPresetToLoad": "Voorafinstelling om te laai",
     "c2sTunnelPresets": "Kliënttonnelvoorinstellings",
-    "c2sTunnelPresetsUnavailable": "Kliënttunnelvoorinstellings is slegs beskikbaar in die rekenaarkliënt."
+    "c2sTunnelPresetsUnavailable": "Kliënttunnelvoorinstellings is slegs beskikbaar in die rekenaarkliënt.",
+    "c2sPresetRenameError": "Kon nie die voorinstelling hernoem nie",
+    "c2sPresetDeleteError": "Kon nie die voorafinstelling verwyder nie"
   },
   "tunnels": {
     "attempt": "Poging {{current}} van {{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "Plaaslik (-L)",
     "typeRemote": "Afstandbeheer (-R)",
     "working": "Werk...",
+    "activeCount": "{{connected}}/{{total}} aktief",
+    "listensOn": "Gebonde aan plaaslike gasheer:{{port}}",
+    "socksProxy": "SOCKS5-instaanbediener",
+    "waiting": "Wag",
+    "remoteSessionExpired": "Afstandsinchronisasie-sessie het verval. Koppel weer aan Afstandsinchronisasie en probeer weer.",
+    "activeTunnels": "Aktiewe Tonnels",
     "start": "Begin",
-    "stop": "Stop"
+    "stop": "Stop",
+    "authTitle": "Tonnel-verifikasie",
+    "authRetry": "Die vorige kode is nie aanvaar nie. Voer 'n nuwe kode in.",
+    "authAnswer": "Verifikasierespons",
+    "authContinue": "Gaan voort"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik tonnels",
+      "description": "Begin, stop en kyk na SSH-tonnels, en stoor kliënttonnelvoorinstellings."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktiveer tonnels",
+        "description": "Stel SSH-tonnels deur hierdie gasheer op."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "Tonnels",

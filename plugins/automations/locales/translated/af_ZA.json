@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Bekyk outomatisasies",
+      "description": "Sien die outomatisasies en hul geskiedenis."
+    },
+    "create": {
+      "title": "Skep outomatisasies",
+      "description": "Voeg nuwe outomatisasies by."
+    },
+    "edit": {
+      "title": "Wysig outomatisasies",
+      "description": "Verander bestaande outomatisasies."
+    },
+    "delete": {
+      "title": "Vee outomatisasies uit",
+      "description": "Verwyder outomatisasies."
+    },
+    "run": {
+      "title": "Voer outomatisasies uit",
+      "description": "Aktiveer 'n outomatisering met die hand."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Wysig Outomatisering",
         "empty": "Geen outomatisasies nog nie. Skep een om op 'n maatstaf, 'n skedule of 'n gebeurtenis te reageer.",
         "emptyRuns": "Geen lopies nog nie.",
-        "emptyChannels": "Geen kanale nog nie. Voeg een by om kennisgewings êrens heen te stuur.",
-        "noChannelsHint": "Geen kanale nog opgestel nie. Voeg een by in die Kanale-oortjie.",
-        "addChannel": "Voeg kanaal by",
-        "testChannel": "Toets",
-        "channelTestSent": "Toetskennisgewing gestuur",
-        "channelTestFailed": "Toetskennisgewing het misluk",
-        "channelDeleted": "Kanaal uitgevee",
-        "deleteChannelConfirm": "Vee hierdie kanaal uit? Outomatiserings wat dit gebruik, sal ophou om kennisgewings te stuur.",
+        "channelsHint": "Kanale word in Waarskuwings opgestel",
+        "noChannelsHint": "Die waarskuwing gaan altyd na jou inboks. Voeg kanale by Waarskuwings om dit ook elders te stuur.",
         "nameLabel": "Naam",
         "namePlaceholder": "bv. Maak /data skoon wanneer dit vol is",
         "nameRequired": "Naam word vereis",
@@ -79,7 +95,7 @@
           "webhook": "Inkomende webhook"
         },
         "stepTypes": {
-          "notify": "Stuur 'n kennisgewing",
+          "notify": "Stuur 'n waarskuwing",
           "http": "Roep 'n URL op",
           "run_snippet": "Voer 'n brokkie uit",
           "run_command": "Voer 'n opdrag uit",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Metode",
           "body": "Liggaam",
-          "channels": "Kanale",
+          "channels": "Stuur ook na",
           "title": "Titel",
           "message": "Boodskap",
           "snippet": "Brokkie",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Stop die hardloop",
           "continue": "Gaan voort"
+        },
+        "needsPlugin": "Benodig {{plugin}}",
+        "needsPluginHint": "Hierdie outomatisering word oorgeslaan totdat die funksie wat dit benodig weer beskikbaar is.",
+        "offBadge": "Af",
+        "docsLink": "Bekyk dokumente",
+        "ago": {
+          "seconds": "{{count}}s gelede",
+          "minutes": "{{count}}m gelede",
+          "hours": "{{count}}uur gelede",
+          "days": "{{count}}dae gelede"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Outomatisasies",
     "feature_automations_desc": "Voer stappe outomaties uit wanneer iets gebeur, en word in kennis gestel."
+  },
+  "maintenance": {
+    "title": "Onderhoud",
+    "description": "Onderbreek gasheerstatus, gesondheid, metrieke, houer- en tonnel-ontkoppelingsoutomatisasies terwyl werk aan die gang is. Monitering, handmatige lopies en geskeduleerde outomatisasies gaan voort.",
+    "denied": "Jy het nie toestemming om onderhoud te sien nie.",
+    "sharedReadOnly": "Hierdie gasheer is met jou gedeel. Slegs die eienaar kan die onderhoud verander.",
+    "failed": "Onderhoud kon nie opgedateer word nie.",
+    "active": "Onderhoud aktief",
+    "estimated": "Geraamde voltooiing",
+    "noAutoEnd": "Die skatting beëindig nie onderhoud nie. Beëindig dit eksplisiet wanneer die werk voltooi is.",
+    "endConfirm": "Beëindig onderhoud en hervat gebeurtenis-geaktiveerde outomatisasies vir hierdie gasheer?",
+    "confirmEnd": "Bevestig einde",
+    "cancel": "Kanselleer",
+    "end": "Einde van onderhoud",
+    "action": "Aksie",
+    "startNow": "Begin nou",
+    "schedule": "Skeduleer vir later",
+    "reason": "Rede",
+    "startUtc": "Eerste begin (UTC)",
+    "repeat": "Herhaal",
+    "once": "Eens",
+    "weekly": "Weekliks",
+    "monthly": "Maandeliks",
+    "utcHelp": "Skedules gebruik UTC dwarsdeur die jaar. Maandelikse skedules slaan maande oor sonder die gekose dag. Beplande vensters kan nie oorvleuel nie; oorskrydende onderhoud gaan voort oor latere vensters.",
+    "duration": "Geraamde duur (minute)",
+    "grace": "Genadetydperk (minute)",
+    "notify": "Stel een keer in kennis indien steeds vanlyn na die skatting plus grasietydperk",
+    "addSchedule": "Voeg skedule by",
+    "schedules": "Skedules",
+    "noSchedules": "Geen onderhoudskedules nie.",
+    "completed": "Reeds begin",
+    "minutes_one": "{{count}} minuut",
+    "minutes_other": "{{count}} minute",
+    "remove": "Verwyder skedule",
+    "loadFailed": "Kon nie onderhoudstatus verfris nie. Veranderinge is gedeaktiveer totdat dit gelaai kan word.",
+    "loading": "Laai onderhoudstatus…"
   }
 }

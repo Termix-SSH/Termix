@@ -117,6 +117,32 @@ describe("plugin user data", () => {
     expect(again).toMatchObject({ imported: 0, skipped: 1 });
   });
 
+  it("writes large tables in chunks and lets the event loop run between them", async () => {
+    const insert = sqlite.prepare(
+      "INSERT INTO p_fixture_bookmark (user_id, path) VALUES ('u1', ?)",
+    );
+    sqlite.transaction(() => {
+      for (let i = 0; i < 4999; i++) insert.run(`/p/${i}`);
+    })();
+    const file = new Database(":memory:");
+    file.exec("CREATE TABLE users (id TEXT PRIMARY KEY)");
+    file.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY)");
+    file.exec("INSERT INTO users (id) VALUES ('u1')");
+    const transaction = vi.spyOn(file, "transaction");
+    let ticks = 0;
+    const ticker = setInterval(() => ticks++, 0);
+
+    const written = await writeUserPluginTables(file, "u1");
+    clearInterval(ticker);
+
+    expect(written).toBe(5000);
+    expect(transaction).toHaveBeenCalled();
+    expect(ticks).toBeGreaterThan(0);
+    expect(
+      file.prepare("SELECT COUNT(*) AS n FROM p_fixture_bookmark").get(),
+    ).toEqual({ n: 5000 });
+  });
+
   it("reads a pre-2.9 export by the legacy table name", async () => {
     const file = new Database(":memory:");
     file.exec(

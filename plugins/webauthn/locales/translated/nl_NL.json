@@ -1,18 +1,22 @@
 {
-  "title": "Wachtwoorden",
-  "signIn": "Aanmelden met wachtwoord",
-  "loginFailed": "Aanmelden met wachtwoord mislukt",
-  "description": "Gebruik WebAuthn/FIDO2-gegevens om zonder wachtwoord in te loggen.",
-  "namePlaceholder": "Wachtwoordnaam",
+  "title": "Passkeys",
+  "signIn": "Sign in with passkey",
+  "loginFailed": "Passkey login failed",
+  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
+  "namePlaceholder": "Passkey name",
+  "defaultName": "Passkey",
   "uv": {
-    "preferred": "Voorkeur",
-    "required": "Vereist",
-    "discouraged": "Ontmoedigd"
+    "preferred": "Preferred",
+    "required": "Required",
+    "discouraged": "Discouraged"
   },
-  "add": "Voeg wachtwoord toe",
-  "none": "Er zijn geen wachtwoorden geregistreerd.",
-  "added": "Wachtwoord toegevoegd",
-  "addFailed": "Wachtwoord toevoegen mislukt",
-  "deleted": "Wachtwoord verwijderd",
-  "deleteFailed": "Het verwijderen van de toegangscode is mislukt."
+  "add": "Add Passkey",
+  "none": "No passkeys registered.",
+  "added": "Passkey added",
+  "addFailed": "Failed to add passkey",
+  "delete": "Delete passkey",
+  "deleted": "Passkey deleted",
+  "deleteFailed": "Failed to delete passkey",
+  "unknownDevice": "unknown",
+  "synced": "synced"
 }

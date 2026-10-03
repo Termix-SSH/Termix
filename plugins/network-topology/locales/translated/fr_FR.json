@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "La source et la cible doivent être différentes",
     "exportJSON": "Exporter JSON",
     "importJSON": "Importer JSON",
-    "terminal": "Terminal",
-    "fileManager": "Gestionnaire de fichiers",
-    "tunnel": "Tunnel",
-    "docker": "Docker",
     "serverStats": "Métriques de l'hôte",
-    "hostMetrics": "Métriques de l'hôte",
     "noNodes": "Aucun nœud pour l'instant"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} nœuds"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser un graphe de réseau",
+      "description": "Afficher et modifier le graphique de topologie du réseau."
+    }
   },
   "hosts": {
     "docsLink": "Voir la documentation"

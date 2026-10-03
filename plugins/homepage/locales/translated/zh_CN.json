@@ -18,6 +18,7 @@
   "homepage": {
     "title": "主页",
     "addWidget": "添加小部件",
+    "noWidgetsInCategory": "此分类没有组件",
     "editWidget": "编辑小部件",
     "zoomIn": "放大",
     "zoomOut": "缩小",
@@ -38,7 +39,7 @@
     "description": "描述",
     "color": "颜色",
     "timezone": "时区",
-    "invalidTimezone": "时区无效。请使用 IANA 名称，例如 America/New_York。",
+    "invalidTimezone": "时区无效，请使用 America/New_York 等 IANA 时区名称",
     "showSeconds": "显示秒",
     "format12h": "12 小时制",
     "content": "内容",
@@ -59,6 +60,9 @@
     "maxItems": "最大条目数",
     "showDescription": "显示描述",
     "widgetRssName": "RSS 订阅源",
+    "rssNoFeedUrl": "请在组件设置中配置订阅源 URL",
+    "rssLoadError": "无法加载订阅源",
+    "rssNoItems": "暂无项目",
     "noHostSelected": "未选择主机",
     "displayedMetrics": "显示指标",
     "metricCpu": "CPU",
@@ -157,16 +161,165 @@
     "compactMode": "紧凑模式",
     "selectHosts": "选择主机",
     "listLayout": "列表",
-    "gridLayout": "网格"
+    "gridLayout": "网格",
+    "configureUrl": "请在组件设置中填写 URL",
+    "embeddedContent": "嵌入内容",
+    "noBookmarks": "暂无书签",
+    "noSections": "尚未设置分区",
+    "noServices": "尚未设置服务",
+    "configureLocation": "请在组件设置中选择位置",
+    "bannerTextPlaceholder": "横幅文字",
+    "serviceNamePlaceholder": "我的服务",
+    "emptyNote": "暂无笔记内容……",
+    "weatherLoadFailed": "无法加载“{{location}}”的天气",
+    "feelsLike": "体感温度 {{temperature}}",
+    "timezonePlaceholder": "Asia/Shanghai（留空使用本地时区）",
+    "notesPlaceholder": "在此填写笔记……",
+    "locationPlaceholder": "北京、上海、东京……",
+    "widgets": {
+      "bookmark_list": {
+        "name": "书签",
+        "description": "显示快捷链接列表"
+      },
+      "calendar": {
+        "name": "日历",
+        "description": "显示月历并突出显示今天"
+      },
+      "clock": {
+        "name": "时钟",
+        "description": "显示实时时钟，可配置时区"
+      },
+      "countdown": {
+        "name": "倒计时",
+        "description": "距离目标日期和时间的倒计时"
+      },
+      "custom_api": {
+        "name": "自定义 API",
+        "description": "获取并展示 JSON API 数据"
+      },
+      "dashboard_links": {
+        "name": "仪表盘链接",
+        "description": "显示已保存的仪表盘服务链接"
+      },
+      "folder": {
+        "name": "文件夹",
+        "description": "用于对组件进行视觉分组的背景卡片"
+      },
+      "host_grid": {
+        "name": "主机网格",
+        "description": "以网格展示所有 SSH 主机的实时状态"
+      },
+      "host_status": {
+        "name": "主机状态",
+        "description": "显示 SSH 主机的实时状态和指标"
+      },
+      "iframe_embed": {
+        "name": "嵌入网页",
+        "description": "通过 iframe 嵌入指定 URL"
+      },
+      "image_widget": {
+        "name": "图片",
+        "description": "显示指定 URL 的图片"
+      },
+      "link_tree": {
+        "name": "链接树",
+        "description": "按分组展示链接与服务入口"
+      },
+      "markdown_notes": {
+        "name": "Markdown 笔记",
+        "description": "支持 Markdown 渲染和行内编辑的笔记"
+      },
+      "notes": {
+        "name": "笔记",
+        "description": "显示文本笔记"
+      },
+      "ping_status": {
+        "name": "连通性状态",
+        "description": "检查 URL 或服务是否可访问"
+      },
+      "quick_connect": {
+        "name": "快速连接",
+        "description": "为主机打开终端、文件、Docker、隧道等功能"
+      },
+      "recent_activity": {
+        "name": "最近活动",
+        "description": "显示最近的终端、Docker、文件和隧道活动"
+      },
+      "rss_feed": {
+        "name": "RSS 订阅源",
+        "description": "显示 RSS 或 Atom 订阅源的内容"
+      },
+      "search_bar": {
+        "name": "搜索栏",
+        "description": "快速使用 Google、DuckDuckGo、Bing 或自定义搜索引擎"
+      },
+      "search_links": {
+        "name": "搜索快捷方式",
+        "description": "快速使用不同搜索引擎"
+      },
+      "service_grid": {
+        "name": "服务网格",
+        "description": "以包含图标和链接的网格展示服务"
+      },
+      "service_link": {
+        "name": "服务链接",
+        "description": "点击卡片即可打开服务 URL"
+      },
+      "ssh_terminal": {
+        "name": "SSH 终端",
+        "description": "连接到指定主机的内嵌 SSH 终端"
+      },
+      "system_overview": {
+        "name": "系统概览",
+        "description": "显示 Termix 系统状态概览"
+      },
+      "termix_uptime": {
+        "name": "Termix 运行时间",
+        "description": "显示 Termix 服务器已运行的时长"
+      },
+      "text_banner": {
+        "name": "文字横幅",
+        "description": "用于分区和标题的样式化文字标签"
+      },
+      "weather": {
+        "name": "天气",
+        "description": "显示指定地点的实时天气"
+      },
+      "docker_widget": {
+        "name": "Docker 管理器",
+        "description": "用于管理指定主机 Docker 容器的内嵌管理器"
+      },
+      "file_manager_widget": {
+        "name": "文件管理器",
+        "description": "用于管理指定主机文件的内嵌 SFTP 管理器"
+      },
+      "tunnel_widget": {
+        "name": "隧道管理器",
+        "description": "用于管理指定主机 SSH 隧道的内嵌管理器"
+      },
+      "metrics_chart": {
+        "name": "指标图表",
+        "description": "显示主机 CPU、内存、磁盘或网络的历史指标图表"
+      }
+    }
+  },
+  "permissions": {
+    "use": {
+      "title": "使用首页",
+      "description": "查看和编辑首页画布及仪表盘服务链接。"
+    }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "允许访问的私网主机",
-      "description": "允许 Ping 状态和自定义 API 组件访问的私网或回环主机名/IP。用逗号或换行分隔，不包含协议、端口或路径。留空则禁止访问私网。"
+      "label": "允许访问的内网主机",
+      "description": "供连通性状态和自定义 API 组件使用的精确内网或回环主机名/IP。用逗号或换行分隔，不包含协议、端口和路径。留空会阻止访问内网目标。"
     },
     "privateCertificateAuthority": {
-      "label": "私网证书颁发机构（PEM）",
-      "description": "可选的可信 CA 证书，仅用于白名单中的主机。仍会验证证书；留空使用系统信任库。"
+      "label": "私有证书颁发机构（PEM）",
+      "description": "可选的受信任 CA 证书包，用于允许列表中的主机。证书验证保持开启，留空则使用系统信任库。"
     }
+  },
+  "plugin": {
+    "name": "首页"
   }
 }

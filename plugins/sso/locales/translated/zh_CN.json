@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "使用 SSO 登录",
   "loginWithProvider": "使用{{name}}登录",
   "loading": "加载中...",
+  "permissions": {
+    "manage": {
+      "title": "管理 SSO 提供商",
+      "description": "添加、修改和移除可供用户登录的 SSO 提供商。"
+    }
+  },
   "providers": {
     "docsLink": "查看文档",
     "none": "未配置 SSO 提供商。",
@@ -9,6 +16,8 @@
     "delete": "删除提供商",
     "deleteConfirm": "删除此提供商？关联用户将无法登录。",
     "name": "显示名称",
+    "namePlaceholder": "我的 SSO 提供商",
+    "nameRequired": "必须填写显示名称",
     "type": "提供商类型",
     "enabled": "已启用",
     "save": "保存提供商",
@@ -17,11 +26,20 @@
     "saveFailed": "保存失败",
     "deleted": "已删除",
     "deleteFailed": "删除失败",
-    "cancel": "取消"
+    "loadFailed": "加载 SSO 提供商失败",
+    "cancel": "取消",
+    "copy": "复制",
+    "copied": "已复制",
+    "redirectUri": "重定向 URI",
+    "redirectUriDesc": "在身份提供商处将此 URL 登记为重定向或回调 URL。",
+    "legacyCallback": "保留旧版重定向 URI",
+    "legacyCallbackDesc": "此提供商在 Termix 2.9 之前配置，仍使用可正常工作的旧重定向 URI。如需迁移，请先在身份提供商处添加 {{uri}}，再关闭此选项。",
+    "authorizationUrl": "授权 URL：{{url}}"
   },
   "fields": {
     "clientId": "客户端 ID",
     "clientSecret": "客户端密钥",
+    "secretKeep": "已保存机密值，留空可保留现有值。",
     "issuerUrl": "颁发者 URL",
     "authUrl": "授权 URL",
     "tokenUrl": "令牌 URL",
@@ -37,5 +55,14 @@
     "adminGroupDesc": "此组的用户将被授予管理员权限。留空可禁用组同步。",
     "caCert": "自定义 CA 证书",
     "caCertDesc": "可选。PEM 编码的 CA 证书，用于使用私有或自签名 CA 的 OIDC 提供商。留空则使用系统信任存储。"
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "自动使用 SSO 登录",
+      "description": "将访客直接跳转到第一个 SSO 提供商，而不显示登录表单。OIDC_SILENT_LOGIN_DEFAULT 环境变量会覆盖此设置。"
+    }
+  },
+  "plugin": {
+    "name": "单点登录"
   }
 }

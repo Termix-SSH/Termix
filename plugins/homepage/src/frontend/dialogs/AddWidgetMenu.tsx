@@ -140,14 +140,18 @@ export function AddWidgetMenu({ state, onAdd, onClose }: AddWidgetMenuProps) {
                   {type.labelComponent ? (
                     <type.labelComponent part="name" />
                   ) : (
-                    type.name
+                    t(`homepage.widgets.${type.id}.name`, {
+                      defaultValue: type.name,
+                    })
                   )}
                 </span>
                 <span className="text-[10px] text-muted-foreground truncate">
                   {type.labelComponent ? (
                     <type.labelComponent part="description" />
                   ) : (
-                    type.description
+                    t(`homepage.widgets.${type.id}.description`, {
+                      defaultValue: type.description,
+                    })
                   )}
                 </span>
               </div>

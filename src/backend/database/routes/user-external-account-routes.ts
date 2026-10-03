@@ -21,6 +21,30 @@ function isNonEmptyString(val: unknown): val is string {
 }
 
 /**
+ * 2.9.0 could not match a 2.8 OIDC account to its provider and made a second
+ * account on first sign-in. The original keeps only its "legacy-oidc" link
+ * with the same subject, so the duplicate may be merged back into it even
+ * though it has no password.
+ */
+async function isLegacyDuplicate(
+  externalUserId: string,
+  targetLinks: Array<{ providerId: string; subject: string }>,
+): Promise<boolean> {
+  if (targetLinks.length === 0) return false;
+  const sourceSubjects = new Set(
+    (
+      await createCurrentUserAuthRepository().listIdentitiesForUser(
+        externalUserId,
+      )
+    ).map((link) => link.subject),
+  );
+  return targetLinks.every(
+    (link) =>
+      link.providerId === "legacy-oidc" && sourceSubjects.has(link.subject),
+  );
+}
+
+/**
  * Merging an account that only signs in externally (SSO, LDAP or any login
  * plugin) into a password account, and taking the external sign-in away
  * again. The identities themselves live in user_external_identities.
@@ -34,7 +58,7 @@ export function registerUserExternalAccountRoutes(
    * /users/link-external-to-password:
    *   post:
    *     summary: Merge an external account into a password account
-   *     description: Moves an external-only account's sign-in identities onto a password account and deletes the external-only account (admin only). The 2.8 path /users/link-oidc-to-password and its oidcUserId field are accepted too.
+   *     description: Moves an external-only account's sign-in identities onto a password account and deletes the external-only account (admin only). A 2.8 SSO account whose only sign-in is the matching legacy OIDC link is accepted as the target too, to merge a duplicate made by 2.9.0. The 2.8 path /users/link-oidc-to-password and its oidcUserId field are accepted too.
    *     tags:
    *       - Users
    *     requestBody:
@@ -98,15 +122,18 @@ export function registerUserExternalAccountRoutes(
           .status(404)
           .json({ error: "Target password user not found" });
       }
-      if (isExternalAccount(targetUser) || !targetUser.passwordHash) {
-        return res.status(400).json({
-          error: "Target user must be a password-based account",
-        });
-      }
-      if ((await identities.listIdentitiesForUser(targetUser.id)).length > 0) {
-        return res.status(400).json({
-          error: "Target user already has an external sign-in",
-        });
+      const targetLinks = await identities.listIdentitiesForUser(targetUser.id);
+      if (!(await isLegacyDuplicate(externalUserId, targetLinks))) {
+        if (isExternalAccount(targetUser) || !targetUser.passwordHash) {
+          return res.status(400).json({
+            error: "Target user must be a password-based account",
+          });
+        }
+        if (targetLinks.length > 0) {
+          return res.status(400).json({
+            error: "Target user already has an external sign-in",
+          });
+        }
       }
 
       authLogger.info("Linking an external account to a password account", {
@@ -118,7 +145,8 @@ export function registerUserExternalAccountRoutes(
 
       await userRepository.update(targetUser.id, {
         isOidc: true,
-        oidcIdentifier: externalUser.oidcIdentifier,
+        oidcIdentifier:
+          externalUser.oidcIdentifier ?? targetUser.oidcIdentifier,
       });
       await identities.moveIdentities(externalUserId, targetUser.id);
 

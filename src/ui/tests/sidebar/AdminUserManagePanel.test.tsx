@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { AdminUserManagePanel } from "../../sidebar/AdminUserManagePanel";
@@ -71,7 +71,20 @@ function renderPanel(
   );
 }
 
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
 beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   for (const fn of Object.values(api)) fn.mockClear();
 });
 

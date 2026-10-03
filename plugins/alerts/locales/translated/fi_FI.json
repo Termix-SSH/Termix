@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Hälytykset"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä hälytyksiä",
+      "description": "Saat hälytyksiä sähköpostiisi ja voit lähettää niitä omiin kanaviisi."
+    }
+  },
+  "onboarding": {
+    "feature": "Hälytykset",
+    "featureDesc": "Jokainen ilmoitus yhdessä postilaatikossa, lähetettynä Discordiin, ntfyyn, sähköpostiin tai webhookiin, jos haluat."
+  },
+  "settings": {
+    "group": {
+      "general": "Yleistä",
+      "email": "Sähköposti"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix-ilmoitukset",
+        "description": "Näytä Termix-tiimin uutiset, kuten tietoturvailmoitukset ja julkaisut, kaikkien postilaatikossa."
+      },
+      "retentionDays": {
+        "label": "Säilytä hälytykset (päivää)",
+        "description": "Vanhemmat ilmoitukset poistetaan kaikista postilaatikoista."
+      },
+      "smtpHost": {
+        "label": "SMTP-palvelin",
+        "description": "Tarvitaan sähköpostikanaville. Jätä tyhjäksi poistaaksesi sähköpostin käytöstä.",
+        "placeholder": "smtp.esimerkki.com"
+      },
+      "smtpPort": {
+        "label": "SMTP-portti",
+        "description": "Yleensä 587 STARTTLS:n kanssa tai 465 TLS:n kanssa."
+      },
+      "smtpSecure": {
+        "label": "Käytä TLS:ää alusta alkaen",
+        "description": "Ota käyttöön portissa 465. Jätä pois käytöstä portissa 587, joka päivittää TLS:ään automaattisesti."
+      },
+      "smtpUser": {
+        "label": "SMTP-käyttäjätunnus",
+        "description": "Jätä tyhjäksi, jos palvelin ei vaadi kirjautumista."
+      },
+      "smtpPassword": {
+        "label": "SMTP-salasana",
+        "description": "Tallennettu salattuna."
+      },
+      "smtpFrom": {
+        "label": "Lähettäjän osoite",
+        "description": "Lähettäjän hälytykset tulevat.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Hälytysikkunat",
+        "description": "Mitkä uudet hälytykset ilmestyvät Termixin käytön aikana? Ne päätyvät aina postilaatikkoon.",
+        "all": "Kaikki hälytykset",
+        "warning": "Varoitukset ja kriittiset",
+        "critical": "Vain kriittiset",
+        "off": "Ei mitään"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Saapuneet",
+    "channels": "Kanavat",
+    "rules": "Toimitussäännöt"
+  },
+  "severity": {
+    "info": "Tiedot",
+    "success": "Menestys",
+    "warning": "Varoitus",
+    "critical": "Kriittinen"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Avata",
+    "view": "Näytä",
+    "unread": "Lukematon",
+    "deliveryFailed_one": "{{count}} kanava epäonnistui",
+    "deliveryFailed_other": "{{count}} kanavat epäonnistuivat",
+    "markRead": "Merkitse luetuksi",
+    "markUnread": "Merkitse lukemattomaksi",
+    "markAllRead": "Merkitse kaikki luetuiksi",
+    "delete": "Poistaa",
+    "clearRead": "Poista lukuilmoitukset",
+    "cleared_one": "Poistettu {{count}} -hälytys",
+    "cleared_other": "Poistetut {{count}} hälytykset",
+    "filterAll": "Kaikki",
+    "filterUnread": "Lukematon",
+    "anySeverity": "Mikä tahansa vakavuusaste",
+    "anySource": "Mikä tahansa lähde",
+    "openAll": "Avaa välilehdessä",
+    "empty": "Ei vielä hälytyksiä.",
+    "emptyUnread": "Olette kaikki kärryillä.",
+    "loadMore": "Lataa lisää"
+  },
+  "channels": {
+    "intro": "Kanavat ovat kanavia, joihin hälytykset voivat mennä Termixin ulkopuolelle. Toimitussäännöt valitsevat, mitkä hälytykset niitä käyttävät.",
+    "add": "Lisää kanava",
+    "edit": "Muokkaa kanavaa",
+    "test": "Lähetä testi",
+    "testSent": "Testihälytys lähetetty",
+    "testFailed": "Testi epäonnistui: {{error}}",
+    "deleteConfirm": "Poistetaanko kanava \"{{name}}\"?",
+    "deleted": "Kanava poistettu",
+    "empty": "Ei vielä kanavia.",
+    "enabled": "Käytössä",
+    "needsSave": "Tämä kanava on avattava ja tallennettava uudelleen ennen kuin se voi lähettää.",
+    "name": "Nimi",
+    "nameRequired": "Nimi on pakollinen",
+    "type": "Tyyppi",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Eripura",
+      "email": "Sähköposti"
+    },
+    "emailUnavailable": "Sähköposti tarvitsee SMTP-palvelimen, jonka järjestelmänvalvoja määrittää hälytysasetuksissa.",
+    "webhookUrl": "URL-osoite",
+    "webhookHint": "Hakee JSON-rungon jokaiselle hälytykselle.",
+    "method": "Menetelmä",
+    "headers": "Ylätunnisteet",
+    "headersHint": "Yksi riviä kohden, kuten Nimi: arvo.",
+    "ntfyServer": "Palvelimen URL-osoite",
+    "ntfyTopic": "Aihe",
+    "ntfyToken": "Käyttöoikeustunnus (valinnainen)",
+    "discordUrl": "Discord-webhookin URL-osoite",
+    "discordHint": "Kanavan asetuksista Discordissa, Integraatiot-kohdasta.",
+    "discordUsername": "Näyttönimi (valinnainen)",
+    "discordAvatar": "Avatarin URL-osoite (valinnainen)",
+    "emailTo": "Lähetä osoitteeseen",
+    "emailHint": "Erota useampi kuin yksi osoite pilkulla.",
+    "privateNetwork": "Salli yksityinen verkko-osoite",
+    "privateNetworkHint": "Toimii vain isännille, jotka ylläpitäjä sallii yksityisten päätepisteiden luettelossa."
+  },
+  "rules": {
+    "intro": "Toimitussääntö lähettää vastaavat hälytykset kanavillesi. Hälytykset pysyvät aina myös postilaatikossasi.",
+    "add": "Lisää sääntö",
+    "edit": "Muokkaa sääntöä",
+    "empty": "Ei vielä sääntöjä, joten hälytykset näkyvät vain postilaatikossa.",
+    "needChannel": "Lisää ensin kanava.",
+    "enabled": "Käytössä",
+    "name": "Nimi",
+    "nameRequired": "Nimi on pakollinen",
+    "match": "Lähetettävät hälytykset",
+    "matchHint": "* kaikkeen, automaatiot.* kaikkeen automaatioista alkaen tai tietynlaiseen.",
+    "minSeverity": "Vähintään",
+    "channels": "Lähetä osoitteeseen",
+    "channelRequired": "Valitse ainakin yksi kanava",
+    "deleteConfirm": "Poistetaanko sääntö \"{{name}}\"?",
+    "everything": "Kaikki",
+    "summary": "{{match}}, {{severity}} tai korkeampi, arvoon {{channels}}"
+  },
+  "actions": {
+    "cancel": "Peruuttaa",
+    "save": "Tallentaa",
+    "saving": "Tallennetaan...",
+    "delete": "Poistaa"
+  },
+  "widget": {
+    "name": "Hälytyssyöte",
+    "description": "Uusimmat ilmoituksesi ja nopea tapa merkitä ne luetuiksi",
+    "maxItems": "Enimmäismäärä esineitä",
+    "showRead": "Näytä lukuilmoitukset",
+    "allClear": "Kaikki selvää",
+    "loading": "Ladataan..."
+  }
+}

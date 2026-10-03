@@ -1,38 +1,69 @@
 {
   "editor": {
-    "profile": "Profil for hvelvsigner",
-    "selectProfile": "Velg en Vault-profil...",
-    "hint": "Innstillingene kommer fra den delte profilen. Du logger deg på Vault via OIDC når du kobler til. Ingen hemmeligheter lagres.",
-    "docs": "Vis dokumenter"
+    "profile": "Vault Signer Profile",
+    "selectProfile": "Select a Vault profile...",
+    "hint": "Settings come from the shared profile; you'll sign in to Vault via OIDC when you connect. No secrets are stored.",
+    "docs": "View docs",
+    "sharedProfile": "{{name}} (shared)"
   },
   "profiles": {
-    "new": "Ny profil",
-    "manage": "Administrer Vault-profiler",
-    "name": "Vennlig navn",
-    "vaultAddr": "Hvelvadresse",
-    "namespace": "Navnerom",
-    "oidcMount": "OIDC-autentiseringsmontering",
-    "oidcRole": "OIDC-rolle",
-    "sshMount": "SSH-hemmeligheter monteres",
-    "sshRole": "SSH-signatørrolle",
-    "validPrincipals": "Gyldige prinsipaler",
-    "keyType": "Kortvarig nøkkeltype",
-    "shareWithAll": "Del med alle brukere",
-    "create": "Opprett profil",
-    "created": "Vault-profil opprettet",
-    "saved": "Vault-profilen er lagret",
-    "deleted": "Vault-profilen er slettet",
-    "saveFailed": "Kunne ikke lagre Vault-profilen",
-    "deleteFailed": "Kunne ikke slette Vault-profilen",
-    "save": "Lagre profil",
-    "validationError": "Navn, hvelvadresse og SSH-signerrolle er obligatorisk",
-    "none": "Ingen Vault-profiler ennå.",
-    "sharedBadge": "delt"
+    "new": "New profile",
+    "manage": "Manage Vault profiles",
+    "name": "Friendly Name",
+    "vaultAddr": "Vault Address",
+    "namespace": "Namespace",
+    "oidcMount": "OIDC Auth Mount",
+    "oidcRole": "OIDC Role",
+    "sshMount": "SSH Secrets Mount",
+    "sshRole": "SSH Signer Role",
+    "validPrincipals": "Valid Principals",
+    "keyType": "Ephemeral Key Type",
+    "shareWithAll": "Share with all users",
+    "create": "Create profile",
+    "created": "Vault profile created",
+    "saved": "Vault profile saved",
+    "deleted": "Vault profile deleted",
+    "saveFailed": "Failed to save Vault profile",
+    "deleteFailed": "Failed to delete Vault profile",
+    "save": "Save profile",
+    "validationError": "Name, Vault address and SSH signer role are required",
+    "none": "No Vault profiles yet.",
+    "sharedBadge": "shared",
+    "edit": "Rediger",
+    "delete": "Slett"
+  },
+  "hosts": {
+    "filterAuthVault": "Vault"
   },
   "dialog": {
-    "title": "Pålogging til arkivet kreves",
-    "description": "Et vindu har åpnet seg for å logge på HashiCorp Vault. Fullfør påloggingen der; denne tilkoblingen vil fortsette automatisk.",
-    "failed": "Hvelv-autentisering mislyktes. Prøv på nytt.",
-    "reopen": "Åpne påloggingsvinduet på nytt"
+    "title": "Vault sign-in required",
+    "description": "A window has opened to sign in to HashiCorp Vault. Complete the sign-in there; this connection will continue automatically.",
+    "failed": "Vault authentication failed. Please try again.",
+    "reopen": "Reopen sign-in window"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Vault SSH signing",
+      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+    },
+    "share": {
+      "title": "Share Vault profiles",
+      "description": "Mark a Vault signer profile as shared so every user can pick it."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+    },
+    "host": {
+      "profileId": {
+        "label": "Vault signer profile"
+      }
+    }
   }
 }

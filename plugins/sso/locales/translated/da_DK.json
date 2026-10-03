@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Log ind med SSO",
   "loginWithProvider": "Log ind med {{name}}",
   "loading": "Indlæser...",
+  "permissions": {
+    "manage": {
+      "title": "Administrer SSO-udbydere",
+      "description": "Tilføj, rediger og fjern de SSO-udbydere, som folk kan logge ind med."
+    }
+  },
   "providers": {
     "docsLink": "Se dokumenter",
     "none": "Ingen SSO-udbydere er konfigureret.",
@@ -9,6 +16,8 @@
     "delete": "Slet udbyder",
     "deleteConfirm": "Vil du slette denne udbyder? Tilknyttede brugere vil ikke kunne logge ind.",
     "name": "Vist navn",
+    "namePlaceholder": "Min SSO-udbyder",
+    "nameRequired": "Et visningsnavn er påkrævet",
     "type": "Udbydertype",
     "enabled": "Aktiveret",
     "save": "Gem udbyder",
@@ -17,11 +26,20 @@
     "saveFailed": "Kunne ikke gemme",
     "deleted": "Slettet",
     "deleteFailed": "Kunne ikke slette",
-    "cancel": "Ophæve"
+    "loadFailed": "Kunne ikke indlæse SSO-udbydere",
+    "cancel": "Ophæve",
+    "copy": "Kopi",
+    "copied": "Kopieret",
+    "redirectUri": "Omdirigerings-URI",
+    "redirectUriDesc": "Registrer denne URL som omdirigerings- eller tilbagekalds-URL i din identitetsudbyder.",
+    "legacyCallback": "Behold den gamle omdirigerings-URI",
+    "legacyCallbackDesc": "Denne udbyder blev oprettet før Termix 2.9 og bruger stadig den gamle omdirigerings-URI, som fortsat fungerer. For at skifte til den nye skal du først tilføje {{uri}} i din identitetsudbyder og derefter slå dette fra.",
+    "authorizationUrl": "Autorisations-URL: {{url}}"
   },
   "fields": {
     "clientId": "Klient-ID",
     "clientSecret": "Klienthemmelighed",
+    "secretKeep": "En hemmelighed er gemt. Lad dette felt være tomt for at beholde den.",
     "issuerUrl": "Udsteders URL",
     "authUrl": "Autorisations-URL",
     "tokenUrl": "Token-URL",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Brugere i denne gruppe har administratorrettigheder. Lad feltet stå tomt for at deaktivere gruppesynkronisering.",
     "caCert": "Brugerdefineret CA-certifikat",
     "caCertDesc": "Valgfrit. PEM-kodet CA-certifikat til OIDC-udbydere, der bruger en privat eller selvsigneret CA. Lad feltet stå tomt for at bruge systemets tillidslager."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Log automatisk ind med SSO",
+      "description": "Send besøgende direkte til den første SSO-udbyder i stedet for at vise loginformularen. Miljøvariablen OIDC_SILENT_LOGIN_DEFAULT tilsidesætter dette."
+    }
   }
 }

@@ -25,15 +25,15 @@
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Không thể bật Auto-Tmux.",
-    "autoTmuxEnabled": "Tính năng Auto-Tmux đã được bật cho {{host}}. Tính năng này sẽ được áp dụng từ lần kết nối tiếp theo.",
-    "clipboardHttpWarning": "Không thể đọc nội dung clipboard. Một số trình duyệt hạn chế quyền truy cập clipboard khi không sử dụng HTTPS - hãy thử Ctrl+V hoặc sử dụng HTTPS để chạy Termix.",
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
     "closeTab": "Đóng",
     "connecting": "Đang kết nối...",
     "connectionLost": "Mất kết nối",
     "connectionRejected": "Kết nối bị máy chủ từ chối. Vui lòng kiểm tra xác thực và cấu hình mạng.",
     "connectionTimeout": "Hết thời gian kết nối",
-    "enableAutoTmuxAction": "Bật Auto-Tmux",
+    "enableAutoTmuxAction": "Kích hoạt Auto-Tmux",
     "hostKeyRejected": "Xác minh khóa máy chủ SSH bị từ chối. Đã hủy kết nối.",
     "linkDialogCopy": "Sao chép",
     "linkDialogOpen": "Mở",
@@ -44,17 +44,18 @@
     "reconnect": "Kết nối lại",
     "reconnected": "Đã kết nối lại thành công",
     "reconnecting": "Đang kết nối lại... ({{attempt}}/{{max}})",
-    "searchCaseSensitive": "Hộp diêm",
-    "searchClose": "Đóng (Thoát)",
-    "searchNext": "Trận đấu tiếp theo (Nhập)",
-    "searchNoResults": "Không có kết quả",
-    "searchPlaceholder": "Tìm thấy",
-    "searchPrevious": "Kết quả khớp trước đó (Shift+Enter)",
-    "searchRegex": "Sử dụng biểu thức chính quy",
-    "searchResultCount": "{{index}} của {{count}}",
-    "searchWholeWord": "Ghép toàn bộ từ",
-    "sessionExpiredNotice": "Phiên làm việc trước của bạn trên {{host}} đã hết hạn sau {{minutes}} phút bị ngắt kết nối; shell và mọi thứ đang chạy trong đó đều đã biến mất. Hãy bật Auto-Tmux trên máy chủ này để duy trì các phiên làm việc.",
-    "sessionExpiredNoticeNoMinutes": "Phiên làm việc trước của bạn trên {{host}} đã hết hạn khi bị ngắt kết nối; shell và mọi thứ đang chạy trong đó đều đã biến mất. Hãy bật Auto-Tmux trên máy chủ này để duy trì các phiên làm việc.",
+    "autoReconnecting": "Connection lost, reconnecting...",
+    "searchCaseSensitive": "Match Case",
+    "searchClose": "Close (Escape)",
+    "searchNext": "Next Match (Enter)",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "Find",
+    "searchPrevious": "Previous Match (Shift+Enter)",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "Match Whole Word",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
     "sessionTakenOver": "Phiên đã được mở trong tab khác. Đang kết nối lại...",
     "tmuxAttached": "Các máy khách đã gắn kết",
     "tmuxAttachedCount": "{{count}} đã gắn kết",
@@ -79,27 +80,36 @@
     "clipboardReadFailed": "Đọc từ clipboard thất bại. Đảm bảo quyền truy cập clipboard đã được cấp.",
     "clipboardWriteFailed": "Sao chép vào clipboard thất bại. Đảm bảo trang được phục vụ qua HTTPS hoặc localhost.",
     "connected": "Đã kết nối",
-    "totpCodeLabel": "Mã xác minh"
+    "totpCodeLabel": "Mã xác minh",
+    "duplicateTab": "Duplicate tab",
+    "imageChooseFile": "Choose an image file",
+    "imageUploaded": "Image uploaded: {{path}}",
+    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
+    "imageClipboardEmpty": "No image found in the clipboard",
+    "localShell": "Local terminal shell",
+    "autocompleteHintComplete": "Tab or Enter to complete",
+    "autocompleteHintNavigate": "↑↓ to navigate",
+    "autocompleteHintClose": "Esc to close"
   },
   "terminalToolbar": {
-    "detachTmux": "Tách tmux",
-    "detachTmuxDescription": "Tách phiên tmux",
-    "dismissError": "Bỏ qua lỗi hình ảnh",
-    "hideToolbar": "Ẩn thanh công cụ",
-    "image": "Thao tác với hình ảnh (chỉ áp dụng cho hình ảnh)",
-    "imageActionFailed": "Thao tác xử lý hình ảnh thất bại",
-    "layout": "Chế độ hiển thị thanh công cụ",
-    "layoutExpanded": "Đã mở rộng với các số liệu",
-    "layoutIcon": "Chỉ có biểu tượng",
-    "layoutLabeled": "Biểu tượng và nhãn",
-    "moveToolbar": "Di chuyển thanh công cụ",
-    "moveToolbarHint": "Kéo để định vị lại thanh công cụ",
-    "paste": "Dán hình ảnh",
-    "pasteImage": "Dán hình ảnh từ clipboard (chỉ áp dụng cho hình ảnh)",
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
     "retry": "Thử lại",
     "showToolbar": "Mở rộng thanh công cụ",
-    "upload": "Tải ảnh lên",
-    "uploadImage": "Tải ảnh lên máy chủ",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
     "uploadingImage": "Đang tải lên..."
   },
   "history": {
@@ -108,131 +118,312 @@
     "searchPlaceholder": "Tìm kiếm lịch sử...",
     "clearAll": "Xóa tất cả",
     "noHistoryEntries": "Không có mục lịch sử",
-    "trackingDisabled": "Tính năng ghi lịch sử đã bị tắt"
+    "trackingDisabled": "Tính năng ghi lịch sử đã bị tắt",
+    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
   },
   "touchInput": {
-    "enabled": "Cho phép nhập liệu cảm ứng",
-    "enabledDesc": "Cho phép cuộn bằng một ngón tay trong cửa sổ dòng lệnh.",
-    "momentumEnabled": "Tạo đà",
-    "momentumEnabledDesc": "Tiếp tục cuộn xuống một chút sau khi vuốt.",
-    "advanced": "Trình độ cao",
-    "resetDefaults": "Khôi phục về cài đặt mặc định",
-    "dragThreshold": "Ngưỡng kéo",
-    "maxWheelDelta": "Chênh lệch bánh xe tối đa",
-    "momentumSampleWindow": "Cửa sổ mẫu động lượng",
-    "releaseGracePeriod": "thời gian ân hạn thả",
-    "minimumVelocity": "Vận tốc tối thiểu",
-    "maximumVelocity": "Vận tốc tối đa",
-    "maximumDuration": "Thời gian tối đa",
-    "maximumTravel": "Hành trình tối đa",
-    "decayTime": "Thời gian phân rã",
-    "pixelsPerTick": "Số pixel trên mỗi tick",
-    "maximumFrameInterval": "Khoảng thời gian khung hình tối đa",
-    "maximumTicksPerFrame": "Số tick tối đa mỗi khung hình"
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "Advanced",
+    "resetDefaults": "Đặt lại mặc định",
+    "dragThreshold": "Drag threshold",
+    "maxWheelDelta": "Maximum wheel delta",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "Release grace period",
+    "minimumVelocity": "Minimum velocity",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "Maximum ticks per frame"
   },
   "imageStorage": {
-    "instanceId": "ID phiên bản phiên thiết bị đầu cuối",
-    "instanceIdDesc": "ID phiên bản của một trong các tab thiết bị đầu cuối được kết nối của bạn, được sử dụng để kiểm tra khả năng hiển thị.",
-    "selectedModeUnavailable": "Không khả dụng",
-    "test": "Bài kiểm tra",
-    "testing": "Đang thử nghiệm...",
-    "testFailed": "Không thể kiểm tra lưu trữ hình ảnh",
-    "testConnected": "Phiên kết nối terminal đã được thiết lập.",
-    "testNotConnected": "Không có phiên làm việc thiết bị đầu cuối nào được kết nối với ID phiên bản này.",
-    "testSelectedMode": "Quá trình tải lên sẽ sử dụng: {{mode}}",
-    "testLocalVisible": "Thư mục cục bộ có thể được nhìn thấy từ máy chủ được kết nối.",
-    "testLocalNotVisible": "Thư mục cục bộ KHÔNG hiển thị từ máy chủ được kết nối."
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
+    "selectedModeUnavailable": "Unavailable",
+    "test": "Kiểm tra",
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "An upload would use: {{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Nhập liệu cảm ứng",
-        "images": "Lưu trữ hình ảnh"
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "Phiên",
+        "newHosts": "New Hosts"
       },
       "sessionTimeoutMinutes": {
-        "label": "Duy trì phiên đầu cuối",
-        "description": "Thời gian duy trì kết nối của một thiết bị đầu cuối bị ngắt kết nối trên máy chủ trước khi nó bị đóng. Tối thiểu 1 phút · Tối đa 1440 phút. Đối với các phiên cần duy trì lâu hơn thời gian này, hãy bật Auto-Tmux trên máy chủ."
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
       },
       "commandHistoryEnabled": {
         "label": "Lịch sử lệnh",
         "description": "Cho phép ghi lịch sử lệnh. Khi tắt, lịch sử sẽ không được lưu bất kể cài đặt từng máy chủ."
       },
+      "commandHistoryForNewHosts": {
+        "label": "Command history for new hosts",
+        "description": "Whether new hosts start with command history on."
+      },
       "imageStorageMode": {
-        "label": "Chế độ lưu trữ",
-        "description": "Nơi hiển thị hình ảnh từ thiết bị đầu cuối được dán và tải lên. Chức năng tự động chọn theo kết nối, cục bộ và từ xa (SFTP) được cố định.",
-        "auto": "Tự động",
-        "local": "Địa phương",
-        "remoteSftp": "Từ xa (SFTP)"
+        "label": "Storage Mode",
+        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "auto": "Tự động",
+        "local": "Cục bộ",
+        "remoteSftp": "Remote (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Thư mục cục bộ"
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Đường dẫn máy chủ",
-        "description": "Đây là giao diện phía máy chủ của thư mục cục bộ mà các tác nhân đầu cuối nhận được."
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)"
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
       },
       "imageMaxCount": {
-        "label": "Số lượng ảnh tối đa"
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
       },
       "imageMaxBytes": {
-        "label": "Số byte lưu trữ tối đa"
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Chạy các cửa sổ terminal của máy chủ mới bên trong tmux để đảm bảo phiên làm việc vẫn hoạt động sau khi ngắt kết nối (cần cài đặt tmux trên máy chủ)."
+        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+      },
+      "newHostTheme": {
+        "label": "Theme for new hosts",
+        "description": "The terminal theme a new host starts with."
+      },
+      "newHostFontFamily": {
+        "label": "Font for new hosts",
+        "description": "The terminal font a new host starts with."
+      },
+      "newHostFontSize": {
+        "label": "Font size for new hosts",
+        "description": "The terminal font size a new host starts with, in pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Cursor style for new hosts"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinking cursor for new hosts"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Kích hoạt thanh công cụ Terminal",
-        "description": "Hiển thị thanh công cụ truy cập nhanh được gắn vào cửa sổ terminal đang hoạt động để xem các công cụ và số liệu thống kê trực tiếp của máy chủ này."
+        "label": "Enable Terminal Toolbar",
+        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+      },
+      "terminalToolbarPosition": {
+        "label": "Toolbar Position",
+        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
+        "bottom": "Bottom center",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right",
+        "top": "Top center",
+        "topLeft": "Top left",
+        "topRight": "Top right"
+      },
+      "terminalToolbarStartState": {
+        "label": "Toolbar Start State",
+        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
+        "expanded": "Expanded",
+        "collapsed": "Minimized"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Toolbar Display Mode",
+        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
+        "remember": "Last used",
+        "icon": "Icon only",
+        "labeled": "Icons and labels",
+        "expanded": "Expanded with stats"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Show Live Stats",
+        "description": "Show live host stats above the toolbar buttons in expanded mode"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade When Idle",
+        "description": "Fade the toolbar out until you hover over it"
       },
       "enableCommandHistory": {
         "label": "Lịch sử lệnh",
         "description": "Ghi lại các lệnh chạy trong terminal này để dùng cho lịch sử và tự động hoàn thành"
       },
       "enableTerminal": {
-        "label": "Bật Terminal"
+        "label": "Bật Terminal",
+        "description": "Offer an SSH terminal for this host."
+      },
+      "inheritAppearance": {
+        "label": "Use user defaults"
+      },
+      "theme": {
+        "label": "Giao diện"
+      },
+      "cursorBlink": {
+        "label": "Blinking cursor"
+      },
+      "cursorStyle": {
+        "label": "Cursor style"
+      },
+      "fontSize": {
+        "label": "Font size"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Scrollback"
+      },
+      "letterSpacing": {
+        "label": "Letter spacing"
+      },
+      "lineHeight": {
+        "label": "Line height"
+      },
+      "bellStyle": {
+        "label": "Bell"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum contrast ratio"
+      },
+      "backgroundImage": {
+        "label": "Background image"
+      },
+      "backgroundImageOpacity": {
+        "label": "Background image opacity"
+      },
+      "customThemeColors": {
+        "label": "Custom theme colors"
+      },
+      "rightClickSelectsWord": {
+        "label": "Right click selects word"
+      },
+      "macOptionIsMeta": {
+        "label": "Option is Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Fast scroll key"
+      },
+      "fastScrollSensitivity": {
+        "label": "Fast scroll speed"
+      },
+      "backspaceMode": {
+        "label": "Backspace"
+      },
+      "autoMosh": {
+        "label": "Auto mosh"
+      },
+      "moshCommand": {
+        "label": "Mosh command"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Use the SSH title"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntax highlighting"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntax highlighting categories"
+      },
+      "linkClickBehavior": {
+        "label": "Link click"
+      },
+      "localEcho": {
+        "label": "Local echo"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Offer to fill password prompts"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Fill sudo prompts"
+      },
+      "autoReconnect": {
+        "label": "Reconnect automatically"
       }
     },
     "user": {
       "commandAutocomplete": {
         "label": "Tự động hoàn thành lệnh",
-        "description": "Hiển thị tính năng tự động hoàn thành khi gõ nếu bạn nhấn phím Tab"
+        "description": "Show autocomplete while typing if you press tab"
       },
       "localEcho": {
-        "label": "Tiếng vọng địa phương",
-        "description": "Giảm độ trễ đầu vào cảm nhận được bằng cách sử dụng tính năng dự đoán thao tác gõ phím cục bộ an toàn."
+        "label": "Local Echo",
+        "description": "Reduce perceived input latency using safe local keystroke prediction"
       },
       "linkClickBehavior": {
         "label": "Hành vi khi nhấp liên kết trong Terminal",
         "description": "Hành vi mặc định khi nhấp vào liên kết trong terminal"
+      },
+      "customThemes": {
+        "label": "Saved themes"
       }
     }
   },
   "palette": {
-    "localTerminal": "Ga địa phương"
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
   },
   "hosts": {
+    "tabTerminal": "Terminal",
     "addHost": "Thêm máy chủ",
-    "applyGlobalThemeTooltip": "Áp dụng chủ đề này",
+    "applyGlobalThemeTooltip": "Apply this theme",
     "backgroundImageDesc": "URL tùy chọn cho ảnh nền terminal",
     "backgroundImageLabel": "URL ảnh nền",
     "backgroundImageOpacityLabel": "Độ mờ ảnh nền",
     "backspaceMode": "Chế độ Backspace",
+    "backspaceModeControlH": "Control-H (BS)",
     "backspaceModeLabel": "Chế độ Backspace",
+    "backspaceModeNormal": "Normal (DEL)",
     "behaviorAndAdvanced": "Hành vi & Nâng cao",
     "bellStyle": "Kiểu chuông",
+    "bellStyleBoth": "Both",
     "bellStyleLabel": "Kiểu chuông",
+    "bellStyleNone": "Không chọn",
+    "bellStyleSound": "Sound",
+    "bellStyleVisual": "Visual",
     "colorTheme": "Chủ đề màu",
     "cursorBlink": "Con trỏ nhấp nháy",
     "cursorBlinking": "Nhấp nháy con trỏ",
     "cursorBlinkingDesc": "Bật hiệu ứng nhấp nháy cho con trỏ terminal",
     "cursorStyle": "Kiểu con trỏ",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Block",
     "cursorStyleLabel": "Kiểu con trỏ",
+    "cursorStyleUnderline": "Underline",
     "customThemeAnsiColors": "Màu ANSI",
     "customThemeBackground": "Nền",
     "customThemeBlack": "Đen",
@@ -257,20 +448,23 @@
     "customThemeSelection": "Vùng chọn",
     "customThemeWhite": "Trắng",
     "customThemeYellow": "Vàng",
-    "deleteGlobalThemeTooltip": "Xóa chủ đề này",
+    "deleteGlobalThemeTooltip": "Delete this theme",
     "docsLink": "Xem tài liệu",
     "enableAutoMosh": "Kích hoạt Auto-Mosh",
     "enableAutoMoshDesc": "Ưu tiên Mosh hơn SSH nếu có",
     "enableAutoTmux": "Kích hoạt Auto-Tmux",
-    "enableAutoTmuxDesc": "Giữ cho shell và mọi thứ đang chạy trong đó hoạt động bình thường ngay cả khi bị ngắt kết nối hoặc khởi động lại trình duyệt bằng cách chạy bên trong tmux (tmux phải được cài đặt trên máy chủ).",
+    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
     "fastScrollModifier": "Phím bổ trợ cuộn nhanh",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "Phím bổ trợ cuộn nhanh",
+    "fastScrollModifierShift": "Shift",
     "fastScrollSensitivity": "Độ nhạy cuộn nhanh",
     "fastScrollSensitivityLabel": "Độ nhạy cuộn nhanh",
     "fontFamily": "Phông chữ",
-    "fontFamilyCustomHint": "Chọn một phông chữ có sẵn hoặc chọn Tùy chỉnh và nhập chính xác tên của một phông chữ đã được cài đặt trên hệ thống của bạn (ví dụ: MesloLGS NF, Noto Sans Mono). Termix không thể cài đặt phông chữ cho bạn, hãy cài đặt nó trên hệ điều hành của bạn trước.",
-    "fontFamilyCustomOption": "Phong tục...",
-    "fontFamilyCustomPlaceholder": "Tên phông chữ chính xác, ví dụ: MesloLGS NF",
+    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
+    "fontFamilyCustomOption": "Custom...",
+    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
     "fontFamilyLabel": "Họ phông chữ",
     "fontSize": "Cỡ chữ",
     "fontSizeLabel": "Cỡ chữ",
@@ -280,31 +474,33 @@
     "lineHeight": "Chiều cao dòng",
     "lineHeightLabel": "Chiều cao dòng",
     "linkClickBehaviorConfirm": "Hiển thị popup để mở hoặc sao chép",
-    "linkClickBehaviorDefault": "Mặc định (tuân theo cài đặt ứng dụng)",
     "linkClickBehaviorDesc": "Điều khiển hành động khi nhấp liên kết trong terminal. Dùng 'Mặc định' để theo cài đặt cấp ứng dụng.",
     "linkClickBehaviorDirect": "Mở trực tiếp",
     "linkClickBehaviorLabel": "Hành vi nhấp liên kết",
     "loadingHost": "Đang tải máy chủ...",
-    "localEchoAuto": "Tự động",
-    "localEchoDefault": "Sử dụng cài đặt toàn cầu",
-    "localEchoDesc": "Dự đoán các thao tác gõ phím an toàn có thể in được cục bộ trên các kết nối chậm. Lời nhắc nhập mật khẩu và đầu vào điều khiển không bao giờ được hiển thị lại.",
-    "localEchoLabel": "Tiếng vọng địa phương",
+    "localEchoAuto": "Automatic",
+    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
+    "localEchoLabel": "Local Echo",
     "localEchoOff": "Tắt",
-    "localEchoOn": "Luôn bật",
-    "macOptionIsMetaLabel": "Phím Tùy chọn gửi dữ liệu meta",
-    "macOptionIsMetaShortDesc": "Tắt tính năng gõ các ký tự đặc biệt (như @ hoặc |) bằng phím Option/Alt trên macOS thay vì gửi dữ liệu Meta.",
+    "localEchoOn": "Always on",
+    "macOptionIsMetaLabel": "Option Key Sends Meta",
+    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
     "moshCommand": "Lệnh MOSH",
     "moshCommandLabel": "Lệnh Mosh",
-    "noSavedThemes": "Chưa có chủ đề nào được lưu.",
+    "noSavedThemes": "No saved themes yet",
     "none": "Không có",
+    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
+    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
+    "autoReconnectLabel": "Auto Reconnect",
+    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
     "rightClickSelectsWord": "Nhấp chuột phải chọn từ",
     "rightClickSelectsWordLabel": "Nhấp chuột phải chọn từ",
     "rightClickSelectsWordShortDesc": "Chọn từ dưới con trỏ khi nhấp chuột phải",
-    "saveAsGlobalTheme": "Lưu dưới dạng Chủ đề toàn cầu",
-    "saveGlobalThemeError": "Không thể lưu chủ đề",
-    "saveGlobalThemeNamePrompt": "Nhập tên cho chủ đề này",
-    "saveGlobalThemeSuccess": "Chủ đề đã được lưu",
-    "savedThemesLabel": "Chủ đề đã lưu",
+    "saveAsGlobalTheme": "Save as Global Theme",
+    "saveGlobalThemeError": "Failed to save theme",
+    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
+    "saveGlobalThemeSuccess": "Theme saved",
+    "savedThemesLabel": "Saved Themes",
     "scrollbackBufferLabel": "Bộ đệm cuộn ngược",
     "scrollbackMaxLines": "Số dòng tối đa được giữ trong lịch sử",
     "sudoPasswordAutoFill": "Tự động điền mật khẩu Sudo",
@@ -328,18 +524,50 @@
     "theme": "Chủ đề",
     "themePreview": "Xem trước chủ đề",
     "useSSHTitleDesc": "Cập nhật tiêu đề tab từ tiêu đề cửa sổ shell thay vì tên máy chủ",
-    "useSSHTitleLabel": "Sử dụng tiêu đề cửa sổ SSH"
+    "useSSHTitleLabel": "Sử dụng tiêu đề cửa sổ SSH",
+    "enableTunnel": "Bật Tunnel",
+    "enableFileManager": "Bật Trình Quản Lý Tệp",
+    "enableDocker": "Bật Docker",
+    "startupSnippet": "Đoạn mã khởi động",
+    "quickActions": "Thao tác nhanh",
+    "proxmoxLastSyncStatus": {
+      "success": "Thành công"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "rdpUrlCopied": "Đã sao chép URL RDP",
+    "vncUrlCopied": "Đã sao chép URL VNC",
+    "filterAuthStepca": "Step CA",
+    "guac": {
+      "noCredential": "Không có thông tin xác thực (thông tin trực tiếp bên dưới)",
+      "authTypeDirect": "Trực tiếp",
+      "authTypeCredential": "Thông tin xác thực",
+      "authTypeNone": "Không chọn",
+      "recordingPath": "Đường dẫn ghi",
+      "recordingName": "Tên bản ghi",
+      "saveHostFirst": "Lưu máy chủ trước.",
+      "sharingOptionsAfterSave": "Tùy chọn chia sẻ khả dụng sau khi máy chủ đã được lưu.",
+      "permissionLevel": "Mức quyền",
+      "typeHeader": "Loại",
+      "targetHeader": "Mục tiêu",
+      "permissionHeader": "Quyền",
+      "cancelBtn": "Hủy",
+      "savingBtn": "Đang lưu...",
+      "updateHostBtn": "Cập nhật máy chủ",
+      "addHostBtn": "Thêm máy chủ"
+    },
+    "filterAuthVault": "Vault"
   },
   "nav": {
     "history": "Lịch sử",
-    "localTerminal": "Ga địa phương",
+    "localTerminal": "Local Terminal",
     "sshTools": "Công cụ SSH",
     "terminal": "Terminal",
-    "macros": "Macro"
+    "macros": "Macros"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Nhập vào đây để phát tán thao tác phím...",
-    "copyOnSelect": "Sao chép văn bản đã chọn tự động",
+    "copyOnSelect": "Copy selected text automatically",
     "enableRightClickCopyPaste": "Bật sao chép/dán bằng chuột phải",
     "fillPassword": "Điền mật khẩu",
     "fillPasswordMissing": "Không có mật khẩu đã lưu cho {{count}} terminal đã chọn",
@@ -354,124 +582,124 @@
     "startRecording": "Bắt đầu ghi",
     "stopRecording": "Dừng ghi"
   },
-  "terminalDefaults": {
-    "clearAll": "Xóa tất cả",
-    "description": "Đặt các giá trị mà mọi máy chủ đều kế thừa trừ khi nó ghi đè lên các giá trị đó.",
-    "dialogDescription": "Các quy định này áp dụng cho các máy chủ không thiết lập bất kỳ cài đặt nào. Bất kỳ cài đặt nào được thiết lập trên máy chủ đều sẽ được ưu tiên.",
-    "inherit": "Kế thừa",
-    "manage": "Quản lý",
-    "off": "Tắt",
-    "on": "TRÊN",
-    "title": "Cài đặt mặc định kết nối"
-  },
   "keybindings": {
-    "copy": "Sao chép lựa chọn",
+    "copy": "Copy selection",
     "paste": "Dán",
-    "sendControlCode": "Gửi tín hiệu Ctrl+chữ cái",
-    "sendText": "Gửi tin nhắn",
-    "controlCodeLabel": "Thư",
-    "textLabel": "Văn bản để gửi",
-    "appendEnterLabel": "Nhấn Enter sau khi gửi",
-    "clipboardPermissionNote": "Một số trình duyệt có thể yêu cầu quyền truy cập clipboard khi sử dụng lần đầu.",
-    "textRequired": "Nhập văn bản cần gửi",
-    "controlCodeRequired": "Nhập một chữ cái duy nhất cho mã điều khiển."
+    "sendControlCode": "Send Ctrl+letter signal",
+    "sendText": "Send text",
+    "controlCodeLabel": "Letter",
+    "textLabel": "Text to send",
+    "appendEnterLabel": "Press Enter after sending",
+    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
+    "textRequired": "Enter the text to send",
+    "controlCodeRequired": "Enter a single letter for the control code",
+    "builtIn": {
+      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
+      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
+      "copyCmdC": "Copy selection (Cmd+C)",
+      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
+      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
+      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
+      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+    }
   },
   "macros": {
-    "title": "Macro",
-    "description": "Chạy một chuỗi lệnh đã lưu trong cửa sổ dòng lệnh và phản hồi lại những gì máy chủ gửi về.",
-    "target": "Mục tiêu",
-    "noTerminal": "Không có thiết bị đầu cuối nào đang mở",
-    "empty": "Chưa có macro nào.",
-    "emptyHint": "Tạo macro để tự động hóa quy trình trên thiết bị đầu cuối, chẳng hạn như đăng nhập, khởi động lại dịch vụ hoặc trả lời các lời nhắc.",
-    "create": "Macro mới",
-    "back": "Quay lại phần macro",
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "Đích",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
     "name": "Tên",
-    "namePlaceholder": "Khởi động lại máy chủ web",
-    "nameRequired": "Đặt tên cho macro trước khi lưu.",
-    "descriptionLabel": "Sự miêu tả",
-    "descriptionPlaceholder": "Chức năng của macro này (tùy chọn)",
-    "unsaved": "Thay đổi chưa được lưu",
-    "save": "Cứu",
-    "saved": "Macro đã được lưu",
-    "saveFailed": "Không thể lưu macro",
-    "delete": "Xóa bỏ",
-    "deleteTitle": "Xóa macro này?",
-    "deleteBody": "\"{{name}}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác.",
-    "deleted": "Macro đã bị xóa",
-    "cancel": "Hủy bỏ",
+    "namePlaceholder": "Restart web server",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "Mô tả",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "Thay đổi chưa lưu",
+    "save": "Lưu",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "Xóa",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "Hủy",
     "run": "Chạy",
-    "stop": "Dừng lại",
-    "running": "Đang chạy...",
-    "completed": "Macro đã hoàn thành",
-    "failed": "Macro bị lỗi",
-    "loadFailed": "Không thể tải macro",
-    "needTerminal": "Trước tiên hãy mở và kết nối thiết bị đầu cuối.",
-    "noSteps": "Macro này chưa có bước nào. Hãy thêm một bước bên dưới.",
-    "addStep": "Thêm bước",
-    "stepNumber": "Bước {{number}}",
-    "removeStep": "Xóa bước",
-    "confirmRunTitle": "Chạy macro này?",
-    "confirmRunBody": "\"{{name}}\" sẽ gửi lệnh đến {{host}}.",
-    "confirmRunAction": "Chạy macro",
+    "stop": "Bit dừng",
+    "running": "Running...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
     "stepTypes": {
       "send": {
-        "label": "Gửi lệnh",
-        "help": "Nhập văn bản vào cửa sổ dòng lệnh, giống như khi bạn tự nhập văn bản."
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
       },
       "wait": {
-        "label": "Chờ kết quả đầu ra",
-        "help": "Tạm dừng cho đến khi máy chủ in ra đoạn văn bản bạn đã đặt tên, ví dụ như lời nhắc nhập mật khẩu."
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
       },
       "delay": {
-        "label": "Tạm dừng",
-        "help": "Chờ một khoảng thời gian cố định trước khi thực hiện bước tiếp theo."
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
       },
       "if": {
-        "label": "Nếu đầu ra chứa",
-        "help": "Kiểm tra tất cả những gì máy chủ đã in ra cho đến nay, sau đó chạy một trong hai nhánh."
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
       },
       "repeat": {
-        "label": "Lặp lại",
-        "help": "Thực thi các bước bên trong nó một số lần nhất định."
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
       }
     },
     "send": {
-      "text": "Lệnh hoặc văn bản",
+      "text": "Command or text",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Nhấn Enter sau khi gửi",
-      "pressEnterHelp": "Tắt tùy chọn này để nhập văn bản mà không cần gửi đi."
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
     },
     "wait": {
-      "pattern": "Chờ cho đến khi đầu ra chứa",
+      "pattern": "Wait until the output contains",
       "patternPlaceholder": "mật khẩu:",
-      "timeout": "Bỏ cuộc sau",
-      "onTimeout": "Nếu nó không bao giờ xuất hiện",
-      "stop": "Dừng macro",
-      "continue": "Cứ tiếp tục đi"
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "Keep going anyway"
     },
     "delay": {
-      "duration": "Chờ đợi"
+      "duration": "Wait for"
     },
     "ifStep": {
-      "pattern": "Nếu đầu ra chứa",
-      "patternPlaceholder": "Đang hoạt động: đang hoạt động (đang chạy)",
-      "then": "Sau đó hãy làm như thế này",
-      "else": "Nếu không thì hãy làm như thế này",
-      "emptyBranch": "Không có bước nào"
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
     },
     "repeat": {
-      "count": "Số lần",
-      "times": "lần"
+      "count": "Number of times",
+      "times": "times"
     },
     "match": {
-      "useRegex": "So khớp với biểu thức chính quy",
-      "useRegexHelp": "Bỏ phần này đi để văn bản khớp chính xác với nội dung đã viết.",
-      "invalidRegex": "Đây không phải là biểu thức chính quy hợp lệ, nó sẽ được so khớp như văn bản thuần túy."
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "Leave this off to match the text exactly as written.",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
     },
     "seconds": "giây",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

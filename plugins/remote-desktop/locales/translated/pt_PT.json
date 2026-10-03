@@ -1,50 +1,50 @@
 {
   "remoteDesktop": {
     "connecting": "A ligar à sessão {{type}}...",
-    "checkingGuacd": "Verificação do serviço de ambiente de trabalho remoto...",
-    "requestingToken": "A solicitar token de ligação {{type}}...",
-    "openingSession": "Abertura {{type}} sessão...",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
     "negotiating": "Negotiating {{type}} handshake...",
-    "sessionReady": "{{type}} sessão pronta",
+    "sessionReady": "{{type}} session ready",
     "connectionError": "Erro de ligação",
     "connectionFailed": "Falha na ligação",
     "failedToConnect": "Falha ao obter o token de ligação",
     "hostNotFound": "Servidor não encontrado",
     "noHostSelected": "Nenhum servidor selecionado",
-    "reconnect": "Religar",
+    "reconnect": "Reconectar",
     "retry": "Repetir",
     "guacdUnavailable": "O serviço de ambiente de trabalho remoto (guacd) não está disponível. Certifique-se de que o guacd está em execução, acessível e devidamente configurado nas definições de administração.",
-    "credentialPromptTitle": "Introduza as credenciais RDP",
-    "credentialPromptDescription": "Este host está configurado para solicitar credenciais ao ligar. São utilizadas apenas para esta sessão e não são guardadas.",
+    "credentialPromptTitle": "Enter RDP Credentials",
+    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
     "connect": "Ligar",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
-      "title": "Arquivos do Drive",
-      "parent": "Diretório pai",
+      "title": "Drive Files",
+      "parent": "Parent directory",
       "refresh": "Atualizar",
       "empty": "Esta pasta está vazia",
-      "listFailed": "Não foi possível ler esta pasta.",
-      "download": "Transferir",
-      "downloadFailed": "Falha ao descarregar {{name}}",
-      "upload": "Carregar ficheiros",
-      "uploading": "Carregando {{name}}...",
-      "uploaded": "Enviado {{name}}",
-      "uploadFailed": "Falha ao carregar {{name}}",
-      "uploadDisabled": "Os uploads estão desativados para esta ligação.",
-      "driveUnavailable": "Ative o redireccionamento da unidade RDP antes de enviar ficheiros.",
-      "driveNotWritable": "O guacd não consegue escrever na pasta da unidade. Verifique a variável de ambiente GUACD_DRIVE_PATH (ou o caminho da unidade do host) e as suas permissões.",
-      "dropToUpload": "Arraste e largue os ficheiros para fazer o upload."
+      "listFailed": "Failed to read this folder",
+      "download": "Descarregar",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "A enviar {{name}}...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "dropToUpload": "Drop files to upload"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (Bloquear ecrã)",
       "winKey": "Tecla Windows",
-      "superL": "Super+L (Ecrã de bloqueio)",
-      "superKey": "Super Chave",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
       "super": "Super",
-      "cmdL": "Cmd+L (Bloquear ecrã)",
-      "cmdKey": "Tecla de comando",
-      "cmd": "Comando",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -54,37 +54,42 @@
       "esc": "Escape",
       "tab": "Tab",
       "home": "Home",
-      "end": "End",
+      "end": "Fim",
       "pageUp": "Page Up",
       "pageDown": "Page Down",
-      "arrowUp": "Arrow Up",
-      "arrowDown": "Arrow Down",
-      "arrowLeft": "Arrow Left",
-      "arrowRight": "Arrow Right",
+      "arrowUp": "Seta para Cima",
+      "arrowDown": "Seta para Baixo",
+      "arrowLeft": "Seta para a Esquerda",
+      "arrowRight": "Seta para a Direita",
       "fnToggle": "Teclas de Função",
       "reconnect": "Reconectar Sessão",
       "collapse": "Recolher barra",
       "expand": "Expandir barra",
       "dragHandle": "Arraste para reposicionar",
-      "hide": "Ocultar para esta sessão. Para o desativar permanentemente, abra as Definições do Host → Geral → Barra de Ferramentas de Ligação.",
-      "zoomIn": "Ampliar",
-      "zoomOut": "Diminuir o zoom",
-      "resetZoom": "Redefinir zoom",
-      "fitToScreen": "Ajustar ao ecrã",
-      "switchToTrackpad": "Mudar para o modo trackpad (arraste para mover o cursor, toque para clicar)",
-      "switchToTouch": "Mude para o modo de toque (toque diretamente onde pretende clicar)."
-    }
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
+      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
   },
   "hosts": {
-    "nativeRdpOpened": "Aberto na Área de Trabalho Remota do Windows",
-    "nativeRdpFailed": "Falha ao abrir a Área de Trabalho Remota do Windows",
-    "openNativeRdp": "Abrir no Windows Remote Desktop",
+    "nativeRdpOpened": "Opened in Windows Remote Desktop",
+    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
+    "openNativeRdp": "Open in Windows Remote Desktop",
     "guac": {
+      "toolbar": "Toolbar",
       "connection": "Ligação",
       "authentication": "Autenticação",
       "storedCredential": "Credencial Armazenada",
       "authMethod": "Método de Autenticação",
-      "authTypeNoneDesc": "Nenhuma credencial é armazenada. Ser-lhe-á pedido que insira um nome de utilizador e uma senha sempre que se conectar; não são salvos.",
+      "authTypeDirect": "Direta",
+      "authTypeCredential": "Credencial",
+      "authTypeNone": "Nenhuma",
+      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
       "selectCredential": "Selecionar uma credencial...",
       "connectionSettings": "Definições de Ligação",
       "displaySettings": "Definições de Ecrã",
@@ -102,7 +107,7 @@
       "rdpPort": "Porta RDP",
       "username": "Nome de utilizador",
       "password": "Palavra-passe",
-      "passwordSaved": "Palavra-passe guardada, digite para alterar",
+      "passwordSaved": "Password saved, type to change",
       "domain": "Domínio",
       "securityMode": "Modo de segurança",
       "width": "Largura",
@@ -206,7 +211,8 @@
       "colorScheme": "Esquema de Cores",
       "backspaceKey": "Tecla Backspace",
       "colorDepth": "Profundidade de cor",
-      "resizeMethod": "Método de redimensionamento"
+      "resizeMethod": "Método de redimensionamento",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Ambiente de trabalho remoto",
     "tabRdp": "RDP",
@@ -214,25 +220,31 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Rede Virtual",
     "unencryptedShell": "Shell não encriptado",
-    "docsLink": "Ver documentação"
+    "remoteDesktopNotes": "Notas",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "Ver documentação",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
   },
   "onboarding": {
-    "feature_desktop": "Área de trabalho remota",
-    "feature_desktop_desc": "Abra as sessões RDP, VNC e Telnet num separador, da mesma forma que o SSH."
+    "feature_desktop": "Remote desktop",
+    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
   },
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Profundidade de cor"
+        "label": "Profundidade de cor",
+        "description": "Used for RDP hosts that leave it on their default."
       },
       "resizeMethod": {
-        "label": "Método de redimensionamento"
+        "label": "Método de redimensionamento",
+        "description": "How the remote screen follows the window size."
       },
-      "resizeDisplayUpdate": "Atualização de visualização",
+      "resizeDisplayUpdate": "Display Update",
       "resizeReconnect": "Reconectar",
-      "inherit": "Herdar",
-      "on": "Em",
-      "off": "Desligado",
+      "inherit": "Inherit",
+      "on": "Ativado",
+      "off": "Desativado",
       "forceLossless": {
         "label": "Forçar sem perdas",
         "description": "Forçar codificação de imagem sem perdas (maior qualidade, mais largura de banda)"
@@ -268,15 +280,71 @@
       "disablePaste": {
         "label": "Desativar Colagem",
         "description": "Impedir a colagem de texto na sessão remota"
-      }
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
     },
     "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
       "guacdUrl": {
-        "label": "URL do guacd"
+        "label": "URL do guacd",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Display",
+      "displayDefaultsTab": "Ambiente de trabalho remoto"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
     }
   },
   "errors": {
-    "remoteServerRequired": "É necessário um servidor remoto. Ligue um servidor remoto nas Definições para utilizar este tipo de ligação."
+    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   }
 }

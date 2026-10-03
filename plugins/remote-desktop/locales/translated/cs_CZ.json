@@ -37,7 +37,7 @@
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
-      "winL": "Win+L (Zamknout obrazovku)",
+      "winL": "Win+L (Zamykání obrazovky)",
       "winKey": "Klávesa Windows",
       "superL": "Super+L (Zamykací obrazovka)",
       "superKey": "Super klíč",
@@ -73,17 +73,22 @@
       "fitToScreen": "Přizpůsobit obrazovce",
       "switchToTrackpad": "Přepnout do režimu trackpadu (tažením přesunete kurzor, klepnutím kliknete)",
       "switchToTouch": "Přepnout do dotykového režimu (klepněte přímo na místo, kam chcete kliknout)"
-    }
+    },
+    "disabled": "Vzdálená plocha je vypnutá. Správce ji může zapnout v Nastavení."
   },
   "hosts": {
     "nativeRdpOpened": "Otevřeno ve Vzdálené ploše systému Windows",
     "nativeRdpFailed": "Nepodařilo se otevřít Vzdálenou plochu systému Windows",
     "openNativeRdp": "Otevřít ve Vzdálené ploše systému Windows",
     "guac": {
+      "toolbar": "Panel nástrojů",
       "connection": "Spojení",
       "authentication": "Ověřování",
       "storedCredential": "Uložené přihlašovací údaje",
       "authMethod": "Metoda ověřování",
+      "authTypeDirect": "Řídit",
+      "authTypeCredential": "Přihlašovací údaj",
+      "authTypeNone": "Žádný",
       "authTypeNoneDesc": "Nejsou uloženy žádné přihlašovací údaje. Při každém připojení budete vyzváni k zadání uživatelského jména a hesla; tyto údaje se neukládají.",
       "selectCredential": "Vyberte pověření...",
       "connectionSettings": "Nastavení připojení",
@@ -133,7 +138,7 @@
       "udpPort": "UDP port",
       "waitTimeS": "Čekací doba (s)",
       "driveName": "Název disku",
-      "drivePath": "Cesta k jednotce",
+      "drivePath": "Cesta pohonu",
       "ignoreCertificate": "Ignorovat certifikát",
       "ignoreCertificateDesc": "Povolit připojení k hostitelům s certifikáty podepsanými držitelem",
       "forceLossless": "Vynutit bezztrátové",
@@ -177,7 +182,7 @@
       "consoleSession": "Relace konzole",
       "consoleSessionDesc": "Připojení ke konzoli (relace 0) namísto nové relace",
       "sendWolPacket": "Odeslat paket WOL",
-      "sendWolPacketDesc": "Odeslat magický paket pro probuzení tohoto hostitele před připojením",
+      "sendWolPacketDesc": "Před připojením odešlete magický paket, který probudí tento hostitel.",
       "disableCopy": "Zakázat kopírování",
       "disableCopyDesc": "Zabránit kopírování textu ze vzdálené relace",
       "disablePaste": "Zakázat vkládání",
@@ -206,7 +211,8 @@
       "colorScheme": "Barevné schéma",
       "backspaceKey": "Klávesa Backspace",
       "colorDepth": "Barevná hloubka",
-      "resizeMethod": "Metoda změny velikosti"
+      "resizeMethod": "Metoda změny velikosti",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Vzdálená plocha",
     "tabRdp": "PRV",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuální síť",
     "unencryptedShell": "Nešifrovaný shell",
-    "docsLink": "Zobrazit dokumenty"
+    "remoteDesktopNotes": "Poznámky",
+    "userDefaultsNote": "Nastavení, která ponecháte beze změny, se řídí výchozími hodnotami vašeho hostitele.",
+    "connectionOriginNote": "V desktopové aplikaci používají RDP, VNC a Telnet vzdálený server, pokud není hostitel nastaven na Toto zařízení, které vyžaduje guacd, ke kterému má tento počítač přístup. Nastavte ho v nastavení Vzdálené plochy nebo pro každého hostitele v části guacd Proxy.",
+    "docsLink": "Zobrazit dokumenty",
+    "connectionOriginGuacamoleNote": "RDP, VNC a Telnet používají vzdálený server, pokud nevyberete možnost „Toto zařízení“, která vyžaduje GUACD, ke kterému má tento počítač přístup. Nastavte ho v nastavení URL GUACD nebo pro každého hostitele v části Proxy GUACD."
   },
   "onboarding": {
     "feature_desktop": "Vzdálená plocha",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Barevná hloubka"
+        "label": "Barevná hloubka",
+        "description": "Používá se pro hostitele RDP, kteří jej ponechávají na výchozím nastavení."
       },
       "resizeMethod": {
-        "label": "Metoda změny velikosti"
+        "label": "Metoda změny velikosti",
+        "description": "Jak vzdálená obrazovka kopíruje velikost okna."
       },
       "resizeDisplayUpdate": "Aktualizace displeje",
       "resizeReconnect": "Znovu se připojte",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Zakázat vkládání",
         "description": "Zabránit vkládání textu do vzdálené relace"
-      }
+      },
+      "group": "Výchozí nastavení vzdálené plochy",
+      "colorDepth16": "16bitový",
+      "colorDepth24": "24bitový",
+      "colorDepth32": "32bitový"
     },
     "admin": {
+      "enabled": {
+        "label": "Povolit vzdálenou plochu",
+        "description": "Povolit připojení RDP, VNC a Telnet přes guacd."
+      },
       "guacdUrl": {
-        "label": "URL GUACD"
+        "label": "URL GUACD",
+        "description": "Kde guacd naslouchá, jako host:port. Proměnné prostředí GUACD_URL, GUACD_HOST a GUACD_PORT toto přepíší.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "PRV"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnetový port"
+      },
+      "rdpSecurity": {
+        "label": "Režim zabezpečení RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignorovat chyby certifikátu"
+      },
+      "guacamoleConfig": {
+        "label": "nastavení GUACD"
+      },
+      "enableToolbar": {
+        "label": "Panel nástrojů Vzdálená plocha",
+        "description": "Zobrazit panel nástrojů v relacích RDP, VNC a Telnet."
+      },
+      "displayGroup": "Zobrazit",
+      "displayDefaultsTab": "Vzdálená plocha"
+    }
+  },
+  "palette": {
+    "connectRdp": "Připojení k RDP",
+    "connectVnc": "Spojte se s VNC",
+    "connectTelnet": "Připojení přes Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Sdílení relací vzdálené plochy",
+      "description": "Umožnit sdílení relací a místnostem pro spolupráci zobrazovat relace RDP, VNC a Telnet tohoto uživatele ostatním."
     }
   },
   "errors": {

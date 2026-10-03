@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Vizualizați automatizările",
+      "description": "Vedeți automatizările și istoricul lor."
+    },
+    "create": {
+      "title": "Creați automatizări",
+      "description": "Adăugați noi automatizări."
+    },
+    "edit": {
+      "title": "Editați automatizările",
+      "description": "Modificați automatizările existente."
+    },
+    "delete": {
+      "title": "Șterge automatizările",
+      "description": "Eliminați automatizările."
+    },
+    "run": {
+      "title": "Rulați automatizări",
+      "description": "Declanșează o automatizare manual."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Editare automatizare",
         "empty": "Încă nu există automatizări. Creați una pentru a reacționa la o metrică, un program sau un eveniment.",
         "emptyRuns": "Nicio alergare încă.",
-        "emptyChannels": "Încă nu există canale. Adaugă unul pentru a trimite notificări undeva.",
-        "noChannelsHint": "Încă nu a fost configurat niciun canal. Adăugați unul în fila Canale.",
-        "addChannel": "Adăugați canal",
-        "testChannel": "Test",
-        "channelTestSent": "Notificare de testare trimisă",
-        "channelTestFailed": "Notificarea de testare a eșuat",
-        "channelDeleted": "Canalul a fost șters",
-        "deleteChannelConfirm": "Ștergeți acest canal? Automatizările care îl folosesc vor înceta să mai trimită notificări.",
+        "channelsHint": "Canalele sunt configurate în Alerte",
+        "noChannelsHint": "Alerta ajunge întotdeauna în căsuța ta poștală. Adaugă canale în Alerte pentru a o trimite și în altă parte.",
         "nameLabel": "Nume",
         "namePlaceholder": "De exemplu, curățați /data când se umple",
         "nameRequired": "Numele este obligatoriu",
@@ -41,7 +57,7 @@
         "runNow": "Aleargă acum",
         "testRun": "Test de funcționare",
         "testRunHint": "Aleargă la fiecare pas, dar nu atinge nimic din afara Termixului.",
-        "runStarted": "Cursa a început",
+        "runStarted": "Rularea a început",
         "runFinished": "Execuția s-a încheiat: {{status}}",
         "trigger": "Declanșator",
         "steps": "Pași",
@@ -79,7 +95,7 @@
           "webhook": "Webhook de intrare"
         },
         "stepTypes": {
-          "notify": "Trimiteți o notificare",
+          "notify": "Trimiteți o alertă",
           "http": "Apelați o adresă URL",
           "run_snippet": "Executați un fragment",
           "run_command": "Executați o comandă",
@@ -118,7 +134,7 @@
           "url": "URL-ul",
           "method": "Metodă",
           "body": "Corp",
-          "channels": "Canale",
+          "channels": "Trimiteți și către",
           "title": "Titlu",
           "message": "Mesaj",
           "snippet": "Fragment",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Oprește alergarea",
           "continue": "Continuă"
+        },
+        "needsPlugin": "Necesită {{plugin}}",
+        "needsPluginHint": "Această automatizare este omisă până când funcția de care are nevoie este din nou disponibilă.",
+        "offBadge": "Dezactivat",
+        "docsLink": "Vizualizați documentele",
+        "ago": {
+          "seconds": "Acum {{count}}secunde",
+          "minutes": "{{count}}acum câteva minute",
+          "hours": "{{count}}acum o oră",
+          "days": "{{count}}zile în urmă"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatizări",
     "feature_automations_desc": "Execută pașii automat când se întâmplă ceva și primește notificări."
+  },
+  "maintenance": {
+    "title": "Întreţinere",
+    "description": "Întrerupeți automatizările privind starea gazdei, sănătatea, metrica, containerul și deconectarea tunelului în timp ce lucrul este în desfășurare. Monitorizarea, rulările manuale și automatizările programate continuă.",
+    "denied": "Nu aveți permisiunea de a vizualiza întreținerea.",
+    "sharedReadOnly": "Această gazdă a fost partajată cu dvs. Numai proprietarul acesteia poate modifica întreținerea.",
+    "failed": "Întreținerea nu a putut fi actualizată.",
+    "active": "Mentenanță activă",
+    "estimated": "Finalizare estimată",
+    "noAutoEnd": "Estimarea nu încheie întreținerea. Încheiați-o explicit când lucrarea este finalizată.",
+    "endConfirm": "Încheiați întreținerea și reluați automatizările declanșate de evenimente pentru această gazdă?",
+    "confirmEnd": "Confirmați sfârșitul",
+    "cancel": "Anula",
+    "end": "Sfârșitul întreținerii",
+    "action": "Acţiune",
+    "startNow": "Începeți acum",
+    "schedule": "Programați pentru mai târziu",
+    "reason": "Motiv",
+    "startUtc": "Prima pornire (UTC)",
+    "repeat": "Repeta",
+    "once": "Dată",
+    "weekly": "Săptămânal",
+    "monthly": "Lunar",
+    "utcHelp": "Programările utilizează UTC pe tot parcursul anului. Programările lunare sar peste luni fără ziua selectată. Ferestrele planificate nu se pot suprapune; întreținerea depășită continuă în ferestrele ulterioare.",
+    "duration": "Durată estimată (minute)",
+    "grace": "Perioadă de grație (minute)",
+    "notify": "Notificați o dată dacă sunteți încă offline după estimare plus perioada de grație",
+    "addSchedule": "Adăugați un program",
+    "schedules": "Programe",
+    "noSchedules": "Fără programe de întreținere.",
+    "completed": "Deja început",
+    "minutes_one": "{{count}} minut",
+    "minutes_other": "{{count}} minute",
+    "remove": "Eliminați programul",
+    "loadFailed": "Nu s-a putut actualiza starea de întreținere. Modificările sunt dezactivate până când pot fi încărcate.",
+    "loading": "Se încarcă starea de întreținere…"
   }
 }

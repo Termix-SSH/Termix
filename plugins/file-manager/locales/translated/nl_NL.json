@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Bestanden",
+    "sftp": "SFTP",
+    "openFileManager": "Open bestandsbeheerder"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik de bestandsbeheerder",
+      "description": "Bestanden bekijken, bewerken en overdragen via SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Bestandsbeheer inschakelen",
+        "description": "Via SFTP kunt u bestanden op deze host bekijken en bewerken."
+      },
+      "defaultPath": {
+        "label": "Standaardpad"
+      },
+      "scpLegacy": {
+        "label": "SCP Legacy-modus"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Gelijktijdige bestandsoverdracht",
+        "description": "Hoeveel bestanden de lokale/externe manager naast elkaar tegelijkertijd uploadt of downloadt. Verlaag deze waarde als uw server het aantal SFTP-kanalen beperkt."
+      },
+      "confirmBeforeTrash": {
+        "label": "Controleer voordat u bestanden naar de prullenbak verplaatst.",
+        "description": "Vraag eerst toestemming voordat je bestanden van een externe locatie naar de prullenbak verplaatst. Voor definitieve verwijdering is nog steeds bevestiging vereist."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Bestandsbeheerder"
+  },
   "fileManager": {
     "noHostSelected": "Geen host geselecteerd",
     "initializingEditor": "Editor wordt geïnitialiseerd...",
@@ -19,7 +57,7 @@
     "selectedFiles": "Geselecteerde bestanden",
     "andMoreFiles": "en {{count}} meer...",
     "compress": "Comprimeren",
-    "compressingFiles": "Het comprimeren van {{count}} items naar {{name}}...",
+    "compressingFiles": "{{count}} items comprimeren tot {{name}}...",
     "filesCompressedSuccessfully": "{{name}} succesvol aangemaakt",
     "compressFailed": "Compressie mislukt",
     "edit": "Bewerking",
@@ -34,6 +72,7 @@
     "rename": "Naam wijzigen",
     "uploading": "Bezig met uploaden...",
     "uploadingFile": "Bezig met uploaden {{name}}...",
+    "uploadingChunk": "Uploaden {{name}}: {{percent}}% (deel {{chunk}} van {{total}})",
     "fileName": "Bestandsnaam",
     "folderName": "Mapnaam",
     "fileUploadedSuccessfully": "Bestand \"{{name}}\" succesvol geüpload",
@@ -290,6 +329,7 @@
     "connecting": "Verbinden...",
     "connectedSuccessfully": "Verbinding succesvol tot stand gebracht.",
     "totpVerificationFailed": "TOTP-verificatie mislukt",
+    "browserSignInFailed": "Aanmelden is mislukt. Probeer het opnieuw.",
     "authenticationFailed": "Authenticatie mislukt",
     "incorrectPassphrase": "Onjuiste wachtzin. Probeer het opnieuw.",
     "verificationCodePrompt": "Verificatiecode:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "Kan PDF niet laden",
     "pdfLoadError": "Er is een fout opgetreden bij het laden van dit PDF-bestand.",
     "loadingPdf": "PDF laden...",
-    "loadingPage": "Pagina laden..."
+    "loadingPage": "Pagina laden...",
+    "cancel": "Annuleren",
+    "copiedItems_one": "Gekopieerd {{count}} item",
+    "copiedItems_other": "Gekopieerde {{count}} items",
+    "deleteCopiedFileFailed": "Kon de kopie van {{name}}niet verwijderen: {{error}}",
+    "dragMovedItems_one": "Item {{count}} verplaatst naar {{target}}",
+    "dragMovedItems_other": "Verplaatste {{count}} items naar {{target}}",
+    "moveBackFileFailed": "Kon {{name}} niet terugzetten: {{error}}",
+    "terminal": "Terminal: {{host}} ({{path}})",
+    "dragToDesktop": "{{name}} naar het bureaublad slepen",
+    "dragFilesToDesktop": "{{count}} bestanden naar het bureaublad slepen",
+    "folderDragUnsupported": "Het slepen van mappen naar het bureaublad wordt momenteel nog niet ondersteund.",
+    "saveToDesktopFailed": "Opslaan mislukt: {{error}}",
+    "dragFailedDetail": "Slepen mislukt: {{error}}",
+    "videoUnsupported": "Uw browser kan dit videoformaat niet afspelen.",
+    "downloadToPlay": "Download het om het elders te spelen.",
+    "cannotPreviewType": "Kan dit bestandstype niet bekijken.",
+    "cannotPreviewTypeHint": "Dit bestandstype heeft geen voorbeeldweergave. Download het om het in een andere app te openen."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Bestandsbeheerder",
-    "tabFiles": "Bestanden",
-    "enableFileManagerMonitor": "Bestandsbeheer inschakelen",
-    "enableFileManagerMonitorDesc": "Blader door en beheer bestanden op deze host via SFTP.",
-    "scpLegacyLabel": "SCP Legacy-modus",
-    "scpLegacyDesc": "Gebruik de traditionele bestandsoverdrachtsmethode voor servers die het SFTP-subsysteem niet ondersteunen (bijvoorbeeld ingebouwde of minimale SSH-servers).",
-    "defaultPathLabel": "Standaardpad",
-    "fileManagerPathHint": "De map die geopend moet worden wanneer de bestandsbeheerder voor deze host wordt gestart.",
     "fileManagerUrlCopied": "URL van bestandsbeheerder gekopieerd",
     "copyFileManagerUrlAction": "Kopieer de URL van de bestandsbeheerder",
     "docsLink": "Documenten bekijken",
     "hostNotFound": "Host niet gevonden",
     "loadingHost": "Host wordt geladen..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Bestandsbeheer inschakelen"
-      },
-      "defaultPath": {
-        "label": "Standaardpad"
-      },
-      "scpLegacy": {
-        "label": "SCP Legacy-modus"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Gelijktijdige bestandsoverdracht",
-        "description": "Hoeveel bestanden de lokale/externe manager naast elkaar tegelijkertijd uploadt of downloadt. Verlaag deze waarde als uw server het aantal SFTP-kanalen beperkt."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Bestanden"
   },
   "onboarding": {
     "feature_files": "Bestandsbeheerder",
@@ -437,7 +464,7 @@
     "destinationPath": "Bestemmingspad",
     "destMustBeDirectory": "De bestemming moet een adresboek zijn voor overdrachten van meerdere items.",
     "goUp": "Ga omhoog",
-    "hostAuthRequired": "Authenticatie vereist — open eerst Bestandsbeheer op deze host.",
+    "hostAuthRequired": "Authenticatie vereist. Open eerst Bestandsbeheer op deze host.",
     "hostConnecting": "Verbinding maken…",
     "hostConnectionFailed": "Verbinding mislukt",
     "hostDisconnected": "Niet verbonden",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Je hebt gekozen voor SFTP per bestand.",
       "user_tar": "Je hebt gekozen voor een tar-archief.",
-      "tar_unavailable": "Tar is niet beschikbaar op een of beide hosts; in plaats daarvan wordt SFTP per bestand gebruikt.",
-      "windows_host": "Er wordt gebruikgemaakt van een Windows-host; tar wordt niet gebruikt.",
-      "auto_multi_large": "Automatisch: meerdere bestanden, waaronder een groot bestand ({{largestSize}}) met comprimeerbare gegevens — tar bundelt deze tot één overdracht.",
-      "auto_single_large_in_archive": "Auto: één groot bestand ({{largestSize}}) in deze set — SFTP per bestand.",
-      "auto_many_incompressible": "Automatisch: voornamelijk niet-comprimeerbare gegevens — SFTP per bestand.",
-      "auto_many_files": "Auto: veel bestanden ({{fileCount}}) — tar vermindert de overhead per bestand.",
+      "tar_unavailable": "Tar is niet beschikbaar op een of beide hosts, daarom wordt in plaats daarvan SFTP per bestand gebruikt.",
+      "windows_host": "Het betreft een Windows-host, dus tar wordt niet gebruikt.",
+      "auto_multi_large": "Auto: meerdere bestanden, waaronder een groot bestand ({{largestSize}}) met comprimeerbare gegevens. Tar bundelt ze tot één overdracht.",
+      "auto_single_large_in_archive": "Auto: één groot bestand ({{largestSize}}) in deze set, dus SFTP per bestand.",
+      "auto_many_incompressible": "Automatisch: meestal niet-comprimeerbare gegevens, dus SFTP per bestand.",
+      "auto_many_files": "Auto: veel bestanden ({{fileCount}}), tar vermindert de overhead per bestand.",
       "auto_default": "Automatisch: SFTP per bestand voor deze set."
     },
     "methodTar": "Tar-archief",
@@ -471,7 +498,7 @@
     "metricsCompress": "Comprimeren op bron: {{duration}}",
     "metricsExtract": "Uitpakken op bestemming: {{duration}}",
     "metricsPrepare": "Bestemming voorbereiden: {{duration}}",
-    "metricsRouteBenchmark": "Route probe — direct: {{direct}}, relay: {{relay}}",
+    "metricsRouteBenchmark": "Route probe: direct {{direct}}, relay {{relay}}",
     "metricsSourceDelete": "Verwijderen uit de bron: {{duration}}",
     "metricsTotal": "Totaal: {{duration}}",
     "metricsTransfer": "Einde tot einde: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "Overdracht mislukt",
     "transferFailedRetryHint": "Er zijn gedeeltelijke gegevens op de bestemming bewaard gebleven. De herhaalpoging wordt hervat zodra de verbinding hersteld is.",
     "transferPartialHint": "Overdracht mislukt: {{paths}}",
-    "transferSuccess": "Overdracht voltooid"
+    "transferSuccess": "Overdracht voltooid",
+    "metricsHopSourceRead": "Bron → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → bestemming (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → bestemming (lokaal): {{throughput}}"
   }
 }

@@ -21,6 +21,11 @@
     "ports": "kikötők",
     "noPorts": "Nincsenek portok",
     "start": "Indul",
+    "stop": "Stop",
+    "status": "Állapot",
+    "actions": "Műveletek",
+    "cardView": "Kártyanézet",
+    "listView": "Lista nézet",
     "confirmRemoveContainer": "Are you sure you want to remove the container '{{name}}'? This action cannot be undone.",
     "runningContainerWarning": "Figyelmeztetés: Ez a konténer jelenleg fut. Eltávolítása először a konténer leállítását jelenti.",
     "loadingContainers": "Konténerek betöltése...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "A konténernek futnia kell a konzol eléréséhez",
     "verificationCodePrompt": "Írja be az ellenőrző kódot",
     "totpVerificationFailed": "A TOTP ellenőrzése sikertelen. Próbáld újra.",
+    "browserSignInFailed": "Sikertelen bejelentkezés. Kérjük, próbálja újra.",
     "connectedTo": "Csatlakoztatva ehhez: {{containerName}}",
     "disconnected": "Szétkapcsolt",
     "consoleError": "Konzolhiba",
@@ -93,7 +99,10 @@
     "logs": "Naplók",
     "stats": "Statisztikák",
     "consoleTab": "Konzol",
-    "startContainerToAccess": "Indítsa el a konténert a konzol eléréséhez"
+    "startContainerToAccess": "Indítsa el a konténert a konzol eléréséhez",
+    "noHostSelected": "Nincs kiválasztva gazdagép",
+    "failedToFetchLogs": "Nem sikerült lekérni a naplókat: {{error}}",
+    "failedToDownloadLogs": "Nem sikerült letölteni a naplókat: {{error}}"
   },
   "nav": {
     "docker": "Dokkmunkás"
@@ -102,10 +111,22 @@
     "feature_docker": "Dokkmunkás",
     "feature_docker_desc": "Tekintsd meg a konténereket, olvasd el a naplókat és figyeld a statisztikákat bármelyik Dockert futtató gazdagépen."
   },
+  "terminal": {
+    "retry": "Újrapróbálkozás",
+    "clipboardReadFailed": "Nem sikerült beolvasni a vágólapról. Győződjön meg arról, hogy a vágólapra vonatkozó engedélyek meg vannak adva.",
+    "clipboardWriteFailed": "Nem sikerült a vágólapra másolni. Győződjön meg arról, hogy az oldal HTTPS vagy localhost protokollon keresztül jelenik meg."
+  },
+  "permissions": {
+    "use": {
+      "title": "Docker használata",
+      "description": "Nyissa meg a Docker Managert és a konténerkonzolokat olyan gazdagépeken, amelyeken engedélyezve van a Docker."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Docker engedélyezése"
+        "label": "Docker engedélyezése",
+        "description": "Konténerek kezelése ezen a gazdagépen."
       },
       "containerRuntime": {
         "label": "Konténer futásideje",
@@ -122,9 +143,5 @@
     "docsLink": "Dokumentumok megtekintése",
     "hostNotFound": "Nem található gazdagép",
     "loadingHost": "Gazdagép betöltése..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Nem sikerült beolvasni a vágólapról. Győződjön meg arról, hogy a vágólapra vonatkozó engedélyek meg vannak adva.",
-    "clipboardWriteFailed": "Nem sikerült a vágólapra másolni. Győződjön meg arról, hogy az oldal HTTPS vagy localhost protokollon keresztül jelenik meg."
   }
 }

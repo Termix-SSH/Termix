@@ -9,7 +9,7 @@
       "ownerLabel": "Gastgeber"
     },
     "modalTitle": "Sitzung teilen",
-    "shareButton": "Aktie",
+    "shareButton": "Teilen",
     "notReadyToShare": "Die Sitzung ist noch nicht zur Freigabe bereit.",
     "modeTab": {
       "link": "Link",
@@ -19,7 +19,7 @@
     "userModeDescription": "Teilen Sie die Sitzung mit einem bestimmten Benutzer, der bereits Zugriff auf diesen Host hat. Falls er noch keinen Zugriff hat, teilen Sie ihm den Host zuerst mit oder verwenden Sie stattdessen einen Link. Nach der Freigabe erscheint die Sitzung im Tab „Verbindungen“ des Benutzers.",
     "permissionLevel": {
       "label": "Berechtigungsstufe",
-      "readOnly": "Nur lesbar",
+      "readOnly": "Schreibgeschützt",
       "readOnlyDescription": "Ich kann die Sitzung live verfolgen, aber nicht tippen oder interagieren.",
       "readWrite": "Lesen und Schreiben",
       "readWriteDescription": "Kann in der Sitzung genauso tippen und mit ihr interagieren wie der Besitzer."
@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Benutzer suchen...",
     "noUsersFound": "Keine Benutzer gefunden",
     "linkCreated": "Link zum Teilen erstellt",
+    "linkNeedsServer": "Freigabelinks funktionieren nur für Sitzungen auf einem Termix-Server. Verbinden Sie diesen Host über Ihren verknüpften Server, um ihn per Link freizugeben.",
     "linkCopied": "Link in die Zwischenablage kopiert",
     "copyLink": "Link kopieren",
     "shareCreated": "Die Sitzung wurde freigegeben. Sie wird im Tab „Verbindungen“ des Benutzers angezeigt.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Link",
     "userShareBadge": "Benutzer: {{username}}",
     "loadSharesFailed": "Fehler beim Laden der aktiven Anteile",
+    "remoteDisplayUnavailable": "Remote-Desktop ist momentan nicht verfügbar.",
+    "sharedWithMe": "Sitzungen, die mit mir geteilt wurden",
     "customHoursPlaceholder": "Stunden bis zum Zugriffsablauf"
   },
   "collab": {
@@ -60,7 +63,7 @@
     "endRoom": "Ende der Besprechung",
     "leaveRoom": "Verlassen",
     "deleteMember": "Entfernen",
-    "removeMember": "Entferne {{name}}",
+    "removeMember": "{{name}} entfernen",
     "removeMemberTitle": "Dieses Mitglied entfernen?",
     "removeMemberDescription": "{{name}} verliert sofort den Zugriff auf diesen Raum. Alle aktiven SSH-Viewer werden getrennt.",
     "invite": "Einladen",
@@ -68,15 +71,18 @@
     "members": "Mitglieder",
     "membersPanel": "Raummitglieder und Kontrollanfragen",
     "membersWithCount": "Mitglieder ({{count}})",
+    "guestsWithCount": "Gäste ({{count}})",
+    "removeGuests": "Gäste entfernen",
+    "anonymousGuest": "Gast",
     "online": "online",
     "offline": "offline",
     "you": "(Du)",
-    "hostBadge": "Gastgeber",
+    "hostBadge": "Host",
     "presenterBadge": "Präsentation",
     "present": "Gegenwärtig",
     "presentTitle": "Betretet die Bühne",
-    "presentHost": "Gastgeber",
-    "searchHosts": "Suchmaschinen",
+    "presentHost": "Host",
+    "searchHosts": "Hosts suchen",
     "noHostsFound": "Es wurden keine verfügbaren Hosts gefunden.",
     "presentProtocol": "Protokoll",
     "stopPresenting": "Hör auf zu präsentieren",
@@ -115,6 +121,7 @@
       "linkInvalid": "Dieser Gastlink ist ungültig oder das Meeting ist beendet."
     },
     "reopenFromPanel": "Dieser Besprechungsreiter ist abgelaufen. Öffnen Sie den Raum erneut über das Besprechungsmenü.",
+    "retry": "Erneut versuchen",
     "requestControl": "Anforderungskontrolle",
     "cancelControlRequest": "Stornierungsanfrage",
     "controlQueue": "Kontrollanfragen",
@@ -130,7 +137,10 @@
     "youArePresenting": "Sie präsentieren in einem anderen Tab. Beenden Sie Ihre Präsentation, um die Bühne zu übergeben.",
     "created": "Raum geschaffen",
     "invited": "Mitglieder eingeladen",
-    "roomTab": "Treffen"
+    "roomTab": "Treffen",
+    "serverChanged": "Der Meeting-Server wurde geändert. Öffnen Sie dieses Meeting erneut über das Meeting-Panel.",
+    "hostNotSynced": "Synchronisieren Sie diesen Host vor der Präsentation mit dem Meeting-Server.",
+    "linkRequiresServer": "Verbinden Sie diesen Desktop mit einem Termix-Server und erstellen Sie dort das Meeting, um einen Weblink freizugeben."
   },
   "nav": {
     "collab": "Treffen"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Sitzungen teilen und Räumen beitreten",
+      "description": "Teilen Sie Live-Sitzungen per Link oder mit anderen Nutzern und erstellen und treten Sie Kollaborationsräumen bei."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Benutzerdefiniert"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Mit mir geteilt",
+    "sharedBy": "Geteilt von {{username}}",
+    "join": "Verbinden",
+    "sharedSessionLabel": "{{hostName}} (gemeinsam genutzt)"
   }
 }

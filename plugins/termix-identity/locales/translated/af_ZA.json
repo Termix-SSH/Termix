@@ -23,7 +23,7 @@
     "provisionLabel": "Voorsien 'n bediener",
     "publishTitle": "Publiseer 'n publieke sleutel",
     "generate": "Genereer",
-    "generateTooltip": "Genereer 'n Ed25519-sleutelpaar — publiseer die publieke sleutel en laai die privaat sleutel na jou toestel af",
+    "generateTooltip": "Genereer 'n Ed25519-sleutelpaar. Publiseer die publieke sleutel en laai die private sleutel na jou toestel af.",
     "saveToVault": "Stoor na geloofsbriewe",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... gebruiker@gasheer",
     "labelPlaceholder": "Etiket (opsioneel)",
@@ -32,7 +32,7 @@
     "keyPublished": "Sleutel gepubliseer",
     "addKeyFailed": "Kon nie sleutel byvoeg nie",
     "generatedSaved": "Sleutelpaar gegenereer en gestoor in jou geloofsbriewekluis. Privaat sleutel ook afgelaai.",
-    "generatedOnly": "Sleutelpaar gegenereer — private sleutel afgelaai (slegs een keer getoon).",
+    "generatedOnly": "Sleutelpaar gegenereer. Privaat sleutel afgelaai (slegs een keer getoon).",
     "generateFailed": "Kon nie sleutel genereer nie",
     "imported": "Sleutel ingevoer vanaf geloofsbriewe",
     "importFailed": "Kon nie sleutel invoer nie",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Vertrou op 'n bediener (loop as root)",
     "caRotate": "Roteer",
     "caRotateConfirm": "Roteer die CA? Elke sertifikaat wat dit onderteken het, sal nie meer aanvaar word nie en moet heruitgereik word.",
-    "caRotated": "KA geroteer — vorige sertifikate herroep",
+    "caRotated": "KA geroteer. Vorige sertifikate herroep.",
     "caRotateFailed": "Kon nie CA roteer nie",
     "caDelete": "Verwyder CA",
     "caDeleteConfirm": "Verwyder die sertifikaatowerheid?",
@@ -66,12 +66,21 @@
     "issueCert": "Sertifikaat",
     "issueCertTooltip": "Reik 'n SSH-sertifikaat uit vir hierdie sleutel, onderteken deur jou CA",
     "certIssued": "Sertifikaat uitgereik en afgelaai",
-    "certIssueFailed": "Kon nie sertifikaat uitreik nie"
+    "certIssueFailed": "Kon nie sertifikaat uitreik nie",
+    "docsLink": "Bekyk dokumente",
+    "principalsLabel": "SSH-hoofde",
+    "principalsPlaceholder": "SSH-hoof(e), bv. wortel"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
     "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik Termix ID",
+      "description": "Eis 'n publieke handvatsel op, publiseer SSH-sleutels en bedryf 'n sertifikaatowerheid."
+    }
   }
 }

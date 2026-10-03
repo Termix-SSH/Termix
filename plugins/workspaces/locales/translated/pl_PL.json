@@ -41,7 +41,13 @@
         "lastSessionDescription": "Automatycznie aktualizowany o najnowszy układ kart. Zastosuj go, aby przywrócić to, co było otwarte.",
         "lastUsed": "Ostatnio użyte {{time}}",
         "neverUsed": "Nigdy nie zastosowano",
-        "tabsSkipped": "Zastosowano obszar roboczy, pominięto {{count}} kart (host już nie istnieje): {{names}}"
+        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}} min temu",
+          "hours": "{{count}} godz. temu",
+          "days": "{{count}} dni temu"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Obszary robocze",
     "workflow_workspaces_desc": "Zapisz zestaw otwartych kart i otwórz cały układ później."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use workspaces",
+      "description": "Save, apply and manage saved tab layouts."
+    }
   },
   "hosts": {
     "docsLink": "Zobacz dokumentację"

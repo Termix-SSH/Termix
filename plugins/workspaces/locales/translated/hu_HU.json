@@ -41,7 +41,13 @@
         "lastSessionDescription": "Automatikusan frissül a legutóbbi tabulátorelrendezéssel. Alkalmazd, hogy visszaállítsd a megnyitott tabulátorokat.",
         "lastUsed": "Utolsó használat {{time}}",
         "neverUsed": "Soha nem alkalmazták",
-        "tabsSkipped": "Munkaterület alkalmazva — {{count}} tabulátor(ok) kihagyva (a gazdagép már nem létezik): {{names}}"
+        "tabsSkipped": "Munkaterület alkalmazva, de {{count}} fül(ek) kimaradtak, mert a tárhelyük már nem létezik: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}másodperccel ezelőtt",
+          "minutes": "{{count}}perccel ezelőtt",
+          "hours": "{{count}}órával ezelőtt",
+          "days": "{{count}}nappal ezelőtt"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Munkaterületek",
     "workflow_workspaces_desc": "Mentse el a megnyitott lapok egy készletét, és később nyissa meg újra a teljes elrendezést."
+  },
+  "permissions": {
+    "use": {
+      "title": "Munkaterületek használata",
+      "description": "Mentett fülelrendezések mentése, alkalmazása és kezelése."
+    }
   },
   "hosts": {
     "docsLink": "Dokumentumok megtekintése"

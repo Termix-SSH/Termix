@@ -73,17 +73,22 @@
       "fitToScreen": "התאמה למסך",
       "switchToTrackpad": "מעבר למצב משטח עקיבה (גרור כדי להזיז את הסמן, הקש כדי ללחוץ)",
       "switchToTouch": "מעבר למצב מגע (הקש ישירות במקום שברצונך ללחוץ)"
-    }
+    },
+    "disabled": "שולחן עבודה מרוחק כבוי. מנהל יכול להפעיל אותו בהגדרות."
   },
   "hosts": {
     "nativeRdpOpened": "נפתח בשולחן עבודה מרוחק של Windows",
     "nativeRdpFailed": "נכשלה פתיחת שולחן עבודה מרוחק של Windows",
     "openNativeRdp": "פתח בשולחן עבודה מרוחק של Windows",
     "guac": {
+      "toolbar": "סרגל כלים",
       "connection": "קֶשֶׁר",
       "authentication": "אימות",
       "storedCredential": "אישורים מאוחסנים",
       "authMethod": "שיטת אימות",
+      "authTypeDirect": "יָשִׁיר",
+      "authTypeCredential": "תְעוּדָה",
+      "authTypeNone": "אַף לֹא אֶחָד",
       "authTypeNoneDesc": "לא נשמרים פרטי גישה. תתבקש להזין שם משתמש וסיסמה בכל פעם שתתחבר; הם לא נשמרים.",
       "selectCredential": "בחר אישור...",
       "connectionSettings": "הגדרות חיבור",
@@ -206,7 +211,8 @@
       "colorScheme": "ערכת צבעים",
       "backspaceKey": "מקש Backspace",
       "colorDepth": "עומק צבע",
-      "resizeMethod": "שיטת שינוי גודל"
+      "resizeMethod": "שיטת שינוי גודל",
+      "driveNamePlaceholder": "כונן טרמיקס"
     },
     "remoteDesktop": "שולחן עבודה מרוחק",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "טלנט",
     "virtualNetwork": "רשת וירטואלית",
     "unencryptedShell": "מעטפת לא מוצפנת",
-    "docsLink": "הצג מסמכים"
+    "remoteDesktopNotes": "הערות",
+    "userDefaultsNote": "הגדרות שאתה משאיר ללא שינוי עוקבות אחר הגדרות ברירת המחדל של המארח.",
+    "connectionOriginNote": "באפליקציית שולחן העבודה, RDP, VNC ו-Telnet משתמשים בשרת המרוחק אלא אם כן המארח מוגדר ל-This device, אשר זקוק ל-guacd שאליו מכונה זו יכולה להגיע. הגדר אחד בהגדרות שולחן העבודה המרוחק, או לכל מארח תחת guacd Proxy.",
+    "docsLink": "הצג מסמכים",
+    "connectionOriginGuacamoleNote": "RDP, VNC ו-Telnet משתמשים בשרת המרוחק אלא אם כן תבחרו באפשרות \"התקן זה\", אשר דורש גישה ל-guacd. הגדר קוד כזה בהגדרת כתובת ה-URL של guacd, או לכל מחשב מארח תחת Proxy של guacd."
   },
   "onboarding": {
     "feature_desktop": "שולחן עבודה מרוחק",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "עומק צבע"
+        "label": "עומק צבע",
+        "description": "משמש עבור מארחי RDP שמשאירים אותו כברירת מחדל."
       },
       "resizeMethod": {
-        "label": "שיטת שינוי גודל"
+        "label": "שיטת שינוי גודל",
+        "description": "כיצד מסך השלט עוקב אחר גודל החלון."
       },
       "resizeDisplayUpdate": "עדכון תצוגה",
       "resizeReconnect": "התחבר מחדש",
@@ -234,7 +246,7 @@
       "on": "עַל",
       "off": "כבוי",
       "forceLossless": {
-        "label": "כפיית אובדן נתונים",
+        "label": "כפה ללא אובדן",
         "description": "כפיית קידוד תמונה ללא אובדן נתונים (איכות גבוהה יותר, רוחב פס גדול יותר)"
       },
       "enableWallpaper": {
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "השבתת הדבקה",
         "description": "מניעת הדבקת טקסט לתוך ההפעלה המרוחקת"
-      }
+      },
+      "group": "ברירות מחדל של שולחן עבודה מרוחק",
+      "colorDepth16": "16 סיביות",
+      "colorDepth24": "24 סיביות",
+      "colorDepth32": "32 סיביות"
     },
     "admin": {
+      "enabled": {
+        "label": "הפעלת שולחן עבודה מרוחק",
+        "description": "אפשר חיבורי RDP, VNC ו-Telnet דרך guacd."
+      },
       "guacdUrl": {
-        "label": "כתובת אתר של guacd"
+        "label": "כתובת אתר של guacd",
+        "description": "כאשר guacd מאזין, כ-host:port. משתני הסביבה GUACD_URL, GUACD_HOST ו-GUACD_PORT עוקפים זאת.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "טלנט"
+      },
+      "rdpPort": {
+        "label": "יציאת RDP"
+      },
+      "vncPort": {
+        "label": "יציאת VNC"
+      },
+      "telnetPort": {
+        "label": "יציאת טלנט"
+      },
+      "rdpSecurity": {
+        "label": "מצב אבטחה של RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "התעלם משגיאות אישור"
+      },
+      "guacamoleConfig": {
+        "label": "הגדרות guacd"
+      },
+      "enableToolbar": {
+        "label": "סרגל הכלים של שולחן עבודה מרוחק",
+        "description": "הצג את סרגל הכלים בהפעלות RDP, VNC ו-Telnet."
+      },
+      "displayGroup": "לְהַצִיג",
+      "displayDefaultsTab": "שולחן עבודה מרוחק"
+    }
+  },
+  "palette": {
+    "connectRdp": "התחבר עם RDP",
+    "connectVnc": "התחבר עם VNC",
+    "connectTelnet": "התחבר עם טלנט"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "שיתוף הפעלות שולחן עבודה מרוחק",
+      "description": "אפשר לשיתוף סשנים וחדרי שיתוף פעולה להציג את סשנים של RDP, VNC ו-Telnet של משתמש זה לאחרים."
     }
   },
   "errors": {

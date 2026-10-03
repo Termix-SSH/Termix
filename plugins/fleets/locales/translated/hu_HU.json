@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Flották megtekintése",
+      "description": "Tekintse meg a flottákat, azok tagjait és a készletet."
+    },
+    "manage": {
+      "title": "Flották kezelése",
+      "description": "Flották létrehozása, szerkesztése és törlése, tagság módosítása, valamint flották megosztása más felhasználókkal vagy szerepkörökkel."
+    },
+    "execute": {
+      "title": "Flotta műveletek futtatása",
+      "description": "Parancsok és csomagműveletek futtatása egy flottán belül, fájlok átvitele a taggépekre és a taggépekről."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -67,7 +81,7 @@
         "inventoryNoData": "Még nincsenek készletadatok – frissítse az oldalt az összegyűjtéséhez.",
         "inventoryHost": "Házigazda",
         "inventoryCollectedCount": "{{count}}/{{total}} begyűjtött",
-        "inventoryOs": "Operációs rendszer",
+        "inventoryOs": "operációs rendszer",
         "inventoryKernel": "Kernel",
         "inventoryArch": "Boltív",
         "inventoryUptime": "Üzemidő",
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Az összes csomag frissítése",
         "packageNameLabel": "Csomag neve",
         "packageNameRequired": "Csomagnév megadása kötelező",
-        "packageHint": "Gazdagépenként felügyeleti szintű hozzáférést igényel, és a gazdagép tárolt sudo jelszavával emeli ki a jogosultságokat."
+        "packageHint": "Gazdagépenként felügyeleti szintű hozzáférést igényel, és a gazdagép tárolt sudo jelszavával emeli ki a jogosultságokat.",
+        "shareFleet": "Megosztási flotta",
+        "shareFleetTitle": "Megosztás \"{{name}}\"",
+        "shareFleetDescription": "Megosztja a flotta jelenlegi tag hosztjait a kiválasztott felhasználókkal vagy szerepkörökkel. A flottához később hozzáadott hosztok nem kerülnek automatikusan megosztásra – ossza meg újra, hogy belefoglalja őket.",
+        "shareSelectionRequired": "Válasszon ki legalább egy felhasználót vagy szerepkört",
+        "fleetSharedSuccessfully": "Megosztott {{shared}} a {{total}} hosztból ebben a flottában",
+        "failedToShareFleet": "Nem sikerült megosztani a flottát",
+        "noMembersToShare": "Ennek a flottának még nincsenek megosztható tag hosztjai."
       }
     }
   },

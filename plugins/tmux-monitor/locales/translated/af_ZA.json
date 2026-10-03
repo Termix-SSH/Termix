@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux-monitor"
-  },
   "hosts": {
     "enableTmuxMonitor": "Aktiveer Tmux-monitor",
     "enableTmuxMonitorDesc": "Wys hierdie gasheer in die Tmux Monitor en voeg sy tmux-aksies by die sybalk.",
+    "tabTmuxMonitor": "Tmux-monitor",
     "docsLink": "Bekyk dokumente"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux-monitor"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux-monitor",
+    "tmuxMonitorDesc": "Monitor tmux-sessies oor jou gashere"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik Tmux Monitor",
+      "description": "Blaai deur en beheer tmux-sessies, vensters en panele op gashere met die monitor geaktiveer."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktiveer Tmux-monitor",
+        "description": "Kyk en koppel aan tmux-sessies wat op hierdie gasheer loop."
+      },
+      "mouseEnabled": {
+        "label": "Aktiveer tmux-muisondersteuning",
+        "description": "Pas muissteun toe op die tmux-sessie wanneer 'n sessie gekoppel of geskep word. Ander sessies en globale tmux-instellings bly onveranderd."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux-monitor",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Kon nie sessie hernoem nie",
     "editTagsTitle": "Wysig etikette vir \"{{name}}\"",
     "killPane": "Maak paneel dood",
-    "resizeTree": "Sleep om te verander — dubbelklik om terug te stel",
+    "resizeTree": "Sleep om te verander, dubbelklik om terug te stel",
     "reattach": "Herbevestig (maak 'n deurmekaar aansig reg)",
     "killWindow": "Maak venster dood",
     "killWindowTitle": "Maak venster {{index}} van \"{{session}} \" dood?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Kon nie sessie doodmaak nie",
     "hostUnreachable": "Kon nie aan die gasheer koppel nie. Maak seker dat dit aanlyn en bereikbaar is.",
     "noServer": "Geen tmux-bediener loop op hierdie gasheer nie.",
-    "searchTruncated": "Gedeeltelike resultate — soektog dek die laaste {{lines}} reëls van elke paneel en hoogstens {{panes}} panele.",
+    "searchTruncated": "Gedeeltelike resultate. Soektog dek die laaste {{lines}} reëls van elke paneel en hoogstens {{panes}} panele.",
     "closeSearchResults": "Maak soekresultate toe",
     "retry": "Probeer weer",
     "noHosts": "Geen SSH-gashere beskikbaar nie",
-    "noHostsHint": "Aktiveer die Tmux Monitor-opsie op 'n SSH-gasheer (Gasheerbestuurder → Terminal-oortjie) om sy tmux-sessies te monitor.",
+    "noHostsHint": "Aktiveer die Tmux Monitor-opsie op 'n SSH-gasheer (Host Manager, Tmux Monitor-oortjie) om sy tmux-sessies te monitor.",
     "tmuxInstallHint": "Installeer dit op die gasheer met:",
     "attachTooltip": "Maak 'n terminaal oop na {{host}}",
-    "attachTooltipPane": "Maak 'n terminaal oop na {{host}} — tmux sessie {{session}}",
+    "attachTooltipPane": "Maak 'n terminaal oop na {{host}}, tmux sessie {{session}}",
     "timeJustNow": "nou net",
     "timeMinutes": "{{count}}m gelede",
     "timeHours": "{{count}}uur gelede",
-    "timeDays": "{{count}}dae gelede"
+    "timeDays": "{{count}}dae gelede",
+    "allHosts": "Alle gashere",
+    "singleHost": "Enkele gasheer",
+    "hostScope": "Monitor omvang",
+    "filterHosts": "Filter gashere volgens naam of adres",
+    "selectHost": "Kies gasheer",
+    "toggleHost": "Vou uit of invou {{host}}",
+    "noMatchingHosts": "Geen ooreenstemmende gashere nie",
+    "toggleSession": "Vou uit of invou {{session}}"
   }
 }

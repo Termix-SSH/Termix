@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux İzleyicisi"
-  },
   "hosts": {
     "enableTmuxMonitor": "Tmux İzleyiciyi Etkinleştir",
     "enableTmuxMonitorDesc": "Bu ana bilgisayarı Tmux İzleyicide göster ve tmux eylemlerini kenar çubuğuna ekle",
+    "tabTmuxMonitor": "Tmux İzleyici",
     "docsLink": "Dokümanları görüntüle"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux İzleyicisi"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux İzleyici",
+    "tmuxMonitorDesc": "Ana makinelerinizdeki tmux oturumlarını izle"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Tmux Monitor",
+      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tmux İzleyiciyi Etkinleştir",
+        "description": "Watch and attach to tmux sessions running on this host."
+      },
+      "mouseEnabled": {
+        "label": "Enable tmux mouse support",
+        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux İzleyici",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Oturum yeniden adlandırılamadı",
     "editTagsTitle": "\"{{name}}\" için etiketleri düzenle",
     "killPane": "Paneyi sonlandır",
-    "resizeTree": "Yeniden boyutlandırmak için sürükle — sıfırlamak için çift tıkla",
+    "resizeTree": "Drag to resize, double-click to reset",
     "reattach": "Yeniden bağlan (bozuk görünümü düzeltir)",
     "killWindow": "Pencereyi sonlandır",
     "killWindowTitle": "\"{{session}}\" oturumundaki {{index}} numaralı pencere sonlandırılsın mı?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Oturum sonlandırılamadı",
     "hostUnreachable": "Ana bilgisayara bağlanılamadı. Çevrimiçi ve erişilebilir olduğunu kontrol edin.",
     "noServer": "Bu ana bilgisayarda tmux sunucusu çalışmıyor.",
-    "searchTruncated": "Kısmi sonuçlar — arama her panenin son {{lines}} satırını ve en fazla {{panes}} paneyi kapsar.",
+    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
     "closeSearchResults": "Arama sonuçlarını kapat",
     "retry": "Yeniden dene",
     "noHosts": "Kullanılabilir SSH ana bilgisayarı yok",
-    "noHostsHint": "Tmux oturumlarını izlemek için bir SSH ana bilgisayarında Tmux Monitor seçeneğini etkinleştirin (Ana Bilgisayar Yöneticisi → Terminal sekmesi).",
+    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
     "tmuxInstallHint": "Ana bilgisayara şu komutla yükleyin:",
     "attachTooltip": "{{host}} için bir terminal aç",
-    "attachTooltipPane": "{{host}} için bir terminal aç — tmux oturumu {{session}}",
+    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
     "timeJustNow": "az önce",
     "timeMinutes": "{{count}} dakika önce",
     "timeHours": "{{count}} saat önce",
-    "timeDays": "{{count}} gün önce"
+    "timeDays": "{{count}} gün önce",
+    "allHosts": "Tüm sunucular",
+    "singleHost": "Single host",
+    "hostScope": "Monitor scope",
+    "filterHosts": "Filter hosts by name or address",
+    "selectHost": "Select host",
+    "toggleHost": "Expand or collapse {{host}}",
+    "noMatchingHosts": "No matching hosts",
+    "toggleSession": "Expand or collapse {{session}}"
   }
 }

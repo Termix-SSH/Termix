@@ -18,6 +18,7 @@
   "homepage": {
     "title": "홈페이지",
     "addWidget": "위젯 추가",
+    "noWidgetsInCategory": "이 카테고리에는 위젯이 없습니다.",
     "editWidget": "위젯 편집",
     "zoomIn": "확대",
     "zoomOut": "축소",
@@ -59,6 +60,9 @@
     "maxItems": "최대 항목 수",
     "showDescription": "설명 표시",
     "widgetRssName": "RSS 피드",
+    "rssNoFeedUrl": "위젯 설정에서 피드 URL을 구성하세요",
+    "rssLoadError": "피드를 로드할 수 없습니다.",
+    "rssNoItems": "품목 없음",
     "noHostSelected": "선택된 호스트 없음",
     "displayedMetrics": "표시된 메트릭",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "간결 모드",
     "selectHosts": "호스트 선택",
     "listLayout": "목록",
-    "gridLayout": "그리드"
+    "gridLayout": "그리드",
+    "configureUrl": "위젯 설정에서 URL을 설정하세요",
+    "embeddedContent": "삽입된 콘텐츠",
+    "noBookmarks": "책갈피 없음",
+    "noSections": "섹션이 설정되어 있지 않습니다.",
+    "noServices": "설정된 서비스가 없습니다",
+    "configureLocation": "위젯 설정에서 위치를 지정하세요",
+    "bannerTextPlaceholder": "배너 텍스트",
+    "serviceNamePlaceholder": "내 서비스"
+  },
+  "permissions": {
+    "use": {
+      "title": "홈페이지를 이용하세요",
+      "description": "홈페이지 캔버스와 대시보드 서비스 링크를 보고 편집할 수 있습니다."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "허용된 개인 호스트",
+      "description": "핑 상태 및 사용자 지정 API 위젯에 사용할 정확한 개인 또는 루프백 호스트 이름/IP 주소를 입력하십시오. 항목은 쉼표 또는 줄 바꿈으로 구분하고, 스키마, 포트 및 경로는 생략하십시오. 빈 칸은 개인 대상 주소입니다."
+    },
+    "privateCertificateAuthority": {
+      "label": "민간 인증 기관(PEM)",
+      "description": "허용 목록에 있는 호스트에 대한 선택적 신뢰 CA 번들입니다. 인증서 검증은 계속 활성화됩니다. 시스템 신뢰 저장소를 사용하려면 비워 두십시오."
+    }
   }
 }

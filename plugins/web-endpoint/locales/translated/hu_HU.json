@@ -20,6 +20,8 @@
     "webUiEndpointLabel": "Végpont {{number}}",
     "webUiIntegration": "Webes felhasználói felület",
     "webUiEndpointsSection": "Végpontok",
+    "webUiNoEndpoints": "Még nincsenek webes végpontok. A Végpont hozzáadása gombbal hozhat létre egyet.",
+    "webUiEndpointsDisabled": "Végpontok hozzáadásához kapcsolja be a fenti webes felhasználói felületet.",
     "webUiRequirementsText": "A böngésződ egy közvetlen végpontot nyit meg, így annak portjának elérhetőnek kell lennie innen. Ehelyett a Termix egy SSH alagutat nyit meg a gazdagép SSH kapcsolatán keresztül, így a portnak csak a gazdagépről kell elérhetőnek lennie.",
     "enableWebUi": "Webes végpontok engedélyezése",
     "enableWebUiDesc": "Nyissa meg a gazdagép webes felületeit az oldalsávból.",

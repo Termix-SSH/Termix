@@ -21,6 +21,11 @@
     "ports": "Ports",
     "noPorts": "Keine Ports",
     "start": "Start",
+    "stop": "Stoppen",
+    "status": "Status",
+    "actions": "Aktionen",
+    "cardView": "Kartenansicht",
+    "listView": "Listenansicht",
     "confirmRemoveContainer": "Sind Sie sicher, dass Sie den Container '{{name}}' entfernen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "runningContainerWarning": "Warnung: Dieser Container wird gerade ausgeführt. Beim Entfernen wird der Container zuerst gestoppt.",
     "loadingContainers": "Container werden geladen...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Der Container muss ausgeführt werden, um auf die Konsole zuzugreifen",
     "verificationCodePrompt": "Bestätigungscode eingeben",
     "totpVerificationFailed": "TOTP-Überprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "browserSignInFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "connectedTo": "Verbunden mit {{containerName}}",
     "disconnected": "Getrennt",
     "consoleError": "Konsolenfehler",
@@ -93,7 +99,10 @@
     "logs": "Protokolle",
     "stats": "Statistiken",
     "consoleTab": "Konsole",
-    "startContainerToAccess": "Starten Sie den Container, um auf die Konsole zuzugreifen"
+    "startContainerToAccess": "Starten Sie den Container, um auf die Konsole zuzugreifen",
+    "noHostSelected": "Kein Host ausgewählt",
+    "failedToFetchLogs": "Protokolle konnten nicht abgerufen werden: {{error}}",
+    "failedToDownloadLogs": "Protokolle konnten nicht heruntergeladen werden: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Container anzeigen, Protokolle lesen und Statistiken auf jedem Host, auf dem Docker ausgeführt wird, einsehen."
   },
+  "terminal": {
+    "retry": "Erneut versuchen",
+    "clipboardReadFailed": "Lesen aus der Zwischenablage fehlgeschlagen. Stellen Sie sicher, dass die Zwischenablageberechtigungen erteilt wurden.",
+    "clipboardWriteFailed": "Kopieren in die Zwischenablage fehlgeschlagen. Stellen Sie sicher, dass die Seite über HTTPS oder localhost bereitgestellt wird."
+  },
+  "permissions": {
+    "use": {
+      "title": "Docker verwenden",
+      "description": "Öffnen Sie die Docker Manager- und Containerkonsolen auf Hosts, auf denen Docker aktiviert ist."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Docker aktivieren"
+        "label": "Docker aktivieren",
+        "description": "Container auf diesem Host verwalten."
       },
       "containerRuntime": {
         "label": "Container-Runtime",
@@ -122,9 +143,5 @@
     "docsLink": "Dokumentation anzeigen",
     "hostNotFound": "Host nicht gefunden",
     "loadingHost": "Host wird geladen..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Lesen aus der Zwischenablage fehlgeschlagen. Stellen Sie sicher, dass die Zwischenablageberechtigungen erteilt wurden.",
-    "clipboardWriteFailed": "Kopieren in die Zwischenablage fehlgeschlagen. Stellen Sie sicher, dass die Seite über HTTPS oder localhost bereitgestellt wird."
   }
 }

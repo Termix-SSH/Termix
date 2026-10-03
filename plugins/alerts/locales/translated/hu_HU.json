@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Riasztások"
+  },
+  "permissions": {
+    "use": {
+      "title": "Értesítések használata",
+      "description": "Értesítéseket kaphatsz a beérkező levelek mappájába, és elküldheted azokat a saját csatornáidra."
+    }
+  },
+  "onboarding": {
+    "feature": "Riasztások",
+    "featureDesc": "Minden értesítés egy postaládában, továbbítva Discordra, ntfy-ra, e-mailben vagy webhookon, ha szeretnéd."
+  },
+  "settings": {
+    "group": {
+      "general": "Általános",
+      "email": "Email"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix bejelentések",
+        "description": "Jelenítse meg a Termix csapatától származó híreket, például a biztonsági értesítéseket és kiadásokat, mindenki postaládájában."
+      },
+      "retentionDays": {
+        "label": "Figyelmeztetések megőrzése (nap)",
+        "description": "A régebbi értesítések minden beérkező üzenetből törlődnek."
+      },
+      "smtpHost": {
+        "label": "SMTP-kiszolgáló",
+        "description": "E-mail csatornákhoz szükséges. Hagyja üresen az e-mail kikapcsolásához.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "SMTP-port",
+        "description": "Általában 587 STARTTLS-sel vagy 465 TLS-sel."
+      },
+      "smtpSecure": {
+        "label": "Használj TLS-t a kezdetektől fogva",
+        "description": "Kapcsold be a 465-ös porton. Hagyd kikapcsolva az 587-es porton, amely önmagában frissít TLS-re."
+      },
+      "smtpUser": {
+        "label": "SMTP felhasználónév",
+        "description": "Hagyja üresen, ha a szerver nem igényel bejelentkezést."
+      },
+      "smtpPassword": {
+        "label": "SMTP jelszó",
+        "description": "Titkosítva tárolva."
+      },
+      "smtpFrom": {
+        "label": "Feladó címe",
+        "description": "A feladó értesítései innen érkeznek.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Figyelmeztető felugró ablakok",
+        "description": "Milyen új értesítések ugranak fel a Termix használata közben? Mindig a beérkezett üzenetek mappába érkeznek.",
+        "all": "Minden riasztás",
+        "warning": "Figyelmeztetések és kritikus fontosságú információk",
+        "critical": "Csak kritikus fontosságú",
+        "off": "Egyik sem"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Beérkezett üzenetek",
+    "channels": "Csatornák",
+    "rules": "Szállítási szabályok"
+  },
+  "severity": {
+    "info": "Információ",
+    "success": "Siker",
+    "warning": "Figyelmeztetés",
+    "critical": "Kritikai"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Nyitott",
+    "view": "Kilátás",
+    "unread": "Nem olvasott",
+    "deliveryFailed_one": "{{count}} csatorna hibás",
+    "deliveryFailed_other": "{{count}} csatornák hibásak",
+    "markRead": "Megjelölés olvasottként",
+    "markUnread": "Megjelölés olvasatlanként",
+    "markAllRead": "Összes megjelölése olvasottként",
+    "delete": "Töröl",
+    "clearRead": "Olvasási értesítések törlése",
+    "cleared_one": "Törölt {{count}} riasztás",
+    "cleared_other": "Törölt {{count}} riasztások",
+    "filterAll": "Minden",
+    "filterUnread": "Nem olvasott",
+    "anySeverity": "Bármilyen súlyosságú",
+    "anySource": "Bármely forrás",
+    "openAll": "Megnyitás egy lapon",
+    "empty": "Még nincsenek riasztások.",
+    "emptyUnread": "Mindennel tisztában vagytok.",
+    "loadMore": "Továbbiak betöltése"
+  },
+  "channels": {
+    "intro": "A csatornák azok a csatornák, amelyeken keresztül a riasztások a Termixen kívülre kerülhetnek. A kézbesítési szabályok választják ki, hogy mely riasztások használják ezeket a csatornákat.",
+    "add": "Csatorna hozzáadása",
+    "edit": "Csatorna szerkesztése",
+    "test": "Küldj egy tesztet",
+    "testSent": "Tesztriasztás elküldve",
+    "testFailed": "Sikertelen teszt: {{error}}",
+    "deleteConfirm": "Törölni a(z) \"{{name}} \" csatornát?",
+    "deleted": "Csatorna törölve",
+    "empty": "Még nincsenek csatornák.",
+    "enabled": "Engedélyezve",
+    "needsSave": "Ezt a csatornát újra meg kell nyitni és menteni, mielőtt küldeni tudna.",
+    "name": "Név",
+    "nameRequired": "Név megadása kötelező",
+    "type": "Típus",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Viszály",
+      "email": "Email"
+    },
+    "emailUnavailable": "Az e-mailhez SMTP-kiszolgálóra van szükség, amelyet egy rendszergazda állít be a riasztási beállításokban.",
+    "webhookUrl": "URL-cím",
+    "webhookHint": "Minden riasztáshoz JSON törzset kap.",
+    "method": "Módszer",
+    "headers": "Fejlécek",
+    "headersHint": "Soronként egy, például Név: érték.",
+    "ntfyServer": "Szerver URL-címe",
+    "ntfyTopic": "Téma",
+    "ntfyToken": "Hozzáférési token (opcionális)",
+    "discordUrl": "Discord webhook URL",
+    "discordHint": "A csatorna beállításaiban a Discordban, az Integrációk alatt.",
+    "discordUsername": "Megjelenített név (opcionális)",
+    "discordAvatar": "Avatar URL-címe (opcionális)",
+    "emailTo": "Küldés ide:",
+    "emailHint": "Több cím esetén vesszővel válassza el az egyes címeket.",
+    "privateNetwork": "Privát hálózati cím engedélyezése",
+    "privateNetworkHint": "Csak azoknál a hosztoknál működik, amelyeket az adminisztrátor engedélyez a privát végpontok listájában."
+  },
+  "rules": {
+    "intro": "A kézbesítési szabály egyező értesítéseket küld a csatornáidra. Az értesítések mindig a beérkezett üzenetek mappájában is maradnak.",
+    "add": "Szabály hozzáadása",
+    "edit": "Szabály szerkesztése",
+    "empty": "Még nincsenek szabályok, így az értesítések csak a beérkező levelek mappában jelennek meg.",
+    "needChannel": "Először adj hozzá egy csatornát.",
+    "enabled": "Engedélyezve",
+    "name": "Név",
+    "nameRequired": "Név megadása kötelező",
+    "match": "Küldendő riasztások",
+    "matchHint": "* mindenre, automatizálásokra.* mindenre az automatizálásoktól kezdve, vagy egy pontos fajtára.",
+    "minSeverity": "Legalább",
+    "channels": "Küldés ide:",
+    "channelRequired": "Válassz legalább egy csatornát",
+    "deleteConfirm": "Törölni kell a(z) \"{{name}} \" szabályt?",
+    "everything": "Minden",
+    "summary": "{{match}}, {{severity}} vagy magasabb, {{channels}}-ra"
+  },
+  "actions": {
+    "cancel": "Mégsem",
+    "save": "Megtakarítás",
+    "saving": "Megtakarítás...",
+    "delete": "Töröl"
+  },
+  "widget": {
+    "name": "Értesítési hírcsatorna",
+    "description": "Legfrissebb értesítéseid, gyors móddal az olvasottként való megjelölésre",
+    "maxItems": "Max. tételek",
+    "showRead": "Olvasási értesítések megjelenítése",
+    "allClear": "Minden tiszta",
+    "loading": "Terhelés..."
+  }
+}

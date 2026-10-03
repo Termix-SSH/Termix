@@ -1,63 +1,64 @@
 {
   "networkGraph": {
     "addHost": "Legg til vert",
-    "addGroup": "Legg til gruppe",
-    "addLink": "Legg til lenke",
+    "addGroup": "Add Group",
+    "addLink": "Add Link",
     "zoomIn": "Zoom inn",
     "zoomOut": "Zoom ut",
-    "resetView": "Tilbakestill visning",
-    "selectHost": "Velg vert",
-    "chooseHost": "Velg en vert...",
-    "parentGroup": "Foreldregruppe",
-    "noGroup": "Ingen gruppe",
-    "groupName": "Gruppenavn",
-    "color": "Farge",
-    "source": "Kilde",
-    "target": "Mål",
-    "moveToGroup": "Flytt til gruppe",
-    "selectGroup": "Velg gruppe...",
-    "addConnection": "Legg til tilkobling",
-    "hostDetails": "Vertsdetaljer",
-    "removeFromGroup": "Fjern fra gruppen",
-    "addHostHere": "Legg til vert her",
-    "editGroup": "Rediger gruppe",
+    "resetView": "Reset View",
+    "selectHost": "Select Host",
+    "chooseHost": "Choose a host...",
+    "parentGroup": "Parent Group",
+    "noGroup": "No Group",
+    "groupName": "Group Name",
+    "color": "Color",
+    "source": "Source",
+    "target": "Target",
+    "moveToGroup": "Move to Group",
+    "selectGroup": "Select group...",
+    "addConnection": "Add Connection",
+    "hostDetails": "Host Details",
+    "removeFromGroup": "Remove from Group",
+    "addHostHere": "Add Host Here",
+    "editGroup": "Edit Group",
     "delete": "Slett",
-    "add": "Legge til",
-    "create": "Skape",
-    "move": "Flytte",
+    "add": "Legg til",
+    "create": "Create",
+    "move": "Flytt",
     "connect": "Koble til",
-    "createGroup": "Opprett gruppe",
-    "selectSourcePlaceholder": "Velg kilde...",
-    "selectTargetPlaceholder": "Velg mål...",
-    "invalidFile": "Ugyldig fil",
-    "hostAlreadyExists": "Verten er allerede i topologien",
-    "connectionExists": "Tilkoblingen finnes allerede",
+    "createGroup": "Create Group",
+    "selectSourcePlaceholder": "Select Source...",
+    "selectTargetPlaceholder": "Select Target...",
+    "invalidFile": "Invalid File",
+    "hostAlreadyExists": "Host is already in the topology",
+    "connectionExists": "Connection already exists",
     "unknown": "Ukjent",
     "name": "Navn",
-    "ip": "IP-adresse",
+    "ip": "IP",
     "status": "Status",
-    "failedToAddNode": "Kunne ikke legge til node",
-    "sourceDifferentFromTarget": "Kilde og mål må være forskjellige",
-    "exportJSON": "Eksporter JSON",
+    "failedToAddNode": "Failed to add node",
+    "sourceDifferentFromTarget": "Source and target must be different",
+    "exportJSON": "Export JSON",
     "importJSON": "Importer JSON",
-    "terminal": "Terminal",
-    "fileManager": "Filbehandler",
-    "tunnel": "Tunnel",
-    "docker": "Dokker",
-    "serverStats": "Vertsmålinger",
-    "hostMetrics": "Vertsmålinger",
-    "noNodes": "Ingen noder ennå"
+    "serverStats": "Host Metrics",
+    "noNodes": "No nodes yet"
   },
   "nav": {
-    "networkGraph": "Nettverksgraf"
+    "networkGraph": "Network Graph"
   },
   "dashboard": {
-    "networkGraph": "Nettverksgraf"
+    "networkGraph": "Network Graph"
   },
   "dashboardTab": {
-    "nodes": "{{count}} noder"
+    "nodes": "{{count}} nodes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use network graph",
+      "description": "View and edit the network topology graph."
+    }
   },
   "hosts": {
-    "docsLink": "Vis dokumenter"
+    "docsLink": "View docs"
   }
 }

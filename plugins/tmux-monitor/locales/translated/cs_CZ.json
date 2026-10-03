@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Monitor Tmux"
-  },
   "hosts": {
     "enableTmuxMonitor": "Povolit monitorování Tmux",
     "enableTmuxMonitorDesc": "Zobrazit tohoto hostitele v Tmux Monitoru a přidat jeho tmux akce do postranního panelu",
+    "tabTmuxMonitor": "Monitor Tmux",
     "docsLink": "Zobrazit dokumenty"
+  },
+  "nav": {
+    "tmuxMonitor": "Monitor Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Monitor Tmux",
+    "tmuxMonitorDesc": "Monitorujte relace tmux napříč vašimi hostiteli"
+  },
+  "permissions": {
+    "use": {
+      "title": "Použijte monitor Tmux",
+      "description": "Procházejte a ovládejte relace, okna a panely tmux na hostitelích s povoleným monitorem."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Povolit monitorování Tmux",
+        "description": "Sledujte a připojujte se k relacím tmux spuštěným na tomto hostiteli."
+      },
+      "mouseEnabled": {
+        "label": "Povolit podporu myši tmux",
+        "description": "Při připojování nebo vytváření relace použijte podporu myši pro relaci tmux. Ostatní relace a globální nastavení tmux zůstanou nezměněny."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Monitor Tmux",
@@ -28,7 +51,7 @@
     "closePreview": "Zavřít náhled",
     "newSession": "Nová relace",
     "newSessionHint": "Název relace (písmena, číslice, _ @ % + = -)",
-    "newSessionPlaceholder": "moje relace",
+    "newSessionPlaceholder": "moje-relace",
     "create": "Vytvořit",
     "sessionCreated": "Relace „{{name}}“ byla vytvořena",
     "sessionCreateFailed": "Nepodařilo se vytvořit relaci",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Přejmenování relace se nezdařilo",
     "editTagsTitle": "Upravit štítky pro „{{name}}“",
     "killPane": "Zavřete panel",
-    "resizeTree": "Přetažením změníte velikost – dvojitým kliknutím resetujete",
+    "resizeTree": "Přetažením změníte velikost, dvojitým kliknutím resetujete",
     "reattach": "Znovu připevnit (opravuje zkreslený obraz)",
     "killWindow": "Okno pro ukončení",
     "killWindowTitle": "Zavřít okno {{index}} z \"{{session}}\"?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Nepodařilo se ukončit relaci",
     "hostUnreachable": "Nepodařilo se připojit k hostiteli. Zkontrolujte, zda je online a dostupný.",
     "noServer": "Na tomto hostiteli neběží žádný tmux server.",
-    "searchTruncated": "Částečné výsledky – vyhledávání pokrývá posledních {{lines}} řádků každého panelu a maximálně {{panes}} panelů.",
+    "searchTruncated": "Částečné výsledky. Hledání pokrývá posledních {{lines}} řádků každého panelu a maximálně {{panes}} panelů.",
     "closeSearchResults": "Zavřít výsledky vyhledávání",
     "retry": "Zkusit znovu",
     "noHosts": "Žádní SSH hostitelé nejsou k dispozici",
-    "noHostsHint": "Povolte možnost Monitor Tmux na hostiteli SSH (Správce hostitelů → záložka Terminál) pro sledování jeho relací tmux.",
+    "noHostsHint": "Povolte možnost Tmux Monitor na hostiteli SSH (Správce hostitelů, záložka Tmux Monitor), abyste mohli monitorovat jeho relace tmux.",
     "tmuxInstallHint": "Nainstalujte jej na hostitele pomocí:",
     "attachTooltip": "Otevřete terminál pro {{host}}",
-    "attachTooltipPane": "Otevřete terminál pro {{host}} — relace tmux {{session}}",
+    "attachTooltipPane": "Otevřete terminál pro {{host}}, tmux session {{session}}",
     "timeJustNow": "právě teď",
     "timeMinutes": "{{count}}před m",
     "timeHours": "{{count}}před hodinami",
-    "timeDays": "Před {{count}}dny"
+    "timeDays": "Před {{count}}dny",
+    "allHosts": "Všichni hostitelé",
+    "singleHost": "Jeden hostitel",
+    "hostScope": "Rozsah monitoru",
+    "filterHosts": "Filtrovat hostitele podle jména nebo adresy",
+    "selectHost": "Vyberte hostitele",
+    "toggleHost": "Rozbalit nebo sbalit {{host}}",
+    "noMatchingHosts": "Žádní odpovídající hostitelé",
+    "toggleSession": "Rozbalit nebo sbalit {{session}}"
   }
 }

@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Zobrazit flotily",
+      "description": "Prohlédněte si flotily, jejich členy a inventář."
+    },
+    "manage": {
+      "title": "Správa vozových parků",
+      "description": "Vytvářejte, upravujte a mazejte flotily, měňte členství a sdílejte flotily s ostatními uživateli nebo rolemi."
+    },
+    "execute": {
+      "title": "Spouštění akcí flotily",
+      "description": "Spouštět příkazy a akce balíčků napříč flotilou a přenášet soubory do a z jejích členských hostitelů."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -31,7 +45,7 @@
         "manageMembers": "Spravovat členy",
         "manageMembersTitle": "Správa členů vozového parku",
         "manageMembersDescription": "Přepíná hostitele do statického členství této flotily nebo z něj. Hostitelé odpovídající pravidlům tagů jsou vždy zahrnuti.",
-        "searchHosts": "Hledat hostitele...",
+        "searchHosts": "Hledat hostitele…",
         "noHostsFound": "Nenalezeny žádné hostitele",
         "noMembers": "Tato flotila zatím nemá žádné členy. Přidejte hostitele nebo nastavte pravidlo pro tagy.",
         "membersLoadFailed": "Nepodařilo se načíst členy flotily",
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Aktualizujte všechny balíčky",
         "packageNameLabel": "Název balíčku",
         "packageNameRequired": "Je vyžadován název balíčku.",
-        "packageHint": "Vyžaduje přístup na úrovni správy pro každého hostitele a zvyšuje oprávnění pomocí uloženého hesla sudo hostitele."
+        "packageHint": "Vyžaduje přístup na úrovni správy pro každého hostitele a zvyšuje oprávnění pomocí uloženého hesla sudo hostitele.",
+        "shareFleet": "Sdílení flotily",
+        "shareFleetTitle": "Sdílet „{{name}}“",
+        "shareFleetDescription": "Sdílí aktuální členské hostitele této flotily s vybranými uživateli nebo rolemi. Hostitelé přidaní do flotily později se nesdílejí automaticky – chcete-li je zahrnout, sdílejte je znovu.",
+        "shareSelectionRequired": "Vyberte alespoň jednoho uživatele nebo roli",
+        "fleetSharedSuccessfully": "Sdílený {{shared}} z {{total}} hostitel(ů) v této flotile",
+        "failedToShareFleet": "Sdílení flotily se nezdařilo",
+        "noMembersToShare": "Tato flotila zatím nemá žádné členské hostitele, o které by se dalo sdílet."
       }
     }
   },
@@ -106,7 +127,7 @@
         },
         "view": {
           "label": "Pohled",
-          "description": "Připojte se a podívejte se na konfiguraci hostitele. Tajné kódy se nikdy nezobrazují."
+          "description": "Připojení a zobrazení konfigurace hostitele. Tajné kódy se nikdy nezobrazují."
         },
         "edit": {
           "label": "Upravit",

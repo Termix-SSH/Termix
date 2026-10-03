@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Utilitza l'assistent",
+      "description": "Obre l'assistent i fes-li preguntes."
+    },
+    "manage_providers": {
+      "title": "Gestiona els proveïdors",
+      "description": "Afegiu, editeu i elimineu els proveïdors d'IA i les seves claus API."
+    },
+    "apply_proposals": {
+      "title": "Aplicar propostes",
+      "description": "Deixa que l'assistent dugui a terme els canvis que suggereixi."
+    },
+    "services.use": {
+      "title": "Utilitza la IA d'altres funcions",
+      "description": "Altres funcions poden trucar a l'assistent en nom teu."
+    },
+    "secrets.share": {
+      "title": "Comparteix la clau de l'API",
+      "description": "Altres funcions poden utilitzar la clau de l'API d'IA emmagatzemada sense veure-la."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "L'assistent d'IA està desactivat en aquest servidor.",
+    "providersNeedOptIn": "Activa l'assistent d'IA que hi ha a sobre per afegir proveïdors.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "Assistent d'IA",
+        "description": "Permet que els usuaris activin l'assistent d'IA. Mentre estigui desactivat, l'assistent està ocult i bloquejat per a tothom."
+      },
+      "privateEndpoints": {
+        "label": "Amfitrions d'IA privats permesos",
+        "description": "Amfitrions de la vostra xarxa privada als quals els usuaris poden dirigir un proveïdor, com ara un Ollama autoallotjat. Poseu un amfitrió a cada línia."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Activa l'Assistent d'IA",
+        "description": "Permet que l'assistent d'IA ajudi al terminal d'aquest amfitrió. Desactivat per defecte, però encara cal que la IA estigui activada per al teu compte."
+      }
+    }
+  },
   "ai": {
     "title": "Assistent",
     "send": "Enviar",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Pregunta per aquest amfitrió...",
     "noProvidersConfigured": "Encara no hi ha cap proveïdor d'IA configurat. Afegeix-ne un a la pestanya Assistent d'IA.",
     "runsInOpenTerminal": "S'executa a la sessió de terminal oberta.",
-    "runInTerminal": "Corre"
+    "runInTerminal": "Corre",
+    "terminalContextPrefill": "Aquí teniu la sortida del meu terminal:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Permet que altres funcions utilitzin la clau de l'API del proveïdor d'IA per a les seves pròpies sol·licituds. La clau no es copia mai i pots revocar-la en qualsevol moment."
+    }
   },
   "nav": {
     "ai": "IA"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Engega-ho",
     "aiEnableDesc": "Afegeix un assistent que llegeix la configuració i suggereix els canvis que aproveu. Necessita un proveïdor que subministreu, com ara un Ollama local.",
     "aiNote": "No s'envia res enlloc fins que no afegiu un proveïdor i envieu un missatge."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "Assistent d'IA",
-        "description": "Permet que els usuaris activin l'assistent d'IA. Mentre estigui desactivat, l'assistent està ocult i bloquejat per a tothom."
-      },
-      "privateEndpoints": {
-        "label": "Amfitrions d'IA privats permesos"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Activa l'Assistent d'IA",
-        "description": "Permet que l'assistent d'IA ajudi al terminal d'aquest amfitrió. Desactivat per defecte, però encara cal que la IA estigui activada per al teu compte."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Veure documents"

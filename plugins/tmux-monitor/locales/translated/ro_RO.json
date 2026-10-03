@@ -1,14 +1,37 @@
 {
-  "nav": {
-    "tmuxMonitor": "Monitorul Tmux"
-  },
   "hosts": {
     "enableTmuxMonitor": "Activează monitorul Tmux",
     "enableTmuxMonitorDesc": "Afișează această gazdă în Monitorul Tmux și adaugă acțiunile sale tmux în bara laterală",
+    "tabTmuxMonitor": "Monitorul Tmux",
     "docsLink": "Vizualizați documentele"
   },
+  "nav": {
+    "tmuxMonitor": "Monitor Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Monitor Tmux",
+    "tmuxMonitorDesc": "Monitorizați sesiunile tmux pe toate gazdele dvs."
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește monitorul Tmux",
+      "description": "Răsfoiți și controlați sesiunile tmux, ferestrele și panourile de pe gazde cu monitorul activat."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activează monitorul Tmux",
+        "description": "Urmărește și atașează-te la sesiunile tmux care rulează pe această gazdă."
+      },
+      "mouseEnabled": {
+        "label": "Activează suportul pentru mouse tmux",
+        "description": "Aplică suport pentru mouse sesiunii tmux la atașarea sau crearea unei sesiuni. Celelalte sesiuni și setările globale tmux rămân neschimbate."
+      }
+    }
+  },
   "tmuxMonitor": {
-    "title": "Monitorul Tmux",
+    "title": "Monitor Tmux",
     "failedToLoadHosts": "Nu s-au putut încărca gazdele",
     "failedToLoad": "Nu s-au putut încărca sesiunile tmux",
     "tmuxUnavailable": "tmux nu este instalat pe această gazdă",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Nu s-a putut redenumi sesiunea",
     "editTagsTitle": "Editați etichetele pentru „{{name}}”",
     "killPane": "Panou de închidere",
-    "resizeTree": "Trageți pentru redimensionare — faceți dublu clic pentru resetare",
+    "resizeTree": "Trageți pentru a redimensiona, faceți dublu clic pentru a reseta",
     "reattach": "Reatașare (corectează o vizualizare deformată)",
     "killWindow": "Fereastră de închidere",
     "killWindowTitle": "Fereastră de închidere {{index}} a ferestrei „{{session}}”?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Sesiunea nu a putut fi închisă",
     "hostUnreachable": "Nu s-a putut conecta la gazdă. Verificați dacă este online și accesibilă.",
     "noServer": "Niciun server tmux nu rulează pe această gazdă.",
-    "searchTruncated": "Rezultate parțiale — căutarea acoperă ultimele {{lines}} linii ale fiecărui panou și cel mult {{panes}} panouri.",
+    "searchTruncated": "Rezultate parțiale. Căutarea acoperă ultimele {{lines}} linii ale fiecărui panou și cel mult {{panes}} panouri.",
     "closeSearchResults": "Închide rezultatele căutării",
     "retry": "Reîncercați",
     "noHosts": "Nu sunt disponibile gazde SSH",
-    "noHostsHint": "Activați opțiunea Monitor Tmux pe o gazdă SSH (fila Manager gazdă → Terminal) pentru a monitoriza sesiunile tmux ale acesteia.",
+    "noHostsHint": "Activați opțiunea Monitor Tmux pe o gazdă SSH (Manager gazdă, fila Monitor Tmux) pentru a monitoriza sesiunile tmux ale acesteia.",
     "tmuxInstallHint": "Instalați-l pe gazdă cu:",
     "attachTooltip": "Deschideți un terminal cu {{host}}",
-    "attachTooltipPane": "Deschideți un terminal cu {{host}} — sesiune tmux {{session}}",
+    "attachTooltipPane": "Deschide un terminal cu {{host}}, sesiune tmux {{session}}",
     "timeJustNow": "chiar acum",
     "timeMinutes": "{{count}}acum câteva minute",
     "timeHours": "{{count}}acum o oră",
-    "timeDays": "{{count}}zile în urmă"
+    "timeDays": "{{count}}zile în urmă",
+    "allHosts": "Toate gazdele",
+    "singleHost": "Gazdă unică",
+    "hostScope": "Monitorizați domeniul de aplicare",
+    "filterHosts": "Filtrați gazdele după nume sau adresă",
+    "selectHost": "Selectați gazda",
+    "toggleHost": "Extinde sau restrânge {{host}}",
+    "noMatchingHosts": "Nicio gazdă potrivită",
+    "toggleSession": "Extinde sau restrânge {{session}}"
   }
 }

@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux 监视器"
-  },
   "hosts": {
     "enableTmuxMonitor": "启用 Tmux 监控",
     "enableTmuxMonitorDesc": "在 Tmux 监控中显示此主机，并将其 tmux 操作添加到侧边栏",
+    "tabTmuxMonitor": "Tmux 监视器",
     "docsLink": "查看文档"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux 监视器"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux 监视器",
+    "tmuxMonitorDesc": "监控主机上的 tmux 会话"
+  },
+  "permissions": {
+    "use": {
+      "title": "使用 tmux 监控",
+      "description": "在启用了监控的主机上浏览和控制 tmux 会话、窗口和窗格。"
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "启用 Tmux 监控",
+        "description": "监控并连接此主机上运行的 tmux 会话。"
+      },
+      "mouseEnabled": {
+        "label": "启用 tmux 鼠标支持",
+        "description": "连接或创建 tmux 会话时为该会话启用鼠标支持，不更改其他会话和 tmux 全局设置。"
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux 监视器",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "重命名会话失败",
     "editTagsTitle": "编辑 \"{{name}}\" 的标签",
     "killPane": "终止窗格",
-    "resizeTree": "拖动调整大小 — 双击重置",
+    "resizeTree": "拖动调整大小，双击重置",
     "reattach": "重新附加（修复显示错乱）",
     "killWindow": "终止窗口",
     "killWindowTitle": "终止会话 \"{{session}}\" 的窗口 {{index}}？",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "终止会话失败",
     "hostUnreachable": "无法连接到主机。请检查主机是否在线且可访问。",
     "noServer": "此主机上未运行 tmux 服务器。",
-    "searchTruncated": "部分结果 — 搜索覆盖每个窗格的最近 {{lines}} 行，最多 {{panes}} 个窗格。",
+    "searchTruncated": "结果不完整。搜索仅覆盖每个窗格最近的 {{lines}} 行，最多搜索 {{panes}} 个窗格。",
     "closeSearchResults": "关闭搜索结果",
     "retry": "重试",
     "noHosts": "没有可用的 SSH 主机",
-    "noHostsHint": "在 SSH 主机上启用 Tmux Monitor 选项（主机管理器 → 终端标签页）以监控其 tmux 会话。",
+    "noHostsHint": "在 SSH 主机的主机管理器中，打开“tmux 监控”标签页并启用监控选项，即可监控其 tmux 会话。",
     "tmuxInstallHint": "使用以下命令在主机上安装：",
     "attachTooltip": "打开到 {{host}} 的终端",
-    "attachTooltipPane": "打开到 {{host}} 的终端 — tmux 会话 {{session}}",
+    "attachTooltipPane": "打开连接到 {{host}} 的终端，使用 tmux 会话 {{session}}",
     "timeJustNow": "刚刚",
     "timeMinutes": "{{count}} 分钟前",
     "timeHours": "{{count}} 小时前",
-    "timeDays": "{{count}} 天前"
+    "timeDays": "{{count}} 天前",
+    "allHosts": "所有主机",
+    "singleHost": "单台主机",
+    "hostScope": "监控范围",
+    "filterHosts": "按名称或地址筛选主机",
+    "selectHost": "选择主机",
+    "toggleHost": "展开或折叠 {{host}}",
+    "noMatchingHosts": "没有匹配的主机",
+    "toggleSession": "展开或折叠 {{session}}"
   }
 }

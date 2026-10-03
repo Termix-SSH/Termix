@@ -3,8 +3,31 @@
     "sessionLogs": "Registos de Sessão"
   },
   "hosts": {
-    "enableSessionRecording": "Registo de sessão",
+    "enableSessionRecording": "Gravação de Sessão",
     "enableSessionRecordingDesc": "Gravar a saída da sessão de terminal para revisão posterior"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording",
+        "description": "Record terminal output for this host so you can play it back or download it later."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
   },
   "sessionLogs": {
     "title": "Registos de Sessão",
@@ -13,7 +36,7 @@
     "duration": "Duração",
     "viewLog": "Ver registo",
     "downloadLog": "Transferir",
-    "downloadAsText": "Descarregar como texto",
+    "downloadAsText": "Download as text",
     "deleteLog": "Eliminar",
     "confirmDelete": "Eliminar este registo de sessão?",
     "confirmDeleteDesc": "Esta ação não pode ser desfeita.",
@@ -21,6 +44,17 @@
     "copied": "Copiado!",
     "loadError": "Falha ao carregar registos de sessão",
     "deleteError": "Falha ao eliminar registo de sessão",
-    "filterByHost": "Filtrar por host..."
+    "filterByHost": "Filtrar por host...",
+    "back": "Voltar",
+    "empty": "(vazio)",
+    "noResults": "No results for \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Session {{id}}"
+  },
+  "player": {
+    "timeline": "Recording timeline",
+    "speed": "Playback speed",
+    "play": "Play recording",
+    "pause": "Pause recording"
   }
 }

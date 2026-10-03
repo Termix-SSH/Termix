@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "ソースとターゲットは異なる必要があります",
     "exportJSON": "JSON エクスポート",
     "importJSON": "JSON インポート",
-    "terminal": "ターミナル",
-    "fileManager": "ファイルマネージャー",
-    "tunnel": "トンネル",
-    "docker": "Docker",
     "serverStats": "ホストメトリクス",
-    "hostMetrics": "ホストメトリクス",
     "noNodes": "ノードはまだありません"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} ノード"
+  },
+  "permissions": {
+    "use": {
+      "title": "ネットワークグラフを使用する",
+      "description": "ネットワークトポロジーグラフを表示および編集します。"
+    }
   },
   "hosts": {
     "docsLink": "ドキュメントを表示"

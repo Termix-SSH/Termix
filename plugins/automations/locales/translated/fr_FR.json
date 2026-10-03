@@ -1,28 +1,44 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Afficher les automatisations",
+      "description": "Consultez les automatisations et leur historique."
+    },
+    "create": {
+      "title": "Créer des automatisations",
+      "description": "Ajouter de nouvelles automatisations."
+    },
+    "edit": {
+      "title": "Modifier les automatisations",
+      "description": "Modifier les automatisations existantes."
+    },
+    "delete": {
+      "title": "Supprimer les automatisations",
+      "description": "Supprimer les automatisations."
+    },
+    "run": {
+      "title": "Exécuter des automatisations",
+      "description": "Déclencher une automatisation manuellement."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
         "title": "Automatisations",
         "tabAutomations": "Automatisations",
         "tabRuns": "Courses",
-        "tabChannels": "Chaînes",
+        "tabChannels": "Canaux",
         "createAutomation": "Nouvelle automatisation",
         "backToAutomations": "Retour aux automatisations",
         "createTitle": "Nouvelle automatisation",
         "editTitle": "Automatisation de la modification",
         "empty": "Aucune automatisation pour le moment. Créez-en une pour qu'elle réagisse à une mesure, une planification ou un événement.",
         "emptyRuns": "Pas encore de runs.",
-        "emptyChannels": "Aucun canal pour le moment. Ajoutez-en un pour envoyer des notifications.",
-        "noChannelsHint": "Aucune chaîne n'est encore configurée. Ajoutez-en une dans l'onglet Chaînes.",
-        "addChannel": "Ajouter une chaîne",
-        "testChannel": "Test",
-        "channelTestSent": "Notification de test envoyée",
-        "channelTestFailed": "La notification de test a échoué",
-        "channelDeleted": "Chaîne supprimée",
-        "deleteChannelConfirm": "Supprimer ce canal ? Les automatisations qui l'utilisent cesseront d'envoyer des notifications.",
+        "channelsHint": "Les canaux sont configurés dans les alertes",
+        "noChannelsHint": "L'alerte est toujours envoyée dans votre boîte de réception. Ajoutez des canaux dans les alertes pour la diffuser également ailleurs.",
         "nameLabel": "Nom",
         "namePlaceholder": "Par exemple, nettoyer le répertoire /data lorsqu'il est plein.",
-        "nameRequired": "Le nom est requis.",
+        "nameRequired": "Le nom est obligatoire",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Description facultative",
         "enabledLabel": "Activé",
@@ -33,7 +49,7 @@
           "queue": "Attendez et courez après",
           "allow": "Exécutez les deux simultanément."
         },
-        "save": "Sauvegarder",
+        "save": "Enregistrer",
         "created": "L'automatisation a créé",
         "updated": "L'automatisation a permis de sauver",
         "deleted": "Automatisation supprimée",
@@ -43,7 +59,7 @@
         "testRunHint": "Exécute chaque étape mais ne touche à rien en dehors de Termix.",
         "runStarted": "La course a commencé",
         "runFinished": "Course terminée : {{status}}",
-        "trigger": "Déclenchement",
+        "trigger": "Déclencheur",
         "steps": "Mesures",
         "addStep": "Ajouter une étape",
         "removeStep": "Supprimer l'étape",
@@ -52,7 +68,7 @@
         "noSteps": "Aucune étape pour l'instant. Ajoutez-en une pour décrire ce qui doit se passer.",
         "webhookTokenTitle": "URL du webhook",
         "webhookTokenDescription": "Ceci ne s'affiche qu'une seule fois. Enregistrez-le maintenant, il ne pourra pas être récupéré ultérieurement.",
-        "copy": "Copie",
+        "copy": "Copier",
         "copied": "Copié",
         "viewJson": "JSON",
         "viewBuilder": "Constructeur",
@@ -60,7 +76,7 @@
         "lastRun": "Dernière course",
         "never": "Jamais",
         "duration": "{{seconds}}s",
-        "stepOutput": "Sortir",
+        "stepOutput": "Sortie",
         "stepError": "Erreur",
         "dryRunBadge": "Essai",
         "hostSelector": {
@@ -79,7 +95,7 @@
           "webhook": "Webhook entrant"
         },
         "stepTypes": {
-          "notify": "Envoyer une notification",
+          "notify": "Envoyer une alerte",
           "http": "Appeler une URL",
           "run_snippet": "Exécuter un extrait de code",
           "run_command": "Exécuter une commande",
@@ -90,12 +106,12 @@
           "set_var": "Définir une variable",
           "if": "Si / sinon",
           "run_automation": "Exécutez une autre automatisation",
-          "stop": "Arrêt"
+          "stop": "Stop"
         },
         "statuses": {
-          "running": "En cours d'exécution",
+          "running": "En cours d’exécution",
           "success": "Succès",
-          "failed": "Échoué",
+          "failed": "Échec",
           "timeout": "Délai d'attente dépassé",
           "skipped": "Omission",
           "cancelled": "Annulé"
@@ -107,7 +123,7 @@
           "operator": "Est",
           "value": "Valeur",
           "forSeconds": "Maintenu pendant (secondes)",
-          "cooldown": "Temps de récupération (minutes)",
+          "cooldown": "Temporisation (minutes)",
           "cron": "Expression de Cron",
           "intervalSeconds": "Toutes les (secondes)",
           "timezone": "Fuseau horaire",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Méthode",
           "body": "Corps",
-          "channels": "Chaînes",
+          "channels": "Envoyer également à",
           "title": "Titre",
           "message": "Message",
           "snippet": "Fragment",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Arrêtez la course",
           "continue": "Continuer"
+        },
+        "needsPlugin": "Besoins {{plugin}}",
+        "needsPluginHint": "Cette automatisation est suspendue jusqu'à ce que la fonctionnalité nécessaire soit de nouveau disponible.",
+        "offBadge": "Désactivée",
+        "docsLink": "Voir la documentation",
+        "ago": {
+          "seconds": "{{count}}il y a s",
+          "minutes": "il y a {{count}} min",
+          "hours": "il y a {{count}} h",
+          "days": "il y a {{count}} j"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatisations",
     "feature_automations_desc": "Exécutez des actions automatiquement lorsqu'un événement se produit et recevez une notification."
+  },
+  "maintenance": {
+    "title": "Maintenance",
+    "description": "Suspendez les automatisations relatives à l'état des hôtes, à leur santé, aux métriques, aux conteneurs et à la déconnexion des tunnels pendant la durée de l'opération. La surveillance, les exécutions manuelles et les automatisations planifiées se poursuivent.",
+    "denied": "Vous n'êtes pas autorisé à consulter les informations de maintenance.",
+    "sharedReadOnly": "Cet hébergement vous a été proposé à la location. Seul son propriétaire peut en modifier la maintenance.",
+    "failed": "La maintenance n'a pas pu être mise à jour.",
+    "active": "Maintenance active",
+    "estimated": "Achèvement estimé",
+    "noAutoEnd": "Le devis ne met pas fin à la maintenance. Il faut y mettre fin explicitement une fois les travaux terminés.",
+    "endConfirm": "Mettre fin à la maintenance et reprendre les automatisations déclenchées par des événements pour cet hôte ?",
+    "confirmEnd": "Confirmer la fin",
+    "cancel": "Annuler",
+    "end": "Maintenance finale",
+    "action": "Action",
+    "startNow": "Commencez maintenant",
+    "schedule": "Planifiez plus tard",
+    "reason": "Raison",
+    "startUtc": "Premier démarrage (UTC)",
+    "repeat": "Répéter",
+    "once": "Une fois",
+    "weekly": "Hebdomadaire",
+    "monthly": "Mensuel",
+    "utcHelp": "Les planifications utilisent le temps universel coordonné (UTC) tout au long de l'année. Les planifications mensuelles ignorent les mois sans le jour sélectionné. Les fenêtres de planification ne peuvent pas se chevaucher ; la maintenance en cours se poursuit sur les fenêtres suivantes.",
+    "duration": "Durée estimée (minutes)",
+    "grace": "Délai de grâce (minutes)",
+    "notify": "Veuillez nous informer une seule fois si nous sommes toujours hors ligne après la période estimée et le délai de grâce. Veuillez nous avertir une fois si nous sommes toujours hors ligne après la période estimée et le délai de grâce.",
+    "addSchedule": "Ajouter un horaire",
+    "schedules": "Horaires",
+    "noSchedules": "Aucun programme de maintenance.",
+    "completed": "Déjà commencé",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "remove": "Supprimer le planning",
+    "loadFailed": "Impossible d'actualiser l'état de maintenance. Les modifications sont désactivées jusqu'à ce que le chargement soit possible.",
+    "loading": "État de la maintenance en cours de chargement…"
   }
 }

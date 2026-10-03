@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Etusivu",
     "addWidget": "Lisää widget",
+    "noWidgetsInCategory": "Ei widgettejä tässä kategoriassa",
     "editWidget": "Muokkaa widgetiä",
     "zoomIn": "Lähennä",
     "zoomOut": "Loitonna",
@@ -59,6 +60,9 @@
     "maxItems": "Kohteiden enimmäismäärä",
     "showDescription": "Näytä kuvaus",
     "widgetRssName": "RSS-syöte",
+    "rssNoFeedUrl": "Syötteen URL-osoitteen määrittäminen widgetin asetuksissa",
+    "rssLoadError": "Syötettä ei voitu ladata",
+    "rssNoItems": "Ei kohteita",
     "noHostSelected": "Ei valittua isäntää",
     "displayedMetrics": "Näytetyt mittarit",
     "metricCpu": "Suoritin",
@@ -157,6 +161,30 @@
     "compactMode": "Kompakti tila",
     "selectHosts": "Valitse isännät",
     "listLayout": "Lista",
-    "gridLayout": "Ruudukko"
+    "gridLayout": "Ruudukko",
+    "configureUrl": "Aseta URL-osoite widgetin asetuksissa",
+    "embeddedContent": "Upotettu sisältö",
+    "noBookmarks": "Ei kirjanmerkkejä",
+    "noSections": "Ei osioita määritettynä",
+    "noServices": "Ei palveluita määritettynä",
+    "configureLocation": "Aseta sijainti widgetin asetuksissa",
+    "bannerTextPlaceholder": "Banneriteksti",
+    "serviceNamePlaceholder": "Palveluni"
+  },
+  "permissions": {
+    "use": {
+      "title": "Käytä kotisivua",
+      "description": "Tarkastele ja muokkaa kotisivun kanvasta ja kojelaudan palvelulinkkejä."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Sallitut yksityiset isännät",
+      "description": "Tarkat yksityiset tai loopback-isäntänimet/IP-osoitteet Ping Status- ja Custom API -widgeteille. Erota merkinnät pilkuilla tai rivinvaihdoilla; jätä pois skeema, portit ja polut. Tyhjät lohkot yksityisiä kohteita."
+    },
+    "privateCertificateAuthority": {
+      "label": "Yksityinen varmentaja (PEM)",
+      "description": "Valinnainen luotettujen varmenteiden paketti sallittujen isäntien luettelosta. Varmenteiden vahvistus pysyy käytössä. Jätä tyhjäksi käyttääksesi järjestelmän luotettujen varmenteiden säilöä."
+    }
   }
 }

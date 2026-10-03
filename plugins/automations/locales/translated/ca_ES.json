@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Veure automatitzacions",
+      "description": "Vegeu les automatitzacions i el seu historial."
+    },
+    "create": {
+      "title": "Crea automatitzacions",
+      "description": "Afegiu noves automatitzacions."
+    },
+    "edit": {
+      "title": "Edita automatitzacions",
+      "description": "Canviar les automatitzacions existents."
+    },
+    "delete": {
+      "title": "Suprimeix automatitzacions",
+      "description": "Eliminar automatitzacions."
+    },
+    "run": {
+      "title": "Executar automatitzacions",
+      "description": "Activa una automatització manualment."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Edita l'automatització",
         "empty": "Encara no hi ha automatitzacions. Crea'n una per reaccionar a una mètrica, una programació o un esdeveniment.",
         "emptyRuns": "Encara no hi ha curses.",
-        "emptyChannels": "Encara no hi ha cap canal. Afegeix-ne un per enviar notificacions a algun lloc.",
-        "noChannelsHint": "Encara no s'ha configurat cap canal. Afegeix-ne un a la pestanya Canals.",
-        "addChannel": "Afegeix un canal",
-        "testChannel": "Prova",
-        "channelTestSent": "Notificació de prova enviada",
-        "channelTestFailed": "La notificació de prova ha fallat",
-        "channelDeleted": "Canal suprimit",
-        "deleteChannelConfirm": "Voleu suprimir aquest canal? Les automatitzacions que l'utilitzen deixaran de notificar.",
+        "channelsHint": "Els canals es configuren a Alertes",
+        "noChannelsHint": "L'alerta sempre va a la teva safata d'entrada. Afegeix canals a Alertes per enviar-la també a un altre lloc.",
         "nameLabel": "Nom",
         "namePlaceholder": "p. ex., Neteja /dades quan s'ompli",
         "nameRequired": "El nom és obligatori",
@@ -79,7 +95,7 @@
           "webhook": "Webhook entrant"
         },
         "stepTypes": {
-          "notify": "Enviar una notificació",
+          "notify": "Enviar una alerta",
           "http": "Crida a una URL",
           "run_snippet": "Executa un fragment",
           "run_command": "Executa una ordre",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Mètode",
           "body": "Cos",
-          "channels": "Canals",
+          "channels": "També envia a",
           "title": "Títol",
           "message": "Missatge",
           "snippet": "Fragment",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Atura la cursa",
           "continue": "Continua"
+        },
+        "needsPlugin": "Necessita {{plugin}}",
+        "needsPluginHint": "Aquesta automatització s'omet fins que la funció que necessita torni a estar disponible.",
+        "offBadge": "Desactivat",
+        "docsLink": "Veure documents",
+        "ago": {
+          "seconds": "Fa {{count}}segons",
+          "minutes": "fa {{count}}minuts",
+          "hours": "fa {{count}}h",
+          "days": "fa {{count}}dies"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatitzacions",
     "feature_automations_desc": "Executa els passos automàticament quan passi alguna cosa i rep notificacions."
+  },
+  "maintenance": {
+    "title": "Manteniment",
+    "description": "Pausa les automatitzacions d'estat, salut, mètriques, contenidors i desconnexió de túnels de l'amfitrió mentre la feina està en curs. La supervisió, les execucions manuals i les automatitzacions programades continuen.",
+    "denied": "No teniu permís per veure el manteniment.",
+    "sharedReadOnly": "Aquest amfitrió s'ha compartit amb tu. Només el seu propietari pot canviar el manteniment.",
+    "failed": "No s'ha pogut actualitzar el manteniment.",
+    "active": "Manteniment actiu",
+    "estimated": "Finalització prevista",
+    "noAutoEnd": "El pressupost no finalitza el manteniment. Finalitzeu-lo explícitament quan la feina s'hagi completat.",
+    "endConfirm": "Voleu finalitzar el manteniment i reprendre les automatitzacions activades per esdeveniments per a aquest amfitrió?",
+    "confirmEnd": "Confirma la fi",
+    "cancel": "Cancel·la",
+    "end": "Finalitzar el manteniment",
+    "action": "Acció",
+    "startNow": "Comença ara",
+    "schedule": "Programa per a més tard",
+    "reason": "Raó",
+    "startUtc": "Primer inici (UTC)",
+    "repeat": "Repetir",
+    "once": "Un cop",
+    "weekly": "Setmanal",
+    "monthly": "Mensual",
+    "utcHelp": "Les programacions utilitzen UTC durant tot l'any. Les programacions mensuals salten mesos sense el dia seleccionat. Les finestres planificades no es poden superposar; el manteniment que s'executa de manera excessiva continua a les finestres posteriors.",
+    "duration": "Durada estimada (minuts)",
+    "grace": "Període de gràcia (minuts)",
+    "notify": "Notifica una vegada si encara estàs fora de línia després de l'estimació més el període de gràcia",
+    "addSchedule": "Afegeix una programació",
+    "schedules": "Horaris",
+    "noSchedules": "Sense programes de manteniment.",
+    "completed": "Ja ha començat",
+    "minutes_one": "{{count}} minut",
+    "minutes_other": "{{count}} minuts",
+    "remove": "Elimina la programació",
+    "loadFailed": "No s'ha pogut actualitzar l'estat del manteniment. Els canvis estan desactivats fins que es pugui carregar.",
+    "loading": "S'està carregant l'estat del manteniment…"
   }
 }

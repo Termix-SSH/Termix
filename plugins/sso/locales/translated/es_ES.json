@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Iniciar sesión con SSO",
   "loginWithProvider": "Iniciar sesión con {{name}}",
   "loading": "Cargando...",
+  "permissions": {
+    "manage": {
+      "title": "Gestionar proveedores de inicio de sesión único (SSO)",
+      "description": "Agregue, cambie y elimine los proveedores de inicio de sesión único (SSO) con los que las personas pueden iniciar sesión."
+    }
+  },
   "providers": {
     "docsLink": "Ver documentación",
     "none": "No hay proveedores SSO configurados.",
@@ -8,7 +15,9 @@
     "edit": "Editar proveedor",
     "delete": "Eliminar proveedor",
     "deleteConfirm": "¿Eliminar este proveedor? Los usuarios asociados no podrán iniciar sesión.",
-    "name": "Nombre visible",
+    "name": "Nombre para mostrar",
+    "namePlaceholder": "Mi proveedor de SSO",
+    "nameRequired": "Se requiere un nombre para mostrar.",
     "type": "Tipo de proveedor",
     "enabled": "Activado",
     "save": "Guardar proveedor",
@@ -17,11 +26,20 @@
     "saveFailed": "Error al guardar",
     "deleted": "Eliminado",
     "deleteFailed": "Error al eliminar",
-    "cancel": "Cancelar"
+    "loadFailed": "No se pudieron cargar los proveedores de SSO.",
+    "cancel": "Cancelar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "redirectUri": "URI de redirección",
+    "redirectUriDesc": "Registra esta URL como URL de redireccionamiento o de devolución de llamada en tu proveedor de identidad.",
+    "legacyCallback": "Mantén la URI de redireccionamiento antigua.",
+    "legacyCallbackDesc": "Este proveedor se configuró antes de Termix 2.9 y aún utiliza la URI de redireccionamiento antigua, que sigue funcionando. Para cambiar a la nueva, primero añade {{uri}} a tu proveedor de identidad y luego desactiva esta opción.",
+    "authorizationUrl": "URL de autorización: {{url}}"
   },
   "fields": {
     "clientId": "ID de cliente",
     "clientSecret": "Secreto de cliente",
+    "secretKeep": "Un secreto está guardado. Deja esto en blanco para conservarlo.",
     "issuerUrl": "URL del emisor",
     "authUrl": "URL de autorización",
     "tokenUrl": "URL del token",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Los usuarios de este grupo reciben permisos de administrador. Déjelo vacío para desactivar la sincronización de grupos.",
     "caCert": "Certificado CA personalizado",
     "caCertDesc": "Opcional. Certificado CA codificado en PEM para proveedores OIDC que utilicen una CA privada o autofirmada. Déjelo vacío para usar el almacén de confianza del sistema."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Inicia sesión automáticamente con SSO.",
+      "description": "En lugar de mostrar el formulario de inicio de sesión, redirige a los visitantes directamente al primer proveedor de SSO. La variable de entorno OIDC_SILENT_LOGIN_DEFAULT anula esta configuración."
+    }
   }
 }

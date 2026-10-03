@@ -73,17 +73,22 @@
       "fitToScreen": "Potrivire la ecran",
       "switchToTrackpad": "Comutare la modul trackpad (tragere pentru mutarea cursorului, atingere pentru clic)",
       "switchToTouch": "Comutare la modul tactil (atingere direct unde doriți să faceți clic)"
-    }
+    },
+    "disabled": "Desktopul la distanță este dezactivat. Un administrator îl poate activa în Setări."
   },
   "hosts": {
     "nativeRdpOpened": "Deschis în Desktop la distanță Windows",
     "nativeRdpFailed": "Nu s-a putut deschide Desktop la distanță Windows",
     "openNativeRdp": "Deschideți în Desktop la distanță Windows",
     "guac": {
+      "toolbar": "Bara de instrumente",
       "connection": "Conexiune",
       "authentication": "Autentificare",
       "storedCredential": "Acreditare stocată",
       "authMethod": "Metodă de autentificare",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Acreditare",
+      "authTypeNone": "Nici unul",
       "authTypeNoneDesc": "Nu sunt stocate acreditări. Vi se va solicita un nume de utilizator și o parolă de fiecare dată când vă conectați; acestea nu sunt salvate.",
       "selectCredential": "Selectați o acreditare...",
       "connectionSettings": "Setări de conectare",
@@ -206,7 +211,8 @@
       "colorScheme": "Schemă de culori",
       "backspaceKey": "Tasta Backspace",
       "colorDepth": "Adâncimea culorii",
-      "resizeMethod": "Metodă de redimensionare"
+      "resizeMethod": "Metodă de redimensionare",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Desktop la distanță",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Rețea virtuală",
     "unencryptedShell": "Shell necriptat",
-    "docsLink": "Vizualizați documentele"
+    "remoteDesktopNotes": "Note",
+    "userDefaultsNote": "Setările pe care le lăsați neschimbate respectă valorile implicite ale gazdei.",
+    "connectionOriginNote": "În aplicația desktop, RDP, VNC și Telnet folosesc serverul la distanță, cu excepția cazului în care gazda este setată la Acest dispozitiv, care necesită un guacd pe care acest computer îl poate accesa. Setați unul în setările Desktop la distanță sau pentru fiecare gazdă în secțiunea Proxy guacd.",
+    "docsLink": "Vizualizați documentele",
+    "connectionOriginGuacamoleNote": "RDP, VNC și Telnet folosesc serverul la distanță, cu excepția cazului în care selectați „Acest dispozitiv”, care necesită un guacd pe care această mașină îl poate accesa. Setați unul în setarea URL guacd sau pentru fiecare gazdă în guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Desktop la distanță",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Adâncimea culorii"
+        "label": "Adâncimea culorii",
+        "description": "Folosit pentru gazdele RDP care îl lasă pe setările implicite."
       },
       "resizeMethod": {
-        "label": "Metodă de redimensionare"
+        "label": "Metodă de redimensionare",
+        "description": "Cum urmărește ecranul de la distanță dimensiunea ferestrei."
       },
       "resizeDisplayUpdate": "Actualizare afișare",
       "resizeReconnect": "Reconectați-vă",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Dezactivați lipirea",
         "description": "Împiedicați lipirea textului în sesiunea la distanță"
-      }
+      },
+      "group": "Setări implicite Desktop la distanță",
+      "colorDepth16": "16 biți",
+      "colorDepth24": "24 de biți",
+      "colorDepth32": "32 de biți"
     },
     "admin": {
+      "enabled": {
+        "label": "Activează Desktop la distanță",
+        "description": "Permite conexiuni RDP, VNC și Telnet prin guacd."
+      },
       "guacdUrl": {
-        "label": "URL-ul guacd"
+        "label": "URL-ul guacd",
+        "description": "Unde guacd ascultă, ca host:port. Variabilele de mediu GUACD_URL, GUACD_HOST și GUACD_PORT suprascriu acest lucru.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "Port RDP"
+      },
+      "vncPort": {
+        "label": "Port VNC"
+      },
+      "telnetPort": {
+        "label": "Port Telnet"
+      },
+      "rdpSecurity": {
+        "label": "Mod de securitate RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignorați erorile de certificat"
+      },
+      "guacamoleConfig": {
+        "label": "setări guacd"
+      },
+      "enableToolbar": {
+        "label": "Bara de instrumente desktop la distanță",
+        "description": "Afișează bara de instrumente în sesiunile RDP, VNC și Telnet."
+      },
+      "displayGroup": "Afişa",
+      "displayDefaultsTab": "Desktop la distanță"
+    }
+  },
+  "palette": {
+    "connectRdp": "Conectați-vă cu RDP",
+    "connectVnc": "Conectați-vă cu VNC",
+    "connectTelnet": "Conectați-vă cu Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Partajați sesiuni desktop la distanță",
+      "description": "Permiteți ca partajarea sesiunilor și camerele de colaborare să arate sesiunile RDP, VNC și Telnet ale acestui utilizator către ceilalți."
     }
   },
   "errors": {

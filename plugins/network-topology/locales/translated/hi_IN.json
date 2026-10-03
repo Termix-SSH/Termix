@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "स्रोत और लक्ष्य भिन्न होने चाहिए",
     "exportJSON": "JSON निर्यात करें",
     "importJSON": "JSON आयात करें",
-    "terminal": "टर्मिनल",
-    "fileManager": "फ़ाइल प्रबंधक",
-    "tunnel": "टनल",
-    "docker": "Docker",
     "serverStats": "होस्ट मेट्रिक्स",
-    "hostMetrics": "होस्ट मेट्रिक्स",
     "noNodes": "अभी तक कोई नोड नहीं"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} नोड्स"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use network graph",
+      "description": "View and edit the network topology graph."
+    }
   },
   "hosts": {
     "docsLink": "दस्तावेज़ देखें"

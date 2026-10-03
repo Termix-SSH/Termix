@@ -21,6 +21,11 @@
     "ports": "Ports",
     "noPorts": "Sense ports",
     "start": "Inici",
+    "stop": "Atura",
+    "status": "Estat",
+    "actions": "Accions",
+    "cardView": "Vista de targeta",
+    "listView": "Vista de llista",
     "confirmRemoveContainer": "Esteu segur que voleu eliminar el contenidor '{{name}}'? Aquesta acció no es pot desfer.",
     "runningContainerWarning": "Avís: Aquest contenidor està en execució. Si el suprimiu, primer s'aturarà el contenidor.",
     "loadingContainers": "Carregant contenidors...",
@@ -36,7 +41,7 @@
     "last50": "Últims 50",
     "last100": "Últims 100",
     "last500": "Últims 500",
-    "last1000": "Els últims 1000",
+    "last1000": "Últims 1000",
     "allLogs": "Tots els registres",
     "noLogsMatching": "No hi ha registres que coincideixin amb \"{{query}}\"",
     "noLogsAvailable": "No hi ha registres disponibles",
@@ -65,7 +70,7 @@
     "blockIo": "Bloc d'E/S",
     "read": "Llegir",
     "write": "Escriure",
-    "pids": "PIDs",
+    "pids": "PID",
     "containerInformation": "Informació del contenidor",
     "name": "Nom",
     "id": "ID",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "El contenidor ha d'estar en execució per accedir a la consola.",
     "verificationCodePrompt": "Introduïu el codi de verificació",
     "totpVerificationFailed": "La verificació TOTP ha fallat. Torna-ho a provar.",
+    "browserSignInFailed": "L'inici de sessió ha fallat. Torna-ho a provar.",
     "connectedTo": "Connectat a {{containerName}}",
     "disconnected": "Desconnectat",
     "consoleError": "Error de consola",
@@ -93,7 +99,10 @@
     "logs": "Registres",
     "stats": "Estadístiques",
     "consoleTab": "Consola",
-    "startContainerToAccess": "Inicieu el contenidor per accedir a la consola"
+    "startContainerToAccess": "Inicieu el contenidor per accedir a la consola",
+    "noHostSelected": "No s'ha seleccionat cap amfitrió",
+    "failedToFetchLogs": "No s'han pogut obtenir els registres: {{error}}",
+    "failedToDownloadLogs": "No s'han pogut descarregar els registres: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Veure contenidors, llegir registres i observar estadístiques de qualsevol host que executi Docker."
   },
+  "terminal": {
+    "retry": "Torna-ho a intentar",
+    "clipboardReadFailed": "No s'ha pogut llegir del porta-retalls. Assegureu-vos que els permisos del porta-retalls estiguin concedits.",
+    "clipboardWriteFailed": "No s'ha pogut copiar al porta-retalls. Assegureu-vos que la pàgina es serveix per HTTPS o localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza Docker",
+      "description": "Obriu el gestor de Docker i les consoles de contenidors als hosts amb Docker habilitat."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Activa Docker"
+        "label": "Activa Docker",
+        "description": "Gestiona els contenidors en aquest amfitrió."
       },
       "containerRuntime": {
         "label": "Temps d'execució del contenidor",
@@ -122,9 +143,5 @@
     "docsLink": "Veure documents",
     "hostNotFound": "No s'ha trobat l'amfitrió",
     "loadingHost": "S'està carregant l'amfitrió..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "No s'ha pogut llegir del porta-retalls. Assegureu-vos que els permisos del porta-retalls estiguin concedits.",
-    "clipboardWriteFailed": "No s'ha pogut copiar al porta-retalls. Assegureu-vos que la pàgina es serveix per HTTPS o localhost."
   }
 }

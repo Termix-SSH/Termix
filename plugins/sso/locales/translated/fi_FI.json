@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Kirjaudu sisään kertakirjautumisella",
   "loginWithProvider": "Kirjaudu sisään tunnuksella {{name}}",
   "loading": "Ladataan...",
+  "permissions": {
+    "manage": {
+      "title": "Hallinnoi kertakirjautumispalveluntarjoajia",
+      "description": "Lisää, muuta ja poista kertakirjautumisen tarjoajia, joilla käyttäjät voivat kirjautua sisään."
+    }
+  },
   "providers": {
     "docsLink": "Näytä dokumentit",
     "none": "SSO-palveluntarjoajia ei ole määritetty.",
@@ -9,6 +16,8 @@
     "delete": "Poista palveluntarjoaja",
     "deleteConfirm": "Poistetaanko tämä palveluntarjoaja? Liitännäiset käyttäjät eivät voi kirjautua sisään.",
     "name": "Näyttönimi",
+    "namePlaceholder": "SSO-palveluntarjoajani",
+    "nameRequired": "Näyttönimi on pakollinen",
     "type": "Palveluntarjoajan tyyppi",
     "enabled": "Käytössä",
     "save": "Tallenna palveluntarjoaja",
@@ -17,11 +26,20 @@
     "saveFailed": "Tallennus epäonnistui",
     "deleted": "Poistettu",
     "deleteFailed": "Poistaminen epäonnistui",
-    "cancel": "Peruuttaa"
+    "loadFailed": "SSO-palveluntarjoajien lataaminen epäonnistui",
+    "cancel": "Peruuttaa",
+    "copy": "Kopioida",
+    "copied": "Kopioitu",
+    "redirectUri": "Uudelleenohjauksen URI",
+    "redirectUriDesc": "Rekisteröi tämä URL-osoite uudelleenohjaus- tai takaisinkutsuosoitteeksi identiteetintarjoajassasi.",
+    "legacyCallback": "Säilytä vanha uudelleenohjaus-URI",
+    "legacyCallbackDesc": "Tämä palveluntarjoaja määritettiin ennen Termix 2.9:ää ja käyttää edelleen vanhaa uudelleenohjaus-URI:a, joka toimii edelleen. Siirry uuteen lisäämällä ensin {{uri}} identiteetintarjoajaasi ja poistamalla tämä sitten käytöstä.",
+    "authorizationUrl": "Valtuutus-URL-osoite: {{url}}"
   },
   "fields": {
     "clientId": "Asiakastunnus",
     "clientSecret": "Asiakkaan salaisuus",
+    "secretKeep": "Salaisuus on tallennettu. Jätä tämä tyhjäksi, jos haluat sen säilyvän.",
     "issuerUrl": "Liikkeeseenlaskijan URL-osoite",
     "authUrl": "Valtuutus-URL-osoite",
     "tokenUrl": "Tunnuksen URL-osoite",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Tämän ryhmän käyttäjille on myönnetty järjestelmänvalvojan oikeudet. Jätä tyhjäksi, jos haluat poistaa ryhmän synkronoinnin käytöstä.",
     "caCert": "Mukautettu CA-varmenne",
     "caCertDesc": "Valinnainen. PEM-koodattu CA-varmenne OIDC-palveluntarjoajille, jotka käyttävät yksityistä tai itse allekirjoitettua CA:ta. Jätä tyhjäksi, jos haluat käyttää järjestelmän luotettavuussäilöä."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Kirjaudu sisään automaattisesti kertakirjautumisella",
+      "description": "Ohjaa kävijät suoraan ensimmäiselle SSO-palveluntarjoajalle kirjautumislomakkeen näyttämisen sijaan. OIDC_SILENT_LOGIN_DEFAULT-ympäristömuuttuja korvaa tämän."
+    }
   }
 }

@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "الملفات",
+    "sftp": "SFTP",
+    "openFileManager": "فتح مدير الملفات"
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدم مدير الملفات",
+      "description": "تصفح الملفات وحررها وانقلها عبر بروتوكول SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "تمكين مدير الملفات",
+        "description": "تصفح الملفات وقم بتحريرها على هذا المضيف عبر بروتوكول SFTP."
+      },
+      "defaultPath": {
+        "label": "المسار الافتراضي"
+      },
+      "scpLegacy": {
+        "label": "وضع SCP القديم"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "نقل الملفات المتزامن",
+        "description": "كم عدد الملفات التي يقوم مدير الملفات المحلي/البعيد بتحميلها أو تنزيلها في نفس الوقت؟ قلل هذا العدد إذا كان خادمك يحد من قنوات SFTP."
+      },
+      "confirmBeforeTrash": {
+        "label": "تأكد قبل نقل الملفات إلى سلة المهملات",
+        "description": "استأذن قبل نقل الملفات البعيدة إلى سلة المهملات. الحذف النهائي يتطلب تأكيداً."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "مدير الملفات"
+  },
   "fileManager": {
     "noHostSelected": "لم يتم اختيار مضيف",
     "initializingEditor": "جارٍ تهيئة المحرر...",
@@ -34,6 +72,7 @@
     "rename": "إعادة تسمية",
     "uploading": "جارٍ الرفع...",
     "uploadingFile": "جارٍ رفع {{name}}...",
+    "uploadingChunk": "جارٍ تحميل {{name}}: {{percent}}% (الجزء {{chunk}} من {{total}})",
     "fileName": "اسم الملف",
     "folderName": "اسم المجلد",
     "fileUploadedSuccessfully": "تم رفع الملف \"{{name}}\" بنجاح",
@@ -67,9 +106,9 @@
     "localHideHidden": "إخفاء الملفات المخفية",
     "localRevealInFileManager": "إظهار في مدير ملفات النظام",
     "localCannotOpenFolder": "لا يمكن فتح المجلد",
-    "localItemCount": "{{count}} عناصر",
-    "localSelectedCount": "{{count}} تم الاختيار",
-    "back": "خلف",
+    "localItemCount": "{{count}} عنصر",
+    "localSelectedCount": "تم تحديد {{count}}",
+    "back": "رجوع",
     "forward": "إلى الأمام",
     "up": "أعلى",
     "kind": "عطوف",
@@ -77,7 +116,7 @@
     "localDownloadingProgress": "جارٍ تنزيل {{current}} من {{total}}",
     "localTransferInFlight": "{{count}} دفعة واحدة",
     "localPreparingDownload": "جارٍ تحضير التنزيل...",
-    "localTransferCancelled": "تم إلغاء التحويل",
+    "localTransferCancelled": "تم إلغاء النقل",
     "localNothingToTransfer": "لا يوجد شيء لنقله",
     "localUploadComplete": "تم تحميل {{count}} ملف(ملفات)",
     "localUploadFailed": "فشل التحميل",
@@ -86,11 +125,11 @@
     "localDownloadFailed": "فشل التنزيل",
     "localDownloadPartial": "تم تنزيل {{done}} ملفًا، {{failed}} فشل",
     "localReplaceExistingPrompt": "{{count}} العنصر (العناصر) موجودة بالفعل في هذا المجلد. هل تريد استبدالها؟",
-    "localReplace": "يستبدل",
+    "localReplace": "استبدال",
     "localSkipExisting": "يتخطى",
     "localSkippedExisting": "تم تخطي {{count}} عنصر (عناصر) موجودة",
     "localUnsafeNamesSkipped": "تم تخطي {{count}} عنصرًا لا يمكن استخدام أسمائها على هذا الكمبيوتر",
-    "localOpen": "يفتح",
+    "localOpen": "فتح",
     "localOpenFolder": "افتح المجلد",
     "localUploadToRemote": "التحميل إلى الخادم",
     "localUploadToRemoteMany": "قم بتحميل {{count}} عنصرًا إلى الخادم",
@@ -163,13 +202,13 @@
     "confirmDeleteMultipleItemsWithFolders": "هل أنت متأكد أنك تريد حذف {{count}} عناصر نهائيًا؟ يتضمن ذلك المجلدات ومحتوياتها.",
     "confirmDeleteFolder": "هل أنت متأكد أنك تريد حذف المجلد \"{{name}}\" وجميع محتوياته نهائيًا؟",
     "permanentDeleteWarning": "لا يمكن التراجع عن هذا الإجراء. سيتم حذف العنصر (العناصر) نهائيًا من الخادم.",
-    "moveToTrashWarning": "سيتم نقل العنصر (العناصر) إلى سلة مهملات Termix ويمكن استعادته قبل انتهاء فترة الاحتفاظ.",
+    "moveToTrashWarning": "سيتم نقل العنصر (العناصر) إلى سلة مهملات Termix ويمكن استعادتها قبل انتهاء فترة الاحتفاظ.",
     "itemsMovedToTrash": "تم نقل العنصر (العناصر) إلى سلة المهملات {{count}}",
     "trash": "نفاية",
     "trashDescription": "يتم الاحتفاظ بالعناصر المحذوفة لمدة {{days}} يوم (أيام) على هذا المضيف.",
     "trashLoadFailed": "فشل تحميل سلة المهملات",
     "trashEmpty": "سلة المهملات فارغة",
-    "trashRestore": "يعيد",
+    "trashRestore": "استعادة",
     "trashRestored": "تمت الاستعادة {{name}}",
     "trashRestoreFailed": "فشلت عملية استعادة العنصر. قد يكون المسار الأصلي موجودًا بالفعل.",
     "trashDeletePermanently": "حذف نهائياً",
@@ -290,6 +329,7 @@
     "connecting": "جارٍ الاتصال...",
     "connectedSuccessfully": "تم الاتصال بنجاح",
     "totpVerificationFailed": "فشل التحقق من TOTP",
+    "browserSignInFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.",
     "authenticationFailed": "فشلت المصادقة",
     "incorrectPassphrase": "عبارة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
     "verificationCodePrompt": "رمز التحقق:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "لا يمكن تحميل PDF",
     "pdfLoadError": "حدث خطأ أثناء تحميل ملف PDF هذا.",
     "loadingPdf": "جارٍ تحميل PDF...",
-    "loadingPage": "جارٍ تحميل الصفحة..."
+    "loadingPage": "جارٍ تحميل الصفحة...",
+    "cancel": "إلغاء",
+    "copiedItems_one": "تم نسخ العنصر {{count}}",
+    "copiedItems_other": "تم نسخ {{count}} عنصرًا",
+    "deleteCopiedFileFailed": "تعذر حذف نسخة من {{name}}: {{error}}",
+    "dragMovedItems_one": "تم نقل العنصر {{count}} إلى {{target}}",
+    "dragMovedItems_other": "تم نقل {{count}} عنصرًا إلى {{target}}",
+    "moveBackFileFailed": "تعذر تحريك {{name}} للخلف: {{error}}",
+    "terminal": "الطرفية: {{host}} ({{path}})",
+    "dragToDesktop": "سحب {{name}} إلى سطح المكتب",
+    "dragFilesToDesktop": "سحب الملفات {{count}} إلى سطح المكتب",
+    "folderDragUnsupported": "لا يدعم التطبيق سحب المجلدات إلى سطح المكتب حتى الآن",
+    "saveToDesktopFailed": "فشل الحفظ: {{error}}",
+    "dragFailedDetail": "فشل السحب: {{error}}",
+    "videoUnsupported": "لا يمكن لمتصفحك تشغيل هذا الفيديو.",
+    "downloadToPlay": "قم بتنزيله لتشغيله في مكان آخر",
+    "cannotPreviewType": "لا يمكن معاينة هذا النوع من الملفات",
+    "cannotPreviewTypeHint": "لا يتوفر معاينة لهذا النوع من الملفات. قم بتنزيله لفتحه في تطبيق آخر."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -334,34 +391,34 @@
     "sourceServer": "خادم المصدر",
     "destinationServer": "خادم الوجهة",
     "selectHost": "حدد المضيف",
-    "noHostSelected": "لم يتم تحديد أي مضيف",
-    "move": "يتحرك",
-    "copy": "ينسخ",
+    "noHostSelected": "لم يتم تحديد أي جهاز مضيف",
+    "move": "نقل",
+    "copy": "نسخ",
     "upload": "رفع",
     "itemsSelected": "تم تحديد العنصر {{count}}",
     "itemsSelected_other": "تم تحديد {{count}} عنصر",
-    "ready": "مستعد",
+    "ready": "جاهز",
     "loadingHosts": "جارٍ تحميل المضيفين...",
-    "name": "اسم",
-    "modified": "معدل",
-    "size": "مقاس",
+    "name": "الاسم",
+    "modified": "تاريخ التعديل",
+    "size": "الحجم",
     "noFiles": "لا توجد ملفات",
-    "open": "يفتح",
+    "open": "فتح",
     "up": "أعلى",
-    "refresh": "ينعش",
+    "refresh": "تحديث",
     "copyToTarget": "انسخ إلى الدليل الهدف",
     "rename": "إعادة تسمية",
-    "delete": "يمسح",
+    "delete": "حذف",
     "editPermissions": "تعديل الأذونات",
     "createNewFolder": "إنشاء مجلد جديد",
     "deleteSelectedItems": "حذف العناصر المحددة",
     "deleteConfirm": "حذف العنصر المحدد {{count}}؟",
     "deleteConfirm_other": "حذف {{count}} من العناصر المحددة؟",
-    "cancel": "يلغي",
-    "save": "يحفظ",
+    "cancel": "إلغاء",
+    "save": "حفظ",
     "folderCreated": "تم إنشاء المجلد",
     "itemRenamed": "تمت إعادة تسمية العنصر",
-    "actionFailed": "فشلت العملية",
+    "actionFailed": "فشل الإجراء",
     "itemsDeleted": "تم حذف العنصر {{count}}",
     "itemsDeleted_other": "تم حذف {{count}} عنصر",
     "deleteFailed": "فشلت عملية الحذف",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "مدير الملفات",
-    "tabFiles": "الملفات",
-    "enableFileManagerMonitor": "تمكين مدير الملفات",
-    "enableFileManagerMonitorDesc": "استعراض وإدارة الملفات على هذا المضيف عبر SFTP",
-    "scpLegacyLabel": "وضع SCP القديم",
-    "scpLegacyDesc": "استخدم وضع النقل القديم للملفات للخوادم التي لا تدعم النظام الفرعي SFTP (مثل خوادم SSH المدمجة أو ذات الإمكانيات المحدودة).",
-    "defaultPathLabel": "المسار الافتراضي",
-    "fileManagerPathHint": "الدليل الذي سيتم فتحه عند تشغيل مدير الملفات لهذا المضيف.",
     "fileManagerUrlCopied": "تم نسخ رابط مدير الملفات",
     "copyFileManagerUrlAction": "نسخ رابط مدير الملفات",
     "docsLink": "عرض المستندات",
     "hostNotFound": "المضيف غير موجود",
     "loadingHost": "جارٍ تحميل المضيف..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "تمكين مدير الملفات"
-      },
-      "defaultPath": {
-        "label": "المسار الافتراضي"
-      },
-      "scpLegacy": {
-        "label": "وضع SCP القديم"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "نقل الملفات المتزامن",
-        "description": "كم عدد الملفات التي يقوم مدير الملفات المحلي/البعيد بتحميلها أو تنزيلها في نفس الوقت؟ قلل هذا العدد إذا كان خادمك يحد من قنوات SFTP."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "الملفات"
   },
   "onboarding": {
     "feature_files": "مدير الملفات",
@@ -437,7 +464,7 @@
     "destinationPath": "مسار الوجهة",
     "destMustBeDirectory": "يجب أن تكون الوجهة مجلدًا لنقل عناصر متعددة",
     "goUp": "للأعلى",
-    "hostAuthRequired": "المصادقة مطلوبة — افتح مدير الملفات على هذا المضيف أولاً",
+    "hostAuthRequired": "يلزم المصادقة. افتح مدير الملفات على هذا المضيف أولاً",
     "hostConnecting": "جارٍ الاتصال…",
     "hostConnectionFailed": "فشل الاتصال",
     "hostDisconnected": "غير متصل",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "اخترت SFTP لكل ملف.",
       "user_tar": "اخترت أرشيف tar.",
-      "tar_unavailable": "tar غير متوفر على أحد المضيفين أو كليهما — سيُستخدم SFTP لكل ملف بدلاً من ذلك.",
-      "windows_host": "يوجد مضيف Windows — لا يُستخدم tar.",
-      "auto_multi_large": "تلقائي: عدة ملفات بما فيها ملف كبير ({{largestSize}}) ببيانات قابلة للضغط — يجمعها tar في حزمة واحدة.",
-      "auto_single_large_in_archive": "تلقائي: ملف كبير واحد ({{largestSize}}) في هذه المجموعة — SFTP لكل ملف.",
-      "auto_many_incompressible": "تلقائي: البيانات غالبًا غير قابلة للضغط — SFTP لكل ملف.",
-      "auto_many_files": "تلقائي: عدة ملفات ({{fileCount}}) — يقلل tar الحمل لكل ملف.",
+      "tar_unavailable": "برنامج Tar غير متوفر على أحد المضيفين أو كليهما، لذلك سيتم استخدام SFTP لكل ملف بدلاً من ذلك.",
+      "windows_host": "يتم استخدام مضيف يعمل بنظام ويندوز، لذلك لا يتم استخدام برنامج tar.",
+      "auto_multi_large": "تلقائي: ملفات متعددة، بما في ذلك ملف كبير ({{largestSize}}) يحتوي على بيانات قابلة للضغط. يقوم برنامج Tar بتجميعها في عملية نقل واحدة.",
+      "auto_single_large_in_archive": "تلقائي: ملف واحد كبير ({{largestSize}}) في هذه المجموعة، لذا SFTP لكل ملف.",
+      "auto_many_incompressible": "تلقائي: بيانات غير قابلة للضغط في الغالب، لذا يتم استخدام بروتوكول SFTP لكل ملف.",
+      "auto_many_files": "الوضع التلقائي: العديد من الملفات ({{fileCount}})، يقوم برنامج tar بتقليل الحمل الزائد لكل ملف.",
       "auto_default": "تلقائي: SFTP لكل ملف لهذه المجموعة."
     },
     "methodTar": "أرشيف Tar",
@@ -471,7 +498,7 @@
     "metricsCompress": "ضغط على المصدر: {{duration}}",
     "metricsExtract": "فك على الوجهة: {{duration}}",
     "metricsPrepare": "تحضير الوجهة: {{duration}}",
-    "metricsRouteBenchmark": "مسبار المسار — مباشر: {{direct}}، مرحل: {{relay}}",
+    "metricsRouteBenchmark": "مسار التحقيق: مباشر {{direct}}، مرحل {{relay}}",
     "metricsSourceDelete": "إزالة من المصدر: {{duration}}",
     "metricsTotal": "الإجمالي: {{duration}}",
     "metricsTransfer": "نقل شامل: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "فشل النقل",
     "transferFailedRetryHint": "تم الاحتفاظ بالبيانات الجزئية على الوجهة. ستُستأنف إعادة المحاولة عند عودة الاتصال.",
     "transferPartialHint": "تعذر النقل: {{paths}}",
-    "transferSuccess": "اكتمل النقل"
+    "transferSuccess": "اكتمل النقل",
+    "metricsHopSourceRead": "المصدر → الخادم: {{throughput}}",
+    "metricsHopDestSftpWrite": "الخادم → الوجهة (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "الخادم → الوجهة (محلي): {{throughput}}"
   }
 }

@@ -21,6 +21,11 @@
     "ports": "Havne",
     "noPorts": "Ingen porte",
     "start": "Starte",
+    "stop": "Stop",
+    "status": "Status",
+    "actions": "Handlinger",
+    "cardView": "Kortvisning",
+    "listView": "Listevisning",
     "confirmRemoveContainer": "Er du sikker på, at du vil fjerne containeren '{{name}}'? Denne handling kan ikke fortrydes.",
     "runningContainerWarning": "Advarsel: Denne container kører i øjeblikket. Fjernelse af den vil stoppe containeren først.",
     "loadingContainers": "Indlæser containere...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Containeren skal køre for at få adgang til konsollen",
     "verificationCodePrompt": "Indtast bekræftelseskode",
     "totpVerificationFailed": "TOTP-bekræftelse mislykkedes. Prøv igen.",
+    "browserSignInFailed": "Log ind mislykkedes. Prøv igen.",
     "connectedTo": "Forbundet til {{containerName}}",
     "disconnected": "Afbrudt",
     "consoleError": "Konsolfejl",
@@ -93,7 +99,10 @@
     "logs": "Logfiler",
     "stats": "Statistik",
     "consoleTab": "Konsol",
-    "startContainerToAccess": "Start containeren for at få adgang til konsollen"
+    "startContainerToAccess": "Start containeren for at få adgang til konsollen",
+    "noHostSelected": "Ingen vært valgt",
+    "failedToFetchLogs": "Kunne ikke hente logfiler: {{error}}",
+    "failedToDownloadLogs": "Kunne ikke downloade logfiler: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Se containere, læs logfiler og se statistikker på enhver vært, der kører Docker."
   },
+  "terminal": {
+    "retry": "Prøv igen",
+    "clipboardReadFailed": "Kunne ikke læse fra udklipsholderen. Sørg for, at der er givet tilladelse til udklipsholderen.",
+    "clipboardWriteFailed": "Kunne ikke kopiere til udklipsholder. Sørg for, at siden serveres via HTTPS eller localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug Docker",
+      "description": "Åbn Docker-manageren og containerkonsollerne på værter med Docker aktiveret."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Aktivér Docker"
+        "label": "Aktivér Docker",
+        "description": "Administrer containere på denne vært."
       },
       "containerRuntime": {
         "label": "Containerkørselstid",
@@ -122,9 +143,5 @@
     "docsLink": "Se dokumenter",
     "hostNotFound": "Værten blev ikke fundet",
     "loadingHost": "Indlæser vært..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Kunne ikke læse fra udklipsholderen. Sørg for, at der er givet tilladelse til udklipsholderen.",
-    "clipboardWriteFailed": "Kunne ikke kopiere til udklipsholder. Sørg for, at siden serveres via HTTPS eller localhost."
   }
 }

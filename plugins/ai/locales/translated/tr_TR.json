@@ -1,88 +1,117 @@
 {
-  "ai": {
-    "title": "Asistan",
-    "send": "Göndermek",
-    "stop": "Durmak",
-    "save": "Kaydetmek",
-    "cancel": "İptal etmek",
-    "running": "koşma",
-    "approve": "Onaylamak",
-    "reject": "Reddetmek",
-    "inputPlaceholder": "Sunucularınız hakkında bilgi isteyin veya önereceğiniz bir değişikliği açıklayın.",
-    "selectProvider": "Bir sağlayıcı seçin",
-    "providerSettings": "Sağlayıcı ayarları",
-    "addProvider": "Sağlayıcı ekle",
-    "editProvider": "Sağlayıcıyı düzenle",
-    "removeProvider": "Sağlayıcıyı kaldır",
-    "providerType": "Sağlayıcı",
-    "providerLabel": "İsim",
-    "providerLabelPlaceholder": "Örneğin: Yerel Ollama",
-    "baseUrl": "Sunucu adresi",
-    "apiKey": "API anahtarı",
-    "defaultModel": "Varsayılan model",
-    "defaultModelPlaceholder": "Örneğin: llama3.1 veya claude-opus-5",
-    "labelRequired": "Bu sağlayıcıya bir isim verin.",
-    "providerSaveFailed": "Sağlayıcı kaydedilemedi.",
-    "providerUpdated": "Sağlayıcı güncellendi.",
-    "providerDeleteFailed": "Sağlayıcı kaldırılamadı.",
-    "privateEndpointHint": "Özel ağınızdaki adreslerin kullanılabilmesi için öncelikle yöneticinin sunucuya izin vermesi gerekmektedir.",
-    "providerOllama": "Ollama",
-    "providerAnthropic": "Antropik",
-    "providerOpenai": "OpenAI",
-    "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI uyumlu",
-    "toolArguments": "Giriş",
-    "toolResult": "Sonuç",
-    "statusApplied": "Uygulandı",
-    "statusRejected": "Reddedilmiş",
-    "proposalApplied": "Değişiklik uygulandı.",
-    "proposalApplyFailed": "Değişiklik uygulanamadı.",
-    "proposalRejectFailed": "Değişikliği reddedemedim.",
-    "enableTitle": "Yapay zekâ asistanını etkinleştirin",
-    "enableDescription": "Asistanın ayarlarınızı okumasını ve onaylamanız için değişiklik önerileri sunmasını sağlayın.",
-    "readOnlyCommands": "Yalnızca okuma amaçlı tanı komutlarına izin ver",
-    "readOnlyCommandsDescription": "Yardımcı program, her seferinde sormadan df ve uptime gibi kısa bir güvenli komut listesini çalıştırabilir. Sunucuda değişiklik yapan her şey her zaman önce önerilir.",
-    "modelDetectFailed": "Sağlayıcıya ulaşılamadı, bu nedenle bu genel bir listedir. İstediğiniz model adını yazabilirsiniz.",
-    "modelCustom": "Bir model adı girin",
-    "modelRefresh": "Listeyi yenile",
-    "modelPlaceholder": "Bir model seçin veya yazın.",
-    "attachHint": "Bir sunucuya, kod parçasına veya otomasyona referans vermek için @ işaretini kullanın. Onaylamanız için değişiklikler öneriliyor.",
-    "runCommandTitle": "Çalıştır komutu",
-    "assistant": "Yapay Zeka Asistanı",
-    "terminalPanelEmpty": "Bu ev sahibi hakkında asistana danışın. Durum değişikliği gerektiren her şey önce sizin onayınızı gerektirir.",
-    "terminalPanelPlaceholder": "Bu ev sahibi hakkında bilgi isteyin...",
-    "noProvidersConfigured": "Henüz hiçbir yapay zeka sağlayıcısı yapılandırılmadı. Yapay zeka asistanı sekmesinden bir tane ekleyin.",
-    "runsInOpenTerminal": "Açık terminal oturumunuzda çalışır.",
-    "runInTerminal": "Koşmak"
-  },
-  "nav": {
-    "ai": "Yapay zeka"
-  },
-  "onboarding": {
-    "aiTitle": "Yapay zeka asistanı",
-    "aiIntro": "Termix isteğe bağlı bir yapay zeka asistanı içerebilir. Bunu daha sonra ayarlarınızdan değiştirebilirsiniz.",
-    "aiSkipTitle": "Kapalı bırakın",
-    "aiSkipDesc": "Termix şu anki haliyle çalışıyor. Asistan gizli kalıyor.",
-    "aiEnableTitle": "Açın",
-    "aiEnableDesc": "Ayarlarınızı okuyan ve onaylamanız halinde değişiklikler öneren bir asistan ekler. Yerel bir Ollama gibi, sizin sağladığınız bir sağlayıcıya ihtiyaç duyar.",
-    "aiNote": "Bir sağlayıcı ekleyip mesaj gönderene kadar hiçbir şey hiçbir yere gönderilmez."
+  "permissions": {
+    "use": {
+      "title": "Use the assistant",
+      "description": "Open the assistant and ask it things."
+    },
+    "manage_providers": {
+      "title": "Manage providers",
+      "description": "Add, edit and remove the AI providers and their API keys."
+    },
+    "apply_proposals": {
+      "title": "Apply proposals",
+      "description": "Let the assistant carry out the changes it suggests."
+    },
+    "services.use": {
+      "title": "Use AI from other features",
+      "description": "Other features may call the assistant on your behalf."
+    },
+    "secrets.share": {
+      "title": "Share the API key",
+      "description": "Other features may use the stored AI API key without seeing it."
+    }
   },
   "settings": {
+    "assistantUnavailable": "The AI assistant is turned off on this server.",
+    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
     "admin": {
       "globallyEnabled": {
-        "label": "Yapay zeka asistanı",
-        "description": "Kullanıcıların yapay zeka asistanını açmasına izin verin. Bu özellik kapalıyken, asistan gizlenir ve herkes için engellenir."
+        "label": "AI assistant",
+        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
       },
       "privateEndpoints": {
-        "label": "Özel yapay zeka sunucularına izin verildi."
+        "label": "Allowed private AI hosts",
+        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Yapay Zeka Asistanını Etkinleştir",
-        "description": "Bu sunucunun terminalinde yapay zeka asistanının yardımcı olmasına izin verin. Varsayılan olarak kapalıdır ve hesabınız için yapay zekanın etkinleştirilmiş olması gerekir."
+        "label": "Enable AI Assistant",
+        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
       }
     }
+  },
+  "ai": {
+    "title": "Assistant",
+    "send": "Send",
+    "stop": "Durdurma",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "running": "çalışan",
+    "approve": "Approve",
+    "reject": "Reject",
+    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
+    "selectProvider": "Select a provider",
+    "providerSettings": "Provider settings",
+    "addProvider": "Add provider",
+    "editProvider": "Edit provider",
+    "removeProvider": "Remove provider",
+    "providerType": "Provider",
+    "providerLabel": "Ad",
+    "providerLabelPlaceholder": "For example: Local Ollama",
+    "baseUrl": "Server address",
+    "apiKey": "API key",
+    "defaultModel": "Default model",
+    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
+    "labelRequired": "Give this provider a name",
+    "providerSaveFailed": "Could not save the provider",
+    "providerUpdated": "Provider updated",
+    "providerDeleteFailed": "Could not remove the provider",
+    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerOllama": "Ollama",
+    "providerAnthropic": "Anthropic",
+    "providerOpenai": "OpenAI",
+    "providerGemini": "Google Gemini",
+    "providerOpenaiCompatible": "OpenAI compatible",
+    "toolArguments": "Giriş",
+    "toolResult": "Result",
+    "statusApplied": "Applied",
+    "statusRejected": "Rejected",
+    "proposalApplied": "Change applied",
+    "proposalApplyFailed": "Could not apply the change",
+    "proposalRejectFailed": "Could not reject the change",
+    "enableTitle": "Enable the AI assistant",
+    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
+    "readOnlyCommands": "Allow read-only diagnostic commands",
+    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
+    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
+    "modelCustom": "Enter a model name",
+    "modelRefresh": "Refresh list",
+    "modelPlaceholder": "Choose or type a model",
+    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
+    "runCommandTitle": "Run command",
+    "assistant": "AI Assistant",
+    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
+    "terminalPanelPlaceholder": "Ask about this host...",
+    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
+    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "runInTerminal": "Çalıştır",
+    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+    }
+  },
+  "nav": {
+    "ai": "AI"
+  },
+  "onboarding": {
+    "aiTitle": "AI assistant",
+    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
+    "aiSkipTitle": "Leave it off",
+    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
+    "aiEnableTitle": "Turn it on",
+    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
+    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
   },
   "hosts": {
     "docsLink": "Dokümanları görüntüle"

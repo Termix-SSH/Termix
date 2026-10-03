@@ -4,10 +4,12 @@
   },
   "editor": {
     "label": "ステップCA",
-    "description": "IDプロバイダー経由でサインインし、Step CAにこのホスト用の有効期限の短いSSH証明書を発行させてください。CAのURL、ルートフィンガープリント、およびOIDCプロビジョナーは、管理者が「管理設定」で設定します。",
-    "docs": "ドキュメントを表示"
+    "description": "IDプロバイダー経由でサインインし、Step CAにこのホスト用の有効期限の短いSSH証明書を発行させてください。CA URL、ルートフィンガープリント、およびOIDCプロビジョナーは、管理者が管理設定のStep CAセクションで設定します。",
+    "docs": "ドキュメントを見る"
   },
   "dialog": {
+    "title": "ステップCA認証が必要です",
+    "description": "続行するには、ブラウザで認証を完了してください。証明書は、認証局が許可する限り有効です。",
     "openBrowser": "ブラウザを開いて認証",
     "waiting": "ブラウザでの認証を待機中...",
     "authenticating": "認証を処理中..."
@@ -17,15 +19,30 @@
     "timeout": "認証がタイムアウトしました。もう一度お試しください。"
   },
   "settings": {
+    "caUrl": {
+      "label": "CA URL",
+      "description": "SmallStep CAのHTTPS URL。Step CAを無効にするには、CA URL、フィンガープリント、プロビジョナーを空欄のままにしてください。",
+      "placeholder": "https://ca.internal:9000"
+    },
     "fingerprint": {
-      "label": "ルートフィンガープリント（SHA-256）"
+      "label": "ルートフィンガープリント（SHA-256）",
+      "description": "ステップ ca bootstrap で示されるルート証明書のフィンガープリント。"
     },
     "provisioner": {
-      "label": "OIDCプロビジョナー名"
+      "label": "OIDCプロビジョナー名",
+      "description": "CAのOIDCプロビジョナーの名前を指定します。次に、ホストの認証タイプとして「ステップCA」を選択します。"
     },
     "privateEndpoints": {
       "label": "許可されたプライベートStep CAホスト",
-      "description": "プライベートホストの場合、Step CA 証明書フローは、認証局自体、および内部の場合は ID プロバイダーと連絡を取ることができます。これらはカンマで区切ってください。"
+      "description": "プライベートホストの場合、Step CA証明書フローは、認証局自体、および内部の場合はIDプロバイダーと連絡を取る可能性があります。これらはカンマまたは改行で区切ってください。"
+    },
+    "redirectUri": {
+      "label": "リダイレクトURI",
+      "description": "このURLを、OIDCプロビジョナーの背後にあるIDプロバイダーに、許可されたリダイレクトURIとして登録してください。"
+    },
+    "legacyCallback": {
+      "label": "古いリダイレクトURIを使用する",
+      "description": "バージョン2.9以前に使用されていたリダイレクトURIである/host/step-ca-callbackを送信し続けてください。IDプロバイダーが新しいURIを許可したら、この設定を無効にしてください。"
     }
   }
 }

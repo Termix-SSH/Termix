@@ -20,6 +20,8 @@
     "webUiEndpointLabel": "Päätepiste {{number}}",
     "webUiIntegration": "Verkkokäyttöliittymä",
     "webUiEndpointsSection": "Päätepisteet",
+    "webUiNoEndpoints": "Ei vielä verkkopäätepisteitä. Luo sellainen Lisää päätepiste -toiminnolla.",
+    "webUiEndpointsDisabled": "Ota yllä oleva verkkokäyttöliittymä käyttöön lisätäksesi päätepisteitä.",
     "webUiRequirementsText": "Selaimesi avaa suoran päätepisteen, joten sen portin on oltava tavoitettavissa täältä. Termix avaa SSH-tunnelin tämän isännän SSH-yhteyden kautta, joten portin on oltava tavoitettavissa vain isännästä.",
     "enableWebUi": "Ota käyttöön verkkopäätepisteet",
     "enableWebUiDesc": "Avaa tämän isännän web-käyttöliittymät sivupalkista.",

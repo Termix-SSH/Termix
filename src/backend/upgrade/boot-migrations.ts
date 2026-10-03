@@ -8,6 +8,7 @@
  */
 
 import { databaseLogger } from "../utils/logger.js";
+import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
 import { getErrorMessage } from "../utils/error-message.js";
 import { runTailscaleSettingsMigration } from "./tailscale-settings-migration.js";
 import { runProxmoxSettingsMigration } from "./proxmox-settings-migration.js";
@@ -36,6 +37,7 @@ import { runTotpMigration } from "./totp-migration.js";
 import { runNotificationChannelMigration } from "./notification-channel-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 import { runSsoSettingsMigration } from "./sso-settings-migration.js";
+import { runSsoLegacyIdentityMigration } from "./sso-legacy-identity-migration.js";
 import { runHostDefaultsMigration } from "./host-defaults-migration.js";
 
 const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
@@ -68,24 +70,27 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runNotificationChannelMigration", runNotificationChannelMigration],
   ["runTermixIdentityCaMigration", runTermixIdentityCaMigration],
   ["runSsoSettingsMigration", runSsoSettingsMigration],
+  ["runSsoLegacyIdentityMigration", runSsoLegacyIdentityMigration],
   ["runTelemetrySettingsMigration", runTelemetrySettingsMigration],
   // Last: it reads what the moves above wrote.
   ["runHostDefaultsMigration", runHostDefaultsMigration],
 ];
 
-export async function runPluginDataMigrations(): Promise<void> {
-  for (const [name, run] of MIGRATIONS) {
-    try {
-      await run();
-    } catch (error) {
-      databaseLogger.warn(`Plugin data migration ${name} failed`, {
-        operation: "plugin_data_migration",
-        error: getErrorMessage(error),
-      });
+export const runPluginDataMigrations = DatabaseSaveTrigger.batched(
+  async (): Promise<void> => {
+    for (const [name, run] of MIGRATIONS) {
+      try {
+        await run();
+      } catch (error) {
+        databaseLogger.warn(`Plugin data migration ${name} failed`, {
+          operation: "plugin_data_migration",
+          error: getErrorMessage(error),
+        });
+      }
     }
-  }
-  await applyHostDefaults();
-}
+    await applyHostDefaults();
+  },
+);
 
 /**
  * Classifies hosts nobody classified yet (from an older release, or for a

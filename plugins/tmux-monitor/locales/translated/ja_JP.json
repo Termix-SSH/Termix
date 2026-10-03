@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "tmuxモニター"
-  },
   "hosts": {
     "enableTmuxMonitor": "Tmuxモニターを有効にする",
     "enableTmuxMonitorDesc": "Tmuxモニターにこのホストを表示し、tmuxアクションをサイドバーに追加します。",
+    "tabTmuxMonitor": "Tmux モニター",
     "docsLink": "ドキュメントを表示"
+  },
+  "nav": {
+    "tmuxMonitor": "tmuxモニター"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux モニター",
+    "tmuxMonitorDesc": "ホスト間の tmux セッションを監視"
+  },
+  "permissions": {
+    "use": {
+      "title": "Tmux Monitorを使用する",
+      "description": "モニターが有効になっているホスト上で、tmuxのセッション、ウィンドウ、ペインを閲覧および制御します。"
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tmuxモニターを有効にする",
+        "description": "このホスト上で実行されているtmuxセッションを監視し、接続します。"
+      },
+      "mouseEnabled": {
+        "label": "tmuxのマウスサポートを有効にする",
+        "description": "セッションのアタッチ時または作成時に、tmuxセッションにマウスサポートを適用します。他のセッションおよびグローバルなtmux設定は変更されません。"
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux モニター",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "セッションの名前変更に失敗しました",
     "editTagsTitle": "\"{{name}}\" のタグを編集",
     "killPane": "ペインを終了",
-    "resizeTree": "ドラッグでリサイズ — ダブルクリックでリセット",
+    "resizeTree": "ドラッグしてサイズを変更、ダブルクリックでリセット",
     "reattach": "再接続 (表示の乱れを修正)",
     "killWindow": "ウィンドウを終了",
     "killWindowTitle": "ウィンドウ {{index}} (\"{{session}}\") を終了しますか？",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "セッションの終了に失敗しました",
     "hostUnreachable": "ホストに接続できませんでした。オンラインで到達可能か確認してください。",
     "noServer": "このホストで tmux サーバーが実行されていません。",
-    "searchTruncated": "一部の結果 — 各ペインの直近 {{lines}} 行と最大 {{panes}} ペインを検索対象としています。",
+    "searchTruncated": "部分的な結果です。検索は各ペインの最後の {{lines}} 行、最大で {{panes}} ペインを対象とします。",
     "closeSearchResults": "検索結果を閉じる",
     "retry": "再試行",
     "noHosts": "利用可能な SSH ホストがありません",
-    "noHostsHint": "SSH ホストで Tmux モニターオプションを有効にすると（ホストマネージャー → 端末タブ）、tmux セッションを監視できます。",
+    "noHostsHint": "SSHホストでTmuxモニターオプションを有効にすると（ホストマネージャーのTmuxモニタータブ）、そのホストのtmuxセッションを監視できます。",
     "tmuxInstallHint": "ホストにインストールするには:",
     "attachTooltip": "{{host}} にターミナルを開く",
-    "attachTooltipPane": "{{host}} にターミナルを開く — tmux セッション {{session}}",
+    "attachTooltipPane": "{{host}}、tmux セッション {{session}} にターミナルを開きます",
     "timeJustNow": "たった今",
     "timeMinutes": "{{count}}分前",
     "timeHours": "{{count}}時間前",
-    "timeDays": "{{count}}日前"
+    "timeDays": "{{count}}日前",
+    "allHosts": "すべてのホスト",
+    "singleHost": "単一ホスト",
+    "hostScope": "モニタースコープ",
+    "filterHosts": "ホストを名前またはアドレスでフィルタリングします",
+    "selectHost": "ホストを選択",
+    "toggleHost": "展開または折りたたみ {{host}}",
+    "noMatchingHosts": "一致するホストはありません",
+    "toggleSession": "展開または折りたたみ {{session}}"
   }
 }

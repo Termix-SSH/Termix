@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "Sign in with LDAP",
   "loginWithProvider": "Zaloguj się za pomocą {{name}}",
   "loading": "Ładowanie...",
   "requiredField": "To pole jest wymagane",
   "username": "Nazwa użytkownika LDAP",
   "password": "Hasło LDAP",
   "signIn": "Zaloguj się",
+  "permissions": {
+    "manage": {
+      "title": "Manage LDAP directories",
+      "description": "Add, change and remove the LDAP directories people can sign in with."
+    }
+  },
   "providers": {
     "docsLink": "Zobacz dokumentację",
+    "none": "No LDAP directories configured.",
+    "add": "Add Directory",
+    "edit": "Edit Directory",
+    "delete": "Delete Directory",
+    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
     "name": "Nazwa wyświetlana",
-    "enabled": "Włączone",
+    "namePlaceholder": "Company directory",
+    "nameRequired": "A display name is required",
+    "enabled": "Włączona",
+    "save": "Save Directory",
     "saving": "Zapisywanie...",
     "saved": "Zapisano",
     "saveFailed": "Nie udało się zapisać",
     "deleted": "Usunięto",
     "deleteFailed": "Nie udało się usunąć",
+    "loadFailed": "Failed to load LDAP directories",
     "cancel": "Anuluj"
   },
   "fields": {
@@ -22,6 +38,7 @@
     "useTls": "Użyj TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Hasło Bind",
+    "secretKeep": "A password is saved. Leave this empty to keep it.",
     "userSearchBase": "Baza wyszukiwania użytkowników",
     "userSearchFilter": "Filtr wyszukiwania użytkownika",
     "usernameAttr": "Atrybut nazwy użytkownika",

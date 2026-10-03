@@ -1,20 +1,30 @@
 {
   "editor": {
     "label": "OPKSSH",
-    "description": "Logg på denne verten med identitetsleverandøren din i stedet for et passord eller en nøkkel. Krever at OPKSSH er konfigurert på serveren.",
-    "docs": "Vis dokumenter"
+    "description": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
+    "docs": "View docs"
   },
   "dialog": {
-    "title": "OPKSSH-autentisering kreves",
-    "description": "Fullfør autentiseringen i nettleseren din for å fortsette. Denne økten vil være gyldig i 24 timer.",
-    "openBrowser": "Åpne nettleseren for å autentisere",
-    "waiting": "Venter på autentisering i nettleseren...",
-    "authenticating": "Behandler autentisering ...",
-    "signInWith": "Logg inn med {{provider}}"
+    "title": "OPKSSH Authentication Required",
+    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "openBrowser": "Open Browser to Authenticate",
+    "waiting": "Waiting for authentication in browser...",
+    "authenticating": "Processing authentication...",
+    "signInWith": "Sign in with {{provider}}"
   },
   "errors": {
-    "authFailed": "Autentiseringen mislyktes. Sjekk legitimasjonen din og prøv på nytt.",
-    "timeout": "Autentiseringen ble tidsavbrutt. Prøv på nytt."
+    "authFailed": "Authentication failed. Please check your credentials and try again.",
+    "timeout": "Authentication timed out. Please try again."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"

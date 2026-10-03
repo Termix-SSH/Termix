@@ -1,26 +1,84 @@
 {
+  "permissions": {
+    "devices.view": {
+      "title": "View tailnet devices",
+      "description": "See the devices on the connected tailnet."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "Tailscale API",
+      "devices": "Tailnet"
+    },
+    "apiKey": {
+      "label": "API key",
+      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API base URL",
+      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Device list",
+      "checking": "Checking the tailnet...",
+      "noKey": "No API key set yet.",
+      "error": "Could not reach the tailnet. Check the API key.",
+      "count": "{{count}} device reachable",
+      "count_other": "{{count}} devices reachable",
+      "refresh": "Check"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
   "hosts": {
-    "tailscaleUsernameHint": "Este deve ser um usuário Unix cuja identidade Tailscale é concedida na ACL SSH da tailnet, não necessariamente o usuário root.",
-    "tailscaleDeviceSelect": "Selecione o dispositivo Tailscale",
+    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleDeviceSelect": "Selecionar dispositivo Tailscale",
     "tailscaleDeviceSelectPlaceholder": "Selecione um dispositivo...",
-    "tailscaleNoApiKey": "Nenhuma chave de API do Tailscale configurada. Adicione uma nas Configurações de Administrador para habilitar a descoberta de dispositivos.",
-    "tailscaleDocsLink": "Ver documentos",
+    "tailscaleNoApiKey": "Nenhuma chave de API Tailscale configurada. Adicione uma nas configurações do Admin para habilitar a descoberta do dispositivo.",
+    "tailscaleDocsLink": "Documentação",
     "tailscaleLoadingDevices": "Carregando dispositivos...",
-    "tailscaleDeviceLoadFailed": "Falha ao carregar os dispositivos Tailscale. Verifique o URL da API e a conexão de rede.",
-    "tailscaleNoDevices": "Nenhum dispositivo encontrado em sua rede traseira.",
-    "tailscaleDeviceAutoFill": "Ao selecionar um dispositivo, o endereço IP do host será preenchido automaticamente."
+    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleNoDevices": "Nenhum dispositivo encontrado na sua rede tail.",
+    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
+    "tailscaleAddHost": "Add host",
+    "tailscaleCopyIp": "Copy Tailscale IP",
+    "tailscaleIpCopied": "IP copied",
+    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Autenticação Tailscale necessária",
-    "tailscaleCheckDescription": "O Tailscale SSH requer uma verificação adicional. Autentique-se no seu navegador para continuar.",
-    "tailscaleCheckOpenBrowser": "Abra o navegador para autenticar.",
-    "tailscaleCheckWaiting": "Aguardando autenticação do Tailscale...",
-    "tailscaleCheckTimeout": "A autenticação no Tailscale expirou. Tente novamente."
+    "tailscaleCheckRequired": "Tailscale Authentication Required",
+    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckOpenBrowser": "Open Browser to Authenticate",
+    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
+    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "Atualizar",
+    "retry": "Retry",
+    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "noData": "No data available",
+    "filter": "Filter...",
+    "tsNotInstalled": "Tailscale is not installed on this host",
+    "tsRunning": "Running",
+    "tsStopped": "Stopped",
+    "tsEnable": "Conectar",
+    "tsDisable": "Desconectar",
+    "tsEnabling": "Connecting to Tailscale...",
+    "tsDisabling": "Disconnecting from Tailscale...",
+    "tsEnabled": "Tailscale connected",
+    "tsDisabled": "Tailscale disconnected",
+    "tsExitNode": "Exit node",
+    "tsExitNodeActive": "Exit node active"
   },
   "newUi": {
     "sidebar": {
       "quickConnect": {
-        "connectToTerminal": "Conectar ao terminal",
+        "connectToTerminal": "Connect to Terminal",
         "usernameLabel": "Nome de usuário"
       }
     }

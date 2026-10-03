@@ -111,4 +111,20 @@ describe("runExternalIdentityMigration", () => {
     expect(second).toEqual({ identities: 0, skipped: 1 });
     expect(h.state.identities).toHaveLength(1);
   });
+
+  it("does not recreate a legacy-oidc link that was moved to its provider", async () => {
+    user("oidc-user", { oidcIdentifier: "sub-1" });
+    h.state.identities.push({
+      id: 1,
+      userId: "oidc-user",
+      providerId: "1",
+      subject: "sub-1",
+      email: null,
+    } as never);
+
+    const result = await runExternalIdentityMigration();
+
+    expect(result).toEqual({ identities: 0, skipped: 1 });
+    expect(h.state.identities).toHaveLength(1);
+  });
 });

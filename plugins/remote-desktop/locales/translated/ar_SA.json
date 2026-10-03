@@ -10,24 +10,24 @@
     "connectionFailed": "فشل الاتصال",
     "failedToConnect": "فشل الحصول على رمز الاتصال",
     "hostNotFound": "المضيف غير موجود",
-    "noHostSelected": "لم يتم اختيار مضيف",
+    "noHostSelected": "لم يتم تحديد أي جهاز مضيف",
     "reconnect": "إعادة الاتصال",
     "retry": "إعادة المحاولة",
     "guacdUnavailable": "خدمة سطح المكتب البعيد (guacd) غير متاحة. يرجى التأكد من تشغيل guacd وإمكانية الوصول إليه وتكوينه بشكل صحيح في إعدادات المسؤول.",
     "credentialPromptTitle": "أدخل بيانات اعتماد RDP",
     "credentialPromptDescription": "تم ضبط هذا المضيف ليطلب بيانات الاعتماد عند الاتصال. تُستخدم هذه البيانات لهذه الجلسة فقط ولا يتم حفظها.",
-    "connect": "يتصل",
+    "connect": "اتصال",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
       "title": "ملفات محرك الأقراص",
       "parent": "الدليل الرئيسي",
-      "refresh": "ينعش",
+      "refresh": "تحديث",
       "empty": "هذا المجلد فارغ",
       "listFailed": "فشل في قراءة هذا المجلد",
-      "download": "تحميل",
+      "download": "تنزيل",
       "downloadFailed": "فشل تنزيل {{name}}",
       "upload": "تحميل الملفات",
-      "uploading": "جارٍ التحميل {{name}}...",
+      "uploading": "جارٍ رفع {{name}}...",
       "uploaded": "تم التحميل {{name}}",
       "uploadFailed": "فشل تحميل {{name}}",
       "uploadDisabled": "تم تعطيل التحميلات لهذا الاتصال",
@@ -73,17 +73,22 @@
       "fitToScreen": "مناسب للشاشة",
       "switchToTrackpad": "قم بالتبديل إلى وضع لوحة اللمس (اسحب لتحريك المؤشر، انقر للنقر)",
       "switchToTouch": "قم بالتبديل إلى وضع اللمس (انقر مباشرة في المكان الذي تريد النقر فيه)"
-    }
+    },
+    "disabled": "تم إيقاف تشغيل سطح المكتب البعيد. يمكن للمسؤول تشغيله في الإعدادات."
   },
   "hosts": {
     "nativeRdpOpened": "تم فتحه في سطح المكتب البعيد لنظام التشغيل Windows",
     "nativeRdpFailed": "فشل فتح سطح المكتب البعيد لنظام التشغيل Windows",
     "openNativeRdp": "افتح في سطح المكتب البعيد لنظام التشغيل Windows",
     "guac": {
+      "toolbar": "شريط الأدوات",
       "connection": "اتصال",
       "authentication": "المصادقة",
       "storedCredential": "بيانات الاعتماد المخزنة",
       "authMethod": "طريقة المصادقة",
+      "authTypeDirect": "مباشر",
+      "authTypeCredential": "بيانات الاعتماد",
+      "authTypeNone": "لا شيء",
       "authTypeNoneDesc": "لا يتم تخزين أي بيانات اعتماد. سيُطلب منك إدخال اسم المستخدم وكلمة المرور في كل مرة تتصل فيها؛ فهي غير محفوظة.",
       "selectCredential": "اختر بيانات اعتماد...",
       "connectionSettings": "إعدادات الاتصال",
@@ -206,7 +211,8 @@
       "colorScheme": "نظام الألوان",
       "backspaceKey": "مفتاح Backspace",
       "colorDepth": "عمق اللون",
-      "resizeMethod": "طريقة تغيير الحجم"
+      "resizeMethod": "طريقة تغيير الحجم",
+      "driveNamePlaceholder": "محرك Termix"
     },
     "remoteDesktop": "سطح المكتب البعيد",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "الشبكة الافتراضية",
     "unencryptedShell": "shell غير مشفر",
-    "docsLink": "عرض المستندات"
+    "remoteDesktopNotes": "ملاحظات",
+    "userDefaultsNote": "تتبع الإعدادات التي تتركها دون تغيير الإعدادات الافتراضية للمضيف.",
+    "connectionOriginNote": "في تطبيق سطح المكتب، تستخدم بروتوكولات RDP وVNC وTelnet الخادم البعيد ما لم يتم ضبط المضيف على \"هذا الجهاز\"، الأمر الذي يتطلب عنوان IP يمكن لهذا الجهاز الوصول إليه. يمكنك تعيين عنوان IP في إعدادات سطح المكتب البعيد، أو لكل مضيف ضمن \"وكيل guacd\".",
+    "docsLink": "عرض المستندات",
+    "connectionOriginGuacamoleNote": "تستخدم بروتوكولات RDP وVNC وTelnet الخادم البعيد ما لم تختر \"هذا الجهاز\"، الأمر الذي يتطلب عنوان IP افتراضيًا (guacd) يمكن لهذا الجهاز الوصول إليه. يمكنك تعيين عنوان IP افتراضي في إعدادات عنوان URL الخاص بـ guacd، أو لكل مضيف ضمن إعدادات وكيل guacd."
   },
   "onboarding": {
     "feature_desktop": "سطح المكتب البعيد",
@@ -223,16 +233,18 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "عمق اللون"
+        "label": "عمق اللون",
+        "description": "يُستخدم مع مضيفي بروتوكول سطح المكتب البعيد (RDP) الذين يتركونه على إعداداتهم الافتراضية."
       },
       "resizeMethod": {
-        "label": "طريقة تغيير الحجم"
+        "label": "طريقة تغيير الحجم",
+        "description": "كيف تتكيف الشاشة البعيدة مع حجم النافذة."
       },
       "resizeDisplayUpdate": "تحديث الشاشة",
       "resizeReconnect": "إعادة الاتصال",
       "inherit": "يرث",
-      "on": "على",
-      "off": "عن",
+      "on": "مفعلة",
+      "off": "غير مفعلة",
       "forceLossless": {
         "label": "فرض بدون فقدان",
         "description": "فرض ترميز الصور بدون فقدان (جودة أعلى، استهلاك أكبر للنطاق الترددي)"
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "تعطيل اللصق",
         "description": "منع لصق النص في الجلسة البعيدة"
-      }
+      },
+      "group": "الإعدادات الافتراضية لسطح المكتب البعيد",
+      "colorDepth16": "16 بت",
+      "colorDepth24": "24 بت",
+      "colorDepth32": "32 بت"
     },
     "admin": {
+      "enabled": {
+        "label": "تمكين سطح المكتب البعيد",
+        "description": "السماح باتصالات RDP وVNC وTelnet عبر guacd."
+      },
       "guacdUrl": {
-        "label": "رابط guacd"
+        "label": "رابط guacd",
+        "description": "حيث يستمع برنامج guacd، كعنوان المضيف:المنفذ. وتتجاوز متغيرات البيئة GUACD_URL و GUACD_HOST و GUACD_PORT هذا الإعداد.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "منفذ RDP"
+      },
+      "vncPort": {
+        "label": "منفذ VNC"
+      },
+      "telnetPort": {
+        "label": "منفذ Telnet"
+      },
+      "rdpSecurity": {
+        "label": "وضع أمان RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "تجاهل أخطاء الشهادة"
+      },
+      "guacamoleConfig": {
+        "label": "إعدادات guacd"
+      },
+      "enableToolbar": {
+        "label": "شريط أدوات سطح المكتب البعيد",
+        "description": "إظهار شريط الأدوات في جلسات RDP وVNC وTelnet."
+      },
+      "displayGroup": "عرض",
+      "displayDefaultsTab": "سطح المكتب البعيد"
+    }
+  },
+  "palette": {
+    "connectRdp": "الاتصال بـ RDP",
+    "connectVnc": "الاتصال بـ VNC",
+    "connectTelnet": "اتصل بشبكة Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "مشاركة جلسات سطح المكتب البعيد",
+      "description": "اسمح لمشاركة الجلسات وغرف التعاون بعرض جلسات RDP وVNC وTelnet الخاصة بهذا المستخدم للآخرين."
     }
   },
   "errors": {

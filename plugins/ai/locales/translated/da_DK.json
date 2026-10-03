@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Brug assistenten",
+      "description": "Åbn assistenten og stil den spørgsmål."
+    },
+    "manage_providers": {
+      "title": "Administrer udbydere",
+      "description": "Tilføj, rediger og fjern AI-udbyderne og deres API-nøgler."
+    },
+    "apply_proposals": {
+      "title": "Anvend forslag",
+      "description": "Lad assistenten udføre de foreslåede ændringer."
+    },
+    "services.use": {
+      "title": "Brug AI fra andre funktioner",
+      "description": "Andre funktioner kan ringe til assistenten på dine vegne."
+    },
+    "secrets.share": {
+      "title": "Del API-nøglen",
+      "description": "Andre funktioner kan bruge den gemte AI API-nøgle uden at se den."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "AI-assistenten er slået fra på denne server.",
+    "providersNeedOptIn": "Slå AI-assistenten ovenfor til for at tilføje udbydere.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI-assistent",
+        "description": "Lad brugerne aktivere AI-assistenten. Når dette er slået fra, er assistenten skjult og blokeret for alle."
+      },
+      "privateEndpoints": {
+        "label": "Tilladte private AI-værter",
+        "description": "Værter på dit private netværk, som brugerne kan henvise en udbyder til, f.eks. en selvhostet Ollama. Sæt én vært på hver linje."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktivér AI-assistent",
+        "description": "Tillad AI-assistenten at hjælpe i denne værts terminal. Deaktiveret som standard, og kræver stadig, at AI er aktiveret for din konto."
+      }
+    }
+  },
   "ai": {
     "title": "Assistent",
     "send": "Sende",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Spørg om denne vært...",
     "noProvidersConfigured": "Der er endnu ikke konfigureret nogen AI-udbyder. Tilføj en i fanen AI-assistent.",
     "runsInOpenTerminal": "Kører i din åbne terminalsession.",
-    "runInTerminal": "Løbe"
+    "runInTerminal": "Løbe",
+    "terminalContextPrefill": "Her er mit terminaloutput:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Lad andre funktioner bruge din AI-udbyders API-nøgle til deres egne anmodninger. Nøglen kopieres aldrig, og du kan til enhver tid tilbagekalde den."
+    }
   },
   "nav": {
     "ai": "AI"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Tænd den",
     "aiEnableDesc": "Tilføjer en assistent, der læser din opsætning og foreslår ændringer, du godkender. Kræver en udbyder, du angiver, f.eks. en lokal Ollama.",
     "aiNote": "Intet sendes nogen steder, før du tilføjer en udbyder og sender en besked."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "AI-assistent",
-        "description": "Lad brugerne aktivere AI-assistenten. Når dette er slået fra, er assistenten skjult og blokeret for alle."
-      },
-      "privateEndpoints": {
-        "label": "Tilladte private AI-værter"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Aktivér AI-assistent",
-        "description": "Tillad AI-assistenten at hjælpe i denne værts terminal. Deaktiveret som standard, og kræver stadig, at AI er aktiveret for din konto."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Se dokumenter"

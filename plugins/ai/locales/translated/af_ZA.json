@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Gebruik die assistent",
+      "description": "Maak die assistent oop en vra dit dinge."
+    },
+    "manage_providers": {
+      "title": "Bestuur verskaffers",
+      "description": "Voeg die KI-verskaffers en hul API-sleutels by, wysig en verwyder hulle."
+    },
+    "apply_proposals": {
+      "title": "Pas voorstelle toe",
+      "description": "Laat die assistent die veranderinge wat dit voorstel, uitvoer."
+    },
+    "services.use": {
+      "title": "Gebruik KI van ander funksies",
+      "description": "Ander funksies kan die assistent namens jou skakel."
+    },
+    "secrets.share": {
+      "title": "Deel die API-sleutel",
+      "description": "Ander funksies mag die gestoorde KI API-sleutel gebruik sonder om dit te sien."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "Die KI-assistent is afgeskakel op hierdie bediener.",
+    "providersNeedOptIn": "Skakel die KI-assistent hierbo aan om verskaffers by te voeg.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "KI-assistent",
+        "description": "Laat gebruikers die KI-assistent aanskakel. Terwyl dit af is, is die assistent vir almal versteek en geblokkeer."
+      },
+      "privateEndpoints": {
+        "label": "Toegelate private KI-gashere",
+        "description": "Gashere op jou privaat netwerk waarna gebruikers 'n verskaffer kan verwys, soos 'n self-gehoste Ollama. Plaas een gasheer op elke lyn."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktiveer KI-assistent",
+        "description": "Laat die KI-assistent toe om in hierdie gasheer se terminaal te help. Standaard afgeskakel, en KI moet steeds vir jou rekening geaktiveer word."
+      }
+    }
+  },
   "ai": {
     "title": "Assistent",
     "send": "Stuur",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Vra oor hierdie gasheer...",
     "noProvidersConfigured": "Geen KI-verskaffer is nog gekonfigureer nie. Voeg een by in die KI-assistent-oortjie.",
     "runsInOpenTerminal": "Loop in jou oop terminaalsessie.",
-    "runInTerminal": "Hardloop"
+    "runInTerminal": "Hardloop",
+    "terminalContextPrefill": "Hier is my terminaaluitvoer:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Laat ander funksies jou KI-verskaffer API-sleutel vir hul eie versoeke gebruik. Die sleutel word nooit gekopieer nie, en jy kan dit te eniger tyd herroep."
+    }
   },
   "nav": {
     "ai": "KI"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Skakel dit aan",
     "aiEnableDesc": "Voeg 'n assistent by wat jou opstelling lees en veranderinge voorstel wat jy goedkeur. Benodig 'n verskaffer wat jy verskaf, soos 'n plaaslike Ollama.",
     "aiNote": "Niks word êrens heen gestuur totdat jy 'n verskaffer byvoeg en 'n boodskap stuur nie."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "KI-assistent",
-        "description": "Laat gebruikers die KI-assistent aanskakel. Terwyl dit af is, is die assistent vir almal versteek en geblokkeer."
-      },
-      "privateEndpoints": {
-        "label": "Toegelate private KI-gashere"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "Aktiveer KI-assistent",
-        "description": "Laat die KI-assistent toe om in hierdie gasheer se terminaal te help. Standaard afgeskakel, en KI moet steeds vir jou rekening geaktiveer word."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Bekyk dokumente"

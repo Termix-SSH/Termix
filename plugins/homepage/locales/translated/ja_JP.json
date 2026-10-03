@@ -18,6 +18,7 @@
   "homepage": {
     "title": "ホームページ",
     "addWidget": "ウィジェットを追加",
+    "noWidgetsInCategory": "このカテゴリにはウィジェットがありません",
     "editWidget": "ウィジェットを編集",
     "zoomIn": "拡大",
     "zoomOut": "縮小",
@@ -59,6 +60,9 @@
     "maxItems": "最大アイテム数",
     "showDescription": "説明を表示",
     "widgetRssName": "RSSフィード",
+    "rssNoFeedUrl": "ウィジェット設定でフィードURLを設定する",
+    "rssLoadError": "フィードを読み込むことができませんでした",
+    "rssNoItems": "商品なし",
     "noHostSelected": "ホストが選択されていません",
     "displayedMetrics": "表示メトリクス",
     "metricCpu": "CPU",
@@ -81,7 +85,7 @@
     "uptimeUnavailable": "稼働時間は利用できません",
     "uptimeLabel": "稼働時間",
     "overviewVersion": "バージョン",
-    "overviewUpdateLabel": "アップデート",
+    "overviewUpdateLabel": "更新",
     "overviewUpdateAvailable": "アップデートあり",
     "overviewDatabase": "データベース",
     "overviewUptime": "稼働時間",
@@ -157,6 +161,30 @@
     "compactMode": "コンパクトモード",
     "selectHosts": "ホストを選択",
     "listLayout": "リスト",
-    "gridLayout": "グリッド"
+    "gridLayout": "グリッド",
+    "configureUrl": "ウィジェット設定でURLを設定してください",
+    "embeddedContent": "埋め込みコンテンツ",
+    "noBookmarks": "ブックマークなし",
+    "noSections": "セクションは設定されていません",
+    "noServices": "サービスが設定されていません",
+    "configureLocation": "ウィジェットの設定で場所を設定してください",
+    "bannerTextPlaceholder": "バナーテキスト",
+    "serviceNamePlaceholder": "私のサービス"
+  },
+  "permissions": {
+    "use": {
+      "title": "ホームページを使用する",
+      "description": "ホームページのキャンバスとダッシュボードのサービスリンクを表示および編集します。"
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "プライベートホストを許可",
+      "description": "PingステータスおよびカスタムAPIウィジェットに使用する、正確なプライベートホスト名またはループバックホスト名/IPアドレス。エントリはカンマまたは改行で区切り、スキーム、ポート、パスは省略してください。空欄はプライベート宛先を示します。"
+    },
+    "privateCertificateAuthority": {
+      "label": "民間認証局（PEM）",
+      "description": "許可リストに登録されたホスト用のオプションの信頼できる認証局（CA）バンドル。証明書の検証は引き続き有効です。システムトラストストアを使用する場合は、空欄のままにしてください。"
+    }
   }
 }

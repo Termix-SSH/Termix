@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Näytä automaatiot",
+      "description": "Katso automaatiot ja niiden historia."
+    },
+    "create": {
+      "title": "Luo automaatioita",
+      "description": "Lisää uusia automaatioita."
+    },
+    "edit": {
+      "title": "Muokkaa automaatioita",
+      "description": "Muuta olemassa olevia automaatioita."
+    },
+    "delete": {
+      "title": "Poista automaatiot",
+      "description": "Poista automaatiot."
+    },
+    "run": {
+      "title": "Suorita automaatioita",
+      "description": "Käynnistä automaatio manuaalisesti."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Muokkaa automatisointia",
         "empty": "Ei vielä automaatioita. Luo sellainen reagoimaan mittariin, aikatauluun tai tapahtumaan.",
         "emptyRuns": "Ei vielä juoksuja.",
-        "emptyChannels": "Ei kanavia vielä. Lisää yksi lähettääksesi ilmoituksia jonnekin.",
-        "noChannelsHint": "Kanavia ei ole vielä määritetty. Lisää yksi Kanavat-välilehdellä.",
-        "addChannel": "Lisää kanava",
-        "testChannel": "Testata",
-        "channelTestSent": "Testi-ilmoitus lähetetty",
-        "channelTestFailed": "Testi-ilmoitus epäonnistui",
-        "channelDeleted": "Kanava poistettu",
-        "deleteChannelConfirm": "Poistetaanko tämä kanava? Sitä käyttävät automaatiot lakkaavat lähettämästä ilmoituksia.",
+        "channelsHint": "Kanavat määritetään Hälytykset-kohdassa",
+        "noChannelsHint": "Ilmoitus menee aina postilaatikkoosi. Lisää kanavia Ilmoitukset-kohtaan lähettääksesi sen myös muualle.",
         "nameLabel": "Nimi",
         "namePlaceholder": "esim. Siivoa /data, kun se täyttyy",
         "nameRequired": "Nimi on pakollinen",
@@ -79,7 +95,7 @@
           "webhook": "Saapuva webhook"
         },
         "stepTypes": {
-          "notify": "Lähetä ilmoitus",
+          "notify": "Lähetä hälytys",
           "http": "Soita URL-osoitteeseen",
           "run_snippet": "Suorita koodinpätkä",
           "run_command": "Suorita komento",
@@ -118,7 +134,7 @@
           "url": "URL-osoite",
           "method": "Menetelmä",
           "body": "Keho",
-          "channels": "Kanavat",
+          "channels": "Lähetä myös osoitteeseen",
           "title": "Otsikko",
           "message": "Viesti",
           "snippet": "Katkelma",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Pysäytä juoksu",
           "continue": "Jatkaa"
+        },
+        "needsPlugin": "Tarpeet {{plugin}}",
+        "needsPluginHint": "Tämä automaatio ohitetaan, kunnes sen tarvitsema ominaisuus on taas käytettävissä.",
+        "offBadge": "Pois",
+        "docsLink": "Näytä dokumentit",
+        "ago": {
+          "seconds": "{{count}}s sitten",
+          "minutes": "{{count}}minuuttia sitten",
+          "hours": "{{count}}tuntia sitten",
+          "days": "{{count}}d sitten"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automaatiot",
     "feature_automations_desc": "Suorita vaiheet automaattisesti, kun jotain tapahtuu, ja saat ilmoituksen."
+  },
+  "maintenance": {
+    "title": "Huolto",
+    "description": "Keskeytä isännän tilan, kunnon, mittareiden, säilön ja tunnelin katkaisun automatisoinnit työn ollessa käynnissä. Valvonta, manuaaliset suoritukset ja ajoitetut automatisoinnit jatkuvat.",
+    "denied": "Sinulla ei ole oikeutta tarkastella ylläpitoa.",
+    "sharedReadOnly": "Tämä isäntä jaettiin kanssasi. Vain sen omistaja voi muuttaa ylläpitoa.",
+    "failed": "Ylläpitoa ei voitu päivittää.",
+    "active": "Huolto aktiivinen",
+    "estimated": "Arvioitu valmistuminen",
+    "noAutoEnd": "Arvio ei lopeta huoltoa. Lopeta se nimenomaisesti, kun työ on valmis.",
+    "endConfirm": "Lopetetaanko ylläpito ja jatketaanko tapahtumien laukaisemia automaatioita tälle isännälle?",
+    "confirmEnd": "Vahvista loppu",
+    "cancel": "Peruuttaa",
+    "end": "Huoltopäätös",
+    "action": "Toiminta",
+    "startNow": "Aloita nyt",
+    "schedule": "Aikatauluta myöhemmin",
+    "reason": "Syy",
+    "startUtc": "Ensimmäinen lähtö (UTC)",
+    "repeat": "Toistaa",
+    "once": "Kerran",
+    "weekly": "Viikoittain",
+    "monthly": "Kuukausittain",
+    "utcHelp": "Aikataulut käyttävät UTC-aikaa ympäri vuoden. Kuukausiaikataulut ohittavat kuukaudet, joilla ei ole valittua päivää. Suunnitellut ikkunat eivät voi olla päällekkäisiä; ylikuormittava huolto jatkuu myöhemmissä ikkuna-ajoissa.",
+    "duration": "Arvioitu kesto (minuutteina)",
+    "grace": "Lisäaika (minuutteina)",
+    "notify": "Ilmoita kerran, jos olet edelleen offline-tilassa arvion ja lisäajan jälkeen",
+    "addSchedule": "Lisää aikataulu",
+    "schedules": "Aikataulut",
+    "noSchedules": "Ei huoltoaikatauluja.",
+    "completed": "Jo aloitettu",
+    "minutes_one": "{{count}} minuutti",
+    "minutes_other": "{{count}} minuuttia",
+    "remove": "Poista aikataulu",
+    "loadFailed": "Ylläpidon tilaa ei voitu päivittää. Muutokset on poistettu käytöstä, kunnes ne voidaan ladata.",
+    "loading": "Ladataan ylläpitotilaa…"
   }
 }

@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "serial": "Port szeregowy"
+  },
   "serial": {
     "title": "Port szeregowy",
     "portLabel": "Port",
@@ -22,8 +25,5 @@
     "notSupported": "Połączenia szeregowe wymagają przeglądarki obsługującej Web Serial API (Chrome, Edge lub Firefox 151+) albo aplikacji desktopowej Termix.",
     "hideHint": "Kartę Port szeregowy można ukryć w: Profil użytkownika > Wygląd > Pasek boczny > Nawigacja.",
     "browserPickerHint": "Kliknij Połącz, a przeglądarka otworzy okno wyboru portu, w którym wskażesz urządzenie."
-  },
-  "nav": {
-    "serial": "Port szeregowy"
   }
 }

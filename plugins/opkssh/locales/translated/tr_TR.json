@@ -2,7 +2,7 @@
   "editor": {
     "label": "OPKSSH",
     "description": "Parola veya anahtar yerine kimlik sağlayıcınızı kullanarak bu sunucuda oturum açın. Sunucuda OPKSSH kurulumu gerektirir.",
-    "docs": "Dokümanları görüntüle"
+    "docs": "Belgelere bak"
   },
   "dialog": {
     "title": "OPKSSH Kimlik Doğrulaması Gerekli",
@@ -15,6 +15,16 @@
   "errors": {
     "authFailed": "Kimlik doğrulaması başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edip tekrar deneyin.",
     "timeout": "Kimlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"

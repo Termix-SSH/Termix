@@ -4,6 +4,7 @@
   "loginFailed": "Error al iniciar sesión con clave de acceso",
   "description": "Usa credenciales WebAuthn/FIDO2 para iniciar sesión sin contraseña",
   "namePlaceholder": "Nombre de la passkey",
+  "defaultName": "Llave maestra",
   "uv": {
     "preferred": "Preferida",
     "required": "Requerida",
@@ -13,6 +14,9 @@
   "none": "No hay passkeys registradas.",
   "added": "Passkey añadida",
   "addFailed": "No se pudo añadir la passkey",
+  "delete": "Eliminar clave de acceso",
   "deleted": "Passkey eliminada",
-  "deleteFailed": "Error al eliminar la clave de acceso"
+  "deleteFailed": "Error al eliminar la clave de acceso",
+  "unknownDevice": "desconocido",
+  "synced": "sincronizado"
 }

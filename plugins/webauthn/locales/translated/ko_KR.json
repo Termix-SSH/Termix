@@ -4,6 +4,7 @@
   "loginFailed": "패스키 로그인 실패",
   "description": "WebAuthn/FIDO2 자격 증명을 사용하여 비밀번호 없이 로그인하세요.",
   "namePlaceholder": "패스키 이름",
+  "defaultName": "곁쇠",
   "uv": {
     "preferred": "선호",
     "required": "필수",
@@ -13,6 +14,9 @@
   "none": "등록된 패스키가 없습니다.",
   "added": "패스키가 추가되었습니다.",
   "addFailed": "패스키 추가 실패",
+  "delete": "암호 삭제",
   "deleted": "패스키가 삭제되었습니다.",
-  "deleteFailed": "패스키 삭제 실패"
+  "deleteFailed": "패스키 삭제 실패",
+  "unknownDevice": "알 수 없음",
+  "synced": "동기화됨"
 }

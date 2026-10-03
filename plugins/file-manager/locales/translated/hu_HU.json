@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Fájlok",
+    "sftp": "SFTP",
+    "openFileManager": "Fájlkezelő megnyitása"
+  },
+  "permissions": {
+    "use": {
+      "title": "Fájlkezelő használata",
+      "description": "Fájlok böngészése, szerkesztése és átvitele SFTP-n keresztül."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Fájlkezelő engedélyezése",
+        "description": "Böngésszen és szerkessze a fájlokat ezen a gazdagépen SFTP-n keresztül."
+      },
+      "defaultPath": {
+        "label": "Alapértelmezett elérési út"
+      },
+      "scpLegacy": {
+        "label": "SCP örökölt mód"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Egyidejű fájlátvitel",
+        "description": "Hány fájlt tölt fel vagy tölt le egyszerre az egymás melletti helyi/távoli kezelő. Csökkentse ezt az értéket, ha a szerver korlátozza az SFTP csatornákat."
+      },
+      "confirmBeforeTrash": {
+        "label": "Fájlok kukába helyezése előtt erősítse meg",
+        "description": "Kérdezzen rá, mielőtt a távoli fájlokat a kukába helyezi. A végleges törlés továbbra is megerősítést igényel."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Fájlkezelő"
+  },
   "fileManager": {
     "noHostSelected": "Nincs kiválasztva gazdagép",
     "initializingEditor": "Szerkesztő inicializálása...",
@@ -34,6 +72,7 @@
     "rename": "Átnevezés",
     "uploading": "Feltöltés...",
     "uploadingFile": "Feltöltés {{name}}...",
+    "uploadingChunk": "Feltöltés folyamatban {{name}}: {{percent}}% (a {{chunk}} része a {{total}}-ból)",
     "fileName": "Fájlnév",
     "folderName": "Mappa neve",
     "fileUploadedSuccessfully": "A(z) \"{{name}}\" fájl feltöltése sikeresen megtörtént.",
@@ -214,7 +253,7 @@
     "undoCopyFailedDelete": "Visszavonás sikertelen: Nem sikerült törölni a másolt fájlokat",
     "undoCopyFailedNoInfo": "Visszavonás sikertelen: Nem találhatók másolt fájlinformációk",
     "undoMoveSuccess": "Visszavont áthelyezési művelet: {{count}} fájl visszahelyezése az eredeti helyére",
-    "undoMoveFailedMove": "Visszavonás sikertelen: Nem sikerült fájlokat visszahelyezni",
+    "undoMoveFailedMove": "Visszavonás sikertelen: Nem sikerült visszahelyezni a fájlokat",
     "undoMoveFailedNoInfo": "Visszavonás sikertelen: Nem találhatók áthelyezett fájlinformációk",
     "undoDeleteNotSupported": "A törlési művelet nem vonható vissza: A fájlok véglegesen törölve lettek a szerverről.",
     "undoTypeNotSupported": "Nem támogatott visszavonási művelettípus",
@@ -290,6 +329,7 @@
     "connecting": "Kapcsolódás...",
     "connectedSuccessfully": "Sikeres csatlakozás",
     "totpVerificationFailed": "TOTP-ellenőrzés sikertelen",
+    "browserSignInFailed": "Sikertelen bejelentkezés. Kérjük, próbálja újra.",
     "authenticationFailed": "Hitelesítés sikertelen",
     "incorrectPassphrase": "Hibás jelszó. Kérjük, próbálja újra.",
     "verificationCodePrompt": "Ellenőrző kód:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "Nem tudom betölteni a PDF-et",
     "pdfLoadError": "Hiba történt a PDF fájl betöltésekor.",
     "loadingPdf": "PDF betöltése...",
-    "loadingPage": "Oldal betöltése..."
+    "loadingPage": "Oldal betöltése...",
+    "cancel": "Mégsem",
+    "copiedItems_one": "Másolt {{count}} elem",
+    "copiedItems_other": "{{count}} elem másolva",
+    "deleteCopiedFileFailed": "Nem sikerült törölni a(z) {{name}}másolatát : {{error}}",
+    "dragMovedItems_one": "Áthelyezve a {{count}} elemet ide: {{target}}",
+    "dragMovedItems_other": "{{count}} elem áthelyezve ide: {{target}}",
+    "moveBackFileFailed": "Nem sikerült a {{name}} visszamozgatása: {{error}}",
+    "terminal": "Terminál: {{host}} ({{path}})",
+    "dragToDesktop": "A {{name}} húzása az asztalra",
+    "dragFilesToDesktop": "{{count}} fájlok húzása az asztalra",
+    "folderDragUnsupported": "A mappák asztalra húzása még nem támogatott.",
+    "saveToDesktopFailed": "Mentés sikertelen: {{error}}",
+    "dragFailedDetail": "Húzása sikertelen: {{error}}",
+    "videoUnsupported": "A böngésződ nem tudja lejátszani ezt a videóformátumot.",
+    "downloadToPlay": "Töltsd le, hogy máshol is lejátszhasd",
+    "cannotPreviewType": "Ez a fájltípus nem tekinthető meg előnézetben",
+    "cannotPreviewTypeHint": "Ennek a fájltípusnak nincs előnézete. Töltse le, hogy egy másik alkalmazásban megnyissa."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Fájlkezelő",
-    "tabFiles": "Fájlok",
-    "enableFileManagerMonitor": "Fájlkezelő engedélyezése",
-    "enableFileManagerMonitorDesc": "Fájlok böngészése és kezelése ezen a gazdagépen SFTP-n keresztül",
-    "scpLegacyLabel": "SCP örökölt mód",
-    "scpLegacyDesc": "Használjon hagyományos fájlátvitelt olyan szerverekhez, amelyek nem támogatják az SFTP alrendszert (pl. beágyazott vagy minimális SSH szerverek).",
-    "defaultPathLabel": "Alapértelmezett elérési út",
-    "fileManagerPathHint": "A könyvtár, amely megnyílik, amikor a fájlkezelő elindul ehhez a gazdagéphez.",
     "fileManagerUrlCopied": "Fájlkezelő URL-címe másolva",
     "copyFileManagerUrlAction": "Fájlkezelő URL-címének másolása",
     "docsLink": "Dokumentumok megtekintése",
     "hostNotFound": "Nem található gazdagép",
     "loadingHost": "Gazdagép betöltése..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Fájlkezelő engedélyezése"
-      },
-      "defaultPath": {
-        "label": "Alapértelmezett elérési út"
-      },
-      "scpLegacy": {
-        "label": "SCP örökölt mód"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Egyidejű fájlátvitel",
-        "description": "Hány fájlt tölt fel vagy tölt le egyszerre az egymás melletti helyi/távoli kezelő. Csökkentse ezt az értéket, ha a szerver korlátozza az SFTP csatornákat."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Fájlok"
   },
   "onboarding": {
     "feature_files": "Fájlkezelő",
@@ -437,7 +464,7 @@
     "destinationPath": "Célútvonal",
     "destMustBeDirectory": "Több elem átviteléhez a célnak egy könyvtárnak kell lennie",
     "goUp": "Felmegy",
-    "hostAuthRequired": "Hitelesítés szükséges — először nyissa meg a Fájlkezelőt ezen a gépen",
+    "hostAuthRequired": "Hitelesítés szükséges. Először nyissa meg a Fájlkezelőt ezen a gazdagépen.",
     "hostConnecting": "… csatlakoztatása",
     "hostConnectionFailed": "Kapcsolódás sikertelen",
     "hostDisconnected": "Nincs csatlakoztatva",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Fájlonkénti SFTP-t választottál.",
       "user_tar": "A tar archívumot választottad.",
-      "tar_unavailable": "A Tar nem érhető el az egyik vagy mindkét hoszton – helyette fájlonkénti SFTP-t fog használni.",
-      "windows_host": "Egy Windows gazdagép érintett – tar-t nem használunk.",
-      "auto_multi_large": "Automatikus: több fájl, beleértve egy nagy fájlt ({{largestSize}}) tömöríthető adatokkal — a tar egyetlen átvitelbe csomagolja.",
-      "auto_single_large_in_archive": "Automatikus: egy nagy fájl ({{largestSize}}) ebben a készletben — fájlonként SFTP.",
-      "auto_many_incompressible": "Automatikus: többnyire tömöríthetetlen adatok — fájlonkénti SFTP.",
-      "auto_many_files": "Auto: sok fájl ({{fileCount}}) — a tar csökkenti a fájlonkénti terhelést.",
+      "tar_unavailable": "A Tar nem érhető el az egyik vagy mindkét hoszton, ezért fájlonkénti SFTP-t fogunk használni.",
+      "windows_host": "Egy Windows gazdagép érintett, így a tar-t nem használjuk.",
+      "auto_multi_large": "Automatikus: több fájl, beleértve egy nagy fájlt ({{largestSize}}) tömöríthető adatokkal. A Tar egyetlen átvitellé köti őket.",
+      "auto_single_large_in_archive": "Automatikus: egy nagy fájl ({{largestSize}}) ebben a készletben, tehát fájlonkénti SFTP.",
+      "auto_many_incompressible": "Automatikus: többnyire tömöríthetetlen adatok, tehát fájlonkénti SFTP.",
+      "auto_many_files": "Auto: sok fájl ({{fileCount}}), a tar csökkenti a fájlonkénti terhelést.",
       "auto_default": "Automatikus: fájlonkénti SFTP ehhez a készlethez."
     },
     "methodTar": "Tar archívum",
@@ -471,13 +498,13 @@
     "metricsCompress": "Tömörítés forráskód szerint: {{duration}}",
     "metricsExtract": "Kivonat a rendeltetési helyen: {{duration}}",
     "metricsPrepare": "Célhely előkészítése: {{duration}}",
-    "metricsRouteBenchmark": "Útvonalszonda — közvetlen: {{direct}}, relé: {{relay}}",
+    "metricsRouteBenchmark": "Útvonalszonda: direkt {{direct}}, relé {{relay}}",
     "metricsSourceDelete": "Eltávolítás a forrásból: {{duration}}",
     "metricsTotal": "Összesen: {{duration}}",
     "metricsTransfer": "Végtől végig: {{throughput}} ({{duration}})",
     "metricsVerify": "SHA-256 ellenőrizve: {{duration}}",
     "moveFolderToHost": "Mappa áthelyezése a… gazdagépre",
-    "moveItemsToHost": "Áthelyez {{count}} elemet a… tárhelyre",
+    "moveItemsToHost": "Mozgass {{count}} elemet a… tárhelyre",
     "moveToHost": "Áthelyezés a… gazdagépre",
     "noHostsConnected": "Nincsenek más elérhető fájlkezelő gazdagépek.",
     "noHostsConnectedHint": "Adjon hozzá egy másik SSH-hosztot, amelynél a Fájlkezelő engedélyezve van a Host Managerben.",
@@ -508,6 +535,9 @@
     "transferError": "Átvitel sikertelen",
     "transferFailedRetryHint": "Részleges adatok maradtak a célállomáson. Az újrapróbálkozás a kapcsolat helyreállásakor folytatódik.",
     "transferPartialHint": "Nem sikerült átvinni: {{paths}}",
-    "transferSuccess": "Átvitel befejezve"
+    "transferSuccess": "Átvitel befejezve",
+    "metricsHopSourceRead": "Forrás → szerver: {{throughput}}",
+    "metricsHopDestSftpWrite": "Szerver → cél (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Szerver → cél (helyi): {{throughput}}"
   }
 }

@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "프리셋은 명시적 스냅샷입니다. 프리셋을 불러오면 이 데스크톱 클라이언트의 로컬 클라이언트 터널 목록이 대체됩니다.",
     "c2sPresetToLoad": "불러올 프리셋",
     "c2sTunnelPresets": "클라이언트 터널 프리셋",
-    "c2sTunnelPresetsUnavailable": "클라이언트 터널 프리셋은 데스크톱 클라이언트에서만 사용할 수 있습니다."
+    "c2sTunnelPresetsUnavailable": "클라이언트 터널 프리셋은 데스크톱 클라이언트에서만 사용할 수 있습니다.",
+    "c2sPresetRenameError": "사전 설정 이름을 변경하는 데 실패했습니다.",
+    "c2sPresetDeleteError": "사전 설정을 삭제하는 데 실패했습니다."
   },
   "tunnels": {
     "attempt": "시도 {{current}}/{{max}}",
@@ -139,8 +141,32 @@
     "typeLocal": "로컬 (-L)",
     "typeRemote": "원격 (-R)",
     "working": "작업 중...",
+    "activeCount": "{{connected}}/{{total}} 활성",
+    "listensOn": "localhost에 바인딩됨:{{port}}",
+    "socksProxy": "SOCKS5 프록시",
+    "waiting": "대기 중",
+    "remoteSessionExpired": "원격 동기화 세션이 만료되었습니다. 원격 동기화에 다시 연결하고 다시 시도하십시오.",
+    "activeTunnels": "활성 터널",
     "start": "시작",
-    "stop": "중지"
+    "stop": "중지",
+    "authTitle": "터널 인증",
+    "authRetry": "이전 코드가 허용되지 않았습니다. 새 코드를 입력하세요.",
+    "authAnswer": "인증 응답",
+    "authContinue": "계속"
+  },
+  "permissions": {
+    "use": {
+      "title": "터널을 이용하세요",
+      "description": "SSH 터널을 시작, 중지 및 모니터링하고 클라이언트 터널 사전 설정을 저장할 수 있습니다."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "터널 활성화",
+        "description": "이 호스트를 통해 SSH 터널을 설정하십시오."
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "터널",

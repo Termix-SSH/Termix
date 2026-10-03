@@ -1,6 +1,13 @@
 {
+  "loginWithSso": "Sign in with SSO",
   "loginWithProvider": "Войти через {{name}}",
   "loading": "Загрузка...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
   "providers": {
     "docsLink": "Документация",
     "none": "Нет настроенных провайдеров SSO.",
@@ -9,19 +16,30 @@
     "delete": "Удалить провайдера",
     "deleteConfirm": "Удалить провайдера? Связанные пользователи не смогут войти.",
     "name": "Отображаемое имя",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
     "type": "Тип провайдера",
     "enabled": "Включено",
     "save": "Сохранить провайдера",
-    "saving": "Сохранение...",
+    "saving": "Сохранение…",
     "saved": "Сохранено",
     "saveFailed": "Не удалось сохранить",
     "deleted": "Удалено",
     "deleteFailed": "Не удалось удалить",
-    "cancel": "Отмена"
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "Отмена",
+    "copy": "Копировать",
+    "copied": "Скопировано",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
   },
   "fields": {
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
     "issuerUrl": "URL издателя",
     "authUrl": "URL авторизации",
     "tokenUrl": "URL токена",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Пользователи в этой группе получают права администратора. Оставьте пустым, чтобы отключить синхронизацию групп.",
     "caCert": "Пользовательский сертификат ЦС",
     "caCertDesc": "Необязательно. Сертификат ЦС в формате PEM для провайдеров OIDC, использующих частный или самоподписанный ЦС. Оставьте пустым, чтобы использовать системное хранилище доверенных сертификатов."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Sign in with SSO automatically",
+      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+    }
   }
 }

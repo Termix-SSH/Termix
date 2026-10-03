@@ -1,27 +1,85 @@
 {
+  "permissions": {
+    "devices.view": {
+      "title": "View tailnet devices",
+      "description": "See the devices on the connected tailnet."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "Tailscale API",
+      "devices": "Tailnet"
+    },
+    "apiKey": {
+      "label": "API key",
+      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API base URL",
+      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Device list",
+      "checking": "Checking the tailnet...",
+      "noKey": "No API key set yet.",
+      "error": "Could not reach the tailnet. Check the API key.",
+      "count": "{{count}} device reachable",
+      "count_other": "{{count}} devices reachable",
+      "refresh": "Check"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
   "hosts": {
-    "tailscaleUsernameHint": "এটি অবশ্যই একজন ইউনিক্স ব্যবহারকারী হতে হবে, যার মাধ্যমে আপনার টেইলনেট-এর SSH ACL-এ আপনার টেইলস্কেল পরিচয়কে অনুমতি দেওয়া হয়; এটি রুট হওয়া আবশ্যক নয়।",
-    "tailscaleDeviceSelect": "টেইলস্কেল ডিভাইস নির্বাচন করুন",
-    "tailscaleDeviceSelectPlaceholder": "একটি ডিভাইস নির্বাচন করুন...",
-    "tailscaleNoApiKey": "কোনো টেইলস্কেল এপিআই কী কনফিগার করা নেই। ডিভাইস ডিসকভারি সক্ষম করতে অ্যাডমিন সেটিংসে একটি যোগ করুন।",
-    "tailscaleDocsLink": "নথি দেখুন",
-    "tailscaleLoadingDevices": "ডিভাইস লোড হচ্ছে...",
-    "tailscaleDeviceLoadFailed": "টেইলস্কেল ডিভাইসগুলো লোড করা সম্ভব হয়নি। এপিআই ইউআরএল এবং নেটওয়ার্ক সংযোগ যাচাই করুন।",
-    "tailscaleNoDevices": "আপনার টেইলনেটে কোনো ডিভাইস খুঁজে পাওয়া যায়নি।",
-    "tailscaleDeviceAutoFill": "ডিভাইস নির্বাচন করলে হোস্ট আইপি অ্যাড্রেসটি স্বয়ংক্রিয়ভাবে পূরণ হয়ে যাবে।"
+    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleDeviceSelect": "Select Tailscale device",
+    "tailscaleDeviceSelectPlaceholder": "Select a device...",
+    "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
+    "tailscaleDocsLink": "View docs",
+    "tailscaleLoadingDevices": "Loading devices...",
+    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleNoDevices": "No devices found in your tailnet.",
+    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
+    "tailscaleAddHost": "Add host",
+    "tailscaleCopyIp": "Copy Tailscale IP",
+    "tailscaleIpCopied": "IP copied",
+    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "টেইলস্কেল প্রমাণীকরণ আবশ্যক",
-    "tailscaleCheckDescription": "টেইলস্কেল SSH-এর জন্য একটি অতিরিক্ত যাচাইকরণ প্রয়োজন। চালিয়ে যাওয়ার জন্য আপনার ব্রাউজারে প্রমাণীকরণ করুন।",
-    "tailscaleCheckOpenBrowser": "প্রমাণীকরণের জন্য ব্রাউজার খুলুন",
-    "tailscaleCheckWaiting": "টেইলস্কেল প্রমাণীকরণের জন্য অপেক্ষা করা হচ্ছে...",
-    "tailscaleCheckTimeout": "টেইলস্কেল প্রমাণীকরণের সময়সীমা শেষ হয়ে গেছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+    "tailscaleCheckRequired": "Tailscale Authentication Required",
+    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckOpenBrowser": "Open Browser to Authenticate",
+    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
+    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+  },
+  "manager": {
+    "title": "Tailscale",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "noData": "No data available",
+    "filter": "Filter...",
+    "tsNotInstalled": "Tailscale is not installed on this host",
+    "tsRunning": "Running",
+    "tsStopped": "Stopped",
+    "tsEnable": "Connect",
+    "tsDisable": "Disconnect",
+    "tsEnabling": "Connecting to Tailscale...",
+    "tsDisabling": "Disconnecting from Tailscale...",
+    "tsEnabled": "Tailscale connected",
+    "tsDisabled": "Tailscale disconnected",
+    "tsExitNode": "Exit node",
+    "tsExitNodeActive": "Exit node active"
   },
   "newUi": {
     "sidebar": {
       "quickConnect": {
-        "connectToTerminal": "টার্মিনালের সাথে সংযোগ করুন",
-        "usernameLabel": "ব্যবহারকারীর নাম"
+        "connectToTerminal": "Connect to Terminal",
+        "usernameLabel": "Username"
       }
     }
   }

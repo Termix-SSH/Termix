@@ -23,7 +23,7 @@ export function ClockEditForm({
           onChange={(e) =>
             onChange({ ...config, timezone: e.target.value || undefined })
           }
-          placeholder="America/New_York (leave blank for local)"
+          placeholder={t("homepage.timezonePlaceholder")}
           aria-invalid={invalidTimezone}
           className={
             invalidTimezone ? "h-8 text-sm border-destructive" : "h-8 text-sm"

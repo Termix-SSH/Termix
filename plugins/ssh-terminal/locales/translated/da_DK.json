@@ -44,6 +44,7 @@
     "reconnect": "Genopret forbindelse",
     "reconnected": "Genoprettet forbindelse",
     "reconnecting": "Genopretter forbindelse... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Forbindelse mistet, genopretter forbindelse...",
     "searchCaseSensitive": "Match-sag",
     "searchClose": "Luk (Escape)",
     "searchNext": "Næste kamp (Enter)",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "Kunne ikke læse fra udklipsholderen. Sørg for, at der er givet tilladelse til udklipsholderen.",
     "clipboardWriteFailed": "Kunne ikke kopiere til udklipsholder. Sørg for, at siden serveres via HTTPS eller localhost.",
     "connected": "Forbundet",
-    "totpCodeLabel": "Bekræftelseskode"
+    "totpCodeLabel": "Bekræftelseskode",
+    "duplicateTab": "Dupliker fane",
+    "imageChooseFile": "Vælg en billedfil",
+    "imageUploaded": "Billede uploadet: {{path}}",
+    "imageClipboardUnavailable": "Denne browser kan ikke læse billeder fra udklipsholderen",
+    "imageClipboardEmpty": "Intet billede fundet i udklipsholderen",
+    "localShell": "Lokal terminalskal",
+    "autocompleteHintComplete": "Tab eller Enter for at fuldføre",
+    "autocompleteHintNavigate": "↑↓ for at navigere",
+    "autocompleteHintClose": "Esc for at lukke"
   },
   "terminalToolbar": {
     "detachTmux": "Afmonter tmux",
@@ -108,7 +118,10 @@
     "searchPlaceholder": "Søgehistorik...",
     "clearAll": "Ryd alt",
     "noHistoryEntries": "Ingen historikposter",
-    "trackingDisabled": "Historiksporing er deaktiveret"
+    "trackingDisabled": "Historiksporing er deaktiveret",
+    "trackingDisabledHint": "Slå Kommandohistorik til i denne værts SSH Terminal-fane.",
+    "commandCount_one": "{{count}} kommando",
+    "commandCount_other": "{{count}} kommandoer"
   },
   "touchInput": {
     "enabled": "Aktivér berøringsinput",
@@ -147,15 +160,21 @@
     "admin": {
       "group": {
         "touch": "Berøringsinput",
-        "images": "Billedlagring"
+        "images": "Billedlagring",
+        "sessions": "Sessioner",
+        "newHosts": "Nye værter"
       },
       "sessionTimeoutMinutes": {
         "label": "Terminalsessionens persistens",
-        "description": "Hvor længe en frakoblet terminal holdes aktiv på serveren, før den lukkes. Min. 1 · Maks. 1440 minutter. For sessioner, der skal overleve dette, skal du aktivere Auto-Tmux på værten."
+        "description": "Hvor længe en frakoblet terminal holdes aktiv på serveren, før den lukkes. Min. 1, maks. 1440 minutter. For sessioner, der skal overleve dette, skal Auto-Tmux aktiveres på værten."
       },
       "commandHistoryEnabled": {
         "label": "Kommandohistorik",
         "description": "Tillad optagelse af kommandohistorik. Når den er deaktiveret, gemmes historikken ikke uanset indstillingerne for den enkelte vært."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Kommandohistorik for nye værter",
+        "description": "Om nye værter starter med kommandohistorik aktiveret."
       },
       "imageStorageMode": {
         "label": "Lagringstilstand",
@@ -165,24 +184,50 @@
         "remoteSftp": "Fjernbetjening (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Lokal mappe"
+        "label": "Lokal mappe",
+        "description": "Absolut sti på Termix-backend'en, hvor lokal tilstand skriver billeder. Vises aldrig efter lagring. Tom bruger TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
         "label": "Værtssti",
         "description": "Værtsvisningen af den lokale mappe, som terminalagenter modtager."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)"
+        "label": "TTL (ms)",
+        "description": "Hvor længe et uploadet billede gemmes, i millisekunder. Tom bruger TERMIX_IMAGE_TTL_MS eller en time."
       },
       "imageMaxCount": {
-        "label": "Maksimalt antal billeder"
+        "label": "Maksimalt antal billeder",
+        "description": "De fleste billeder gemmes på én gang. Tomme bruger TERMIX_MAX_IMAGE_COUNT eller 100."
       },
       "imageMaxBytes": {
-        "label": "Maks. lagerplads i bytes"
+        "label": "Maks. lagerplads i bytes",
+        "description": "Flest bytes af billeder gemmes på én gang. Tomme filer bruger TERMIX_MAX_IMAGE_STORAGE_BYTES eller 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Behold sessioner efter afbrydelse",
+        "description": "Hold en frakoblet terminal aktiv på serveren i ovenstående periode, så genåbning af fanen fortsætter, hvor den slap."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
         "description": "Kør nye værters terminaler inde i tmux, så sessioner overlever afbrydelser (kræver tmux på værten)"
+      },
+      "newHostTheme": {
+        "label": "Tema for nye værter",
+        "description": "Terminaltemaet en ny vært starter med."
+      },
+      "newHostFontFamily": {
+        "label": "Skrifttype til nye værter",
+        "description": "Terminalfonten, som en ny vært starter med."
+      },
+      "newHostFontSize": {
+        "label": "Skriftstørrelse for nye værter",
+        "description": "Terminalens skriftstørrelse, som en ny vært starter med, i pixels."
+      },
+      "newHostCursorStyle": {
+        "label": "Markørstil for nye værter"
+      },
+      "newHostCursorBlink": {
+        "label": "Blinkende markør for nye værter"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "Aktivér Terminalværktøjslinjen",
         "description": "Vis en værktøjslinje med hurtig adgang, der er docket til den aktive terminal for denne værts værktøjer og live statistikker"
       },
+      "terminalToolbarPosition": {
+        "label": "Værktøjslinjeposition",
+        "description": "Hvor værktøjslinjen sidder i terminalen. Du kan stadig trække den derfra.",
+        "bottom": "Nederst i midten",
+        "bottomLeft": "Nederst til venstre",
+        "bottomRight": "Nederst til højre",
+        "top": "Øverste midtpunkt",
+        "topLeft": "Øverst til venstre",
+        "topRight": "Øverst til højre"
+      },
+      "terminalToolbarStartState": {
+        "label": "Værktøjslinjens starttilstand",
+        "description": "Om værktøjslinjen åbnes udvidet eller minimeret, når terminalen opretter forbindelse",
+        "expanded": "Udvidet",
+        "collapsed": "Minimeret"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Værktøjslinjevisningstilstand",
+        "description": "Sådan vises knapper på værktøjslinjen. Sidst brugt gemmer det, du valgte i værktøjslinjen.",
+        "remember": "Sidst brugt",
+        "icon": "Kun ikon",
+        "labeled": "Ikoner og etiketter",
+        "expanded": "Udvidet med statistikker"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Vis live statistikker",
+        "description": "Vis statistik for live værter over knapperne på værktøjslinjen i udvidet tilstand"
+      },
+      "terminalToolbarFade": {
+        "label": "Fade når den er inaktiv",
+        "description": "Fade værktøjslinjen ud, indtil du holder musen over den"
+      },
       "enableCommandHistory": {
         "label": "Kommandohistorik",
         "description": "Optagelseskommandoer køres i denne terminal for historik og autofuldførelse"
       },
       "enableTerminal": {
-        "label": "Aktivér terminal"
+        "label": "Aktivér terminal",
+        "description": "Tilbyd en SSH-terminal til denne vært."
+      },
+      "inheritAppearance": {
+        "label": "Brug brugerstandarder"
+      },
+      "theme": {
+        "label": "Tema"
+      },
+      "cursorBlink": {
+        "label": "Blinkende markør"
+      },
+      "cursorStyle": {
+        "label": "Markørstil"
+      },
+      "fontSize": {
+        "label": "Skriftstørrelse"
+      },
+      "fontFamily": {
+        "label": "Skrifttype"
+      },
+      "scrollback": {
+        "label": "Rul tilbage"
+      },
+      "letterSpacing": {
+        "label": "Bogstavafstand"
+      },
+      "lineHeight": {
+        "label": "Linjehøjde"
+      },
+      "bellStyle": {
+        "label": "Klokke"
+      },
+      "minimumContrastRatio": {
+        "label": "Minimum kontrastforhold"
+      },
+      "backgroundImage": {
+        "label": "Baggrundsbillede"
+      },
+      "backgroundImageOpacity": {
+        "label": "Baggrundsbilledets opacitet"
+      },
+      "customThemeColors": {
+        "label": "Brugerdefinerede temafarver"
+      },
+      "rightClickSelectsWord": {
+        "label": "Højreklik markerer ord"
+      },
+      "macOptionIsMeta": {
+        "label": "Valgmuligheden er Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Hurtig scroll-tast"
+      },
+      "fastScrollSensitivity": {
+        "label": "Hurtig scrollhastighed"
+      },
+      "backspaceMode": {
+        "label": "Tilbage"
+      },
+      "autoMosh": {
+        "label": "Automosh"
+      },
+      "moshCommand": {
+        "label": "Mosh-kommando"
+      },
+      "autoTmux": {
+        "label": "Auto tmux"
+      },
+      "useSSHTitle": {
+        "label": "Brug SSH-titlen"
+      },
+      "syntaxHighlighting": {
+        "label": "Syntaksfremhævning"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Syntaksfremhævningskategorier"
+      },
+      "linkClickBehavior": {
+        "label": "Klik på linket"
+      },
+      "localEcho": {
+        "label": "Lokalt ekko"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Tilbyd at udfylde adgangskodeprompter"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Udfyld sudo-prompter"
+      },
+      "autoReconnect": {
+        "label": "Genopret forbindelse automatisk"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "Klik på terminallink",
         "description": "Standardadfærd ved klik på links i terminalen"
+      },
+      "customThemes": {
+        "label": "Gemte temaer"
       }
     }
   },
   "palette": {
     "localTerminal": "Lokal terminal"
   },
+  "permissions": {
+    "sessions": {
+      "title": "Brug live terminalsessioner",
+      "description": "Lader andre funktioner, såsom sessionsdeling og -optagelse, få adgang til dine live terminalsessioner."
+    },
+    "history": {
+      "title": "Læs kommandohistorik",
+      "description": "Lader andre funktioner, såsom AI-assistenten, læse din kommandohistorik."
+    }
+  },
   "hosts": {
+    "tabTerminal": "Terminal",
     "addHost": "Tilføj vært",
     "applyGlobalThemeTooltip": "Anvend dette tema",
     "backgroundImageDesc": "Valgfri URL til et baggrundsbillede i terminalen",
     "backgroundImageLabel": "URL til baggrundsbillede",
     "backgroundImageOpacityLabel": "Baggrundsbilledets opacitet",
     "backspaceMode": "Backspace-tilstand",
+    "backspaceModeControlH": "Kontrol-H (BS)",
     "backspaceModeLabel": "Backspace-tilstand",
+    "backspaceModeNormal": "Normal (DEL)",
     "behaviorAndAdvanced": "Adfærd og avanceret",
     "bellStyle": "Klokkestil",
+    "bellStyleBoth": "Begge",
     "bellStyleLabel": "Klokkestil",
+    "bellStyleNone": "Ingen",
+    "bellStyleSound": "Sund",
+    "bellStyleVisual": "Visuel",
     "colorTheme": "Farvetema",
     "cursorBlink": "Markørblink",
     "cursorBlinking": "Markøren blinker",
     "cursorBlinkingDesc": "Aktivér blinkende animation for terminalmarkøren",
     "cursorStyle": "Markørstil",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Blok",
     "cursorStyleLabel": "Markørstil",
+    "cursorStyleUnderline": "Understrege",
     "customThemeAnsiColors": "ANSI-farver",
     "customThemeBackground": "Baggrund",
     "customThemeBlack": "Sort",
@@ -264,7 +455,10 @@
     "enableAutoTmux": "Aktivér Auto-Tmux",
     "enableAutoTmuxDesc": "Hold din shell og alt, der kører i den, i live på tværs af afbrydelser og genstart af browseren ved at køre den inde i tmux (tmux skal være installeret på værten)",
     "fastScrollModifier": "Hurtig scroll-modifikator",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "Hurtig scroll-modifikator",
+    "fastScrollModifierShift": "Flytte",
     "fastScrollSensitivity": "Hurtig scrollfølsomhed",
     "fastScrollSensitivityLabel": "Hurtig scrollfølsomhed",
     "fontFamily": "Skrifttypefamilie",
@@ -280,13 +474,11 @@
     "lineHeight": "Linjehøjde",
     "lineHeightLabel": "Linjehøjde",
     "linkClickBehaviorConfirm": "Vis pop op-vindue for at åbne eller kopiere",
-    "linkClickBehaviorDefault": "Standard (følg app-indstilling)",
     "linkClickBehaviorDesc": "Styrer, hvad der sker, når du klikker på et link i terminalen. Brug 'Standard' for at følge indstillingen på appniveau.",
     "linkClickBehaviorDirect": "Åbn direkte",
     "linkClickBehaviorLabel": "Linkkliksadfærd",
     "loadingHost": "Indlæser vært...",
     "localEchoAuto": "Automatisk",
-    "localEchoDefault": "Brug global indstilling",
     "localEchoDesc": "Forudsig sikre, udskrivbare tastetryk lokalt på langsomme forbindelser. Adgangskodeprompter og kontrolinput gentages aldrig.",
     "localEchoLabel": "Lokalt ekko",
     "localEchoOff": "Slukket",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "Mosh-kommandoen",
     "noSavedThemes": "Ingen gemte temaer endnu",
     "none": "Ingen",
+    "passwordPromptAutoFillDesc": "Tilbyd at udfylde den gemte adgangskode, når terminalen beder om en. Slå fra for aldrig at udfylde en adgangskode automatisk på denne vært.",
+    "passwordPromptAutoFillLabel": "Automatisk udfyldning af tilbudsadgangskode",
+    "autoReconnectLabel": "Automatisk genoprettelse af forbindelse",
+    "autoReconnectDesc": "Genopretter forbindelsen af sig selv, når SSH-forbindelsen afbrydes, f.eks. efter et netværksfejl eller dvaletilstand. Bevarer scrollback-funktionen.",
     "rightClickSelectsWord": "Højreklik markerer ord",
     "rightClickSelectsWordLabel": "Højreklik markerer ord",
     "rightClickSelectsWordShortDesc": "Vælg ordet under markøren ved højreklik",
@@ -328,7 +524,39 @@
     "theme": "Tema",
     "themePreview": "Temaforhåndsvisning",
     "useSSHTitleDesc": "Opdater fanetitlen fra skallens vinduestitel i stedet for værtsnavnet",
-    "useSSHTitleLabel": "Brug SSH-vinduestitel"
+    "useSSHTitleLabel": "Brug SSH-vinduestitel",
+    "enableTunnel": "Aktivér tunnel",
+    "enableFileManager": "Aktivér Filhåndtering",
+    "enableDocker": "Aktivér Docker",
+    "startupSnippet": "Opstartskodestykke",
+    "quickActions": "Hurtige handlinger",
+    "proxmoxLastSyncStatus": {
+      "success": "Succes"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} sprunget over (ingen IP fundet)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL kopieret til udklipsholder",
+    "rdpUrlCopied": "RDP-URL kopieret",
+    "vncUrlCopied": "VNC-URL kopieret",
+    "filterAuthStepca": "Trin CA",
+    "guac": {
+      "noCredential": "Ingen legitimationsoplysninger (direkte legitimationsoplysninger nedenfor)",
+      "authTypeDirect": "Direkte",
+      "authTypeCredential": "Legitimationsoplysninger",
+      "authTypeNone": "Ingen",
+      "recordingPath": "Optagelsessti",
+      "recordingName": "Optagelsesnavn",
+      "saveHostFirst": "Gem værten først.",
+      "sharingOptionsAfterSave": "Delingsmuligheder er tilgængelige, når værten er blevet gemt.",
+      "permissionLevel": "Tilladelsesniveau",
+      "typeHeader": "Type",
+      "targetHeader": "Mål",
+      "permissionHeader": "Tilladelse",
+      "cancelBtn": "Ophæve",
+      "savingBtn": "Gemmer...",
+      "updateHostBtn": "Opdater vært",
+      "addHostBtn": "Tilføj vært"
+    },
+    "filterAuthVault": "Hvælving"
   },
   "nav": {
     "history": "Historie",
@@ -354,16 +582,6 @@
     "startRecording": "Start optagelse",
     "stopRecording": "Stop optagelse"
   },
-  "terminalDefaults": {
-    "clearAll": "Ryd alt",
-    "description": "Angiv værdier, som hver vært arver, medmindre den tilsidesætter dem.",
-    "dialogDescription": "Disse gælder for værter, der ikke har angivet en indstilling. Alt, hvad der er angivet på en vært, vinder.",
-    "inherit": "Arve",
-    "manage": "Styre",
-    "off": "Slukket",
-    "on": "På",
-    "title": "Standardindstillinger for forbindelse"
-  },
   "keybindings": {
     "copy": "Kopiér valg",
     "paste": "Indsæt",
@@ -374,7 +592,17 @@
     "appendEnterLabel": "Tryk Enter efter afsendelse",
     "clipboardPermissionNote": "Kan bede om tilladelse til udklipsholder ved første brug i nogle browsere.",
     "textRequired": "Indtast den tekst, der skal sendes",
-    "controlCodeRequired": "Indtast et enkelt bogstav for kontrolkoden"
+    "controlCodeRequired": "Indtast et enkelt bogstav for kontrolkoden",
+    "builtIn": {
+      "copyCtrlC": "Kopiér det markerede (Ctrl+C, kun når teksten er markeret)",
+      "copyCtrlShiftC": "Kopiér markering (Ctrl+Shift+C)",
+      "copyCmdC": "Kopiér valg (Cmd+C)",
+      "pasteCtrlShiftV": "Indsæt fra udklipsholder (Ctrl+Shift+V)",
+      "ctrlW": "Send Ctrl+W til shell (blokeret fra at lukke browserfane)",
+      "ctrlT": "Send Ctrl+T til shell (blokeret fra at åbne browserfaneblad)",
+      "ctrlN": "Send Ctrl+N til shell (blokeret fra at åbne browservindue)",
+      "ctrlQ": "Send Ctrl+Q til shell (blokeret fra at afslutte browser)"
+    }
   },
   "macros": {
     "title": "Makroer",

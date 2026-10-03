@@ -23,7 +23,7 @@
     "provisionLabel": "Provisionar un servidor",
     "publishTitle": "Publicar una clau pública",
     "generate": "Generar",
-    "generateTooltip": "Genera un parell de claus Ed25519: publica la clau pública i descarrega la clau privada al dispositiu.",
+    "generateTooltip": "Genera un parell de claus Ed25519. Publica la clau pública i descarrega la clau privada al dispositiu.",
     "saveToVault": "Desa a les credencials",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... usuari@amfitrió",
     "labelPlaceholder": "Etiqueta (opcional)",
@@ -32,7 +32,7 @@
     "keyPublished": "Clau publicada",
     "addKeyFailed": "No s'ha pogut afegir la clau",
     "generatedSaved": "Parell de claus generat i desat al vostre magatzem de credencials. La clau privada també s'ha descarregat.",
-    "generatedOnly": "Parell de claus generat: clau privada descarregada (només es mostra una vegada).",
+    "generatedOnly": "Parell de claus generat. Clau privada descarregada (només es mostra una vegada).",
     "generateFailed": "No s'ha pogut generar la clau",
     "imported": "Clau importada de la credencial",
     "importFailed": "No s'ha pogut importar la clau",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Confiança en un servidor (executat com a root)",
     "caRotate": "Girar",
     "caRotateConfirm": "Voleu rotar l'entitat de certificació? Tots els certificats que hagi signat deixaran de ser acceptats i s'hauran de tornar a emetre.",
-    "caRotated": "CA rotada: certificats anteriors revocats",
+    "caRotated": "CA rotada. Certificats anteriors revocats.",
     "caRotateFailed": "No s'ha pogut rotar CA",
     "caDelete": "Eliminar CA",
     "caDeleteConfirm": "Voleu eliminar l'autoritat de certificació?",
@@ -66,12 +66,21 @@
     "issueCert": "Certificat",
     "issueCertTooltip": "Emet un certificat SSH per a aquesta clau, signat per la teva CA",
     "certIssued": "Certificat emès i descarregat",
-    "certIssueFailed": "No s'ha pogut emetre el certificat"
+    "certIssueFailed": "No s'ha pogut emetre el certificat",
+    "docsLink": "Veure documents",
+    "principalsLabel": "Directors de SSH",
+    "principalsPlaceholder": "Principal(s) SSH, p. ex. root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
     "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilitza l'ID de Termix",
+      "description": "Reclama un identificador públic, publica claus SSH i executa una autoritat de certificació."
+    }
   }
 }

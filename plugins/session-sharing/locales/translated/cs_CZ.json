@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Hledat uživatele...",
     "noUsersFound": "Nenaleženi žádní uživatelé",
     "linkCreated": "Odkaz pro sdílení vytvořen",
+    "linkNeedsServer": "Sdílení odkazů funguje pouze pro relace na serveru Termix. Pro sdílení tohoto hostitele pomocí odkazu jej připojte přes propojený server.",
     "linkCopied": "Odkaz zkopírován do schránky",
     "copyLink": "Kopírovat odkaz",
     "shareCreated": "Relace sdílena. Zobrazí se na jejich kartě Připojení.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Odkaz",
     "userShareBadge": "Uživatel: {{username}}",
     "loadSharesFailed": "Nepodařilo se načíst aktivní sdílení",
+    "remoteDisplayUnavailable": "Vzdálená plocha momentálně není k dispozici.",
+    "sharedWithMe": "Sezení sdílená se mnou",
     "customHoursPlaceholder": "Hodiny do vypršení přístupu"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Členové",
     "membersPanel": "Členové místnosti a požadavky na ovládání",
     "membersWithCount": "Členové ({{count}})",
+    "guestsWithCount": "Hosté ({{count}})",
+    "removeGuests": "Odebrat hosty",
+    "anonymousGuest": "Host",
     "online": "online",
     "offline": "offline",
     "you": "(Vy)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Tento odkaz pro hosty je neplatný nebo schůzka skončila."
     },
     "reopenFromPanel": "Platnost této karty schůzky vypršela. Znovu otevřete místnost z panelu Schůzky.",
+    "retry": "Zkusit znovu",
     "requestControl": "Požádat o kontrolu",
     "cancelControlRequest": "Zrušit požadavek",
     "controlQueue": "Žádosti o kontrolu",
@@ -130,7 +137,10 @@
     "youArePresenting": "Prezentujete na jiné kartě. Ukončete prezentaci, abyste mohli předat scénu.",
     "created": "Místnost vytvořena",
     "invited": "Pozvaní členové",
-    "roomTab": "Zasedání"
+    "roomTab": "Zasedání",
+    "serverChanged": "Server schůzky se změnil. Znovu otevřete tuto schůzku z panelu Schůzky.",
+    "hostNotSynced": "Před prezentací synchronizujte tohoto hostitele se serverem schůzek.",
+    "linkRequiresServer": "Propojte tuto plochu se serverem Termix a vytvořte tam schůzku pro sdílení webového odkazu."
   },
   "nav": {
     "collab": "Schůzky"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Sdílení relací a připojení k místnostem",
+      "description": "Sdílejte živé relace prostřednictvím odkazu nebo s ostatními uživateli a vytvářejte a připojujte se k místnostem pro spolupráci."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Zvyk"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Sdíleno se mnou",
+    "sharedBy": "Sdíleno uživatelem {{username}}",
+    "join": "Připojit se",
+    "sharedSessionLabel": "{{hostName}} (sdílené)"
   }
 }

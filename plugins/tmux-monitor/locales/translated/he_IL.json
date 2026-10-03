@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "צג Tmux"
-  },
   "hosts": {
     "enableTmuxMonitor": "הפעל את צג Tmux",
     "enableTmuxMonitorDesc": "הצג מארח זה בצג Tmux והוסף את פעולות ה-tmux שלו לסרגל הצד",
+    "tabTmuxMonitor": "צג Tmux",
     "docsLink": "הצג מסמכים"
+  },
+  "nav": {
+    "tmuxMonitor": "צג Tmux"
+  },
+  "dashboard": {
+    "tmuxMonitor": "צג Tmux",
+    "tmuxMonitorDesc": "ניטור הפעלות tmux בין המארחים שלך"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש ב-Tmux Monitor",
+      "description": "עיון ושליטה בהפעלות, חלונות וחלוניות של tmux במחשבים מארחים כאשר הצג מופעל."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "הפעל את צג Tmux",
+        "description": "צפה והצטרף להפעלות tmux הפועלות על מארח זה."
+      },
+      "mouseEnabled": {
+        "label": "הפעל תמיכה בעכבר tmux",
+        "description": "החל תמיכת עכבר על סשן tmux בעת צירוף או יצירה של סשן. סשנים אחרים והגדרות tmux גלובליות לא ישתנו."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "צג Tmux",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "שינוי שם ההפעלה נכשל",
     "editTagsTitle": "עריכת תגיות עבור \"{{name}}\"",
     "killPane": "חלונית הרג",
-    "resizeTree": "גרור לשינוי גודל - לחץ פעמיים לאיפוס",
+    "resizeTree": "גרור כדי לשנות גודל, לחץ פעמיים כדי לאפס",
     "reattach": "חבר מחדש (מתקן תצוגה מעוותת)",
     "killWindow": "להרוג את החלון",
     "killWindowTitle": "להפסיק את החלון {{index}} של \"{{session}}\"?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "נכשלה הסיום",
     "hostUnreachable": "לא ניתן היה להתחבר למארח. ודא שהוא מחובר ונגיש.",
     "noServer": "אף שרת tmux לא פועל על מחשב אחסון זה.",
-    "searchTruncated": "תוצאות חלקיות - החיפוש מכסה את השורות האחרונות {{lines}} של כל חלונית ולכל היותר {{panes}} חלונות.",
+    "searchTruncated": "תוצאות חלקיות. החיפוש מכסה את השורות האחרונות {{lines}} של כל חלונית ולכל היותר {{panes}} חלונות.",
     "closeSearchResults": "סגור את תוצאות החיפוש",
     "retry": "נסה שוב",
     "noHosts": "אין מארחי SSH זמינים",
-    "noHostsHint": "הפעל את האפשרות Tmux Monitor במארח SSH (מנהל מארח → לשונית טרמינל) כדי לנטר את הפעלות ה-tmux שלו.",
+    "noHostsHint": "הפעל את האפשרות Tmux Monitor במארח SSH (Host Manager, כרטיסיית Tmux Monitor) כדי לנטר את הפעלות ה-tmux שלו.",
     "tmuxInstallHint": "התקן אותו על המארח עם:",
     "attachTooltip": "פתח טרמינל אל {{host}}",
-    "attachTooltipPane": "פתח טרמינל אל {{host}} — tmux session {{session}}",
+    "attachTooltipPane": "פתח טרמינל אל {{host}}, tmux session {{session}}",
     "timeJustNow": "זֶה עַתָה",
     "timeMinutes": "לפני {{count}}דקות",
     "timeHours": "{{count}}h ago",
-    "timeDays": "{{count}}d ago"
+    "timeDays": "{{count}}d ago",
+    "allHosts": "כל המארחים",
+    "singleHost": "מארח יחיד",
+    "hostScope": "היקף הניטור",
+    "filterHosts": "סנן מארחים לפי שם או כתובת",
+    "selectHost": "בחר מארח",
+    "toggleHost": "הרחב או כיווץ {{host}}",
+    "noMatchingHosts": "אין מארחים תואמים",
+    "toggleSession": "הרחב או כיווץ {{session}}"
   }
 }

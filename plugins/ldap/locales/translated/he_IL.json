@@ -1,19 +1,35 @@
 {
+  "loginWithLdap": "כניסה עם LDAP",
   "loginWithProvider": "התחברות באמצעות {{name}}",
   "loading": "טְעִינָה...",
   "requiredField": "שדה זה נדרש",
   "username": "שם משתמש LDAP",
   "password": "סיסמת LDAP",
   "signIn": "כניסה",
+  "permissions": {
+    "manage": {
+      "title": "ניהול ספריות LDAP",
+      "description": "הוספה, שינוי והסרה של ספריות LDAP שדרכן אנשים יכולים להתחבר."
+    }
+  },
   "providers": {
     "docsLink": "הצג מסמכים",
+    "none": "לא הוגדרו ספריות LDAP.",
+    "add": "הוסף ספרייה",
+    "edit": "עריכת ספרייה",
+    "delete": "מחיקת ספרייה",
+    "deleteConfirm": "למחוק את הספרייה הזו? משתמשים שיתחברו דרכה לא יוכלו להתחבר.",
     "name": "שם תצוגה",
+    "namePlaceholder": "מדריך חברות",
+    "nameRequired": "נדרש שם תצוגה",
     "enabled": "מופעל",
+    "save": "שמור ספרייה",
     "saving": "חִסָכוֹן...",
     "saved": "נשמר",
     "saveFailed": "השמירה נכשלה",
     "deleted": "נמחק",
     "deleteFailed": "המחיקה נכשלה",
+    "loadFailed": "טעינת ספריות LDAP נכשלה",
     "cancel": "לְבַטֵל"
   },
   "fields": {
@@ -22,6 +38,7 @@
     "useTls": "השתמש ב-TLS (LDAPS)",
     "bindDn": "קשר DN",
     "bindPassword": "קשירת סיסמה",
+    "secretKeep": "סיסמה נשמרה. השאר שדה זה ריק כדי לשמור אותה.",
     "userSearchBase": "בסיס חיפוש משתמשים",
     "userSearchFilter": "מסנן חיפוש משתמשים",
     "usernameAttr": "מאפיין שם משתמש",

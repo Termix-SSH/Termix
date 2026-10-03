@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "קבצים",
+    "sftp": "SFTP",
+    "openFileManager": "פתח את מנהל הקבצים"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש במנהל הקבצים",
+      "description": "עיון, עריכה והעברה של קבצים דרך SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "הפעל את מנהל הקבצים",
+        "description": "עיין וערוך קבצים במארח זה דרך SFTP."
+      },
+      "defaultPath": {
+        "label": "נתיב ברירת מחדל"
+      },
+      "scpLegacy": {
+        "label": "מצב SCP Legacy"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "העברות קבצים בו זמנית",
+        "description": "כמה קבצים מעלה או מוריד המנהל המקומי/מרחוק בו זמנית. יש להוריד ערך זה אם השרת שלך מגביל ערוצי SFTP."
+      },
+      "confirmBeforeTrash": {
+        "label": "אשר לפני העברת קבצים לאשפה",
+        "description": "שאל לפני העברת קבצים מרוחקים לאשפה. מחיקה לצמיתות עדיין דורשת אישור."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "מנהל הקבצים"
+  },
   "fileManager": {
     "noHostSelected": "לא נבחר מארח",
     "initializingEditor": "מאתחל עורך...",
@@ -34,6 +72,7 @@
     "rename": "שינוי שם",
     "uploading": "מעלה...",
     "uploadingFile": "מעלה {{name}}...",
+    "uploadingChunk": "מעלה {{name}}: {{percent}}% (חלק {{chunk}} מתוך {{total}})",
     "fileName": "שם הקובץ",
     "folderName": "שם התיקייה",
     "fileUploadedSuccessfully": "הקובץ \"{{name}}\" הועלה בהצלחה",
@@ -143,7 +182,7 @@
     "failedToRenameItem": "שינוי שם הפריט נכשל",
     "download": "הורדה",
     "openExternalEditor": "פתוח חיצונית",
-    "chooseExternalEditor": "בחירת עורך חיצוני",
+    "chooseExternalEditor": "בחר עורך חיצוני",
     "externalEditorSelected": "עורך חיצוני נבחר",
     "externalEditorDesktopOnly": "עורך חיצוני זמין רק באפליקציית שולחן העבודה",
     "externalEditorOpened": "נפתח בעורך חיצוני. שמירה שם תעלה את השינויים בחזרה לשרת.",
@@ -290,6 +329,7 @@
     "connecting": "מְקַשֵׁר...",
     "connectedSuccessfully": "התחבר בהצלחה",
     "totpVerificationFailed": "אימות TOTP נכשל",
+    "browserSignInFailed": "הכניסה נכשלה. אנא נסה שוב.",
     "authenticationFailed": "האימות נכשל",
     "incorrectPassphrase": "סיסמה שגויה. אנא נסה שוב.",
     "verificationCodePrompt": "קוד אימות:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "לא ניתן לטעון את ה-PDF",
     "pdfLoadError": "אירעה שגיאה בטעינת קובץ PDF זה.",
     "loadingPdf": "טוען PDF...",
-    "loadingPage": "טוען דף..."
+    "loadingPage": "טוען דף...",
+    "cancel": "לְבַטֵל",
+    "copiedItems_one": "פריט {{count}} הועתק",
+    "copiedItems_other": "הועתקו {{count}} פריטים",
+    "deleteCopiedFileFailed": "לא ניתן היה למחוק את העותק של {{name}}: {{error}}",
+    "dragMovedItems_one": "הועבר פריט {{count}} אל {{target}}",
+    "dragMovedItems_other": "הועבר {{count}} פריטים ל- {{target}}",
+    "moveBackFileFailed": "לא ניתן היה להזיז {{name}} אחורה: {{error}}",
+    "terminal": "טרמינל: {{host}} ({{path}})",
+    "dragToDesktop": "גרירת {{name}} לשולחן העבודה",
+    "dragFilesToDesktop": "גרירת קבצים {{count}} לשולחן העבודה",
+    "folderDragUnsupported": "גרירת תיקיות לשולחן העבודה אינה נתמכת עדיין",
+    "saveToDesktopFailed": "השמירה נכשלה: {{error}}",
+    "dragFailedDetail": "גרירה נכשלה: {{error}}",
+    "videoUnsupported": "הדפדפן שלך לא יכול להפעיל פורמט וידאו זה.",
+    "downloadToPlay": "הורד כדי להפעיל אותו במקום אחר",
+    "cannotPreviewType": "לא ניתן להציג תצוגה מקדימה של סוג קובץ זה",
+    "cannotPreviewTypeHint": "לסוג קובץ זה אין תצוגה מקדימה. הורד אותו כדי לפתוח אותו באפליקציה אחרת."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "מנהל הקבצים",
-    "tabFiles": "קבצים",
-    "enableFileManagerMonitor": "הפעל את מנהל הקבצים",
-    "enableFileManagerMonitorDesc": "עיון וניהול קבצים במארח זה דרך SFTP",
-    "scpLegacyLabel": "מצב SCP Legacy",
-    "scpLegacyDesc": "השתמש בהעברת קבצים מדור קודם עבור שרתים שאינם תומכים בתת-מערכת SFTP (למשל שרתי SSH מוטמעים או מינימליים).",
-    "defaultPathLabel": "נתיב ברירת מחדל",
-    "fileManagerPathHint": "הספרייה שתיפתח כאשר מנהל הקבצים יופעל עבור מארח זה.",
     "fileManagerUrlCopied": "כתובת ה-URL של מנהל הקבצים הועתקה",
     "copyFileManagerUrlAction": "העתקת כתובת URL של מנהל הקבצים",
     "docsLink": "הצג מסמכים",
     "hostNotFound": "המארח לא נמצא",
     "loadingHost": "טוען מארח..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "הפעל את מנהל הקבצים"
-      },
-      "defaultPath": {
-        "label": "נתיב ברירת מחדל"
-      },
-      "scpLegacy": {
-        "label": "מצב SCP Legacy"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "העברות קבצים בו זמנית",
-        "description": "כמה קבצים מעלה או מוריד המנהל המקומי/מרחוק בו זמנית. יש להוריד ערך זה אם השרת שלך מגביל ערוצי SFTP."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "קבצים"
   },
   "onboarding": {
     "feature_files": "מנהל הקבצים",
@@ -437,7 +464,7 @@
     "destinationPath": "נתיב היעד",
     "destMustBeDirectory": "היעד חייב להיות ספרייה עבור העברות מרובות פריטים",
     "goUp": "לַעֲלוֹת",
-    "hostAuthRequired": "נדרש אימות - פתח תחילה את מנהל הקבצים במארח זה",
+    "hostAuthRequired": "נדרש אימות. פתח תחילה את מנהל הקבצים במארח זה",
     "hostConnecting": "חיבור…",
     "hostConnectionFailed": "החיבור נכשל",
     "hostDisconnected": "לא מחובר",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "בחרת SFTP לפי קובץ.",
       "user_tar": "בחרת בארכיון tar.",
-      "tar_unavailable": "Tar אינו זמין באחד המארחים או בשניהם - במקום זאת ייעשה שימוש ב-SFTP לפי קובץ.",
-      "windows_host": "מחשב מארח של Windows מעורב - tar אינו בשימוש.",
-      "auto_multi_large": "אוטומטי: קבצים מרובים כולל קובץ גדול ({{largestSize}}) עם נתונים דחוסים - tar מאחד את הנתונים להעברה אחת.",
-      "auto_single_large_in_archive": "אוטומטי: קובץ גדול אחד ({{largestSize}}) בקבוצה זו - SFTP לכל קובץ.",
-      "auto_many_incompressible": "אוטומטי: נתונים לרוב בלתי ניתנים לדחיסה - SFTP לכל קובץ.",
-      "auto_many_files": "אוטומטי: קבצים רבים ({{fileCount}}) — tar מפחית את התקורה של כל קובץ.",
+      "tar_unavailable": "Tar אינו זמין באחד המארחים או בשניהם, לכן ייעשה שימוש במקום זאת ב-SFTP לפי קובץ.",
+      "windows_host": "מחשב מארח של Windows מעורב, לכן לא נעשה שימוש ב-tar.",
+      "auto_multi_large": "אוטומטי: קבצים מרובים כולל קובץ גדול ({{largestSize}}) עם נתונים הניתנים לדחיסה. Tar מאגד אותם להעברה אחת.",
+      "auto_single_large_in_archive": "אוטומטי: קובץ אחד גדול ({{largestSize}}) בקבוצה זו, לכן SFTP לכל קובץ.",
+      "auto_many_incompressible": "אוטומטי: נתונים לרוב בלתי ניתנים לדחיסה, לכן SFTP לכל קובץ.",
+      "auto_many_files": "אוטומטי: קבצים רבים ({{fileCount}}), tar מוריד את התקורה לכל קובץ.",
       "auto_default": "אוטומטי: SFTP לכל קובץ עבור קבוצה זו."
     },
     "methodTar": "ארכיון טאר",
@@ -471,7 +498,7 @@
     "metricsCompress": "דחיסה במקור: {{duration}}",
     "metricsExtract": "חילוץ ביעד: {{duration}}",
     "metricsPrepare": "הכנת יעד: {{duration}}",
-    "metricsRouteBenchmark": "גשש מסלול — ישיר: {{direct}}, ממסר: {{relay}}",
+    "metricsRouteBenchmark": "גשש מסלול: ישיר {{direct}}, ממסר {{relay}}",
     "metricsSourceDelete": "הסר מהמקור: {{duration}}",
     "metricsTotal": "סה\"כ: {{duration}}",
     "metricsTransfer": "מקצה לקצה: {{throughput}} ({{duration}})",
@@ -506,8 +533,11 @@
     "transferCancelledCopyHint": "ייתכן שיישארו קבצים חלקיים ביעד.",
     "transferCancelledMoveHint": "ייתכן שיישארו קבצים חלקיים ביעד. קבצי המקור לא הוסרו.",
     "transferError": "ההעברה נכשלה",
-    "transferFailedRetryHint": "נתונים חלקיים נשמרו ביעד. ניסיון חוזר יחודש כאשר החיבור יחזור.",
+    "transferFailedRetryHint": "נתונים חלקיים נשמרו ביעד. ניסיון חוזר יתחדש כאשר החיבור יחזור.",
     "transferPartialHint": "לא ניתן היה להעביר: {{paths}}",
-    "transferSuccess": "ההעברה הושלמה"
+    "transferSuccess": "ההעברה הושלמה",
+    "metricsHopSourceRead": "מקור → שרת: {{throughput}}",
+    "metricsHopDestSftpWrite": "שרת → יעד (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "שרת → יעד (מקומי): {{throughput}}"
   }
 }

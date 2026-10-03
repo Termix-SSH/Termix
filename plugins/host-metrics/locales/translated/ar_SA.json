@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "مقاييس المضيف"
+  },
   "hostMetrics": {
     "cpu": "المعالج",
     "memory": "الذاكرة",
@@ -160,7 +163,6 @@
       "firewallPersist": "حفظ القواعد",
       "firewallPersisted": "تم حفظ قواعد جدار الحماية",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard غير مثبت على هذا المضيف",
       "wgNoInterfaces": "لا توجد واجهات WireGuard مُعدّة",
       "wgInterfaceUp": "رفع",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "آخر مصافحة",
       "wgHandshakeNever": "أبدًا",
       "wgTransfer": "نقل",
-      "tsNotInstalled": "Tailscale غير مثبت على هذا المضيف",
-      "tsRunning": "يعمل",
-      "tsStopped": "متوقف",
-      "tsEnable": "اتصل",
-      "tsDisable": "افصل",
-      "tsEnabling": "جارٍ الاتصال بـ Tailscale...",
-      "tsDisabling": "جارٍ قطع الاتصال بـ Tailscale...",
-      "tsEnabled": "Tailscale متصل",
-      "tsDisabled": "Tailscale غير متصل",
-      "tsIPs": "عناوين IP لـ Tailscale",
-      "tsPeers": "الأقران",
-      "tsOnline": "متصل",
-      "tsOffline": "غير متصل",
-      "tsExitNode": "عقدة خروج",
-      "tsExitNodeActive": "عقدة خروج نشطة",
-      "tsHostname": "اسم المضيف"
+      "wgNoPeers": "لا يوجد نظراء"
     }
   },
   "metricsHistory": {
@@ -207,9 +194,6 @@
     "apply": "تطبيق",
     "viewHistory": "عرض السجل"
   },
-  "nav": {
-    "hostMetrics": "مقاييس المضيف"
-  },
   "hosts": {
     "tabHostMetrics": "مقاييس المضيف",
     "metricsCollectionLabel": "تجميع المقاييس",
@@ -219,16 +203,16 @@
     "useGlobalMetricsDesc": "تجاوز باستخدام فترة المقاييس على مستوى الخادم",
     "metricsIntervalS": "فترة المقاييس (ثانية)",
     "metricsIntervalDesc2": "الثواني بين لقطات المقاييس",
-    "excludedMountsLabel": "حوامل مستثناة",
+    "excludedMountsLabel": "التركيبات المستثناة",
     "monitoredMountsLabel": "مسارات مراقبة مخصصة",
     "monitoredMountsDesc": "أضف المسارات التي لا يتم عرضها كعمليات ربط منفصلة، بما في ذلك مسارات Home Assistant المرتبطة مثل /config.",
     "monitoredMountPathPlaceholder": "المسار (/config، /mnt/data)",
-    "monitoredMountLabelPlaceholder": "ملصق (اختياري)",
+    "monitoredMountLabelPlaceholder": "وسم (اختياري)",
     "addMonitoredMount": "إضافة مسار",
     "excludedMountsDesc": "إخفاء نقاط التحميل المحددة أو أنواع أنظمة الملفات (مثل nfs و cifs) من استخدام القرص والتنبيهات لهذا المضيف.",
     "excludedMountsPlaceholder": "مسار التثبيت (/mnt/nas) أو نوع نظام الملفات (nfs، cifs)",
     "excludedMountsEmpty": "لم يتم استبعاد أي وحدات تخزين. يتم عرض جميع أنظمة الملفات المكتشفة.",
-    "addExcludedMount": "يضيف",
+    "addExcludedMount": "إضافة",
     "visibleWidgets": "الأدوات المرئية",
     "widgetsMovedToHostMetrics": "تتم الآن إضافة البطاقات وترتيبها وتغيير حجمها مباشرةً في علامة تبويب مقاييس المضيف. افتح مقاييس المضيف لهذا المضيف واستخدم تخصيص لاختيار البطاقات التي ستظهر.",
     "hostNotFound": "المضيف غير موجود",
@@ -265,6 +249,9 @@
     "noHostSelected": "لم يتم تحديد أي مضيف",
     "selectHost": "اختيار مضيف..."
   },
+  "terminalStatus": {
+    "unavailable": "الإحصائيات المباشرة غير متوفرة"
+  },
   "dashboard": {
     "cpu": "المعالج",
     "ram": "الذاكرة"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "متصل"
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدام مقاييس المضيف",
+      "description": "يمكنك عرض مقاييس المضيف واستخدام مديري المضيف (الخدمات والحزم وجدار الحماية والمزيد) على المضيفين الذين يمكنك الوصول إليهم."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "فاصل القياسات (بالثواني)",
+        "description": "عدد مرات أخذ عينات من المضيف الذي تتم مشاهدته، ما لم يحدد المضيف الفاصل الزمني الخاص به."
+      },
+      "historyRetentionDays": {
+        "label": "مدة الاحتفاظ بالسجل (بالأيام)",
+        "description": "مدة الاحتفاظ بعينات المقاييس في مخططات التاريخ."
+      },
+      "enabledForNewHosts": {
+        "label": "تم تفعيل المقاييس للمضيفين الجدد",
+        "description": "ما إذا كانت الأجهزة المضيفة الجديدة تبدأ بتفعيل خاصية جمع البيانات الإحصائية."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "وحدة قياس درجة الحرارة",
+        "description": "كيفية عرض درجات الحرارة في مقاييس المضيف.",
+        "celsius": "درجة مئوية",
+        "fahrenheit": "فهرنهايت"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "جمع المقاييس"
+      },
+      "metricsInterval": {
+        "label": "فاصل القياسات (بالثواني)"
+      },
+      "enabledWidgets": {
+        "label": "الأدوات المُفعّلة"
+      },
+      "excludedMounts": {
+        "label": "التركيبات المستثناة"
+      },
+      "monitoredMounts": {
+        "label": "المسارات المراقبة"
+      }
+    }
   }
 }

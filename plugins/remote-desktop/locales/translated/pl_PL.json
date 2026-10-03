@@ -1,11 +1,11 @@
 {
   "remoteDesktop": {
     "connecting": "Łączenie z sesją {{type}}...",
-    "checkingGuacd": "Sprawdzanie usługi pulpitu zdalnego...",
-    "requestingToken": "Żądanie tokena połączenia {{type}}...",
-    "openingSession": "Otwieranie sesji {{type}}...",
-    "negotiating": "Negocjowanie {{type}} uścisku dłoni...",
-    "sessionReady": "{{type}} sesja gotowa",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
     "connectionError": "Błąd połączenia",
     "connectionFailed": "Połączenie nieudane",
     "failedToConnect": "Nie udało się uzyskać tokena połączenia",
@@ -16,7 +16,7 @@
     "guacdUnavailable": "Usługa pulpitu zdalnego (guacd) jest niedostępna. Upewnij się, że usługa guacd jest uruchomiona, dostępna i poprawnie skonfigurowana w ustawieniach administratora.",
     "credentialPromptTitle": "Wprowadź poświadczenia RDP",
     "credentialPromptDescription": "Ten host jest ustawiony tak, aby pytać o poświadczenia przy łączeniu. Są używane tylko w tej sesji i nie są zapisywane.",
-    "connect": "Połącz",
+    "connect": "Połączenie",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
       "title": "Pliki dysku",
@@ -32,19 +32,19 @@
       "uploadFailed": "Nie udało się przesłać {{name}}",
       "uploadDisabled": "Przesyłanie plików jest wyłączone dla tego połączenia",
       "driveUnavailable": "Włącz przekierowanie dysku RDP przed przesłaniem plików",
-      "driveNotWritable": "guacd nie może zapisać do folderu dysku. Sprawdź zmienną GUACD_DRIVE_PATH (lub ścieżkę do dysku hosta) i jej uprawnienia.",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
       "dropToUpload": "Upuść pliki, aby je przesłać"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (zablokuj ekran)",
       "winKey": "Klawisz Windows",
-      "superL": "Super+L (ekran blokady)",
-      "superKey": "Super klucz",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
       "super": "Super",
-      "cmdL": "Cmd+L (ekran blokady)",
-      "cmdKey": "Klawisz polecenia",
-      "cmd": "Polecenie",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -66,24 +66,29 @@
       "collapse": "Zwiń pasek narzędzi",
       "expand": "Rozwiń pasek narzędzi",
       "dragHandle": "Przeciągnij, aby zmienić położenie",
-      "hide": "Ukryj na czas tej sesji. Aby trwale wyłączyć tę opcję, otwórz Ustawienia hosta → Ogólne → Pasek narzędzi połączenia.",
-      "zoomIn": "Powiększ",
-      "zoomOut": "Oddal",
-      "resetZoom": "Zresetuj powiększenie",
-      "fitToScreen": "Dopasuj do ekranu",
+      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
       "switchToTrackpad": "Przełącz na tryb gładzika (przeciągnij, aby przesunąć kursor, dotknij, aby kliknąć)",
       "switchToTouch": "Przełącz na tryb dotykowy (dotknij bezpośrednio miejsca, w którym chcesz kliknąć)"
-    }
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
   },
   "hosts": {
     "nativeRdpOpened": "Otwarto w Pulpicie zdalnym systemu Windows",
     "nativeRdpFailed": "Nie udało się otworzyć pulpitu zdalnego systemu Windows",
     "openNativeRdp": "Otwórz w Pulpicie zdalnym systemu Windows",
     "guac": {
+      "toolbar": "Toolbar",
       "connection": "Połączenie",
       "authentication": "Uwierzytelnianie",
       "storedCredential": "Zapisane poświadczenie",
       "authMethod": "Metoda uwierzytelniania",
+      "authTypeDirect": "Bezpośredni",
+      "authTypeCredential": "Poświadczenie",
+      "authTypeNone": "Brak",
       "authTypeNoneDesc": "Żadne poświadczenia nie są przechowywane. Przy każdym połączeniu pojawi się prośba o nazwę użytkownika i hasło; nie są zapisywane.",
       "selectCredential": "Wybierz poświadczenie...",
       "connectionSettings": "Ustawienia połączenia",
@@ -206,7 +211,8 @@
       "colorScheme": "Schemat kolorów",
       "backspaceKey": "Klawisz Backspace",
       "colorDepth": "Głębia koloru",
-      "resizeMethod": "Metoda zmiany rozmiaru"
+      "resizeMethod": "Metoda zmiany rozmiaru",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Pulpit zdalny",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Sieć wirtualna",
     "unencryptedShell": "Niezaszyfrowana powłoka",
-    "docsLink": "Zobacz dokumentację"
+    "remoteDesktopNotes": "Notatki",
+    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "docsLink": "Zobacz dokumentację",
+    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Zdalny pulpit",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Głębia koloru"
+        "label": "Głębia koloru",
+        "description": "Used for RDP hosts that leave it on their default."
       },
       "resizeMethod": {
-        "label": "Metoda zmiany rozmiaru"
+        "label": "Metoda zmiany rozmiaru",
+        "description": "How the remote screen follows the window size."
       },
       "resizeDisplayUpdate": "Aktualizacja ekranu",
       "resizeReconnect": "Połącz ponownie",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Wyłącz wklejanie",
         "description": "Zapobiegaj wklejaniu tekstu do sesji zdalnej"
-      }
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
     },
     "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
       "guacdUrl": {
-        "label": "Adres URL guacd"
+        "label": "Adres URL guacd",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      },
+      "displayGroup": "Wyświetlanie",
+      "displayDefaultsTab": "Pulpit zdalny"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
     }
   },
   "errors": {

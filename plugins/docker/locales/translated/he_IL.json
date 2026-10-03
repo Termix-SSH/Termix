@@ -21,6 +21,11 @@
     "ports": "נמלים",
     "noPorts": "אין יציאות",
     "start": "הַתחָלָה",
+    "stop": "לְהַפְסִיק",
+    "status": "סטָטוּס",
+    "actions": "פעולות",
+    "cardView": "תצוגת כרטיס",
+    "listView": "תצוגת רשימה",
     "confirmRemoveContainer": "האם אתה בטוח שברצונך להסיר את המכולה '{{name}}'? לא ניתן לבטל פעולה זו.",
     "runningContainerWarning": "אזהרה: מיכל זה פועל כעת. הסרתו תעצור את המיכל תחילה.",
     "loadingContainers": "טוען מכולות...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "יש לפעול על מנת לגשת למסוף.",
     "verificationCodePrompt": "הזן קוד אימות",
     "totpVerificationFailed": "אימות TOTP נכשל. אנא נסה שוב.",
+    "browserSignInFailed": "הכניסה נכשלה. אנא נסה שוב.",
     "connectedTo": "מחובר אל {{containerName}}",
     "disconnected": "מְנוּתָק",
     "consoleError": "שגיאת קונסולה",
@@ -93,7 +99,10 @@
     "logs": "יומני רישום",
     "stats": "סטטיסטיקות",
     "consoleTab": "לְנַחֵם",
-    "startContainerToAccess": "הפעל את המכולה כדי לגשת לקונסולה"
+    "startContainerToAccess": "הפעל את המכולה כדי לגשת לקונסולה",
+    "noHostSelected": "לא נבחר מארח",
+    "failedToFetchLogs": "נכשלה אחזור הלוגים: {{error}}",
+    "failedToDownloadLogs": "הורדת יומני רישום נכשלה: {{error}}"
   },
   "nav": {
     "docker": "דוקר"
@@ -102,10 +111,22 @@
     "feature_docker": "דוקר",
     "feature_docker_desc": "ראה קונטיינרים, קרא יומני רישום וצפה בסטטיסטיקות על כל מארח שמפעיל את Docker."
   },
+  "terminal": {
+    "retry": "נסה שוב",
+    "clipboardReadFailed": "הקריאה מהלוח נכשלה. ודא שהרשאות הלוח ניתנות.",
+    "clipboardWriteFailed": "ההעתקה ללוח נכשלה. ודא שהדף מוגש דרך HTTPS או localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש ב-Docker",
+      "description": "פתח את מנהל ה-Docker ואת קונסולות המכולות במחשבים מארחים שבהם Docker מופעל."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "הפעל את Docker"
+        "label": "הפעל את Docker",
+        "description": "ניהול מכולות במארח זה."
       },
       "containerRuntime": {
         "label": "זמן ריצה של המכולה",
@@ -122,9 +143,5 @@
     "docsLink": "הצג מסמכים",
     "hostNotFound": "המארח לא נמצא",
     "loadingHost": "טוען מארח..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "הקריאה מהלוח נכשלה. ודא שהרשאות הלוח ניתנות.",
-    "clipboardWriteFailed": "ההעתקה ללוח נכשלה. ודא שהדף מוגש דרך HTTPS או localhost."
   }
 }

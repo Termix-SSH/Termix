@@ -1,18 +1,22 @@
 {
-  "title": "Лозинке",
-  "signIn": "Пријавите се помоћу лозинке",
-  "loginFailed": "Пријава лозинком није успела",
-  "description": "Користите WebAuthn/FIDO2 акредитиве за пријаву без лозинке",
-  "namePlaceholder": "Назив лозинке",
+  "title": "Passkeys",
+  "signIn": "Sign in with passkey",
+  "loginFailed": "Passkey login failed",
+  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
+  "namePlaceholder": "Passkey name",
+  "defaultName": "Passkey",
   "uv": {
-    "preferred": "Преферирано",
-    "required": "Обавезно",
-    "discouraged": "Обесхрабрено"
+    "preferred": "Preferred",
+    "required": "Required",
+    "discouraged": "Discouraged"
   },
-  "add": "Додај лозинку",
-  "none": "Није регистрована ниједна лозинка.",
-  "added": "Лозинка је додата",
-  "addFailed": "Додавање лозинке није успело",
-  "deleted": "Лозинка је обрисана",
-  "deleteFailed": "Брисање лозинке није успело"
+  "add": "Add Passkey",
+  "none": "No passkeys registered.",
+  "added": "Passkey added",
+  "addFailed": "Failed to add passkey",
+  "delete": "Delete passkey",
+  "deleted": "Passkey deleted",
+  "deleteFailed": "Failed to delete passkey",
+  "unknownDevice": "unknown",
+  "synced": "synced"
 }

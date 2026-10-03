@@ -15,7 +15,7 @@
     "home": "Home",
     "pageDown": "PgDn",
     "pageUp": "PgUp",
-    "paste": "반죽",
+    "paste": "붙여넣기",
     "quickKeyPlaceholder": "예: sudo ",
     "quickKeysDesc": "×를 탭하여 제거합니다. 최대 8자까지 지원합니다.",
     "quickKeysTitle": "빠른 키",
@@ -33,7 +33,7 @@
     "connectionLost": "연결이 끊어졌습니다",
     "connectionRejected": "서버에서 연결이 거부되었습니다. 인증 및 네트워크 구성을 확인하세요.",
     "connectionTimeout": "연결 시간 초과",
-    "enableAutoTmuxAction": "자동 Tmux 활성화",
+    "enableAutoTmuxAction": "Auto-Tmux 활성화",
     "hostKeyRejected": "SSH 호스트 키 검증이 거부되었습니다. 연결이 취소되었습니다.",
     "linkDialogCopy": "복사",
     "linkDialogOpen": "열기",
@@ -44,15 +44,16 @@
     "reconnect": "재연결",
     "reconnected": "재연결 성공",
     "reconnecting": "재연결 중... ({{attempt}}/{{max}})",
+    "autoReconnecting": "연결이 끊어졌습니다. 다시 연결 중입니다...",
     "searchCaseSensitive": "대소문자를 일치시키세요",
     "searchClose": "닫기 (탈출)",
     "searchNext": "다음 매치 (Enter)",
     "searchNoResults": "결과가 없습니다",
-    "searchPlaceholder": "찾다",
+    "searchPlaceholder": "찾기",
     "searchPrevious": "이전 일치 항목 (Shift+Enter)",
     "searchRegex": "정규 표현식을 사용하세요",
     "searchResultCount": "{{index}} {{count}}",
-    "searchWholeWord": "단어 전체를 일치시키세요",
+    "searchWholeWord": "단어 전체 일치",
     "sessionExpiredNotice": "{{host}} 호스트에서 진행 중이던 이전 세션이 {{minutes}} 분 후 연결이 끊어지면서 만료되었습니다. 셸과 셸에서 실행 중이던 모든 항목이 종료되었습니다. 세션을 유지하려면 이 호스트에서 자동 Tmux를 활성화하십시오.",
     "sessionExpiredNoticeNoMinutes": "{{host}} 에서 이전 세션이 연결이 끊긴 상태에서 만료되었습니다. 셸과 그 안에서 실행 중이던 모든 항목이 사라졌습니다. 세션을 유지하려면 이 호스트에서 자동 Tmux를 활성화하십시오.",
     "sessionTakenOver": "다른 탭에서 세션이 열렸습니다. 다시 연결 중...",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "클립보드에서 읽지 못했습니다. 클립보드 권한이 허용되었는지 확인하세요.",
     "clipboardWriteFailed": "클립보드에 복사하지 못했습니다. 페이지가 HTTPS 또는 localhost에서 제공되는지 확인하세요.",
     "connected": "연결됨",
-    "totpCodeLabel": "인증 코드"
+    "totpCodeLabel": "인증 코드",
+    "duplicateTab": "탭 복제",
+    "imageChooseFile": "이미지 파일을 선택하세요",
+    "imageUploaded": "이미지 업로드됨: {{path}}",
+    "imageClipboardUnavailable": "이 브라우저는 클립보드에서 이미지를 읽을 수 없습니다.",
+    "imageClipboardEmpty": "클립보드에서 이미지를 찾을 수 없습니다.",
+    "localShell": "로컬 터미널 셸",
+    "autocompleteHintComplete": "탭 또는 엔터를 눌러 완료하세요.",
+    "autocompleteHintNavigate": "↑↓로 이동",
+    "autocompleteHintClose": "Esc 키를 눌러 닫으세요"
   },
   "terminalToolbar": {
     "detachTmux": "tmux 분리",
@@ -96,8 +106,8 @@
     "moveToolbarHint": "드래그하여 툴바의 위치를 변경하세요.",
     "paste": "이미지 붙여넣기",
     "pasteImage": "클립보드에서 이미지 붙여넣기 (이미지만 해당)",
-    "retry": "다시 해 보다",
-    "showToolbar": "확장 도구 모음",
+    "retry": "재시도",
+    "showToolbar": "도구 모음 펼치기",
     "upload": "이미지 업로드",
     "uploadImage": "호스트에 이미지를 업로드하세요",
     "uploadingImage": "업로드 중..."
@@ -108,15 +118,18 @@
     "searchPlaceholder": "기록 검색...",
     "clearAll": "모두 지우기",
     "noHistoryEntries": "기록 항목 없음",
-    "trackingDisabled": "기록 추적이 비활성화됨"
+    "trackingDisabled": "기록 추적이 비활성화됨",
+    "trackingDisabledHint": "이 호스트의 SSH 터미널 탭에서 명령 기록을 활성화하세요.",
+    "commandCount_one": "{{count}} 명령",
+    "commandCount_other": "{{count}} 명령"
   },
   "touchInput": {
     "enabled": "터치 입력 활성화",
     "enabledDesc": "단말기에서 한 손가락 터치 스크롤을 허용합니다.",
     "momentumEnabled": "모멘텀을 활성화하세요",
-    "momentumEnabledDesc": "스와이프 후 잠시 스크롤을 더 내리세요.",
-    "advanced": "고급의",
-    "resetDefaults": "기본 설정으로 재설정",
+    "momentumEnabledDesc": "스와이프 후 잠시 스크롤을 더 하세요.",
+    "advanced": "고급",
+    "resetDefaults": "기본값으로 초기화",
     "dragThreshold": "드래그 임계값",
     "maxWheelDelta": "최대 휠 델타",
     "momentumSampleWindow": "모멘텀 샘플 윈도우",
@@ -134,55 +147,87 @@
     "instanceId": "터미널 세션 인스턴스 ID",
     "instanceIdDesc": "연결된 터미널 탭 중 하나의 인스턴스 ID입니다. 이는 가시성 테스트에 사용됩니다.",
     "selectedModeUnavailable": "없는",
-    "test": "시험",
+    "test": "테스트",
     "testing": "테스트 중...",
     "testFailed": "이미지 저장소 테스트에 실패했습니다.",
     "testConnected": "터미널 세션이 연결되었습니다.",
     "testNotConnected": "이 인스턴스 ID로 연결된 터미널 세션이 없습니다.",
     "testSelectedMode": "업로드 시에는 {{mode}}를 사용합니다.",
     "testLocalVisible": "로컬 디렉터리는 연결된 호스트에서 볼 수 있습니다.",
-    "testLocalNotVisible": "로컬 디렉터리는 연결된 호스트에서 볼 수 없습니다."
+    "testLocalNotVisible": "연결된 호스트에서 로컬 디렉터리가 보이지 않습니다."
   },
   "settings": {
     "admin": {
       "group": {
         "touch": "터치 입력",
-        "images": "이미지 저장"
+        "images": "이미지 저장",
+        "sessions": "세션",
+        "newHosts": "새로운 호스트"
       },
       "sessionTimeoutMinutes": {
         "label": "터미널 세션 지속성",
-        "description": "연결이 끊긴 터미널이 서버에서 종료되기 전까지 유지되는 시간입니다. 최소 1분, 최대 1440분. 이 시간보다 오래 세션을 유지해야 하는 경우 호스트에서 자동 Tmux를 활성화하십시오."
+        "description": "연결이 끊긴 터미널이 서버에서 종료되기 전까지 유지되는 시간입니다. 최소 1분, 최대 1440분입니다. 이 시간보다 오래 세션을 유지해야 하는 경우 호스트에서 자동 Tmux를 활성화하십시오."
       },
       "commandHistoryEnabled": {
         "label": "명령어 히스토리",
         "description": "명령어 히스토리 기록 허용. 비활성화 시 호스트별 설정과 무관하게 히스토리가 저장되지 않습니다."
       },
+      "commandHistoryForNewHosts": {
+        "label": "새 호스트에 대한 명령 기록",
+        "description": "새 호스트가 명령 기록을 활성화한 상태로 시작할지 여부."
+      },
       "imageStorageMode": {
         "label": "저장 모드",
         "description": "붙여넣거나 업로드한 터미널 이미지가 표시되는 위치입니다. 연결 유형에 따라 로컬 및 원격(SFTP) 이미지가 자동으로 선택됩니다.",
         "auto": "자동",
-        "local": "현지의",
+        "local": "로컬",
         "remoteSftp": "원격(SFTP)"
       },
       "imageLocalDir": {
-        "label": "로컬 디렉토리"
+        "label": "로컬 디렉토리",
+        "description": "로컬 모드에서 이미지를 저장하는 Termix 백엔드의 절대 경로입니다. 저장 후에는 표시되지 않습니다. 비어 있는 경우 TERMIX_IMAGE_DIR이 사용됩니다."
       },
       "imageHostPath": {
         "label": "호스트 경로",
         "description": "터미널 에이전트가 수신하는 로컬 디렉터리의 호스트 측 보기입니다."
       },
       "imageTtlMs": {
-        "label": "TTL(밀리초)"
+        "label": "TTL(밀리초)",
+        "description": "업로드된 이미지가 유지되는 시간(밀리초). 빈 이미지의 경우 TERMIX_IMAGE_TTL_MS 또는 1시간이 사용됩니다."
       },
       "imageMaxCount": {
-        "label": "최대 이미지 개수"
+        "label": "최대 이미지 개수",
+        "description": "대부분의 이미지는 한 번에 보관됩니다. 빈 이미지는 TERMIX_MAX_IMAGE_COUNT 또는 100을 사용합니다."
       },
       "imageMaxBytes": {
-        "label": "최대 저장 용량(바이트)"
+        "label": "최대 저장 용량(바이트)",
+        "description": "한 번에 저장되는 이미지의 최대 바이트 수입니다. 빈 이미지는 TERMIX_MAX_IMAGE_STORAGE_BYTES 또는 5GiB를 사용합니다."
+      },
+      "sessionPersistence": {
+        "label": "연결이 끊어진 후에도 세션을 유지합니다.",
+        "description": "위에 명시된 시간 동안 서버에서 연결이 끊긴 터미널을 활성화 상태로 유지하십시오. 그러면 해당 탭을 다시 열었을 때 이전에 작업하던 부분부터 이어서 작업할 수 있습니다."
       },
       "newHostAutoTmux": {
         "label": "자동 Tmux",
         "description": "새 호스트의 터미널을 tmux 내에서 실행하여 연결이 끊어져도 세션이 유지되도록 합니다(호스트에 tmux가 설치되어 있어야 함)."
+      },
+      "newHostTheme": {
+        "label": "새로운 호스트를 위한 테마",
+        "description": "새 호스트가 시작할 때 표시되는 터미널 테마입니다."
+      },
+      "newHostFontFamily": {
+        "label": "새 호스트를 위한 글꼴",
+        "description": "새 호스트가 시작할 때 사용하는 터미널 글꼴입니다."
+      },
+      "newHostFontSize": {
+        "label": "새 호스트의 글꼴 크기",
+        "description": "새 호스트가 시작할 때 사용하는 터미널 글꼴 크기(픽셀 단위)."
+      },
+      "newHostCursorStyle": {
+        "label": "새 호스트를 위한 커서 스타일"
+      },
+      "newHostCursorBlink": {
+        "label": "새로운 호스트를 위한 깜빡이는 커서"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "터미널 툴바 활성화",
         "description": "현재 활성화된 터미널에 도킹된 빠른 액세스 툴바를 표시하여 해당 호스트의 도구 및 실시간 통계를 볼 수 있도록 합니다."
       },
+      "terminalToolbarPosition": {
+        "label": "툴바 위치",
+        "description": "터미널에서 툴바가 위치하는 곳입니다. 거기서 드래그해서 옮길 수도 있습니다.",
+        "bottom": "하단 중앙",
+        "bottomLeft": "왼쪽 하단",
+        "bottomRight": "오른쪽 하단",
+        "top": "상단 중앙",
+        "topLeft": "왼쪽 상단",
+        "topRight": "오른쪽 상단"
+      },
+      "terminalToolbarStartState": {
+        "label": "툴바 시작 상태",
+        "description": "터미널 연결 시 툴바가 확장된 상태로 열리는지 또는 최소화된 상태로 열리는지 여부",
+        "expanded": "퍼지는",
+        "collapsed": "최소화됨"
+      },
+      "terminalToolbarDisplay": {
+        "label": "툴바 표시 모드",
+        "description": "툴바 버튼 표시 방식입니다. 마지막으로 선택한 버튼이 툴바에 유지됩니다.",
+        "remember": "마지막 사용",
+        "icon": "아이콘 전용",
+        "labeled": "아이콘 및 레이블",
+        "expanded": "통계 자료를 추가하여 확장했습니다."
+      },
+      "terminalToolbarShowStatus": {
+        "label": "실시간 통계 보기",
+        "description": "확장 모드에서 툴바 버튼 위에 호스트의 실시간 통계를 표시합니다."
+      },
+      "terminalToolbarFade": {
+        "label": "가만히 있으면 페이드 아웃",
+        "description": "마우스 커서를 올리기 전까지 툴바가 서서히 사라집니다."
+      },
       "enableCommandHistory": {
         "label": "명령어 히스토리",
         "description": "히스토리 및 자동 완성을 위해 이 터미널에서 실행된 명령어를 기록합니다"
       },
       "enableTerminal": {
-        "label": "터미널 활성화"
+        "label": "터미널 활성화",
+        "description": "이 호스트에 SSH 터미널을 제공하십시오."
+      },
+      "inheritAppearance": {
+        "label": "사용자 기본 설정을 사용합니다."
+      },
+      "theme": {
+        "label": "테마"
+      },
+      "cursorBlink": {
+        "label": "깜빡이는 커서"
+      },
+      "cursorStyle": {
+        "label": "커서 스타일"
+      },
+      "fontSize": {
+        "label": "글꼴 크기"
+      },
+      "fontFamily": {
+        "label": "세례반"
+      },
+      "scrollback": {
+        "label": "스크롤백"
+      },
+      "letterSpacing": {
+        "label": "글자 간격"
+      },
+      "lineHeight": {
+        "label": "선 높이"
+      },
+      "bellStyle": {
+        "label": "벨"
+      },
+      "minimumContrastRatio": {
+        "label": "최소 대비비"
+      },
+      "backgroundImage": {
+        "label": "배경 이미지"
+      },
+      "backgroundImageOpacity": {
+        "label": "배경 이미지 투명도"
+      },
+      "customThemeColors": {
+        "label": "사용자 지정 테마 색상"
+      },
+      "rightClickSelectsWord": {
+        "label": "마우스 오른쪽 버튼을 클릭하여 단어를 선택합니다."
+      },
+      "macOptionIsMeta": {
+        "label": "옵션은 메타입니다"
+      },
+      "fastScrollModifier": {
+        "label": "빠른 스크롤 키"
+      },
+      "fastScrollSensitivity": {
+        "label": "빠른 스크롤 속도"
+      },
+      "backspaceMode": {
+        "label": "역행 키이"
+      },
+      "autoMosh": {
+        "label": "자동 모쉬"
+      },
+      "moshCommand": {
+        "label": "모쉬 명령"
+      },
+      "autoTmux": {
+        "label": "자동 tmux"
+      },
+      "useSSHTitle": {
+        "label": "SSH 타이틀을 사용하세요"
+      },
+      "syntaxHighlighting": {
+        "label": "구문 강조 표시"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "구문 강조 표시 범주"
+      },
+      "linkClickBehavior": {
+        "label": "링크를 클릭하세요"
+      },
+      "localEcho": {
+        "label": "로컬 에코"
+      },
+      "passwordPromptAutoFill": {
+        "label": "비밀번호 입력 프롬프트에 자동으로 입력해 주는 서비스를 제공하세요."
+      },
+      "sudoPasswordAutoFill": {
+        "label": "sudo 프롬프트를 채우세요"
+      },
+      "autoReconnect": {
+        "label": "자동으로 다시 연결됩니다"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "터미널 링크 클릭",
         "description": "터미널에서 링크 클릭 시 기본 동작"
+      },
+      "customThemes": {
+        "label": "저장된 테마"
       }
     }
   },
   "palette": {
     "localTerminal": "로컬 터미널"
   },
+  "permissions": {
+    "sessions": {
+      "title": "실시간 터미널 세션을 사용하세요",
+      "description": "세션 공유 및 녹화와 같은 다른 기능도 실시간 터미널 세션에서 사용할 수 있도록 합니다."
+    },
+    "history": {
+      "title": "명령 기록 읽기",
+      "description": "AI 비서와 같은 다른 기능이 사용자의 명령 기록을 읽을 수 있도록 합니다."
+    }
+  },
   "hosts": {
+    "tabTerminal": "터미널",
     "addHost": "호스트 추가",
     "applyGlobalThemeTooltip": "이 테마를 적용하세요",
     "backgroundImageDesc": "터미널 배경 이미지를 위한 선택적인 URL입니다.",
     "backgroundImageLabel": "배경 이미지 URL",
     "backgroundImageOpacityLabel": "배경 이미지 불투명도",
     "backspaceMode": "백스페이스 모드",
+    "backspaceModeControlH": "컨트롤-H(BS)",
     "backspaceModeLabel": "백스페이스 모드",
+    "backspaceModeNormal": "정상(DEL)",
     "behaviorAndAdvanced": "동작 및 고급",
     "bellStyle": "벨 스타일",
+    "bellStyleBoth": "둘 다",
     "bellStyleLabel": "벨 스타일",
+    "bellStyleNone": "없음",
+    "bellStyleSound": "소리",
+    "bellStyleVisual": "시각",
     "colorTheme": "색상 테마",
     "cursorBlink": "커서 깜빡임",
     "cursorBlinking": "커서 깜박임",
     "cursorBlinkingDesc": "터미널 커서의 깜박이는 애니메이션을 활성화합니다.",
     "cursorStyle": "커서 스타일",
+    "cursorStyleBar": "바",
+    "cursorStyleBlock": "블록",
     "cursorStyleLabel": "커서 스타일",
+    "cursorStyleUnderline": "밑줄",
     "customThemeAnsiColors": "ANSI 색상",
     "customThemeBackground": "배경",
     "customThemeBlack": "검정",
@@ -264,7 +455,10 @@
     "enableAutoTmux": "Auto-Tmux 활성화",
     "enableAutoTmuxDesc": "tmux 내부에서 실행하면 연결이 끊기거나 브라우저가 다시 시작되더라도 셸과 그 안에서 실행 중인 모든 작업이 계속 유지됩니다(호스트에 tmux가 설치되어 있어야 함).",
     "fastScrollModifier": "빠른 스크롤 수정 키",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "빠른 스크롤 보조 키",
+    "fastScrollModifierShift": "Shift",
     "fastScrollSensitivity": "빠른 스크롤 감도",
     "fastScrollSensitivityLabel": "빠른 스크롤 감도",
     "fontFamily": "글꼴",
@@ -280,16 +474,14 @@
     "lineHeight": "줄 간격",
     "lineHeightLabel": "줄 높이",
     "linkClickBehaviorConfirm": "팝업을 표시하여 열거나 복사",
-    "linkClickBehaviorDefault": "기본값 (앱 설정 따르기)",
     "linkClickBehaviorDesc": "터미널에서 링크를 클릭할 때의 동작을 제어합니다. 앱 수준 설정을 따르려면 '기본값'을 사용하세요",
     "linkClickBehaviorDirect": "바로 열기",
     "linkClickBehaviorLabel": "링크 클릭 동작",
     "loadingHost": "호스트 로드 중...",
     "localEchoAuto": "오토매틱",
-    "localEchoDefault": "전역 설정을 사용하세요",
     "localEchoDesc": "연결 속도가 느린 환경에서도 안전하게 입력 가능한 키 입력을 로컬에서 예측합니다. 비밀번호 입력 및 제어 입력은 절대 화면에 표시되지 않습니다.",
     "localEchoLabel": "로컬 에코",
-    "localEchoOff": "끄다",
+    "localEchoOff": "꺼짐",
     "localEchoOn": "항상 켜져 있음",
     "macOptionIsMetaLabel": "옵션 키를 누르면 메타 데이터가 전송됩니다.",
     "macOptionIsMetaShortDesc": "macOS에서 Option/Alt 키를 눌러 특수 문자(예: @ 또는 |)를 입력하는 대신 Meta 메시지를 전송하도록 설정합니다.",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "Mosh 명령어",
     "noSavedThemes": "아직 저장된 테마가 없습니다.",
     "none": "없음",
+    "passwordPromptAutoFillDesc": "터미널에서 비밀번호를 입력하라는 메시지가 나타날 때 저장된 비밀번호를 자동으로 입력하도록 제안합니다. 이 호스트에서 비밀번호 자동 입력 기능을 끄려면 이 옵션을 해제하십시오.",
+    "passwordPromptAutoFillLabel": "비밀번호 자동 완성 기능을 제공합니다",
+    "autoReconnectLabel": "자동 재연결",
+    "autoReconnectDesc": "네트워크 오류나 절전 모드 등으로 SSH 연결이 끊어지면 자동으로 다시 연결합니다. 스크롤백도 유지합니다.",
     "rightClickSelectsWord": "우클릭 단어 선택",
     "rightClickSelectsWordLabel": "오른쪽 클릭으로 단어 선택",
     "rightClickSelectsWordShortDesc": "오른쪽 클릭 시 커서 아래의 단어를 선택합니다.",
@@ -328,7 +524,39 @@
     "theme": "테마",
     "themePreview": "테마 미리보기",
     "useSSHTitleDesc": "탭 제목을 호스트 이름 대신 셸 창 제목에서 업데이트합니다",
-    "useSSHTitleLabel": "SSH 창 제목 사용"
+    "useSSHTitleLabel": "SSH 창 제목 사용",
+    "enableTunnel": "터널 활성화",
+    "enableFileManager": "파일 관리자 활성화",
+    "enableDocker": "Docker 활성화",
+    "startupSnippet": "시작 스니펫",
+    "quickActions": "빠른 동작",
+    "proxmoxLastSyncStatus": {
+      "success": "성공"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} 건너뛰었습니다(IP 주소를 찾을 수 없음)",
+    "proxmoxStatsUrlCopied": "Proxmox 통계 URL이 클립보드에 복사되었습니다.",
+    "rdpUrlCopied": "RDP URL 복사됨",
+    "vncUrlCopied": "VNC URL 복사됨",
+    "filterAuthStepca": "스텝 CA",
+    "guac": {
+      "noCredential": "자격 증명 없음 (직접 자격 증명 사용)",
+      "authTypeDirect": "직접",
+      "authTypeCredential": "자격 증명",
+      "authTypeNone": "전체 해제",
+      "recordingPath": "녹화 경로",
+      "recordingName": "녹화 이름",
+      "saveHostFirst": "호스트를 먼저 저장하세요.",
+      "sharingOptionsAfterSave": "공유 옵션은 호스트가 저장된 후 사용할 수 있습니다.",
+      "permissionLevel": "권한 수준",
+      "typeHeader": "유형",
+      "targetHeader": "대상",
+      "permissionHeader": "권한",
+      "cancelBtn": "취소",
+      "savingBtn": "저장 중...",
+      "updateHostBtn": "호스트 업데이트",
+      "addHostBtn": "호스트 추가"
+    },
+    "filterAuthVault": "둥근 천장"
   },
   "nav": {
     "history": "기록",
@@ -354,32 +582,32 @@
     "startRecording": "기록 시작",
     "stopRecording": "기록 중지"
   },
-  "terminalDefaults": {
-    "clearAll": "모두 지우기",
-    "description": "호스트가 재정의하지 않는 한 모든 호스트가 상속받는 값을 설정합니다.",
-    "dialogDescription": "이 설정은 호스트에서 설정을 지정하지 않은 경우에 적용됩니다. 호스트에 설정된 값이 우선 적용됩니다.",
-    "inherit": "상속하다",
-    "manage": "관리하다",
-    "off": "끄다",
-    "on": "~에",
-    "title": "연결 기본 설정"
-  },
   "keybindings": {
     "copy": "선택 복사",
-    "paste": "반죽",
-    "sendControlCode": "Ctrl+문자 신호를 보내세요",
+    "paste": "붙여넣기",
+    "sendControlCode": "Ctrl+문자 신호를 보냅니다",
     "sendText": "문자 보내기",
     "controlCodeLabel": "편지",
     "textLabel": "보낼 텍스트",
     "appendEnterLabel": "전송 후 Enter 키를 누르세요.",
     "clipboardPermissionNote": "일부 브라우저에서는 처음 사용 시 클립보드 권한을 요청할 수 있습니다.",
     "textRequired": "보낼 텍스트를 입력하세요",
-    "controlCodeRequired": "제어 코드에 한 글자를 입력하세요."
+    "controlCodeRequired": "제어 코드에 한 글자를 입력하세요.",
+    "builtIn": {
+      "copyCtrlC": "선택 영역 복사(Ctrl+C, 텍스트가 선택된 경우에만 가능)",
+      "copyCtrlShiftC": "선택 영역 복사(Ctrl+Shift+C)",
+      "copyCmdC": "선택 영역 복사(Cmd+C)",
+      "pasteCtrlShiftV": "클립보드에서 붙여넣기(Ctrl+Shift+V)",
+      "ctrlW": "Ctrl+W를 눌러 셸로 이동합니다(브라우저 탭을 닫을 수 없도록 차단됨).",
+      "ctrlT": "Ctrl+T를 눌러 셸로 이동(브라우저 탭 열기 차단됨)",
+      "ctrlN": "Ctrl+N을 눌러 셸로 이동하세요 (브라우저 창 열기가 차단됨).",
+      "ctrlQ": "Ctrl+Q를 눌러 셸로 이동합니다(브라우저 종료가 차단됨)."
+    }
   },
   "macros": {
     "title": "매크로",
     "description": "터미널에서 저장된 일련의 명령어를 실행하고, 서버가 보내는 응답에 반응합니다.",
-    "target": "목표",
+    "target": "대상",
     "noTerminal": "터미널이 열려 있지 않습니다",
     "empty": "아직 매크로가 없습니다.",
     "emptyHint": "터미널 로그인, 서비스 재시작 또는 프롬프트 응답과 같은 터미널 작업 흐름을 자동화하는 매크로를 만드세요.",
@@ -391,7 +619,7 @@
     "descriptionLabel": "설명",
     "descriptionPlaceholder": "이 매크로의 기능 (선택 사항)",
     "unsaved": "저장되지 않은 변경 사항",
-    "save": "구하다",
+    "save": "저장",
     "saved": "매크로 저장됨",
     "saveFailed": "매크로를 저장할 수 없습니다.",
     "delete": "삭제",
@@ -399,8 +627,8 @@
     "deleteBody": "\"{{name}}\"는 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
     "deleted": "매크로 삭제됨",
     "cancel": "취소",
-    "run": "달리다",
-    "stop": "멈추다",
+    "run": "실행",
+    "stop": "스톱",
     "running": "달리기...",
     "completed": "매크로 완료",
     "failed": "매크로 실패",
@@ -423,7 +651,7 @@
         "help": "서버가 사용자가 입력한 텍스트(예: 비밀번호 입력창)를 출력할 때까지 일시 중지됩니다."
       },
       "delay": {
-        "label": "정지시키다",
+        "label": "일시 정지",
         "help": "다음 단계로 넘어가기 전에 일정 시간 동안 기다립니다."
       },
       "if": {

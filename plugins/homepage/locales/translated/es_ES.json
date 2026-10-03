@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Inicio",
     "addWidget": "Añadir widget",
+    "noWidgetsInCategory": "No hay widgets en esta categoría.",
     "editWidget": "Editar widget",
     "zoomIn": "Acercar",
     "zoomOut": "Alejar",
@@ -59,6 +60,9 @@
     "maxItems": "Máx. de elementos",
     "showDescription": "Mostrar descripción",
     "widgetRssName": "Fuente RSS",
+    "rssNoFeedUrl": "Configure una URL de feed en la configuración del widget.",
+    "rssLoadError": "No se pudo cargar la fuente",
+    "rssNoItems": "No hay artículos",
     "noHostSelected": "Ningún host seleccionado",
     "displayedMetrics": "Métricas mostradas",
     "metricCpu": "CPU",
@@ -157,6 +161,30 @@
     "compactMode": "Modo compacto",
     "selectHosts": "Seleccionar hosts",
     "listLayout": "Lista",
-    "gridLayout": "Cuadrícula"
+    "gridLayout": "Cuadrícula",
+    "configureUrl": "Establezca una URL en la configuración del widget.",
+    "embeddedContent": "Contenido incrustado",
+    "noBookmarks": "Sin marcadores",
+    "noSections": "No hay secciones configuradas",
+    "noServices": "No hay servicios configurados",
+    "configureLocation": "Establezca una ubicación en la configuración del widget.",
+    "bannerTextPlaceholder": "Texto del banner",
+    "serviceNamePlaceholder": "Mi servicio"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilice la página de inicio",
+      "description": "Visualiza y edita el lienzo de la página de inicio y los enlaces de servicio del panel de control."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Anfitriones privados permitidos",
+      "description": "Nombres de host/direcciones IP privadas o de bucle invertido exactas para los widgets de estado de ping y API personalizadas. Separe las entradas con comas o saltos de línea; omita esquemas, puertos y rutas. Los bloques vacíos representan destinos privados."
+    },
+    "privateCertificateAuthority": {
+      "label": "Autoridad de certificación privada (PEM)",
+      "description": "Paquete de certificados CA de confianza opcional para los hosts permitidos. La verificación de certificados permanece habilitada. Déjelo en blanco para usar el almacén de certificados de confianza del sistema."
+    }
   }
 }

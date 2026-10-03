@@ -38,6 +38,7 @@ function formatFileSize(bytes?: number): string {
 }
 
 function renderTransferProgressToast(
+  t: TFunction,
   toastId: string | number,
   status: TransferProgressResponse,
   liveMbPerSec?: number,
@@ -47,6 +48,7 @@ function renderTransferProgressToast(
 ): void {
   toast.loading(
     <TransferProgressToast
+      t={t}
       status={status}
       liveMbPerSec={liveMbPerSec}
       stalled={stalled}
@@ -265,6 +267,7 @@ export function beginTransferProgressMonitoring(
 
   const progressToast = toast.loading(
     <TransferProgressToast
+      t={t}
       status={initialStatus}
       formatSize={formatFileSize}
     />,
@@ -279,6 +282,7 @@ export function beginTransferProgressMonitoring(
     if (cancelling) return;
     cancelling = true;
     renderTransferProgressToast(
+      t,
       progressToast,
       { ...initialStatus, transferId },
       undefined,
@@ -294,6 +298,7 @@ export function beginTransferProgressMonitoring(
       options.onProgress?.(status);
       const { rate, stalled } = progressTracker.update(status);
       renderTransferProgressToast(
+        t,
         progressToast,
         status,
         rate,
@@ -333,6 +338,7 @@ export function beginTransferProgressMonitoring(
     });
 
   renderTransferProgressToast(
+    t,
     progressToast,
     initialStatus,
     undefined,

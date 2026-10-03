@@ -1,16 +1,40 @@
 {
+  "permissions": {
+    "manage": {
+      "title": "ניהול אישורי ACME",
+      "description": "ראה את סטטוס האישור ובקש אישור חדש כעת."
+    }
+  },
   "settings": {
+    "autoRenew": {
+      "label": "חידוש אוטומטי",
+      "description": "בדקו פעמיים ביום וקבלו תעודה חדשה אם אין, אם היא לא מכסה את הדומיין, או אם היא פגה תוך 30 יום."
+    },
     "domain": {
       "label": "תְחוּם",
-      "placeholder": "termix.example.com",
-      "description": "שם התחום הציבורי עבור התעודה."
+      "description": "שם התחום הציבורי עבור התעודה.",
+      "placeholder": "termix.example.com"
     },
     "email": {
       "label": "אֶלֶקטרוֹנִי",
+      "description": "כתובת דוא\"ל ליצירת קשר עבור חשבון ACME והודעות תפוגה.",
       "placeholder": "admin@example.com"
+    },
+    "provider": {
+      "label": "רשות אישורים",
+      "description": "היכן ניתן להשיג את האישור. השתמשו ב-staging כדי לבדוק מבלי להגיע למגבלות התעריף של Let's Encrypt.",
+      "letsencrypt": "בואו נצפין",
+      "letsencryptStaging": "בואו נצפין (שלבי)",
+      "custom": "ספריית ACME מותאמת אישית"
+    },
+    "directoryUrl": {
+      "label": "כתובת אתר של ספריית ACME",
+      "description": "רק עבור רשות אישורים מותאמת אישית. חייבת להיות כתובת URL מסוג https."
     },
     "challengeType": {
       "label": "סוג האתגר",
+      "description": "איך להוכיח שאתה הבעלים של הדומיין.",
+      "http": "HTTP - דורש גישה לפורט 80 מהאינטרנט",
       "cloudflare": "DNS (Cloudflare) - דורש אסימון API של Cloudflare"
     },
     "cloudflareToken": {
@@ -21,9 +45,14 @@
   "status": {
     "title": "סטטוס התעודה",
     "none": "אין תעודה",
+    "names": "כריכות {{names}}",
+    "issuer": "הונפק על ידי {{issuer}}",
     "expires": "פג תוקף {{date}}",
     "lastIssued": "הוצאה אחרונה {{date}}",
-    "request": "הנפקה / חידוש תעודה",
-    "requesting": "מבקש תעודה..."
+    "lastError": "ניסיון אחרון נכשל: {{error}}",
+    "missing": "הגדר את הדומיין, האימייל והשדות הנדרשים עבור סוג האתגר שלך, ולאחר מכן שמור, לפני בקשת האישור.",
+    "request": "בקשת תעודה עכשיו",
+    "requesting": "מבקש תעודה...",
+    "issued": "תעודה הונפקה והותקנה"
   }
 }

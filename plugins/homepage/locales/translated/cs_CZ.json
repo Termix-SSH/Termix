@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Domovská stránka",
     "addWidget": "Přidat widget",
+    "noWidgetsInCategory": "V této kategorii nejsou žádné widgety",
     "editWidget": "Upravit widget",
     "zoomIn": "Přiblížit",
     "zoomOut": "Oddálit",
@@ -59,6 +60,9 @@
     "maxItems": "Maximální počet položek",
     "showDescription": "Zobrazit popis",
     "widgetRssName": "RSS kanál",
+    "rssNoFeedUrl": "Konfigurace adresy URL kanálu v nastavení widgetu",
+    "rssLoadError": "Nepodařilo se načíst zdroj",
+    "rssNoItems": "Žádné položky",
     "noHostSelected": "Nebyl vybrán žádný hostitel",
     "displayedMetrics": "Zobrazené metriky",
     "metricCpu": "Procesor",
@@ -157,6 +161,30 @@
     "compactMode": "Kompaktní režim",
     "selectHosts": "Vyberte hostitele",
     "listLayout": "Seznam",
-    "gridLayout": "Mřížka"
+    "gridLayout": "Mřížka",
+    "configureUrl": "Nastavte URL adresu v nastavení widgetu",
+    "embeddedContent": "Vložený obsah",
+    "noBookmarks": "Žádné záložky",
+    "noSections": "Žádné sekce nejsou nastaveny",
+    "noServices": "Žádné služby nejsou nastaveny",
+    "configureLocation": "Nastavte umístění v nastavení widgetu",
+    "bannerTextPlaceholder": "Text banneru",
+    "serviceNamePlaceholder": "Moje služba"
+  },
+  "permissions": {
+    "use": {
+      "title": "Použijte domovskou stránku",
+      "description": "Zobrazte a upravte odkazy na služby na domovské stránce a na řídicím panelu."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Povolení soukromí hostitelé",
+      "description": "Přesné soukromé nebo zpětně smyčkové názvy hostitelů/IP adresy pro widgety Ping Status a Custom API. Oddělte položky čárkami nebo znaky nového řádku; vynechte schémata, porty a cesty. Prázdné pole blokuje soukromé cíle."
+    },
+    "privateCertificateAuthority": {
+      "label": "Soukromá certifikační autorita (PEM)",
+      "description": "Volitelný balíček důvěryhodných certifikačních autorit pro hostitele na seznamu povolených. Ověřování certifikátů zůstává povoleno. Pro použití systémového úložiště důvěryhodných certifikátů ponechte pole prázdné."
+    }
   }
 }

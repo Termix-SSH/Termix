@@ -1990,8 +1990,6 @@ router.delete(
  *     summary: Set personal authentication for a shared host protocol
  *     description: Selects one of the authenticated recipient's own credentials, or clears the selection with null. The protocol is "ssh" or one a plugin declares.
  *     tags: [RBAC]
- *     security:
- *       - bearerAuth: []
  */
 router.put(
   "/host-access/:hostId/auth/:protocol",
@@ -2047,8 +2045,6 @@ router.put(
  *   get:
  *     summary: Get the current recipient's shared-host protocol authentication override
  *     tags: [RBAC]
- *     security:
- *       - bearerAuth: []
  */
 router.get(
   "/host-access/:hostId/auth/:protocol",

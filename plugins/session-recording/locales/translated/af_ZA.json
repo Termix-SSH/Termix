@@ -3,8 +3,31 @@
     "sessionLogs": "Sessielogboeke"
   },
   "hosts": {
-    "enableSessionRecording": "Sessie-logging",
+    "enableSessionRecording": "Sessie-opname",
     "enableSessionRecordingDesc": "Neem terminaalsessie-uitvoer op vir latere hersiening"
+  },
+  "permissions": {
+    "view": {
+      "title": "Bekyk sessie-opnames",
+      "description": "Sien en speel jou eie sessie-opnames terug."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Behoud (dae)",
+        "description": "Hoe lank 'n sessie-opname gehou word voordat dit outomaties uitgevee word."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Aktiveer sessie-opname",
+        "description": "Neem terminaaluitvoer vir hierdie gasheer op sodat jy dit later kan terugspeel of aflaai."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Opname"
   },
   "sessionLogs": {
     "title": "Sessielogboeke",
@@ -21,6 +44,17 @@
     "copied": "Gekopieer!",
     "loadError": "Kon nie sessielogboeke laai nie",
     "deleteError": "Kon nie sessielogboek uitvee nie",
-    "filterByHost": "Filtreer volgens gasheer..."
+    "filterByHost": "Filtreer volgens gasheer...",
+    "back": "Terug",
+    "empty": "(leeg)",
+    "noResults": "Geen resultate vir \"{{query}}\"",
+    "hostFallback": "Gasheer {{id}}",
+    "sessionFallback": "Sessie {{id}}"
+  },
+  "player": {
+    "timeline": "Opnametydlyn",
+    "speed": "Terugspeelspoed",
+    "play": "Speel opname",
+    "pause": "Onderbreek opname"
   }
 }

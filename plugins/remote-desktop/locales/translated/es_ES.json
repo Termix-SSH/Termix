@@ -21,7 +21,7 @@
     "files": {
       "title": "Archivos de Drive",
       "parent": "Directorio principal",
-      "refresh": "Refrescar",
+      "refresh": "Actualizar",
       "empty": "Esta carpeta está vacía",
       "listFailed": "No se pudo leer esta carpeta.",
       "download": "Descargar",
@@ -47,7 +47,7 @@
       "cmd": "Comando",
       "ctrl": "Ctrl",
       "alt": "Alt",
-      "shift": "Shift",
+      "shift": "Mayús",
       "win": "Win",
       "stickyActive": "{{key}} (activado - clic para soltar)",
       "stickyInactive": "{{key}} (clic para activar)",
@@ -73,17 +73,22 @@
       "fitToScreen": "Ajustar a la pantalla",
       "switchToTrackpad": "Cambia al modo panel táctil (arrastra para mover el cursor, toca para hacer clic).",
       "switchToTouch": "Cambia al modo táctil (pulsa directamente donde quieras hacer clic)."
-    }
+    },
+    "disabled": "El Escritorio remoto está desactivado. Un administrador puede activarlo en la configuración."
   },
   "hosts": {
     "nativeRdpOpened": "Abierto en Escritorio remoto de Windows",
     "nativeRdpFailed": "No se pudo abrir el Escritorio remoto de Windows.",
     "openNativeRdp": "Abrir en Escritorio remoto de Windows",
     "guac": {
+      "toolbar": "Barra de herramientas",
       "connection": "Conexión",
       "authentication": "Autenticación",
       "storedCredential": "Credencial almacenada",
       "authMethod": "Método de autenticación",
+      "authTypeDirect": "Directa",
+      "authTypeCredential": "Credencial",
+      "authTypeNone": "Ninguna",
       "authTypeNoneDesc": "No se almacenan credenciales. Se le solicitará un nombre de usuario y una contraseña cada vez que se conecte; estos no se guardan.",
       "selectCredential": "Seleccionar una credencial...",
       "connectionSettings": "Configuración de conexión",
@@ -206,7 +211,8 @@
       "colorScheme": "Esquema de color",
       "backspaceKey": "Tecla de retroceso",
       "colorDepth": "Profundidad de color",
-      "resizeMethod": "Método de redimensionamiento"
+      "resizeMethod": "Método de redimensionamiento",
+      "driveNamePlaceholder": "Unidad Termix"
     },
     "remoteDesktop": "Escritorio remoto",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Red virtual",
     "unencryptedShell": "Shell sin cifrar",
-    "docsLink": "Ver documentación"
+    "remoteDesktopNotes": "Notas",
+    "userDefaultsNote": "Los ajustes que no modifiques seguirán la configuración predeterminada de tu servidor.",
+    "connectionOriginNote": "En la aplicación de escritorio, RDP, VNC y Telnet usan el servidor remoto a menos que el host esté configurado como Este dispositivo, que necesita un proxy guacd al que esta máquina pueda acceder. Configure uno en la configuración de Escritorio remoto o por host en Proxy guacd.",
+    "docsLink": "Ver documentación",
+    "connectionOriginGuacamoleNote": "RDP, VNC y Telnet utilizan el servidor remoto a menos que seleccione \"Este dispositivo\", en cuyo caso se necesita un servidor guacd al que esta máquina pueda acceder. Configure uno en la configuración de URL de guacd o por host en la configuración de proxy de guacd."
   },
   "onboarding": {
     "feature_desktop": "Escritorio remoto",
@@ -223,16 +233,18 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Profundidad de color"
+        "label": "Profundidad de color",
+        "description": "Se utiliza para hosts RDP que lo dejan en su configuración predeterminada."
       },
       "resizeMethod": {
-        "label": "Método de redimensionamiento"
+        "label": "Método de redimensionamiento",
+        "description": "Cómo la pantalla remota se ajusta al tamaño de la ventana."
       },
       "resizeDisplayUpdate": "Actualización de pantalla",
       "resizeReconnect": "Reconectar",
       "inherit": "Heredar",
-      "on": "En",
-      "off": "Apagado",
+      "on": "Activado",
+      "off": "Desactivado",
       "forceLossless": {
         "label": "Forzar sin pérdida",
         "description": "Forzar codificación de imagen sin pérdida (más calidad, más ancho de banda)"
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Deshabilitar pegado",
         "description": "Impedir el pegado de texto en la sesión remota"
-      }
+      },
+      "group": "Configuración predeterminada de Escritorio remoto",
+      "colorDepth16": "16 bits",
+      "colorDepth24": "24 bits",
+      "colorDepth32": "32 bits"
     },
     "admin": {
+      "enabled": {
+        "label": "Habilitar Escritorio remoto",
+        "description": "Permitir conexiones RDP, VNC y Telnet a través de guacd."
+      },
       "guacdUrl": {
-        "label": "URL de guacd"
+        "label": "URL de guacd",
+        "description": "Donde guacd escucha, como host:puerto. Las variables de entorno GUACD_URL, GUACD_HOST y GUACD_PORT anulan esto.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "Puerto RDP"
+      },
+      "vncPort": {
+        "label": "puerto VNC"
+      },
+      "telnetPort": {
+        "label": "Puerto Telnet"
+      },
+      "rdpSecurity": {
+        "label": "Modo de seguridad RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignorar errores de certificado"
+      },
+      "guacamoleConfig": {
+        "label": "Configuración de guacd"
+      },
+      "enableToolbar": {
+        "label": "Barra de herramientas de escritorio remoto",
+        "description": "Mostrar la barra de herramientas en las sesiones RDP, VNC y Telnet."
+      },
+      "displayGroup": "Mostrar",
+      "displayDefaultsTab": "Escritorio remoto"
+    }
+  },
+  "palette": {
+    "connectRdp": "Conéctese mediante RDP",
+    "connectVnc": "Conéctate con VNC",
+    "connectTelnet": "Conéctese con Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Compartir sesiones de escritorio remoto",
+      "description": "Permitir que las salas de colaboración y de uso compartido de sesiones muestren las sesiones RDP, VNC y Telnet de este usuario a otros."
     }
   },
   "errors": {

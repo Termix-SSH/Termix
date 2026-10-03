@@ -41,7 +41,13 @@
         "lastSessionDescription": "Die Tab-Anordnung wird automatisch aktualisiert. Wenden Sie sie an, um Ihre geöffneten Tabs wiederherzustellen.",
         "lastUsed": "Zuletzt verwendet {{time}}",
         "neverUsed": "Nie angewendet",
-        "tabsSkipped": "Arbeitsbereich angewendet — {{count}} Registerkarte(n) übersprungen (Host existiert nicht mehr): {{names}}"
+        "tabsSkipped": "Arbeitsbereich angewendet, aber {{count}} Registerkarte(n) wurden übersprungen, da ihr Host nicht mehr existiert: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "vor {{count}} Min.",
+          "hours": "vor {{count}} Std.",
+          "days": "vor {{count}} Tagen"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Arbeitsbereiche",
     "workflow_workspaces_desc": "Speichern Sie einen Satz geöffneter Tabs und öffnen Sie das gesamte Layout später wieder."
+  },
+  "permissions": {
+    "use": {
+      "title": "Arbeitsbereiche nutzen",
+      "description": "Speichern, anwenden und verwalten Sie gespeicherte Tab-Layouts."
+    }
   },
   "hosts": {
     "docsLink": "Dokumentation anzeigen"

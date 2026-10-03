@@ -3,8 +3,31 @@
     "sessionLogs": "Sitzungsprotokolle"
   },
   "hosts": {
-    "enableSessionRecording": "Sitzungsprotokollierung",
+    "enableSessionRecording": "Sitzungsaufzeichnung",
     "enableSessionRecordingDesc": "Terminal-Sitzungsausgabe zur späteren Überprüfung aufzeichnen"
+  },
+  "permissions": {
+    "view": {
+      "title": "Sitzungsaufzeichnungen ansehen",
+      "description": "Sehen und spielen Sie Ihre eigenen Session-Aufnahmen ab."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Aufbewahrungsdauer (Tage)",
+        "description": "Wie lange eine Sitzungsaufzeichnung aufbewahrt wird, bevor sie automatisch gelöscht wird."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Sitzungsaufzeichnung aktivieren",
+        "description": "Zeichnen Sie die Terminalausgabe dieses Hosts auf, damit Sie sie später wiedergeben oder herunterladen können."
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Aufnahme"
   },
   "sessionLogs": {
     "title": "Sitzungsprotokolle",
@@ -21,6 +44,17 @@
     "copied": "Kopiert!",
     "loadError": "Fehler beim Laden der Sitzungsprotokolle",
     "deleteError": "Fehler beim Löschen des Sitzungsprotokolls",
-    "filterByHost": "Nach Host filtern..."
+    "filterByHost": "Nach Host filtern...",
+    "back": "Zurück",
+    "empty": "(leer)",
+    "noResults": "Keine Ergebnisse für \"{{query}}\"",
+    "hostFallback": "Host {{id}}",
+    "sessionFallback": "Sitzung {{id}}"
+  },
+  "player": {
+    "timeline": "Aufnahmezeitplan",
+    "speed": "Wiedergabegeschwindigkeit",
+    "play": "Wiedergabe",
+    "pause": "Aufnahme pausieren"
   }
 }

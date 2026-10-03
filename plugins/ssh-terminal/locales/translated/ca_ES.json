@@ -44,6 +44,7 @@
     "reconnect": "Reconnecta",
     "reconnected": "S'ha reconnectat correctament",
     "reconnecting": "Reconnectant... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Connexió perduda, s'està tornant a connectar...",
     "searchCaseSensitive": "Coincideix amb el cas",
     "searchClose": "Tanca (Escapada)",
     "searchNext": "Pròxima coincidència (Intro)",
@@ -79,7 +80,16 @@
     "clipboardReadFailed": "No s'ha pogut llegir del porta-retalls. Assegureu-vos que els permisos del porta-retalls estiguin concedits.",
     "clipboardWriteFailed": "No s'ha pogut copiar al porta-retalls. Assegureu-vos que la pàgina es serveix per HTTPS o localhost.",
     "connected": "Connectat",
-    "totpCodeLabel": "Codi de verificació"
+    "totpCodeLabel": "Codi de verificació",
+    "duplicateTab": "Pestanya duplicada",
+    "imageChooseFile": "Trieu un fitxer d'imatge",
+    "imageUploaded": "Imatge penjada: {{path}}",
+    "imageClipboardUnavailable": "Aquest navegador no pot llegir imatges del porta-retalls",
+    "imageClipboardEmpty": "No s'ha trobat cap imatge al porta-retalls",
+    "localShell": "Intèrpret d'ordres del terminal local",
+    "autocompleteHintComplete": "Tabulador o Intro per completar",
+    "autocompleteHintNavigate": "↑↓ per navegar",
+    "autocompleteHintClose": "Esc per tancar"
   },
   "terminalToolbar": {
     "detachTmux": "Desconnecta tmux",
@@ -108,7 +118,10 @@
     "searchPlaceholder": "Historial de cerca...",
     "clearAll": "Esborra-ho tot",
     "noHistoryEntries": "Sense entrades a l'historial",
-    "trackingDisabled": "El seguiment de l'historial està desactivat"
+    "trackingDisabled": "El seguiment de l'historial està desactivat",
+    "trackingDisabledHint": "Activa l'Historial d'ordres a la pestanya Terminal SSH d'aquest amfitrió.",
+    "commandCount_one": "Ordre {{count}}",
+    "commandCount_other": "Comandes {{count}}"
   },
   "touchInput": {
     "enabled": "Activa l'entrada tàctil",
@@ -147,15 +160,21 @@
     "admin": {
       "group": {
         "touch": "Entrada tàctil",
-        "images": "Emmagatzematge d'imatges"
+        "images": "Emmagatzematge d'imatges",
+        "sessions": "Sessions",
+        "newHosts": "Nous amfitrions"
       },
       "sessionTimeoutMinutes": {
         "label": "Persistència de la sessió terminal",
-        "description": "Quant de temps es manté actiu un terminal desconnectat al servidor abans de tancar-lo. Mín 1 · Màx 1440 minuts. Per a sessions que han de durar més temps, activeu Auto-Tmux a l'amfitrió."
+        "description": "Quant de temps es manté actiu un terminal desconnectat al servidor abans de tancar-lo. Mín 1, màxim 1440 minuts. Per a sessions que han de durar més temps, activeu Auto-Tmux a l'amfitrió."
       },
       "commandHistoryEnabled": {
         "label": "Historial de comandaments",
         "description": "Permet l'enregistrament de l'historial d'ordres. Quan està desactivat, l'historial no es desa independentment de la configuració de cada host."
+      },
+      "commandHistoryForNewHosts": {
+        "label": "Historial d'ordres per a nous amfitrions",
+        "description": "Si els nous hosts comencen amb l'historial d'ordres activat."
       },
       "imageStorageMode": {
         "label": "Mode d'emmagatzematge",
@@ -165,24 +184,50 @@
         "remoteSftp": "Remot (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Directori local"
+        "label": "Directori local",
+        "description": "Ruta absoluta al backend de Termix on el mode local escriu les imatges. No es mostra mai després de desar. Un camp buit utilitza TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
         "label": "Camí d'amfitrió",
         "description": "La vista del costat de l'amfitrió del directori local que reben els agents del terminal."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)"
+        "label": "TTL (ms)",
+        "description": "Quant de temps es conserva una imatge carregada, en mil·lisegons. Si es buida, s'utilitza TERMIX_IMAGE_TTL_MS o una hora."
       },
       "imageMaxCount": {
-        "label": "Nombre màxim d'imatges"
+        "label": "Nombre màxim d'imatges",
+        "description": "La majoria de les imatges es conserven alhora. Si es buida, s'utilitza TERMIX_MAX_IMAGE_COUNT o 100."
       },
       "imageMaxBytes": {
-        "label": "Bytes d'emmagatzematge màxims"
+        "label": "Bytes d'emmagatzematge màxims",
+        "description": "La majoria dels bytes d'imatges es conserven alhora. Si es buida, s'utilitzen TERMIX_MAX_IMAGE_STORAGE_BYTES o 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Mantenir les sessions després de la desconnexió",
+        "description": "Mantingueu un terminal desconnectat actiu al servidor durant el temps indicat anteriorment, de manera que la reobertura de la seva pestanya es reprengui on s'havia quedat."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
         "description": "Executa els terminals dels nous hosts dins de tmux perquè les sessions sobrevisquin a les desconnexions (necessita tmux al host)"
+      },
+      "newHostTheme": {
+        "label": "Tema per a nous amfitrions",
+        "description": "El tema del terminal amb què comença un nou amfitrió."
+      },
+      "newHostFontFamily": {
+        "label": "Font per a nous amfitrions",
+        "description": "La font de terminal amb què comença un nou host."
+      },
+      "newHostFontSize": {
+        "label": "Mida de la lletra per als nous amfitrions",
+        "description": "La mida de la lletra del terminal amb què comença un nou host, en píxels."
+      },
+      "newHostCursorStyle": {
+        "label": "Estil del cursor per a nous amfitrions"
+      },
+      "newHostCursorBlink": {
+        "label": "Cursor intermitent per a nous amfitrions"
       }
     },
     "host": {
@@ -190,12 +235,135 @@
         "label": "Habilita la barra d'eines del terminal",
         "description": "Mostra una barra d'eines d'accés ràpid acoblada al terminal actiu per a les eines i les estadístiques en directe d'aquest amfitrió"
       },
+      "terminalToolbarPosition": {
+        "label": "Posició de la barra d'eines",
+        "description": "On es troba la barra d'eines al terminal. Encara la podeu arrossegar des d'allà.",
+        "bottom": "Centre inferior",
+        "bottomLeft": "A baix a l'esquerra",
+        "bottomRight": "A baix a la dreta",
+        "top": "Centre superior",
+        "topLeft": "A dalt a l'esquerra",
+        "topRight": "A dalt a la dreta"
+      },
+      "terminalToolbarStartState": {
+        "label": "Estat inicial de la barra d'eines",
+        "description": "Si la barra d'eines s'obre expandida o minimitzada quan el terminal es connecta",
+        "expanded": "Expandit",
+        "collapsed": "Minimitzat"
+      },
+      "terminalToolbarDisplay": {
+        "label": "Mode de visualització de la barra d'eines",
+        "description": "Com es mostren els botons de la barra d'eines. L'opció \"Últim ús\" conserva el que heu seleccionat a la barra d'eines.",
+        "remember": "Últim ús",
+        "icon": "Només icona",
+        "labeled": "Icones i etiquetes",
+        "expanded": "Ampliat amb estadístiques"
+      },
+      "terminalToolbarShowStatus": {
+        "label": "Mostra les estadístiques en directe",
+        "description": "Mostra les estadístiques de l'amfitrió en directe a sobre dels botons de la barra d'eines en mode expandit"
+      },
+      "terminalToolbarFade": {
+        "label": "Esvaeix-se quan està inactiu",
+        "description": "Desapareix la barra d'eines fins que hi passes el cursor per sobre"
+      },
       "enableCommandHistory": {
         "label": "Historial de comandaments",
         "description": "Enregistra les ordres executades en aquest terminal per a l'historial i l'autocompleció"
       },
       "enableTerminal": {
-        "label": "Habilita el terminal"
+        "label": "Habilita el terminal",
+        "description": "Ofereix un terminal SSH per a aquest host."
+      },
+      "inheritAppearance": {
+        "label": "Utilitza els valors predeterminats de l'usuari"
+      },
+      "theme": {
+        "label": "Tema"
+      },
+      "cursorBlink": {
+        "label": "Cursor intermitent"
+      },
+      "cursorStyle": {
+        "label": "Estil del cursor"
+      },
+      "fontSize": {
+        "label": "Mida de la lletra"
+      },
+      "fontFamily": {
+        "label": "Font"
+      },
+      "scrollback": {
+        "label": "Desplaçament enrere"
+      },
+      "letterSpacing": {
+        "label": "Espaiat de les lletres"
+      },
+      "lineHeight": {
+        "label": "Alçada de la línia"
+      },
+      "bellStyle": {
+        "label": "Campana"
+      },
+      "minimumContrastRatio": {
+        "label": "Relació de contrast mínima"
+      },
+      "backgroundImage": {
+        "label": "Imatge de fons"
+      },
+      "backgroundImageOpacity": {
+        "label": "Opacitat de la imatge de fons"
+      },
+      "customThemeColors": {
+        "label": "Colors de tema personalitzats"
+      },
+      "rightClickSelectsWord": {
+        "label": "Clic dret per seleccionar una paraula"
+      },
+      "macOptionIsMeta": {
+        "label": "L'opció és Meta"
+      },
+      "fastScrollModifier": {
+        "label": "Tecla de desplaçament ràpid"
+      },
+      "fastScrollSensitivity": {
+        "label": "Velocitat de desplaçament ràpida"
+      },
+      "backspaceMode": {
+        "label": "Retrocés"
+      },
+      "autoMosh": {
+        "label": "Mosh automàtic"
+      },
+      "moshCommand": {
+        "label": "Comandament Mosh"
+      },
+      "autoTmux": {
+        "label": "Multiplicador automàtic"
+      },
+      "useSSHTitle": {
+        "label": "Utilitzeu el títol SSH"
+      },
+      "syntaxHighlighting": {
+        "label": "Ressaltat de sintaxi"
+      },
+      "syntaxHighlightingOptions": {
+        "label": "Categories de ressaltat sintàctic"
+      },
+      "linkClickBehavior": {
+        "label": "Clic d'enllaç"
+      },
+      "localEcho": {
+        "label": "Eco local"
+      },
+      "passwordPromptAutoFill": {
+        "label": "Oferiu-vos per omplir les sol·licituds de contrasenya"
+      },
+      "sudoPasswordAutoFill": {
+        "label": "Empleneu les instruccions de sudo"
+      },
+      "autoReconnect": {
+        "label": "Torna a connectar-se automàticament"
       }
     },
     "user": {
@@ -210,29 +378,52 @@
       "linkClickBehavior": {
         "label": "Clic d'enllaç del terminal",
         "description": "Comportament predeterminat en fer clic a enllaços al terminal"
+      },
+      "customThemes": {
+        "label": "Temes desats"
       }
     }
   },
   "palette": {
     "localTerminal": "Terminal local"
   },
+  "permissions": {
+    "sessions": {
+      "title": "Utilitza sessions de terminal en directe",
+      "description": "Permet que altres funcions, com ara compartir sessions i gravar, arribin a les sessions de terminal en directe."
+    },
+    "history": {
+      "title": "Llegeix l'historial d'ordres",
+      "description": "Permet que altres funcions, com ara l'assistent d'IA, llegeixin el teu historial d'ordres."
+    }
+  },
   "hosts": {
+    "tabTerminal": "Terminal",
     "addHost": "Afegeix amfitrió",
     "applyGlobalThemeTooltip": "Aplica aquest tema",
     "backgroundImageDesc": "URL opcional per a una imatge de fons del terminal",
     "backgroundImageLabel": "URL de la imatge de fons",
     "backgroundImageOpacityLabel": "Opacitat de la imatge de fons",
     "backspaceMode": "Mode de retrocés",
+    "backspaceModeControlH": "Control-H (BS)",
     "backspaceModeLabel": "Mode de retrocés",
+    "backspaceModeNormal": "Normal (SUP)",
     "behaviorAndAdvanced": "Comportament i avançat",
     "bellStyle": "Estil de campana",
+    "bellStyleBoth": "Tots dos",
     "bellStyleLabel": "Estil de campana",
+    "bellStyleNone": "Cap",
+    "bellStyleSound": "So",
+    "bellStyleVisual": "Visual",
     "colorTheme": "Tema de color",
     "cursorBlink": "Parpelleig del cursor",
     "cursorBlinking": "Cursor parpellejant",
     "cursorBlinkingDesc": "Habilita l'animació intermitent per al cursor del terminal",
     "cursorStyle": "Estil del cursor",
+    "cursorStyleBar": "Bar",
+    "cursorStyleBlock": "Bloc",
     "cursorStyleLabel": "Estil del cursor",
+    "cursorStyleUnderline": "Subratllat",
     "customThemeAnsiColors": "Colors ANSI",
     "customThemeBackground": "Fons",
     "customThemeBlack": "Negre",
@@ -264,7 +455,10 @@
     "enableAutoTmux": "Activa la transmissió automàtica",
     "enableAutoTmuxDesc": "Mantingueu actiu el vostre shell i tot el que s'hi executi després de desconnexions i reinicis del navegador executant-lo dins de tmux (tmux ha d'estar instal·lat a l'amfitrió)",
     "fastScrollModifier": "Modificador de desplaçament ràpid",
+    "fastScrollModifierAlt": "Alt",
+    "fastScrollModifierCtrl": "Ctrl",
     "fastScrollModifierLabel": "Modificador de desplaçament ràpid",
+    "fastScrollModifierShift": "Majúscules",
     "fastScrollSensitivity": "Sensibilitat de desplaçament ràpid",
     "fastScrollSensitivityLabel": "Sensibilitat de desplaçament ràpid",
     "fontFamily": "Família tipogràfica",
@@ -280,14 +474,12 @@
     "lineHeight": "Alçada de la línia",
     "lineHeightLabel": "Alçada de la línia",
     "linkClickBehaviorConfirm": "Mostra la finestra emergent per obrir o copiar",
-    "linkClickBehaviorDefault": "Per defecte (segueu la configuració de l'aplicació)",
-    "linkClickBehaviorDesc": "Controla què passa quan feu clic a un enllaç al terminal. Feu servir \"Per defecte\" per seguir la configuració a nivell d'aplicació.",
+    "linkClickBehaviorDesc": "Controla què passa quan feu clic a un enllaç al terminal. Feu servir \"Per defecte\" per seguir la configuració del nivell d'aplicació.",
     "linkClickBehaviorDirect": "Obre directament",
     "linkClickBehaviorLabel": "Comportament dels clics d'enllaç",
     "loadingHost": "S'està carregant l'amfitrió...",
     "localEchoAuto": "Automàtic",
-    "localEchoDefault": "Utilitza la configuració global",
-    "localEchoDesc": "Prediu localment les pulsacions de tecles imprimibles de manera segura en connexions lentes. Les sol·licituds de contrasenya i l'entrada de control no es reprodueixen mai.",
+    "localEchoDesc": "Prediu les pulsacions de tecles imprimibles de manera segura localment en connexions lentes. Les sol·licituds de contrasenya i l'entrada de control no es reprodueixen mai.",
     "localEchoLabel": "Eco local",
     "localEchoOff": "Desactivat",
     "localEchoOn": "Sempre activat",
@@ -297,6 +489,10 @@
     "moshCommandLabel": "Comandament Mosh",
     "noSavedThemes": "Encara no hi ha temes desats",
     "none": "Cap",
+    "passwordPromptAutoFillDesc": "Ofereix-te a introduir la contrasenya desada quan el terminal te la demani. Desactiva aquesta opció per no introduir mai cap contrasenya automàticament en aquest host.",
+    "passwordPromptAutoFillLabel": "Ofereix l'emplenament automàtic de la contrasenya",
+    "autoReconnectLabel": "Reconnexió automàtica",
+    "autoReconnectDesc": "Es torna a connectar sol quan la connexió SSH cau, com ara després d'una fallada de xarxa o de la suspensió. Manté el desplaçament enrere.",
     "rightClickSelectsWord": "Clic dret Selecciona Word",
     "rightClickSelectsWordLabel": "Feu clic amb el botó dret Selecciona Word",
     "rightClickSelectsWordShortDesc": "Seleccioneu la paraula sota el cursor en fer clic amb el botó dret",
@@ -328,7 +524,39 @@
     "theme": "Tema",
     "themePreview": "Vista prèvia del tema",
     "useSSHTitleDesc": "Actualitza el títol de la pestanya a partir del títol de la finestra de l'intèrpret d'ordres en comptes del nom de l'amfitrió",
-    "useSSHTitleLabel": "Utilitza el títol de la finestra SSH"
+    "useSSHTitleLabel": "Utilitza el títol de la finestra SSH",
+    "enableTunnel": "Habilita el túnel",
+    "enableFileManager": "Habilita el gestor de fitxers",
+    "enableDocker": "Activa Docker",
+    "startupSnippet": "Fragment d'inici",
+    "quickActions": "Accions ràpides",
+    "proxmoxLastSyncStatus": {
+      "success": "Èxit"
+    },
+    "proxmoxResultSkippedNoIp": "{{count}} omès (no s'ha trobat cap IP)",
+    "proxmoxStatsUrlCopied": "URL de les estadístiques de Proxmox copiada al porta-retalls",
+    "rdpUrlCopied": "URL RDP copiada",
+    "vncUrlCopied": "URL de VNC copiada",
+    "filterAuthStepca": "Pas CA",
+    "guac": {
+      "noCredential": "Sense credencials (credencials directes a continuació)",
+      "authTypeDirect": "Directe",
+      "authTypeCredential": "Credencial",
+      "authTypeNone": "Cap",
+      "recordingPath": "Ruta d'enregistrament",
+      "recordingName": "Nom de l'enregistrament",
+      "saveHostFirst": "Primer desa l'amfitrió.",
+      "sharingOptionsAfterSave": "Les opcions de compartició estan disponibles després que s'hagi desat l'amfitrió.",
+      "permissionLevel": "Nivell de permís",
+      "typeHeader": "Tipus",
+      "targetHeader": "Objectiu",
+      "permissionHeader": "Permís",
+      "cancelBtn": "Cancel·la",
+      "savingBtn": "Desant...",
+      "updateHostBtn": "Actualitza l'amfitrió",
+      "addHostBtn": "Afegeix amfitrió"
+    },
+    "filterAuthVault": "Volta"
   },
   "nav": {
     "history": "Història",
@@ -354,16 +582,6 @@
     "startRecording": "Comença a gravar",
     "stopRecording": "Atura l'enregistrament"
   },
-  "terminalDefaults": {
-    "clearAll": "Esborra-ho tot",
-    "description": "Defineix els valors que cada amfitrió hereta tret que els sobreescrigui.",
-    "dialogDescription": "Això s'aplica als amfitrions que deixen una configuració sense definir. Qualsevol cosa definida en un amfitrió guanya.",
-    "inherit": "Heretar",
-    "manage": "Gestiona",
-    "off": "Desactivat",
-    "on": "Activat",
-    "title": "Valors predeterminats de connexió"
-  },
   "keybindings": {
     "copy": "Copia la selecció",
     "paste": "Enganxa",
@@ -374,7 +592,17 @@
     "appendEnterLabel": "Premeu Intro després d'enviar",
     "clipboardPermissionNote": "Pot demanar permisos al porta-retalls en el primer ús en alguns navegadors.",
     "textRequired": "Introduïu el text per enviar",
-    "controlCodeRequired": "Introduïu una sola lletra per al codi de control"
+    "controlCodeRequired": "Introduïu una sola lletra per al codi de control",
+    "builtIn": {
+      "copyCtrlC": "Copiar la selecció (Ctrl+C, només quan hi ha text seleccionat)",
+      "copyCtrlShiftC": "Copiar la selecció (Ctrl+Maj+C)",
+      "copyCmdC": "Copiar la selecció (Cmd+C)",
+      "pasteCtrlShiftV": "Enganxa des del porta-retalls (Ctrl+Maj+V)",
+      "ctrlW": "Envia Ctrl+W a l'intèrpret d'ordres (bloquejat per tancar la pestanya del navegador)",
+      "ctrlT": "Envia Ctrl+T a l'intèrpret d'ordres (bloquejat per obrir la pestanya del navegador)",
+      "ctrlN": "Envia Ctrl+N a l'intèrpret d'ordres (bloquejat per obrir la finestra del navegador)",
+      "ctrlQ": "Envia Ctrl+Q a l'intèrpret d'ordres (bloquejat per tancar el navegador)"
+    }
   },
   "macros": {
     "title": "Macros",
@@ -437,7 +665,7 @@
     },
     "send": {
       "text": "Ordre o text",
-      "textPlaceholder": "reinici de systemctl a nginx",
+      "textPlaceholder": "systemctl reinicia nginx",
       "pressEnter": "Premeu Intro després d'enviar",
       "pressEnterHelp": "Desactiva això per escriure text sense enviar-lo."
     },

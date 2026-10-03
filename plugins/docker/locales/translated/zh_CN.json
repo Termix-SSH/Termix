@@ -21,6 +21,11 @@
     "ports": "端口",
     "noPorts": "无端口",
     "start": "启动",
+    "stop": "停止",
+    "status": "状态",
+    "actions": "操作",
+    "cardView": "卡片视图",
+    "listView": "列表视图",
     "confirmRemoveContainer": "确定要移除容器 '{{name}}' 吗？此操作无法撤销。",
     "runningContainerWarning": "警告：此容器正在运行。移除操作将先停止容器。",
     "loadingContainers": "正在加载容器...",
@@ -65,7 +70,7 @@
     "blockIo": "块 I/O",
     "read": "读取",
     "write": "写入",
-    "pids": "PIDs",
+    "pids": "进程 ID",
     "containerInformation": "容器信息",
     "name": "名称",
     "id": "ID",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "访问控制台需要容器处于运行状态",
     "verificationCodePrompt": "输入验证码",
     "totpVerificationFailed": "TOTP 验证失败，请重试。",
+    "browserSignInFailed": "登录失败，请重试。",
     "connectedTo": "已连接到 {{containerName}}",
     "disconnected": "已断开连接",
     "consoleError": "控制台错误",
@@ -93,7 +99,10 @@
     "logs": "日志",
     "stats": "统计",
     "consoleTab": "控制台",
-    "startContainerToAccess": "启动容器以访问控制台"
+    "startContainerToAccess": "启动容器以访问控制台",
+    "noHostSelected": "未选择主机",
+    "failedToFetchLogs": "获取日志失败：{{error}}",
+    "failedToDownloadLogs": "日志下载失败：{{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "在任何运行 Docker 的主机上查看容器、读取日志及监控运行状态。"
   },
+  "terminal": {
+    "retry": "重试",
+    "clipboardReadFailed": "从剪贴板读取失败。请确保已授予剪贴板权限。",
+    "clipboardWriteFailed": "复制到剪贴板失败。请确保页面通过 HTTPS 或 localhost 提供服务。"
+  },
+  "permissions": {
+    "use": {
+      "title": "使用 Docker",
+      "description": "在启用了 Docker 的主机上打开 Docker 管理器和容器控制台。"
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "启用 Docker"
+        "label": "启用 Docker",
+        "description": "管理此主机上的容器。"
       },
       "containerRuntime": {
         "label": "容器运行时",
@@ -116,15 +137,11 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"
+    "remoteServerRequired": "需要远程服务器。请在设置中连接远程服务器以使用此连接类型。"
   },
   "hosts": {
     "docsLink": "查看文档",
     "hostNotFound": "未找到主机",
     "loadingHost": "正在加载主机..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "从剪贴板读取失败。请确保已授予剪贴板权限。",
-    "clipboardWriteFailed": "复制到剪贴板失败。请确保页面通过 HTTPS 或 localhost 提供服务。"
   }
 }

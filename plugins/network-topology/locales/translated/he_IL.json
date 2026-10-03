@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "המקור והיעד חייבים להיות שונים",
     "exportJSON": "ייצוא JSON",
     "importJSON": "ייבוא JSON",
-    "terminal": "מָסוֹף",
-    "fileManager": "מנהל הקבצים",
-    "tunnel": "מִנהָרָה",
-    "docker": "דוקר",
     "serverStats": "מדדי מארח",
-    "hostMetrics": "מדדי מארח",
     "noNodes": "עדיין אין צמתים"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "צמתים {{count}}"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש בגרף הרשת",
+      "description": "הצג וערוך את גרף טופולוגיית הרשת."
+    }
   },
   "hosts": {
     "docsLink": "הצג מסמכים"

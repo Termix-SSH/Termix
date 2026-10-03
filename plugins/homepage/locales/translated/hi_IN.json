@@ -18,6 +18,7 @@
   "homepage": {
     "title": "होमपेज",
     "addWidget": "विजेट जोड़ें",
+    "noWidgetsInCategory": "No widgets in this category",
     "editWidget": "विजेट संपादित करें",
     "zoomIn": "ज़ूम इन",
     "zoomOut": "ज़ूम आउट",
@@ -38,7 +39,7 @@
     "description": "विवरण",
     "color": "रंग",
     "timezone": "समय क्षेत्र",
-    "invalidTimezone": "समय क्षेत्र अमान्य है। कृपया IANA नाम का उपयोग करें, जैसे कि America/New_York",
+    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
     "showSeconds": "सेकंड दिखाएँ",
     "format12h": "12-घंटे",
     "content": "सामग्री",
@@ -59,6 +60,9 @@
     "maxItems": "अधिकतम आइटम",
     "showDescription": "विवरण दिखाएं",
     "widgetRssName": "RSS फ़ीड",
+    "rssNoFeedUrl": "Configure a feed URL in widget settings",
+    "rssLoadError": "Could not load feed",
+    "rssNoItems": "No items",
     "noHostSelected": "कोई होस्ट चयनित नहीं",
     "displayedMetrics": "प्रदर्शित मेट्रिक्स",
     "metricCpu": "CPU",
@@ -81,7 +85,7 @@
     "uptimeUnavailable": "अपटाइम अनुपलब्ध",
     "uptimeLabel": "अपटाइम",
     "overviewVersion": "संस्करण",
-    "overviewUpdateLabel": "अद्यतन",
+    "overviewUpdateLabel": "अपडेट करें",
     "overviewUpdateAvailable": "अपडेट उपलब्ध है",
     "overviewDatabase": "डेटाबेस",
     "overviewUptime": "अपटाइम",
@@ -157,6 +161,30 @@
     "compactMode": "संक्षिप्त मोड",
     "selectHosts": "होस्ट चुनें",
     "listLayout": "सूची",
-    "gridLayout": "ग्रिड"
+    "gridLayout": "ग्रिड",
+    "configureUrl": "Set a URL in the widget settings",
+    "embeddedContent": "Embedded content",
+    "noBookmarks": "No bookmarks",
+    "noSections": "No sections set up",
+    "noServices": "No services set up",
+    "configureLocation": "Set a location in the widget settings",
+    "bannerTextPlaceholder": "Banner text",
+    "serviceNamePlaceholder": "My service"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use the homepage",
+      "description": "View and edit the homepage canvas and dashboard service links."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Allowed private hosts",
+      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+    },
+    "privateCertificateAuthority": {
+      "label": "Private certificate authority (PEM)",
+      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+    }
   }
 }

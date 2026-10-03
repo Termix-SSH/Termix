@@ -1,20 +1,30 @@
 {
   "editor": {
     "label": "OPKSSH",
-    "description": "Masuk ke host ini menggunakan penyedia identitas Anda, bukan kata sandi atau kunci. Membutuhkan OPKSSH yang terpasang di server.",
-    "docs": "Lihat dokumen"
+    "description": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
+    "docs": "View docs"
   },
   "dialog": {
-    "title": "Otentikasi OPKSSH Diperlukan",
-    "description": "Lakukan otentikasi di browser Anda untuk melanjutkan. Sesi ini akan tetap berlaku selama 24 jam.",
-    "openBrowser": "Buka Browser untuk Melakukan Otentikasi",
-    "waiting": "Menunggu otentikasi di browser...",
-    "authenticating": "Memproses otentikasi...",
+    "title": "OPKSSH Authentication Required",
+    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "openBrowser": "Open Browser to Authenticate",
+    "waiting": "Waiting for authentication in browser...",
+    "authenticating": "Processing authentication...",
     "signInWith": "Masuk dengan {{provider}}"
   },
   "errors": {
-    "authFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
-    "timeout": "Autentikasi habis waktu. Silakan coba lagi."
+    "authFailed": "Authentication failed. Please check your credentials and try again.",
+    "timeout": "Authentication timed out. Please try again."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"

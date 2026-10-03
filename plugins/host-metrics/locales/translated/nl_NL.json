@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Hoststatistieken"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Geheugen",
@@ -160,7 +163,6 @@
       "firewallPersist": "Persist-regels",
       "firewallPersisted": "De firewallregels bleven van kracht.",
       "wireguard": "WireGuard",
-      "tailscale": "Staartschaal",
       "wgNotInstalled": "WireGuard is niet geïnstalleerd op deze host.",
       "wgNoInterfaces": "Er zijn geen WireGuard-interfaces geconfigureerd.",
       "wgInterfaceUp": "Breng ter sprake",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Laatste handdruk",
       "wgHandshakeNever": "Nooit",
       "wgTransfer": "Overdracht",
-      "tsNotInstalled": "Tailscale is niet geïnstalleerd op deze host.",
-      "tsRunning": "Rennen",
-      "tsStopped": "Gestopt",
-      "tsEnable": "Verbinden",
-      "tsDisable": "Verbinding verbreken",
-      "tsEnabling": "Verbinding maken met Tailscale...",
-      "tsDisabling": "Verbinding met Tailscale verbreken...",
-      "tsEnabled": "Aangesloten staartschaal",
-      "tsDisabled": "Staartschaal losgekoppeld",
-      "tsIPs": "Tailscale IP-adressen",
-      "tsPeers": "Leeftijdsgenoten",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Uitgangsknooppunt",
-      "tsExitNodeActive": "Uitgangsknooppunt actief",
-      "tsHostname": "Hostnaam"
+      "wgNoPeers": "Geen gelijken"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "naar",
     "apply": "Toepassen",
     "viewHistory": "Geschiedenis bekijken"
-  },
-  "nav": {
-    "hostMetrics": "Hoststatistieken"
   },
   "hosts": {
     "tabHostMetrics": "Hoststatistieken",
@@ -265,6 +249,9 @@
     "noHostSelected": "Geen host geselecteerd",
     "selectHost": "Selecteer een host..."
   },
+  "terminalStatus": {
+    "unavailable": "Live statistieken niet beschikbaar"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Aangesloten"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik hoststatistieken",
+      "description": "Bekijk hoststatistieken en gebruik de hostmanagers (services, pakketten, firewall en meer) op hosts die u kunt bereiken."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metingen interval (seconden)",
+        "description": "De frequentie waarmee een bekeken host wordt bemonsterd, tenzij de host zelf een interval instelt."
+      },
+      "historyRetentionDays": {
+        "label": "Bewaartermijn van de gegevens (dagen)",
+        "description": "Hoe lang worden meetwaarden bewaard voor de historische grafieken?"
+      },
+      "enabledForNewHosts": {
+        "label": "Statistieken ingeschakeld voor nieuwe hosts",
+        "description": "Of nieuwe hosts starten met ingeschakelde metrische gegevensverzameling."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperatuureenheid",
+        "description": "Hoe temperaturen worden weergegeven in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Verzamel meetgegevens"
+      },
+      "metricsInterval": {
+        "label": "Metingen interval (seconden)"
+      },
+      "enabledWidgets": {
+        "label": "Ingeschakelde widgets"
+      },
+      "excludedMounts": {
+        "label": "Uitgesloten montagepunten"
+      },
+      "monitoredMounts": {
+        "label": "Bewaakte paden"
+      }
+    }
   }
 }

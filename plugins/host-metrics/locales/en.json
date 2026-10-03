@@ -308,5 +308,8 @@
         "label": "Monitored paths"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

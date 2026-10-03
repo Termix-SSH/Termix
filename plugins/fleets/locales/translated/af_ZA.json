@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Bekyk vlote",
+      "description": "Sien vlote, hul lede en inventaris."
+    },
+    "manage": {
+      "title": "Bestuur vlote",
+      "description": "Skep, wysig en verwyder vlote, verander lidmaatskap en deel vlote met ander gebruikers of rolle."
+    },
+    "execute": {
+      "title": "Voer vlootaksies uit",
+      "description": "Voer bevele en pakketaksies oor 'n vloot uit, en dra lêers na en van sy lidgashere oor."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -22,7 +36,7 @@
         "saveFailed": "Kon nie vloot stoor nie",
         "deleteFailed": "Kon nie vloot uitvee nie",
         "loadFailed": "Kon nie vlote laai nie",
-        "deleteFleetTitle": "Vee vloot uit",
+        "deleteFleetTitle": "Vee Vloot uit",
         "deleteFleetDescription": "Is jy seker jy wil \"{{name}}\" verwyder? Dit verwyder nie die lidgashere self nie.",
         "searchFleets": "Soek vlote...",
         "noFleets": "Geen vlote nog nie. Skep een om te begin.",
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Gradeer alle pakkette op",
         "packageNameLabel": "Pakketnaam",
         "packageNameRequired": "'n Pakketnaam word vereis",
-        "packageHint": "Vereis bestuursvlaktoegang per gasheer en verhoog met behulp van die gasheer se gestoorde sudo-wagwoord."
+        "packageHint": "Vereis bestuursvlaktoegang per gasheer en verhoog met behulp van die gasheer se gestoorde sudo-wagwoord.",
+        "shareFleet": "Deel Vloot",
+        "shareFleetTitle": "Deel \"{{name}}\"",
+        "shareFleetDescription": "Deel hierdie vloot se huidige lid-gashere met die gekose gebruikers of rolle. Gashere wat later by die vloot gevoeg word, word nie outomaties gedeel nie - deel weer om hulle in te sluit.",
+        "shareSelectionRequired": "Kies ten minste een gebruiker of rol",
+        "fleetSharedSuccessfully": "Gedeelde {{shared}} van {{total}} gasheer(s) in hierdie vloot",
+        "failedToShareFleet": "Kon nie vloot deel nie",
+        "noMembersToShare": "Hierdie vloot het nog geen lidgashere om te deel nie."
       }
     }
   },

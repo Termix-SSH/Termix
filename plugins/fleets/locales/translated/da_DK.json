@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Se flåder",
+      "description": "Se flåder, deres medlemmer og inventar."
+    },
+    "manage": {
+      "title": "Administrer flåder",
+      "description": "Opret, rediger og slet flåder, skift medlemskab og del flåder med andre brugere eller roller."
+    },
+    "execute": {
+      "title": "Kør flådehandlinger",
+      "description": "Kør kommandoer og pakkehandlinger på tværs af en flåde, og overfør filer til og fra dens medlemsværter."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Opgrader alle pakker",
         "packageNameLabel": "Pakkenavn",
         "packageNameRequired": "Et pakkenavn er påkrævet",
-        "packageHint": "Kræver adgang på administratorniveau pr. vært og hæver ved hjælp af værtens gemte sudo-adgangskode."
+        "packageHint": "Kræver adgang på administratorniveau pr. vært og hæver ved hjælp af værtens gemte sudo-adgangskode.",
+        "shareFleet": "Del flåde",
+        "shareFleetTitle": "Del \"{{name}}\"",
+        "shareFleetDescription": "Deler denne flådes nuværende medlemsværter med de valgte brugere eller roller. Værter, der tilføjes til flåden senere, deles ikke automatisk - del igen for at inkludere dem.",
+        "shareSelectionRequired": "Vælg mindst én bruger eller rolle",
+        "fleetSharedSuccessfully": "Delt {{shared}} af {{total}} vært(er) i denne flåde",
+        "failedToShareFleet": "Kunne ikke dele flåden",
+        "noMembersToShare": "Denne flåde har endnu ingen medlemsværter at dele."
       }
     }
   },

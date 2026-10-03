@@ -16,7 +16,20 @@
     "authFailed": "认证失败，请检查凭据并重试。",
     "timeout": "认证超时，请重试。"
   },
+  "settings": {
+    "redirectUri": {
+      "label": "重定向 URI",
+      "description": "在 OPKSSH 配置中的每个身份提供商处，将此 URL 登记为允许的重定向 URI。"
+    },
+    "legacyCallback": {
+      "label": "使用旧版重定向 URI",
+      "description": "继续发送 2.9 之前使用的重定向 URI /host/opkssh-callback。当身份提供商允许新 URI 后，可关闭此选项。"
+    }
+  },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
+  },
+  "plugin": {
+    "name": "OPKSSH"
   }
 }

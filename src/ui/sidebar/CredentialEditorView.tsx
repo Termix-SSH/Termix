@@ -183,7 +183,7 @@ export function CredentialEditorView({
                 {t("hosts.friendlyNameLabel")}
               </label>
               <Input
-                placeholder="e.g. Production SSH Key"
+                placeholder={t("placeholders.credentialName")}
                 value={credForm.name}
                 onChange={(e) => setCredField("name", e.target.value)}
               />
@@ -203,7 +203,7 @@ export function CredentialEditorView({
                 {t("hosts.descriptionLabel")}
               </label>
               <Input
-                placeholder="Optional details..."
+                placeholder={t("placeholders.optionalDetails")}
                 value={credForm.description}
                 onChange={(e) => setCredField("description", e.target.value)}
               />
@@ -278,7 +278,7 @@ export function CredentialEditorView({
                 {t("hosts.username")}
               </label>
               <Input
-                placeholder="e.g. root or deploy"
+                placeholder={t("placeholders.sshUsername")}
                 value={credForm.username}
                 onChange={(e) => setCredField("username", e.target.value)}
               />

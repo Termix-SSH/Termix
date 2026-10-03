@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Pagina iniziale",
     "addWidget": "Aggiungi widget",
+    "noWidgetsInCategory": "Nessun widget in questa categoria",
     "editWidget": "Modifica widget",
     "zoomIn": "Ingrandisci",
     "zoomOut": "Rimpicciolisci",
@@ -59,6 +60,9 @@
     "maxItems": "Numero massimo di elementi",
     "showDescription": "Mostra descrizione",
     "widgetRssName": "Feed RSS",
+    "rssNoFeedUrl": "Configura l'URL del feed nelle impostazioni del widget.",
+    "rssLoadError": "Impossibile caricare il feed",
+    "rssNoItems": "Nessun articolo",
     "noHostSelected": "Nessun host selezionato",
     "displayedMetrics": "Metriche visualizzate",
     "metricCpu": "CPU",
@@ -81,7 +85,7 @@
     "uptimeUnavailable": "Uptime non disponibile",
     "uptimeLabel": "Uptime",
     "overviewVersion": "Versione",
-    "overviewUpdateLabel": "Aggiornamento",
+    "overviewUpdateLabel": "Aggiorna",
     "overviewUpdateAvailable": "Aggiornamento disponibile",
     "overviewDatabase": "Database",
     "overviewUptime": "Uptime",
@@ -157,6 +161,30 @@
     "compactMode": "Modalità compatta",
     "selectHosts": "Seleziona host",
     "listLayout": "Elenco",
-    "gridLayout": "Griglia"
+    "gridLayout": "Griglia",
+    "configureUrl": "Imposta un URL nelle impostazioni del widget",
+    "embeddedContent": "Contenuto incorporato",
+    "noBookmarks": "Nessun segnalibro",
+    "noSections": "Nessuna sezione impostata",
+    "noServices": "Nessun servizio configurato",
+    "configureLocation": "Imposta una posizione nelle impostazioni del widget",
+    "bannerTextPlaceholder": "Testo del banner",
+    "serviceNamePlaceholder": "Il mio servizio"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare la homepage",
+      "description": "Visualizza e modifica i collegamenti ai servizi della pagina iniziale e della dashboard."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Host privati autorizzati",
+      "description": "Nomi host/IP privati o di loopback esatti per i widget Ping Status e API personalizzate. Separare le voci con virgole o interruzioni di riga; omettere schemi, porte e percorsi. I blocchi vuoti devono essere dedicati a destinazioni private."
+    },
+    "privateCertificateAuthority": {
+      "label": "Autorità di certificazione privata (PEM)",
+      "description": "Pacchetto CA attendibile opzionale per gli host consentiti. La verifica del certificato rimane abilitata. Lasciare vuoto per utilizzare l'archivio di certificati attendibili del sistema."
+    }
   }
 }

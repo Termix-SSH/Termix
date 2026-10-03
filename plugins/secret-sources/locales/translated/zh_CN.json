@@ -1,0 +1,30 @@
+{
+  "hint": "可粘贴 1Password 引用（op://vault/item/field）来代替机密值，连接时会从机密来源读取。",
+  "manage": "管理机密来源",
+  "title": "机密来源",
+  "description": "Termix 在连接时从外部密码管理器读取机密。目前支持自托管的 1Password Connect，访问令牌使用你的数据密钥加密保存。",
+  "new": "新建来源",
+  "nameLabel": "显示名称",
+  "urlLabel": "Connect 服务器 URL",
+  "tokenLabel": "Connect 访问令牌",
+  "tokenKeep": "留空以保留当前令牌",
+  "sharedLabel": "与所有用户共享（仅管理员可设置，仅在你登录期间解析）",
+  "shared": "已共享",
+  "test": "测试",
+  "testOk": "已连接，可见 {{count}} 个保管库",
+  "testFailed": "连接测试失败",
+  "required": "名称、服务器 URL 和令牌为必填项",
+  "saved": "机密来源已保存",
+  "deleted": "机密来源已删除",
+  "settings": {
+    "admin": {
+      "privateEndpoints": {
+        "label": "私有端点允许列表",
+        "description": "机密来源允许访问的内网或回环主机，每行一个。自托管的 1Password Connect 服务器通常需要在此列出其地址。"
+      }
+    }
+  },
+  "plugin": {
+    "name": "密钥来源"
+  }
+}

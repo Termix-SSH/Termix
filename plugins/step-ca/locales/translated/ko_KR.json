@@ -4,10 +4,12 @@
   },
   "editor": {
     "label": "스텝 CA",
-    "description": "ID 공급자를 통해 로그인하고 Step CA에서 이 호스트에 대한 단기 SSH 인증서를 발급받으세요. CA URL, 루트 지문 및 OIDC 프로비저너는 관리자가 관리자 설정에서 설정합니다.",
+    "description": "ID 공급자를 통해 로그인하고 Step CA에서 이 호스트에 대한 단기 SSH 인증서를 발급받으세요. CA URL, 루트 지문 및 OIDC 프로비저너는 관리자가 관리 설정의 Step CA 섹션에서 설정합니다.",
     "docs": "문서 보기"
   },
   "dialog": {
+    "title": "단계 CA 인증 필요",
+    "description": "계속하려면 브라우저에서 인증을 완료하십시오. 인증서는 CA(인증 기관)에서 허용하는 기간 동안 유효합니다.",
     "openBrowser": "브라우저로 인증하기",
     "waiting": "브라우저에서 인증 대기 중...",
     "authenticating": "인증 처리 중..."
@@ -17,15 +19,30 @@
     "timeout": "인증 시간이 초과되었습니다. 다시 시도하세요."
   },
   "settings": {
+    "caUrl": {
+      "label": "CA URL",
+      "description": "SmallStep CA의 HTTPS URL을 입력하십시오. Step CA를 비활성화하려면 CA URL, 지문 및 프로비저너 필드를 비워 두십시오.",
+      "placeholder": "https://ca.internal:9000"
+    },
     "fingerprint": {
-      "label": "루트 지문(SHA-256)"
+      "label": "루트 지문(SHA-256)",
+      "description": "루트 인증서 지문은 CA 부트스트랩 단계에서 확인할 수 있습니다."
     },
     "provisioner": {
-      "label": "OIDC 프로비저너 이름"
+      "label": "OIDC 프로비저너 이름",
+      "description": "CA의 OIDC 프로비저너 이름을 입력합니다. 그런 다음 호스트의 인증 유형으로 \"단계별 CA\"를 선택합니다."
     },
     "privateEndpoints": {
       "label": "허용된 개인 Step CA 호스트",
-      "description": "Step CA 인증서 흐름이 접촉할 수 있는 개인 호스트는 CA 자체와 (내부 호스트인 경우) ID 공급자입니다. 이들을 쉼표로 구분하세요."
+      "description": "Step CA 인증서 흐름이 접촉할 수 있는 개인 호스트는 CA 자체와 (내부 호스트인 경우) ID 공급자입니다. 쉼표 또는 줄 바꿈으로 구분하십시오."
+    },
+    "redirectUri": {
+      "label": "리디렉션 URI",
+      "description": "이 URL을 OIDC 프로비저너 뒤에 있는 ID 공급자에게 허용된 리디렉션 URI로 등록하십시오."
+    },
+    "legacyCallback": {
+      "label": "이전 리디렉션 URI를 사용하세요",
+      "description": "2.9 이전 버전에서 사용했던 리디렉션 URI인 /host/step-ca-callback을 계속 전송하세요. ID 공급자가 새 URI를 허용하면 이 기능을 비활성화하십시오."
     }
   }
 }

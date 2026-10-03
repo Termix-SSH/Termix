@@ -4,6 +4,7 @@
   "loginFailed": "Accesso con passkey non riuscito",
   "description": "Utilizza credenziali WebAuthn/FIDO2 per accedere senza password",
   "namePlaceholder": "Nome passkey",
+  "defaultName": "Chiave di sicurezza",
   "uv": {
     "preferred": "Preferita",
     "required": "Obbligatoria",
@@ -13,6 +14,9 @@
   "none": "Nessuna passkey registrata.",
   "added": "Passkey aggiunta",
   "addFailed": "Impossibile aggiungere la passkey",
+  "delete": "Elimina la password",
   "deleted": "Passkey eliminata",
-  "deleteFailed": "Impossibile eliminare la passkey"
+  "deleteFailed": "Impossibile eliminare la passkey",
+  "unknownDevice": "sconosciuto",
+  "synced": "sincronizzato"
 }

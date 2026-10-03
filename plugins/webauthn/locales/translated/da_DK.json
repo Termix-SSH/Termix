@@ -4,6 +4,7 @@
   "loginFailed": "Login med adgangsnøgle mislykkedes",
   "description": "Brug WebAuthn/FIDO2-legitimationsoplysninger til at logge ind uden en adgangskode",
   "namePlaceholder": "Adgangsnøglenavn",
+  "defaultName": "Adgangsnøgle",
   "uv": {
     "preferred": "Foretrukket",
     "required": "Påkrævet",
@@ -13,6 +14,9 @@
   "none": "Ingen adgangsnøgler registreret.",
   "added": "Adgangsnøgle tilføjet",
   "addFailed": "Kunne ikke tilføje adgangsnøgle",
+  "delete": "Slet adgangsnøgle",
   "deleted": "Adgangsnøgle slettet",
-  "deleteFailed": "Kunne ikke slette adgangsnøglen"
+  "deleteFailed": "Kunne ikke slette adgangsnøglen",
+  "unknownDevice": "ukendt",
+  "synced": "synkroniseret"
 }

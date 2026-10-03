@@ -1,27 +1,45 @@
 {
+  "loginWithSso": "Accedi con SSO",
   "loginWithProvider": "Accedi con {{name}}",
-  "loading": "Caricamento in corso...",
+  "loading": "Caricamento...",
+  "permissions": {
+    "manage": {
+      "title": "Gestire i provider SSO",
+      "description": "Aggiungi, modifica e rimuovi i provider SSO con cui gli utenti possono accedere."
+    }
+  },
   "providers": {
-    "docsLink": "Visualizza documentazione",
+    "docsLink": "Vedi documenti",
     "none": "Nessun provider SSO configurato.",
     "add": "Aggiungi provider",
     "edit": "Modifica provider",
     "delete": "Elimina provider",
     "deleteConfirm": "Eliminare questo provider? Gli utenti associati non potranno più accedere.",
     "name": "Nome visualizzato",
+    "namePlaceholder": "Il mio provider SSO",
+    "nameRequired": "È richiesto un nome visualizzato",
     "type": "Tipo provider",
     "enabled": "Abilitato",
     "save": "Salva provider",
-    "saving": "Salvataggio in corso...",
+    "saving": "Salvando...",
     "saved": "Salvato",
     "saveFailed": "Salvataggio non riuscito",
     "deleted": "Eliminato",
     "deleteFailed": "Eliminazione non riuscita",
-    "cancel": "Annulla"
+    "loadFailed": "Impossibile caricare i provider SSO",
+    "cancel": "Annulla",
+    "copy": "Copia",
+    "copied": "Copiato",
+    "redirectUri": "URI di reindirizzamento",
+    "redirectUriDesc": "Registra questo URL come URL di reindirizzamento o di callback nel tuo provider di identità.",
+    "legacyCallback": "Mantieni il vecchio URI di reindirizzamento",
+    "legacyCallbackDesc": "Questo provider è stato configurato prima di Termix 2.9 e utilizza ancora il vecchio URI di reindirizzamento, che continua a funzionare. Per passare a quello nuovo, aggiungi prima {{uri}} al tuo provider di identità, quindi disattiva questa opzione.",
+    "authorizationUrl": "URL di autorizzazione: {{url}}"
   },
   "fields": {
     "clientId": "ID client",
     "clientSecret": "Segreto client",
+    "secretKeep": "Un segreto è stato custodito. Lascia questo campo vuoto per mantenerlo.",
     "issuerUrl": "URL dell'emittente",
     "authUrl": "URL di autorizzazione",
     "tokenUrl": "URL token",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "Gli utenti di questo gruppo ottengono i diritti di amministratore. Lascia vuoto per disabilitare la sincronizzazione dei gruppi.",
     "caCert": "Certificato CA personalizzato",
     "caCertDesc": "Opzionale. Certificato CA in formato PEM per provider OIDC che utilizzano una CA privata o autofirmata. Lascia vuoto per usare l'archivio dei certificati attendibili di sistema."
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "Accedi automaticamente con SSO",
+      "description": "Indirizza i visitatori direttamente al primo provider SSO anziché mostrare il modulo di accesso. La variabile d'ambiente OIDC_SILENT_LOGIN_DEFAULT sovrascrive questa impostazione."
+    }
   }
 }

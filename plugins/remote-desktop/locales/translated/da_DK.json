@@ -73,17 +73,22 @@
       "fitToScreen": "Tilpas til skærm",
       "switchToTrackpad": "Skift til trackpad-tilstand (træk for at flytte markøren, tryk for at klikke)",
       "switchToTouch": "Skift til berøringstilstand (tryk direkte der, hvor du vil klikke)"
-    }
+    },
+    "disabled": "Fjernskrivebord er slået fra. En administrator kan slå det til i Indstillinger."
   },
   "hosts": {
     "nativeRdpOpened": "Åbnet i Windows Fjernskrivebord",
     "nativeRdpFailed": "Kunne ikke åbne Windows Fjernskrivebord",
     "openNativeRdp": "Åbn i Windows Fjernskrivebord",
     "guac": {
+      "toolbar": "Værktøjslinje",
       "connection": "Forbindelse",
       "authentication": "Godkendelse",
       "storedCredential": "Gemte legitimationsoplysninger",
       "authMethod": "Godkendelsesmetode",
+      "authTypeDirect": "Direkte",
+      "authTypeCredential": "Legitimationsoplysninger",
+      "authTypeNone": "Ingen",
       "authTypeNoneDesc": "Ingen loginoplysninger gemmes. Du vil blive bedt om et brugernavn og en adgangskode, hver gang du opretter forbindelse; de gemmes ikke.",
       "selectCredential": "Vælg en legitimationsoplysninger...",
       "connectionSettings": "Forbindelsesindstillinger",
@@ -112,7 +117,7 @@
       "initialProgram": "Indledende program",
       "serverLayout": "Serverlayout",
       "timezone": "Tidszone",
-      "loadBalanceInfo": "Oplysninger om belastningsbalance / Cookie",
+      "loadBalanceInfo": "Oplysninger om belastningsbalance / cookie",
       "loadBalanceInfoDesc": "RD Connection Broker-cookie til belastningsbalancering af RDS-farm (f.eks. tsv://MS Terminal Services Plugin.1.CollectionName)",
       "guacdProxy": "guacd Proxy",
       "guacdHostname": "guacd-vært",
@@ -206,7 +211,8 @@
       "colorScheme": "Farveskema",
       "backspaceKey": "Tilbagetast",
       "colorDepth": "Farvedybde",
-      "resizeMethod": "Ændre størrelse-metode"
+      "resizeMethod": "Ændre størrelse-metode",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Fjernskrivebord",
     "tabRdp": "Landdistriktsudviklingsplan",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Virtuelt netværk",
     "unencryptedShell": "Ukrypteret skal",
-    "docsLink": "Se dokumenter"
+    "remoteDesktopNotes": "Noter",
+    "userDefaultsNote": "Indstillinger, du lader være uændrede, følger din værts standardindstillinger.",
+    "connectionOriginNote": "I desktop-appen bruger RDP, VNC og Telnet den eksterne server, medmindre værten er indstillet til Denne enhed, som kræver en guacd, som denne maskine kan nå. Angiv en i indstillingerne for Fjernskrivebord, eller pr. vært under guacd Proxy.",
+    "docsLink": "Se dokumenter",
+    "connectionOriginGuacamoleNote": "RDP, VNC og Telnet bruger den eksterne server, medmindre du vælger \"Denne enhed\", som kræver en guacd, som denne maskine kan nå. Angiv en i guacd URL-indstillingen eller pr. vært under guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Fjernskrivebord",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Farvedybde"
+        "label": "Farvedybde",
+        "description": "Bruges til RDP-værter, der lader den være på standardværdien."
       },
       "resizeMethod": {
-        "label": "Ændre størrelse-metode"
+        "label": "Ændre størrelse-metode",
+        "description": "Hvordan fjernskærmen følger vinduets størrelse."
       },
       "resizeDisplayUpdate": "Opdatering af display",
       "resizeReconnect": "Genopret forbindelse",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Deaktiver indsætning",
         "description": "Forhindr indsættelse af tekst i fjernsessionen"
-      }
+      },
+      "group": "Standardindstillinger for fjernskrivebord",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
     },
     "admin": {
+      "enabled": {
+        "label": "Aktivér fjernskrivebord",
+        "description": "Tillad RDP-, VNC- og Telnet-forbindelser via guacd."
+      },
       "guacdUrl": {
-        "label": "guacd-URL"
+        "label": "guacd-URL",
+        "description": "Hvor guacd lytter som host:port. Miljøvariablerne GUACD_URL, GUACD_HOST og GUACD_PORT tilsidesætter dette.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "Landdistriktsudviklingsplan"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP-port"
+      },
+      "vncPort": {
+        "label": "VNC-port"
+      },
+      "telnetPort": {
+        "label": "Telnet-port"
+      },
+      "rdpSecurity": {
+        "label": "RDP-sikkerhedstilstand"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignorer certifikatfejl"
+      },
+      "guacamoleConfig": {
+        "label": "guacd-indstillinger"
+      },
+      "enableToolbar": {
+        "label": "Værktøjslinjen til fjernskrivebord",
+        "description": "Vis værktøjslinjen i RDP-, VNC- og Telnet-sessioner."
+      },
+      "displayGroup": "Vise",
+      "displayDefaultsTab": "Fjernskrivebord"
+    }
+  },
+  "palette": {
+    "connectRdp": "Opret forbindelse med RDP",
+    "connectVnc": "Opret forbindelse med VNC",
+    "connectTelnet": "Opret forbindelse med Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Del fjernskrivebordssessioner",
+      "description": "Lad sessionsdeling og samarbejdsrum vise denne brugers RDP-, VNC- og Telnet-sessioner til andre."
     }
   },
   "errors": {

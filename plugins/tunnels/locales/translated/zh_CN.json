@@ -33,7 +33,7 @@
     "loadingHost": "正在加载主机..."
   },
   "nav": {
-    "portForwarding": "转发",
+    "portForwarding": "端口转发",
     "tunnels": "隧道"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (本地监听)",
     "localTargetHost": "127.0.0.1 (此计算机上的目标)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1（监听端点）",
-    "remoteTargetHost": "127.0.0.1（来自端点的目标）",
+    "remoteBindHost": "127.0.0.1（在端点上监听）",
+    "remoteTargetHost": "127.0.0.1（从端点访问的目标地址）",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1（SOCKS 监听器）"
   },
@@ -62,7 +62,9 @@
     "c2sPresetSyncNote": "预设是显式快照；加载预设将替换此桌面客户端的本地客户端隧道列表。",
     "c2sPresetToLoad": "要加载的预设",
     "c2sTunnelPresets": "客户端隧道预设",
-    "c2sTunnelPresetsUnavailable": "客户端隧道预设仅在桌面客户端中可用。"
+    "c2sTunnelPresetsUnavailable": "客户端隧道预设仅在桌面客户端中可用。",
+    "c2sPresetRenameError": "重命名预设失败",
+    "c2sPresetDeleteError": "删除预设失败"
   },
   "tunnels": {
     "attempt": "尝试 {{current}}/{{max}}",
@@ -83,8 +85,8 @@
     "createFirstTunnelMessage": "您尚未创建任何 SSH 隧道。在主机管理器中配置隧道连接以开始使用。",
     "currentHostPort": "当前主机端口",
     "destination": "目标",
-    "destinationAddress": "目的地地址",
-    "destinationPort": "目的港",
+    "destinationAddress": "目标地址",
+    "destinationPort": "目标端口",
     "disconnected": "已断开",
     "duplicateAutoStartBind": "只有一个自启动客户端隧道可以使用 {{bind}}。",
     "endpointPort": "端点端口",
@@ -99,13 +101,13 @@
     "forwardDescriptionServerLocal": "当前主机 {{sourcePort}} → 端点 {{endpointPort}}。",
     "forwardDescriptionServerRemote": "端点 {{endpointPort}} → 当前主机 {{sourcePort}}。",
     "host": "主机",
-    "intermediateHost": "中间宿主",
+    "intermediateHost": "中间主机",
     "invalidBindIp": "本地 IP 必须是有效的 IPv4 地址。",
     "invalidEndpointPort": "端点端口必须在 1 到 65535 之间。",
     "invalidLocalPort": "本地端口必须在 1 到 65535 之间。",
     "invalidLocalTargetIp": "本地目标 IP 必须是有效的 IPv4 地址。",
     "invalidLocalTargetPort": "本地目标端口必须在 1 到 65535 之间。",
-    "invalidRemoteAddress": "需要远程地址。",
+    "invalidRemoteAddress": "必须填写远程地址。",
     "invalidRemotePort": "远程端口必须在 1 到 65535 之间。",
     "lastError": "最后错误",
     "lastStarted": "最后启动",
@@ -128,8 +130,8 @@
     "retryInterval": "重试间隔（秒）",
     "route": "路由：",
     "summaryClientDynamic": "{{localHost}}:{{localPort}} → SOCKS 通过 {{endpoint}}",
-    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} 经由 {{endpoint}}",
-    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} 在 {{endpoint}} → {{localHost}}:{{localPort}}",
+    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}}，经由 {{endpoint}}",
+    "summaryClientRemote": "{{endpoint}} 上的 {{remoteHost}}:{{remotePort}} → {{localHost}}:{{localPort}}",
     "test": "测试",
     "tunnelName": "隧道名称",
     "tunnelTestFailed": "隧道测试失败",
@@ -139,8 +141,32 @@
     "typeLocal": "本地 (-L)",
     "typeRemote": "远程 (-R)",
     "working": "处理中...",
+    "activeCount": "{{connected}}/{{total}} 个处于活动状态",
+    "listensOn": "绑定到 localhost:{{port}}",
+    "socksProxy": "SOCKS5 代理",
+    "waiting": "等待",
+    "remoteSessionExpired": "远程同步会话已过期，请重新连接远程同步后再试。",
+    "activeTunnels": "活跃隧道",
     "start": "启动",
-    "stop": "停止"
+    "stop": "停止",
+    "authTitle": "隧道身份验证",
+    "authRetry": "上一个验证码未通过，请输入新的验证码。",
+    "authAnswer": "身份验证响应",
+    "authContinue": "继续"
+  },
+  "permissions": {
+    "use": {
+      "title": "使用隧道",
+      "description": "启动、停止和监控 SSH 隧道，并保存客户端隧道预设。"
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "启用隧道",
+        "description": "通过此主机建立 SSH 隧道。"
+      }
+    }
   },
   "onboarding": {
     "feature_tunnels": "隧道",

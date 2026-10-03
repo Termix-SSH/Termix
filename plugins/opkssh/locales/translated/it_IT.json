@@ -2,7 +2,7 @@
   "editor": {
     "label": "OPKSSH",
     "description": "Accedi a questo host usando il tuo provider di identità invece di una password o chiave. Richiede OPKSSH configurato sul server.",
-    "docs": "Visualizza documentazione"
+    "docs": "Vedi documenti"
   },
   "dialog": {
     "title": "Autenticazione OPKSSH richiesta",
@@ -15,6 +15,16 @@
   "errors": {
     "authFailed": "Autenticazione fallita. Controlla le credenziali e riprova.",
     "timeout": "Autenticazione scaduta. Riprova."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "URI di reindirizzamento",
+      "description": "Registra questo URL come URI di reindirizzamento consentito presso ogni provider di identità nella tua configurazione OPKSSH."
+    },
+    "legacyCallback": {
+      "label": "Utilizzare il vecchio URI di reindirizzamento",
+      "description": "Continua a inviare /host/opkssh-callback, l'URI di reindirizzamento utilizzato prima della versione 2.9. Disattivalo non appena i tuoi provider di identità consentiranno il nuovo URI."
+    }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"

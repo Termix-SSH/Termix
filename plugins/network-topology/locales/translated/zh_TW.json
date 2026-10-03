@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "來源與目標必須不同",
     "exportJSON": "匯出 JSON",
     "importJSON": "匯入 JSON",
-    "terminal": "終端機",
-    "fileManager": "檔案管理員",
-    "tunnel": "隧道",
-    "docker": "Docker",
     "serverStats": "主機指標",
-    "hostMetrics": "主機指標",
     "noNodes": "尚無節點"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} 個節點"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use network graph",
+      "description": "View and edit the network topology graph."
+    }
   },
   "hosts": {
     "docsLink": "檢視文件"

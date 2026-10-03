@@ -3,7 +3,8 @@
     "profile": "Profilul semnatarului din seif",
     "selectProfile": "Selectați un profil Vault...",
     "hint": "Setările provin din profilul partajat; te vei conecta la Vault prin OIDC când te conectezi. Nu sunt stocate secrete.",
-    "docs": "Vizualizați documentele"
+    "docs": "Vizualizați documentele",
+    "sharedProfile": "{{name}} (partajat)"
   },
   "profiles": {
     "new": "Profil nou",
@@ -27,12 +28,42 @@
     "save": "Salvați profilul",
     "validationError": "Numele, adresa seifului și rolul semnatarului SSH sunt obligatorii.",
     "none": "Încă nu există profiluri Vault.",
-    "sharedBadge": "partajat"
+    "sharedBadge": "partajat",
+    "edit": "Edita",
+    "delete": "Şterge"
+  },
+  "hosts": {
+    "filterAuthVault": "Seif"
   },
   "dialog": {
     "title": "Este necesară conectarea la seif",
     "description": "S-a deschis o fereastră pentru a vă conecta la HashiCorp Vault. Finalizați conectarea acolo; această conexiune va continua automat.",
     "failed": "Autentificarea în seif a eșuat. Vă rugăm să încercați din nou.",
     "reopen": "Redeschideți fereastra de conectare"
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește semnarea SSH în Vault",
+      "description": "Creați profiluri de semnatar Vault și conectați-vă la gazde care utilizează Vault."
+    },
+    "share": {
+      "title": "Partajați profiluri Vault",
+      "description": "Marcați un profil de semnatar Vault ca partajat, astfel încât fiecare utilizator să îl poată alege."
+    }
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "URI de redirecționare",
+      "description": "Adăugați această adresă URL la allowed_redirect_uris în fiecare rol OIDC din Vault cu care se conectează Termix."
+    },
+    "legacyCallback": {
+      "label": "Folosește vechiul URI de redirecționare",
+      "description": "Continuă să trimiți /vault/oidc/callback, URI-ul de redirecționare folosit înainte de versiunea 2.9. Dezactivează această opțiune odată ce rolurile din Vault îl permit pe cel nou."
+    },
+    "host": {
+      "profileId": {
+        "label": "Profilul semnatarului din seif"
+      }
+    }
   }
 }

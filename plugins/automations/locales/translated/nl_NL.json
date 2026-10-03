@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Automatiseringen bekijken",
+      "description": "Bekijk de automatiseringen en hun geschiedenis."
+    },
+    "create": {
+      "title": "Automatiseringen maken",
+      "description": "Voeg nieuwe automatiseringen toe."
+    },
+    "edit": {
+      "title": "Automatiseringen bewerken",
+      "description": "Wijzig bestaande automatiseringsprocessen."
+    },
+    "delete": {
+      "title": "Automatiseringen verwijderen",
+      "description": "Automatiseringen uitschakelen."
+    },
+    "run": {
+      "title": "Automatiseringen uitvoeren",
+      "description": "Activeer een automatisering handmatig."
+    }
+  },
   "newUi": {
     "sidebar": {
       "automations": {
@@ -12,14 +34,8 @@
         "editTitle": "Automatisering bewerken",
         "empty": "Nog geen automatiseringen. Maak er een aan die reageert op een meetwaarde, een planning of een gebeurtenis.",
         "emptyRuns": "Nog geen runs.",
-        "emptyChannels": "Nog geen kanalen. Voeg er een toe om meldingen ergens naartoe te sturen.",
-        "noChannelsHint": "Er zijn nog geen kanalen ingesteld. Voeg er een toe via het tabblad Kanalen.",
-        "addChannel": "Kanaal toevoegen",
-        "testChannel": "Test",
-        "channelTestSent": "Testmelding verzonden",
-        "channelTestFailed": "Testmelding mislukt",
-        "channelDeleted": "Kanaal verwijderd",
-        "deleteChannelConfirm": "Als u dit kanaal wilt verwijderen, zullen automatiseringsprocessen die ervan gebruikmaken geen meldingen meer versturen.",
+        "channelsHint": "Kanalen worden ingesteld in waarschuwingen.",
+        "noChannelsHint": "De melding komt altijd in je inbox terecht. Voeg kanalen toe in Meldingen om de melding ook naar een andere locatie te verzenden.",
         "nameLabel": "Naam",
         "namePlaceholder": "Bijvoorbeeld: maak /data leeg wanneer het vol is.",
         "nameRequired": "Naam is verplicht",
@@ -31,7 +47,7 @@
         "concurrency": {
           "skip": "Sla de nieuwe run over",
           "queue": "Wacht en ren erachteraan.",
-          "allow": "Voer ze allebei tegelijk uit."
+          "allow": "Voer ze allebei tegelijk uit"
         },
         "save": "Redden",
         "created": "Automatisering gecreëerd",
@@ -40,7 +56,7 @@
         "deleteConfirm": "Als je deze automatisering verwijdert, wordt ook de uitvoeringsgeschiedenis ervan verwijderd.",
         "runNow": "Ren nu",
         "testRun": "Testrun",
-        "testRunHint": "Voert elke stap uit, maar raakt niets buiten Termix aan.",
+        "testRunHint": "Het voert elke stap uit, maar raakt niets buiten Termix aan.",
         "runStarted": "De run is gestart.",
         "runFinished": "Run voltooid: {{status}}",
         "trigger": "Trekker",
@@ -79,10 +95,10 @@
           "webhook": "Inkomende webhook"
         },
         "stepTypes": {
-          "notify": "Een melding verzenden",
+          "notify": "Verzend een melding",
           "http": "Roep een URL aan",
           "run_snippet": "Voer een codefragment uit",
-          "run_command": "Voer een commando uit",
+          "run_command": "Voer een opdracht uit",
           "docker": "Een container besturen",
           "tunnel": "Beheer een tunnel",
           "wol": "Maak een gastheer wakker",
@@ -118,7 +134,7 @@
           "url": "URL",
           "method": "Methode",
           "body": "Lichaam",
-          "channels": "Kanalen",
+          "channels": "Ook verzenden naar",
           "title": "Titel",
           "message": "Bericht",
           "snippet": "Fragment",
@@ -135,6 +151,16 @@
         "onError": {
           "stop": "Stop de loop",
           "continue": "Ga zo door"
+        },
+        "needsPlugin": "Vereist {{plugin}}",
+        "needsPluginHint": "Deze automatisering wordt overgeslagen totdat de benodigde functie weer beschikbaar is.",
+        "offBadge": "Uit",
+        "docsLink": "Documenten bekijken",
+        "ago": {
+          "seconds": "{{count}}s geleden",
+          "minutes": "{{count}}m geleden",
+          "hours": "{{count}}uur geleden",
+          "days": "{{count}}dagen geleden"
         }
       }
     }
@@ -145,5 +171,41 @@
   "onboarding": {
     "feature_automations": "Automatiseringen",
     "feature_automations_desc": "Voer stappen automatisch uit wanneer er iets gebeurt en ontvang meldingen."
+  },
+  "maintenance": {
+    "title": "Onderhoud",
+    "description": "Pauzeer de automatiseringsprocessen voor hoststatus, gezondheid, metrics, containers en tunnelontkoppeling terwijl de werkzaamheden worden uitgevoerd. Monitoring, handmatige uitvoeringen en geplande automatiseringsprocessen worden wel voortgezet.",
+    "denied": "U hebt geen toestemming om onderhoudswerkzaamheden te bekijken.",
+    "sharedReadOnly": "Deze host is met u gedeeld. Alleen de eigenaar kan het onderhoud wijzigen.",
+    "failed": "Het onderhoud kon niet worden bijgewerkt.",
+    "active": "Onderhoud actief",
+    "estimated": "Geschatte voltooiing",
+    "noAutoEnd": "De begroting beëindigt het onderhoud niet. Beëindig het expliciet wanneer de werkzaamheden zijn voltooid.",
+    "endConfirm": "Onderhoud beëindigen en gebeurtenisgestuurde automatiseringen voor deze host hervatten?",
+    "confirmEnd": "Bevestig einde",
+    "cancel": "Annuleren",
+    "end": "Einde onderhoud",
+    "action": "Actie",
+    "startNow": "Begin nu",
+    "schedule": "Plan voor later",
+    "reason": "Reden",
+    "startUtc": "Eerste start (UTC)",
+    "repeat": "Herhalen",
+    "once": "Eenmaal",
+    "weekly": "Wekelijks",
+    "monthly": "Maandelijks",
+    "utcHelp": "De planning gebruikt het hele jaar door UTC. Maandelijkse planningen slaan maanden over waarin de geselecteerde dag niet voorkomt. Geplande onderhoudsvensters mogen elkaar niet overlappen; uitlopend onderhoud wordt voortgezet in latere vensters.",
+    "duration": "Geschatte duur (minuten)",
+    "grace": "Respijtperiode (minuten)",
+    "notify": "Eenmalige melding verzenden indien de verbinding na de geschatte tijd plus de respijtperiode nog steeds verbroken is.",
+    "addSchedule": "Voeg een schema toe",
+    "schedules": "Roosters",
+    "noSchedules": "Geen onderhoudsschema's.",
+    "completed": "Reeds begonnen",
+    "minutes_one": "{{count}} minuut",
+    "minutes_other": "{{count}} minuten",
+    "remove": "Schema verwijderen",
+    "loadFailed": "De onderhoudsstatus kon niet worden vernieuwd. Wijzigingen zijn uitgeschakeld totdat de status kan worden geladen.",
+    "loading": "Onderhoudsstatus laden…"
   }
 }

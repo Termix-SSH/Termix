@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "يجب أن يكون المصدر والهدف مختلفين",
     "exportJSON": "تصدير JSON",
     "importJSON": "استيراد JSON",
-    "terminal": "الطرفية",
-    "fileManager": "مدير الملفات",
-    "tunnel": "نفق",
-    "docker": "Docker",
     "serverStats": "مقاييس المضيف",
-    "hostMetrics": "مقاييس المضيف",
     "noNodes": "لا توجد عُقد بعد"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} عقدة"
+  },
+  "permissions": {
+    "use": {
+      "title": "استخدم الرسم البياني للشبكة",
+      "description": "عرض وتعديل مخطط طوبولوجيا الشبكة."
+    }
   },
   "hosts": {
     "docsLink": "عرض المستندات"

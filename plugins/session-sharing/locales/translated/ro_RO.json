@@ -5,7 +5,7 @@
       "linkInvalid": "Acest link de partajare este invalid, a expirat sau a fost revocat.",
       "rateLimited": "Prea multe încercări, vă rugăm să încercați din nou în scurt timp",
       "sessionEnded": "Această sesiune s-a încheiat",
-      "readOnlyBadge": "Doar vizualizare",
+      "readOnlyBadge": "Numai vizualizare",
       "ownerLabel": "Proprietarul gazdei"
     },
     "modalTitle": "Partajați sesiunea",
@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Căutați utilizatori...",
     "noUsersFound": "Nu au fost găsiți utilizatori",
     "linkCreated": "Link de partajare creat",
+    "linkNeedsServer": "Linkurile de partajare funcționează doar pentru sesiunile de pe un server Termix. Conectați această gazdă prin serverul conectat pentru a o partaja printr-un link.",
     "linkCopied": "Linkul a fost copiat în clipboard",
     "copyLink": "Copiază linkul",
     "shareCreated": "Sesiune partajată. Va apărea în fila Conexiuni.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Legătură",
     "userShareBadge": "Utilizator: {{username}}",
     "loadSharesFailed": "Nu s-au putut încărca partajările active",
+    "remoteDisplayUnavailable": "Desktopul la distanță nu este disponibil momentan.",
+    "sharedWithMe": "Sesiuni partajate cu mine",
     "customHoursPlaceholder": "Ore până la expirarea accesului"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Membri",
     "membersPanel": "Membrii camerei și solicitările de control",
     "membersWithCount": "Membri ({{count}})",
+    "guestsWithCount": "Oaspeți ({{count}})",
+    "removeGuests": "Eliminați invitații",
+    "anonymousGuest": "Oaspete",
     "online": "online",
     "offline": "offline",
     "you": "(tu)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Acest link de invitat este invalid sau întâlnirea s-a încheiat."
     },
     "reopenFromPanel": "Această filă de întâlnire a expirat. Redeschideți sala din panoul Întâlniri.",
+    "retry": "Reîncercați",
     "requestControl": "Cerere de control",
     "cancelControlRequest": "Anulează cererea",
     "controlQueue": "Cereri de control",
@@ -130,7 +137,10 @@
     "youArePresenting": "Prezentați într-o altă filă. Oprește prezentarea pentru a preda scena.",
     "created": "Cameră creată",
     "invited": "Membrii invitați",
-    "roomTab": "Întâlnire"
+    "roomTab": "Întâlnire",
+    "serverChanged": "Serverul de întâlnire s-a modificat. Redeschideți această întâlnire din panoul Întâlniri.",
+    "hostNotSynced": "Sincronizează această gazdă cu serverul de întâlnire înainte de prezentare.",
+    "linkRequiresServer": "Conectează acest desktop la un server Termix și creează întâlnirea acolo pentru a partaja un link web."
   },
   "nav": {
     "collab": "Întâlniri"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Partajați sesiuni și alăturați-vă sălilor",
+      "description": "Partajați sesiuni live prin link sau cu alți utilizatori și creați și alăturați-vă sălilor de colaborare."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Personalizat"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Distribuit cu mine",
+    "sharedBy": "Distribuit de {{username}}",
+    "join": "Alătură-te",
+    "sharedSessionLabel": "{{hostName}} (partajat)"
   }
 }

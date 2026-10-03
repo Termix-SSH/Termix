@@ -2,7 +2,7 @@
   "editor": {
     "label": "OPKSSH",
     "description": "Melden Sie sich mit Ihrem Identitätsanbieter an diesem Host an, anstatt mit einem Passwort oder Schlüssel. Erfordert, dass OPKSSH auf dem Server eingerichtet ist.",
-    "docs": "Dokumentation anzeigen"
+    "docs": "Dokumentation ansehen"
   },
   "dialog": {
     "title": "OPKSSH-Authentifizierung erforderlich",
@@ -15,6 +15,16 @@
   "errors": {
     "authFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldeinformationen und versuchen Sie es erneut.",
     "timeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Umleitungs-URI",
+      "description": "Registrieren Sie diese URL als zulässige Umleitungs-URI bei jedem Identitätsanbieter in Ihrer OPKSSH-Konfiguration."
+    },
+    "legacyCallback": {
+      "label": "Verwenden Sie die alte Umleitungs-URI.",
+      "description": "Senden Sie weiterhin /host/opkssh-callback, die Umleitungs-URI, die vor Version 2.9 verwendet wurde. Deaktivieren Sie diese Funktion, sobald Ihre Identitätsanbieter die neue URI zulassen."
+    }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"

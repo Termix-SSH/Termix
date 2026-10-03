@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Alertes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Utiliser les alertes",
+      "description": "Recevez des alertes dans votre boîte de réception et transférez-les sur vos propres canaux."
+    }
+  },
+  "onboarding": {
+    "feature": "Alertes",
+    "featureDesc": "Toutes les alertes dans une seule boîte de réception, envoyées sur Discord, ntfy, par e-mail ou via un webhook si vous le souhaitez."
+  },
+  "settings": {
+    "group": {
+      "general": "Général",
+      "email": "E-mail"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Annonces de Termix",
+        "description": "Afficher les actualités de l'équipe Termix, telles que les avis de sécurité et les nouvelles versions, dans la boîte de réception de tous."
+      },
+      "retentionDays": {
+        "label": "Conserver les alertes pendant (jours)",
+        "description": "Les alertes les plus anciennes sont supprimées de chaque boîte de réception."
+      },
+      "smtpHost": {
+        "label": "Serveur SMTP",
+        "description": "Nécessaire pour les canaux de messagerie. Laisser vide pour désactiver les e-mails.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "Port SMTP",
+        "description": "Généralement 587 avec STARTTLS ou 465 avec TLS."
+      },
+      "smtpSecure": {
+        "label": "Utilisez TLS dès le début",
+        "description": "Activez le port 465. Désactivez le port 587, qui passe automatiquement au protocole TLS."
+      },
+      "smtpUser": {
+        "label": "Nom d'utilisateur SMTP",
+        "description": "Laissez ce champ vide si le serveur ne nécessite pas d'authentification."
+      },
+      "smtpPassword": {
+        "label": "Mot de passe SMTP",
+        "description": "Stocké de manière cryptée."
+      },
+      "smtpFrom": {
+        "label": "Adresse de départ",
+        "description": "L'expéditeur des alertes provient de :",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "fenêtres contextuelles d'alerte",
+        "description": "Quelles nouvelles alertes s'affichent lorsque vous utilisez Termix ? Elles arrivent toujours dans votre boîte de réception.",
+        "all": "Toutes les alertes",
+        "warning": "Avertissements et critiques",
+        "critical": "Critique uniquement",
+        "off": "Aucune"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Boîte de réception",
+    "channels": "Canaux",
+    "rules": "Règles de livraison"
+  },
+  "severity": {
+    "info": "Info",
+    "success": "Succès",
+    "warning": "Avertissement",
+    "critical": "Critique"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Ouvrir",
+    "view": "Consultation",
+    "unread": "Non lu",
+    "deliveryFailed_one": "Le canal {{count}} a échoué",
+    "deliveryFailed_other": "Les canaux {{count}} ont échoué",
+    "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu",
+    "markAllRead": "Marquer tout comme lu",
+    "delete": "Supprimer",
+    "clearRead": "Supprimer les alertes de lecture",
+    "cleared_one": "Alerte {{count}} supprimée",
+    "cleared_other": "Alertes supprimées {{count}}",
+    "filterAll": "Tout",
+    "filterUnread": "Non lu",
+    "anySeverity": "Toute gravité",
+    "anySource": "Toute source",
+    "openAll": "Ouvrir dans un onglet",
+    "empty": "Aucune alerte pour le moment.",
+    "emptyUnread": "Vous êtes à jour.",
+    "loadMore": "Charger plus"
+  },
+  "channels": {
+    "intro": "Les canaux permettent aux alertes de sortir de Termix. Les règles de diffusion déterminent quelles alertes les utilisent.",
+    "add": "Ajouter une chaîne",
+    "edit": "Modifier la chaîne",
+    "test": "Envoyer un test",
+    "testSent": "Alerte de test envoyée",
+    "testFailed": "Test échoué : {{error}}",
+    "deleteConfirm": "Supprimer le canal \"{{name}}\"?",
+    "deleted": "Chaîne supprimée",
+    "empty": "Aucune chaîne pour le moment.",
+    "enabled": "Activé",
+    "needsSave": "Ce canal doit être ouvert et enregistré à nouveau avant de pouvoir envoyer des données.",
+    "name": "Nom",
+    "nameRequired": "Le nom est obligatoire",
+    "type": "Type",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Discord",
+      "email": "E-mail"
+    },
+    "emailUnavailable": "La messagerie électronique nécessite un serveur SMTP, que l'administrateur configure dans les paramètres d'alertes.",
+    "webhookUrl": "URL",
+    "webhookHint": "Récupère un corps JSON pour chaque alerte.",
+    "method": "Méthode",
+    "headers": "En-têtes",
+    "headersHint": "Une par ligne, comme Nom : valeur.",
+    "ntfyServer": "URL du serveur",
+    "ntfyTopic": "Sujet",
+    "ntfyToken": "Jeton d'accès (facultatif)",
+    "discordUrl": "URL du webhook Discord",
+    "discordHint": "Dans les paramètres de la chaîne sur Discord, sous Intégrations.",
+    "discordUsername": "Nom d'affichage (facultatif)",
+    "discordAvatar": "URL de l'avatar (facultatif)",
+    "emailTo": "Envoyer à",
+    "emailHint": "Séparez les adresses multiples par des virgules.",
+    "privateNetwork": "Autoriser une adresse réseau privée",
+    "privateNetworkHint": "Fonctionne uniquement pour les hôtes autorisés par un administrateur dans la liste des points de terminaison privés."
+  },
+  "rules": {
+    "intro": "Une règle de diffusion envoie des alertes correspondantes à vos canaux. Les alertes restent également disponibles dans votre boîte de réception.",
+    "add": "Ajouter une règle",
+    "edit": "Règle de modification",
+    "empty": "Aucune règle n'a encore été définie, les alertes n'apparaissent donc que dans la boîte de réception.",
+    "needChannel": "Commencez par ajouter un canal.",
+    "enabled": "Activé",
+    "name": "Nom",
+    "nameRequired": "Le nom est obligatoire",
+    "match": "Alertes à envoyer",
+    "matchHint": "* Pour tout, les automatisations.* Pour tout ce qui concerne les automatisations, ou un type précis.",
+    "minSeverity": "Au moins",
+    "channels": "Envoyer à",
+    "channelRequired": "Choisissez au moins une chaîne",
+    "deleteConfirm": "Supprimer la règle \"{{name}}\"?",
+    "everything": "Tout",
+    "summary": "{{match}}, {{severity}} ou supérieur, à {{channels}}"
+  },
+  "actions": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "delete": "Supprimer"
+  },
+  "widget": {
+    "name": "Flux d'alertes",
+    "description": "Vos dernières alertes, avec un moyen rapide de les marquer comme lues",
+    "maxItems": "Articles maximum",
+    "showRead": "Afficher les alertes de lecture",
+    "allClear": "Aucune alerte",
+    "loading": "Chargement..."
+  }
+}

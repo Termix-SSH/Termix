@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Главная страница",
     "addWidget": "Добавить виджет",
+    "noWidgetsInCategory": "No widgets in this category",
     "editWidget": "Изменить виджет",
     "zoomIn": "Приблизить",
     "zoomOut": "Отдалить",
@@ -38,7 +39,7 @@
     "description": "Описание",
     "color": "Цвет",
     "timezone": "Часовой пояс",
-    "invalidTimezone": "Неверный часовой пояс. Используйте название IANA, например, America/New_York.",
+    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
     "showSeconds": "Показывать секунды",
     "format12h": "12-часовой",
     "content": "Содержимое",
@@ -59,6 +60,9 @@
     "maxItems": "Макс. элементов",
     "showDescription": "Показывать описание",
     "widgetRssName": "RSS-лента",
+    "rssNoFeedUrl": "Configure a feed URL in widget settings",
+    "rssLoadError": "Could not load feed",
+    "rssNoItems": "No items",
     "noHostSelected": "Хост не выбран",
     "displayedMetrics": "Отображаемые метрики",
     "metricCpu": "ЦП",
@@ -81,7 +85,7 @@
     "uptimeUnavailable": "Время работы недоступно",
     "uptimeLabel": "Время работы",
     "overviewVersion": "Версия",
-    "overviewUpdateLabel": "Обновлять",
+    "overviewUpdateLabel": "Обновить",
     "overviewUpdateAvailable": "Доступно обновление",
     "overviewDatabase": "База данных",
     "overviewUptime": "Время работы",
@@ -157,6 +161,30 @@
     "compactMode": "Компактный режим",
     "selectHosts": "Выбрать хосты",
     "listLayout": "Список",
-    "gridLayout": "Сетка"
+    "gridLayout": "Сетка",
+    "configureUrl": "Set a URL in the widget settings",
+    "embeddedContent": "Embedded content",
+    "noBookmarks": "No bookmarks",
+    "noSections": "No sections set up",
+    "noServices": "No services set up",
+    "configureLocation": "Set a location in the widget settings",
+    "bannerTextPlaceholder": "Banner text",
+    "serviceNamePlaceholder": "My service"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use the homepage",
+      "description": "View and edit the homepage canvas and dashboard service links."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Allowed private hosts",
+      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+    },
+    "privateCertificateAuthority": {
+      "label": "Private certificate authority (PEM)",
+      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+    }
   }
 }

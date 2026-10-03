@@ -1,4 +1,42 @@
 {
+  "nav": {
+    "files": "Fișiere",
+    "sftp": "SFTP",
+    "openFileManager": "Deschideți Managerul de fișiere"
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește managerul de fișiere",
+      "description": "Răsfoiți, editați și transferați fișiere prin SFTP."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activează Managerul de fișiere",
+        "description": "Răsfoiți și editați fișiere pe această gazdă prin SFTP."
+      },
+      "defaultPath": {
+        "label": "Calea implicită"
+      },
+      "scpLegacy": {
+        "label": "Modul SCP Legacy"
+      }
+    },
+    "user": {
+      "transferConcurrency": {
+        "label": "Transferuri simultane de fișiere",
+        "description": "Câte fișiere încarcă sau descarcă simultan managerul local/la distanță. Reduceți această valoare dacă serverul dvs. limitează canalele SFTP."
+      },
+      "confirmBeforeTrash": {
+        "label": "Confirmați înainte de a muta fișierele în coșul de gunoi",
+        "description": "Întreabă înainte de a muta fișierele la distanță în coșul de gunoi. Ștergerea definitivă necesită în continuare confirmare."
+      }
+    }
+  },
+  "hostCapability": {
+    "label": "Manager de fișiere"
+  },
   "fileManager": {
     "noHostSelected": "Nicio gazdă selectată",
     "initializingEditor": "Se inițializează editorul...",
@@ -34,6 +72,7 @@
     "rename": "Redenumire",
     "uploading": "Se încarcă...",
     "uploadingFile": "Se încarcă {{name}}...",
+    "uploadingChunk": "Se încarcă {{name}}: {{percent}}% (partea {{chunk}} din {{total}})",
     "fileName": "Nume de fișier",
     "folderName": "Nume folder",
     "fileUploadedSuccessfully": "Fișierul „{{name}}” a fost încărcat cu succes",
@@ -95,7 +134,7 @@
     "localUploadToRemote": "Încărcare pe server",
     "localUploadToRemoteMany": "Încărcați {{count}} elemente pe server",
     "localMoveToTrash": "Mută în coșul de gunoi",
-    "localMoveToTrashMany": "Mută articolele {{count}} în Coșul de gunoi",
+    "localMoveToTrashMany": "Mută articolele {{count}} în coșul de gunoi",
     "localTrashConfirmSingle": "Mutați „{{name}}” în coșul de gunoi?",
     "localTrashConfirmFolder": "Mutați folderul „{{name}}” și tot conținutul său în Coșul de gunoi?",
     "localTrashConfirmMany": "Mutați {{count}} elemente în coșul de gunoi?",
@@ -117,7 +156,7 @@
     "failedToLoadDirectory": "Directorul nu a putut fi încărcat",
     "noSSHConnection": "Nu este disponibilă nicio conexiune SSH",
     "copy": "Copie",
-    "cut": "Tăiere",
+    "cut": "Tăiați",
     "paste": "Pastă",
     "copyPath": "Copiere cale",
     "copyPaths": "Copiați căile",
@@ -199,7 +238,7 @@
     "unpinnedSuccessfully": "„{{name}}” a fost anulată cu succes",
     "unpinFailed": "Anularea fixării a eșuat",
     "removedShortcut": "S-a eliminat comanda rapidă „{{name}}”",
-    "removeShortcutFailed": "Eliminarea comenzii rapide a eșuat",
+    "removeShortcutFailed": "Eliminarea comenzii rapide a eșuat.",
     "clearedAllRecentFiles": "Am șters toate fișierele recente",
     "clearFailed": "Ștergerea a eșuat",
     "removeFromRecentFiles": "Eliminați din fișierele recente",
@@ -290,6 +329,7 @@
     "connecting": "Se conectează...",
     "connectedSuccessfully": "Conectare reușită",
     "totpVerificationFailed": "Verificarea TOTP a eșuat",
+    "browserSignInFailed": "Conectarea a eșuat. Vă rugăm să încercați din nou.",
     "authenticationFailed": "Autentificarea a eșuat",
     "incorrectPassphrase": "Parolă incorectă. Vă rugăm să încercați din nou.",
     "verificationCodePrompt": "Cod de verificare:",
@@ -326,7 +366,24 @@
     "cannotLoadPdf": "Nu se poate încărca PDF-ul",
     "pdfLoadError": "A apărut o eroare la încărcarea acestui fișier PDF.",
     "loadingPdf": "Se încarcă PDF-ul...",
-    "loadingPage": "Se încarcă pagina..."
+    "loadingPage": "Se încarcă pagina...",
+    "cancel": "Anula",
+    "copiedItems_one": "Elementul {{count}} a fost copiat",
+    "copiedItems_other": "Articole {{count}} copiate",
+    "deleteCopiedFileFailed": "Nu s-a putut șterge copia lui {{name}}: {{error}}",
+    "dragMovedItems_one": "Elementul {{count}} a fost mutat la {{target}}",
+    "dragMovedItems_other": "Am mutat {{count}} elemente la {{target}}",
+    "moveBackFileFailed": "Nu s-a putut muta {{name}} înapoi: {{error}}",
+    "terminal": "Terminal: {{host}} ({{path}})",
+    "dragToDesktop": "Tragerea {{name}} pe desktop",
+    "dragFilesToDesktop": "Tragerea fișierelor {{count}} pe desktop",
+    "folderDragUnsupported": "Tragerea folderelor pe desktop nu este încă acceptată",
+    "saveToDesktopFailed": "Salvarea a eșuat: {{error}}",
+    "dragFailedDetail": "Tragerea a eșuat: {{error}}",
+    "videoUnsupported": "Browserul dvs. nu poate reda acest format video.",
+    "downloadToPlay": "Descarcă pentru a-l reda în altă parte",
+    "cannotPreviewType": "Nu se poate previzualiza acest tip de fișier",
+    "cannotPreviewTypeHint": "Acest tip de fișier nu are previzualizare. Descărcați-l pentru a-l deschide în altă aplicație."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -374,41 +431,11 @@
   },
   "hosts": {
     "fileManager": "Manager de fișiere",
-    "tabFiles": "Fișiere",
-    "enableFileManagerMonitor": "Activează Managerul de fișiere",
-    "enableFileManagerMonitorDesc": "Răsfoiți și gestionați fișierele de pe această gazdă prin SFTP",
-    "scpLegacyLabel": "Modul SCP Legacy",
-    "scpLegacyDesc": "Folosește transferul de fișiere vechi pentru serverele care nu acceptă subsistemul SFTP (de exemplu, servere SSH încorporate sau minimale).",
-    "defaultPathLabel": "Calea implicită",
-    "fileManagerPathHint": "Directorul care va fi deschis la lansarea managerului de fișiere pentru această gazdă.",
     "fileManagerUrlCopied": "Adresa URL a Managerului de fișiere a fost copiată",
     "copyFileManagerUrlAction": "Copiați adresa URL a managerului de fișiere",
     "docsLink": "Vizualizați documentele",
     "hostNotFound": "Gazdă negăsită",
     "loadingHost": "Se încarcă gazda..."
-  },
-  "settings": {
-    "host": {
-      "enable": {
-        "label": "Activează Managerul de fișiere"
-      },
-      "defaultPath": {
-        "label": "Calea implicită"
-      },
-      "scpLegacy": {
-        "label": "Modul SCP Legacy"
-      }
-    },
-    "user": {
-      "transferConcurrency": {
-        "label": "Transferuri simultane de fișiere",
-        "description": "Câte fișiere încarcă sau descarcă simultan managerul local/la distanță. Reduceți această valoare dacă serverul dvs. limitează canalele SFTP."
-      }
-    }
-  },
-  "nav": {
-    "sftp": "SFTP",
-    "files": "Fișiere"
   },
   "onboarding": {
     "feature_files": "Manager de fișiere",
@@ -437,7 +464,7 @@
     "destinationPath": "Calea de destinație",
     "destMustBeDirectory": "Destinația trebuie să fie un director pentru transferurile cu mai multe elemente",
     "goUp": "Mergi sus",
-    "hostAuthRequired": "Autentificare necesară — deschideți mai întâi File Manager pe această gazdă",
+    "hostAuthRequired": "Autentificare necesară. Deschideți mai întâi File Manager pe această gazdă.",
     "hostConnecting": "Conectare…",
     "hostConnectionFailed": "Conexiunea a eșuat",
     "hostDisconnected": "Neconectat",
@@ -458,12 +485,12 @@
     "methodReason": {
       "user_item_sftp": "Ai ales SFTP per fișier.",
       "user_tar": "Ai ales arhiva tar.",
-      "tar_unavailable": "Tar nu este disponibil pe una sau ambele gazde — se va folosi în schimb SFTP per fișier.",
-      "windows_host": "Este implicată o gazdă Windows — nu se folosește fișierul tar.",
-      "auto_multi_large": "Automat: fișiere multiple, inclusiv un fișier mare ({{largestSize}}) cu date compresibile — pachete tar într-un singur transfer.",
-      "auto_single_large_in_archive": "Automat: un fișier mare ({{largestSize}}) în acest set — SFTP per fișier.",
-      "auto_many_incompressible": "Automat: date în mare parte incompresibile — SFTP per fișier.",
-      "auto_many_files": "Auto: multe fișiere ({{fileCount}}) — tar reduce costul per fișier.",
+      "tar_unavailable": "Tar nu este disponibil pe una sau ambele gazde, așa că se va utiliza în schimb SFTP per fișier.",
+      "windows_host": "Este implicată o gazdă Windows, deci nu se folosește tar.",
+      "auto_multi_large": "Automat: fișiere multiple, inclusiv un fișier mare ({{largestSize}}) cu date compresibile. Tar le grupează într-un singur transfer.",
+      "auto_single_large_in_archive": "Automat: un fișier mare ({{largestSize}}) în acest set, deci SFTP per fișier.",
+      "auto_many_incompressible": "Automat: date în mare parte incompresibile, deci SFTP per fișier.",
+      "auto_many_files": "Auto: multe fișiere ({{fileCount}}), tar reduce costul per fișier.",
       "auto_default": "Automat: SFTP per fișier pentru acest set."
     },
     "methodTar": "Arhivă Tar",
@@ -471,7 +498,7 @@
     "metricsCompress": "Comprimare pe sursă: {{duration}}",
     "metricsExtract": "Extras la destinație: {{duration}}",
     "metricsPrepare": "Pregătiți destinația: {{duration}}",
-    "metricsRouteBenchmark": "Sondă de rută — directă: {{direct}}, releu: {{relay}}",
+    "metricsRouteBenchmark": "Sondă de rută: directă {{direct}}, releu {{relay}}",
     "metricsSourceDelete": "Eliminare din sursă: {{duration}}",
     "metricsTotal": "Total: {{duration}}",
     "metricsTransfer": "De la un capăt la altul: {{throughput}} ({{duration}})",
@@ -508,6 +535,9 @@
     "transferError": "Transferul a eșuat",
     "transferFailedRetryHint": "Date parțiale au fost păstrate la destinație. Reîncercarea va fi reluată după restabilirea conexiunii.",
     "transferPartialHint": "Nu s-a putut transfera: {{paths}}",
-    "transferSuccess": "Transfer finalizat"
+    "transferSuccess": "Transfer finalizat",
+    "metricsHopSourceRead": "Sursă → server: {{throughput}}",
+    "metricsHopDestSftpWrite": "Server → destinație (SFTP): {{throughput}}",
+    "metricsHopDestLocalWrite": "Server → destinație (locală): {{throughput}}"
   }
 }

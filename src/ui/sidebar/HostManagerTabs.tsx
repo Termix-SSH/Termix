@@ -1,6 +1,19 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
-import { KeyRound, Settings, Terminal } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  KeyRound,
+  Settings,
+  Terminal,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { byOrderThenId, createRegistry } from "@/lib/registry";
 
 /** Core host editor tabs. Plugins add theirs through registerHostEditorSection. */
@@ -197,6 +210,27 @@ export function TabStrip({
   variant?: "primary" | "secondary";
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+  const [scroll, setScroll] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () =>
+      setScroll({
+        left: el.scrollLeft > 1,
+        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+      });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    el.addEventListener("scroll", update);
+    update();
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", update);
+    };
+  }, [tabs]);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -229,14 +263,48 @@ export function TabStrip({
     );
   };
 
+  const overflow = scroll.left || scroll.right;
   return (
     <div
-      ref={ref}
-      className={`overflow-x-auto scrollbar-none ${
-        variant === "secondary" ? "border-t border-border bg-card" : ""
-      }`}
+      className={`flex min-w-0 items-center ${variant === "secondary" ? "border-t border-border bg-card" : ""}`}
     >
-      <div className="flex min-w-max">{tabs.map(renderTab)}</div>
+      {overflow && (
+        <button
+          type="button"
+          aria-label={t("common.scrollTabsLeft")}
+          title={t("common.scrollTabsLeft")}
+          disabled={!scroll.left}
+          className="shrink-0 p-1 disabled:opacity-30"
+          onClick={() =>
+            ref.current?.scrollBy({
+              left: -ref.current.clientWidth * 0.75,
+              behavior: "smooth",
+            })
+          }
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+      )}
+      <div ref={ref} className="min-w-0 flex-1 overflow-x-auto scrollbar-none">
+        <div className="flex min-w-max">{tabs.map(renderTab)}</div>
+      </div>
+      {overflow && (
+        <button
+          type="button"
+          aria-label={t("common.scrollTabsRight")}
+          title={t("common.scrollTabsRight")}
+          disabled={!scroll.right}
+          className="shrink-0 p-1 disabled:opacity-30"
+          onClick={() =>
+            ref.current?.scrollBy({
+              left: ref.current.clientWidth * 0.75,
+              behavior: "smooth",
+            })
+          }
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      )}
     </div>
   );
 }

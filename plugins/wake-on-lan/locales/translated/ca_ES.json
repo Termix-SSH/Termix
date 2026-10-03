@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "Despertar",
+    "sent": "Paquet Wake-on-LAN enviat",
+    "failed": "No s'ha pogut enviar el paquet Wake-on-LAN"
+  },
+  "permissions": {
+    "send": {
+      "title": "Enviar paquets Wake-on-LAN",
+      "description": "Desperta un host enviant un paquet màgic a la seva adreça MAC."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "Adreça MAC",
+        "description": "L'adreça MAC de xarxa de l'amfitrió, que s'utilitza per enviar paquets Wake-on-LAN.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "Adreça de difusió",
+        "description": "L'adreça de difusió de la subxarxa a la qual s'enviarà el paquet. Deixeu-ho en blanc si voleu 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

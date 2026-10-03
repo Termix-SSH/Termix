@@ -16,6 +16,16 @@
     "authFailed": "Godkendelse mislykkedes. Tjek dine loginoplysninger, og prøv igen.",
     "timeout": "Godkendelsen udløb. Prøv igen."
   },
+  "settings": {
+    "redirectUri": {
+      "label": "Omdirigerings-URI",
+      "description": "Registrer denne URL som en tilladt omdirigerings-URI hos alle identitetsudbydere i din OPKSSH-konfiguration."
+    },
+    "legacyCallback": {
+      "label": "Brug den gamle omdirigerings-URI",
+      "description": "Fortsæt med at sende /host/opkssh-callback, den omdirigerings-URI, der blev brugt før 2.9. Slå dette fra, når dine identitetsudbydere tillader den nye."
+    }
+  },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
   }

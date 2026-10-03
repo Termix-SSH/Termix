@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Felhasználók keresése...",
     "noUsersFound": "Nem található felhasználó",
     "linkCreated": "Megosztási link létrehozva",
+    "linkNeedsServer": "A megosztási linkek csak Termix szerveren lévő munkamenetek esetén működnek. A linkkel való megosztáshoz csatlakoztasd ezt a hosztot a csatolt szervereden keresztül.",
     "linkCopied": "Link a vágólapra másolva",
     "copyLink": "Link másolása",
     "shareCreated": "Munkamenet megosztva. Megjelenik a Kapcsolatok fülön.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Link",
     "userShareBadge": "Felhasználó: {{username}}",
     "loadSharesFailed": "Nem sikerült betölteni az aktív megosztásokat",
+    "remoteDisplayUnavailable": "A távoli asztal jelenleg nem érhető el.",
+    "sharedWithMe": "Velem megosztott munkamenetek",
     "customHoursPlaceholder": "Órák a hozzáférés lejártáig"
   },
   "collab": {
@@ -68,6 +71,9 @@
     "members": "Tagok",
     "membersPanel": "Szoba tagjai és irányítási kérelmek",
     "membersWithCount": "Tagok ({{count}})",
+    "guestsWithCount": "Vendégek ({{count}})",
+    "removeGuests": "Vendégek eltávolítása",
+    "anonymousGuest": "Vendég",
     "online": "online",
     "offline": "offline",
     "you": "(te)",
@@ -115,6 +121,7 @@
       "linkInvalid": "Ez a vendéglink érvénytelen, vagy a megbeszélés véget ért."
     },
     "reopenFromPanel": "Ez a megbeszélésfül lejárt. Nyissa meg újra a szobát a Megbeszélések panelről.",
+    "retry": "Újrapróbálkozás",
     "requestControl": "Kérelemvezérlés",
     "cancelControlRequest": "Kérés visszavonása",
     "controlQueue": "Ellenőrzési kérelmek",
@@ -130,7 +137,10 @@
     "youArePresenting": "Egy másik lapon tartasz előadást. Állítsa le az előadást, hogy átadhassa a helyet.",
     "created": "Szoba létrehozva",
     "invited": "Meghívott tagok",
-    "roomTab": "Találkozó"
+    "roomTab": "Találkozó",
+    "serverChanged": "A megbeszélés szervere megváltozott. Nyissa meg újra a megbeszélést a Megbeszélések panelről.",
+    "hostNotSynced": "Szinkronizálja ezt a gazdagépet a megbeszélés szerverével a prezentáció megkezdése előtt.",
+    "linkRequiresServer": "Kapcsold össze ezt az asztalt egy Termix szerverrel, és hozd létre ott a találkozót egy webhivatkozás megosztásához."
   },
   "nav": {
     "collab": "Találkozók"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Munkamenetek megosztása és szobákhoz való csatlakozás",
+      "description": "Ossz meg élő munkameneteket linken keresztül vagy más felhasználókkal, és hozz létre, illetve csatlakozz együttműködési szobákhoz."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Szokás"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Megosztva velem",
+    "sharedBy": "Megosztotta: {{username}}",
+    "join": "Csatlakozik",
+    "sharedSessionLabel": "{{hostName}} (megosztva)"
   }
 }

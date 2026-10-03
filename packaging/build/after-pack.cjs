@@ -30,6 +30,20 @@ function copyPluginSdk(resourcesDir, sdkDir = path.join(repoRoot, "packages", "p
 
 exports.copyPluginSdk = copyPluginSdk;
 
+/** Mac App Store builds report "mas", not "darwin", but are still .app bundles. */
+function resourcesDirFor({ electronPlatformName, appOutDir, packager }) {
+  return ["darwin", "mas"].includes(electronPlatformName)
+    ? path.join(
+        appOutDir,
+        `${packager.appInfo.productFilename}.app`,
+        "Contents",
+        "Resources",
+      )
+    : path.join(appOutDir, "resources");
+}
+
+exports.resourcesDirFor = resourcesDirFor;
+
 exports.default = async function afterPack(context) {
   const { targets, appOutDir } = context;
 
@@ -39,15 +53,7 @@ exports.default = async function afterPack(context) {
     fs.writeFileSync(markerPath, "");
   }
 
-  const resourcesDir =
-    context.electronPlatformName === "darwin"
-      ? path.join(
-          appOutDir,
-          `${context.packager.appInfo.productFilename}.app`,
-          "Contents",
-          "Resources",
-        )
-      : path.join(appOutDir, "resources");
+  const resourcesDir = resourcesDirFor(context);
 
   copyPluginSdk(resourcesDir);
 

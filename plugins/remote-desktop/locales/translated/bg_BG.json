@@ -6,7 +6,7 @@
     "openingSession": "Отваряне на {{type}} сесия...",
     "negotiating": "Преговаряне {{type}} ръкостискане...",
     "sessionReady": "{{type}} сесията е готова",
-    "connectionError": "Грешка при свързване",
+    "connectionError": "Грешка във връзката",
     "connectionFailed": "Връзката не бе успешна",
     "failedToConnect": "Неуспешно получаване на токен за връзка",
     "hostNotFound": "Хостът не е намерен",
@@ -73,17 +73,22 @@
       "fitToScreen": "Побиране на екрана",
       "switchToTrackpad": "Превключване в режим на тракпад (плъзнете, за да преместите курсора, докоснете, за да щракнете)",
       "switchToTouch": "Превключване към режим на докосване (докоснете директно там, където искате да щракнете)"
-    }
+    },
+    "disabled": "Отдалеченият работен плот е изключен. Администратор може да го включи в „Настройки“."
   },
   "hosts": {
     "nativeRdpOpened": "Отворено в отдалечен работен плот на Windows",
     "nativeRdpFailed": "Неуспешно отваряне на отдалечения работен плот на Windows",
     "openNativeRdp": "Отваряне в отдалечен работен плот на Windows",
     "guac": {
+      "toolbar": "Лента с инструменти",
       "connection": "Връзка",
       "authentication": "Удостоверяване",
       "storedCredential": "Съхранени идентификационни данни",
       "authMethod": "Метод за удостоверяване",
+      "authTypeDirect": "Директно",
+      "authTypeCredential": "Пълномощия",
+      "authTypeNone": "Няма",
       "authTypeNoneDesc": "Не се съхраняват идентификационни данни. Ще бъдете подканени да въведете потребителско име и парола всеки път, когато се свържете; те не се запазват.",
       "selectCredential": "Изберете идентификационен номер...",
       "connectionSettings": "Настройки за връзка",
@@ -198,7 +203,7 @@
       "swapRedBlue": "Разменете червено/синьо",
       "swapRedBlueDesc": "Разменете червените и сините цветови канали (коригира някои проблеми с цветовете)",
       "readOnly": "Само за четене",
-      "readOnlyDesc": "Преглеждайте отдалечения екран, без да изпращате никакви входни данни",
+      "readOnlyDesc": "Преглед на отдалечения екран без изпращане на каквито и да било входни данни",
       "telnetPort": "Telnet порт",
       "terminalType": "Тип терминал",
       "fontName": "Име на шрифта",
@@ -206,7 +211,8 @@
       "colorScheme": "Цветова схема",
       "backspaceKey": "Клавиш Backspace",
       "colorDepth": "Дълбочина на цвета",
-      "resizeMethod": "Метод за преоразмеряване"
+      "resizeMethod": "Метод за преоразмеряване",
+      "driveNamePlaceholder": "Термикс Драйв"
     },
     "remoteDesktop": "Отдалечен работен плот",
     "tabRdp": "ПРСР",
@@ -214,7 +220,11 @@
     "tabTelnet": "Телнет",
     "virtualNetwork": "Виртуална мрежа",
     "unencryptedShell": "Некриптирана обвивка",
-    "docsLink": "Преглед на документи"
+    "remoteDesktopNotes": "Бележки",
+    "userDefaultsNote": "Настройките, които оставяте непроменени, следват настройките по подразбиране на вашия хост.",
+    "connectionOriginNote": "В настолното приложение RDP, VNC и Telnet използват отдалечения сървър, освен ако хостът не е зададен на „Това устройство“, което изисква guacd, до който тази машина може да достигне. Задайте такъв в настройките на отдалечения работен плот или за всеки хост под guacd Proxy.",
+    "docsLink": "Преглед на документи",
+    "connectionOriginGuacamoleNote": "RDP, VNC и Telnet използват отдалечения сървър, освен ако не изберете „Това устройство“, което изисква guacd, до който тази машина може да достигне. Задайте такъв в настройката на guacd URL или за всеки хост под guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Отдалечен работен плот",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Дълбочина на цвета"
+        "label": "Дълбочина на цвета",
+        "description": "Използва се за RDP хостове, които го оставят по подразбиране."
       },
       "resizeMethod": {
-        "label": "Метод за преоразмеряване"
+        "label": "Метод за преоразмеряване",
+        "description": "Как отдалеченият екран следва размера на прозореца."
       },
       "resizeDisplayUpdate": "Актуализация на дисплея",
       "resizeReconnect": "Свържете се отново",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Деактивиране на поставянето",
         "description": "Предотвратяване на поставянето на текст в отдалечената сесия"
-      }
+      },
+      "group": "Настройки по подразбиране за отдалечен работен плот",
+      "colorDepth16": "16-битов",
+      "colorDepth24": "24-битов",
+      "colorDepth32": "32-битов"
     },
     "admin": {
+      "enabled": {
+        "label": "Активиране на отдалечен работен плот",
+        "description": "Разрешаване на RDP, VNC и Telnet връзки чрез guacd."
+      },
       "guacdUrl": {
-        "label": "URL адрес на GUACD"
+        "label": "URL адрес на GUACD",
+        "description": "Където guacd слуша, като host:port. Променливите на средата GUACD_URL, GUACD_HOST и GUACD_PORT отменят това.",
+        "placeholder": "гуакд:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "ПРСР"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Телнет"
+      },
+      "rdpPort": {
+        "label": "RDP порт"
+      },
+      "vncPort": {
+        "label": "VNC порт"
+      },
+      "telnetPort": {
+        "label": "Telnet порт"
+      },
+      "rdpSecurity": {
+        "label": "Режим на защита на RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "Игнориране на грешки в сертификатите"
+      },
+      "guacamoleConfig": {
+        "label": "настройки на GUACD"
+      },
+      "enableToolbar": {
+        "label": "Лента с инструменти за отдалечен работен плот",
+        "description": "Показване на лентата с инструменти в RDP, VNC и Telnet сесии."
+      },
+      "displayGroup": "Дисплей",
+      "displayDefaultsTab": "Отдалечен работен плот"
+    }
+  },
+  "palette": {
+    "connectRdp": "Свържете се с RDP",
+    "connectVnc": "Свържете се с VNC",
+    "connectTelnet": "Свържете се с Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Споделяне на сесии за отдалечен работен плот",
+      "description": "Позволете на споделянето на сесии и стаите за сътрудничество да показват RDP, VNC и Telnet сесиите на този потребител на други."
     }
   },
   "errors": {

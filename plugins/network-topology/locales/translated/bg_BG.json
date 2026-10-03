@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "Източникът и целта трябва да са различни",
     "exportJSON": "Експортиране на JSON",
     "importJSON": "Импортиране на JSON",
-    "terminal": "Терминал",
-    "fileManager": "Файлов мениджър",
-    "tunnel": "Тунел",
-    "docker": "Докер",
     "serverStats": "Метрики на хоста",
-    "hostMetrics": "Метрики на хоста",
     "noNodes": "Все още няма възли"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} възли"
+  },
+  "permissions": {
+    "use": {
+      "title": "Използвайте мрежова графика",
+      "description": "Преглед и редактиране на графиката на мрежовата топология."
+    }
   },
   "hosts": {
     "docsLink": "Преглед на документи"

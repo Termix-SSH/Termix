@@ -9,7 +9,7 @@
       "ownerLabel": "Proprietario dell'host"
     },
     "modalTitle": "Sessione di condivisione",
-    "shareButton": "Condividere",
+    "shareButton": "Condividi",
     "notReadyToShare": "La sessione non è ancora pronta per la condivisione.",
     "modeTab": {
       "link": "Collegamento",
@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Cerca utenti...",
     "noUsersFound": "Nessun utente trovato",
     "linkCreated": "Link di condivisione creato",
+    "linkNeedsServer": "I link di condivisione funzionano solo per le sessioni su un server Termix. Collega questo host tramite il tuo server collegato per condividerlo con un link.",
     "linkCopied": "Link copiato negli appunti",
     "copyLink": "Copia il link",
     "shareCreated": "Sessione condivisa. Sarà visibile nella scheda Connessioni.",
@@ -37,7 +38,7 @@
     "userLacksHostAccess": "Quell'utente non ha ancora accesso a questo host. Condividi prima l'host con lui, oppure usa un link.",
     "activeShares": "Condivisioni attive",
     "noActiveShares": "Nessuna azione attiva in questa sessione.",
-    "revoke": "Revocare",
+    "revoke": "Revoca",
     "revokeConfirmTitle": "Revocare questa condivisione?",
     "revokeConfirmDescription": "Chiunque utilizzi questa condivisione perderà immediatamente l'accesso.",
     "revoked": "Azione revocata.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Collegamento",
     "userShareBadge": "Utente: {{username}}",
     "loadSharesFailed": "Impossibile caricare le azioni attive",
+    "remoteDisplayUnavailable": "Al momento il desktop remoto non è disponibile.",
+    "sharedWithMe": "Sessioni condivise con me",
     "customHoursPlaceholder": "Ore fino alla scadenza dell'accesso"
   },
   "collab": {
@@ -56,10 +59,10 @@
     "persistentRoom": "Stanza persistente",
     "persistentRoomHint": "Le stanze persistenti rimangono elencate anche dopo la fine della riunione e possono essere riutilizzate.",
     "noRooms": "Non ci sono ancora stanze. Creane una per avviare una riunione.",
-    "openRoom": "Aprire",
+    "openRoom": "Apri",
     "endRoom": "Fine della riunione",
     "leaveRoom": "Partire",
-    "deleteMember": "Rimuovere",
+    "deleteMember": "Rimuovi",
     "removeMember": "Rimuovi {{name}}",
     "removeMemberTitle": "Rimuovere questo membro?",
     "removeMemberDescription": "{{name}} perderà immediatamente l'accesso a questa stanza. Qualsiasi visualizzatore SSH attivo verrà disconnesso.",
@@ -68,15 +71,18 @@
     "members": "Membri",
     "membersPanel": "Membri della stanza e richieste di controllo",
     "membersWithCount": "Membri ({{count}})",
+    "guestsWithCount": "Ospiti ({{count}})",
+    "removeGuests": "Rimuovi gli ospiti",
+    "anonymousGuest": "Ospite",
     "online": "online",
     "offline": "offline",
     "you": "(Voi)",
-    "hostBadge": "Ospite",
+    "hostBadge": "Host",
     "presenterBadge": "Presentazione",
     "present": "Presente",
     "presentTitle": "Sali sul palco",
-    "presentHost": "Ospite",
-    "searchHosts": "Host di ricerca",
+    "presentHost": "Host",
+    "searchHosts": "Cerca host",
     "noHostsFound": "Nessun host disponibile trovato.",
     "presentProtocol": "Protocollo",
     "stopPresenting": "Smetti di presentare",
@@ -98,7 +104,7 @@
     "rotateLinkDescription": "Il collegamento attuale smetterà di funzionare immediatamente. Gli ospiti SSH connessi verranno disconnessi.",
     "disableLinkConfirmTitle": "Disabilitare il link per gli ospiti?",
     "disableLinkDescription": "Gli utenti che tentano di connettersi tramite SSH in modo anonimo verranno disconnessi immediatamente e il collegamento corrente smetterà di funzionare.",
-    "linkCopied": "Link copiato",
+    "linkCopied": "Collegamento copiato",
     "roles": "Ruoli",
     "users": "Utenti",
     "searchUsers": "Utenti di ricerca",
@@ -115,6 +121,7 @@
       "linkInvalid": "Questo link per gli ospiti non è valido oppure la riunione è terminata."
     },
     "reopenFromPanel": "La scheda di questa riunione è scaduta. Riapri la sala riunioni dal pannello Riunioni.",
+    "retry": "Riprova",
     "requestControl": "Controllo della richiesta",
     "cancelControlRequest": "Annulla richiesta",
     "controlQueue": "Richieste di controllo",
@@ -130,7 +137,10 @@
     "youArePresenting": "Stai presentando in un'altra scheda. Interrompi la presentazione per cedere la parola.",
     "created": "Stanza creata",
     "invited": "Membri invitati",
-    "roomTab": "Incontro"
+    "roomTab": "Incontro",
+    "serverChanged": "Il server della riunione è cambiato. Riapri la riunione dal pannello Riunioni.",
+    "hostNotSynced": "Sincronizza l'host con il server della riunione prima di iniziare la presentazione.",
+    "linkRequiresServer": "Collega questo computer desktop a un server Termix e crea la riunione lì per condividere un link web."
   },
   "nav": {
     "collab": "Riunioni"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Condividi sessioni e unisciti alle stanze",
+      "description": "Condividi sessioni live tramite link o con altri utenti, e crea e partecipa a stanze di collaborazione."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Personalizzato"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Condiviso con me",
+    "sharedBy": "Condiviso da {{username}}",
+    "join": "Giuntura",
+    "sharedSessionLabel": "{{hostName}} (condiviso)"
   }
 }

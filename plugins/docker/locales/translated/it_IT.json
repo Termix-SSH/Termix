@@ -21,6 +21,11 @@
     "ports": "Porte",
     "noPorts": "Nessuna porta",
     "start": "Avvia",
+    "stop": "Stop",
+    "status": "Stato",
+    "actions": "Azioni",
+    "cardView": "Visualizzazione a schede",
+    "listView": "Visualizzazione elenco",
     "confirmRemoveContainer": "Sei sicuro di voler rimuovere il container '{{name}}'? Questa azione non può essere annullata.",
     "runningContainerWarning": "Attenzione: questo container è attualmente in esecuzione. La rimozione lo arresterà prima.",
     "loadingContainers": "Caricamento container in corso...",
@@ -73,6 +78,7 @@
     "containerMustBeRunning": "Il container deve essere in esecuzione per accedere alla console",
     "verificationCodePrompt": "Inserisci il codice di verifica",
     "totpVerificationFailed": "Verifica TOTP fallita. Riprova.",
+    "browserSignInFailed": "Accesso non riuscito. Riprova.",
     "connectedTo": "Connesso a {{containerName}}",
     "disconnected": "Disconnesso",
     "consoleError": "Errore console",
@@ -93,7 +99,10 @@
     "logs": "Log",
     "stats": "Statistiche",
     "consoleTab": "Console",
-    "startContainerToAccess": "Avvia il container per accedere alla console"
+    "startContainerToAccess": "Avvia il container per accedere alla console",
+    "noHostSelected": "Nessun host selezionato",
+    "failedToFetchLogs": "Impossibile recuperare i log: {{error}}",
+    "failedToDownloadLogs": "Impossibile scaricare i log: {{error}}"
   },
   "nav": {
     "docker": "Docker"
@@ -102,10 +111,22 @@
     "feature_docker": "Docker",
     "feature_docker_desc": "Visualizza i container, leggi i log e controlla le statistiche su qualsiasi host che esegue Docker."
   },
+  "terminal": {
+    "retry": "Riprova",
+    "clipboardReadFailed": "Lettura dagli appunti non riuscita. Assicurati che i permessi degli appunti siano stati concessi.",
+    "clipboardWriteFailed": "Copia negli appunti non riuscita. Assicurati che la pagina sia servita via HTTPS o localhost."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizzare Docker",
+      "description": "Apri il gestore Docker e le console dei container sugli host in cui Docker è abilitato."
+    }
+  },
   "settings": {
     "host": {
       "enable": {
-        "label": "Abilita Docker"
+        "label": "Abilita Docker",
+        "description": "Gestisci i container su questo host."
       },
       "containerRuntime": {
         "label": "Runtime container",
@@ -122,9 +143,5 @@
     "docsLink": "Visualizza documentazione",
     "hostNotFound": "Host non trovato",
     "loadingHost": "Caricamento host..."
-  },
-  "terminal": {
-    "clipboardReadFailed": "Lettura dagli appunti non riuscita. Assicurati che i permessi degli appunti siano stati concessi.",
-    "clipboardWriteFailed": "Copia negli appunti non riuscita. Assicurati che la pagina sia servita via HTTPS o localhost."
   }
 }

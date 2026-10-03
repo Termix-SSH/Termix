@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Gazdagép-metrikák"
+  },
   "hostMetrics": {
     "cpu": "CPU",
     "memory": "Memória",
@@ -160,7 +163,6 @@
       "firewallPersist": "Szabályok megőrzése",
       "firewallPersisted": "A tűzfalszabályok megmaradtak",
       "wireguard": "Drótvédő",
-      "tailscale": "Farokskála",
       "wgNotInstalled": "A WireGuard nincs telepítve erre a gépre",
       "wgNoInterfaces": "Nincsenek konfigurált WireGuard interfészek",
       "wgInterfaceUp": "Felnevel",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Utolsó kézfogás",
       "wgHandshakeNever": "Soha",
       "wgTransfer": "Átruházás",
-      "tsNotInstalled": "A Tailscale nincs telepítve erre a gazdagépre",
-      "tsRunning": "Futás",
-      "tsStopped": "Leállítva",
-      "tsEnable": "Csatlakozás",
-      "tsDisable": "Leválasztás",
-      "tsEnabling": "Kapcsolódás a Tailscale-hez...",
-      "tsDisabling": "Lecsatlakozás a Tailscale-ről...",
-      "tsEnabled": "Farokméret csatlakoztatva",
-      "tsDisabled": "Farokváz leválasztva",
-      "tsIPs": "Tailscale IP-címek",
-      "tsPeers": "Társak",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Kilépési csomópont",
-      "tsExitNodeActive": "Kilépési csomópont aktív",
-      "tsHostname": "Gazdagépnév"
+      "wgNoPeers": "Nincsenek társaik"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "hogy",
     "apply": "Jelentkezés",
     "viewHistory": "Előzmények megtekintése"
-  },
-  "nav": {
-    "hostMetrics": "Gazdagép-metrikák"
   },
   "hosts": {
     "tabHostMetrics": "Gazdagép-metrikák",
@@ -265,6 +249,9 @@
     "noHostSelected": "Nincs kiválasztva gazdagép",
     "selectHost": "Válasszon egy hosztot..."
   },
+  "terminalStatus": {
+    "unavailable": "Élő statisztikák nem elérhetők"
+  },
   "dashboard": {
     "cpu": "CPU",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Csatlakoztatva"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gazdagép-metrikák használata",
+      "description": "Tekintse meg a hoszt metrikáit, és használja a hosztkezelőket (szolgáltatásokat, csomagokat, tűzfalat és egyebeket) az elérhető hosztokon."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrika intervallum (másodperc)",
+        "description": "Azt adja meg, hogy egy megtekintett gazdagépből milyen gyakran történik mintavételezés, kivéve, ha a gazdagép beállítja a saját intervallumát."
+      },
+      "historyRetentionDays": {
+        "label": "Előzménymegőrzés (nap)",
+        "description": "Mennyi ideig tárolják a metrika mintákat az előzménydiagramokhoz."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrikák bekapcsolva az új házigazdák számára",
+        "description": "Az új hosztok bekapcsolt metrikák gyűjtésével indulnak-e."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Hőmérséklet mértékegysége",
+        "description": "Hogyan jelennek meg a hőmérsékletek a Host Metrics-ben?",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Metrikák gyűjtése"
+      },
+      "metricsInterval": {
+        "label": "Metrika intervallum (másodperc)"
+      },
+      "enabledWidgets": {
+        "label": "Engedélyezett widgetek"
+      },
+      "excludedMounts": {
+        "label": "Kizárt tartók"
+      },
+      "monitoredMounts": {
+        "label": "Megfigyelt útvonalak"
+      }
+    }
   }
 }

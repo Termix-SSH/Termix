@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "Gasheermetrieke"
+  },
   "hostMetrics": {
     "cpu": "SVE",
     "memory": "Geheue",
@@ -59,7 +62,7 @@
       "process": "Proses",
       "search": "Soek poorte...",
       "allProtocols": "Alles",
-      "noData": "Geen luisterpoorte-data nie"
+      "noData": "Geen luisterpoorte data nie"
     },
     "firewall": {
       "title": "Firewall",
@@ -160,7 +163,6 @@
       "firewallPersist": "Behou reëls",
       "firewallPersisted": "Firewall-reëls het voortgeduur",
       "wireguard": "Draadbeskerming",
-      "tailscale": "Stertskaal",
       "wgNotInstalled": "WireGuard is nie op hierdie gasheer geïnstalleer nie",
       "wgNoInterfaces": "Geen WireGuard-koppelvlakke gekonfigureer nie",
       "wgInterfaceUp": "Bring op",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "Laaste handdruk",
       "wgHandshakeNever": "Nooit",
       "wgTransfer": "Oordrag",
-      "tsNotInstalled": "Tailscale is nie op hierdie gasheer geïnstalleer nie",
-      "tsRunning": "Hardloop",
-      "tsStopped": "Gestop",
-      "tsEnable": "Verbind",
-      "tsDisable": "Ontkoppel",
-      "tsEnabling": "Verbind met Tailscale...",
-      "tsDisabling": "Ontkoppel tans van Tailscale...",
-      "tsEnabled": "Stertskaal gekoppel",
-      "tsDisabled": "Stertskaal ontkoppel",
-      "tsIPs": "Stertskaal-IP's",
-      "tsPeers": "Eweknieë",
-      "tsOnline": "Aanlyn",
-      "tsOffline": "Vanlyn",
-      "tsExitNode": "Uitgangsknoop",
-      "tsExitNodeActive": "Uitgangsknoop aktief",
-      "tsHostname": "Gasheernaam"
+      "wgNoPeers": "Geen eweknieë nie"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "om",
     "apply": "Dien toe",
     "viewHistory": "Bekyk Geskiedenis"
-  },
-  "nav": {
-    "hostMetrics": "Gasheermetrieke"
   },
   "hosts": {
     "tabHostMetrics": "Gasheermetrieke",
@@ -265,6 +249,9 @@
     "noHostSelected": "Geen gasheer gekies nie",
     "selectHost": "Kies 'n gasheer..."
   },
+  "terminalStatus": {
+    "unavailable": "Regstreekse statistieke is nie beskikbaar nie"
+  },
   "dashboard": {
     "cpu": "SVE",
     "ram": "RAM"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "Verbonde"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik gasheermetrieke",
+      "description": "Bekyk gasheerstatistieke en gebruik die gasheerbestuurders (dienste, pakkette, firewall en meer) op gashere wat jy kan bereik."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrieke-interval (sekondes)",
+        "description": "Hoe gereeld 'n gasheer wat besigtig word, gemonster word, tensy die gasheer sy eie interval stel."
+      },
+      "historyRetentionDays": {
+        "label": "Geskiedenisbewaring (dae)",
+        "description": "Hoe lank word metrieke-monsters vir die geskiedenisgrafieke gehou."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrieke aan vir nuwe gashere",
+        "description": "Of nuwe gashere begin met metrieke-insameling aangeskakel."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperatuureenheid",
+        "description": "Hoe temperature in Host Metrics getoon word.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Versamel statistieke"
+      },
+      "metricsInterval": {
+        "label": "Metrieke-interval (sekondes)"
+      },
+      "enabledWidgets": {
+        "label": "Geaktiveerde widgets"
+      },
+      "excludedMounts": {
+        "label": "Uitgesluite monterings"
+      },
+      "monitoredMounts": {
+        "label": "Gemonitorde paaie"
+      }
+    }
   }
 }

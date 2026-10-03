@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Pagina principală",
     "addWidget": "Adăugați widget",
+    "noWidgetsInCategory": "Niciun widget în această categorie",
     "editWidget": "Editare widget",
     "zoomIn": "Mărire",
     "zoomOut": "Micșorare",
@@ -59,6 +60,9 @@
     "maxItems": "Articole maxime",
     "showDescription": "Afișați descrierea",
     "widgetRssName": "Flux RSS",
+    "rssNoFeedUrl": "Configurați o adresă URL de flux în setările widgetului",
+    "rssLoadError": "Nu s-a putut încărca feedul",
+    "rssNoItems": "Niciun articol",
     "noHostSelected": "Nicio gazdă selectată",
     "displayedMetrics": "Metrici afișate",
     "metricCpu": "CPU",
@@ -78,7 +82,7 @@
     "filterActivityTypes": "Tipuri de filtre",
     "filterTypesHint": "Lăsați gol pentru a afișa toate",
     "showTimestamp": "Afișați marcajul temporal",
-    "uptimeUnavailable": "Disponibilitate indisponibilă",
+    "uptimeUnavailable": "Timp de funcționare indisponibil",
     "uptimeLabel": "Timp de funcționare",
     "overviewVersion": "Versiune",
     "overviewUpdateLabel": "Actualizare",
@@ -157,6 +161,30 @@
     "compactMode": "Mod compact",
     "selectHosts": "Selectați gazdele",
     "listLayout": "Listă",
-    "gridLayout": "Grilă"
+    "gridLayout": "Grilă",
+    "configureUrl": "Setați o adresă URL în setările widgetului",
+    "embeddedContent": "Conținut încorporat",
+    "noBookmarks": "Fără marcaje",
+    "noSections": "Nicio secțiune configurată",
+    "noServices": "Niciun serviciu configurat",
+    "configureLocation": "Setați o locație în setările widgetului",
+    "bannerTextPlaceholder": "Textul bannerului",
+    "serviceNamePlaceholder": "Serviciul meu"
+  },
+  "permissions": {
+    "use": {
+      "title": "Folosește pagina principală",
+      "description": "Vizualizați și editați linkurile către serviciul canvas și tabloul de bord al paginii principale."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Gazde private permise",
+      "description": "Nume de gazdă/IP-uri private sau loopback exacte pentru widget-urile Ping Status și Custom API. Separați intrările cu virgule sau linii noi; omiteți schemele, porturile și căile. Spațiile goale blochează destinațiile private."
+    },
+    "privateCertificateAuthority": {
+      "label": "Autoritate de certificare privată (PEM)",
+      "description": "Pachet CA opțional de încredere pentru gazdele din lista permisă. Verificarea certificatelor rămâne activată. Lăsați câmpul gol pentru a utiliza depozitul de încredere al sistemului."
+    }
   }
 }

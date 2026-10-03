@@ -73,17 +73,22 @@
       "fitToScreen": "Ajusta a la pantalla",
       "switchToTrackpad": "Canvia al mode trackpad (arrossega per moure el cursor, toca per fer clic)",
       "switchToTouch": "Canvia al mode tàctil (toca directament on vols fer clic)"
-    }
+    },
+    "disabled": "L'escriptori remot està desactivat. Un administrador el pot activar a Configuració."
   },
   "hosts": {
     "nativeRdpOpened": "Obert a l'escriptori remot de Windows",
     "nativeRdpFailed": "No s'ha pogut obrir l'escriptori remot de Windows",
     "openNativeRdp": "Obre a l'escriptori remot de Windows",
     "guac": {
+      "toolbar": "Barra d'eines",
       "connection": "Connexió",
       "authentication": "Autenticació",
       "storedCredential": "Credencial emmagatzemada",
       "authMethod": "Mètode d'autenticació",
+      "authTypeDirect": "Directe",
+      "authTypeCredential": "Credencial",
+      "authTypeNone": "Cap",
       "authTypeNoneDesc": "No s'emmagatzemen les credencials. Se us demanarà un nom d'usuari i una contrasenya cada vegada que us connecteu; no es desen.",
       "selectCredential": "Selecciona una credencial...",
       "connectionSettings": "Configuració de connexió",
@@ -206,7 +211,8 @@
       "colorScheme": "Esquema de colors",
       "backspaceKey": "Tecla Retrocés",
       "colorDepth": "Profunditat de color",
-      "resizeMethod": "Mètode de redimensionament"
+      "resizeMethod": "Mètode de redimensionament",
+      "driveNamePlaceholder": "Termix Drive"
     },
     "remoteDesktop": "Escriptori remot",
     "tabRdp": "RDP",
@@ -214,7 +220,11 @@
     "tabTelnet": "Telnet",
     "virtualNetwork": "Xarxa virtual",
     "unencryptedShell": "Shell sense xifrar",
-    "docsLink": "Veure documents"
+    "remoteDesktopNotes": "Notes",
+    "userDefaultsNote": "La configuració que deixeu sense canvis segueix els valors predeterminats de l'amfitrió.",
+    "connectionOriginNote": "A l'aplicació d'escriptori, RDP, VNC i Telnet utilitzen el servidor remot tret que l'amfitrió estigui configurat com a Aquest dispositiu, que necessita un guacd al qual pugui arribar aquesta màquina. Configureu-ne un a la configuració de l'escriptori remot o per amfitrió a guacd Proxy.",
+    "docsLink": "Veure documents",
+    "connectionOriginGuacamoleNote": "RDP, VNC i Telnet utilitzen el servidor remot tret que seleccioneu \"Aquest dispositiu\", que necessita un guacd al qual aquesta màquina pugui arribar. Definiu-ne un a la configuració de l'URL guacd o per host a guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Escriptori remot",
@@ -223,10 +233,12 @@
   "settings": {
     "user": {
       "colorDepth": {
-        "label": "Profunditat de color"
+        "label": "Profunditat de color",
+        "description": "S'utilitza per a hosts RDP que el deixen per defecte."
       },
       "resizeMethod": {
-        "label": "Mètode de redimensionament"
+        "label": "Mètode de redimensionament",
+        "description": "Com la pantalla remota segueix la mida de la finestra."
       },
       "resizeDisplayUpdate": "Actualització de la pantalla",
       "resizeReconnect": "Reconnecta",
@@ -268,12 +280,68 @@
       "disablePaste": {
         "label": "Desactiva l'enganxament",
         "description": "Impedir enganxar text a la sessió remota"
-      }
+      },
+      "group": "Valors predeterminats d'escriptori remot",
+      "colorDepth16": "16 bits",
+      "colorDepth24": "24 bits",
+      "colorDepth32": "32 bits"
     },
     "admin": {
+      "enabled": {
+        "label": "Habilita l'escriptori remot",
+        "description": "Permet connexions RDP, VNC i Telnet a través de guacd."
+      },
       "guacdUrl": {
-        "label": "URL de guacd"
+        "label": "URL de guacd",
+        "description": "On guacd escolta, com a host:port. Les variables d'entorn GUACD_URL, GUACD_HOST i GUACD_PORT ho anul·len.",
+        "placeholder": "guacd:4822"
       }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "Port RDP"
+      },
+      "vncPort": {
+        "label": "Port VNC"
+      },
+      "telnetPort": {
+        "label": "Port Telnet"
+      },
+      "rdpSecurity": {
+        "label": "Mode de seguretat RDP"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignora els errors de certificat"
+      },
+      "guacamoleConfig": {
+        "label": "configuració de guacd"
+      },
+      "enableToolbar": {
+        "label": "Barra d'eines d'escriptori remot",
+        "description": "Mostra la barra d'eines a les sessions RDP, VNC i Telnet."
+      },
+      "displayGroup": "Pantalla",
+      "displayDefaultsTab": "Escriptori remot"
+    }
+  },
+  "palette": {
+    "connectRdp": "Connecta't amb RDP",
+    "connectVnc": "Connecta amb VNC",
+    "connectTelnet": "Connecta amb Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Compartir sessions d'escriptori remot",
+      "description": "Permet que les sales de compartició de sessions i col·laboració mostrin les sessions RDP, VNC i Telnet d'aquest usuari a altres persones."
     }
   },
   "errors": {

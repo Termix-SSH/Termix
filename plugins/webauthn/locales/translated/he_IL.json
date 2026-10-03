@@ -3,7 +3,8 @@
   "signIn": "כניסה עם סיסמה",
   "loginFailed": "כניסה עם סיסמה נכשלה",
   "description": "השתמש בפרטי הכניסה של WebAuthn/FIDO2 ללא סיסמה",
-  "namePlaceholder": "שם המפתח",
+  "namePlaceholder": "שם סיסמה",
+  "defaultName": "סיסמה",
   "uv": {
     "preferred": "מועדף",
     "required": "דָרוּשׁ",
@@ -13,6 +14,9 @@
   "none": "אין סיסמות רשומות.",
   "added": "סיסמה נוספת",
   "addFailed": "נכשלה הוספת סיסמה",
+  "delete": "מחיקת סיסמה",
   "deleted": "סיסמת הגישה נמחקה",
-  "deleteFailed": "מחיקת המפתח נכשלה"
+  "deleteFailed": "מחיקת המפתח נכשלה",
+  "unknownDevice": "לֹא יְדוּעַ",
+  "synced": "מסונכרן"
 }

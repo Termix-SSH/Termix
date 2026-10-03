@@ -1,11 +1,34 @@
 {
-  "nav": {
-    "tmuxMonitor": "Tmux monitor"
-  },
   "hosts": {
     "enableTmuxMonitor": "Tmux monitor engedélyezése",
     "enableTmuxMonitorDesc": "Mutassa meg ezt a gépet a Tmux Monitorban, és adja hozzá a tmux műveleteit az oldalsávhoz",
+    "tabTmuxMonitor": "Tmux monitor",
     "docsLink": "Dokumentumok megtekintése"
+  },
+  "nav": {
+    "tmuxMonitor": "Tmux monitor"
+  },
+  "dashboard": {
+    "tmuxMonitor": "Tmux monitor",
+    "tmuxMonitorDesc": "TMUX munkamenetek figyelése a hosztokon keresztül"
+  },
+  "permissions": {
+    "use": {
+      "title": "Tmux monitor használata",
+      "description": "Böngésszen és vezérelje a tmux munkameneteket, ablakokat és paneleket a monitorral rendelkező gazdagépeken."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Tmux monitor engedélyezése",
+        "description": "Figyelje és csatlakozzon a hoszton futó tmux munkamenetekhez."
+      },
+      "mouseEnabled": {
+        "label": "tmux egér támogatásának engedélyezése",
+        "description": "Egér támogatás alkalmazása a tmux munkamenetre munkamenet csatolásakor vagy létrehozásakor. A többi munkamenet és a globális tmux beállítások változatlanok maradnak."
+      }
+    }
   },
   "tmuxMonitor": {
     "title": "Tmux monitor",
@@ -50,7 +73,7 @@
     "sessionRenameFailed": "Nem sikerült átnevezni a munkamenetet",
     "editTagsTitle": "A(z) „{{name}} ” címkéinek szerkesztése",
     "killPane": "Ablak bezárása",
-    "resizeTree": "Húzással átméretezhető – dupla kattintással visszaállítható",
+    "resizeTree": "Húzással átméretezheted, dupla kattintással visszaállíthatod",
     "reattach": "Újracsatolás (kijavítja a torz képet)",
     "killWindow": "Ablak ölése",
     "killWindowTitle": "A(z) \"{{session}} \" ablakának {{index}} leállítása?",
@@ -70,17 +93,25 @@
     "sessionKillFailed": "Nem sikerült leállítani a munkamenetet",
     "hostUnreachable": "Nem sikerült csatlakozni a gazdagéphez. Ellenőrizze, hogy online van-e és elérhető-e.",
     "noServer": "Nem fut tmux szerver ezen a gépen.",
-    "searchTruncated": "Részleges eredmények — a keresés az egyes panelek utolsó {{lines}} soraira, és legfeljebb {{panes}} panelre terjed ki.",
+    "searchTruncated": "Részleges találatok. A keresés az egyes panelek utolsó {{lines}} soraira, és legfeljebb {{panes}} panelre terjed ki.",
     "closeSearchResults": "Keresési eredmények bezárása",
     "retry": "Újrapróbálkozás",
     "noHosts": "Nincsenek elérhető SSH-hosztok",
-    "noHostsHint": "Engedélyezze a Tmux Monitor opciót egy SSH hoszton (Host Manager → Terminal fül) a tmux munkamenetek monitorozásához.",
+    "noHostsHint": "Engedélyezze a Tmux Monitor opciót egy SSH hoszton (Host Manager, Tmux Monitor fül) a tmux munkamenetek monitorozásához.",
     "tmuxInstallHint": "Telepítse a gazdagépre a következő paranccsal:",
     "attachTooltip": "Nyisson meg egy terminált a következőhöz: {{host}}",
-    "attachTooltipPane": "Nyiss meg egy terminált a következőhöz: {{host}} — tmux session {{session}}",
+    "attachTooltipPane": "Nyiss meg egy terminált a következővel: {{host}}, tmux session {{session}}",
     "timeJustNow": "éppen most",
     "timeMinutes": "{{count}}perccel ezelőtt",
     "timeHours": "{{count}}órával ezelőtt",
-    "timeDays": "{{count}}nappal ezelőtt"
+    "timeDays": "{{count}}nappal ezelőtt",
+    "allHosts": "Minden házigazda",
+    "singleHost": "Egyetlen host",
+    "hostScope": "Monitor hatóköre",
+    "filterHosts": "Szűrje a házigazdákat név vagy cím alapján",
+    "selectHost": "Válasszon gazdagépet",
+    "toggleHost": "Kibontás vagy összecsukás {{host}}",
+    "noMatchingHosts": "Nincsenek egyező gazdagépek",
+    "toggleSession": "Kibontás vagy összecsukás {{session}}"
   }
 }

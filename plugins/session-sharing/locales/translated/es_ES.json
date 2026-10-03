@@ -30,6 +30,7 @@
     "searchUsersPlaceholder": "Buscar usuarios...",
     "noUsersFound": "No se encontraron usuarios",
     "linkCreated": "Enlace para compartir creado",
+    "linkNeedsServer": "Los enlaces para compartir solo funcionan para sesiones en un servidor Termix. Conecta este host a través de tu servidor vinculado para compartirlo mediante un enlace.",
     "linkCopied": "Enlace copiado al portapapeles",
     "copyLink": "Copiar enlace",
     "shareCreated": "Sesión compartida. Aparecerá en su pestaña Conexiones.",
@@ -48,6 +49,8 @@
     "linkShareBadge": "Enlace",
     "userShareBadge": "Usuario: {{username}}",
     "loadSharesFailed": "No se pudieron cargar los recursos compartidos activos.",
+    "remoteDisplayUnavailable": "El acceso remoto al escritorio no está disponible en este momento.",
+    "sharedWithMe": "Sesiones compartidas conmigo",
     "customHoursPlaceholder": "Horas hasta que caduque el acceso"
   },
   "collab": {
@@ -56,10 +59,10 @@
     "persistentRoom": "Habitación persistente",
     "persistentRoomHint": "Las salas reservadas permanecen en la lista una vez finalizada la reunión y pueden volver a utilizarse.",
     "noRooms": "Aún no hay salas disponibles. Crea una para iniciar una reunión.",
-    "openRoom": "Abierto",
+    "openRoom": "Abrir",
     "endRoom": "Fin de la reunión",
     "leaveRoom": "Dejar",
-    "deleteMember": "Eliminar",
+    "deleteMember": "Quitar",
     "removeMember": "Eliminar {{name}}",
     "removeMemberTitle": "¿Eliminar a este miembro?",
     "removeMemberDescription": "{{name}} perderá el acceso a esta sala inmediatamente. Cualquier visor SSH activo será desconectado.",
@@ -68,14 +71,17 @@
     "members": "Miembros",
     "membersPanel": "Miembros de la sala y solicitudes de control",
     "membersWithCount": "Miembros ({{count}})",
+    "guestsWithCount": "Invitados ({{count}})",
+    "removeGuests": "Eliminar invitados",
+    "anonymousGuest": "Invitado",
     "online": "en línea",
     "offline": "desconectado",
     "you": "(tú)",
-    "hostBadge": "Anfitrión",
+    "hostBadge": "Host",
     "presenterBadge": "Presentación",
     "present": "Presente",
     "presentTitle": "Sube al escenario",
-    "presentHost": "Anfitrión",
+    "presentHost": "Host",
     "searchHosts": "Buscar hosts",
     "noHostsFound": "No se encontraron hosts disponibles.",
     "presentProtocol": "Protocolo",
@@ -115,6 +121,7 @@
       "linkInvalid": "Este enlace de invitado no es válido o la reunión ha finalizado."
     },
     "reopenFromPanel": "Esta pestaña de reunión ha caducado. Vuelva a abrir la sala desde el panel de Reuniones.",
+    "retry": "Reintentar",
     "requestControl": "Control de solicitudes",
     "cancelControlRequest": "Cancelar solicitud",
     "controlQueue": "Solicitudes de control",
@@ -130,7 +137,10 @@
     "youArePresenting": "Estás presentando en otra pestaña. Deja de presentar para ceder la palabra.",
     "created": "Habitación creada",
     "invited": "Miembros invitados",
-    "roomTab": "Reunión"
+    "roomTab": "Reunión",
+    "serverChanged": "El servidor de la reunión ha cambiado. Vuelva a abrir esta reunión desde el panel de Reuniones.",
+    "hostNotSynced": "Sincroniza este host con el servidor de la reunión antes de la presentación.",
+    "linkRequiresServer": "Conecta este ordenador de escritorio a un servidor Termix y crea la reunión allí para compartir un enlace web."
   },
   "nav": {
     "collab": "Reuniones"
@@ -149,6 +159,12 @@
       }
     }
   },
+  "permissions": {
+    "use": {
+      "title": "Comparte sesiones y únete a salas",
+      "description": "Comparte sesiones en directo mediante un enlace o con otros usuarios, y crea y únete a salas de colaboración."
+    }
+  },
   "hosts": {
     "sharing": {
       "expiry": {
@@ -160,5 +176,11 @@
         "custom": "Personalizado"
       }
     }
+  },
+  "connections": {
+    "sectionSharedWithMe": "Compartido conmigo",
+    "sharedBy": "Compartido por {{username}}",
+    "join": "Unirse",
+    "sharedSessionLabel": "{{hostName}} (compartido)"
   }
 }

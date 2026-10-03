@@ -20,6 +20,8 @@
     "webUiEndpointLabel": "Punct final {{number}}",
     "webUiIntegration": "Interfață web",
     "webUiEndpointsSection": "Puncte finale",
+    "webUiNoEndpoints": "Încă nu există puncte finale web. Folosește Adăugare punct final pentru a crea unul.",
+    "webUiEndpointsDisabled": "Activați interfața web de mai sus pentru a adăuga puncte finale.",
     "webUiRequirementsText": "Un punct final direct este deschis de browserul dvs., deci portul său trebuie să fie accesibil de aici. Un tunel SSH este deschis de Termix prin conexiunea SSH a acestei gazde, deci portul trebuie să fie accesibil doar de la gazdă.",
     "enableWebUi": "Activează punctele de terminare web",
     "enableWebUiDesc": "Deschideți interfețele web ale acestei gazde din bara laterală.",

@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "Vizualizați flotele",
+      "description": "Vedeți flotele, membrii și inventarul acestora."
+    },
+    "manage": {
+      "title": "Gestionați flotele",
+      "description": "Creați, editați și ștergeți flote, modificați calitatea de membru și partajați flote cu alți utilizatori sau roluri."
+    },
+    "execute": {
+      "title": "Execută acțiuni de flotă",
+      "description": "Execută comenzi și acțiuni de pachete într-o flotă și transferă fișiere către și de la gazdele membre."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {
@@ -79,7 +93,14 @@
         "packageUpgradeAll": "Actualizați toate pachetele",
         "packageNameLabel": "Numele pachetului",
         "packageNameRequired": "Este necesar un nume de pachet",
-        "packageHint": "Necesită acces la nivel de administrare per gazdă și ridică privilegiile folosind parola sudo stocată a gazdei."
+        "packageHint": "Necesită acces la nivel de administrare per gazdă și ridică privilegiile folosind parola sudo stocată a gazdei.",
+        "shareFleet": "Flotă partajată",
+        "shareFleetTitle": "Distribuie „{{name}}”",
+        "shareFleetDescription": "Partajează gazdele membre actuale ale acestei flote cu utilizatorii sau rolurile selectate. Gazdele adăugate ulterior la flotă nu sunt partajate automat - partajați din nou pentru a le include.",
+        "shareSelectionRequired": "Selectați cel puțin un utilizator sau un rol",
+        "fleetSharedSuccessfully": "Gazdă(e) {{shared}} partajată din {{total}} din această flotă",
+        "failedToShareFleet": "Nu s-a putut partaja flota",
+        "noMembersToShare": "Această flotă nu are încă gazde membre de partajat."
       }
     }
   },

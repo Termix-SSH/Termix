@@ -16,6 +16,16 @@
     "authFailed": "Échec de l'authentification. Veuillez vérifier vos identifiants et réessayer.",
     "timeout": "L'authentification a expiré. Veuillez réessayer."
   },
+  "settings": {
+    "redirectUri": {
+      "label": "URI de redirection",
+      "description": "Enregistrez cette URL comme URI de redirection autorisée auprès de chaque fournisseur d'identité dans votre configuration OPKSSH."
+    },
+    "legacyCallback": {
+      "label": "Utilisez l'ancienne URI de redirection",
+      "description": "Continuez à envoyer /host/opkssh-callback, l'URI de redirection utilisée avant la version 2.9. Désactivez-la une fois que vos fournisseurs d'identité autoriseront la nouvelle."
+    }
+  },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
   }

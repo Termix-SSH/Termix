@@ -20,6 +20,7 @@ describe("UserRepository and SessionRepository", () => {
   async function createRepositories(options: {
     onUserWrite?: () => void | Promise<void>;
     onSessionWrite?: () => void | Promise<void>;
+    onSessionActivity?: () => void | Promise<void>;
   }): Promise<{
     users: UserRepository;
     sessions: SessionRepository;
@@ -28,6 +29,7 @@ describe("UserRepository and SessionRepository", () => {
     options: {
       onUserWrite?: () => void | Promise<void>;
       onSessionWrite?: () => void | Promise<void>;
+      onSessionActivity?: () => void | Promise<void>;
     } = {},
   ): Promise<{
     users: UserRepository;
@@ -38,7 +40,11 @@ describe("UserRepository and SessionRepository", () => {
 
     return {
       users: new UserRepository(context, options.onUserWrite),
-      sessions: new SessionRepository(context, options.onSessionWrite),
+      sessions: new SessionRepository(
+        context,
+        options.onSessionWrite,
+        options.onSessionActivity,
+      ),
     };
   }
 
@@ -226,6 +232,46 @@ describe("UserRepository and SessionRepository", () => {
     expect((await repo.sessions.findById("session-1"))?.lastActiveAt).toBe(
       "2026-06-26T00:01:00.000Z",
     );
+  });
+
+  it("separates activity persistence from security-critical session writes", async () => {
+    let writes = 0,
+      activity = 0;
+    const repo = await createRepositories({
+      onSessionWrite: () => {
+        writes++;
+      },
+      onSessionActivity: () => {
+        activity++;
+      },
+    });
+    await repo.users.create({
+      id: "user-1",
+      username: "user",
+      passwordHash: "hash",
+      isAdmin: false,
+      isOidc: false,
+    });
+    await repo.sessions.create({
+      id: "session-1",
+      userId: "user-1",
+      jwtToken: "token",
+      deviceType: "desktop",
+      deviceInfo: "Firefox",
+      createdAt: "2026-06-26T00:00:00.000Z",
+      expiresAt: "2026-06-27T00:00:00.000Z",
+      lastActiveAt: "2026-06-26T00:00:00.000Z",
+    });
+    expect(writes).toBe(1);
+    await repo.sessions.touch("session-1", "2026-06-26T00:01:00.000Z");
+    expect(activity).toBe(1);
+    expect(writes).toBe(1);
+    await repo.sessions.touch("session-1", "2026-06-26T00:01:10.000Z");
+    expect(activity).toBe(1);
+    await repo.sessions.updateToken("session-1", "renewed");
+    expect(writes).toBe(2);
+    await repo.sessions.revoke("session-1");
+    expect(writes).toBe(3);
   });
 
   it("revokes all user sessions except an optional current session", async () => {

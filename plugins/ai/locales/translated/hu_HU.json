@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "use": {
+      "title": "Használja az asszisztenst",
+      "description": "Nyisd meg az asszisztenst, és kérdezz tőle dolgokat."
+    },
+    "manage_providers": {
+      "title": "Szolgáltatók kezelése",
+      "description": "MI-szolgáltatók és API-kulcsaik hozzáadása, szerkesztése és eltávolítása."
+    },
+    "apply_proposals": {
+      "title": "Javaslatok alkalmazása",
+      "description": "Hagyd, hogy az asszisztens végrehajtsa a javasolt módosításokat."
+    },
+    "services.use": {
+      "title": "Használja a mesterséges intelligenciát más funkciókból",
+      "description": "Más funkciók felhívhatják az asszisztenst az Ön nevében."
+    },
+    "secrets.share": {
+      "title": "API-kulcs megosztása",
+      "description": "Más funkciók használhatják a tárolt AI API-kulcsot anélkül, hogy látnák azt."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "A mesterséges intelligencia asszisztens ki van kapcsolva ezen a szerveren.",
+    "providersNeedOptIn": "Kapcsolja be a fenti AI asszisztenst a szolgáltatók hozzáadásához.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "MI asszisztens",
+        "description": "Engedélyezheti a felhasználóknak a mesterséges intelligencia asszisztens bekapcsolását. Amíg ez ki van kapcsolva, az asszisztens rejtett és blokkolt mindenki számára."
+      },
+      "privateEndpoints": {
+        "label": "Engedélyezett privát AI-gazdagépek",
+        "description": "Privát hálózatán található hosztok, amelyekre a felhasználók szolgáltatót irányíthatnak, például egy saját hosztot futtató Ollama. Minden sorba egy hosztot írjon be."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AI asszisztens engedélyezése",
+        "description": "Engedélyezi a mesterséges intelligencia asszisztensének a gazdagép terminálján való segítséget. Alapértelmezés szerint ki van kapcsolva, de továbbra is engedélyeznie kell a mesterséges intelligenciát a fiókjában."
+      }
+    }
+  },
   "ai": {
     "title": "Helyettes",
     "send": "Elküld",
@@ -53,7 +95,11 @@
     "terminalPanelPlaceholder": "Kérdezz rá erre a házigazdára...",
     "noProvidersConfigured": "Még nincs konfigurálva AI-szolgáltató. Adjon hozzá egyet az AI-asszisztens fülön.",
     "runsInOpenTerminal": "A megnyitott terminál munkamenetben fut.",
-    "runInTerminal": "Fut"
+    "runInTerminal": "Fut",
+    "terminalContextPrefill": "Itt a terminál kimenete:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Engedélyezd más funkcióknak a mesterséges intelligencia szolgáltató API-kulcsának használatát a saját kéréseikhez. A kulcs soha nem kerül másolásra, és ezt bármikor visszavonhatod."
+    }
   },
   "nav": {
     "ai": "MI"
@@ -66,23 +112,6 @@
     "aiEnableTitle": "Kapcsold be",
     "aiEnableDesc": "Hozzáad egy asszisztenst, amely beolvassa a beállításait, és javaslatokat tesz az Ön által jóváhagyott módosításokra. Szükség van egy Ön által biztosított szolgáltatóra, például egy helyi Ollama szakemberre.",
     "aiNote": "Semmi sem kerül sehova, amíg nem adsz hozzá egy szolgáltatót és nem küldesz üzenetet."
-  },
-  "settings": {
-    "admin": {
-      "globallyEnabled": {
-        "label": "MI asszisztens",
-        "description": "Engedélyezheti a felhasználóknak a mesterséges intelligencia asszisztens bekapcsolását. Amíg ez ki van kapcsolva, az asszisztens rejtett és blokkolt mindenki számára."
-      },
-      "privateEndpoints": {
-        "label": "Engedélyezett privát AI-gazdagépek"
-      }
-    },
-    "host": {
-      "enableAiAssistant": {
-        "label": "AI asszisztens engedélyezése",
-        "description": "Engedélyezi a mesterséges intelligencia asszisztensének a gazdagép terminálján való segítséget. Alapértelmezés szerint ki van kapcsolva, de továbbra is engedélyeznie kell a mesterséges intelligenciát a fiókjában."
-      }
-    }
   },
   "hosts": {
     "docsLink": "Dokumentumok megtekintése"

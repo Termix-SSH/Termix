@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "manage": {
+      "title": "Hallinnoi käyttötilastoja",
+      "description": "Katso lähetetyt käyttötilastot, lähetä ne nyt ja nollaa instanssitunnus."
+    }
+  },
+  "settings": {
+    "enabled": {
+      "label": "Jaa anonyymejä käyttötilastoja",
+      "description": "Lähettää pienen anonyymin yhteenvedon kerran päivässä Termixin parantamiseksi. Se ei koskaan sisällä käyttäjätunnuksia, isäntänimiä, IP-osoitteita tai tunnistetietoja."
+    },
+    "includePlatform": {
+      "label": "Sisällytä alustatiedot",
+      "description": "Käyttöjärjestelmä, suorittimen arkkitehtuuri, Node.js-versio, tietokannan tyyppi ja Termixin asennustapa (Docker, työpöytäsovellus vai palvelin)."
+    },
+    "includeFeatureUsage": {
+      "label": "Sisällytä ominaisuuksien käyttö",
+      "description": "Kuinka monta kertaa kutakin välilehtityyppiä avattiin ja kuinka monta SSH-kirjautumista tapahtui viimeisimmän raportin jälkeen. Käyttäjät voivat poistaa oman osuutensa käytöstä profiilissaan."
+    },
+    "includePlugins": {
+      "label": "Sisällytä asennetut ominaisuudet",
+      "description": "Mitkä sisäänrakennetut ominaisuudet on asennettu ja käynnissä."
+    },
+    "instanceId": {
+      "label": "Instanssin tunnus"
+    },
+    "shareFeatureUsage": {
+      "label": "Sisällytä ominaisuuksien käyttöni",
+      "description": "Laskee avaamiesi välilehtien tyypit anonyymeissä käyttötilastoissa. Sinusta tai isännistäsi ei lähetetä mitään tietoja."
+    }
+  },
+  "status": {
+    "title": "Status",
+    "on": "Käyttötilastojen jakaminen kerran päivässä",
+    "off": "Ei jaa käyttötilastoja",
+    "lockedOn": "ENABLE_TELEMETRY-ympäristömuuttuja ottaa sen käyttöön. Muuta sitä siellä.",
+    "lockedOff": "Ympäristömuuttuja ENABLE_TELEMETRY on kytkenyt sen pois päältä. Voit muuttaa sitä siellä.",
+    "instanceId": "Instanssitunnus: {{id}}",
+    "noInstanceId": "Ei vielä instanssi-ID:tä",
+    "lastSent": "Viimeksi lähetetty {{date}}",
+    "neverSent": "Ei vielä lähetetty",
+    "nextSend": "Seuraava raportti erääntyy {{date}}",
+    "lastError": "Viimeisin yritys epäonnistui: {{error}}",
+    "preview": "Esikatsele raporttia",
+    "sendNow": "Lähetä nyt",
+    "sending": "Lähetetään...",
+    "sent": "Käyttötilastot lähetetty",
+    "notSent": "Käyttötilastot on poistettu käytöstä, mitään ei lähetetty",
+    "resetId": "Palauta instanssitunnus",
+    "resetIdConfirm": "Nollataanko instanssitunnus? Tulevat raportit näyttävät uudelta asennukselta.",
+    "resetIdDone": "Instanssi-ID:n nollaus",
+    "previewTitle": "Seuraava raportti",
+    "previewDescription": "Juuri tätä lähetettäisiin nyt.",
+    "close": "Lähellä",
+    "loadFailed": "Käyttötilastojen tilan lataaminen epäonnistui"
+  }
+}

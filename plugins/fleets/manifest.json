@@ -18,6 +18,7 @@
     "hosts:read",
     "hosts:write",
     "credentials:use",
+    "credentials:read",
     "ssh:connect",
     "db:own",
     "network:serve",

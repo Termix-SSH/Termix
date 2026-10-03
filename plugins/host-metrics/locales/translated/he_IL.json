@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "hostMetrics": "מדדי מארח"
+  },
   "hostMetrics": {
     "cpu": "מעבד",
     "memory": "זֵכֶר",
@@ -160,7 +163,6 @@
       "firewallPersist": "כללים קבועים",
       "firewallPersisted": "כללי חומת האש נשמרו",
       "wireguard": "WireGuard",
-      "tailscale": "קנה מידה זנב",
       "wgNotInstalled": "WireGuard אינו מותקן על מחשב זה",
       "wgNoInterfaces": "לא הוגדרו ממשקי WireGuard",
       "wgInterfaceUp": "לְהַעֲלוֹת",
@@ -176,22 +178,7 @@
       "wgLastHandshake": "לחיצת יד אחרונה",
       "wgHandshakeNever": "לְעוֹלָם לֹא",
       "wgTransfer": "לְהַעֲבִיר",
-      "tsNotInstalled": "Tailscale אינו מותקן על מחשב אחסון זה",
-      "tsRunning": "רִיצָה",
-      "tsStopped": "נֶעצָר",
-      "tsEnable": "לְחַבֵּר",
-      "tsDisable": "לְנַתֵק",
-      "tsEnabling": "מתחבר ל-Tailscale...",
-      "tsDisabling": "מתנתק מ-Tailscale...",
-      "tsEnabled": "זנבסקאלה מחוברת",
-      "tsDisabled": "ניתוק של קנה המידה של הזנב",
-      "tsIPs": "כתובות IP של זנבות",
-      "tsPeers": "עמיתים",
-      "tsOnline": "באינטרנט",
-      "tsOffline": "לא מקוון",
-      "tsExitNode": "צומת יציאה",
-      "tsExitNodeActive": "צומת יציאה פעיל",
-      "tsHostname": "שם מארח"
+      "wgNoPeers": "אין עמיתים"
     }
   },
   "metricsHistory": {
@@ -206,9 +193,6 @@
     "to": "אֶל",
     "apply": "לִפְנוֹת",
     "viewHistory": "הצג היסטוריה"
-  },
-  "nav": {
-    "hostMetrics": "מדדי מארח"
   },
   "hosts": {
     "tabHostMetrics": "מדדי מארח",
@@ -265,6 +249,9 @@
     "noHostSelected": "לא נבחר מארח",
     "selectHost": "בחר מארח..."
   },
+  "terminalStatus": {
+    "unavailable": "סטטיסטיקות חיות לא זמינות"
+  },
   "dashboard": {
     "cpu": "מעבד",
     "ram": "אַיִל"
@@ -274,5 +261,52 @@
   },
   "terminal": {
     "connected": "מְחוּבָּר"
+  },
+  "permissions": {
+    "use": {
+      "title": "השתמש במדדי מארח",
+      "description": "צפה במדדי אירוח והשתמש במנהלי אירוח (שירותים, חבילות, חומת אש ועוד) עבור אירוחים שאתה יכול להגיע אליהם."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "מרווח מדדים (שניות)",
+        "description": "באיזו תדירות נדגם מארח שנצפה, אלא אם כן המארח קובע מרווח זמן משלו."
+      },
+      "historyRetentionDays": {
+        "label": "שמירת היסטוריה (ימים)",
+        "description": "כמה זמן נשמרות דגימות מדדים עבור תרשימי ההיסטוריה."
+      },
+      "enabledForNewHosts": {
+        "label": "מדדים מופעלים עבור מארחים חדשים",
+        "description": "האם מארחים חדשים מתחילים עם איסוף מדדים מופעל."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "יחידת טמפרטורה",
+        "description": "כיצד מוצגות טמפרטורות ב- Host Metrics.",
+        "celsius": "צֶלסִיוּס",
+        "fahrenheit": "פרנהייט"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "איסוף מדדים"
+      },
+      "metricsInterval": {
+        "label": "מרווח מדדים (שניות)"
+      },
+      "enabledWidgets": {
+        "label": "ווידג'טים מופעלים"
+      },
+      "excludedMounts": {
+        "label": "הרכבות לא כלולות"
+      },
+      "monitoredMounts": {
+        "label": "נתיבים מנוטרים"
+      }
+    }
   }
 }

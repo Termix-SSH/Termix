@@ -1,0 +1,27 @@
+{
+  "hostAction": {
+    "title": "استيقظ",
+    "sent": "تم إرسال حزمة Wake-on-LAN",
+    "failed": "فشل إرسال حزمة Wake-on-LAN"
+  },
+  "permissions": {
+    "send": {
+      "title": "إرسال حزم Wake-on-LAN",
+      "description": "قم بتنشيط جهاز مضيف عن طريق إرسال حزمة سحرية إلى عنوان MAC الخاص به."
+    }
+  },
+  "settings": {
+    "host": {
+      "macAddress": {
+        "label": "عنوان MAC",
+        "description": "عنوان MAC الخاص بشبكة المضيف، والذي يستخدم لإرسال حزم Wake-on-LAN.",
+        "placeholder": "AA:BB:CC:DD:EE:FF"
+      },
+      "broadcastAddress": {
+        "label": "خطاب البث",
+        "description": "عنوان البث الفرعي لإرسال الحزمة إليه. اتركه فارغًا إذا كان العنوان 255.255.255.255.",
+        "placeholder": "192.168.1.255"
+      }
+    }
+  }
+}

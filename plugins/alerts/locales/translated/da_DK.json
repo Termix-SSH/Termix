@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "alerts": "Advarsler"
+  },
+  "permissions": {
+    "use": {
+      "title": "Brug alarmer",
+      "description": "Få besked i indbakken, og send dem til dine egne kanaler."
+    }
+  },
+  "onboarding": {
+    "feature": "Advarsler",
+    "featureDesc": "Alle alarmer i én indbakke, sendt videre til Discord, ntfy, e-mail eller en webhook, hvis du vil."
+  },
+  "settings": {
+    "group": {
+      "general": "Generel",
+      "email": "E-mail"
+    },
+    "admin": {
+      "announcements": {
+        "label": "Termix-meddelelser",
+        "description": "Vis nyheder fra Termix-teamet, f.eks. sikkerhedsmeddelelser og udgivelser, i alles indbakke."
+      },
+      "retentionDays": {
+        "label": "Gem advarsler i (dage)",
+        "description": "Ældre advarsler fjernes fra alle indbakker."
+      },
+      "smtpHost": {
+        "label": "SMTP-server",
+        "description": "Nødvendigt for e-mailkanaler. Lad feltet stå tomt for at slå e-mail fra.",
+        "placeholder": "smtp.example.com"
+      },
+      "smtpPort": {
+        "label": "SMTP-port",
+        "description": "Normalt 587 med STARTTLS eller 465 med TLS."
+      },
+      "smtpSecure": {
+        "label": "Brug TLS fra starten",
+        "description": "Slå port 465 til. Slå port 587 fra, som opgraderer til TLS af sig selv."
+      },
+      "smtpUser": {
+        "label": "SMTP-brugernavn",
+        "description": "Lad feltet stå tomt, hvis serveren ikke kræver login."
+      },
+      "smtpPassword": {
+        "label": "SMTP-adgangskode",
+        "description": "Gemt krypteret."
+      },
+      "smtpFrom": {
+        "label": "Fra adresse",
+        "description": "Afsenderbeskederne kommer fra.",
+        "placeholder": "Termix <alerts@example.com>"
+      }
+    },
+    "user": {
+      "popups": {
+        "label": "Popup-vinduer for alarmer",
+        "description": "Hvilke nye advarsler dukker op, mens du bruger Termix? De lander altid i indbakken.",
+        "all": "Alle advarsler",
+        "warning": "Advarsler og kritiske",
+        "critical": "Kun kritisk",
+        "off": "Ingen"
+      }
+    }
+  },
+  "sections": {
+    "inbox": "Indbakke",
+    "channels": "Kanaler",
+    "rules": "Leveringsregler"
+  },
+  "severity": {
+    "info": "Info",
+    "success": "Succes",
+    "warning": "Advarsel",
+    "critical": "Kritisk"
+  },
+  "inbox": {
+    "sourceTermix": "Termix",
+    "openLink": "Åben",
+    "view": "Udsigt",
+    "unread": "Ulæst",
+    "deliveryFailed_one": "{{count}} kanal mislykkedes",
+    "deliveryFailed_other": "{{count}} kanaler mislykkedes",
+    "markRead": "Markér som læst",
+    "markUnread": "Markér som ulæst",
+    "markAllRead": "Markér alle som læst",
+    "delete": "Slet",
+    "clearRead": "Slet læseadvarsler",
+    "cleared_one": "Slettet {{count}} -alarm",
+    "cleared_other": "Slettede {{count}} advarsler",
+    "filterAll": "Alle",
+    "filterUnread": "Ulæst",
+    "anySeverity": "Enhver alvorlighedsgrad",
+    "anySource": "Enhver kilde",
+    "openAll": "Åbn i en fane",
+    "empty": "Ingen advarsler endnu.",
+    "emptyUnread": "I er alle med på banen.",
+    "loadMore": "Indlæs mere"
+  },
+  "channels": {
+    "intro": "Kanaler er hvor advarsler kan sendes uden for Termix. Leveringsregler vælger hvilke advarsler der bruger dem.",
+    "add": "Tilføj kanal",
+    "edit": "Rediger kanal",
+    "test": "Send en test",
+    "testSent": "Testalarm sendt",
+    "testFailed": "Test mislykkedes: {{error}}",
+    "deleteConfirm": "Slet kanalen \"{{name}}\"?",
+    "deleted": "Kanal slettet",
+    "empty": "Ingen kanaler endnu.",
+    "enabled": "Aktiveret",
+    "needsSave": "Denne kanal skal åbnes og gemmes igen, før den kan sende.",
+    "name": "Navn",
+    "nameRequired": "Navn er påkrævet",
+    "type": "Type",
+    "types": {
+      "webhook": "Webhook",
+      "ntfy": "ntfy",
+      "discord": "Disharmoni",
+      "email": "E-mail"
+    },
+    "emailUnavailable": "E-mail kræver en SMTP-server, som en administrator konfigurerer i indstillingerne for alarmer.",
+    "webhookUrl": "URL",
+    "webhookHint": "Henter en JSON-brødtekst for hver alarm.",
+    "method": "Metode",
+    "headers": "Overskrifter",
+    "headersHint": "En pr. linje, ligesom Navn: værdi.",
+    "ntfyServer": "Server-URL",
+    "ntfyTopic": "Emne",
+    "ntfyToken": "Adgangstoken (valgfrit)",
+    "discordUrl": "Discord webhook-URL",
+    "discordHint": "Fra kanalens indstillinger i Discord, under Integrationer.",
+    "discordUsername": "Visningsnavn (valgfrit)",
+    "discordAvatar": "Avatar-URL (valgfrit)",
+    "emailTo": "Send til",
+    "emailHint": "Adskil mere end én adresse med kommaer.",
+    "privateNetwork": "Tillad en privat netværksadresse",
+    "privateNetworkHint": "Fungerer kun for værter, som en administrator tillader på listen over private slutpunkter."
+  },
+  "rules": {
+    "intro": "En leveringsregel sender matchende advarsler til dine kanaler. Advarsler forbliver også altid i indbakken.",
+    "add": "Tilføj regel",
+    "edit": "Rediger regel",
+    "empty": "Ingen regler endnu, så advarsler vises kun i indbakken.",
+    "needChannel": "Tilføj først en kanal.",
+    "enabled": "Aktiveret",
+    "name": "Navn",
+    "nameRequired": "Navn er påkrævet",
+    "match": "Advarsler, der skal sendes",
+    "matchHint": "* for alt, automatiseringer.* for alt fra automatiseringer, eller én præcis slags.",
+    "minSeverity": "Mindst",
+    "channels": "Send til",
+    "channelRequired": "Vælg mindst én kanal",
+    "deleteConfirm": "Slet reglen \"{{name}}\"?",
+    "everything": "Alt",
+    "summary": "{{match}}, {{severity}} eller højere, til {{channels}}"
+  },
+  "actions": {
+    "cancel": "Ophæve",
+    "save": "Spare",
+    "saving": "Gemmer...",
+    "delete": "Slet"
+  },
+  "widget": {
+    "name": "Alarmfeed",
+    "description": "Dine seneste advarsler, med en hurtig måde at markere dem som læst",
+    "maxItems": "Maks. antal varer",
+    "showRead": "Vis læseadvarsler",
+    "allClear": "Alt klart",
+    "loading": "Indlæser..."
+  }
+}

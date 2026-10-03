@@ -1,14 +1,23 @@
 {
+  "loginWithSso": "SSOでサインイン",
   "loginWithProvider": "{{name}}でログイン",
   "loading": "読み込み中...",
+  "permissions": {
+    "manage": {
+      "title": "SSOプロバイダーを管理する",
+      "description": "ユーザーがサインインに使用できるSSOプロバイダーを追加、変更、削除します。"
+    }
+  },
   "providers": {
-    "docsLink": "ドキュメントを表示",
+    "docsLink": "ドキュメントを見る",
     "none": "SSOプロバイダーが設定されていません。",
     "add": "追加",
     "edit": "編集",
     "delete": "削除",
     "deleteConfirm": "このプロバイダーを削除しますか？関連付けられているユーザーはログインできなくなります。",
     "name": "表示名",
+    "namePlaceholder": "私のSSOプロバイダー",
+    "nameRequired": "表示名は必須です",
     "type": "プロバイダータイプ",
     "enabled": "有効",
     "save": "保存",
@@ -17,11 +26,20 @@
     "saveFailed": "保存に失敗しました",
     "deleted": "削除しました",
     "deleteFailed": "削除に失敗しました",
-    "cancel": "キャンセル"
+    "loadFailed": "SSOプロバイダーの読み込みに失敗しました",
+    "cancel": "キャンセル",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "redirectUri": "リダイレクトURI",
+    "redirectUriDesc": "このURLを、ご利用のIDプロバイダーのリダイレクトURLまたはコールバックURLとして登録してください。",
+    "legacyCallback": "古いリダイレクトURIを保持する",
+    "legacyCallbackDesc": "このプロバイダはTermix 2.9より前に設定されたもので、古いリダイレクトURIがまだ使用されていますが、これは引き続き機能します。新しいURIに移行するには、まずIDプロバイダに {{uri}} を追加し、その後この設定を無効にしてください。",
+    "authorizationUrl": "認証URL: {{url}}"
   },
   "fields": {
     "clientId": "クライアントID",
     "clientSecret": "クライアントシークレット",
+    "secretKeep": "秘密が守られました。秘密を守るには、この欄を空欄のままにしてください。",
     "issuerUrl": "発行者URL",
     "authUrl": "認証URL",
     "tokenUrl": "トークンURL",
@@ -37,5 +55,11 @@
     "adminGroupDesc": "このグループのユーザーは管理者権限が付与されます。空にするとグループ同期は無効です。",
     "caCert": "カスタムCA証明書",
     "caCertDesc": "オプション。プライベートまたは自己署名CAを使用するOIDCプロバイダー用のPEMエンコードCA証明書。空の場合はシステムの信頼ストアを使用。"
+  },
+  "settings": {
+    "silentLoginDefault": {
+      "label": "SSOで自動的にサインイン",
+      "description": "ログインフォームを表示せずに、訪問者を最初のSSOプロバイダーに直接誘導します。この設定は、環境変数OIDC_SILENT_LOGIN_DEFAULTで上書きされます。"
+    }
   }
 }

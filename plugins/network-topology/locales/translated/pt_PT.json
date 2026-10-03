@@ -40,12 +40,7 @@
     "sourceDifferentFromTarget": "A origem e o destino devem ser diferentes",
     "exportJSON": "Exportar JSON",
     "importJSON": "Importar JSON",
-    "terminal": "Terminal",
-    "fileManager": "Gestor de ficheiros",
-    "tunnel": "Túnel",
-    "docker": "Docker",
     "serverStats": "Métricas do host",
-    "hostMetrics": "Métricas do host",
     "noNodes": "Ainda sem nós"
   },
   "nav": {
@@ -56,6 +51,12 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} nós"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use network graph",
+      "description": "View and edit the network topology graph."
+    }
   },
   "hosts": {
     "docsLink": "Ver documentação"

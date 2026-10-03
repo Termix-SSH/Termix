@@ -23,7 +23,7 @@
     "provisionLabel": "서버 프로비저닝",
     "publishTitle": "공개 키 게시",
     "generate": "생성",
-    "generateTooltip": "Ed25519 키 쌍 생성 — 공개 키를 게시하고 개인 키를 기기에 다운로드합니다",
+    "generateTooltip": "Ed25519 키 쌍을 생성합니다. 공개 키를 게시하고 개인 키를 기기에 다운로드합니다.",
     "saveToVault": "자격 증명에 저장",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "레이블 (선택 사항)",
@@ -32,7 +32,7 @@
     "keyPublished": "키 게시됨",
     "addKeyFailed": "키 추가 실패",
     "generatedSaved": "키 쌍이 생성되어 자격 증명 보관함에 저장되었습니다. 개인 키도 다운로드되었습니다.",
-    "generatedOnly": "키 쌍 생성됨 — 개인 키가 다운로드되었습니다 (한 번만 표시됨).",
+    "generatedOnly": "키 쌍이 생성되었습니다. 개인 키가 다운로드되었습니다(한 번만 표시됨).",
     "generateFailed": "키 생성 실패",
     "imported": "자격 증명에서 키를 가져왔습니다",
     "importFailed": "키 가져오기 실패",
@@ -56,7 +56,7 @@
     "caTrustLabel": "서버에서 신뢰 (루트로 실행)",
     "caRotate": "로테이션",
     "caRotateConfirm": "CA를 로테이션하시겠습니까? 서명한 모든 인증서가 수락되지 않으며 다시 발급해야 합니다.",
-    "caRotated": "CA 로테이션됨 — 이전 인증서 폐기됨",
+    "caRotated": "CA가 갱신되었습니다. 이전 인증서는 취소되었습니다.",
     "caRotateFailed": "CA 로테이션 실패",
     "caDelete": "CA 제거",
     "caDeleteConfirm": "인증 기관을 제거하시겠습니까?",
@@ -66,12 +66,21 @@
     "issueCert": "인증서",
     "issueCertTooltip": "이 키에 대해 CA가 서명한 SSH 인증서를 발급합니다.",
     "certIssued": "인증서 발급 및 다운로드 완료",
-    "certIssueFailed": "인증서 발급 실패"
+    "certIssueFailed": "인증서 발급 실패",
+    "docsLink": "문서 보기",
+    "principalsLabel": "SSH 원칙",
+    "principalsPlaceholder": "SSH 주체(들), 예: root"
   },
   "nav": {
     "termixId": "ID"
   },
   "credentials": {
     "idBadge": "ID"
+  },
+  "permissions": {
+    "use": {
+      "title": "Termix ID를 사용하세요",
+      "description": "공개 핸들을 확보하고, SSH 키를 게시하고, 인증 기관을 운영하세요."
+    }
   }
 }

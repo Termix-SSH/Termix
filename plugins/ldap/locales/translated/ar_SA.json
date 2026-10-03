@@ -1,33 +1,50 @@
 {
+  "loginWithLdap": "تسجيل الدخول باستخدام LDAP",
   "loginWithProvider": "تسجيل الدخول باستخدام {{name}}",
   "loading": "جارٍ التحميل...",
   "requiredField": "هذا الحقل مطلوب",
   "username": "اسم مستخدم LDAP",
   "password": "كلمة مرور LDAP",
   "signIn": "تسجيل الدخول",
+  "permissions": {
+    "manage": {
+      "title": "إدارة أدلة LDAP",
+      "description": "أضف، غيّر، واحذف أدلة LDAP التي يمكن للأشخاص تسجيل الدخول بها."
+    }
+  },
   "providers": {
     "docsLink": "عرض المستندات",
-    "name": "الاسم المعروض",
+    "none": "لم يتم تكوين أي أدلة LDAP.",
+    "add": "إضافة دليل",
+    "edit": "تحرير الدليل",
+    "delete": "حذف الدليل",
+    "deleteConfirm": "هل تريد حذف هذا المجلد؟ لن يتمكن المستخدمون الذين يسجلون الدخول من خلاله من تسجيل الدخول.",
+    "name": "اسم العرض",
+    "namePlaceholder": "دليل الشركات",
+    "nameRequired": "اسم العرض مطلوب",
     "enabled": "مُمكّن",
+    "save": "حفظ الدليل",
     "saving": "جارٍ الحفظ...",
     "saved": "محفوظ",
     "saveFailed": "فشل في الحفظ",
     "deleted": "محذوف",
     "deleteFailed": "فشل في الحذف",
+    "loadFailed": "فشل تحميل أدلة LDAP",
     "cancel": "إلغاء"
   },
   "fields": {
     "host": "مضيف LDAP",
-    "port": "المنفذ",
+    "port": "منفذ",
     "useTls": "استخدام TLS (LDAPS)",
     "bindDn": "اسم مميز للربط",
     "bindPassword": "كلمة مرور الارتباط",
+    "secretKeep": "تم حفظ كلمة المرور. اترك هذا الحقل فارغًا للاحتفاظ بها.",
     "userSearchBase": "قاعدة بحث المستخدمين",
     "userSearchFilter": "مرشح بحث المستخدمين",
     "usernameAttr": "سمة اسم المستخدم",
     "displayNameAttr": "سمة اسم العرض",
     "groupSearchBase": "قاعدة بحث المجموعات",
-    "adminGroup": "مجموعة المديرين",
-    "allowedUsers": "المستخدمون المسموح بهم"
+    "adminGroup": "مجموعة المسؤولين",
+    "allowedUsers": "المستخدمون المسموح لهم"
   }
 }

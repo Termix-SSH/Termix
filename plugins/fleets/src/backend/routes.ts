@@ -1357,9 +1357,9 @@ export function registerFleetRoutes(
           fleetId,
           "manage",
           async (host) => {
-            // Package actions need the host's sudo password, an operational
-            // secret ctx.hosts.get() leaves out. ctx.ssh.connect resolves the
-            // full host the connect pipeline uses, which carries it.
+            // Package actions need the host's sudo password. connect() hands
+            // back a redacted host, so read it through resolveHost.
+            const full = await ctx.ssh.resolveHost(host.id);
             const connection = await ctx.ssh.connect(host.id, {
               purpose: "fleet",
             });
@@ -1388,7 +1388,7 @@ export function registerFleetRoutes(
                 const result = await execElevated(
                   sshClient,
                   cmd,
-                  connection.host.sudoPassword as string | undefined,
+                  full?.sudoPassword as string | undefined,
                   { forceSudo: true, timeoutMs: 600000 },
                 );
                 return {

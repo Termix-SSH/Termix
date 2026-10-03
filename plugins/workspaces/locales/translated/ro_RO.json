@@ -41,7 +41,13 @@
         "lastSessionDescription": "Actualizat automat cu cea mai recentă aranjare a filelor. Aplică-l pentru a recupera ce aveai deschis.",
         "lastUsed": "Ultima utilizare {{time}}",
         "neverUsed": "Niciodată aplicat",
-        "tabsSkipped": "Spațiu de lucru aplicat — {{count}} filă(e) omisă (gazda nu mai există): {{names}}"
+        "tabsSkipped": "Spațiul de lucru a fost aplicat, dar {{count}} filă(e) au fost omise deoarece gazda lor nu mai există: {{names}}",
+        "timeAgo": {
+          "seconds": "Acum {{count}}secunde",
+          "minutes": "{{count}}acum câteva minute",
+          "hours": "{{count}}acum o oră",
+          "days": "{{count}}zile în urmă"
+        }
       }
     }
   },
@@ -51,6 +57,12 @@
   "onboarding": {
     "workflow_workspaces": "Spații de lucru",
     "workflow_workspaces_desc": "Salvați un set de file deschise și redeschideți întregul aspect mai târziu."
+  },
+  "permissions": {
+    "use": {
+      "title": "Utilizați spațiile de lucru",
+      "description": "Salvați, aplicați și gestionați machetele de file salvate."
+    }
   },
   "hosts": {
     "docsLink": "Vizualizați documentele"

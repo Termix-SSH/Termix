@@ -18,6 +18,7 @@
   "homepage": {
     "title": "Tuisblad",
     "addWidget": "Voeg Widget by",
+    "noWidgetsInCategory": "Geen widgets in hierdie kategorie nie",
     "editWidget": "Wysig Widget",
     "zoomIn": "Inzoem",
     "zoomOut": "Uitzoom",
@@ -59,6 +60,9 @@
     "maxItems": "Maksimum items",
     "showDescription": "Wys Beskrywing",
     "widgetRssName": "RSS-voer",
+    "rssNoFeedUrl": "Konfigureer 'n voer-URL in widget-instellings",
+    "rssLoadError": "Kon nie voer laai nie",
+    "rssNoItems": "Geen items nie",
     "noHostSelected": "Geen gasheer gekies nie",
     "displayedMetrics": "Vertoonde Metrieke",
     "metricCpu": "SVE",
@@ -157,6 +161,30 @@
     "compactMode": "Kompakte modus",
     "selectHosts": "Kies gashere",
     "listLayout": "Lys",
-    "gridLayout": "Rooster"
+    "gridLayout": "Rooster",
+    "configureUrl": "Stel 'n URL in die widget-instellings",
+    "embeddedContent": "Ingeslote inhoud",
+    "noBookmarks": "Geen boekmerke nie",
+    "noSections": "Geen afdelings opgestel nie",
+    "noServices": "Geen dienste opgestel nie",
+    "configureLocation": "Stel 'n ligging in die widget-instellings",
+    "bannerTextPlaceholder": "Banier teks",
+    "serviceNamePlaceholder": "My diens"
+  },
+  "permissions": {
+    "use": {
+      "title": "Gebruik die tuisblad",
+      "description": "Bekyk en wysig die tuisblad-doek en dashboarddiensskakels."
+    }
+  },
+  "settings": {
+    "privateEndpoints": {
+      "label": "Toegelate privaat gashere",
+      "description": "Presiese private of teruglus-gasheername/IP's vir Ping Status en Pasgemaakte API-widgets. Skei inskrywings met kommas of nuwe reëls; laat skemas, poorte en paaie weg. Maak private bestemmings leeg."
+    },
+    "privateCertificateAuthority": {
+      "label": "Privaat sertifikaatowerheid (PEM)",
+      "description": "Opsionele vertroude CA-bundel vir gashere op die toelaatlys. Sertifikaatverifikasie bly geaktiveer. Los leeg om die stelselvertrouensberging te gebruik."
+    }
   }
 }
