@@ -16,7 +16,7 @@ export function NotesEditForm({
         <Textarea
           value={config.content}
           onChange={(e) => onChange({ ...config, content: e.target.value })}
-          placeholder="Write your notes here..."
+          placeholder={t("homepage.notesPlaceholder")}
           className="text-sm min-h-[120px] resize-none rounded-none"
         />
       </div>

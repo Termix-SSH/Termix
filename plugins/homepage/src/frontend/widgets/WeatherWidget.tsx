@@ -100,7 +100,7 @@ function WeatherWidget({
   if (error) {
     return (
       <div className="flex items-center justify-center w-full h-full text-xs text-destructive/70 p-3 text-center">
-        Could not load weather for "{location}"
+        {t("homepage.weatherLoadFailed", { location })}
       </div>
     );
   }
@@ -108,7 +108,7 @@ function WeatherWidget({
   if (!data) {
     return (
       <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground/50">
-        Loading...
+        {t("common.loading")}
       </div>
     );
   }
@@ -138,7 +138,7 @@ function WeatherWidget({
               {desc}
             </span>
             <span className="text-[10px] text-muted-foreground/70">
-              Feels like {displayFeels}
+              {t("homepage.feelsLike", { temperature: displayFeels })}
             </span>
           </div>
         </div>

@@ -8,6 +8,7 @@
  */
 
 import { databaseLogger } from "../utils/logger.js";
+import { DatabaseSaveTrigger } from "../utils/database-save-trigger.js";
 import { getErrorMessage } from "../utils/error-message.js";
 import { runTailscaleSettingsMigration } from "./tailscale-settings-migration.js";
 import { runProxmoxSettingsMigration } from "./proxmox-settings-migration.js";
@@ -73,19 +74,21 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runHostDefaultsMigration", runHostDefaultsMigration],
 ];
 
-export async function runPluginDataMigrations(): Promise<void> {
-  for (const [name, run] of MIGRATIONS) {
-    try {
-      await run();
-    } catch (error) {
-      databaseLogger.warn(`Plugin data migration ${name} failed`, {
-        operation: "plugin_data_migration",
-        error: getErrorMessage(error),
-      });
+export const runPluginDataMigrations = DatabaseSaveTrigger.batched(
+  async (): Promise<void> => {
+    for (const [name, run] of MIGRATIONS) {
+      try {
+        await run();
+      } catch (error) {
+        databaseLogger.warn(`Plugin data migration ${name} failed`, {
+          operation: "plugin_data_migration",
+          error: getErrorMessage(error),
+        });
+      }
     }
-  }
-  await applyHostDefaults();
-}
+    await applyHostDefaults();
+  },
+);
 
 /**
  * Classifies hosts nobody classified yet (from an older release, or for a

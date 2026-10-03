@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "使用 SSO 登录",
   "loginWithProvider": "使用{{name}}登录",
   "loading": "加载中...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "管理 SSO 提供商",
+      "description": "添加、修改和移除可供用户登录的 SSO 提供商。"
     }
   },
   "providers": {
@@ -16,8 +16,8 @@
     "delete": "删除提供商",
     "deleteConfirm": "删除此提供商？关联用户将无法登录。",
     "name": "显示名称",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "我的 SSO 提供商",
+    "nameRequired": "必须填写显示名称",
     "type": "提供商类型",
     "enabled": "已启用",
     "save": "保存提供商",
@@ -26,20 +26,20 @@
     "saveFailed": "保存失败",
     "deleted": "已删除",
     "deleteFailed": "删除失败",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "加载 SSO 提供商失败",
     "cancel": "取消",
     "copy": "复制",
     "copied": "已复制",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "重定向 URI",
+    "redirectUriDesc": "在身份提供商处将此 URL 登记为重定向或回调 URL。",
+    "legacyCallback": "保留旧版重定向 URI",
+    "legacyCallbackDesc": "此提供商在 Termix 2.9 之前配置，仍使用可正常工作的旧重定向 URI。如需迁移，请先在身份提供商处添加 {{uri}}，再关闭此选项。",
+    "authorizationUrl": "授权 URL：{{url}}"
   },
   "fields": {
     "clientId": "客户端 ID",
     "clientSecret": "客户端密钥",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "已保存机密值，留空可保留现有值。",
     "issuerUrl": "颁发者 URL",
     "authUrl": "授权 URL",
     "tokenUrl": "令牌 URL",
@@ -58,8 +58,11 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "自动使用 SSO 登录",
+      "description": "将访客直接跳转到第一个 SSO 提供商，而不显示登录表单。OIDC_SILENT_LOGIN_DEFAULT 环境变量会覆盖此设置。"
     }
+  },
+  "plugin": {
+    "name": "单点登录"
   }
 }

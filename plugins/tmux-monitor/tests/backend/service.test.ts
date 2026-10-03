@@ -38,17 +38,32 @@ describe("createTmuxSessionsService", () => {
     });
   });
 
-  it("detect() lists session names when tmux is available", async () => {
+  it("detect() lists full session info when tmux is available", async () => {
     const { ctx } = createFakeContext({ pluginId: "tmux-monitor" });
     const service = createTmuxSessionsService(ctx);
     const client = fakeSshClient({
       "-V": "tmux 3.7b\n",
-      "list-sessions": "main|1|2|1\nlogs|3|4|0\n",
+      "list-sessions": "main|1|2|3|1\nlogs|4|5|1|0\n",
     });
 
     await expect(service.detect(client)).resolves.toEqual({
       available: true,
-      sessions: ["main", "logs"],
+      sessions: [
+        {
+          name: "main",
+          created: 1,
+          lastActivity: 2,
+          windows: 3,
+          attachedClients: 1,
+        },
+        {
+          name: "logs",
+          created: 4,
+          lastActivity: 5,
+          windows: 1,
+          attachedClients: 0,
+        },
+      ],
     });
   });
 

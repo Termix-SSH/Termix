@@ -3,7 +3,7 @@ import type {
   PluginSshConnectOptions,
   PluginSshHost,
 } from "@termix/plugin-sdk/backend";
-import { startServer, type TestServer } from "./server";
+import { startServer, sshHost, type TestServer } from "./server";
 import { FakeClient } from "./fake-ssh";
 
 let server: TestServer | null = null;
@@ -74,6 +74,41 @@ describe("docker routes", () => {
   it("answers 404 for a host the user cannot reach", async () => {
     server = await startServer();
     expect((await connect(server, "s1", 99)).status).toBe(404);
+  });
+
+  it("keeps the core-resolved host identity when using stored credentials", async () => {
+    server = await startServer();
+    const host = sshHost(7, { authType: "key", password: undefined });
+    const originalConnect = server.mock.ctx.ssh.connect;
+    server.mock.ctx.ssh.resolveHost = async () => host;
+    server.mock.ctx.ssh.connect = (async (target, options) => {
+      if (target !== host)
+        throw new Error("Stored credential association lost");
+      return originalConnect(target, options);
+    }) as typeof originalConnect;
+    const response = await connect(server);
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+  });
+
+  it("applies explicit authentication overrides without changing the resolved host", async () => {
+    server = await startServer();
+    const host = sshHost(7, { authType: "key", password: undefined });
+    server.mock.ctx.ssh.resolveHost = async () => host;
+    const response = await server.request("POST", "/ssh/connect", {
+      body: {
+        sessionId: "override",
+        hostId: 7,
+        userProvidedPassword: "replacement",
+      },
+    });
+    expect(response.status).toBe(200);
+    expect(server.mock.sshConnections.at(-1)?.host).toMatchObject({
+      authType: "password",
+      password: "replacement",
+    });
+    expect(host.authType).toBe("key");
+    expect(host.password).toBeUndefined();
   });
 
   it("connects, validates and manages containers on the session", async () => {

@@ -1,5 +1,5 @@
 import { Button } from "@termix/plugin-sdk/ui";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import type { TranslateFn } from "@termix/plugin-sdk/frontend";
 import { formatFileSize } from "../file-manager-utils.ts";
 
 export interface LocalTransferBatchStatus {
@@ -16,15 +16,16 @@ export interface LocalTransferBatchStatus {
 }
 
 interface LocalTransferProgressToastProps {
+  t: TranslateFn;
   status: LocalTransferBatchStatus;
   onCancel?: () => void;
 }
 
 export function LocalTransferProgressToast({
+  t,
   status,
   onCancel,
 }: LocalTransferProgressToastProps) {
-  const { t } = useTranslation();
   const percent =
     status.totalBytes > 0
       ? Math.min(100, Math.round((status.bytesDone / status.totalBytes) * 100))

@@ -194,7 +194,6 @@ export function createSsoLogin(ctx: PluginContext, store: ProviderStore) {
     config: OidcConfig,
     code: string,
     pending: PendingState,
-    withVerifier: boolean,
   ): Promise<Record<string, unknown>> {
     const response = await fetch(config.token_url, {
       method: "POST",
@@ -208,7 +207,7 @@ export function createSsoLogin(ctx: PluginContext, store: ProviderStore) {
         client_secret: config.client_secret,
         code,
         redirect_uri: pending.backendCallback,
-        ...(withVerifier ? { code_verifier: pending.codeVerifier } : {}),
+        code_verifier: pending.codeVerifier,
       }),
       ...buildFetchOptions(config.ca_cert),
     } as RequestInit);
@@ -231,7 +230,7 @@ export function createSsoLogin(ctx: PluginContext, store: ProviderStore) {
     code: string,
     pending: PendingState,
   ): Promise<PluginVerifiedIdentity> {
-    const tokenData = await exchangeCode(provider.config, code, pending, false);
+    const tokenData = await exchangeCode(provider.config, code, pending);
     const fetchOptions = buildFetchOptions(provider.config.ca_cert);
     const headers = {
       Authorization: `Bearer ${tokenData.access_token}`,
@@ -341,7 +340,7 @@ export function createSsoLogin(ctx: PluginContext, store: ProviderStore) {
     pending: PendingState,
   ): Promise<PluginVerifiedIdentity> {
     const { config } = provider;
-    const tokenData = await exchangeCode(config, code, pending, true);
+    const tokenData = await exchangeCode(config, code, pending);
 
     let userInfo: Record<string, unknown> | null = null;
     const claimSources: Record<string, unknown>[] = [];

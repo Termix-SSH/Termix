@@ -1444,7 +1444,7 @@ export function HostEditor({
                   {t("hosts.friendlyNameLabel")}
                 </label>
                 <Input
-                  placeholder="e.g. Production SSH Key"
+                  placeholder={t("placeholders.credentialName")}
                   value={quickCredentialName}
                   onChange={(e) => setQuickCredentialName(e.target.value)}
                 />

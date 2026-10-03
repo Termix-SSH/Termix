@@ -61,5 +61,8 @@
       "label": "Sign in with SSO automatically",
       "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

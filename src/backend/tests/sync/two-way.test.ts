@@ -26,6 +26,7 @@ vi.mock("../../utils/database-save-trigger.js", () => ({
   DatabaseSaveTrigger: {
     triggerSave: vi.fn(),
     forceSave: vi.fn(async () => {}),
+    batched: <T>(work: T) => work,
   },
 }));
 vi.mock("../../utils/system-crypto.js", () => ({

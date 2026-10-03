@@ -521,6 +521,89 @@ describe("external identities", () => {
     ).rejects.toMatchObject({ code: "user_not_allowed" });
   });
 
+  it.each(["true", "false"])(
+    "does not duplicate an unscoped migrated account with provisioning %s",
+    async (enabled) => {
+      addUser({
+        id: "old",
+        username: "Alice",
+        isOidc: true,
+        passwordHash: "",
+        oidcIdentifier: "sub-1",
+        ssoProviderId: null,
+      });
+      const { runExternalIdentityMigration } =
+        await import("../../upgrade/external-identity-migration.js");
+      await runExternalIdentityMigration();
+      h.state.settings.set("oidc_auto_provision", enabled);
+      await expect(
+        runLogin(fakeRequest() as never, external, {
+          methodId: "oidc",
+          rememberMe: false,
+        }),
+      ).rejects.toMatchObject({ code: "legacy_identity_conflict" });
+      expect([...h.state.users.keys()]).toEqual(["old"]);
+      expect(h.state.identities).toHaveLength(1);
+      expect(h.state.identities[0]).toMatchObject({
+        userId: "old",
+        providerId: "legacy-oidc",
+        subject: "sub-1",
+      });
+    },
+  );
+
+  it("keeps equal subjects on explicitly different providers separate", async () => {
+    addUser({
+      id: "other",
+      username: "Other Alice",
+      isOidc: true,
+      passwordHash: "",
+      oidcIdentifier: "sub-1",
+      ssoProviderId: 9,
+    });
+    h.state.identities.push({
+      id: 1,
+      userId: "other",
+      providerId: "9",
+      subject: "sub-1",
+      email: null,
+    });
+    h.state.settings.set("oidc_auto_provision", "true");
+    const result = await runLogin(fakeRequest() as never, external, {
+      methodId: "oidc",
+      rememberMe: false,
+    });
+    expect(result.kind).toBe("session");
+    expect(h.state.users.size).toBe(2);
+    expect(
+      h.state.identities.find((link) => link.providerId === "3")?.userId,
+    ).not.toBe("other");
+  });
+
+  it("uses a verified provider link even when the old provider column is empty", async () => {
+    addUser({
+      id: "old",
+      username: "Alice",
+      isOidc: true,
+      passwordHash: "",
+      oidcIdentifier: "sub-1",
+      ssoProviderId: null,
+    });
+    h.state.identities.push({
+      id: 1,
+      userId: "old",
+      providerId: "3",
+      subject: "sub-1",
+      email: null,
+    });
+    const result = await runLogin(fakeRequest() as never, external, {
+      methodId: "oidc",
+      rememberMe: false,
+    });
+    expect(result.kind).toBe("session");
+    expect(h.state.users.size).toBe(1);
+  });
+
   it("re-checks the allowed list for existing users", async () => {
     addUser({ id: "u9", username: "Alice", isOidc: true, passwordHash: "" });
     h.state.identities.push({

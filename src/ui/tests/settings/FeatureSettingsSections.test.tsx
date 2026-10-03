@@ -23,8 +23,15 @@ vi.mock("@/api/plugins-api", async (importOriginal) => ({
 }));
 
 vi.mock("react-i18next", () => {
-  const t = (key: string, options?: { name?: string }) =>
-    options?.name ? `${key}:${options.name}` : key;
+  const t = (
+    key: string,
+    options?: { name?: string; defaultValue?: string },
+  ) =>
+    key === "ai:plugin.name"
+      ? "AI 助手"
+      : options?.name
+        ? `${key}:${options.name}`
+        : (options?.defaultValue ?? key);
   return { useTranslation: () => ({ t }) };
 });
 
@@ -112,8 +119,20 @@ describe("FeatureSettingsSection", () => {
       />,
     );
 
-    expect(screen.getByText("AI Assistant")).toBeTruthy();
+    expect(screen.getByText("AI 助手")).toBeTruthy();
     expect(api.getPluginUserSettings).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the manifest name for plugins without a translated title", () => {
+    render(
+      <FeatureSettingsSection
+        plugin={plugin({ id: "third-party", name: "Custom Feature" })}
+        scope="admin"
+        open={false}
+        onToggle={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Custom Feature")).toBeTruthy();
   });
 
   it("loads and saves the scope's values once open", async () => {
@@ -179,7 +198,7 @@ describe("FeatureSettingsSection", () => {
     );
 
     expect(
-      await screen.findByText("settings.featureUnavailable:AI Assistant"),
+      await screen.findByText("settings.featureUnavailable:AI 助手"),
     ).toBeTruthy();
   });
 });

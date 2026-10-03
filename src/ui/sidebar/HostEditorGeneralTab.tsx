@@ -1,4 +1,5 @@
 import React from "react";
+import { getHostTags } from "@/api/host-tags-api";
 import type { ProxyNode } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
@@ -47,6 +48,39 @@ export function HostEditorGeneralTab({
   const { t } = useTranslation();
   const syncLinked = !!useSyncStatus()?.linked;
   const pluginProtocols = useHostProtocols();
+  const [predefinedTags, setPredefinedTags] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      void getHostTags()
+        .then((tags) => {
+          if (!cancelled) setPredefinedTags(tags);
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("termix:host-tags-changed", load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("termix:host-tags-changed", load);
+    };
+  }, []);
+  const suggestedTags = [
+    ...new Set([
+      ...predefinedTags,
+      ...hosts.flatMap((item) => item.tags ?? []),
+    ]),
+  ].filter(
+    (tag) =>
+      !form.tags.includes(tag) &&
+      tag
+        .toLocaleLowerCase()
+        .includes(form.tagInput.trim().toLocaleLowerCase()),
+  );
+  const addTag = (tag: string) => {
+    if (!form.tags.includes(tag)) setField("tags", [...form.tags, tag]);
+    setField("tagInput", "");
+  };
 
   // Tracks which picker is shown, independent of whether a value is set yet
   // -- switching to "parent host" mode with nothing picked shouldn't bounce
@@ -174,7 +208,7 @@ export function HostEditorGeneralTab({
                 {t("hosts.addressIp")}
               </label>
               <Input
-                placeholder="10.0.0.1 or example.com"
+                placeholder={t("placeholders.hostAddress")}
                 value={form.ip}
                 onChange={(e) => setField("ip", e.target.value)}
               />
@@ -186,7 +220,7 @@ export function HostEditorGeneralTab({
                   {t("hosts.friendlyName")}
                 </label>
                 <Input
-                  placeholder="e.g. Web Server Production"
+                  placeholder={t("placeholders.hostName")}
                   value={form.name}
                   onChange={(e) => setField("name", e.target.value)}
                 />
@@ -283,14 +317,12 @@ export function HostEditorGeneralTab({
                   onChange={(e) => setField("tagInput", e.target.value)}
                   onKeyDown={(e) => {
                     if (
-                      (e.key === " " || e.key === "Enter") &&
+                      e.key === "Enter" &&
+                      !e.nativeEvent.isComposing &&
                       form.tagInput.trim()
                     ) {
                       e.preventDefault();
-                      const tag = form.tagInput.trim();
-                      if (!form.tags.includes(tag))
-                        setField("tags", [...form.tags, tag]);
-                      setField("tagInput", "");
+                      addTag(form.tagInput.trim());
                     } else if (
                       e.key === "Backspace" &&
                       !form.tagInput &&
@@ -302,6 +334,24 @@ export function HostEditorGeneralTab({
                 />
               </div>
             </div>
+            {suggestedTags.length > 0 && (
+              <div
+                className="col-span-2 flex flex-wrap gap-1 max-h-24 overflow-y-auto"
+                aria-label={t("admin.hostTags")}
+              >
+                {suggestedTags.map((tag) => (
+                  <Button
+                    type="button"
+                    key={tag}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addTag(tag)}
+                  >
+                    {tag}
+                  </Button>
+                ))}
+              </div>
+            )}
             <div className="flex flex-col gap-1.5 col-span-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.privateNotes")}

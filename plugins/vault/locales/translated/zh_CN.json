@@ -43,27 +43,30 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Vault SSH signing",
-      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+      "title": "使用 Vault SSH 签名",
+      "description": "创建 Vault 签名配置，并连接使用 Vault 的主机。"
     },
     "share": {
-      "title": "Share Vault profiles",
-      "description": "Mark a Vault signer profile as shared so every user can pick it."
+      "title": "共享 Vault 配置",
+      "description": "将 Vault 签名配置标记为共享，以供所有用户选择。"
     }
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+      "label": "重定向 URI",
+      "description": "在 Termix 登录所用的每个 Vault OIDC 角色中，将此 URL 添加到 allowed_redirect_uris。"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+      "label": "使用旧版重定向 URI",
+      "description": "继续发送 2.9 之前使用的重定向 URI /vault/oidc/callback。当 Vault 角色允许新 URI 后，可关闭此选项。"
     },
     "host": {
       "profileId": {
-        "label": "Vault signer profile"
+        "label": "Vault 签名配置"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }
