@@ -11,7 +11,7 @@ import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { parseKeyForStorage } from "../../hosts/stored-ssh-key.js";
 import {
   pickResolvedPassword,
   pickResolvedUsername,
@@ -358,7 +358,7 @@ router.post(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        const keyValidation = parseSSHKey(
+        const keyValidation = parseKeyForStorage(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
         );
@@ -940,7 +940,7 @@ router.put(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        const keyValidation = parseSSHKey(
+        const keyValidation = parseKeyForStorage(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
         );

@@ -8,6 +8,8 @@ import {
   parseSSHKey,
   validateKeyPair,
 } from "../../utils/ssh-key-utils.js";
+import { resolveKeyReferences } from "../../hosts/stored-ssh-key.js";
+import type { AuthenticatedRequest } from "../../../types/index.js";
 
 const { utils: ssh2Utils } = ssh2Pkg;
 
@@ -99,13 +101,17 @@ export function registerCredentialKeyRoutes(
     requireCredentialViewPermission,
     requireDataAccess,
     async (req: Request, res: Response) => {
-      const { privateKey, keyPassword } = req.body;
-
-      if (!privateKey || typeof privateKey !== "string") {
+      if (!req.body?.privateKey || typeof req.body.privateKey !== "string") {
         return res.status(400).json({ error: "Private key is required" });
       }
 
       try {
+        const { key: privateKey, passphrase: keyPassword } =
+          await resolveKeyReferences(
+            (req as AuthenticatedRequest).userId,
+            req.body.privateKey,
+            req.body.keyPassword,
+          );
         const keyInfo = parseSSHKey(privateKey, keyPassword);
 
         const response = {
@@ -352,13 +358,17 @@ export function registerCredentialKeyRoutes(
     requireCredentialViewPermission,
     requireDataAccess,
     async (req: Request, res: Response) => {
-      const { privateKey, keyPassword } = req.body;
-
-      if (!privateKey || typeof privateKey !== "string") {
+      if (!req.body?.privateKey || typeof req.body.privateKey !== "string") {
         return res.status(400).json({ error: "Private key is required" });
       }
 
       try {
+        const { key: privateKey, passphrase: keyPassword } =
+          await resolveKeyReferences(
+            (req as AuthenticatedRequest).userId,
+            req.body.privateKey,
+            req.body.keyPassword,
+          );
         let privateKeyObj;
         const parseAttempts = [];
 

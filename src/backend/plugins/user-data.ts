@@ -107,7 +107,7 @@ interface SqliteLike {
     run(...params: unknown[]): unknown;
     all(...params: unknown[]): unknown[];
   };
-  transaction?<T extends (...args: never[]) => unknown>(fn: T): T;
+  transaction?(fn: (rows: Row[]) => void): (rows: Row[]) => unknown;
 }
 
 const INSERT_CHUNK = 2000;
@@ -148,7 +148,7 @@ export async function writeUserPluginTables(
       : writeChunk;
     for (let start = 0; start < rows.length; start += INSERT_CHUNK) {
       const chunk = rows.slice(start, start + INSERT_CHUNK);
-      runChunk(chunk as never);
+      runChunk(chunk);
       written += chunk.length;
       await yieldToEventLoop();
     }

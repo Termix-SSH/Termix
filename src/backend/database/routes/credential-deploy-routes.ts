@@ -9,6 +9,9 @@ import { createCurrentHostResolutionRepository } from "../repositories/factory.j
 import { connectHost } from "../../hosts/connect/connect-host.js";
 import type { SshConnectHost } from "../../hosts/connect/types.js";
 import { resolveHostById } from "../../hosts/host-resolver.js";
+import { isSecretReference } from "../../hosts/external-secrets.js";
+import { resolveKeyReferences } from "../../hosts/stored-ssh-key.js";
+import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 
 function describeDeployError(err: unknown): string {
   const message = getErrorMessage(err, "Connection failed");
@@ -363,7 +366,20 @@ export function registerCredentialDeployRoutes(
           });
         }
 
-        const publicKey = credData.publicKey;
+        let publicKey = credData.publicKey;
+        const storedKey = credData.privateKey || credData.key;
+        if (!publicKey && isSecretReference(storedKey)) {
+          // A key kept in a secret source has no stored public key; derive
+          // it from the resolved key.
+          const resolved = await resolveKeyReferences(
+            userId,
+            storedKey,
+            (credData as { keyPassword?: string | null }).keyPassword,
+          );
+          publicKey =
+            parseSSHKey(resolved.key, resolved.passphrase).publicKey ||
+            undefined;
+        }
         if (!publicKey) {
           return res.status(400).json({
             success: false,
