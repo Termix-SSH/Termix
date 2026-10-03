@@ -21,6 +21,18 @@ describe("DatabaseSaveTrigger", () => {
     });
   });
 
+  it("lets the event loop turn before a force save resolves", async () => {
+    DatabaseSaveTrigger.initialize(vi.fn().mockResolvedValue(undefined));
+    let turned = false;
+    setImmediate(() => {
+      turned = true;
+    });
+
+    await DatabaseSaveTrigger.forceSave("bulk_write");
+
+    expect(turned).toBe(true);
+  });
+
   it("debounces dirty saves and marks the database clean after saving", async () => {
     vi.useFakeTimers();
     const save = vi.fn().mockResolvedValue(undefined);
@@ -33,6 +45,7 @@ describe("DatabaseSaveTrigger", () => {
     expect(DatabaseSaveTrigger.getStatus().hasPendingTimeout).toBe(true);
 
     await vi.advanceTimersByTimeAsync(2000);
+    await vi.runOnlyPendingTimersAsync();
 
     expect(save).toHaveBeenCalledTimes(1);
     expect(DatabaseSaveTrigger.isDirty).toBe(false);

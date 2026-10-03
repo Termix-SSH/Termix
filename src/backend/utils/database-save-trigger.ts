@@ -94,7 +94,13 @@ export class DatabaseSaveTrigger {
       }
     }
 
-    const save = Promise.resolve().then(() => this.saveFunction!());
+    // Each save serializes the whole database into fresh buffers, and V8 only
+    // frees them once the event loop turns. A loop of awaited writes (boot
+    // migrations, bulk import) never yields, so every save's copies piled up
+    // until the process ran out of memory.
+    const save = Promise.resolve()
+      .then(() => this.saveFunction!())
+      .finally(() => new Promise<void>((resolve) => setImmediate(resolve)));
     this.activeSave = save;
     this.pendingSave = true;
 
