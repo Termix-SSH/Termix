@@ -25,3 +25,22 @@ export async function applyDefaultsAfterHostWrite(
     });
   }
 }
+
+/**
+ * The same for many hosts written in one go (an import), in a single pass
+ * instead of one per host.
+ */
+export async function applyDefaultsAfterHostWrites(
+  hostIds: number[],
+): Promise<void> {
+  if (hostIds.length === 0) return;
+  try {
+    await recompute({ hostIds });
+  } catch (error) {
+    databaseLogger.warn("Could not apply host defaults after a write", {
+      operation: "host_defaults_after_write",
+      hosts: hostIds.length,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}

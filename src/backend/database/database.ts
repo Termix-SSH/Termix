@@ -1,7 +1,7 @@
 import { getErrorMessage } from "../utils/error-message.js";
 import { sshOptionsForWrite } from "../hosts/ssh-options.js";
 import {
-  applyDefaultsAfterHostWrite,
+  applyDefaultsAfterHostWrites,
   applyHostDefaultsToWrite,
 } from "../hosts/defaults/index.js";
 import { recompute } from "../hosts/defaults/recompute.js";
@@ -1048,7 +1048,7 @@ app.post(
   "/database/import",
   authenticateJWT,
   upload.single("file"),
-  async (req, res) => {
+  DatabaseSaveTrigger.batched(async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
@@ -1150,6 +1150,7 @@ app.post(
             const importedHosts = importDb
               .prepare("SELECT * FROM ssh_data")
               .all();
+            const importedHostIds: number[] = [];
             for (const host of importedHosts) {
               try {
                 const hostRepository = createCurrentHostRepository();
@@ -1224,7 +1225,7 @@ app.post(
                   Number(created.id),
                   importedHostPluginSettings(importDb, host),
                 );
-                await applyDefaultsAfterHostWrite(Number(created.id));
+                importedHostIds.push(Number(created.id));
                 await importHostProtocolLogins(
                   importDb,
                   host,
@@ -1238,6 +1239,7 @@ app.post(
                 );
               }
             }
+            await applyDefaultsAfterHostWrites(importedHostIds);
           } catch {
             apiLogger.info("ssh_data table not found in import file, skipping");
           }
@@ -1402,7 +1404,7 @@ app.post(
         details: getErrorMessage(error),
       });
     }
-  },
+  }),
 );
 
 /**

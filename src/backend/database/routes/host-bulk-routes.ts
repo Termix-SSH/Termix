@@ -4,7 +4,7 @@ import {
 } from "./host-import-order.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
 import {
-  applyDefaultsAfterHostWrite,
+  applyDefaultsAfterHostWrites,
   applyHostDefaultsToWrite,
 } from "../../hosts/defaults/index.js";
 import {
@@ -576,6 +576,7 @@ export function registerHostBulkRoutes(
       }
 
       const knownAuthTypes = listKnownAuthTypes();
+      const writtenHostIds: number[] = [];
       for (const { host: hostData, index: i, exportId } of orderedHosts) {
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
@@ -811,12 +812,14 @@ export function registerHostBulkRoutes(
             savedHostId,
             hostData as Record<string, unknown>,
           );
-          await applyDefaultsAfterHostWrite(savedHostId);
+          writtenHostIds.push(savedHostId);
         } catch (error) {
           results.failed++;
           results.errors.push(`Host ${i + 1}: ${getErrorMessage(error)}`);
         }
       }
+
+      await applyDefaultsAfterHostWrites(writtenHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
@@ -935,6 +938,7 @@ export function registerHostBulkRoutes(
         }
       }
 
+      const writtenHostIds: number[] = [];
       for (let i = 0; i < hostsToImport.length; i++) {
         const hostData = normalizeImportedHost(
           hostsToImport[i] as Record<string, unknown>,
@@ -1002,7 +1006,7 @@ export function registerHostBulkRoutes(
               existing.id,
               sshDataObj,
             );
-            await applyDefaultsAfterHostWrite(existing.id);
+            writtenHostIds.push(existing.id);
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
@@ -1010,7 +1014,7 @@ export function registerHostBulkRoutes(
               userId,
               sshDataObj,
             );
-            await applyDefaultsAfterHostWrite(saved.id);
+            writtenHostIds.push(saved.id);
             results.success++;
           }
         } catch (error) {
@@ -1020,6 +1024,8 @@ export function registerHostBulkRoutes(
           );
         }
       }
+
+      await applyDefaultsAfterHostWrites(writtenHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,

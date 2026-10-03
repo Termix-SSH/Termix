@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import {
   createMockCtx,
@@ -9,6 +9,7 @@ import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 import { activate } from "../../src/backend/index.js";
 import type { MetricsViewersV1 } from "../../src/backend/index.js";
 import { hostImportNormalizer } from "../../src/backend/host-import.js";
+import { MetricsPoller } from "../../src/backend/poller.js";
 import { manifest, pluginDir, startServer, type TestServer } from "./server";
 
 let db: TestDb | null = null;
@@ -116,5 +117,24 @@ describe("hostImportNormalizer", () => {
 
   it("writes nothing for a row without metrics settings", () => {
     expect(hostImportNormalizer({ name: "x" })).toBeNull();
+  });
+
+  it("retimes once after a burst of interval writes", async () => {
+    server = await startServer();
+    const retime = vi
+      .spyOn(MetricsPoller.prototype, "retimeAll")
+      .mockResolvedValue();
+    vi.useFakeTimers();
+    try {
+      for (let hostId = 1; hostId <= 20; hostId++) {
+        await server.mock.ctx.settings.setHost(hostId, "metricsInterval", 30);
+      }
+      expect(retime).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(retime).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      retime.mockRestore();
+    }
   });
 });
