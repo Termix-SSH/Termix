@@ -5,9 +5,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { copyPluginSdk } =
+const { copyPluginSdk, resourcesDirFor } =
   require("../../../../packaging/build/after-pack.cjs") as {
     copyPluginSdk: (resourcesDir: string, sdkDir?: string) => string;
+    resourcesDirFor: (context: {
+      electronPlatformName: string;
+      appOutDir: string;
+      packager: { appInfo: { productFilename: string } };
+    }) => string;
   };
 
 let dir: string;
@@ -53,4 +58,30 @@ describe("afterPack plugin SDK copy", () => {
       "npm run build:sdk",
     );
   });
+
+  it.each(["darwin", "mas"])(
+    "copies into the app bundle for %s builds",
+    (electronPlatformName) => {
+      const context = {
+        electronPlatformName,
+        appOutDir: "/out",
+        packager: { appInfo: { productFilename: "Termix" } },
+      };
+      expect(resourcesDirFor(context)).toBe(
+        path.join("/out", "Termix.app", "Contents", "Resources"),
+      );
+    },
+  );
+
+  it.each(["win32", "linux"])(
+    "copies into resources for %s builds",
+    (electronPlatformName) => {
+      const context = {
+        electronPlatformName,
+        appOutDir: "/out",
+        packager: { appInfo: { productFilename: "Termix" } },
+      };
+      expect(resourcesDirFor(context)).toBe(path.join("/out", "resources"));
+    },
+  );
 });
