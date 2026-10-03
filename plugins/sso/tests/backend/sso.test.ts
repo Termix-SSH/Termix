@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   LEGACY_DDL,
@@ -355,6 +356,19 @@ describe("the callback", () => {
     const callback = await server.request(
       "GET",
       `/callback?code=abc&state=${url.searchParams.get("state")}`,
+    );
+    const exchange = vi
+      .mocked(fetch)
+      .mock.calls.find(
+        ([url]) =>
+          String(url) === "https://github.com/login/oauth/access_token",
+      );
+    const token = new URLSearchParams(String(exchange?.[1]?.body));
+    const verifier = token.get("code_verifier");
+    expect(verifier).toBeTruthy();
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(createHash("sha256").update(verifier!).digest("base64url")).toBe(
+      url.searchParams.get("code_challenge"),
     );
     expect(callback.body.identity).toMatchObject({
       provider: String(created.body.id),
