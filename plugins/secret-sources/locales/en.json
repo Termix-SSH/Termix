@@ -23,5 +23,8 @@
         "description": "Private or loopback hosts a secret source may reach, one per line. A self-hosted 1Password Connect server usually needs its own address listed here."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

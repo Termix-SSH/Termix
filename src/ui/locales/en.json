@@ -189,7 +189,11 @@
     "remove": "Remove",
     "add": "Add",
     "update": "Update",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Step {{current}} of {{total}}",
@@ -1122,7 +1126,13 @@
     "language": "Language",
     "keyPassword": "key password",
     "pastePrivateKey": "Paste your private key here...",
-    "enterPassword": "Enter your password"
+    "enterPassword": "Enter your password",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashboard",

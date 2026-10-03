@@ -24,8 +24,8 @@
     "stop": "停止",
     "status": "状态",
     "actions": "操作",
-    "cardView": "Card view",
-    "listView": "List view",
+    "cardView": "卡片视图",
+    "listView": "列表视图",
     "confirmRemoveContainer": "确定要移除容器 '{{name}}' 吗？此操作无法撤销。",
     "runningContainerWarning": "警告：此容器正在运行。移除操作将先停止容器。",
     "loadingContainers": "正在加载容器...",
@@ -70,7 +70,7 @@
     "blockIo": "块 I/O",
     "read": "读取",
     "write": "写入",
-    "pids": "PIDs",
+    "pids": "进程 ID",
     "containerInformation": "容器信息",
     "name": "名称",
     "id": "ID",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "访问控制台需要容器处于运行状态",
     "verificationCodePrompt": "输入验证码",
     "totpVerificationFailed": "TOTP 验证失败，请重试。",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "登录失败，请重试。",
     "connectedTo": "已连接到 {{containerName}}",
     "disconnected": "已断开连接",
     "consoleError": "控制台错误",
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "使用 Docker",
+      "description": "在启用了 Docker 的主机上打开 Docker 管理器和容器控制台。"
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "启用 Docker",
-        "description": "Manage containers on this host."
+        "description": "管理此主机上的容器。"
       },
       "containerRuntime": {
         "label": "容器运行时",
@@ -137,7 +137,7 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "需要远程服务器。请在设置中连接远程服务器以使用此连接类型。"
   },
   "hosts": {
     "docsLink": "查看文档",

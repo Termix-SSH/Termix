@@ -150,7 +150,7 @@ export function AdminApiKeysSection({
                     <span className="text-accent-brand">*</span>
                   </label>
                   <Input
-                    placeholder="e.g., CI Pipeline"
+                    placeholder={t("placeholders.apiKeyName")}
                     value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
                     className="text-xs"

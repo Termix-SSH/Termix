@@ -208,7 +208,7 @@ export function HostEditorGeneralTab({
                 {t("hosts.addressIp")}
               </label>
               <Input
-                placeholder="10.0.0.1 or example.com"
+                placeholder={t("placeholders.hostAddress")}
                 value={form.ip}
                 onChange={(e) => setField("ip", e.target.value)}
               />
@@ -220,7 +220,7 @@ export function HostEditorGeneralTab({
                   {t("hosts.friendlyName")}
                 </label>
                 <Input
-                  placeholder="e.g. Web Server Production"
+                  placeholder={t("placeholders.hostName")}
                   value={form.name}
                   onChange={(e) => setField("name", e.target.value)}
                 />

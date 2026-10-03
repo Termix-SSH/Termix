@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "唤醒",
+    "sent": "网络唤醒数据包已发送",
+    "failed": "发送网络唤醒数据包失败"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "发送网络唤醒数据包",
+      "description": "向主机的 MAC 地址发送魔术包以唤醒主机。"
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
+        "label": "MAC 地址",
+        "description": "主机的网络 MAC 地址，用于发送网络唤醒数据包。",
         "placeholder": "AA:BB:CC:DD:EE:FF"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "广播地址",
+        "description": "发送数据包所用的子网广播地址，留空则使用 255.255.255.255。",
         "placeholder": "192.168.1.255"
       }
     }

@@ -36,7 +36,9 @@ function open(timezone?: string) {
   return {
     onSave,
     onClose,
-    input: screen.getByPlaceholderText(/America\/New_York/) as HTMLInputElement,
+    input: screen.getByPlaceholderText(
+      "homepage.timezonePlaceholder",
+    ) as HTMLInputElement,
     save: screen
       .getByText("homepage.save")
       .closest("button") as HTMLButtonElement,

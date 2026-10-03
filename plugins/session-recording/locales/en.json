@@ -56,5 +56,8 @@
     "speed": "Playback speed",
     "play": "Play recording",
     "pause": "Pause recording"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }
