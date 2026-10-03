@@ -75,4 +75,77 @@ describe("DatabaseSaveTrigger", () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(DatabaseSaveTrigger.getStatus().pendingSave).toBe(false);
   });
+
+  it("collapses force saves inside a batch into one save", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+
+    const result = await DatabaseSaveTrigger.batched(async (rows: number) => {
+      for (let i = 0; i < rows; i++) {
+        await DatabaseSaveTrigger.forceSave("row_write");
+      }
+      expect(save).not.toHaveBeenCalled();
+      return rows;
+    })(50);
+
+    expect(result).toBe(50);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(DatabaseSaveTrigger.isDirty).toBe(false);
+  });
+
+  it("folds a nested batch into the outer one", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    const inner = DatabaseSaveTrigger.batched(() =>
+      DatabaseSaveTrigger.forceSave("inner_write"),
+    );
+
+    await DatabaseSaveTrigger.batched(async () => {
+      await inner();
+      await inner();
+    })();
+
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips the save when a batch wrote nothing", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+
+    await DatabaseSaveTrigger.batched(async () => {})();
+
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("still saves what a failed batch wrote", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+
+    await expect(
+      DatabaseSaveTrigger.batched(async () => {
+        await DatabaseSaveTrigger.forceSave("row_write");
+        throw new Error("boom");
+      })(),
+    ).rejects.toThrow("boom");
+
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves immediately for work that outlives its batch", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    DatabaseSaveTrigger.initialize(save);
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let detached: Promise<void> | undefined;
+
+    await DatabaseSaveTrigger.batched(async () => {
+      detached = gate.then(() => DatabaseSaveTrigger.forceSave("late_write"));
+    })();
+    release?.();
+    await detached;
+
+    expect(save).toHaveBeenCalledTimes(1);
+  });
 });
