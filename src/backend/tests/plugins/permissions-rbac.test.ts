@@ -378,6 +378,7 @@ describe("shipped manifests keep their permission ids", () => {
       "ai.apply_proposals",
       "ai.services.use",
       "ai.secrets.share",
+      "ai.agents",
     ]);
   });
 

@@ -181,7 +181,7 @@ describe("termix id panel", () => {
     expect(screen.getByText(IDENTITY.resolverUrl)).toBeTruthy();
     expect(screen.getByText("Laptop")).toBeTruthy();
     expect(screen.getByText(KEY.publicKey)).toBeTruthy();
-    expect(api.get).toHaveBeenCalledWith("/credentials");
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith("/credentials"));
   });
 });
 

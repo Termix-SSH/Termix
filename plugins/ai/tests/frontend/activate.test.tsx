@@ -64,6 +64,8 @@ describe(`${manifest.id} activate`, () => {
 
   it("adds the assistant tab once AI is on for the user", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
-    await waitFor(() => expect(rendered!.registered.tabs()).toEqual(["ai"]));
+    await waitFor(() =>
+      expect(rendered!.registered.tabs()).toEqual(["ai", "ai-agents"]),
+    );
   });
 });

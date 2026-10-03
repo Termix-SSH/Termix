@@ -135,4 +135,88 @@ export const proposals = adoptLegacyTable(
   ),
 );
 
-export const tables = [providers, conversations, messages, proposals];
+/*
+ * Coding agent sessions. Events and queued prompts are rows of their own, so a
+ * running agent appends instead of rewriting its session and no single value
+ * grows with the conversation. Text is TEXT on MySQL (64 KB), which is why
+ * prompts, drafts and event text are capped in UTF-8 bytes.
+ */
+export const agentSessions = defineTable(
+  "agent_sessions",
+  {
+    id: id(),
+    sessionId: varchar(36).notNull().unique(),
+    userId: refUser(),
+    hostId: integer().notNull(),
+    providerId: integer().notNull(),
+    agent: varchar(32).notNull(),
+    model: text().notNull(),
+    cwd: text().notNull(),
+    executable: text().notNull(),
+    nativeId: text(),
+    title: text(),
+    archived: boolean().notNull().default(false),
+    queuePaused: boolean().notNull().default(false),
+    draft: text(),
+    // At most 100 small records.
+    attachments: text().notNull().default("[]"),
+    updatedAt: text().notNull(),
+  },
+  {
+    indexes: [{ name: "idx_ai_agent_sessions_user", columns: ["userId"] }],
+  },
+);
+
+export const agentEvents = defineTable(
+  "agent_events",
+  {
+    id: id(),
+    sessionId: varchar(36).notNull(),
+    userId: refUser(),
+    seq: integer().notNull(),
+    // text | tool | permission | status | error | user | state
+    kind: varchar(16).notNull(),
+    text: text().notNull(),
+    requestId: text(),
+    choices: text(),
+  },
+  {
+    uniques: [
+      {
+        name: "idx_ai_agent_events_session_seq",
+        columns: ["sessionId", "seq"],
+      },
+    ],
+  },
+);
+
+export const agentQueue = defineTable(
+  "agent_queue",
+  {
+    id: id(),
+    sessionId: varchar(36).notNull(),
+    userId: refUser(),
+    promptId: varchar(36).notNull(),
+    position: integer().notNull(),
+    text: text().notNull(),
+    attachmentIds: text().notNull().default("[]"),
+  },
+  {
+    indexes: [
+      {
+        name: "idx_ai_agent_queue_session",
+        columns: ["sessionId", "position"],
+      },
+    ],
+  },
+);
+
+export const tables = [
+  providers,
+  conversations,
+  messages,
+  proposals,
+  agentSessions,
+  agentEvents,
+  agentQueue,
+];
