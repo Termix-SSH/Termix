@@ -42,5 +42,7 @@ https://youtu.be/lngaePO96tM
 - Status checks triggering Fail2Ban bans while a session was open
 - Too many database writes from session activity
 - Host editor tabs being hidden when they did not fit
+- SSH host keys being accepted without a check when the host was missing from the database
+- The "last login failed" host status showing in English or mistranslated in several languages
 
 <!-- /BUG_FIXES -->
