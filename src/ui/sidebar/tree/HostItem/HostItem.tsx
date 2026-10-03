@@ -1313,7 +1313,7 @@ export function HostItem({
             <div
               className={`flex flex-col gap-0.5 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "" : "pt-1.5"}`}
             >
-              {/* Connection buttons — only shown here when not already shown above */}
+              {/* Connection buttons, only shown here when not already shown above */}
               {!alwaysShowTray && !actionsOnly && !shouldUseClickTray && (
                 <div className="flex items-center flex-wrap gap-[1.75px]">
                   {connectionButtons}
