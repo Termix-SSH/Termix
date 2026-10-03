@@ -65,6 +65,21 @@ const swaggerOptions: SwaggerJSDocOptions = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
+          description: "Session JWT sent as Authorization: Bearer <JWT>.",
+        },
+        cookieAuth: {
+          type: "apiKey",
+          in: "cookie",
+          name: "jwt",
+          description:
+            "Session JWT cookie set at sign-in. When present, it takes precedence over the Authorization header.",
+        },
+        apiKeyAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "tmx_<api key>",
+          description:
+            "API key sent as Authorization: Bearer tmx_<api key>. Permissions follow the key owner's account; encrypted data must be unlocked separately. API keys cannot impersonate another user.",
         },
       },
       schemas: {
@@ -80,6 +95,12 @@ const swaggerOptions: SwaggerJSDocOptions = {
     security: [
       {
         bearerAuth: [],
+      },
+      {
+        cookieAuth: [],
+      },
+      {
+        apiKeyAuth: [],
       },
     ],
     tags: [

@@ -52,6 +52,7 @@ function setup(
     loadSharedHostIds: async (userId) => shared[userId] ?? [],
     ping,
     pingThroughJumpHosts,
+    hasActiveSession: (id) => hostSessionStatus.hasActiveSession(id),
     globalInterval: () => 60,
     emit: (payload) => emitted.push(payload),
   });
@@ -74,6 +75,34 @@ afterEach(() => {
 });
 
 describe("HostStatusService", () => {
+  it.each([{ jumpHosts: [] }, { jumpHosts: [{ hostId: 9 }] }])(
+    "skips probes while a session is open, including jump hosts: %j",
+    async ({ jumpHosts }) => {
+      const { service, ping, pingThroughJumpHosts } = setup([
+        target(7, { jumpHosts }),
+      ]);
+      active = service;
+      const close = hostSessionStatus.register(7);
+      try {
+        await service.statusesFor("owner", null);
+        await flush();
+        await vi.advanceTimersByTimeAsync(60_000);
+        await flush();
+        expect(service.get(7)?.status).toBe("online");
+        expect(ping).not.toHaveBeenCalled();
+        expect(pingThroughJumpHosts).not.toHaveBeenCalled();
+        close();
+        await vi.advanceTimersByTimeAsync(60_000);
+        await flush();
+        expect(
+          jumpHosts.length ? pingThroughJumpHosts : ping,
+        ).toHaveBeenCalledOnce();
+      } finally {
+        close();
+      }
+    },
+  );
+
   it("starts a user's own hosts and reports them online", async () => {
     const { service, emitted, ping } = setup([target(1), target(2)]);
     active = service;

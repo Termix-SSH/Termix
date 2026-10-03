@@ -34,6 +34,26 @@ describe("RemoteSessions", () => {
     expect(sessions.byGuacamole("g1")).toBeNull();
   });
 
+  it.each(["vnc", "rdp"] as const)(
+    "keeps an opened %s session's proxy and jump tunnel alive beyond one hour",
+    (protocol) => {
+      vi.useFakeTimers();
+      const sessions = new RemoteSessions();
+      const proxy = vi.fn();
+      const tunnel = vi.fn();
+      sessions.park("c1", [proxy, tunnel]);
+      sessions.opened({ ...meta, protocol }, "g1");
+      vi.advanceTimersByTime(2 * 60 * 60 * 1000);
+      expect(proxy).not.toHaveBeenCalled();
+      expect(tunnel).not.toHaveBeenCalled();
+      expect(sessions.byConnect("c1")?.guacamoleConnectionId).toBe("g1");
+      sessions.closed("c1");
+      sessions.closed("c1");
+      expect(proxy).toHaveBeenCalledOnce();
+      expect(tunnel).toHaveBeenCalledOnce();
+    },
+  );
+
   it("releases a tunnel guacd never used", () => {
     vi.useFakeTimers();
     const sessions = new RemoteSessions(1000);

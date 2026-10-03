@@ -13,10 +13,13 @@ describe("HostSessionStatus", () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenLastCalledWith(7, true);
 
+    expect(status.hasActiveSession(7)).toBe(true);
     closeFirst();
+    expect(status.hasActiveSession(7)).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
 
     closeSecond();
+    expect(status.hasActiveSession(7)).toBe(false);
     expect(listener).toHaveBeenLastCalledWith(7, false);
     expect(listener).toHaveBeenCalledTimes(2);
   });

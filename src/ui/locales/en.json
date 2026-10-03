@@ -116,6 +116,8 @@
     "updateLinkLabel": "Update available. Open the release notes on GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Close",
     "minimize": "Minimize",
     "online": "Online",
@@ -481,7 +483,7 @@
     "sameHost": "This host (direct tunnel)",
     "statusChecksLabel": "Status Checks",
     "enableStatusChecks": "Enable Status Checks",
-    "enableStatusChecksDesc": "Periodically ping this host to verify availability",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Use Global Interval",
     "useGlobalIntervalDesc": "Override with the server-wide status check interval",
     "checkIntervalS": "Check Interval (s)",
@@ -1062,7 +1064,8 @@
     "secondFactorUnavailable": "Your account uses a second factor that is not available right now. Contact an admin to reset it.",
     "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin.",
     "serverAuthentication": "Server sign-in",
-    "minChars": "min. {{min}} characters"
+    "minChars": "min. {{min}} characters",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",
@@ -1511,7 +1514,11 @@
     "sslIssuer": "Issued by {{issuer}}",
     "sslNames": "Covers {{names}}",
     "sslManualTitle": "Upload a certificate",
-    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting"
+    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "One tag per line, available to all users. Editing this list changes suggestions only; tags already assigned to hosts are kept.",
+    "hostTagsSaved": "Host tag suggestions saved.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

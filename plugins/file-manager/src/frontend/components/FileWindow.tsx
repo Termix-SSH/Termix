@@ -483,7 +483,7 @@ export function FileWindow({
 
   const handleDownload = async () => {
     const toastId = toast.loading(
-      <DownloadProgressToast fileName={file.name} loaded={0} />,
+      <DownloadProgressToast t={t} fileName={file.name} loaded={0} />,
       { duration: Infinity },
     );
     try {
@@ -495,6 +495,7 @@ export function FileWindow({
         ({ loaded, total }) => {
           toast.loading(
             <DownloadProgressToast
+              t={t}
               fileName={file.name}
               loaded={loaded}
               total={total}

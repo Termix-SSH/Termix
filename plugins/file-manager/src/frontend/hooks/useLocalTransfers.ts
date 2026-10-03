@@ -193,6 +193,7 @@ export function useLocalTransfers({
       const render = () => {
         toast.loading(
           createElement(LocalTransferProgressToast, {
+            t,
             status: { ...status, cancelling },
             onCancel: () => {
               cancelled = true;

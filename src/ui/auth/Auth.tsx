@@ -296,6 +296,15 @@ export function Auth({ onLogin }: AuthProps) {
   const [pendingToken, setPendingToken] = useState("");
   const [secondFactors, setSecondFactors] = useState<SecondFactorRef[]>([]);
   const [activeFactorId, setActiveFactorId] = useState("");
+  const [authPluginsLoading, setAuthPluginsLoading] = useState(true);
+  const retryAuthPlugins = async () => {
+    setAuthPluginsLoading(true);
+    try {
+      await startPreLoginPlugins({ retryFailed: true });
+    } finally {
+      setAuthPluginsLoading(false);
+    }
+  };
   const loginMethodUIs = useLoginMethods();
   const secondFactorUIs = useSecondFactors();
   // A server that did not list its factors gets every factor with a UI here.
@@ -434,7 +443,9 @@ export function Auth({ onLogin }: AuthProps) {
       .then((allowed) => setPasswordResetAllowed(allowed))
       .catch(() => setPasswordResetAllowed(false));
     // Plugins that draw login or second-factor UI load before sign-in.
-    void startPreLoginPlugins().catch(() => {});
+    void startPreLoginPlugins()
+      .catch(() => {})
+      .finally(() => setAuthPluginsLoading(false));
     getLoginMethods()
       .then((methods) => setAuthMethods(methods))
       .catch(() => setAuthMethods([]))
@@ -1364,9 +1375,24 @@ export function Auth({ onLogin }: AuthProps) {
                   );
                   if (!ui) {
                     return (
-                      <p className="text-xs text-destructive">
-                        {t("auth.secondFactorNoUI")}
-                      </p>
+                      <div className="space-y-2" aria-live="polite">
+                        <p className="text-xs text-muted-foreground">
+                          {t(
+                            authPluginsLoading
+                              ? "common.loading"
+                              : "auth.secondFactorNoUI",
+                          )}
+                        </p>
+                        <Button
+                          type="button"
+                          disabled={authPluginsLoading}
+                          onClick={() =>
+                            void retryAuthPlugins().catch(() => {})
+                          }
+                        >
+                          {t("auth.retrySecondFactorUI")}
+                        </Button>
+                      </div>
                     );
                   }
                   const Component = ui.component;

@@ -5,6 +5,7 @@ import { Input } from "@/components/input";
 import { SettingRow } from "@/components/section-card";
 import { Database, Lock, RefreshCw, Server, Settings } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
+import { AdminHostTags } from "./AdminHostTags";
 import type { TlsStatus } from "@/api/tls-api";
 
 type GeneralSettingsSectionProps = {
@@ -68,6 +69,7 @@ export function AdminGeneralSettingsSection({
       onToggle={onToggle}
     >
       <div className="flex flex-col gap-0 pt-2">
+        <AdminHostTags />
         <div className="flex flex-col gap-1.5 py-2">
           <span className="text-xs font-medium">
             {t("admin.notificationPrivateEndpoints")}

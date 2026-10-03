@@ -754,6 +754,7 @@ export function SidebarTree({
       const row = visibleRows[index];
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
+      if (isCompactDensity) return 29;
       const tagExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
       // The resource bars only render for an online host that reported CPU/RAM.
       // Reserving their height unconditionally left a gap under every offline

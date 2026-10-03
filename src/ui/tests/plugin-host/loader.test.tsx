@@ -232,6 +232,20 @@ describe("plugin loader", () => {
     expect(isPluginFrontendActive("alpha")).toBe(true);
   });
 
+  it("retries failed login bundles only when explicitly requested", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify([summary("login")])),
+    );
+    await startPreLoginPlugins();
+    expect(isPluginFrontendActive("login")).toBe(false);
+    modules.login = railPlugin("login");
+    await startPreLoginPlugins();
+    expect(isPluginFrontendActive("login")).toBe(false);
+    await startPreLoginPlugins({ retryFailed: true });
+    expect(isPluginFrontendActive("login")).toBe(true);
+  });
+
   it("ignores a pre-login load started after sign-in", async () => {
     modules.login = railPlugin("login");
     modules.alpha = railPlugin("alpha");

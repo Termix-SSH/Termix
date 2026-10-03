@@ -198,6 +198,25 @@ async function mayClaimLegacyAccount(
   const links = await createCurrentUserAuthRepository().listIdentitiesForUser(
     legacy.id,
   );
+  // An unscoped legacy subject may already have been migrated under a
+  // different provider. Creating another account loses access to the old
+  // data; claiming it automatically could cross an identity-provider boundary.
+  if (
+    legacy.ssoProviderId == null &&
+    identity.ssoProviderId != null &&
+    identity.legacyIdentifier === identity.subject &&
+    links.some(
+      (link) =>
+        link.subject === identity.subject &&
+        link.providerId !== identity.provider,
+    )
+  ) {
+    throw new LoginMethodError(
+      "A legacy SSO account has an unresolved provider mapping. Ask an administrator to verify and repair its identity mapping before signing in.",
+      409,
+      "legacy_identity_conflict",
+    );
+  }
   return links.length === 0;
 }
 

@@ -4,12 +4,10 @@ import {
   attachOrCreateTmuxSession,
   detectTmux,
   waitForTmuxSession,
+  type TmuxDetectionResult,
 } from "./tmux-commands.js";
 
-export interface TmuxDetection {
-  available: boolean;
-  sessions: string[];
-}
+export type TmuxDetection = TmuxDetectionResult;
 
 /**
  * What the terminal (ssh-terminal's optional "tmux.sessions" consumer) asks
@@ -29,12 +27,8 @@ export interface TmuxSessionsV1 {
 
 export function createTmuxSessionsService(ctx: PluginContext): TmuxSessionsV1 {
   return {
-    async detect(client) {
-      const result = await detectTmux(client as Client);
-      return {
-        available: result.available,
-        sessions: result.sessions.map((s) => s.name),
-      };
+    detect(client) {
+      return detectTmux(client as Client);
     },
 
     async attachOrCreate(stream, name, newName, hostId) {

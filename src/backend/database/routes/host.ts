@@ -53,6 +53,7 @@ import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
 import { registerHostDefaultsRoutes } from "./host-defaults-routes.js";
+import { registerHostTagRoutes } from "./host-tag-routes.js";
 import { registerHostStatusRoutes } from "./host-status-routes.js";
 import {
   applyHostEnrollmentDefaults,
@@ -135,6 +136,12 @@ const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
+
+registerHostTagRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("admin.settings.manage"),
+);
 
 registerHostStatusRoutes(router, {
   authenticateJWT,
@@ -493,8 +500,6 @@ router.post(
  *     description: Creates a host owned by the user assigned to the API key. The user's encrypted data must be unlocked by an active sign-in.
  *     tags:
  *       - Host Enrollment
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:

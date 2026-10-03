@@ -134,7 +134,7 @@ export function DiffViewer({
 
   const handleDownloadFile = async (file: FileItem) => {
     const toastId = toast.loading(
-      <DownloadProgressToast fileName={file.name} loaded={0} />,
+      <DownloadProgressToast t={t} fileName={file.name} loaded={0} />,
       { duration: Infinity },
     );
     try {
@@ -145,6 +145,7 @@ export function DiffViewer({
         ({ loaded, total }) => {
           toast.loading(
             <DownloadProgressToast
+              t={t}
               fileName={file.name}
               loaded={loaded}
               total={total}

@@ -1064,7 +1064,8 @@
     "secondFactorUnavailable": "你的账户启用了当前不可用的第二验证因素，请联系管理员重置。",
     "secondFactorNoUI": "此界面无法显示该第二验证因素，请联系管理员。",
     "serverAuthentication": "服务器登录",
-    "minChars": "至少 {{min}} 个字符"
+    "minChars": "至少 {{min}} 个字符",
+    "retrySecondFactorUI": "重新加载验证方式"
   },
   "hostKey": {
     "verifyNewHost": "验证 SSH 主机密钥",
@@ -1513,7 +1514,11 @@
     "sslIssuer": "签发者：{{issuer}}",
     "sslNames": "覆盖域名：{{names}}",
     "sslManualTitle": "上传证书",
-    "updateExternalAutoProvisionFailed": "更新自动创建设置失败"
+    "updateExternalAutoProvisionFailed": "更新自动创建设置失败",
+    "hostTags": "预定义主机标签",
+    "hostTagsDesc": "每行一个标签，供所有用户使用。编辑此列表仅修改建议项，不会更改主机已有的标签。",
+    "hostTagsSaved": "主机标签建议已保存。",
+    "hostTagsError": "无法加载或保存主机标签建议。"
   },
   "newUi": {
     "sidebar": {
