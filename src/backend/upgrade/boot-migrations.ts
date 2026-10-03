@@ -37,6 +37,7 @@ import { runTotpMigration } from "./totp-migration.js";
 import { runNotificationChannelMigration } from "./notification-channel-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 import { runSsoSettingsMigration } from "./sso-settings-migration.js";
+import { runSsoLegacyIdentityMigration } from "./sso-legacy-identity-migration.js";
 import { runHostDefaultsMigration } from "./host-defaults-migration.js";
 
 const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
@@ -69,6 +70,7 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runNotificationChannelMigration", runNotificationChannelMigration],
   ["runTermixIdentityCaMigration", runTermixIdentityCaMigration],
   ["runSsoSettingsMigration", runSsoSettingsMigration],
+  ["runSsoLegacyIdentityMigration", runSsoLegacyIdentityMigration],
   ["runTelemetrySettingsMigration", runTelemetrySettingsMigration],
   // Last: it reads what the moves above wrote.
   ["runHostDefaultsMigration", runHostDefaultsMigration],

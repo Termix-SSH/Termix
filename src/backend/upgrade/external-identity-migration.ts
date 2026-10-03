@@ -79,7 +79,15 @@ export async function runExternalIdentityMigration(): Promise<ExternalIdentityMi
             parsed.providerId,
             parsed.subject,
           );
-          if (existing) {
+          // sso-legacy-identity-migration.ts moves "legacy-oidc" rows to
+          // their provider; recreating one would undo that on every boot.
+          const moved =
+            !existing &&
+            parsed.providerId === LEGACY_OIDC_PROVIDER_ID &&
+            (await auth.listIdentitiesForUser(user.id)).some(
+              (link) => link.subject === parsed.subject,
+            );
+          if (existing || moved) {
             result.skipped++;
           } else {
             await auth.linkIdentity({

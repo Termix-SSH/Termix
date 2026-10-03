@@ -201,6 +201,65 @@ describe("linking an external account to a password account", () => {
     });
     expect(response.status).toBe(400);
   });
+
+  it("merges a 2.9.0 duplicate back into its 2.8 SSO account", async () => {
+    h.users.set("orig", {
+      id: "orig",
+      username: "bob",
+      isAdmin: false,
+      isOidc: true,
+      passwordHash: "",
+      oidcIdentifier: "sub-9",
+    });
+    h.users.set("dup", {
+      id: "dup",
+      username: "bob-1",
+      isAdmin: false,
+      isOidc: true,
+      passwordHash: "",
+      oidcIdentifier: null,
+    });
+    h.identities.push(
+      { userId: "orig", providerId: "legacy-oidc", subject: "sub-9" },
+      { userId: "dup", providerId: "1", subject: "sub-9" },
+    );
+
+    const response = await post("/link-external-to-password", {
+      externalUserId: "dup",
+      targetUsername: "bob",
+    });
+
+    expect(response.status).toBe(200);
+    expect(h.deleted).toEqual(["dup"]);
+    expect(h.users.get("orig")!.oidcIdentifier).toBe("sub-9");
+    expect(
+      h.identities
+        .filter((row) => row.userId === "orig")
+        .map((row) => row.providerId),
+    ).toEqual(["legacy-oidc", "1"]);
+  });
+
+  it("does not treat an unrelated SSO account as a duplicate target", async () => {
+    h.users.set("other", {
+      id: "other",
+      username: "carol",
+      isAdmin: false,
+      isOidc: true,
+      passwordHash: "",
+      oidcIdentifier: "sub-x",
+    });
+    h.identities.push({
+      userId: "other",
+      providerId: "legacy-oidc",
+      subject: "sub-x",
+    });
+
+    const response = await post("/link-external-to-password", {
+      externalUserId: "sso",
+      targetUsername: "carol",
+    });
+    expect(response.status).toBe(400);
+  });
 });
 
 describe("unlinking", () => {
