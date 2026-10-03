@@ -3,13 +3,17 @@ import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { hostImportNormalizer } from "./host-import.js";
 import { createAiRepository } from "./repository.js";
 import { registerProviderSync } from "./sync.js";
+import { registerAgentRoutes } from "./agents/routes.js";
+import { createAgentStore } from "./agents/store.js";
 import { registerAiRoutes } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
   const repository = await createAiRepository(ctx);
   await registerProviderSync(ctx, repository);
 
-  registerAiRoutes(ctx.http.router<Router>(), repository, ctx);
+  const router = ctx.http.router<Router>();
+  registerAiRoutes(router, repository, ctx);
+  registerAgentRoutes(router, repository, ctx, await createAgentStore(ctx));
 
   ctx.registry.provide("ai.hostImportNormalizer", hostImportNormalizer);
   ctx.disposables.add(

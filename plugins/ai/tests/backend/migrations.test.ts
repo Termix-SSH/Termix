@@ -46,6 +46,9 @@ describe("ai adoption migration", () => {
     });
 
     expect(tables(db.sqlite)).toEqual([
+      "p_ai_agent_events",
+      "p_ai_agent_queue",
+      "p_ai_agent_sessions",
       "p_ai_conversations",
       "p_ai_messages",
       "p_ai_proposals",
@@ -83,6 +86,9 @@ describe("ai adoption migration", () => {
     db = await createTestDb(pluginDir);
 
     expect(tables(db.sqlite)).toEqual([
+      "p_ai_agent_events",
+      "p_ai_agent_queue",
+      "p_ai_agent_sessions",
       "p_ai_conversations",
       "p_ai_messages",
       "p_ai_proposals",

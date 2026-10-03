@@ -9,6 +9,7 @@ import type {
   TerminalSidePanelProps,
   TerminalSlotApi,
 } from "./terminal/terminal-slot-types";
+import { AgentPanel } from "./agents/AgentPanel";
 import { AiPanel } from "./AiPanel";
 import { TerminalAiPanel } from "./terminal/TerminalAiPanel";
 import { AiAssistantStep } from "./AiAssistantStep";
@@ -63,6 +64,12 @@ export function activate(app: TermixApp): void {
 
   let globallyEnabled = false;
   let userEnabled = false;
+  let agentsAllowed = false;
+  void app.hasPermission("agents").then((allowed) => {
+    if (disposed) return;
+    agentsAllowed = allowed;
+    applyStatus();
+  });
   const surface: (() => void)[] = [];
 
   const clearSurface = () => {
@@ -100,6 +107,26 @@ export function activate(app: TermixApp): void {
         singleton: true,
         hostless: true,
         panelFrame: true,
+      }),
+    );
+
+    surface.push(
+      app.registerTab("ai-agents", AgentPanel, {
+        icon: Bot,
+        titleKey: "agents.title",
+        requiresHost: true,
+        persistent: true,
+      }),
+    );
+    surface.push(
+      app.registerHostAction({
+        id: "ai-agents",
+        titleKey: "agents.title",
+        icon: Bot,
+        kind: "open",
+        order: 35,
+        tabType: "ai-agents",
+        when: (host) => userEnabled && agentsAllowed && !!host.enableSsh,
       }),
     );
 

@@ -25,7 +25,8 @@
     "notify:send",
     "network:serve",
     "ui:surface",
-    "users:impersonate"
+    "users:impersonate",
+    "events:core"
   ],
   "optionalDependencies": {
     "workspaces": "^1.0.0",
@@ -87,6 +88,12 @@
         "titleKey": "nav.ai",
         "icon": "Sparkles",
         "openFrom": ["rail", "palette"]
+      },
+      {
+        "id": "ai-agents",
+        "titleKey": "agents.title",
+        "icon": "Bot",
+        "openFrom": ["host-context-menu", "palette"]
       }
     ],
     "actions": [
@@ -130,6 +137,12 @@
         "titleKey": "permissions.secrets.share.title",
         "descriptionKey": "permissions.secrets.share.description",
         "defaultRoles": ["user"]
+      },
+      {
+        "name": "agents",
+        "titleKey": "agents.permissionTitle",
+        "descriptionKey": "agents.permissionDescription",
+        "defaultRoles": ["admin"]
       }
     ],
     "settings": {

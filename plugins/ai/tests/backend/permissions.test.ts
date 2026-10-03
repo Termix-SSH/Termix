@@ -17,6 +17,7 @@ const EXPECTED = [
   "ai.apply_proposals",
   "ai.services.use",
   "ai.secrets.share",
+  "ai.agents",
 ];
 
 describe("ai permissions", () => {
@@ -54,7 +55,9 @@ describe("ai permissions", () => {
   it("keeps the fresh-install defaults core used to seed", () => {
     for (const permission of manifest.manifest?.contributes?.permissions ??
       []) {
-      expect(permission.defaultRoles).toEqual(["user"]);
+      expect(permission.defaultRoles).toEqual([
+        permission.name === "agents" ? "admin" : "user",
+      ]);
     }
   });
 });
