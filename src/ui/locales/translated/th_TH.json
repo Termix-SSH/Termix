@@ -353,7 +353,7 @@
     "serverStats": "เมตริกโฮสต์",
     "status": {
       "available": "มีอยู่",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "พร้อมใช้งาน แต่เข้าสู่ระบบไม่สำเร็จ",
       "offline": "ออฟไลน์",
       "monitoringDisabled": "ปิดใช้งานการตรวจสอบ",
       "label": "สถานะ"

@@ -353,7 +353,7 @@
     "serverStats": "Số liệu máy chủ",
     "status": {
       "available": "Có sẵn",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Khả dụng, nhưng đăng nhập thất bại",
       "offline": "Ngoại tuyến",
       "monitoringDisabled": "Chức năng giám sát đã bị vô hiệu hóa.",
       "label": "Trạng thái"

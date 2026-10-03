@@ -317,7 +317,7 @@ export function HostEditorGeneralTab({
                   onChange={(e) => setField("tagInput", e.target.value)}
                   onKeyDown={(e) => {
                     if (
-                      e.key === "Enter" &&
+                      (e.key === " " || e.key === "Enter") &&
                       !e.nativeEvent.isComposing &&
                       form.tagInput.trim()
                     ) {
@@ -340,15 +340,15 @@ export function HostEditorGeneralTab({
                 aria-label={t("admin.hostTags")}
               >
                 {suggestedTags.map((tag) => (
-                  <Button
+                  <button
                     type="button"
                     key={tag}
-                    variant="outline"
-                    size="sm"
                     onClick={() => addTag(tag)}
+                    className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
                   >
+                    <Plus className="size-2.5" />
                     {tag}
-                  </Button>
+                  </button>
                 ))}
               </div>
             )}

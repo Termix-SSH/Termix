@@ -353,7 +353,7 @@
     "serverStats": "مقاييس المضيف",
     "status": {
       "available": "متاح",
-      "reachable": "تم تسجيل الدخول، لكن آخر تسجيل دخول فشل",
+      "reachable": "متاح، لكن تسجيل الدخول فشل",
       "offline": "غير متصل بالإنترنت",
       "monitoringDisabled": "تم تعطيل المراقبة",
       "label": "حالة"

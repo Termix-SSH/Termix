@@ -353,7 +353,7 @@
     "serverStats": "Gazdagép-metrikák",
     "status": {
       "available": "Elérhető",
-      "reachable": "Felment, de az utolsó bejelentkezés sikertelen",
+      "reachable": "Elérhető, de a bejelentkezés sikertelen",
       "offline": "Offline",
       "monitoringDisabled": "Monitorozás letiltva",
       "label": "Állapot"

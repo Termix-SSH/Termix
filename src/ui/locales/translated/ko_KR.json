@@ -353,7 +353,7 @@
     "serverStats": "호스트 메트릭",
     "status": {
       "available": "사용 가능",
-      "reachable": "올라갔지만 마지막 로그인 시도가 실패했습니다.",
+      "reachable": "사용 가능하지만 로그인에 실패했습니다",
       "offline": "오프라인",
       "monitoringDisabled": "모니터링이 비활성화되었습니다.",
       "label": "상태"

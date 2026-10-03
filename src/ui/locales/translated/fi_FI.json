@@ -353,7 +353,7 @@
     "serverStats": "Isännän mittarit",
     "status": {
       "available": "Saatavilla",
-      "reachable": "Ylös, mutta viimeisin kirjautuminen epäonnistui",
+      "reachable": "Saatavilla, mutta kirjautuminen epäonnistui",
       "offline": "Offline-tilassa",
       "monitoringDisabled": "Valvonta poistettu käytöstä",
       "label": "Status"

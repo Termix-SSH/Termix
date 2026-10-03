@@ -353,7 +353,7 @@
     "serverStats": "Gasheermetrieke",
     "status": {
       "available": "Beskikbaar",
-      "reachable": "Aan, maar die laaste aanmelding het misluk",
+      "reachable": "Beskikbaar, maar aanmelding het misluk",
       "offline": "Vanlyn",
       "monitoringDisabled": "Monitering gedeaktiveer",
       "label": "Status"

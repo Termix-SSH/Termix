@@ -353,7 +353,7 @@
     "serverStats": "Métricas del host",
     "status": {
       "available": "Disponible",
-      "reachable": "Arriba, pero el último cartel falló.",
+      "reachable": "Disponible, pero el inicio de sesión falló",
       "offline": "Desconectado",
       "monitoringDisabled": "Monitoreo desactivado",
       "label": "Estado"

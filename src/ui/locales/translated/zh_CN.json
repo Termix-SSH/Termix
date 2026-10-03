@@ -359,7 +359,7 @@
     "serverStats": "主机指标",
     "status": {
       "available": "可用的",
-      "reachable": "在线，但上次登录失败",
+      "reachable": "可用，但登录失败",
       "offline": "离线",
       "monitoringDisabled": "监控已禁用",
       "label": "地位"

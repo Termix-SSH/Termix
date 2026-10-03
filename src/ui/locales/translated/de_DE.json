@@ -353,7 +353,7 @@
     "serverStats": "Host-Metriken",
     "status": {
       "available": "Verfügbar",
-      "reachable": "Oben angekommen, aber die letzte Anmeldung schlug fehl.",
+      "reachable": "Erreichbar, aber Anmeldung fehlgeschlagen",
       "offline": "Offline",
       "monitoringDisabled": "Überwachung deaktiviert",
       "label": "Status"

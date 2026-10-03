@@ -353,7 +353,7 @@
     "serverStats": "Метрики хоста",
     "status": {
       "available": "Доступный",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Доступен, но вход не выполнен",
       "offline": "Офлайн",
       "monitoringDisabled": "Мониторинг отключен",
       "label": "Статус"

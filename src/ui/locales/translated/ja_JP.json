@@ -353,7 +353,7 @@
     "serverStats": "ホストメトリクス",
     "status": {
       "available": "利用可能",
-      "reachable": "上昇したが、最後のサインインが失敗した",
+      "reachable": "利用可能ですが、ログインに失敗しました",
       "offline": "オフライン",
       "monitoringDisabled": "監視が無効になっています",
       "label": "状態"

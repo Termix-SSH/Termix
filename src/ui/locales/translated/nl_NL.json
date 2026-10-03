@@ -353,7 +353,7 @@
     "serverStats": "Hoststatistieken",
     "status": {
       "available": "Beschikbaar",
-      "reachable": "Omhoog, maar de laatste aanmelding mislukte.",
+      "reachable": "Beschikbaar, maar inloggen mislukt",
       "offline": "Offline",
       "monitoringDisabled": "Monitoring uitgeschakeld",
       "label": "Status"

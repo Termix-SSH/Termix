@@ -353,7 +353,7 @@
     "serverStats": "Värdstatistik",
     "status": {
       "available": "Tillgänglig",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Tillgänglig, men inloggningen misslyckades",
       "offline": "Off-line",
       "monitoringDisabled": "Övervakning inaktiverad",
       "label": "Status"

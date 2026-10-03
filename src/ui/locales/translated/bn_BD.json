@@ -353,7 +353,7 @@
     "serverStats": "হোস্ট মেট্রিক্স",
     "status": {
       "available": "উপলব্ধ",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "উপলব্ধ, কিন্তু লগইন ব্যর্থ হয়েছে",
       "offline": "অফলাইন",
       "monitoringDisabled": "পর্যবেক্ষণ অক্ষম করা হয়েছে",
       "label": "অবস্থা"
