@@ -1504,7 +1504,11 @@
     "sslIssuer": "Issued by {{issuer}}",
     "sslNames": "Covers {{names}}",
     "sslManualTitle": "Upload a certificate",
-    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting"
+    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "One tag per line, available to all users. Editing this list changes suggestions only; tags already assigned to hosts are kept.",
+    "hostTagsSaved": "Host tag suggestions saved.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

@@ -1502,7 +1502,11 @@
     "sslIssuer": "Issued by {{issuer}}",
     "sslNames": "Covers {{names}}",
     "sslManualTitle": "Upload a certificate",
-    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting"
+    "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting",
+    "hostTags": "预定义主机标签",
+    "hostTagsDesc": "每行一个标签，供所有用户使用。编辑此列表仅修改建议项，不会更改主机已有的标签。",
+    "hostTagsSaved": "主机标签建议已保存。",
+    "hostTagsError": "无法加载或保存主机标签建议。"
   },
   "newUi": {
     "sidebar": {
