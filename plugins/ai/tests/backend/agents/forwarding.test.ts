@@ -8,6 +8,9 @@ import {
   forwardingScript,
 } from "../../../src/backend/agents/forwarding.js";
 
+// These run sh, git and agent binaries the way a remote Linux host does.
+const posix = it.skipIf(process.platform === "win32");
+
 async function fixture(mode = "no") {
   const dir = await mkdtemp(join(tmpdir(), "termix-forwarding-"));
   const bin = join(dir, "bin");
@@ -53,22 +56,25 @@ exit 0
   };
 }
 
-it("adds a scoped rule before existing Match blocks and is idempotent", async () => {
-  const f = await fixture();
-  try {
-    expect(f.run()).toContain("Enabled loopback remote forwarding");
-    const config = await f.config();
-    expect(config).toContain(
-      "AllowTcpForwarding no\n# BEGIN Termix Agent root 10.1.1.35\nMatch User root Address 10.1.1.35\n  AllowTcpForwarding remote\n  PermitListen 127.0.0.1:*\n  GatewayPorts no",
-    );
-    expect(config).toContain("Match Address 10.1.1.3\n  DenyUsers root");
-    expect(f.run()).toContain("already allowed");
-    expect(await f.config()).toBe(config);
-  } finally {
-    await f.close();
-  }
-});
-it("preserves existing local forwarding", async () => {
+posix(
+  "adds a scoped rule before existing Match blocks and is idempotent",
+  async () => {
+    const f = await fixture();
+    try {
+      expect(f.run()).toContain("Enabled loopback remote forwarding");
+      const config = await f.config();
+      expect(config).toContain(
+        "AllowTcpForwarding no\n# BEGIN Termix Agent root 10.1.1.35\nMatch User root Address 10.1.1.35\n  AllowTcpForwarding remote\n  PermitListen 127.0.0.1:*\n  GatewayPorts no",
+      );
+      expect(config).toContain("Match Address 10.1.1.3\n  DenyUsers root");
+      expect(f.run()).toContain("already allowed");
+      expect(await f.config()).toBe(config);
+    } finally {
+      await f.close();
+    }
+  },
+);
+posix("preserves existing local forwarding", async () => {
   const f = await fixture("local");
   try {
     f.run();

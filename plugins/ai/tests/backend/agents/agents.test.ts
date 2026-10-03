@@ -12,6 +12,9 @@ import {
 import { providerPath } from "../../../src/backend/agents/routes.js";
 import { REMOTE_RUNNER } from "../../../src/backend/agents/remote-runner.js";
 
+// These run sh, git and agent binaries the way a remote Linux host does.
+const posix = it.skipIf(process.platform === "win32");
+
 describe("remote agent boundaries", () => {
   it("rejects shell syntax and invalid targets", () => {
     const start = {
@@ -78,74 +81,78 @@ if(args[0]==='serve') {
 });
 `;
 for (const agent of ["pi", "claude", "codex", "opencode"] as const) {
-  it(`${agent}: native protocol streams a turn and returns to ready`, async () => {
-    const dir = await mkdtemp(join(tmpdir(), "termix-agent-test-"));
-    const executable = join(dir, "fake-agent");
-    const image = join(dir, "image.png");
-    await writeFile(image, "image");
-    await writeFile(executable, fake, { mode: 0o700 });
-    const child = spawn(process.execPath, ["-e", REMOTE_RUNNER], {
-      env: { ...process.env, HOME: dir },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    const events: Record<string, unknown>[] = [];
-    let stderr = "";
-    child.stderr.on("data", (d) => (stderr += d));
-    const send = (m: unknown) => child.stdin.write(JSON.stringify(m) + "\n");
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(
-          () => reject(Error("timeout " + stderr + JSON.stringify(events))),
-          12000,
-        );
-        let prompted = false;
-        createInterface({ input: child.stdout }).on("line", (line) => {
-          const m = JSON.parse(line);
-          events.push(m);
-          if (m.kind === "error") {
-            clearTimeout(timer);
-            reject(Error(m.text));
-          }
-          if (m.kind === "permission")
-            send({ type: "answer", requestId: m.requestId, allow: true });
-          if (m.kind === "status" && m.text === "ready") {
-            if (!prompted) {
-              prompted = true;
-              send({
-                type: "prompt",
-                text: "hello",
-                attachments: [{ path: image, mime: "image/png" }],
-              });
-            } else {
-              clearTimeout(timer);
-              resolve();
-            }
-          }
-        });
-        send({
-          type: "start",
-          config: {
-            agent,
-            id: "test-session",
-            cwd: dir,
-            executable,
-            model: "test-model",
-            proxyUrl: "http://127.0.0.1:1",
-            token: "temporary-token",
-            providerType:
-              agent === "claude" ? "anthropic" : "openai_compatible",
-          },
-        });
+  posix(
+    `${agent}: native protocol streams a turn and returns to ready`,
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), "termix-agent-test-"));
+      const executable = join(dir, "fake-agent");
+      const image = join(dir, "image.png");
+      await writeFile(image, "image");
+      await writeFile(executable, fake, { mode: 0o700 });
+      const child = spawn(process.execPath, ["-e", REMOTE_RUNNER], {
+        env: { ...process.env, HOME: dir },
+        stdio: ["pipe", "pipe", "pipe"],
       });
-      expect(
-        events.some((e) => e.kind === "text" && e.text === "verified"),
-      ).toBe(true);
-      if (agent === "claude")
-        expect(events.some((e) => e.kind === "permission")).toBe(true);
-    } finally {
-      send({ type: "stop" });
-      await new Promise((resolve) => child.once("exit", resolve));
-      await rm(dir, { recursive: true, force: true });
-    }
-  }, 15000);
+      const events: Record<string, unknown>[] = [];
+      let stderr = "";
+      child.stderr.on("data", (d) => (stderr += d));
+      const send = (m: unknown) => child.stdin.write(JSON.stringify(m) + "\n");
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(Error("timeout " + stderr + JSON.stringify(events))),
+            12000,
+          );
+          let prompted = false;
+          createInterface({ input: child.stdout }).on("line", (line) => {
+            const m = JSON.parse(line);
+            events.push(m);
+            if (m.kind === "error") {
+              clearTimeout(timer);
+              reject(Error(m.text));
+            }
+            if (m.kind === "permission")
+              send({ type: "answer", requestId: m.requestId, allow: true });
+            if (m.kind === "status" && m.text === "ready") {
+              if (!prompted) {
+                prompted = true;
+                send({
+                  type: "prompt",
+                  text: "hello",
+                  attachments: [{ path: image, mime: "image/png" }],
+                });
+              } else {
+                clearTimeout(timer);
+                resolve();
+              }
+            }
+          });
+          send({
+            type: "start",
+            config: {
+              agent,
+              id: "test-session",
+              cwd: dir,
+              executable,
+              model: "test-model",
+              proxyUrl: "http://127.0.0.1:1",
+              token: "temporary-token",
+              providerType:
+                agent === "claude" ? "anthropic" : "openai_compatible",
+            },
+          });
+        });
+        expect(
+          events.some((e) => e.kind === "text" && e.text === "verified"),
+        ).toBe(true);
+        if (agent === "claude")
+          expect(events.some((e) => e.kind === "permission")).toBe(true);
+      } finally {
+        send({ type: "stop" });
+        await new Promise((resolve) => child.once("exit", resolve));
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+    15000,
+  );
 }
