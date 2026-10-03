@@ -493,8 +493,6 @@ router.post(
  *     description: Creates a host owned by the user assigned to the API key. The user's encrypted data must be unlocked by an active sign-in.
  *     tags:
  *       - Host Enrollment
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
