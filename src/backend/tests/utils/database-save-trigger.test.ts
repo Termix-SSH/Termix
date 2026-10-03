@@ -18,7 +18,10 @@ describe("DatabaseSaveTrigger", () => {
     expect(save).not.toHaveBeenCalled();
     expect(DatabaseSaveTrigger.isDirty).toBe(true);
     expect(DatabaseSaveTrigger.getStatus().hasPendingTimeout).toBe(false);
-    await DatabaseSaveTrigger.forceSave("periodic_flush");
+    const flushed = DatabaseSaveTrigger.forceSave("periodic_flush");
+    // A save yields one event-loop turn, which fake timers also control.
+    await vi.runOnlyPendingTimersAsync();
+    await flushed;
     expect(save).toHaveBeenCalledOnce();
     expect(DatabaseSaveTrigger.isDirty).toBe(false);
   });
