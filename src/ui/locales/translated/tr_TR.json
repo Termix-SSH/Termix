@@ -353,7 +353,7 @@
     "serverStats": "Sunucu Metrikleri",
     "status": {
       "available": "Mevcut",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Erişilebilir, ancak oturum açma başarısız oldu",
       "offline": "Çevrimdışı",
       "monitoringDisabled": "İzleme devre dışı bırakıldı",
       "label": "Durum"

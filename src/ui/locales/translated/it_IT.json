@@ -353,7 +353,7 @@
     "serverStats": "Metriche host",
     "status": {
       "available": "Disponibile",
-      "reachable": "Su, ma l'ultimo accesso non è riuscito",
+      "reachable": "Disponibile, ma l'accesso non è riuscito",
       "offline": "Offline",
       "monitoringDisabled": "Monitoraggio disabilitato",
       "label": "Stato"

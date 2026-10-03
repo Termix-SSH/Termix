@@ -353,7 +353,7 @@
     "serverStats": "होस्ट मेट्रिक्स",
     "status": {
       "available": "उपलब्ध",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "उपलब्ध, लेकिन लॉगिन विफल रहा",
       "offline": "ऑफलाइन",
       "monitoringDisabled": "निगरानी अक्षम है",
       "label": "स्थिति"

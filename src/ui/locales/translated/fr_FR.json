@@ -353,7 +353,7 @@
     "serverStats": "Métriques de l'hôte",
     "status": {
       "available": "Disponible",
-      "reachable": "J'ai réussi, mais la dernière connexion a échoué.",
+      "reachable": "Disponible, mais la connexion a échoué",
       "offline": "Hors ligne",
       "monitoringDisabled": "Surveillance désactivée",
       "label": "Statut"

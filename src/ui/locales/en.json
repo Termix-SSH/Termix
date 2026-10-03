@@ -359,7 +359,7 @@
     "serverStats": "Host Metrics",
     "status": {
       "available": "Available",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Available, but login failed",
       "offline": "Offline",
       "monitoringDisabled": "Monitoring disabled",
       "label": "Status"

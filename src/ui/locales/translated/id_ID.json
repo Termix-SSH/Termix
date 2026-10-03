@@ -353,7 +353,7 @@
     "serverStats": "Metrik Host",
     "status": {
       "available": "Tersedia",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Tersedia, tetapi login gagal",
       "offline": "Offline",
       "monitoringDisabled": "Pemantauan dinonaktifkan",
       "label": "Status"

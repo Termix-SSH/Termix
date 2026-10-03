@@ -353,7 +353,7 @@
     "serverStats": "מדדי מארח",
     "status": {
       "available": "זָמִין",
-      "reachable": "למעלה, אבל הכניסה האחרונה נכשלה",
+      "reachable": "זמין, אך ההתחברות נכשלה",
       "offline": "לא מקוון",
       "monitoringDisabled": "ניטור מושבת",
       "label": "סטָטוּס"

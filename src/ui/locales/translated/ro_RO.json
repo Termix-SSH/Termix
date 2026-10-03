@@ -353,7 +353,7 @@
     "serverStats": "Metrici ale gazdei",
     "status": {
       "available": "Disponibil",
-      "reachable": "Activ, dar ultima conectare a eșuat",
+      "reachable": "Disponibil, dar autentificarea a eșuat",
       "offline": "Offline",
       "monitoringDisabled": "Monitorizarea este dezactivată",
       "label": "Stare"

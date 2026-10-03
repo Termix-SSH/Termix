@@ -353,7 +353,7 @@
     "serverStats": "Метрике хоста",
     "status": {
       "available": "Доступно",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Доступан, али пријава није успела",
       "offline": "Офлајн",
       "monitoringDisabled": "Праћење је онемогућено",
       "label": "Статус"

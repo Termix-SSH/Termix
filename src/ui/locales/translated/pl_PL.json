@@ -353,7 +353,7 @@
     "serverStats": "Metryki hosta",
     "status": {
       "available": "Dostępny",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Dostępny, ale logowanie nie powiodło się",
       "offline": "Niedostępny",
       "monitoringDisabled": "Monitorowanie wyłączone",
       "label": "Status"

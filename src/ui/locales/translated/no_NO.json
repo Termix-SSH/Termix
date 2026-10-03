@@ -353,7 +353,7 @@
     "serverStats": "Vertsmålinger",
     "status": {
       "available": "Tilgjengelig",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "Tilgjengelig, men innlogging mislyktes",
       "offline": "Frakoblet",
       "monitoringDisabled": "Overvåking deaktivert",
       "label": "Status"

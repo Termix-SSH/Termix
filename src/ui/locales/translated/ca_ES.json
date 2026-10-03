@@ -353,7 +353,7 @@
     "serverStats": "Mètriques de l'amfitrió",
     "status": {
       "available": "Disponible",
-      "reachable": "Activat, però l'últim inici de sessió ha fallat",
+      "reachable": "Disponible, però l'inici de sessió ha fallat",
       "offline": "Fora de línia",
       "monitoringDisabled": "Monitorització desactivada",
       "label": "Estat"

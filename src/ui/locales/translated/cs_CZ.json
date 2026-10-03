@@ -353,7 +353,7 @@
     "serverStats": "Metriky hostitele",
     "status": {
       "available": "K dispozici",
-      "reachable": "Nahoře, ale poslední přihlášení se nezdařilo",
+      "reachable": "Dostupný, ale přihlášení selhalo",
       "offline": "Offline",
       "monitoringDisabled": "Monitorování zakázáno",
       "label": "Postavení"

@@ -353,7 +353,7 @@
     "serverStats": "主機指標",
     "status": {
       "available": "可用的",
-      "reachable": "Up, but the last sign in failed",
+      "reachable": "可用，但登入失敗",
       "offline": "離線",
       "monitoringDisabled": "監控已停用",
       "label": "地位"
