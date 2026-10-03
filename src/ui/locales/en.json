@@ -1060,7 +1060,8 @@
     "secondFactorUnavailable": "Your account uses a second factor that is not available right now. Contact an admin to reset it.",
     "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin.",
     "serverAuthentication": "Server sign-in",
-    "minChars": "min. {{min}} characters"
+    "minChars": "min. {{min}} characters",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",

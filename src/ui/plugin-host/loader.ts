@@ -449,7 +449,9 @@ async function fetchPreLoginPlugins(): Promise<PluginSummary[]> {
  * factors) before anyone has signed in. After sign-in the full runtime
  * reconciles, keeping these active when their bundle has not changed.
  */
-export async function startPreLoginPlugins(): Promise<void> {
+export async function startPreLoginPlugins(
+  options: { retryFailed?: boolean } = {},
+): Promise<void> {
   installPluginHostBridge();
   let list: PluginSummary[];
   try {
@@ -468,6 +470,9 @@ export async function startPreLoginPlugins(): Promise<void> {
     // subset would unload everything else. Auth remounts during the
     // post-login fade, so this runs after sign-in every time.
     if (started) return;
+    if (options.retryFailed) {
+      for (const plugin of list) failedVersions.delete(plugin.id);
+    }
     await reconcile(list);
     markPluginsSettled();
   });
