@@ -4,6 +4,7 @@ import { hostImportNormalizer } from "./host-import.js";
 import { createAiRepository } from "./repository.js";
 import { registerProviderSync } from "./sync.js";
 import { registerAgentRoutes } from "./agents/routes.js";
+import { createAgentStore } from "./agents/store.js";
 import { registerAiRoutes } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
@@ -12,7 +13,7 @@ export async function activate(ctx: PluginContext) {
 
   const router = ctx.http.router<Router>();
   registerAiRoutes(router, repository, ctx);
-  registerAgentRoutes(router, repository, ctx);
+  registerAgentRoutes(router, repository, ctx, await createAgentStore(ctx));
 
   ctx.registry.provide("ai.hostImportNormalizer", hostImportNormalizer);
   ctx.disposables.add(

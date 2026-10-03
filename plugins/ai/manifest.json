@@ -26,7 +26,6 @@
     "network:serve",
     "ui:surface",
     "users:impersonate",
-    "kv:own",
     "events:core"
   ],
   "optionalDependencies": {

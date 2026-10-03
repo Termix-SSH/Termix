@@ -2,7 +2,7 @@
 export const REMOTE_RUNNER = String.raw`
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const {spawn} = require('node:child_process'), readline = require('node:readline');
-let config, child, nativeId, turnId, serverUrl, ready = false, running = false, rpcId = 0;
+let config, child, nativeId, turnId, serverUrl, serverAuth, ready = false, running = false, rpcId = 0;
 const pending = new Map(), approvals = new Map();
 const emit = (kind, text, extra = {}) => process.stdout.write(JSON.stringify({kind,text,...extra})+'\n');
 const send = value => child.stdin.write(JSON.stringify(value)+'\n');
@@ -67,12 +67,12 @@ function receive(m) {
   }
 }
 async function oc(method, route, body) {
-  const r=await fetch(serverUrl+route,{method,headers:{'Content-Type':'application/json','x-opencode-directory':config.cwd},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(5000)});
+  const r=await fetch(serverUrl+route,{method,headers:{'Content-Type':'application/json','x-opencode-directory':config.cwd,authorization:serverAuth},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(5000)});
   if(!r.ok) throw Error('OpenCode '+route+' returned '+r.status);
   return r.status===204?null:r.json();
 }
 async function ocEvents() {
-  const response=await fetch(serverUrl+'/event',{headers:{'x-opencode-directory':config.cwd}});
+  const response=await fetch(serverUrl+'/event',{headers:{'x-opencode-directory':config.cwd,authorization:serverAuth}});
   if(!response.ok || !response.body) throw Error('OpenCode event stream unavailable');
   let buffer='';const decoder=new TextDecoder(),partTypes=new Map();
   for await(const chunk of response.body) {
@@ -125,9 +125,11 @@ async function start(c) {
   if(c.agent==='opencode') {
     const net=require('node:net');const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
     serverUrl='http://127.0.0.1:'+port;
+    // Loopback is shared with every local account; the password keeps them off the agent.
+    const password=require('node:crypto').randomBytes(32).toString('hex');serverAuth='Basic '+Buffer.from('opencode:'+password).toString('base64');
     const settings={autoupdate:false,model:'termix/'+c.model,provider:{termix:{npm:c.providerType==='anthropic'?'@ai-sdk/anthropic':'@ai-sdk/openai-compatible',name:'Termix',options:{baseURL:base+'/v1',apiKey:token},models:{[c.model]:{name:c.model}}}},permission:'ask'};
     emit('tool','Starting OpenCode server');
-    await launch(['serve','--hostname','127.0.0.1','--port',String(port)],{OPENCODE_CONFIG_CONTENT:JSON.stringify(settings),XDG_DATA_HOME:dir,XDG_CONFIG_HOME:dir});
+    await launch(['serve','--hostname','127.0.0.1','--port',String(port)],{OPENCODE_CONFIG_CONTENT:JSON.stringify(settings),OPENCODE_SERVER_USERNAME:'opencode',OPENCODE_SERVER_PASSWORD:password,XDG_DATA_HOME:dir,XDG_CONFIG_HOME:dir});
     emit('tool','Waiting for OpenCode health');
     let available=false;for(let i=0;i<100;i++){try{await oc('GET','/global/health');available=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}
     if(!available) throw Error('OpenCode startup timed out');

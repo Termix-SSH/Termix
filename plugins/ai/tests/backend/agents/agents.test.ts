@@ -54,6 +54,7 @@ if(args.includes('--session') && require('path').dirname(args[args.indexOf('--se
 if(args[0]==='serve') {
  let stream;const port=Number(args[args.indexOf('--port')+1]);
  http.createServer(async(q,r)=>{
+   if(!process.env.OPENCODE_SERVER_PASSWORD || q.headers.authorization!=='Basic '+Buffer.from('opencode:'+process.env.OPENCODE_SERVER_PASSWORD).toString('base64')){r.statusCode=401;r.end();return;}
    if(q.url==='/event'){r.writeHead(200,{'Content-Type':'text/event-stream'});r.write(': hello\n\n');stream=r;return;}
    r.setHeader('Content-Type','application/json');
    if(q.url==='/session')return r.end(JSON.stringify({id:'oc-session'}));

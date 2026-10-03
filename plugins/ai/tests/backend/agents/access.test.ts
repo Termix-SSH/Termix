@@ -1,9 +1,32 @@
 import { afterEach, expect, it } from "vitest";
+import { createAgentStore } from "../../../src/backend/agents/store.js";
+import type { AgentEvent } from "../../../src/backend/agents/types.js";
 import { startServer, type TestServer } from "../helpers.js";
 let server: TestServer;
 afterEach(async () => {
   await server?.close();
 });
+async function seed(id: string, events: Omit<AgentEvent, "seq">[] = []) {
+  const store = await createAgentStore(server.mock.ctx);
+  const session = {
+    id,
+    userId: "user-1",
+    hostId: 1,
+    providerId: 1,
+    agent: "pi" as const,
+    model: "test",
+    cwd: "/tmp",
+    executable: "pi",
+    status: "stopped" as const,
+    events: [],
+    updatedAt: new Date().toISOString(),
+  };
+  await store.save(session);
+  await store.append(
+    session,
+    events.map((e, i) => ({ ...e, seq: i + 1 })),
+  );
+}
 it("requires the separate agent permission even when AI is enabled", async () => {
   server = await startServer();
   await server.enableFor("user-1");
@@ -20,13 +43,7 @@ it("does not expose another user's persisted session or allow a malformed launch
   await server.enableFor("user-1");
   await server.enableFor("user-2");
   const id = "11111111-1111-1111-1111-111111111111";
-  await server.mock.ctx.kv.set(`agent:user-1:${id}`, {
-    id,
-    userId: "user-1",
-    hostId: 1,
-    events: [{ text: "private transcript" }],
-    updatedAt: new Date().toISOString(),
-  });
+  await seed(id, [{ kind: "text", text: "private transcript" }]);
   const other = await server.request("GET", `/agents/${id}`, {
     user: "user-2",
   });
@@ -83,13 +100,7 @@ it("persists session metadata and queued drafts without exposing them to another
   await server.enableFor("user-1");
   await server.enableFor("user-2");
   const id = "22222222-2222-2222-2222-222222222222";
-  await server.mock.ctx.kv.set(`agent:user-1:${id}`, {
-    id,
-    userId: "user-1",
-    hostId: 1,
-    events: [],
-    updatedAt: new Date().toISOString(),
-  });
+  await seed(id);
   expect(
     (
       await server.request("PATCH", `/agents/${id}`, {

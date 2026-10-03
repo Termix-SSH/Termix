@@ -48,6 +48,18 @@ export function compatible(agent: AgentKind, providerType: string): boolean {
     providerType,
   );
 }
+/** MySQL stores plugin text as TEXT, which holds 65535 bytes. */
+export const MAX_TEXT_BYTES = 65535;
+export function fitsText(value: string): boolean {
+  return Buffer.byteLength(value, "utf8") <= MAX_TEXT_BYTES;
+}
+/** Cut to fit; the slack covers a split character decoding to U+FFFD. */
+export function clipText(value: string): string {
+  if (fitsText(value)) return value;
+  return Buffer.from(value, "utf8")
+    .subarray(0, MAX_TEXT_BYTES - 3)
+    .toString("utf8");
+}
 export function shellQuote(value: string): string {
   return "'" + value.replaceAll("'", "'\\''") + "'";
 }

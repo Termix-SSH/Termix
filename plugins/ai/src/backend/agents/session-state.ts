@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AgentSession, QueuedPrompt } from "./types.js";
+import { fitsText, type AgentSession, type QueuedPrompt } from "./types.js";
 
 export function promptInput(
   s: AgentSession,
@@ -9,7 +9,7 @@ export function promptInput(
   const attachmentIds = body.attachmentIds ?? [];
   if (
     typeof text !== "string" ||
-    text.length > 64000 ||
+    !fitsText(text) ||
     !Array.isArray(attachmentIds) ||
     attachmentIds.length > 4 ||
     attachmentIds.some(
@@ -33,7 +33,7 @@ export function updateSession(
     throw Error("Invalid archive state");
   if (
     body.draft !== undefined &&
-    (typeof body.draft !== "string" || body.draft.length > 64000)
+    (typeof body.draft !== "string" || !fitsText(body.draft))
   )
     throw Error("Draft is too long");
   if (body.title !== undefined) s.title = (body.title as string).trim();

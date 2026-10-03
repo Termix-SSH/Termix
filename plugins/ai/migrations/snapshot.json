@@ -8,6 +8,11 @@
           "primaryKey": true,
           "notNull": true
         },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
         "userId": {
           "type": "refUser",
           "length": 255,
@@ -191,6 +196,173 @@
         }
       ],
       "adopts": "ai_proposals"
+    },
+    "agent_sessions": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sessionId": {
+          "type": "varchar",
+          "length": 36,
+          "notNull": true,
+          "unique": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "providerId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "agent": {
+          "type": "varchar",
+          "length": 32,
+          "notNull": true
+        },
+        "model": {
+          "type": "text",
+          "notNull": true
+        },
+        "cwd": {
+          "type": "text",
+          "notNull": true
+        },
+        "executable": {
+          "type": "text",
+          "notNull": true
+        },
+        "nativeId": {
+          "type": "text"
+        },
+        "title": {
+          "type": "text"
+        },
+        "archived": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "queuePaused": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "draft": {
+          "type": "text"
+        },
+        "attachments": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "[]"
+        },
+        "updatedAt": {
+          "type": "text",
+          "notNull": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_agent_sessions_user",
+          "columns": ["userId"]
+        }
+      ]
+    },
+    "agent_events": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sessionId": {
+          "type": "varchar",
+          "length": 36,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "seq": {
+          "type": "integer",
+          "notNull": true
+        },
+        "kind": {
+          "type": "varchar",
+          "length": 16,
+          "notNull": true
+        },
+        "text": {
+          "type": "text",
+          "notNull": true
+        },
+        "requestId": {
+          "type": "text"
+        },
+        "choices": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_agent_events_session_seq",
+          "columns": ["sessionId", "seq"],
+          "unique": true
+        }
+      ]
+    },
+    "agent_queue": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sessionId": {
+          "type": "varchar",
+          "length": 36,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "promptId": {
+          "type": "varchar",
+          "length": 36,
+          "notNull": true
+        },
+        "position": {
+          "type": "integer",
+          "notNull": true
+        },
+        "text": {
+          "type": "text",
+          "notNull": true
+        },
+        "attachmentIds": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "[]"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_ai_agent_queue_session",
+          "columns": ["sessionId", "position"]
+        }
+      ]
     }
   }
 }

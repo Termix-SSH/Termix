@@ -13,6 +13,7 @@ import { createProviderFetch } from "../providers/http.js";
 import type { AiRepository } from "../repository.js";
 import {
   AGENTS,
+  clipText,
   compatible,
   shellQuote,
   validStart,
@@ -25,6 +26,7 @@ import { registerInstallRoute } from "./install.js";
 import { workspaceOperation } from "./workspace.js";
 import { promptInput, updateSession, updateQueue } from "./session-state.js";
 import { REMOTE_RUNNER } from "./remote-runner.js";
+import { EVENT_HISTORY, type AgentStore } from "./store.js";
 
 interface Live {
   session: AgentSession;
@@ -32,6 +34,8 @@ interface Live {
   dispose: () => void;
   subscribers: Set<Response>;
   approvals: Set<string>;
+  /** Events not yet written; flushed together at most once a second. */
+  pending: AgentEvent[];
   saved: Promise<void>;
   stopping?: Promise<void>;
   draining?: boolean;
@@ -55,37 +59,46 @@ export function registerAgentRoutes(
   router: Router,
   repository: AiRepository,
   ctx: PluginContext,
+  store: AgentStore,
 ): void {
   const live = new Map<string, Live>();
-  const key = (s: Pick<AgentSession, "userId" | "id">) =>
-    `agent:${s.userId}:${s.id}`;
   const actor = () => ctx.currentActor() as string;
-  const save = (entry: Live) => {
-    const snapshot = JSON.parse(JSON.stringify(entry.session));
+  /** Writes are queued per session, so rows land in the order they happened. */
+  const write = (entry: Live, full: boolean) => {
     entry.saved = entry.saved
       .catch(() => undefined)
-      .then(() => ctx.kv.set(key(snapshot), snapshot));
+      .then(async () => {
+        const session = { ...entry.session };
+        await store.append(session, entry.pending.splice(0));
+        if (full) await store.save(session);
+      });
     return entry.saved;
   };
+  const save = (entry: Live) => write(entry, true);
+  const logFailure = (error: unknown) =>
+    ctx.log.error(
+      "Agent session could not be saved",
+      error instanceof Error ? error : new Error(String(error)),
+    );
   const event = (entry: Live, input: Omit<AgentEvent, "seq">) => {
     const s = entry.session;
     const item = {
       ...input,
       seq: (s.events.at(-1)?.seq ?? 0) + 1,
-      text: input.text.slice(0, 32000),
+      text: clipText(input.text.slice(0, 32000)),
     };
     s.events.push(item);
-    if (s.events.length > 2000) s.events.shift();
+    if (s.events.length > EVENT_HISTORY) s.events.shift();
+    entry.pending.push(item);
     s.updatedAt = new Date().toISOString();
     for (const res of entry.subscribers) {
       if (!res.write(`id: ${item.seq}\ndata: ${JSON.stringify(item)}\n\n`))
         res.end();
     }
-    if (input.kind !== "text") void save(entry);
-    else if (!entry.flush)
+    if (!entry.flush)
       entry.flush = setTimeout(() => {
         entry.flush = undefined;
-        void save(entry);
+        write(entry, false).catch(logFailure);
       }, 1000);
   };
   async function allowed(s: AgentSession) {
@@ -97,10 +110,7 @@ export function registerAgentRoutes(
   }
   async function find(id: string): Promise<AgentSession> {
     if (!/^[a-f0-9-]{36}$/.test(id)) throw Error("Invalid session ID");
-    const s =
-      live.get(id)?.session ??
-      ((await ctx.kv.get(key({ userId: actor(), id }))) as
-        AgentSession | undefined);
+    const s = live.get(id)?.session ?? (await store.get(actor(), id));
     if (!s || s.userId !== actor() || !(await allowed(s)))
       throw Error("Agent session is not accessible");
     return live.has(id) ? s : { ...s, status: "stopped" };
@@ -120,10 +130,11 @@ export function registerAgentRoutes(
         });
       }
       if (live.get(entry.session.id) === entry) live.delete(entry.session.id);
-      if (entry.flush) clearTimeout(entry.flush);
       entry.dispose();
       entry.session.status = "stopped";
       event(entry, { kind: "status", text: "stopped" });
+      // The save below writes everything pending.
+      clearTimeout(entry.flush);
       for (const res of entry.subscribers) res.end();
       await save(entry);
     })();
@@ -144,7 +155,7 @@ export function registerAgentRoutes(
     if (entry) {
       event(entry, { kind: "state", text: "" });
       await save(entry);
-    } else await ctx.kv.set(key(s), s);
+    } else await store.save(s);
   }
   async function dispatch(entry: Live, prompt: QueuedPrompt) {
     const s = entry.session;
@@ -224,10 +235,12 @@ export function registerAgentRoutes(
       timeoutMs: 15000,
     });
     const entry: Live = {
-      session: { ...s, status: "starting" },
+      // History is loaded so a resumed session keeps numbering its events.
+      session: { ...s, status: "starting", events: await store.events(s.id) },
       dispose: connection.dispose,
       subscribers: new Set(),
       approvals: new Set(),
+      pending: [],
       saved: Promise.resolve(),
     };
     live.set(s.id, entry);
@@ -392,7 +405,7 @@ export function registerAgentRoutes(
             const m = JSON.parse(line);
             if (m.kind === "native" && typeof m.nativeId === "string") {
               entry.session.nativeId = m.nativeId;
-              void save(entry);
+              save(entry).catch(logFailure);
               continue;
             }
             if (
@@ -494,9 +507,7 @@ export function registerAgentRoutes(
     "/agents",
     route(async (_req, res) => {
       const sessions: AgentSession[] = [];
-      for (const k of await ctx.kv.list()) {
-        if (!k.startsWith(`agent:${actor()}:`)) continue;
-        const stored = (await ctx.kv.get(k)) as AgentSession;
+      for (const stored of await store.list(actor())) {
         if (await allowed(stored))
           sessions.push(
             live.get(stored.id)?.session ?? { ...stored, status: "stopped" },
@@ -590,7 +601,10 @@ export function registerAgentRoutes(
   );
   router.get(
     "/agents/:id",
-    route(async (req, res) => res.json(await find(String(req.params.id)))),
+    route(async (req, res) => {
+      const s = await find(String(req.params.id));
+      res.json(live.has(s.id) ? s : { ...s, events: await store.events(s.id) });
+    }),
   );
   router.get(
     "/agents/:id/events",
@@ -605,10 +619,12 @@ export function registerAgentRoutes(
       const after = Number(
         req.headers["last-event-id"] || req.query.after || 0,
       );
-      for (const e of s.events)
-        if (e.seq > after)
-          res.write(`id: ${e.seq}\ndata: ${JSON.stringify(e)}\n\n`);
       const entry = live.get(s.id);
+      const history = entry
+        ? s.events.filter((e) => e.seq > after)
+        : await store.events(s.id, after);
+      for (const e of history)
+        res.write(`id: ${e.seq}\ndata: ${JSON.stringify(e)}\n\n`);
       if (!entry) {
         res.write(
           `event: snapshot\ndata: ${JSON.stringify({ status: "stopped" })}\n\n`,
@@ -685,8 +701,8 @@ export function registerAgentRoutes(
       const s = await find(String(req.params.id));
       const entry = live.get(s.id);
       if (entry) await stop(entry);
-      await entry?.saved;
-      await ctx.kv.delete(key(s));
+      await entry?.saved.catch(() => undefined);
+      await store.delete(s.id);
       res.json({ ok: true });
     }),
   );
