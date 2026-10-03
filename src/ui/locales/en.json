@@ -116,6 +116,8 @@
     "updateLinkLabel": "Update available. Open the release notes on GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Close",
     "minimize": "Minimize",
     "online": "Online",
