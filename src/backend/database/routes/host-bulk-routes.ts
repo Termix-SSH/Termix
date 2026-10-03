@@ -22,6 +22,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
@@ -237,7 +238,7 @@ export function registerHostBulkRoutes(
     authenticateJWT,
     requireEditPermission,
     requireDataAccess,
-    async (req: Request, res: Response) => {
+    DatabaseSaveTrigger.batched(async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostIds, updates } = req.body;
 
@@ -366,7 +367,7 @@ export function registerHostBulkRoutes(
         sshLogger.error("Failed to bulk update hosts:", error);
         return res.status(500).json({ error: "Failed to bulk update hosts" });
       }
-    },
+    }),
   );
 
   /**
@@ -455,7 +456,7 @@ export function registerHostBulkRoutes(
     requireCreatePermission,
     requireEditPermission,
     requireDataAccess,
-    async (req: Request, res: Response) => {
+    DatabaseSaveTrigger.batched(async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
         hosts: hostsToImport,
@@ -825,7 +826,7 @@ export function registerHostBulkRoutes(
         failed: results.failed,
         errors: results.errors,
       });
-    },
+    }),
   );
 
   /**
@@ -862,7 +863,7 @@ export function registerHostBulkRoutes(
     requireCreatePermission,
     requireEditPermission,
     requireDataAccess,
-    async (req: Request, res: Response) => {
+    DatabaseSaveTrigger.batched(async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { content, overwrite } = req.body;
 
@@ -1028,7 +1029,7 @@ export function registerHostBulkRoutes(
         failed: results.failed,
         errors: results.errors,
       });
-    },
+    }),
   );
 }
 

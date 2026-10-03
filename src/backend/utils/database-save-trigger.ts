@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { getErrorMessage } from "./error-message.js";
 import { databaseLogger } from "./logger.js";
 
@@ -8,6 +9,10 @@ export class DatabaseSaveTrigger {
   private static activeSave: Promise<void> | null = null;
   private static saveTimeout: NodeJS.Timeout | null = null;
   private static _dirty = false;
+  private static batch = new AsyncLocalStorage<{
+    open: boolean;
+    pending: boolean;
+  }>();
 
   static initialize(saveFunction: () => Promise<void>): void {
     this.saveFunction = saveFunction;
@@ -60,6 +65,27 @@ export class DatabaseSaveTrigger {
     }, 2000);
   }
 
+  /**
+   * Wraps `work` so the force saves made while it runs collapse into one save
+   * when it finishes. Every save serializes and encrypts the whole database,
+   * so a loop writing one row per host per setting otherwise rewrites the
+   * file once per row. Nested scopes fold into the outer one; work that
+   * outlives its scope (fire-and-forget) saves normally again.
+   */
+  static batched<A extends unknown[], T>(
+    work: (...args: A) => Promise<T>,
+  ): (...args: A) => Promise<T> {
+    return async (...args) => {
+      const scope = { open: true, pending: false };
+      try {
+        return await this.batch.run(scope, () => work(...args));
+      } finally {
+        scope.open = false;
+        if (scope.pending) await this.forceSave("batched_writes");
+      }
+    };
+  }
+
   static async forceSave(reason: string = "critical_operation"): Promise<void> {
     if (!this.isInitialized || !this.saveFunction) {
       databaseLogger.warn(
@@ -69,6 +95,13 @@ export class DatabaseSaveTrigger {
           reason,
         },
       );
+      return;
+    }
+
+    const scope = this.batch.getStore();
+    if (scope?.open) {
+      scope.pending = true;
+      this._dirty = true;
       return;
     }
 
@@ -99,7 +132,13 @@ export class DatabaseSaveTrigger {
       }
     }
 
-    const save = Promise.resolve().then(() => this.saveFunction!());
+    // Each save serializes the whole database into fresh buffers, and V8 only
+    // frees them once the event loop turns. A loop of awaited writes (boot
+    // migrations, bulk import) never yields, so every save's copies piled up
+    // until the process ran out of memory.
+    const save = Promise.resolve()
+      .then(() => this.saveFunction!())
+      .finally(() => new Promise<void>((resolve) => setImmediate(resolve)));
     this.activeSave = save;
     this.pendingSave = true;
 
