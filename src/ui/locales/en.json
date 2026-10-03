@@ -1516,8 +1516,7 @@
     "sslManualTitle": "Upload a certificate",
     "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting",
     "hostTags": "Predefined host tags",
-    "hostTagsDesc": "One tag per line, available to all users. Editing this list changes suggestions only; tags already assigned to hosts are kept.",
-    "hostTagsSaved": "Host tag suggestions saved.",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
     "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {

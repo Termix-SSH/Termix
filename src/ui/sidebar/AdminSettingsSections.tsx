@@ -69,7 +69,6 @@ export function AdminGeneralSettingsSection({
       onToggle={onToggle}
     >
       <div className="flex flex-col gap-0 pt-2">
-        <AdminHostTags />
         <div className="flex flex-col gap-1.5 py-2">
           <span className="text-xs font-medium">
             {t("admin.notificationPrivateEndpoints")}
@@ -351,6 +350,9 @@ export function AdminHostDefaultsSection({
         >
           {t("hostDefaults.editServerDefaults")}
         </Button>
+        <div className="border-t border-border pt-3">
+          <AdminHostTags />
+        </div>
       </div>
     </AccordionSection>
   );
