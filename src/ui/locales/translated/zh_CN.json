@@ -1919,7 +1919,7 @@
     "never": "从未",
     "justNow": "刚刚",
     "minutesAgo_one": "{{count}} 分钟前",
-    "minutesAgo_other": "{{count}} minutes ago",
+    "minutesAgo_other": "{{count}} 分钟前",
     "hoursAgo_one": "{{count}} hour ago",
     "hoursAgo_other": "{{count}} 小时前",
     "actionFailed": "这样做行不通，请再试一次。",
