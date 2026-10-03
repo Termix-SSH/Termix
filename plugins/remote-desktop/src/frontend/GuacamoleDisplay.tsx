@@ -176,8 +176,8 @@ export const GuacamoleDisplay = forwardRef<
         const scale = fitScaleRef.current * zoom;
         scaleRef.current = scale;
         display.scale(scale);
-        displayRef.current.style.width = `${display.getWidth() * scale}px`;
-        displayRef.current.style.height = `${display.getHeight() * scale}px`;
+        displayRef.current.style.width = `${Math.floor(display.getWidth() * scale)}px`;
+        displayRef.current.style.height = `${Math.floor(display.getHeight() * scale)}px`;
       }
       onZoomChange?.(zoom);
       return zoom;
@@ -904,7 +904,7 @@ export const GuacamoleDisplay = forwardRef<
     >
       <div
         ref={displayRef}
-        className="relative flex min-h-full min-w-full items-center justify-center"
+        className="relative flex min-h-full min-w-full items-center justify-center overflow-hidden"
         style={{
           cursor: isReady ? "none" : "default",
           visibility: isReady ? "visible" : "hidden",
