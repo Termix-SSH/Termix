@@ -687,6 +687,11 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     });
 
     const exportDb = new Database(tempPath);
+    // A scratch file: without these every row is its own synced commit, and
+    // plugin rows may point at hosts the export leaves out.
+    exportDb.pragma("journal_mode = OFF");
+    exportDb.pragma("synchronous = OFF");
+    exportDb.pragma("foreign_keys = OFF");
 
     try {
       exportDb.exec(`
@@ -990,9 +995,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userId,
         filename,
       });
+    });
 
+    // "close" also fires when the client aborts mid download, which "end"
+    // does not, so the decrypted export never stays behind on disk.
+    fileStream.on("close", () => {
       fs.unlink(tempPath, (err) => {
-        if (err) {
+        if (err && err.code !== "ENOENT") {
           apiLogger.warn("Failed to clean up export file", {
             operation: "export_cleanup_failed",
             path: tempPath,
@@ -1001,6 +1010,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         }
       });
     });
+    res.on("close", () => fileStream.destroy());
 
     fileStream.pipe(res);
   } catch (error) {
