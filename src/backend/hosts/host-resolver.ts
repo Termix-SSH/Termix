@@ -129,6 +129,10 @@ export async function resolveHostById(
     }
     host.terminalConfig = rest;
   }
+  // Stored as the text "true"/"false"; the string "false" is truthy and would
+  // make the password provider skip password auth.
+  host.forceKeyboardInteractive =
+    String(host.forceKeyboardInteractive) === "true";
   // A row the boot copy has not reached yet still has them in terminal_config.
   host.sshOptions = parseSshOptions(
     host.sshOptions != null ? host.sshOptions : host.terminalConfig,

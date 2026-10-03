@@ -487,6 +487,16 @@ describe("resolveHostById", () => {
     expect(host.sshOptions).toEqual({ keepaliveCountMax: 3 });
   });
 
+  it("turns the stored force_keyboard_interactive text into a boolean", async () => {
+    state.host = baseHost({ forceKeyboardInteractive: "false" });
+    const off = (await resolveHostById(42, "owner")) as Record<string, unknown>;
+    expect(off.forceKeyboardInteractive).toBe(false);
+
+    state.host = baseHost({ forceKeyboardInteractive: "true" });
+    const on = (await resolveHostById(42, "owner")) as Record<string, unknown>;
+    expect(on.forceKeyboardInteractive).toBe(true);
+  });
+
   it("resolves an admin bypass like the owner, keeping owner-only secrets", async () => {
     state.isAdminBypass = true;
     state.host = baseHost({
