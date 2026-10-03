@@ -11,6 +11,9 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     },
   }),
 }));
+vi.mock("../../../utils/logger.js", () => ({
+  databaseLogger: { error: vi.fn() },
+}));
 import { registerHostTagRoutes } from "../../../database/routes/host-tag-routes.js";
 
 function app() {
@@ -66,6 +69,14 @@ describe("instance host tag catalog", () => {
       .put("/tags")
       .set("Authorization", "admin")
       .send({ tags: [] })
+      .expect(200, { tags: [] });
+  });
+
+  it("reads a damaged catalog as empty instead of failing", async () => {
+    settings.set("host_tag_catalog", "{not json");
+    await request(app())
+      .get("/tags")
+      .set("Authorization", "member")
       .expect(200, { tags: [] });
   });
 });
