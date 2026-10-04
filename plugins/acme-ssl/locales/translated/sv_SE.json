@@ -54,5 +54,8 @@
     "request": "Begär certifikat nu",
     "requesting": "Begär certifikat...",
     "issued": "Certifikat utfärdat och installerat"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

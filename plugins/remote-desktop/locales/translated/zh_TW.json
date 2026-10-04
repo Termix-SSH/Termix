@@ -212,7 +212,28 @@
       "backspaceKey": "退格鍵",
       "colorDepth": "色彩深度",
       "resizeMethod": "調整尺寸方法",
-      "driveNamePlaceholder": "特米克斯大道"
+      "driveNamePlaceholder": "特米克斯大道",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "遠端桌面",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

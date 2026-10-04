@@ -207,5 +207,19 @@
     "remove": "Ütemezés eltávolítása",
     "loadFailed": "Nem sikerült frissíteni a karbantartási állapotot. A változtatások le vannak tiltva, amíg be nem töltődik.",
     "loading": "Karbantartási állapot betöltése…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

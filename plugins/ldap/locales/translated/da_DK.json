@@ -23,6 +23,12 @@
     "namePlaceholder": "Firmaregister",
     "nameRequired": "Et visningsnavn er påkrævet",
     "enabled": "Aktiveret",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Gem mappe",
     "saving": "Gemmer...",
     "saved": "Gemt",
@@ -36,6 +42,7 @@
     "host": "LDAP-vært",
     "port": "Havn",
     "useTls": "Brug TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Bind adgangskode",
     "secretKeep": "En adgangskode er gemt. Lad dette felt være tomt for at beholde den.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Gruppesøgningsbase",
     "adminGroup": "Admingruppe",
     "allowedUsers": "Tilladte brugere"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

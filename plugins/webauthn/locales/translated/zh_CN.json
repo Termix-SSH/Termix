@@ -14,9 +14,9 @@
   "none": "未注册通行密钥。",
   "added": "通行密钥已添加",
   "addFailed": "添加通行密钥失败",
-  "delete": "删除通行密钥",
+  "delete": "删除密码",
   "deleted": "通行密钥已删除",
   "deleteFailed": "删除通行密钥失败",
   "unknownDevice": "未知",
-  "synced": "已同步"
+  "synced": "同步"
 }

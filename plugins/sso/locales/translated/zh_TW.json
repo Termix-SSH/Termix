@@ -20,6 +20,12 @@
     "nameRequired": "必須填寫顯示名稱。",
     "type": "提供者類型",
     "enabled": "已啟用",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "儲存提供者",
     "saving": "儲存中…",
     "saved": "已儲存",
@@ -61,5 +67,8 @@
       "label": "使用 SSO 自動登入",
       "description": "將訪客直接引導至第一個單一登入 (SSO) 供應商，而不是顯示登入表單。環境變數 OIDC_SILENT_LOGIN_DEFAULT 會覆寫此設定。"
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

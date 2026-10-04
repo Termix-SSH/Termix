@@ -308,5 +308,8 @@
         "label": "Overvågede stier"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

@@ -20,6 +20,12 @@
     "nameRequired": "Ett visningsnamn krävs",
     "type": "Leverantörstyp",
     "enabled": "Aktiverad",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Spara leverantör",
     "saving": "Sparande...",
     "saved": "Sparad",
@@ -61,5 +67,8 @@
       "label": "Logga in med SSO automatiskt",
       "description": "Skicka besökare direkt till den första SSO-leverantören istället för att visa inloggningsformuläret. Miljövariabeln OIDC_SILENT_LOGIN_DEFAULT åsidosätter detta."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

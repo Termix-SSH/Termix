@@ -182,5 +182,8 @@
     "sharedBy": "Dibagikan oleh {{username}}",
     "join": "Bergabung",
     "sharedSessionLabel": "{{hostName}} (dibagikan)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

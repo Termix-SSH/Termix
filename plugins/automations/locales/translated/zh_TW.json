@@ -207,5 +207,19 @@
     "remove": "移除行程",
     "loadFailed": "無法刷新維護狀態。更改功能已停用，待狀態載入完畢後方可啟用。",
     "loading": "正在載入維護狀態…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

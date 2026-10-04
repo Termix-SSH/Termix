@@ -231,5 +231,8 @@
   "targetTerminals": "วิ่งใน",
   "targetTerminalsHint": "ตัวเลือกเสริม มิฉะนั้นจะเป็นแท็บที่ใช้งานอยู่",
   "selectAll": "ทั้งหมด",
-  "selectNone": "ไม่มี"
+  "selectNone": "ไม่มี",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

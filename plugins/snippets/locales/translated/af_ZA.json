@@ -231,5 +231,8 @@
   "targetTerminals": "Hardloop in",
   "targetTerminalsHint": "opsioneel, anders die aktiewe oortjie",
   "selectAll": "Alles",
-  "selectNone": "Geen"
+  "selectNone": "Geen",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

@@ -23,5 +23,8 @@
         "description": "Hosts privados ou de loopback a que uma fonte secreta pode aceder, um por linha. Um servidor 1Password Connect auto-hospedado precisa geralmente de ter o seu próprio endereço listado aqui."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

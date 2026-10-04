@@ -207,5 +207,19 @@
     "remove": "Usuń harmonogram",
     "loadFailed": "Nie można odświeżyć statusu konserwacji. Zmiany są zablokowane do czasu ich załadowania.",
     "loading": "Ładowanie statusu konserwacji…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

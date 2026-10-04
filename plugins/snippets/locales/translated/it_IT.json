@@ -231,5 +231,8 @@
   "targetTerminals": "Correre in",
   "targetTerminalsHint": "facoltativo, altrimenti la scheda attiva",
   "selectAll": "Tutte",
-  "selectNone": "Nessuno"
+  "selectNone": "Nessuno",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

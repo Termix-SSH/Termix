@@ -20,6 +20,12 @@
     "nameRequired": "É necessário um nome de utilizador.",
     "type": "Tipo de Provedor",
     "enabled": "Ativado",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Guardar Provedor",
     "saving": "A guardar...",
     "saved": "Guardado",
@@ -61,5 +67,8 @@
       "label": "Faça login automaticamente com o SSO.",
       "description": "Dirija os visitantes diretamente para o primeiro fornecedor de SSO em vez de apresentar o formulário de início de sessão. A variável de ambiente OIDC_SILENT_LOGIN_DEFAULT substitui esta definição."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

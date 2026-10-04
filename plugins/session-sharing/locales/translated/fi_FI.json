@@ -182,5 +182,8 @@
     "sharedBy": "Jakanut {{username}}",
     "join": "Liity",
     "sharedSessionLabel": "{{hostName}} (jaettu)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

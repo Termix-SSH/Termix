@@ -207,5 +207,19 @@
     "remove": "Odebrat plán",
     "loadFailed": "Nepodařilo se obnovit stav údržby. Změny jsou zakázány, dokud nebude možné jej načíst.",
     "loading": "Načítání stavu údržby…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

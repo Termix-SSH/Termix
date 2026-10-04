@@ -308,5 +308,8 @@
         "label": "Percorsi monitorati"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

@@ -8,15 +8,15 @@
   },
   "permissions": {
     "view": {
-      "title": "查看会话录像",
-      "description": "查看和回放你自己的会话录像。"
+      "title": "查看会议录像",
+      "description": "查看并回放您自己的会话录像。"
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "保留天数",
-        "description": "会话录像在自动删除前的保留时长。"
+        "label": "保留时间（天）",
+        "description": "会话录像在自动删除前会保留多长时间？"
       }
     },
     "host": {
@@ -27,7 +27,7 @@
     }
   },
   "terminalStatus": {
-    "recording": "录制中"
+    "recording": "记录"
   },
   "sessionLogs": {
     "title": "会话日志",
@@ -47,17 +47,17 @@
     "filterByHost": "按主机筛选...",
     "back": "返回",
     "empty": "(空)",
-    "noResults": "没有与“{{query}}”匹配的结果",
+    "noResults": "没有找到“{{query}}”的结果",
     "hostFallback": "主机 {{id}}",
     "sessionFallback": "会话 {{id}}"
   },
   "player": {
-    "timeline": "录像时间轴",
+    "timeline": "录制时间线",
     "speed": "播放速度",
-    "play": "播放录像",
-    "pause": "暂停播放"
+    "play": "播放录音",
+    "pause": "暂停录制"
   },
   "plugin": {
-    "name": "会话录制"
+    "name": "Session Recording"
   }
 }

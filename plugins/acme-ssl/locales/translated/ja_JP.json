@@ -54,5 +54,8 @@
     "request": "今すぐ証明書を申請する",
     "requesting": "証明書をリクエスト中...",
     "issued": "証明書が発行され、インストールされました。"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

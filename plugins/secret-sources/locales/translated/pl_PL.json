@@ -23,5 +23,8 @@
         "description": "Prywatne lub zwrotne hosty, do których może dotrzeć tajne źródło, po jednym na linię. Samodzielnie hostowany serwer 1Password Connect zazwyczaj wymaga podania tutaj własnego adresu."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

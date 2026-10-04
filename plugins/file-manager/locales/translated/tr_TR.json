@@ -323,7 +323,7 @@
     "sideBySide": "Yan Yana",
     "inline": "Satır İçi",
     "fileComparison": "Dosya Karşılaştırması: {{file1}} vs {{file2}}",
-    "fileTooLarge": "Dosya çok büyük: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH bağlantısı başarısız oldu. Lütfen {{name}} ({{ip}}:{{port}}) ile bağlantınızı kontrol edin",
     "loadFileFailed": "Dosya yüklenemedi: {{error}}",
     "connecting": "Bağlanıyor...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Rahat bir düzen kullanın.",
     "cannotLoadPdf": "PDF yüklenemiyor",
     "pdfLoadError": "Bu PDF dosyası yüklenirken bir hata oluştu.",
-    "loadingPdf": "PDF yükleniyor...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Sayfa yükleniyor...",
     "cancel": "İptal",
     "copiedItems_one": "Kopyalanan {{count}} öğe",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Tarayıcınız bu video formatını oynatamıyor.",
     "downloadToPlay": "Başka yerde oynamak için indirin",
     "cannotPreviewType": "Bu dosya türünün önizlemesi yapılamıyor.",
-    "cannotPreviewTypeHint": "Bu dosya türünün önizlemesi yok. Başka bir uygulamada açmak için indirin."
+    "cannotPreviewTypeHint": "Bu dosya türünün önizlemesi yok. Başka bir uygulamada açmak için indirin.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Kaynak → sunucu: {{throughput}}",
     "metricsHopDestSftpWrite": "Sunucu → hedef (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Sunucu → hedef (yerel): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

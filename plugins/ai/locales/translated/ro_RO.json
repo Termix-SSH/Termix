@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "Vizualizați documentele"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

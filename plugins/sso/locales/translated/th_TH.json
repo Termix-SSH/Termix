@@ -20,6 +20,12 @@
     "nameRequired": "จำเป็นต้องระบุชื่อที่แสดง",
     "type": "ประเภทผู้ให้บริการ",
     "enabled": "เปิดใช้งาน",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "บันทึกผู้ให้บริการ",
     "saving": "ประหยัด...",
     "saved": "บันทึกแล้ว",
@@ -61,5 +67,8 @@
       "label": "ลงชื่อเข้าใช้ด้วย SSO โดยอัตโนมัติ",
       "description": "ส่งผู้เข้าชมไปยังผู้ให้บริการ SSO ตัวแรกโดยตรงแทนที่จะแสดงแบบฟอร์มล็อกอิน ตัวแปรสภาพแวดล้อม OIDC_SILENT_LOGIN_DEFAULT จะแทนที่การตั้งค่านี้"
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

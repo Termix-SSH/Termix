@@ -54,5 +54,8 @@
     "request": "Versoek nou 'n sertifikaat",
     "requesting": "Versoek sertifikaat...",
     "issued": "Sertifikaat uitgereik en geïnstalleer"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

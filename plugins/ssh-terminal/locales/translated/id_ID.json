@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

@@ -308,5 +308,8 @@
         "label": "모니터링되는 경로"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

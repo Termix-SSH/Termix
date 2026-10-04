@@ -231,5 +231,8 @@
   "targetTerminals": "달리기",
   "targetTerminalsHint": "선택 사항이며, 그렇지 않으면 활성 탭이 표시됩니다.",
   "selectAll": "모두",
-  "selectNone": "전체 해제"
+  "selectNone": "전체 해제",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

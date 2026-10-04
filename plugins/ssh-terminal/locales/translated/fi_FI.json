@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Etäpalvelin vaaditaan. Yhdistä etäpalvelin asetuksissa käyttääksesi tätä yhteystyyppiä."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

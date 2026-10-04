@@ -23,6 +23,12 @@
     "namePlaceholder": "Именик компанија",
     "nameRequired": "Потребно је приказано име",
     "enabled": "Омогућено",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Сачувај директоријум",
     "saving": "Чување...",
     "saved": "Сачувано",
@@ -36,6 +42,7 @@
     "host": "LDAP хост",
     "port": "Лука",
     "useTls": "Користите TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Повезивање DN-а",
     "bindPassword": "Повезивање лозинке",
     "secretKeep": "Лозинка је сачувана. Оставите ово празно да бисте је задржали.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "База групне претраге",
     "adminGroup": "Администраторска група",
     "allowedUsers": "Дозвољени корисници"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

@@ -308,5 +308,8 @@
         "label": "Senderos vigilados"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

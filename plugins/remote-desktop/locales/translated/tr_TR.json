@@ -212,7 +212,28 @@
       "backspaceKey": "Geri Silme Tuşu",
       "colorDepth": "Renk Derinliği",
       "resizeMethod": "Yeniden Boyutlandırma Yöntemi",
-      "driveNamePlaceholder": "Termix Drive"
+      "driveNamePlaceholder": "Termix Drive",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Uzak Masaüstü",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

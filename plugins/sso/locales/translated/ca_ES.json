@@ -20,6 +20,12 @@
     "nameRequired": "Cal un nom de visualització",
     "type": "Tipus de proveïdor",
     "enabled": "Activat",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Desa el proveïdor",
     "saving": "Desant...",
     "saved": "Desat",
@@ -61,5 +67,8 @@
       "label": "Inicia la sessió amb SSO automàticament",
       "description": "Envia els visitants directament al primer proveïdor d'SSO en comptes de mostrar el formulari d'inici de sessió. La variable d'entorn OIDC_SILENT_LOGIN_DEFAULT ho anul·la."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

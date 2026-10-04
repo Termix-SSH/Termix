@@ -231,5 +231,8 @@
   "targetTerminals": "Laufen",
   "targetTerminalsHint": "optional, ansonsten der aktive Tab",
   "selectAll": "Alle",
-  "selectNone": "Keine"
+  "selectNone": "Keine",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

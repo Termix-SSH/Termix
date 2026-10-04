@@ -231,5 +231,8 @@
   "targetTerminals": "Утрчавање",
   "targetTerminalsHint": "опционо, иначе активна картица",
   "selectAll": "Сви",
-  "selectNone": "Ниједан"
+  "selectNone": "Ниједан",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

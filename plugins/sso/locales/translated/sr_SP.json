@@ -20,6 +20,12 @@
     "nameRequired": "Потребно је приказано име",
     "type": "Тип добављача",
     "enabled": "Омогућено",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Сачувај добављача",
     "saving": "Чување...",
     "saved": "Сачувано",
@@ -61,5 +67,8 @@
       "label": "Аутоматски се пријавите помоћу SSO-а",
       "description": "Шаљите посетиоце директно првом SSO провајдеру уместо приказивања формулара за пријаву. Променљива окружења OIDC_SILENT_LOGIN_DEFAULT ово поништава."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

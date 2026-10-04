@@ -231,5 +231,8 @@
   "targetTerminals": "跑進",
   "targetTerminalsHint": "可選，否則為活動選項卡",
   "selectAll": "全選",
-  "selectNone": "取消全選"
+  "selectNone": "取消全選",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

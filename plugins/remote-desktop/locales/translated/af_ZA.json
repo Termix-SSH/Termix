@@ -212,7 +212,28 @@
       "backspaceKey": "Terugspasie-sleutel",
       "colorDepth": "Kleurdiepte",
       "resizeMethod": "Vergrootingsmetode",
-      "driveNamePlaceholder": "Termix-rylaan"
+      "driveNamePlaceholder": "Termix-rylaan",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Afstandslessenaar",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Afstandbediener word benodig. Koppel 'n afstandbediener in Instellings om hierdie verbindingstipe te gebruik."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

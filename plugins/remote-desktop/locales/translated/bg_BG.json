@@ -212,7 +212,28 @@
       "backspaceKey": "Клавиш Backspace",
       "colorDepth": "Дълбочина на цвета",
       "resizeMethod": "Метод за преоразмеряване",
-      "driveNamePlaceholder": "Термикс Драйв"
+      "driveNamePlaceholder": "Термикс Драйв",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Отдалечен работен плот",
     "tabRdp": "ПРСР",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Изисква се отдалечен сървър. Свържете се с отдалечен сървър в „Настройки“, за да използвате този тип връзка."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

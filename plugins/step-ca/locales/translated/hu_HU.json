@@ -44,5 +44,8 @@
       "label": "Használja a régi átirányítási URI-t",
       "description": "Továbbra is küldd a /host/step-ca-callback átirányítási URI-t, amely a 2.9 előtt használt. Kapcsold ki ezt, amint az identitásszolgáltatód engedélyezi az újat."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

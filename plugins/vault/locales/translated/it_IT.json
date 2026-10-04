@@ -65,5 +65,8 @@
         "label": "Profilo del firmatario della cassaforte"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

@@ -23,6 +23,12 @@
     "namePlaceholder": "Firmenverzeichnis",
     "nameRequired": "Ein Anzeigename ist erforderlich.",
     "enabled": "Aktiviert",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Speicherverzeichnis",
     "saving": "Wird gespeichert …",
     "saved": "Gespeichert",
@@ -36,6 +42,7 @@
     "host": "LDAP-Host",
     "port": "Port",
     "useTls": "TLS verwenden (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind-DN",
     "bindPassword": "Bind-Passwort",
     "secretKeep": "Ein Passwort wurde gespeichert. Lassen Sie dieses Feld leer, um es zu behalten.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Gruppen-Suchbasis",
     "adminGroup": "Admin-Gruppe",
     "allowedUsers": "Zugelassene Benutzer"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

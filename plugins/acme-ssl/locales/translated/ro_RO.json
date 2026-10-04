@@ -54,5 +54,8 @@
     "request": "Solicitați certificatul acum",
     "requesting": "Se solicită certificatul...",
     "issued": "Certificat emis și instalat"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

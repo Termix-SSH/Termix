@@ -20,6 +20,12 @@
     "nameRequired": "Een weergavenaam is vereist.",
     "type": "Aanbiedertype",
     "enabled": "Ingeschakeld",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Aanbieder opslaan",
     "saving": "Besparing...",
     "saved": "Opgeslagen",
@@ -61,5 +67,8 @@
       "label": "Meld u automatisch aan met SSO.",
       "description": "Stuur bezoekers direct door naar de eerste SSO-provider in plaats van het inlogformulier weer te geven. De omgevingsvariabele OIDC_SILENT_LOGIN_DEFAULT overschrijft dit."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

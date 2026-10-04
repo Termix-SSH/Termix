@@ -116,11 +116,12 @@
     "updateLinkLabel": "有更新可用。請在 GitHub 上查看發布說明。"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "關閉",
     "minimize": "最小化",
     "online": "線上",
     "offline": "離線",
-    "signInFailed": "登入失敗",
     "unknown": "未知",
     "continue": "繼續",
     "maintenance": "維護",
@@ -187,7 +188,11 @@
     "remove": "移除",
     "add": "新增",
     "update": "更新",
-    "noResults": "未找到結果"
+    "noResults": "未找到結果",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "步驟 {{current}} 的 {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "通道",
     "serverStats": "主機指標",
     "status": {
-      "available": "可用的",
-      "reachable": "可用，但登入失敗",
+      "online": "Online",
       "offline": "離線",
-      "monitoringDisabled": "監控已停用",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "地位"
     },
     "folderRenamed": "資料夾「{{oldName}}」已成功重新命名為「{{newName}}」",
@@ -477,7 +482,7 @@
     "sameHost": "此主機（直接通道）",
     "statusChecksLabel": "狀態檢查",
     "enableStatusChecks": "啟用狀態檢查",
-    "enableStatusChecksDesc": "定期 ping 此主機以驗證可用性",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "使用全域間隔",
     "useGlobalIntervalDesc": "以伺服器範圍的狀態檢查間隔覆寫",
     "checkIntervalS": "檢查間隔（秒）",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "您的帳戶啟用了第二重驗證，但目前不可用。請聯絡管理員重置驗證。",
     "secondFactorNoUI": "第二個因素無法在此畫面上顯示。請聯絡管理員。",
     "serverAuthentication": "伺服器登入",
-    "minChars": "最小字元數 {{min}}"
+    "minChars": "最小字元數 {{min}}",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "驗證 SSH 主機金鑰",
@@ -1119,7 +1125,13 @@
     "language": "語言",
     "keyPassword": "金鑰密碼",
     "pastePrivateKey": "在此貼上您的私密金鑰...",
-    "enterPassword": "輸入您的密碼"
+    "enterPassword": "輸入您的密碼",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "儀表板",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "由 {{issuer}} 發行",
     "sslNames": "封面 {{names}}",
     "sslManualTitle": "上傳證書",
-    "updateExternalAutoProvisionFailed": "自動建立設定更新失敗"
+    "updateExternalAutoProvisionFailed": "自動建立設定更新失敗",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

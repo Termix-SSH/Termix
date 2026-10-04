@@ -323,7 +323,7 @@
     "sideBySide": "เคียงข้างกัน",
     "inline": "อินไลน์",
     "fileComparison": "การเปรียบเทียบไฟล์: {{file1}} กับ {{file2}}",
-    "fileTooLarge": "ไฟล์มีขนาดใหญ่เกินไป: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "การเชื่อมต่อ SSH ล้มเหลว โปรดตรวจสอบการเชื่อมต่อของคุณกับ {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "ไม่สามารถโหลดไฟล์ได้: {{error}}",
     "connecting": "กำลังเชื่อมต่อ...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "ใช้รูปแบบการจัดวางที่สะดวกสบาย",
     "cannotLoadPdf": "ไม่สามารถโหลดไฟล์ PDF ได้",
     "pdfLoadError": "เกิดข้อผิดพลาดในการโหลดไฟล์ PDF นี้",
-    "loadingPdf": "กำลังโหลดไฟล์ PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "กำลังโหลดหน้าเว็บ...",
     "cancel": "ยกเลิก",
     "copiedItems_one": "คัดลอกรายการ {{count}} แล้ว",
@@ -383,7 +383,16 @@
     "videoUnsupported": "เบราว์เซอร์ของคุณไม่สามารถเล่นวิดีโอรูปแบบนี้ได้",
     "downloadToPlay": "ดาวน์โหลดเพื่อเล่นที่อื่น",
     "cannotPreviewType": "ไม่สามารถแสดงตัวอย่างไฟล์ประเภทนี้ได้",
-    "cannotPreviewTypeHint": "ไฟล์ประเภทนี้ไม่มีตัวอย่างให้ดู ดาวน์โหลดเพื่อเปิดในแอปพลิเคชันอื่น"
+    "cannotPreviewTypeHint": "ไฟล์ประเภทนี้ไม่มีตัวอย่างให้ดู ดาวน์โหลดเพื่อเปิดในแอปพลิเคชันอื่น",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "เอสเอฟทีพี",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "แหล่งที่มา → เซิร์ฟเวอร์: {{throughput}}",
     "metricsHopDestSftpWrite": "เซิร์ฟเวอร์ → ปลายทาง (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "เซิร์ฟเวอร์ → ปลายทาง (ภายในเครื่อง): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

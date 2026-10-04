@@ -65,5 +65,8 @@
         "label": "Profil sygnatariusza Vault"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

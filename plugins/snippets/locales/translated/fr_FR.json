@@ -231,5 +231,8 @@
   "targetTerminals": "Courir",
   "targetTerminalsHint": "facultatif, sinon l'onglet actif",
   "selectAll": "Tout",
-  "selectNone": "Aucune"
+  "selectNone": "Aucune",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

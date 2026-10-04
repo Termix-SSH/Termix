@@ -207,5 +207,19 @@
     "remove": "Rimuovere la pianificazione",
     "loadFailed": "Impossibile aggiornare lo stato della manutenzione. Le modifiche sono disabilitate fino al caricamento.",
     "loading": "Caricamento dello stato di manutenzione…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

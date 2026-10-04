@@ -54,5 +54,8 @@
     "previewDescription": "Đây chính xác là những gì sẽ được gửi ngay bây giờ.",
     "close": "Đóng",
     "loadFailed": "Không thể tải trạng thái thống kê sử dụng"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

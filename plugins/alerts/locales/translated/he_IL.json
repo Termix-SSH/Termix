@@ -168,5 +168,8 @@
     "showRead": "הצג התראות קריאה",
     "allClear": "הכל ברור",
     "loading": "טְעִינָה..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

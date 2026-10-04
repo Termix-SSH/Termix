@@ -54,5 +54,8 @@
     "previewDescription": "هذا بالضبط ما سيتم إرساله الآن.",
     "close": "إغلاق",
     "loadFailed": "تعذر تحميل حالة إحصائيات الاستخدام"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

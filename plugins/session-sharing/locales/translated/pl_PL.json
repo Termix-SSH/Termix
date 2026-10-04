@@ -182,5 +182,8 @@
     "sharedBy": "Udostępnione przez {{username}}",
     "join": "Dołącz",
     "sharedSessionLabel": "{{hostName}} (udostępnione)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

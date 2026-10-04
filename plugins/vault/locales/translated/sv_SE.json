@@ -65,5 +65,8 @@
         "label": "Profil för valvsignerare"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

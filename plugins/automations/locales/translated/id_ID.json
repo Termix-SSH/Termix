@@ -207,5 +207,19 @@
     "remove": "Hapus jadwal",
     "loadFailed": "Status pemeliharaan tidak dapat diperbarui. Perubahan dinonaktifkan hingga status dapat dimuat.",
     "loading": "Memuat status pemeliharaan…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

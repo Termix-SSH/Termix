@@ -20,6 +20,12 @@
     "nameRequired": "Изисква се показвано име",
     "type": "Тип доставчик",
     "enabled": "Активирано",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Запазване на доставчика",
     "saving": "Запазване...",
     "saved": "Запазено",
@@ -61,5 +67,8 @@
       "label": "Влизане с SSO автоматично",
       "description": "Изпращайте посетителите директно към първия SSO доставчик, вместо да показвате формата за вход. Променливата на средата OIDC_SILENT_LOGIN_DEFAULT отменя това."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

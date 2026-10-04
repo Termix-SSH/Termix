@@ -231,5 +231,8 @@
   "targetTerminals": "Spring in",
   "targetTerminalsHint": "valfritt, annars den aktiva fliken",
   "selectAll": "Alla",
-  "selectNone": "Ingen"
+  "selectNone": "Ingen",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

@@ -23,5 +23,8 @@
         "description": "Gizli bir kaynağın erişebileceği özel veya geri döngü sunucuları, her satıra bir tane. Kendi kendine barındırılan bir 1Password Connect sunucusunun genellikle burada listelenen kendi adresine ihtiyacı vardır."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

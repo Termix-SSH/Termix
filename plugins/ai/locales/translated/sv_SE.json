@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "Visa dokument"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

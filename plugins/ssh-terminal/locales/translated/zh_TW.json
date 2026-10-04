@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

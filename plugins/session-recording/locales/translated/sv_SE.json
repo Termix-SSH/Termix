@@ -56,5 +56,8 @@
     "speed": "Uppspelningshastighet",
     "play": "Spela upp inspelningen",
     "pause": "Pausa inspelningen"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

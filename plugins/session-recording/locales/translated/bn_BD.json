@@ -56,5 +56,8 @@
     "speed": "প্লেব্যাক গতি",
     "play": "রেকর্ডিং চালান",
     "pause": "রেকর্ডিং থামান"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

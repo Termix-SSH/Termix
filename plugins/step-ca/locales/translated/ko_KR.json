@@ -44,5 +44,8 @@
       "label": "이전 리디렉션 URI를 사용하세요",
       "description": "2.9 이전 버전에서 사용했던 리디렉션 URI인 /host/step-ca-callback을 계속 전송하세요. ID 공급자가 새 URI를 허용하면 이 기능을 비활성화하십시오."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

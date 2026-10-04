@@ -308,5 +308,8 @@
         "label": "Monitorowane ścieżki"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

@@ -323,7 +323,7 @@
     "sideBySide": "Rinnakkain",
     "inline": "Rivissä",
     "fileComparison": "Tiedostovertailu: {{file1}} vs. {{file2}}",
-    "fileTooLarge": "Tiedosto liian suuri: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH-yhteys epäonnistui. Tarkista yhteytesi kohteeseen {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Tiedoston lataus epäonnistui: {{error}}",
     "connecting": "Yhdistetään...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Käytä mukavaa asettelua",
     "cannotLoadPdf": "PDF-tiedoston lataaminen ei onnistu",
     "pdfLoadError": "PDF-tiedoston lataamisessa tapahtui virhe.",
-    "loadingPdf": "Ladataan PDF-tiedostoa...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Sivua ladataan...",
     "cancel": "Peruuttaa",
     "copiedItems_one": "Kopioitu {{count}} kohde",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Selaimesi ei voi toistaa tätä videomuotoa.",
     "downloadToPlay": "Lataa toistaaksesi sen muualla",
     "cannotPreviewType": "Tätä tiedostotyyppiä ei voi esikatsella",
-    "cannotPreviewTypeHint": "Tällä tiedostotyypillä ei ole esikatselua. Lataa se avataksesi sen toisessa sovelluksessa."
+    "cannotPreviewTypeHint": "Tällä tiedostotyypillä ei ole esikatselua. Lataa se avataksesi sen toisessa sovelluksessa.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Lähde → palvelin: {{throughput}}",
     "metricsHopDestSftpWrite": "Palvelin → kohde (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Palvelin → kohde (paikallinen): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

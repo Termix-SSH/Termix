@@ -323,7 +323,7 @@
     "sideBySide": "Један поред другог",
     "inline": "Уграђено",
     "fileComparison": "Поређење датотека: {{file1}} наспрам {{file2}}",
-    "fileTooLarge": "Датотека је превелика: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH веза није успела. Молимо вас да проверите везу са {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Није успело учитавање датотеке: {{error}}",
     "connecting": "Повезивање...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Користите удобан распоред",
     "cannotLoadPdf": "Није могуће учитати PDF",
     "pdfLoadError": "Дошло је до грешке при учитавању ове PDF датотеке.",
-    "loadingPdf": "Учитавање PDF-а...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Учитавање странице...",
     "cancel": "Откажи",
     "copiedItems_one": "Копирана ставка {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Ваш прегледач не може да репродукује овај видео формат.",
     "downloadToPlay": "Преузмите да бисте је репродуковали негде другде",
     "cannotPreviewType": "Не могу да прегледам овај тип датотеке",
-    "cannotPreviewTypeHint": "Овај тип датотеке нема преглед. Преузмите је да бисте је отворили у другој апликацији."
+    "cannotPreviewTypeHint": "Овај тип датотеке нема преглед. Преузмите је да бисте је отворили у другој апликацији.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "СФТП",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Извор → сервер: {{throughput}}",
     "metricsHopDestSftpWrite": "Сервер → одредиште (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Сервер → одредиште (локално): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

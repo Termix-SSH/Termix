@@ -54,5 +54,8 @@
     "request": "Zertifikat jetzt anfordern",
     "requesting": "Zertifikat wird angefordert...",
     "issued": "Zertifikat ausgestellt und installiert"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

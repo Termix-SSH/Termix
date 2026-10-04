@@ -65,5 +65,8 @@
         "label": "Vault 簽署者設定檔"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

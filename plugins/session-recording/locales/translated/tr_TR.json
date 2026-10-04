@@ -56,5 +56,8 @@
     "speed": "Oynatma hızı",
     "play": "Kaydı oynat",
     "pause": "Kaydı duraklat"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

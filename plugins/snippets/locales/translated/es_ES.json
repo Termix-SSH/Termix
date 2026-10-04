@@ -231,5 +231,8 @@
   "targetTerminals": "Rodar",
   "targetTerminalsHint": "opcional, de lo contrario la pestaña activa",
   "selectAll": "Revocar todo",
-  "selectNone": "Ninguna"
+  "selectNone": "Ninguna",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

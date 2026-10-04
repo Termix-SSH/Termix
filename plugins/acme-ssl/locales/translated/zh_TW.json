@@ -54,5 +54,8 @@
     "request": "立即申請證書",
     "requesting": "請求憑證中...",
     "issued": "證書已頒發並安裝"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

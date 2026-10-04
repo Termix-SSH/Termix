@@ -20,6 +20,12 @@
     "nameRequired": "Et visningsnavn er obligatorisk",
     "type": "Leverandørtype",
     "enabled": "Aktivert",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Lagre leverandør",
     "saving": "Lagrer...",
     "saved": "Lagret",
@@ -61,5 +67,8 @@
       "label": "Logg inn med SSO automatisk",
       "description": "Send besøkende direkte til den første SSO-leverandøren i stedet for å vise innloggingsskjemaet. Miljøvariabelen OIDC_SILENT_LOGIN_DEFAULT overstyrer dette."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

@@ -44,5 +44,8 @@
       "label": "Sử dụng URI chuyển hướng cũ.",
       "description": "Tiếp tục gửi /host/step-ca-callback, URI chuyển hướng được sử dụng trước phiên bản 2.9. Tắt chức năng này khi nhà cung cấp định danh của bạn cho phép sử dụng URI mới."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

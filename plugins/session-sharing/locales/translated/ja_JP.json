@@ -182,5 +182,8 @@
     "sharedBy": "{{username}} によって共有されました",
     "join": "参加する",
     "sharedSessionLabel": "{{hostName}} (共有)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

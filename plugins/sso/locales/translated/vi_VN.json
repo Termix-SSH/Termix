@@ -20,6 +20,12 @@
     "nameRequired": "Tên hiển thị là bắt buộc",
     "type": "Loại nhà cung cấp",
     "enabled": "Đã bật",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Lưu nhà cung cấp",
     "saving": "Đang lưu...",
     "saved": "Đã lưu",
@@ -61,5 +67,8 @@
       "label": "Đăng nhập tự động bằng SSO",
       "description": "Hãy chuyển hướng khách truy cập trực tiếp đến nhà cung cấp SSO đầu tiên thay vì hiển thị biểu mẫu đăng nhập. Biến môi trường OIDC_SILENT_LOGIN_DEFAULT sẽ ghi đè lên cài đặt này."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

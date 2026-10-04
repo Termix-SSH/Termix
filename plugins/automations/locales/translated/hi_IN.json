@@ -207,5 +207,19 @@
     "remove": "अनुसूची हटाएँ",
     "loadFailed": "रखरखाव की स्थिति को रीफ़्रेश नहीं किया जा सका। जब तक यह लोड नहीं हो जाता, तब तक परिवर्तन अक्षम रहेंगे।",
     "loading": "रखरखाव की स्थिति लोड हो रही है…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

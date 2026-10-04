@@ -168,5 +168,8 @@
     "showRead": "Mostra gli avvisi di lettura",
     "allClear": "Tutto a posto",
     "loading": "Caricamento in corso..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

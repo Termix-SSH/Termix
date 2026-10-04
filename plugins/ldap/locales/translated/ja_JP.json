@@ -23,6 +23,12 @@
     "namePlaceholder": "企業名簿",
     "nameRequired": "表示名は必須です",
     "enabled": "有効",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "保存先ディレクトリ",
     "saving": "保存中...",
     "saved": "保存しました",
@@ -36,6 +42,7 @@
     "host": "LDAPホスト",
     "port": "ポート",
     "useTls": "TLS (LDAPS) を使用",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "バインドDN",
     "bindPassword": "バインドパスワード",
     "secretKeep": "パスワードが保存されます。パスワードを保持するには、この欄を空欄のままにしてください。",
@@ -46,5 +53,8 @@
     "groupSearchBase": "グループ検索ベース",
     "adminGroup": "管理者グループ",
     "allowedUsers": "許可ユーザー"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

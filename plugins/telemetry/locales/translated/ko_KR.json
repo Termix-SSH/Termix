@@ -54,5 +54,8 @@
     "previewDescription": "지금 당장 보내질 내용이 바로 이것입니다.",
     "close": "닫기",
     "loadFailed": "사용량 통계 상태를 불러올 수 없습니다."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

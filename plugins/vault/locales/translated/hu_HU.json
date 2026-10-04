@@ -65,5 +65,8 @@
         "label": "Vault aláírói profil"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

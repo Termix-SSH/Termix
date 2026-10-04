@@ -212,7 +212,28 @@
       "backspaceKey": "Phím Backspace",
       "colorDepth": "Độ sâu màu",
       "resizeMethod": "Phương thức thay đổi kích thước",
-      "driveNamePlaceholder": "Đường Termix"
+      "driveNamePlaceholder": "Đường Termix",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Máy tính từ xa",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

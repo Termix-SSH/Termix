@@ -1,11 +1,11 @@
 {
   "remoteDesktop": {
     "connecting": "正在连接到 {{type}} 会话...",
-    "checkingGuacd": "正在检查远程桌面服务……",
-    "requestingToken": "正在请求 {{type}} 连接令牌……",
-    "openingSession": "正在打开 {{type}} 会话……",
-    "negotiating": "正在协商 {{type}} 握手……",
-    "sessionReady": "{{type}} 会话已就绪",
+    "checkingGuacd": "正在检查远程桌面服务...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "正在开启 {{type}} 会话...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} 会话已准备就绪",
     "connectionError": "连接错误",
     "connectionFailed": "连接失败",
     "failedToConnect": "获取连接令牌失败",
@@ -15,7 +15,7 @@
     "retry": "重试",
     "guacdUnavailable": "远程桌面服务 (guacd) 不可用。请确保 guacd 正在运行并可访问，且在管理设置中正确配置。",
     "credentialPromptTitle": "输入 RDP 凭据",
-    "credentialPromptDescription": "此主机配置为连接时询问凭据。凭据仅用于当前会话，不会保存。",
+    "credentialPromptDescription": "此主机设置为在连接时提示输入凭据。这些凭据仅用于当前会话，不会被保存。",
     "connect": "连接",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
@@ -25,60 +25,60 @@
       "empty": "此文件夹为空",
       "listFailed": "读取此文件夹失败",
       "download": "下载",
-      "downloadFailed": "下载 {{name}} 失败",
+      "downloadFailed": "下载失败 {{name}}",
       "upload": "上传文件",
       "uploading": "正在上传 {{name}}...",
       "uploaded": "已上传 {{name}}",
-      "uploadFailed": "上传 {{name}} 失败",
-      "uploadDisabled": "此连接已禁用上传",
-      "driveUnavailable": "上传文件前请先启用 RDP 驱动器重定向",
-      "driveNotWritable": "guacd 无法写入驱动器文件夹，请检查 GUACD_DRIVE_PATH（或主机的“驱动器路径”）及其权限。",
-      "dropToUpload": "拖放文件以上传"
+      "uploadFailed": "上传失败 {{name}}",
+      "uploadDisabled": "此连接已禁用上传功能",
+      "driveUnavailable": "上传文件前启用 RDP 驱动器重定向",
+      "driveNotWritable": "guacd 无法写入驱动器文件夹。请检查 GUACD_DRIVE_PATH（或主机驱动器路径）及其权限。",
+      "dropToUpload": "拖放文件即可上传"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (锁定屏幕)",
       "winKey": "Windows 键",
       "superL": "Super+L（锁屏）",
-      "superKey": "Super 键",
-      "super": "Super",
+      "superKey": "超级密钥",
+      "super": "极好的",
       "cmdL": "Cmd+L（锁屏）",
-      "cmdKey": "Command 键",
-      "cmd": "Cmd",
+      "cmdKey": "命令键",
+      "cmd": "命令",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
       "win": "Win",
       "stickyActive": "{{key}}（已锁定 - 点击释放）",
       "stickyInactive": "{{key}}（点击锁定）",
-      "esc": "Esc 键",
-      "tab": "Tab 键",
-      "home": "Home 键",
-      "end": "End 键",
-      "pageUp": "向上翻页",
-      "pageDown": "向下翻页",
-      "arrowUp": "向上方向键",
-      "arrowDown": "向下方向键",
-      "arrowLeft": "向左方向键",
-      "arrowRight": "向右方向键",
+      "esc": "Escape",
+      "tab": "Tab",
+      "home": "Home",
+      "end": "End",
+      "pageUp": "Page Up",
+      "pageDown": "Page Down",
+      "arrowUp": "Arrow Up",
+      "arrowDown": "Arrow Down",
+      "arrowLeft": "Arrow Left",
+      "arrowRight": "Arrow Right",
       "fnToggle": "功能键",
       "reconnect": "重新连接会话",
       "collapse": "折叠工具栏",
       "expand": "展开工具栏",
       "dragHandle": "拖动以重新定位",
-      "hide": "仅在此会话中隐藏。如需永久禁用，请打开“主机设置 → 常规 → 连接工具栏”。",
+      "hide": "本次会话期间隐藏。要永久禁用，请打开“主机设置”→“常规”→“连接工具栏”。",
       "zoomIn": "放大",
       "zoomOut": "缩小",
       "resetZoom": "重置缩放",
       "fitToScreen": "适应屏幕",
       "switchToTrackpad": "切换到触控板模式（拖动移动光标，轻点进行点击）",
-      "switchToTouch": "切换到触摸模式（直接点按目标位置）"
+      "switchToTouch": "切换到触摸模式（直接点击你想点击的地方）"
     },
-    "disabled": "远程桌面已关闭，管理员可在设置中启用。"
+    "disabled": "远程桌面已关闭。管理员可以在“设置”中启用它。"
   },
   "hosts": {
-    "nativeRdpOpened": "已在 Windows 远程桌面中打开",
-    "nativeRdpFailed": "打开 Windows 远程桌面失败",
+    "nativeRdpOpened": "在 Windows 远程桌面中打开",
+    "nativeRdpFailed": "无法打开 Windows 远程桌面",
     "openNativeRdp": "在 Windows 远程桌面中打开",
     "guac": {
       "toolbar": "工具栏",
@@ -89,7 +89,7 @@
       "authTypeDirect": "直接",
       "authTypeCredential": "凭据",
       "authTypeNone": "无",
-      "authTypeNoneDesc": "未保存凭据。每次连接时都会询问用户名和密码，且不会保存。",
+      "authTypeNoneDesc": "不会存储任何凭据。每次连接时，系统都会提示您输入用户名和密码；这些信息不会被保存。",
       "selectCredential": "选择凭据...",
       "connectionSettings": "连接设置",
       "displaySettings": "显示设置",
@@ -107,7 +107,7 @@
       "rdpPort": "RDP 端口",
       "username": "用户名",
       "password": "密码",
-      "passwordSaved": "密码已保存，输入以修改",
+      "passwordSaved": "密码已保存，输入即可更改",
       "domain": "域",
       "securityMode": "安全模式",
       "width": "宽度",
@@ -212,27 +212,27 @@
       "backspaceKey": "退格键",
       "colorDepth": "颜色深度",
       "resizeMethod": "调整大小方法",
-      "driveNamePlaceholder": "Termix 驱动器",
+      "driveNamePlaceholder": "特米克斯大道",
       "options": {
-        "any": "任意",
-        "auto": "自动",
-        "nlaExtended": "扩展 NLA",
-        "color8": "8 位",
-        "color16": "16 位",
-        "color24": "24 位",
-        "color32": "32 位",
-        "displayUpdate": "显示更新",
-        "reconnect": "重新连接",
-        "preserve": "保留原样",
-        "unix": "Unix（LF 换行）",
-        "windows": "Windows（CRLF 换行）",
-        "local": "本地",
-        "remote": "远程",
-        "failsafe": "兼容模式",
-        "blackOnWhite": "白底黑字",
-        "whiteOnBlack": "黑底白字",
-        "grayOnBlack": "黑底灰字",
-        "greenOnBlack": "黑底绿字"
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
       }
     },
     "remoteDesktop": "远程桌面",
@@ -242,10 +242,10 @@
     "virtualNetwork": "虚拟网络",
     "unencryptedShell": "未加密 Shell",
     "remoteDesktopNotes": "笔记",
-    "userDefaultsNote": "未修改的设置将使用主机默认值。",
-    "connectionOriginNote": "在桌面应用中，RDP、VNC 和 Telnet 默认通过远程服务器连接。若主机设置为“此设备”，则需要本机可访问的 guacd。可在远程桌面设置中配置，或为每台主机单独设置 guacd 代理。",
+    "userDefaultsNote": "如果您的设置保持不变，则遵循主机默认设置。",
+    "connectionOriginNote": "在桌面应用程序中，RDP、VNC 和 Telnet 会使用远程服务器，除非主机设置为“此设备”。“此设备”需要 guacd 代理，即此计算机可以访问的代理。您可以在远程桌面设置中设置 guacd 代理，也可以为每个主机单独设置。",
     "docsLink": "查看文档",
-    "connectionOriginGuacamoleNote": "RDP、VNC 和 Telnet 默认通过远程服务器连接。选择“此设备”时，需要本机可访问的 guacd。可在 guacd URL 设置中配置，或为每台主机单独设置 guacd 代理。"
+    "connectionOriginGuacamoleNote": "RDP、VNC 和 Telnet 默认使用远程服务器，除非您选择“此设备”，这需要一台机器可以访问的 guacd 服务器。您可以在 guacd URL 设置中设置，也可以在 guacd 代理中为每个主机单独设置。"
   },
   "onboarding": {
     "feature_desktop": "远程桌面",
@@ -255,13 +255,13 @@
     "user": {
       "colorDepth": {
         "label": "颜色深度",
-        "description": "用于使用默认值的 RDP 主机。"
+        "description": "用于那些保留默认设置的 RDP 主机。"
       },
       "resizeMethod": {
         "label": "调整大小方法",
-        "description": "远程屏幕随窗口大小变化的方式。"
+        "description": "远程屏幕如何跟随窗口大小变化。"
       },
-      "resizeDisplayUpdate": "显示更新方式",
+      "resizeDisplayUpdate": "显示更新",
       "resizeReconnect": "重新连接",
       "inherit": "继承",
       "on": "开启",
@@ -302,7 +302,7 @@
         "label": "禁用粘贴",
         "description": "禁止粘贴文本到远程会话"
       },
-      "group": "远程桌面默认值",
+      "group": "远程桌面默认设置",
       "colorDepth16": "16 位",
       "colorDepth24": "24 位",
       "colorDepth32": "32 位"
@@ -310,11 +310,11 @@
     "admin": {
       "enabled": {
         "label": "启用远程桌面",
-        "description": "允许通过 guacd 建立 RDP、VNC 和 Telnet 连接。"
+        "description": "允许通过 guacd 连接 RDP、VNC 和 Telnet。"
       },
       "guacdUrl": {
-        "label": "guacd 地址",
-        "description": "guacd 监听地址，格式为 host:port。GUACD_URL、GUACD_HOST 和 GUACD_PORT 环境变量会覆盖此设置。",
+        "label": "guacd URL",
+        "description": "guacd 监听的位置，格式为 host:port。GUACD_URL、GUACD_HOST 和 GUACD_PORT 环境变量会覆盖此设置。",
         "placeholder": "guacd:4822"
       }
     },
@@ -329,13 +329,13 @@
         "label": "Telnet"
       },
       "rdpPort": {
-        "label": "RDP 端口"
+        "label": "RDP端口"
       },
       "vncPort": {
-        "label": "VNC 端口"
+        "label": "VNC端口"
       },
       "telnetPort": {
-        "label": "Telnet 端口"
+        "label": "Telnet端口"
       },
       "rdpSecurity": {
         "label": "RDP 安全模式"
@@ -350,25 +350,25 @@
         "label": "远程桌面工具栏",
         "description": "在 RDP、VNC 和 Telnet 会话中显示工具栏。"
       },
-      "displayGroup": "显示",
+      "displayGroup": "展示",
       "displayDefaultsTab": "远程桌面"
     }
   },
   "palette": {
-    "connectRdp": "通过 RDP 连接",
+    "connectRdp": "使用 RDP 连接",
     "connectVnc": "通过 VNC 连接",
-    "connectTelnet": "通过 Telnet 连接"
+    "connectTelnet": "使用 Telnet 连接"
   },
   "permissions": {
     "sessions": {
       "title": "共享远程桌面会话",
-      "description": "允许通过会话共享和协作房间向他人展示此用户的 RDP、VNC 和 Telnet 会话。"
+      "description": "允许会话共享和协作房间向其他人显示此用户的 RDP、VNC 和 Telnet 会话。"
     }
   },
   "errors": {
-    "remoteServerRequired": "需要远程服务器。请在设置中连接远程服务器以使用此连接类型。"
+    "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"
   },
   "plugin": {
-    "name": "远程桌面"
+    "name": "Remote Desktop"
   }
 }

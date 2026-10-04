@@ -54,5 +54,8 @@
     "previewDescription": "Pontosan ezt küldenék most.",
     "close": "Közeli",
     "loadFailed": "Nem sikerült betölteni a használati statisztikák állapotát"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

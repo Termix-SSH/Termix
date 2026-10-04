@@ -23,5 +23,8 @@
         "description": "Privaat of teruglusgashere wat 'n geheime bron mag bereik, een per lyn. 'n Selfgehosteerde 1Password Connect-bediener benodig gewoonlik sy eie adres wat hier gelys word."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

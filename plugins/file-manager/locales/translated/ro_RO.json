@@ -323,7 +323,7 @@
     "sideBySide": "Alăturat",
     "inline": "În linie",
     "fileComparison": "Comparație fișiere: {{file1}} vs {{file2}}",
-    "fileTooLarge": "Fișier prea mare: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "Conexiunea SSH a eșuat. Vă rugăm să verificați conexiunea la {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Nu s-a putut încărca fișierul: {{error}}",
     "connecting": "Se conectează...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Folosește un aspect confortabil",
     "cannotLoadPdf": "Nu se poate încărca PDF-ul",
     "pdfLoadError": "A apărut o eroare la încărcarea acestui fișier PDF.",
-    "loadingPdf": "Se încarcă PDF-ul...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Se încarcă pagina...",
     "cancel": "Anula",
     "copiedItems_one": "Elementul {{count}} a fost copiat",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Browserul dvs. nu poate reda acest format video.",
     "downloadToPlay": "Descarcă pentru a-l reda în altă parte",
     "cannotPreviewType": "Nu se poate previzualiza acest tip de fișier",
-    "cannotPreviewTypeHint": "Acest tip de fișier nu are previzualizare. Descărcați-l pentru a-l deschide în altă aplicație."
+    "cannotPreviewTypeHint": "Acest tip de fișier nu are previzualizare. Descărcați-l pentru a-l deschide în altă aplicație.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Sursă → server: {{throughput}}",
     "metricsHopDestSftpWrite": "Server → destinație (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Server → destinație (locală): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

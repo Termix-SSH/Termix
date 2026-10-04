@@ -116,11 +116,12 @@
     "updateLinkLabel": "Aktualizacja dostępna. Otwórz notatki do wydania na GitHubie."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Zamknij",
     "minimize": "Minimalizuj",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Logowanie nie powiodło się",
     "unknown": "Nieznany",
     "continue": "Kontynuuj",
     "maintenance": "Konserwacja",
@@ -187,7 +188,11 @@
     "remove": "Usuń",
     "add": "Dodaj",
     "update": "Aktualizuj",
-    "noResults": "Nie znaleziono wyników"
+    "noResults": "Nie znaleziono wyników",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Krok {{current}} z {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunel",
     "serverStats": "Metryki hosta",
     "status": {
-      "available": "Dostępny",
-      "reachable": "Dostępny, ale logowanie nie powiodło się",
+      "online": "Online",
       "offline": "Niedostępny",
-      "monitoringDisabled": "Monitorowanie wyłączone",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Zmieniono nazwę folderu „{{oldName}}” na „{{newName}}”",
@@ -477,7 +482,7 @@
     "sameHost": "Ten host (tunel bezpośredni)",
     "statusChecksLabel": "Sprawdzanie statusu",
     "enableStatusChecks": "Włącz sprawdzanie statusu",
-    "enableStatusChecksDesc": "Okresowo wysyłaj polecenie ping do tego hosta w celu sprawdzenia dostępności",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Użyj interwału globalnego",
     "useGlobalIntervalDesc": "Użyj globalnego interwału sprawdzania statusu",
     "checkIntervalS": "Interwał sprawdzania (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Twoje konto korzysta z drugiego czynnika uwierzytelniania, który obecnie nie jest dostępny. Skontaktuj się z administratorem, aby go zresetować.",
     "secondFactorNoUI": "Drugiego czynnika nie można wyświetlić na tym ekranie. Skontaktuj się z administratorem.",
     "serverAuthentication": "Logowanie do serwera",
-    "minChars": "min. {{min}} znaków"
+    "minChars": "min. {{min}} znaków",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Zweryfikuj klucz hosta SSH",
@@ -1119,7 +1125,13 @@
     "language": "Język",
     "keyPassword": "hasło klucza",
     "pastePrivateKey": "Wklej tutaj klucz prywatny...",
-    "enterPassword": "Wprowadź hasło"
+    "enterPassword": "Wprowadź hasło",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Pulpit",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Wydane przez {{issuer}}",
     "sslNames": "Obejmuje {{names}}",
     "sslManualTitle": "Prześlij certyfikat",
-    "updateExternalAutoProvisionFailed": "Nie udało się zaktualizować ustawienia automatycznego tworzenia"
+    "updateExternalAutoProvisionFailed": "Nie udało się zaktualizować ustawienia automatycznego tworzenia",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

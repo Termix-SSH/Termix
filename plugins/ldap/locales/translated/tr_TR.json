@@ -23,6 +23,12 @@
     "namePlaceholder": "Şirket dizini",
     "nameRequired": "Görünen ad gereklidir.",
     "enabled": "Etkin",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Kaydet",
     "saving": "Kaydediliyor...",
     "saved": "Kaydedildi",
@@ -36,6 +42,7 @@
     "host": "LDAP Sunucusu",
     "port": "Port",
     "useTls": "TLS Kullan (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Bind Parolası",
     "secretKeep": "Parola kaydedildi. Parolayı saklamak için bu alanı boş bırakın.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Grup Arama Tabanı",
     "adminGroup": "Yönetici Grubu",
     "allowedUsers": "İzin Verilen Kullanıcılar"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "נדרש שרת מרוחק. יש להתחבר לשרת מרוחק בהגדרות כדי להשתמש בסוג חיבור זה."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

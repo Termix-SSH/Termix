@@ -207,5 +207,19 @@
     "remove": "Programı kaldır",
     "loadFailed": "Bakım durumu yenilenemedi. Yüklenene kadar değişiklikler devre dışı bırakılmıştır.",
     "loading": "Bakım durumu yükleniyor…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

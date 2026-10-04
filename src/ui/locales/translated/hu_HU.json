@@ -116,11 +116,12 @@
     "updateLinkLabel": "Frissítés elérhető. Nyissa meg a kiadási megjegyzéseket a GitHubon."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Közeli",
     "minimize": "Minimalizálás",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Bejelentkezés sikertelen",
     "unknown": "Ismeretlen",
     "continue": "Folytatás",
     "maintenance": "Karbantartás",
@@ -187,7 +188,11 @@
     "remove": "Eltávolítás",
     "add": "Hozzáadás",
     "update": "Frissítés",
-    "noResults": "Nincs találat"
+    "noResults": "Nincs találat",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "{{total}} {{current}} lépése",
@@ -352,10 +357,10 @@
     "tunnel": "Alagút",
     "serverStats": "Gazdagép-metrikák",
     "status": {
-      "available": "Elérhető",
-      "reachable": "Elérhető, de a bejelentkezés sikertelen",
+      "online": "Online",
       "offline": "Offline",
-      "monitoringDisabled": "Monitorozás letiltva",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Állapot"
     },
     "folderRenamed": "A(z) „{{oldName}}” mappa sikeresen átnevezve erre: „{{newName}}”",
@@ -477,7 +482,7 @@
     "sameHost": "Ez a gazdagép (közvetlen alagút)",
     "statusChecksLabel": "Állapotellenőrzések",
     "enableStatusChecks": "Állapotellenőrzések engedélyezése",
-    "enableStatusChecksDesc": "Rendszeresen pingelje ezt a gazdagépet az elérhetőség ellenőrzéséhez",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Globális intervallum használata",
     "useGlobalIntervalDesc": "Felülbírálás a szerver szintű állapotellenőrzési intervallummal",
     "checkIntervalS": "Ellenőrzési intervallum (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "A fiókod egy második faktort használ, ami jelenleg nem érhető el. Lépj kapcsolatba egy adminisztrátorral a visszaállításához.",
     "secondFactorNoUI": "Ez a második tényező nem jeleníthető meg ezen a képernyőn. Lépjen kapcsolatba egy adminisztrátorral.",
     "serverAuthentication": "Szerver bejelentkezés",
-    "minChars": "min. {{min}} karakter"
+    "minChars": "min. {{min}} karakter",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "SSH host kulcs ellenőrzése",
@@ -1119,7 +1125,13 @@
     "language": "Nyelv",
     "keyPassword": "kulcs jelszó",
     "pastePrivateKey": "Illeszd be ide a privát kulcsodat...",
-    "enterPassword": "Írja be a jelszavát"
+    "enterPassword": "Írja be a jelszavát",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Műszerfal",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Kibocsátó: {{issuer}}",
     "sslNames": "Borítók {{names}}",
     "sslManualTitle": "Tanúsítvány feltöltése",
-    "updateExternalAutoProvisionFailed": "Nem sikerült frissíteni az automatikus létrehozási beállítást"
+    "updateExternalAutoProvisionFailed": "Nem sikerült frissíteni az automatikus létrehozási beállítást",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

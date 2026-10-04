@@ -65,5 +65,8 @@
         "label": "Профіль підписанта сховища"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

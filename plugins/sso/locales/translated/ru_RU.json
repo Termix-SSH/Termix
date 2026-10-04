@@ -20,6 +20,12 @@
     "nameRequired": "Необходимо указать отображаемое имя.",
     "type": "Тип провайдера",
     "enabled": "Включено",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Сохранить провайдера",
     "saving": "Сохранение…",
     "saved": "Сохранено",
@@ -61,5 +67,8 @@
       "label": "Автоматический вход через SSO.",
       "description": "Вместо отображения формы входа, посетители будут направляться непосредственно к первому поставщику единого входа (SSO). Это определяется переменной среды OIDC_SILENT_LOGIN_DEFAULT."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

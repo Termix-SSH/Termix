@@ -3,13 +3,13 @@
     "filterAuthStepca": "步骤 CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "通过身份提供商登录，由 Step CA 为此主机签发短期 SSH 证书。CA URL、根证书指纹和 OIDC 签发配置由管理员在管理设置的 Step CA 部分配置。",
+    "label": "步骤 CA",
+    "description": "通过您的身份提供商登录，并让您的 Step CA 为此主机颁发一个短期 SSH 证书。CA URL、根指纹和 OIDC 配置器由管理员在“管理设置”的 Step CA 部分中设置。",
     "docs": "查看文档"
   },
   "dialog": {
-    "title": "需要 Step CA 身份验证",
-    "description": "请在浏览器中完成验证以继续。证书有效期由你的 CA 决定。",
+    "title": "步骤 CA 身份验证是必需的",
+    "description": "请在浏览器中完成身份验证以继续。证书的有效期取决于您的证书颁发机构 (CA) 的许可期限。",
     "openBrowser": "打开浏览器进行认证",
     "waiting": "等待浏览器认证...",
     "authenticating": "正在处理认证..."
@@ -20,29 +20,29 @@
   },
   "settings": {
     "caUrl": {
-      "label": "CA 地址",
-      "description": "你的 smallstep CA 的 HTTPS URL。将 CA URL、指纹和签发配置留空可关闭 Step CA。",
+      "label": "CA URL",
+      "description": "您的 SmallStep CA 的 HTTPS URL。如果将 CA URL、指纹和配置器留空，则禁用 Step CA。",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "根证书指纹（SHA-256）",
-      "description": "根证书指纹，可通过 step ca bootstrap 查看。"
+      "label": "根指纹（SHA-256）",
+      "description": "根证书指纹，如步骤 ca bootstrap 所示。"
     },
     "provisioner": {
-      "label": "OIDC 签发配置名称",
-      "description": "CA 的 OIDC 签发配置名称。之后可将主机的身份验证类型设为“Step CA”。"
+      "label": "OIDC配置器名称",
+      "description": "CA 的 OIDC 配置器的名称。然后选择“步骤 CA”作为主机的身份验证类型。"
     },
     "privateEndpoints": {
-      "label": "允许的私有 Step CA 主机",
-      "description": "Step CA 证书流程可以访问的内网主机：CA 本身，以及部署在内网的身份提供商。使用逗号或换行分隔。"
+      "label": "允许的私有步骤 CA 主机",
+      "description": "步骤 CA 证书流程中的私有主机可能会联系：CA 本身，以及（如果是内部）您的身份提供商。请用逗号或换行符分隔它们。"
     },
     "redirectUri": {
       "label": "重定向 URI",
-      "description": "在 OIDC 签发配置使用的身份提供商处，将此 URL 登记为允许的重定向 URI。"
+      "description": "将此 URL 注册为 OIDC 配置器后面的身份提供商允许的重定向 URI。"
     },
     "legacyCallback": {
-      "label": "使用旧版重定向 URI",
-      "description": "继续发送 2.9 之前使用的重定向 URI /host/step-ca-callback。当身份提供商允许新 URI 后，可关闭此选项。"
+      "label": "使用旧的重定向 URI",
+      "description": "继续发送 /host/step-ca-callback，这是 2.9 版本之前使用的重定向 URI。一旦您的身份提供商允许使用新的重定向 URI，就将其关闭。"
     }
   },
   "plugin": {

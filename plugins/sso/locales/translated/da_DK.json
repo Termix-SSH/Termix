@@ -20,6 +20,12 @@
     "nameRequired": "Et visningsnavn er påkrævet",
     "type": "Udbydertype",
     "enabled": "Aktiveret",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Gem udbyder",
     "saving": "Gemmer...",
     "saved": "Gemt",
@@ -61,5 +67,8 @@
       "label": "Log automatisk ind med SSO",
       "description": "Send besøgende direkte til den første SSO-udbyder i stedet for at vise loginformularen. Miljøvariablen OIDC_SILENT_LOGIN_DEFAULT tilsidesætter dette."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

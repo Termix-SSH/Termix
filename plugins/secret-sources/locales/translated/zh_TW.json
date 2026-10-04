@@ -23,5 +23,8 @@
         "description": "私有或回環位址，秘密來源可以訪問，每行一個。自託管的 1Password Connect 伺服器通常需要在此列出自己的位址。"
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

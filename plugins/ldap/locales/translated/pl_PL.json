@@ -23,6 +23,12 @@
     "namePlaceholder": "Katalog firm",
     "nameRequired": "Wymagana jest nazwa wyświetlana",
     "enabled": "Włączona",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Zapisz katalog",
     "saving": "Zapisywanie...",
     "saved": "Zapisano",
@@ -36,6 +42,7 @@
     "host": "Host LDAP",
     "port": "Port",
     "useTls": "Użyj TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Hasło Bind",
     "secretKeep": "Hasło zostało zapisane. Pozostaw to pole puste, aby je zachować.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Baza wyszukiwania grup",
     "adminGroup": "Grupa administratorów",
     "allowedUsers": "Dozwoleni użytkownicy"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

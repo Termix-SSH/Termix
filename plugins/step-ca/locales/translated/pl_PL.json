@@ -44,5 +44,8 @@
       "label": "Użyj starego adresu URI przekierowania",
       "description": "Nadal wysyłaj /host/step-ca-callback, czyli URI przekierowania używane przed wersją 2.9. Wyłącz tę opcję, gdy Twój dostawca tożsamości zezwoli na nową."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

@@ -54,5 +54,8 @@
     "previewDescription": "Juuri tätä lähetettäisiin nyt.",
     "close": "Lähellä",
     "loadFailed": "Käyttötilastojen tilan lataaminen epäonnistui"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

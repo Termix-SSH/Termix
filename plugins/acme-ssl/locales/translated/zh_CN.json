@@ -7,8 +7,8 @@
   },
   "settings": {
     "autoRenew": {
-      "label": "自动续期",
-      "description": "每天检查两次。在没有证书、证书未覆盖域名或将在 30 天内过期时申请新证书。"
+      "label": "自动续订",
+      "description": "每天检查两次，如果没有证书、证书不涵盖该域名或证书将在 30 天内过期，则获取新证书。"
     },
     "domain": {
       "label": "域名",
@@ -17,25 +17,25 @@
     },
     "email": {
       "label": "邮箱",
-      "description": "用于 ACME 账户和到期通知的联系邮箱。",
+      "description": "ACME账户及到期通知的联系邮箱。",
       "placeholder": "admin@example.com"
     },
     "provider": {
       "label": "证书颁发机构",
-      "description": "证书申请来源。测试时使用测试环境，以免触发 Let's Encrypt 频率限制。",
+      "description": "证书获取途径。使用测试环境进行测试，避免超出 Let's Encrypt 的速率限制。",
       "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt（测试环境）",
+      "letsencryptStaging": "Let's Encrypt（测试版）",
       "custom": "自定义 ACME 目录"
     },
     "directoryUrl": {
-      "label": "ACME 目录 URL",
-      "description": "仅用于自定义证书颁发机构，必须为 HTTPS URL。"
+      "label": "ACME目录URL",
+      "description": "仅适用于自定义证书颁发机构。必须是 https URL。"
     },
     "challengeType": {
-      "label": "验证类型",
-      "description": "用于证明域名所有权的方式。",
-      "http": "HTTP：需要互联网能够访问端口 80",
-      "cloudflare": "DNS（Cloudflare）：需要 Cloudflare API 令牌"
+      "label": "挑战类型",
+      "description": "如何证明您拥有该域名。",
+      "http": "HTTP协议需要可通过互联网访问的80端口。",
+      "cloudflare": "DNS（Cloudflare）——需要 Cloudflare API 令牌"
     },
     "cloudflareToken": {
       "label": "Cloudflare API 令牌",
@@ -45,17 +45,17 @@
   "status": {
     "title": "证书状态",
     "none": "无证书",
-    "names": "覆盖域名：{{names}}",
-    "issuer": "签发者：{{issuer}}",
+    "names": "封面 {{names}}",
+    "issuer": "由 {{issuer}} 发行",
     "expires": "过期于 {{date}}",
     "lastIssued": "上次签发于 {{date}}",
-    "lastError": "上次尝试失败：{{error}}",
-    "missing": "请先设置域名、邮箱及所选验证方式需要的字段，保存后再申请证书。",
+    "lastError": "最后一次尝试失败： {{error}}",
+    "missing": "设置域名、电子邮件和您的质询类型所需的字段，然后保存，再申请证书。",
     "request": "立即申请证书",
     "requesting": "正在请求证书...",
-    "issued": "证书已签发并安装"
+    "issued": "证书已颁发并安装"
   },
   "plugin": {
-    "name": "ACME 证书"
+    "name": "ACME Certificates"
   }
 }

@@ -116,11 +116,12 @@
     "updateLinkLabel": "Доступне оновлення. Відкрийте нотатки до випуску на GitHub."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Закрити",
     "minimize": "Згорнути",
     "online": "Онлайн",
     "offline": "Офлайн",
-    "signInFailed": "Не вдалося ввійти",
     "unknown": "Невідомо",
     "continue": "Продовжити",
     "maintenance": "Технічне обслуговування",
@@ -187,7 +188,11 @@
     "remove": "Видалити",
     "add": "Додати",
     "update": "Оновлення",
-    "noResults": "Результатів не знайдено"
+    "noResults": "Результатів не знайдено",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Крок {{current}} з {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Тунель",
     "serverStats": "Метрики хоста",
     "status": {
-      "available": "Доступно",
-      "reachable": "Доступний, але вхід не виконано",
+      "online": "Online",
       "offline": "Офлайн",
-      "monitoringDisabled": "Моніторинг вимкнено",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Статус"
     },
     "folderRenamed": "Папку «{{oldName}}» успішно перейменовано на «{{newName}}»",
@@ -477,7 +482,7 @@
     "sameHost": "Цей хост (прямий тунель)",
     "statusChecksLabel": "Перевірки статусу",
     "enableStatusChecks": "Увімкнути перевірки стану",
-    "enableStatusChecksDesc": "Періодично перевіряти доступність цього хоста за допомогою ping-повідомлення",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Використовувати глобальний інтервал",
     "useGlobalIntervalDesc": "Перевизначити інтервал перевірки стану на рівні сервера",
     "checkIntervalS": "Інтервал перевірки (і)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Ваш обліковий запис використовує другий фактор, який зараз недоступний. Зверніться до адміністратора, щоб скинути його.",
     "secondFactorNoUI": "Цей другий фактор неможливо відобразити на цьому екрані. Зверніться до адміністратора.",
     "serverAuthentication": "Вхід на сервер",
-    "minChars": "мін. {{min}} символів"
+    "minChars": "мін. {{min}} символів",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Перевірте ключ хоста SSH",
@@ -1119,7 +1125,13 @@
     "language": "Мова",
     "keyPassword": "пароль ключа",
     "pastePrivateKey": "Вставте сюди свій закритий ключ...",
-    "enterPassword": "Введіть свій пароль"
+    "enterPassword": "Введіть свій пароль",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Інформаційна панель",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Видано {{issuer}}",
     "sslNames": "Обкладинки {{names}}",
     "sslManualTitle": "Завантажити сертифікат",
-    "updateExternalAutoProvisionFailed": "Не вдалося оновити налаштування автоматичного створення"
+    "updateExternalAutoProvisionFailed": "Не вдалося оновити налаштування автоматичного створення",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

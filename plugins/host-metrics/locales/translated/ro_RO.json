@@ -308,5 +308,8 @@
         "label": "Căi monitorizate"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

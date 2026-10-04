@@ -182,5 +182,8 @@
     "sharedBy": "Delat av {{username}}",
     "join": "Ansluta sig till",
     "sharedSessionLabel": "{{hostName}} (delad)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

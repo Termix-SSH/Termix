@@ -207,5 +207,19 @@
     "remove": "Verwyder skedule",
     "loadFailed": "Kon nie onderhoudstatus verfris nie. Veranderinge is gedeaktiveer totdat dit gelaai kan word.",
     "loading": "Laai onderhoudstatus…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

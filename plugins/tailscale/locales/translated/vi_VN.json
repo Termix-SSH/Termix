@@ -82,5 +82,8 @@
         "usernameLabel": "Tên đăng nhập"
       }
     }
+  },
+  "plugin": {
+    "name": "Tailscale"
   }
 }

@@ -20,6 +20,12 @@
     "nameRequired": "Ein Anzeigename ist erforderlich.",
     "type": "Anbietertyp",
     "enabled": "Aktiviert",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Anbieter speichern",
     "saving": "Wird gespeichert …",
     "saved": "Gespeichert",
@@ -61,5 +67,8 @@
       "label": "Automatische Anmeldung mit SSO",
       "description": "Besucher werden direkt zum ersten SSO-Anbieter weitergeleitet, anstatt das Anmeldeformular anzuzeigen. Die Umgebungsvariable OIDC_SILENT_LOGIN_DEFAULT überschreibt dies."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

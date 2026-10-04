@@ -116,11 +116,12 @@
     "updateLinkLabel": "Налична е актуализация. Отворете бележките за изданието в GitHub."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Затвори",
     "minimize": "Минимизиране",
     "online": "Онлайн",
     "offline": "Офлайн",
-    "signInFailed": "Влизането не бе успешно",
     "unknown": "Неизвестен",
     "continue": "Продължи",
     "maintenance": "Поддръжка",
@@ -187,7 +188,11 @@
     "remove": "Премахване",
     "add": "Добавяне",
     "update": "Актуализация",
-    "noResults": "Няма намерени резултати"
+    "noResults": "Няма намерени резултати",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Стъпка {{current}} от {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Тунел",
     "serverStats": "Метрики на хоста",
     "status": {
-      "available": "Налично",
-      "reachable": "Достъпен, но влизането е неуспешно",
+      "online": "Online",
       "offline": "Офлайн",
-      "monitoringDisabled": "Мониторингът е деактивиран",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Статус"
     },
     "folderRenamed": "Папка „{{oldName}}“ е преименувана успешно на „{{newName}}“",
@@ -477,7 +482,7 @@
     "sameHost": "Този хост (директен тунел)",
     "statusChecksLabel": "Проверки на състоянието",
     "enableStatusChecks": "Активиране на проверки на състоянието",
-    "enableStatusChecksDesc": "Периодично проверявайте наличността на този хост чрез ping.",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Използване на глобален интервал",
     "useGlobalIntervalDesc": "Замяна с интервала за проверка на състоянието на целия сървър",
     "checkIntervalS": "Интервал(и) на проверка",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Вашият акаунт използва втори фактор, който не е наличен в момента. Свържете се с администратор, за да го нулира.",
     "secondFactorNoUI": "Този втори фактор не може да бъде показан на този екран. Свържете се с администратор.",
     "serverAuthentication": "Влизане в сървъра",
-    "minChars": "мин. {{min}} символа"
+    "minChars": "мин. {{min}} символа",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Проверете SSH хост ключа",
@@ -1119,7 +1125,13 @@
     "language": "Език",
     "keyPassword": "ключова парола",
     "pastePrivateKey": "Поставете личния си ключ тук...",
-    "enterPassword": "Въведете паролата си"
+    "enterPassword": "Въведете паролата си",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Табло за управление",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Издадено от {{issuer}}",
     "sslNames": "Обхваща {{names}}",
     "sslManualTitle": "Качване на сертификат",
-    "updateExternalAutoProvisionFailed": "Актуализирането на настройката за автоматично създаване не бе успешно"
+    "updateExternalAutoProvisionFailed": "Актуализирането на настройката за автоматично създаване не бе успешно",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

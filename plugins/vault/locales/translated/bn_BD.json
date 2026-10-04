@@ -65,5 +65,8 @@
         "label": "ভল্ট স্বাক্ষরকারীর প্রোফাইল"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

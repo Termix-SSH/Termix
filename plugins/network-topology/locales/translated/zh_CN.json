@@ -54,7 +54,7 @@
   },
   "permissions": {
     "use": {
-      "title": "使用网络拓扑图",
+      "title": "使用网络图",
       "description": "查看和编辑网络拓扑图。"
     }
   },

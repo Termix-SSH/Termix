@@ -20,6 +20,12 @@
     "nameRequired": "Görünen ad gereklidir.",
     "type": "Sağlayıcı Türü",
     "enabled": "Etkin",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Sağlayıcıyı Kaydet",
     "saving": "Kaydediliyor...",
     "saved": "Kaydedildi",
@@ -61,5 +67,8 @@
       "label": "SSO ile otomatik olarak giriş yap",
       "description": "Ziyaretçileri giriş formunu göstermek yerine doğrudan ilk SSO sağlayıcısına yönlendirin. OIDC_SILENT_LOGIN_DEFAULT ortam değişkeni bunu geçersiz kılar."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

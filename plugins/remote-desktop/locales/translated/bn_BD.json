@@ -212,7 +212,28 @@
       "backspaceKey": "ব্যাকস্পেস কী",
       "colorDepth": "রঙের গভীরতা",
       "resizeMethod": "আকার পরিবর্তন পদ্ধতি",
-      "driveNamePlaceholder": "টারমিক্স ড্রাইভ"
+      "driveNamePlaceholder": "টারমিক্স ড্রাইভ",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "রিমোট ডেস্কটপ",
     "tabRdp": "আরডিপি",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "রিমোট সার্ভার প্রয়োজন। এই সংযোগের ধরণটি ব্যবহার করতে সেটিংস-এ একটি রিমোট সার্ভার সংযুক্ত করুন।"
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

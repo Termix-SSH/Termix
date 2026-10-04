@@ -207,5 +207,19 @@
     "remove": "Премахване на графика",
     "loadFailed": "Не можа да се обнови състоянието на поддръжката. Промените са деактивирани, докато не може да бъде заредено.",
     "loading": "Зареждане на състоянието на поддръжката…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

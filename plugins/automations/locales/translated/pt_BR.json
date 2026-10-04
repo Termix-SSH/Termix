@@ -207,5 +207,19 @@
     "remove": "Remover agendamento",
     "loadFailed": "Não foi possível atualizar o status de manutenção. As alterações estão desativadas até que o status seja carregado.",
     "loading": "Carregando status de manutenção…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

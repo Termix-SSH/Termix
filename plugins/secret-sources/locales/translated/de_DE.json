@@ -23,5 +23,8 @@
         "description": "Private oder Loopback-Hosts, die eine geheime Quelle erreichen kann, jeweils einer pro Zeile. Ein selbst gehosteter 1Password Connect-Server benötigt in der Regel eine eigene Adresse, die hier aufgeführt wird."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

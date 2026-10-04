@@ -54,5 +54,8 @@
     "previewDescription": "Şu anda gönderilecek olan tam olarak bu.",
     "close": "Kapat",
     "loadFailed": "Kullanım istatistikleri durumu yüklenemedi."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

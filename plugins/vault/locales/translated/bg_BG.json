@@ -65,5 +65,8 @@
         "label": "Профил на подписващ в трезора"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

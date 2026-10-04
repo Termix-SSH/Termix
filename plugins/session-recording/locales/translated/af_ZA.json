@@ -56,5 +56,8 @@
     "speed": "Terugspeelspoed",
     "play": "Speel opname",
     "pause": "Onderbreek opname"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

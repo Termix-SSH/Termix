@@ -323,7 +323,7 @@
     "sideBySide": "Пліч-о-пліч",
     "inline": "Вбудований",
     "fileComparison": "Порівняння файлів: {{file1}} проти {{file2}}",
-    "fileTooLarge": "Файл занадто великий: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "Помилка SSH-з’єднання. Будь ласка, перевірте ваше з’єднання з {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Не вдалося завантажити файл: {{error}}",
     "connecting": "Підключення...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Використовуйте зручний макет",
     "cannotLoadPdf": "Не вдається завантажити PDF",
     "pdfLoadError": "Під час завантаження цього PDF-файлу сталася помилка.",
-    "loadingPdf": "Завантаження PDF-файлу...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Завантаження сторінки...",
     "cancel": "Скасувати",
     "copiedItems_one": "Скопійовано елемент {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Ваш браузер не може відтворити цей відеоформат.",
     "downloadToPlay": "Завантажте, щоб відтворити деінде",
     "cannotPreviewType": "Неможливо переглянути цей тип файлу",
-    "cannotPreviewTypeHint": "Цей тип файлу не має попереднього перегляду. Завантажте його, щоб відкрити в іншій програмі."
+    "cannotPreviewTypeHint": "Цей тип файлу не має попереднього перегляду. Завантажте його, щоб відкрити в іншій програмі.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Джерело → сервер: {{throughput}}",
     "metricsHopDestSftpWrite": "Сервер → призначення (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Сервер → призначення (локальний): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

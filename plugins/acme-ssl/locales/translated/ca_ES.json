@@ -54,5 +54,8 @@
     "request": "Sol·licita el certificat ara",
     "requesting": "Sol·licitant certificat...",
     "issued": "Certificat emès i instal·lat"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

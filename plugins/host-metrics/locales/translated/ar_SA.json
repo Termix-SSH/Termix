@@ -308,5 +308,8 @@
         "label": "المسارات المراقبة"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

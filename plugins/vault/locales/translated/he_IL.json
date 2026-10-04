@@ -65,5 +65,8 @@
         "label": "פרופיל חותם בכספת"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

@@ -207,5 +207,19 @@
     "remove": "Poista aikataulu",
     "loadFailed": "Ylläpidon tilaa ei voitu päivittää. Muutokset on poistettu käytöstä, kunnes ne voidaan ladata.",
     "loading": "Ladataan ylläpitotilaa…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

@@ -56,5 +56,8 @@
     "speed": "播放速度",
     "play": "播放錄音",
     "pause": "暫停錄製"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

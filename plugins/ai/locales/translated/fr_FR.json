@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "Voir la documentation"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

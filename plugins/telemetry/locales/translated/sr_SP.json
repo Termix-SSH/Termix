@@ -54,5 +54,8 @@
     "previewDescription": "Управо ово би сада било послато.",
     "close": "Затвори",
     "loadFailed": "Није могуће учитати статус статистике коришћења"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

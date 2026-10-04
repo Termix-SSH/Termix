@@ -207,5 +207,19 @@
     "remove": "ลบกำหนดการ",
     "loadFailed": "ไม่สามารถรีเฟรชสถานะการบำรุงรักษาได้ การเปลี่ยนแปลงจะถูกปิดใช้งานจนกว่าจะสามารถโหลดได้",
     "loading": "กำลังโหลดสถานะการบำรุงรักษา…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

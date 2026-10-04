@@ -23,6 +23,12 @@
     "namePlaceholder": "Adresář firem",
     "nameRequired": "Je vyžadováno zobrazované jméno",
     "enabled": "Povoleno",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Uložit adresář",
     "saving": "Ukládání…",
     "saved": "Uloženo",
@@ -36,6 +42,7 @@
     "host": "Hostitel LDAP",
     "port": "Port",
     "useTls": "Používejte TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Vázat DN",
     "bindPassword": "Vázat heslo",
     "secretKeep": "Heslo je uloženo. Pro jeho zachování nechte toto pole prázdné.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Základna pro vyhledávání skupin",
     "adminGroup": "Skupina administrátorů",
     "allowedUsers": "Povolení uživatelé"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

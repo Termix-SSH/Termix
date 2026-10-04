@@ -54,5 +54,8 @@
     "request": "Yêu cầu chứng chỉ ngay bây giờ",
     "requesting": "Đang yêu cầu chứng chỉ...",
     "issued": "Giấy chứng nhận đã được cấp và cài đặt"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

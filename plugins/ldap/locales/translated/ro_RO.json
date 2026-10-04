@@ -23,6 +23,12 @@
     "namePlaceholder": "Directorul companiilor",
     "nameRequired": "Este obligatoriu un nume afișat",
     "enabled": "Activat",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Salvați directorul",
     "saving": "Economisire...",
     "saved": "Salvat",
@@ -36,6 +42,7 @@
     "host": "Gazdă LDAP",
     "port": "Port",
     "useTls": "Utilizați TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Legați DN-ul",
     "bindPassword": "Parolă de legare",
     "secretKeep": "O parolă este salvată. Lăsați acest câmp gol pentru a o păstra.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Baza de căutare a grupului",
     "adminGroup": "Grup de administratori",
     "allowedUsers": "Utilizatori permiși"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

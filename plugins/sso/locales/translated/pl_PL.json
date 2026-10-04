@@ -20,6 +20,12 @@
     "nameRequired": "Wymagana jest nazwa wyświetlana",
     "type": "Typ dostawcy",
     "enabled": "Włączona",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Zapisz dostawcę",
     "saving": "Zapisywanie...",
     "saved": "Zapisano",
@@ -61,5 +67,8 @@
       "label": "Zaloguj się automatycznie za pomocą SSO",
       "description": "Zamiast wyświetlać formularz logowania, przekieruj odwiedzających bezpośrednio do pierwszego dostawcy SSO. Zmienna środowiskowa OIDC_SILENT_LOGIN_DEFAULT zastępuje to ustawienie."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

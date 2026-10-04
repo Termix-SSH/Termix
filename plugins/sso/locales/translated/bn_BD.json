@@ -20,6 +20,12 @@
     "nameRequired": "একটি প্রদর্শনের নাম প্রয়োজন",
     "type": "প্রদানকারীর ধরণ",
     "enabled": "সক্ষম করা হয়েছে",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "সরবরাহকারীকে সংরক্ষণ করুন",
     "saving": "সঞ্চয়...",
     "saved": "সংরক্ষিত",
@@ -61,5 +67,8 @@
       "label": "SSO দিয়ে স্বয়ংক্রিয়ভাবে সাইন ইন করুন",
       "description": "লগইন ফর্ম দেখানোর পরিবর্তে ভিজিটরদের সরাসরি প্রথম SSO প্রোভাইডারের কাছে পাঠান। OIDC_SILENT_LOGIN_DEFAULT এনভায়রনমেন্ট ভেরিয়েবলটি এই প্রক্রিয়াটিকে ওভাররাইড করে।"
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

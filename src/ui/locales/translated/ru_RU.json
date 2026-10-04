@@ -116,11 +116,12 @@
     "updateLinkLabel": "Доступно обновление. Откройте примечания к выпуску на GitHub."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Закрыть",
     "minimize": "Свернуть",
     "online": "В сети",
     "offline": "Не в сети",
-    "signInFailed": "Не удалось войти в систему.",
     "unknown": "Неизвестно",
     "continue": "Продолжить",
     "maintenance": "Обслуживание",
@@ -187,7 +188,11 @@
     "remove": "Удалить",
     "add": "Добавить",
     "update": "Обновить",
-    "noResults": "Результаты не найдены"
+    "noResults": "Результаты не найдены",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Шаг {{current}} из {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Туннель",
     "serverStats": "Метрики хоста",
     "status": {
-      "available": "Доступный",
-      "reachable": "Доступен, но вход не выполнен",
+      "online": "Online",
       "offline": "Офлайн",
-      "monitoringDisabled": "Мониторинг отключен",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Статус"
     },
     "folderRenamed": "Папка \"{{oldName}}\" успешно переименована в \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "Этот хост (прямой туннель)",
     "statusChecksLabel": "Проверки состояния",
     "enableStatusChecks": "Включить проверки состояния",
-    "enableStatusChecksDesc": "Периодически пинговать этот хост для проверки доступности",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Использовать глобальный интервал",
     "useGlobalIntervalDesc": "Переопределить глобальным интервалом проверки состояния сервера",
     "checkIntervalS": "Интервал проверки (с)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Для сброса второго фактора аутентификации в вашем аккаунте в данный момент недоступен. Обратитесь к администратору.",
     "secondFactorNoUI": "Этот второй фактор не отображается на данном экране. Свяжитесь с администратором.",
     "serverAuthentication": "Вход на сервер",
-    "minChars": "мин. {{min}} символов"
+    "minChars": "мин. {{min}} символов",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Проверить SSH-ключ хоста",
@@ -1119,7 +1125,13 @@
     "language": "Язык",
     "keyPassword": "пароль ключа",
     "pastePrivateKey": "Вставьте свой закрытый ключ сюда...",
-    "enterPassword": "Введите пароль"
+    "enterPassword": "Введите пароль",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Панель управления",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Выпущено {{issuer}}",
     "sslNames": "Обложки {{names}}",
     "sslManualTitle": "Загрузите сертификат",
-    "updateExternalAutoProvisionFailed": "Не удалось обновить настройку автоматического создания."
+    "updateExternalAutoProvisionFailed": "Не удалось обновить настройку автоматического создания.",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

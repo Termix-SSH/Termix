@@ -207,5 +207,19 @@
     "remove": "Видалити розклад",
     "loadFailed": "Не вдалося оновити стан обслуговування. Зміни вимкнено, доки його не буде завантажено.",
     "loading": "Завантаження статусу технічного обслуговування…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

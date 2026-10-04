@@ -23,6 +23,12 @@
     "namePlaceholder": "Yrityshakemisto",
     "nameRequired": "Näyttönimi on pakollinen",
     "enabled": "Käytössä",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Tallenna hakemisto",
     "saving": "Tallennetaan...",
     "saved": "Tallennettu",
@@ -36,6 +42,7 @@
     "host": "LDAP-isäntä",
     "port": "Portti",
     "useTls": "Käytä TLS:ää (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Sido DN",
     "bindPassword": "Sido salasana",
     "secretKeep": "Salasana on tallennettu. Jätä tämä tyhjäksi, jos haluat säilyttää sen.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Ryhmän hakukanta",
     "adminGroup": "Hallintaryhmä",
     "allowedUsers": "Sallitut käyttäjät"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

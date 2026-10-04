@@ -65,5 +65,8 @@
         "label": "Kasa imzalayıcı profili"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

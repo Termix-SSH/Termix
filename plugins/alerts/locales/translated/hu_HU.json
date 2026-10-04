@@ -168,5 +168,8 @@
     "showRead": "Olvasási értesítések megjelenítése",
     "allClear": "Minden tiszta",
     "loading": "Terhelés..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

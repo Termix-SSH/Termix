@@ -54,5 +54,8 @@
     "previewDescription": "ठीक यही चीज़ अभी भेजी जाएगी।",
     "close": "बंद करें",
     "loadFailed": "उपयोग सांख्यिकी स्थिति लोड नहीं हो सकी"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

@@ -308,5 +308,8 @@
         "label": "পর্যবেক্ষণ করা পথ"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

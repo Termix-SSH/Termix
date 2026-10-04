@@ -23,5 +23,8 @@
         "description": "Gazde private sau loopback la care poate ajunge o sursă secretă, câte una pe linie. Un server 1Password Connect auto-găzduit are nevoie de obicei de propria adresă listată aici."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

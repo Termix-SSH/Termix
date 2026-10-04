@@ -168,5 +168,8 @@
     "showRead": "Tampilkan pemberitahuan telah dibaca",
     "allClear": "Semuanya aman.",
     "loading": "Memuat..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

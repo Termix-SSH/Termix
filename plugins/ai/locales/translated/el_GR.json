@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "Προβολή εγγράφων"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

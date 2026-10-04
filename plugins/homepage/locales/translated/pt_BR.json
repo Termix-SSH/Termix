@@ -169,7 +169,139 @@
     "noServices": "Nenhum serviço configurado",
     "configureLocation": "Defina uma localização nas configurações do widget.",
     "bannerTextPlaceholder": "Texto do banner",
-    "serviceNamePlaceholder": "Meu serviço"
+    "serviceNamePlaceholder": "Meu serviço",
+    "emptyNote": "Empty note...",
+    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
+    "feelsLike": "Feels like {{temperature}}",
+    "timezonePlaceholder": "America/New_York (leave blank for local)",
+    "notesPlaceholder": "Write your notes here...",
+    "locationPlaceholder": "New York, London, Tokyo...",
+    "widgets": {
+      "bookmark_list": {
+        "name": "Bookmarks",
+        "description": "A list of quick links"
+      },
+      "calendar": {
+        "name": "Calendar",
+        "description": "A month calendar with today highlighted"
+      },
+      "clock": {
+        "name": "Clock",
+        "description": "A live clock with configurable timezone"
+      },
+      "countdown": {
+        "name": "Countdown",
+        "description": "Counts down to a target date and time"
+      },
+      "custom_api": {
+        "name": "Custom API",
+        "description": "Fetch and display data from any JSON API"
+      },
+      "dashboard_links": {
+        "name": "Dashboard Links",
+        "description": "Shows your saved dashboard service links"
+      },
+      "folder": {
+        "name": "Folder",
+        "description": "A background card for grouping widgets visually"
+      },
+      "host_grid": {
+        "name": "Host Grid",
+        "description": "Live status overview grid for all your SSH hosts"
+      },
+      "host_status": {
+        "name": "Host Status",
+        "description": "Shows live status and metrics for an SSH host"
+      },
+      "iframe_embed": {
+        "name": "iFrame Embed",
+        "description": "Embed any URL in an iframe"
+      },
+      "image_widget": {
+        "name": "Image",
+        "description": "Display any image from a URL"
+      },
+      "link_tree": {
+        "name": "Link Tree",
+        "description": "Grouped links organized into labeled sections"
+      },
+      "markdown_notes": {
+        "name": "Markdown Notes",
+        "description": "Notes with optional Markdown rendering and inline editing"
+      },
+      "notes": {
+        "name": "Notes",
+        "description": "A text notes widget"
+      },
+      "ping_status": {
+        "name": "Ping Status",
+        "description": "Check if URLs or services are reachable"
+      },
+      "quick_connect": {
+        "name": "Quick Connect",
+        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+      },
+      "recent_activity": {
+        "name": "Recent Activity",
+        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+      },
+      "rss_feed": {
+        "name": "RSS Feed",
+        "description": "Display items from an RSS or Atom feed"
+      },
+      "search_bar": {
+        "name": "Search Bar",
+        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+      },
+      "search_links": {
+        "name": "Search Shortcuts",
+        "description": "Quick buttons to search different engines"
+      },
+      "service_grid": {
+        "name": "Service Grid",
+        "description": "A grid of service tiles with icons and links"
+      },
+      "service_link": {
+        "name": "Service Link",
+        "description": "A clickable tile linking to a service URL"
+      },
+      "ssh_terminal": {
+        "name": "SSH Terminal",
+        "description": "An inline SSH terminal connected to a configured host"
+      },
+      "system_overview": {
+        "name": "System Overview",
+        "description": "Termix version, database health, and uptime at a glance"
+      },
+      "termix_uptime": {
+        "name": "Termix Uptime",
+        "description": "Shows how long the Termix server has been running"
+      },
+      "text_banner": {
+        "name": "Text Banner",
+        "description": "A styled text label for sections and headings"
+      },
+      "weather": {
+        "name": "Weather",
+        "description": "Live weather for any location"
+      },
+      "docker_widget": {
+        "name": "Docker Manager",
+        "description": "Embedded Docker container manager for a configured host"
+      },
+      "file_manager_widget": {
+        "name": "File Manager",
+        "description": "Embedded SFTP file manager for a configured host"
+      },
+      "tunnel_widget": {
+        "name": "Tunnel Manager",
+        "description": "Embedded SSH tunnel manager for a configured host"
+      },
+      "metrics_chart": {
+        "name": "Metrics Chart",
+        "description": "Historical CPU, memory, disk, or network chart for a host"
+      }
+    }
   },
   "permissions": {
     "use": {
@@ -186,5 +318,8 @@
       "label": "Autoridade de certificação privada (PEM)",
       "description": "Pacote opcional de CAs confiáveis para hosts na lista de permissões. A verificação de certificados permanece ativada. Deixe em branco para usar o repositório de certificados confiáveis do sistema."
     }
+  },
+  "plugin": {
+    "name": "Homepage"
   }
 }

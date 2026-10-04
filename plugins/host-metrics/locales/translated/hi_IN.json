@@ -308,5 +308,8 @@
         "label": "निगरानी किए गए पथ"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

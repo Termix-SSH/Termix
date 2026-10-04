@@ -54,5 +54,8 @@
     "request": "ขอใบรับรองตอนนี้",
     "requesting": "ขอใบรับรอง...",
     "issued": "ออกและติดตั้งใบรับรองแล้ว"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

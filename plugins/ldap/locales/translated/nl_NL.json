@@ -23,6 +23,12 @@
     "namePlaceholder": "Bedrijfsdirectory",
     "nameRequired": "Een weergavenaam is verplicht.",
     "enabled": "Ingeschakeld",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Map opslaan",
     "saving": "Besparing...",
     "saved": "Opgeslagen",
@@ -36,6 +42,7 @@
     "host": "LDAP-host",
     "port": "Haven",
     "useTls": "Gebruik TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Bind wachtwoord",
     "secretKeep": "Er wordt een wachtwoord opgeslagen. Laat dit veld leeg om het wachtwoord te behouden.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Groepszoekbasis",
     "adminGroup": "Beheerdersgroep",
     "allowedUsers": "Toegestane gebruikers"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

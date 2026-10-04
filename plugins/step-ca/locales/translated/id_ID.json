@@ -44,5 +44,8 @@
       "label": "Gunakan URI pengalihan lama.",
       "description": "Tetap kirimkan /host/step-ca-callback, URI pengalihan yang digunakan sebelum versi 2.9. Matikan ini setelah penyedia identitas Anda mengizinkan yang baru."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }
