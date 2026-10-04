@@ -546,6 +546,10 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
             : value;
       }
       wire.jumpHosts = await jumpHostsToSyncIds(host.jumpHosts);
+      wire.pluginSettings = await exportHostPluginSettings(hostId, {
+        userId,
+        permissionLevel,
+      });
       wire.syncId = host.syncId;
       wire.shared = {
         hostId,

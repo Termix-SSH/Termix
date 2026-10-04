@@ -11,10 +11,19 @@ const h = vi.hoisted(() => ({
   writes: [] as Array<[string, number, string, unknown]>,
   hooks: new Map<string, unknown>(),
   manifests: [] as PluginManifest[],
+  visible: null as Record<string, Record<string, unknown>> | null,
+  viewerCalls: [] as Array<[Record<string, unknown>, string | undefined]>,
 }));
 
 vi.mock("../../database/routes/host-plugin-settings.js", () => ({
   hostSettingsPlugins: () => h.manifests,
+  withHostPluginSettings: async (
+    host: Record<string, unknown>,
+    viewerId?: string,
+  ) => {
+    h.viewerCalls.push([host, viewerId]);
+    return h.visible ? { ...host, pluginSettings: h.visible } : host;
+  },
 }));
 vi.mock("../../plugins/registry.js", () => ({
   consume: (key: string) => h.hooks.get(key),
@@ -65,11 +74,27 @@ const VAULT = {
   },
 } as unknown as PluginManifest;
 
+const TUNNELS = {
+  id: "tunnels",
+  contributes: {
+    settings: {
+      host: {
+        fields: [
+          { key: "enableTunnel", type: "boolean", labelKey: "k" },
+          { key: "tunnelConnections", type: "custom", labelKey: "k" },
+        ],
+      },
+    },
+  },
+} as unknown as PluginManifest;
+
 beforeEach(() => {
   h.stored.clear();
   h.writes.length = 0;
   h.hooks.clear();
   h.manifests = [VAULT];
+  h.visible = null;
+  h.viewerCalls.length = 0;
   h.hooks.set("vault.hostSettingsSync", {
     exportValue: (key: string, value: unknown) =>
       key === "profileId" && value === 4 ? "profile-sync-4" : value,
@@ -85,6 +110,25 @@ describe("host plugin settings over sync", () => {
     expect(await exportHostPluginSettings(1)).toEqual({
       vault: { profileId: "profile-sync-4" },
     });
+  });
+
+  it("exports only what a shared host's viewer sees", async () => {
+    h.manifests = [VAULT, TUNNELS];
+    h.visible = {
+      vault: { token: { set: true } },
+      tunnels: { enableTunnel: true, tunnelConnections: [{ sourcePort: 22 }] },
+    };
+    expect(
+      await exportHostPluginSettings(1, {
+        userId: "viewer",
+        permissionLevel: "connect",
+      }),
+    ).toEqual({
+      tunnels: { enableTunnel: true, tunnelConnections: [{ sourcePort: 22 }] },
+    });
+    expect(h.viewerCalls).toEqual([
+      [{ id: 1, isShared: true, permissionLevel: "connect" }, "viewer"],
+    ]);
   });
 
   it("imports them back to local ids", async () => {
