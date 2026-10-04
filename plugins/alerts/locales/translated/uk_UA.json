@@ -1,172 +1,172 @@
 {
   "nav": {
-    "alerts": "Alerts"
+    "alerts": "Сповіщення"
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "Використовуйте сповіщення",
+      "description": "Отримуйте сповіщення у вхідні повідомлення та надсилайте їх на власні канали."
     }
   },
   "onboarding": {
-    "feature": "Alerts",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "feature": "Сповіщення",
+    "featureDesc": "Кожне сповіщення в одній поштовій скриньці, що надсилається на Discord, ntfy, електронну пошту або вебхук, якщо хочете."
   },
   "settings": {
     "group": {
-      "general": "General",
-      "email": "Email"
+      "general": "Загальне",
+      "email": "Електронна пошта"
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Оголошення Termix",
+        "description": "Показувати новини від команди Termix, такі як повідомлення та релізи безпеки, у папці \"Вхідні\" для всіх."
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "Зберігати сповіщення протягом (днів)",
+        "description": "Старіші сповіщення видаляються з усіх папок \"Вхідні\"."
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "SMTP-сервер",
+        "description": "Потрібно для каналів електронної пошти. Залиште поле порожнім, щоб вимкнути електронну пошту.",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "SMTP-порт",
+        "description": "Зазвичай 587 з STARTTLS або 465 з TLS."
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "Використовуйте TLS з самого початку",
+        "description": "Увімкніть для порту 465. Вимкніть для порту 587, який самостійно оновлюється до TLS."
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "Ім'я користувача SMTP",
+        "description": "Залиште поле порожнім, якщо сервер не потребує входу."
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "Пароль SMTP",
+        "description": "Зберігається зашифрованим."
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
-        "placeholder": "Termix <alerts@example.com>"
+        "label": "З адреси",
+        "description": "Сповіщення відправника надходять з.",
+        "placeholder": "Термікс <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
-        "off": "None"
+        "label": "Спливаючі вікна сповіщень",
+        "description": "Які нові сповіщення з’являються під час використання Termix. Вони завжди потрапляють у папку «Вхідні».",
+        "all": "Усі сповіщення",
+        "warning": "Попередження та критичні",
+        "critical": "Тільки критично",
+        "off": "Жоден"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
-    "channels": "Channels",
-    "rules": "Delivery rules"
+    "inbox": "Вхідні",
+    "channels": "Канали",
+    "rules": "Правила доставки"
   },
   "severity": {
-    "info": "Info",
-    "success": "Success",
-    "warning": "Warning",
-    "critical": "Critical"
+    "info": "Інформація",
+    "success": "Успіх",
+    "warning": "УВАГА",
+    "critical": "Критичний"
   },
   "inbox": {
-    "sourceTermix": "Termix",
-    "openLink": "Open",
-    "view": "View",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
-    "delete": "Delete",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "sourceTermix": "Термікс",
+    "openLink": "ВІДЧИНЕНО",
+    "view": "Переглянути",
+    "unread": "Непрочитане",
+    "deliveryFailed_one": "{{count}} канал не вдався",
+    "deliveryFailed_other": "{{count}} каналів не вдалося",
+    "markRead": "Позначити як прочитане",
+    "markUnread": "Позначити як непрочитане",
+    "markAllRead": "Позначити всі як прочитані",
+    "delete": "Видалити",
+    "clearRead": "Видалити сповіщення про прочитання",
+    "cleared_one": "Видалено сповіщення {{count}}",
+    "cleared_other": "Видалено сповіщень {{count}}",
+    "filterAll": "Усі",
+    "filterUnread": "Непрочитане",
+    "anySeverity": "Будь-якої тяжкості",
+    "anySource": "Будь-яке джерело",
+    "openAll": "Відкрити у вкладці",
+    "empty": "Поки що немає сповіщень.",
+    "emptyUnread": "Ви все в курсі.",
+    "loadMore": "Завантажити більше"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
-    "enabled": "Enabled",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "type": "Type",
+    "intro": "Канали – це місця, де сповіщення можуть надходити за межі Termix. Правила доставки вибирають, які сповіщення їх використовувати.",
+    "add": "Додати канал",
+    "edit": "Редагувати канал",
+    "test": "Надіслати тест",
+    "testSent": "Тестове сповіщення надіслано",
+    "testFailed": "Тест не вдався: {{error}}",
+    "deleteConfirm": "Видалити канал «{{name}}»?",
+    "deleted": "Канал видалено",
+    "empty": "Поки що немає каналів.",
+    "enabled": "Увімкнено",
+    "needsSave": "Цей канал потрібно знову відкрити та зберегти, перш ніж його можна буде надіслати.",
+    "name": "Ім'я",
+    "nameRequired": "Ім'я обов'язкове",
+    "type": "Тип",
     "types": {
-      "webhook": "Webhook",
+      "webhook": "Вебхук",
       "ntfy": "ntfy",
-      "discord": "Discord",
-      "email": "Email"
+      "discord": "Дискорд",
+      "email": "Електронна пошта"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
-    "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
-    "ntfyServer": "Server URL",
-    "ntfyTopic": "Topic",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "emailUnavailable": "Для електронної пошти потрібен SMTP-сервер, який адміністратор налаштовує в налаштуваннях сповіщень.",
+    "webhookUrl": "URL-адреса",
+    "webhookHint": "Отримує тіло JSON для кожного сповіщення.",
+    "method": "Метод",
+    "headers": "Заголовки",
+    "headersHint": "По одному на рядок, наприклад, Ім'я: значення.",
+    "ntfyServer": "URL-адреса сервера",
+    "ntfyTopic": "Тема",
+    "ntfyToken": "Токен доступу (необов'язково)",
+    "discordUrl": "URL-адреса вебхука Discord",
+    "discordHint": "У налаштуваннях каналу в Discord, у розділі «Інтеграції».",
+    "discordUsername": "Відображуване ім'я (необов'язково)",
+    "discordAvatar": "URL-адреса аватара (необов'язково)",
+    "emailTo": "Надіслати",
+    "emailHint": "Розділяйте більше однієї адреси комами.",
+    "privateNetwork": "Дозволити адресу приватної мережі",
+    "privateNetworkHint": "Працює лише для хостів, які адміністратор дозволяє в списку приватних кінцевих точок."
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
-    "enabled": "Enabled",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "intro": "Правило доставки надсилає відповідні сповіщення до ваших каналів. Сповіщення також завжди залишаються у вхідних повідомленнях.",
+    "add": "Додати правило",
+    "edit": "Редагувати правило",
+    "empty": "Поки що немає правил, тому сповіщення відображаються лише у вхідних повідомленнях.",
+    "needChannel": "Спочатку додайте канал.",
+    "enabled": "Увімкнено",
+    "name": "Ім'я",
+    "nameRequired": "Ім'я обов'язкове",
+    "match": "Сповіщення для надсилання",
+    "matchHint": "* для всього, автоматизації.* для всього, починаючи від автоматизації, або одного точного виду.",
+    "minSeverity": "Принаймні",
+    "channels": "Надіслати",
+    "channelRequired": "Виберіть хоча б один канал",
+    "deleteConfirm": "Видалити правило \"{{name}}\"?",
+    "everything": "Все",
+    "summary": "{{match}}, {{severity}} або вище, до {{channels}}"
   },
   "actions": {
-    "cancel": "Cancel",
-    "save": "Save",
-    "saving": "Saving...",
-    "delete": "Delete"
+    "cancel": "Скасувати",
+    "save": "Зберегти",
+    "saving": "Збереження...",
+    "delete": "Видалити"
   },
   "widget": {
-    "name": "Alert Feed",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
-    "allClear": "All clear",
-    "loading": "Loading..."
+    "name": "Стрічка сповіщень",
+    "description": "Ваші останні сповіщення з можливістю швидко позначити їх як прочитані",
+    "maxItems": "Макс. кількість елементів",
+    "showRead": "Показувати сповіщення про прочитання",
+    "allClear": "Все чисто",
+    "loading": "Завантаження..."
   }
 }

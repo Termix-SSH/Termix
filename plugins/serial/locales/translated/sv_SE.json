@@ -1,29 +1,29 @@
 {
   "nav": {
-    "serial": "Serial"
+    "serial": "Serie"
   },
   "serial": {
-    "title": "Serial",
-    "portLabel": "Port",
-    "portPlaceholder": "/dev/ttyUSB0 or COM3",
-    "baudRateLabel": "Baud Rate",
+    "title": "Serie",
+    "portLabel": "Hamn",
+    "portPlaceholder": "/dev/ttyUSB0 eller COM3",
+    "baudRateLabel": "Baudhastighet",
     "dataBitsLabel": "Data",
-    "stopBitsLabel": "Stop",
-    "parityLabel": "Parity",
-    "parityNone": "None",
-    "parityEven": "Even",
-    "parityOdd": "Odd",
-    "connect": "Connect to Serial",
-    "disconnect": "Disconnect",
-    "refreshPorts": "Refresh ports",
-    "connected": "Connected to {{path}} at {{baud}} baud",
-    "disconnected": "Serial port disconnected",
-    "connectionError": "Failed to open serial port",
-    "wsError": "WebSocket error",
-    "errorNoServerUrl": "No server URL configured",
-    "notSupportedTitle": "Serial Not Supported",
-    "notSupported": "Serial connections require a browser with Web Serial API support (Chrome, Edge, or Firefox 151+), or the Termix desktop app.",
-    "hideHint": "You can hide the Serial tab under User Profile > Appearance > Sidebar > Navigation.",
-    "browserPickerHint": "Click Connect and your browser will open a port picker to choose the device."
+    "stopBitsLabel": "Stopp",
+    "parityLabel": "Paritet",
+    "parityNone": "Ingen",
+    "parityEven": "Även",
+    "parityOdd": "Udda",
+    "connect": "Anslut till seriellt",
+    "disconnect": "Koppla från",
+    "refreshPorts": "Uppdatera portar",
+    "connected": "Ansluten till {{path}} vid {{baud}} baud",
+    "disconnected": "Seriell port frånkopplad",
+    "connectionError": "Misslyckades med att öppna serieporten",
+    "wsError": "WebSocket-fel",
+    "errorNoServerUrl": "Ingen server-URL konfigurerad",
+    "notSupportedTitle": "Seriellt stöds inte",
+    "notSupported": "Seriella anslutningar kräver en webbläsare med stöd för Web Serial API (Chrome, Edge eller Firefox 151+), eller Termix-skrivbordsappen.",
+    "hideHint": "Du kan dölja fliken Seriell under Användarprofil > Utseende > Sidofält > Navigering.",
+    "browserPickerHint": "Klicka på Anslut så öppnar din webbläsare en portväljare där du kan välja enheten."
   }
 }

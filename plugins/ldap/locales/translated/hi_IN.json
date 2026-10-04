@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "LDAP के साथ साइन इन करें",
   "loginWithProvider": "{{name}} से लॉगिन करें",
   "loading": "लोड हो रहा है...",
   "requiredField": "यह फ़ील्ड आवश्यक है",
@@ -8,28 +8,28 @@
   "signIn": "साइन इन करें",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "LDAP निर्देशिकाओं का प्रबंधन करें",
+      "description": "उन LDAP डायरेक्टरी को जोड़ें, बदलें और हटाएं जिनका उपयोग लोग साइन इन करने के लिए कर सकते हैं।"
     }
   },
   "providers": {
     "docsLink": "दस्तावेज़ देखें",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "कोई LDAP डायरेक्टरी कॉन्फ़िगर नहीं की गई है।",
+    "add": "निर्देशिका जोड़ें",
+    "edit": "निर्देशिका संपादित करें",
+    "delete": "निर्देशिका हटाएं",
+    "deleteConfirm": "क्या इस डायरेक्टरी को हटा दें? इसके माध्यम से साइन इन करने वाले उपयोगकर्ता लॉग इन नहीं कर पाएंगे।",
     "name": "प्रदर्शन नाम",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "कंपनी निर्देशिका",
+    "nameRequired": "एक डिस्प्ले नाम आवश्यक है",
     "enabled": "सक्षम",
-    "save": "Save Directory",
+    "save": "निर्देशिका सहेजें",
     "saving": "सहेजा जा रहा है...",
     "saved": "सहेजा गया",
     "saveFailed": "सहेजने में विफल",
     "deleted": "हटाया गया",
     "deleteFailed": "हटाने में विफल",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "LDAP निर्देशिकाओं को लोड करने में विफल",
     "cancel": "रद्द करें"
   },
   "fields": {
@@ -38,7 +38,7 @@
     "useTls": "TLS (LDAPS) का उपयोग करें",
     "bindDn": "Bind DN",
     "bindPassword": "Bind पासवर्ड",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "पासवर्ड सेव हो गया है। इसे सेव रखने के लिए इसे खाली छोड़ दें।",
     "userSearchBase": "उपयोगकर्ता खोज आधार",
     "userSearchFilter": "उपयोगकर्ता खोज फ़िल्टर",
     "usernameAttr": "उपयोगकर्ता नाम विशेषता",

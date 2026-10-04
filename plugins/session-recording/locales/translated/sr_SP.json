@@ -1,60 +1,60 @@
 {
   "nav": {
-    "sessionLogs": "Session Logs"
+    "sessionLogs": "Записи сесија"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "Снимање сесије",
+    "enableSessionRecordingDesc": "Снимите излаз терминалне сесије за каснији преглед"
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Погледајте снимке сесије",
+      "description": "Погледајте и репродукујте снимке сопствених сесија."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Задржавање (дани)",
+        "description": "Колико дуго се снимак сесије чува пре него што се аутоматски обрише."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Омогући снимање сесије",
+        "description": "Снимите излаз терминала за овај хост како бисте га могли касније репродуковати или преузети."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Снимање"
   },
   "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
-    "back": "Back",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "title": "Записи сесија",
+    "noLogs": "Још нема евиденција сесија",
+    "noLogsDesc": "Омогућите евидентирање сесије на хосту да бисте започели снимање",
+    "duration": "Трајање",
+    "viewLog": "Прикажи дневник",
+    "downloadLog": "Преузми",
+    "downloadAsText": "Преузми као текст",
+    "deleteLog": "Обриши",
+    "confirmDelete": "Да ли желите да обришете овај дневник сесије?",
+    "confirmDeleteDesc": "Ова радња се не може поништити.",
+    "copyContent": "Копија",
+    "copied": "Копирано!",
+    "loadError": "Учитавање евиденције сесије није успело",
+    "deleteError": "Брисање дневника сесије није успело",
+    "filterByHost": "Филтрирај по хосту...",
+    "back": "Назад",
+    "empty": "(празно)",
+    "noResults": "Нема резултата за „{{query}}“",
+    "hostFallback": "Домаћин {{id}}",
+    "sessionFallback": "Сесија {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Временска линија снимања",
+    "speed": "Брзина репродукције",
+    "play": "Пусти снимак",
+    "pause": "Паузирај снимање"
   }
 }

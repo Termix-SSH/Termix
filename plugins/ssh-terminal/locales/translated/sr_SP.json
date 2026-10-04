@@ -1,705 +1,705 @@
 {
   "mobileKeyboard": {
-    "addQuickKey": "Add",
-    "arrowDown": "Arrow Down",
-    "arrowLeft": "Arrow Left",
-    "arrowRight": "Arrow Right",
-    "arrowUp": "Arrow Up",
+    "addQuickKey": "Додај",
+    "arrowDown": "Стрелица надоле",
+    "arrowLeft": "Стрелица лево",
+    "arrowRight": "Стрелица десно",
+    "arrowUp": "Стрелица нагоре",
     "backTab": "⇥",
     "ctrl": "Ctrl",
-    "delete": "Del",
-    "done": "Done",
-    "editQuickKeys": "Edit quick keys",
-    "end": "End",
-    "esc": "Esc",
-    "home": "Home",
-    "pageDown": "PgDn",
+    "delete": "Дел",
+    "done": "Готово",
+    "editQuickKeys": "Уреди брзе тастере",
+    "end": "Крај",
+    "esc": "Излаз",
+    "home": "Дом",
+    "pageDown": "ПгДн",
     "pageUp": "PgUp",
-    "paste": "Paste",
-    "quickKeyPlaceholder": "e.g. sudo ",
-    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
-    "quickKeysTitle": "Quick Keys",
-    "removeQuickKey": "Remove",
-    "resetDefaults": "Reset to defaults",
-    "shift": "Shift",
-    "tab": "Tab"
+    "paste": "Залепи",
+    "quickKeyPlaceholder": "нпр. sudo ",
+    "quickKeysDesc": "Додирните × да бисте уклонили. Подржава до 8 знакова.",
+    "quickKeysTitle": "Брзи тастери",
+    "removeQuickKey": "Уклони",
+    "resetDefaults": "Ресетуј на подразумеване вредности",
+    "shift": "Померање",
+    "tab": "Таб"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
-    "closeTab": "Close",
-    "connecting": "Connecting...",
-    "connectionLost": "Connection lost",
-    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
-    "connectionTimeout": "Connection timeout",
-    "enableAutoTmuxAction": "Enable Auto-Tmux",
-    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
-    "linkDialogCopy": "Copy",
-    "linkDialogOpen": "Open",
-    "linkDialogTitle": "Open Link",
-    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
-    "noHostSelected": "No host selected",
-    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
-    "reconnect": "Reconnect",
-    "reconnected": "Reconnected successfully",
-    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
-    "tmuxAttached": "Attached clients",
-    "tmuxAttachedCount": "{{count}} attached",
-    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
-    "tmuxCreateNew": "Start new session",
-    "tmuxDetached": "Detached from tmux session",
-    "tmuxLastActivity": "Last activity",
-    "tmuxSessionAttached": "tmux session attached: {{name}}",
-    "tmuxSessionCreated": "tmux session created: {{name}}",
-    "tmuxSessionPickerDesc": "Existing tmux sessions found on this host. Select one to reattach or create a new session.",
-    "tmuxSessionPickerTitle": "tmux Sessions",
-    "tmuxTimeDays": "{{count}}d ago",
-    "tmuxTimeHours": "{{count}}h ago",
-    "tmuxTimeJustNow": "just now",
-    "tmuxTimeMinutes": "{{count}}m ago",
-    "tmuxUnavailable": "tmux is not installed on the remote host, falling back to standard shell",
-    "tmuxWindowCount": "{{count}} window",
-    "tmuxWindows": "Windows",
-    "unknownError": "Unknown error occurred",
-    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
-    "websocketError": "WebSocket connection error",
-    "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
-    "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
-    "connected": "Connected",
-    "totpCodeLabel": "Verification Code",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "autoTmuxEnableFailed": "Није успело омогућавање аутоматског Tmux-а",
+    "autoTmuxEnabled": "Аутоматски Tmux је омогућен за {{host}}. Примењује се од следећег повезивања.",
+    "clipboardHttpWarning": "Није могуће прочитати међуспремник. Неки прегледачи ограничавају приступ међуспремнику ван HTTPS-а - покушајте са Ctrl+V или покрените Termix преко HTTPS-а.",
+    "closeTab": "Затвори",
+    "connecting": "Повезивање...",
+    "connectionLost": "Веза је прекинута",
+    "connectionRejected": "Сервер је одбио везу. Проверите аутентификацију и конфигурацију мреже.",
+    "connectionTimeout": "Временско ограничење везе",
+    "enableAutoTmuxAction": "Омогући аутоматски Tmux",
+    "hostKeyRejected": "Верификација SSH кључа хоста је одбијена. Веза је отказана.",
+    "linkDialogCopy": "Копија",
+    "linkDialogOpen": "Отворено",
+    "linkDialogTitle": "Отвори линк",
+    "maxReconnectAttemptsReached": "Достигнут је максималан број покушаја поновног повезивања",
+    "noHostSelected": "Није изабран домаћин",
+    "passwordPromptFillTitle": "Унесите сачувану лозинку у овај промпт?",
+    "reconnect": "Поново се повежите",
+    "reconnected": "Поново повезано успешно",
+    "reconnecting": "Поновно повезивање... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Веза је прекинута, поново се повезује...",
+    "searchCaseSensitive": "Упаривање великог и малог дела",
+    "searchClose": "Затвори (Escape)",
+    "searchNext": "Следећи меч (Унесите)",
+    "searchNoResults": "Нема резултата",
+    "searchPlaceholder": "Пронађи",
+    "searchPrevious": "Претходно подударање (Shift+Enter)",
+    "searchRegex": "Користите регуларни израз",
+    "searchResultCount": "{{index}} од {{count}}",
+    "searchWholeWord": "Подударање целе речи",
+    "sessionExpiredNotice": "Ваша претходна сесија на {{host}} је истекла након {{minutes}} минута од прекида везе; љуска и све што је у њој покренуто су нестали. Омогућите Auto-Tmux на овом хосту да би сесије остале активне.",
+    "sessionExpiredNoticeNoMinutes": "Ваша претходна сесија на {{host}} је истекла док сте били одвојени; љуска и све што је у њој покренуто су нестали. Омогућите Auto-Tmux на овом хосту да би сесије остале активне.",
+    "sessionTakenOver": "Сесија је отворена у другој картици. Поновно повезивање...",
+    "tmuxAttached": "Прикључени клијенти",
+    "tmuxAttachedCount": "{{count}} приложено",
+    "tmuxCopyHint": "Прилагодите избор и притисните Ентер да бисте копирали у међуспремник",
+    "tmuxCreateNew": "Започни нову сесију",
+    "tmuxDetached": "Одвојено од tmux сесије",
+    "tmuxLastActivity": "Последња активност",
+    "tmuxSessionAttached": "приложена tmux сесија: {{name}}",
+    "tmuxSessionCreated": "tmux сесија креирана: {{name}}",
+    "tmuxSessionPickerDesc": "Постојеће tmux сесије пронађене су на овом хосту. Изаберите једну да бисте је поново повезали или креирали нову сесију.",
+    "tmuxSessionPickerTitle": "tmux сесије",
+    "tmuxTimeDays": "{{count}}пре д",
+    "tmuxTimeHours": "{{count}}пре сати",
+    "tmuxTimeJustNow": "управо сада",
+    "tmuxTimeMinutes": "{{count}}пре мин",
+    "tmuxUnavailable": "tmux није инсталиран на удаљеном хосту, враћа се на стандардну љуску",
+    "tmuxWindowCount": "{{count}} прозор",
+    "tmuxWindows": "Прозори",
+    "unknownError": "Дошло је до непознате грешке",
+    "websocketAbnormalClose": "Веза је неочекивано прекинута. Ово може бити због проблема са обрнутим проксијем или SSL конфигурацијом. Молимо вас да проверите логове сервера.",
+    "websocketError": "Грешка при повезивању са WebSocket-ом",
+    "clipboardReadFailed": "Читање из међуспремника није успело. Уверите се да су дозволе за међуспремник одобрене.",
+    "clipboardWriteFailed": "Копирање у међуспремник није успело. Уверите се да се страница приказује преко HTTPS-а или localhost-а.",
+    "connected": "Повезано",
+    "totpCodeLabel": "Верификациони код",
+    "duplicateTab": "Дуплирај картицу",
+    "imageChooseFile": "Изаберите датотеку слике",
+    "imageUploaded": "Отпремљена слика: {{path}}",
+    "imageClipboardUnavailable": "Овај прегледач не може да чита слике из међуспремника",
+    "imageClipboardEmpty": "Није пронађена слика у међуспремнику",
+    "localShell": "Локална терминална љуска",
+    "autocompleteHintComplete": "Таб или Ентер да бисте завршили",
+    "autocompleteHintNavigate": "↑↓ за навигацију",
+    "autocompleteHintClose": "Esc за затварање"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
-    "retry": "Retry",
-    "showToolbar": "Expand toolbar",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
-    "uploadingImage": "Uploading..."
+    "detachTmux": "Одвојите tmux",
+    "detachTmuxDescription": "Одвојите tmux сесију",
+    "dismissError": "Грешка при одбацивању слике",
+    "hideToolbar": "Сакриј траку са алаткама",
+    "image": "Радње са сликама (само слике)",
+    "imageActionFailed": "Акција са сликом није успела",
+    "layout": "Режим приказа алатне траке",
+    "layoutExpanded": "Проширено са метрикама",
+    "layoutIcon": "Само икона",
+    "layoutLabeled": "Иконе и ознаке",
+    "moveToolbar": "Помери траку са алаткама.",
+    "moveToolbarHint": "Превуците да бисте променили положај траке са алаткама",
+    "paste": "Налепи слику",
+    "pasteImage": "Налепи слику из међуспремника (само слике)",
+    "retry": "Покушај поново",
+    "showToolbar": "Прошири траку са алаткама",
+    "upload": "Отпреми слику",
+    "uploadImage": "Отпремите слику на хост",
+    "uploadingImage": "Отпремање..."
   },
   "history": {
-    "noTerminalSelected": "No terminal selected",
-    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
-    "searchPlaceholder": "Search history...",
-    "clearAll": "Clear All",
-    "noHistoryEntries": "No history entries",
-    "trackingDisabled": "History tracking is disabled",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "noTerminalSelected": "Није изабран терминал",
+    "noTerminalSelectedHint": "Отворите картицу SSH терминала да бисте видели историју његових команди",
+    "searchPlaceholder": "Историја претраге...",
+    "clearAll": "Обриши све",
+    "noHistoryEntries": "Нема уноса у историји",
+    "trackingDisabled": "Праћење историје је онемогућено",
+    "trackingDisabledHint": "Укључите историју команди на картици SSH терминала овог хоста.",
+    "commandCount_one": "{{count}} команда",
+    "commandCount_other": "{{count}} команде"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
-    "advanced": "Advanced",
-    "resetDefaults": "Reset to defaults",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "enabled": "Омогући унос додиром",
+    "enabledDesc": "Дозволите скроловање једним прстом у терминалима",
+    "momentumEnabled": "Омогући Моментум",
+    "momentumEnabledDesc": "Наставите кратко да скролујете након превлачења прстом",
+    "advanced": "Напредно",
+    "resetDefaults": "Ресетуј на подразумеване вредности",
+    "dragThreshold": "Праг превлачења",
+    "maxWheelDelta": "Максимална делта точка",
+    "momentumSampleWindow": "Прозор узорка момента",
+    "releaseGracePeriod": "Грејс период за објављивање",
+    "minimumVelocity": "Минимална брзина",
+    "maximumVelocity": "Максимална брзина",
+    "maximumDuration": "Максимално трајање",
+    "maximumTravel": "Максимални ход",
+    "decayTime": "Време распада",
+    "pixelsPerTick": "Пиксела по тик-у",
+    "maximumFrameInterval": "Максимални интервал кадра",
+    "maximumTicksPerFrame": "Максималан број откуцаја по кадру"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
-    "test": "Test",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "instanceId": "ИД инстанце терминалне сесије",
+    "instanceIdDesc": "ИД инстанце једне од ваших повезаних картица терминала, која се користи за тестирање видљивости.",
+    "selectedModeUnavailable": "Недоступно",
+    "test": "Тест",
+    "testing": "Тестирање...",
+    "testFailed": "Тестирање складиштења слика није успело",
+    "testConnected": "Терминална сесија је повезана.",
+    "testNotConnected": "Нема повезане терминалне сесије са овим ID-ом инстанце.",
+    "testSelectedMode": "Отпремање би користило: {{mode}}",
+    "testLocalVisible": "Локални директоријум је видљив са повезаног хоста.",
+    "testLocalNotVisible": "Локални директоријум НИЈЕ видљив са повезаног хоста."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
-        "sessions": "Sessions",
-        "newHosts": "New Hosts"
+        "touch": "Унос додиром",
+        "images": "Складиштење слика",
+        "sessions": "Сесије",
+        "newHosts": "Нови домаћини"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Трајност терминалне сесије",
+        "description": "Колико дуго се искључени терминал одржава активним на серверу пре него што се затвори. Мин. 1, макс. 1440 минута. За сесије које морају да трају дуже од овог периода, омогућите Auto-Tmux на хосту."
       },
       "commandHistoryEnabled": {
-        "label": "Command History",
-        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+        "label": "Историја команди",
+        "description": "Дозволи снимање историје команди. Када је онемогућено, историја се не чува без обзира на подешавања за сваки хост."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "Историја команди за нове хостове",
+        "description": "Да ли нови хостови почињу са укљученом историјом команди."
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
-        "auto": "Auto",
-        "local": "Local",
-        "remoteSftp": "Remote (SFTP)"
+        "label": "Режим складиштења",
+        "description": "Где се записују налепљене и отпремљене слике терминала. Аутоматски избори по конекцији, локални и удаљени (SFTP) су поправљени.",
+        "auto": "Аутоматски",
+        "local": "Локално",
+        "remoteSftp": "Удаљено (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "Локални директоријум",
+        "description": "Апсолутна путања на Termix серверу где локални режим уписује слике. Никада се не приказује након чувања. Празно користи TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "Путања хоста",
+        "description": "Поглед са стране хоста на локални директоријум који терминални агенти примају."
       },
       "imageTtlMs": {
         "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "description": "Колико дуго се чува отпремљена слика, у милисекундама. Празно користи TERMIX_IMAGE_TTL_MS или један сат."
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "Максималан број слика",
+        "description": "Већина слика се чува одједном. Празно користи TERMIX_MAX_IMAGE_COUNT или 100."
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "Максимални број бајтова за складиштење",
+        "description": "Већина бајтова слика се чува одједном. Празно користи TERMIX_MAX_IMAGE_STORAGE_BYTES или 5 GiB."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Задржи сесије након прекида",
+        "description": "Држите искључени терминал активним на серверу током горе наведеног времена, тако да поновно отварање његове картице настави тамо где је стао."
       },
       "newHostAutoTmux": {
-        "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "label": "Ауто-Тмукс",
+        "description": "Покрећи терминале нових хостова унутар tmux-а како би сесије преживеле прекиде везе (потребан је tmux на хосту)"
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Тема за нове домаћине",
+        "description": "Тема терминала са којом почиње нови домаћин."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Фонт за нове домаћине",
+        "description": "Фонт терминала са којим почиње нови хост."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Величина фонта за нове хостове",
+        "description": "Величина фонта терминала са којом почиње нови хост, у пикселима."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Стил курсора за нове хостове"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Трепћући курсор за нове хостове"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "Омогући траку са алаткама терминала",
+        "description": "Прикажи траку са алаткама за брзи приступ причвршћену за активни терминал за алате и статистику уживо овог хоста"
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Положај алатне траке",
+        "description": "Где се налази трака са алаткама у терминалу. И даље је можете превући одатле.",
+        "bottom": "Доњи центар",
+        "bottomLeft": "Доле лево",
+        "bottomRight": "Доле десно",
+        "top": "Горњи центар",
+        "topLeft": "Горе лево",
+        "topRight": "Горе десно"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Почетно стање алатке",
+        "description": "Да ли се трака са алаткама отвара проширена или минимизирана када се терминал повеже",
+        "expanded": "Проширено",
+        "collapsed": "Минимизирано"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "Режим приказа алатне траке",
+        "description": "Како се приказују дугмад на траци са алаткама. „Последње коришћено“ задржава оно што сте изабрали на траци са алаткама.",
+        "remember": "Последње коришћење",
+        "icon": "Само икона",
+        "labeled": "Иконе и ознаке",
+        "expanded": "Проширено са статистиком"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Прикажи статистику уживо",
+        "description": "Прикажи статистику домаћина уживо изнад дугмади на траци са алаткама у проширеном режиму"
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Блидење у стању мировања",
+        "description": "Трака са алаткама ће се постепено смањивати док се показивач миша не пређе преко ње"
       },
       "enableCommandHistory": {
-        "label": "Command History",
-        "description": "Record commands run in this terminal for history and autocomplete"
+        "label": "Историја команди",
+        "description": "Снимање команди које се извршавају у овом терминалу за историју и аутоматско довршавање"
       },
       "enableTerminal": {
-        "label": "Enable Terminal",
-        "description": "Offer an SSH terminal for this host."
+        "label": "Омогући терминал",
+        "description": "Понудите SSH терминал за овај хост."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Користи подразумеване вредности корисника"
       },
       "theme": {
-        "label": "Theme"
+        "label": "Тема"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Трепћући курсор"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "Стил курсора"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "Величина фонта"
       },
       "fontFamily": {
-        "label": "Font"
+        "label": "Фонт"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Померање уназад"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "Размак између слова"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Висина линије"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Звоно"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Минимални контрастни однос"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Позадинска слика"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Непрозирност позадинске слике"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Прилагођене боје теме"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Десни клик бира реч"
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Опција је Мета"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Тастер за брзо скроловање"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Велика брзина скроловања"
       },
       "backspaceMode": {
-        "label": "Backspace"
+        "label": "Brisanje"
       },
       "autoMosh": {
-        "label": "Auto mosh"
+        "label": "Ауто мош"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Мош команда"
       },
       "autoTmux": {
-        "label": "Auto tmux"
+        "label": "Аутоматски tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "Користите SSH наслов"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Истицање синтаксе"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Категорије истицања синтаксе"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Клик на линк"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Локални одјек"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Понуди попуњавање захтева за лозинку"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "Попуните sudo упите"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Аутоматски се поново повежи"
       }
     },
     "user": {
       "commandAutocomplete": {
-        "label": "Command Autocomplete",
-        "description": "Show autocomplete while typing if you press tab"
+        "label": "Аутоматско довршавање команди",
+        "description": "Прикажи аутоматско довршавање током куцања ако притиснеш тастер Tab"
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "Локални одјек",
+        "description": "Смањите перципирану латенцију уноса користећи безбедно локално предвиђање откуцаја тастера"
       },
       "linkClickBehavior": {
-        "label": "Terminal Link Click",
-        "description": "Default behavior when clicking links in the terminal"
+        "label": "Клик на линк терминала",
+        "description": "Подразумевано понашање при клику на линкове у терминалу"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Сачуване теме"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "Локални терминал"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Користите сесије терминала уживо",
+      "description": "Омогућава другим функцијама, као што су дељење и снимање сесија, да досегну ваше терминалне сесије уживо."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Прочитај историју команди",
+      "description": "Омогућава другим функцијама, као што је AI асистент, да читају вашу историју команди."
     }
   },
   "hosts": {
-    "tabTerminal": "Terminal",
-    "addHost": "Add Host",
-    "applyGlobalThemeTooltip": "Apply this theme",
-    "backgroundImageDesc": "Optional URL for a terminal background image",
-    "backgroundImageLabel": "Background Image URL",
-    "backgroundImageOpacityLabel": "Background Image Opacity",
-    "backspaceMode": "Backspace Mode",
-    "backspaceModeControlH": "Control-H (BS)",
-    "backspaceModeLabel": "Backspace Mode",
-    "backspaceModeNormal": "Normal (DEL)",
-    "behaviorAndAdvanced": "Behavior & Advanced",
-    "bellStyle": "Bell Style",
-    "bellStyleBoth": "Both",
-    "bellStyleLabel": "Bell Style",
-    "bellStyleNone": "None",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
-    "colorTheme": "Color Theme",
-    "cursorBlink": "Cursor Blink",
-    "cursorBlinking": "Cursor Blinking",
-    "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
-    "cursorStyle": "Cursor Style",
-    "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
-    "cursorStyleLabel": "Cursor Style",
-    "cursorStyleUnderline": "Underline",
-    "customThemeAnsiColors": "ANSI Colors",
-    "customThemeBackground": "Background",
-    "customThemeBlack": "Black",
-    "customThemeBlue": "Blue",
-    "customThemeBrightBlack": "Bright Black",
-    "customThemeBrightBlue": "Bright Blue",
-    "customThemeBrightCyan": "Bright Cyan",
-    "customThemeBrightGreen": "Bright Green",
-    "customThemeBrightMagenta": "Bright Magenta",
-    "customThemeBrightRed": "Bright Red",
-    "customThemeBrightWhite": "Bright White",
-    "customThemeBrightYellow": "Bright Yellow",
-    "customThemeColors": "Custom Colors",
-    "customThemeCursor": "Cursor",
-    "customThemeCursorAccent": "Cursor Accent",
-    "customThemeCyan": "Cyan",
-    "customThemeForeground": "Foreground",
-    "customThemeGreen": "Green",
-    "customThemeMagenta": "Magenta",
-    "customThemeRed": "Red",
-    "customThemeResetTooltip": "Reset to defaults",
-    "customThemeSelection": "Selection",
-    "customThemeWhite": "White",
-    "customThemeYellow": "Yellow",
-    "deleteGlobalThemeTooltip": "Delete this theme",
-    "docsLink": "View docs",
-    "enableAutoMosh": "Enable Auto-Mosh",
-    "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
-    "enableAutoTmux": "Enable Auto-Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
-    "fastScrollModifier": "Fast Scroll Modifier",
-    "fastScrollModifierAlt": "Alt",
+    "tabTerminal": "Терминал",
+    "addHost": "Додај хоста",
+    "applyGlobalThemeTooltip": "Примени ову тему",
+    "backgroundImageDesc": "Опциони URL за позадинску слику терминала",
+    "backgroundImageLabel": "URL адреса позадинске слике",
+    "backgroundImageOpacityLabel": "Непрозирност позадинске слике",
+    "backspaceMode": "Режим брзе плоче",
+    "backspaceModeControlH": "Контрола-Х (БС)",
+    "backspaceModeLabel": "Режим брзе плоче",
+    "backspaceModeNormal": "Нормално (DEL)",
+    "behaviorAndAdvanced": "Понашање и напредно",
+    "bellStyle": "Стил звона",
+    "bellStyleBoth": "Обоје",
+    "bellStyleLabel": "Стил звона",
+    "bellStyleNone": "Ниједан",
+    "bellStyleSound": "Звук",
+    "bellStyleVisual": "Визуелно",
+    "colorTheme": "Тема боја",
+    "cursorBlink": "Трептање курсора",
+    "cursorBlinking": "Курсор трепери",
+    "cursorBlinkingDesc": "Омогући трепћућу анимацију за курсор терминала",
+    "cursorStyle": "Стил курсора",
+    "cursorStyleBar": "Бар",
+    "cursorStyleBlock": "Блок",
+    "cursorStyleLabel": "Стил курсора",
+    "cursorStyleUnderline": "Подвучено",
+    "customThemeAnsiColors": "ANSI боје",
+    "customThemeBackground": "Позадина",
+    "customThemeBlack": "Црна",
+    "customThemeBlue": "Плава",
+    "customThemeBrightBlack": "Светло црна",
+    "customThemeBrightBlue": "Светлоплава",
+    "customThemeBrightCyan": "Светло цијан",
+    "customThemeBrightGreen": "Светло зелена",
+    "customThemeBrightMagenta": "Светло магента",
+    "customThemeBrightRed": "Светло црвена",
+    "customThemeBrightWhite": "Светло бела",
+    "customThemeBrightYellow": "Светло жута",
+    "customThemeColors": "Прилагођене боје",
+    "customThemeCursor": "Курсор",
+    "customThemeCursorAccent": "Акцент курсора",
+    "customThemeCyan": "Цијан",
+    "customThemeForeground": "Предњи план",
+    "customThemeGreen": "Зелено",
+    "customThemeMagenta": "Магента",
+    "customThemeRed": "Црвена",
+    "customThemeResetTooltip": "Ресетуј на подразумеване вредности",
+    "customThemeSelection": "Избор",
+    "customThemeWhite": "Бела",
+    "customThemeYellow": "Жута",
+    "deleteGlobalThemeTooltip": "Обриши ову тему",
+    "docsLink": "Прикажи документе",
+    "enableAutoMosh": "Омогући аутоматско покретање",
+    "enableAutoMoshDesc": "Преферирај Mosh у односу на SSH ако је доступан",
+    "enableAutoTmux": "Омогући аутоматски Tmux",
+    "enableAutoTmuxDesc": "Одржавајте своју шкољку и све што се у њој покреће активним након прекида везе и поновног покретања прегледача покретањем унутар tmux-а (tmux мора бити инсталиран на хосту)",
+    "fastScrollModifier": "Модификатор брзог скроловања",
+    "fastScrollModifierAlt": "Алтернативно",
     "fastScrollModifierCtrl": "Ctrl",
-    "fastScrollModifierLabel": "Fast Scroll Modifier",
-    "fastScrollModifierShift": "Shift",
-    "fastScrollSensitivity": "Fast Scroll Sensitivity",
-    "fastScrollSensitivityLabel": "Fast Scroll Sensitivity",
-    "fontFamily": "Font Family",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
-    "fontFamilyLabel": "Font Family",
-    "fontSize": "Font Size",
-    "fontSizeLabel": "Font Size",
-    "hostNotFound": "Host not found",
-    "letterSpacing": "Letter Spacing",
-    "letterSpacingPx": "Letter Spacing (px)",
-    "lineHeight": "Line Height",
-    "lineHeightLabel": "Line Height",
-    "linkClickBehaviorConfirm": "Show popup to open or copy",
-    "linkClickBehaviorDesc": "Controls what happens when you click a link in the terminal. Use 'Default' to follow the app-level setting.",
-    "linkClickBehaviorDirect": "Open directly",
-    "linkClickBehaviorLabel": "Link Click Behavior",
-    "loadingHost": "Loading host...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
-    "localEchoOff": "Off",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
-    "moshCommand": "MOSH Command",
-    "moshCommandLabel": "Mosh Command",
-    "noSavedThemes": "No saved themes yet",
-    "none": "None",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
-    "rightClickSelectsWord": "Right Click Selects Word",
-    "rightClickSelectsWordLabel": "Right-click Selects Word",
-    "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
-    "scrollbackBufferLabel": "Scrollback Buffer",
-    "scrollbackMaxLines": "Maximum number of lines kept in history",
-    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
-    "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
-    "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
-    "syntaxCategoryIpAddresses": "IP Addresses",
+    "fastScrollModifierLabel": "Модификатор брзог скроловања",
+    "fastScrollModifierShift": "Померање",
+    "fastScrollSensitivity": "Осетљивост брзог скроловања",
+    "fastScrollSensitivityLabel": "Осетљивост брзог скроловања",
+    "fontFamily": "Породица фонтова",
+    "fontFamilyCustomHint": "Изаберите фонт из пакета или изаберите „Прилагођено“ и унесите тачно име фонта који је већ инсталиран на вашем систему (нпр. MesloLGS NF, Noto Sans Mono). Termix не може да инсталира фонтове уместо вас, прво га инсталирајте на ваш оперативни систем.",
+    "fontFamilyCustomOption": "Прилагођено...",
+    "fontFamilyCustomPlaceholder": "Тачан назив фонта, нпр. MesloLGS NF",
+    "fontFamilyLabel": "Породица фонтова",
+    "fontSize": "Величина фонта",
+    "fontSizeLabel": "Величина фонта",
+    "hostNotFound": "Хост није пронађен",
+    "letterSpacing": "Размак између слова",
+    "letterSpacingPx": "Размак између слова (px)",
+    "lineHeight": "Висина линије",
+    "lineHeightLabel": "Висина линије",
+    "linkClickBehaviorConfirm": "Прикажи искачући прозор за отварање или копирање",
+    "linkClickBehaviorDesc": "Контролише шта се дешава када кликнете на линк у терминалу. Користите „Подразумевано“ да бисте пратили подешавање на нивоу апликације.",
+    "linkClickBehaviorDirect": "Отвори директно",
+    "linkClickBehaviorLabel": "Понашање при клику на линк",
+    "loadingHost": "Учитавање хоста...",
+    "localEchoAuto": "Аутоматски",
+    "localEchoDesc": "Предвиди безбедне притиске тастера за штампање локално на спорим везама. Упити за лозинку и контролни уноси се никада не понављају.",
+    "localEchoLabel": "Локални одјек",
+    "localEchoOff": "Искључено",
+    "localEchoOn": "Увек укључено",
+    "macOptionIsMetaLabel": "Тастер са опцијама шаље метаподатке",
+    "macOptionIsMetaShortDesc": "Онемогућите куцање специјалних знакова (као што су @ или |) помоћу тастера Option/Alt на macOS-у уместо слања Meta",
+    "moshCommand": "MOSH команда",
+    "moshCommandLabel": "Мош команда",
+    "noSavedThemes": "Још нема сачуваних тема",
+    "none": "Ниједан",
+    "passwordPromptAutoFillDesc": "Понуди унос сачуване лозинке када терминал то затражи. Искључи ову опцију да се лозинка никада не би аутоматски попуњавала на овом хосту.",
+    "passwordPromptAutoFillLabel": "Аутоматско попуњавање лозинке за понуду",
+    "autoReconnectLabel": "Аутоматско поновно повезивање",
+    "autoReconnectDesc": "Самостално се поново повезује када SSH веза прекине, као након прекида мреже или спавања. Задржава померање уназад.",
+    "rightClickSelectsWord": "Десни клик бира реч",
+    "rightClickSelectsWordLabel": "Десни клик бира реч",
+    "rightClickSelectsWordShortDesc": "Изаберите реч испод курсора кликом десним тастером миша",
+    "saveAsGlobalTheme": "Сачувај као глобалну тему",
+    "saveGlobalThemeError": "Чување теме није успело",
+    "saveGlobalThemeNamePrompt": "Унесите име за ову тему",
+    "saveGlobalThemeSuccess": "Тема је сачувана",
+    "savedThemesLabel": "Сачуване теме",
+    "scrollbackBufferLabel": "Бафер за померање уназад",
+    "scrollbackMaxLines": "Максималан број линија сачуваних у историји",
+    "sudoPasswordAutoFill": "Аутоматско попуњавање лозинке за Судо",
+    "sudoPasswordAutoFillDesc": "Сачувајте лозинку за sudo како би метрике хоста, упити терминала и други могли аутоматски да покрећу привилеговане команде.",
+    "sudoPasswordAutoFillLabel": "Аутоматско попуњавање лозинке за Sudo",
+    "syntaxCategoryIpAddresses": "IP адресе",
     "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
-    "syntaxCategoryLogLevels": "Log Levels",
-    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
-    "syntaxCategoryNumbers": "Labeled Numbers",
-    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
-    "syntaxCategoryPaths": "File Paths",
+    "syntaxCategoryLogLevels": "Нивои логова",
+    "syntaxCategoryLogLevelsDesc": "грешка, упозорење, информације, дебаговање, фатално",
+    "syntaxCategoryNumbers": "Означени бројеви",
+    "syntaxCategoryNumbersDesc": "порт 8080, излаз 1, статус 404",
+    "syntaxCategoryPaths": "Путање датотека",
     "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
-    "syntaxCategoryTimestamps": "Timestamps",
-    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
-    "syntaxCategoryUrls": "URLs",
+    "syntaxCategoryTimestamps": "Временске ознаке",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15.01.2024.",
+    "syntaxCategoryUrls": "URL-ови",
     "syntaxCategoryUrlsDesc": "https://example.com",
-    "syntaxHighlightingDesc": "Colorize terminal output (errors, paths, IPs, timestamps)",
-    "syntaxHighlightingLabel": "Syntax Highlighting",
-    "terminalAppearance": "Terminal Appearance",
-    "theme": "Theme",
-    "themePreview": "Theme Preview",
-    "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
-    "useSSHTitleLabel": "Use SSH Window Title",
-    "enableTunnel": "Enable Tunnel",
-    "enableFileManager": "Enable File Manager",
-    "enableDocker": "Enable Docker",
-    "startupSnippet": "Startup Snippet",
-    "quickActions": "Quick Actions",
+    "syntaxHighlightingDesc": "Обоји излаз терминала (грешке, путање, IP адресе, временске ознаке)",
+    "syntaxHighlightingLabel": "Истицање синтаксе",
+    "terminalAppearance": "Изглед терминала",
+    "theme": "Тема",
+    "themePreview": "Преглед теме",
+    "useSSHTitleDesc": "Ажурирајте наслов картице из наслова прозора љуске уместо имена хоста",
+    "useSSHTitleLabel": "Користи SSH наслов прозора",
+    "enableTunnel": "Омогући тунел",
+    "enableFileManager": "Омогући менаџер датотека",
+    "enableDocker": "Омогући Докер",
+    "startupSnippet": "Исечак за покретање",
+    "quickActions": "Брзе акције",
     "proxmoxLastSyncStatus": {
-      "success": "Success"
+      "success": "Успех"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
-    "rdpUrlCopied": "RDP URL copied",
-    "vncUrlCopied": "VNC URL copied",
-    "filterAuthStepca": "Step CA",
+    "proxmoxResultSkippedNoIp": "{{count}} прескочено (није пронађена IP адреса)",
+    "proxmoxStatsUrlCopied": "URL Proxmox статистике је копиран у међуспремник",
+    "rdpUrlCopied": "RDP URL је копиран",
+    "vncUrlCopied": "VNC URL је копиран",
+    "filterAuthStepca": "Корак CA",
     "guac": {
-      "noCredential": "No credential (direct credentials below)",
-      "authTypeDirect": "Direct",
-      "authTypeCredential": "Credential",
-      "authTypeNone": "None",
-      "recordingPath": "Recording Path",
-      "recordingName": "Recording Name",
-      "saveHostFirst": "Save the host first.",
-      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
-      "permissionLevel": "Permission Level",
-      "typeHeader": "Type",
-      "targetHeader": "Target",
-      "permissionHeader": "Permission",
-      "cancelBtn": "Cancel",
-      "savingBtn": "Saving...",
-      "updateHostBtn": "Update Host",
-      "addHostBtn": "Add Host"
+      "noCredential": "Без акредитива (директни акредитиви испод)",
+      "authTypeDirect": "Директно",
+      "authTypeCredential": "Акредитив",
+      "authTypeNone": "Ниједан",
+      "recordingPath": "Путања снимања",
+      "recordingName": "Назив снимка",
+      "saveHostFirst": "Прво сачувајте домаћина.",
+      "sharingOptionsAfterSave": "Опције дељења су доступне након што је хост сачуван.",
+      "permissionLevel": "Ниво дозволе",
+      "typeHeader": "Тип",
+      "targetHeader": "Циљ",
+      "permissionHeader": "Дозвола",
+      "cancelBtn": "Откажи",
+      "savingBtn": "Чување...",
+      "updateHostBtn": "Ажурирај хост",
+      "addHostBtn": "Додај хоста"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Трезор"
   },
   "nav": {
-    "history": "History",
-    "localTerminal": "Local Terminal",
-    "sshTools": "SSH Tools",
-    "terminal": "Terminal",
-    "macros": "Macros"
+    "history": "Историја",
+    "localTerminal": "Локални терминал",
+    "sshTools": "SSH алати",
+    "terminal": "Терминал",
+    "macros": "Макрои"
   },
   "sshTools": {
-    "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
-    "copyOnSelect": "Copy selected text automatically",
-    "enableRightClickCopyPaste": "Enable right-click copy/paste",
-    "fillPassword": "Fill password",
-    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
-    "fillPasswordSuccess": "Filled password into {{count}} terminal(s)",
-    "keyRecordingTitle": "Key Recording",
-    "noTerminalTabsOpen": "No terminal tabs open",
-    "recordToTerminals": "Record to terminals",
-    "selectAll": "All",
-    "selectNone": "None",
-    "selectTerminalsAbove": "Select terminals above",
-    "settingsTitle": "Settings",
-    "startRecording": "Start Recording",
-    "stopRecording": "Stop Recording"
+    "broadcastInputPlaceholder": "Куцајте овде да бисте емитовали притиске тастера...",
+    "copyOnSelect": "Аутоматски копирај изабрани текст",
+    "enableRightClickCopyPaste": "Омогући копирање/лепљење десним кликом",
+    "fillPassword": "Попуните лозинку",
+    "fillPasswordMissing": "Нема сачуване лозинке за {{count}} изабраних терминала",
+    "fillPasswordSuccess": "Лозинка је унета у {{count}} терминал(а)",
+    "keyRecordingTitle": "Снимање кључа",
+    "noTerminalTabsOpen": "Нема отворених картица терминала",
+    "recordToTerminals": "Снимање на терминале",
+    "selectAll": "Сви",
+    "selectNone": "Ниједан",
+    "selectTerminalsAbove": "Изаберите терминале изнад",
+    "settingsTitle": "Подешавања",
+    "startRecording": "Почни снимање",
+    "stopRecording": "Заустави снимање"
   },
   "keybindings": {
-    "copy": "Copy selection",
-    "paste": "Paste",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "copy": "Копирај избор",
+    "paste": "Залепи",
+    "sendControlCode": "Пошаљи сигнал Ctrl+слово",
+    "sendText": "Пошаљи текст",
+    "controlCodeLabel": "Писмо",
+    "textLabel": "Текст за слање",
+    "appendEnterLabel": "Притисните Ентер након слања",
+    "clipboardPermissionNote": "Може затражити дозволу за међуспремник при првој употреби у неким прегледачима.",
+    "textRequired": "Унесите текст за слање",
+    "controlCodeRequired": "Унесите једно слово за контролни код",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Копирај селекцију (Ctrl+C, само када је текст изабран)",
+      "copyCtrlShiftC": "Копирај селекцију (Ctrl+Shift+C)",
+      "copyCmdC": "Копирај селекцију (Cmd+C)",
+      "pasteCtrlShiftV": "Налепи из међуспремника (Ctrl+Shift+V)",
+      "ctrlW": "Пошаљи Ctrl+W у љуску (блокирано затварање картице прегледача)",
+      "ctrlT": "Пошаљи Ctrl+T у shell (блокирано отварање картице прегледача)",
+      "ctrlN": "Пошаљи Ctrl+N у shell (блокирано отварање прозора прегледача)",
+      "ctrlQ": "Пошаљи Ctrl+Q у shell (блокирано затварање прегледача)"
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
-    "target": "Target",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
-    "name": "Name",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
-    "descriptionLabel": "Description",
-    "descriptionPlaceholder": "What this macro does (optional)",
-    "unsaved": "Unsaved changes",
-    "save": "Save",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
-    "delete": "Delete",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
-    "cancel": "Cancel",
-    "run": "Run",
-    "stop": "Stop",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "title": "Макрои",
+    "description": "Покрените сачувану серију команди у терминалу и реагујте на оно што сервер пошаље назад.",
+    "target": "Циљ",
+    "noTerminal": "Ниједан терминал није отворен",
+    "empty": "Још нема макроа",
+    "emptyHint": "Направите макро за аутоматизацију тока рада терминала, као што је пријављивање, поновно покретање сервиса или одговарање на упите.",
+    "create": "Нови макро",
+    "back": "Назад на макрое",
+    "name": "Име",
+    "namePlaceholder": "Поново покрените веб сервер",
+    "nameRequired": "Дајте макроу име пре чувања",
+    "descriptionLabel": "Опис",
+    "descriptionPlaceholder": "Шта овај макро ради (опционо)",
+    "unsaved": "Несачуване промене",
+    "save": "Сачувај",
+    "saved": "Макро је сачуван",
+    "saveFailed": "Није могуће сачувати макро",
+    "delete": "Обриши",
+    "deleteTitle": "Да ли желите да обришете овај макро?",
+    "deleteBody": "„{{name}}“ ће бити трајно обрисано. Ова радња се не може поништити.",
+    "deleted": "Макро је обрисан",
+    "cancel": "Откажи",
+    "run": "Трчи",
+    "stop": "Заустави",
+    "running": "Трчи се...",
+    "completed": "Макро је завршен",
+    "failed": "Макро није успео",
+    "loadFailed": "Није могуће учитати макрое",
+    "needTerminal": "Прво отворите и повежите терминал",
+    "noSteps": "Овај макро још нема кораке. Додајте један испод.",
+    "addStep": "Додај корак",
+    "stepNumber": "Корак {{number}}",
+    "removeStep": "Уклони корак",
+    "confirmRunTitle": "Покрени овај макро?",
+    "confirmRunBody": "„{{name}}“ ће послати команде на {{host}}.",
+    "confirmRunAction": "Покрени макро",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "Пошаљи команду",
+        "help": "Уноси текст у терминал, исто као да сте га откуцали."
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "Сачекајте излаз",
+        "help": "Паузира док сервер не одштампа текст који наведете, као што је захтев за лозинку."
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "Пауза",
+        "help": "Чека одређено време пре следећег корака."
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "Ако излаз садржи",
+        "help": "Проверава све што је сервер до сада одштампао, а затим покреће једну од две гране."
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "Понови",
+        "help": "Покреће кораке унутар њега одређени број пута."
       }
     },
     "send": {
-      "text": "Command or text",
-      "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "text": "Команда или текст",
+      "textPlaceholder": "системцтл рестартовање нгинкса",
+      "pressEnter": "Притисните Ентер након слања",
+      "pressEnterHelp": "Искључите ово да бисте куцали текст без његовог слања."
     },
     "wait": {
-      "pattern": "Wait until the output contains",
-      "patternPlaceholder": "password:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "pattern": "Сачекајте док излаз не садржи",
+      "patternPlaceholder": "лозинка:",
+      "timeout": "Одустани после",
+      "onTimeout": "Ако се никада не појави",
+      "stop": "Зауставите макро",
+      "continue": "Настави у сваком случају"
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "Сачекајте"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "Ако излаз садржи",
+      "patternPlaceholder": "Активно: активно (покреће се)",
+      "then": "Онда уради ово",
+      "else": "У супротном, урадите ово",
+      "emptyBranch": "Без степеница"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "Број пута",
+      "times": "пута"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "Упари се са регуларним изразом",
+      "useRegexHelp": "Оставите ово искључено да би текст тачно одговарао написаном тексту.",
+      "invalidRegex": "Није важећи регуларни израз, биће упарен као обичан текст"
     },
-    "seconds": "seconds",
-    "secondsShort": "{{count}}s"
+    "seconds": "секунде",
+    "secondsShort": "{{count}}с"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Потребан је удаљени сервер. Повежите се са удаљеним сервером у Подешавањима да бисте користили овај тип везе."
   }
 }

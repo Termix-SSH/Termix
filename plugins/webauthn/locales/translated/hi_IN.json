@@ -4,7 +4,7 @@
   "loginFailed": "पासकी लॉगिन विफल",
   "description": "बिना पासवर्ड साइन इन करने के लिए WebAuthn/FIDO2 क्रेडेंशियल का उपयोग करें",
   "namePlaceholder": "पासकी नाम",
-  "defaultName": "Passkey",
+  "defaultName": "सर्व-कुंजी",
   "uv": {
     "preferred": "पसंदीदा",
     "required": "आवश्यक",
@@ -14,9 +14,9 @@
   "none": "कोई पासकी पंजीकृत नहीं है।",
   "added": "पासकी जोड़ी गई",
   "addFailed": "पासकी जोड़ने में विफल",
-  "delete": "Delete passkey",
+  "delete": "पासकी हटाएं",
   "deleted": "पासकी हटाई गई",
   "deleteFailed": "पासकी हटाने में विफल",
   "unknownDevice": "अज्ञात",
-  "synced": "synced"
+  "synced": "सिंक किया गया"
 }

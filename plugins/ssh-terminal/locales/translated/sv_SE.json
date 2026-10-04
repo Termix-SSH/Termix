@@ -1,705 +1,705 @@
 {
   "mobileKeyboard": {
-    "addQuickKey": "Add",
-    "arrowDown": "Arrow Down",
-    "arrowLeft": "Arrow Left",
-    "arrowRight": "Arrow Right",
-    "arrowUp": "Arrow Up",
+    "addQuickKey": "Tillägga",
+    "arrowDown": "Pil nedåt",
+    "arrowLeft": "Pil vänster",
+    "arrowRight": "Pil höger",
+    "arrowUp": "Pil upp",
     "backTab": "⇥",
     "ctrl": "Ctrl",
     "delete": "Del",
-    "done": "Done",
-    "editQuickKeys": "Edit quick keys",
-    "end": "End",
+    "done": "Gjort",
+    "editQuickKeys": "Redigera snabbknappar",
+    "end": "Avsluta",
     "esc": "Esc",
-    "home": "Home",
+    "home": "Hem",
     "pageDown": "PgDn",
     "pageUp": "PgUp",
-    "paste": "Paste",
-    "quickKeyPlaceholder": "e.g. sudo ",
-    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
-    "quickKeysTitle": "Quick Keys",
-    "removeQuickKey": "Remove",
-    "resetDefaults": "Reset to defaults",
-    "shift": "Shift",
-    "tab": "Tab"
+    "paste": "Klistra",
+    "quickKeyPlaceholder": "t.ex. sudo ",
+    "quickKeysDesc": "Tryck på × för att ta bort. Stöder upp till 8 tecken.",
+    "quickKeysTitle": "Snabbtangenter",
+    "removeQuickKey": "Ta bort",
+    "resetDefaults": "Återställ till standardinställningarna",
+    "shift": "Flytta",
+    "tab": "Flik"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
-    "closeTab": "Close",
-    "connecting": "Connecting...",
-    "connectionLost": "Connection lost",
-    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
-    "connectionTimeout": "Connection timeout",
-    "enableAutoTmuxAction": "Enable Auto-Tmux",
-    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
-    "linkDialogCopy": "Copy",
-    "linkDialogOpen": "Open",
-    "linkDialogTitle": "Open Link",
-    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
-    "noHostSelected": "No host selected",
-    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
-    "reconnect": "Reconnect",
-    "reconnected": "Reconnected successfully",
-    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
-    "tmuxAttached": "Attached clients",
-    "tmuxAttachedCount": "{{count}} attached",
-    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
-    "tmuxCreateNew": "Start new session",
-    "tmuxDetached": "Detached from tmux session",
-    "tmuxLastActivity": "Last activity",
-    "tmuxSessionAttached": "tmux session attached: {{name}}",
-    "tmuxSessionCreated": "tmux session created: {{name}}",
-    "tmuxSessionPickerDesc": "Existing tmux sessions found on this host. Select one to reattach or create a new session.",
-    "tmuxSessionPickerTitle": "tmux Sessions",
-    "tmuxTimeDays": "{{count}}d ago",
-    "tmuxTimeHours": "{{count}}h ago",
-    "tmuxTimeJustNow": "just now",
-    "tmuxTimeMinutes": "{{count}}m ago",
-    "tmuxUnavailable": "tmux is not installed on the remote host, falling back to standard shell",
-    "tmuxWindowCount": "{{count}} window",
-    "tmuxWindows": "Windows",
-    "unknownError": "Unknown error occurred",
-    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
-    "websocketError": "WebSocket connection error",
-    "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
-    "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
-    "connected": "Connected",
-    "totpCodeLabel": "Verification Code",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "autoTmuxEnableFailed": "Misslyckades med att aktivera Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux aktiverat för {{host}}. Det gäller från nästa anslutning.",
+    "clipboardHttpWarning": "Kunde inte läsa urklippet. Vissa webbläsare begränsar åtkomst till urklipp utanför HTTPS - prova Ctrl+V istället, eller servera Termix över HTTPS.",
+    "closeTab": "Nära",
+    "connecting": "Ansluter...",
+    "connectionLost": "Anslutningen förlorades",
+    "connectionRejected": "Anslutningen avvisades av servern. Kontrollera din autentisering och nätverkskonfiguration.",
+    "connectionTimeout": "Anslutningstimeout",
+    "enableAutoTmuxAction": "Aktivera Auto-Tmux",
+    "hostKeyRejected": "Verifiering av SSH-värdnyckel avvisad. Anslutningen avbröts.",
+    "linkDialogCopy": "Kopiera",
+    "linkDialogOpen": "Öppna",
+    "linkDialogTitle": "Öppna länk",
+    "maxReconnectAttemptsReached": "Maximalt antal återanslutningsförsök uppnådda",
+    "noHostSelected": "Ingen värd vald",
+    "passwordPromptFillTitle": "Fyll i det sparade lösenordet i den här frågan?",
+    "reconnect": "Återanslut",
+    "reconnected": "Återansluten lyckades",
+    "reconnecting": "Återansluter... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Anslutningen bruten, återansluter...",
+    "searchCaseSensitive": "Matchfodral",
+    "searchClose": "Stäng (Escape)",
+    "searchNext": "Nästa match (Enter)",
+    "searchNoResults": "Inga resultat",
+    "searchPlaceholder": "Hitta",
+    "searchPrevious": "Föregående matchning (Shift+Enter)",
+    "searchRegex": "Använd reguljärt uttryck",
+    "searchResultCount": "{{index}} av {{count}}",
+    "searchWholeWord": "Matcha hela ordet",
+    "sessionExpiredNotice": "Din föregående session på {{host}} gick ut efter {{minutes}} minuters frånkoppling; skalet och allt som körs i det är borta. Aktivera Auto-Tmux på den här värden för att hålla sessionerna aktiva.",
+    "sessionExpiredNoticeNoMinutes": "Din föregående session på {{host}} upphörde medan den var frånkopplad; skalet och allt som körs i det är borta. Aktivera Auto-Tmux på den här värden för att hålla sessionerna aktiva.",
+    "sessionTakenOver": "Sessionen öppnades i en annan flik. Återansluter...",
+    "tmuxAttached": "Anslutna klienter",
+    "tmuxAttachedCount": "{{count}} bifogad",
+    "tmuxCopyHint": "Justera markeringen och tryck på Enter för att kopiera till urklipp",
+    "tmuxCreateNew": "Starta ny session",
+    "tmuxDetached": "Losskopplad från tmux-sessionen",
+    "tmuxLastActivity": "Senaste aktivitet",
+    "tmuxSessionAttached": "tmux-session bifogad: {{name}}",
+    "tmuxSessionCreated": "tmux-session skapad: {{name}}",
+    "tmuxSessionPickerDesc": "Befintliga tmux-sessioner hittades på den här värden. Välj en för att återansluta eller skapa en ny session.",
+    "tmuxSessionPickerTitle": "tmux-sessioner",
+    "tmuxTimeDays": "för {{count}}dagar sedan",
+    "tmuxTimeHours": "för {{count}}timmar sedan",
+    "tmuxTimeJustNow": "just nu",
+    "tmuxTimeMinutes": "för {{count}}minuter sedan",
+    "tmuxUnavailable": "tmux är inte installerat på fjärrdatorn, utan återgår till standardskal",
+    "tmuxWindowCount": "{{count}} fönster",
+    "tmuxWindows": "Fönster",
+    "unknownError": "Okänt fel inträffade",
+    "websocketAbnormalClose": "Anslutningen stängdes oväntat. Detta kan bero på ett problem med omvänd proxy eller SSL-konfigurationen. Kontrollera serverloggarna.",
+    "websocketError": "WebSocket-anslutningsfel",
+    "clipboardReadFailed": "Kunde inte läsa från urklipp. Kontrollera att behörigheter för urklipp är beviljade.",
+    "clipboardWriteFailed": "Kunde inte kopiera till urklipp. Kontrollera att sidan serveras via HTTPS eller localhost.",
+    "connected": "Ansluten",
+    "totpCodeLabel": "Verifieringskod",
+    "duplicateTab": "Duplicera fliken",
+    "imageChooseFile": "Välj en bildfil",
+    "imageUploaded": "Bild uppladdad: {{path}}",
+    "imageClipboardUnavailable": "Den här webbläsaren kan inte läsa bilder från urklipp",
+    "imageClipboardEmpty": "Ingen bild hittades i urklipp",
+    "localShell": "Lokalt terminalskal",
+    "autocompleteHintComplete": "Tab eller Enter för att slutföra",
+    "autocompleteHintNavigate": "↑↓ för att navigera",
+    "autocompleteHintClose": "Esc för att stänga"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
-    "retry": "Retry",
-    "showToolbar": "Expand toolbar",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
-    "uploadingImage": "Uploading..."
+    "detachTmux": "Lossa tmux",
+    "detachTmuxDescription": "Koppla bort tmux-session",
+    "dismissError": "Stäng bildfel",
+    "hideToolbar": "Dölj verktygsfältet",
+    "image": "Bildåtgärder (endast bilder)",
+    "imageActionFailed": "Bildåtgärden misslyckades",
+    "layout": "Verktygsfältets visningsläge",
+    "layoutExpanded": "Utökad med mätvärden",
+    "layoutIcon": "Endast ikon",
+    "layoutLabeled": "Ikoner och etiketter",
+    "moveToolbar": "Flytta verktygsfältet",
+    "moveToolbarHint": "Dra för att flytta verktygsfältet",
+    "paste": "Klistra in bild",
+    "pasteImage": "Klistra in bild från urklipp (endast bilder)",
+    "retry": "Försöka igen",
+    "showToolbar": "Expandera verktygsfältet",
+    "upload": "Ladda upp bild",
+    "uploadImage": "Ladda upp en bild till värden",
+    "uploadingImage": "Laddar upp..."
   },
   "history": {
-    "noTerminalSelected": "No terminal selected",
-    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
-    "searchPlaceholder": "Search history...",
-    "clearAll": "Clear All",
-    "noHistoryEntries": "No history entries",
-    "trackingDisabled": "History tracking is disabled",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "noTerminalSelected": "Ingen terminal vald",
+    "noTerminalSelectedHint": "Öppna en SSH-terminalflik för att visa dess kommandohistorik",
+    "searchPlaceholder": "Sökhistorik...",
+    "clearAll": "Rensa alla",
+    "noHistoryEntries": "Inga historikposter",
+    "trackingDisabled": "Historikspårning är inaktiverad",
+    "trackingDisabledHint": "Aktivera kommandohistorik på den här värdens SSH-terminalflik.",
+    "commandCount_one": "{{count}} kommando",
+    "commandCount_other": "{{count}} kommandon"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
-    "advanced": "Advanced",
-    "resetDefaults": "Reset to defaults",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "enabled": "Aktivera pekinmatning",
+    "enabledDesc": "Tillåt scrollning med ett finger i terminaler",
+    "momentumEnabled": "Aktivera momentum",
+    "momentumEnabledDesc": "Fortsätt skrolla kort efter en svepning",
+    "advanced": "Avancerad",
+    "resetDefaults": "Återställ till standardinställningarna",
+    "dragThreshold": "Draggräns",
+    "maxWheelDelta": "Maximal hjuldelta",
+    "momentumSampleWindow": "Momentum-exempelfönster",
+    "releaseGracePeriod": "Frigivningsfrist",
+    "minimumVelocity": "Minsta hastighet",
+    "maximumVelocity": "Maximal hastighet",
+    "maximumDuration": "Maximal varaktighet",
+    "maximumTravel": "Maximal resa",
+    "decayTime": "Avklingningstid",
+    "pixelsPerTick": "Pixlar per tick",
+    "maximumFrameInterval": "Maximalt bildintervall",
+    "maximumTicksPerFrame": "Maximalt antal ticks per bildruta"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
-    "test": "Test",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "instanceId": "Terminalsessionsinstans-ID",
+    "instanceIdDesc": "Instans-ID för en av dina anslutna terminalflikar, används för att testa synligheten.",
+    "selectedModeUnavailable": "Inte tillgänglig",
+    "test": "Testa",
+    "testing": "Testning...",
+    "testFailed": "Misslyckades med att testa bildlagring",
+    "testConnected": "Terminalsessionen är ansluten.",
+    "testNotConnected": "Ingen ansluten terminalsession med detta instans-ID.",
+    "testSelectedMode": "En uppladdning skulle använda: {{mode}}",
+    "testLocalVisible": "Den lokala katalogen är synlig från den anslutna värden.",
+    "testLocalNotVisible": "Den lokala katalogen är INTE synlig från den anslutna värden."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
-        "sessions": "Sessions",
-        "newHosts": "New Hosts"
+        "touch": "Pekinmatning",
+        "images": "Bildlagring",
+        "sessions": "Sessioner",
+        "newHosts": "Nya värdar"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Terminalsessionens persistens",
+        "description": "Hur länge en frånkopplad terminal hålls aktiv på servern innan den stängs. Min 1, max 1440 minuter. För sessioner som måste överleva detta, aktivera Auto-Tmux på värden."
       },
       "commandHistoryEnabled": {
-        "label": "Command History",
-        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+        "label": "Kommandohistorik",
+        "description": "Tillåt inspelning av kommandohistorik. När det är inaktiverat sparas inte historiken oavsett inställningarna per värd."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "Kommandohistorik för nya värdar",
+        "description": "Om nya värdar börjar med kommandohistorik aktiverad."
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
-        "auto": "Auto",
-        "local": "Local",
-        "remoteSftp": "Remote (SFTP)"
+        "label": "Lagringsläge",
+        "description": "Där inklistrade och uppladdade terminalbilder skrivs. Automatiska val via anslutning, lokal och fjärransluten (SFTP) är åtgärdade.",
+        "auto": "Bil",
+        "local": "Lokal",
+        "remoteSftp": "Fjärrstyrning (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "Lokal katalog",
+        "description": "Absolut sökväg på Termix-backend där lokalt läge skriver bilder. Visas aldrig efter sparning. Tom använder TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "Värdsökväg",
+        "description": "Värdsidans vy av den lokala katalogen som terminalagenter tar emot."
       },
       "imageTtlMs": {
         "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "description": "Hur länge en uppladdad bild sparas, i millisekunder. Tom använder TERMIX_IMAGE_TTL_MS eller en timme."
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "Max antal bilder",
+        "description": "De flesta bilder sparas samtidigt. Tomma alternativ använder TERMIX_MAX_IMAGE_COUNT eller 100."
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "Max antal lagringsbyte",
+        "description": "Flest byte av bilder lagras samtidigt. Tomma lagringsplatser använder TERMIX_MAX_IMAGE_STORAGE_BYTES eller 5 GiB."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Behåll sessioner efter frånkoppling",
+        "description": "Håll en frånkopplad terminal aktiv på servern under ovanstående tid, så att öppnandet av fliken fortsätter där den slutade."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "description": "Kör nya värdars terminaler inuti tmux så att sessioner överlever frånkopplingar (kräver tmux på värden)"
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Tema för nya värdar",
+        "description": "Terminaltemat som en ny värd börjar med."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Typsnitt för nya värdar",
+        "description": "Terminaltypsnittet som en ny värd börjar med."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Teckenstorlek för nya värdar",
+        "description": "Terminalens teckenstorlek som en ny värd börjar med, i pixlar."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Markörstil för nya värdar"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Blinkande markör för nya värdar"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "Aktivera terminalverktygsfältet",
+        "description": "Visa en snabbåtkomstverktygsfält dockad till den aktiva terminalen för den här värdens verktyg och livestatistik"
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Verktygsfältets position",
+        "description": "Där verktygsfältet sitter i terminalen. Du kan fortfarande dra det därifrån.",
+        "bottom": "Nederst i mitten",
+        "bottomLeft": "Nederst till vänster",
+        "bottomRight": "Nederst till höger",
+        "top": "Övre mitten",
+        "topLeft": "Övre vänster",
+        "topRight": "Övre högra"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Verktygsfältets startläge",
+        "description": "Om verktygsfältet öppnas expanderat eller minimerat när terminalen ansluter",
+        "expanded": "Utökad",
+        "collapsed": "Minimerad"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "Verktygsfältets visningsläge",
+        "description": "Hur knapparna i verktygsfältet visas. Senast använda sparar det du valde i verktygsfältet.",
+        "remember": "Senast använd",
+        "icon": "Endast ikon",
+        "labeled": "Ikoner och etiketter",
+        "expanded": "Utökad med statistik"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Visa livestatistik",
+        "description": "Visa statistik för livevärdar ovanför verktygsfältsknapparna i utökat läge"
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Tona vid inaktivitet",
+        "description": "Tona ut verktygsfältet tills du håller muspekaren över det"
       },
       "enableCommandHistory": {
-        "label": "Command History",
-        "description": "Record commands run in this terminal for history and autocomplete"
+        "label": "Kommandohistorik",
+        "description": "Record-kommandon körs i den här terminalen för historik och autofullständig ifyllning"
       },
       "enableTerminal": {
-        "label": "Enable Terminal",
-        "description": "Offer an SSH terminal for this host."
+        "label": "Aktivera terminalen",
+        "description": "Erbjud en SSH-terminal för den här värden."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Använd användarstandarder"
       },
       "theme": {
-        "label": "Theme"
+        "label": "Tema"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Blinkande markör"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "Markörstil"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "Fontstorlek"
       },
       "fontFamily": {
         "label": "Font"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Skrolla tillbaka"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "Bokstavsavstånd"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Linjehöjd"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Klocka"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Minsta kontrastförhållande"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Bakgrundsbild"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Bakgrundsbildens opacitet"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Anpassade temafärger"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Högerklicka markerar ord"
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Alternativet är Meta"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Snabb bläddringsknapp"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Snabb scrollhastighet"
       },
       "backspaceMode": {
-        "label": "Backspace"
+        "label": "Backsteg"
       },
       "autoMosh": {
-        "label": "Auto mosh"
+        "label": "Automosh"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Mosh-kommandot"
       },
       "autoTmux": {
         "label": "Auto tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "Använd SSH-titeln"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Syntaxmarkering"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Syntaxmarkeringskategorier"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Länkklick"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Lokalt eko"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Erbjud dig att fylla i lösenordsförfrågningar"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "Fyll i sudo-prompter"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Återanslut automatiskt"
       }
     },
     "user": {
       "commandAutocomplete": {
-        "label": "Command Autocomplete",
-        "description": "Show autocomplete while typing if you press tab"
+        "label": "Kommando Autokomplettering",
+        "description": "Visa autokomplettering medan du skriver om du trycker på tabbtangenten"
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "Lokalt eko",
+        "description": "Minska upplevd inmatningsfördröjning med hjälp av säker lokal tangenttryckningsprediktion"
       },
       "linkClickBehavior": {
-        "label": "Terminal Link Click",
-        "description": "Default behavior when clicking links in the terminal"
+        "label": "Klicka på terminallänken",
+        "description": "Standardbeteende vid klick på länkar i terminalen"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Sparade teman"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "Lokal terminal"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Använd live-terminalsessioner",
+      "description": "Låter andra funktioner, som sessionsdelning och inspelning, nå dina live-terminalsessioner."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Läs kommandohistorik",
+      "description": "Låter andra funktioner, som AI-assistenten, läsa din kommandohistorik."
     }
   },
   "hosts": {
     "tabTerminal": "Terminal",
-    "addHost": "Add Host",
-    "applyGlobalThemeTooltip": "Apply this theme",
-    "backgroundImageDesc": "Optional URL for a terminal background image",
-    "backgroundImageLabel": "Background Image URL",
-    "backgroundImageOpacityLabel": "Background Image Opacity",
-    "backspaceMode": "Backspace Mode",
-    "backspaceModeControlH": "Control-H (BS)",
-    "backspaceModeLabel": "Backspace Mode",
+    "addHost": "Lägg till värd",
+    "applyGlobalThemeTooltip": "Använd detta tema",
+    "backgroundImageDesc": "Valfri URL för en bakgrundsbild i terminalen",
+    "backgroundImageLabel": "Bakgrundsbildens URL",
+    "backgroundImageOpacityLabel": "Bakgrundsbildens opacitet",
+    "backspaceMode": "Backstegsläge",
+    "backspaceModeControlH": "Kontroll-H (BS)",
+    "backspaceModeLabel": "Backstegsläge",
     "backspaceModeNormal": "Normal (DEL)",
-    "behaviorAndAdvanced": "Behavior & Advanced",
-    "bellStyle": "Bell Style",
-    "bellStyleBoth": "Both",
-    "bellStyleLabel": "Bell Style",
-    "bellStyleNone": "None",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
-    "colorTheme": "Color Theme",
-    "cursorBlink": "Cursor Blink",
-    "cursorBlinking": "Cursor Blinking",
-    "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
-    "cursorStyle": "Cursor Style",
+    "behaviorAndAdvanced": "Beteende och avancerat",
+    "bellStyle": "Klockstil",
+    "bellStyleBoth": "Både",
+    "bellStyleLabel": "Klockstil",
+    "bellStyleNone": "Ingen",
+    "bellStyleSound": "Ljud",
+    "bellStyleVisual": "Visuell",
+    "colorTheme": "Färgtema",
+    "cursorBlink": "Markörblinkning",
+    "cursorBlinking": "Markören blinkar",
+    "cursorBlinkingDesc": "Aktivera blinkande animering för terminalmarkören",
+    "cursorStyle": "Markörstil",
     "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
-    "cursorStyleLabel": "Cursor Style",
-    "cursorStyleUnderline": "Underline",
-    "customThemeAnsiColors": "ANSI Colors",
-    "customThemeBackground": "Background",
-    "customThemeBlack": "Black",
-    "customThemeBlue": "Blue",
-    "customThemeBrightBlack": "Bright Black",
-    "customThemeBrightBlue": "Bright Blue",
-    "customThemeBrightCyan": "Bright Cyan",
-    "customThemeBrightGreen": "Bright Green",
-    "customThemeBrightMagenta": "Bright Magenta",
-    "customThemeBrightRed": "Bright Red",
-    "customThemeBrightWhite": "Bright White",
-    "customThemeBrightYellow": "Bright Yellow",
-    "customThemeColors": "Custom Colors",
-    "customThemeCursor": "Cursor",
-    "customThemeCursorAccent": "Cursor Accent",
+    "cursorStyleBlock": "Blockera",
+    "cursorStyleLabel": "Markörstil",
+    "cursorStyleUnderline": "Betona",
+    "customThemeAnsiColors": "ANSI-färger",
+    "customThemeBackground": "Bakgrund",
+    "customThemeBlack": "Svart",
+    "customThemeBlue": "Blå",
+    "customThemeBrightBlack": "Ljussvart",
+    "customThemeBrightBlue": "Klarblå",
+    "customThemeBrightCyan": "Ljus cyan",
+    "customThemeBrightGreen": "Ljusgrön",
+    "customThemeBrightMagenta": "Ljus magenta",
+    "customThemeBrightRed": "Klarröd",
+    "customThemeBrightWhite": "Klarvit",
+    "customThemeBrightYellow": "Klargul",
+    "customThemeColors": "Anpassade färger",
+    "customThemeCursor": "Markör",
+    "customThemeCursorAccent": "Marköraccent",
     "customThemeCyan": "Cyan",
-    "customThemeForeground": "Foreground",
-    "customThemeGreen": "Green",
+    "customThemeForeground": "Förgrund",
+    "customThemeGreen": "Grön",
     "customThemeMagenta": "Magenta",
-    "customThemeRed": "Red",
-    "customThemeResetTooltip": "Reset to defaults",
-    "customThemeSelection": "Selection",
-    "customThemeWhite": "White",
-    "customThemeYellow": "Yellow",
-    "deleteGlobalThemeTooltip": "Delete this theme",
-    "docsLink": "View docs",
-    "enableAutoMosh": "Enable Auto-Mosh",
-    "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
-    "enableAutoTmux": "Enable Auto-Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
-    "fastScrollModifier": "Fast Scroll Modifier",
+    "customThemeRed": "Röd",
+    "customThemeResetTooltip": "Återställ till standardinställningarna",
+    "customThemeSelection": "Urval",
+    "customThemeWhite": "Vit",
+    "customThemeYellow": "Gul",
+    "deleteGlobalThemeTooltip": "Ta bort det här temat",
+    "docsLink": "Visa dokument",
+    "enableAutoMosh": "Aktivera Auto-Mosh",
+    "enableAutoMoshDesc": "Föredra Mosh framför SSH om tillgängligt",
+    "enableAutoTmux": "Aktivera Auto-Tmux",
+    "enableAutoTmuxDesc": "Håll ditt skal och allt som körs i det vid liv även efter frånkopplingar och omstart av webbläsare genom att köra det inuti tmux (tmux måste vara installerat på värden)",
+    "fastScrollModifier": "Snabbrullningsmodifierare",
     "fastScrollModifierAlt": "Alt",
     "fastScrollModifierCtrl": "Ctrl",
-    "fastScrollModifierLabel": "Fast Scroll Modifier",
-    "fastScrollModifierShift": "Shift",
-    "fastScrollSensitivity": "Fast Scroll Sensitivity",
-    "fastScrollSensitivityLabel": "Fast Scroll Sensitivity",
-    "fontFamily": "Font Family",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
-    "fontFamilyLabel": "Font Family",
-    "fontSize": "Font Size",
-    "fontSizeLabel": "Font Size",
-    "hostNotFound": "Host not found",
-    "letterSpacing": "Letter Spacing",
-    "letterSpacingPx": "Letter Spacing (px)",
-    "lineHeight": "Line Height",
-    "lineHeightLabel": "Line Height",
-    "linkClickBehaviorConfirm": "Show popup to open or copy",
-    "linkClickBehaviorDesc": "Controls what happens when you click a link in the terminal. Use 'Default' to follow the app-level setting.",
-    "linkClickBehaviorDirect": "Open directly",
-    "linkClickBehaviorLabel": "Link Click Behavior",
-    "loadingHost": "Loading host...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
-    "localEchoOff": "Off",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
-    "moshCommand": "MOSH Command",
-    "moshCommandLabel": "Mosh Command",
-    "noSavedThemes": "No saved themes yet",
-    "none": "None",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
-    "rightClickSelectsWord": "Right Click Selects Word",
-    "rightClickSelectsWordLabel": "Right-click Selects Word",
-    "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
-    "scrollbackBufferLabel": "Scrollback Buffer",
-    "scrollbackMaxLines": "Maximum number of lines kept in history",
-    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
-    "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
-    "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
-    "syntaxCategoryIpAddresses": "IP Addresses",
+    "fastScrollModifierLabel": "Snabbrullningsmodifierare",
+    "fastScrollModifierShift": "Flytta",
+    "fastScrollSensitivity": "Snabb rullningskänslighet",
+    "fastScrollSensitivityLabel": "Snabb rullningskänslighet",
+    "fontFamily": "Typsnittsfamilj",
+    "fontFamilyCustomHint": "Välj ett paketerat teckensnitt, eller välj Anpassad och skriv det exakta namnet på ett teckensnitt som redan är installerat på ditt system (t.ex. MesloLGS NF, Noto Sans Mono). Termix kan inte installera teckensnitt åt dig, installera det på ditt operativsystem först.",
+    "fontFamilyCustomOption": "Beställnings...",
+    "fontFamilyCustomPlaceholder": "Exakt typsnittsnamn, t.ex. MesloLGS NF",
+    "fontFamilyLabel": "Typsnittsfamilj",
+    "fontSize": "Fontstorlek",
+    "fontSizeLabel": "Fontstorlek",
+    "hostNotFound": "Värden hittades inte",
+    "letterSpacing": "Bokstavsavstånd",
+    "letterSpacingPx": "Bokstavsavstånd (px)",
+    "lineHeight": "Linjehöjd",
+    "lineHeightLabel": "Linjehöjd",
+    "linkClickBehaviorConfirm": "Visa popup för att öppna eller kopiera",
+    "linkClickBehaviorDesc": "Styr vad som händer när du klickar på en länk i terminalen. Använd \"Standard\" för att följa inställningen på appnivå.",
+    "linkClickBehaviorDirect": "Öppna direkt",
+    "linkClickBehaviorLabel": "Länkklickbeteende",
+    "loadingHost": "Laddar värd...",
+    "localEchoAuto": "Automatisk",
+    "localEchoDesc": "Förutsäg säkra utskrivbara tangenttryckningar lokalt på långsamma anslutningar. Lösenordsförfrågningar och kontrollinmatning upprepas aldrig.",
+    "localEchoLabel": "Lokalt eko",
+    "localEchoOff": "Av",
+    "localEchoOn": "Alltid på",
+    "macOptionIsMetaLabel": "Alternativtangenten skickar meta",
+    "macOptionIsMetaShortDesc": "Inaktivera möjligheten att skriva specialtecken (som @ eller |) med Alternativ/Alt-tangenten på macOS istället för att skicka Meta",
+    "moshCommand": "MOSH-kommandot",
+    "moshCommandLabel": "Mosh-kommandot",
+    "noSavedThemes": "Inga sparade teman ännu",
+    "none": "Ingen",
+    "passwordPromptAutoFillDesc": "Erbjud dig att fylla i det sparade lösenordet när terminalen ber om det. Stäng av för att aldrig automatiskt fylla i något lösenord på den här värden.",
+    "passwordPromptAutoFillLabel": "Erbjudandelösenord automatiskt ifyllt",
+    "autoReconnectLabel": "Automatisk återanslutning",
+    "autoReconnectDesc": "Återansluter av sig själv när SSH-anslutningen bryts, till exempel efter ett nätverksavbrott eller viloläge. Behåller bakåtskrollningen.",
+    "rightClickSelectsWord": "Högerklicka markerar ord",
+    "rightClickSelectsWordLabel": "Högerklicka Markerar ord",
+    "rightClickSelectsWordShortDesc": "Markera ordet under markören vid högerklick",
+    "saveAsGlobalTheme": "Spara som globalt tema",
+    "saveGlobalThemeError": "Misslyckades med att spara temat",
+    "saveGlobalThemeNamePrompt": "Ange ett namn för detta tema",
+    "saveGlobalThemeSuccess": "Temat sparat",
+    "savedThemesLabel": "Sparade teman",
+    "scrollbackBufferLabel": "Scrollback-buffert",
+    "scrollbackMaxLines": "Maximalt antal rader som sparas i historiken",
+    "sudoPasswordAutoFill": "Sudo-lösenordsautomatik",
+    "sudoPasswordAutoFillDesc": "Lagra ett sudo-lösenord så att värdmätvärden, terminalprompter och annat kan köra privilegierade kommandon automatiskt.",
+    "sudoPasswordAutoFillLabel": "Sudo-lösenordsautomatik",
+    "syntaxCategoryIpAddresses": "IP-adresser",
     "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
-    "syntaxCategoryLogLevels": "Log Levels",
-    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
-    "syntaxCategoryNumbers": "Labeled Numbers",
-    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
-    "syntaxCategoryPaths": "File Paths",
-    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
-    "syntaxCategoryTimestamps": "Timestamps",
+    "syntaxCategoryLogLevels": "Loggnivåer",
+    "syntaxCategoryLogLevelsDesc": "fel, varna, information, felsök, dödlig",
+    "syntaxCategoryNumbers": "Märkta nummer",
+    "syntaxCategoryNumbersDesc": "port 8080, utgång 1, status 404",
+    "syntaxCategoryPaths": "Filsökvägar",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/fil.txt",
+    "syntaxCategoryTimestamps": "Tidsstämplar",
     "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
-    "syntaxCategoryUrls": "URLs",
+    "syntaxCategoryUrls": "URL:er",
     "syntaxCategoryUrlsDesc": "https://example.com",
-    "syntaxHighlightingDesc": "Colorize terminal output (errors, paths, IPs, timestamps)",
-    "syntaxHighlightingLabel": "Syntax Highlighting",
-    "terminalAppearance": "Terminal Appearance",
-    "theme": "Theme",
-    "themePreview": "Theme Preview",
-    "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
-    "useSSHTitleLabel": "Use SSH Window Title",
-    "enableTunnel": "Enable Tunnel",
-    "enableFileManager": "Enable File Manager",
-    "enableDocker": "Enable Docker",
-    "startupSnippet": "Startup Snippet",
-    "quickActions": "Quick Actions",
+    "syntaxHighlightingDesc": "Färglägg terminalutdata (fel, sökvägar, IP-adresser, tidsstämplar)",
+    "syntaxHighlightingLabel": "Syntaxmarkering",
+    "terminalAppearance": "Terminalens utseende",
+    "theme": "Tema",
+    "themePreview": "Förhandsvisning av tema",
+    "useSSHTitleDesc": "Uppdatera flikrubriken från skalets fönsterrubriken istället för värdnamnet",
+    "useSSHTitleLabel": "Använd SSH-fönstertitel",
+    "enableTunnel": "Aktivera tunnel",
+    "enableFileManager": "Aktivera filhanteraren",
+    "enableDocker": "Aktivera Docker",
+    "startupSnippet": "Startkodavsnitt",
+    "quickActions": "Snabbåtgärder",
     "proxmoxLastSyncStatus": {
-      "success": "Success"
+      "success": "Framgång"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
-    "rdpUrlCopied": "RDP URL copied",
-    "vncUrlCopied": "VNC URL copied",
-    "filterAuthStepca": "Step CA",
+    "proxmoxResultSkippedNoIp": "{{count}} hoppades över (ingen IP-adress hittades)",
+    "proxmoxStatsUrlCopied": "Proxmox Stats URL kopierad till urklipp",
+    "rdpUrlCopied": "RDP-URL kopierad",
+    "vncUrlCopied": "VNC-URL kopierad",
+    "filterAuthStepca": "Steg CA",
     "guac": {
-      "noCredential": "No credential (direct credentials below)",
-      "authTypeDirect": "Direct",
-      "authTypeCredential": "Credential",
-      "authTypeNone": "None",
-      "recordingPath": "Recording Path",
-      "recordingName": "Recording Name",
-      "saveHostFirst": "Save the host first.",
-      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
-      "permissionLevel": "Permission Level",
-      "typeHeader": "Type",
-      "targetHeader": "Target",
-      "permissionHeader": "Permission",
-      "cancelBtn": "Cancel",
-      "savingBtn": "Saving...",
-      "updateHostBtn": "Update Host",
-      "addHostBtn": "Add Host"
+      "noCredential": "Ingen referens (direkta referenser nedan)",
+      "authTypeDirect": "Direkt",
+      "authTypeCredential": "Referenser",
+      "authTypeNone": "Ingen",
+      "recordingPath": "Inspelningsväg",
+      "recordingName": "Inspelningsnamn",
+      "saveHostFirst": "Spara värden först.",
+      "sharingOptionsAfterSave": "Delningsalternativ är tillgängliga efter att värden har sparats.",
+      "permissionLevel": "Behörighetsnivå",
+      "typeHeader": "Typ",
+      "targetHeader": "Mål",
+      "permissionHeader": "Tillstånd",
+      "cancelBtn": "Avboka",
+      "savingBtn": "Sparande...",
+      "updateHostBtn": "Uppdatera värd",
+      "addHostBtn": "Lägg till värd"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Valv"
   },
   "nav": {
-    "history": "History",
-    "localTerminal": "Local Terminal",
-    "sshTools": "SSH Tools",
+    "history": "Historia",
+    "localTerminal": "Lokal terminal",
+    "sshTools": "SSH-verktyg",
     "terminal": "Terminal",
-    "macros": "Macros"
+    "macros": "Makron"
   },
   "sshTools": {
-    "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
-    "copyOnSelect": "Copy selected text automatically",
-    "enableRightClickCopyPaste": "Enable right-click copy/paste",
-    "fillPassword": "Fill password",
-    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
-    "fillPasswordSuccess": "Filled password into {{count}} terminal(s)",
-    "keyRecordingTitle": "Key Recording",
-    "noTerminalTabsOpen": "No terminal tabs open",
-    "recordToTerminals": "Record to terminals",
-    "selectAll": "All",
-    "selectNone": "None",
-    "selectTerminalsAbove": "Select terminals above",
-    "settingsTitle": "Settings",
-    "startRecording": "Start Recording",
-    "stopRecording": "Stop Recording"
+    "broadcastInputPlaceholder": "Skriv här för att sända tangenttryckningar...",
+    "copyOnSelect": "Kopiera markerad text automatiskt",
+    "enableRightClickCopyPaste": "Aktivera högerklickskopiera/klistra in",
+    "fillPassword": "Fyll i lösenordet",
+    "fillPasswordMissing": "Inget sparat lösenord för {{count}} vald(a) terminal(er)",
+    "fillPasswordSuccess": "Ifyllt lösenord i {{count}} terminal(er)",
+    "keyRecordingTitle": "Nyckelinspelning",
+    "noTerminalTabsOpen": "Inga terminalflikar öppna",
+    "recordToTerminals": "Spela in till terminaler",
+    "selectAll": "Alla",
+    "selectNone": "Ingen",
+    "selectTerminalsAbove": "Välj terminaler ovan",
+    "settingsTitle": "Inställningar",
+    "startRecording": "Starta inspelning",
+    "stopRecording": "Stoppa inspelningen"
   },
   "keybindings": {
-    "copy": "Copy selection",
-    "paste": "Paste",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "copy": "Kopiera val",
+    "paste": "Klistra",
+    "sendControlCode": "Skicka Ctrl+bokstavssignal",
+    "sendText": "Skicka sms",
+    "controlCodeLabel": "Brev",
+    "textLabel": "SMS att skicka",
+    "appendEnterLabel": "Tryck Enter efter att du skickat",
+    "clipboardPermissionNote": "Kan be om behörighet för urklipp vid första användningen i vissa webbläsare.",
+    "textRequired": "Ange texten som ska skickas",
+    "controlCodeRequired": "Ange en enda bokstav för kontrollkoden",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Kopiera markering (Ctrl+C, endast när text är markerad)",
+      "copyCtrlShiftC": "Kopiera markering (Ctrl+Skift+C)",
+      "copyCmdC": "Kopiera markering (Cmd+C)",
+      "pasteCtrlShiftV": "Klistra in från urklipp (Ctrl+Shift+V)",
+      "ctrlW": "Skicka Ctrl+W till shell (blockeras från att stänga webbläsarfliken)",
+      "ctrlT": "Skicka Ctrl+T till shell (blockerad från att öppna webbläsarfliken)",
+      "ctrlN": "Skicka Ctrl+N till shell (blockeras från att öppna webbläsarfönster)",
+      "ctrlQ": "Skicka Ctrl+Q till shell (blockeras från att avsluta webbläsaren)"
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
-    "target": "Target",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
-    "name": "Name",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
-    "descriptionLabel": "Description",
-    "descriptionPlaceholder": "What this macro does (optional)",
-    "unsaved": "Unsaved changes",
-    "save": "Save",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
-    "delete": "Delete",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
-    "cancel": "Cancel",
-    "run": "Run",
-    "stop": "Stop",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "title": "Makron",
+    "description": "Kör en sparad serie kommandon i en terminal och reagera på vad servern skickar tillbaka.",
+    "target": "Mål",
+    "noTerminal": "Ingen terminal öppen",
+    "empty": "Inga makron ännu",
+    "emptyHint": "Skapa ett makro för att automatisera ett terminalflöde, som att logga in, starta om en tjänst eller svara på frågor.",
+    "create": "Nytt makro",
+    "back": "Tillbaka till makron",
+    "name": "Namn",
+    "namePlaceholder": "Starta om webbservern",
+    "nameRequired": "Ge makrot ett namn innan du sparar",
+    "descriptionLabel": "Beskrivning",
+    "descriptionPlaceholder": "Vad detta makro gör (valfritt)",
+    "unsaved": "Osparade ändringar",
+    "save": "Spara",
+    "saved": "Makrot sparat",
+    "saveFailed": "Kunde inte spara makrot",
+    "delete": "Radera",
+    "deleteTitle": "Ta bort det här makrot?",
+    "deleteBody": "\"{{name}}\" kommer att raderas permanent. Detta kan inte ångras.",
+    "deleted": "Makro borttaget",
+    "cancel": "Avboka",
+    "run": "Sikt",
+    "stop": "Stopp",
+    "running": "Spring...",
+    "completed": "Makro klart",
+    "failed": "Makrot misslyckades",
+    "loadFailed": "Kunde inte läsa in makron",
+    "needTerminal": "Öppna och anslut en terminal först",
+    "noSteps": "Det här makrot har inga steg ännu. Lägg till ett nedan.",
+    "addStep": "Lägg till steg",
+    "stepNumber": "Steg {{number}}",
+    "removeStep": "Ta bort steg",
+    "confirmRunTitle": "Köra det här makrot?",
+    "confirmRunBody": "\"{{name}}\" skickar kommandon till {{host}}.",
+    "confirmRunAction": "Kör makro",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "Skicka kommando",
+        "help": "Skriver text i terminalen, på samma sätt som om du hade skrivit den."
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "Vänta på utdata",
+        "help": "Pausar tills servern skriver ut texten du anger, som en lösenordsfråga."
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "Paus",
+        "help": "Väntar en fastställd tid innan nästa steg."
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "Om utdata innehåller",
+        "help": "Kontrollerar allt som servern har skrivit ut hittills och kör sedan en av två grenar."
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "Upprepa",
+        "help": "Kör stegen inuti ett visst antal gånger."
       }
     },
     "send": {
-      "text": "Command or text",
-      "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "text": "Kommando eller text",
+      "textPlaceholder": "systemctl starta om nginx",
+      "pressEnter": "Tryck Enter efter att du skickat",
+      "pressEnterHelp": "Stäng av detta för att skriva text utan att skicka in den."
     },
     "wait": {
-      "pattern": "Wait until the output contains",
-      "patternPlaceholder": "password:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "pattern": "Vänta tills utdata innehåller",
+      "patternPlaceholder": "lösenord:",
+      "timeout": "Ge upp efteråt",
+      "onTimeout": "Om det aldrig dyker upp",
+      "stop": "Stoppa makrot",
+      "continue": "Fortsätt ändå"
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "Vänta på"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "Om utdata innehåller",
+      "patternPlaceholder": "Aktiv: aktiv (löper)",
+      "then": "Gör sedan detta",
+      "else": "Annars gör så här",
+      "emptyBranch": "Inga steg"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "Antal gånger",
+      "times": "gånger"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "Matcha med ett reguljärt uttryck",
+      "useRegexHelp": "Lämna detta av för att texten ska se exakt ut som den är skriven.",
+      "invalidRegex": "Inte ett giltigt reguljärt uttryck, det kommer att matchas som vanlig text"
     },
-    "seconds": "seconds",
+    "seconds": "sekunder",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Fjärrserver krävs. Anslut en fjärrserver i Inställningar för att använda den här anslutningstypen."
   }
 }

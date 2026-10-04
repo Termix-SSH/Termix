@@ -1,22 +1,22 @@
 {
-  "title": "Passkeys",
-  "signIn": "Sign in with passkey",
-  "loginFailed": "Passkey login failed",
-  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
-  "namePlaceholder": "Passkey name",
-  "defaultName": "Passkey",
+  "title": "Lösenord",
+  "signIn": "Logga in med lösenord",
+  "loginFailed": "Inloggning med lösenord misslyckades",
+  "description": "Använd WebAuthn/FIDO2-inloggningsuppgifter för att logga in utan lösenord",
+  "namePlaceholder": "Lösenordsnamn",
+  "defaultName": "Lösenord",
   "uv": {
-    "preferred": "Preferred",
-    "required": "Required",
-    "discouraged": "Discouraged"
+    "preferred": "Föredragen",
+    "required": "Nödvändig",
+    "discouraged": "Avskräckt"
   },
-  "add": "Add Passkey",
-  "none": "No passkeys registered.",
-  "added": "Passkey added",
-  "addFailed": "Failed to add passkey",
-  "delete": "Delete passkey",
-  "deleted": "Passkey deleted",
-  "deleteFailed": "Failed to delete passkey",
-  "unknownDevice": "unknown",
-  "synced": "synced"
+  "add": "Lägg till lösenord",
+  "none": "Inga lösennycklar registrerade.",
+  "added": "Lösenord tillagt",
+  "addFailed": "Misslyckades med att lägga till lösenord",
+  "delete": "Ta bort lösenord",
+  "deleted": "Lösenordet raderat",
+  "deleteFailed": "Misslyckades med att ta bort lösenordet",
+  "unknownDevice": "okänd",
+  "synced": "synkroniserad"
 }

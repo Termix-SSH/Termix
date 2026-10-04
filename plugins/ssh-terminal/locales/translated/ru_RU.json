@@ -25,9 +25,9 @@
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "autoTmuxEnableFailed": "Не удалось включить Auto-Tmux.",
+    "autoTmuxEnabled": "Автоматический Tmux включен для {{host}}. Он применяется со следующего соединения.",
+    "clipboardHttpWarning": "Не удалось прочитать содержимое буфера обмена. Некоторые браузеры ограничивают доступ к буферу обмена вне протокола HTTPS — попробуйте использовать Ctrl+V или используйте Termix через HTTPS.",
     "closeTab": "Закрыть",
     "connecting": "Подключение...",
     "connectionLost": "Соединение потеряно",
@@ -44,18 +44,18 @@
     "reconnect": "Переподключиться",
     "reconnected": "Успешно переподключено",
     "reconnecting": "Переподключение... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "autoReconnecting": "Соединение потеряно, переподключение...",
+    "searchCaseSensitive": "Спичечный коробок",
+    "searchClose": "Закрыть (Выход)",
+    "searchNext": "Следующий матч (Вход)",
+    "searchNoResults": "Результаты отсутствуют",
+    "searchPlaceholder": "Находить",
+    "searchPrevious": "Предыдущий матч (Shift+Enter)",
+    "searchRegex": "Используйте регулярные выражения",
+    "searchResultCount": "{{index}} из {{count}}",
+    "searchWholeWord": "Сопоставьте целое слово",
+    "sessionExpiredNotice": "Ваша предыдущая сессия на {{host}} завершилась через {{minutes}} минут после разрыва соединения; оболочка и все запущенные в ней программы удалены. Включите Auto-Tmux на этом хосте, чтобы поддерживать сессии активными.",
+    "sessionExpiredNoticeNoMinutes": "Ваша предыдущая сессия на {{host}} завершилась во время отключения; оболочка и все запущенные в ней приложения удалены. Включите Auto-Tmux на этом хосте, чтобы поддерживать сессии активными.",
     "sessionTakenOver": "Сеанс был открыт в другой вкладке. Переподключение...",
     "tmuxAttached": "Подключённые клиенты",
     "tmuxAttachedCount": "{{count}} подключено",
@@ -81,35 +81,35 @@
     "clipboardWriteFailed": "Не удалось скопировать в буфер обмена. Убедитесь, что страница загружена по HTTPS или с localhost.",
     "connected": "Подключено",
     "totpCodeLabel": "Код подтверждения",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "duplicateTab": "Дублировать вкладку",
+    "imageChooseFile": "Выберите файл изображения",
+    "imageUploaded": "Загруженное изображение: {{path}}",
+    "imageClipboardUnavailable": "Этот браузер не может считывать изображения из буфера обмена.",
+    "imageClipboardEmpty": "Изображение в буфере обмена не найдено",
+    "localShell": "Локальная терминальная оболочка",
+    "autocompleteHintComplete": "Нажмите клавишу Tab или Enter для завершения.",
+    "autocompleteHintNavigate": "↑↓ для навигации",
+    "autocompleteHintClose": "Нажмите Esc для закрытия"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
+    "detachTmux": "Отсоединить tmux",
+    "detachTmuxDescription": "Отключить сессию tmux",
+    "dismissError": "Отклонить ошибку изображения",
+    "hideToolbar": "Скрыть панель инструментов",
+    "image": "Действия с изображениями (только с изображениями)",
+    "imageActionFailed": "Операция с изображением не удалась.",
+    "layout": "режим отображения панели инструментов",
+    "layoutExpanded": "Дополнено метриками",
+    "layoutIcon": "Только иконка",
+    "layoutLabeled": "Иконки и подписи",
+    "moveToolbar": "Переместить панель инструментов",
+    "moveToolbarHint": "Перетащите панель инструментов, чтобы изменить ее положение.",
+    "paste": "Вставить изображение",
+    "pasteImage": "Вставить изображение из буфера обмена (только изображения)",
     "retry": "Повторить",
     "showToolbar": "Развернуть панель",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
+    "upload": "Загрузить изображение",
+    "uploadImage": "Загрузите изображение на хостинг.",
     "uploadingImage": "Загрузка..."
   },
   "history": {
@@ -119,153 +119,153 @@
     "clearAll": "Очистить всё",
     "noHistoryEntries": "Нет записей в истории",
     "trackingDisabled": "Отслеживание истории отключено",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "trackingDisabledHint": "Включите историю команд во вкладке SSH-терминала этого хоста.",
+    "commandCount_one": "{{count}} команда",
+    "commandCount_other": "{{count}} команд"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
-    "advanced": "Advanced",
+    "enabled": "Включить сенсорный ввод",
+    "enabledDesc": "Разрешить прокрутку одним пальцем в терминалах",
+    "momentumEnabled": "Включить импульс",
+    "momentumEnabledDesc": "После свайпа продолжите прокрутку еще немного.",
+    "advanced": "Передовой",
     "resetDefaults": "Сбросить по умолчанию",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "dragThreshold": "Порог сопротивления",
+    "maxWheelDelta": "Максимальная разница колес",
+    "momentumSampleWindow": "Окно выборки импульса",
+    "releaseGracePeriod": "Льготный период освобождения",
+    "minimumVelocity": "Минимальная скорость",
+    "maximumVelocity": "Максимальная скорость",
+    "maximumDuration": "Максимальная продолжительность",
+    "maximumTravel": "Максимальный ход",
+    "decayTime": "Время распада",
+    "pixelsPerTick": "Пикселей на такт",
+    "maximumFrameInterval": "Максимальный интервал кадров",
+    "maximumTicksPerFrame": "Максимальное количество тактов на кадр"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
+    "instanceId": "Идентификатор экземпляра терминальной сессии",
+    "instanceIdDesc": "Идентификатор экземпляра одной из подключенных вкладок терминала, используемый для проверки видимости.",
+    "selectedModeUnavailable": "Недоступно",
     "test": "Проверить",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "testing": "Тестирование...",
+    "testFailed": "Не удалось проверить хранилище изображений.",
+    "testConnected": "Терминальная сессия подключена.",
+    "testNotConnected": "Нет подключенной терминальной сессии с этим идентификатором экземпляра.",
+    "testSelectedMode": "Для загрузки будет использоваться следующий синтаксис: {{mode}}",
+    "testLocalVisible": "Локальный каталог виден с подключенного хоста.",
+    "testLocalNotVisible": "Локальный каталог НЕ виден с подключенного хоста."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
+        "touch": "Сенсорный ввод",
+        "images": "Хранилище изображений",
         "sessions": "Сессии",
-        "newHosts": "New Hosts"
+        "newHosts": "Новые хосты"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Сохранение сессии в терминале",
+        "description": "Как долго отключенный терминал остается активным на сервере до его закрытия. Мин. 1, макс. 1440 минут. Для сессий, которые должны длиться дольше этого времени, включите Auto-Tmux на хосте."
       },
       "commandHistoryEnabled": {
         "label": "История команд",
         "description": "Включить запись истории команд. При отключении история не сохраняется независимо от настроек хостов."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "История команд для новых хостов",
+        "description": "Включается ли история команд при запуске новых хостов."
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "label": "Режим хранения",
+        "description": "Где записываются и загружаются образы терминала. Автоматический выбор по типу подключения, локальному и удаленному (SFTP) — это фиксированная настройка.",
         "auto": "Авто",
         "local": "Локальная",
-        "remoteSftp": "Remote (SFTP)"
+        "remoteSftp": "Удаленный (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "Локальный каталог",
+        "description": "Абсолютный путь в бэкэнде Termix, куда в локальном режиме записываются изображения. Никогда не отображается после сохранения. Пустой путь использует TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "Путь к хосту",
+        "description": "Представление локального каталога на стороне хоста, которое получают терминальные агенты."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "label": "TTL (мс)",
+        "description": "Время хранения загруженного изображения в миллисекундах. В пустом случае используется значение TERMIX_IMAGE_TTL_MS, или один час."
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "Максимальное количество изображений",
+        "description": "Большинство изображений сохраняется одновременно. В пустом режиме используется значение TERMIX_MAX_IMAGE_COUNT или 100."
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "Максимальный объем хранилища в байтах",
+        "description": "Максимальное количество байтов изображений, хранящихся одновременно. Пустой файл использует TERMIX_MAX_IMAGE_STORAGE_BYTES или 5 GiB."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Сохраняйте сессии после отключения.",
+        "description": "Поддерживайте активность отключенного терминала на сервере в течение указанного выше времени, чтобы при повторном открытии его вкладки работа продолжалась с того места, где она остановилась."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "description": "Запускайте терминалы новых хостов внутри tmux, чтобы сессии сохранялись после разрывов соединения (для этого tmux должен быть установлен на хосте)."
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Тема оформления для новых хостов",
+        "description": "Тема оформления терминала, с которой запускается новый хост."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Шрифт для новых хостов",
+        "description": "Шрифт терминала, используемый при запуске нового хоста."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Размер шрифта для новых хостов",
+        "description": "Размер шрифта в пикселях, с которым запускается новый хост."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Стиль курсора для новых хостов"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Мигающий курсор для новых хостов"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "Включить панель инструментов терминала",
+        "description": "Отобразить панель быстрого доступа, закрепленную на активном терминале, для отображения инструментов и статистики этого хоста в режиме реального времени."
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Положение панели инструментов",
+        "description": "Там, где находится панель инструментов в терминале. Вы по-прежнему можете перетаскивать её оттуда.",
+        "bottom": "Нижний центр",
+        "bottomLeft": "Внизу слева",
+        "bottomRight": "Внизу справа",
+        "top": "Верхний центр",
+        "topLeft": "Вверху слева",
+        "topRight": "Вверху справа"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Начальное состояние панели инструментов",
+        "description": "Будет ли панель инструментов открываться в развернутом или свернутом виде при подключении терминала?",
+        "expanded": "Расширенный",
+        "collapsed": "Минимизированный"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "Режим отображения панели инструментов",
+        "description": "Как отображаются кнопки на панели инструментов. Функция «Последнее использованное» сохраняет выбранные вами кнопки на панели инструментов.",
+        "remember": "Последнее использование",
+        "icon": "Только иконка",
+        "labeled": "Иконки и подписи",
+        "expanded": "Дополнено статистикой."
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Показать статистику в реальном времени",
+        "description": "В расширенном режиме отображайте статистику хоста в режиме реального времени над кнопками панели инструментов."
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Затухание в режиме ожидания",
+        "description": "Постепенно уменьшайте масштаб панели инструментов, пока не наведете на нее курсор мыши."
       },
       "enableCommandHistory": {
         "label": "История команд",
@@ -273,157 +273,157 @@
       },
       "enableTerminal": {
         "label": "Включить терминал",
-        "description": "Offer an SSH terminal for this host."
+        "description": "Предоставьте SSH-терминал для этого хоста."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Использовать пользовательские настройки по умолчанию"
       },
       "theme": {
         "label": "Тема"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Мигающий курсор"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "Стиль курсора"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "размер шрифта"
       },
       "fontFamily": {
-        "label": "Font"
+        "label": "Шрифт"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Прокрутка назад"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "межбуквенный интервал"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Высота строки"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Белл"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Минимальный коэффициент контрастности"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Фоновое изображение"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Прозрачность фонового изображения"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Пользовательские цвета темы"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Щелчок правой кнопкой мыши выделяет слово."
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Вариант — Мета"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Клавиша быстрой прокрутки"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Высокая скорость прокрутки"
       },
       "backspaceMode": {
         "label": "Backspace"
       },
       "autoMosh": {
-        "label": "Auto mosh"
+        "label": "Автомош"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Команда Мош"
       },
       "autoTmux": {
-        "label": "Auto tmux"
+        "label": "Автоматический tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "Используйте заголовок SSH"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Подсветка синтаксиса"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Категории подсветки синтаксиса"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Ссылка клик"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Локальное эхо"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Предложить заполнить поля для ввода пароля"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "Заполните подсказки sudo"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Автоматическое переподключение"
       }
     },
     "user": {
       "commandAutocomplete": {
         "label": "Автодополнение команд",
-        "description": "Show autocomplete while typing if you press tab"
+        "description": "При нажатии клавиши Tab будет отображаться автозаполнение во время набора текста."
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "Локальное эхо",
+        "description": "Снизьте воспринимаемую задержку ввода, используя безопасное локальное прогнозирование нажатий клавиш."
       },
       "linkClickBehavior": {
         "label": "Клик по ссылке в терминале",
         "description": "Поведение по умолчанию при клике по ссылкам в терминале"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Сохраненные темы"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "Локальный терминал"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Используйте сеансы работы с терминалом в режиме реального времени.",
+      "description": "Позволяет использовать другие функции, такие как совместное использование сессий и запись, в режиме реального времени на вашем терминале."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Прочитать историю команд",
+      "description": "Позволяет другим функциям, таким как ИИ-помощник, читать историю ваших команд."
     }
   },
   "hosts": {
     "tabTerminal": "Терминал",
     "addHost": "Добавить хост",
-    "applyGlobalThemeTooltip": "Apply this theme",
+    "applyGlobalThemeTooltip": "Примените эту тему",
     "backgroundImageDesc": "Необязательный URL для фонового изображения терминала",
     "backgroundImageLabel": "URL фонового изображения",
     "backgroundImageOpacityLabel": "Прозрачность фонового изображения",
     "backspaceMode": "Режим Backspace",
-    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeControlH": "Контроль-H (BS)",
     "backspaceModeLabel": "Режим Backspace",
-    "backspaceModeNormal": "Normal (DEL)",
+    "backspaceModeNormal": "Нормальный (DEL)",
     "behaviorAndAdvanced": "Поведение и дополнительные настройки",
     "bellStyle": "Стиль звукового сигнала",
-    "bellStyleBoth": "Both",
+    "bellStyleBoth": "Оба",
     "bellStyleLabel": "Стиль сигнала",
     "bellStyleNone": "Ни одного",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
+    "bellStyleSound": "Звук",
+    "bellStyleVisual": "Визуальный",
     "colorTheme": "Цветовая тема",
     "cursorBlink": "Мигание курсора",
     "cursorBlinking": "Мигание курсора",
     "cursorBlinkingDesc": "Включить анимацию мигания курсора терминала",
     "cursorStyle": "Стиль курсора",
-    "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
+    "cursorStyleBar": "Бар",
+    "cursorStyleBlock": "Блокировать",
     "cursorStyleLabel": "Стиль курсора",
-    "cursorStyleUnderline": "Underline",
+    "cursorStyleUnderline": "Подчеркнуть",
     "customThemeAnsiColors": "Цвета ANSI",
     "customThemeBackground": "Фон",
     "customThemeBlack": "Чёрный",
@@ -448,12 +448,12 @@
     "customThemeSelection": "Выделение",
     "customThemeWhite": "Белый",
     "customThemeYellow": "Жёлтый",
-    "deleteGlobalThemeTooltip": "Delete this theme",
+    "deleteGlobalThemeTooltip": "Удалить эту тему",
     "docsLink": "Документация",
     "enableAutoMosh": "Включить Auto-Mosh",
     "enableAutoMoshDesc": "Предпочитать Mosh вместо SSH, если доступен",
     "enableAutoTmux": "Включить Auto-Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "enableAutoTmuxDesc": "Поддерживайте работоспособность вашей оболочки и всего, что в ней работает, даже при разрыве соединения и перезапуске браузера, запустив tmux (tmux должен быть установлен на хосте).",
     "fastScrollModifier": "Модификатор быстрой прокрутки",
     "fastScrollModifierAlt": "Alt",
     "fastScrollModifierCtrl": "Ctrl",
@@ -462,9 +462,9 @@
     "fastScrollSensitivity": "Чувствительность быстрой прокрутки",
     "fastScrollSensitivityLabel": "Чувствительность быстрой прокрутки",
     "fontFamily": "Семейство шрифтов",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyCustomHint": "Выберите шрифт из комплекта или выберите «Пользовательский» и введите точное название шрифта, уже установленного в вашей системе (например, MesloLGS NF, Noto Sans Mono). Termix не может установить шрифты автоматически, сначала установите его в свою операционную систему.",
+    "fontFamilyCustomOption": "Обычай...",
+    "fontFamilyCustomPlaceholder": "Точное название шрифта, например, MesloLGS NF",
     "fontFamilyLabel": "Семейство шрифтов",
     "fontSize": "Размер шрифта",
     "fontSizeLabel": "Размер шрифта",
@@ -478,29 +478,29 @@
     "linkClickBehaviorDirect": "Открывать напрямую",
     "linkClickBehaviorLabel": "Поведение при клике по ссылке",
     "loadingHost": "Загрузка хоста...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
+    "localEchoAuto": "Автоматический",
+    "localEchoDesc": "Предсказывает безопасные нажатия клавиш для печати локально даже при медленном соединении. Запросы паролей и управляющий ввод никогда не отображаются.",
+    "localEchoLabel": "Локальное эхо",
     "localEchoOff": "Отключено",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "localEchoOn": "Всегда включено",
+    "macOptionIsMetaLabel": "Клавиша Option отправляет метаданные",
+    "macOptionIsMetaShortDesc": "Отключите возможность ввода специальных символов (например, @ или |) с помощью клавиши Option/Alt в macOS вместо отправки Meta.",
     "moshCommand": "Команда MOSH",
     "moshCommandLabel": "Команда Mosh",
-    "noSavedThemes": "No saved themes yet",
+    "noSavedThemes": "Сохранённых тем пока нет.",
     "none": "Нет",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "passwordPromptAutoFillDesc": "Предлагается ввести сохраненный пароль, когда терминал запросит его. Отключите эту функцию, чтобы автоматическое заполнение паролей на этом хосте никогда не происходило.",
+    "passwordPromptAutoFillLabel": "Функция автозаполнения паролей",
+    "autoReconnectLabel": "Автоматическое переподключение",
+    "autoReconnectDesc": "При разрыве SSH-соединения, например, после сбоя сети или перехода в спящий режим, система автоматически переподключается. При этом сохраняется возможность прокрутки назад.",
     "rightClickSelectsWord": "Выделять слово правой кнопкой",
     "rightClickSelectsWordLabel": "Правый клик выделяет слово",
     "rightClickSelectsWordShortDesc": "Выделять слово под курсором при правом клике",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
+    "saveAsGlobalTheme": "Сохранить как глобальную тему",
+    "saveGlobalThemeError": "Не удалось сохранить тему.",
+    "saveGlobalThemeNamePrompt": "Введите название для этой темы.",
+    "saveGlobalThemeSuccess": "Тема сохранена",
+    "savedThemesLabel": "Сохраненные темы",
     "scrollbackBufferLabel": "Буфер прокрутки",
     "scrollbackMaxLines": "Максимальное количество строк, сохраняемых в истории",
     "sudoPasswordAutoFill": "Автозаполнение пароля sudo",
@@ -533,11 +533,11 @@
     "proxmoxLastSyncStatus": {
       "success": "Успешно"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "proxmoxResultSkippedNoIp": "{{count}} пропущено (IP-адрес не найден)",
+    "proxmoxStatsUrlCopied": "URL-адрес статистики Proxmox скопирован в буфер обмена.",
     "rdpUrlCopied": "Скопирован URL RDP",
     "vncUrlCopied": "Скопирован URL VNC",
-    "filterAuthStepca": "Step CA",
+    "filterAuthStepca": "Шаг CA",
     "guac": {
       "noCredential": "Нет учетных данных (прямые данные ниже)",
       "authTypeDirect": "Прямой",
@@ -556,18 +556,18 @@
       "updateHostBtn": "Обновить хост",
       "addHostBtn": "Добавить хост"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Сейф"
   },
   "nav": {
     "history": "История",
-    "localTerminal": "Local Terminal",
+    "localTerminal": "Локальный терминал",
     "sshTools": "Инструменты SSH",
     "terminal": "Терминал",
-    "macros": "Macros"
+    "macros": "Макросы"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Введите текст для трансляции нажатий...",
-    "copyOnSelect": "Copy selected text automatically",
+    "copyOnSelect": "Автоматическое копирование выделенного текста",
     "enableRightClickCopyPaste": "Включить копирование/вставку правой кнопкой мыши",
     "fillPassword": "Заполнить пароль",
     "fillPasswordMissing": "Нет сохранённого пароля для {{count}} выбранных терминалов",
@@ -583,123 +583,123 @@
     "stopRecording": "Остановить запись"
   },
   "keybindings": {
-    "copy": "Copy selection",
+    "copy": "Скопировать выделенный фрагмент",
     "paste": "Вставить",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "sendControlCode": "Отправить сигнал Ctrl+буква",
+    "sendText": "Отправить текст",
+    "controlCodeLabel": "Письмо",
+    "textLabel": "Текст для отправки",
+    "appendEnterLabel": "Нажмите Enter после отправки",
+    "clipboardPermissionNote": "В некоторых браузерах при первом использовании может запрашиваться разрешение на использование буфера обмена.",
+    "textRequired": "Введите текст для отправки",
+    "controlCodeRequired": "Введите одну букву в качестве управляющего кода.",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Скопировать выделенный фрагмент (Ctrl+C, только если выделен текст)",
+      "copyCtrlShiftC": "Скопировать выделенный фрагмент (Ctrl+Shift+C)",
+      "copyCmdC": "Скопировать выделенный фрагмент (Cmd+C)",
+      "pasteCtrlShiftV": "Вставить из буфера обмена (Ctrl+Shift+V)",
+      "ctrlW": "Отправьте Ctrl+W в командную оболочку (это заблокирует закрытие вкладки браузера).",
+      "ctrlT": "Отправьте Ctrl+T в командную оболочку (это заблокирует открытие вкладки браузера).",
+      "ctrlN": "Отправьте Ctrl+N в командную оболочку (это заблокирует открытие окна браузера).",
+      "ctrlQ": "Отправьте Ctrl+Q в командную оболочку (это заблокирует возможность закрытия браузера)."
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "title": "Макросы",
+    "description": "Выполните сохраненную последовательность команд в терминале и отреагируйте на то, что сервер отправит вам в ответ.",
     "target": "Цель",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
+    "noTerminal": "Терминал не открыт",
+    "empty": "Макросы пока отсутствуют",
+    "emptyHint": "Создайте макрос для автоматизации действий в терминале, таких как вход в систему, перезапуск службы или ответ на запросы.",
+    "create": "Новый макрос",
+    "back": "Вернуться к макроэлементам",
     "name": "Название",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
+    "namePlaceholder": "Перезапустите веб-сервер",
+    "nameRequired": "Перед сохранением дайте макросу имя.",
     "descriptionLabel": "Описание",
-    "descriptionPlaceholder": "What this macro does (optional)",
+    "descriptionPlaceholder": "Что делает этот макрос (необязательно)",
     "unsaved": "Несохранённые изменения",
     "save": "Сохранить",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
+    "saved": "Макрос сохранен",
+    "saveFailed": "Не удалось сохранить макрос.",
     "delete": "Удалить",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
+    "deleteTitle": "Удалить этот макрос?",
+    "deleteBody": "\"{{name}}\" будет удалено навсегда. Этого нельзя будет отменить.",
+    "deleted": "Макрос удален",
     "cancel": "Отмена",
     "run": "Запустить",
     "stop": "Остановить",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "running": "Бег...",
+    "completed": "Макро завершен",
+    "failed": "Макрос не сработал",
+    "loadFailed": "Не удалось загрузить макросы.",
+    "needTerminal": "Сначала откройте и подключите терминал.",
+    "noSteps": "В этом макросе пока нет шагов. Добавьте один ниже.",
+    "addStep": "Добавить шаг",
+    "stepNumber": "Шаг {{number}}",
+    "removeStep": "Удалить шаг",
+    "confirmRunTitle": "Запустить этот макрос?",
+    "confirmRunBody": "\"{{name}}\" будет отправлять команды {{host}}.",
+    "confirmRunAction": "Запустить макрос",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "Отправить команду",
+        "help": "Вводит текст в терминал так же, как если бы вы его ввели вручную."
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "Дождитесь вывода",
+        "help": "Приостанавливается до тех пор, пока сервер не выведет указанный вами текст, как запрос пароля."
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "Пауза",
+        "help": "Перед следующим шагом выполняется ожидание в течение заданного промежутка времени."
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "Если вывод содержит",
+        "help": "Проверяет все данные, выведенные сервером на экран, а затем запускает одну из двух ветвей выполнения."
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "Повторить",
+        "help": "Выполняет все шаги, входящие в его состав, заданное количество раз."
       }
     },
     "send": {
-      "text": "Command or text",
+      "text": "Команда или текст",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "pressEnter": "Нажмите Enter после отправки",
+      "pressEnterHelp": "Отключите эту функцию, чтобы вводить текст без отправки."
     },
     "wait": {
-      "pattern": "Wait until the output contains",
+      "pattern": "Дождитесь, пока на выходе не появится",
       "patternPlaceholder": "пароль:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "timeout": "Сдаться после",
+      "onTimeout": "Если оно никогда не появится",
+      "stop": "Остановите макрос",
+      "continue": "Продолжайте в любом случае."
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "Подождите"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "Если в выходных данных содержится",
+      "patternPlaceholder": "Активный: активен (работает)",
+      "then": "Затем сделайте это.",
+      "else": "В противном случае сделайте это.",
+      "emptyBranch": "Без ступенек"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "Количество раз",
+      "times": "времена"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "Сопоставление с использованием регулярного выражения",
+      "useRegexHelp": "Оставьте этот параметр отключенным, чтобы текст точно соответствовал написанному.",
+      "invalidRegex": "Не является допустимым регулярным выражением, будет сопоставлено как обычный текст."
     },
     "seconds": "секунды",
-    "secondsShort": "{{count}}s"
+    "secondsShort": "{{count}}с"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Требуется удаленный сервер. Для использования этого типа подключения подключите удаленный сервер в настройках."
   }
 }

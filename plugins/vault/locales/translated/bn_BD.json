@@ -1,68 +1,68 @@
 {
   "editor": {
-    "profile": "Vault Signer Profile",
-    "selectProfile": "Select a Vault profile...",
-    "hint": "Settings come from the shared profile; you'll sign in to Vault via OIDC when you connect. No secrets are stored.",
-    "docs": "View docs",
-    "sharedProfile": "{{name}} (shared)"
+    "profile": "ভল্ট স্বাক্ষরকারীর প্রোফাইল",
+    "selectProfile": "একটি ভল্ট প্রোফাইল নির্বাচন করুন...",
+    "hint": "সেটিংস শেয়ার করা প্রোফাইল থেকে আসে; সংযোগ করার সময় আপনি OIDC-এর মাধ্যমে ভল্টে সাইন ইন করবেন। কোনো গোপনীয় তথ্য সংরক্ষিত থাকে না।",
+    "docs": "নথি দেখুন",
+    "sharedProfile": "{{name}} (ভাগ করা)"
   },
   "profiles": {
-    "new": "New profile",
-    "manage": "Manage Vault profiles",
-    "name": "Friendly Name",
-    "vaultAddr": "Vault Address",
-    "namespace": "Namespace",
-    "oidcMount": "OIDC Auth Mount",
-    "oidcRole": "OIDC Role",
-    "sshMount": "SSH Secrets Mount",
-    "sshRole": "SSH Signer Role",
-    "validPrincipals": "Valid Principals",
-    "keyType": "Ephemeral Key Type",
-    "shareWithAll": "Share with all users",
-    "create": "Create profile",
-    "created": "Vault profile created",
-    "saved": "Vault profile saved",
-    "deleted": "Vault profile deleted",
-    "saveFailed": "Failed to save Vault profile",
-    "deleteFailed": "Failed to delete Vault profile",
-    "save": "Save profile",
-    "validationError": "Name, Vault address and SSH signer role are required",
-    "none": "No Vault profiles yet.",
+    "new": "নতুন প্রোফাইল",
+    "manage": "ভল্ট প্রোফাইলগুলি পরিচালনা করুন",
+    "name": "বন্ধুত্বপূর্ণ নাম",
+    "vaultAddr": "ভল্ট ঠিকানা",
+    "namespace": "নেমস্পেস",
+    "oidcMount": "OIDC অথোরাইজেশন মাউন্ট",
+    "oidcRole": "OIDC ভূমিকা",
+    "sshMount": "SSH সিক্রেটস মাউন্ট",
+    "sshRole": "SSH স্বাক্ষরকারীর ভূমিকা",
+    "validPrincipals": "বৈধ অধ্যক্ষরা",
+    "keyType": "ক্ষণস্থায়ী কী টাইপ",
+    "shareWithAll": "সকল ব্যবহারকারীর সাথে শেয়ার করুন",
+    "create": "প্রোফাইল তৈরি করুন",
+    "created": "ভল্ট প্রোফাইল তৈরি করা হয়েছে",
+    "saved": "ভল্ট প্রোফাইল সংরক্ষিত হয়েছে",
+    "deleted": "ভল্ট প্রোফাইল মুছে ফেলা হয়েছে",
+    "saveFailed": "ভল্ট প্রোফাইল সংরক্ষণ করতে ব্যর্থ হয়েছে",
+    "deleteFailed": "ভল্ট প্রোফাইল মুছে ফেলা ব্যর্থ হয়েছে",
+    "save": "প্রোফাইল সংরক্ষণ করুন",
+    "validationError": "নাম, ভল্ট অ্যাড্রেস এবং SSH সাইনার রোল প্রয়োজন।",
+    "none": "এখনো কোনো ভল্ট প্রোফাইল তৈরি হয়নি।",
     "sharedBadge": "ভাগ করা হয়েছে",
-    "edit": "Edit",
-    "delete": "Delete"
+    "edit": "সম্পাদনা",
+    "delete": "মুছে ফেলুন"
   },
   "hosts": {
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "ভল্ট"
   },
   "dialog": {
-    "title": "Vault sign-in required",
-    "description": "A window has opened to sign in to HashiCorp Vault. Complete the sign-in there; this connection will continue automatically.",
-    "failed": "Vault authentication failed. Please try again.",
-    "reopen": "Reopen sign-in window"
+    "title": "ভল্টে সাইন-ইন করা আবশ্যক",
+    "description": "হ্যাশিকর্প ভল্টে সাইন ইন করার জন্য একটি উইন্ডো খুলেছে। সেখানে সাইন-ইন সম্পন্ন করুন; এই সংযোগটি স্বয়ংক্রিয়ভাবে চলতে থাকবে।",
+    "failed": "ভল্ট প্রমাণীকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+    "reopen": "সাইন-ইন উইন্ডো পুনরায় খুলুন"
   },
   "permissions": {
     "use": {
-      "title": "Use Vault SSH signing",
-      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+      "title": "ভল্ট এসএসএইচ সাইনিং ব্যবহার করুন",
+      "description": "Vault স্বাক্ষরকারী প্রোফাইল তৈরি করুন এবং Vault ব্যবহারকারী হোস্টগুলির সাথে সংযোগ স্থাপন করুন।"
     },
     "share": {
-      "title": "Share Vault profiles",
-      "description": "Mark a Vault signer profile as shared so every user can pick it."
+      "title": "ভল্ট প্রোফাইল শেয়ার করুন",
+      "description": "একটি ভল্ট স্বাক্ষরকারীর প্রোফাইলকে শেয়ার করা হিসেবে চিহ্নিত করুন, যাতে প্রত্যেক ব্যবহারকারী সেটি বেছে নিতে পারে।"
     }
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+      "label": "পুনঃনির্দেশ URI",
+      "description": "Termix যেসব Vault OIDC রোলের মাধ্যমে সাইন ইন করে, সেগুলোর প্রতিটির allowed_redirect_uris-এ এই URL-টি যোগ করুন।"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+      "label": "পুরানো রিডাইরেক্ট ইউআরআই ব্যবহার করুন",
+      "description": "/vault/oidc/callback পাঠানো চালিয়ে যান, যেটি ২.৯ এর আগে ব্যবহৃত রিডাইরেক্ট ইউআরআই ছিল। আপনার ভল্ট রোলগুলো নতুনটি অনুমোদন করলে এটি বন্ধ করে দিন।"
     },
     "host": {
       "profileId": {
-        "label": "Vault signer profile"
+        "label": "ভল্ট স্বাক্ষরকারীর প্রোফাইল"
       }
     }
   }

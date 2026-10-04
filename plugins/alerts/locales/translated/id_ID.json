@@ -1,172 +1,172 @@
 {
   "nav": {
-    "alerts": "Alerts"
+    "alerts": "Peringatan"
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "Gunakan peringatan",
+      "description": "Dapatkan notifikasi di kotak masuk dan kirimkan ke saluran Anda sendiri."
     }
   },
   "onboarding": {
-    "feature": "Alerts",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "feature": "Peringatan",
+    "featureDesc": "Semua notifikasi dalam satu kotak masuk, yang kemudian dikirim ke Discord, ntfy, email, atau webhook jika Anda mau."
   },
   "settings": {
     "group": {
-      "general": "General",
-      "email": "Email"
+      "general": "Umum",
+      "email": "E-mail"
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Pengumuman Termix",
+        "description": "Tampilkan berita dari tim Termix, seperti pemberitahuan keamanan dan rilis, di kotak masuk setiap orang."
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "Aktifkan peringatan selama (hari)",
+        "description": "Notifikasi lama dihapus dari setiap kotak masuk."
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "Server SMTP",
+        "description": "Diperlukan untuk saluran email. Biarkan kosong untuk menonaktifkan email.",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "Port SMTP",
+        "description": "Biasanya 587 dengan STARTTLS atau 465 dengan TLS."
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "Gunakan TLS sejak awal.",
+        "description": "Aktifkan untuk port 465. Biarkan nonaktif untuk port 587, yang akan secara otomatis diupgrade ke TLS."
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "Nama pengguna SMTP",
+        "description": "Biarkan kosong jika server tidak memerlukan login."
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "Kata sandi SMTP",
+        "description": "Disimpan dalam keadaan terenkripsi."
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
+        "label": "Dari alamat",
+        "description": "Peringatan pengirim berasal dari.",
         "placeholder": "Termix <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
-        "off": "None"
+        "label": "Popup peringatan",
+        "description": "Notifikasi baru apa saja yang muncul saat Anda menggunakan Termix? Notifikasi tersebut selalu masuk ke kotak masuk Anda.",
+        "all": "Semua peringatan",
+        "warning": "Peringatan dan hal-hal penting",
+        "critical": "Kritik saja",
+        "off": "Tidak ada"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
-    "channels": "Channels",
-    "rules": "Delivery rules"
+    "inbox": "Kotak Masuk",
+    "channels": "Saluran",
+    "rules": "Aturan pengiriman"
   },
   "severity": {
-    "info": "Info",
-    "success": "Success",
-    "warning": "Warning",
-    "critical": "Critical"
+    "info": "Informasi",
+    "success": "Kesuksesan",
+    "warning": "Peringatan",
+    "critical": "Kritis"
   },
   "inbox": {
     "sourceTermix": "Termix",
-    "openLink": "Open",
-    "view": "View",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
-    "delete": "Delete",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "openLink": "Membuka",
+    "view": "Melihat",
+    "unread": "Belum dibaca",
+    "deliveryFailed_one": "{{count}} saluran gagal",
+    "deliveryFailed_other": "{{count}} saluran gagal",
+    "markRead": "Tandai sebagai sudah dibaca",
+    "markUnread": "Tandai sebagai belum dibaca",
+    "markAllRead": "Tandai semua sebagai sudah dibaca",
+    "delete": "Menghapus",
+    "clearRead": "Hapus notifikasi baca",
+    "cleared_one": "Peringatan {{count}} dihapus",
+    "cleared_other": "Peringatan {{count}} dihapus",
+    "filterAll": "Semua",
+    "filterUnread": "Belum dibaca",
+    "anySeverity": "Tingkat keparahan apa pun",
+    "anySource": "Sumber apa pun",
+    "openAll": "Buka di tab",
+    "empty": "Belum ada peringatan.",
+    "emptyUnread": "Anda sudah mengetahui semuanya.",
+    "loadMore": "Muat lebih banyak"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
-    "enabled": "Enabled",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "type": "Type",
+    "intro": "Saluran adalah tempat peringatan dapat dikirim ke luar Termix. Aturan pengiriman memilih peringatan mana yang akan menggunakannya.",
+    "add": "Tambahkan saluran",
+    "edit": "Edit saluran",
+    "test": "Kirim tes",
+    "testSent": "Peringatan uji coba terkirim",
+    "testFailed": "Tes gagal: {{error}}",
+    "deleteConfirm": "Hapus saluran \"{{name}}\"?",
+    "deleted": "Saluran dihapus",
+    "empty": "Belum ada saluran.",
+    "enabled": "Diaktifkan",
+    "needsSave": "Saluran ini perlu dibuka dan disimpan kembali sebelum dapat mengirim data.",
+    "name": "Nama",
+    "nameRequired": "Nama wajib diisi.",
+    "type": "Jenis",
     "types": {
       "webhook": "Webhook",
       "ntfy": "ntfy",
-      "discord": "Discord",
-      "email": "Email"
+      "discord": "Perselisihan",
+      "email": "E-mail"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "emailUnavailable": "Email memerlukan server SMTP, yang diatur oleh administrator di pengaturan Notifikasi.",
     "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
-    "ntfyServer": "Server URL",
-    "ntfyTopic": "Topic",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "webhookHint": "Menerima isi JSON untuk setiap peringatan.",
+    "method": "Metode",
+    "headers": "Judul",
+    "headersHint": "Satu per baris, seperti Nama: nilai.",
+    "ntfyServer": "URL Server",
+    "ntfyTopic": "Topik",
+    "ntfyToken": "Token akses (opsional)",
+    "discordUrl": "URL webhook Discord",
+    "discordHint": "Dari pengaturan saluran di Discord, di bawah Integrasi.",
+    "discordUsername": "Nama tampilan (opsional)",
+    "discordAvatar": "URL Avatar (opsional)",
+    "emailTo": "Kirim ke",
+    "emailHint": "Pisahkan lebih dari satu alamat dengan koma.",
+    "privateNetwork": "Izinkan alamat jaringan pribadi",
+    "privateNetworkHint": "Hanya berfungsi untuk host yang diizinkan oleh admin dalam daftar endpoint privat."
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
-    "enabled": "Enabled",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "intro": "Aturan pengiriman mengirimkan peringatan yang sesuai ke saluran Anda. Peringatan juga selalu tetap berada di kotak masuk.",
+    "add": "Tambahkan aturan",
+    "edit": "Edit aturan",
+    "empty": "Belum ada aturan, jadi notifikasi hanya muncul di kotak masuk.",
+    "needChannel": "Tambahkan saluran terlebih dahulu.",
+    "enabled": "Diaktifkan",
+    "name": "Nama",
+    "nameRequired": "Nama wajib diisi.",
+    "match": "Peringatan untuk dikirim",
+    "matchHint": "* untuk segala hal, otomatisasi.* untuk segala hal mulai dari otomatisasi, atau satu jenis tertentu.",
+    "minSeverity": "Setidaknya",
+    "channels": "Kirim ke",
+    "channelRequired": "Pilih setidaknya satu saluran",
+    "deleteConfirm": "Hapus aturan \"{{name}}\"?",
+    "everything": "Semuanya",
+    "summary": "{{match}}, {{severity}} atau lebih tinggi, hingga {{channels}}"
   },
   "actions": {
-    "cancel": "Cancel",
-    "save": "Save",
-    "saving": "Saving...",
-    "delete": "Delete"
+    "cancel": "Membatalkan",
+    "save": "Menyimpan",
+    "saving": "Penghematan...",
+    "delete": "Menghapus"
   },
   "widget": {
-    "name": "Alert Feed",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
-    "allClear": "All clear",
-    "loading": "Loading..."
+    "name": "Umpan Peringatan",
+    "description": "Notifikasi terbaru Anda, dengan cara cepat untuk menandainya sebagai sudah dibaca.",
+    "maxItems": "Jumlah maksimum",
+    "showRead": "Tampilkan pemberitahuan telah dibaca",
+    "allClear": "Semuanya aman.",
+    "loading": "Memuat..."
   }
 }

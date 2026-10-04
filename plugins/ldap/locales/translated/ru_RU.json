@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "Вход через LDAP",
   "loginWithProvider": "Войти через {{name}}",
   "loading": "Загрузка...",
   "requiredField": "Обязательное поле",
@@ -8,28 +8,28 @@
   "signIn": "Войти",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "Управление каталогами LDAP",
+      "description": "Добавляйте, изменяйте и удаляйте каталоги LDAP, через которые пользователи могут входить в систему."
     }
   },
   "providers": {
     "docsLink": "Документация",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "Каталоги LDAP не настроены.",
+    "add": "Добавить каталог",
+    "edit": "Редактировать каталог",
+    "delete": "Удалить каталог",
+    "deleteConfirm": "Удалить этот каталог? Пользователи, которые войдут в систему с его помощью, не смогут авторизоваться.",
     "name": "Отображаемое имя",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Справочник компаний",
+    "nameRequired": "Необходимо указать отображаемое имя.",
     "enabled": "Включено",
-    "save": "Save Directory",
+    "save": "Сохранить каталог",
     "saving": "Сохранение…",
     "saved": "Сохранено",
     "saveFailed": "Не удалось сохранить",
     "deleted": "Удалено",
     "deleteFailed": "Не удалось удалить",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "Не удалось загрузить каталоги LDAP.",
     "cancel": "Отмена"
   },
   "fields": {
@@ -38,7 +38,7 @@
     "useTls": "Использовать TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Пароль привязки",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "Пароль сохранен. Оставьте это поле пустым, чтобы сохранить его.",
     "userSearchBase": "База поиска пользователей",
     "userSearchFilter": "Фильтр поиска пользователей",
     "usernameAttr": "Атрибут имени пользователя",

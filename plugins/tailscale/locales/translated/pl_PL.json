@@ -1,33 +1,33 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "Wyświetl urządzenia sieci ogonowej",
+      "description": "Zobacz urządzenia na podłączonej sieci tailnet."
     }
   },
   "settings": {
     "group": {
-      "api": "Tailscale API",
-      "devices": "Tailnet"
+      "api": "API Tailscale",
+      "devices": "Siatka ogonowa"
     },
     "apiKey": {
       "label": "Klucz API",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "description": "Służy do wyświetlania listy urządzeń w sieci Tailnet. Działa z kluczem Tailscale lub Headscale.",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "Podstawowy adres URL API",
+      "description": "Pozostaw puste dla Tailscale. Ustaw to tak, aby wskazywało na instancję Headscale.",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "Lista urządzeń",
+      "checking": "Sprawdzanie siatki ogonowej...",
+      "noKey": "Klucz API nie został jeszcze ustawiony.",
+      "error": "Nie udało się połączyć z siecią ogonową. Sprawdź klucz API.",
+      "count": "{{count}} urządzenie jest dostępne",
+      "count_other": "{{count}} urządzeń dostępnych",
+      "refresh": "Sprawdzać"
     }
   },
   "nav": {
@@ -43,10 +43,10 @@
     "tailscaleDeviceLoadFailed": "Nie udało się załadować urządzeń Tailscale. Sprawdź adres URL API i połączenie sieciowe.",
     "tailscaleNoDevices": "Nie znaleziono urządzeń w Twojej sieci tailnet.",
     "tailscaleDeviceAutoFill": "Wybranie urządzenia spowoduje automatyczne wypełnienie adresu IP hosta.",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "tailscaleAddHost": "Dodaj hosta",
+    "tailscaleCopyIp": "Kopiuj Tailscale IP",
+    "tailscaleIpCopied": "Skopiowano adres IP",
+    "tailscaleIpCopyFailed": "Nie udało się skopiować adresu IP",
     "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
@@ -60,7 +60,7 @@
     "title": "Tailscale",
     "refresh": "Odśwież",
     "retry": "Ponów",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "sudoHint": "Ustaw hasło sudo dla tego hosta, aby umożliwić wykonywanie podwyższonych uprawnień.",
     "noData": "Brak dostępnych danych",
     "filter": "Filtr...",
     "tsNotInstalled": "Tailscale nie jest zainstalowany na tym hoście",

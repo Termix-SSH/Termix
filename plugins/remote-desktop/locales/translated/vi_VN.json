@@ -1,11 +1,11 @@
 {
   "remoteDesktop": {
     "connecting": "Đang kết nối đến phiên {{type}}...",
-    "checkingGuacd": "Checking remote desktop service...",
-    "requestingToken": "Requesting {{type}} connection token...",
-    "openingSession": "Opening {{type}} session...",
-    "negotiating": "Negotiating {{type}} handshake...",
-    "sessionReady": "{{type}} session ready",
+    "checkingGuacd": "Kiểm tra dịch vụ máy tính từ xa...",
+    "requestingToken": "Yêu cầu mã thông báo kết nối {{type}}...",
+    "openingSession": "Khai mạc phiên {{type}}...",
+    "negotiating": "Đàm phán bằng cái bắt tay {{type}}...",
+    "sessionReady": "{{type}} phiên đã sẵn sàng",
     "connectionError": "Lỗi kết nối",
     "connectionFailed": "Kết nối thất bại",
     "failedToConnect": "Không lấy được mã token kết nối",
@@ -14,37 +14,37 @@
     "reconnect": "Kết nối lại",
     "retry": "Thử lại",
     "guacdUnavailable": "Dịch vụ máy tính từ xa (guacd) không khả dụng. Vui lòng đảm bảo guacd đang chạy, có thể truy cập và được cấu hình đúng trong cài đặt quản trị.",
-    "credentialPromptTitle": "Enter RDP Credentials",
-    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "credentialPromptTitle": "Nhập thông tin đăng nhập RDP",
+    "credentialPromptDescription": "Máy chủ này được thiết lập để yêu cầu thông tin đăng nhập khi kết nối. Thông tin này chỉ được sử dụng cho phiên này và không được lưu lại.",
     "connect": "Kết nối",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
-      "title": "Drive Files",
-      "parent": "Parent directory",
+      "title": "Tệp ổ đĩa",
+      "parent": "Thư mục cha",
       "refresh": "Làm mới",
       "empty": "Thư mục này trống",
-      "listFailed": "Failed to read this folder",
+      "listFailed": "Không thể đọc thư mục này.",
       "download": "Tải xuống",
-      "downloadFailed": "Failed to download {{name}}",
-      "upload": "Upload files",
+      "downloadFailed": "Tải xuống không thành công {{name}}",
+      "upload": "Tải lên tệp",
       "uploading": "Đang tải lên {{name}}...",
-      "uploaded": "Uploaded {{name}}",
-      "uploadFailed": "Failed to upload {{name}}",
-      "uploadDisabled": "Uploads are disabled for this connection",
-      "driveUnavailable": "Enable RDP drive redirection before uploading files",
-      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
-      "dropToUpload": "Drop files to upload"
+      "uploaded": "Đã tải lên {{name}}",
+      "uploadFailed": "Tải lên không thành công {{name}}",
+      "uploadDisabled": "Chức năng tải lên đã bị vô hiệu hóa cho kết nối này.",
+      "driveUnavailable": "Hãy bật tính năng chuyển hướng ổ đĩa RDP trước khi tải lên tệp.",
+      "driveNotWritable": "guacd không thể ghi vào thư mục ổ đĩa. Hãy kiểm tra GUACD_DRIVE_PATH (hoặc Đường dẫn ổ đĩa của máy chủ) và quyền truy cập của nó.",
+      "dropToUpload": "Kéo thả tệp để tải lên"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (Khóa màn hình)",
       "winKey": "Phím Windows",
-      "superL": "Super+L (Lock Screen)",
-      "superKey": "Super Key",
-      "super": "Super",
-      "cmdL": "Cmd+L (Lock Screen)",
-      "cmdKey": "Command Key",
-      "cmd": "Cmd",
+      "superL": "Super+L (Màn hình khóa)",
+      "superKey": "Siêu chìa khóa",
+      "super": "Siêu",
+      "cmdL": "Cmd+L (Khóa màn hình)",
+      "cmdKey": "Phím lệnh",
+      "cmd": "Lệnh",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -66,22 +66,22 @@
       "collapse": "Thu gọn thanh công cụ",
       "expand": "Mở rộng thanh công cụ",
       "dragHandle": "Kéo để di chuyển",
-      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "resetZoom": "Reset zoom",
-      "fitToScreen": "Fit to screen",
-      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
-      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+      "hide": "Ẩn tùy chọn này trong phiên làm việc hiện tại. Để tắt vĩnh viễn, hãy mở Cài đặt máy chủ → Chung → Thanh công cụ kết nối.",
+      "zoomIn": "Phóng to",
+      "zoomOut": "Thu nhỏ",
+      "resetZoom": "Đặt lại thu phóng",
+      "fitToScreen": "Vừa với màn hình",
+      "switchToTrackpad": "Chuyển sang chế độ bàn di chuột (kéo để di chuyển con trỏ, chạm để nhấp chuột)",
+      "switchToTouch": "Chuyển sang chế độ cảm ứng (chạm trực tiếp vào vị trí bạn muốn nhấp chuột)"
     },
-    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+    "disabled": "Chức năng Truy cập Máy tính Từ xa (Remote Desktop) đã bị tắt. Quản trị viên có thể bật chức năng này trong phần Cài đặt."
   },
   "hosts": {
-    "nativeRdpOpened": "Opened in Windows Remote Desktop",
-    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
-    "openNativeRdp": "Open in Windows Remote Desktop",
+    "nativeRdpOpened": "Đã mở bằng Windows Remote Desktop",
+    "nativeRdpFailed": "Không thể mở Windows Remote Desktop",
+    "openNativeRdp": "Mở bằng Windows Remote Desktop",
     "guac": {
-      "toolbar": "Toolbar",
+      "toolbar": "Thanh công cụ",
       "connection": "Kết nối",
       "authentication": "Xác thực",
       "storedCredential": "Thông tin xác thực đã lưu",
@@ -89,7 +89,7 @@
       "authTypeDirect": "Trực tiếp",
       "authTypeCredential": "Thông tin xác thực",
       "authTypeNone": "Không chọn",
-      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
+      "authTypeNoneDesc": "Thông tin đăng nhập của bạn không được lưu trữ. Bạn sẽ được yêu cầu nhập tên người dùng và mật khẩu mỗi khi kết nối; chúng không được lưu lại.",
       "selectCredential": "Chọn thông tin xác thực...",
       "connectionSettings": "Cài đặt kết nối",
       "displaySettings": "Cài đặt hiển thị",
@@ -107,7 +107,7 @@
       "rdpPort": "Cổng RDP",
       "username": "Tên người dùng",
       "password": "Mật khẩu",
-      "passwordSaved": "Password saved, type to change",
+      "passwordSaved": "Mật khẩu đã được lưu, nhập để thay đổi",
       "domain": "Miền",
       "securityMode": "Chế độ bảo mật",
       "width": "Chiều rộng",
@@ -212,7 +212,7 @@
       "backspaceKey": "Phím Backspace",
       "colorDepth": "Độ sâu màu",
       "resizeMethod": "Phương thức thay đổi kích thước",
-      "driveNamePlaceholder": "Termix Drive"
+      "driveNamePlaceholder": "Đường Termix"
     },
     "remoteDesktop": "Máy tính từ xa",
     "tabRdp": "RDP",
@@ -221,28 +221,28 @@
     "virtualNetwork": "Mạng ảo",
     "unencryptedShell": "Shell không mã hóa",
     "remoteDesktopNotes": "Ghi chú",
-    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
-    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "userDefaultsNote": "Các thiết lập bạn giữ nguyên sẽ tuân theo cài đặt mặc định của máy chủ.",
+    "connectionOriginNote": "Trên ứng dụng máy tính để bàn, RDP, VNC và Telnet sử dụng máy chủ từ xa trừ khi máy chủ được đặt thành Thiết bị này, điều này yêu cầu một máy ảo mà guacd này có thể truy cập được. Hãy thiết lập một máy ảo trong cài đặt Máy tính từ xa hoặc cho từng máy chủ trong guacd Proxy.",
     "docsLink": "Xem tài liệu",
-    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+    "connectionOriginGuacamoleNote": "RDP, VNC và Telnet sử dụng máy chủ từ xa trừ khi bạn chọn \"Thiết bị này\", tùy chọn này yêu cầu máy ảo guacd mà máy này có thể truy cập được. Hãy thiết lập máy ảo này trong cài đặt URL của guacd hoặc cho từng máy chủ trong phần Proxy của guacd."
   },
   "onboarding": {
-    "feature_desktop": "Remote desktop",
-    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
+    "feature_desktop": "Máy tính từ xa",
+    "feature_desktop_desc": "Mở các phiên RDP, VNC và Telnet trong cùng một tab, tương tự như SSH."
   },
   "settings": {
     "user": {
       "colorDepth": {
         "label": "Độ sâu màu",
-        "description": "Used for RDP hosts that leave it on their default."
+        "description": "Được sử dụng cho các máy chủ RDP để chế độ mặc định."
       },
       "resizeMethod": {
         "label": "Phương thức thay đổi kích thước",
-        "description": "How the remote screen follows the window size."
+        "description": "Màn hình điều khiển từ xa tự động điều chỉnh theo kích thước cửa sổ."
       },
-      "resizeDisplayUpdate": "Display Update",
+      "resizeDisplayUpdate": "Cập nhật hiển thị",
       "resizeReconnect": "Kết nối lại",
-      "inherit": "Inherit",
+      "inherit": "Kế thừa",
       "on": "Bật",
       "off": "Tắt",
       "forceLossless": {
@@ -281,19 +281,19 @@
         "label": "Tắt dán",
         "description": "Ngăn dán văn bản vào phiên từ xa"
       },
-      "group": "Remote Desktop defaults",
+      "group": "Cài đặt mặc định của Remote Desktop",
       "colorDepth16": "16-bit",
-      "colorDepth24": "24-bit",
+      "colorDepth24": "24 bit",
       "colorDepth32": "32-bit"
     },
     "admin": {
       "enabled": {
-        "label": "Enable Remote Desktop",
-        "description": "Allow RDP, VNC and Telnet connections through guacd."
+        "label": "Bật tính năng truy cập máy tính từ xa",
+        "description": "Cho phép các kết nối RDP, VNC và Telnet thông qua guacd."
       },
       "guacdUrl": {
         "label": "URL guacd",
-        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "description": "Nơi guacd lắng nghe, được định dạng là host:port. Các biến môi trường GUACD_URL, GUACD_HOST và GUACD_PORT sẽ ghi đè lên định dạng này.",
         "placeholder": "guacd:4822"
       }
     },
@@ -308,43 +308,43 @@
         "label": "Telnet"
       },
       "rdpPort": {
-        "label": "RDP port"
+        "label": "Cổng RDP"
       },
       "vncPort": {
-        "label": "VNC port"
+        "label": "Cổng VNC"
       },
       "telnetPort": {
-        "label": "Telnet port"
+        "label": "Cổng Telnet"
       },
       "rdpSecurity": {
-        "label": "RDP security mode"
+        "label": "Chế độ bảo mật RDP"
       },
       "rdpIgnoreCert": {
-        "label": "Ignore certificate errors"
+        "label": "Bỏ qua lỗi chứng chỉ"
       },
       "guacamoleConfig": {
-        "label": "guacd settings"
+        "label": "cài đặt guacd"
       },
       "enableToolbar": {
-        "label": "Remote desktop toolbar",
-        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+        "label": "thanh công cụ máy tính từ xa",
+        "description": "Hiển thị thanh công cụ trong các phiên RDP, VNC và Telnet."
       },
-      "displayGroup": "Display",
+      "displayGroup": "Trưng bày",
       "displayDefaultsTab": "Máy tính từ xa"
     }
   },
   "palette": {
-    "connectRdp": "Connect with RDP",
-    "connectVnc": "Connect with VNC",
-    "connectTelnet": "Connect with Telnet"
+    "connectRdp": "Kết nối với RDP",
+    "connectVnc": "Kết nối với VNC",
+    "connectTelnet": "Kết nối bằng Telnet"
   },
   "permissions": {
     "sessions": {
-      "title": "Share remote desktop sessions",
-      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+      "title": "Chia sẻ phiên làm việc từ xa",
+      "description": "Cho phép chia sẻ phiên và phòng cộng tác hiển thị các phiên RDP, VNC và Telnet của người dùng này cho những người khác."
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Cần có máy chủ từ xa. Kết nối máy chủ từ xa trong Cài đặt để sử dụng loại kết nối này."
   }
 }

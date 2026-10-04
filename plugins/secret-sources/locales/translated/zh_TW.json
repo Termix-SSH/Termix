@@ -1,26 +1,26 @@
 {
-  "hint": "You can paste a 1Password reference (op://vault/item/field) instead of the secret. It is fetched from your secret source when connecting.",
-  "manage": "Manage secret sources",
-  "title": "Secret sources",
-  "description": "External password managers Termix reads secrets from at connect time. Currently 1Password Connect (self-hosted). The access token is stored encrypted with your data key.",
-  "new": "New source",
-  "nameLabel": "Friendly name",
-  "urlLabel": "Connect server URL",
-  "tokenLabel": "Connect access token",
-  "tokenKeep": "Leave empty to keep the current token",
-  "sharedLabel": "Share with all users (admins only, resolves while you are signed in)",
+  "hint": "您可以貼上 1Password 引用（op://vault/item/field）而不是金鑰。連線時，系統會從您的金鑰來源取得該引用。",
+  "manage": "管理秘密來源",
+  "title": "秘密消息來源",
+  "description": "外部密碼管理器 Termix 會在連線時讀取金鑰。目前支援 1Password Connect（自架）。存取令牌會使用您的資料密鑰進行加密儲存。",
+  "new": "新來源",
+  "nameLabel": "友善名稱",
+  "urlLabel": "連接伺服器 URL",
+  "tokenLabel": "連接訪問令牌",
+  "tokenKeep": "留空以保留當前令牌",
+  "sharedLabel": "分享給所有使用者（僅限管理員，登入後生效）",
   "shared": "已共用",
   "test": "測試",
-  "testOk": "Connected, {{count}} vault(s) visible",
-  "testFailed": "Connection test failed",
-  "required": "Name, server URL and token are required",
-  "saved": "Secret source saved",
-  "deleted": "Secret source deleted",
+  "testOk": "已連接， {{count}} 保險庫可見",
+  "testFailed": "連線測試失敗",
+  "required": "需要提供名稱、伺服器 URL 和令牌。",
+  "saved": "秘密來源已儲存",
+  "deleted": "秘密來源已刪除",
   "settings": {
     "admin": {
       "privateEndpoints": {
-        "label": "Private endpoint allowlist",
-        "description": "Private or loopback hosts a secret source may reach, one per line. A self-hosted 1Password Connect server usually needs its own address listed here."
+        "label": "私有端點允許列表",
+        "description": "私有或回環位址，秘密來源可以訪問，每行一個。自託管的 1Password Connect 伺服器通常需要在此列出自己的位址。"
       }
     }
   }

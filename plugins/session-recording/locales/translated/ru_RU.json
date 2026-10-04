@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Просмотреть записи сессий",
+      "description": "Просматривайте и воспроизводите записи своих собственных сессий."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Срок хранения (дни)",
+        "description": "Как долго хранится запись сеанса, прежде чем она будет автоматически удалена."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Включить запись сеанса",
+        "description": "Запишите вывод терминала для этого хоста, чтобы вы могли воспроизвести его или загрузить позже."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Запись"
   },
   "sessionLogs": {
     "title": "Журналы сеансов",
@@ -36,7 +36,7 @@
     "duration": "Продолжительность",
     "viewLog": "Просмотреть журнал",
     "downloadLog": "Скачать",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "Скачать как текст",
     "deleteLog": "Удалить",
     "confirmDelete": "Удалить этот журнал сеансов?",
     "confirmDeleteDesc": "Это действие нельзя отменить.",
@@ -47,14 +47,14 @@
     "filterByHost": "Фильтровать по хосту...",
     "back": "Назад",
     "empty": "(пусто)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "Результаты поиска по запросу \"{{query}} отсутствуют",
+    "hostFallback": "Хост {{id}}",
+    "sessionFallback": "Сессия {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Хронология записи",
+    "speed": "скорость воспроизведения",
+    "play": "Воспроизвести запись",
+    "pause": "Приостановить запись"
   }
 }

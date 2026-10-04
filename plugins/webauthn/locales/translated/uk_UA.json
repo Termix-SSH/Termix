@@ -1,22 +1,22 @@
 {
-  "title": "Passkeys",
-  "signIn": "Sign in with passkey",
-  "loginFailed": "Passkey login failed",
-  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
-  "namePlaceholder": "Passkey name",
-  "defaultName": "Passkey",
+  "title": "Ключі доступу",
+  "signIn": "Увійти за допомогою ключа доступу",
+  "loginFailed": "Не вдалося ввійти з ключем доступу",
+  "description": "Використовуйте облікові дані WebAuthn/FIDO2 для входу без пароля",
+  "namePlaceholder": "Ім'я ключа доступу",
+  "defaultName": "Ключ доступу",
   "uv": {
-    "preferred": "Preferred",
-    "required": "Required",
-    "discouraged": "Discouraged"
+    "preferred": "Бажаний",
+    "required": "Обов'язково",
+    "discouraged": "Знеохочений"
   },
-  "add": "Add Passkey",
-  "none": "No passkeys registered.",
-  "added": "Passkey added",
-  "addFailed": "Failed to add passkey",
-  "delete": "Delete passkey",
-  "deleted": "Passkey deleted",
-  "deleteFailed": "Failed to delete passkey",
-  "unknownDevice": "unknown",
-  "synced": "synced"
+  "add": "Додати пароль",
+  "none": "Не зареєстровано ключів доступу.",
+  "added": "Ключ доступу додано",
+  "addFailed": "Не вдалося додати ключ доступу",
+  "delete": "Видалити ключ доступу",
+  "deleted": "Ключ доступу видалено",
+  "deleteFailed": "Не вдалося видалити ключ доступу",
+  "unknownDevice": "невідомий",
+  "synced": "синхронізовано"
 }

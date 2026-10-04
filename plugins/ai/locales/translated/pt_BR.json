@@ -1,117 +1,117 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "Use o assistente",
+      "description": "Abra o assistente e faça perguntas."
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "Gerenciar fornecedores",
+      "description": "Adicione, edite e remova os fornecedores de IA e suas chaves de API."
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "Apresentar propostas",
+      "description": "Deixe que o assistente execute as alterações que sugerir."
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "Utilizar IA de outras funcionalidades",
+      "description": "Outras funcionalidades podem chamar o assistente em seu nome."
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "Compartilhe a chave da API",
+      "description": "Outras funcionalidades podem usar a chave da API de IA armazenada sem visualizá-la."
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "O assistente de IA está desativado neste servidor.",
+    "providersNeedOptIn": "Ative o assistente de IA acima para adicionar fornecedores.",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "assistente de IA",
+        "description": "Permita que os usuários ativem o assistente de IA. Quando estiver desativado, o assistente ficará oculto e bloqueado para todos."
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "Hosts de IA privados permitidos",
+        "description": "Servidores na sua rede privada que os usuários podem usar como provedores, como um Ollama auto-hospedado. Coloque um servidor em cada linha."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "Ativar o assistente de IA",
+        "description": "Permita que o assistente de IA ajude no terminal deste host. Desativado por padrão, mas ainda precisa que a IA esteja ativada para sua conta."
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
-    "stop": "Stop",
+    "title": "Assistente",
+    "send": "Enviar",
+    "stop": "Parar",
     "save": "Salvar",
     "cancel": "Cancelar",
-    "running": "running",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
-    "providerLabel": "Name",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "running": "correndo",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "inputPlaceholder": "Pergunte sobre seus servidores ou descreva uma alteração que você gostaria de propor.",
+    "selectProvider": "Selecione um fornecedor",
+    "providerSettings": "Configurações do provedor",
+    "addProvider": "Adicionar provedor",
+    "editProvider": "Editar provedor",
+    "removeProvider": "Remover provedor",
+    "providerType": "Fornecedor",
+    "providerLabel": "Nome",
+    "providerLabelPlaceholder": "Por exemplo: Ollama local",
+    "baseUrl": "Endereço do servidor",
+    "apiKey": "Chave de API",
+    "defaultModel": "Modelo padrão",
+    "defaultModelPlaceholder": "Por exemplo: llama3.1 ou claude-opus-5",
+    "labelRequired": "Dê um nome a este fornecedor.",
+    "providerSaveFailed": "Não foi possível salvar o provedor.",
+    "providerUpdated": "Fornecedor atualizado",
+    "providerDeleteFailed": "Não foi possível remover o provedor.",
+    "privateEndpointHint": "Os endereços na sua rede privada precisam que um administrador autorize o host primeiro.",
     "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
+    "providerAnthropic": "Antrópico",
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
+    "providerOpenaiCompatible": "Compatível com OpenAI",
     "toolArguments": "Entrada",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
-    "runInTerminal": "Run",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "toolResult": "Resultado",
+    "statusApplied": "Aplicado",
+    "statusRejected": "Rejeitado",
+    "proposalApplied": "Alteração aplicada",
+    "proposalApplyFailed": "Não foi possível aplicar a alteração.",
+    "proposalRejectFailed": "Não foi possível rejeitar a alteração.",
+    "enableTitle": "Ative o assistente de IA",
+    "enableDescription": "Deixe o assistente ler sua configuração e sugerir alterações para você aprovar.",
+    "readOnlyCommands": "Permitir comandos de diagnóstico somente leitura",
+    "readOnlyCommandsDescription": "O assistente pode executar uma pequena lista de comandos seguros, como `df` e `uptime`, sem perguntar a cada vez. Qualquer alteração que faça no servidor será sempre sugerida primeiro.",
+    "modelDetectFailed": "Não foi possível contatar o fornecedor, portanto esta é uma lista genérica. Você pode digitar o nome de qualquer modelo.",
+    "modelCustom": "Insira o nome do modelo",
+    "modelRefresh": "Atualizar lista",
+    "modelPlaceholder": "Selecione ou digite um modelo",
+    "attachHint": "Digite @ para fazer referência a um host, snippet ou automação. As alterações são propostas para sua aprovação.",
+    "runCommandTitle": "Executar comando",
+    "assistant": "Assistente de IA",
+    "terminalPanelEmpty": "Pergunte ao assistente sobre este anfitrião. Qualquer alteração de estado precisa da sua aprovação prévia.",
+    "terminalPanelPlaceholder": "Pergunte sobre este anfitrião...",
+    "noProvidersConfigured": "Nenhum provedor de IA está configurado ainda. Adicione um na aba do assistente de IA.",
+    "runsInOpenTerminal": "Executa na sua sessão de terminal aberta.",
+    "runInTerminal": "Correr",
+    "terminalContextPrefill": "Aqui está a saída do meu terminal:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "Permita que outros recursos usem sua chave de API do provedor de IA para suas próprias solicitações. A chave nunca é copiada e você pode revogá-la a qualquer momento."
     }
   },
   "nav": {
-    "ai": "AI"
+    "ai": "IA"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "assistente de IA",
+    "aiIntro": "O Termix pode incluir um assistente de IA opcional. Você pode alterar isso posteriormente nas suas configurações.",
+    "aiSkipTitle": "Deixe desligado",
+    "aiSkipDesc": "O Termix funciona como está agora. O assistente permanece oculto.",
+    "aiEnableTitle": "Ligue-o",
+    "aiEnableDesc": "Adiciona um assistente que lê sua configuração e sugere alterações que você aprova. Requer um provedor fornecido por você, como um Ollama local.",
+    "aiNote": "Nada será enviado até que você adicione um provedor e envie uma mensagem."
   },
   "hosts": {
     "docsLink": "Documentação"

@@ -4,7 +4,7 @@
   "loginFailed": "Falha no início de sessão com passkey",
   "description": "Utilize credenciais WebAuthn/FIDO2 para iniciar sessão sem palavra-passe",
   "namePlaceholder": "Nome da passkey",
-  "defaultName": "Passkey",
+  "defaultName": "Chave de acesso",
   "uv": {
     "preferred": "Preferencial",
     "required": "Obrigatório",
@@ -14,9 +14,9 @@
   "none": "Nenhuma passkey registada.",
   "added": "Passkey adicionada",
   "addFailed": "Falha ao adicionar passkey",
-  "delete": "Delete passkey",
+  "delete": "Apagar chave de acesso",
   "deleted": "Passkey eliminada",
   "deleteFailed": "Falha ao eliminar chave de acesso",
   "unknownDevice": "desconhecido",
-  "synced": "synced"
+  "synced": "sincronizado"
 }

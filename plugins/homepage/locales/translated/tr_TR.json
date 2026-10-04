@@ -18,7 +18,7 @@
   "homepage": {
     "title": "Ana Sayfa",
     "addWidget": "Bileşen Ekle",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "Bu kategoride hiçbir widget yok.",
     "editWidget": "Bileşeni Düzenle",
     "zoomIn": "Yakınlaştır",
     "zoomOut": "Uzaklaştır",
@@ -39,7 +39,7 @@
     "description": "Açıklama",
     "color": "Renk",
     "timezone": "Zaman Dilimi",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "Geçersiz saat dilimi. Lütfen America/New_York gibi bir IANA adı kullanın.",
     "showSeconds": "Saniyeleri göster",
     "format12h": "12 saatlik",
     "content": "İçerik",
@@ -60,9 +60,9 @@
     "maxItems": "Maksimum Öğe Sayısı",
     "showDescription": "Açıklamayı Göster",
     "widgetRssName": "RSS Akışı",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "Widget ayarlarında bir besleme URL'si yapılandırın.",
+    "rssLoadError": "Besleme yüklenemedi.",
+    "rssNoItems": "Hiçbir ürün yok",
     "noHostSelected": "Sunucu seçilmedi",
     "displayedMetrics": "Gösterilen Metrikler",
     "metricCpu": "CPU",
@@ -162,29 +162,29 @@
     "selectHosts": "Sunucuları Seç",
     "listLayout": "Liste",
     "gridLayout": "Izgara",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "Widget ayarlarında bir URL belirleyin.",
+    "embeddedContent": "Gömülü içerik",
+    "noBookmarks": "Yer imi yok",
+    "noSections": "Hiçbir bölüm oluşturulmadı.",
+    "noServices": "Hiçbir hizmet kurulmadı.",
+    "configureLocation": "Widget ayarlarında bir konum belirleyin.",
+    "bannerTextPlaceholder": "Afiş metni",
+    "serviceNamePlaceholder": "Hizmetim"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Ana sayfayı kullanın",
+      "description": "Ana sayfa tuvalini ve kontrol paneli hizmet bağlantılarını görüntüleyin ve düzenleyin."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Özel ev sahiplerine izin verilir.",
+      "description": "Ping Durumu ve Özel API widget'ları için tam özel veya geri döngü ana bilgisayar adları/IP adresleri. Girişleri virgül veya yeni satırlarla ayırın; şemaları, bağlantı noktalarını ve yolları atlayın. Boş bloklar özel hedefleri belirtir."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Özel sertifika yetkilisi (PEM)",
+      "description": "İzin verilen sunucular için isteğe bağlı güvenilir CA paketi. Sertifika doğrulaması etkin kalır. Sistem güven deposunu kullanmak için boş bırakın."
     }
   }
 }

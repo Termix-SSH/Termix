@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "管理使用情況統計信息",
+      "description": "查看已傳送的使用統計訊息，立即傳送並重設實例 ID。"
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "分享匿名使用統計數據",
+      "description": "每天發送一份簡短的匿名摘要，以幫助改善 Termix。摘要中絕不包含使用者名稱、主機名稱、IP 位址或憑證。"
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "包含平台訊息",
+      "description": "作業系統、CPU架構、Node.js版本、資料庫類型以及Termix的安裝方式（Docker、桌面應用程式或伺服器）。"
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "包含功能使用",
+      "description": "自上次報告以來，各類標籤頁的開啟次數以及 SSH 登入次數總計是多少？用戶可以在個人資料中關閉此功能。"
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "包含已安裝的功能",
+      "description": "哪些內建功能已安裝並正在運作？"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "實例 ID"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "請包含我的功能使用情況",
+      "description": "匿名使用統計資料會統計您開啟的標籤頁類型。不會發送任何關於您或您的主機的資訊。"
     }
   },
   "status": {
     "title": "狀態",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "每天分享一次使用統計資料。",
+    "off": "不分享使用統計數據",
+    "lockedOn": "此功能由 ENABLE_TELEMETRY 環境變數啟用。請修改該變數。",
+    "lockedOff": "此功能已透過 ENABLE_TELEMETRY 環境變數關閉。請更改該變數。",
+    "instanceId": "實例 ID： {{id}}",
+    "noInstanceId": "暫無執行個體 ID",
+    "lastSent": "最後發送 {{date}}",
+    "neverSent": "尚未發送",
+    "nextSend": "下一份報告截止日期 {{date}}",
+    "lastError": "最後嘗試失敗： {{error}}",
+    "preview": "預覽報告",
+    "sendNow": "立即發送",
+    "sending": "正在發送...",
+    "sent": "已發送使用統計訊息",
+    "notSent": "使用情況統計已關閉，未發送任何內容。",
+    "resetId": "重置實例 ID",
+    "resetIdConfirm": "重置實例 ID？以後的報告將顯示為新安裝的實例。",
+    "resetIdDone": "實例 ID 重置",
+    "previewTitle": "下一篇報告",
+    "previewDescription": "這正是現在會發送的內容。",
     "close": "關閉",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "無法載入使用情況統計狀態"
   }
 }

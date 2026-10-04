@@ -19,21 +19,21 @@
     "cpuUsage": "CPU 使用率",
     "memoryUsage": "記憶體使用率",
     "diskUsage": "磁碟使用率",
-    "selectFilesystem": "Select filesystem",
+    "selectFilesystem": "選擇檔案系統",
     "temperature": "溫度",
     "highestTemperature": "最高溫度",
-    "primaryTemperatureSensor": "Primary sensor",
+    "primaryTemperatureSensor": "主感應器",
     "gpu": {
       "title": "GPU",
-      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
-      "driver": "Driver {{version}}",
-      "utilization": "Utilization",
-      "memory": "VRAM",
-      "temperature": "Temp",
-      "power": "Power",
-      "fan": "Fan",
-      "processes": "GPU processes",
-      "noProcesses": "No processes are using the GPU"
+      "noDevice": "未偵測到NVIDIA GPU。請安裝NVIDIA驅動程式（它提供nvidia-smi）以查看GPU指標。",
+      "driver": "司機 {{version}}",
+      "utilization": "使用率",
+      "memory": "顯存",
+      "temperature": "溫度",
+      "power": "力量",
+      "fan": "扇子",
+      "processes": "GPU 行程",
+      "noProcesses": "沒有進程正在使用 GPU"
     },
     "failedToFetchHostConfig": "無法取得主機設定",
     "serverOffline": "伺服器離線",
@@ -178,7 +178,7 @@
       "wgLastHandshake": "上次交握",
       "wgHandshakeNever": "從未",
       "wgTransfer": "傳輸",
-      "wgNoPeers": "No peers"
+      "wgNoPeers": "沒有對手"
     }
   },
   "metricsHistory": {
@@ -203,15 +203,15 @@
     "useGlobalMetricsDesc": "以伺服器範圍的指標間隔覆寫",
     "metricsIntervalS": "指標間隔（秒）",
     "metricsIntervalDesc2": "每次指標快照之間的秒數",
-    "excludedMountsLabel": "Excluded Mounts",
-    "monitoredMountsLabel": "Custom monitored paths",
-    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
-    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "excludedMountsLabel": "排除的安裝",
+    "monitoredMountsLabel": "自訂監控路徑",
+    "monitoredMountsDesc": "新增未以單獨掛載點公開的路徑，包括綁定掛載的 Home Assistant 路徑，例如 /config。",
+    "monitoredMountPathPlaceholder": "路徑（/config，/mnt/data）",
     "monitoredMountLabelPlaceholder": "標籤（選填）",
-    "addMonitoredMount": "Add path",
-    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
-    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
-    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addMonitoredMount": "新增路徑",
+    "excludedMountsDesc": "隱藏此主機磁碟使用情況和警報中的特定掛載點或檔案系統類型（例如 nfs、cifs）。",
+    "excludedMountsPlaceholder": "掛載路徑（/mnt/nas）或檔案系統類型（nfs、cifs）",
+    "excludedMountsEmpty": "未排除任何掛載點。顯示所有偵測到的檔案系統。",
     "addExcludedMount": "新增",
     "visibleWidgets": "可見的小工具",
     "widgetsMovedToHostMetrics": "現在卡片可直接在主機指標分頁中新增、排列和調整大小。開啟此主機的主機指標，然後使用自訂功能選擇要顯示的卡片。",
@@ -219,8 +219,8 @@
     "loadingHost": "正在載入主機..."
   },
   "onboarding": {
-    "feature_metrics": "Metrics and alerts",
-    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
+    "feature_metrics": "指標和警報",
+    "feature_metrics_desc": "追蹤 CPU、記憶體和磁碟的運作情況，並在它們出現故障時發出警報。"
   },
   "admin": {
     "metricsHistoryRetention": "指標歷史保留",
@@ -250,7 +250,7 @@
     "selectHost": "選擇主機..."
   },
   "terminalStatus": {
-    "unavailable": "Live stats unavailable"
+    "unavailable": "即時統計數據不可用"
   },
   "dashboard": {
     "cpu": "CPU",
@@ -264,48 +264,48 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Host Metrics",
-      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+      "title": "使用主機指標",
+      "description": "查看主機指標並使用您可以存取的主機上的主機管理器（服務、軟體包、防火牆等）。"
     }
   },
   "settings": {
     "admin": {
       "metricsInterval": {
-        "label": "Metrics interval (seconds)",
-        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+        "label": "指標間隔（秒）",
+        "description": "除非主機自行設定間隔，否則將對正在查看的主機進行取樣的頻率。"
       },
       "historyRetentionDays": {
-        "label": "History retention (days)",
-        "description": "How long metrics samples are kept for the history charts."
+        "label": "歷史資料保留時間（天）",
+        "description": "歷史圖表中的指標樣本保留多久？"
       },
       "enabledForNewHosts": {
-        "label": "Metrics on for new hosts",
-        "description": "Whether new hosts start with metrics collection turned on."
+        "label": "新主機指標",
+        "description": "新主機是否預設開啟指標收集功能。"
       }
     },
     "user": {
       "temperatureUnit": {
-        "label": "Temperature unit",
-        "description": "How temperatures are shown in Host Metrics.",
-        "celsius": "Celsius",
-        "fahrenheit": "Fahrenheit"
+        "label": "溫度單位",
+        "description": "主機指標中如何顯示溫度。",
+        "celsius": "攝氏度",
+        "fahrenheit": "華氏度"
       }
     },
     "host": {
       "metricsEnabled": {
-        "label": "Collect metrics"
+        "label": "收集指標"
       },
       "metricsInterval": {
-        "label": "Metrics interval (seconds)"
+        "label": "指標間隔（秒）"
       },
       "enabledWidgets": {
-        "label": "Enabled widgets"
+        "label": "已啟用的小工具"
       },
       "excludedMounts": {
-        "label": "Excluded mounts"
+        "label": "排除的安裝點"
       },
       "monitoredMounts": {
-        "label": "Monitored paths"
+        "label": "監控路徑"
       }
     }
   }

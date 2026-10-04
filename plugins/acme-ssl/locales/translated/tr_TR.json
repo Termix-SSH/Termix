@@ -1,14 +1,14 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "ACME sertifikalarını yönetin",
+      "description": "Sertifika durumunu kontrol edin ve şimdi yeni bir sertifika talep edin."
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "Otomatik olarak yenile",
+      "description": "Sertifikayı günde iki kez kontrol edin ve yoksa, alan adını kapsamıyorsa veya 30 gün içinde süresi dolacaksa yenisini alın."
     },
     "domain": {
       "label": "Alan Adı",
@@ -17,42 +17,42 @@
     },
     "email": {
       "label": "E-posta",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "description": "ACME hesabı ve sona erme bildirimleri için iletişim e-posta adresi.",
       "placeholder": "admin@example.com"
     },
     "provider": {
       "label": "Sertifika yetkilisi",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "description": "Sertifikayı nereden alabilirsiniz? Let's Encrypt'in hız sınırlamalarına takılmadan test etmek için hazırlık ortamını kullanın.",
       "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "letsencryptStaging": "Let's Encrypt (test aşaması)",
+      "custom": "Özel ACME dizini"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "ACME dizin URL'si",
+      "description": "Yalnızca özel sertifika yetkilisi için geçerlidir. HTTPS URL'si olmalıdır."
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "Meydan okuma türü",
+      "description": "Alan adının size ait olduğunu nasıl kanıtlayabilirsiniz?",
+      "http": "HTTP - internetten erişilebilir 80 numaralı porta ihtiyaç duyar.",
+      "cloudflare": "DNS (Cloudflare) - Cloudflare API belirteci gerektirir."
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
+      "label": "Cloudflare API belirteci",
       "description": "Alan adınız için Zone:DNS:Edit iznine sahip kapsamlı belirteç."
     }
   },
   "status": {
-    "title": "Certificate status",
+    "title": "Sertifika durumu",
     "none": "Sertifika yok",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
+    "names": "Kapaklar {{names}}",
+    "issuer": "{{issuer}} tarafından yayınlandı",
     "expires": "Son kullanma: {{date}}",
     "lastIssued": "Son veriliş: {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
+    "lastError": "Son deneme başarısız oldu: {{error}}",
+    "missing": "Sertifika talebinde bulunmadan önce etki alanını, e-postayı ve doğrulama türünüzün gerektirdiği alanları ayarlayın, ardından kaydedin.",
+    "request": "Şimdi sertifika talep edin",
     "requesting": "Sertifika isteniyor...",
-    "issued": "Certificate issued and installed"
+    "issued": "Sertifika düzenlendi ve kuruldu."
   }
 }

@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "Đăng nhập bằng LDAP",
   "loginWithProvider": "Đăng nhập bằng {{name}}",
   "loading": "Đang tải...",
   "requiredField": "Trường này là bắt buộc",
@@ -8,28 +8,28 @@
   "signIn": "Đăng nhập",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "Quản lý thư mục LDAP",
+      "description": "Thêm, thay đổi và xóa các thư mục LDAP mà người dùng có thể sử dụng để đăng nhập."
     }
   },
   "providers": {
     "docsLink": "Xem tài liệu",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "Chưa có thư mục LDAP nào được cấu hình.",
+    "add": "Thêm thư mục",
+    "edit": "Chỉnh sửa thư mục",
+    "delete": "Xóa thư mục",
+    "deleteConfirm": "Xóa thư mục này? Người dùng đăng nhập bằng thư mục này sẽ không thể đăng nhập được nữa.",
     "name": "Tên hiển thị",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Danh bạ công ty",
+    "nameRequired": "Tên hiển thị là bắt buộc",
     "enabled": "Đã bật",
-    "save": "Save Directory",
+    "save": "Lưu thư mục",
     "saving": "Đang lưu...",
     "saved": "Đã lưu",
     "saveFailed": "Không thể lưu",
     "deleted": "Đã xóa",
     "deleteFailed": "Không thể xóa",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "Không thể tải thư mục LDAP.",
     "cancel": "Hủy"
   },
   "fields": {
@@ -38,7 +38,7 @@
     "useTls": "Dùng TLS (LDAPS)",
     "bindDn": "Bind DN",
     "bindPassword": "Mật khẩu Bind",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "Mật khẩu đã được lưu. Hãy để trống phần này để giữ nguyên.",
     "userSearchBase": "Cơ sở tìm kiếm người dùng",
     "userSearchFilter": "Bộ lọc tìm kiếm người dùng",
     "usernameAttr": "Thuộc tính tên người dùng",

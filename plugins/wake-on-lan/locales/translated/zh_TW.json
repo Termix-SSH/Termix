@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "喚醒",
+    "sent": "已傳送網路喚醒封包",
+    "failed": "發送網路喚醒封包失敗"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "傳送網路喚醒封包",
+      "description": "透過傳送喚醒封包給主機的 MAC 位址來喚醒主機。"
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
+        "label": "MAC位址",
+        "description": "主機的網路 MAC 位址，用於傳送 Wake-on-LAN 封包。",
         "placeholder": "AA:BB:CC:DD:EE:FF"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "廣播位址",
+        "description": "要將資料包傳送到的子網路廣播位址。留空則預設為 255.255.255.255。",
         "placeholder": "192.168.1.255"
       }
     }

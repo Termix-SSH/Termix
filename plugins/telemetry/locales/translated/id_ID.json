@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Kelola statistik penggunaan",
+      "description": "Lihat statistik penggunaan apa yang dikirim, kirimkan sekarang, dan atur ulang ID instance."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Bagikan statistik penggunaan anonim.",
+      "description": "Mengirimkan ringkasan anonim singkat sekali sehari untuk membantu meningkatkan Termix. Ringkasan ini tidak pernah menyertakan nama pengguna, nama host, alamat IP, atau kredensial."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Sertakan informasi platform.",
+      "description": "Sistem operasi, arsitektur CPU, versi Node.js, tipe basis data, dan cara Termix diinstal (Docker, aplikasi desktop, atau server)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Sertakan penggunaan fitur",
+      "description": "Berapa kali setiap jenis tab dibuka dan berapa kali login SSH terjadi sejak laporan terakhir. Pengguna dapat menonaktifkan bagian mereka sendiri di profil mereka."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Termasuk fitur yang terpasang",
+      "description": "Fitur bawaan mana yang terpasang dan berjalan."
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "ID Instansi"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Sertakan penggunaan fitur saya",
+      "description": "Menghitung jenis tab yang Anda buka dalam statistik penggunaan anonim. Tidak ada informasi tentang Anda atau penyedia hosting Anda yang dikirimkan."
     }
   },
   "status": {
     "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "Membagikan statistik penggunaan sekali sehari.",
+    "off": "Tidak membagikan statistik penggunaan",
+    "lockedOn": "Diaktifkan oleh variabel lingkungan ENABLE_TELEMETRY. Ubah di sana.",
+    "lockedOff": "Dinonaktifkan oleh variabel lingkungan ENABLE_TELEMETRY. Ubah di sana.",
+    "instanceId": "ID Instansi: {{id}}",
+    "noInstanceId": "Belum ada ID instance.",
+    "lastSent": "Terakhir dikirim {{date}}",
+    "neverSent": "Belum dikirim",
+    "nextSend": "Laporan selanjutnya jatuh tempo {{date}}",
+    "lastError": "Upaya terakhir gagal: {{error}}",
+    "preview": "Pratinjau laporan",
+    "sendNow": "Kirim sekarang",
+    "sending": "Mengirim...",
+    "sent": "Statistik penggunaan telah dikirim.",
+    "notSent": "Statistik penggunaan dimatikan, tidak ada yang dikirim.",
+    "resetId": "Atur ulang ID instance",
+    "resetIdConfirm": "Apakah Anda mengatur ulang ID instance? Laporan selanjutnya akan terlihat seperti instalasi baru.",
+    "resetIdDone": "ID Instansi diatur ulang",
+    "previewTitle": "Laporan selanjutnya",
+    "previewDescription": "Inilah yang akan dikirimkan sekarang juga.",
     "close": "Tutup",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "Tidak dapat memuat status statistik penggunaan."
   }
 }

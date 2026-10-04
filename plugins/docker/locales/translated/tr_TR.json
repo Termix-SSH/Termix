@@ -23,9 +23,9 @@
     "start": "Başlat",
     "stop": "Durdurma",
     "status": "Durum",
-    "actions": "Actions",
-    "cardView": "Card view",
-    "listView": "List view",
+    "actions": "Eylemler",
+    "cardView": "Kart görünümü",
+    "listView": "Liste görünümü",
     "confirmRemoveContainer": "'{{name}}' konteynerini kaldırmak istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "runningContainerWarning": "Uyarı: Bu konteyner şu anda çalışıyor. Kaldırma işlemi önce konteyneri durduracak.",
     "loadingContainers": "Konteynerler yükleniyor...",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "Konsola erişmek için konteyner çalışıyor olmalıdır",
     "verificationCodePrompt": "Doğrulama kodunu girin",
     "totpVerificationFailed": "TOTP doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "Giriş başarısız oldu. Lütfen tekrar deneyin.",
     "connectedTo": "{{containerName}} ile bağlantı kuruldu",
     "disconnected": "Bağlantı kesildi",
     "consoleError": "Konsol hatası",
@@ -101,15 +101,15 @@
     "consoleTab": "Konsol",
     "startContainerToAccess": "Konsola erişmek için konteyneri başlatın",
     "noHostSelected": "Sunucu seçilmedi",
-    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
-    "failedToDownloadLogs": "Failed to download logs: {{error}}"
+    "failedToFetchLogs": "Günlükleri alma işlemi başarısız oldu: {{error}}",
+    "failedToDownloadLogs": "Günlük dosyaları indirilemedi: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
     "feature_docker": "Docker",
-    "feature_docker_desc": "See containers, read logs and watch stats on any host running Docker."
+    "feature_docker_desc": "Docker çalıştıran herhangi bir sunucudaki konteynerleri görüntüleyin, günlükleri okuyun ve istatistikleri izleyin."
   },
   "terminal": {
     "retry": "Yeniden dene",
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "Docker kullanın",
+      "description": "Docker'ın etkinleştirildiği sunucularda Docker yöneticisini ve kapsayıcı konsollarını açın."
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Docker'ı Etkinleştir",
-        "description": "Manage containers on this host."
+        "description": "Bu sunucudaki konteynerleri yönetin."
       },
       "containerRuntime": {
         "label": "Kapsayıcı Çalışma Zamanı",
@@ -137,7 +137,7 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
   },
   "hosts": {
     "docsLink": "Dokümanları görüntüle",

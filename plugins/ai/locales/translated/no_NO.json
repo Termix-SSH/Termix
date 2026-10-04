@@ -1,119 +1,119 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "Bruk assistenten",
+      "description": "Åpne assistenten og spør den om ting."
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "Administrer leverandører",
+      "description": "Legg til, rediger og fjern AI-leverandørene og API-nøklene deres."
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "Bruk forslag",
+      "description": "La assistenten utføre endringene den foreslår."
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "Bruk AI fra andre funksjoner",
+      "description": "Andre funksjoner kan ringe assistenten på dine vegne."
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "Del API-nøkkelen",
+      "description": "Andre funksjoner kan bruke den lagrede AI API-nøkkelen uten å se den."
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "AI-assistenten er slått av på denne serveren.",
+    "providersNeedOptIn": "Slå på AI-assistenten ovenfor for å legge til leverandører.",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "AI-assistent",
+        "description": "La brukere slå på AI-assistenten. Mens dette er av, er assistenten skjult og blokkert for alle."
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "Tillatte private AI-verter",
+        "description": "Verter på ditt private nettverk som brukere kan peke en leverandør til, for eksempel en selvhostet Ollama. Plasser én vert på hver linje."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "Aktiver AI-assistent",
+        "description": "Tillat at AI-assistenten hjelper til i denne vertens terminal. Av som standard, og krever fortsatt at AI er aktivert for kontoen din."
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
+    "title": "Assistent",
+    "send": "Sende",
     "stop": "Stopp",
     "save": "Lagre",
     "cancel": "Avbryt",
     "running": "kjører",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
+    "approve": "Vedta",
+    "reject": "Avvis",
+    "inputPlaceholder": "Spør om servitørene dine, eller beskriv en endring du vil foreslå",
+    "selectProvider": "Velg en leverandør",
+    "providerSettings": "Leverandørinnstillinger",
+    "addProvider": "Legg til leverandør",
+    "editProvider": "Rediger leverandør",
+    "removeProvider": "Fjern leverandør",
+    "providerType": "Leverandør",
     "providerLabel": "Navn",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerLabelPlaceholder": "For eksempel: Lokal Ollama",
+    "baseUrl": "Serveradresse",
+    "apiKey": "API-nøkkel",
+    "defaultModel": "Standardmodell",
+    "defaultModelPlaceholder": "For eksempel: llama3.1 eller claude-opus-5",
+    "labelRequired": "Gi denne leverandøren et navn",
+    "providerSaveFailed": "Kunne ikke lagre leverandøren",
+    "providerUpdated": "Leverandøren er oppdatert",
+    "providerDeleteFailed": "Kunne ikke fjerne leverandøren",
+    "privateEndpointHint": "Adresser på ditt private nettverk krever at en administrator tillater verten først.",
     "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
-    "providerOpenai": "OpenAI",
+    "providerAnthropic": "Antropisk",
+    "providerOpenai": "Åpen kunstig intelligens",
     "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
-    "toolArguments": "Input",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "providerOpenaiCompatible": "OpenAI-kompatibel",
+    "toolArguments": "Inndata",
+    "toolResult": "Resultat",
+    "statusApplied": "Anvendt",
+    "statusRejected": "Avvist",
+    "proposalApplied": "Endringen er brukt",
+    "proposalApplyFailed": "Kunne ikke bruke endringen",
+    "proposalRejectFailed": "Kunne ikke avvise endringen",
+    "enableTitle": "Aktiver AI-assistenten",
+    "enableDescription": "La assistenten lese oppsettet ditt og foreslå endringer du kan godkjenne.",
+    "readOnlyCommands": "Tillat skrivebeskyttede diagnostiske kommandoer",
+    "readOnlyCommandsDescription": "Assistenten kan kjøre en kort liste med sikre kommandoer som df og uptime uten å spørre hver gang. Alt som endrer en server blir alltid foreslått først.",
+    "modelDetectFailed": "Kunne ikke nå leverandøren, så dette er en generell liste. Du kan skrive inn et hvilket som helst modellnavn.",
+    "modelCustom": "Skriv inn et modellnavn",
+    "modelRefresh": "Oppdater listen",
+    "modelPlaceholder": "Velg eller skriv inn en modell",
+    "attachHint": "Skriv inn @ for å referere til en vert, et kodeutdrag eller en automatisering. Endringer foreslås som du kan godkjenne.",
+    "runCommandTitle": "Kjør kommandoen",
+    "assistant": "AI-assistent",
+    "terminalPanelEmpty": "Spør assistenten om denne verten. Alt som endrer status trenger din godkjenning først.",
+    "terminalPanelPlaceholder": "Spør om denne verten...",
+    "noProvidersConfigured": "Ingen AI-leverandør er konfigurert ennå. Legg til en i AI-assistent-fanen.",
+    "runsInOpenTerminal": "Kjører i din åpne terminaløkt.",
     "runInTerminal": "Kjør",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "terminalContextPrefill": "Her er terminalutgangen min:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "La andre funksjoner bruke API-nøkkelen til AI-leverandøren din for sine egne forespørsler. Nøkkelen kopieres aldri, og du kan tilbakekalle den når som helst."
     }
   },
   "nav": {
     "ai": "AI"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "AI-assistent",
+    "aiIntro": "Termix kan inkludere en valgfri AI-assistent. Du kan endre dette senere i innstillingene dine.",
+    "aiSkipTitle": "La det være av",
+    "aiSkipDesc": "Termix fungerer som den gjør nå. Assistenten forblir skjult.",
+    "aiEnableTitle": "Slå den på",
+    "aiEnableDesc": "Legger til en assistent som leser oppsettet ditt og foreslår endringer du godkjenner. Krever en leverandør du oppgir, for eksempel en lokal Ollama.",
+    "aiNote": "Ingenting sendes noe sted før du legger til en leverandør og sender en melding."
   },
   "hosts": {
-    "docsLink": "View docs"
+    "docsLink": "Vis dokumenter"
   }
 }

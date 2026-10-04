@@ -33,7 +33,7 @@
     "loadingHost": "Загрузка хоста..."
   },
   "nav": {
-    "portForwarding": "Forwarding",
+    "portForwarding": "Пересылка",
     "tunnels": "Туннели"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (слушать локально)",
     "localTargetHost": "127.0.0.1 (цель на этом компьютере)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
-    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
+    "remoteBindHost": "127.0.0.1 (прослушивание конечной точки)",
+    "remoteTargetHost": "127.0.0.1 (цель с конечной точки)",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1 (SOCKS-слушатель)"
   },
@@ -63,8 +63,8 @@
     "c2sPresetToLoad": "Предустановка для загрузки",
     "c2sTunnelPresets": "Предустановки клиентских туннелей",
     "c2sTunnelPresetsUnavailable": "Предустановки клиентских туннелей доступны только в десктопном клиенте.",
-    "c2sPresetRenameError": "Failed to rename the preset",
-    "c2sPresetDeleteError": "Failed to delete the preset"
+    "c2sPresetRenameError": "Не удалось переименовать предустановку.",
+    "c2sPresetDeleteError": "Не удалось удалить предустановку."
   },
   "tunnels": {
     "attempt": "Попытка {{current}} из {{max}}",
@@ -85,8 +85,8 @@
     "createFirstTunnelMessage": "Вы ещё не создали ни одного SSH-туннеля. Настройте туннельные соединения в Менеджере хостов, чтобы начать.",
     "currentHostPort": "Порт текущего хоста",
     "destination": "Назначение",
-    "destinationAddress": "Destination Address",
-    "destinationPort": "Destination Port",
+    "destinationAddress": "Адрес назначения",
+    "destinationPort": "Порт назначения",
     "disconnected": "Отключено",
     "duplicateAutoStartBind": "Только один клиентский туннель с автозапуском может использовать {{bind}}.",
     "endpointPort": "Порт конечной точки",
@@ -101,18 +101,18 @@
     "forwardDescriptionServerLocal": "Текущий хост {{sourcePort}} → конечная точка {{endpointPort}}.",
     "forwardDescriptionServerRemote": "Конечная точка {{endpointPort}} → текущий хост {{sourcePort}}.",
     "host": "Хост",
-    "intermediateHost": "Intermediate Host",
+    "intermediateHost": "Промежуточный хост",
     "invalidBindIp": "Локальный IP-адрес должен быть действительным адресом IPv4.",
     "invalidEndpointPort": "Порт конечной точки должен быть в диапазоне от 1 до 65535.",
     "invalidLocalPort": "Локальный порт должен быть в диапазоне от 1 до 65535.",
     "invalidLocalTargetIp": "Локальный целевой IP-адрес должен быть действительным адресом IPv4.",
     "invalidLocalTargetPort": "Локальный целевой порт должен быть в диапазоне от 1 до 65535.",
-    "invalidRemoteAddress": "Remote address is required.",
+    "invalidRemoteAddress": "Требуется удаленный адрес.",
     "invalidRemotePort": "Удаленный порт должен быть в диапазоне от 1 до 65535.",
     "lastError": "Последняя ошибка",
     "lastStarted": "Последний запуск",
     "lastTested": "Последняя проверка",
-    "localAddress": "Local Address",
+    "localAddress": "Местный адрес",
     "localPort": "Локальный порт",
     "localSaveError": "Не удалось сохранить локальные клиентские туннели",
     "localSaved": "Клиентские туннели сохранены",
@@ -124,14 +124,14 @@
     "noHostSelected": "Хост не выбран",
     "noSshTunnels": "Нет SSH-туннелей",
     "port": "Порт",
-    "remoteBindAddress": "Remote Bind Address",
+    "remoteBindAddress": "Удаленный адрес привязки",
     "remoteHost": "Удаленный хост",
     "remotePort": "Удаленный порт",
     "retryInterval": "Интервал повтора (секунд)",
     "route": "Маршрут:",
     "summaryClientDynamic": "{{localHost}}:{{localPort}} → SOCKS через {{endpoint}}",
-    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} via {{endpoint}}",
-    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} on {{endpoint}} → {{localHost}}:{{localPort}}",
+    "summaryClientLocal": "{{localHost}}:{{localPort}} → {{remoteHost}}:{{remotePort}} через {{endpoint}}",
+    "summaryClientRemote": "{{remoteHost}}:{{remotePort}} на {{endpoint}} → {{localHost}}:{{localPort}}",
     "test": "Проверить",
     "tunnelName": "Имя туннеля",
     "tunnelTestFailed": "Проверка туннеля не удалась",
@@ -141,35 +141,35 @@
     "typeLocal": "Локальный (-L)",
     "typeRemote": "Удалённый (-R)",
     "working": "Выполняется...",
-    "activeCount": "{{connected}}/{{total}} active",
-    "listensOn": "Bound to localhost:{{port}}",
-    "socksProxy": "SOCKS5 proxy",
-    "waiting": "Waiting",
-    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeCount": "{{connected}}/{{total}} активный",
+    "listensOn": "Привязка к localhost:{{port}}",
+    "socksProxy": "SOCKS5 прокси",
+    "waiting": "Ожидающий",
+    "remoteSessionExpired": "Сеанс удаленной синхронизации истек. Переподключитесь к удаленной синхронизации и попробуйте снова.",
     "activeTunnels": "Активные туннели",
     "start": "Запустить",
     "stop": "Остановить",
-    "authTitle": "Tunnel authentication",
-    "authRetry": "The previous code was not accepted. Enter a new code.",
-    "authAnswer": "Authentication response",
+    "authTitle": "туннельная аутентификация",
+    "authRetry": "Предыдущий код не был принят. Введите новый код.",
+    "authAnswer": "Ответ аутентификации",
     "authContinue": "Продолжить"
   },
   "permissions": {
     "use": {
-      "title": "Use tunnels",
-      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+      "title": "Используйте туннели",
+      "description": "Запуск, остановка и мониторинг SSH-туннелей, а также сохранение настроек клиентских туннелей."
     }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "Enable tunnels",
-        "description": "Set up SSH tunnels through this host."
+        "label": "Включить туннели",
+        "description": "Настройте SSH-туннели через этот хост."
       }
     }
   },
   "onboarding": {
     "feature_tunnels": "Туннели",
-    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
+    "feature_tunnels_desc": "Перенаправляйте порты через сервер для доступа к службам, которые не доступны извне."
   }
 }

@@ -1,64 +1,64 @@
 {
   "networkGraph": {
-    "addHost": "Add Host",
-    "addGroup": "Add Group",
-    "addLink": "Add Link",
-    "zoomIn": "Zoom In",
-    "zoomOut": "Zoom Out",
-    "resetView": "Reset View",
-    "selectHost": "Select Host",
-    "chooseHost": "Choose a host...",
-    "parentGroup": "Parent Group",
-    "noGroup": "No Group",
-    "groupName": "Group Name",
-    "color": "Color",
-    "source": "Source",
-    "target": "Target",
-    "moveToGroup": "Move to Group",
-    "selectGroup": "Select group...",
-    "addConnection": "Add Connection",
-    "hostDetails": "Host Details",
-    "removeFromGroup": "Remove from Group",
-    "addHostHere": "Add Host Here",
-    "editGroup": "Edit Group",
-    "delete": "Delete",
-    "add": "Add",
-    "create": "Create",
-    "move": "Move",
-    "connect": "Connect",
-    "createGroup": "Create Group",
-    "selectSourcePlaceholder": "Select Source...",
-    "selectTargetPlaceholder": "Select Target...",
-    "invalidFile": "Invalid File",
-    "hostAlreadyExists": "Host is already in the topology",
-    "connectionExists": "Connection already exists",
-    "unknown": "Unknown",
-    "name": "Name",
-    "ip": "IP",
-    "status": "Status",
-    "failedToAddNode": "Failed to add node",
-    "sourceDifferentFromTarget": "Source and target must be different",
-    "exportJSON": "Export JSON",
-    "importJSON": "Import JSON",
-    "serverStats": "Host Metrics",
-    "noNodes": "No nodes yet"
+    "addHost": "Додати хоста",
+    "addGroup": "Додати групу",
+    "addLink": "Додати посилання",
+    "zoomIn": "Збільшити масштаб",
+    "zoomOut": "Зменшити масштаб",
+    "resetView": "Скинути вигляд",
+    "selectHost": "Виберіть хоста",
+    "chooseHost": "Виберіть хоста...",
+    "parentGroup": "Батьківська група",
+    "noGroup": "Без групи",
+    "groupName": "Назва групи",
+    "color": "Колір",
+    "source": "Джерело",
+    "target": "Ціль",
+    "moveToGroup": "Перемістити до групи",
+    "selectGroup": "Виберіть групу...",
+    "addConnection": "Додати підключення",
+    "hostDetails": "Деталі хоста",
+    "removeFromGroup": "Видалити з групи",
+    "addHostHere": "Додати хост тут",
+    "editGroup": "Редагувати групу",
+    "delete": "Видалити",
+    "add": "Додати",
+    "create": "Створити",
+    "move": "Перемістити",
+    "connect": "Підключитися",
+    "createGroup": "Створити групу",
+    "selectSourcePlaceholder": "Виберіть джерело...",
+    "selectTargetPlaceholder": "Виберіть ціль...",
+    "invalidFile": "Недійсний файл",
+    "hostAlreadyExists": "Хост вже є в топології",
+    "connectionExists": "З'єднання вже існує",
+    "unknown": "Невідомо",
+    "name": "Ім'я",
+    "ip": "ІП",
+    "status": "Статус",
+    "failedToAddNode": "Не вдалося додати вузол",
+    "sourceDifferentFromTarget": "Джерело та ціль мають бути різними",
+    "exportJSON": "Експорт JSON",
+    "importJSON": "Імпорт JSON",
+    "serverStats": "Метрики хоста",
+    "noNodes": "Поки що немає вузлів"
   },
   "nav": {
-    "networkGraph": "Network Graph"
+    "networkGraph": "Мережевий графік"
   },
   "dashboard": {
-    "networkGraph": "Network Graph"
+    "networkGraph": "Мережевий графік"
   },
   "dashboardTab": {
-    "nodes": "{{count}} nodes"
+    "nodes": "{{count}} вузлів"
   },
   "permissions": {
     "use": {
-      "title": "Use network graph",
-      "description": "View and edit the network topology graph."
+      "title": "Використовуйте мережевий графік",
+      "description": "Перегляд та редагування графа топології мережі."
     }
   },
   "hosts": {
-    "docsLink": "View docs"
+    "docsLink": "Переглянути документи"
   }
 }

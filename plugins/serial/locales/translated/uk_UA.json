@@ -1,29 +1,29 @@
 {
   "nav": {
-    "serial": "Serial"
+    "serial": "Серійний"
   },
   "serial": {
-    "title": "Serial",
-    "portLabel": "Port",
-    "portPlaceholder": "/dev/ttyUSB0 or COM3",
-    "baudRateLabel": "Baud Rate",
-    "dataBitsLabel": "Data",
-    "stopBitsLabel": "Stop",
-    "parityLabel": "Parity",
-    "parityNone": "None",
-    "parityEven": "Even",
-    "parityOdd": "Odd",
-    "connect": "Connect to Serial",
-    "disconnect": "Disconnect",
-    "refreshPorts": "Refresh ports",
-    "connected": "Connected to {{path}} at {{baud}} baud",
-    "disconnected": "Serial port disconnected",
-    "connectionError": "Failed to open serial port",
-    "wsError": "WebSocket error",
-    "errorNoServerUrl": "No server URL configured",
-    "notSupportedTitle": "Serial Not Supported",
-    "notSupported": "Serial connections require a browser with Web Serial API support (Chrome, Edge, or Firefox 151+), or the Termix desktop app.",
-    "hideHint": "You can hide the Serial tab under User Profile > Appearance > Sidebar > Navigation.",
-    "browserPickerHint": "Click Connect and your browser will open a port picker to choose the device."
+    "title": "Серійний",
+    "portLabel": "Порт",
+    "portPlaceholder": "/dev/ttyUSB0 або COM3",
+    "baudRateLabel": "Швидкість передачі даних",
+    "dataBitsLabel": "Дані",
+    "stopBitsLabel": "СТІЙ",
+    "parityLabel": "Паритет",
+    "parityNone": "Жоден",
+    "parityEven": "Навіть",
+    "parityOdd": "Дивний",
+    "connect": "Підключення до послідовного порту",
+    "disconnect": "Відключитися",
+    "refreshPorts": "Оновити порти",
+    "connected": "Підключено до {{path}} зі швидкістю {{baud}} бод",
+    "disconnected": "Послідовний порт відключено",
+    "connectionError": "Не вдалося відкрити послідовний порт",
+    "wsError": "Помилка WebSocket",
+    "errorNoServerUrl": "URL-адреса сервера не налаштована",
+    "notSupportedTitle": "Серійний номер не підтримується",
+    "notSupported": "Для послідовних з’єднань потрібен браузер із підтримкою Web Serial API (Chrome, Edge або Firefox 151+) або настільний додаток Termix.",
+    "hideHint": "Ви можете приховати вкладку «Серійний номер» у розділі «Профіль користувача» > «Зовнішній вигляд» > «Бічна панель» > «Навігація».",
+    "browserPickerHint": "Натисніть «Підключитися», і ваш браузер відкриє вибір порту для вибору пристрою."
   }
 }

@@ -14,19 +14,19 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Tmux Monitor",
-      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+      "title": "Tmux मॉनिटर का उपयोग करें",
+      "description": "मॉनिटर चालू होने पर होस्ट पर tmux सेशन, विंडो और पैन को ब्राउज़ करें और नियंत्रित करें।"
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Tmux मॉनिटर सक्षम करें",
-        "description": "Watch and attach to tmux sessions running on this host."
+        "description": "इस होस्ट पर चल रहे tmux सत्रों को देखें और उनसे जुड़ें।"
       },
       "mouseEnabled": {
-        "label": "Enable tmux mouse support",
-        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+        "label": "tmux माउस समर्थन सक्षम करें",
+        "description": "सेशन अटैच करते या बनाते समय tmux सेशन में माउस सपोर्ट लागू करें। अन्य सेशन और ग्लोबल tmux सेटिंग्स अपरिवर्तित रहेंगी।"
       }
     }
   },
@@ -73,7 +73,7 @@
     "sessionRenameFailed": "सत्र का नाम बदलने में विफल",
     "editTagsTitle": "\"{{name}}\" के लिए टैग संपादित करें",
     "killPane": "पेन नष्ट करें",
-    "resizeTree": "Drag to resize, double-click to reset",
+    "resizeTree": "आकार बदलने के लिए खींचें, रीसेट करने के लिए डबल-क्लिक करें",
     "reattach": "पुनः अटैच करें (विकृत दृश्य को ठीक करता है)",
     "killWindow": "विंडो नष्ट करें",
     "killWindowTitle": "क्या \"{{session}}\" की विंडो {{index}} नष्ट करें?",
@@ -93,25 +93,25 @@
     "sessionKillFailed": "सत्र नष्ट करने में विफल",
     "hostUnreachable": "होस्ट से कनेक्ट नहीं हो सका। जाँचें कि यह ऑनलाइन और पहुँच योग्य है।",
     "noServer": "इस होस्ट पर कोई tmux सर्वर नहीं चल रहा है।",
-    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "searchTruncated": "आंशिक परिणाम। खोज प्रत्येक फलक की अंतिम {{lines}} पंक्तियों और अधिकतम {{panes}} फलकों को कवर करती है।",
     "closeSearchResults": "खोज परिणाम बंद करें",
     "retry": "पुनः प्रयास करें",
     "noHosts": "कोई SSH होस्ट उपलब्ध नहीं है",
-    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "noHostsHint": "किसी SSH होस्ट पर Tmux Monitor विकल्प को सक्षम करें (होस्ट मैनेजर, Tmux Monitor टैब) ताकि उसके tmux सत्रों की निगरानी की जा सके।",
     "tmuxInstallHint": "इसे होस्ट पर इंस्टॉल करें:",
     "attachTooltip": "{{host}} पर टर्मिनल खोलें",
-    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "attachTooltipPane": "{{host}}पर एक टर्मिनल खोलें, tmux सत्र {{session}}",
     "timeJustNow": "अभी",
     "timeMinutes": "{{count}}m पहले",
     "timeHours": "{{count}}h पहले",
     "timeDays": "{{count}}d पहले",
     "allHosts": "सभी होस्ट",
-    "singleHost": "Single host",
-    "hostScope": "Monitor scope",
-    "filterHosts": "Filter hosts by name or address",
-    "selectHost": "Select host",
-    "toggleHost": "Expand or collapse {{host}}",
-    "noMatchingHosts": "No matching hosts",
-    "toggleSession": "Expand or collapse {{session}}"
+    "singleHost": "एकल होस्ट",
+    "hostScope": "मॉनिटर स्कोप",
+    "filterHosts": "होस्ट को नाम या पते के आधार पर फ़िल्टर करें",
+    "selectHost": "होस्ट का चयन करें",
+    "toggleHost": "विस्तार करें या संक्षिप्त करें {{host}}",
+    "noMatchingHosts": "कोई मेल खाने वाले होस्ट नहीं मिले",
+    "toggleSession": "विस्तार करें या संक्षिप्त करें {{session}}"
   }
 }

@@ -1,16 +1,16 @@
 {
   "nav": {
-    "alerts": "Alerts"
+    "alerts": "Varsler"
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "Bruk varsler",
+      "description": "Få varsler i innboksen og send dem til dine egne kanaler."
     }
   },
   "onboarding": {
-    "feature": "Alerts",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "feature": "Varsler",
+    "featureDesc": "Alle varsler i én innboks, sendt videre til Discord, ntfy, e-post eller en webhook om du vil."
   },
   "settings": {
     "group": {
@@ -19,141 +19,141 @@
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Termix-kunngjøringer",
+        "description": "Vis nyheter fra Termix-teamet, som sikkerhetsvarsler og utgivelser, i alles innboks."
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "Behold varsler i (dager)",
+        "description": "Eldre varsler fjernes fra alle innbokser."
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "SMTP-server",
+        "description": "Nødvendig for e-postkanaler. La stå tomt for å slå av e-post.",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "SMTP-port",
+        "description": "Vanligvis 587 med STARTTLS eller 465 med TLS."
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "Bruk TLS fra starten av",
+        "description": "Slå på port 465. Slå av for port 587, som oppgraderer til TLS på egenhånd."
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "SMTP-brukernavn",
+        "description": "La feltet stå tomt hvis serveren ikke trenger pålogging."
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "SMTP-passord",
+        "description": "Lagret kryptert."
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
+        "label": "Fra adresse",
+        "description": "Avsendervarslene kommer fra.",
         "placeholder": "Termix <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
+        "label": "Varselspopup-vinduer",
+        "description": "Hvilke nye varsler dukker opp mens du bruker Termix? De havner alltid i innboksen.",
+        "all": "Alle varsler",
+        "warning": "Advarsler og kritiske",
+        "critical": "Kun kritisk",
         "off": "Ingen"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
-    "channels": "Channels",
-    "rules": "Delivery rules"
+    "inbox": "Innboks",
+    "channels": "Kanaler",
+    "rules": "Leveringsregler"
   },
   "severity": {
     "info": "Info",
     "success": "Suksess",
     "warning": "Advarsel",
-    "critical": "Critical"
+    "critical": "Kritisk"
   },
   "inbox": {
     "sourceTermix": "Termix",
-    "openLink": "Open",
-    "view": "View",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
+    "openLink": "Åpne",
+    "view": "Utsikt",
+    "unread": "Ulest",
+    "deliveryFailed_one": "{{count}} kanal mislyktes",
+    "deliveryFailed_other": "{{count}} kanaler mislyktes",
+    "markRead": "Merk som lest",
+    "markUnread": "Merk som ulest",
+    "markAllRead": "Merk alle som lest",
     "delete": "Slett",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "clearRead": "Slett lesevarsler",
+    "cleared_one": "Slettet {{count}} -varsel",
+    "cleared_other": "Slettede {{count}} varsler",
+    "filterAll": "Alle",
+    "filterUnread": "Ulest",
+    "anySeverity": "Enhver alvorlighetsgrad",
+    "anySource": "Enhver kilde",
+    "openAll": "Åpne i en fane",
+    "empty": "Ingen varsler ennå.",
+    "emptyUnread": "Dere er helt oppdatert.",
+    "loadMore": "Last inn mer"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
+    "intro": "Kanaler er der varsler kan sendes utenfor Termix. Leveringsregler velger hvilke varsler som bruker dem.",
+    "add": "Legg til kanal",
+    "edit": "Rediger kanal",
+    "test": "Send en test",
+    "testSent": "Testvarsel sendt",
+    "testFailed": "Testen mislyktes: {{error}}",
+    "deleteConfirm": "Slette kanalen «{{name}}»?",
+    "deleted": "Kanalen slettet",
+    "empty": "Ingen kanaler ennå.",
     "enabled": "Aktivert",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
+    "needsSave": "Denne kanalen må åpnes og lagres på nytt før den kan sende.",
     "name": "Navn",
     "nameRequired": "Navn er påkrevd",
     "type": "Type",
     "types": {
       "webhook": "Webhook",
       "ntfy": "ntfy",
-      "discord": "Discord",
+      "discord": "Disharmoni",
       "email": "E-post"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
-    "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
+    "emailUnavailable": "E-post trenger en SMTP-server, som en administrator konfigurerer i varslingsinnstillingene.",
+    "webhookUrl": "URL-adresse",
+    "webhookHint": "Henter en JSON-tekst for hvert varsel.",
+    "method": "Metode",
+    "headers": "Overskrifter",
+    "headersHint": "Én per linje, som Navn: verdi.",
     "ntfyServer": "Server-URL",
-    "ntfyTopic": "Topic",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "ntfyTopic": "Emne",
+    "ntfyToken": "Tilgangstoken (valgfritt)",
+    "discordUrl": "Discord webhook-URL",
+    "discordHint": "Fra kanalens innstillinger i Discord, under Integrasjoner.",
+    "discordUsername": "Visningsnavn (valgfritt)",
+    "discordAvatar": "Avatar-URL (valgfritt)",
+    "emailTo": "Send til",
+    "emailHint": "Skill mer enn én adresse med komma.",
+    "privateNetwork": "Tillat en privat nettverksadresse",
+    "privateNetworkHint": "Fungerer bare for verter som en administrator tillater i listen over private endepunkter."
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
+    "intro": "En leveringsregel sender samsvarende varsler til kanalene dine. Varsler forblir også alltid i innboksen.",
+    "add": "Legg til regel",
+    "edit": "Rediger regel",
+    "empty": "Ingen regler ennå, så varsler vises bare i innboksen.",
+    "needChannel": "Legg til en kanal først.",
     "enabled": "Aktivert",
     "name": "Navn",
     "nameRequired": "Navn er påkrevd",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "match": "Varsler som skal sendes",
+    "matchHint": "* for alt, automatiseringer.* for alt fra automatiseringer, eller én eksakt type.",
+    "minSeverity": "Minst",
+    "channels": "Send til",
+    "channelRequired": "Velg minst én kanal",
+    "deleteConfirm": "Slette regelen «{{name}}»?",
+    "everything": "Alt",
+    "summary": "{{match}}, {{severity}} eller høyere, til {{channels}}"
   },
   "actions": {
     "cancel": "Avbryt",
@@ -162,11 +162,11 @@
     "delete": "Slett"
   },
   "widget": {
-    "name": "Alert Feed",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
-    "allClear": "All clear",
+    "name": "Varselstrøm",
+    "description": "Dine siste varsler, med en rask måte å merke dem som lest",
+    "maxItems": "Maks antall varer",
+    "showRead": "Vis lesevarsler",
+    "allClear": "Alt klart",
     "loading": "Laster..."
   }
 }

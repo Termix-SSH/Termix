@@ -1,26 +1,26 @@
 {
-  "hint": "You can paste a 1Password reference (op://vault/item/field) instead of the secret. It is fetched from your secret source when connecting.",
-  "manage": "Manage secret sources",
-  "title": "Secret sources",
-  "description": "External password managers Termix reads secrets from at connect time. Currently 1Password Connect (self-hosted). The access token is stored encrypted with your data key.",
-  "new": "New source",
-  "nameLabel": "Friendly name",
-  "urlLabel": "Connect server URL",
-  "tokenLabel": "Connect access token",
-  "tokenKeep": "Leave empty to keep the current token",
-  "sharedLabel": "Share with all users (admins only, resolves while you are signed in)",
+  "hint": "आप गुप्त पासवर्ड के स्थान पर 1Password संदर्भ (op://vault/item/field) पेस्ट कर सकते हैं। कनेक्ट करते समय यह आपके गुप्त पासवर्ड स्रोत से प्राप्त किया जाता है।",
+  "manage": "गुप्त स्रोतों का प्रबंधन करें",
+  "title": "गुप्त सूत्रों",
+  "description": "टर्मिक्स कनेक्ट होने के समय बाहरी पासवर्ड मैनेजर से गुप्त जानकारी पढ़ता है। वर्तमान में 1Password Connect (स्वयं-होस्टेड) का उपयोग किया जा रहा है। एक्सेस टोकन आपके डेटा कुंजी के साथ एन्क्रिप्टेड रूप में संग्रहीत किया जाता है।",
+  "new": "नए स्रोत",
+  "nameLabel": "दोस्ताना नाम",
+  "urlLabel": "सर्वर यूआरएल से कनेक्ट करें",
+  "tokenLabel": "एक्सेस टोकन कनेक्ट करें",
+  "tokenKeep": "वर्तमान टोकन को बनाए रखने के लिए इसे खाली छोड़ दें",
+  "sharedLabel": "सभी उपयोगकर्ताओं के साथ साझा करें (केवल व्यवस्थापकों के लिए, आपके लॉग इन होने पर ही समस्या का समाधान हो जाएगा)",
   "shared": "साझा",
   "test": "परीक्षण",
-  "testOk": "Connected, {{count}} vault(s) visible",
-  "testFailed": "Connection test failed",
-  "required": "Name, server URL and token are required",
-  "saved": "Secret source saved",
-  "deleted": "Secret source deleted",
+  "testOk": "कनेक्टेड, {{count}} वॉल्ट दिखाई दे रहे हैं",
+  "testFailed": "कनेक्शन परीक्षण विफल रहा",
+  "required": "नाम, सर्वर यूआरएल और टोकन आवश्यक हैं।",
+  "saved": "गुप्त स्रोत सुरक्षित",
+  "deleted": "गुप्त सूत्र हटा दिया गया",
   "settings": {
     "admin": {
       "privateEndpoints": {
-        "label": "Private endpoint allowlist",
-        "description": "Private or loopback hosts a secret source may reach, one per line. A self-hosted 1Password Connect server usually needs its own address listed here."
+        "label": "निजी एंडपॉइंट अनुमति सूची",
+        "description": "निजी या लूपबैक होस्ट तक एक गुप्त स्रोत पहुंच सकता है, प्रति पंक्ति एक। एक स्व-होस्टेड 1Password Connect सर्वर को आमतौर पर यहां अपना पता सूचीबद्ध करने की आवश्यकता होती है।"
       }
     }
   }

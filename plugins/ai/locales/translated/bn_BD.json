@@ -1,119 +1,119 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "সহকারী ব্যবহার করুন",
+      "description": "অ্যাসিস্ট্যান্টটি খুলুন এবং এটিকে বিভিন্ন জিনিস জিজ্ঞাসা করুন।"
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "সরবরাহকারীদের পরিচালনা করুন",
+      "description": "এআই প্রোভাইডার এবং তাদের এপিআই কীগুলো যোগ, সম্পাদনা ও অপসারণ করুন।"
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "প্রস্তাবগুলি প্রয়োগ করুন",
+      "description": "সহকারীকে তার প্রস্তাবিত পরিবর্তনগুলো কার্যকর করতে দিন।"
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "অন্যান্য বৈশিষ্ট্য থেকে এআই ব্যবহার করুন",
+      "description": "অন্যান্য বৈশিষ্ট্য আপনার পক্ষ থেকে সহকারীকে ডাকতে পারে।"
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "এপিআই কী শেয়ার করুন",
+      "description": "অন্যান্য ফিচারগুলো সংরক্ষিত এআই এপিআই কী-টি না দেখেই ব্যবহার করতে পারে।"
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "এই সার্ভারে এআই অ্যাসিস্ট্যান্ট বন্ধ করা আছে।",
+    "providersNeedOptIn": "প্রোভাইডার যোগ করতে উপরের এআই অ্যাসিস্ট্যান্টটি চালু করুন।",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "এআই সহকারী",
+        "description": "ব্যবহারকারীদের এআই অ্যাসিস্ট্যান্ট চালু করার সুযোগ দিন। এটি বন্ধ থাকা অবস্থায়, অ্যাসিস্ট্যান্টটি সকলের জন্য লুকানো এবং ব্লক করা থাকবে।"
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "ব্যক্তিগত এআই হোস্ট অনুমোদিত",
+        "description": "আপনার প্রাইভেট নেটওয়ার্কে এমন হোস্ট রাখুন, যেগুলোকে ব্যবহারকারীরা কোনো প্রোভাইডারের দিকে নির্দেশ করতে পারে, যেমন একটি সেলফ-হোস্টেড ওলামা। প্রতিটি লাইনে একটি করে হোস্ট রাখুন।"
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "এআই অ্যাসিস্ট্যান্ট সক্রিয় করুন",
+        "description": "এই হোস্টের টার্মিনালে সাহায্য করার জন্য এআই অ্যাসিস্ট্যান্টকে অনুমতি দিন। এটি ডিফল্টরূপে বন্ধ থাকে এবং আপনার অ্যাকাউন্টের জন্য এআই চালু করা প্রয়োজন।"
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
-    "stop": "Stop",
-    "save": "Save",
-    "cancel": "Cancel",
-    "running": "running",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
-    "providerLabel": "Name",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
-    "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
-    "providerOpenai": "OpenAI",
-    "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
-    "toolArguments": "Input",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
-    "runInTerminal": "Run",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "title": "সহকারী",
+    "send": "পাঠান",
+    "stop": "থামুন",
+    "save": "সংরক্ষণ করুন",
+    "cancel": "বাতিল করুন",
+    "running": "দৌড়ানো",
+    "approve": "অনুমোদন করুন",
+    "reject": "প্রত্যাখ্যান করুন",
+    "inputPlaceholder": "আপনার সার্ভারগুলো সম্পর্কে জিজ্ঞাসা করুন, অথবা কোনো পরিবর্তনের প্রস্তাব বর্ণনা করুন।",
+    "selectProvider": "একজন সরবরাহকারী নির্বাচন করুন",
+    "providerSettings": "প্রদানকারীর সেটিংস",
+    "addProvider": "প্রদানকারী যোগ করুন",
+    "editProvider": "সম্পাদনা প্রদানকারী",
+    "removeProvider": "প্রদানকারীকে অপসারণ করুন",
+    "providerType": "সরবরাহকারী",
+    "providerLabel": "নাম",
+    "providerLabelPlaceholder": "উদাহরণস্বরূপ: স্থানীয় ওলামা",
+    "baseUrl": "সার্ভারের ঠিকানা",
+    "apiKey": "এপিআই কী",
+    "defaultModel": "ডিফল্ট মডেল",
+    "defaultModelPlaceholder": "উদাহরণস্বরূপ: llama3.1 অথবা claude-opus-5",
+    "labelRequired": "এই সরবরাহকারীকে একটি নাম দিন",
+    "providerSaveFailed": "প্রদানকারীকে সংরক্ষণ করা যায়নি",
+    "providerUpdated": "প্রদানকারী আপডেট করেছেন",
+    "providerDeleteFailed": "প্রদানকারীকে সরানো যায়নি",
+    "privateEndpointHint": "আপনার ব্যক্তিগত নেটওয়ার্কের অ্যাড্রেসগুলো ব্যবহার করার জন্য প্রথমে একজন অ্যাডমিনিস্ট্রেটরের কাছ থেকে হোস্টটিকে অনুমতি নিতে হয়।",
+    "providerOllama": "ওল্লামা",
+    "providerAnthropic": "অ্যানথ্রোপিক",
+    "providerOpenai": "ওপেনএআই",
+    "providerGemini": "গুগল জেমিনি",
+    "providerOpenaiCompatible": "ওপেনএআই সামঞ্জস্যপূর্ণ",
+    "toolArguments": "ইনপুট",
+    "toolResult": "ফলাফল",
+    "statusApplied": "প্রয়োগ করা হয়েছে",
+    "statusRejected": "প্রত্যাখ্যাত",
+    "proposalApplied": "পরিবর্তন প্রয়োগ করা হয়েছে",
+    "proposalApplyFailed": "পরিবর্তনটি প্রয়োগ করা যায়নি।",
+    "proposalRejectFailed": "পরিবর্তনটি প্রত্যাখ্যান করা যায়নি",
+    "enableTitle": "এআই অ্যাসিস্ট্যান্ট সক্রিয় করুন",
+    "enableDescription": "সহকারীকে আপনার সেটআপটি পড়তে দিন এবং আপনার অনুমোদনের জন্য পরিবর্তনের পরামর্শ দিতে দিন।",
+    "readOnlyCommands": "শুধুমাত্র পঠনযোগ্য ডায়াগনস্টিক কমান্ডের অনুমতি দিন",
+    "readOnlyCommandsDescription": "সহকারী প্রতিবার অনুমতি না নিয়েই df এবং uptime-এর মতো কয়েকটি নিরাপদ কমান্ড চালাতে পারে। সার্ভার পরিবর্তন করে এমন যেকোনো কিছু সর্বদা প্রথমে প্রস্তাব করা হয়।",
+    "modelDetectFailed": "সরবরাহকারীর সাথে যোগাযোগ করা সম্ভব হয়নি, তাই এটি একটি সাধারণ তালিকা। আপনি যেকোনো মডেলের নাম টাইপ করতে পারেন।",
+    "modelCustom": "একটি মডেলের নাম লিখুন",
+    "modelRefresh": "তালিকা রিফ্রেশ করুন",
+    "modelPlaceholder": "একটি মডেল বেছে নিন বা টাইপ করুন",
+    "attachHint": "কোনো হোস্ট, স্নিপেট বা অটোমেশন উল্লেখ করতে @ টাইপ করুন। আপনার অনুমোদনের জন্য পরিবর্তনগুলো প্রস্তাব করা হবে।",
+    "runCommandTitle": "রান কমান্ড",
+    "assistant": "এআই সহকারী",
+    "terminalPanelEmpty": "এই হোস্ট সম্পর্কে অ্যাসিস্ট্যান্টকে জিজ্ঞাসা করুন। অবস্থা পরিবর্তনের জন্য প্রথমে আপনার অনুমোদন প্রয়োজন।",
+    "terminalPanelPlaceholder": "এই হোস্ট সম্পর্কে জিজ্ঞাসা করুন...",
+    "noProvidersConfigured": "এখনো কোনো এআই প্রোভাইডার কনফিগার করা হয়নি। এআই অ্যাসিস্ট্যান্ট ট্যাবে একটি যোগ করুন।",
+    "runsInOpenTerminal": "আপনার খোলা টার্মিনাল সেশনে চলে।",
+    "runInTerminal": "দৌড়",
+    "terminalContextPrefill": "আমার টার্মিনাল আউটপুট নিচে দেওয়া হলো:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "অন্যান্য ফিচারগুলোকে তাদের নিজস্ব অনুরোধের জন্য আপনার এআই প্রোভাইডার এপিআই কী ব্যবহার করতে দিন। কী-টি কখনোই কপি করা হয় না এবং আপনি যেকোনো সময় এটি প্রত্যাহার করতে পারেন।"
     }
   },
   "nav": {
-    "ai": "AI"
+    "ai": "এআই"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "এআই সহকারী",
+    "aiIntro": "টারমিক্সে একটি ঐচ্ছিক এআই অ্যাসিস্ট্যান্ট অন্তর্ভুক্ত থাকতে পারে। আপনি পরবর্তীতে আপনার সেটিংসে এটি পরিবর্তন করতে পারবেন।",
+    "aiSkipTitle": "এটা ছেড়ে দাও",
+    "aiSkipDesc": "টারমিক্স এখন যেমন কাজ করে, তেমনই কাজ করে। অ্যাসিস্ট্যান্টটি লুকানো থাকে।",
+    "aiEnableTitle": "এটা চালু করুন",
+    "aiEnableDesc": "একজন সহকারী যোগ করে যে আপনার সেটআপ পড়ে এবং আপনার অনুমোদিত পরিবর্তনের পরামর্শ দেয়। এর জন্য আপনার সরবরাহ করা একজন প্রদানকারীর প্রয়োজন, যেমন একজন স্থানীয় ওলামা।",
+    "aiNote": "আপনি একজন প্রোভাইডার যোগ করে মেসেজ না পাঠানো পর্যন্ত কোথাও কিছু পাঠানো হয় না।"
   },
   "hosts": {
-    "docsLink": "View docs"
+    "docsLink": "নথি দেখুন"
   }
 }

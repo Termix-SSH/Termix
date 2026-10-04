@@ -4,7 +4,7 @@
   "loginFailed": "Đăng nhập bằng passkey thất bại",
   "description": "Sử dụng thông tin đăng nhập WebAuthn/FIDO2 để đăng nhập không cần mật khẩu",
   "namePlaceholder": "Tên passkey",
-  "defaultName": "Passkey",
+  "defaultName": "Mật khẩu",
   "uv": {
     "preferred": "Ưu tiên",
     "required": "Bắt buộc",
@@ -14,9 +14,9 @@
   "none": "Chưa đăng ký passkey nào.",
   "added": "Đã thêm Passkey",
   "addFailed": "Không thêm được Passkey",
-  "delete": "Delete passkey",
+  "delete": "Xóa mật khẩu",
   "deleted": "Đã xóa Passkey",
   "deleteFailed": "Xóa passkey thất bại",
   "unknownDevice": "không xác định",
-  "synced": "synced"
+  "synced": "đã đồng bộ"
 }

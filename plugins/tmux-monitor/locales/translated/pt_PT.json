@@ -14,19 +14,19 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Tmux Monitor",
-      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+      "title": "Utilize o monitor Tmux",
+      "description": "Navegue e controle as sessões, janelas e painéis do tmux em hosts com o monitor activado."
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Ativar Monitor Tmux",
-        "description": "Watch and attach to tmux sessions running on this host."
+        "description": "Monitorize e ligue-se às sessões tmux em execução neste host."
       },
       "mouseEnabled": {
-        "label": "Enable tmux mouse support",
-        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+        "label": "Activar suporte para rato no tmux",
+        "description": "Ao ligar ou criar uma sessão, o suporte do rato será ativado na sessão tmux. As restantes sessões e definições globais do tmux permanecem inalteradas."
       }
     }
   },
@@ -73,7 +73,7 @@
     "sessionRenameFailed": "Falha ao renomear sessão",
     "editTagsTitle": "Editar etiquetas para \"{{name}}\"",
     "killPane": "Terminar painel",
-    "resizeTree": "Drag to resize, double-click to reset",
+    "resizeTree": "Arraste para redimensionar, clique duas vezes para repor.",
     "reattach": "Reanexar (corrige uma visualização distorcida)",
     "killWindow": "Terminar janela",
     "killWindowTitle": "Terminar janela {{index}} de \"{{session}}\"?",
@@ -93,25 +93,25 @@
     "sessionKillFailed": "Falha ao terminar sessão",
     "hostUnreachable": "Não foi possível ligar ao anfitrião. Verifique se está online e acessível.",
     "noServer": "Não há nenhum servidor tmux em execução neste anfitrião.",
-    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "searchTruncated": "Resultados parciais. A pesquisa abrange as últimas {{lines}} linhas de cada painel e no máximo {{panes}} painéis.",
     "closeSearchResults": "Fechar resultados da pesquisa",
     "retry": "Tentar novamente",
     "noHosts": "Nenhum anfitrião SSH disponível",
-    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "noHostsHint": "Active a opção Monitor do Tmux num host SSH (Gestor de Hosts, separador Monitor do Tmux) para monitorizar as suas sessões do tmux.",
     "tmuxInstallHint": "Instale-o no anfitrião com:",
     "attachTooltip": "Abrir um terminal para {{host}}",
-    "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
+    "attachTooltipPane": "Abra um terminal para {{host}}, sessão tmux {{session}}",
     "timeJustNow": "agora mesmo",
     "timeMinutes": "há {{count}} min",
     "timeHours": "há {{count}} h",
     "timeDays": "há {{count}} d",
     "allHosts": "Todos os hosts",
-    "singleHost": "Single host",
-    "hostScope": "Monitor scope",
-    "filterHosts": "Filter hosts by name or address",
-    "selectHost": "Select host",
-    "toggleHost": "Expand or collapse {{host}}",
-    "noMatchingHosts": "No matching hosts",
-    "toggleSession": "Expand or collapse {{session}}"
+    "singleHost": "Host único",
+    "hostScope": "Escopo do monitor",
+    "filterHosts": "Filtre os hosts por nome ou endereço.",
+    "selectHost": "Selecione o host",
+    "toggleHost": "Expandir ou recolher {{host}}",
+    "noMatchingHosts": "Nenhum host correspondente",
+    "toggleSession": "Expandir ou recolher {{session}}"
   }
 }

@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "Вејк",
+    "sent": "Пакет Wake-on-LAN је послат",
+    "failed": "Није успело слање Wake-on-LAN пакета"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "Слање Wake-on-LAN пакета",
+      "description": "Пробудите хост слањем магичног пакета на његову MAC адресу."
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
-        "placeholder": "AA:BB:CC:DD:EE:FF"
+        "label": "MAC адреса",
+        "description": "MAC адреса мреже хоста, која се користи за слање Wake-on-LAN пакета.",
+        "placeholder": "АА:ББ:ЦЦ:ДД:ЕЕ:ФФ"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "Адреса за емитовање",
+        "description": "Адреса емитовања подмреже на коју треба послати пакет. Оставите празно за 255.255.255.255.",
         "placeholder": "192.168.1.255"
       }
     }

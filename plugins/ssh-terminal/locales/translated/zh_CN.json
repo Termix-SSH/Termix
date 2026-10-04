@@ -405,7 +405,7 @@
     "backgroundImageLabel": "背景图片 URL",
     "backgroundImageOpacityLabel": "背景图片不透明度",
     "backspaceMode": "退格模式",
-    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeControlH": "Control-H（BS）",
     "backspaceModeLabel": "退格模式",
     "backspaceModeNormal": "标准（DEL）",
     "behaviorAndAdvanced": "行为与高级设置",
@@ -537,7 +537,7 @@
     "proxmoxStatsUrlCopied": "Proxmox 统计 URL 已复制到剪贴板",
     "rdpUrlCopied": "RDP URL 已复制",
     "vncUrlCopied": "VNC URL 已复制",
-    "filterAuthStepca": "Step CA",
+    "filterAuthStepca": "步骤 CA",
     "guac": {
       "noCredential": "无凭据（下方直接填写凭据）",
       "authTypeDirect": "直接",
@@ -556,7 +556,7 @@
       "updateHostBtn": "更新主机",
       "addHostBtn": "添加主机"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "保险库"
   },
   "nav": {
     "history": "历史记录",

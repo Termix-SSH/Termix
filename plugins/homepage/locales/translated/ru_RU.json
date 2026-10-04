@@ -18,7 +18,7 @@
   "homepage": {
     "title": "Главная страница",
     "addWidget": "Добавить виджет",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "В этой категории нет виджетов.",
     "editWidget": "Изменить виджет",
     "zoomIn": "Приблизить",
     "zoomOut": "Отдалить",
@@ -39,7 +39,7 @@
     "description": "Описание",
     "color": "Цвет",
     "timezone": "Часовой пояс",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "Неверный часовой пояс. Используйте название IANA, например, America/New_York.",
     "showSeconds": "Показывать секунды",
     "format12h": "12-часовой",
     "content": "Содержимое",
@@ -60,9 +60,9 @@
     "maxItems": "Макс. элементов",
     "showDescription": "Показывать описание",
     "widgetRssName": "RSS-лента",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "Настройте URL-адрес ленты в параметрах виджета.",
+    "rssLoadError": "Не удалось загрузить подачу.",
+    "rssNoItems": "Нет товаров",
     "noHostSelected": "Хост не выбран",
     "displayedMetrics": "Отображаемые метрики",
     "metricCpu": "ЦП",
@@ -162,29 +162,29 @@
     "selectHosts": "Выбрать хосты",
     "listLayout": "Список",
     "gridLayout": "Сетка",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "Укажите URL-адрес в настройках виджета.",
+    "embeddedContent": "Встроенный контент",
+    "noBookmarks": "Закладок нет",
+    "noSections": "Разделы не настроены",
+    "noServices": "Сервисы не настроены",
+    "configureLocation": "Укажите местоположение в настройках виджета.",
+    "bannerTextPlaceholder": "Текст баннера",
+    "serviceNamePlaceholder": "Моя услуга"
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Воспользуйтесь главной страницей",
+      "description": "Просматривайте и редактируйте ссылки на холст главной страницы и панель управления."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Разрешены частные хосты",
+      "description": "Точные частные или зацикленные имена хостов/IP-адреса для виджетов Ping Status и Custom API. Разделяйте записи запятыми или символами новой строки; схемы, порты и пути опускайте. Пустые блоки указывают частные адреса назначения."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Частный центр сертификации (PEM)",
+      "description": "Дополнительный пакет доверенных центров сертификации для хостов из списка разрешенных. Проверка сертификатов остается включенной. Оставьте поле пустым, чтобы использовать системное хранилище доверенных сертификатов."
     }
   }
 }

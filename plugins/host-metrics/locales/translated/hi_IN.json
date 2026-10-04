@@ -19,21 +19,21 @@
     "cpuUsage": "CPU उपयोग",
     "memoryUsage": "मेमोरी उपयोग",
     "diskUsage": "डिस्क उपयोग",
-    "selectFilesystem": "Select filesystem",
+    "selectFilesystem": "फ़ाइल सिस्टम का चयन करें",
     "temperature": "तापमान",
     "highestTemperature": "उच्चतम तापमान",
-    "primaryTemperatureSensor": "Primary sensor",
+    "primaryTemperatureSensor": "प्राथमिक सेंसर",
     "gpu": {
-      "title": "GPU",
-      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
-      "driver": "Driver {{version}}",
-      "utilization": "Utilization",
-      "memory": "VRAM",
-      "temperature": "Temp",
-      "power": "Power",
-      "fan": "Fan",
-      "processes": "GPU processes",
-      "noProcesses": "No processes are using the GPU"
+      "title": "जीपीयू",
+      "noDevice": "कोई NVIDIA GPU नहीं मिला। GPU मेट्रिक्स देखने के लिए NVIDIA ड्राइवर (जो nvidia-smi प्रदान करता है) इंस्टॉल करें।",
+      "driver": "ड्राइवर {{version}}",
+      "utilization": "उपयोग",
+      "memory": "वीआरएएम",
+      "temperature": "अस्थायी",
+      "power": "शक्ति",
+      "fan": "पंखा",
+      "processes": "जीपीयू प्रक्रियाएँ",
+      "noProcesses": "कोई भी प्रक्रिया जीपीयू का उपयोग नहीं कर रही है।"
     },
     "failedToFetchHostConfig": "होस्ट कॉन्फ़िगरेशन प्राप्त करने में विफल",
     "serverOffline": "सर्वर ऑफ़लाइन",
@@ -178,7 +178,7 @@
       "wgLastHandshake": "अंतिम हैंडशेक",
       "wgHandshakeNever": "कभी नहीं",
       "wgTransfer": "ट्रांसफर",
-      "wgNoPeers": "No peers"
+      "wgNoPeers": "कोई समकक्ष नहीं"
     }
   },
   "metricsHistory": {
@@ -203,15 +203,15 @@
     "useGlobalMetricsDesc": "सर्वर-व्यापी मेट्रिक्स अंतराल से ओवरराइड करें",
     "metricsIntervalS": "मेट्रिक्स अंतराल (सेकंड)",
     "metricsIntervalDesc2": "मेट्रिक स्नैपशॉट के बीच सेकंड",
-    "excludedMountsLabel": "Excluded Mounts",
-    "monitoredMountsLabel": "Custom monitored paths",
-    "monitoredMountsDesc": "Add paths that are not exposed as separate mounts, including bind-mounted Home Assistant paths such as /config.",
-    "monitoredMountPathPlaceholder": "Path (/config, /mnt/data)",
+    "excludedMountsLabel": "बहिष्कृत पर्वत",
+    "monitoredMountsLabel": "कस्टम मॉनिटर किए गए पथ",
+    "monitoredMountsDesc": "उन पथों को जोड़ें जो अलग-अलग माउंट के रूप में उजागर नहीं होते हैं, जिनमें बाइंड-माउंटेड होम असिस्टेंट पथ जैसे कि /config शामिल हैं।",
+    "monitoredMountPathPlaceholder": "पथ (/config, /mnt/data)",
     "monitoredMountLabelPlaceholder": "लेबल (वैकल्पिक)",
-    "addMonitoredMount": "Add path",
-    "excludedMountsDesc": "Hide specific mount points or filesystem types (e.g. nfs, cifs) from disk usage and alerts for this host.",
-    "excludedMountsPlaceholder": "Mount path (/mnt/nas) or filesystem type (nfs, cifs)",
-    "excludedMountsEmpty": "No mounts excluded. All detected filesystems are shown.",
+    "addMonitoredMount": "पथ जोड़ें",
+    "excludedMountsDesc": "इस होस्ट के लिए डिस्क उपयोग और अलर्ट से विशिष्ट माउंट पॉइंट या फ़ाइल सिस्टम प्रकार (जैसे nfs, cifs) को छिपाएँ।",
+    "excludedMountsPlaceholder": "माउंट पथ (/mnt/nas) या फ़ाइल सिस्टम प्रकार (nfs, cifs)",
+    "excludedMountsEmpty": "कोई भी माउंट बाहर नहीं रखा गया है। सभी पहचाने गए फ़ाइल सिस्टम दिखाए गए हैं।",
     "addExcludedMount": "जोड़ें",
     "visibleWidgets": "दृश्यमान विजेट्स",
     "widgetsMovedToHostMetrics": "कार्ड अब सीधे होस्ट मेट्रिक्स टैब में जोड़े, व्यवस्थित और आकार बदले जा सकते हैं। इस होस्ट के लिए होस्ट मेट्रिक्स खोलें और यह चुनने के लिए कस्टमाइज़ का उपयोग करें कि कौन से कार्ड दिखाए जाएँ।",
@@ -219,8 +219,8 @@
     "loadingHost": "होस्ट लोड हो रहा है..."
   },
   "onboarding": {
-    "feature_metrics": "Metrics and alerts",
-    "feature_metrics_desc": "Track CPU, memory and disk over time, and get alerted when they go bad."
+    "feature_metrics": "मैट्रिक्स और अलर्ट",
+    "feature_metrics_desc": "समय के साथ सीपीयू, मेमोरी और डिस्क की स्थिति पर नज़र रखें और उनके खराब होने पर अलर्ट प्राप्त करें।"
   },
   "admin": {
     "metricsHistoryRetention": "मेट्रिक्स इतिहास प्रतिधारण",
@@ -250,7 +250,7 @@
     "selectHost": "होस्ट चुनें..."
   },
   "terminalStatus": {
-    "unavailable": "Live stats unavailable"
+    "unavailable": "लाइव आंकड़े उपलब्ध नहीं हैं"
   },
   "dashboard": {
     "cpu": "CPU",
@@ -264,48 +264,48 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Host Metrics",
-      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+      "title": "होस्ट मेट्रिक्स का उपयोग करें",
+      "description": "आप जिन होस्ट तक पहुंच सकते हैं, उन पर होस्ट मेट्रिक्स देखें और होस्ट मैनेजर (सेवाएं, पैकेज, फ़ायरवॉल आदि) का उपयोग करें।"
     }
   },
   "settings": {
     "admin": {
       "metricsInterval": {
-        "label": "Metrics interval (seconds)",
-        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+        "label": "मैट्रिक्स अंतराल (सेकंड)",
+        "description": "किसी होस्ट को कितनी बार देखा जा रहा है, इसकी गणना की जाती है, जब तक कि होस्ट स्वयं अपना अंतराल निर्धारित न कर ले।"
       },
       "historyRetentionDays": {
-        "label": "History retention (days)",
-        "description": "How long metrics samples are kept for the history charts."
+        "label": "इतिहास प्रतिधारण (दिनों में)",
+        "description": "हिस्ट्री चार्ट के लिए मैट्रिक्स सैंपल कितने समय तक रखे जाते हैं?"
       },
       "enabledForNewHosts": {
-        "label": "Metrics on for new hosts",
-        "description": "Whether new hosts start with metrics collection turned on."
+        "label": "नए होस्ट के लिए मेट्रिक्स चालू हैं",
+        "description": "क्या नए होस्ट मेट्रिक्स संग्रह चालू होने के साथ शुरू होते हैं?"
       }
     },
     "user": {
       "temperatureUnit": {
-        "label": "Temperature unit",
-        "description": "How temperatures are shown in Host Metrics.",
-        "celsius": "Celsius",
-        "fahrenheit": "Fahrenheit"
+        "label": "तापमान इकाई",
+        "description": "होस्ट मेट्रिक्स में तापमान कैसे प्रदर्शित किया जाता है।",
+        "celsius": "सेल्सीयस",
+        "fahrenheit": "फ़ारेनहाइट"
       }
     },
     "host": {
       "metricsEnabled": {
-        "label": "Collect metrics"
+        "label": "मैट्रिक्स एकत्र करें"
       },
       "metricsInterval": {
-        "label": "Metrics interval (seconds)"
+        "label": "मैट्रिक्स अंतराल (सेकंड)"
       },
       "enabledWidgets": {
-        "label": "Enabled widgets"
+        "label": "सक्षम विजेट"
       },
       "excludedMounts": {
-        "label": "Excluded mounts"
+        "label": "वर्जित माउंट"
       },
       "monitoredMounts": {
-        "label": "Monitored paths"
+        "label": "निगरानी किए गए पथ"
       }
     }
   }

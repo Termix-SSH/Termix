@@ -18,12 +18,12 @@
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "Przekieruj URI",
+      "description": "Zarejestruj ten adres URL jako dozwolony adres przekierowania URI u każdego dostawcy tożsamości w konfiguracji OPKSSH."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "Użyj starego adresu URI przekierowania",
+      "description": "Nadal wysyłaj /host/opkssh-callback, czyli przekierowanie URI używane przed wersją 2.9. Wyłącz tę opcję, gdy Twoi dostawcy tożsamości zezwolą na nową."
     }
   },
   "hosts": {

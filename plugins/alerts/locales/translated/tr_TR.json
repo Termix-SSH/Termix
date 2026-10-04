@@ -4,13 +4,13 @@
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "Uyarıları kullanın",
+      "description": "Gelen kutunuza bildirimler alın ve bunları kendi kanallarınıza gönderin."
     }
   },
   "onboarding": {
     "feature": "Uyarılar",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "featureDesc": "Tüm uyarılar tek bir gelen kutusunda toplanır ve isterseniz Discord, NTfy, e-posta veya webhook üzerinden de gönderilebilir."
   },
   "settings": {
     "group": {
@@ -19,97 +19,97 @@
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Termix duyuruları",
+        "description": "Termix ekibinden gelen güvenlik uyarıları ve sürümler gibi haberleri herkesin e-posta kutusunda göster."
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "Uyarıları (gün) süreyle açık tut",
+        "description": "Eski bildirimler tüm gelen kutularından silinir."
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "SMTP sunucusu",
+        "description": "E-posta kanalları için gereklidir. E-postayı kapatmak için boş bırakın.",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "SMTP bağlantı noktası",
+        "description": "Genellikle STARTTLS ile 587 veya TLS ile 465 kullanılır."
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "TLS'yi en başından itibaren kullanın.",
+        "description": "465 numaralı bağlantı noktası için etkinleştirin. 587 numaralı bağlantı noktasını ise devre dışı bırakın; bu bağlantı noktası otomatik olarak TLS'ye yükseltilir."
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "SMTP kullanıcı adı",
+        "description": "Sunucuya giriş yapılması gerekmiyorsa boş bırakın."
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "SMTP şifresi",
+        "description": "Şifrelenmiş olarak saklanmaktadır."
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
+        "label": "Gönderen adresi",
+        "description": "Uyarı gönderen şuradan geliyor.",
         "placeholder": "Termix <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
+        "label": "Uyarı açılır pencereleri",
+        "description": "Termix kullanırken hangi yeni uyarılar belirir? Bunlar her zaman gelen kutunuza düşer.",
+        "all": "Tüm uyarılar",
+        "warning": "Uyarılar ve kritik noktalar",
+        "critical": "Sadece kritik",
         "off": "Yok"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
+    "inbox": "Gelen Kutusu",
     "channels": "Kanallar",
-    "rules": "Delivery rules"
+    "rules": "Teslimat kuralları"
   },
   "severity": {
     "info": "Bilgi",
     "success": "Başarılı",
     "warning": "Uyarı",
-    "critical": "Critical"
+    "critical": "Kritik"
   },
   "inbox": {
     "sourceTermix": "Termix",
     "openLink": "Aç",
     "view": "Görüntüle",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
+    "unread": "Okunmamış",
+    "deliveryFailed_one": "{{count}} kanal başarısız oldu",
+    "deliveryFailed_other": "{{count}} kanal başarısız oldu",
+    "markRead": "Okundu olarak işaretle",
+    "markUnread": "Okunmamış olarak işaretle",
+    "markAllRead": "Tümünü okundu olarak işaretle",
     "delete": "Sil",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
+    "clearRead": "Okuma uyarılarını sil",
+    "cleared_one": "Silindi {{count}} uyarısı",
+    "cleared_other": "Silinen {{count}} uyarıları",
     "filterAll": "Tümü",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "filterUnread": "Okunmamış",
+    "anySeverity": "Herhangi bir şiddet",
+    "anySource": "Herhangi bir kaynak",
+    "openAll": "Yeni sekmede aç",
+    "empty": "Henüz herhangi bir uyarı yok.",
+    "emptyUnread": "Her şey tamamlandı.",
+    "loadMore": "Daha fazla yükle"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
+    "intro": "Kanallar, uyarıların Termix dışına gönderilebileceği yerlerdir. Teslimat kuralları, hangi uyarıların bu kanalları kullanacağını belirler.",
+    "add": "Kanal ekle",
+    "edit": "Kanalı düzenle",
+    "test": "Bir test gönderin",
+    "testSent": "Test uyarısı gönderildi",
+    "testFailed": "Test başarısız oldu: {{error}}",
+    "deleteConfirm": "\"{{name}} \" kanalını silmek mi istiyorsunuz?",
+    "deleted": "Kanal silindi",
+    "empty": "Henüz kanal yok.",
     "enabled": "Etkin",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
+    "needsSave": "Bu kanalın gönderilebilmesi için önce açılıp tekrar kaydedilmesi gerekiyor.",
     "name": "Ad",
     "nameRequired": "Ad zorunludur",
     "type": "Tür",
@@ -119,41 +119,41 @@
       "discord": "Discord",
       "email": "E-posta"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "emailUnavailable": "E-posta göndermek için bir SMTP sunucusuna ihtiyaç vardır ve bu sunucu yönetici tarafından Uyarılar ayarlarında kurulur.",
     "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
+    "webhookHint": "Her uyarı için JSON formatında bir veri gövdesi alır.",
+    "method": "Yöntem",
+    "headers": "Başlıklar",
+    "headersHint": "Her satıra bir tane, örneğin İsim: değer şeklinde.",
     "ntfyServer": "Sunucu URL'si",
     "ntfyTopic": "Konu",
-    "ntfyToken": "Access token (optional)",
+    "ntfyToken": "Erişim belirteci (isteğe bağlı)",
     "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "discordHint": "Discord'daki kanal ayarlarından, Entegrasyonlar bölümünden.",
+    "discordUsername": "Görüntülenen ad (isteğe bağlı)",
+    "discordAvatar": "Avatar URL'si (isteğe bağlı)",
+    "emailTo": "Gönder",
+    "emailHint": "Birden fazla adresi virgülle ayırın.",
+    "privateNetwork": "Özel ağ adresine izin verin",
+    "privateNetworkHint": "Yalnızca yöneticinin özel uç nokta listesinde izin verdiği sunucular için çalışır."
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
+    "intro": "Bir teslimat kuralı, eşleşen uyarıları kanallarınıza gönderir. Uyarılar her zaman gelen kutunuzda da kalır.",
+    "add": "Kural ekle",
+    "edit": "Kuralı düzenle",
+    "empty": "Henüz kurallar belirlenmedi, bu nedenle uyarılar yalnızca gelen kutusunda görünüyor.",
+    "needChannel": "Önce bir kanal ekleyin.",
     "enabled": "Etkin",
     "name": "Ad",
     "nameRequired": "Ad zorunludur",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "match": "Gönderilecek uyarılar",
+    "matchHint": "*Her şey için otomasyonlar.* Otomasyonlardan her şeye veya belirli bir türe kadar.",
+    "minSeverity": "En azından",
+    "channels": "Gönder",
+    "channelRequired": "En az bir kanal seçin",
+    "deleteConfirm": "\"{{name}} \" kuralını silmek mi istiyorsunuz?",
+    "everything": "Her şey",
+    "summary": "{{match}}, {{severity}} veya daha yüksek, {{channels}}'ye kadar"
   },
   "actions": {
     "cancel": "İptal",
@@ -163,9 +163,9 @@
   },
   "widget": {
     "name": "Uyarı Akışı",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
+    "description": "En son bildirimleriniz ve bunları okundu olarak işaretlemenin hızlı bir yolu.",
+    "maxItems": "Maksimum öğe",
+    "showRead": "Okuma uyarılarını göster",
     "allClear": "Her şey normal",
     "loading": "Yükleniyor..."
   }

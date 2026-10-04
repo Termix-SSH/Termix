@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "SSO ile giriş yapın",
   "loginWithProvider": "{{name}} ile giriş yap",
   "loading": "Yükleniyor...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "SSO sağlayıcılarını yönetin",
+      "description": "Kullanıcıların oturum açabileceği SSO sağlayıcılarını ekleyin, değiştirin ve kaldırın."
     }
   },
   "providers": {
@@ -16,8 +16,8 @@
     "delete": "Sağlayıcıyı Sil",
     "deleteConfirm": "Bu sağlayıcı silinsin mi? İlişkili kullanıcılar oturum açamaz.",
     "name": "Görünen Ad",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "SSO sağlayıcım",
+    "nameRequired": "Görünen ad gereklidir.",
     "type": "Sağlayıcı Türü",
     "enabled": "Etkin",
     "save": "Sağlayıcıyı Kaydet",
@@ -26,20 +26,20 @@
     "saveFailed": "Kaydedilemedi",
     "deleted": "Silindi",
     "deleteFailed": "Silinemedi",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "SSO sağlayıcıları yüklenemedi.",
     "cancel": "İptal",
     "copy": "Kopyala",
     "copied": "Kopyalandı",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "Yönlendirme URI'si",
+    "redirectUriDesc": "Bu URL'yi kimlik sağlayıcınızda yönlendirme veya geri çağırma URL'si olarak kaydedin.",
+    "legacyCallback": "Eski yönlendirme URI'sini koruyun.",
+    "legacyCallbackDesc": "Bu sağlayıcı Termix 2.9'dan önce kuruldu ve hala çalışmaya devam eden eski yönlendirme URI'sini kullanıyor. Yenisine geçmek için önce kimlik sağlayıcınıza {{uri}} ekleyin, ardından bunu devre dışı bırakın.",
+    "authorizationUrl": "Yetkilendirme URL'si: {{url}}"
   },
   "fields": {
     "clientId": "İstemci Kimliği",
     "clientSecret": "İstemci Sırrı",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "Bir sır saklanıyor. Sırrı korumak için burayı boş bırakın.",
     "issuerUrl": "Sağlayıcı URL'si",
     "authUrl": "Yetkilendirme URL'si",
     "tokenUrl": "Belirteç URL'si",
@@ -58,8 +58,8 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "SSO ile otomatik olarak giriş yap",
+      "description": "Ziyaretçileri giriş formunu göstermek yerine doğrudan ilk SSO sağlayıcısına yönlendirin. OIDC_SILENT_LOGIN_DEFAULT ortam değişkeni bunu geçersiz kılar."
     }
   }
 }

@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "जागो",
+    "sent": "वेक-ऑन-लैन पैकेट भेजा गया",
+    "failed": "वेक-ऑन-लैन पैकेट भेजने में विफल रहा"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "वेक-ऑन-लैन पैकेट भेजें",
+      "description": "किसी होस्ट को उसके मैक एड्रेस पर मैजिक पैकेट भेजकर जगाएं।"
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
-        "placeholder": "AA:BB:CC:DD:EE:FF"
+        "label": "मैक पता",
+        "description": "होस्ट का नेटवर्क मैक एड्रेस, जिसका उपयोग वेक-ऑन-लैन पैकेट भेजने के लिए किया जाता है।",
+        "placeholder": "एए:बीबी:सीसी:डीडी:ईई:एफएफ"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "ब्रॉडकास्ट पता",
+        "description": "पैकेट भेजने के लिए सबनेट ब्रॉडकास्ट पता। 255.255.255.255 के लिए इसे खाली छोड़ दें।",
         "placeholder": "192.168.1.255"
       }
     }

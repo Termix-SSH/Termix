@@ -1,66 +1,66 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "टेलनेट उपकरणों को देखें",
+      "description": "कनेक्टेड टेलनेट पर मौजूद डिवाइस देखें।"
     }
   },
   "settings": {
     "group": {
-      "api": "Tailscale API",
-      "devices": "Tailnet"
+      "api": "टेलस्केल एपीआई",
+      "devices": "टेलनेट"
     },
     "apiKey": {
-      "label": "API key",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "label": "एपीआई कुंजी",
+      "description": "इसका उपयोग टेलनेट पर मौजूद उपकरणों की सूची बनाने के लिए किया जाता है। यह टेलस्केल या हेडस्केल कुंजी के साथ काम करता है।",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "एपीआई आधारित यूआरएल",
+      "description": "टेलस्केल के लिए इसे खाली छोड़ दें। इसे हेडस्केल इंस्टेंस की ओर इंगित करने के लिए सेट करें।",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "डिवाइस सूची",
+      "checking": "टेलनेट की जाँच कर रहा हूँ...",
+      "noKey": "अभी तक कोई एपीआई कुंजी सेट नहीं की गई है।",
+      "error": "टेलनेट तक नहीं पहुंच सका। कृपया एपीआई कुंजी की जांच करें।",
+      "count": "{{count}} डिवाइस पहुंच योग्य है",
+      "count_other": "{{count}} पहुंच योग्य उपकरण",
+      "refresh": "जाँच करना"
     }
   },
   "nav": {
     "tailscale": "Tailscale"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleUsernameHint": "यह एक यूनिक्स उपयोगकर्ता होना चाहिए जिसे टेलनेट के एसएसएच एसीएल में आपकी टेलस्केल पहचान प्रदान की गई हो, जरूरी नहीं कि यह रूट हो।",
     "tailscaleDeviceSelect": "Tailscale डिवाइस चुनें",
     "tailscaleDeviceSelectPlaceholder": "एक डिवाइस चुनें...",
     "tailscaleNoApiKey": "कोई Tailscale API कुंजी कॉन्फ़िगर नहीं की गई है। डिवाइस खोज सक्षम करने के लिए व्यवस्थापक सेटिंग में एक जोड़ें।",
     "tailscaleDocsLink": "दस्तावेज़ देखें",
     "tailscaleLoadingDevices": "उपकरण लोड हो रहे हैं...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleDeviceLoadFailed": "टेलस्केल डिवाइस लोड करने में विफल। कृपया एपीआई यूआरएल और नेटवर्क कनेक्शन की जांच करें।",
     "tailscaleNoDevices": "आपके टेलनेट में कोई उपकरण नहीं मिला।",
     "tailscaleDeviceAutoFill": "डिवाइस चुनने पर होस्ट IP पता स्वतः भर जाएगा।",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "tailscaleAddHost": "होस्ट जोड़ें",
+    "tailscaleCopyIp": "टेलस्केल आईपी कॉपी करें",
+    "tailscaleIpCopied": "आईपी कॉपी हो गया",
+    "tailscaleIpCopyFailed": "आईपी कॉपी नहीं हो सकी",
     "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckRequired": "टेलस्केल प्रमाणीकरण आवश्यक है",
+    "tailscaleCheckDescription": "Tailscale SSH के लिए एक अतिरिक्त जांच की आवश्यकता है। जारी रखने के लिए अपने ब्राउज़र में प्रमाणीकरण करें।",
     "tailscaleCheckOpenBrowser": "प्रमाणीकरण के लिए ब्राउज़र खोलें",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
-    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+    "tailscaleCheckWaiting": "टेलस्केल प्रमाणीकरण की प्रतीक्षा की जा रही है...",
+    "tailscaleCheckTimeout": "टेलस्केल प्रमाणीकरण का समय समाप्त हो गया। कृपया पुनः प्रयास करें।"
   },
   "manager": {
     "title": "Tailscale",
     "refresh": "रीफ़्रेश",
     "retry": "पुनः प्रयास करें",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "sudoHint": "इस होस्ट के लिए एक सूडो पासवर्ड सेट करें ताकि उच्च स्तरीय कार्रवाई की अनुमति मिल सके।",
     "noData": "कोई डेटा उपलब्ध नहीं",
     "filter": "फ़िल्टर...",
     "tsNotInstalled": "Tailscale इस होस्ट पर स्थापित नहीं है",

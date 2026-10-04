@@ -33,7 +33,7 @@
     "delete": "删除"
   },
   "hosts": {
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "保险库"
   },
   "dialog": {
     "title": "需要 Vault 登录",

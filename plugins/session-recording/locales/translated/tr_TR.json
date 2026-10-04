@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Oturum kayıtlarını görüntüleyin",
+      "description": "Kendi oturum kayıtlarınızı görüntüleyin ve tekrar oynatın."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Saklama süresi (gün)",
+        "description": "Oturum kaydının otomatik olarak silinmeden önce ne kadar süreyle saklandığı."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Oturum kaydını etkinleştirin",
+        "description": "Bu sunucu için terminal çıktısını kaydedin, böylece daha sonra tekrar oynatabilir veya indirebilirsiniz."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Kayıt"
   },
   "sessionLogs": {
     "title": "Oturum Günlükleri",
@@ -36,7 +36,7 @@
     "duration": "Süre",
     "viewLog": "Günlüğü görüntüle",
     "downloadLog": "İndir",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "Metin olarak indir",
     "deleteLog": "Sil",
     "confirmDelete": "Bu oturum günlüğü silinsin mi?",
     "confirmDeleteDesc": "Bu işlem geri alınamaz.",
@@ -47,14 +47,14 @@
     "filterByHost": "Sunucuya göre filtrele...",
     "back": "Geri",
     "empty": "(boş)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "\"{{query}} \" için sonuç bulunamadı.",
+    "hostFallback": "Sunucu {{id}}",
+    "sessionFallback": "Oturum {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Kayıt zaman çizelgesi",
+    "speed": "Oynatma hızı",
+    "play": "Kaydı oynat",
+    "pause": "Kaydı duraklat"
   }
 }

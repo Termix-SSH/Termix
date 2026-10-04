@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "एसएसओ के साथ साइन इन करें",
   "loginWithProvider": "{{name}} से लॉगिन करें",
   "loading": "लोड हो रहा है...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "एसएसओ प्रदाताओं का प्रबंधन करें",
+      "description": "उन एसएसओ प्रदाताओं को जोड़ें, बदलें और हटाएं जिनके माध्यम से लोग साइन इन कर सकते हैं।"
     }
   },
   "providers": {
@@ -16,8 +16,8 @@
     "delete": "प्रदाता हटाएँ",
     "deleteConfirm": "इस प्रदाता को हटाएँ? इससे जुड़े उपयोगकर्ता लॉगिन नहीं कर पाएंगे।",
     "name": "प्रदर्शन नाम",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "मेरा एसएसओ प्रदाता",
+    "nameRequired": "एक डिस्प्ले नाम आवश्यक है",
     "type": "प्रदाता प्रकार",
     "enabled": "सक्षम",
     "save": "प्रदाता सहेजें",
@@ -26,20 +26,20 @@
     "saveFailed": "सहेजने में विफल",
     "deleted": "हटाया गया",
     "deleteFailed": "हटाने में विफल",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "एसएसओ प्रदाताओं को लोड करने में विफल।",
     "cancel": "रद्द करें",
     "copy": "कॉपी",
     "copied": "कॉपी किया गया",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "रीडायरेक्ट यूआरआई",
+    "redirectUriDesc": "इस यूआरएल को अपने आइडेंटिटी प्रोवाइडर में रीडायरेक्ट या कॉलबैक यूआरएल के रूप में रजिस्टर करें।",
+    "legacyCallback": "पुराने रीडायरेक्ट यूआरआई को बनाए रखें",
+    "legacyCallbackDesc": "यह प्रोवाइडर Termix 2.9 से पहले स्थापित किया गया था और अभी भी पुराने रीडायरेक्ट URI का उपयोग करता है, जो काम करता रहता है। नए URI पर जाने के लिए, पहले अपने आइडेंटिटी प्रोवाइडर में {{uri}} जोड़ें, फिर इसे बंद कर दें।",
+    "authorizationUrl": "प्राधिकरण यूआरएल: {{url}}"
   },
   "fields": {
     "clientId": "क्लाइंट आईडी",
     "clientSecret": "क्लाइंट सीक्रेट",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "एक राज़ सुरक्षित रखा गया है। इसे सुरक्षित रखने के लिए इसे खाली छोड़ दें।",
     "issuerUrl": "जारीकर्ता URL",
     "authUrl": "प्राधिकरण URL",
     "tokenUrl": "टोकन URL",
@@ -58,8 +58,8 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "एसएसओ के साथ स्वचालित रूप से साइन इन करें",
+      "description": "लॉगिन फ़ॉर्म दिखाने के बजाय आगंतुकों को सीधे पहले एसएसओ प्रदाता पर भेजें। OIDC_SILENT_LOGIN_DEFAULT पर्यावरण चर इसे ओवरराइड करता है।"
     }
   }
 }

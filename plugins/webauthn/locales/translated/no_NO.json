@@ -1,22 +1,22 @@
 {
-  "title": "Passkeys",
-  "signIn": "Sign in with passkey",
-  "loginFailed": "Passkey login failed",
-  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
-  "namePlaceholder": "Passkey name",
-  "defaultName": "Passkey",
+  "title": "Passord",
+  "signIn": "Logg inn med passord",
+  "loginFailed": "Innlogging med passord mislyktes",
+  "description": "Bruk WebAuthn/FIDO2-legitimasjon for å logge på uten passord",
+  "namePlaceholder": "Navn på passord",
+  "defaultName": "Tilgangsnøkkel",
   "uv": {
-    "preferred": "Preferred",
+    "preferred": "Foretrukket",
     "required": "Påkrevd",
-    "discouraged": "Discouraged"
+    "discouraged": "Motløs"
   },
-  "add": "Add Passkey",
-  "none": "No passkeys registered.",
-  "added": "Passkey added",
-  "addFailed": "Failed to add passkey",
-  "delete": "Delete passkey",
-  "deleted": "Passkey deleted",
-  "deleteFailed": "Failed to delete passkey",
+  "add": "Legg til tilgangsnøkkel",
+  "none": "Ingen passord registrert.",
+  "added": "Tilgangsnøkkel lagt til",
+  "addFailed": "Kunne ikke legge til passord",
+  "delete": "Slett passord",
+  "deleted": "Tilgangsnøkkel slettet",
+  "deleteFailed": "Kunne ikke slette passordet",
   "unknownDevice": "ukjent",
-  "synced": "synced"
+  "synced": "synkronisert"
 }

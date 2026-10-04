@@ -1,66 +1,66 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "Visualizar dispositivos de rede de cauda",
+      "description": "Veja os dispositivos na rede de cauda ligada."
     }
   },
   "settings": {
     "group": {
-      "api": "Tailscale API",
-      "devices": "Tailnet"
+      "api": "API Tailscale",
+      "devices": "Rede de cauda"
     },
     "apiKey": {
-      "label": "API key",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "label": "Chave API",
+      "description": "Utilizado para listar os dispositivos na sua rede de cauda. Funciona com uma chave Tailscale ou Headscale.",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "URL base da API",
+      "description": "Deixe em branco para Tailscale. Defina isto para apontar para uma instância de Headscale.",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "Lista de dispositivos",
+      "checking": "Verificação da rede traseira...",
+      "noKey": "Nenhuma chave API foi definida ainda.",
+      "error": "Não foi possível aceder à tailnet. Verifique a chave API.",
+      "count": "{{count}} dispositivo acessível",
+      "count_other": "{{count}} dispositivos acessíveis",
+      "refresh": "Verificação"
     }
   },
   "nav": {
     "tailscale": "Tailscale"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleUsernameHint": "Este deve ser um utilizador Unix cuja identidade Tailscale é concedida na ACL SSH da tailnet, não necessariamente o utilizador root.",
     "tailscaleDeviceSelect": "Selecionar dispositivo Tailscale",
     "tailscaleDeviceSelectPlaceholder": "Selecionar um dispositivo...",
     "tailscaleNoApiKey": "Nenhuma chave de API Tailscale configurada. Adicione uma nas Definições de Administrador para ativar a descoberta de dispositivos.",
     "tailscaleDocsLink": "Ver documentação",
     "tailscaleLoadingDevices": "A carregar dispositivos...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleDeviceLoadFailed": "Falha ao carregar os dispositivos Tailscale. Verifique o URL da API e a ligação de rede.",
     "tailscaleNoDevices": "Nenhum dispositivo encontrado na sua tailnet.",
     "tailscaleDeviceAutoFill": "Selecionar um dispositivo preencherá automaticamente o endereço IP do host.",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "tailscaleAddHost": "Adicionar host",
+    "tailscaleCopyIp": "Copiar IP da Tailscale",
+    "tailscaleIpCopied": "IP copiado",
+    "tailscaleIpCopyFailed": "Não foi possível copiar o endereço IP.",
     "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckRequired": "Autenticação Tailscale necessária",
+    "tailscaleCheckDescription": "O Tailscale SSH requer uma verificação adicional. Autentique-se no seu browser para continuar.",
     "tailscaleCheckOpenBrowser": "Abrir navegador para autenticar",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
-    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+    "tailscaleCheckWaiting": "Aguarda-se autenticação do Tailscale...",
+    "tailscaleCheckTimeout": "A autenticação no Tailscale expirou. Tente novamente."
   },
   "manager": {
     "title": "Tailscale",
     "refresh": "Atualizar",
     "retry": "Repetir",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "sudoHint": "Defina uma palavra-passe sudo para este host para permitir ações com privilégios elevados.",
     "noData": "Sem dados disponíveis",
     "filter": "Filtrar...",
     "tsNotInstalled": "O Tailscale não está instalado neste host",

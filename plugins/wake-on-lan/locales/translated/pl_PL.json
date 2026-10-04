@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "Budzić",
+    "sent": "Wysłano pakiet Wake-on-LAN",
+    "failed": "Nie udało się wysłać pakietu Wake-on-LAN"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "Wysyłaj pakiety Wake-on-LAN",
+      "description": "Wybudź hosta, wysyłając magiczny pakiet na jego adres MAC."
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
+        "label": "Adres MAC",
+        "description": "Adres MAC sieci hosta, używany do wysyłania pakietów Wake-on-LAN.",
         "placeholder": "AA:BB:CC:DD:EE:FF"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "Adres rozgłoszeniowy",
+        "description": "Adres rozgłoszeniowy podsieci, do którego ma zostać wysłany pakiet. Pozostaw puste pole dla adresu 255.255.255.255.",
         "placeholder": "192.168.1.255"
       }
     }

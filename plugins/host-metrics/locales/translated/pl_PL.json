@@ -22,18 +22,18 @@
     "selectFilesystem": "Wybierz system plików",
     "temperature": "Temperatura",
     "highestTemperature": "Najwyższa temperatura",
-    "primaryTemperatureSensor": "Primary sensor",
+    "primaryTemperatureSensor": "Główny czujnik",
     "gpu": {
-      "title": "GPU",
-      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
-      "driver": "Driver {{version}}",
-      "utilization": "Utilization",
-      "memory": "VRAM",
+      "title": "Procesor graficzny",
+      "noDevice": "Nie wykryto procesora graficznego NVIDIA. Zainstaluj sterownik NVIDIA (zawiera on nvidia-smi), aby wyświetlić dane dotyczące procesora graficznego.",
+      "driver": "Kierowca {{version}}",
+      "utilization": "Wykorzystanie",
+      "memory": "Pamięć VRAM",
       "temperature": "Temp",
-      "power": "Power",
-      "fan": "Fan",
-      "processes": "GPU processes",
-      "noProcesses": "No processes are using the GPU"
+      "power": "Moc",
+      "fan": "Wentylator",
+      "processes": "Procesy GPU",
+      "noProcesses": "Żaden proces nie wykorzystuje procesora GPU"
     },
     "failedToFetchHostConfig": "Nie udało się pobrać konfiguracji hosta",
     "serverOffline": "Serwer offline",
@@ -178,7 +178,7 @@
       "wgLastHandshake": "Ostatni handshake",
       "wgHandshakeNever": "Nigdy",
       "wgTransfer": "Transfer",
-      "wgNoPeers": "No peers"
+      "wgNoPeers": "Brak rówieśników"
     }
   },
   "metricsHistory": {
@@ -264,48 +264,48 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Host Metrics",
-      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+      "title": "Użyj metryk hosta",
+      "description": "Przeglądaj metryki hosta i korzystaj z menedżerów hosta (usług, pakietów, zapory sieciowej i innych) na hostach, do których masz dostęp."
     }
   },
   "settings": {
     "admin": {
       "metricsInterval": {
-        "label": "Metrics interval (seconds)",
-        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+        "label": "Interwał metryk (sekundy)",
+        "description": "Częstotliwość próbkowania oglądanego hosta, chyba że host ustawi własny interwał."
       },
       "historyRetentionDays": {
-        "label": "History retention (days)",
-        "description": "How long metrics samples are kept for the history charts."
+        "label": "Retencja historii (dni)",
+        "description": "Jak długo przechowywane są próbki metryk na potrzeby wykresów historycznych."
       },
       "enabledForNewHosts": {
-        "label": "Metrics on for new hosts",
-        "description": "Whether new hosts start with metrics collection turned on."
+        "label": "Metryki dla nowych hostów",
+        "description": "Czy nowi gospodarze rozpoczynają pracę z włączonym zbieraniem danych metrycznych."
       }
     },
     "user": {
       "temperatureUnit": {
-        "label": "Temperature unit",
-        "description": "How temperatures are shown in Host Metrics.",
-        "celsius": "Celsius",
-        "fahrenheit": "Fahrenheit"
+        "label": "Jednostka temperatury",
+        "description": "W jaki sposób temperatury są wyświetlane w Host Metrics.",
+        "celsius": "Celsjusz",
+        "fahrenheit": "Fahrenheita"
       }
     },
     "host": {
       "metricsEnabled": {
-        "label": "Collect metrics"
+        "label": "Zbieraj dane metryczne"
       },
       "metricsInterval": {
-        "label": "Metrics interval (seconds)"
+        "label": "Interwał metryk (sekundy)"
       },
       "enabledWidgets": {
-        "label": "Enabled widgets"
+        "label": "Włączone widżety"
       },
       "excludedMounts": {
-        "label": "Excluded mounts"
+        "label": "Wykluczone wierzchowce"
       },
       "monitoredMounts": {
-        "label": "Monitored paths"
+        "label": "Monitorowane ścieżki"
       }
     }
   }

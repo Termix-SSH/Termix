@@ -54,8 +54,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use network graph",
-      "description": "View and edit the network topology graph."
+      "title": "Użyj grafu sieciowego",
+      "description": "Przeglądaj i edytuj wykres topologii sieci."
     }
   },
   "hosts": {

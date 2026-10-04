@@ -23,9 +23,9 @@
     "start": "प्रारंभ करें",
     "stop": "स्टॉप",
     "status": "स्थिति",
-    "actions": "Actions",
-    "cardView": "Card view",
-    "listView": "List view",
+    "actions": "कार्रवाई",
+    "cardView": "कार्ड दृश्य",
+    "listView": "लिस्ट व्यू",
     "confirmRemoveContainer": "क्या आप वाकई कंटेनर '{{name}}' हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
     "runningContainerWarning": "चेतावनी: यह कंटेनर वर्तमान में चल रहा है। हटाने पर पहले इसे रोका जाएगा।",
     "loadingContainers": "कंटेनर लोड हो रहे हैं...",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "कंसोल तक पहुंचने के लिए कंटेनर चालू होना चाहिए",
     "verificationCodePrompt": "सत्यापन कोड दर्ज करें",
     "totpVerificationFailed": "TOTP सत्यापन विफल। कृपया पुनः प्रयास करें।",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "प्रवेश विफल। कृपया दोबारा प्रयास करें।",
     "connectedTo": "{{containerName}} से जुड़ा",
     "disconnected": "डिस्कनेक्टेड",
     "consoleError": "कंसोल त्रुटि",
@@ -101,15 +101,15 @@
     "consoleTab": "कंसोल",
     "startContainerToAccess": "कंसोल तक पहुंचने के लिए कंटेनर चालू करें",
     "noHostSelected": "कोई होस्ट चयनित नहीं है",
-    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
-    "failedToDownloadLogs": "Failed to download logs: {{error}}"
+    "failedToFetchLogs": "लॉग प्राप्त करने में विफल: {{error}}",
+    "failedToDownloadLogs": "लॉग डाउनलोड करने में विफल: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
     "feature_docker": "Docker",
-    "feature_docker_desc": "See containers, read logs and watch stats on any host running Docker."
+    "feature_docker_desc": "डॉकर चलाने वाले किसी भी होस्ट पर कंटेनर देखें, लॉग पढ़ें और आंकड़े देखें।"
   },
   "terminal": {
     "retry": "पुनः प्रयास करें",
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "डॉकर का उपयोग करें",
+      "description": "जिन होस्ट पर डॉकर सक्षम है, उन पर डॉकर मैनेजर और कंटेनर कंसोल खोलें।"
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Docker सक्षम करें",
-        "description": "Manage containers on this host."
+        "description": "इस होस्ट पर कंटेनरों का प्रबंधन करें।"
       },
       "containerRuntime": {
         "label": "कंटेनर रनटाइम",
@@ -137,7 +137,7 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "रिमोट सर्वर आवश्यक है। इस कनेक्शन प्रकार का उपयोग करने के लिए सेटिंग्स में जाकर रिमोट सर्वर कनेक्ट करें।"
   },
   "hosts": {
     "docsLink": "दस्तावेज़ देखें",

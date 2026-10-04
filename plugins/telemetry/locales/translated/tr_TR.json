@@ -1,58 +1,58 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Kullanım istatistiklerini yönetin",
+      "description": "Gönderilen kullanım istatistiklerine bakın, bunları şimdi gönderin ve örnek kimliğini sıfırlayın."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Anonim kullanım istatistiklerini paylaşın",
+      "description": "Termix'in geliştirilmesine yardımcı olmak amacıyla günde bir kez küçük, anonim bir özet gönderir. Bu özet asla kullanıcı adlarını, sunucu adlarını, IP adreslerini veya kimlik bilgilerini içermez."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Platform bilgilerini ekleyin",
+      "description": "İşletim sistemi, işlemci mimarisi, Node.js sürümü, veritabanı türü ve Termix'in nasıl kurulduğu (Docker, masaüstü uygulaması veya sunucu)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Özellik kullanımını dahil et",
+      "description": "Son rapordan bu yana her sekme türünün kaç kez açıldığı ve kaç SSH oturum açma işleminin gerçekleştiği. Kullanıcılar profillerinden kendi bölümlerini kapatabilirler."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Kurulu özellikleri dahil et",
+      "description": "Hangi yerleşik özellikler yüklü ve çalışıyor?"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "Örnek Kimliği"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Özellik kullanımımı dahil et",
+      "description": "Anonim kullanım istatistiklerinde hangi tür sekmeleri açtığınızı sayar. Sizin veya sunucularınız hakkında hiçbir bilgi gönderilmez."
     }
   },
   "status": {
     "title": "Durum",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "Kullanım istatistikleri günde bir kez paylaşılıyor.",
+    "off": "Kullanım istatistiklerini paylaşmamak",
+    "lockedOn": "ENABLE_TELEMETRY ortam değişkeni tarafından etkinleştirilir. Orada değiştirin.",
+    "lockedOff": "ENABLE_TELEMETRY ortam değişkeni tarafından devre dışı bırakılmıştır. Lütfen bu değişkeni orada değiştirin.",
+    "instanceId": "Örnek Kimliği: {{id}}",
+    "noInstanceId": "Henüz bir örnek kimliği yok.",
+    "lastSent": "Son gönderilen {{date}}",
+    "neverSent": "Henüz gönderilmedi",
+    "nextSend": "Sonraki raporun teslim tarihi {{date}}",
+    "lastError": "Son deneme başarısız oldu: {{error}}",
+    "preview": "Önizleme raporu",
+    "sendNow": "Şimdi gönder",
+    "sending": "Gönderiliyor...",
+    "sent": "Kullanım istatistikleri gönderildi",
+    "notSent": "Kullanım istatistikleri kapalı, hiçbir şey gönderilmedi.",
+    "resetId": "Örnek kimliğini sıfırla",
+    "resetIdConfirm": "Örnek kimliğini sıfırla? Gelecekteki raporlar yeni bir kurulum gibi görünecektir.",
+    "resetIdDone": "Örnek Kimliği sıfırlandı",
+    "previewTitle": "Sonraki rapor",
+    "previewDescription": "Şu anda gönderilecek olan tam olarak bu.",
     "close": "Kapat",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "Kullanım istatistikleri durumu yüklenemedi."
   }
 }
