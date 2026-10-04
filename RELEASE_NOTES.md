@@ -44,5 +44,7 @@ https://youtu.be/lngaePO96tM
 - Host editor tabs being hidden when they did not fit
 - SSH host keys being accepted without a check when the host was missing from the database
 - The "last login failed" host status showing in English or mistranslated in several languages
+- SSO and LDAP provider dialogs overflowing the screen and using mismatched toggles
+- Plugin audit log entries failing to save when no user was signed in
 
 <!-- /BUG_FIXES -->
