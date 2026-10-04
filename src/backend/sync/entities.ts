@@ -30,6 +30,7 @@ import {
 } from "./host-plugin-settings.js";
 import {
   exportProtocolLogins,
+  exportSharedProtocolLogins,
   importProtocolLogins,
 } from "./host-protocol-auth.js";
 import {
@@ -477,7 +478,7 @@ async function writeAccountProfile(userId: string, wire: SyncRow) {
   }
 }
 
-/** Host columns a shared copy never carries. */
+/** Host columns a shared copy never carries as the owner has them. */
 const SHARED_HOST_DROP = [
   "id",
   "userId",
@@ -550,6 +551,7 @@ async function loadSharedHosts(userId: string): Promise<SyncRow[]> {
         userId,
         permissionLevel,
       });
+      wire.protocolAuth = await exportSharedProtocolLogins(host, userId);
       wire.syncId = host.syncId;
       wire.shared = {
         hostId,

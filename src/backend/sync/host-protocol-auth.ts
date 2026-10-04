@@ -6,12 +6,15 @@
 
 import type { SyncRow } from "@termix/plugin-sdk/backend";
 import type { HostProtocolLogin } from "../database/repositories/host-protocol-auth-repository.js";
+import { createCurrentHostProtocolAuthRepository } from "../database/repositories/factory.js";
 import {
   fromPortableLogin,
   listProtocolLogins,
   replaceProtocolLogins,
+  resolveRecipientProtocolLogin,
   toPortableLogins,
 } from "../hosts/protocol-auth/protocol-auth.js";
+import { findHostProtocol } from "../hosts/protocol-auth/registry.js";
 import { syncLogger } from "../utils/logger.js";
 
 type ResolveSyncId = (entityType: string, id: number) => Promise<string | null>;
@@ -34,6 +37,45 @@ export async function exportProtocolLogins(
         ? await resolveSyncId(CREDENTIALS, credentialId)
         : null,
     };
+  }
+  return out;
+}
+
+/**
+ * The logins a user a host is shared with may use, for their desktop's copy:
+ * their own override or the owner's shared snapshot, never the owner's own
+ * secret. Each goes as a direct login since its credential is not theirs.
+ */
+export async function exportSharedProtocolLogins(
+  host: Record<string, unknown>,
+  userId: string,
+): Promise<SyncRow> {
+  const out: SyncRow = {};
+  const hostId = Number(host.id);
+  const rows =
+    await createCurrentHostProtocolAuthRepository().listRowsForHost(hostId);
+  for (const row of rows) {
+    const declared = findHostProtocol(row.protocol);
+    if (!declared) continue;
+    try {
+      const login = await resolveRecipientProtocolLogin(host, userId, declared);
+      out[row.protocol] = {
+        authType: login.authType === "none" ? "none" : "direct",
+        username: login.username || null,
+        password: login.password || null,
+        fields: Object.fromEntries(
+          Object.entries(login.fields).filter(([, value]) => value),
+        ),
+        credentialSyncId: null,
+      };
+    } catch (error) {
+      syncLogger.warn("Could not include a shared host's protocol login", {
+        operation: "sync_shared_host_protocol_auth",
+        hostId,
+        protocol: row.protocol,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
   return out;
 }
