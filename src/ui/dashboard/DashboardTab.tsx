@@ -57,7 +57,11 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import { useServerStatusMeta } from "@/lib/ServerStatusContext";
+import {
+  useServerStatus,
+  useServerStatusMeta,
+} from "@/lib/ServerStatusContext";
+import { withLiveHostStatus } from "@/sidebar/live-host-status";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 
@@ -429,7 +433,7 @@ export function HostStatusCard({
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length} {t("hosts.status.available")}
+          {online}/{hosts.length} {t("hosts.status.online")}
         </span>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
@@ -439,12 +443,7 @@ export function HostStatusCard({
           </div>
         )}
         {hosts.map((host, i) => {
-          const availability =
-            host.status && host.status !== "unknown"
-              ? host.status
-              : host.online
-                ? "online"
-                : "offline";
+          const availability = host.status ?? "offline";
           return (
             <div
               key={i}
@@ -492,13 +491,11 @@ export function HostStatusCard({
                 <span
                   className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(availability, statusScheme, "badge", statusLoading)}`}
                 >
-                  {statusLoading
+                  {statusLoading || availability === "unknown"
                     ? t("dashboardTab.checking")
                     : availability === "online"
-                      ? t("hosts.status.available")
-                      : availability === "reachable"
-                        ? t("hosts.status.reachable")
-                        : t("hosts.status.offline")}
+                      ? t("hosts.status.online")
+                      : t("hosts.status.offline")}
                 </span>
               </div>
             </div>
@@ -582,7 +579,7 @@ function RecentActivityCard({
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.online ?? false, statusScheme, "dot", statusLoading)}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.status ?? false, statusScheme, "dot", statusLoading)}`}
                 />
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-xs font-semibold truncate">
@@ -1102,7 +1099,14 @@ export function DashboardTab({
     }
   }, [mainWidthPct]);
 
-  const [hosts, setHosts] = useState<Host[]>([]);
+  const [configHosts, setHosts] = useState<Host[]>([]);
+  const { statuses, getStatus } = useServerStatus();
+  const hosts = useMemo(
+    () => withLiveHostStatus(configHosts, getStatus),
+    // statuses changes identity whenever a host's status changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configHosts, statuses, getStatus],
+  );
   const [isAdmin, setIsAdmin] = useState(false);
   const [uptimeFormatted, setUptimeFormatted] = useState("");
   const [versionText, setVersionText] = useState("");

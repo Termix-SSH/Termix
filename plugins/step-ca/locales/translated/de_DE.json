@@ -44,5 +44,8 @@
       "label": "Verwenden Sie die alte Umleitungs-URI.",
       "description": "Senden Sie weiterhin /host/step-ca-callback, die Umleitungs-URI, die vor Version 2.9 verwendet wurde. Deaktivieren Sie diese Funktion, sobald Ihr Identitätsanbieter die neue URI zulässt."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

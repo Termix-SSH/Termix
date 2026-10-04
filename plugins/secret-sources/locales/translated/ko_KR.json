@@ -23,5 +23,8 @@
         "description": "비밀 소스가 접근할 수 있는 개인 또는 루프백 호스트를 한 줄에 하나씩 나열합니다. 자체 호스팅 1Password Connect 서버는 일반적으로 여기에 자체 주소를 나열해야 합니다."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

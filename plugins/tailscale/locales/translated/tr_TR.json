@@ -1,66 +1,66 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "Kuyruk ağı cihazlarını görüntüle",
+      "description": "Bağlı kuyruk ağındaki cihazları inceleyin."
     }
   },
   "settings": {
     "group": {
       "api": "Tailscale API",
-      "devices": "Tailnet"
+      "devices": "Kuyruk ağı"
     },
     "apiKey": {
-      "label": "API key",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "label": "API anahtarı",
+      "description": "Tailnet'inizdeki cihazları listelemek için kullanılır. Tailscale veya Headscale anahtarıyla çalışır.",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "API temel URL'si",
+      "description": "Tailscale için boş bırakın. Bunu bir Headscale örneğine işaret edecek şekilde ayarlayın.",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "Cihaz listesi",
+      "checking": "Kuyruk ağını kontrol ediyoruz...",
+      "noKey": "Henüz bir API anahtarı ayarlanmadı.",
+      "error": "Tailnet'e ulaşılamadı. API anahtarını kontrol edin.",
+      "count": "{{count}} cihaza erişilebilir",
+      "count_other": "{{count}} erişilebilir cihaz",
+      "refresh": "Kontrol etmek"
     }
   },
   "nav": {
     "tailscale": "Tailscale"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleUsernameHint": "Bu, Tailscale kimliğinizin tailnet'in SSH erişim kontrol listesinde (ACL) verildiği bir Unix kullanıcısı olmalıdır, mutlaka root olması gerekmez.",
     "tailscaleDeviceSelect": "Tailscale cihazı seçin",
     "tailscaleDeviceSelectPlaceholder": "Bir cihaz seçin...",
     "tailscaleNoApiKey": "Tailscale API anahtarı yapılandırılmamış. Cihaz keşfini etkinleştirmek için Yönetici Ayarları'ndan bir tane ekleyin.",
     "tailscaleDocsLink": "Dokümanları görüntüle",
     "tailscaleLoadingDevices": "Aygıtlar yükleniyor...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleDeviceLoadFailed": "Tailscale cihazları yüklenemedi. API URL'sini ve ağ bağlantısını kontrol edin.",
     "tailscaleNoDevices": "Tailnet'inizde aygıt bulunamadı.",
     "tailscaleDeviceAutoFill": "Bir aygıt seçmek, host IP adresini otomatik dolduracaktır.",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "tailscaleAddHost": "Sunucu ekle",
+    "tailscaleCopyIp": "Tailscale IP adresini kopyala",
+    "tailscaleIpCopied": "IP kopyalandı",
+    "tailscaleIpCopyFailed": "IP adresi kopyalanamadı.",
     "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckRequired": "Tailscale Kimlik Doğrulaması Gerekli",
+    "tailscaleCheckDescription": "Tailscale SSH ek bir doğrulama gerektiriyor. Devam etmek için tarayıcınızda kimlik doğrulaması yapın.",
     "tailscaleCheckOpenBrowser": "Kimlik Doğrulaması için Tarayıcı Aç",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
-    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+    "tailscaleCheckWaiting": "Tailscale kimlik doğrulamasının tamamlanmasını bekliyoruz...",
+    "tailscaleCheckTimeout": "Tailscale kimlik doğrulama işlemi zaman aşımına uğradı. Lütfen tekrar deneyin."
   },
   "manager": {
     "title": "Tailscale",
     "refresh": "Yenile",
     "retry": "Yeniden dene",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "sudoHint": "Bu sunucu için sudo parolası belirleyerek üst düzey işlemlere izin verin.",
     "noData": "Veri yok",
     "filter": "Filtrele...",
     "tsNotInstalled": "Bu sunucuda Tailscale yüklü değil",
@@ -82,5 +82,8 @@
         "usernameLabel": "Kullanıcı Adı"
       }
     }
+  },
+  "plugin": {
+    "name": "Tailscale"
   }
 }

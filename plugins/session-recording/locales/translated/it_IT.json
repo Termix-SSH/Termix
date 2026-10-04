@@ -56,5 +56,8 @@
     "speed": "Velocità di riproduzione",
     "play": "Riproduci la registrazione",
     "pause": "Metti in pausa la registrazione"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

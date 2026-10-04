@@ -23,11 +23,9 @@ function StatusDot({ status }: { status: string }) {
   const color =
     status === "online"
       ? getAccentColor()
-      : status === "reachable"
-        ? "#fbbf24"
-        : status === "offline"
-          ? "#ef4444"
-          : "#6b7280";
+      : status === "offline"
+        ? "#ef4444"
+        : "#6b7280";
   return (
     <span
       className="w-1.5 h-1.5 rounded-full shrink-0 inline-block"

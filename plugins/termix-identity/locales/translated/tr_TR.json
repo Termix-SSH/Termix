@@ -23,7 +23,7 @@
     "provisionLabel": "Sunucu hazırla",
     "publishTitle": "Genel anahtar yayımla",
     "generate": "Oluştur",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "Ed25519 anahtar çifti oluşturun. Genel anahtarı yayınlayın ve özel anahtarı cihazınıza indirin.",
     "saveToVault": "Kimlik Bilgilerine Kaydet",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Etiket (isteğe bağlı)",
@@ -32,7 +32,7 @@
     "keyPublished": "Anahtar yayımlandı",
     "addKeyFailed": "Anahtar eklenemedi",
     "generatedSaved": "Anahtar çifti oluşturuldu ve kimlik bilgileri kasanıza kaydedildi. Özel anahtar da indirildi.",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "Anahtar çifti oluşturuldu. Özel anahtar indirildi (yalnızca bir kez gösterilir).",
     "generateFailed": "Anahtar oluşturulamadı",
     "imported": "Anahtar kimlik bilgisinden içe aktarıldı",
     "importFailed": "Anahtar içe aktarılamadı",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Sunucuda güven (root olarak çalıştırın)",
     "caRotate": "Döndür",
     "caRotateConfirm": "CA'yı döndürmek istediğinize emin misiniz? İmzaladığı tüm sertifikalar kabul edilmeyecek ve yeniden düzenlenmeleri gerekecek.",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "CA görevinden alındı. Önceki sertifikalar iptal edildi.",
     "caRotateFailed": "CA döndürülemedi",
     "caDelete": "CA'yı kaldır",
     "caDeleteConfirm": "Sertifika yetkilisi kaldırılsın mı?",
@@ -68,8 +68,8 @@
     "certIssued": "Sertifika düzenlendi ve indirildi",
     "certIssueFailed": "Sertifika düzenlenemedi",
     "docsLink": "Belgelere bak",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "SSH prensipleri",
+    "principalsPlaceholder": "SSH sorumlusu(ları), örneğin root"
   },
   "nav": {
     "termixId": "Kimlik"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "Termix ID'nizi kullanın.",
+      "description": "Herkese açık bir kullanıcı adı alın, SSH anahtarlarını yayınlayın ve bir sertifika yetkilisi çalıştırın."
     }
   }
 }

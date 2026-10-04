@@ -116,11 +116,12 @@
     "updateLinkLabel": "Aktualizace je k dispozici. Otevřít poznámky k verzi na GitHubu."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Blízko",
     "minimize": "Minimalizovat",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Přihlášení se nezdařilo",
     "unknown": "Neznámý",
     "continue": "Pokračovat",
     "maintenance": "Údržba",
@@ -187,7 +188,11 @@
     "remove": "Odstranit",
     "add": "Přidat",
     "update": "Aktualizovat",
-    "noResults": "Nenalezeny žádné výsledky"
+    "noResults": "Nenalezeny žádné výsledky",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Krok {{current}} z {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunel",
     "serverStats": "Metriky hostitele",
     "status": {
-      "available": "K dispozici",
-      "reachable": "Dostupný, ale přihlášení selhalo",
+      "online": "Online",
       "offline": "Offline",
-      "monitoringDisabled": "Monitorování zakázáno",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Postavení"
     },
     "folderRenamed": "Složka „{{oldName}}“ byla úspěšně přejmenována na „{{newName}}“",
@@ -477,7 +482,7 @@
     "sameHost": "Tento hostitel (přímý tunel)",
     "statusChecksLabel": "Kontroly stavu",
     "enableStatusChecks": "Povolit kontroly stavu",
-    "enableStatusChecksDesc": "Pravidelně pingovat tento hostitel pro ověření dostupnosti",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Použít globální interval",
     "useGlobalIntervalDesc": "Přepsat intervalem kontroly stavu na úrovni celého serveru",
     "checkIntervalS": "Kontrolní interval(y)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Váš účet používá druhý faktor, který momentálně není k dispozici. Pro jeho resetování kontaktujte administrátora.",
     "secondFactorNoUI": "Tento druhý faktor nelze na této obrazovce zobrazit. Kontaktujte administrátora.",
     "serverAuthentication": "Přihlášení k serveru",
-    "minChars": "min. {{min}} znaků"
+    "minChars": "min. {{min}} znaků",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Ověření klíče hostitele SSH",
@@ -1119,7 +1125,13 @@
     "language": "Jazyk",
     "keyPassword": "klíčové heslo",
     "pastePrivateKey": "Vložte sem svůj soukromý klíč...",
-    "enterPassword": "Zadejte své heslo"
+    "enterPassword": "Zadejte své heslo",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Vydáno uživatelem {{issuer}}",
     "sslNames": "Kryty {{names}}",
     "sslManualTitle": "Nahrát certifikát",
-    "updateExternalAutoProvisionFailed": "Nepodařilo se aktualizovat nastavení automatického vytváření"
+    "updateExternalAutoProvisionFailed": "Nepodařilo se aktualizovat nastavení automatického vytváření",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

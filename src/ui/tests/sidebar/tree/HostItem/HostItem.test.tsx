@@ -27,12 +27,11 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@/lib/ServerStatusContext", () => ({
   useHostStatus: () => null,
-  useHostStatusReason: () => null,
   useServerStatus: () => ({
     getStatus: () => "online",
     initialLoadComplete: true,
   }),
-  useServerStatusMeta: () => ({ initialLoadComplete: true, isLoading: false }),
+  useServerStatusMeta: () => ({ initialLoadComplete: true }),
 }));
 
 vi.mock("@/hooks/use-status-color-scheme", () => ({

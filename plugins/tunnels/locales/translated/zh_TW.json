@@ -33,7 +33,7 @@
     "loadingHost": "正在載入主機..."
   },
   "nav": {
-    "portForwarding": "Forwarding",
+    "portForwarding": "轉發",
     "tunnels": "隧道"
   },
   "placeholders": {
@@ -42,8 +42,8 @@
     "localListenerHost": "127.0.0.1 (本機監聽)",
     "localTargetHost": "127.0.0.1 (此電腦上的目標)",
     "maxRetries": "3",
-    "remoteBindHost": "127.0.0.1 (listen on endpoint)",
-    "remoteTargetHost": "127.0.0.1 (target from endpoint)",
+    "remoteBindHost": "127.0.0.1（監聽端點）",
+    "remoteTargetHost": "127.0.0.1（來自端點的目標）",
     "retryInterval": "10",
     "socksListenerHost": "127.0.0.1（SOCKS 監聽器）"
   },
@@ -63,8 +63,8 @@
     "c2sPresetToLoad": "要載入的預設組",
     "c2sTunnelPresets": "用戶端通道預設組",
     "c2sTunnelPresetsUnavailable": "用戶端通道預設組僅在桌面用戶端中可用。",
-    "c2sPresetRenameError": "Failed to rename the preset",
-    "c2sPresetDeleteError": "Failed to delete the preset"
+    "c2sPresetRenameError": "重新命名預設失敗",
+    "c2sPresetDeleteError": "刪除預設失敗"
   },
   "tunnels": {
     "attempt": "嘗試 {{current}}/{{max}}",
@@ -85,8 +85,8 @@
     "createFirstTunnelMessage": "您尚未建立任何 SSH 通道。請在主機管理員中設定通道連線以開始使用。",
     "currentHostPort": "目前主機連接埠",
     "destination": "目的地",
-    "destinationAddress": "Destination Address",
-    "destinationPort": "Destination Port",
+    "destinationAddress": "目的地地址",
+    "destinationPort": "目的港",
     "disconnected": "已離線",
     "duplicateAutoStartBind": "只有一個自動啟動的用戶端通道可以使用 {{bind}}。",
     "endpointPort": "端點連接埠",
@@ -101,18 +101,18 @@
     "forwardDescriptionServerLocal": "目前主機 {{sourcePort}} → 端點 {{endpointPort}}。",
     "forwardDescriptionServerRemote": "端點 {{endpointPort}} → 目前主機 {{sourcePort}}。",
     "host": "主機",
-    "intermediateHost": "Intermediate Host",
+    "intermediateHost": "中間宿主",
     "invalidBindIp": "本機 IP 必須是有效的 IPv4 位址。",
     "invalidEndpointPort": "端點連接埠必須介於 1 到 65535 之間。",
     "invalidLocalPort": "本機連接埠必須介於 1 到 65535 之間。",
     "invalidLocalTargetIp": "本機目標 IP 必須是有效的 IPv4 位址。",
     "invalidLocalTargetPort": "本機目標連接埠必須介於 1 到 65535 之間。",
-    "invalidRemoteAddress": "Remote address is required.",
+    "invalidRemoteAddress": "需要遠端位址。",
     "invalidRemotePort": "遠端連接埠必須介於 1 到 65535 之間。",
     "lastError": "上次錯誤",
     "lastStarted": "上次啟動",
     "lastTested": "上次測試",
-    "localAddress": "Local Address",
+    "localAddress": "本地地址",
     "localPort": "本機連接埠",
     "localSaveError": "無法儲存本機用戶端通道",
     "localSaved": "用戶端通道已儲存",
@@ -124,7 +124,7 @@
     "noHostSelected": "未選取主機",
     "noSshTunnels": "無 SSH 通道",
     "port": "連接埠",
-    "remoteBindAddress": "Remote Bind Address",
+    "remoteBindAddress": "遠端綁定位址",
     "remoteHost": "遠端主機",
     "remotePort": "遠端連接埠",
     "retryInterval": "重試間隔（秒）",
@@ -141,35 +141,35 @@
     "typeLocal": "本機 (-L)",
     "typeRemote": "遠端 (-R)",
     "working": "處理中...",
-    "activeCount": "{{connected}}/{{total}} active",
-    "listensOn": "Bound to localhost:{{port}}",
-    "socksProxy": "SOCKS5 proxy",
-    "waiting": "Waiting",
-    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeCount": "{{connected}}/{{total}} 活動",
+    "listensOn": "綁定到本地主機：{{port}}",
+    "socksProxy": "SOCKS5代理",
+    "waiting": "等待",
+    "remoteSessionExpired": "遠端同步會話已過期。請重新連線遠端同步並重試。",
     "activeTunnels": "活動通道",
     "start": "啟動",
     "stop": "停止",
-    "authTitle": "Tunnel authentication",
-    "authRetry": "The previous code was not accepted. Enter a new code.",
-    "authAnswer": "Authentication response",
+    "authTitle": "隧道認證",
+    "authRetry": "之前的驗證碼無效。請輸入新的驗證碼。",
+    "authAnswer": "身份驗證回應",
     "authContinue": "繼續"
   },
   "permissions": {
     "use": {
-      "title": "Use tunnels",
-      "description": "Start, stop and watch SSH tunnels, and save client tunnel presets."
+      "title": "利用隧道",
+      "description": "啟動、停止和監視 SSH 隧道，並儲存用戶端隧道預設。"
     }
   },
   "settings": {
     "host": {
       "enable": {
-        "label": "Enable tunnels",
-        "description": "Set up SSH tunnels through this host."
+        "label": "啟用隧道",
+        "description": "透過此主機建立 SSH 隧道。"
       }
     }
   },
   "onboarding": {
     "feature_tunnels": "通道",
-    "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed."
+    "feature_tunnels_desc": "透過伺服器轉送連接埠以存取未公開的服務。"
   }
 }

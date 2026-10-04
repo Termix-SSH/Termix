@@ -18,15 +18,18 @@
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "Yönlendirme URI'si",
+      "description": "OPKSSH yapılandırmanızda bu URL'yi her kimlik sağlayıcısında izin verilen yönlendirme URI'si olarak kaydedin."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "Eski yönlendirme URI'sini kullanın.",
+      "description": "2.9 öncesinde kullanılan yönlendirme URI'si olan /host/opkssh-callback'i göndermeye devam edin. Kimlik sağlayıcılarınız yenisine izin verdiğinde bunu kapatın."
     }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
+  },
+  "plugin": {
+    "name": "OPKSSH"
   }
 }

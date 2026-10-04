@@ -56,5 +56,8 @@
     "speed": "Vitesse de lecture",
     "play": "Lire l'enregistrement",
     "pause": "Mettre en pause l'enregistrement"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

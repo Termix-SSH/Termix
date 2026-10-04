@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Керування статистикою використання",
+      "description": "Перегляньте, яка статистика використання надсилається, надішліть її зараз і скиньте ідентифікатор екземпляра."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Діліться анонімною статистикою використання",
+      "description": "Надсилає невеликий анонімний звіт раз на день, щоб допомогти покращити Termix. Він ніколи не містить імен користувачів, імен хостів, IP-адрес чи облікових даних."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Включити інформацію про платформу",
+      "description": "Операційна система, архітектура процесора, версія Node.js, тип бази даних та спосіб встановлення Termix (Docker, десктопний додаток чи сервер)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Включити використання функцій",
+      "description": "Скільки разів було відкрито кожен тип вкладки та скільки разів відбулося входів через SSH з моменту останнього звіту. Користувачі можуть вимкнути власну частину у своєму профілі."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Включити встановлені функції",
+      "description": "Які вбудовані функції встановлено та працюють."
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "Ідентифікатор екземпляра"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Включити використання мною функцій",
+      "description": "Враховує, які типи вкладок ви відкриваєте, в анонімній статистиці використання. Нічого про вас чи ваші хости не надсилається."
     }
   },
   "status": {
-    "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
-    "close": "Close",
-    "loadFailed": "Could not load the usage statistics status"
+    "title": "Статус",
+    "on": "Надання статистики використання раз на день",
+    "off": "Не поширюється статистика використання",
+    "lockedOn": "Вмикається змінною середовища ENABLE_TELEMETRY. Змініть її там.",
+    "lockedOff": "Вимкнено змінною середовища ENABLE_TELEMETRY. Змініть це там.",
+    "instanceId": "Ідентифікатор екземпляра: {{id}}",
+    "noInstanceId": "Ідентифікатора екземпляра ще немає",
+    "lastSent": "Останнє відправлення {{date}}",
+    "neverSent": "Ще не надіслано",
+    "nextSend": "Наступний звіт має бути {{date}}",
+    "lastError": "Остання спроба не вдалася: {{error}}",
+    "preview": "Попередній перегляд звіту",
+    "sendNow": "Надіслати зараз",
+    "sending": "Надсилання...",
+    "sent": "Надіслано статистику використання",
+    "notSent": "Статистику використання вимкнено, нічого не надіслано",
+    "resetId": "Скинути ідентифікатор екземпляра",
+    "resetIdConfirm": "Скинути ідентифікатор екземпляра? Майбутні звіти виглядатимуть як нова інсталяція.",
+    "resetIdDone": "Скидання ідентифікатора екземпляра",
+    "previewTitle": "Наступний звіт",
+    "previewDescription": "Саме це зараз і було б надіслано.",
+    "close": "Закрити",
+    "loadFailed": "Не вдалося завантажити статус статистики використання"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

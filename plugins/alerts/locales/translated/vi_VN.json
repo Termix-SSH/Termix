@@ -4,13 +4,13 @@
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "Sử dụng cảnh báo",
+      "description": "Nhận thông báo trong hộp thư đến và chia sẻ chúng lên các kênh của riêng bạn."
     }
   },
   "onboarding": {
     "feature": "Cảnh báo",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "featureDesc": "Tất cả thông báo đều được tập trung trong một hộp thư đến, sau đó được gửi đến Discord, NTFS, email hoặc webhook nếu bạn muốn."
   },
   "settings": {
     "group": {
@@ -19,97 +19,97 @@
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Thông báo của Termix",
+        "description": "Hiển thị tin tức từ đội ngũ Termix, chẳng hạn như thông báo bảo mật và bản phát hành, trong hộp thư đến của mọi người."
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "Giữ cảnh báo trong (ngày)",
+        "description": "Các thông báo cũ hơn sẽ bị xóa khỏi mọi hộp thư đến."
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "Máy chủ SMTP",
+        "description": "Cần thiết cho các kênh email. Để trống nếu muốn tắt email.",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "Cổng SMTP",
+        "description": "Thông thường là cổng 587 với STARTTLS hoặc 465 với TLS."
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "Hãy sử dụng TLS ngay từ đầu.",
+        "description": "Bật tính năng này cho cổng 465. Tắt tính năng cho cổng 587, vì cổng này sẽ tự động nâng cấp lên TLS."
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "Tên người dùng SMTP",
+        "description": "Để trống nếu máy chủ không cần đăng nhập."
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "Mật khẩu SMTP",
+        "description": "Được lưu trữ dưới dạng mã hóa."
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
+        "label": "Từ địa chỉ",
+        "description": "Thông báo đến từ nguồn nào?",
         "placeholder": "Termix <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
+        "label": "Cửa sổ bật lên cảnh báo",
+        "description": "Những thông báo mới nào xuất hiện khi bạn sử dụng Termix? Chúng luôn được gửi đến hộp thư đến.",
+        "all": "Tất cả cảnh báo",
+        "warning": "Cảnh báo và thông tin quan trọng",
+        "critical": "Chỉ quan trọng",
         "off": "Không"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
+    "inbox": "Hộp thư đến",
     "channels": "Kênh",
-    "rules": "Delivery rules"
+    "rules": "Quy tắc giao hàng"
   },
   "severity": {
     "info": "Thông tin",
     "success": "Thành công",
     "warning": "Cảnh báo",
-    "critical": "Critical"
+    "critical": "Phê bình"
   },
   "inbox": {
     "sourceTermix": "Termix",
     "openLink": "Mở",
     "view": "Xem",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
+    "unread": "Chưa đọc",
+    "deliveryFailed_one": "{{count}} kênh bị lỗi",
+    "deliveryFailed_other": "{{count}} kênh bị lỗi",
+    "markRead": "Đánh dấu là đã đọc",
+    "markUnread": "Đánh dấu là chưa đọc",
+    "markAllRead": "Đánh dấu tất cả là đã đọc",
     "delete": "Xóa",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
+    "clearRead": "Xóa thông báo đã đọc",
+    "cleared_one": "Đã xóa cảnh báo {{count}}",
+    "cleared_other": "Đã xóa {{count}} cảnh báo",
     "filterAll": "Tất cả",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "filterUnread": "Chưa đọc",
+    "anySeverity": "Bất kỳ mức độ nghiêm trọng nào",
+    "anySource": "Bất kỳ nguồn nào",
+    "openAll": "Mở trong một tab",
+    "empty": "Chưa có thông báo nào.",
+    "emptyUnread": "Bạn đã nắm bắt được hết mọi thứ rồi.",
+    "loadMore": "Tải thêm"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
+    "intro": "Các kênh là nơi các cảnh báo có thể được gửi ra ngoài Termix. Các quy tắc phân phối sẽ chọn những cảnh báo nào sử dụng các kênh đó.",
+    "add": "Thêm kênh",
+    "edit": "Chỉnh sửa kênh",
+    "test": "Gửi một bài kiểm tra",
+    "testSent": "Đã gửi cảnh báo thử nghiệm",
+    "testFailed": "Kiểm tra thất bại: {{error}}",
+    "deleteConfirm": "Xóa kênh \"{{name}}\"?",
+    "deleted": "Kênh đã bị xóa",
+    "empty": "Chưa có kênh nào.",
     "enabled": "Đã bật",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
+    "needsSave": "Kênh này cần được mở và lưu lại một lần nữa trước khi có thể gửi.",
     "name": "Tên",
     "nameRequired": "Tên là bắt buộc",
     "type": "Loại",
@@ -119,41 +119,41 @@
       "discord": "Discord",
       "email": "Email"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "emailUnavailable": "Email cần có máy chủ SMTP, mà quản trị viên sẽ thiết lập trong phần cài đặt Thông báo.",
     "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
+    "webhookHint": "Lấy nội dung JSON cho mỗi thông báo.",
+    "method": "Phương pháp",
+    "headers": "Tiêu đề",
+    "headersHint": "Mỗi mục một dòng, ví dụ: Tên: giá trị.",
     "ntfyServer": "URL máy chủ",
     "ntfyTopic": "Chủ đề",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "ntfyToken": "Mã truy cập (tùy chọn)",
+    "discordUrl": "URL webhook Discord",
+    "discordHint": "Bạn có thể chọn \"Integrations\" trong phần cài đặt kênh trên Discord.",
+    "discordUsername": "Tên hiển thị (tùy chọn)",
+    "discordAvatar": "URL ảnh đại diện (tùy chọn)",
+    "emailTo": "Gửi đến",
+    "emailHint": "Hãy sử dụng dấu phẩy để phân tách nhiều địa chỉ.",
+    "privateNetwork": "Cho phép địa chỉ mạng riêng",
+    "privateNetworkHint": "Chỉ hoạt động với các máy chủ mà quản trị viên cho phép trong danh sách điểm cuối riêng tư."
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
+    "intro": "Quy tắc phân phối sẽ gửi các thông báo phù hợp đến các kênh của bạn. Các thông báo này cũng luôn được lưu trữ trong hộp thư đến.",
+    "add": "Thêm quy tắc",
+    "edit": "Chỉnh sửa quy tắc",
+    "empty": "Hiện chưa có quy tắc nào, vì vậy thông báo chỉ hiển thị trong hộp thư đến.",
+    "needChannel": "Trước tiên hãy thêm kênh.",
     "enabled": "Đã bật",
     "name": "Tên",
     "nameRequired": "Tên là bắt buộc",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "match": "Thông báo cần gửi",
+    "matchHint": "* Cho mọi thứ, tự động hóa.* Cho mọi thứ từ tự động hóa, hoặc một loại cụ thể nào đó.",
+    "minSeverity": "Ít nhất",
+    "channels": "Gửi đến",
+    "channelRequired": "Chọn ít nhất một kênh",
+    "deleteConfirm": "Xóa quy tắc \"{{name}}\"?",
+    "everything": "Mọi thứ",
+    "summary": "{{match}}, {{severity}} hoặc cao hơn, đến {{channels}}"
   },
   "actions": {
     "cancel": "Hủy",
@@ -163,10 +163,13 @@
   },
   "widget": {
     "name": "Luồng cảnh báo",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
+    "description": "Thông báo mới nhất của bạn, kèm theo cách nhanh để đánh dấu đã đọc.",
+    "maxItems": "Số lượng vật phẩm tối đa",
+    "showRead": "Hiển thị thông báo đã đọc",
     "allClear": "Tất cả ổn",
     "loading": "Đang tải..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

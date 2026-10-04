@@ -1,705 +1,708 @@
 {
   "mobileKeyboard": {
-    "addQuickKey": "Add",
-    "arrowDown": "Arrow Down",
-    "arrowLeft": "Arrow Left",
-    "arrowRight": "Arrow Right",
-    "arrowUp": "Arrow Up",
+    "addQuickKey": "Додати",
+    "arrowDown": "Стрілка вниз",
+    "arrowLeft": "Стрілка ліворуч",
+    "arrowRight": "Стрілка праворуч",
+    "arrowUp": "Стрілка вгору",
     "backTab": "⇥",
     "ctrl": "Ctrl",
-    "delete": "Del",
-    "done": "Done",
-    "editQuickKeys": "Edit quick keys",
-    "end": "End",
+    "delete": "Дел",
+    "done": "Готово",
+    "editQuickKeys": "Редагувати швидкі клавіші",
+    "end": "Кінець",
     "esc": "Esc",
-    "home": "Home",
-    "pageDown": "PgDn",
+    "home": "Дім",
+    "pageDown": "ПгДн",
     "pageUp": "PgUp",
-    "paste": "Paste",
-    "quickKeyPlaceholder": "e.g. sudo ",
-    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
-    "quickKeysTitle": "Quick Keys",
-    "removeQuickKey": "Remove",
-    "resetDefaults": "Reset to defaults",
-    "shift": "Shift",
-    "tab": "Tab"
+    "paste": "Вставити",
+    "quickKeyPlaceholder": "наприклад, sudo ",
+    "quickKeysDesc": "Натисніть ×, щоб видалити. Підтримує до 8 символів.",
+    "quickKeysTitle": "Швидкі клавіші",
+    "removeQuickKey": "Видалити",
+    "resetDefaults": "Скинути до налаштувань за замовчуванням",
+    "shift": "Зсув",
+    "tab": "Вкладка"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
-    "closeTab": "Close",
-    "connecting": "Connecting...",
-    "connectionLost": "Connection lost",
-    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
-    "connectionTimeout": "Connection timeout",
-    "enableAutoTmuxAction": "Enable Auto-Tmux",
-    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
-    "linkDialogCopy": "Copy",
-    "linkDialogOpen": "Open",
-    "linkDialogTitle": "Open Link",
-    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
-    "noHostSelected": "No host selected",
-    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
-    "reconnect": "Reconnect",
-    "reconnected": "Reconnected successfully",
-    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
-    "tmuxAttached": "Attached clients",
-    "tmuxAttachedCount": "{{count}} attached",
-    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
-    "tmuxCreateNew": "Start new session",
-    "tmuxDetached": "Detached from tmux session",
-    "tmuxLastActivity": "Last activity",
-    "tmuxSessionAttached": "tmux session attached: {{name}}",
-    "tmuxSessionCreated": "tmux session created: {{name}}",
-    "tmuxSessionPickerDesc": "Existing tmux sessions found on this host. Select one to reattach or create a new session.",
-    "tmuxSessionPickerTitle": "tmux Sessions",
-    "tmuxTimeDays": "{{count}}d ago",
-    "tmuxTimeHours": "{{count}}h ago",
-    "tmuxTimeJustNow": "just now",
-    "tmuxTimeMinutes": "{{count}}m ago",
-    "tmuxUnavailable": "tmux is not installed on the remote host, falling back to standard shell",
-    "tmuxWindowCount": "{{count}} window",
-    "tmuxWindows": "Windows",
-    "unknownError": "Unknown error occurred",
-    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
-    "websocketError": "WebSocket connection error",
-    "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
-    "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
-    "connected": "Connected",
-    "totpCodeLabel": "Verification Code",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "autoTmuxEnableFailed": "Не вдалося ввімкнути Auto-Tmux",
+    "autoTmuxEnabled": "Автоматичне Tmux-змінення увімкнено для {{host}}. Застосовується з наступного підключення.",
+    "clipboardHttpWarning": "Не вдалося прочитати буфер обміну. Деякі браузери обмежують доступ до буфера обміну поза HTTPS — спробуйте Ctrl+V або обслуговуйте Termix через HTTPS.",
+    "closeTab": "Закрити",
+    "connecting": "Підключення...",
+    "connectionLost": "З’єднання втрачено",
+    "connectionRejected": "З’єднання відхилено сервером. Перевірте автентифікацію та конфігурацію мережі.",
+    "connectionTimeout": "Тайм-аут з'єднання",
+    "enableAutoTmuxAction": "Увімкнути автоматичне Tmux",
+    "hostKeyRejected": "Перевірку ключа хоста SSH відхилено. З'єднання скасовано.",
+    "linkDialogCopy": "Копіювати",
+    "linkDialogOpen": "ВІДЧИНЕНО",
+    "linkDialogTitle": "Відкрити посилання",
+    "maxReconnectAttemptsReached": "Досягнуто максимальної кількості спроб повторного підключення",
+    "noHostSelected": "Хост не вибрано",
+    "passwordPromptFillTitle": "Введіть збережений пароль у цей запит?",
+    "reconnect": "Знову підключитися",
+    "reconnected": "Успішно відновлено підключення",
+    "reconnecting": "Повторне підключення... ({{attempt}}/{{max}})",
+    "autoReconnecting": "З’єднання втрачено, під’єднання повторне...",
+    "searchCaseSensitive": "Зіставте регістр",
+    "searchClose": "Закрити (Escape)",
+    "searchNext": "Наступний матч (Enter)",
+    "searchNoResults": "Немає результатів",
+    "searchPlaceholder": "Знайти",
+    "searchPrevious": "Попередній збіг (Shift+Enter)",
+    "searchRegex": "Використовуйте регулярний вираз",
+    "searchResultCount": "{{index}} з {{count}}",
+    "searchWholeWord": "Зіставлення цілого слова",
+    "sessionExpiredNotice": "Ваш попередній сеанс на {{host}} завершився через {{minutes}} хвилин після відключення; оболонка та все, що в ній працює, зникли. Увімкніть Auto-Tmux на цьому хості, щоб підтримувати сеанси активними.",
+    "sessionExpiredNoticeNoMinutes": "Ваш попередній сеанс на {{host}} закінчився під час відключення; оболонка та все, що в ній працює, зникли. Увімкніть Auto-Tmux на цьому хості, щоб підтримувати сеанси активними.",
+    "sessionTakenOver": "Сеанс відкрито в іншій вкладці. Повторне підключення...",
+    "tmuxAttached": "Підключені клієнти",
+    "tmuxAttachedCount": "{{count}} додається",
+    "tmuxCopyHint": "Відрегулюйте виділення та натисніть Enter, щоб скопіювати його в буфер обміну",
+    "tmuxCreateNew": "Почати новий сеанс",
+    "tmuxDetached": "Від’єднано від сеансу tmux",
+    "tmuxLastActivity": "Остання активність",
+    "tmuxSessionAttached": "додано сеанс tmux: {{name}}",
+    "tmuxSessionCreated": "Створено сеанс tmux: {{name}}",
+    "tmuxSessionPickerDesc": "На цьому хості знайдено існуючі сеанси tmux. Виберіть один для повторного підключення або створення нового сеансу.",
+    "tmuxSessionPickerTitle": "Сесії tmux",
+    "tmuxTimeDays": "{{count}}днів тому",
+    "tmuxTimeHours": "{{count}}год тому",
+    "tmuxTimeJustNow": "щойно",
+    "tmuxTimeMinutes": "{{count}}хв тому",
+    "tmuxUnavailable": "tmux не встановлено на віддаленому хості, повертається до стандартної оболонки",
+    "tmuxWindowCount": "вікно {{count}}",
+    "tmuxWindows": "Вікна",
+    "unknownError": "Сталася невідома помилка",
+    "websocketAbnormalClose": "З’єднання несподівано завершилося. Можливо, це пов’язано зі зворотним проксі-сервером або проблемою конфігурації SSL. Перевірте журнали сервера.",
+    "websocketError": "Помилка підключення WebSocket",
+    "clipboardReadFailed": "Не вдалося прочитати з буфера обміну. Переконайтеся, що надано дозволи на доступ до буфера обміну.",
+    "clipboardWriteFailed": "Не вдалося скопіювати в буфер обміну. Переконайтеся, що сторінка обслуговується через HTTPS або localhost.",
+    "connected": "Підключено",
+    "totpCodeLabel": "Код підтвердження",
+    "duplicateTab": "Дублікат вкладки",
+    "imageChooseFile": "Виберіть файл зображення",
+    "imageUploaded": "Завантажене зображення: {{path}}",
+    "imageClipboardUnavailable": "Цей браузер не може читати зображення з буфера обміну",
+    "imageClipboardEmpty": "У буфері обміну не знайдено зображення",
+    "localShell": "Локальна термінальна оболонка",
+    "autocompleteHintComplete": "Tab або Enter для завершення",
+    "autocompleteHintNavigate": "↑↓ для навігації",
+    "autocompleteHintClose": "Esc для закриття"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
-    "retry": "Retry",
-    "showToolbar": "Expand toolbar",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
-    "uploadingImage": "Uploading..."
+    "detachTmux": "Від’єднати tmux",
+    "detachTmuxDescription": "Від’єднати сеанс tmux",
+    "dismissError": "Помилка відхилення зображення",
+    "hideToolbar": "Приховати панель інструментів",
+    "image": "Дії із зображеннями (лише зображення)",
+    "imageActionFailed": "Не вдалося виконати дію із зображенням",
+    "layout": "Режим відображення панелі інструментів",
+    "layoutExpanded": "Розширено показниками",
+    "layoutIcon": "Тільки значок",
+    "layoutLabeled": "Піктограми та мітки",
+    "moveToolbar": "Переміщення панелі інструментів",
+    "moveToolbarHint": "Перетягніть, щоб змінити положення панелі інструментів",
+    "paste": "Вставити зображення",
+    "pasteImage": "Вставити зображення з буфера обміну (лише зображення)",
+    "retry": "Повторити спробу",
+    "showToolbar": "Розгорнути панель інструментів",
+    "upload": "Завантажити зображення",
+    "uploadImage": "Завантажте зображення на хостинг",
+    "uploadingImage": "Завантаження..."
   },
   "history": {
-    "noTerminalSelected": "No terminal selected",
-    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
-    "searchPlaceholder": "Search history...",
-    "clearAll": "Clear All",
-    "noHistoryEntries": "No history entries",
-    "trackingDisabled": "History tracking is disabled",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "noTerminalSelected": "Термінал не вибрано",
+    "noTerminalSelectedHint": "Відкрийте вкладку терміналу SSH, щоб переглянути історію його команд",
+    "searchPlaceholder": "Історія пошуку...",
+    "clearAll": "Очистити все",
+    "noHistoryEntries": "Немає записів в історії",
+    "trackingDisabled": "Відстеження історії вимкнено",
+    "trackingDisabledHint": "Увімкніть історію команд на вкладці SSH-терміналу цього хоста.",
+    "commandCount_one": "команда {{count}}",
+    "commandCount_other": "команди {{count}}"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
-    "advanced": "Advanced",
-    "resetDefaults": "Reset to defaults",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "enabled": "Увімкнути сенсорне введення",
+    "enabledDesc": "Дозволити прокручування одним пальцем у терміналах",
+    "momentumEnabled": "Увімкнути імпульс",
+    "momentumEnabledDesc": "Продовжуйте прокручувати ненадовго після проведення пальцем",
+    "advanced": "Розширений",
+    "resetDefaults": "Скинути до налаштувань за замовчуванням",
+    "dragThreshold": "Поріг перетягування",
+    "maxWheelDelta": "Максимальна дельта коліс",
+    "momentumSampleWindow": "Вікно вибірки імпульсу",
+    "releaseGracePeriod": "Пільговий період випуску",
+    "minimumVelocity": "Мінімальна швидкість",
+    "maximumVelocity": "Максимальна швидкість",
+    "maximumDuration": "Максимальна тривалість",
+    "maximumTravel": "Максимальний хід",
+    "decayTime": "Час розпаду",
+    "pixelsPerTick": "Пікселів на такт",
+    "maximumFrameInterval": "Максимальний інтервал кадру",
+    "maximumTicksPerFrame": "Максимальна кількість тиків на кадр"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
-    "test": "Test",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "instanceId": "Ідентифікатор екземпляра термінального сеансу",
+    "instanceIdDesc": "Ідентифікатор екземпляра однієї з ваших підключених вкладок терміналу, що використовується для перевірки видимості.",
+    "selectedModeUnavailable": "Недоступно",
+    "test": "Тест",
+    "testing": "Тестування...",
+    "testFailed": "Не вдалося перевірити сховище зображень",
+    "testConnected": "Термінальний сеанс підключено.",
+    "testNotConnected": "Немає підключеного термінального сеансу з цим ідентифікатором екземпляра.",
+    "testSelectedMode": "Для завантаження буде використано: {{mode}}",
+    "testLocalVisible": "Локальний каталог видно з підключеного хоста.",
+    "testLocalNotVisible": "Локальний каталог НЕ видно з підключеного хоста."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
-        "sessions": "Sessions",
-        "newHosts": "New Hosts"
+        "touch": "Сенсорний ввід",
+        "images": "Зберігання зображень",
+        "sessions": "Сесії",
+        "newHosts": "Нові господарі"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Збереження термінального сеансу",
+        "description": "Як довго відключений термінал залишається активним на сервері, перш ніж його буде закрито. Мін. 1, макс. 1440 хвилин. Для сеансів, які мають тривати довше цього часу, увімкніть Auto-Tmux на хості."
       },
       "commandHistoryEnabled": {
-        "label": "Command History",
-        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+        "label": "Історія команд",
+        "description": "Дозволити запис історії команд. Якщо вимкнено, історія не зберігається незалежно від налаштувань для кожного хоста."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "Історія команд для нових хостів",
+        "description": "Чи нові хости запускаються з увімкненою історією команд."
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
-        "auto": "Auto",
-        "local": "Local",
-        "remoteSftp": "Remote (SFTP)"
+        "label": "Режим зберігання",
+        "description": "Куди записуються вставлені та завантажені образи терміналів. Виправлено автоматичний вибір за підключенням, локальним та віддаленим (SFTP).",
+        "auto": "Авто",
+        "local": "Місцевий",
+        "remoteSftp": "Віддалений (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "Локальний каталог",
+        "description": "Абсолютний шлях на серверній частині Termix, де локальний режим записує зображення. Ніколи не відображається після збереження. Порожній шлях використовує TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "Шлях хоста",
+        "description": "Вигляд локального каталогу, який отримують агенти терміналів, з боку хоста."
       },
       "imageTtlMs": {
-        "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "label": "TTL (мс)",
+        "description": "Як довго зберігається завантажене зображення, у мілісекундах. Порожнє значення використовує TERMIX_IMAGE_TTL_MS або одну годину."
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "Максимальна кількість зображень",
+        "description": "Більшість зображень зберігається одночасно. Порожнє значення використовує TERMIX_MAX_IMAGE_COUNT або 100."
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "Максимальна кількість байтів пам'яті",
+        "description": "Найбільше байтів зображень зберігається одночасно. Порожнє значення використовує TERMIX_MAX_IMAGE_STORAGE_BYTES або 5 ГіБ."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Зберегти сеанси після відключення",
+        "description": "Зберігайте відключений термінал активним на сервері протягом зазначеного вище часу, щоб повторне відкриття його вкладки продовжило роботу з того місця, де вона була зупинена."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "description": "Запускати термінали нових хостів всередині tmux, щоб сесії пережили відключення (потрібен tmux на хості)"
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Тема для нових хостів",
+        "description": "Тема терміналу, з якої починається новий хост."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Шрифт для нових хостів",
+        "description": "Шрифт терміналу, з якого починається новий хост."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Розмір шрифту для нових хостів",
+        "description": "Розмір шрифту терміналу, з якого починається новий хост, у пікселях."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Стиль курсора для нових хостів"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Миготливий курсор для нових хостів"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "Увімкнути панель інструментів термінала",
+        "description": "Показати панель швидкого доступу, прикріплену до активного терміналу, для інструментів цього хоста та статистики в реальному часі"
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Положення панелі інструментів",
+        "description": "Там, де розташована панель інструментів у терміналі. Ви все ще можете перетягнути її звідти.",
+        "bottom": "Внизу по центру",
+        "bottomLeft": "Внизу ліворуч",
+        "bottomRight": "Внизу праворуч",
+        "top": "Верхній центр",
+        "topLeft": "Угорі ліворуч",
+        "topRight": "Угорі праворуч"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Початковий стан панелі інструментів",
+        "description": "Чи відкривається панель інструментів розгорнутим чи згорнутим під час підключення терміналу",
+        "expanded": "Розгорнуто",
+        "collapsed": "Згорнуто"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "Режим відображення панелі інструментів",
+        "description": "Як відображаються кнопки панелі інструментів. «Останній використаний» зберігає вибрані вами кнопки на панелі інструментів.",
+        "remember": "Останнє використання",
+        "icon": "Тільки значок",
+        "labeled": "Піктограми та мітки",
+        "expanded": "Розширено статистикою"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Показати статистику в реальному часі",
+        "description": "Показувати статистику ведучого в реальному часі над кнопками панелі інструментів у розгорнутому режимі"
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Згасання під час очікування",
+        "description": "Зменшення масштабу панелі інструментів, доки не наведете на неї курсор"
       },
       "enableCommandHistory": {
-        "label": "Command History",
-        "description": "Record commands run in this terminal for history and autocomplete"
+        "label": "Історія команд",
+        "description": "Запис команд, що виконуються в цьому терміналі, для історії та автозаповнення"
       },
       "enableTerminal": {
-        "label": "Enable Terminal",
-        "description": "Offer an SSH terminal for this host."
+        "label": "Увімкнути термінал",
+        "description": "Запропонуйте SSH-термінал для цього хоста."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Використовувати налаштування користувача за замовчуванням"
       },
       "theme": {
-        "label": "Theme"
+        "label": "Тема"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Миготливий курсор"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "Стиль курсора"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "Розмір шрифту"
       },
       "fontFamily": {
-        "label": "Font"
+        "label": "Шрифт"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Прокрутка назад"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "Інтервал між літерами"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Висота рядка"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Дзвін"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Мінімальний коефіцієнт контрастності"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Фонове зображення"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Непрозорість фонового зображення"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Кольори користувацьких тем"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Клацніть правою кнопкою миші, щоб вибрати слово"
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Варіант – це Meta"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Клавіша швидкого прокручування"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Швидка швидкість прокручування"
       },
       "backspaceMode": {
-        "label": "Backspace"
+        "label": "Назад"
       },
       "autoMosh": {
-        "label": "Auto mosh"
+        "label": "Авто мош"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Команда Мош"
       },
       "autoTmux": {
-        "label": "Auto tmux"
+        "label": "Автоматичний tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "Використовуйте заголовок SSH"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Підсвічування синтаксису"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Категорії підсвічування синтаксису"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Клік по посиланню"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Локальне відлуння"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Пропонувати заповнити запити на введення пароля"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "Заповніть запити sudo"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Автоматичне повторне підключення"
       }
     },
     "user": {
       "commandAutocomplete": {
-        "label": "Command Autocomplete",
-        "description": "Show autocomplete while typing if you press tab"
+        "label": "Автозаповнення команд",
+        "description": "Показувати автозаповнення під час введення тексту, якщо натиснути клавішу Tab"
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "Локальне відлуння",
+        "description": "Зменште сприйняту затримку введення за допомогою безпечного локального передбачення натискання клавіш"
       },
       "linkClickBehavior": {
-        "label": "Terminal Link Click",
-        "description": "Default behavior when clicking links in the terminal"
+        "label": "Натисніть посилання терміналу",
+        "description": "Поведінка за замовчуванням під час натискання посилань у терміналі"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Збережені теми"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "Місцевий термінал"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Використання термінальних сесій у реальному часі",
+      "description": "Дозволяє іншим функціям, таким як спільний доступ до сеансів та запис, отримувати доступ до ваших термінальних сеансів у реальному часі."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Читати історію команд",
+      "description": "Дозволяє іншим функціям, таким як помічник зі штучним інтелектом, зчитувати історію ваших команд."
     }
   },
   "hosts": {
-    "tabTerminal": "Terminal",
-    "addHost": "Add Host",
-    "applyGlobalThemeTooltip": "Apply this theme",
-    "backgroundImageDesc": "Optional URL for a terminal background image",
-    "backgroundImageLabel": "Background Image URL",
-    "backgroundImageOpacityLabel": "Background Image Opacity",
-    "backspaceMode": "Backspace Mode",
-    "backspaceModeControlH": "Control-H (BS)",
-    "backspaceModeLabel": "Backspace Mode",
-    "backspaceModeNormal": "Normal (DEL)",
-    "behaviorAndAdvanced": "Behavior & Advanced",
-    "bellStyle": "Bell Style",
-    "bellStyleBoth": "Both",
-    "bellStyleLabel": "Bell Style",
-    "bellStyleNone": "None",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
-    "colorTheme": "Color Theme",
-    "cursorBlink": "Cursor Blink",
-    "cursorBlinking": "Cursor Blinking",
-    "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
-    "cursorStyle": "Cursor Style",
-    "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
-    "cursorStyleLabel": "Cursor Style",
-    "cursorStyleUnderline": "Underline",
-    "customThemeAnsiColors": "ANSI Colors",
-    "customThemeBackground": "Background",
-    "customThemeBlack": "Black",
-    "customThemeBlue": "Blue",
-    "customThemeBrightBlack": "Bright Black",
-    "customThemeBrightBlue": "Bright Blue",
-    "customThemeBrightCyan": "Bright Cyan",
-    "customThemeBrightGreen": "Bright Green",
-    "customThemeBrightMagenta": "Bright Magenta",
-    "customThemeBrightRed": "Bright Red",
-    "customThemeBrightWhite": "Bright White",
-    "customThemeBrightYellow": "Bright Yellow",
-    "customThemeColors": "Custom Colors",
-    "customThemeCursor": "Cursor",
-    "customThemeCursorAccent": "Cursor Accent",
-    "customThemeCyan": "Cyan",
-    "customThemeForeground": "Foreground",
-    "customThemeGreen": "Green",
-    "customThemeMagenta": "Magenta",
-    "customThemeRed": "Red",
-    "customThemeResetTooltip": "Reset to defaults",
-    "customThemeSelection": "Selection",
-    "customThemeWhite": "White",
-    "customThemeYellow": "Yellow",
-    "deleteGlobalThemeTooltip": "Delete this theme",
-    "docsLink": "View docs",
-    "enableAutoMosh": "Enable Auto-Mosh",
-    "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
-    "enableAutoTmux": "Enable Auto-Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
-    "fastScrollModifier": "Fast Scroll Modifier",
-    "fastScrollModifierAlt": "Alt",
+    "tabTerminal": "Термінал",
+    "addHost": "Додати хоста",
+    "applyGlobalThemeTooltip": "Застосувати цю тему",
+    "backgroundImageDesc": "Додаткова URL-адреса для фонового зображення терміналу",
+    "backgroundImageLabel": "URL-адреса фонового зображення",
+    "backgroundImageOpacityLabel": "Непрозорість фонового зображення",
+    "backspaceMode": "Режим повернення",
+    "backspaceModeControlH": "Контроль-H (BS)",
+    "backspaceModeLabel": "Режим повернення",
+    "backspaceModeNormal": "Звичайний (DEL)",
+    "behaviorAndAdvanced": "Поведінка та просунуті навички",
+    "bellStyle": "Стиль дзвона",
+    "bellStyleBoth": "Обидва",
+    "bellStyleLabel": "Стиль дзвона",
+    "bellStyleNone": "Жоден",
+    "bellStyleSound": "Звук",
+    "bellStyleVisual": "Візуальний",
+    "colorTheme": "Колірна тема",
+    "cursorBlink": "Блимання курсора",
+    "cursorBlinking": "Миготіння курсора",
+    "cursorBlinkingDesc": "Увімкнути миготливу анімацію для курсора терміналу",
+    "cursorStyle": "Стиль курсора",
+    "cursorStyleBar": "Бар",
+    "cursorStyleBlock": "Блок",
+    "cursorStyleLabel": "Стиль курсора",
+    "cursorStyleUnderline": "Підкреслення",
+    "customThemeAnsiColors": "Кольори ANSI",
+    "customThemeBackground": "Передісторія",
+    "customThemeBlack": "Чорний",
+    "customThemeBlue": "Синій",
+    "customThemeBrightBlack": "Яскраво-чорний",
+    "customThemeBrightBlue": "Яскраво-синій",
+    "customThemeBrightCyan": "Яскравий блакитний",
+    "customThemeBrightGreen": "Яскраво-зелений",
+    "customThemeBrightMagenta": "Яскраво-пурпуровий",
+    "customThemeBrightRed": "Яскраво-червоний",
+    "customThemeBrightWhite": "Яскраво-білий",
+    "customThemeBrightYellow": "Яскраво-жовтий",
+    "customThemeColors": "Користувацькі кольори",
+    "customThemeCursor": "Курсор",
+    "customThemeCursorAccent": "Акцент курсора",
+    "customThemeCyan": "Блакитний",
+    "customThemeForeground": "Передній план",
+    "customThemeGreen": "Зелений",
+    "customThemeMagenta": "Магента",
+    "customThemeRed": "Червоний",
+    "customThemeResetTooltip": "Скинути до налаштувань за замовчуванням",
+    "customThemeSelection": "Вибір",
+    "customThemeWhite": "Білий",
+    "customThemeYellow": "Жовтий",
+    "deleteGlobalThemeTooltip": "Видалити цю тему",
+    "docsLink": "Переглянути документи",
+    "enableAutoMosh": "Увімкнути Auto-Mosh",
+    "enableAutoMoshDesc": "Надавати перевагу Mosh над SSH, якщо доступно",
+    "enableAutoTmux": "Увімкнути автоматичне Tmux",
+    "enableAutoTmuxDesc": "Зберігайте вашу оболонку та все, що в ній працює, активними після відключень та перезапусків браузера, запускаючи її всередині tmux (tmux має бути встановлений на хості)",
+    "fastScrollModifier": "Модифікатор швидкої прокрутки",
+    "fastScrollModifierAlt": "Альтернативний",
     "fastScrollModifierCtrl": "Ctrl",
-    "fastScrollModifierLabel": "Fast Scroll Modifier",
-    "fastScrollModifierShift": "Shift",
-    "fastScrollSensitivity": "Fast Scroll Sensitivity",
-    "fastScrollSensitivityLabel": "Fast Scroll Sensitivity",
-    "fontFamily": "Font Family",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
-    "fontFamilyLabel": "Font Family",
-    "fontSize": "Font Size",
-    "fontSizeLabel": "Font Size",
-    "hostNotFound": "Host not found",
-    "letterSpacing": "Letter Spacing",
-    "letterSpacingPx": "Letter Spacing (px)",
-    "lineHeight": "Line Height",
-    "lineHeightLabel": "Line Height",
-    "linkClickBehaviorConfirm": "Show popup to open or copy",
-    "linkClickBehaviorDesc": "Controls what happens when you click a link in the terminal. Use 'Default' to follow the app-level setting.",
-    "linkClickBehaviorDirect": "Open directly",
-    "linkClickBehaviorLabel": "Link Click Behavior",
-    "loadingHost": "Loading host...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
-    "localEchoOff": "Off",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
-    "moshCommand": "MOSH Command",
-    "moshCommandLabel": "Mosh Command",
-    "noSavedThemes": "No saved themes yet",
-    "none": "None",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
-    "rightClickSelectsWord": "Right Click Selects Word",
-    "rightClickSelectsWordLabel": "Right-click Selects Word",
-    "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
-    "scrollbackBufferLabel": "Scrollback Buffer",
-    "scrollbackMaxLines": "Maximum number of lines kept in history",
-    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
-    "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
-    "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
-    "syntaxCategoryIpAddresses": "IP Addresses",
+    "fastScrollModifierLabel": "Модифікатор швидкої прокрутки",
+    "fastScrollModifierShift": "Зсув",
+    "fastScrollSensitivity": "Чутливість швидкого прокручування",
+    "fastScrollSensitivityLabel": "Чутливість швидкого прокручування",
+    "fontFamily": "Сімейство шрифтів",
+    "fontFamilyCustomHint": "Виберіть шрифт зі списку або виберіть «Налаштування» та введіть точну назву шрифту, який уже встановлено у вашій системі (наприклад, MesloLGS NF, Noto Sans Mono). Termix не може встановити шрифти за вас, спочатку встановіть його у вашій ОС.",
+    "fontFamilyCustomOption": "Користувацькі...",
+    "fontFamilyCustomPlaceholder": "Точна назва шрифту, наприклад, MesloLGS NF",
+    "fontFamilyLabel": "Сімейство шрифтів",
+    "fontSize": "Розмір шрифту",
+    "fontSizeLabel": "Розмір шрифту",
+    "hostNotFound": "Хост не знайдено",
+    "letterSpacing": "Міжлітерний інтервал",
+    "letterSpacingPx": "Міжлітерний інтервал (пікселі)",
+    "lineHeight": "Висота рядка",
+    "lineHeightLabel": "Висота рядка",
+    "linkClickBehaviorConfirm": "Показати спливаюче вікно для відкриття або копіювання",
+    "linkClickBehaviorDesc": "Керує тим, що відбувається, коли ви натискаєте посилання в терміналі. Використовуйте «За замовчуванням», щоб дотримуватися налаштувань рівня програми.",
+    "linkClickBehaviorDirect": "Відкрити безпосередньо",
+    "linkClickBehaviorLabel": "Поведінка кліків посилань",
+    "loadingHost": "Завантаження хоста...",
+    "localEchoAuto": "Автоматичний",
+    "localEchoDesc": "Передбачати безпечні для друку натискання клавіш локально на повільних з'єднаннях. Запити на введення пароля та введені елементи керування ніколи не відображаються.",
+    "localEchoLabel": "Локальне відлуння",
+    "localEchoOff": "Вимкнено",
+    "localEchoOn": "Завжди увімкнено",
+    "macOptionIsMetaLabel": "Клавіша Option надсилає метадані",
+    "macOptionIsMetaShortDesc": "Вимкнути введення спеціальних символів (наприклад, @ або |) за допомогою клавіші Option/Alt у macOS замість надсилання Meta",
+    "moshCommand": "Команда MOSH",
+    "moshCommandLabel": "Команда Моша",
+    "noSavedThemes": "Ще немає збережених тем",
+    "none": "Жоден",
+    "passwordPromptAutoFillDesc": "Пропонувати ввести збережений пароль, коли термінал запитує його. Вимкніть, щоб ніколи не вводити пароль автоматично на цьому хості.",
+    "passwordPromptAutoFillLabel": "Автоматичне заповнення пароля пропозиції",
+    "autoReconnectLabel": "Автоматичне повторне підключення",
+    "autoReconnectDesc": "Самостійно перепідключається, коли SSH-з'єднання обривається, наприклад, після збою мережі або сну. Зберігає прокрутку назад.",
+    "rightClickSelectsWord": "Вибір слова клацанням правою кнопкою миші",
+    "rightClickSelectsWordLabel": "Клацання правою кнопкою миші Вибір слова",
+    "rightClickSelectsWordShortDesc": "Вибір слова під курсором при клацанні правою кнопкою миші",
+    "saveAsGlobalTheme": "Зберегти як глобальну тему",
+    "saveGlobalThemeError": "Не вдалося зберегти тему",
+    "saveGlobalThemeNamePrompt": "Введіть назву для цієї теми",
+    "saveGlobalThemeSuccess": "Тему збережено",
+    "savedThemesLabel": "Збережені теми",
+    "scrollbackBufferLabel": "Буфер прокручування",
+    "scrollbackMaxLines": "Максимальна кількість рядків, що зберігаються в історії",
+    "sudoPasswordAutoFill": "Автозаповнення пароля Sudo",
+    "sudoPasswordAutoFillDesc": "Зберігайте пароль sudo, щоб метрики хоста, запити терміналу та інші могли автоматично запускати привілейовані команди.",
+    "sudoPasswordAutoFillLabel": "Автозаповнення пароля Sudo",
+    "syntaxCategoryIpAddresses": "IP-адреси",
     "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
-    "syntaxCategoryLogLevels": "Log Levels",
-    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
-    "syntaxCategoryNumbers": "Labeled Numbers",
-    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
-    "syntaxCategoryPaths": "File Paths",
-    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
-    "syntaxCategoryTimestamps": "Timestamps",
-    "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
-    "syntaxCategoryUrls": "URLs",
+    "syntaxCategoryLogLevels": "Рівні журналів",
+    "syntaxCategoryLogLevelsDesc": "помилка, попередження, інформація, налагодження, фатальний",
+    "syntaxCategoryNumbers": "Позначені числа",
+    "syntaxCategoryNumbersDesc": "порт 8080, вихід 1, статус 404",
+    "syntaxCategoryPaths": "Шляхи до файлів",
+    "syntaxCategoryPathsDesc": "/usr/share/doc, ~/файл.txt",
+    "syntaxCategoryTimestamps": "Позначки часу",
+    "syntaxCategoryTimestampsDesc": "[12:34:56], 15 січня 2024 р.",
+    "syntaxCategoryUrls": "URL-адреси",
     "syntaxCategoryUrlsDesc": "https://example.com",
-    "syntaxHighlightingDesc": "Colorize terminal output (errors, paths, IPs, timestamps)",
-    "syntaxHighlightingLabel": "Syntax Highlighting",
-    "terminalAppearance": "Terminal Appearance",
-    "theme": "Theme",
-    "themePreview": "Theme Preview",
-    "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
-    "useSSHTitleLabel": "Use SSH Window Title",
-    "enableTunnel": "Enable Tunnel",
-    "enableFileManager": "Enable File Manager",
-    "enableDocker": "Enable Docker",
-    "startupSnippet": "Startup Snippet",
-    "quickActions": "Quick Actions",
+    "syntaxHighlightingDesc": "Розфарбувати вивід терміналу (помилки, шляхи, IP-адреси, позначки часу)",
+    "syntaxHighlightingLabel": "Підсвічування синтаксису",
+    "terminalAppearance": "Зовнішній вигляд терміналу",
+    "theme": "Тема",
+    "themePreview": "Попередній перегляд теми",
+    "useSSHTitleDesc": "Оновіть заголовок вкладки з заголовка вікна оболонки, а не з назви хоста.",
+    "useSSHTitleLabel": "Використовувати заголовок вікна SSH",
+    "enableTunnel": "Увімкнути тунель",
+    "enableFileManager": "Увімкнути файловий менеджер",
+    "enableDocker": "Увімкнути Докер",
+    "startupSnippet": "Фрагмент запуску",
+    "quickActions": "Швидкі дії",
     "proxmoxLastSyncStatus": {
-      "success": "Success"
+      "success": "Успіх"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
-    "rdpUrlCopied": "RDP URL copied",
-    "vncUrlCopied": "VNC URL copied",
-    "filterAuthStepca": "Step CA",
+    "proxmoxResultSkippedNoIp": "{{count}} пропущено (IP-адресу не знайдено)",
+    "proxmoxStatsUrlCopied": "URL-адресу статистики Proxmox скопійовано в буфер обміну",
+    "rdpUrlCopied": "URL-адресу RDP скопійовано",
+    "vncUrlCopied": "URL-адресу VNC скопійовано",
+    "filterAuthStepca": "Крок CA",
     "guac": {
-      "noCredential": "No credential (direct credentials below)",
-      "authTypeDirect": "Direct",
-      "authTypeCredential": "Credential",
-      "authTypeNone": "None",
-      "recordingPath": "Recording Path",
-      "recordingName": "Recording Name",
-      "saveHostFirst": "Save the host first.",
-      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
-      "permissionLevel": "Permission Level",
-      "typeHeader": "Type",
-      "targetHeader": "Target",
-      "permissionHeader": "Permission",
-      "cancelBtn": "Cancel",
-      "savingBtn": "Saving...",
-      "updateHostBtn": "Update Host",
-      "addHostBtn": "Add Host"
+      "noCredential": "Без посвідчень (прямі посвідчення нижче)",
+      "authTypeDirect": "Прямий",
+      "authTypeCredential": "Посвідчення",
+      "authTypeNone": "Жоден",
+      "recordingPath": "Шлях запису",
+      "recordingName": "Назва запису",
+      "saveHostFirst": "Спочатку збережіть хост.",
+      "sharingOptionsAfterSave": "Опції спільного доступу доступні після збереження хоста.",
+      "permissionLevel": "Рівень дозволів",
+      "typeHeader": "Тип",
+      "targetHeader": "Ціль",
+      "permissionHeader": "Дозвіл",
+      "cancelBtn": "Скасувати",
+      "savingBtn": "Збереження...",
+      "updateHostBtn": "Оновити хост",
+      "addHostBtn": "Додати хоста"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Сховище"
   },
   "nav": {
-    "history": "History",
-    "localTerminal": "Local Terminal",
-    "sshTools": "SSH Tools",
-    "terminal": "Terminal",
-    "macros": "Macros"
+    "history": "Історія",
+    "localTerminal": "Місцевий термінал",
+    "sshTools": "SSH-інструменти",
+    "terminal": "Термінал",
+    "macros": "Макроси"
   },
   "sshTools": {
-    "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
-    "copyOnSelect": "Copy selected text automatically",
-    "enableRightClickCopyPaste": "Enable right-click copy/paste",
-    "fillPassword": "Fill password",
-    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
-    "fillPasswordSuccess": "Filled password into {{count}} terminal(s)",
-    "keyRecordingTitle": "Key Recording",
-    "noTerminalTabsOpen": "No terminal tabs open",
-    "recordToTerminals": "Record to terminals",
-    "selectAll": "All",
-    "selectNone": "None",
-    "selectTerminalsAbove": "Select terminals above",
-    "settingsTitle": "Settings",
-    "startRecording": "Start Recording",
-    "stopRecording": "Stop Recording"
+    "broadcastInputPlaceholder": "Введіть тут, щоб транслювати натискання клавіш...",
+    "copyOnSelect": "Автоматичне копіювання вибраного тексту",
+    "enableRightClickCopyPaste": "Увімкнути копіювання/вставку, клацнувши правою кнопкою миші",
+    "fillPassword": "Заповніть пароль",
+    "fillPasswordMissing": "Немає збереженого пароля для {{count}} вибраних терміналів",
+    "fillPasswordSuccess": "Пароль введено в {{count}} термінал(и)",
+    "keyRecordingTitle": "Запис клавіш",
+    "noTerminalTabsOpen": "Немає відкритих вкладок терміналу",
+    "recordToTerminals": "Запис на термінали",
+    "selectAll": "Усі",
+    "selectNone": "Жоден",
+    "selectTerminalsAbove": "Виберіть термінали вище",
+    "settingsTitle": "Налаштування",
+    "startRecording": "Почати запис",
+    "stopRecording": "Зупинити запис"
   },
   "keybindings": {
-    "copy": "Copy selection",
-    "paste": "Paste",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "copy": "Копіювати виділення",
+    "paste": "Вставити",
+    "sendControlCode": "Надіслати сигнал Ctrl+літера",
+    "sendText": "Надіслати текст",
+    "controlCodeLabel": "Лист",
+    "textLabel": "Текст для надсилання",
+    "appendEnterLabel": "Натисніть Enter після відправлення",
+    "clipboardPermissionNote": "У деяких браузерах може запитуватися дозвіл на використання буфера обміну під час першого використання.",
+    "textRequired": "Введіть текст для надсилання",
+    "controlCodeRequired": "Введіть одну літеру для контрольного коду",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Копіювати виділення (Ctrl+C, лише якщо виділено текст)",
+      "copyCtrlShiftC": "Копіювати виділення (Ctrl+Shift+C)",
+      "copyCmdC": "Копіювати виділення (Cmd+C)",
+      "pasteCtrlShiftV": "Вставити з буфера обміну (Ctrl+Shift+V)",
+      "ctrlW": "Надіслати Ctrl+W до оболонки (блоковано закриття вкладки браузера)",
+      "ctrlT": "Надіслати Ctrl+T до оболонки (заблоковано відкриття вкладки браузера)",
+      "ctrlN": "Надіслати Ctrl+N до оболонки (заблоковано відкриття вікна браузера)",
+      "ctrlQ": "Надіслати Ctrl+Q до оболонки (заблоковано закриття браузера)"
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
-    "target": "Target",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
-    "name": "Name",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
-    "descriptionLabel": "Description",
-    "descriptionPlaceholder": "What this macro does (optional)",
-    "unsaved": "Unsaved changes",
-    "save": "Save",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
-    "delete": "Delete",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
-    "cancel": "Cancel",
-    "run": "Run",
-    "stop": "Stop",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "title": "Макроси",
+    "description": "Виконайте збережену серію команд у терміналі та відреагуйте на те, що надсилає сервер.",
+    "target": "Ціль",
+    "noTerminal": "Термінал не відкритий",
+    "empty": "Поки що немає макросів",
+    "emptyHint": "Створіть макрос для автоматизації процесу роботи термінала, такого як вхід у систему, перезапуск служби або відповідь на запити.",
+    "create": "Новий макрос",
+    "back": "Повернутися до макросів",
+    "name": "Ім'я",
+    "namePlaceholder": "Перезапустіть веб-сервер",
+    "nameRequired": "Дайте макросу ім'я перед збереженням",
+    "descriptionLabel": "Опис",
+    "descriptionPlaceholder": "Що робить цей макрос (необов'язково)",
+    "unsaved": "Незбережені зміни",
+    "save": "Зберегти",
+    "saved": "Макрос збережено",
+    "saveFailed": "Не вдалося зберегти макрос",
+    "delete": "Видалити",
+    "deleteTitle": "Видалити цей макрос?",
+    "deleteBody": "«{{name}}» буде видалено назавжди. Цю дію неможливо скасувати.",
+    "deleted": "Макрос видалено",
+    "cancel": "Скасувати",
+    "run": "Бігти",
+    "stop": "СТІЙ",
+    "running": "Біг...",
+    "completed": "Макрос завершено",
+    "failed": "Помилка макросу",
+    "loadFailed": "Не вдалося завантажити макроси",
+    "needTerminal": "Спочатку відкрийте та підключіть термінал",
+    "noSteps": "Цей макрос ще не має кроків. Додайте один нижче.",
+    "addStep": "Додати крок",
+    "stepNumber": "Крок {{number}}",
+    "removeStep": "Видалити крок",
+    "confirmRunTitle": "Запустити цей макрос?",
+    "confirmRunBody": "\"{{name}}\" надсилатиме команди до {{host}}.",
+    "confirmRunAction": "Запустити макрос",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "Надіслати команду",
+        "help": "Вводить текст у термінал так само, як і надруковано."
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "Зачекайте на вивід",
+        "help": "Призупиняється, доки сервер не надрукує вказаний вами текст, наприклад, запит на пароль."
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "Пауза",
+        "help": "Очікує фіксований проміжок часу перед наступним кроком."
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "Якщо вихід містить",
+        "help": "Перевіряє все, що сервер надрукував до цього часу, а потім запускає одну з двох гілок."
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "Повторити",
+        "help": "Виконує кроки всередині нього задану кількість разів."
       }
     },
     "send": {
-      "text": "Command or text",
-      "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "text": "Команда або текст",
+      "textPlaceholder": "перезапуск systemctl nginx",
+      "pressEnter": "Натисніть Enter після відправлення",
+      "pressEnterHelp": "Вимкніть цю функцію, щоб вводити текст, не надсилаючи його."
     },
     "wait": {
-      "pattern": "Wait until the output contains",
-      "patternPlaceholder": "password:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "pattern": "Зачекайте, поки вихідні дані міститимуть",
+      "patternPlaceholder": "пароль:",
+      "timeout": "Здайся після",
+      "onTimeout": "Якщо воно ніколи не з'явиться",
+      "stop": "Зупинити макрос",
+      "continue": "Продовжуй у будь-якому разі"
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "Зачекайте"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "Якщо вихід містить",
+      "patternPlaceholder": "Активний: активний (працює)",
+      "then": "Тоді зробіть це",
+      "else": "Інакше зробіть це",
+      "emptyBranch": "Без сходинок"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "Кількість разів",
+      "times": "рази"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "Зіставлення з регулярним виразом",
+      "useRegexHelp": "Не виключайте це, щоб текст точно відповідав написаному.",
+      "invalidRegex": "Недійсний регулярний вираз, буде знайдено звичайний текст"
     },
-    "seconds": "seconds",
-    "secondsShort": "{{count}}s"
+    "seconds": "секунди",
+    "secondsShort": "{{count}}с"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Потрібен віддалений сервер. Підключіться до віддаленого сервера в налаштуваннях, щоб використовувати цей тип підключення."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

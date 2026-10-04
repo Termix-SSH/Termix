@@ -25,8 +25,8 @@
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "autoTmuxEnableFailed": "Nie udało się włączyć funkcji Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux włączony dla {{host}}. Ma zastosowanie od następnego połączenia.",
     "clipboardHttpWarning": "Nie udało się odczytać schowka. Niektóre przeglądarki ograniczają dostęp do schowka poza HTTPS. Użyj Ctrl+V albo udostępniaj Termix przez HTTPS.",
     "closeTab": "Zamknij",
     "connecting": "Łączenie...",
@@ -44,7 +44,7 @@
     "reconnect": "Połącz ponownie",
     "reconnected": "Połączono ponownie pomyślnie",
     "reconnecting": "Ponowne łączenie... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
+    "autoReconnecting": "Utracono połączenie, łączę ponownie...",
     "searchCaseSensitive": "Uwzględnij wielkość liter",
     "searchClose": "Zamknij (Esc)",
     "searchNext": "Następne dopasowanie (Enter)",
@@ -54,8 +54,8 @@
     "searchRegex": "Użyj wyrażenia regularnego",
     "searchResultCount": "{{index}} z {{count}}",
     "searchWholeWord": "Dopasuj całe słowo",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNotice": "Twoja poprzednia sesja z {{host}} wygasła po {{minutes}} minutach odłączenia. Powłoka i wszystko, co w niej działa, zniknęło. Włącz Auto-Tmux na tym hoście, aby sesje pozostały aktywne.",
+    "sessionExpiredNoticeNoMinutes": "Twoja poprzednia sesja na {{host}} wygasła podczas rozłączenia; powłoka i wszystko, co w niej działa, zniknęło. Włącz Auto-Tmux na tym hoście, aby sesje pozostały aktywne.",
     "sessionTakenOver": "Sesja została otwarta w innej karcie. Ponowne łączenie...",
     "tmuxAttached": "Dołączeni klienci",
     "tmuxAttachedCount": "{{count}} dołączonych",
@@ -81,15 +81,15 @@
     "clipboardWriteFailed": "Nie udało się skopiować do schowka. Upewnij się, że strona jest serwowana przez HTTPS lub localhost.",
     "connected": "Połączono",
     "totpCodeLabel": "Kod weryfikacyjny",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "duplicateTab": "Duplikuj kartę",
+    "imageChooseFile": "Wybierz plik obrazu",
+    "imageUploaded": "Przesłano obraz: {{path}}",
+    "imageClipboardUnavailable": "Ta przeglądarka nie może odczytać obrazów ze schowka",
+    "imageClipboardEmpty": "Nie znaleziono obrazu w schowku",
+    "localShell": "Lokalna powłoka terminala",
+    "autocompleteHintComplete": "Aby zakończyć, naciśnij Tab lub Enter",
+    "autocompleteHintNavigate": "↑↓ aby nawigować",
+    "autocompleteHintClose": "Esc, aby zamknąć"
   },
   "terminalToolbar": {
     "detachTmux": "Odłącz tmux",
@@ -119,9 +119,9 @@
     "clearAll": "Wyczyść wszystko",
     "noHistoryEntries": "Brak wpisów w historii",
     "trackingDisabled": "Śledzenie historii jest wyłączone",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "trackingDisabledHint": "Włącz historię poleceń na karcie terminala SSH tego hosta.",
+    "commandCount_one": "polecenie {{count}}",
+    "commandCount_other": "polecenia {{count}}"
   },
   "touchInput": {
     "enabled": "Włącz wprowadzanie dotykowe",
@@ -162,19 +162,19 @@
         "touch": "Wprowadzanie dotykowe",
         "images": "Przechowywanie obrazów",
         "sessions": "Sesje",
-        "newHosts": "New Hosts"
+        "newHosts": "Nowi gospodarze"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Trwałość sesji terminalowej",
+        "description": "Jak długo odłączony terminal jest utrzymywany aktywny na serwerze przed jego zamknięciem. Min. 1, maks. 1440 minut. W przypadku sesji, które muszą przetrwać ten czas, włącz funkcję Auto-Tmux na hoście."
       },
       "commandHistoryEnabled": {
         "label": "Historia poleceń",
         "description": "Zezwól na rejestrowanie historii poleceń. Po wyłączeniu historia nie jest zapisywana, niezależnie od ustawień poszczególnych hostów."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "Historia poleceń dla nowych hostów",
+        "description": "Czy nowi gospodarze rozpoczynają pracę z włączoną historią poleceń."
       },
       "imageStorageMode": {
         "label": "Tryb przechowywania",
@@ -185,7 +185,7 @@
       },
       "imageLocalDir": {
         "label": "Katalog lokalny",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "description": "Ścieżka bezwzględna w zapleczu Termix, gdzie tryb lokalny zapisuje obrazy. Nigdy nie jest wyświetlana po zapisaniu. Pusta ścieżka używa TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
         "label": "Ścieżka hosta",
@@ -193,41 +193,41 @@
       },
       "imageTtlMs": {
         "label": "Czas życia (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "description": "Czas przechowywania przesłanego obrazu (w milisekundach). Wartość „pusta” oznacza TERMIX_IMAGE_TTL_MS lub jedną godzinę."
       },
       "imageMaxCount": {
         "label": "Maksymalna liczba obrazów",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "description": "Większość obrazów jest przechowywana jednocześnie. Puste używa TERMIX_MAX_IMAGE_COUNT lub 100."
       },
       "imageMaxBytes": {
         "label": "Maksymalny rozmiar magazynu (bajty)",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "description": "Największa ilość bajtów obrazów przechowywana jednocześnie. Pusty zajmuje TERMIX_MAX_IMAGE_STORAGE_BYTES lub 5 GiB."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Zachowaj sesje po rozłączeniu",
+        "description": "Utrzymuj odłączony terminal aktywny na serwerze przez podany powyżej czas, tak aby ponowne otwarcie jego karty powodowało kontynuację pracy od miejsca, w którym została przerwana."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "description": "Uruchom nowe terminale hostów w tmux, aby sesje przetrwały rozłączenia (wymaga tmux na hoście)"
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Motyw dla nowych gospodarzy",
+        "description": "Motyw terminala, z którym rozpoczyna pracę nowy host."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Czcionka dla nowych gospodarzy",
+        "description": "Czcionka terminala, od której zaczyna nowy host."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Rozmiar czcionki dla nowych gospodarzy",
+        "description": "Rozmiar czcionki terminala, od którego zaczyna nowy host (w pikselach)."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Styl kursora dla nowych hostów"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Migający kursor dla nowych hostów"
       }
     },
     "host": {
@@ -236,36 +236,36 @@
         "description": "Pokaż pasek narzędzi szybkiego dostępu zadokowany do aktywnego terminala, umożliwiający dostęp do narzędzi i statystyk na żywo tego hosta"
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Pozycja paska narzędzi",
+        "description": "Miejsce, w którym znajduje się pasek narzędzi w terminalu. Nadal możesz go stamtąd przeciągnąć.",
+        "bottom": "Dolny środek",
+        "bottomLeft": "Lewy dolny róg",
+        "bottomRight": "Prawy dolny róg",
+        "top": "Środek góry",
+        "topLeft": "Lewy górny róg",
+        "topRight": "Prawy górny róg"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Stan początkowy paska narzędzi",
+        "description": "Czy pasek narzędzi otwiera się w formie rozwiniętej czy zminimalizowanej po nawiązaniu połączenia z terminalem",
+        "expanded": "Rozszerzony",
+        "collapsed": "Zminimalizowany"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
+        "label": "Tryb wyświetlania paska narzędzi",
+        "description": "Jak wyświetlane są przyciski na pasku narzędzi. Ostatnio użyte przyciski zachowują to, co wybrałeś na pasku narzędzi.",
+        "remember": "Ostatnio używane",
         "icon": "Tylko ikona",
         "labeled": "Ikony i etykiety",
-        "expanded": "Expanded with stats"
+        "expanded": "Rozszerzone o statystyki"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Pokaż statystyki na żywo",
+        "description": "Pokaż statystyki gospodarza na żywo nad przyciskami paska narzędzi w trybie rozszerzonym"
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Zanikanie w stanie bezczynności",
+        "description": "Wygasz pasek narzędzi, aż najedziesz na niego kursorem"
       },
       "enableCommandHistory": {
         "label": "Historia poleceń",
@@ -273,61 +273,61 @@
       },
       "enableTerminal": {
         "label": "Włącz terminal",
-        "description": "Offer an SSH terminal for this host."
+        "description": "Zaoferuj terminal SSH dla tego hosta."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Użyj domyślnych ustawień użytkownika"
       },
       "theme": {
         "label": "Motyw"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Migający kursor"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "Styl kursora"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "Rozmiar czcionki"
       },
       "fontFamily": {
-        "label": "Font"
+        "label": "Chrzcielnica"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Przewiń w tył"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "Odstępy między literami"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Wysokość linii"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Dzwonek"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Minimalny współczynnik kontrastu"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Obraz tła"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Krycie obrazu tła"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Niestandardowe kolory motywu"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Kliknięcie prawym przyciskiem myszy zaznacza słowo"
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Opcja jest Meta"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Klawisz szybkiego przewijania"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Szybka prędkość przewijania"
       },
       "backspaceMode": {
         "label": "Backspace"
@@ -336,34 +336,34 @@
         "label": "Auto mosh"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Komenda Mosh"
       },
       "autoTmux": {
         "label": "Auto tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "Użyj tytułu SSH"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Podświetlanie składni"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Kategorie wyróżniania składni"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Kliknij link"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Lokalne echo"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Zaoferuj wypełnienie monitu o hasło"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "Wypełnij monity sudo"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Połącz ponownie automatycznie"
       }
     },
     "user": {
@@ -380,7 +380,7 @@
         "description": "Domyślne zachowanie po kliknięciu linków w terminalu"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Zapisane motywy"
       }
     }
   },
@@ -389,12 +389,12 @@
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Korzystaj z sesji terminalowych na żywo",
+      "description": "Umożliwia innym funkcjom, takim jak udostępnianie sesji i nagrywanie, dostęp do sesji terminalowych na żywo."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Przeczytaj historię poleceń",
+      "description": "Umożliwia innym funkcjom, takim jak asystent AI, odczytywanie historii poleceń."
     }
   },
   "hosts": {
@@ -405,25 +405,25 @@
     "backgroundImageLabel": "Adres URL obrazu tła",
     "backgroundImageOpacityLabel": "Krycie obrazu tła",
     "backspaceMode": "Tryb Backspace",
-    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeControlH": "Sterowanie-H (BS)",
     "backspaceModeLabel": "Tryb Backspace",
-    "backspaceModeNormal": "Normal (DEL)",
+    "backspaceModeNormal": "Normalny (DEL)",
     "behaviorAndAdvanced": "Zachowanie i zaawansowane",
     "bellStyle": "Styl dzwonka",
-    "bellStyleBoth": "Both",
+    "bellStyleBoth": "Obydwa",
     "bellStyleLabel": "Styl dzwonka",
     "bellStyleNone": "Żaden",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
+    "bellStyleSound": "Dźwięk",
+    "bellStyleVisual": "Wizualny",
     "colorTheme": "Motyw kolorów",
     "cursorBlink": "Miganie kursora",
     "cursorBlinking": "Miganie kursora",
     "cursorBlinkingDesc": "Włącz animację migania kursora terminala",
     "cursorStyle": "Styl kursora",
     "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
+    "cursorStyleBlock": "Blok",
     "cursorStyleLabel": "Styl kursora",
-    "cursorStyleUnderline": "Underline",
+    "cursorStyleUnderline": "Podkreślać",
     "customThemeAnsiColors": "Kolory ANSI",
     "customThemeBackground": "Tło",
     "customThemeBlack": "Czarny",
@@ -453,7 +453,7 @@
     "enableAutoMosh": "Włącz Auto-Mosh",
     "enableAutoMoshDesc": "Jeśli to możliwe, preferuj Mosh zamiast SSH",
     "enableAutoTmux": "Włącz Auto-Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "enableAutoTmuxDesc": "Utrzymuj działanie powłoki i wszystkiego, co w niej działa, nawet po rozłączeniu i ponownym uruchomieniu przeglądarki, uruchamiając ją wewnątrz tmux (tmux musi być zainstalowany na hoście).",
     "fastScrollModifier": "Modyfikator szybkiego przewijania",
     "fastScrollModifierAlt": "Alt",
     "fastScrollModifierCtrl": "Ctrl",
@@ -489,10 +489,10 @@
     "moshCommandLabel": "Polecenie Mosh",
     "noSavedThemes": "Brak zapisanych motywów",
     "none": "Brak",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "passwordPromptAutoFillDesc": "Zaproponuj wpisanie zapisanego hasła, gdy terminal o nie poprosi. Wyłącz tę opcję, aby nigdy nie wpisywać automatycznie żadnego hasła na tym hoście.",
+    "passwordPromptAutoFillLabel": "Oferta automatycznego uzupełniania hasła",
+    "autoReconnectLabel": "Automatyczne ponowne łączenie",
+    "autoReconnectDesc": "Ponowne połączenie następuje automatycznie po utracie połączenia SSH, np. po awarii sieci lub uśpieniu. Utrzymuje przewijanie.",
     "rightClickSelectsWord": "Kliknięcie prawym przyciskiem myszy zaznacza słowo",
     "rightClickSelectsWordLabel": "Kliknięcie prawym przyciskiem myszy powoduje zaznaczenie słowa",
     "rightClickSelectsWordShortDesc": "Zaznacza słowo pod kursorem po kliknięciu prawym przyciskiem",
@@ -537,7 +537,7 @@
     "proxmoxStatsUrlCopied": "Skopiowano adres URL statystyk Proxmox",
     "rdpUrlCopied": "Skopiowano adres URL RDP",
     "vncUrlCopied": "Skopiowano adres URL VNC",
-    "filterAuthStepca": "Step CA",
+    "filterAuthStepca": "Krok CA",
     "guac": {
       "noCredential": "Brak poświadczenia (dane bezpośrednie poniżej)",
       "authTypeDirect": "Bezpośredni",
@@ -556,7 +556,7 @@
       "updateHostBtn": "Aktualizuj hosta",
       "addHostBtn": "Dodaj hosta"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Sklepienie"
   },
   "nav": {
     "history": "Historia",
@@ -567,7 +567,7 @@
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Wpisz tutaj, aby rozesłać naciśnięcia klawiszy...",
-    "copyOnSelect": "Copy selected text automatically",
+    "copyOnSelect": "Kopiuj zaznaczony tekst automatycznie",
     "enableRightClickCopyPaste": "Włącz kopiowanie/wklejanie prawym przyciskiem myszy",
     "fillPassword": "Wpisz hasło",
     "fillPasswordMissing": "Brak zapisanego hasła dla {{count}} wybranych terminali",
@@ -594,14 +594,14 @@
     "textRequired": "Wprowadź tekst do wysłania",
     "controlCodeRequired": "Wprowadź pojedynczą literę kodu kontrolnego",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Kopiuj zaznaczenie (Ctrl+C, tylko gdy zaznaczony jest tekst)",
+      "copyCtrlShiftC": "Kopiuj zaznaczenie (Ctrl+Shift+C)",
+      "copyCmdC": "Kopiuj zaznaczenie (Cmd+C)",
+      "pasteCtrlShiftV": "Wklej ze schowka (Ctrl+Shift+V)",
+      "ctrlW": "Wyślij Ctrl+W do powłoki (zablokowano możliwość zamknięcia karty przeglądarki)",
+      "ctrlT": "Wyślij Ctrl+T do powłoki (zablokowano otwieranie karty przeglądarki)",
+      "ctrlN": "Wyślij Ctrl+N do powłoki (zablokowane otwieranie okna przeglądarki)",
+      "ctrlQ": "Wyślij Ctrl+Q do powłoki (zablokowane przed zamknięciem przeglądarki)"
     }
   },
   "macros": {
@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

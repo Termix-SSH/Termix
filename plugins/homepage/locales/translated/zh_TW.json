@@ -18,7 +18,7 @@
   "homepage": {
     "title": "首頁",
     "addWidget": "新增小工具",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "此類別中沒有小工具",
     "editWidget": "編輯小工具",
     "zoomIn": "放大",
     "zoomOut": "縮小",
@@ -39,7 +39,7 @@
     "description": "描述",
     "color": "顏色",
     "timezone": "時區",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "時區無效。請使用 IANA 名稱，例如 America/New_York。",
     "showSeconds": "顯示秒數",
     "format12h": "12 小時制",
     "content": "內容",
@@ -60,9 +60,9 @@
     "maxItems": "最大項目數",
     "showDescription": "顯示描述",
     "widgetRssName": "RSS 摘要",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "在小工具設定中設定資訊來源 URL",
+    "rssLoadError": "無法載飼料",
+    "rssNoItems": "無商品",
     "noHostSelected": "未選取主機",
     "displayedMetrics": "顯示的指標",
     "metricCpu": "CPU",
@@ -162,29 +162,164 @@
     "selectHosts": "選取主機",
     "listLayout": "清單",
     "gridLayout": "格線",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "在小工具設定中設定 URL",
+    "embeddedContent": "嵌入式內容",
+    "noBookmarks": "沒有書籤",
+    "noSections": "未設定任何部分。",
+    "noServices": "未設定任何服務。",
+    "configureLocation": "在小部件設定中設定位置",
+    "bannerTextPlaceholder": "橫幅文字",
+    "serviceNamePlaceholder": "我的服務",
+    "emptyNote": "Empty note...",
+    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
+    "feelsLike": "Feels like {{temperature}}",
+    "timezonePlaceholder": "America/New_York (leave blank for local)",
+    "notesPlaceholder": "Write your notes here...",
+    "locationPlaceholder": "New York, London, Tokyo...",
+    "widgets": {
+      "bookmark_list": {
+        "name": "Bookmarks",
+        "description": "A list of quick links"
+      },
+      "calendar": {
+        "name": "Calendar",
+        "description": "A month calendar with today highlighted"
+      },
+      "clock": {
+        "name": "Clock",
+        "description": "A live clock with configurable timezone"
+      },
+      "countdown": {
+        "name": "Countdown",
+        "description": "Counts down to a target date and time"
+      },
+      "custom_api": {
+        "name": "Custom API",
+        "description": "Fetch and display data from any JSON API"
+      },
+      "dashboard_links": {
+        "name": "Dashboard Links",
+        "description": "Shows your saved dashboard service links"
+      },
+      "folder": {
+        "name": "Folder",
+        "description": "A background card for grouping widgets visually"
+      },
+      "host_grid": {
+        "name": "Host Grid",
+        "description": "Live status overview grid for all your SSH hosts"
+      },
+      "host_status": {
+        "name": "Host Status",
+        "description": "Shows live status and metrics for an SSH host"
+      },
+      "iframe_embed": {
+        "name": "iFrame Embed",
+        "description": "Embed any URL in an iframe"
+      },
+      "image_widget": {
+        "name": "Image",
+        "description": "Display any image from a URL"
+      },
+      "link_tree": {
+        "name": "Link Tree",
+        "description": "Grouped links organized into labeled sections"
+      },
+      "markdown_notes": {
+        "name": "Markdown Notes",
+        "description": "Notes with optional Markdown rendering and inline editing"
+      },
+      "notes": {
+        "name": "Notes",
+        "description": "A text notes widget"
+      },
+      "ping_status": {
+        "name": "Ping Status",
+        "description": "Check if URLs or services are reachable"
+      },
+      "quick_connect": {
+        "name": "Quick Connect",
+        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+      },
+      "recent_activity": {
+        "name": "Recent Activity",
+        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+      },
+      "rss_feed": {
+        "name": "RSS Feed",
+        "description": "Display items from an RSS or Atom feed"
+      },
+      "search_bar": {
+        "name": "Search Bar",
+        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+      },
+      "search_links": {
+        "name": "Search Shortcuts",
+        "description": "Quick buttons to search different engines"
+      },
+      "service_grid": {
+        "name": "Service Grid",
+        "description": "A grid of service tiles with icons and links"
+      },
+      "service_link": {
+        "name": "Service Link",
+        "description": "A clickable tile linking to a service URL"
+      },
+      "ssh_terminal": {
+        "name": "SSH Terminal",
+        "description": "An inline SSH terminal connected to a configured host"
+      },
+      "system_overview": {
+        "name": "System Overview",
+        "description": "Termix version, database health, and uptime at a glance"
+      },
+      "termix_uptime": {
+        "name": "Termix Uptime",
+        "description": "Shows how long the Termix server has been running"
+      },
+      "text_banner": {
+        "name": "Text Banner",
+        "description": "A styled text label for sections and headings"
+      },
+      "weather": {
+        "name": "Weather",
+        "description": "Live weather for any location"
+      },
+      "docker_widget": {
+        "name": "Docker Manager",
+        "description": "Embedded Docker container manager for a configured host"
+      },
+      "file_manager_widget": {
+        "name": "File Manager",
+        "description": "Embedded SFTP file manager for a configured host"
+      },
+      "tunnel_widget": {
+        "name": "Tunnel Manager",
+        "description": "Embedded SSH tunnel manager for a configured host"
+      },
+      "metrics_chart": {
+        "name": "Metrics Chart",
+        "description": "Historical CPU, memory, disk, or network chart for a host"
+      }
+    }
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "使用主頁",
+      "description": "查看和編輯首頁畫布和儀錶板服務連結。"
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "允許的私人主機",
+      "description": "用於 Ping 狀態和自訂 API 小工具的精確私有或環回主機名稱/IP 位址。條目之間以逗號或換行符號分隔；省略協定、連接埠和路徑。空值會封鎖私有目標位址。"
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "私有憑證授權單位（PEM）",
+      "description": "可選的受信任 CA 憑證包，適用於已列入允許清單的主機。憑證驗證功能仍然啟用。留空則使用系統信任儲存。"
     }
+  },
+  "plugin": {
+    "name": "Homepage"
   }
 }

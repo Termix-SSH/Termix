@@ -1,7 +1,7 @@
 import { getErrorMessage } from "../lib/error-message.js";
 import { enabledHostProtocols, useHostProtocols } from "./host-protocols";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import {
@@ -53,6 +53,8 @@ import {
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
+import { withLiveStatus } from "@/sidebar/live-host-status";
+import { useServerStatus } from "@/lib/ServerStatusContext";
 import { useHostSidebarPreferences } from "@/sidebar/tree/hooks/useHostSidebarPreferences";
 import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import type {
@@ -137,9 +139,7 @@ function hostPassesFilters(
   if (filters.status.length > 0) {
     const ok =
       (filters.status.includes("online") && host.online) ||
-      (filters.status.includes("offline") &&
-        host.status !== "reachable" &&
-        !host.online) ||
+      (filters.status.includes("offline") && host.status === "offline") ||
       (filters.status.includes("pinned") && !!host.pin);
     if (!ok) return false;
   }
@@ -219,6 +219,13 @@ export function HostsPanel({
   active?: boolean;
 }) {
   const { t } = useTranslation();
+  const { statuses, getStatus } = useServerStatus();
+  const liveHostTree = useMemo(
+    () => (hostTree ? withLiveStatus(hostTree, getStatus) : undefined),
+    // statuses changes identity whenever a host's status changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [hostTree, statuses, getStatus],
+  );
   const hostSwitchPlugins = usePluginHostSections().filter(
     (plugin) => !!plugin.contributes?.settings?.host?.enableKey,
   );
@@ -1028,10 +1035,10 @@ export function HostsPanel({
         <div className="flex flex-col flex-1 min-h-0">
           <SidebarTree
             children={
-              hostTree
+              liveHostTree
                 ? groupHosts(
                     applyFilters(
-                      sortHostTree(hostTree, sortKey, pinnedFirst),
+                      sortHostTree(liveHostTree, sortKey, pinnedFirst),
                       filterState,
                       hostSwitches,
                     ),

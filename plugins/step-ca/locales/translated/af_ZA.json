@@ -44,5 +44,8 @@
       "label": "Gebruik die ou aanstuur-URI",
       "description": "Hou aan om /host/step-ca-callback te stuur, die aanstuur-URI wat voor 2.9 gebruik is. Skakel dit af sodra jou identiteitsverskaffer die nuwe een toelaat."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

@@ -25,9 +25,9 @@
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "autoTmuxEnableFailed": "Otomatik Tmux etkinleştirme başarısız oldu.",
+    "autoTmuxEnabled": "{{host}}için otomatik Tmux etkinleştirildi. Bu, sonraki bağlantıdan itibaren geçerli olacak.",
+    "clipboardHttpWarning": "Panoyu okuyamadım. Bazı tarayıcılar HTTPS dışında panoya erişimi kısıtlar; bunun yerine Ctrl+V tuş kombinasyonunu deneyin veya Termix'i HTTPS üzerinden sunun.",
     "closeTab": "Kapat",
     "connecting": "Bağlanıyor...",
     "connectionLost": "Bağlantı kesildi",
@@ -44,18 +44,18 @@
     "reconnect": "Yeniden Bağlan",
     "reconnected": "Başarıyla yeniden bağlandı",
     "reconnecting": "Yeniden bağlanıyor... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "autoReconnecting": "Bağlantı kesildi, yeniden bağlanılıyor...",
+    "searchCaseSensitive": "Kibrit Kutusu",
+    "searchClose": "Kapat (Escape)",
+    "searchNext": "Sonraki Maç (Giriş)",
+    "searchNoResults": "Sonuç bulunamadı.",
+    "searchPlaceholder": "Bulmak",
+    "searchPrevious": "Önceki Maç (Shift+Enter)",
+    "searchRegex": "Düzenli İfade Kullanımı",
+    "searchResultCount": "{{index}} / {{count}}",
+    "searchWholeWord": "Kelimenin tamamını eşleştir",
+    "sessionExpiredNotice": "{{host}} üzerindeki önceki oturumunuz {{minutes}} dakika sonra sona erdi; kabuk ve içinde çalışan her şey kayboldu. Oturumların aktif kalması için bu sunucuda Auto-Tmux'u etkinleştirin.",
+    "sessionExpiredNoticeNoMinutes": "{{host}} üzerindeki önceki oturumunuz bağlantı kesikken sona erdi; kabuk ve içinde çalışan her şey kayboldu. Oturumların aktif kalması için bu sunucuda Auto-Tmux'u etkinleştirin.",
     "sessionTakenOver": "Oturum başka bir sekmede açıldı. Yeniden bağlanılıyor...",
     "tmuxAttached": "Bağlı istemciler",
     "tmuxAttachedCount": "{{count}} bağlı",
@@ -81,35 +81,35 @@
     "clipboardWriteFailed": "Panoya kopyalama başarısız oldu. Sayfanın HTTPS veya localhost üzerinden sunulduğundan emin olun.",
     "connected": "Bağlandı",
     "totpCodeLabel": "Doğrulama Kodu",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "duplicateTab": "Sekmeyi çoğalt",
+    "imageChooseFile": "Bir resim dosyası seçin",
+    "imageUploaded": "Yüklenen resim: {{path}}",
+    "imageClipboardUnavailable": "Bu tarayıcı panodan resim okuyamıyor.",
+    "imageClipboardEmpty": "Panoda hiçbir resim bulunamadı.",
+    "localShell": "Yerel terminal kabuğu",
+    "autocompleteHintComplete": "Tab veya Enter tuşuna basarak işlemi tamamlayın.",
+    "autocompleteHintNavigate": "↑↓ gezinmek için",
+    "autocompleteHintClose": "Esc tuşuyla kapatın"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
+    "detachTmux": "tmux'u ayır",
+    "detachTmuxDescription": "Tmux oturumunu ayır",
+    "dismissError": "Görüntü hatasını kapat",
+    "hideToolbar": "Araç çubuğunu gizle",
+    "image": "Görüntü işlemleri (yalnızca görüntüler)",
+    "imageActionFailed": "Görüntü işlemi başarısız oldu",
+    "layout": "Araç çubuğu görüntüleme modu",
+    "layoutExpanded": "Ölçütlerle genişletildi",
+    "layoutIcon": "Yalnızca simge",
+    "layoutLabeled": "Simgeler ve etiketler",
+    "moveToolbar": "Araç çubuğunu taşı",
+    "moveToolbarHint": "Araç çubuğunu yeniden konumlandırmak için sürükleyin.",
+    "paste": "Resmi yapıştır",
+    "pasteImage": "Panodan resim yapıştır (yalnızca resimler)",
     "retry": "Yeniden dene",
     "showToolbar": "Araç çubuğunu genişlet",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
+    "upload": "Resim yükle",
+    "uploadImage": "Sunucuya bir resim yükleyin.",
     "uploadingImage": "Yükleniyor..."
   },
   "history": {
@@ -119,153 +119,153 @@
     "clearAll": "Tümünü Temizle",
     "noHistoryEntries": "Geçmiş girdisi yok",
     "trackingDisabled": "Geçmiş takibi kapalı",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "trackingDisabledHint": "Bu sunucunun SSH Terminal sekmesinde Komut Geçmişini etkinleştirin.",
+    "commandCount_one": "{{count}} komutu",
+    "commandCount_other": "{{count}} komutları"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
-    "advanced": "Advanced",
+    "enabled": "Dokunmatik Girişi Etkinleştir",
+    "enabledDesc": "Terminallerde tek parmakla dokunmatik kaydırmaya izin verin.",
+    "momentumEnabled": "İvme Kazandırın",
+    "momentumEnabledDesc": "Kaydırma işleminden sonra kısa bir süre daha aşağı kaydırmaya devam edin.",
+    "advanced": "Gelişmiş",
     "resetDefaults": "Varsayılanlara sıfırla",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "dragThreshold": "Sürükleme eşiği",
+    "maxWheelDelta": "Maksimum tekerlek deltası",
+    "momentumSampleWindow": "Momentum örnek penceresi",
+    "releaseGracePeriod": "Serbest bırakma erteleme süresi",
+    "minimumVelocity": "Minimum hız",
+    "maximumVelocity": "Maksimum hız",
+    "maximumDuration": "Maksimum süre",
+    "maximumTravel": "Maksimum seyahat",
+    "decayTime": "Bozunma süresi",
+    "pixelsPerTick": "Piksel başına tik",
+    "maximumFrameInterval": "Maksimum kare aralığı",
+    "maximumTicksPerFrame": "Kare başına maksimum tik sayısı"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
+    "instanceId": "Terminal oturum örneği kimliği",
+    "instanceIdDesc": "Görünürlüğü test etmek için kullanılan, bağlı terminal sekmelerinizden birinin örnek kimliği.",
+    "selectedModeUnavailable": "Mevcut değil",
     "test": "Test Et",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "testing": "Test...",
+    "testFailed": "Görüntü depolama testi başarısız oldu.",
+    "testConnected": "Terminal oturumu bağlandı.",
+    "testNotConnected": "Bu örnek kimliğiyle bağlantılı bir terminal oturumu bulunmamaktadır.",
+    "testSelectedMode": "Yükleme işlemi şu şekilde yapılır: {{mode}}",
+    "testLocalVisible": "Yerel dizin, bağlı sunucudan görülebilir.",
+    "testLocalNotVisible": "Yerel dizin, bağlı sunucudan görünmez."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
+        "touch": "Dokunmatik Giriş",
+        "images": "Görüntü Depolama",
         "sessions": "Oturumlar",
-        "newHosts": "New Hosts"
+        "newHosts": "Yeni Sunucular"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Terminal Oturum Kalıcılığı",
+        "description": "Bağlantısı kesilmiş bir terminalin sunucuda kapatılmadan önce ne kadar süreyle aktif tutulacağı. Minimum 1, maksimum 1440 dakika. Bu süreyi aşması gereken oturumlar için, sunucuda Auto-Tmux'u etkinleştirin."
       },
       "commandHistoryEnabled": {
         "label": "Komut Geçmişi",
         "description": "Komut geçmişi kaydına izin ver. Devre dışı bırakıldığında, host başına ayarlara bakılmaksızın geçmiş kaydedilmez."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "Yeni sunucular için komut geçmişi",
+        "description": "Yeni sunucuların komut geçmişi açık olarak başlatılıp başlatılmadığı."
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "label": "Depolama Modu",
+        "description": "Yapıştırılan ve yüklenen terminal görüntülerinin yazıldığı yer. Bağlantı türüne göre otomatik seçim, Yerel ve Uzak (SFTP) ayarları düzeltildi.",
         "auto": "Otomatik",
         "local": "Yerel",
-        "remoteSftp": "Remote (SFTP)"
+        "remoteSftp": "Uzaktan (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "Yerel dizin",
+        "description": "Termix arka ucunda yerel modun görüntüleri yazdığı mutlak yol. Kaydedildikten sonra asla gösterilmez. Boş bırakıldığında TERMIX_IMAGE_DIR kullanılır."
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "Ana bilgisayar yolu",
+        "description": "Terminal aracıların aldığı yerel dizinin sunucu tarafındaki görünümü."
       },
       "imageTtlMs": {
         "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "description": "Yüklenen bir görüntünün ne kadar süreyle (milisaniye cinsinden) saklanacağı. Boş değerler için TERMIX_IMAGE_TTL_MS veya bir saat kullanılır."
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "Maksimum görüntü sayısı",
+        "description": "Çoğu resim aynı anda saklanır. Boş değer için TERMIX_MAX_IMAGE_COUNT veya 100 kullanılır."
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "Maksimum depolama baytları",
+        "description": "Görüntülerin en fazla baytlık kısmı aynı anda saklanır. Boş hali TERMIX_MAX_IMAGE_STORAGE_BYTES veya 5 GiB kullanır."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Bağlantı kesildikten sonra oturumları sürdürün.",
+        "description": "Sunucuda bağlantısı kesilmiş bir terminali yukarıda belirtilen süre boyunca açık tutun, böylece sekme yeniden açıldığında kaldığı yerden devam eder."
       },
       "newHostAutoTmux": {
-        "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "label": "Otomatik Tmux",
+        "description": "Yeni sunucuların terminallerini tmux içinde çalıştırın, böylece oturumlar bağlantı kesintilerinden etkilenmeden devam eder (sunucuda tmux kurulu olması gerekir)."
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Yeni ev sahipleri için tema",
+        "description": "Yeni bir sunucunun başlattığı terminal teması."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Yeni sunucular için yazı tipi",
+        "description": "Yeni bir sunucunun başlatıldığı terminal yazı tipi."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Yeni sunucular için yazı tipi boyutu",
+        "description": "Yeni bir sunucunun başlangıçta kullandığı terminal yazı tipi boyutu, piksel cinsinden."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Yeni sunucular için imleç stili"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Yeni sunucular için yanıp sönen imleç"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "Terminal Araç Çubuğunu Etkinleştir",
+        "description": "Etkin terminale sabitlenmiş, bu sunucunun araçlarına ve canlı istatistiklerine hızlı erişim sağlayan bir araç çubuğu gösterin."
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Araç Çubuğu Konumu",
+        "description": "Araç çubuğunun terminalde bulunduğu yer. Oradan hala sürükleyebilirsiniz.",
+        "bottom": "Alt orta kısım",
+        "bottomLeft": "Sol alt",
+        "bottomRight": "Sağ alt",
+        "top": "Üst orta",
+        "topLeft": "Sol üst",
+        "topRight": "Sağ üstte"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Araç Çubuğu Başlangıç Durumu",
+        "description": "Terminal bağlandığında araç çubuğunun genişletilmiş mi yoksa simge durumuna küçültülmüş mü açılacağı",
+        "expanded": "Genişletilmiş",
+        "collapsed": "Minimize edildi"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "Araç Çubuğu Görüntüleme Modu",
+        "description": "Araç çubuğu düğmelerinin nasıl gösterileceği. Son kullanılan seçenek, araç çubuğunda seçtiğiniz düğmeyi korur.",
+        "remember": "Son kullanım",
+        "icon": "Yalnızca simge",
+        "labeled": "Simgeler ve etiketler",
+        "expanded": "İstatistiklerle genişletildi"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Canlı İstatistikleri Göster",
+        "description": "Genişletilmiş modda, araç çubuğu düğmelerinin üstünde canlı sunucu istatistiklerini göster."
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Boşta Kalırken Solma",
+        "description": "Fare imlecini üzerine getirene kadar araç çubuğunu soluklaştırın."
       },
       "enableCommandHistory": {
         "label": "Komut Geçmişi",
@@ -273,157 +273,157 @@
       },
       "enableTerminal": {
         "label": "Terminali Etkinleştir",
-        "description": "Offer an SSH terminal for this host."
+        "description": "Bu sunucu için bir SSH terminali sunun."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Kullanıcı varsayılanlarını kullanın"
       },
       "theme": {
         "label": "Tema"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Yanıp sönen imleç"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "İmleç stili"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "Yazı tipi boyutu"
       },
       "fontFamily": {
-        "label": "Font"
+        "label": "Yazı Tipi"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Geriye kaydır"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "Harf aralığı"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Çizgi yüksekliği"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Zil"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Minimum kontrast oranı"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Arka plan resmi"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Arka plan görüntüsünün saydamlığı"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Özel tema renkleri"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Sağ tıklama kelimeyi seçer."
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Seçenek Meta'dır"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Hızlı kaydırma tuşu"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Hızlı kaydırma hızı"
       },
       "backspaceMode": {
-        "label": "Backspace"
+        "label": "Geri tuşu"
       },
       "autoMosh": {
-        "label": "Auto mosh"
+        "label": "Otomatik mosh"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Mosh komutu"
       },
       "autoTmux": {
-        "label": "Auto tmux"
+        "label": "Otomatik tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "SSH başlığını kullanın."
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Sözdizimi vurgulama"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Sözdizimi vurgulama kategorileri"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Bağlantıya tıklama"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Yerel yankı"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Şifre istemlerini doldurmayı teklif edin"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "sudo komut istemlerini doldurun"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Otomatik olarak yeniden bağlan"
       }
     },
     "user": {
       "commandAutocomplete": {
         "label": "Komut Otomatik Tamamlama",
-        "description": "Show autocomplete while typing if you press tab"
+        "description": "Sekme tuşuna bastığınızda yazarken otomatik tamamlama özelliğini göster."
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "Yerel Yankı",
+        "description": "Güvenli yerel tuş vuruşu tahmini kullanarak algılanan giriş gecikmesini azaltın."
       },
       "linkClickBehavior": {
         "label": "Terminal Bağlantı Tıklama",
         "description": "Terminalde bağlantılara tıklandığında varsayılan davranış"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Kaydedilen temalar"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "Yerel Terminal"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Canlı terminal oturumlarını kullanın.",
+      "description": "Oturum paylaşımı ve kayıt gibi diğer özelliklerin canlı terminal oturumlarınıza ulaşmasını sağlar."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Komut geçmişini oku",
+      "description": "Yapay zekâ asistanı gibi diğer özelliklerin komut geçmişinizi okumasına olanak tanır."
     }
   },
   "hosts": {
     "tabTerminal": "Terminal",
     "addHost": "Ana Bilgisayar Ekle",
-    "applyGlobalThemeTooltip": "Apply this theme",
+    "applyGlobalThemeTooltip": "Bu temayı uygulayın",
     "backgroundImageDesc": "Bir terminal arka plan resmi için isteğe bağlı URL",
     "backgroundImageLabel": "Arka Plan Resmi URL",
     "backgroundImageOpacityLabel": "Arka Plan Resmi Opaklığı",
     "backspaceMode": "Geri Silme Modu",
-    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeControlH": "Kontrol-H (BS)",
     "backspaceModeLabel": "Backspace Modu",
     "backspaceModeNormal": "Normal (DEL)",
     "behaviorAndAdvanced": "Davranış ve Gelişmiş",
     "bellStyle": "Zil Stili",
-    "bellStyleBoth": "Both",
+    "bellStyleBoth": "İkisi birden",
     "bellStyleLabel": "Zil Stili",
     "bellStyleNone": "Yok",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
+    "bellStyleSound": "Ses",
+    "bellStyleVisual": "Görsel",
     "colorTheme": "Renk Teması",
     "cursorBlink": "İmleç Yanıp Sönme",
     "cursorBlinking": "İmleç Yanıp Sönmesi",
     "cursorBlinkingDesc": "Terminal imleci için yanıp sönme animasyonunu etkinleştir",
     "cursorStyle": "İmleç Stili",
-    "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
+    "cursorStyleBar": "Çubuk",
+    "cursorStyleBlock": "Engellemek",
     "cursorStyleLabel": "İmleç Stili",
-    "cursorStyleUnderline": "Underline",
+    "cursorStyleUnderline": "Altını çiz",
     "customThemeAnsiColors": "ANSI Renkleri",
     "customThemeBackground": "Arka Plan",
     "customThemeBlack": "Siyah",
@@ -448,12 +448,12 @@
     "customThemeSelection": "Seçim",
     "customThemeWhite": "Beyaz",
     "customThemeYellow": "Sarı",
-    "deleteGlobalThemeTooltip": "Delete this theme",
+    "deleteGlobalThemeTooltip": "Bu temayı sil",
     "docsLink": "Dokümanları görüntüle",
     "enableAutoMosh": "Otomatik Mosh'u Etkinleştir",
     "enableAutoMoshDesc": "Varsa, SSH yerine Mosh'u tercih et",
     "enableAutoTmux": "Otomatik Tmux'u Etkinleştir",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "enableAutoTmuxDesc": "Kabuk uygulamanızı ve içinde çalışan her şeyi bağlantı kesintileri ve tarayıcı yeniden başlatmaları sırasında çalışır durumda tutmak için tmux içinde çalıştırın (tmux ana bilgisayarda kurulu olmalıdır).",
     "fastScrollModifier": "Hızlı Kaydırma Değiştiricisi",
     "fastScrollModifierAlt": "Alt",
     "fastScrollModifierCtrl": "Ctrl",
@@ -462,9 +462,9 @@
     "fastScrollSensitivity": "Hızlı Kaydırma Hassasiyeti",
     "fastScrollSensitivityLabel": "Hızlı Kaydırma Hassasiyeti",
     "fontFamily": "Yazı Tipi Ailesi",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyCustomHint": "Hazır gelen yazı tiplerinden birini seçin veya Özel'i seçip sisteminizde zaten yüklü olan bir yazı tipinin tam adını yazın (örneğin MesloLGS NF, Noto Sans Mono). Termix sizin için yazı tiplerini yükleyemez, önce işletim sisteminize yükleyin.",
+    "fontFamilyCustomOption": "Gelenek...",
+    "fontFamilyCustomPlaceholder": "Tam yazı tipi adı, örneğin MesloLGS NF",
     "fontFamilyLabel": "Yazı Tipi Ailesi",
     "fontSize": "Yazı Tipi Boyutu",
     "fontSizeLabel": "Yazı Tipi Boyutu",
@@ -478,29 +478,29 @@
     "linkClickBehaviorDirect": "Doğrudan aç",
     "linkClickBehaviorLabel": "Bağlantı Tıklama Davranışı",
     "loadingHost": "Host yükleniyor...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
+    "localEchoAuto": "Otomatik",
+    "localEchoDesc": "Yavaş bağlantılarda bile yerel olarak güvenli yazdırılabilir tuş vuruşlarını tahmin edin. Parola istemleri ve kontrol girişleri asla tekrarlanmaz.",
+    "localEchoLabel": "Yerel Yankı",
     "localEchoOff": "Kapalı",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "localEchoOn": "Her zaman açık",
+    "macOptionIsMetaLabel": "Seçenek Tuşu Meta Verilerini Gönderiyor",
+    "macOptionIsMetaShortDesc": "macOS'ta Option/Alt tuşuyla özel karakterler (örneğin @ veya |) yazmayı devre dışı bırakın, bunun yerine Meta gönderin.",
     "moshCommand": "MOSH Komutu",
     "moshCommandLabel": "Mosh Komutu",
-    "noSavedThemes": "No saved themes yet",
+    "noSavedThemes": "Henüz kaydedilmiş tema yok.",
     "none": "Hiçbiri",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "passwordPromptAutoFillDesc": "Terminal şifre istediğinde kaydedilmiş şifreyi girmeyi teklif edin. Bu sunucuda hiçbir zaman otomatik şifre doldurmayı devre dışı bırakın.",
+    "passwordPromptAutoFillLabel": "Şifre Otomatik Doldurma Teklifi",
+    "autoReconnectLabel": "Otomatik Yeniden Bağlantı",
+    "autoReconnectDesc": "Ağda bir aksaklık veya uyku modu gibi durumlarda SSH bağlantısı kesildiğinde otomatik olarak yeniden bağlanır. Geri kaydırma özelliğini korur.",
     "rightClickSelectsWord": "Sağ Tık Kelimeyi Seçer",
     "rightClickSelectsWordLabel": "Sağ Tık Kelime Seçer",
     "rightClickSelectsWordShortDesc": "Sağ tıklandığında imlecin altındaki kelimeyi seç",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
+    "saveAsGlobalTheme": "Küresel Tema Olarak Kaydet",
+    "saveGlobalThemeError": "Tema kaydedilemedi.",
+    "saveGlobalThemeNamePrompt": "Bu tema için bir ad girin.",
+    "saveGlobalThemeSuccess": "Tema kaydedildi",
+    "savedThemesLabel": "Kaydedilen Temalar",
     "scrollbackBufferLabel": "Kaydırma Arabelleği",
     "scrollbackMaxLines": "Geçmişte saklanan maksimum satır sayısı",
     "sudoPasswordAutoFill": "Sudo Parolası Otomatik Doldurma",
@@ -533,11 +533,11 @@
     "proxmoxLastSyncStatus": {
       "success": "Başarılı"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "proxmoxResultSkippedNoIp": "{{count}} atlandı (IP adresi bulunamadı)",
+    "proxmoxStatsUrlCopied": "Proxmox İstatistikleri URL'si panoya kopyalandı",
     "rdpUrlCopied": "RDP URL kopyalandı",
     "vncUrlCopied": "VNC URL kopyalandı",
-    "filterAuthStepca": "Step CA",
+    "filterAuthStepca": "Adım CA",
     "guac": {
       "noCredential": "Kimlik bilgisi yok (aşağıda doğrudan kimlik bilgileri)",
       "authTypeDirect": "Doğrudan",
@@ -556,18 +556,18 @@
       "updateHostBtn": "Ana Makineyi Güncelle",
       "addHostBtn": "Ana Makine Ekle"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Kasa"
   },
   "nav": {
     "history": "Geçmiş",
-    "localTerminal": "Local Terminal",
+    "localTerminal": "Yerel Terminal",
     "sshTools": "SSH Araçları",
     "terminal": "Terminal",
-    "macros": "Macros"
+    "macros": "Makrolar"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "Tuş vuruşlarını yayınlamak için buraya yazın...",
-    "copyOnSelect": "Copy selected text automatically",
+    "copyOnSelect": "Seçilen metni otomatik olarak kopyala",
     "enableRightClickCopyPaste": "Sağ tık kopyala/yapıştırmayı etkinleştir",
     "fillPassword": "Parolayı doldur",
     "fillPasswordMissing": "Seçili {{count}} terminal için kayıtlı parola yok",
@@ -583,123 +583,126 @@
     "stopRecording": "Kaydı Durdur"
   },
   "keybindings": {
-    "copy": "Copy selection",
+    "copy": "Seçimi kopyala",
     "paste": "Yapıştır",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "sendControlCode": "Ctrl+harf sinyali gönder",
+    "sendText": "Mesaj gönder",
+    "controlCodeLabel": "Mektup",
+    "textLabel": "Gönderilecek metin",
+    "appendEnterLabel": "Gönderdikten sonra Enter tuşuna basın.",
+    "clipboardPermissionNote": "Bazı tarayıcılarda ilk kullanımda panoya kopyalama izni isteyebilir.",
+    "textRequired": "Göndermek istediğiniz metni girin.",
+    "controlCodeRequired": "Kontrol kodu için tek bir harf girin.",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Seçimi kopyala (Ctrl+C, yalnızca metin seçiliyken)",
+      "copyCtrlShiftC": "Seçimi kopyala (Ctrl+Shift+C)",
+      "copyCmdC": "Seçimi kopyala (Cmd+C)",
+      "pasteCtrlShiftV": "Panodan yapıştır (Ctrl+Shift+V)",
+      "ctrlW": "Ctrl+W komutunu göndererek shell'e bağlanın (tarayıcı sekmesinin kapatılması engellendi).",
+      "ctrlT": "Ctrl+T komutunu göndererek shell komutuna komut verin (tarayıcı sekmesinin açılması engellendi).",
+      "ctrlN": "Ctrl+N tuşuna basarak shell'e geçin (tarayıcı penceresinin açılması engellendi).",
+      "ctrlQ": "Ctrl+Q tuşuna basarak kabuk moduna geçin (tarayıcıdan çıkmanız engellendi)."
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "title": "Makrolar",
+    "description": "Önceden kaydedilmiş bir komut dizisini terminalde çalıştırın ve sunucunun geri gönderdiği yanıtlara göre hareket edin.",
     "target": "Hedef",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
+    "noTerminal": "Açık terminal yok.",
+    "empty": "Henüz makro yok",
+    "emptyHint": "Giriş yapma, bir hizmeti yeniden başlatma veya komut istemlerine yanıt verme gibi terminal işlemlerini otomatikleştirmek için bir makro oluşturun.",
+    "create": "Yeni makro",
+    "back": "Makrolara geri dön",
     "name": "Ad",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
+    "namePlaceholder": "Web sunucusunu yeniden başlatın.",
+    "nameRequired": "Kaydetmeden önce makroya bir ad verin.",
     "descriptionLabel": "Açıklama",
-    "descriptionPlaceholder": "What this macro does (optional)",
+    "descriptionPlaceholder": "Bu makronun ne yaptığı (isteğe bağlı)",
     "unsaved": "Kaydedilmemiş değişiklikler",
     "save": "Kaydet",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
+    "saved": "Makro kaydedildi.",
+    "saveFailed": "Makro kaydedilemedi.",
     "delete": "Sil",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
+    "deleteTitle": "Bu makroyu silmek ister misiniz?",
+    "deleteBody": "\"{{name}}\" kalıcı olarak silinecektir. Bu işlem geri alınamaz.",
+    "deleted": "Makro silindi",
     "cancel": "İptal",
     "run": "Çalıştır",
     "stop": "Durdurma",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "running": "Koşma...",
+    "completed": "Makro tamamlandı",
+    "failed": "Makro başarısız oldu",
+    "loadFailed": "Makrolar yüklenemedi.",
+    "needTerminal": "Öncelikle bir terminal açın ve bağlayın.",
+    "noSteps": "Bu makronun henüz hiçbir adımı yok. Aşağıya bir adım ekleyin.",
+    "addStep": "Adım ekle",
+    "stepNumber": "Adım {{number}}",
+    "removeStep": "Adımı kaldır",
+    "confirmRunTitle": "Bu makroyu çalıştırayım mı?",
+    "confirmRunBody": "\"{{name}}\" {{host}} adresine komutlar gönderecektir.",
+    "confirmRunAction": "Makroyu çalıştır",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "Komut gönder",
+        "help": "Terminale, sanki siz yazmışsınız gibi metin yazar."
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "Çıktıyı bekleyin",
+        "help": "Sunucu, belirttiğiniz metni (örneğin parola istemi gibi) yazdırana kadar bekler."
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "Duraklat",
+        "help": "Bir sonraki adıma geçmeden önce belirli bir süre bekler."
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "Çıktı içeriyorsa",
+        "help": "Sunucunun şu ana kadar yazdırdığı her şeyi kontrol eder, ardından iki daldan birini çalıştırır."
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "Tekrarlamak",
+        "help": "İçindeki adımları belirtilen sayıda tekrarlar."
       }
     },
     "send": {
-      "text": "Command or text",
+      "text": "Komut veya metin",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "pressEnter": "Gönderdikten sonra Enter tuşuna basın.",
+      "pressEnterHelp": "Göndermeden metin yazmak için bunu kapatın."
     },
     "wait": {
-      "pattern": "Wait until the output contains",
+      "pattern": "Çıktıyı oluşturana kadar bekleyin.",
       "patternPlaceholder": "parola:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "timeout": "Vazgeçtikten sonra",
+      "onTimeout": "Eğer hiç ortaya çıkmazsa",
+      "stop": "Makroyu durdur",
+      "continue": "Yine de devam edin."
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "Bekleyin"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "Çıktı şunları içeriyorsa:",
+      "patternPlaceholder": "Aktif: aktif (koşmak)",
+      "then": "O halde şunu yapın",
+      "else": "Aksi takdirde şunu yapın",
+      "emptyBranch": "Hiçbir adım yok"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "Sayısı",
+      "times": "kez"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "Düzenli ifadeyle eşleştirin",
+      "useRegexHelp": "Metnin aynen yazıldığı gibi kalması için bunu atlayın.",
+      "invalidRegex": "Geçerli bir normal ifade değil, düz metin olarak eşleştirilecektir."
     },
     "seconds": "saniye",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

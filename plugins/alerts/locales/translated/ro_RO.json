@@ -168,5 +168,8 @@
     "showRead": "Afișează alertele de citire",
     "allClear": "Totul este clar",
     "loading": "Încărcare..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

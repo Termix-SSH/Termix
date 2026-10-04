@@ -23,6 +23,12 @@
     "namePlaceholder": "회사 디렉토리",
     "nameRequired": "표시 이름은 필수입니다.",
     "enabled": "사용",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "디렉토리 저장",
     "saving": "저장 중...",
     "saved": "저장됨",
@@ -36,6 +42,7 @@
     "host": "LDAP 호스트",
     "port": "포트",
     "useTls": "TLS 사용 (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "바인딩 DN",
     "bindPassword": "바인딩 암호",
     "secretKeep": "비밀번호가 저장됩니다. 비밀번호를 유지하려면 이 필드를 비워 두세요.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "그룹 검색 기준",
     "adminGroup": "관리자 그룹",
     "allowedUsers": "허용 사용자"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

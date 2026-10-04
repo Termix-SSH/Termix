@@ -54,5 +54,8 @@
     "request": "בקשת תעודה עכשיו",
     "requesting": "מבקש תעודה...",
     "issued": "תעודה הונפקה והותקנה"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

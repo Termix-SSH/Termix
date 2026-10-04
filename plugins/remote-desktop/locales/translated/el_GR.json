@@ -212,7 +212,28 @@
       "backspaceKey": "Πλήκτρο Backspace",
       "colorDepth": "Βάθος χρώματος",
       "resizeMethod": "Μέθοδος αλλαγής μεγέθους",
-      "driveNamePlaceholder": "Οδός Τέρμιξ"
+      "driveNamePlaceholder": "Οδός Τέρμιξ",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Απομακρυσμένη επιφάνεια εργασίας",
     "tabRdp": "ΠΑΑ",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Απαιτείται απομακρυσμένος διακομιστής. Συνδέστε έναν απομακρυσμένο διακομιστή στις Ρυθμίσεις για να χρησιμοποιήσετε αυτόν τον τύπο σύνδεσης."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

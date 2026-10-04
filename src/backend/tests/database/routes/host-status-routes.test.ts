@@ -88,7 +88,7 @@ beforeEach(() => {
   state.statuses = new Map([
     [1, { status: "online", lastChecked: "t" }],
     [2, { status: "offline", lastChecked: "t" }],
-    [3, { status: "reachable", lastChecked: "t" }],
+    [3, { status: "offline", lastChecked: "t" }],
   ]);
   service.statusesFor.mockImplementation(async () => state.statuses);
   service.get.mockImplementation(

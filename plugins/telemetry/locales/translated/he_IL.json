@@ -54,5 +54,8 @@
     "previewDescription": "זה בדיוק מה שיישלח עכשיו.",
     "close": "לִסְגוֹר",
     "loadFailed": "לא ניתן היה לטעון את סטטוס סטטיסטיקות השימוש"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

@@ -23,5 +23,8 @@
         "description": "Privát vagy visszacsatolásos hosztok, amelyeket egy titkos forrás elérhet, soronként egy. Egy saját hosztolt 1Password Connect szervernek általában saját címre van szüksége, amely itt szerepel."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

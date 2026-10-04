@@ -54,5 +54,8 @@
     "previewDescription": "Přesně tohle by bylo teď odesláno.",
     "close": "Blízko",
     "loadFailed": "Nepodařilo se načíst stav statistik využití"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

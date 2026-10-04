@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "ব্যবহারের পরিসংখ্যান পরিচালনা করুন",
+      "description": "কী ব্যবহারের পরিসংখ্যান পাঠানো হয়েছে তা দেখুন, এখনই সেগুলো পাঠান এবং ইনস্ট্যান্স আইডি রিসেট করুন।"
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "বেনামী ব্যবহারের পরিসংখ্যান শেয়ার করুন",
+      "description": "টারমিক্স উন্নত করতে সাহায্য করার জন্য দিনে একবার একটি সংক্ষিপ্ত, বেনামী সারসংক্ষেপ পাঠানো হয়। এতে কখনও ইউজারনেম, হোস্টনেম, আইপি অ্যাড্রেস বা ক্রেডেনশিয়াল অন্তর্ভুক্ত থাকে না।"
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "প্ল্যাটফর্মের তথ্য অন্তর্ভুক্ত করুন",
+      "description": "অপারেটিং সিস্টেম, সিপিইউ আর্কিটেকচার, নোড.জেএস ভার্সন, ডেটাবেসের ধরন এবং টারমিক্স কীভাবে ইনস্টল করা হয়েছে (ডকার, ডেস্কটপ অ্যাপ বা সার্ভার)।"
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "বৈশিষ্ট্য ব্যবহার অন্তর্ভুক্ত করুন",
+      "description": "শেষ প্রতিবেদনের পর থেকে প্রতিটি ধরণের ট্যাব কতবার খোলা হয়েছে এবং কতবার SSH লগইন হয়েছে। ব্যবহারকারীরা তাদের প্রোফাইলে এই অংশটি বন্ধ করতে পারেন।"
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "ইনস্টল করা বৈশিষ্ট্যগুলি অন্তর্ভুক্ত করুন",
+      "description": "কোন বিল্ট-ইন ফিচারগুলো ইনস্টল এবং চালু আছে।"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "ইনস্ট্যান্স আইডি"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "আমার বৈশিষ্ট্য ব্যবহার অন্তর্ভুক্ত করুন",
+      "description": "বেনামী ব্যবহারের পরিসংখ্যানে আপনি কোন ধরনের ট্যাব খোলেন তা গণনা করা হয়। আপনার বা আপনার হোস্টদের সম্পর্কে কোনো তথ্য পাঠানো হয় না।"
     }
   },
   "status": {
-    "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
-    "close": "Close",
-    "loadFailed": "Could not load the usage statistics status"
+    "title": "অবস্থা",
+    "on": "দিনে একবার ব্যবহারের পরিসংখ্যান শেয়ার করা",
+    "off": "ব্যবহারের পরিসংখ্যান শেয়ার করা হচ্ছে না",
+    "lockedOn": "ENABLE_TELEMETRY এনভায়রনমেন্ট ভেরিয়েবল দ্বারা এটি চালু করা হয়। সেখানে এটি পরিবর্তন করুন।",
+    "lockedOff": "ENABLE_TELEMETRY এনভায়রনমেন্ট ভেরিয়েবল দ্বারা এটি বন্ধ করা আছে। সেখানে এটি পরিবর্তন করুন।",
+    "instanceId": "ইনস্ট্যান্স আইডি: {{id}}",
+    "noInstanceId": "এখনও কোনো ইনস্ট্যান্স আইডি নেই",
+    "lastSent": "সর্বশেষ পাঠানো {{date}}",
+    "neverSent": "এখনো পাঠানো হয়নি",
+    "nextSend": "পরবর্তী প্রতিবেদন জমা দেওয়ার শেষ তারিখ {{date}}",
+    "lastError": "শেষ চেষ্টা ব্যর্থ: {{error}}",
+    "preview": "পূর্বরূপ প্রতিবেদন",
+    "sendNow": "এখনই পাঠান",
+    "sending": "পাঠানো হচ্ছে...",
+    "sent": "ব্যবহারের পরিসংখ্যান পাঠানো হয়েছে",
+    "notSent": "ব্যবহারের পরিসংখ্যান বন্ধ করা আছে, কিছুই পাঠানো হয়নি।",
+    "resetId": "ইনস্ট্যান্স আইডি রিসেট করুন",
+    "resetIdConfirm": "ইনস্ট্যান্স আইডি রিসেট করবেন? ভবিষ্যতের রিপোর্টগুলো নতুন ইনস্টলের মতো দেখাবে।",
+    "resetIdDone": "ইনস্ট্যান্স আইডি রিসেট",
+    "previewTitle": "পরবর্তী প্রতিবেদন",
+    "previewDescription": "ঠিক এই মুহূর্তে এটাই পাঠানো হবে।",
+    "close": "বন্ধ করুন",
+    "loadFailed": "ব্যবহারের পরিসংখ্যানের স্থিতি লোড করা যায়নি"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

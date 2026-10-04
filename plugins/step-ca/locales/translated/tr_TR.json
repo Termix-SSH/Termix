@@ -1,15 +1,15 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "Adım CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "label": "Adım CA",
+    "description": "Kimlik sağlayıcınız aracılığıyla oturum açın ve Step CA'nızın bu sunucu için kısa süreli bir SSH sertifikası düzenlemesine izin verin. CA URL'si, kök parmak izi ve OIDC sağlayıcısı, Yönetici Ayarları'nın Step CA bölümünde bir yönetici tarafından ayarlanır.",
     "docs": "Belgelere bak"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "title": "CA Kimlik Doğrulaması Gerekli Adım",
+    "description": "Devam etmek için tarayıcınızda kimlik doğrulamasını tamamlayın. Sertifika, sertifika yetkilinizin izin verdiği süre boyunca geçerli kalır.",
     "openBrowser": "Kimlik Doğrulaması için Tarayıcı Aç",
     "waiting": "Tarayıcıda kimlik doğrulaması bekleniyor...",
     "authenticating": "Kimlik doğrulaması işleniyor..."
@@ -21,28 +21,31 @@
   "settings": {
     "caUrl": {
       "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "description": "Smallstep CA'nızın https URL'si. Step CA'yı devre dışı bırakmak için CA URL'sini, parmak izini ve provizyon sağlayıcısını boş bırakın.",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "Kök parmak izi (SHA-256)",
+      "description": "Kök sertifika parmak izi, ca bootstrap adımı tarafından gösterildiği gibidir."
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "OIDC tedarikçi adı",
+      "description": "CA'nın OIDC sağlayıcısının adını girin. Ardından, ana bilgisayarın kimlik doğrulama türü olarak \"Adım CA\"yı seçin."
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "Özel Step CA sunucularına izin verildi.",
+      "description": "Özel sunucular, Step CA sertifika akışı kapsamında şu kuruluşlarla iletişime geçebilir: CA'nın kendisi ve (dahili ise) kimlik sağlayıcınız. Bunları virgül veya yeni satırlarla ayırın."
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "Yönlendirme URI'si",
+      "description": "Bu URL'yi, OIDC sağlayıcısının arkasındaki kimlik sağlayıcısında izin verilen yönlendirme URI'si olarak kaydedin."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "Eski yönlendirme URI'sini kullanın.",
+      "description": "2.9 öncesinde kullanılan yönlendirme URI'si olan /host/step-ca-callback'i göndermeye devam edin. Kimlik sağlayıcınız yenisine izin verdiğinde bunu kapatın."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

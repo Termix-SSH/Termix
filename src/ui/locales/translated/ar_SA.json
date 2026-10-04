@@ -116,11 +116,12 @@
     "updateLinkLabel": "يتوفر تحديث. اطلع على ملاحظات الإصدار على GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "إغلاق",
     "minimize": "تصغير",
     "online": "متصل",
     "offline": "غير متصل",
-    "signInFailed": "فشل تسجيل الدخول",
     "unknown": "غير معروف",
     "continue": "متابعة",
     "maintenance": "صيانة",
@@ -187,7 +188,11 @@
     "remove": "إزالة",
     "add": "إضافة",
     "update": "تحديث",
-    "noResults": "لم يتم العثور على نتائج"
+    "noResults": "لم يتم العثور على نتائج",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "الخطوة {{current}} من {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "النفق",
     "serverStats": "مقاييس المضيف",
     "status": {
-      "available": "متاح",
-      "reachable": "متاح، لكن تسجيل الدخول فشل",
+      "online": "Online",
       "offline": "غير متصل بالإنترنت",
-      "monitoringDisabled": "تم تعطيل المراقبة",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "حالة"
     },
     "folderRenamed": "تمت إعادة تسمية المجلد \"{{oldName}}\" إلى \"{{newName}}\" بنجاح",
@@ -477,7 +482,7 @@
     "sameHost": "هذا المضيف (نفق مباشر)",
     "statusChecksLabel": "فحوصات الحالة",
     "enableStatusChecks": "تمكين فحوصات الحالة",
-    "enableStatusChecksDesc": "إرسال ping دوريًا لهذا المضيف للتحقق من توفره",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "استخدام الفاصل الزمني العام",
     "useGlobalIntervalDesc": "تجاوز باستخدام فترة فحص الحالة على مستوى الخادم",
     "checkIntervalS": "فترة الفحص (ثانية)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "يستخدم حسابك عامل مصادقة ثانٍ غير متوفر حاليًا. تواصل مع أحد المسؤولين لإعادة تعيينه.",
     "secondFactorNoUI": "لا يمكن عرض هذا العامل الثاني على هذه الشاشة. تواصل مع أحد المسؤولين.",
     "serverAuthentication": "تسجيل الدخول إلى الخادم",
-    "minChars": "الحد الأدنى {{min}} حرفًا"
+    "minChars": "الحد الأدنى {{min}} حرفًا",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "تحقق من مفتاح مضيف SSH",
@@ -1119,7 +1125,13 @@
     "language": "اللغة",
     "keyPassword": "كلمة مرور المفتاح",
     "pastePrivateKey": "الصق مفتاحك الخاص هنا...",
-    "enterPassword": "أدخل كلمة المرور"
+    "enterPassword": "أدخل كلمة المرور",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "صادر عن {{issuer}}",
     "sslNames": "يغطي {{names}}",
     "sslManualTitle": "قم بتحميل شهادة",
-    "updateExternalAutoProvisionFailed": "فشل تحديث إعداد الإنشاء التلقائي"
+    "updateExternalAutoProvisionFailed": "فشل تحديث إعداد الإنشاء التلقائي",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

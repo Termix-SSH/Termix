@@ -20,6 +20,12 @@
     "nameRequired": "Un nom d'affichage est requis.",
     "type": "Type de fournisseur",
     "enabled": "Activé",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Enregistrer le fournisseur",
     "saving": "Enregistrement…",
     "saved": "Enregistré",
@@ -61,5 +67,8 @@
       "label": "Connectez-vous automatiquement avec l'authentification unique (SSO).",
       "description": "Dirigez les visiteurs directement vers le premier fournisseur d'authentification unique (SSO) au lieu d'afficher le formulaire de connexion. La variable d'environnement OIDC_SILENT_LOGIN_DEFAULT remplace ce comportement."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

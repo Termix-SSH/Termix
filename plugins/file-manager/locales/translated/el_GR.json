@@ -323,7 +323,7 @@
     "sideBySide": "Πλάι πλάι",
     "inline": "Ενσωματωμένο",
     "fileComparison": "Σύγκριση αρχείων: {{file1}} έναντι {{file2}}",
-    "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "Η σύνδεση SSH απέτυχε. Ελέγξτε τη σύνδεσή σας με {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Αποτυχία φόρτωσης αρχείου: {{error}}",
     "connecting": "Συνδετικός...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Χρησιμοποιήστε άνετη διάταξη",
     "cannotLoadPdf": "Δεν είναι δυνατή η φόρτωση του PDF",
     "pdfLoadError": "Παρουσιάστηκε σφάλμα κατά τη φόρτωση αυτού του αρχείου PDF.",
-    "loadingPdf": "Φόρτωση PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Φόρτωση σελίδας...",
     "cancel": "Ματαίωση",
     "copiedItems_one": "Αντιγράφηκε {{count}} στοιχείο",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Το πρόγραμμα περιήγησής σας δεν μπορεί να αναπαράγει αυτήν τη μορφή βίντεο.",
     "downloadToPlay": "Κατεβάστε το για να το παίξετε αλλού",
     "cannotPreviewType": "Δεν είναι δυνατή η προεπισκόπηση αυτού του τύπου αρχείου",
-    "cannotPreviewTypeHint": "Αυτός ο τύπος αρχείου δεν έχει προεπισκόπηση. Κατεβάστε το για να το ανοίξετε σε άλλη εφαρμογή."
+    "cannotPreviewTypeHint": "Αυτός ο τύπος αρχείου δεν έχει προεπισκόπηση. Κατεβάστε το για να το ανοίξετε σε άλλη εφαρμογή.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Πηγή → διακομιστής: {{throughput}}",
     "metricsHopDestSftpWrite": "Διακομιστής → προορισμός (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Διακομιστής → προορισμός (τοπικός): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

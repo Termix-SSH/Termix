@@ -23,6 +23,12 @@
     "namePlaceholder": "دليل الشركات",
     "nameRequired": "اسم العرض مطلوب",
     "enabled": "مُمكّن",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "حفظ الدليل",
     "saving": "جارٍ الحفظ...",
     "saved": "محفوظ",
@@ -36,6 +42,7 @@
     "host": "مضيف LDAP",
     "port": "منفذ",
     "useTls": "استخدام TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "اسم مميز للربط",
     "bindPassword": "كلمة مرور الارتباط",
     "secretKeep": "تم حفظ كلمة المرور. اترك هذا الحقل فارغًا للاحتفاظ بها.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "قاعدة بحث المجموعات",
     "adminGroup": "مجموعة المسؤولين",
     "allowedUsers": "المستخدمون المسموح لهم"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

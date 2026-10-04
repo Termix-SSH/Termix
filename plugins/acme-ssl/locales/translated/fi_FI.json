@@ -54,5 +54,8 @@
     "request": "Pyydä todistus nyt",
     "requesting": "Pyydetään varmennetta...",
     "issued": "Sertifikaatti myönnetty ja asennettu"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

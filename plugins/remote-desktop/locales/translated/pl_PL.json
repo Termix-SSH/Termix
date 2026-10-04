@@ -1,11 +1,11 @@
 {
   "remoteDesktop": {
     "connecting": "Łączenie z sesją {{type}}...",
-    "checkingGuacd": "Checking remote desktop service...",
-    "requestingToken": "Requesting {{type}} connection token...",
-    "openingSession": "Opening {{type}} session...",
-    "negotiating": "Negotiating {{type}} handshake...",
-    "sessionReady": "{{type}} session ready",
+    "checkingGuacd": "Sprawdzanie usługi pulpitu zdalnego...",
+    "requestingToken": "Żądanie tokena połączenia {{type}}...",
+    "openingSession": "Otwieranie sesji {{type}}...",
+    "negotiating": "Negocjowanie {{type}} uścisku dłoni...",
+    "sessionReady": "{{type}} sesja gotowa",
     "connectionError": "Błąd połączenia",
     "connectionFailed": "Połączenie nieudane",
     "failedToConnect": "Nie udało się uzyskać tokena połączenia",
@@ -32,19 +32,19 @@
       "uploadFailed": "Nie udało się przesłać {{name}}",
       "uploadDisabled": "Przesyłanie plików jest wyłączone dla tego połączenia",
       "driveUnavailable": "Włącz przekierowanie dysku RDP przed przesłaniem plików",
-      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
+      "driveNotWritable": "guacd nie może zapisać do folderu dysku. Sprawdź zmienną GUACD_DRIVE_PATH (lub ścieżkę do dysku hosta) i jej uprawnienia.",
       "dropToUpload": "Upuść pliki, aby je przesłać"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (zablokuj ekran)",
       "winKey": "Klawisz Windows",
-      "superL": "Super+L (Lock Screen)",
-      "superKey": "Super Key",
+      "superL": "Super+L (ekran blokady)",
+      "superKey": "Super klucz",
       "super": "Super",
-      "cmdL": "Cmd+L (Lock Screen)",
-      "cmdKey": "Command Key",
-      "cmd": "Cmd",
+      "cmdL": "Cmd+L (ekran blokady)",
+      "cmdKey": "Klawisz polecenia",
+      "cmd": "Polecenie",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -66,22 +66,22 @@
       "collapse": "Zwiń pasek narzędzi",
       "expand": "Rozwiń pasek narzędzi",
       "dragHandle": "Przeciągnij, aby zmienić położenie",
-      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "resetZoom": "Reset zoom",
-      "fitToScreen": "Fit to screen",
+      "hide": "Ukryj na czas tej sesji. Aby trwale wyłączyć tę opcję, otwórz Ustawienia hosta → Ogólne → Pasek narzędzi połączenia.",
+      "zoomIn": "Powiększ",
+      "zoomOut": "Oddal",
+      "resetZoom": "Zresetuj powiększenie",
+      "fitToScreen": "Dopasuj do ekranu",
       "switchToTrackpad": "Przełącz na tryb gładzika (przeciągnij, aby przesunąć kursor, dotknij, aby kliknąć)",
       "switchToTouch": "Przełącz na tryb dotykowy (dotknij bezpośrednio miejsca, w którym chcesz kliknąć)"
     },
-    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+    "disabled": "Pulpit zdalny jest wyłączony. Administrator może go włączyć w Ustawieniach."
   },
   "hosts": {
     "nativeRdpOpened": "Otwarto w Pulpicie zdalnym systemu Windows",
     "nativeRdpFailed": "Nie udało się otworzyć pulpitu zdalnego systemu Windows",
     "openNativeRdp": "Otwórz w Pulpicie zdalnym systemu Windows",
     "guac": {
-      "toolbar": "Toolbar",
+      "toolbar": "Pasek narzędzi",
       "connection": "Połączenie",
       "authentication": "Uwierzytelnianie",
       "storedCredential": "Zapisane poświadczenie",
@@ -212,7 +212,28 @@
       "backspaceKey": "Klawisz Backspace",
       "colorDepth": "Głębia koloru",
       "resizeMethod": "Metoda zmiany rozmiaru",
-      "driveNamePlaceholder": "Termix Drive"
+      "driveNamePlaceholder": "Napęd Termix",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Pulpit zdalny",
     "tabRdp": "RDP",
@@ -221,10 +242,10 @@
     "virtualNetwork": "Sieć wirtualna",
     "unencryptedShell": "Niezaszyfrowana powłoka",
     "remoteDesktopNotes": "Notatki",
-    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
-    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "userDefaultsNote": "Ustawienia, które pozostawisz bez zmian, będą zgodne z ustawieniami domyślnymi Twojego hosta.",
+    "connectionOriginNote": "W aplikacji desktopowej RDP, VNC i Telnet korzystają ze zdalnego serwera, chyba że host jest ustawiony na „To urządzenie”, co wymaga identyfikatora GUACD, z którym ten komputer może się połączyć. Ustaw go w ustawieniach pulpitu zdalnego lub dla każdego hosta w sekcji Serwer proxy GUACD.",
     "docsLink": "Zobacz dokumentację",
-    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+    "connectionOriginGuacamoleNote": "RDP, VNC i Telnet korzystają ze zdalnego serwera, chyba że wybierzesz opcję „To urządzenie”, co wymaga identyfikatora GUACD, z którym ten komputer może się połączyć. Ustaw go w ustawieniu adresu URL GUACD lub dla każdego hosta w sekcji Serwer proxy GUACD."
   },
   "onboarding": {
     "feature_desktop": "Zdalny pulpit",
@@ -234,11 +255,11 @@
     "user": {
       "colorDepth": {
         "label": "Głębia koloru",
-        "description": "Used for RDP hosts that leave it on their default."
+        "description": "Używane w przypadku hostów RDP, które pozostawiają tę wartość domyślną."
       },
       "resizeMethod": {
         "label": "Metoda zmiany rozmiaru",
-        "description": "How the remote screen follows the window size."
+        "description": "W jaki sposób zdalny ekran dostosowuje się do rozmiaru okna."
       },
       "resizeDisplayUpdate": "Aktualizacja ekranu",
       "resizeReconnect": "Połącz ponownie",
@@ -281,19 +302,19 @@
         "label": "Wyłącz wklejanie",
         "description": "Zapobiegaj wklejaniu tekstu do sesji zdalnej"
       },
-      "group": "Remote Desktop defaults",
+      "group": "Domyślne ustawienia pulpitu zdalnego",
       "colorDepth16": "16-bit",
       "colorDepth24": "24-bit",
       "colorDepth32": "32-bit"
     },
     "admin": {
       "enabled": {
-        "label": "Enable Remote Desktop",
-        "description": "Allow RDP, VNC and Telnet connections through guacd."
+        "label": "Włącz pulpit zdalny",
+        "description": "Zezwalaj na połączenia RDP, VNC i Telnet przez guacd."
       },
       "guacdUrl": {
         "label": "Adres URL guacd",
-        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "description": "Miejsce, w którym nasłuchuje GUACD, jako host:port. Zmienne środowiskowe GUACD_URL, GUACD_HOST i GUACD_PORT zastępują to ustawienie.",
         "placeholder": "guacd:4822"
       }
     },
@@ -308,43 +329,46 @@
         "label": "Telnet"
       },
       "rdpPort": {
-        "label": "RDP port"
+        "label": "Port RDP"
       },
       "vncPort": {
-        "label": "VNC port"
+        "label": "Port VNC"
       },
       "telnetPort": {
-        "label": "Telnet port"
+        "label": "Port Telnet"
       },
       "rdpSecurity": {
-        "label": "RDP security mode"
+        "label": "Tryb bezpieczeństwa RDP"
       },
       "rdpIgnoreCert": {
-        "label": "Ignore certificate errors"
+        "label": "Ignoruj błędy certyfikatu"
       },
       "guacamoleConfig": {
-        "label": "guacd settings"
+        "label": "ustawienia GUACD"
       },
       "enableToolbar": {
-        "label": "Remote desktop toolbar",
-        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+        "label": "Pasek narzędzi pulpitu zdalnego",
+        "description": "Wyświetla pasek narzędzi w sesjach RDP, VNC i Telnet."
       },
       "displayGroup": "Wyświetlanie",
       "displayDefaultsTab": "Pulpit zdalny"
     }
   },
   "palette": {
-    "connectRdp": "Connect with RDP",
-    "connectVnc": "Connect with VNC",
-    "connectTelnet": "Connect with Telnet"
+    "connectRdp": "Połącz się z RDP",
+    "connectVnc": "Połącz się z VNC",
+    "connectTelnet": "Połącz się przez Telnet"
   },
   "permissions": {
     "sessions": {
-      "title": "Share remote desktop sessions",
-      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+      "title": "Udostępniaj sesje pulpitu zdalnego",
+      "description": "Zezwól na udostępnianie sesji i współpracę w pokojach, aby sesje RDP, VNC i Telnet tego użytkownika były widoczne dla innych użytkowników."
     }
   },
   "errors": {
     "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

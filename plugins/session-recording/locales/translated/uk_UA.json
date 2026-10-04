@@ -1,60 +1,63 @@
 {
   "nav": {
-    "sessionLogs": "Session Logs"
+    "sessionLogs": "Журнали сеансів"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "Запис сеансу",
+    "enableSessionRecordingDesc": "Запис виводу сеансу терміналу для подальшого перегляду"
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Переглянути записи сеансу",
+      "description": "Переглядайте та відтворюйте власні записи сеансів."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Утримання (дні)",
+        "description": "Як довго зберігається запис сеансу, перш ніж його буде автоматично видалено."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Увімкнути запис сеансу",
+        "description": "Запишіть вивід терміналу для цього хоста, щоб ви могли його відтворити або завантажити пізніше."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Запис"
   },
   "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
-    "back": "Back",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "title": "Журнали сеансів",
+    "noLogs": "Журналів сеансів поки що немає",
+    "noLogsDesc": "Увімкнути ведення журналу сеансу на хості, щоб розпочати запис",
+    "duration": "Тривалість",
+    "viewLog": "Переглянути журнал",
+    "downloadLog": "Завантажити",
+    "downloadAsText": "Завантажити як текст",
+    "deleteLog": "Видалити",
+    "confirmDelete": "Видалити цей журнал сеансу?",
+    "confirmDeleteDesc": "Цю дію не можна скасувати.",
+    "copyContent": "Копіювати",
+    "copied": "Скопійовано!",
+    "loadError": "Не вдалося завантажити журнали сеансу",
+    "deleteError": "Не вдалося видалити журнал сеансу",
+    "filterByHost": "Фільтрувати за хостом...",
+    "back": "Назад",
+    "empty": "(порожній)",
+    "noResults": "Немає результатів для запиту \"{{query}}\"",
+    "hostFallback": "Хост {{id}}",
+    "sessionFallback": "Сесія {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Хронологія запису",
+    "speed": "Швидкість відтворення",
+    "play": "Відтворити запис",
+    "pause": "Призупинити запис"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

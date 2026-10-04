@@ -1,67 +1,67 @@
 {
   "mobileKeyboard": {
-    "addQuickKey": "Add",
-    "arrowDown": "Arrow Down",
-    "arrowLeft": "Arrow Left",
-    "arrowRight": "Arrow Right",
-    "arrowUp": "Arrow Up",
+    "addQuickKey": "Menambahkan",
+    "arrowDown": "Panah ke Bawah",
+    "arrowLeft": "Panah Kiri",
+    "arrowRight": "Panah Kanan",
+    "arrowUp": "Panah Atas",
     "backTab": "⇥",
     "ctrl": "Ctrl",
     "delete": "Del",
-    "done": "Done",
-    "editQuickKeys": "Edit quick keys",
-    "end": "End",
+    "done": "Selesai",
+    "editQuickKeys": "Edit tombol pintasan",
+    "end": "Akhir",
     "esc": "Esc",
-    "home": "Home",
+    "home": "Rumah",
     "pageDown": "PgDn",
     "pageUp": "PgUp",
-    "paste": "Paste",
-    "quickKeyPlaceholder": "e.g. sudo ",
-    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
-    "quickKeysTitle": "Quick Keys",
-    "removeQuickKey": "Remove",
-    "resetDefaults": "Reset to defaults",
-    "shift": "Shift",
+    "paste": "Pasta",
+    "quickKeyPlaceholder": "misalnya sudo ",
+    "quickKeysDesc": "Ketuk × untuk menghapus. Mendukung hingga 8 karakter.",
+    "quickKeysTitle": "Tombol Pintas",
+    "removeQuickKey": "Menghapus",
+    "resetDefaults": "Kembalikan ke pengaturan default",
+    "shift": "Menggeser",
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "autoTmuxEnableFailed": "Gagal mengaktifkan Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux diaktifkan untuk {{host}}. Ini berlaku mulai koneksi berikutnya.",
+    "clipboardHttpWarning": "Tidak dapat membaca isi clipboard. Beberapa browser membatasi akses clipboard di luar HTTPS - coba tekan Ctrl+V, atau sajikan Termix melalui HTTPS.",
     "closeTab": "Tutup",
-    "connecting": "Connecting...",
+    "connecting": "Menghubungkan...",
     "connectionLost": "Koneksi terputus",
-    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
-    "connectionTimeout": "Connection timeout",
-    "enableAutoTmuxAction": "Enable Auto-Tmux",
-    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
-    "linkDialogCopy": "Copy",
-    "linkDialogOpen": "Open",
-    "linkDialogTitle": "Open Link",
-    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
-    "noHostSelected": "No host selected",
-    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
-    "reconnect": "Reconnect",
-    "reconnected": "Reconnected successfully",
-    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
+    "connectionRejected": "Koneksi ditolak oleh server. Harap periksa otentikasi dan konfigurasi jaringan Anda.",
+    "connectionTimeout": "Waktu habis koneksi",
+    "enableAutoTmuxAction": "Aktifkan Auto-Tmux",
+    "hostKeyRejected": "Verifikasi kunci host SSH ditolak. Koneksi dibatalkan.",
+    "linkDialogCopy": "Menyalin",
+    "linkDialogOpen": "Membuka",
+    "linkDialogTitle": "Buka Tautan",
+    "maxReconnectAttemptsReached": "Upaya penyambungan kembali maksimum telah tercapai.",
+    "noHostSelected": "Tidak ada pembawa acara yang dipilih.",
+    "passwordPromptFillTitle": "Masukkan kata sandi yang tersimpan ke dalam kolom ini?",
+    "reconnect": "Terhubung kembali",
+    "reconnected": "Berhasil terhubung kembali",
+    "reconnecting": "Menghubungkan kembali... ({{attempt}}/{{max}})",
+    "autoReconnecting": "Koneksi terputus, sedang mencoba menyambungkan kembali...",
+    "searchCaseSensitive": "Kotak Korek Api",
+    "searchClose": "Tutup (Keluar)",
+    "searchNext": "Pertandingan Berikutnya (Masuk)",
+    "searchNoResults": "Tidak ada hasil",
+    "searchPlaceholder": "Menemukan",
+    "searchPrevious": "Pertandingan Sebelumnya (Shift+Enter)",
+    "searchRegex": "Gunakan Ekspresi Reguler",
+    "searchResultCount": "{{index}} dari {{count}}",
+    "searchWholeWord": "Cocokkan Seluruh Kata",
+    "sessionExpiredNotice": "Sesi Anda sebelumnya di {{host}} telah berakhir setelah {{minutes}} menit terputus; shell dan semua yang berjalan di dalamnya telah hilang. Aktifkan Auto-Tmux pada host ini untuk menjaga agar sesi tetap aktif.",
+    "sessionExpiredNoticeNoMinutes": "Sesi Anda sebelumnya di {{host}} telah berakhir saat terputus; shell dan semua yang berjalan di dalamnya telah hilang. Aktifkan Auto-Tmux pada host ini untuk menjaga agar sesi tetap aktif.",
+    "sessionTakenOver": "Sesi dibuka di tab lain. Sedang menyambungkan kembali...",
     "tmuxAttached": "Client terhubung",
     "tmuxAttachedCount": "{{count}} terhubung",
     "tmuxCopyHint": "Sesuaikan seleksi lalu tekan Enter untuk salin ke clipboard",
     "tmuxCreateNew": "Buat session baru",
-    "tmuxDetached": "Detached from tmux session",
+    "tmuxDetached": "Terputus dari sesi tmux",
     "tmuxLastActivity": "Aktivitas terakhir",
     "tmuxSessionAttached": "sesi tmux terhubung: {{name}}",
     "tmuxSessionCreated": "tmux session dibuat: {{name}}",
@@ -74,632 +74,635 @@
     "tmuxUnavailable": "tmux tidak terinstal di host, beralih ke shell standar",
     "tmuxWindowCount": "{{count}} window",
     "tmuxWindows": "Windows",
-    "unknownError": "Unknown error occurred",
-    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
-    "websocketError": "WebSocket connection error",
-    "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
-    "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
-    "connected": "Connected",
-    "totpCodeLabel": "Verification Code",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "unknownError": "Terjadi kesalahan yang tidak diketahui.",
+    "websocketAbnormalClose": "Koneksi terputus secara tidak terduga. Ini mungkin disebabkan oleh masalah konfigurasi reverse proxy atau SSL. Silakan periksa log server.",
+    "websocketError": "Kesalahan koneksi WebSocket",
+    "clipboardReadFailed": "Gagal membaca dari clipboard. Pastikan izin clipboard telah diberikan.",
+    "clipboardWriteFailed": "Gagal menyalin ke papan klip. Pastikan halaman disajikan melalui HTTPS atau localhost.",
+    "connected": "Terhubung",
+    "totpCodeLabel": "Kode Verifikasi",
+    "duplicateTab": "Tab duplikat",
+    "imageChooseFile": "Pilih file gambar",
+    "imageUploaded": "Gambar diunggah: {{path}}",
+    "imageClipboardUnavailable": "Browser ini tidak dapat membaca gambar dari clipboard.",
+    "imageClipboardEmpty": "Tidak ada gambar yang ditemukan di papan klip.",
+    "localShell": "Shell terminal lokal",
+    "autocompleteHintComplete": "Tekan Tab atau Enter untuk menyelesaikan",
+    "autocompleteHintNavigate": "↑↓ untuk navigasi",
+    "autocompleteHintClose": "Tekan Esc untuk menutup"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
-    "retry": "Retry",
-    "showToolbar": "Expand toolbar",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
-    "uploadingImage": "Uploading..."
+    "detachTmux": "Lepaskan tmux",
+    "detachTmuxDescription": "Lepaskan sesi tmux",
+    "dismissError": "Abaikan kesalahan gambar",
+    "hideToolbar": "Sembunyikan bilah alat",
+    "image": "Aksi gambar (hanya gambar)",
+    "imageActionFailed": "Aksi gambar gagal",
+    "layout": "Mode tampilan bilah alat",
+    "layoutExpanded": "Dilengkapi dengan metrik",
+    "layoutIcon": "Hanya ikon",
+    "layoutLabeled": "Ikon dan label",
+    "moveToolbar": "Pindahkan bilah alat",
+    "moveToolbarHint": "Seret untuk memposisikan ulang bilah alat",
+    "paste": "Tempel gambar",
+    "pasteImage": "Tempel gambar dari clipboard (hanya gambar)",
+    "retry": "Mencoba kembali",
+    "showToolbar": "Perluas bilah alat",
+    "upload": "Unggah gambar",
+    "uploadImage": "Unggah gambar ke host",
+    "uploadingImage": "Sedang mengunggah..."
   },
   "history": {
-    "noTerminalSelected": "No terminal selected",
-    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
-    "searchPlaceholder": "Search history...",
-    "clearAll": "Clear All",
-    "noHistoryEntries": "No history entries",
-    "trackingDisabled": "History tracking is disabled",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "noTerminalSelected": "Tidak ada terminal yang dipilih",
+    "noTerminalSelectedHint": "Buka tab terminal SSH untuk melihat riwayat perintahnya.",
+    "searchPlaceholder": "Riwayat pencarian...",
+    "clearAll": "Hapus Semua",
+    "noHistoryEntries": "Tidak ada entri riwayat.",
+    "trackingDisabled": "Pelacakan riwayat dinonaktifkan",
+    "trackingDisabledHint": "Aktifkan Riwayat Perintah di tab Terminal SSH host ini.",
+    "commandCount_one": "{{count}} perintah",
+    "commandCount_other": "{{count}} perintah"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
-    "advanced": "Advanced",
-    "resetDefaults": "Reset to defaults",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "enabled": "Aktifkan Input Sentuh",
+    "enabledDesc": "Izinkan pengguliran sentuh satu jari di terminal.",
+    "momentumEnabled": "Aktifkan Momentum",
+    "momentumEnabledDesc": "Lanjutkan menggulir sebentar setelah menggeser",
+    "advanced": "Canggih",
+    "resetDefaults": "Kembalikan ke pengaturan default",
+    "dragThreshold": "Ambang batas seret",
+    "maxWheelDelta": "Delta roda maksimum",
+    "momentumSampleWindow": "Jendela sampel momentum",
+    "releaseGracePeriod": "Masa tenggang pelepasan",
+    "minimumVelocity": "Kecepatan minimum",
+    "maximumVelocity": "Kecepatan maksimum",
+    "maximumDuration": "Durasi maksimum",
+    "maximumTravel": "Perjalanan maksimum",
+    "decayTime": "Waktu peluruhan",
+    "pixelsPerTick": "Piksel per detik",
+    "maximumFrameInterval": "Interval bingkai maksimum",
+    "maximumTicksPerFrame": "Jumlah tick maksimum per frame"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
-    "test": "Test",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "instanceId": "ID instance sesi terminal",
+    "instanceIdDesc": "ID instans dari salah satu tab terminal yang terhubung, digunakan untuk menguji visibilitas.",
+    "selectedModeUnavailable": "Tidak tersedia",
+    "test": "Tes",
+    "testing": "Pengujian...",
+    "testFailed": "Pengujian penyimpanan gambar gagal.",
+    "testConnected": "Sesi terminal terhubung.",
+    "testNotConnected": "Tidak ada sesi terminal yang terhubung dengan ID instance ini.",
+    "testSelectedMode": "Unggahan akan menggunakan: {{mode}}",
+    "testLocalVisible": "Direktori lokal tersebut dapat dilihat dari host yang terhubung.",
+    "testLocalNotVisible": "Direktori lokal TIDAK terlihat dari host yang terhubung."
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
-        "sessions": "Sessions",
-        "newHosts": "New Hosts"
+        "touch": "Input Sentuh",
+        "images": "Penyimpanan Gambar",
+        "sessions": "Sesi",
+        "newHosts": "Pembawa Acara Baru"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "Ketahanan Sesi Terminal",
+        "description": "Berapa lama terminal yang terputus tetap aktif di server sebelum ditutup. Minimal 1 menit, maksimal 1440 menit. Untuk sesi yang harus bertahan lebih lama dari ini, aktifkan Auto-Tmux pada host."
       },
       "commandHistoryEnabled": {
-        "label": "Command History",
-        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+        "label": "Riwayat Perintah",
+        "description": "Izinkan perekaman riwayat perintah. Jika dinonaktifkan, riwayat tidak akan disimpan terlepas dari pengaturan per host."
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "Riwayat perintah untuk host baru",
+        "description": "Apakah host baru memulai dengan riwayat perintah diaktifkan."
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
-        "auto": "Auto",
-        "local": "Local",
-        "remoteSftp": "Remote (SFTP)"
+        "label": "Mode Penyimpanan",
+        "description": "Di sinilah gambar terminal yang disalin dan diunggah ditulis. Pemilihan otomatis berdasarkan koneksi, Lokal dan Jarak Jauh (SFTP) telah ditetapkan.",
+        "auto": "Mobil",
+        "local": "Lokal",
+        "remoteSftp": "Jarak Jauh (SFTP)"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "Direktori lokal",
+        "description": "Jalur absolut pada backend Termix tempat mode lokal menulis gambar. Tidak pernah ditampilkan setelah disimpan. Kosong menggunakan TERMIX_IMAGE_DIR."
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "Jalur host",
+        "description": "Tampilan sisi host dari direktori lokal yang diterima oleh agen terminal."
       },
       "imageTtlMs": {
         "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "description": "Berapa lama gambar yang diunggah disimpan, dalam milidetik. Kosong menggunakan TERMIX_IMAGE_TTL_MS atau satu jam."
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "Jumlah gambar maksimum",
+        "description": "Sebagian besar gambar disimpan sekaligus. Kosong menggunakan TERMIX_MAX_IMAGE_COUNT atau 100."
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "Byte penyimpanan maksimum",
+        "description": "Sebagian besar byte gambar disimpan sekaligus. Kosong menggunakan TERMIX_MAX_IMAGE_STORAGE_BYTES atau 5 GiB."
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "Pertahankan sesi setelah terputus.",
+        "description": "Pertahankan agar terminal yang terputus tetap aktif di server selama waktu yang disebutkan di atas, sehingga saat dibuka kembali, tab-nya akan melanjutkan dari tempat terakhir kali berhenti."
       },
       "newHostAutoTmux": {
         "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "description": "Jalankan terminal host baru di dalam tmux agar sesi tetap berjalan meskipun terjadi pemutusan koneksi (membutuhkan tmux pada host)."
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "Tema untuk host baru",
+        "description": "Tema terminal yang ditampilkan saat host baru dimulai."
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "Font untuk host baru",
+        "description": "Font terminal yang digunakan saat host baru pertama kali dijalankan."
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "Ukuran font untuk host baru",
+        "description": "Ukuran font terminal yang digunakan oleh host baru saat pertama kali dijalankan, dalam piksel."
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "Gaya kursor untuk host baru"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "Kursor berkedip untuk host baru"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "Aktifkan Toolbar Terminal",
+        "description": "Tampilkan bilah alat akses cepat yang terpasang pada terminal aktif untuk alat dan statistik langsung host ini."
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "Posisi Toolbar",
+        "description": "Di situlah letak toolbar di terminal. Anda masih bisa menyeretnya dari sana.",
+        "bottom": "Bagian tengah bawah",
+        "bottomLeft": "Kiri bawah",
+        "bottomRight": "Kanan bawah",
+        "top": "Tengah atas",
+        "topLeft": "Kiri atas",
+        "topRight": "Kanan atas"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "Status Awal Toolbar",
+        "description": "Apakah toolbar terbuka dalam keadaan diperluas atau diminimalkan saat terminal terhubung",
+        "expanded": "Diperluas",
+        "collapsed": "Diminimalkan"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "Mode Tampilan Toolbar",
+        "description": "Cara tombol toolbar ditampilkan. Terakhir digunakan akan menyimpan pilihan Anda sebelumnya di toolbar.",
+        "remember": "Terakhir digunakan",
+        "icon": "Hanya ikon",
+        "labeled": "Ikon dan label",
+        "expanded": "Dilengkapi dengan statistik"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "Tampilkan Statistik Langsung",
+        "description": "Tampilkan statistik host langsung di atas tombol toolbar dalam mode diperluas."
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "Memudar Saat Diam",
+        "description": "Samarkan bilah alat hingga Anda mengarahkan kursor ke atasnya."
       },
       "enableCommandHistory": {
-        "label": "Command History",
-        "description": "Record commands run in this terminal for history and autocomplete"
+        "label": "Riwayat Perintah",
+        "description": "Rekam perintah yang dijalankan di terminal ini untuk riwayat dan pelengkapan otomatis."
       },
       "enableTerminal": {
-        "label": "Enable Terminal",
-        "description": "Offer an SSH terminal for this host."
+        "label": "Aktifkan Terminal",
+        "description": "Sediakan terminal SSH untuk host ini."
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "Gunakan pengaturan default pengguna."
       },
       "theme": {
-        "label": "Theme"
+        "label": "Tema"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "Kursor berkedip"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "Gaya kursor"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "Ukuran font"
       },
       "fontFamily": {
         "label": "Font"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "Gulir ke belakang"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "Jarak antar huruf"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "Tinggi baris"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "Bel"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "Rasio kontras minimum"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "Gambar latar belakang"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "Opasitas gambar latar belakang"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "Warna tema kustom"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "Klik kanan memilih kata"
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "Opsi adalah Meta"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "Tombol gulir cepat"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "Kecepatan gulir cepat"
       },
       "backspaceMode": {
-        "label": "Backspace"
+        "label": "Hapus"
       },
       "autoMosh": {
         "label": "Auto mosh"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Perintah mosh"
       },
       "autoTmux": {
         "label": "Auto tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "Gunakan judul SSH"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "Penyorotan sintaksis"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "Kategori penyorotan sintaksis"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "Klik tautan"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "Gema lokal"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "Tawarkan untuk mengisi kolom kata sandi."
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "Isi perintah sudo"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "Terhubung kembali secara otomatis"
       }
     },
     "user": {
       "commandAutocomplete": {
-        "label": "Command Autocomplete",
-        "description": "Show autocomplete while typing if you press tab"
+        "label": "Pelengkapan Otomatis Perintah",
+        "description": "Tampilkan fitur pelengkapan otomatis saat mengetik jika Anda menekan tombol Tab."
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "Gema Lokal",
+        "description": "Kurangi latensi input yang dirasakan menggunakan prediksi penekanan tombol lokal yang aman."
       },
       "linkClickBehavior": {
-        "label": "Terminal Link Click",
-        "description": "Default behavior when clicking links in the terminal"
+        "label": "Klik Tautan Terminal",
+        "description": "Perilaku default saat mengklik tautan di terminal"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "Tema yang tersimpan"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "Terminal Lokal"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "Gunakan sesi terminal langsung.",
+      "description": "Memungkinkan fitur lain, seperti berbagi sesi dan perekaman, untuk menjangkau sesi terminal langsung Anda."
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "Baca riwayat perintah",
+      "description": "Memungkinkan fitur lain, seperti asisten AI, untuk membaca riwayat perintah Anda."
     }
   },
   "hosts": {
     "tabTerminal": "Terminal",
-    "addHost": "Add Host",
-    "applyGlobalThemeTooltip": "Apply this theme",
-    "backgroundImageDesc": "Optional URL for a terminal background image",
-    "backgroundImageLabel": "Background Image URL",
-    "backgroundImageOpacityLabel": "Background Image Opacity",
-    "backspaceMode": "Backspace Mode",
-    "backspaceModeControlH": "Control-H (BS)",
-    "backspaceModeLabel": "Backspace Mode",
+    "addHost": "Tambahkan Host",
+    "applyGlobalThemeTooltip": "Terapkan tema ini",
+    "backgroundImageDesc": "URL opsional untuk gambar latar belakang terminal.",
+    "backgroundImageLabel": "URL Gambar Latar Belakang",
+    "backgroundImageOpacityLabel": "Opasitas Gambar Latar Belakang",
+    "backspaceMode": "Mode Hapus",
+    "backspaceModeControlH": "Kontrol-H (BS)",
+    "backspaceModeLabel": "Mode Hapus",
     "backspaceModeNormal": "Normal (DEL)",
-    "behaviorAndAdvanced": "Behavior & Advanced",
-    "bellStyle": "Bell Style",
-    "bellStyleBoth": "Both",
-    "bellStyleLabel": "Bell Style",
-    "bellStyleNone": "None",
-    "bellStyleSound": "Sound",
+    "behaviorAndAdvanced": "Perilaku & Tingkat Lanjut",
+    "bellStyle": "Gaya Lonceng",
+    "bellStyleBoth": "Keduanya",
+    "bellStyleLabel": "Gaya Lonceng",
+    "bellStyleNone": "Tidak ada",
+    "bellStyleSound": "Suara",
     "bellStyleVisual": "Visual",
-    "colorTheme": "Color Theme",
-    "cursorBlink": "Cursor Blink",
-    "cursorBlinking": "Cursor Blinking",
-    "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
-    "cursorStyle": "Cursor Style",
-    "cursorStyleBar": "Bar",
-    "cursorStyleBlock": "Block",
-    "cursorStyleLabel": "Cursor Style",
-    "cursorStyleUnderline": "Underline",
-    "customThemeAnsiColors": "ANSI Colors",
-    "customThemeBackground": "Background",
-    "customThemeBlack": "Black",
-    "customThemeBlue": "Blue",
-    "customThemeBrightBlack": "Bright Black",
-    "customThemeBrightBlue": "Bright Blue",
-    "customThemeBrightCyan": "Bright Cyan",
-    "customThemeBrightGreen": "Bright Green",
-    "customThemeBrightMagenta": "Bright Magenta",
-    "customThemeBrightRed": "Bright Red",
-    "customThemeBrightWhite": "Bright White",
-    "customThemeBrightYellow": "Bright Yellow",
-    "customThemeColors": "Custom Colors",
-    "customThemeCursor": "Cursor",
-    "customThemeCursorAccent": "Cursor Accent",
-    "customThemeCyan": "Cyan",
-    "customThemeForeground": "Foreground",
-    "customThemeGreen": "Green",
+    "colorTheme": "Tema Warna",
+    "cursorBlink": "Kedipan Kursor",
+    "cursorBlinking": "Kursor Berkedip",
+    "cursorBlinkingDesc": "Aktifkan animasi berkedip untuk kursor terminal.",
+    "cursorStyle": "Gaya Kursor",
+    "cursorStyleBar": "Batang",
+    "cursorStyleBlock": "Memblokir",
+    "cursorStyleLabel": "Gaya Kursor",
+    "cursorStyleUnderline": "Menggarisbawahi",
+    "customThemeAnsiColors": "Warna ANSI",
+    "customThemeBackground": "Latar belakang",
+    "customThemeBlack": "Hitam",
+    "customThemeBlue": "Biru",
+    "customThemeBrightBlack": "Hitam Terang",
+    "customThemeBrightBlue": "Biru Terang",
+    "customThemeBrightCyan": "Biru Muda Terang",
+    "customThemeBrightGreen": "Hijau Terang",
+    "customThemeBrightMagenta": "Magenta Terang",
+    "customThemeBrightRed": "Merah Terang",
+    "customThemeBrightWhite": "Putih Terang",
+    "customThemeBrightYellow": "Kuning Cerah",
+    "customThemeColors": "Warna Kustom",
+    "customThemeCursor": "Kursor",
+    "customThemeCursorAccent": "Aksen Kursor",
+    "customThemeCyan": "Biru muda",
+    "customThemeForeground": "Latar depan",
+    "customThemeGreen": "Hijau",
     "customThemeMagenta": "Magenta",
-    "customThemeRed": "Red",
-    "customThemeResetTooltip": "Reset to defaults",
-    "customThemeSelection": "Selection",
-    "customThemeWhite": "White",
-    "customThemeYellow": "Yellow",
-    "deleteGlobalThemeTooltip": "Delete this theme",
-    "docsLink": "View docs",
-    "enableAutoMosh": "Enable Auto-Mosh",
-    "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
-    "enableAutoTmux": "Enable Auto-Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
-    "fastScrollModifier": "Fast Scroll Modifier",
-    "fastScrollModifierAlt": "Alt",
+    "customThemeRed": "Merah",
+    "customThemeResetTooltip": "Kembalikan ke pengaturan default",
+    "customThemeSelection": "Pilihan",
+    "customThemeWhite": "Putih",
+    "customThemeYellow": "Kuning",
+    "deleteGlobalThemeTooltip": "Hapus tema ini",
+    "docsLink": "Lihat dokumen",
+    "enableAutoMosh": "Aktifkan Auto-Mosh",
+    "enableAutoMoshDesc": "Lebih baik menggunakan Mosh daripada SSH jika tersedia.",
+    "enableAutoTmux": "Aktifkan Auto-Tmux",
+    "enableAutoTmuxDesc": "Jaga agar shell Anda dan semua yang berjalan di dalamnya tetap aktif meskipun terjadi pemutusan koneksi dan restart browser dengan menjalankan perintah di dalam tmux (tmux harus diinstal pada host).",
+    "fastScrollModifier": "Pengubah Gulir Cepat",
+    "fastScrollModifierAlt": "Alternatif",
     "fastScrollModifierCtrl": "Ctrl",
-    "fastScrollModifierLabel": "Fast Scroll Modifier",
-    "fastScrollModifierShift": "Shift",
-    "fastScrollSensitivity": "Fast Scroll Sensitivity",
-    "fastScrollSensitivityLabel": "Fast Scroll Sensitivity",
-    "fontFamily": "Font Family",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
-    "fontFamilyLabel": "Font Family",
-    "fontSize": "Font Size",
-    "fontSizeLabel": "Font Size",
-    "hostNotFound": "Host not found",
-    "letterSpacing": "Letter Spacing",
-    "letterSpacingPx": "Letter Spacing (px)",
-    "lineHeight": "Line Height",
-    "lineHeightLabel": "Line Height",
-    "linkClickBehaviorConfirm": "Show popup to open or copy",
-    "linkClickBehaviorDesc": "Controls what happens when you click a link in the terminal. Use 'Default' to follow the app-level setting.",
-    "linkClickBehaviorDirect": "Open directly",
-    "linkClickBehaviorLabel": "Link Click Behavior",
-    "loadingHost": "Loading host...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
-    "localEchoOff": "Off",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
-    "moshCommand": "MOSH Command",
-    "moshCommandLabel": "Mosh Command",
-    "noSavedThemes": "No saved themes yet",
-    "none": "None",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
-    "rightClickSelectsWord": "Right Click Selects Word",
-    "rightClickSelectsWordLabel": "Right-click Selects Word",
-    "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
-    "scrollbackBufferLabel": "Scrollback Buffer",
-    "scrollbackMaxLines": "Maximum number of lines kept in history",
-    "sudoPasswordAutoFill": "Sudo Password Auto-Fill",
-    "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
-    "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
-    "syntaxCategoryIpAddresses": "IP Addresses",
+    "fastScrollModifierLabel": "Pengubah Gulir Cepat",
+    "fastScrollModifierShift": "Menggeser",
+    "fastScrollSensitivity": "Sensitivitas Gulir Cepat",
+    "fastScrollSensitivityLabel": "Sensitivitas Gulir Cepat",
+    "fontFamily": "Keluarga Font",
+    "fontFamilyCustomHint": "Pilih font yang sudah tersedia, atau pilih Kustom dan ketik nama persis font yang sudah terpasang di sistem Anda (misalnya MesloLGS NF, Noto Sans Mono). Termix tidak dapat memasang font untuk Anda, pasang terlebih dahulu di sistem operasi Anda.",
+    "fontFamilyCustomOption": "Kebiasaan...",
+    "fontFamilyCustomPlaceholder": "Nama font yang tepat, misalnya MesloLGS NF",
+    "fontFamilyLabel": "Keluarga Font",
+    "fontSize": "Ukuran Huruf",
+    "fontSizeLabel": "Ukuran Huruf",
+    "hostNotFound": "Host tidak ditemukan",
+    "letterSpacing": "Jarak Antar Huruf",
+    "letterSpacingPx": "Jarak Antar Huruf (px)",
+    "lineHeight": "Tinggi Baris",
+    "lineHeightLabel": "Tinggi Baris",
+    "linkClickBehaviorConfirm": "Tampilkan jendela pop-up untuk membuka atau menyalin",
+    "linkClickBehaviorDesc": "Mengontrol apa yang terjadi saat Anda mengklik tautan di terminal. Gunakan 'Default' untuk mengikuti pengaturan tingkat aplikasi.",
+    "linkClickBehaviorDirect": "Buka langsung",
+    "linkClickBehaviorLabel": "Perilaku Klik Tautan",
+    "loadingHost": "Memuat host...",
+    "localEchoAuto": "Otomatis",
+    "localEchoDesc": "Memprediksi penekanan tombol yang aman dan dapat dicetak secara lokal pada koneksi lambat. Permintaan kata sandi dan input kontrol tidak pernah diulang.",
+    "localEchoLabel": "Gema Lokal",
+    "localEchoOff": "Mati",
+    "localEchoOn": "Selalu aktif",
+    "macOptionIsMetaLabel": "Tombol Opsi Mengirim Meta",
+    "macOptionIsMetaShortDesc": "Nonaktifkan pengetikan karakter khusus (seperti @ atau |) dengan tombol Option/Alt di macOS sebagai pengganti pengiriman Meta.",
+    "moshCommand": "Komando MOSH",
+    "moshCommandLabel": "Perintah Mosh",
+    "noSavedThemes": "Belum ada tema yang tersimpan.",
+    "none": "Tidak ada",
+    "passwordPromptAutoFillDesc": "Tawarkan untuk mengisi kata sandi yang tersimpan saat terminal memintanya. Matikan fitur ini agar tidak pernah mengisi kata sandi secara otomatis pada host ini.",
+    "passwordPromptAutoFillLabel": "Tawarkan fitur Isi Otomatis Kata Sandi",
+    "autoReconnectLabel": "Sambungkan Kembali Otomatis",
+    "autoReconnectDesc": "Terhubung kembali secara otomatis ketika koneksi SSH terputus, misalnya setelah gangguan jaringan atau mode tidur. Menyimpan riwayat penelusuran.",
+    "rightClickSelectsWord": "Klik kanan memilih Word",
+    "rightClickSelectsWordLabel": "Klik kanan Pilih Word",
+    "rightClickSelectsWordShortDesc": "Pilih kata di bawah kursor dengan klik kanan.",
+    "saveAsGlobalTheme": "Simpan sebagai Tema Global",
+    "saveGlobalThemeError": "Gagal menyimpan tema",
+    "saveGlobalThemeNamePrompt": "Masukkan nama untuk tema ini",
+    "saveGlobalThemeSuccess": "Tema tersimpan",
+    "savedThemesLabel": "Tema Tersimpan",
+    "scrollbackBufferLabel": "Buffer Gulir Balik",
+    "scrollbackMaxLines": "Jumlah maksimum baris yang disimpan dalam riwayat",
+    "sudoPasswordAutoFill": "Isi Otomatis Kata Sandi Sudo",
+    "sudoPasswordAutoFillDesc": "Simpan kata sandi sudo agar metrik host, perintah terminal, dan lainnya dapat menjalankan perintah istimewa secara otomatis.",
+    "sudoPasswordAutoFillLabel": "Isi Otomatis Kata Sandi Sudo",
+    "syntaxCategoryIpAddresses": "Alamat IP",
     "syntaxCategoryIpAddressesDesc": "192.168.1.1, 10.0.0.1:8080",
-    "syntaxCategoryLogLevels": "Log Levels",
-    "syntaxCategoryLogLevelsDesc": "error, warn, info, debug, fatal",
-    "syntaxCategoryNumbers": "Labeled Numbers",
-    "syntaxCategoryNumbersDesc": "port 8080, exit 1, status 404",
-    "syntaxCategoryPaths": "File Paths",
+    "syntaxCategoryLogLevels": "Tingkat Log",
+    "syntaxCategoryLogLevelsDesc": "kesalahan, peringatan, info, debug, fatal",
+    "syntaxCategoryNumbers": "Angka Berlabel",
+    "syntaxCategoryNumbersDesc": "port 8080, keluar 1, status 404",
+    "syntaxCategoryPaths": "Jalur File",
     "syntaxCategoryPathsDesc": "/usr/share/doc, ~/file.txt",
-    "syntaxCategoryTimestamps": "Timestamps",
+    "syntaxCategoryTimestamps": "Cap waktu",
     "syntaxCategoryTimestampsDesc": "[12:34:56], 2024-01-15",
-    "syntaxCategoryUrls": "URLs",
+    "syntaxCategoryUrls": "URL",
     "syntaxCategoryUrlsDesc": "https://example.com",
-    "syntaxHighlightingDesc": "Colorize terminal output (errors, paths, IPs, timestamps)",
-    "syntaxHighlightingLabel": "Syntax Highlighting",
-    "terminalAppearance": "Terminal Appearance",
-    "theme": "Theme",
-    "themePreview": "Theme Preview",
-    "useSSHTitleDesc": "Update the tab title from the shell's window title instead of the host name",
-    "useSSHTitleLabel": "Use SSH Window Title",
+    "syntaxHighlightingDesc": "Berikan warna pada output terminal (kesalahan, jalur, IP, stempel waktu)",
+    "syntaxHighlightingLabel": "Penyorotan Sintaksis",
+    "terminalAppearance": "Tampilan Terminal",
+    "theme": "Tema",
+    "themePreview": "Pratinjau Tema",
+    "useSSHTitleDesc": "Perbarui judul tab dari judul jendela shell, bukan nama host.",
+    "useSSHTitleLabel": "Gunakan Judul Jendela SSH",
     "enableTunnel": "Aktifkan Tunnel",
-    "enableFileManager": "Enable File Manager",
-    "enableDocker": "Enable Docker",
-    "startupSnippet": "Startup Snippet",
-    "quickActions": "Quick Actions",
+    "enableFileManager": "Aktifkan Pengelola File",
+    "enableDocker": "Aktifkan Docker",
+    "startupSnippet": "Cuplikan Startup",
+    "quickActions": "Tindakan Cepat",
     "proxmoxLastSyncStatus": {
-      "success": "Success"
+      "success": "Kesuksesan"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
-    "rdpUrlCopied": "RDP URL copied",
-    "vncUrlCopied": "VNC URL copied",
-    "filterAuthStepca": "Step CA",
+    "proxmoxResultSkippedNoIp": "{{count}} dilewati (tidak ditemukan IP)",
+    "proxmoxStatsUrlCopied": "URL Statistik Proxmox disalin ke papan klip",
+    "rdpUrlCopied": "URL RDP disalin",
+    "vncUrlCopied": "URL VNC disalin",
+    "filterAuthStepca": "Langkah CA",
     "guac": {
-      "noCredential": "No credential (direct credentials below)",
-      "authTypeDirect": "Direct",
-      "authTypeCredential": "Credential",
-      "authTypeNone": "None",
-      "recordingPath": "Recording Path",
-      "recordingName": "Recording Name",
-      "saveHostFirst": "Save the host first.",
-      "sharingOptionsAfterSave": "Sharing options are available after the host has been saved.",
-      "permissionLevel": "Permission Level",
-      "typeHeader": "Type",
+      "noCredential": "Tidak memerlukan kredensial (kredensial langsung di bawah)",
+      "authTypeDirect": "Langsung",
+      "authTypeCredential": "Mandat",
+      "authTypeNone": "Tidak ada",
+      "recordingPath": "Jalur Perekaman",
+      "recordingName": "Nama Rekaman",
+      "saveHostFirst": "Selamatkan tuan rumah terlebih dahulu.",
+      "sharingOptionsAfterSave": "Opsi berbagi tersedia setelah host disimpan.",
+      "permissionLevel": "Tingkat Izin",
+      "typeHeader": "Jenis",
       "targetHeader": "Target",
-      "permissionHeader": "Permission",
-      "cancelBtn": "Cancel",
-      "savingBtn": "Saving...",
-      "updateHostBtn": "Update Host",
-      "addHostBtn": "Add Host"
+      "permissionHeader": "Izin",
+      "cancelBtn": "Membatalkan",
+      "savingBtn": "Penghematan...",
+      "updateHostBtn": "Perbarui Host",
+      "addHostBtn": "Tambahkan Host"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Kubah"
   },
   "nav": {
-    "history": "History",
-    "localTerminal": "Local Terminal",
-    "sshTools": "SSH Tools",
+    "history": "Sejarah",
+    "localTerminal": "Terminal Lokal",
+    "sshTools": "Alat SSH",
     "terminal": "Terminal",
-    "macros": "Macros"
+    "macros": "Makro"
   },
   "sshTools": {
-    "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
-    "copyOnSelect": "Copy selected text automatically",
-    "enableRightClickCopyPaste": "Enable right-click copy/paste",
-    "fillPassword": "Fill password",
-    "fillPasswordMissing": "No saved password for {{count}} selected terminal(s)",
-    "fillPasswordSuccess": "Filled password into {{count}} terminal(s)",
-    "keyRecordingTitle": "Key Recording",
-    "noTerminalTabsOpen": "No terminal tabs open",
-    "recordToTerminals": "Record to terminals",
-    "selectAll": "All",
-    "selectNone": "None",
-    "selectTerminalsAbove": "Select terminals above",
-    "settingsTitle": "Settings",
-    "startRecording": "Start Recording",
-    "stopRecording": "Stop Recording"
+    "broadcastInputPlaceholder": "Ketik di sini untuk menyiarkan ketukan keyboard...",
+    "copyOnSelect": "Salin teks yang dipilih secara otomatis",
+    "enableRightClickCopyPaste": "Aktifkan salin/tempel dengan klik kanan",
+    "fillPassword": "Isi kata sandi",
+    "fillPasswordMissing": "Tidak ada kata sandi tersimpan untuk {{count}} terminal yang dipilih",
+    "fillPasswordSuccess": "Kata sandi dimasukkan ke dalam terminal {{count}}",
+    "keyRecordingTitle": "Rekaman Kunci",
+    "noTerminalTabsOpen": "Tidak ada tab terminal yang terbuka.",
+    "recordToTerminals": "Rekam ke terminal",
+    "selectAll": "Semua",
+    "selectNone": "Tidak ada",
+    "selectTerminalsAbove": "Pilih terminal di atas",
+    "settingsTitle": "Pengaturan",
+    "startRecording": "Mulai Merekam",
+    "stopRecording": "Hentikan Perekaman"
   },
   "keybindings": {
-    "copy": "Copy selection",
-    "paste": "Paste",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "copy": "Salin pilihan",
+    "paste": "Pasta",
+    "sendControlCode": "Kirim sinyal Ctrl+huruf",
+    "sendText": "Kirim pesan teks",
+    "controlCodeLabel": "Surat",
+    "textLabel": "Teks untuk dikirim",
+    "appendEnterLabel": "Tekan Enter setelah mengirim",
+    "clipboardPermissionNote": "Pada beberapa browser, mungkin akan meminta izin akses clipboard saat pertama kali digunakan.",
+    "textRequired": "Masukkan teks yang ingin dikirim",
+    "controlCodeRequired": "Masukkan satu huruf untuk kode kontrol.",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "Salin pilihan (Ctrl+C, hanya jika teks dipilih)",
+      "copyCtrlShiftC": "Salin pilihan (Ctrl+Shift+C)",
+      "copyCmdC": "Salin pilihan (Cmd+C)",
+      "pasteCtrlShiftV": "Salin dari clipboard (Ctrl+Shift+V)",
+      "ctrlW": "Kirim Ctrl+W ke shell (diblokir agar tidak menutup tab browser)",
+      "ctrlT": "Kirim Ctrl+T ke shell (diblokir agar tidak membuka tab browser)",
+      "ctrlN": "Kirim Ctrl+N ke shell (diblokir agar tidak membuka jendela browser)",
+      "ctrlQ": "Kirim Ctrl+Q ke shell (diblokir agar tidak menutup browser)"
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "title": "Makro",
+    "description": "Jalankan serangkaian perintah yang tersimpan di terminal, dan tanggapi apa yang dikirimkan kembali oleh server.",
     "target": "Target",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
-    "name": "Name",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
-    "descriptionLabel": "Description",
-    "descriptionPlaceholder": "What this macro does (optional)",
-    "unsaved": "Unsaved changes",
-    "save": "Save",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
-    "delete": "Delete",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
-    "cancel": "Cancel",
-    "run": "Run",
-    "stop": "Stop",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "noTerminal": "Tidak ada terminal yang terbuka",
+    "empty": "Belum ada makro",
+    "emptyHint": "Buat makro untuk mengotomatiskan alur terminal, seperti masuk, memulai ulang layanan, atau menjawab perintah.",
+    "create": "Makro baru",
+    "back": "Kembali ke makro",
+    "name": "Nama",
+    "namePlaceholder": "Mulai ulang server web",
+    "nameRequired": "Beri nama makro sebelum menyimpannya.",
+    "descriptionLabel": "Keterangan",
+    "descriptionPlaceholder": "Fungsi makro ini (opsional)",
+    "unsaved": "Perubahan yang belum disimpan",
+    "save": "Menyimpan",
+    "saved": "Makro tersimpan",
+    "saveFailed": "Makro tidak dapat disimpan.",
+    "delete": "Menghapus",
+    "deleteTitle": "Hapus makro ini?",
+    "deleteBody": "\"{{name}}\" akan dihapus secara permanen. Ini tidak dapat dibatalkan.",
+    "deleted": "Makro dihapus",
+    "cancel": "Membatalkan",
+    "run": "Berlari",
+    "stop": "Berhenti",
+    "running": "Berlari...",
+    "completed": "Makro selesai",
+    "failed": "Makro gagal",
+    "loadFailed": "Makro tidak dapat dimuat",
+    "needTerminal": "Buka dan sambungkan terminal terlebih dahulu.",
+    "noSteps": "Makro ini belum memiliki langkah. Tambahkan langkah di bawah ini.",
+    "addStep": "Tambahkan langkah",
+    "stepNumber": "Langkah {{number}}",
+    "removeStep": "Hapus langkah",
+    "confirmRunTitle": "Jalankan makro ini?",
+    "confirmRunBody": "\"{{name}}\" akan mengirimkan perintah ke {{host}}.",
+    "confirmRunAction": "Jalankan makro",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "Kirim perintah",
+        "help": "Mengetik teks ke terminal, sama seperti jika Anda mengetiknya."
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "Tunggu hingga muncul output.",
+        "help": "Akan berhenti sejenak hingga server menampilkan teks yang Anda sebutkan, seperti saat meminta kata sandi."
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "Berhenti sebentar",
+        "help": "Menunggu dalam jangka waktu tertentu sebelum melanjutkan ke langkah berikutnya."
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "Jika output berisi",
+        "help": "Memeriksa semua yang telah dicetak server sejauh ini, lalu menjalankan salah satu dari dua cabang."
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "Mengulang",
+        "help": "Menjalankan langkah-langkah di dalamnya sebanyak jumlah kali yang telah ditentukan."
       }
     },
     "send": {
-      "text": "Command or text",
+      "text": "Perintah atau teks",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "pressEnter": "Tekan Enter setelah mengirim",
+      "pressEnterHelp": "Matikan opsi ini untuk mengetik teks tanpa mengirimkannya."
     },
     "wait": {
-      "pattern": "Wait until the output contains",
-      "patternPlaceholder": "password:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "pattern": "Tunggu hingga output berisi",
+      "patternPlaceholder": "kata sandi:",
+      "timeout": "Menyerah setelah",
+      "onTimeout": "Jika itu tidak pernah muncul",
+      "stop": "Hentikan makro",
+      "continue": "Tetaplah melanjutkan"
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "Tunggu"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "Jika outputnya berisi",
+      "patternPlaceholder": "Aktif: aktif (berjalan)",
+      "then": "Kemudian lakukan ini",
+      "else": "Jika tidak, lakukan ini",
+      "emptyBranch": "Tidak ada tangga"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "Jumlah kali",
+      "times": "waktu"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "Cocokkan dengan ekspresi reguler",
+      "useRegexHelp": "Hilangkan bagian ini agar sesuai persis dengan teks yang tertulis.",
+      "invalidRegex": "Bukan ekspresi reguler yang valid, akan dicocokkan sebagai teks biasa."
     },
-    "seconds": "seconds",
+    "seconds": "detik",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

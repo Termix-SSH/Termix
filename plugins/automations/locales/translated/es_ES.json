@@ -207,5 +207,19 @@
     "remove": "Eliminar horario",
     "loadFailed": "No se pudo actualizar el estado de mantenimiento. Los cambios están deshabilitados hasta que se puedan cargar.",
     "loading": "Cargando estado de mantenimiento…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

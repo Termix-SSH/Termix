@@ -54,5 +54,8 @@
     "previewDescription": "Això és exactament el que s'enviaria ara mateix.",
     "close": "Tanca",
     "loadFailed": "No s'ha pogut carregar l'estat de les estadístiques d'ús."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

@@ -168,5 +168,8 @@
     "showRead": "Leeswaarschuwingen weergeven",
     "allClear": "Alles in orde",
     "loading": "Laden..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

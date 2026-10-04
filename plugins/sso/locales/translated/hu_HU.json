@@ -20,6 +20,12 @@
     "nameRequired": "Megjelenített név megadása kötelező",
     "type": "Szolgáltató típusa",
     "enabled": "Engedélyezve",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Szolgáltató mentése",
     "saving": "Megtakarítás...",
     "saved": "Mentett",
@@ -61,5 +67,8 @@
       "label": "Automatikus bejelentkezés egyszeri bejelentkezéssel",
       "description": "A látogatókat közvetlenül az első SSO-szolgáltatóhoz irányítsa a bejelentkezési űrlap megjelenítése helyett. Az OIDC_SILENT_LOGIN_DEFAULT környezeti változó felülírja ezt."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

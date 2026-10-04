@@ -23,6 +23,12 @@
     "namePlaceholder": "מדריך חברות",
     "nameRequired": "נדרש שם תצוגה",
     "enabled": "מופעל",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "שמור ספרייה",
     "saving": "חִסָכוֹן...",
     "saved": "נשמר",
@@ -36,6 +42,7 @@
     "host": "מארח LDAP",
     "port": "נָמָל",
     "useTls": "השתמש ב-TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "קשר DN",
     "bindPassword": "קשירת סיסמה",
     "secretKeep": "סיסמה נשמרה. השאר שדה זה ריק כדי לשמור אותה.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "בסיס חיפוש קבוצתי",
     "adminGroup": "קבוצת ניהול",
     "allowedUsers": "משתמשים מורשים"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

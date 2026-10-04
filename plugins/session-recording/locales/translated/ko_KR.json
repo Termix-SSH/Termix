@@ -56,5 +56,8 @@
     "speed": "재생 속도",
     "play": "재생 녹음",
     "pause": "녹화 일시 중지"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

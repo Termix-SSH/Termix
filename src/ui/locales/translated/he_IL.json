@@ -116,11 +116,12 @@
     "updateLinkLabel": "עדכון זמין. פתח את הערות הגרסה ב-GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "לִסְגוֹר",
     "minimize": "לְצַמְצֵם",
     "online": "באינטרנט",
     "offline": "לא מקוון",
-    "signInFailed": "הכניסה נכשלה",
     "unknown": "לֹא יְדוּעַ",
     "continue": "לְהַמשִׁיך",
     "maintenance": "תַחזוּקָה",
@@ -187,7 +188,11 @@
     "remove": "לְהַסִיר",
     "add": "לְהוֹסִיף",
     "update": "לְעַדְכֵּן",
-    "noResults": "לא נמצאו תוצאות"
+    "noResults": "לא נמצאו תוצאות",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "שלב {{current}} של {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "מִנהָרָה",
     "serverStats": "מדדי מארח",
     "status": {
-      "available": "זָמִין",
-      "reachable": "זמין, אך ההתחברות נכשלה",
+      "online": "Online",
       "offline": "לא מקוון",
-      "monitoringDisabled": "ניטור מושבת",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "סטָטוּס"
     },
     "folderRenamed": "תיקיית \"{{oldName}}\" שמה שונה בהצלחה ל- \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "מארח זה (מנהרה ישירה)",
     "statusChecksLabel": "בדיקות סטטוס",
     "enableStatusChecks": "הפעל בדיקות סטטוס",
-    "enableStatusChecksDesc": "שלח פינג למארח הזה מעת לעת כדי לוודא זמינות",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "השתמש במרווח גלובלי",
     "useGlobalIntervalDesc": "עקיפה עם מרווח בדיקת המצב הכולל של השרת",
     "checkIntervalS": "מרווח זמן בדיקה (ים)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "החשבון שלך משתמש בגורם שני שאינו זמין כרגע. צור קשר עם מנהל כדי לאפס אותו.",
     "secondFactorNoUI": "לא ניתן להציג את הגורם השני במסך זה. צור קשר עם מנהל.",
     "serverAuthentication": "כניסה לשרת",
-    "minChars": "מינימום {{min}} תווים"
+    "minChars": "מינימום {{min}} תווים",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "אימות מפתח מארח SSH",
@@ -1119,7 +1125,13 @@
     "language": "שָׂפָה",
     "keyPassword": "סיסמת מפתח",
     "pastePrivateKey": "הדבק את המפתח הפרטי שלך כאן...",
-    "enterPassword": "הזן את הסיסמה שלך"
+    "enterPassword": "הזן את הסיסמה שלך",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "לוּחַ מַחווָנִים",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "הונפק על ידי {{issuer}}",
     "sslNames": "כריכות {{names}}",
     "sslManualTitle": "העלה תעודה",
-    "updateExternalAutoProvisionFailed": "נכשל עדכון הגדרת היצירה האוטומטית"
+    "updateExternalAutoProvisionFailed": "נכשל עדכון הגדרת היצירה האוטומטית",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

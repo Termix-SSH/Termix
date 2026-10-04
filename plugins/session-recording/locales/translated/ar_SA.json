@@ -56,5 +56,8 @@
     "speed": "سرعة التشغيل",
     "play": "تشغيل التسجيل",
     "pause": "إيقاف التسجيل مؤقتًا"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

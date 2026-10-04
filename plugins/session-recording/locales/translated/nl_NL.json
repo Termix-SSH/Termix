@@ -56,5 +56,8 @@
     "speed": "Afspeelsnelheid",
     "play": "Speel opname af",
     "pause": "Opname pauzeren"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

@@ -59,11 +59,7 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import {
-  useHostStatus,
-  useHostStatusReason,
-  useServerStatusMeta,
-} from "@/lib/ServerStatusContext";
+import { useHostStatus } from "@/lib/ServerStatusContext";
 import {
   Tooltip,
   TooltipContent,
@@ -101,16 +97,16 @@ export function statusCheckEnabled(host: Host): boolean {
 
 export function buildStatusTooltip(
   host: Host,
-  status: "online" | "reachable" | "offline",
+  status: "online" | "offline" | "unknown",
   t: (key: string) => string = (k) => k,
 ): string {
+  if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
   const statusLabel =
     status === "online"
-      ? t("hosts.status.available")
-      : status === "reachable"
-        ? t("hosts.status.reachable")
-        : t("hosts.status.offline");
-  if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
+      ? t("hosts.status.online")
+      : status === "offline"
+        ? t("hosts.status.offline")
+        : t("hosts.status.checking");
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
   for (const protocol of enabledHostProtocols(host)) {
@@ -283,22 +279,11 @@ export function HostItem({
   const pluginMenuItems = hostMenuItemsFor(useHostContextMenuItems(), host);
   const splitTargets = useSplitTargets();
   const statusScheme = useStatusColorScheme();
-  const { initialLoadComplete } = useServerStatusMeta();
   const statusCheckOn = statusCheckEnabled(host);
-  const statusLoading = !initialLoadComplete && statusCheckOn;
-  // Per-host subscription — status polls only re-render rows that flipped.
-  const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
-  const statusReason = useHostStatusReason(Number(host.id), statusCheckOn);
+  // Per-host subscription, so a poll only re-renders rows that flipped.
   const availability =
-    liveStatus === "online" ||
-    liveStatus === "reachable" ||
-    liveStatus === "offline"
-      ? liveStatus
-      : host.status === "reachable"
-        ? "reachable"
-        : host.online
-          ? "online"
-          : "offline";
+    useHostStatus(Number(host.id), statusCheckOn) ?? "offline";
+  const statusLoading = availability === "unknown";
   const isOnline = availability === "online";
   const previousAvailability = useRef(availability);
   const [statusLocking, setStatusLocking] = useState(false);
@@ -1136,9 +1121,7 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {statusReason === "host_key_changed"
-                  ? `${t("hostKey.keyChangedWarning")}: ${t("hostKey.keyChangedDescription")}`
-                  : buildStatusTooltip(host, availability, t)}
+                {buildStatusTooltip(host, availability, t)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

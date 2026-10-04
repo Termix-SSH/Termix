@@ -1,15 +1,15 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "स्टेप सीए"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "label": "स्टेप सीए",
+    "description": "अपने आइडेंटिटी प्रोवाइडर के माध्यम से साइन इन करें और अपने स्टेप सीए को इस होस्ट के लिए एक अल्पकालिक एसएसएच प्रमाणपत्र जारी करने दें। सीए यूआरएल, रूट फिंगरप्रिंट और ओआईडीसी प्रोविजनर को एडमिनिस्ट्रेटर द्वारा एडमिन सेटिंग्स के स्टेप सीए सेक्शन में सेट किया जाता है।",
     "docs": "दस्तावेज़ देखें"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "title": "चरण CA प्रमाणीकरण आवश्यक है",
+    "description": "आगे बढ़ने के लिए अपने ब्राउज़र में प्रमाणीकरण पूरा करें। प्रमाणपत्र तब तक वैध रहेगा जब तक आपका CA इसकी अनुमति देता है।",
     "openBrowser": "प्रमाणीकरण के लिए ब्राउज़र खोलें",
     "waiting": "ब्राउज़र में प्रमाणीकरण की प्रतीक्षा हो रही है...",
     "authenticating": "प्रमाणीकरण प्रक्रिया में है..."
@@ -20,29 +20,32 @@
   },
   "settings": {
     "caUrl": {
-      "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "label": "सीए यूआरएल",
+      "description": "आपके SmallStep CA का HTTPS URL। Step CA को बंद करने के लिए CA URL, फिंगरप्रिंट और प्रोविज़नर को खाली छोड़ दें।",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "रूट फिंगरप्रिंट (SHA-256)",
+      "description": "रूट सर्टिफिकेट फिंगरप्रिंट, जैसा कि स्टेप सीए बूटस्ट्रैप द्वारा दिखाया गया है।"
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "OIDC प्रोविज़नर नाम",
+      "description": "सीए के ओआईडीसी प्रोविजनर का नाम। फिर होस्ट के प्रमाणीकरण प्रकार के रूप में \"स्टेप सीए\" चुनें।"
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "निजी स्टेप सीए होस्ट की अनुमति है",
+      "description": "निजी होस्ट, स्टेप सीए प्रमाणपत्र प्रवाह के दौरान निम्नलिखित से संपर्क कर सकते हैं: सीए स्वयं और, यदि आंतरिक है, तो आपका पहचान प्रदाता। इन्हें अल्पविराम या नई पंक्तियों से अलग करें।"
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "रीडायरेक्ट यूआरआई",
+      "description": "इस यूआरएल को ओआईडीसी प्रोविजनर के पीछे स्थित आइडेंटिटी प्रोवाइडर के साथ एक अनुमत रीडायरेक्ट यूआरआई के रूप में पंजीकृत करें।"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "पुराने रीडायरेक्ट यूआरआई का उपयोग करें",
+      "description": "पहले 2.9 से पहले इस्तेमाल होने वाले रीडायरेक्ट यूआरआई /host/step-ca-callback को भेजते रहें। जब आपका आइडेंटिटी प्रोवाइडर नए यूआरआई की अनुमति दे दे, तो इसे बंद कर दें।"
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

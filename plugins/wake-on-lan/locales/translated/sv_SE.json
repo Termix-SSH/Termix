@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "Vakna",
+    "sent": "Wake-on-LAN-paket skickat",
+    "failed": "Misslyckades med att skicka Wake-on-LAN-paketet"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "Skicka Wake-on-LAN-paket",
+      "description": "Väcka en värd genom att skicka ett magiskt paket till dess MAC-adress."
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
+        "label": "MAC-adress",
+        "description": "Värdens nätverks-MAC-adress, som används för att skicka Wake-on-LAN-paket.",
         "placeholder": "AA:BB:CC:DD:EE:FF"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "Sändningsadress",
+        "description": "Subnätets sändningsadress att skicka paketet till. Lämna tomt för 255.255.255.255.",
         "placeholder": "192.168.1.255"
       }
     }

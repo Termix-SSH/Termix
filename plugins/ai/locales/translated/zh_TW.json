@@ -1,117 +1,117 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "使用助手",
+      "description": "打開助手並向它提問。"
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "管理供應商",
+      "description": "新增、編輯和刪除人工智慧提供者及其 API 金鑰。"
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "提交提案",
+      "description": "讓助手執行它建議的更改。"
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "利用其他功能中的人工智慧",
+      "description": "其他功能可能會代表您呼叫語音助理。"
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "分享 API 金鑰",
+      "description": "其他功能可能會在不查看金鑰的情況下使用已儲存的 AI API 金鑰。"
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "此伺服器上的AI助理已關閉。",
+    "providersNeedOptIn": "開啟上方的AI助手，即可新增服務提供者。",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "人工智慧助手",
+        "description": "允許用戶開啟AI助理。關閉此功能後，助手將被隱藏，所有用戶均無法存取。"
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "允許的私有人工智慧主機",
+        "description": "使用者可將服務提供者指向的私有網路上的主機，例如自架的 Ollama。每行填寫一個主機。"
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "啟用人工智慧助手",
+        "description": "允許 AI 助理在此主機的終端機上提供協助。預設為關閉狀態，但仍需在您的帳戶中啟用 AI 功能。"
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
+    "title": "助理",
+    "send": "傳送",
     "stop": "停止位元",
     "save": "儲存",
     "cancel": "取消",
     "running": "執行中",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
+    "approve": "核准",
+    "reject": "拒絕",
+    "inputPlaceholder": "詢問伺服器相關情況，或描述要提出的變更建議",
+    "selectProvider": "選擇服務提供者",
+    "providerSettings": "提供者設定",
+    "addProvider": "新增提供者",
+    "editProvider": "編輯提供者",
+    "removeProvider": "移除提供者",
+    "providerType": "提供者",
     "providerLabel": "名稱",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
-    "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
+    "providerLabelPlaceholder": "例如：本地奧拉馬",
+    "baseUrl": "伺服器位址",
+    "apiKey": "API金鑰",
+    "defaultModel": "預設模型",
+    "defaultModelPlaceholder": "例如：llama3.1 或 claude-opus-5",
+    "labelRequired": "給這家服務提供者取個名字",
+    "providerSaveFailed": "無法儲存提供者",
+    "providerUpdated": "提供者已更新",
+    "providerDeleteFailed": "無法移除提供者",
+    "privateEndpointHint": "您私有網路上的位址需要管理員先允許主機存取。",
+    "providerOllama": "奧拉瑪",
+    "providerAnthropic": "人類學",
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
+    "providerOpenaiCompatible": "相容 OpenAI",
     "toolArguments": "輸入",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "toolResult": "結果",
+    "statusApplied": "應用",
+    "statusRejected": "已拒絕",
+    "proposalApplied": "變更已生效",
+    "proposalApplyFailed": "無法套用變更",
+    "proposalRejectFailed": "無法拒絕更改",
+    "enableTitle": "啟用人工智慧助手",
+    "enableDescription": "請助手讀取您的設定並提出更改建議，供您批准。",
+    "readOnlyCommands": "允許只讀診斷命令",
+    "readOnlyCommandsDescription": "助手可能會在不每次都詢問的情況下執行一些安全的命令，例如 `df` 和 `uptime`。任何會更改伺服器的操作都會優先被提出。",
+    "modelDetectFailed": "無法聯繫到供應商，所以這裡提供的是通用清單。您可以輸入任何型號名稱。",
+    "modelCustom": "請輸入型號名稱",
+    "modelRefresh": "重新整理清單",
+    "modelPlaceholder": "選擇或輸入型號",
+    "attachHint": "輸入 @ 符號可引用主機、程式碼片段或自動化流程。系統會提出更改建議，供您批准。",
+    "runCommandTitle": "運行命令",
+    "assistant": "人工智慧助手",
+    "terminalPanelEmpty": "向助理詢問有關此房東的資訊。任何狀態變更都需要您先批准。",
+    "terminalPanelPlaceholder": "詢問一下這位房東的狀況…",
+    "noProvidersConfigured": "尚未配置任何 AI 提供者。請在 AI 助理標籤中新增。",
+    "runsInOpenTerminal": "在開啟的終端機會話中運行。",
     "runInTerminal": "執行",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "terminalContextPrefill": "以下是我的終端輸出：\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "允許其他功能使用您的 AI 提供者 API 金鑰發出各自的請求。該密鑰絕不會被複製，您可以隨時撤銷此授權。"
     }
   },
   "nav": {
-    "ai": "AI"
+    "ai": "人工智慧"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "人工智慧助手",
+    "aiIntro": "Termix 可以包含一個可選的 AI 助手。您可以稍後在設定中變更此選項。",
+    "aiSkipTitle": "丟開",
+    "aiSkipDesc": "Termix 的運作方式與現在相同。助手保持隱藏狀態。",
+    "aiEnableTitle": "打開它",
+    "aiEnableDesc": "添加一個助手，它可以讀取您的設定並提出您批准的更改建議。需要您提供服務提供者，例如當地的 Ollama 服務提供者。",
+    "aiNote": "在您新增服務提供者並發送訊息之前，任何內容都不會發送到任何地方。"
   },
   "hosts": {
     "docsLink": "檢視文件"
@@ -191,5 +191,8 @@
     "reconnecting": "Reconnecting and restoring messages…",
     "unavailable": "Session is no longer accessible. Check your permissions or sign in again.",
     "shortcuts": "Enter sends or queues · Shift+Enter adds a line · Esc interrupts and pauses the queue"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

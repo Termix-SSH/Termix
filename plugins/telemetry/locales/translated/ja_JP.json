@@ -54,5 +54,8 @@
     "previewDescription": "これはまさに今送られてくる内容です。",
     "close": "閉じる",
     "loadFailed": "使用状況統計ステータスを読み込めませんでした"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

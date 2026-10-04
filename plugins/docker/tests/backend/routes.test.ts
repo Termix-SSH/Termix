@@ -303,7 +303,7 @@ describe("docker routes", () => {
     });
   });
 
-  it("reports a failed login to core", async () => {
+  it("never reports a failed login to core", async () => {
     const client = new FakeClient();
     server = await startServer({ client });
     server.mock.ctx.ssh.connect = (async () => {
@@ -311,10 +311,6 @@ describe("docker routes", () => {
     }) as never;
     const response = await connect(server);
     expect(response.status).toBe(500);
-    expect(server.mock.statusReports).toContainEqual({
-      hostId: 7,
-      ok: false,
-      hostKeyChanged: false,
-    });
+    expect(server.mock.statusReports).toEqual([]);
   });
 });

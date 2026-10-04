@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "使用 SSO 登入",
   "loginWithProvider": "使用 {{name}} 登入",
   "loading": "載入中...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "管理 SSO 提供者",
+      "description": "新增、變更和刪除使用者可用於登入的 SSO 提供者。"
     }
   },
   "providers": {
@@ -16,30 +16,36 @@
     "delete": "刪除提供者",
     "deleteConfirm": "刪除此提供者？相關使用者將無法登入。",
     "name": "顯示名稱",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "我的 SSO 提供者",
+    "nameRequired": "必須填寫顯示名稱。",
     "type": "提供者類型",
     "enabled": "已啟用",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "儲存提供者",
     "saving": "儲存中…",
     "saved": "已儲存",
     "saveFailed": "儲存失敗",
     "deleted": "已刪除",
     "deleteFailed": "刪除失敗",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "載入 SSO 提供者失敗",
     "cancel": "取消",
     "copy": "複製",
     "copied": "已複製",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "重定向 URI",
+    "redirectUriDesc": "將此 URL 註冊為身分提供者中的重新導向或回調 URL。",
+    "legacyCallback": "保留舊的重定向 URI",
+    "legacyCallbackDesc": "此身分提供者是在 Termix 2.9 版本之前設定的，目前仍使用舊的重定向 URI，該 URI 仍然有效。若要遷移到新的重定向 URI，請先在身分提供者中新增 {{uri}} ，然後再將其關閉。",
+    "authorizationUrl": "授權網址： {{url}}"
   },
   "fields": {
     "clientId": "用戶端 ID",
     "clientSecret": "用戶端密鑰",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "一個秘密被保守。留空即可保密。",
     "issuerUrl": "發行者 URL",
     "authUrl": "授權 URL",
     "tokenUrl": "權杖 URL",
@@ -58,8 +64,11 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "使用 SSO 自動登入",
+      "description": "將訪客直接引導至第一個單一登入 (SSO) 供應商，而不是顯示登入表單。環境變數 OIDC_SILENT_LOGIN_DEFAULT 會覆寫此設定。"
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

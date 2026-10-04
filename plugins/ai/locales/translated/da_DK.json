@@ -191,5 +191,8 @@
     "reconnecting": "Reconnecting and restoring messages…",
     "unavailable": "Session is no longer accessible. Check your permissions or sign in again.",
     "shortcuts": "Enter sends or queues · Shift+Enter adds a line · Esc interrupts and pauses the queue"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "उपयोग सांख्यिकी प्रबंधित करें",
+      "description": "देखें कि उपयोग संबंधी कौन से आंकड़े भेजे जा रहे हैं, उन्हें अभी भेजें और इंस्टेंस आईडी को रीसेट करें।"
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "अनाम उपयोग के आँकड़े साझा करें",
+      "description": "यह Termix को बेहतर बनाने में मदद करने के लिए दिन में एक बार एक छोटा, गुमनाम सारांश भेजता है। इसमें कभी भी उपयोगकर्ता नाम, होस्टनाम, आईपी पते या पहचान संबंधी जानकारी शामिल नहीं होती है।"
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "प्लेटफ़ॉर्म की जानकारी शामिल करें",
+      "description": "ऑपरेटिंग सिस्टम, सीपीयू आर्किटेक्चर, नोड.जेएस संस्करण, डेटाबेस का प्रकार और टर्मिक्स कैसे स्थापित किया गया है (डॉकर, डेस्कटॉप ऐप या सर्वर)।"
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "फ़ीचर उपयोग को शामिल करें",
+      "description": "पिछली रिपोर्ट के बाद से प्रत्येक प्रकार के टैब कितनी बार खोले गए और कितने SSH लॉगिन हुए। उपयोगकर्ता अपनी प्रोफ़ाइल में इस जानकारी को बंद कर सकते हैं।"
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "स्थापित सुविधाओं को शामिल करें",
+      "description": "कौन-कौन सी अंतर्निहित सुविधाएं स्थापित हैं और चल रही हैं।"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "उदाहरण आईडी"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "मेरे फ़ीचर उपयोग को शामिल करें",
+      "description": "यह गुमनाम उपयोग आंकड़ों में आपके द्वारा खोले गए टैब के प्रकारों की गणना करता है। आपके या आपके होस्ट के बारे में कोई भी जानकारी नहीं भेजी जाती है।"
     }
   },
   "status": {
     "title": "स्थिति",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "उपयोग के आंकड़े दिन में एक बार साझा करना",
+    "off": "उपयोग के आंकड़े साझा नहीं किए जा रहे हैं",
+    "lockedOn": "यह ENABLE_TELEMETRY एनवायरनमेंट वेरिएबल द्वारा चालू किया जाता है। इसे वहां बदलें।",
+    "lockedOff": "इसे ENABLE_TELEMETRY एनवायरनमेंट वेरिएबल द्वारा बंद किया गया है। इसे वहां बदलें।",
+    "instanceId": "इंस्टेंस आईडी: {{id}}",
+    "noInstanceId": "अभी तक कोई इंस्टेंस आईडी नहीं है",
+    "lastSent": "अंतिम बार भेजा गया {{date}}",
+    "neverSent": "अभी तक भेजा नहीं गया",
+    "nextSend": "अगली रिपोर्ट जमा करने की तिथि {{date}}",
+    "lastError": "अंतिम प्रयास विफल रहा: {{error}}",
+    "preview": "पूर्वावलोकन रिपोर्ट",
+    "sendNow": "अब भेजें",
+    "sending": "भेजा जा रहा है...",
+    "sent": "उपयोग संबंधी आंकड़े भेजे गए",
+    "notSent": "उपयोग संबंधी आंकड़े बंद हैं, कुछ भी नहीं भेजा गया।",
+    "resetId": "इंस्टेंस आईडी रीसेट करें",
+    "resetIdConfirm": "क्या इंस्टेंस आईडी रीसेट करें? भविष्य की रिपोर्टें एक नए इंस्टॉलेशन की तरह दिखेंगी।",
+    "resetIdDone": "इंस्टेंस आईडी रीसेट",
+    "previewTitle": "अगली रिपोर्ट",
+    "previewDescription": "ठीक यही चीज़ अभी भेजी जाएगी।",
     "close": "बंद करें",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "उपयोग सांख्यिकी स्थिति लोड नहीं हो सकी"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

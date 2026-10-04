@@ -1,172 +1,175 @@
 {
   "nav": {
-    "alerts": "Alerts"
+    "alerts": "Упозорења"
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "Користите упозорења",
+      "description": "Добијајте обавештења у пријемно сандуче и шаљите их на своје канале."
     }
   },
   "onboarding": {
-    "feature": "Alerts",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "feature": "Упозорења",
+    "featureDesc": "Свако упозорење у једном пријемном сандучету, послато на Discord, ntfy, имејл или вебхук ако желите."
   },
   "settings": {
     "group": {
-      "general": "General",
-      "email": "Email"
+      "general": "Опште",
+      "email": "Е-пошта"
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "Termix саопштења",
+        "description": "Прикажи вести од Termix тима, као што су безбедносна обавештења и издања, у пријемном сандучету свих корисника."
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "Задржавај упозорења (дана)",
+        "description": "Старија упозорења се уклањају из сваког пријемног сандучета."
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "SMTP сервер",
+        "description": "Потребно за имејл канале. Оставите празно да бисте искључили имејл.",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "СМТП порт",
+        "description": "Обично 587 са STARTTLS-ом или 465 са TLS-ом."
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "Користите TLS од почетка",
+        "description": "Укључите за порт 465. Оставите искључено за порт 587, који се сам надограђује на TLS."
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "SMTP корисничко име",
+        "description": "Оставите празно ако сервер не захтева пријаву."
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "СМТП лозинка",
+        "description": "Сачувано шифровано."
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
-        "placeholder": "Termix <alerts@example.com>"
+        "label": "Адреса одакле",
+        "description": "Упозорења пошиљаоца долазе од.",
+        "placeholder": "Термикс <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
-        "off": "None"
+        "label": "Искачући прозори са упозорењима",
+        "description": "Која нова упозорења се појављују док користите Termix. Она увек стижу у пријемно сандуче.",
+        "all": "Сва упозорења",
+        "warning": "Упозорења и критичне информације",
+        "critical": "Само критично",
+        "off": "Ниједан"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
-    "channels": "Channels",
-    "rules": "Delivery rules"
+    "inbox": "Пријемно сандуче",
+    "channels": "Канали",
+    "rules": "Правила испоруке"
   },
   "severity": {
-    "info": "Info",
-    "success": "Success",
-    "warning": "Warning",
-    "critical": "Critical"
+    "info": "Информације",
+    "success": "Успех",
+    "warning": "Упозорење",
+    "critical": "Критично"
   },
   "inbox": {
-    "sourceTermix": "Termix",
-    "openLink": "Open",
-    "view": "View",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
-    "delete": "Delete",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "sourceTermix": "Термикс",
+    "openLink": "Отворено",
+    "view": "Поглед",
+    "unread": "Непрочитано",
+    "deliveryFailed_one": "{{count}} канал није успео",
+    "deliveryFailed_other": "{{count}} канала није успело",
+    "markRead": "Означи као прочитано",
+    "markUnread": "Означи као непрочитано",
+    "markAllRead": "Означи све као прочитано",
+    "delete": "Обриши",
+    "clearRead": "Обриши упозорења о читању",
+    "cleared_one": "Обрисано упозорење {{count}}",
+    "cleared_other": "Обрисана упозорења {{count}}",
+    "filterAll": "Сви",
+    "filterUnread": "Непрочитано",
+    "anySeverity": "Било која тежина",
+    "anySource": "Било који извор",
+    "openAll": "Отвори у картици",
+    "empty": "Још нема упозорења.",
+    "emptyUnread": "Све сте у току.",
+    "loadMore": "Учитај још"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
-    "enabled": "Enabled",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "type": "Type",
+    "intro": "Канали су места где упозорења могу да се шаљу изван Termix-а. Правила испоруке бирају која упозорења их користе.",
+    "add": "Додај канал",
+    "edit": "Измени канал",
+    "test": "Пошаљи тест",
+    "testSent": "Послато је тестно упозорење",
+    "testFailed": "Тест није успео: {{error}}",
+    "deleteConfirm": "Обрисати канал „{{name}}“?",
+    "deleted": "Канал је обрисан",
+    "empty": "Још нема канала.",
+    "enabled": "Омогућено",
+    "needsSave": "Овај канал треба поново отворити и сачувати пре него што се може послати.",
+    "name": "Име",
+    "nameRequired": "Име је обавезно",
+    "type": "Тип",
     "types": {
-      "webhook": "Webhook",
-      "ntfy": "ntfy",
-      "discord": "Discord",
-      "email": "Email"
+      "webhook": "Вебхук",
+      "ntfy": "нтфи",
+      "discord": "Неслагање",
+      "email": "Е-пошта"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
+    "emailUnavailable": "Е-пошти је потребан SMTP сервер, који администратор подешава у подешавањима упозорења.",
     "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
-    "ntfyServer": "Server URL",
-    "ntfyTopic": "Topic",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "webhookHint": "Добија JSON тело за свако упозорење.",
+    "method": "Метод",
+    "headers": "Заглавља",
+    "headersHint": "Један по реду, као што је Име: вредност.",
+    "ntfyServer": "URL сервера",
+    "ntfyTopic": "Тема",
+    "ntfyToken": "Приступни токен (опционо)",
+    "discordUrl": "URL вебхука на Дискорду",
+    "discordHint": "Из подешавања канала на Дискорду, под Интеграције.",
+    "discordUsername": "Приказано име (опционо)",
+    "discordAvatar": "URL адреса аватара (опционо)",
+    "emailTo": "Пошаљи",
+    "emailHint": "Одвојите више од једне адресе зарезима.",
+    "privateNetwork": "Дозволи адресу приватне мреже",
+    "privateNetworkHint": "Ради само за хостове које администратор дозвољава на листи приватних крајњих тачака."
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
-    "enabled": "Enabled",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "intro": "Правило испоруке шаље одговарајућа упозорења вашим каналима. Упозорења такође увек остају у пријемном сандучету.",
+    "add": "Додај правило",
+    "edit": "Измени правило",
+    "empty": "Још нема правила, тако да се упозорења приказују само у пријемном сандучету.",
+    "needChannel": "Прво додајте канал.",
+    "enabled": "Омогућено",
+    "name": "Име",
+    "nameRequired": "Име је обавезно",
+    "match": "Обавештења за слање",
+    "matchHint": "* за све, аутоматизације.* за све од аутоматизација, или само једну врсту.",
+    "minSeverity": "Барем",
+    "channels": "Пошаљи",
+    "channelRequired": "Изаберите барем један канал",
+    "deleteConfirm": "Обрисати правило „{{name}}“?",
+    "everything": "Све",
+    "summary": "{{match}}, {{severity}} или више, до {{channels}}"
   },
   "actions": {
-    "cancel": "Cancel",
-    "save": "Save",
-    "saving": "Saving...",
-    "delete": "Delete"
+    "cancel": "Откажи",
+    "save": "Сачувај",
+    "saving": "Чување...",
+    "delete": "Обриши"
   },
   "widget": {
-    "name": "Alert Feed",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
-    "allClear": "All clear",
-    "loading": "Loading..."
+    "name": "Фид обавештења",
+    "description": "Ваша најновија обавештења, са брзим начином да их означите као прочитане",
+    "maxItems": "Максималан број ставки",
+    "showRead": "Прикажи обавештења о читању",
+    "allClear": "Све је чисто",
+    "loading": "Учитавање..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

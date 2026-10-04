@@ -23,6 +23,12 @@
     "namePlaceholder": "Directorio de empresas",
     "nameRequired": "Se requiere un nombre para mostrar.",
     "enabled": "Activado",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Guardar directorio",
     "saving": "Guardando...",
     "saved": "Guardado",
@@ -36,6 +42,7 @@
     "host": "Host LDAP",
     "port": "Puerto",
     "useTls": "Usar TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "DN de enlace",
     "bindPassword": "Contraseña de enlace",
     "secretKeep": "Se ha guardado una contraseña. Déjelo en blanco para conservarla.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Base de búsqueda de grupos",
     "adminGroup": "Grupo de administradores",
     "allowedUsers": "Usuarios permitidos"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

@@ -40,7 +40,7 @@ function setup(hostIds = [7]) {
     hostStatuses: Object.fromEntries(
       hostIds.map((id) => [
         id,
-        { status: "reachable" as const, lastChecked: "now" },
+        { status: "online" as const, lastChecked: "now" },
       ]),
     ),
   });
@@ -131,13 +131,13 @@ describe("MetricsPoller", () => {
     expect(collectMetrics).not.toHaveBeenCalled();
 
     // Core's check comes back: the first sample runs.
-    fake.hostStatuses.set(7, { status: "reachable", lastChecked: "now" });
-    poller.hostStatusChanged(7, "reachable");
+    fake.hostStatuses.set(7, { status: "online", lastChecked: "now" });
+    poller.hostStatusChanged(7, "online");
     await flush();
     expect(collectMetrics).toHaveBeenCalledOnce();
   });
 
-  it("reports a failed login and why collection stopped", async () => {
+  it("says why collection stopped without touching the status", async () => {
     collectMetrics.mockRejectedValue(
       new Error("All configured authentication methods failed"),
     );
@@ -146,9 +146,7 @@ describe("MetricsPoller", () => {
     poller.registerViewer(7, "viewer-a", "user-1");
     await flush();
 
-    expect(fake.statusReports).toEqual([
-      { hostId: 7, ok: false, hostKeyChanged: false },
-    ]);
+    expect(fake.statusReports).toEqual([]);
     expect(fake.emitted.at(-1)?.payload).toMatchObject({
       state: "auth_failed",
     });
@@ -174,9 +172,7 @@ describe("MetricsPoller", () => {
     poller.registerViewer(7, "viewer-a", "user-1");
     await flush();
 
-    expect(fake.statusReports).toEqual([
-      { hostId: 7, ok: false, hostKeyChanged: true },
-    ]);
+    expect(fake.statusReports).toEqual([]);
     expect(state.authFailures.shouldSkip(7)).toBe(true);
     poller.hostKeyAccepted(7);
     expect(state.authFailures.shouldSkip(7)).toBe(false);

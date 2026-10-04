@@ -1,11 +1,11 @@
 {
   "remoteDesktop": {
     "connecting": "正在連線至 {{type}} 工作階段…",
-    "checkingGuacd": "Checking remote desktop service...",
+    "checkingGuacd": "正在檢查遠端桌面服務...",
     "requestingToken": "Requesting {{type}} connection token...",
-    "openingSession": "Opening {{type}} session...",
+    "openingSession": "正在開啟 {{type}} 會話...",
     "negotiating": "Negotiating {{type}} handshake...",
-    "sessionReady": "{{type}} session ready",
+    "sessionReady": "{{type}} 會話已準備就緒",
     "connectionError": "連線錯誤",
     "connectionFailed": "連線失敗",
     "failedToConnect": "無法取得連線權杖",
@@ -14,37 +14,37 @@
     "reconnect": "重新連線",
     "retry": "重試",
     "guacdUnavailable": "遠端桌面服務 (guacd) 無法使用。請確保 guacd 正在執行且可存取，並已在管理員設定中正確設定。",
-    "credentialPromptTitle": "Enter RDP Credentials",
-    "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
+    "credentialPromptTitle": "輸入 RDP 憑證",
+    "credentialPromptDescription": "此主機設定為在連線時提示輸入憑證。這些憑證僅用於當前會話，不會被儲存。",
     "connect": "連線",
     "ctrlAltDel": "Ctrl+Alt+Del",
     "files": {
-      "title": "Drive Files",
-      "parent": "Parent directory",
+      "title": "磁碟機檔案",
+      "parent": "父目錄",
       "refresh": "重新整理",
       "empty": "此資料夾為空",
-      "listFailed": "Failed to read this folder",
+      "listFailed": "讀取此資料夾失敗",
       "download": "下載",
-      "downloadFailed": "Failed to download {{name}}",
-      "upload": "Upload files",
+      "downloadFailed": "下載失敗 {{name}}",
+      "upload": "上傳文件",
       "uploading": "正在上傳 {{name}}...",
-      "uploaded": "Uploaded {{name}}",
-      "uploadFailed": "Failed to upload {{name}}",
-      "uploadDisabled": "Uploads are disabled for this connection",
-      "driveUnavailable": "Enable RDP drive redirection before uploading files",
-      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
-      "dropToUpload": "Drop files to upload"
+      "uploaded": "已上傳 {{name}}",
+      "uploadFailed": "上傳失敗 {{name}}",
+      "uploadDisabled": "此連線已停用上傳功能",
+      "driveUnavailable": "上傳檔案前啟用 RDP 磁碟機重定向",
+      "driveNotWritable": "guacd 無法寫入磁碟機資料夾。請檢查 GUACD_DRIVE_PATH（或主機磁碟機路徑）及其權限。",
+      "dropToUpload": "拖放檔案即可上傳"
     },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (鎖定螢幕)",
       "winKey": "Windows 鍵",
-      "superL": "Super+L (Lock Screen)",
-      "superKey": "Super Key",
-      "super": "Super",
-      "cmdL": "Cmd+L (Lock Screen)",
-      "cmdKey": "Command Key",
-      "cmd": "Cmd",
+      "superL": "Super+L（鎖定畫面）",
+      "superKey": "超級鑰匙",
+      "super": "極佳的",
+      "cmdL": "Cmd+L（鎖定畫面）",
+      "cmdKey": "命令鍵",
+      "cmd": "命令",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -66,22 +66,22 @@
       "collapse": "收合工具列",
       "expand": "展開工具列",
       "dragHandle": "拖曳以重新定位",
-      "hide": "Hide for this session. To disable it permanently, open Host Settings → General → Connection Toolbar.",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "resetZoom": "Reset zoom",
-      "fitToScreen": "Fit to screen",
-      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
-      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
+      "hide": "本次會話期間隱藏。若要永久停用，請開啟「主機設定」→「一般」→「連線工具列」。",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "resetZoom": "重置縮放",
+      "fitToScreen": "適應螢幕",
+      "switchToTrackpad": "切換到觸控板模式（拖曳移動遊標，點擊點擊）",
+      "switchToTouch": "切換到觸控模式（直接點擊你想點擊的地方）"
     },
-    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
+    "disabled": "遠端桌面已關閉。管理員可以在“設定”中啟用它。"
   },
   "hosts": {
-    "nativeRdpOpened": "Opened in Windows Remote Desktop",
-    "nativeRdpFailed": "Failed to open Windows Remote Desktop",
-    "openNativeRdp": "Open in Windows Remote Desktop",
+    "nativeRdpOpened": "在 Windows 遠端桌面中開啟",
+    "nativeRdpFailed": "無法開啟 Windows 遠端桌面",
+    "openNativeRdp": "在 Windows 遠端桌面中開啟",
     "guac": {
-      "toolbar": "Toolbar",
+      "toolbar": "工具列",
       "connection": "連線",
       "authentication": "驗證",
       "storedCredential": "已儲存的憑證",
@@ -89,7 +89,7 @@
       "authTypeDirect": "直接",
       "authTypeCredential": "憑證",
       "authTypeNone": "取消全選",
-      "authTypeNoneDesc": "No credentials are stored. You'll be prompted for a username and password each time you connect; they are not saved.",
+      "authTypeNoneDesc": "不會儲存任何憑證。每次連線時，系統都會提示您輸入使用者名稱和密碼；這些資訊不會被儲存。",
       "selectCredential": "選取憑證…",
       "connectionSettings": "連線設定",
       "displaySettings": "顯示設定",
@@ -107,7 +107,7 @@
       "rdpPort": "RDP 連接埠",
       "username": "使用者名稱",
       "password": "密碼",
-      "passwordSaved": "Password saved, type to change",
+      "passwordSaved": "密碼已儲存，輸入即可更改",
       "domain": "網域",
       "securityMode": "安全模式",
       "width": "寬度",
@@ -212,7 +212,28 @@
       "backspaceKey": "退格鍵",
       "colorDepth": "色彩深度",
       "resizeMethod": "調整尺寸方法",
-      "driveNamePlaceholder": "Termix Drive"
+      "driveNamePlaceholder": "特米克斯大道",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "遠端桌面",
     "tabRdp": "RDP",
@@ -221,28 +242,28 @@
     "virtualNetwork": "虛擬網路",
     "unencryptedShell": "未加密殼層",
     "remoteDesktopNotes": "筆記",
-    "userDefaultsNote": "Settings you leave unchanged follow your host defaults.",
-    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy.",
+    "userDefaultsNote": "如果您的設定保持不變，請遵循主機預設設定。",
+    "connectionOriginNote": "在桌面應用程式中，RDP、VNC 和 Telnet 會使用遠端伺服器，除非主機設定為「此設備」。 「此設備」需要 guacd 代理，即此電腦可以存取的代理。您可以在遠端桌面設定中設定 guacd 代理，也可以為每個主機單獨設定。",
     "docsLink": "檢視文件",
-    "connectionOriginGuacamoleNote": "RDP, VNC and Telnet use the remote server unless you pick \"This device\", which needs a guacd this machine can reach. Set one in the guacd URL setting, or per host under guacd Proxy."
+    "connectionOriginGuacamoleNote": "RDP、VNC 和 Telnet 預設使用遠端伺服器，除非您選擇“此設備”，這需要一台機器可以存取的 guacd 伺服器。您可以在 guacd URL 設定中設置，也可以在 guacd 代理中為每個主機單獨設定。"
   },
   "onboarding": {
-    "feature_desktop": "Remote desktop",
-    "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
+    "feature_desktop": "遠端桌面",
+    "feature_desktop_desc": "像 SSH 一樣，在同一個標籤頁中開啟 RDP、VNC 和 Telnet 會話。"
   },
   "settings": {
     "user": {
       "colorDepth": {
         "label": "色彩深度",
-        "description": "Used for RDP hosts that leave it on their default."
+        "description": "用於那些保留預設設定的 RDP 主機。"
       },
       "resizeMethod": {
         "label": "調整尺寸方法",
-        "description": "How the remote screen follows the window size."
+        "description": "遠端螢幕如何跟隨視窗大小變化。"
       },
-      "resizeDisplayUpdate": "Display Update",
+      "resizeDisplayUpdate": "顯示更新",
       "resizeReconnect": "重新連線",
-      "inherit": "Inherit",
+      "inherit": "繼承",
       "on": "開啟",
       "off": "關閉",
       "forceLossless": {
@@ -281,19 +302,19 @@
         "label": "停用貼上",
         "description": "防止將文字貼上至遠端工作階段"
       },
-      "group": "Remote Desktop defaults",
-      "colorDepth16": "16-bit",
-      "colorDepth24": "24-bit",
-      "colorDepth32": "32-bit"
+      "group": "遠端桌面預設設定",
+      "colorDepth16": "16 位元",
+      "colorDepth24": "24 位元",
+      "colorDepth32": "32 位元"
     },
     "admin": {
       "enabled": {
-        "label": "Enable Remote Desktop",
-        "description": "Allow RDP, VNC and Telnet connections through guacd."
+        "label": "啟用遠端桌面",
+        "description": "允許透過 guacd 連接 RDP、VNC 和 Telnet。"
       },
       "guacdUrl": {
         "label": "guacd URL",
-        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "description": "guacd 監聽的位置，格式為 host:port。 GUACD_URL、GUACD_HOST 和 GUACD_PORT 環境變數會覆寫此設定。",
         "placeholder": "guacd:4822"
       }
     },
@@ -308,43 +329,46 @@
         "label": "Telnet"
       },
       "rdpPort": {
-        "label": "RDP port"
+        "label": "RDP埠"
       },
       "vncPort": {
-        "label": "VNC port"
+        "label": "VNC埠"
       },
       "telnetPort": {
-        "label": "Telnet port"
+        "label": "Telnet連接埠"
       },
       "rdpSecurity": {
-        "label": "RDP security mode"
+        "label": "RDP 安全模式"
       },
       "rdpIgnoreCert": {
-        "label": "Ignore certificate errors"
+        "label": "忽略證書錯誤"
       },
       "guacamoleConfig": {
-        "label": "guacd settings"
+        "label": "guacd 設定"
       },
       "enableToolbar": {
-        "label": "Remote desktop toolbar",
-        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+        "label": "遠端桌面工具列",
+        "description": "在 RDP、VNC 和 Telnet 會話中顯示工具列。"
       },
-      "displayGroup": "Display",
+      "displayGroup": "展示",
       "displayDefaultsTab": "遠端桌面"
     }
   },
   "palette": {
-    "connectRdp": "Connect with RDP",
-    "connectVnc": "Connect with VNC",
-    "connectTelnet": "Connect with Telnet"
+    "connectRdp": "使用 RDP 連接",
+    "connectVnc": "透過 VNC 連接",
+    "connectTelnet": "使用 Telnet 連接"
   },
   "permissions": {
     "sessions": {
-      "title": "Share remote desktop sessions",
-      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+      "title": "共用遠端桌面會話",
+      "description": "允許會話共用和協作房間向其他人顯示此使用者的 RDP、VNC 和 Telnet 會話。"
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

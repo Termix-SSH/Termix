@@ -23,6 +23,12 @@
     "namePlaceholder": "Cégjegyzék",
     "nameRequired": "Megjelenített név megadása kötelező",
     "enabled": "Engedélyezve",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Könyvtár mentése",
     "saving": "Megtakarítás...",
     "saved": "Mentett",
@@ -36,6 +42,7 @@
     "host": "LDAP-gazdagép",
     "port": "Kikötő",
     "useTls": "TLS (LDAPS) használata",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Kötési DN",
     "bindPassword": "Jelszó kötése",
     "secretKeep": "A jelszó mentésre került. Hagyja ezt üresen a megőrzéshez.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Csoportkeresési bázis",
     "adminGroup": "Adminisztrátori csoport",
     "allowedUsers": "Engedélyezett felhasználók"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

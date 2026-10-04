@@ -1,27 +1,30 @@
 {
-  "hint": "You can paste a 1Password reference (op://vault/item/field) instead of the secret. It is fetched from your secret source when connecting.",
-  "manage": "Manage secret sources",
-  "title": "Secret sources",
-  "description": "External password managers Termix reads secrets from at connect time. Currently 1Password Connect (self-hosted). The access token is stored encrypted with your data key.",
-  "new": "New source",
-  "nameLabel": "Friendly name",
-  "urlLabel": "Connect server URL",
-  "tokenLabel": "Connect access token",
-  "tokenKeep": "Leave empty to keep the current token",
-  "sharedLabel": "Share with all users (admins only, resolves while you are signed in)",
-  "shared": "shared",
-  "test": "Test",
-  "testOk": "Connected, {{count}} vault(s) visible",
-  "testFailed": "Connection test failed",
-  "required": "Name, server URL and token are required",
-  "saved": "Secret source saved",
-  "deleted": "Secret source deleted",
+  "hint": "Ви можете вставити посилання на 1Password (op://vault/item/field) замість секретного коду. Воно отримується з вашого секретного джерела під час підключення.",
+  "manage": "Керування секретними джерелами",
+  "title": "Секретні джерела",
+  "description": "Зовнішні менеджери паролів Termix зчитують секрети під час підключення. Наразі це 1Password Connect (власний хостинг). Токен доступу зберігається в зашифрованому вигляді з вашим ключем даних.",
+  "new": "Нове джерело",
+  "nameLabel": "Зрозуміле ім'я",
+  "urlLabel": "URL-адреса сервера підключення",
+  "tokenLabel": "Підключити токен доступу",
+  "tokenKeep": "Залиште поле порожнім, щоб зберегти поточний токен",
+  "sharedLabel": "Поділитися з усіма користувачами (лише для адміністраторів, вирішується, коли ви ввійшли в систему)",
+  "shared": "спільний",
+  "test": "Тест",
+  "testOk": "Підключено, видимих сховищ {{count}}",
+  "testFailed": "Перевірка з'єднання не вдалася",
+  "required": "Ім'я, URL-адреса сервера та токен обов'язкові",
+  "saved": "Секретне джерело збережено",
+  "deleted": "Секретне джерело видалено",
   "settings": {
     "admin": {
       "privateEndpoints": {
-        "label": "Private endpoint allowlist",
-        "description": "Private or loopback hosts a secret source may reach, one per line. A self-hosted 1Password Connect server usually needs its own address listed here."
+        "label": "Список дозволених приватних кінцевих точок",
+        "description": "Приватні або петлеві хости, до яких може звернутися секретне джерело, по одному на рядок. Власному серверу 1Password Connect зазвичай потрібна власна адреса, вказана тут."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

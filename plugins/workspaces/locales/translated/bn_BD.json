@@ -2,69 +2,69 @@
   "newUi": {
     "sidebar": {
       "workspaces": {
-        "title": "Workspaces",
-        "saveCurrent": "Save Current",
-        "saveCurrentTitle": "Save Current Workspace",
-        "saveCurrentDescription": "Save every open tab, split layout, and pane arrangement as a new named workspace.",
-        "nameLabel": "Name",
-        "namePlaceholder": "e.g., Prod Debugging",
-        "nameRequired": "Workspace name is required",
-        "colorLabel": "Color",
-        "workspaceCreated": "Workspace saved",
-        "workspaceUpdated": "Workspace updated",
-        "workspaceDeleted": "Workspace deleted",
-        "workspaceDuplicated": "Workspace duplicated",
-        "saveFailed": "Failed to save workspace",
-        "updateFailed": "Failed to update workspace",
-        "deleteFailed": "Failed to delete workspace",
-        "duplicateFailed": "Failed to duplicate workspace",
-        "loadFailed": "Failed to load workspaces",
-        "applyFailed": "Failed to apply workspace",
-        "deleteWorkspaceTitle": "Delete Workspace",
-        "deleteWorkspaceDescription": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
-        "noWorkspaces": "No saved workspaces yet. Save your current tab arrangement to get started.",
-        "tabCount": "{{count}} tab",
-        "tabCount_other": "{{count}} tabs",
-        "apply": "Apply",
-        "applyConfirmTitle": "Apply Workspace",
-        "applyConfirmDescription": "Applying \"{{name}}\" will close your current tabs and replace them with this workspace's saved arrangement. Unsaved changes to your current layout will be lost.",
-        "applyConfirmButton": "Apply Workspace",
-        "updateWithCurrent": "Update with Current",
-        "updateWithCurrentConfirm": "Overwrite \"{{name}}\" with your current tab arrangement?",
-        "rename": "Rename",
-        "duplicate": "Duplicate",
-        "duplicateNameSuffix": "{{name}} (copy)",
-        "setDefault": "Set as Default",
-        "unsetDefault": "Remove as Default",
-        "defaultBadge": "Default",
-        "lastSession": "Last Session",
-        "lastSessionDescription": "Automatically updated with your most recent tab arrangement. Apply it to recover what you had open.",
-        "lastUsed": "Last used {{time}}",
-        "neverUsed": "Never applied",
-        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "title": "কর্মক্ষেত্র",
+        "saveCurrent": "বর্তমান সংরক্ষণ করুন",
+        "saveCurrentTitle": "বর্তমান ওয়ার্কস্পেস সংরক্ষণ করুন",
+        "saveCurrentDescription": "প্রতিটি খোলা ট্যাব, স্প্লিট লেআউট এবং পেন বিন্যাসকে একটি নতুন নামযুক্ত ওয়ার্কস্পেস হিসেবে সংরক্ষণ করুন।",
+        "nameLabel": "নাম",
+        "namePlaceholder": "যেমন, প্রোডাকশন ডিবাগিং",
+        "nameRequired": "ওয়ার্কস্পেসের নাম আবশ্যক।",
+        "colorLabel": "রঙ",
+        "workspaceCreated": "ওয়ার্কস্পেস সংরক্ষিত",
+        "workspaceUpdated": "ওয়ার্কস্পেস আপডেট করা হয়েছে",
+        "workspaceDeleted": "ওয়ার্কস্পেস মুছে ফেলা হয়েছে",
+        "workspaceDuplicated": "ওয়ার্কস্পেস নকল করা হয়েছে",
+        "saveFailed": "ওয়ার্কস্পেস সংরক্ষণ করতে ব্যর্থ হয়েছে",
+        "updateFailed": "ওয়ার্কস্পেস আপডেট করতে ব্যর্থ হয়েছে",
+        "deleteFailed": "ওয়ার্কস্পেস মুছে ফেলা ব্যর্থ হয়েছে",
+        "duplicateFailed": "ওয়ার্কস্পেস নকল করতে ব্যর্থ হয়েছে",
+        "loadFailed": "ওয়ার্কস্পেস লোড করতে ব্যর্থ হয়েছে",
+        "applyFailed": "ওয়ার্কস্পেস প্রয়োগ করতে ব্যর্থ হয়েছে",
+        "deleteWorkspaceTitle": "ওয়ার্কস্পেস মুছুন",
+        "deleteWorkspaceDescription": "আপনি কি \"{{name}}\" মুছে ফেলতে নিশ্চিত? এটি আর পূর্বাবস্থায় ফেরানো যাবে না।",
+        "noWorkspaces": "এখনো কোনো ওয়ার্কস্পেস সেভ করা হয়নি। কাজ শুরু করার জন্য আপনার বর্তমান ট্যাব বিন্যাসটি সেভ করুন।",
+        "tabCount": "{{count}} ট্যাব",
+        "tabCount_other": "{{count}} ট্যাব",
+        "apply": "আবেদন করুন",
+        "applyConfirmTitle": "ওয়ার্কস্পেস প্রয়োগ করুন",
+        "applyConfirmDescription": "\"{{name}}\" প্রয়োগ করলে আপনার বর্তমান ট্যাবগুলি বন্ধ হয়ে যাবে এবং সেগুলির পরিবর্তে এই ওয়ার্কস্পেসের সংরক্ষিত বিন্যাসটি প্রদর্শিত হবে। আপনার বর্তমান লেআউটে করা অসংরক্ষিত পরিবর্তনগুলি হারিয়ে যাবে।",
+        "applyConfirmButton": "ওয়ার্কস্পেস প্রয়োগ করুন",
+        "updateWithCurrent": "বর্তমান তথ্য দিয়ে আপডেট করুন",
+        "updateWithCurrentConfirm": "আপনার বর্তমান ট্যাব বিন্যাস দিয়ে \"{{name}}\" ওভাররাইট করবেন?",
+        "rename": "নাম পরিবর্তন",
+        "duplicate": "নকল",
+        "duplicateNameSuffix": "{{name}} (অনুলিপি)",
+        "setDefault": "ডিফল্ট হিসাবে সেট করা হয়েছে",
+        "unsetDefault": "ডিফল্ট হিসেবে অপসারণ করুন",
+        "defaultBadge": "ডিফল্ট",
+        "lastSession": "শেষ অধিবেশন",
+        "lastSessionDescription": "আপনার সর্বশেষ ট্যাব বিন্যাস অনুযায়ী স্বয়ংক্রিয়ভাবে আপডেট হয়। আপনার খোলা ট্যাবগুলো পুনরুদ্ধার করতে এটি প্রয়োগ করুন।",
+        "lastUsed": "সর্বশেষ ব্যবহৃত {{time}}",
+        "neverUsed": "কখনো প্রয়োগ করা হয়নি",
+        "tabsSkipped": "ওয়ার্কস্পেস প্রয়োগ করা হয়েছে, কিন্তু {{count}} টি ট্যাব বাদ দেওয়া হয়েছে কারণ তাদের হোস্ট আর বিদ্যমান নেই: {{names}}",
         "timeAgo": {
-          "seconds": "{{count}}s ago",
-          "minutes": "{{count}}m ago",
-          "hours": "{{count}}h ago",
-          "days": "{{count}}d ago"
+          "seconds": "{{count}}সেকেন্ড আগে",
+          "minutes": "{{count}}মিনিট আগে",
+          "hours": "{{count}}ঘণ্টা আগে",
+          "days": "{{count}}দিন আগে"
         }
       }
     }
   },
   "nav": {
-    "workspaces": "Workspaces"
+    "workspaces": "কর্মক্ষেত্র"
   },
   "onboarding": {
-    "workflow_workspaces": "Workspaces",
-    "workflow_workspaces_desc": "Save a set of open tabs and reopen the whole layout later."
+    "workflow_workspaces": "কর্মক্ষেত্র",
+    "workflow_workspaces_desc": "খোলা ট্যাবগুলো সংরক্ষণ করুন এবং পরে সম্পূর্ণ লেআউটটি আবার খুলুন।"
   },
   "permissions": {
     "use": {
-      "title": "Use workspaces",
-      "description": "Save, apply and manage saved tab layouts."
+      "title": "ওয়ার্কস্পেস ব্যবহার করুন",
+      "description": "সংরক্ষিত ট্যাব লেআউটগুলি সংরক্ষণ করুন, প্রয়োগ করুন এবং পরিচালনা করুন।"
     }
   },
   "hosts": {
-    "docsLink": "View docs"
+    "docsLink": "নথি দেখুন"
   }
 }

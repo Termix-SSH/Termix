@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Управљајте статистиком коришћења",
+      "description": "Погледајте које се статистике коришћења шаљу, пошаљите их сада и ресетујте ИД инстанце."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Делите анонимну статистику коришћења",
+      "description": "Шаље мали анонимни резиме једном дневно како би помогао у побољшању Termix-а. Никада не садржи корисничка имена, имена хостова, IP адресе или акредитиве."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Укључи информације о платформи",
+      "description": "Оперативни систем, архитектура процесора, верзија Node.js-а, тип базе података и начин инсталирања Termix-а (Docker, десктоп апликација или сервер)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Укључи коришћење функција",
+      "description": "Колико пута је свака врста картице отворена и колико се SSH пријављивања догодило од последњег извештаја. Корисници могу да искључе свој део у свом профилу."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Укључи инсталиране функције",
+      "description": "Које уграђене функције су инсталиране и покрећу се."
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "ИД инстанце"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Укључи моје коришћење функција",
+      "description": "У анонимној статистици коришћења рачуна које врсте картица отварате. Не шаље се ништа о вама или вашим хостовима."
     }
   },
   "status": {
-    "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
-    "close": "Close",
-    "loadFailed": "Could not load the usage statistics status"
+    "title": "Статус",
+    "on": "Дељење статистике коришћења једном дневно",
+    "off": "Не дели статистику коришћења",
+    "lockedOn": "Укључује променљива окружења ENABLE_TELEMETRY. Промените је тамо.",
+    "lockedOff": "Искључено променљивом окружења ENABLE_TELEMETRY. Промените је тамо.",
+    "instanceId": "ИД инстанце: {{id}}",
+    "noInstanceId": "Још увек нема ИД-а инстанце",
+    "lastSent": "Последње послато {{date}}",
+    "neverSent": "Још није послато",
+    "nextSend": "Следећи извештај {{date}}",
+    "lastError": "Последњи покушај није успео: {{error}}",
+    "preview": "Преглед извештаја",
+    "sendNow": "Пошаљи сада",
+    "sending": "Слање...",
+    "sent": "Послата је статистика коришћења",
+    "notSent": "Статистика коришћења је искључена, ништа није послато",
+    "resetId": "Ресетуј ИД инстанце",
+    "resetIdConfirm": "Ресетовати ИД инстанце? Будући извештаји ће изгледати као нова инсталација.",
+    "resetIdDone": "Ресетовање ИД-а инстанце",
+    "previewTitle": "Следећи извештај",
+    "previewDescription": "Управо ово би сада било послато.",
+    "close": "Затвори",
+    "loadFailed": "Није могуће учитати статус статистике коришћења"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

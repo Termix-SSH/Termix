@@ -182,5 +182,8 @@
     "sharedBy": "Compartit per {{username}}",
     "join": "Uneix-te",
     "sharedSessionLabel": "{{hostName}} (compartit)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

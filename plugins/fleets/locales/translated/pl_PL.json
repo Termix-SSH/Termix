@@ -1,16 +1,16 @@
 {
   "permissions": {
     "view": {
-      "title": "View fleets",
-      "description": "See fleets, their members and inventory."
+      "title": "Wyświetl floty",
+      "description": "Zobacz floty, ich członków i zapasy."
     },
     "manage": {
-      "title": "Manage fleets",
-      "description": "Create, edit and delete fleets, change membership, and share fleets with other users or roles."
+      "title": "Zarządzaj flotami",
+      "description": "Twórz, edytuj i usuwaj floty, zmieniaj członkostwo i udostępniaj floty innym użytkownikom lub rolom."
     },
     "execute": {
-      "title": "Run fleet actions",
-      "description": "Run commands and package actions across a fleet, and transfer files to and from its member hosts."
+      "title": "Wykonaj akcje floty",
+      "description": "Uruchamiaj polecenia i pakiety działań w obrębie floty oraz przesyłaj pliki do i z jej hostów członkowskich."
     }
   },
   "newUi": {
@@ -94,13 +94,13 @@
         "packageNameLabel": "Nazwa pakietu",
         "packageNameRequired": "Wymagana jest nazwa pakietu",
         "packageHint": "Wymaga dostępu na poziomie zarządzania na każdym hoście i podnosi uprawnienia zapisanym hasłem sudo hosta.",
-        "shareFleet": "Share Fleet",
-        "shareFleetTitle": "Share \"{{name}}\"",
-        "shareFleetDescription": "Shares this fleet's current member hosts with the selected users or roles. Hosts added to the fleet later are not shared automatically - share again to include them.",
-        "shareSelectionRequired": "Select at least one user or role",
-        "fleetSharedSuccessfully": "Shared {{shared}} of {{total}} host(s) in this fleet",
-        "failedToShareFleet": "Failed to share fleet",
-        "noMembersToShare": "This fleet has no member hosts to share yet."
+        "shareFleet": "Udostępnij flotę",
+        "shareFleetTitle": "Udostępnij „{{name}}”",
+        "shareFleetDescription": "Udostępnia aktualnych gospodarzy należących do tej floty wybranym użytkownikom lub rolom. Gospodarze dodani do floty później nie są udostępniani automatycznie — udostępnij ponownie, aby ich uwzględnić.",
+        "shareSelectionRequired": "Wybierz co najmniej jednego użytkownika lub rolę",
+        "fleetSharedSuccessfully": "Udostępniono {{shared}} z {{total}} hostów w tej flocie",
+        "failedToShareFleet": "Nie udało się udostępnić floty",
+        "noMembersToShare": "Ta flota nie ma jeszcze żadnych członków-gospodarzy, którymi można by się podzielić."
       }
     }
   },

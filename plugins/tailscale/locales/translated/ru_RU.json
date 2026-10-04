@@ -1,66 +1,66 @@
 {
   "permissions": {
     "devices.view": {
-      "title": "View tailnet devices",
-      "description": "See the devices on the connected tailnet."
+      "title": "Просмотреть устройства хвостовой сети",
+      "description": "Посмотрите на устройства в подключенной сети."
     }
   },
   "settings": {
     "group": {
-      "api": "Tailscale API",
-      "devices": "Tailnet"
+      "api": "API масштабирования хвоста",
+      "devices": "Хвостовая сеть"
     },
     "apiKey": {
-      "label": "API key",
-      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "label": "ключ API",
+      "description": "Используется для отображения списка устройств в вашей сети. Работает с ключом Tailscale или Headscale.",
       "placeholder": "tskey-api-... / hskey-api-..."
     },
     "apiBaseUrl": {
-      "label": "API base URL",
-      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "label": "Базовый URL API",
+      "description": "Оставьте поле Tailscale пустым. Установите его так, чтобы оно указывало на экземпляр Headscale.",
       "placeholder": "https://api.tailscale.com/api/v2"
     },
     "devices": {
-      "label": "Device list",
-      "checking": "Checking the tailnet...",
-      "noKey": "No API key set yet.",
-      "error": "Could not reach the tailnet. Check the API key.",
-      "count": "{{count}} device reachable",
-      "count_other": "{{count}} devices reachable",
-      "refresh": "Check"
+      "label": "Список устройств",
+      "checking": "Проверка задней сетки...",
+      "noKey": "API-ключ пока не установлен.",
+      "error": "Не удалось подключиться к сети. Проверьте ключ API.",
+      "count": "{{count}} устройство доступно",
+      "count_other": "{{count}} доступных устройств",
+      "refresh": "Проверять"
     }
   },
   "nav": {
     "tailscale": "Tailscale"
   },
   "hosts": {
-    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleUsernameHint": "Это должен быть пользователь Unix, которому предоставлена идентификация Tailscale в списке контроля доступа SSH сети TailNet, а не обязательно root.",
     "tailscaleDeviceSelect": "Выберите устройство Tailscale",
     "tailscaleDeviceSelectPlaceholder": "Выберите устройство...",
     "tailscaleNoApiKey": "Ключ API Tailscale не настроен. Добавьте его в настройках администратора, чтобы включить обнаружение устройств.",
     "tailscaleDocsLink": "Документация",
     "tailscaleLoadingDevices": "Загрузка устройств...",
-    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleDeviceLoadFailed": "Не удалось загрузить устройства Tailscale. Проверьте URL-адрес API и сетевое соединение.",
     "tailscaleNoDevices": "В вашем tailnet не найдено устройств.",
     "tailscaleDeviceAutoFill": "При выборе устройства IP-адрес хоста будет заполнен автоматически.",
-    "tailscaleAddHost": "Add host",
-    "tailscaleCopyIp": "Copy Tailscale IP",
-    "tailscaleIpCopied": "IP copied",
-    "tailscaleIpCopyFailed": "Could not copy the IP",
+    "tailscaleAddHost": "Добавить хост",
+    "tailscaleCopyIp": "Копировать IP-адрес хвостовой части",
+    "tailscaleIpCopied": "IP-адрес скопирован",
+    "tailscaleIpCopyFailed": "Не удалось скопировать IP-адрес.",
     "filterAuthTailscale": "Tailscale"
   },
   "terminal": {
-    "tailscaleCheckRequired": "Tailscale Authentication Required",
-    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckRequired": "Требуется аутентификация Tailscale",
+    "tailscaleCheckDescription": "Для работы Tailscale SSH требуется дополнительная проверка. Для продолжения выполните аутентификацию в браузере.",
     "tailscaleCheckOpenBrowser": "Открыть браузер для аутентификации",
-    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
-    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+    "tailscaleCheckWaiting": "Ожидание аутентификации Tailscale...",
+    "tailscaleCheckTimeout": "Время ожидания аутентификации Tailscale истекло. Пожалуйста, попробуйте еще раз."
   },
   "manager": {
     "title": "Tailscale",
     "refresh": "Обновить",
     "retry": "Повторить",
-    "sudoHint": "Set a sudo password for this host to allow elevated actions.",
+    "sudoHint": "Установите пароль sudo для этого хоста, чтобы разрешить действия с повышенными правами.",
     "noData": "Нет данных",
     "filter": "Фильтр...",
     "tsNotInstalled": "Tailscale не установлен на этом хосте",
@@ -82,5 +82,8 @@
         "usernameLabel": "Имя пользователя"
       }
     }
+  },
+  "plugin": {
+    "name": "Tailscale"
   }
 }

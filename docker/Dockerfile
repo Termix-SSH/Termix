@@ -8,7 +8,9 @@ COPY plugins ./plugins
 RUN find plugins -mindepth 2 -maxdepth 2 ! -name package.json ! -name manifest.json -exec rm -rf {} +
 
 # Stage 1: Install dependencies
-FROM node:26-slim AS deps
+# The builders only produce JS, so they run on the build machine's own arch
+# once instead of under QEMU per target. Rolldown hangs under arm64 emulation.
+FROM --platform=$BUILDPLATFORM node:26-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -41,10 +43,6 @@ FROM deps AS backend-builder
 WORKDIR /app
 
 COPY . .
-
-RUN rm -rf node_modules/better-sqlite3/prebuilds && \
-    npm run build-release --prefix node_modules/better-sqlite3 && \
-    test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node
 
 RUN npm run build:backend
 

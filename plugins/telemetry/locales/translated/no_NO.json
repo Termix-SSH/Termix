@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Administrer bruksstatistikk",
+      "description": "Se hvilken bruksstatistikk som sendes, send den nå og tilbakestill forekomst-ID-en."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Del anonym bruksstatistikk",
+      "description": "Sender et lite anonymt sammendrag én gang daglig for å forbedre Termix. Det inkluderer aldri brukernavn, vertsnavn, IP-adresser eller påloggingsinformasjon."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Inkluder plattforminformasjon",
+      "description": "Operativsystemet, CPU-arkitekturen, Node.js-versjonen, databasetypen og hvordan Termix er installert (Docker, skrivebordsapp eller server)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Inkluder bruk av funksjoner",
+      "description": "Hvor mange ganger hver type fane ble åpnet, og hvor mange SSH-pålogginger som skjedde siden forrige rapport. Brukere kan slå av sin egen del i profilen sin."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Inkluder installerte funksjoner",
+      "description": "Hvilke innebygde funksjoner som er installert og kjører."
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "Forekomst-ID"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Inkluder min funksjonsbruk",
+      "description": "Teller hvilke typer faner du åpner i den anonyme bruksstatistikken. Ingenting om deg eller vertene dine sendes."
     }
   },
   "status": {
     "title": "Status",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "Deler bruksstatistikk én gang om dagen",
+    "off": "Deler ikke bruksstatistikk",
+    "lockedOn": "Slått på av miljøvariabelen ENABLE_TELEMETRY. Endre den der.",
+    "lockedOff": "Slått av av miljøvariabelen ENABLE_TELEMETRY. Endre den der.",
+    "instanceId": "Forekomst-ID: {{id}}",
+    "noInstanceId": "Ingen forekomst-ID ennå",
+    "lastSent": "Sist sendt {{date}}",
+    "neverSent": "Ikke sendt ennå",
+    "nextSend": "Neste rapport forfaller {{date}}",
+    "lastError": "Siste forsøk mislyktes: {{error}}",
+    "preview": "Forhåndsvisningsrapport",
+    "sendNow": "Send nå",
+    "sending": "Sender...",
+    "sent": "Bruksstatistikk sendt",
+    "notSent": "Bruksstatistikk er slått av, ingenting ble sendt",
+    "resetId": "Tilbakestill forekomst-ID",
+    "resetIdConfirm": "Vil du tilbakestille instans-ID-en? Fremtidige rapporter vil se ut som en ny installasjon.",
+    "resetIdDone": "Tilbakestilling av forekomst-ID",
+    "previewTitle": "Neste rapport",
+    "previewDescription": "Dette er akkurat det som ville bli sendt akkurat nå.",
     "close": "Lukk",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "Kunne ikke laste inn statusen for bruksstatistikken"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

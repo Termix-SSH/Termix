@@ -66,8 +66,8 @@ describe("getStatusClasses", () => {
     expect(getStatusClasses(true, "accent", "dot")).toContain("accent-brand");
   });
 
-  it("draws reachable as a warning in both schemes", () => {
-    expect(getStatusClasses("reachable", "accent", "dot")).toContain("amber");
-    expect(getStatusClasses("reachable", "status", "dot")).toContain("amber");
+  it("draws an unchecked host as loading", () => {
+    expect(getStatusClasses("unknown", "accent", "dot")).toContain("pulse");
+    expect(getStatusClasses("unknown", "status", "dot")).toContain("pulse");
   });
 });

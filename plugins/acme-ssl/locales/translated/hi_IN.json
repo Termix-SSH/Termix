@@ -1,14 +1,14 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "ACME प्रमाणपत्रों का प्रबंधन करें",
+      "description": "प्रमाणपत्र की स्थिति देखें और अभी नए प्रमाणपत्र के लिए अनुरोध करें।"
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "स्वचालित रूप से नवीनीकरण करें",
+      "description": "दिन में दो बार जांच करें और यदि कोई प्रमाणपत्र मौजूद नहीं है, या वह डोमेन को कवर नहीं करता है, या 30 दिनों के भीतर समाप्त हो रहा है, तो नया प्रमाणपत्र प्राप्त करें।"
     },
     "domain": {
       "label": "डोमेन",
@@ -17,42 +17,45 @@
     },
     "email": {
       "label": "ईमेल",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "description": "ACME खाते और समाप्ति सूचनाओं के लिए संपर्क ईमेल पता।",
       "placeholder": "admin@example.com"
     },
     "provider": {
       "label": "प्रमाणपत्र प्राधिकरण",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
-      "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "description": "सर्टिफिकेट कहां से प्राप्त करें। Let's Encrypt की दर सीमा का उल्लंघन किए बिना परीक्षण के लिए स्टेजिंग का उपयोग करें।",
+      "letsencrypt": "आइए एन्क्रिप्ट करें",
+      "letsencryptStaging": "लेट्स एनक्रिप्ट (चरणबद्ध)",
+      "custom": "कस्टम एसीएमई निर्देशिका"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "ACME निर्देशिका URL",
+      "description": "केवल कस्टम सर्टिफिकेट अथॉरिटी के लिए। यूआरएल HTTPS होना चाहिए।"
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "चुनौती का प्रकार",
+      "description": "आप डोमेन के मालिक होने का प्रमाण कैसे दे सकते हैं?",
+      "http": "HTTP - इसके लिए इंटरनेट से पोर्ट 80 तक पहुंच आवश्यक है।",
+      "cloudflare": "DNS (Cloudflare) - इसके लिए Cloudflare API टोकन की आवश्यकता होती है।"
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
+      "label": "क्लाउडफ्लेयर एपीआई टोकन",
       "description": "आपके डोमेन के लिए Zone:DNS:Edit अनुमति वाला स्कोप्ड टोकन।"
     }
   },
   "status": {
-    "title": "Certificate status",
+    "title": "प्रमाणपत्र की स्थिति",
     "none": "कोई प्रमाणपत्र नहीं",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
+    "names": "कवर {{names}}",
+    "issuer": "{{issuer}} द्वारा जारी किया गया",
     "expires": "{{date}} को समाप्त होगा",
     "lastIssued": "अंतिम जारी: {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
+    "lastError": "अंतिम प्रयास विफल रहा: {{error}}",
+    "missing": "डोमेन, ईमेल और आपके चैलेंज टाइप के लिए आवश्यक फ़ील्ड सेट करें, फिर प्रमाणपत्र का अनुरोध करने से पहले सेव करें।",
+    "request": "अभी प्रमाणपत्र का अनुरोध करें",
     "requesting": "प्रमाणपत्र अनुरोध किया जा रहा है...",
-    "issued": "Certificate issued and installed"
+    "issued": "प्रमाणपत्र जारी और स्थापित किया गया"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

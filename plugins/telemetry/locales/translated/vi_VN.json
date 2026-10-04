@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Quản lý số liệu thống kê sử dụng",
+      "description": "Hãy xem các số liệu thống kê sử dụng nào đang được gửi, gửi chúng ngay bây giờ và đặt lại ID phiên bản."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Chia sẻ số liệu thống kê sử dụng ẩn danh",
+      "description": "Gửi một bản tóm tắt ngắn gọn, ẩn danh mỗi ngày một lần để giúp cải thiện Termix. Bản tóm tắt này không bao giờ bao gồm tên người dùng, tên máy chủ, địa chỉ IP hoặc thông tin đăng nhập."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Bao gồm thông tin nền tảng",
+      "description": "Hệ điều hành, kiến trúc CPU, phiên bản Node.js, loại cơ sở dữ liệu và cách cài đặt Termix (Docker, ứng dụng máy tính để bàn hoặc máy chủ)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Bao gồm việc sử dụng tính năng",
+      "description": "Số lần mỗi loại tab được mở và số lần đăng nhập SSH kể từ báo cáo gần nhất. Người dùng có thể tắt phần này trong hồ sơ của mình."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Bao gồm các tính năng đã được cài đặt",
+      "description": "Những tính năng tích hợp nào đã được cài đặt và đang hoạt động?"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "ID phiên bản"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Bao gồm cả việc tôi sử dụng tính năng này.",
+      "description": "Ứng dụng này đếm số loại tab bạn mở trong thống kê sử dụng ẩn danh. Không có thông tin nào về bạn hoặc máy chủ của bạn được gửi đi."
     }
   },
   "status": {
     "title": "Trạng thái",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "Chia sẻ số liệu thống kê sử dụng một lần mỗi ngày",
+    "off": "Không chia sẻ số liệu thống kê sử dụng",
+    "lockedOn": "Chức năng này được bật bởi biến môi trường ENABLE_TELEMETRY. Hãy thay đổi nó ở đó.",
+    "lockedOff": "Chức năng này bị tắt bởi biến môi trường ENABLE_TELEMETRY. Hãy thay đổi nó ở đó.",
+    "instanceId": "ID phiên bản: {{id}}",
+    "noInstanceId": "Chưa có ID phiên bản",
+    "lastSent": "Lần gửi cuối cùng {{date}}",
+    "neverSent": "Chưa gửi",
+    "nextSend": "Báo cáo tiếp theo sẽ đến hạn {{date}}",
+    "lastError": "Lần thử cuối cùng thất bại: {{error}}",
+    "preview": "Báo cáo xem trước",
+    "sendNow": "Gửi ngay",
+    "sending": "Đang gửi...",
+    "sent": "Số liệu thống kê sử dụng đã được gửi",
+    "notSent": "Thống kê sử dụng đã bị tắt, không có dữ liệu nào được gửi đi.",
+    "resetId": "Đặt lại ID phiên bản",
+    "resetIdConfirm": "Đặt lại ID phiên bản? Các báo cáo trong tương lai sẽ trông giống như một bản cài đặt mới.",
+    "resetIdDone": "Đặt lại ID phiên bản",
+    "previewTitle": "Báo cáo tiếp theo",
+    "previewDescription": "Đây chính xác là những gì sẽ được gửi ngay bây giờ.",
     "close": "Đóng",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "Không thể tải trạng thái thống kê sử dụng"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

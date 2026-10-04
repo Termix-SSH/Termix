@@ -65,5 +65,8 @@
         "label": "Vault 서명자 프로필"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

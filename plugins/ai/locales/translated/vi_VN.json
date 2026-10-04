@@ -1,117 +1,117 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "Sử dụng trợ lý",
+      "description": "Mở trợ lý ảo và hỏi nó những câu hỏi."
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "Quản lý nhà cung cấp",
+      "description": "Thêm, chỉnh sửa và xóa các nhà cung cấp AI và khóa API của họ."
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "Áp dụng các đề xuất",
+      "description": "Hãy để trợ lý thực hiện những thay đổi mà nó đề xuất."
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "Sử dụng trí tuệ nhân tạo từ các tính năng khác",
+      "description": "Các tính năng khác có thể gọi trợ lý ảo thay mặt bạn."
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "Chia sẻ khóa API",
+      "description": "Các tính năng khác có thể sử dụng khóa API AI đã lưu trữ mà không cần nhìn thấy khóa đó."
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "Trợ lý AI đã bị tắt trên máy chủ này.",
+    "providersNeedOptIn": "Hãy bật trợ lý AI ở trên để thêm nhà cung cấp.",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "Trợ lý AI",
+        "description": "Cho phép người dùng bật trợ lý AI. Khi chức năng này tắt, trợ lý sẽ bị ẩn và chặn đối với tất cả mọi người."
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "Cho phép máy chủ AI riêng",
+        "description": "Các máy chủ trên mạng riêng của bạn mà người dùng có thể trỏ đến nhà cung cấp, chẳng hạn như Ollama tự lưu trữ. Đặt một máy chủ trên mỗi dòng."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "Kích hoạt Trợ lý AI",
+        "description": "Cho phép trợ lý AI hỗ trợ trong thiết bị đầu cuối của máy chủ này. Mặc định là tắt, nhưng bạn vẫn cần bật AI cho tài khoản của mình."
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
+    "title": "Trợ lý",
+    "send": "Gửi",
     "stop": "Bit dừng",
     "save": "Lưu",
     "cancel": "Hủy",
     "running": "đang chạy",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
+    "approve": "Chấp thuận",
+    "reject": "Từ chối",
+    "inputPlaceholder": "Hãy hỏi về máy chủ của bạn, hoặc mô tả một thay đổi mà bạn muốn đề xuất.",
+    "selectProvider": "Chọn nhà cung cấp",
+    "providerSettings": "Cài đặt nhà cung cấp",
+    "addProvider": "Thêm nhà cung cấp",
+    "editProvider": "Chỉnh sửa nhà cung cấp",
+    "removeProvider": "Xóa nhà cung cấp",
+    "providerType": "Nhà cung cấp",
     "providerLabel": "Tên",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerLabelPlaceholder": "Ví dụ: Ollama địa phương",
+    "baseUrl": "Địa chỉ máy chủ",
+    "apiKey": "Khóa API",
+    "defaultModel": "Mô hình mặc định",
+    "defaultModelPlaceholder": "Ví dụ: llama3.1 hoặc claude-opus-5",
+    "labelRequired": "Đặt tên cho nhà cung cấp này",
+    "providerSaveFailed": "Không thể lưu nhà cung cấp",
+    "providerUpdated": "Nhà cung cấp đã cập nhật",
+    "providerDeleteFailed": "Không thể xóa nhà cung cấp",
+    "privateEndpointHint": "Các địa chỉ trên mạng riêng của bạn cần được quản trị viên cho phép truy cập trước.",
     "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
+    "providerAnthropic": "Nhân loại",
     "providerOpenai": "OpenAI",
     "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
+    "providerOpenaiCompatible": "Tương thích với OpenAI",
     "toolArguments": "Nhập",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "toolResult": "Kết quả",
+    "statusApplied": "Đã áp dụng",
+    "statusRejected": "Vật bị loại bỏ",
+    "proposalApplied": "Thay đổi đã được áp dụng",
+    "proposalApplyFailed": "Không thể áp dụng thay đổi",
+    "proposalRejectFailed": "Không thể từ chối thay đổi",
+    "enableTitle": "Kích hoạt trợ lý AI",
+    "enableDescription": "Hãy để trợ lý đọc cấu hình của bạn và đề xuất các thay đổi để bạn phê duyệt.",
+    "readOnlyCommands": "Cho phép các lệnh chẩn đoán chỉ đọc",
+    "readOnlyCommandsDescription": "Trợ lý có thể chạy một danh sách ngắn các lệnh an toàn như df và uptime mà không cần hỏi mỗi lần. Bất kỳ lệnh nào thay đổi máy chủ đều được đề xuất trước tiên.",
+    "modelDetectFailed": "Không thể liên lạc được với nhà cung cấp, vì vậy đây là danh sách chung. Bạn có thể nhập bất kỳ tên mẫu nào.",
+    "modelCustom": "Nhập tên mẫu",
+    "modelRefresh": "Làm mới danh sách",
+    "modelPlaceholder": "Chọn hoặc nhập mô hình",
+    "attachHint": "Nhập @ để tham chiếu đến máy chủ, đoạn mã hoặc quy trình tự động hóa. Các thay đổi được đề xuất để bạn phê duyệt.",
+    "runCommandTitle": "Chạy lệnh",
+    "assistant": "Trợ lý AI",
+    "terminalPanelEmpty": "Hãy hỏi trợ lý về máy chủ này. Bất cứ thay đổi nào về trạng thái đều cần sự chấp thuận của bạn trước.",
+    "terminalPanelPlaceholder": "Hãy hỏi về chủ nhà này...",
+    "noProvidersConfigured": "Chưa có nhà cung cấp AI nào được cấu hình. Hãy thêm một nhà cung cấp trong tab trợ lý AI.",
+    "runsInOpenTerminal": "Chương trình này chạy trong cửa sổ dòng lệnh đang mở của bạn.",
     "runInTerminal": "Chạy",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "terminalContextPrefill": "Đây là kết quả hiển thị trên terminal của tôi:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "Cho phép các tính năng khác sử dụng khóa API của nhà cung cấp AI của bạn cho các yêu cầu riêng của chúng. Khóa này không bao giờ được sao chép và bạn có thể thu hồi nó bất cứ lúc nào."
     }
   },
   "nav": {
-    "ai": "AI"
+    "ai": "Trí tuệ nhân tạo"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "Trợ lý AI",
+    "aiIntro": "Termix có thể bao gồm trợ lý AI tùy chọn. Bạn có thể thay đổi điều này sau trong phần cài đặt.",
+    "aiSkipTitle": "Đừng làm vậy",
+    "aiSkipDesc": "Termix vẫn hoạt động như hiện tại. Trợ lý ảo vẫn ẩn mình.",
+    "aiEnableTitle": "Bật nó lên",
+    "aiEnableDesc": "Thêm một trợ lý đọc cấu hình của bạn và đề xuất các thay đổi mà bạn chấp thuận. Cần có nhà cung cấp do bạn chỉ định, chẳng hạn như Ollama địa phương.",
+    "aiNote": "Không có dữ liệu nào được gửi đi cho đến khi bạn thêm nhà cung cấp và gửi tin nhắn."
   },
   "hosts": {
     "docsLink": "Xem tài liệu"
@@ -191,5 +191,8 @@
     "reconnecting": "Reconnecting and restoring messages…",
     "unavailable": "Session is no longer accessible. Check your permissions or sign in again.",
     "shortcuts": "Enter sends or queues · Shift+Enter adds a line · Esc interrupts and pauses the queue"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

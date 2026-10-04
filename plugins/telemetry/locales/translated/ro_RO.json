@@ -54,5 +54,8 @@
     "previewDescription": "Exact asta ar fi trimis chiar acum.",
     "close": "Aproape",
     "loadFailed": "Nu s-a putut încărca starea statisticilor de utilizare"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

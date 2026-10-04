@@ -54,5 +54,8 @@
     "request": "Igényeljen tanúsítványt most",
     "requesting": "Tanúsítvány kérése...",
     "issued": "Tanúsítvány kiállítva és telepítve"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

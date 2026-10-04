@@ -129,7 +129,7 @@ vi.mock("../../hosts/host-session-status.js", () => ({
 vi.mock("../../hosts/status/host-status-service.js", () => ({
   hostStatusService: {
     get: (hostId: number) =>
-      hostId === 4 ? { status: "reachable", lastChecked: "t" } : null,
+      hostId === 4 ? { status: "online", lastChecked: "t" } : null,
     check: async (hostId: number) => ({
       status: "offline",
       lastChecked: String(hostId),
@@ -496,7 +496,7 @@ describe("ctx.hosts", () => {
     }
     expect(record.sshOptions).toEqual({ keepaliveInterval: 5 });
     expect(record.pluginSettings).toEqual({ mine: "own-4" });
-    expect(record.status).toEqual({ status: "reachable", lastChecked: "t" });
+    expect(record.status).toEqual({ status: "online", lastChecked: "t" });
     expect(record.enableSsh).toBe(true);
   });
 
@@ -620,7 +620,7 @@ describe("ctx.hosts.status", () => {
       audit: vi.fn(async () => {}),
     });
     await expect(hosts.status.get(4)).resolves.toEqual({
-      status: "reachable",
+      status: "online",
       lastChecked: "t",
     });
     await expect(hosts.status.get(5)).resolves.toBeNull();
@@ -656,11 +656,9 @@ describe("ctx.hosts.status", () => {
       manifest: manifest(["hosts:read"]),
       audit: vi.fn(async () => {}),
     });
-    hosts.status.reportLogin(4, { ok: false, hostKeyChanged: true });
+    hosts.status.reportLogin(4, { ok: true });
     await settle();
-    expect(h.statusReports).toEqual([
-      { hostId: 4, ok: false, hostKeyChanged: true },
-    ]);
+    expect(h.statusReports).toEqual([{ hostId: 4, ok: true }]);
   });
 
   it("removes a registered port when the plugin is disposed", async () => {

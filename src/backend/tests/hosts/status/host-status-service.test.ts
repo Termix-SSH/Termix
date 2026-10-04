@@ -55,6 +55,7 @@ function setup(
     hasActiveSession: (id) => hostSessionStatus.hasActiveSession(id),
     globalInterval: () => 60,
     emit: (payload) => emitted.push(payload),
+    retryDelayMs: 0,
   });
   return { service, emitted, ping, pingThroughJumpHosts, loadTargets };
 }
@@ -192,86 +193,44 @@ describe("HostStatusService", () => {
     expect(ping).toHaveBeenCalledWith("10.0.0.1", 3389);
   });
 
-  it("warns about a failed login until a login works again", async () => {
+  it("ignores a failed login and counts a working one as online", async () => {
     const { service, emitted } = setup([target(1)]);
     active = service;
     await service.statusesFor("owner", null);
-    await flush();
 
+    const before = emitted.length;
     service.reportLogin(1, { ok: false });
-    expect(service.get(1)?.status).toBe("reachable");
-    expect(emitted.at(-1)).toMatchObject({
-      status: "reachable",
-      previous: "online",
-    });
-
-    vi.advanceTimersByTime(75_000);
-    await flush();
-    expect(service.get(1)?.status).toBe("reachable");
-
-    service.reportLogin(1, { ok: true });
     expect(service.get(1)?.status).toBe("online");
-    vi.advanceTimersByTime(75_000);
-    await flush();
-    expect(service.get(1)?.status).toBe("online");
+    expect(emitted).toHaveLength(before);
   });
 
-  it("marks a changed host key and clears it once the new key is accepted", async () => {
-    const { service } = setup([target(1)]);
+  it("marks a host online when a terminal session opens", async () => {
+    const { service } = setup([target(1)], false);
     active = service;
     service.start();
     await service.statusesFor("owner", null);
-    await flush();
-    service.reportLogin(1, { ok: false, hostKeyChanged: true });
-    expect(service.get(1)).toMatchObject({
-      status: "reachable",
-      reason: "host_key_changed",
-    });
-
-    pluginEvents.emit(TOPICS.hostKeyUpdated, { hostId: 1 });
-    expect(service.get(1)?.reason).toBeUndefined();
-    expect(service.get(1)?.status).toBe("online");
-  });
-
-  it("clears a failed login when the host is edited", async () => {
-    const { service } = setup([target(1)]);
-    active = service;
-    service.start();
-    await service.statusesFor("owner", null);
-    await flush();
-    service.reportLogin(1, { ok: false });
-
-    pluginEvents.emit(TOPICS.hostUpdated, { hostId: 1 });
-    await flush();
-    await flush();
-    expect(service.get(1)?.status).toBe("online");
-  });
-
-  it("clears a failed login when a terminal session opens", async () => {
-    const { service } = setup([target(1)]);
-    active = service;
-    service.start();
-    await service.statusesFor("owner", null);
-    await flush();
-    service.reportLogin(1, { ok: false });
+    expect(service.get(1)?.status).toBe("offline");
 
     const release = hostSessionStatus.register(1);
     expect(service.get(1)?.status).toBe("online");
     release();
+  });
+
+  it("tries a failed ping again before reporting offline", async () => {
+    const { service, ping } = setup([target(1)]);
+    active = service;
+    ping.mockResolvedValueOnce(false);
+    await service.statusesFor("owner", null);
+    expect(ping).toHaveBeenCalledTimes(2);
     expect(service.get(1)?.status).toBe("online");
   });
 
-  it("shows an offline host as offline whatever the login said", async () => {
-    const { service } = setup([target(1)], false);
+  it("answers the first request with the first checks done", async () => {
+    const { service } = setup([target(1), target(2)]);
     active = service;
-    await service.statusesFor("owner", null);
-    await flush();
-    service.reportLogin(1, { ok: false });
-    expect(service.get(1)?.status).toBe("offline");
-    service.reportLogin(1, { ok: true });
-    vi.advanceTimersByTime(75_000);
-    await flush();
-    expect(service.get(1)?.status).toBe("offline");
+    const statuses = await service.statusesFor("owner", null);
+    expect(statuses.get(1)?.status).toBe("online");
+    expect(statuses.get(2)?.status).toBe("online");
   });
 
   it("only checks the requested hosts on the desktop app", async () => {

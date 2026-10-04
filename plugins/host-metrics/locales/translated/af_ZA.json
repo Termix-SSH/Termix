@@ -308,5 +308,8 @@
         "label": "Gemonitorde paaie"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

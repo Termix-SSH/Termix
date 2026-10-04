@@ -33,7 +33,6 @@ import {
 } from "../hosts/connect/auth-provider-registry.js";
 import { classifyKeyboardInteractive } from "../hosts/connect/keyboard-interactive.js";
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
-import { isHostKeyVerificationError } from "../hosts/status/host-status.js";
 import {
   getLoginMethod,
   registerLoginMethod,
@@ -123,9 +122,6 @@ function withOverrides(
   if (typeof source.authType === "string") merged.authType = source.authType;
   return merged as unknown as SshConnectHost;
 }
-
-const LOGIN_FAILED =
-  /all configured authentication methods failed|permission denied|authentication failed/i;
 
 export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   const pluginId = manifest.id;
@@ -223,23 +219,13 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     return { ...(host as unknown as SshConnectHost), userId };
   };
 
-  /**
-   * A login to a saved host core resolved feeds its status dot. Only a clear
-   * auth or host key failure counts: a timeout says nothing about the login.
-   */
-  const reportLogin = (host: number | PluginSshHost, error?: unknown) => {
+  /** A working login to a saved host core resolved marks it online. */
+  const reportLogin = (host: number | PluginSshHost) => {
     const hostId = typeof host === "number" ? host : lookup(host)?.host.id;
     if (!Number.isInteger(hostId) || hostId <= 0) return;
-    let outcome: { ok: boolean; hostKeyChanged?: boolean } = { ok: true };
-    if (error !== undefined) {
-      const message = error instanceof Error ? error.message : String(error);
-      const hostKeyChanged = isHostKeyVerificationError(error);
-      if (!hostKeyChanged && !LOGIN_FAILED.test(message)) return;
-      outcome = { ok: false, hostKeyChanged };
-    }
     void import("../hosts/status/host-status-service.js")
       .then(({ hostStatusService }) =>
-        hostStatusService.reportLogin(hostId, outcome),
+        hostStatusService.reportLogin(hostId, { ok: true }),
       )
       .catch(() => {});
   };
@@ -299,7 +285,6 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         success: false,
         errorMessage: error instanceof Error ? error.message : String(error),
       });
-      reportLogin(host, error);
       throw error;
     }
   };

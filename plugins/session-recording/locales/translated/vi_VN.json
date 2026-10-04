@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Xem bản ghi lại các buổi họp",
+      "description": "Xem và phát lại các bản ghi âm buổi tập của chính bạn."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Thời gian lưu giữ (ngày)",
+        "description": "Thời gian lưu giữ bản ghi phiên trước khi nó tự động bị xóa."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Bật tính năng ghi lại phiên",
+        "description": "Ghi lại thông báo lỗi trên terminal của máy chủ này để bạn có thể phát lại hoặc tải xuống sau."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Ghi âm"
   },
   "sessionLogs": {
     "title": "Nhật ký phiên",
@@ -36,7 +36,7 @@
     "duration": "Thời lượng",
     "viewLog": "Xem nhật ký",
     "downloadLog": "Tải xuống",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "Tải xuống dưới dạng văn bản",
     "deleteLog": "Xóa",
     "confirmDelete": "Xóa nhật ký phiên này?",
     "confirmDeleteDesc": "Hành động này không thể hoàn tác.",
@@ -47,14 +47,17 @@
     "filterByHost": "Lọc theo máy chủ...",
     "back": "Quay lại",
     "empty": "(trống)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "Không tìm thấy kết quả cho \"{{query}}\"",
+    "hostFallback": "Máy chủ {{id}}",
+    "sessionFallback": "Phiên {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Lịch trình ghi âm",
+    "speed": "Tốc độ phát lại",
+    "play": "Phát bản ghi âm",
+    "pause": "Tạm dừng ghi âm"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

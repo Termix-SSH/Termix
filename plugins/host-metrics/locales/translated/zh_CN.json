@@ -13,7 +13,7 @@
     "free": "空闲",
     "connecting": "连接中...",
     "connectionFailed": "连接服务器失败",
-    "naCpus": "CPU 数据不可用",
+    "naCpus": "N/A CPU",
     "cpuCores_one": "{{count}} 核心",
     "cpuCores_other": "{{count}} 核心",
     "cpuUsage": "CPU 使用率",
@@ -25,13 +25,13 @@
     "primaryTemperatureSensor": "主传感器",
     "gpu": {
       "title": "GPU",
-      "noDevice": "未检测到 NVIDIA GPU。请安装 NVIDIA 驱动（包含 nvidia-smi）以查看 GPU 指标。",
-      "driver": "驱动版本 {{version}}",
-      "utilization": "使用率",
+      "noDevice": "未检测到NVIDIA GPU。请安装NVIDIA驱动程序（它提供nvidia-smi）以查看GPU指标。",
+      "driver": "司机 {{version}}",
+      "utilization": "利用率",
       "memory": "显存",
       "temperature": "温度",
-      "power": "功率",
-      "fan": "风扇",
+      "power": "力量",
+      "fan": "扇子",
       "processes": "GPU 进程",
       "noProcesses": "没有进程正在使用 GPU"
     },
@@ -143,7 +143,7 @@
       "sslIssued": "证书已签发",
       "sslDomainsPlaceholder": "example.com, www.example.com",
       "sslHttpStandalone": "HTTP (独立模式)",
-      "sslHttpWebroot": "HTTP（网站根目录）",
+      "sslHttpWebroot": "HTTP (webroot)",
       "sslDns": "DNS",
       "sslDnsProvider": "DNS 提供商 (如 cloudflare)",
       "sslIssueHint": "DNS 提供商凭据必须已在主机上配置。",
@@ -178,7 +178,7 @@
       "wgLastHandshake": "上次握手",
       "wgHandshakeNever": "从未",
       "wgTransfer": "传输",
-      "wgNoPeers": "没有对等节点"
+      "wgNoPeers": "没有对手"
     }
   },
   "metricsHistory": {
@@ -186,8 +186,8 @@
     "historySuffix": "历史",
     "cpuMemoryDisk": "CPU / 内存 / 磁盘",
     "network": "网络",
-    "download": "接收",
-    "upload": "发送",
+    "download": "RX",
+    "upload": "TX",
     "noData": "此时间范围内没有可用的历史数据。",
     "custom": "自定义",
     "to": "至",
@@ -205,13 +205,13 @@
     "metricsIntervalDesc2": "指标快照之间的秒数",
     "excludedMountsLabel": "排除的挂载点",
     "monitoredMountsLabel": "自定义监控路径",
-    "monitoredMountsDesc": "添加未作为独立挂载点显示的路径，包括 /config 等通过绑定挂载的 Home Assistant 路径。",
-    "monitoredMountPathPlaceholder": "路径（/config、/mnt/data）",
+    "monitoredMountsDesc": "添加未作为单独挂载点公开的路径，包括绑定挂载的 Home Assistant 路径，例如 /config。",
+    "monitoredMountPathPlaceholder": "路径（/config，/mnt/data）",
     "monitoredMountLabelPlaceholder": "标签（可选）",
     "addMonitoredMount": "添加路径",
-    "excludedMountsDesc": "在此主机的磁盘使用情况和告警中隐藏指定挂载点或文件系统类型（如 nfs、cifs）。",
+    "excludedMountsDesc": "隐藏此主机磁盘使用情况和警报中的特定挂载点或文件系统类型（例如 nfs、cifs）。",
     "excludedMountsPlaceholder": "挂载路径（/mnt/nas）或文件系统类型（nfs、cifs）",
-    "excludedMountsEmpty": "未排除任何挂载点，将显示所有检测到的文件系统。",
+    "excludedMountsEmpty": "未排除任何挂载点。显示所有检测到的文件系统。",
     "addExcludedMount": "添加",
     "visibleWidgets": "可见小部件",
     "widgetsMovedToHostMetrics": "卡片现在可在“主机指标”选项卡中直接添加、排列和调整大小。打开此主机的“主机指标”，使用“自定义”选择要显示的卡片。",
@@ -250,7 +250,7 @@
     "selectHost": "选择主机..."
   },
   "terminalStatus": {
-    "unavailable": "实时统计不可用"
+    "unavailable": "实时统计数据不可用"
   },
   "dashboard": {
     "cpu": "CPU",
@@ -265,44 +265,44 @@
   "permissions": {
     "use": {
       "title": "使用主机指标",
-      "description": "查看主机指标，并在你有权访问的主机上使用服务、软件包、防火墙等管理工具。"
+      "description": "查看主机指标并使用您可以访问的主机上的主机管理器（服务、软件包、防火墙等）。"
     }
   },
   "settings": {
     "admin": {
       "metricsInterval": {
-        "label": "指标采样间隔（秒）",
-        "description": "正在查看的主机的采样频率，除非该主机另行设置了间隔。"
+        "label": "指标间隔（秒）",
+        "description": "除非主机自行设置间隔，否则将对正在查看的主机进行采样的频率。"
       },
       "historyRetentionDays": {
-        "label": "历史保留天数",
-        "description": "用于历史图表的指标采样数据保留时长。"
+        "label": "历史数据保留时间（天）",
+        "description": "历史图表中的指标样本保留多长时间？"
       },
       "enabledForNewHosts": {
-        "label": "新主机默认启用指标",
-        "description": "是否为新主机默认启用指标采集。"
+        "label": "新主机指标",
+        "description": "新主机是否默认开启指标收集功能。"
       }
     },
     "user": {
       "temperatureUnit": {
         "label": "温度单位",
-        "description": "主机指标中的温度显示方式。",
+        "description": "主机指标中如何显示温度。",
         "celsius": "摄氏度",
         "fahrenheit": "华氏度"
       }
     },
     "host": {
       "metricsEnabled": {
-        "label": "采集指标"
+        "label": "收集指标"
       },
       "metricsInterval": {
-        "label": "指标采样间隔（秒）"
+        "label": "指标间隔（秒）"
       },
       "enabledWidgets": {
-        "label": "启用的组件"
+        "label": "已启用的小部件"
       },
       "excludedMounts": {
-        "label": "排除的挂载点"
+        "label": "排除的安装点"
       },
       "monitoredMounts": {
         "label": "监控路径"
@@ -310,6 +310,6 @@
     }
   },
   "plugin": {
-    "name": "主机指标"
+    "name": "Host Metrics"
   }
 }

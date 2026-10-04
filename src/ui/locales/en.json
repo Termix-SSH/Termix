@@ -122,7 +122,6 @@
     "minimize": "Minimize",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Sign in failed",
     "unknown": "Unknown",
     "continue": "Continue",
     "maintenance": "Maintenance",
@@ -358,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Host Metrics",
     "status": {
-      "available": "Available",
-      "reachable": "Available, but login failed",
+      "online": "Online",
       "offline": "Offline",
-      "monitoringDisabled": "Monitoring disabled",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Folder \"{{oldName}}\" renamed to \"{{newName}}\" successfully",

@@ -1,27 +1,30 @@
 {
-  "hint": "You can paste a 1Password reference (op://vault/item/field) instead of the secret. It is fetched from your secret source when connecting.",
-  "manage": "Manage secret sources",
-  "title": "Secret sources",
-  "description": "External password managers Termix reads secrets from at connect time. Currently 1Password Connect (self-hosted). The access token is stored encrypted with your data key.",
-  "new": "New source",
-  "nameLabel": "Friendly name",
-  "urlLabel": "Connect server URL",
-  "tokenLabel": "Connect access token",
-  "tokenKeep": "Leave empty to keep the current token",
-  "sharedLabel": "Share with all users (admins only, resolves while you are signed in)",
-  "shared": "shared",
-  "test": "Test",
-  "testOk": "Connected, {{count}} vault(s) visible",
-  "testFailed": "Connection test failed",
-  "required": "Name, server URL and token are required",
-  "saved": "Secret source saved",
-  "deleted": "Secret source deleted",
+  "hint": "คุณสามารถวางข้อมูลอ้างอิง 1Password (op://vault/item/field) แทนรหัสลับได้ ระบบจะดึงข้อมูลนี้จากแหล่งข้อมูลลับของคุณเมื่อเชื่อมต่อ",
+  "manage": "จัดการแหล่งข้อมูลลับ",
+  "title": "แหล่งข่าวลับ",
+  "description": "โปรแกรมจัดการรหัสผ่านภายนอก Termix จะอ่านข้อมูลลับจากอุปกรณ์เมื่อเชื่อมต่อ ปัจจุบันคือ 1Password Connect (แบบติดตั้งเอง) โทเค็นการเข้าถึงจะถูกจัดเก็บในรูปแบบเข้ารหัสพร้อมกับคีย์ข้อมูลของคุณ",
+  "new": "แหล่งข้อมูลใหม่",
+  "nameLabel": "ชื่อที่เป็นมิตร",
+  "urlLabel": "เชื่อมต่อ URL ของเซิร์ฟเวอร์",
+  "tokenLabel": "เชื่อมต่อโทเค็นการเข้าถึง",
+  "tokenKeep": "เว้นว่างไว้เพื่อคงโทเค็นปัจจุบันไว้",
+  "sharedLabel": "แชร์กับผู้ใช้ทั้งหมด (เฉพาะผู้ดูแลระบบเท่านั้น ใช้งานได้เฉพาะเมื่อคุณเข้าสู่ระบบอยู่)",
+  "shared": "แชร์",
+  "test": "ทดสอบ",
+  "testOk": "เชื่อมต่อแล้ว, มองเห็นห้องนิรภัย {{count}} ห้อง",
+  "testFailed": "การทดสอบการเชื่อมต่อล้มเหลว",
+  "required": "จำเป็นต้องระบุชื่อ ที่อยู่ URL ของเซิร์ฟเวอร์ และโทเค็น",
+  "saved": "แหล่งข่าวลับถูกบันทึกไว้แล้ว",
+  "deleted": "แหล่งข่าวลับถูกลบแล้ว",
   "settings": {
     "admin": {
       "privateEndpoints": {
-        "label": "Private endpoint allowlist",
-        "description": "Private or loopback hosts a secret source may reach, one per line. A self-hosted 1Password Connect server usually needs its own address listed here."
+        "label": "รายการอนุญาตปลายทางส่วนตัว",
+        "description": "โฮสต์ส่วนตัวหรือโฮสต์แบบลูปแบ็กที่แหล่งข้อมูลลับสามารถเข้าถึงได้ หนึ่งโฮสต์ต่อบรรทัด โดยปกติแล้วเซิร์ฟเวอร์ 1Password Connect ที่ติดตั้งเองจะต้องมีที่อยู่ของตัวเองระบุไว้ที่นี่"
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

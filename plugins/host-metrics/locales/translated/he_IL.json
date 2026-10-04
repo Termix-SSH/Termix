@@ -308,5 +308,8 @@
         "label": "נתיבים מנוטרים"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

@@ -3,58 +3,61 @@
     "sessionLogs": "Logs de sessão"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "Gravação da sessão",
+    "enableSessionRecordingDesc": "Registre a saída da sessão do terminal para revisão posterior."
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Veja as gravações das sessões",
+      "description": "Veja e reproduza as gravações das suas próprias sessões."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Retenção (dias)",
+        "description": "Por quanto tempo uma gravação de sessão é mantida antes de ser excluída automaticamente."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Ativar gravação de sessão",
+        "description": "Grave a saída do terminal para este host para que você possa reproduzi-la ou baixá-la posteriormente."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Gravação"
   },
   "sessionLogs": {
     "title": "Logs de sessão",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
+    "noLogs": "Ainda não há registros de sessão.",
+    "noLogsDesc": "Habilite o registro de sessão em um host para iniciar a gravação.",
+    "duration": "Duração",
+    "viewLog": "Ver registro",
     "downloadLog": "Download",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "Baixar como texto",
     "deleteLog": "Apagar",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
+    "confirmDelete": "Excluir este registro de sessão?",
+    "confirmDeleteDesc": "Esta ação não pode ser desfeita.",
     "copyContent": "Copiar",
     "copied": "Copiado!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
+    "loadError": "Falha ao carregar os registros da sessão.",
+    "deleteError": "Falha ao excluir o registro da sessão",
+    "filterByHost": "Filtrar por host...",
     "back": "Voltar",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "empty": "(vazio)",
+    "noResults": "Nenhum resultado para \"{{query}}\"",
+    "hostFallback": "Anfitrião {{id}}",
+    "sessionFallback": "Sessão {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Cronograma de gravação",
+    "speed": "Velocidade de reprodução",
+    "play": "Reproduzir gravação",
+    "pause": "Pausar gravação"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

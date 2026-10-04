@@ -1,32 +1,35 @@
 {
   "editor": {
     "label": "OPKSSH",
-    "description": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
-    "docs": "View docs"
+    "description": "Logga in på den här värden med din identitetsleverantör istället för ett lösenord eller en nyckel. Kräver att OPKSSH är konfigurerat på servern.",
+    "docs": "Visa dokument"
   },
   "dialog": {
-    "title": "OPKSSH Authentication Required",
-    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication...",
-    "signInWith": "Sign in with {{provider}}"
+    "title": "OPKSSH-autentisering krävs",
+    "description": "Slutför autentiseringen i din webbläsare för att fortsätta. Denna session kommer att vara giltig i 24 timmar.",
+    "openBrowser": "Öppna webbläsaren för att autentisera",
+    "waiting": "Väntar på autentisering i webbläsaren...",
+    "authenticating": "Bearbetar autentisering...",
+    "signInWith": "Logga in med {{provider}}"
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "Autentiseringen misslyckades. Kontrollera dina inloggningsuppgifter och försök igen.",
+    "timeout": "Autentiseringen har gått ut. Försök igen."
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "Omdirigerings-URI",
+      "description": "Registrera denna URL som en tillåten omdirigerings-URI hos varje identitetsleverantör i din OPKSSH-konfiguration."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "Använd den gamla omdirigerings-URI:n",
+      "description": "Fortsätt skicka /host/opkssh-callback, den omdirigerings-URI som användes före version 2.9. Stäng av detta när dina identitetsleverantörer tillåter den nya."
     }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
+  },
+  "plugin": {
+    "name": "OPKSSH"
   }
 }

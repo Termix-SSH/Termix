@@ -1,190 +1,325 @@
 {
   "nav": {
-    "homepage": "Homepage"
+    "homepage": "Página inicial"
   },
   "dashboard": {
-    "serviceLinks": "Service Links",
-    "homepagePreview": "Homepage Preview"
+    "serviceLinks": "Links de serviço",
+    "homepagePreview": "Pré-visualização da página inicial"
   },
   "dashboardTab": {
-    "serviceLinksTitle": "Service Links",
-    "serviceLinksEmpty": "No service links yet",
+    "serviceLinksTitle": "Links de serviço",
+    "serviceLinksEmpty": "Ainda não há links de serviço.",
     "serviceLinksAdd": "Adicionar",
-    "serviceLinksLabelPlaceholder": "My Service",
+    "serviceLinksLabelPlaceholder": "Meu Serviço",
     "serviceLinksUrlPlaceholder": "http://192.168.1.10:8080",
-    "serviceLinksInvalidUrl": "Enter a valid web address",
-    "serviceLinksAddFailed": "Failed to add service link"
+    "serviceLinksInvalidUrl": "Insira um endereço web válido.",
+    "serviceLinksAddFailed": "Falha ao adicionar o link de serviço"
   },
   "homepage": {
-    "title": "Homepage",
-    "addWidget": "Add Widget",
-    "noWidgetsInCategory": "No widgets in this category",
-    "editWidget": "Edit Widget",
-    "zoomIn": "Zoom In",
-    "zoomOut": "Zoom Out",
-    "resetView": "Reset View",
-    "lockLayout": "Lock Layout",
-    "unlockLayout": "Unlock Layout",
-    "noWidgets": "Right-click or click + to add your first widget",
-    "openFullView": "Open Full View",
-    "previewTitle": "Homepage Preview",
+    "title": "Página inicial",
+    "addWidget": "Adicionar widget",
+    "noWidgetsInCategory": "Não há widgets nesta categoria.",
+    "editWidget": "Widget de edição",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Diminuir o zoom",
+    "resetView": "Redefinir visualização",
+    "lockLayout": "Configuração de fechadura",
+    "unlockLayout": "Desbloquear layout",
+    "noWidgets": "Clique com o botão direito do mouse ou clique em + para adicionar seu primeiro widget.",
+    "openFullView": "Abrir visualização completa",
+    "previewTitle": "Pré-visualização da página inicial",
     "cancel": "Cancelar",
     "save": "Salvar",
-    "title_label": "Title",
-    "widgetTitlePlaceholder": "Widget title (optional)",
+    "title_label": "Título",
+    "widgetTitlePlaceholder": "Título do widget (opcional)",
     "url": "URL",
-    "imageUrl": "Custom Image URL",
-    "imageUrlHint": "Leave blank to use the site favicon automatically",
-    "showImage": "Show Image",
-    "description": "Description",
-    "color": "Color",
-    "timezone": "Timezone",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
-    "showSeconds": "Show seconds",
-    "format12h": "12-hour",
-    "content": "Content",
-    "backgroundColor": "Background Color",
+    "imageUrl": "URL da imagem personalizada",
+    "imageUrlHint": "Deixe em branco para usar o favicon do site automaticamente.",
+    "showImage": "Mostrar imagem",
+    "description": "Descrição",
+    "color": "Cor",
+    "timezone": "Fuso horário",
+    "invalidTimezone": "Fuso horário inválido. Use um nome IANA, como America/New_York.",
+    "showSeconds": "Mostrar segundos",
+    "format12h": "12 horas",
+    "content": "Contente",
+    "backgroundColor": "Cor de fundo",
     "links": "Links",
-    "addLink": "Add Link",
-    "linkLabel": "Label",
+    "addLink": "Adicionar link",
+    "linkLabel": "Rótulo",
     "categoryLinks": "Links",
-    "categoryInfo": "Info",
-    "categorySystem": "System",
-    "copyLink": "Copy Link",
-    "linkCopied": "Link copied!",
-    "location": "Location",
-    "temperatureUnit": "Temperature Unit",
-    "showForecast": "Show 3-day forecast",
-    "scrolling": "Allow Scrolling",
-    "feedUrl": "Feed URL",
-    "maxItems": "Max Items",
-    "showDescription": "Show Description",
-    "widgetRssName": "RSS Feed",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
-    "noHostSelected": "No host selected",
-    "displayedMetrics": "Displayed Metrics",
+    "categoryInfo": "Informações",
+    "categorySystem": "Sistema",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado!",
+    "location": "Localização",
+    "temperatureUnit": "Unidade de temperatura",
+    "showForecast": "Mostrar previsão para 3 dias",
+    "scrolling": "Permitir rolagem",
+    "feedUrl": "URL do feed",
+    "maxItems": "Número máximo de itens",
+    "showDescription": "Descrição do programa",
+    "widgetRssName": "Feed RSS",
+    "rssNoFeedUrl": "Configure um URL de feed nas configurações do widget.",
+    "rssLoadError": "Não foi possível carregar o feed.",
+    "rssNoItems": "Nenhum item",
+    "noHostSelected": "Nenhum host selecionado",
+    "displayedMetrics": "Métricas exibidas",
     "metricCpu": "CPU",
-    "metricMemory": "Memory",
-    "metricDisk": "Disk",
-    "metricUptime": "Uptime",
-    "metricSystem": "System",
-    "metricNetwork": "Network",
-    "metricProcesses": "Processes",
-    "categoryMonitoring": "Monitoring",
-    "noPingUrls": "No URLs configured",
-    "pingLabel": "Label",
-    "addPingUrl": "Add URL",
-    "showLatency": "Show Latency",
-    "refreshInterval": "Refresh Interval",
-    "seconds": "seconds",
-    "filterActivityTypes": "Filter Types",
-    "filterTypesHint": "Leave empty to show all",
-    "showTimestamp": "Show Timestamp",
-    "uptimeUnavailable": "Uptime unavailable",
-    "uptimeLabel": "Uptime",
-    "overviewVersion": "Version",
+    "metricMemory": "Memória",
+    "metricDisk": "Disco",
+    "metricUptime": "Tempo de atividade",
+    "metricSystem": "Sistema",
+    "metricNetwork": "Rede",
+    "metricProcesses": "Processos",
+    "categoryMonitoring": "Monitoramento",
+    "noPingUrls": "Nenhuma URL configurada",
+    "pingLabel": "Rótulo",
+    "addPingUrl": "Adicionar URL",
+    "showLatency": "Mostrar latência",
+    "refreshInterval": "Intervalo de atualização",
+    "seconds": "segundos",
+    "filterActivityTypes": "Tipos de filtro",
+    "filterTypesHint": "Deixe em branco para mostrar tudo",
+    "showTimestamp": "Mostrar carimbo de data/hora",
+    "uptimeUnavailable": "Tempo de atividade indisponível",
+    "uptimeLabel": "Tempo de atividade",
+    "overviewVersion": "Versão",
     "overviewUpdateLabel": "Atualizar",
-    "overviewUpdateAvailable": "Update available",
-    "overviewDatabase": "Database",
-    "overviewUptime": "Uptime",
-    "noHosts": "No hosts configured",
+    "overviewUpdateAvailable": "Atualização disponível",
+    "overviewDatabase": "Banco de dados",
+    "overviewUptime": "Tempo de atividade",
+    "noHosts": "Nenhum host configurado",
     "hostGridHosts": "Hosts",
-    "hostGridAllHint": "Leave empty to show all hosts",
-    "columns": "Columns",
-    "showIp": "Show IP Address",
+    "hostGridAllHint": "Deixe em branco para mostrar todos os hosts.",
+    "columns": "Colunas",
+    "showIp": "Mostrar endereço IP",
     "layout": "Layout",
-    "showStatus": "Show Status",
-    "noActivity": "No activity",
-    "widgetPingStatusName": "Ping Status",
-    "widgetRecentActivityName": "Recent Activity",
-    "sshTerminalNoHost": "No host configured",
+    "showStatus": "Mostrar status",
+    "noActivity": "Nenhuma atividade",
+    "widgetPingStatusName": "Status do ping",
+    "widgetRecentActivityName": "Atividade recente",
+    "sshTerminalNoHost": "Nenhum host configurado",
     "sshTerminalConnect": "Conectar",
-    "sshTerminalAutoConnect": "Auto-connect on load",
-    "connectionTypes": "Connection Types",
+    "sshTerminalAutoConnect": "Conexão automática sob carga",
+    "connectionTypes": "Tipos de conexão",
     "calMon": "Mo",
     "calTue": "Tu",
-    "calWed": "We",
-    "calThu": "Th",
-    "calFri": "Fr",
+    "calWed": "Nós",
+    "calThu": "O",
+    "calFri": "Padre",
     "calSat": "Sa",
     "calSun": "Su",
-    "startOnMonday": "Start week on Monday",
-    "countdownNoDate": "No target date set",
-    "countdownPast": "Event has passed",
-    "countdownDays": "days",
-    "countdownHours": "hrs",
+    "startOnMonday": "Comece a semana na segunda-feira",
+    "countdownNoDate": "Nenhuma data-alvo definida.",
+    "countdownPast": "O evento já aconteceu.",
+    "countdownDays": "dias",
+    "countdownHours": "horas",
     "countdownMinutes": "min",
-    "countdownSeconds": "sec",
-    "countdownLabel": "Label",
-    "countdownLabelPlaceholder": "e.g. Launch Day",
-    "countdownShowDays": "Show Days",
-    "countdownShowHours": "Show Hours",
-    "targetDate": "Target Date",
-    "searchEngine": "Search Engine",
-    "customSearchUrl": "Custom Search URL",
-    "searchPlaceholder": "Search...",
-    "searchGo": "Go",
-    "searchPlaceholderLabel": "Placeholder Text",
-    "searchPlaceholderHint": "Text shown inside the search input",
+    "countdownSeconds": "seg",
+    "countdownLabel": "Rótulo",
+    "countdownLabelPlaceholder": "Exemplo: Dia do Lançamento",
+    "countdownShowDays": "Dias de exibição",
+    "countdownShowHours": "Horário de funcionamento",
+    "targetDate": "Data alvo",
+    "searchEngine": "Mecanismo de busca",
+    "customSearchUrl": "URL de pesquisa personalizada",
+    "searchPlaceholder": "Procurar...",
+    "searchGo": "Ir",
+    "searchPlaceholderLabel": "Texto de espaço reservado",
+    "searchPlaceholderHint": "Texto exibido dentro do campo de pesquisa",
     "openInNewTab": "Abrir em Nova Aba",
-    "searchQueryPlaceholder": "Enter query...",
-    "noSearchShortcuts": "No shortcuts configured",
-    "addSearchShortcut": "Add Shortcut",
+    "searchQueryPlaceholder": "Digite a consulta...",
+    "noSearchShortcuts": "Nenhum atalho configurado",
+    "addSearchShortcut": "Adicionar atalho",
     "fontSize": "Tamanho da Fonte",
-    "textAlign": "Text Align",
-    "fontWeight": "Font Weight",
-    "clearColor": "Clear Color",
-    "imageFit": "Image Fit",
-    "imageLinkUrl": "Link URL",
-    "noImage": "No image URL set",
-    "altText": "Alt Text",
-    "altTextPlaceholder": "Describe the image",
-    "renderMarkdown": "Render Markdown",
-    "displayMode": "Display Mode",
-    "displayField": "Display Field",
-    "jsonPath": "JSON Path",
-    "customApiLabel": "Label",
-    "customApiLabelPlaceholder": "e.g. Temperature",
-    "customApiUnit": "Unit",
-    "customApiNoUrl": "No API URL configured",
-    "customApiError": "Failed to fetch",
-    "customApiNotArray": "Response is not an array",
-    "addService": "Add Service",
-    "showLabels": "Show Labels",
-    "iconSize": "Icon Size",
-    "noDashboardLinks": "No dashboard links configured",
-    "noLimit": "No limit",
-    "sectionHeading": "Section Heading",
-    "addSection": "Add Section",
-    "compactMode": "Compact Mode",
-    "selectHosts": "Select Hosts",
-    "listLayout": "List",
-    "gridLayout": "Grid",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "textAlign": "Alinhamento de texto",
+    "fontWeight": "Peso da fonte",
+    "clearColor": "Cor transparente",
+    "imageFit": "Ajuste de imagem",
+    "imageLinkUrl": "URL do link",
+    "noImage": "Nenhuma URL de imagem definida.",
+    "altText": "Texto alternativo",
+    "altTextPlaceholder": "Descreva a imagem",
+    "renderMarkdown": "Renderizar Markdown",
+    "displayMode": "Modo de exibição",
+    "displayField": "Campo de exibição",
+    "jsonPath": "Caminho JSON",
+    "customApiLabel": "Rótulo",
+    "customApiLabelPlaceholder": "Exemplo: Temperatura",
+    "customApiUnit": "Unidade",
+    "customApiNoUrl": "Nenhuma URL de API configurada",
+    "customApiError": "Falha ao buscar",
+    "customApiNotArray": "A resposta não é uma matriz.",
+    "addService": "Adicionar serviço",
+    "showLabels": "Mostrar rótulos",
+    "iconSize": "Tamanho do ícone",
+    "noDashboardLinks": "Nenhum link para o painel de controle configurado",
+    "noLimit": "Sem limite",
+    "sectionHeading": "Título da seção",
+    "addSection": "Adicionar seção",
+    "compactMode": "Modo compacto",
+    "selectHosts": "Selecionar anfitriões",
+    "listLayout": "Lista",
+    "gridLayout": "Grade",
+    "configureUrl": "Defina um URL nas configurações do widget.",
+    "embeddedContent": "Conteúdo incorporado",
+    "noBookmarks": "Sem favoritos",
+    "noSections": "Nenhuma seção configurada",
+    "noServices": "Nenhum serviço configurado",
+    "configureLocation": "Defina uma localização nas configurações do widget.",
+    "bannerTextPlaceholder": "Texto do banner",
+    "serviceNamePlaceholder": "Meu serviço",
+    "emptyNote": "Empty note...",
+    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
+    "feelsLike": "Feels like {{temperature}}",
+    "timezonePlaceholder": "America/New_York (leave blank for local)",
+    "notesPlaceholder": "Write your notes here...",
+    "locationPlaceholder": "New York, London, Tokyo...",
+    "widgets": {
+      "bookmark_list": {
+        "name": "Bookmarks",
+        "description": "A list of quick links"
+      },
+      "calendar": {
+        "name": "Calendar",
+        "description": "A month calendar with today highlighted"
+      },
+      "clock": {
+        "name": "Clock",
+        "description": "A live clock with configurable timezone"
+      },
+      "countdown": {
+        "name": "Countdown",
+        "description": "Counts down to a target date and time"
+      },
+      "custom_api": {
+        "name": "Custom API",
+        "description": "Fetch and display data from any JSON API"
+      },
+      "dashboard_links": {
+        "name": "Dashboard Links",
+        "description": "Shows your saved dashboard service links"
+      },
+      "folder": {
+        "name": "Folder",
+        "description": "A background card for grouping widgets visually"
+      },
+      "host_grid": {
+        "name": "Host Grid",
+        "description": "Live status overview grid for all your SSH hosts"
+      },
+      "host_status": {
+        "name": "Host Status",
+        "description": "Shows live status and metrics for an SSH host"
+      },
+      "iframe_embed": {
+        "name": "iFrame Embed",
+        "description": "Embed any URL in an iframe"
+      },
+      "image_widget": {
+        "name": "Image",
+        "description": "Display any image from a URL"
+      },
+      "link_tree": {
+        "name": "Link Tree",
+        "description": "Grouped links organized into labeled sections"
+      },
+      "markdown_notes": {
+        "name": "Markdown Notes",
+        "description": "Notes with optional Markdown rendering and inline editing"
+      },
+      "notes": {
+        "name": "Notes",
+        "description": "A text notes widget"
+      },
+      "ping_status": {
+        "name": "Ping Status",
+        "description": "Check if URLs or services are reachable"
+      },
+      "quick_connect": {
+        "name": "Quick Connect",
+        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+      },
+      "recent_activity": {
+        "name": "Recent Activity",
+        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+      },
+      "rss_feed": {
+        "name": "RSS Feed",
+        "description": "Display items from an RSS or Atom feed"
+      },
+      "search_bar": {
+        "name": "Search Bar",
+        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+      },
+      "search_links": {
+        "name": "Search Shortcuts",
+        "description": "Quick buttons to search different engines"
+      },
+      "service_grid": {
+        "name": "Service Grid",
+        "description": "A grid of service tiles with icons and links"
+      },
+      "service_link": {
+        "name": "Service Link",
+        "description": "A clickable tile linking to a service URL"
+      },
+      "ssh_terminal": {
+        "name": "SSH Terminal",
+        "description": "An inline SSH terminal connected to a configured host"
+      },
+      "system_overview": {
+        "name": "System Overview",
+        "description": "Termix version, database health, and uptime at a glance"
+      },
+      "termix_uptime": {
+        "name": "Termix Uptime",
+        "description": "Shows how long the Termix server has been running"
+      },
+      "text_banner": {
+        "name": "Text Banner",
+        "description": "A styled text label for sections and headings"
+      },
+      "weather": {
+        "name": "Weather",
+        "description": "Live weather for any location"
+      },
+      "docker_widget": {
+        "name": "Docker Manager",
+        "description": "Embedded Docker container manager for a configured host"
+      },
+      "file_manager_widget": {
+        "name": "File Manager",
+        "description": "Embedded SFTP file manager for a configured host"
+      },
+      "tunnel_widget": {
+        "name": "Tunnel Manager",
+        "description": "Embedded SSH tunnel manager for a configured host"
+      },
+      "metrics_chart": {
+        "name": "Metrics Chart",
+        "description": "Historical CPU, memory, disk, or network chart for a host"
+      }
+    }
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Use a página inicial",
+      "description": "Visualize e edite os links de serviço da página inicial e do painel de controle."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Hosts privados permitidos",
+      "description": "Insira os nomes de host/IPs exatos, privados ou de loopback, para os widgets de Status de Ping e API Personalizada. Separe as entradas com vírgulas ou novas linhas; omita esquemas, portas e caminhos. Deixe os blocos vazios para destinos privados."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Autoridade de certificação privada (PEM)",
+      "description": "Pacote opcional de CAs confiáveis para hosts na lista de permissões. A verificação de certificados permanece ativada. Deixe em branco para usar o repositório de certificados confiáveis do sistema."
     }
+  },
+  "plugin": {
+    "name": "Homepage"
   }
 }

@@ -23,7 +23,7 @@
     "provisionLabel": "Настроить сервер",
     "publishTitle": "Опубликовать открытый ключ",
     "generate": "Сгенерировать",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "Сгенерируйте пару ключей Ed25519. Опубликуйте открытый ключ и загрузите закрытый ключ на ваше устройство.",
     "saveToVault": "Сохранить в учётные данные",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Метка (необязательно)",
@@ -32,7 +32,7 @@
     "keyPublished": "Ключ опубликован",
     "addKeyFailed": "Не удалось добавить ключ",
     "generatedSaved": "Пара ключей сгенерирована и сохранена в хранилище учётных данных. Закрытый ключ также загружен.",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "Пара ключей сгенерирована. Закрытый ключ загружен (отображается только один раз).",
     "generateFailed": "Не удалось сгенерировать ключ",
     "imported": "Ключ импортирован из учётных данных",
     "importFailed": "Не удалось импортировать ключ",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Доверие на сервере (запустите от root)",
     "caRotate": "Ротировать",
     "caRotateConfirm": "Ротировать ЦС? Все выданные им сертификаты перестанут приниматься и потребуют перевыпуска.",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "Центр сертификации был перезапущен. Предыдущие сертификаты аннулированы.",
     "caRotateFailed": "Не удалось ротировать ЦС",
     "caDelete": "Удалить ЦС",
     "caDeleteConfirm": "Удалить центр сертификации?",
@@ -68,8 +68,8 @@
     "certIssued": "Сертификат выпущен и загружен",
     "certIssueFailed": "Не удалось выпустить сертификат",
     "docsLink": "Документация",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "Принципы SSH",
+    "principalsPlaceholder": "Основные пользователи SSH, например, root."
   },
   "nav": {
     "termixId": "ID"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "Используйте идентификатор Termix.",
+      "description": "Получите публичный IP-адрес, опубликуйте SSH-ключи и запустите центр сертификации."
     }
   }
 }

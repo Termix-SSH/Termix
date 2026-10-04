@@ -14,19 +14,19 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Tmux Monitor",
-      "description": "Browse and control tmux sessions, windows and panes on hosts with the monitor enabled."
+      "title": "Используйте монитор Tmux.",
+      "description": "Просматривайте и управляйте сессиями, окнами и панелями tmux на хостах с включенным монитором."
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Включить монитор Tmux",
-        "description": "Watch and attach to tmux sessions running on this host."
+        "description": "Отслеживайте и подключайтесь к сессиям tmux, запущенным на этом хосте."
       },
       "mouseEnabled": {
-        "label": "Enable tmux mouse support",
-        "description": "Apply mouse support to the tmux session when attaching or creating a session. Other sessions and global tmux settings are unchanged."
+        "label": "Включить поддержку мыши в tmux",
+        "description": "При подключении или создании сессии в сессии tmux должна быть добавлена поддержка мыши. Другие сессии и глобальные настройки tmux остаются без изменений."
       }
     }
   },
@@ -73,7 +73,7 @@
     "sessionRenameFailed": "Не удалось переименовать сессию",
     "editTagsTitle": "Изменить теги для \"{{name}}\"",
     "killPane": "Завершить панель",
-    "resizeTree": "Drag to resize, double-click to reset",
+    "resizeTree": "Перетащите для изменения размера, дважды щелкните для сброса.",
     "reattach": "Переподключиться (исправляет искажённое отображение)",
     "killWindow": "Завершить окно",
     "killWindowTitle": "Завершить окно {{index}} сессии \"{{session}}\"?",
@@ -93,11 +93,11 @@
     "sessionKillFailed": "Не удалось завершить сессию",
     "hostUnreachable": "Не удалось подключиться к хосту. Проверьте, что он онлайн и доступен.",
     "noServer": "На этом хосте не запущен сервер tmux.",
-    "searchTruncated": "Partial results. Search covers the last {{lines}} lines of each pane and at most {{panes}} panes.",
+    "searchTruncated": "Частичные результаты. Поиск охватывает последние {{lines}} строк каждой панели и не более {{panes}} панелей.",
     "closeSearchResults": "Закрыть результаты поиска",
     "retry": "Повторить",
     "noHosts": "Нет доступных SSH-хостов",
-    "noHostsHint": "Enable the Tmux Monitor option on an SSH host (Host Manager, Tmux Monitor tab) to monitor its tmux sessions.",
+    "noHostsHint": "Включите параметр Tmux Monitor на SSH-хосте (Диспетчер хостов, вкладка Tmux Monitor), чтобы отслеживать его tmux-сессии.",
     "tmuxInstallHint": "Установите его на хост с помощью:",
     "attachTooltip": "Открыть терминал на {{host}}",
     "attachTooltipPane": "Open a terminal to {{host}}, tmux session {{session}}",
@@ -106,12 +106,12 @@
     "timeHours": "{{count}}ч назад",
     "timeDays": "{{count}}д назад",
     "allHosts": "Все хосты",
-    "singleHost": "Single host",
-    "hostScope": "Monitor scope",
-    "filterHosts": "Filter hosts by name or address",
-    "selectHost": "Select host",
-    "toggleHost": "Expand or collapse {{host}}",
-    "noMatchingHosts": "No matching hosts",
-    "toggleSession": "Expand or collapse {{session}}"
+    "singleHost": "Один хост",
+    "hostScope": "Область действия монитора",
+    "filterHosts": "Фильтрация хостов по имени или адресу",
+    "selectHost": "Выберите хост",
+    "toggleHost": "Развернуть или свернуть {{host}}",
+    "noMatchingHosts": "Нет подходящих хостов",
+    "toggleSession": "Развернуть или свернуть {{session}}"
   }
 }

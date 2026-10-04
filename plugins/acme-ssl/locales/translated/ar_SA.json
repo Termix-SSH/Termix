@@ -54,5 +54,8 @@
     "request": "اطلب الشهادة الآن",
     "requesting": "جارٍ طلب الشهادة...",
     "issued": "تم إصدار الشهادة وتركيبها"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

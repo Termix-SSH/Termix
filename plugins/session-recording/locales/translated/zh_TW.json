@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "查看會議錄影",
+      "description": "查看並回放您自己的會話錄影。"
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "保留時間（天）",
+        "description": "會話錄影在自動刪除前會保留多久？"
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "啟用會話錄製",
+        "description": "記錄此主機的終端輸出，以便稍後重播或下載。"
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "記錄"
   },
   "sessionLogs": {
     "title": "工作階段記錄",
@@ -36,7 +36,7 @@
     "duration": "持續時間",
     "viewLog": "檢視記錄",
     "downloadLog": "下載",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "下載為文字",
     "deleteLog": "刪除",
     "confirmDelete": "刪除此工作階段記錄？",
     "confirmDeleteDesc": "此動作無法復原。",
@@ -47,14 +47,17 @@
     "filterByHost": "依主機篩選...",
     "back": "返回",
     "empty": "(空的)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "沒有找到「{{query}}」的結果",
+    "hostFallback": "主機 {{id}}",
+    "sessionFallback": "會話 {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "錄製時間軸",
+    "speed": "播放速度",
+    "play": "播放錄音",
+    "pause": "暫停錄製"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

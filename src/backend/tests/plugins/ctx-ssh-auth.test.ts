@@ -220,24 +220,19 @@ describe("ctx.ssh", () => {
     expect(h.logins).toEqual([{ hostId: 7, outcome: { ok: true } }]);
   });
 
-  it("reports an auth or host key failure, but not a timeout", async () => {
+  it("never reports a failed login to the status", async () => {
     h.granted = new Set(["ssh:connect", "credentials:use"]);
     const ssh = createPluginSsh({
       manifest: manifest(["ssh:connect", "credentials:use"]),
       bag: new DisposableBag("fixture"),
       audit: vi.fn(async () => {}),
     });
-    h.connectError = new Error("Timed out while waiting for handshake");
-    await expect(ssh.connect(7)).rejects.toThrow();
     h.connectError = new Error("All configured authentication methods failed");
     await expect(ssh.connect(7)).rejects.toThrow();
     h.connectError = new Error("Host key changed");
     await expect(ssh.connect(8)).rejects.toThrow();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(h.logins).toEqual([
-      { hostId: 7, outcome: { ok: false, hostKeyChanged: false } },
-      { hostId: 8, outcome: { ok: false, hostKeyChanged: true } },
-    ]);
+    expect(h.logins).toEqual([]);
   });
 
   it("never believes a host object's own userId", async () => {

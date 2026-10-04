@@ -54,5 +54,8 @@
     "request": "Vyžádejte si certifikát nyní",
     "requesting": "Žádost o certifikát...",
     "issued": "Certifikát vydán a nainstalován"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

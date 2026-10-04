@@ -18,7 +18,7 @@
   "homepage": {
     "title": "Trang chủ",
     "addWidget": "Thêm widget",
-    "noWidgetsInCategory": "No widgets in this category",
+    "noWidgetsInCategory": "Không có tiện ích nào trong danh mục này.",
     "editWidget": "Sửa widget",
     "zoomIn": "Phóng to",
     "zoomOut": "Thu nhỏ",
@@ -39,7 +39,7 @@
     "description": "Mô tả",
     "color": "Màu sắc",
     "timezone": "Múi giờ",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
+    "invalidTimezone": "Múi giờ không hợp lệ. Hãy sử dụng tên IANA như America/New_York.",
     "showSeconds": "Hiển thị giây",
     "format12h": "12 giờ",
     "content": "Nội dung",
@@ -60,9 +60,9 @@
     "maxItems": "Số mục tối đa",
     "showDescription": "Hiển thị mô tả",
     "widgetRssName": "Nguồn RSS",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "rssNoFeedUrl": "Cấu hình URL nguồn cấp dữ liệu trong cài đặt tiện ích.",
+    "rssLoadError": "Không thể tải nguồn cấp dữ liệu",
+    "rssNoItems": "Không có mặt hàng nào",
     "noHostSelected": "Chưa chọn máy chủ",
     "displayedMetrics": "Chỉ số hiển thị",
     "metricCpu": "CPU",
@@ -162,29 +162,164 @@
     "selectHosts": "Chọn máy chủ",
     "listLayout": "Danh sách",
     "gridLayout": "Lưới",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "configureUrl": "Đặt URL trong cài đặt tiện ích.",
+    "embeddedContent": "Nội dung nhúng",
+    "noBookmarks": "Không có dấu trang",
+    "noSections": "Chưa có phần nào được thiết lập.",
+    "noServices": "Chưa có dịch vụ nào được thiết lập.",
+    "configureLocation": "Chọn vị trí trong cài đặt tiện ích.",
+    "bannerTextPlaceholder": "Văn bản biểu ngữ",
+    "serviceNamePlaceholder": "Dịch vụ của tôi",
+    "emptyNote": "Empty note...",
+    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
+    "feelsLike": "Feels like {{temperature}}",
+    "timezonePlaceholder": "America/New_York (leave blank for local)",
+    "notesPlaceholder": "Write your notes here...",
+    "locationPlaceholder": "New York, London, Tokyo...",
+    "widgets": {
+      "bookmark_list": {
+        "name": "Bookmarks",
+        "description": "A list of quick links"
+      },
+      "calendar": {
+        "name": "Calendar",
+        "description": "A month calendar with today highlighted"
+      },
+      "clock": {
+        "name": "Clock",
+        "description": "A live clock with configurable timezone"
+      },
+      "countdown": {
+        "name": "Countdown",
+        "description": "Counts down to a target date and time"
+      },
+      "custom_api": {
+        "name": "Custom API",
+        "description": "Fetch and display data from any JSON API"
+      },
+      "dashboard_links": {
+        "name": "Dashboard Links",
+        "description": "Shows your saved dashboard service links"
+      },
+      "folder": {
+        "name": "Folder",
+        "description": "A background card for grouping widgets visually"
+      },
+      "host_grid": {
+        "name": "Host Grid",
+        "description": "Live status overview grid for all your SSH hosts"
+      },
+      "host_status": {
+        "name": "Host Status",
+        "description": "Shows live status and metrics for an SSH host"
+      },
+      "iframe_embed": {
+        "name": "iFrame Embed",
+        "description": "Embed any URL in an iframe"
+      },
+      "image_widget": {
+        "name": "Image",
+        "description": "Display any image from a URL"
+      },
+      "link_tree": {
+        "name": "Link Tree",
+        "description": "Grouped links organized into labeled sections"
+      },
+      "markdown_notes": {
+        "name": "Markdown Notes",
+        "description": "Notes with optional Markdown rendering and inline editing"
+      },
+      "notes": {
+        "name": "Notes",
+        "description": "A text notes widget"
+      },
+      "ping_status": {
+        "name": "Ping Status",
+        "description": "Check if URLs or services are reachable"
+      },
+      "quick_connect": {
+        "name": "Quick Connect",
+        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+      },
+      "recent_activity": {
+        "name": "Recent Activity",
+        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+      },
+      "rss_feed": {
+        "name": "RSS Feed",
+        "description": "Display items from an RSS or Atom feed"
+      },
+      "search_bar": {
+        "name": "Search Bar",
+        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+      },
+      "search_links": {
+        "name": "Search Shortcuts",
+        "description": "Quick buttons to search different engines"
+      },
+      "service_grid": {
+        "name": "Service Grid",
+        "description": "A grid of service tiles with icons and links"
+      },
+      "service_link": {
+        "name": "Service Link",
+        "description": "A clickable tile linking to a service URL"
+      },
+      "ssh_terminal": {
+        "name": "SSH Terminal",
+        "description": "An inline SSH terminal connected to a configured host"
+      },
+      "system_overview": {
+        "name": "System Overview",
+        "description": "Termix version, database health, and uptime at a glance"
+      },
+      "termix_uptime": {
+        "name": "Termix Uptime",
+        "description": "Shows how long the Termix server has been running"
+      },
+      "text_banner": {
+        "name": "Text Banner",
+        "description": "A styled text label for sections and headings"
+      },
+      "weather": {
+        "name": "Weather",
+        "description": "Live weather for any location"
+      },
+      "docker_widget": {
+        "name": "Docker Manager",
+        "description": "Embedded Docker container manager for a configured host"
+      },
+      "file_manager_widget": {
+        "name": "File Manager",
+        "description": "Embedded SFTP file manager for a configured host"
+      },
+      "tunnel_widget": {
+        "name": "Tunnel Manager",
+        "description": "Embedded SSH tunnel manager for a configured host"
+      },
+      "metrics_chart": {
+        "name": "Metrics Chart",
+        "description": "Historical CPU, memory, disk, or network chart for a host"
+      }
+    }
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Sử dụng trang chủ",
+      "description": "Xem và chỉnh sửa giao diện trang chủ và các liên kết dịch vụ trên bảng điều khiển."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Cho phép chủ nhà riêng",
+      "description": "Nhập chính xác tên máy chủ/địa chỉ IP riêng hoặc loopback cho tiện ích Ping Status và Custom API. Phân tách các mục bằng dấu phẩy hoặc xuống dòng; bỏ qua lược đồ, cổng và đường dẫn. Để trống các mục đích riêng tư."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Cơ quan cấp chứng chỉ tư nhân (PEM)",
+      "description": "Gói CA đáng tin cậy tùy chọn cho các máy chủ được phép. Quá trình xác minh chứng chỉ vẫn được bật. Để trống để sử dụng kho lưu trữ chứng chỉ tin cậy của hệ thống."
     }
+  },
+  "plugin": {
+    "name": "Homepage"
   }
 }

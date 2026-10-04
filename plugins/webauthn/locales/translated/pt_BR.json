@@ -1,22 +1,22 @@
 {
-  "title": "Passkeys",
-  "signIn": "Sign in with passkey",
-  "loginFailed": "Passkey login failed",
-  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
-  "namePlaceholder": "Passkey name",
-  "defaultName": "Passkey",
+  "title": "Senhas",
+  "signIn": "Faça login com a chave de acesso.",
+  "loginFailed": "Falha no login com a chave de acesso",
+  "description": "Use as credenciais WebAuthn/FIDO2 para fazer login sem senha.",
+  "namePlaceholder": "Nome da chave de acesso",
+  "defaultName": "Chave de acesso",
   "uv": {
-    "preferred": "Preferred",
+    "preferred": "Preferido",
     "required": "Obrigatório",
-    "discouraged": "Discouraged"
+    "discouraged": "Desencorajado"
   },
-  "add": "Add Passkey",
-  "none": "No passkeys registered.",
-  "added": "Passkey added",
-  "addFailed": "Failed to add passkey",
-  "delete": "Delete passkey",
-  "deleted": "Passkey deleted",
-  "deleteFailed": "Failed to delete passkey",
-  "unknownDevice": "unknown",
-  "synced": "synced"
+  "add": "Adicionar chave de acesso",
+  "none": "Nenhuma chave de acesso registrada.",
+  "added": "Senha adicionada",
+  "addFailed": "Falha ao adicionar a chave de acesso.",
+  "delete": "Excluir chave de acesso",
+  "deleted": "Senha excluída",
+  "deleteFailed": "Falha ao excluir a chave de acesso.",
+  "unknownDevice": "desconhecido",
+  "synced": "sincronizado"
 }

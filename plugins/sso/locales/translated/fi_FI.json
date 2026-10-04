@@ -20,6 +20,12 @@
     "nameRequired": "Näyttönimi on pakollinen",
     "type": "Palveluntarjoajan tyyppi",
     "enabled": "Käytössä",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Tallenna palveluntarjoaja",
     "saving": "Tallennetaan...",
     "saved": "Tallennettu",
@@ -61,5 +67,8 @@
       "label": "Kirjaudu sisään automaattisesti kertakirjautumisella",
       "description": "Ohjaa kävijät suoraan ensimmäiselle SSO-palveluntarjoajalle kirjautumislomakkeen näyttämisen sijaan. OIDC_SILENT_LOGIN_DEFAULT-ympäristömuuttuja korvaa tämän."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

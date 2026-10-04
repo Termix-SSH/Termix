@@ -23,6 +23,12 @@
     "namePlaceholder": "Κατάλογος εταιρείας",
     "nameRequired": "Απαιτείται εμφανιζόμενο όνομα",
     "enabled": "Ενεργοποιημένο",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Αποθήκευση καταλόγου",
     "saving": "Οικονομία...",
     "saved": "Αποθηκεύτηκε",
@@ -36,6 +42,7 @@
     "host": "Κεντρικός υπολογιστής LDAP",
     "port": "Λιμάνι",
     "useTls": "Χρήση TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Σύνδεση DN",
     "bindPassword": "Σύνδεση κωδικού πρόσβασης",
     "secretKeep": "Ένας κωδικός πρόσβασης αποθηκεύτηκε. Αφήστε το κενό για να τον διατηρήσετε.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Βάση αναζήτησης ομάδας",
     "adminGroup": "Ομάδα Διαχειριστών",
     "allowedUsers": "Επιτρεπόμενοι χρήστες"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

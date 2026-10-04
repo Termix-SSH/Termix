@@ -3,7 +3,7 @@
     "host": {
       "useWarpgate": {
         "label": "Warpgate Gateway",
-        "description": "This host connects through a Warpgate SSH proxy. Termix will handle the browser-based approval flow automatically after authenticating."
+        "description": "Denna värd ansluter via en Warpgate SSH-proxy. Termix hanterar det webbläsarbaserade godkännandeflödet automatiskt efter autentisering."
       }
     }
   }

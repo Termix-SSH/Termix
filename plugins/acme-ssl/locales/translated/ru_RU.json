@@ -1,14 +1,14 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "Управление сертификатами ACME",
+      "description": "Проверьте статус сертификата и запросите новый сертификат прямо сейчас."
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "Автоматическое продление",
+      "description": "Проверяйте дважды в день и получайте новый сертификат, если его нет, если он не покрывает домен или если срок действия старого истекает в течение 30 дней."
     },
     "domain": {
       "label": "Домен",
@@ -17,42 +17,45 @@
     },
     "email": {
       "label": "Email",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "description": "Адрес электронной почты, указанный в учетной записи ACME, для получения уведомлений об истечении срока действия.",
       "placeholder": "admin@example.com"
     },
     "provider": {
       "label": "Центр сертификации",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
+      "description": "Где получить сертификат. Используйте тестовую среду (staging) для проверки без превышения лимитов запросов Let's Encrypt.",
       "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "letsencryptStaging": "Let's Encrypt (тестовая версия)",
+      "custom": "Пользовательский каталог ACME"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "URL-адрес каталога ACME",
+      "description": "Только для пользовательского центра сертификации. URL-адрес должен быть HTTPS."
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "Тип задачи",
+      "description": "Как доказать, что вы являетесь владельцем домена.",
+      "http": "HTTP — требуется доступ к порту 80 из интернета.",
+      "cloudflare": "DNS (Cloudflare) — требуется токен API Cloudflare."
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
+      "label": "API-токен Cloudflare",
       "description": "Токен с ограниченной областью действия и разрешением Zone:DNS:Edit для вашего домена."
     }
   },
   "status": {
-    "title": "Certificate status",
+    "title": "Статус сертификата",
     "none": "Сертификат отсутствует",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
+    "names": "Обложки {{names}}",
+    "issuer": "Выпущено {{issuer}}",
     "expires": "Истекает {{date}}",
     "lastIssued": "Последний выпуск {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
+    "lastError": "Последняя попытка не удалась: {{error}}",
+    "missing": "Укажите домен, адрес электронной почты и поля, необходимые для типа проверки подлинности, затем сохраните изменения, прежде чем запрашивать сертификат.",
+    "request": "Запросить сертификат сейчас",
     "requesting": "Запрос сертификата...",
-    "issued": "Certificate issued and installed"
+    "issued": "Сертификат выдан и установлен."
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

@@ -65,5 +65,8 @@
         "label": "ملف تعريف مُوقِّع الخزينة"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

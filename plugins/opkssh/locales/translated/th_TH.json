@@ -1,32 +1,35 @@
 {
   "editor": {
-    "label": "OPKSSH",
-    "description": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
-    "docs": "View docs"
+    "label": "โอพีเคเอสเอช",
+    "description": "เข้าสู่ระบบโฮสต์นี้โดยใช้ผู้ให้บริการยืนยันตัวตนของคุณแทนรหัสผ่านหรือคีย์ จำเป็นต้องตั้งค่า OPKSSH บนเซิร์ฟเวอร์ก่อน",
+    "docs": "ดูเอกสาร"
   },
   "dialog": {
-    "title": "OPKSSH Authentication Required",
-    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication...",
-    "signInWith": "Sign in with {{provider}}"
+    "title": "ต้องใช้การตรวจสอบสิทธิ์ OPKSSH",
+    "description": "โปรดยืนยันตัวตนในเบราว์เซอร์ของคุณเพื่อดำเนินการต่อ เซสชันนี้จะมีอายุใช้งาน 24 ชั่วโมง",
+    "openBrowser": "เปิดเบราว์เซอร์เพื่อยืนยันตัวตน",
+    "waiting": "กำลังรอการยืนยันตัวตนในเบราว์เซอร์...",
+    "authenticating": "กำลังตรวจสอบสิทธิ์...",
+    "signInWith": "ลงชื่อเข้าใช้ด้วย {{provider}}"
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "การตรวจสอบสิทธิ์ล้มเหลว โปรดตรวจสอบข้อมูลประจำตัวของคุณและลองอีกครั้ง",
+    "timeout": "การตรวจสอบสิทธิ์หมดเวลา โปรดลองอีกครั้ง"
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "URI การเปลี่ยนเส้นทาง",
+      "description": "ลงทะเบียน URL นี้เป็น URI ที่อนุญาตให้เปลี่ยนเส้นทางได้กับผู้ให้บริการยืนยันตัวตนทุกรายในไฟล์การกำหนดค่า OPKSSH ของคุณ"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "ใช้ URI การเปลี่ยนเส้นทางแบบเดิม",
+      "description": "ส่ง /host/opkssh-callback ต่อไป ซึ่งเป็น URI สำหรับการเปลี่ยนเส้นทางที่ใช้ก่อนเวอร์ชัน 2.9 ปิดใช้งานเมื่อผู้ให้บริการยืนยันตัวตนของคุณอนุญาตให้ใช้ URI ใหม่แล้ว"
     }
   },
   "hosts": {
-    "filterAuthOpkssh": "OPKSSH"
+    "filterAuthOpkssh": "โอพีเคเอสเอช"
+  },
+  "plugin": {
+    "name": "OPKSSH"
   }
 }

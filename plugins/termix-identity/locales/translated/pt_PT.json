@@ -23,7 +23,7 @@
     "provisionLabel": "Provisionar um servidor",
     "publishTitle": "Publicar uma chave pública",
     "generate": "Gerar",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "Gera um par de chaves Ed25519. Publica a chave pública e descarrega a chave privada para o seu dispositivo.",
     "saveToVault": "Guardar nas credenciais",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Etiqueta (opcional)",
@@ -32,7 +32,7 @@
     "keyPublished": "Chave publicada",
     "addKeyFailed": "Falha ao adicionar chave",
     "generatedSaved": "Par de chaves gerado e guardado no cofre de credenciais. A chave privada também foi descarregada.",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "Par de chaves gerado. Chave privada descarregada (exibida apenas uma vez).",
     "generateFailed": "Falha ao gerar chave",
     "imported": "Chave importada da credencial",
     "importFailed": "Falha ao importar chave",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Confiar num servidor (executar como root)",
     "caRotate": "Rodar",
     "caRotateConfirm": "Rodar a CA? Todos os certificados que assinou deixarão de ser aceites e terão de ser reemitidos.",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "Autoridade Certificadora rotada. Certificados anteriores revogados.",
     "caRotateFailed": "Falha ao rodar CA",
     "caDelete": "Remover CA",
     "caDeleteConfirm": "Remover a CA?",
@@ -68,8 +68,8 @@
     "certIssued": "Certificado emitido e transferido",
     "certIssueFailed": "Falha ao emitir certificado",
     "docsLink": "Ver docs",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "Princípios SSH",
+    "principalsPlaceholder": "Principal(is) SSH, por exemplo, root"
   },
   "nav": {
     "termixId": "ID"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "Utilize o ID Termix",
+      "description": "Reivindique um nome de utilizador público, publique chaves SSH e execute uma autoridade de certificação."
     }
   }
 }

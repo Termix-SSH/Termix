@@ -23,7 +23,7 @@
     "provisionLabel": "Cung cấp máy chủ",
     "publishTitle": "Công bố khóa công khai",
     "generate": "Tạo",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "Tạo một cặp khóa Ed25519. Công bố khóa công khai và tải khóa riêng tư xuống thiết bị của bạn.",
     "saveToVault": "Lưu vào Kho thông tin",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Nhãn (tùy chọn)",
@@ -32,7 +32,7 @@
     "keyPublished": "Đã công bố khóa",
     "addKeyFailed": "Thêm khóa thất bại",
     "generatedSaved": "Đã tạo cặp khóa và lưu vào kho thông tin đăng nhập của bạn. Khóa riêng cũng đã được tải xuống.",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "Cặp khóa đã được tạo. Khóa riêng tư đã được tải xuống (chỉ hiển thị một lần).",
     "generateFailed": "Tạo khóa thất bại",
     "imported": "Đã nhập khóa từ thông tin đăng nhập",
     "importFailed": "Nhập khóa thất bại",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Tin cậy trên máy chủ (chạy với quyền root)",
     "caRotate": "Xoay",
     "caRotateConfirm": "Xoay CA? Mọi chứng chỉ do CA này ký sẽ không còn được chấp nhận và phải được cấp lại.",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "CA đã được xoay vòng. Các chứng chỉ trước đó đã bị thu hồi.",
     "caRotateFailed": "Xoay CA thất bại",
     "caDelete": "Gỡ bỏ CA",
     "caDeleteConfirm": "Gỡ bỏ cơ quan chứng thực?",
@@ -68,8 +68,8 @@
     "certIssued": "Chứng chỉ đã được cấp và tải xuống",
     "certIssueFailed": "Cấp chứng chỉ thất bại",
     "docsLink": "Xem tài liệu",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "Nguyên tắc SSH",
+    "principalsPlaceholder": "Người dùng SSH chính, ví dụ như root"
   },
   "nav": {
     "termixId": "ID"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "Sử dụng Termix ID",
+      "description": "Đăng ký một tên người dùng công khai, công bố khóa SSH và vận hành một cơ quan cấp chứng chỉ."
     }
   }
 }

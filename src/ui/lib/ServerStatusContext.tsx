@@ -9,7 +9,8 @@ import React, {
   useSyncExternalStore,
   useState,
 } from "react";
-import { getAllServerStatuses, getSSHHosts } from "@/main-axios";
+import { getAllServerStatuses } from "@/main-axios";
+import { invalidateServerStatusCache } from "./hosts-request-cache";
 import {
   ServerStatusStore,
   type ServerStatusEntry,
@@ -19,17 +20,26 @@ import { runAdaptivePolling } from "./adaptive-polling";
 
 interface ServerStatusContextType {
   statuses: Map<number, ServerStatusEntry>;
-  isLoading: boolean;
   initialLoadComplete: boolean;
   refreshStatuses: () => Promise<void>;
+  /** "unknown" until the host has been checked. */
   getStatus: (hostId: number) => StatusValue;
 }
 
-/** Stable for the provider lifetime — fine-grained hooks only need this. */
+/** Stable for the provider lifetime. Fine-grained hooks only need this. */
 const StatusStoreContext = createContext<ServerStatusStore | null>(null);
 const ServerStatusContext = createContext<ServerStatusContextType | null>(null);
 
-const POLL_INTERVAL = 30000;
+/** The mounted provider's store, for code outside React (plugin host lists). */
+let activeStore: ServerStatusStore | null = null;
+
+/** A host's live status outside React. "unknown" with no provider mounted. */
+export function getLiveHostStatus(hostId: number): StatusValue {
+  return activeStore?.getStatus(hostId) ?? "unknown";
+}
+
+/** The backend keeps statuses in memory, so reading them often is cheap. */
+const POLL_INTERVAL = 15_000;
 
 export function ServerStatusProvider({
   children,
@@ -47,121 +57,48 @@ export function ServerStatusProvider({
   // Bumps only full-context consumers (dashboard, folder counts, etc.).
   const [version, setVersion] = useState(0);
   const mountedRef = useRef(true);
-  const refreshInFlightRef = useRef<Promise<boolean | void> | null>(null);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+
+  useEffect(() => store.subscribeAll(() => setVersion((v) => v + 1)), [store]);
 
   useEffect(() => {
-    return store.subscribeAll(() => {
-      setVersion((v) => v + 1);
-    });
+    activeStore = store;
+    return () => {
+      if (activeStore === store) activeStore = null;
+    };
   }, [store]);
-
-  useEffect(() => {
-    return store.subscribeMeta(() => {
-      setVersion((v) => v + 1);
-    });
-  }, [store]);
-
-  const fetchEnabledHosts = useCallback(async () => {
-    if (!isAuthenticated) {
-      store.setEnabledHostIds(new Set());
-      return new Set<number>();
-    }
-
-    try {
-      const hosts = await getSSHHosts({ includeStatus: false });
-      const enabled = new Set<number>();
-
-      hosts.forEach((host) => {
-        if (host.statusCheckEnabled !== false) enabled.add(host.id);
-      });
-
-      store.setEnabledHostIds(enabled);
-      return enabled;
-    } catch {
-      return store.getEnabledHostIds();
-    }
-  }, [isAuthenticated, store]);
-
-  const refreshStatusesImpl = useCallback(
-    async (rethrow = false) => {
-      if (!mountedRef.current || !isAuthenticated) return;
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "hidden"
-      ) {
-        return;
-      }
-
-      if (refreshInFlightRef.current) {
-        return refreshInFlightRef.current;
-      }
-
-      const showLoading = !store.getInitialLoadComplete();
-      if (showLoading) store.setLoading(true);
-
-      const run = (async () => {
-        try {
-          const data = await getAllServerStatuses();
-          if (!mountedRef.current) return;
-
-          const newStatuses = new Map<number, ServerStatusEntry>();
-          const now = new Date().toISOString();
-
-          if (data && typeof data === "object") {
-            Object.entries(data).forEach(([idStr, statusData]) => {
-              const id = parseInt(idStr, 10);
-              if (!isNaN(id)) {
-                const status =
-                  statusData?.status === "online" ||
-                  statusData?.status === "reachable"
-                    ? statusData.status
-                    : "offline";
-                newStatuses.set(id, {
-                  status,
-                  lastChecked: statusData?.lastChecked || now,
-                  ...(statusData?.reason === "host_key_changed"
-                    ? { reason: statusData.reason }
-                    : {}),
-                });
-              }
-            });
-          }
-
-          const previousStatuses = store.getStatuses();
-          const changed =
-            previousStatuses.size !== newStatuses.size ||
-            [...newStatuses].some(
-              ([id, entry]) =>
-                previousStatuses.get(id)?.status !== entry.status ||
-                previousStatuses.get(id)?.reason !== entry.reason,
-            );
-          store.applyStatuses(newStatuses);
-          return changed;
-        } catch (error) {
-          if (mountedRef.current) {
-            store.markDegraded(store.getEnabledHostIds());
-          }
-          if (rethrow) throw error;
-          return false;
-        } finally {
-          if (mountedRef.current) {
-            if (showLoading) store.setLoading(false);
-            store.setInitialLoadComplete(true);
-          }
-        }
-      })();
-
-      refreshInFlightRef.current = run.finally(() => {
-        refreshInFlightRef.current = null;
-      });
-      return refreshInFlightRef.current;
-    },
-    [isAuthenticated, store],
-  );
 
   const refreshStatuses = useCallback(async () => {
-    await refreshStatusesImpl();
-  }, [refreshStatusesImpl]);
+    if (!mountedRef.current || !isAuthenticated) return;
+    if (refreshInFlightRef.current) return refreshInFlightRef.current;
+
+    const run = (async () => {
+      try {
+        const data = await getAllServerStatuses();
+        if (!mountedRef.current || !data || typeof data !== "object") return;
+        const next = new Map<number, ServerStatusEntry>();
+        const now = new Date().toISOString();
+        for (const [idStr, entry] of Object.entries(data)) {
+          const id = parseInt(idStr, 10);
+          if (isNaN(id)) continue;
+          next.set(id, {
+            status: entry?.status === "online" ? "online" : "offline",
+            lastChecked: entry?.lastChecked || now,
+          });
+        }
+        store.applyStatuses(next);
+      } catch {
+        // Keep the last known statuses rather than flipping every host.
+      } finally {
+        if (mountedRef.current) store.setInitialLoadComplete(true);
+      }
+    })();
+
+    refreshInFlightRef.current = run.finally(() => {
+      refreshInFlightRef.current = null;
+    });
+    return refreshInFlightRef.current;
+  }, [isAuthenticated, store]);
 
   const getStatus = useCallback(
     (hostId: number): StatusValue => store.getStatus(hostId),
@@ -170,35 +107,31 @@ export function ServerStatusProvider({
 
   useEffect(() => {
     mountedRef.current = true;
+    if (!isAuthenticated) {
+      store.clear();
+      return () => {
+        mountedRef.current = false;
+      };
+    }
 
-    let stopPolling: (() => void) | null = null;
-
-    const init = async () => {
-      await fetchEnabledHosts();
-      if (!mountedRef.current) return;
-      stopPolling = runAdaptivePolling(
-        () => refreshStatusesImpl(true),
-        {
-          minIntervalMs: POLL_INTERVAL,
-          maxIntervalMs: 120_000,
-          stablePollsPerStep: 3,
-        },
-        { enabled: () => isAuthenticated },
-      );
-    };
-
-    void init();
+    const stopPolling = runAdaptivePolling(refreshStatuses, {
+      minIntervalMs: POLL_INTERVAL,
+      maxIntervalMs: POLL_INTERVAL,
+    });
+    const onFocus = () => void refreshStatuses();
+    window.addEventListener("focus", onFocus);
 
     return () => {
       mountedRef.current = false;
-      stopPolling?.();
+      stopPolling();
+      window.removeEventListener("focus", onFocus);
     };
-  }, [fetchEnabledHosts, isAuthenticated, refreshStatusesImpl]);
+  }, [isAuthenticated, refreshStatuses, store]);
 
   useEffect(() => {
-    const handleHostsChanged = async () => {
-      await fetchEnabledHosts();
-      await refreshStatuses();
+    const handleHostsChanged = () => {
+      invalidateServerStatusCache();
+      void refreshStatuses();
     };
 
     window.addEventListener("ssh-hosts:changed", handleHostsChanged);
@@ -208,17 +141,16 @@ export function ServerStatusProvider({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
       window.removeEventListener("hosts:refresh", handleHostsChanged);
     };
-  }, [fetchEnabledHosts, refreshStatuses]);
+  }, [refreshStatuses]);
 
   const contextValue = useMemo(
     () => ({
       statuses: store.getStatuses(),
-      isLoading: store.getIsLoading(),
       initialLoadComplete: store.getInitialLoadComplete(),
       refreshStatuses,
       getStatus,
     }),
-    // version refreshes statuses/isLoading/initialLoadComplete snapshots
+    // version refreshes the statuses/initialLoadComplete snapshots
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [version, refreshStatuses, getStatus],
   );
@@ -252,85 +184,49 @@ export function useServerStatus() {
 
 /**
  * Subscribe to a single host's status. Only re-renders when that host's
- * status value changes (or its enabled flag flips). Does not re-render when
- * other hosts update.
+ * status changes. Null when status checks are off for the host.
  */
 export function useHostStatus(
   hostId: number,
   statusCheckEnabled: boolean = true,
 ): StatusValue | null {
   const store = useStatusStore();
-
-  const snapshot = useSyncExternalStore(
+  const status = useSyncExternalStore(
     (onChange) => store.subscribeHost(hostId, onChange),
-    () => store.getHostSnapshot(hostId),
-    () => store.getHostSnapshot(hostId),
+    () => store.getStatus(hostId),
+    () => store.getStatus(hostId),
   );
-
-  if (!statusCheckEnabled) {
-    return null;
-  }
-  return snapshot.split(":", 1)[0] as StatusValue;
-}
-
-export function useHostStatusReason(
-  hostId: number,
-  statusCheckEnabled: boolean = true,
-): ServerStatusEntry["reason"] | null {
-  const store = useStatusStore();
-  const snapshot = useSyncExternalStore(
-    (onChange) => store.subscribeHost(hostId, onChange),
-    () => store.getHostSnapshot(hostId),
-    () => store.getHostSnapshot(hostId),
-  );
-  if (!statusCheckEnabled) return null;
-  return snapshot.endsWith(":host_key_changed")
-    ? "host_key_changed"
-    : undefined;
+  return statusCheckEnabled ? status : null;
 }
 
 /** Meta flags without depending on the full status map. */
-export function useServerStatusMeta(): {
-  initialLoadComplete: boolean;
-  isLoading: boolean;
-} {
+export function useServerStatusMeta(): { initialLoadComplete: boolean } {
   const store = useStatusStore();
-
   useSyncExternalStore(
     (onChange) => store.subscribeMeta(onChange),
     () => store.getMetaSnapshot(),
     () => store.getMetaSnapshot(),
   );
-
-  return {
-    initialLoadComplete: store.getInitialLoadComplete(),
-    isLoading: store.getIsLoading(),
-  };
+  return { initialLoadComplete: store.getInitialLoadComplete() };
 }
 
-const noStatus = () => "";
+const noStatus = (): StatusValue => "unknown";
 
 /**
  * One host's status for plugin views, which can render outside the app shell
  * (a standalone window). Null there, and while the host has not been checked.
  */
-export function useOptionalHostStatusEntry(hostId: number | undefined): {
-  status: StatusValue;
-  reason?: "host_key_changed";
-} | null {
+export function useOptionalHostStatusEntry(
+  hostId: number | undefined,
+): { status: "online" | "offline" } | null {
   const store = useContext(StatusStoreContext);
-  const snapshot = useSyncExternalStore(
+  const status = useSyncExternalStore(
     (onChange) =>
       store && hostId !== undefined
         ? store.subscribeHost(hostId, onChange)
         : () => {},
-    () => (store && hostId !== undefined ? store.getHostSnapshot(hostId) : ""),
+    () => (store && hostId !== undefined ? store.getStatus(hostId) : "unknown"),
     noStatus,
   );
-  if (!snapshot) return null;
-  const [status] = snapshot.split(":", 1);
-  if (!status) return null;
-  return snapshot.endsWith(":host_key_changed")
-    ? { status: status as StatusValue, reason: "host_key_changed" }
-    : { status: status as StatusValue };
+  return status === "unknown" ? null : { status };
 }

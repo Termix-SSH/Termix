@@ -323,7 +323,7 @@
     "sideBySide": "جنباً إلى جنب",
     "inline": "مضمن",
     "fileComparison": "مقارنة الملفات: {{file1}} مقابل {{file2}}",
-    "fileTooLarge": "الملف كبير جداً: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "فشل اتصال SSH. يرجى التحقق من الاتصال بـ {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "فشل تحميل الملف: {{error}}",
     "connecting": "جارٍ الاتصال...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "استخدم تصميمًا مريحًا",
     "cannotLoadPdf": "لا يمكن تحميل PDF",
     "pdfLoadError": "حدث خطأ أثناء تحميل ملف PDF هذا.",
-    "loadingPdf": "جارٍ تحميل PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "جارٍ تحميل الصفحة...",
     "cancel": "إلغاء",
     "copiedItems_one": "تم نسخ العنصر {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "لا يمكن لمتصفحك تشغيل هذا الفيديو.",
     "downloadToPlay": "قم بتنزيله لتشغيله في مكان آخر",
     "cannotPreviewType": "لا يمكن معاينة هذا النوع من الملفات",
-    "cannotPreviewTypeHint": "لا يتوفر معاينة لهذا النوع من الملفات. قم بتنزيله لفتحه في تطبيق آخر."
+    "cannotPreviewTypeHint": "لا يتوفر معاينة لهذا النوع من الملفات. قم بتنزيله لفتحه في تطبيق آخر.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "المصدر → الخادم: {{throughput}}",
     "metricsHopDestSftpWrite": "الخادم → الوجهة (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "الخادم → الوجهة (محلي): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

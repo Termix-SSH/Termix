@@ -23,9 +23,9 @@
     "start": "Iniciar",
     "stop": "Stop",
     "status": "Estado",
-    "actions": "Actions",
-    "cardView": "Card view",
-    "listView": "List view",
+    "actions": "Ações",
+    "cardView": "Visualização em cartão",
+    "listView": "Visualização em lista",
     "confirmRemoveContainer": "Tem a certeza de que pretende remover o contentor '{{name}}'? Esta ação não pode ser desfeita.",
     "runningContainerWarning": "Aviso: Este contentor está em execução. Removê-lo irá pará-lo primeiro.",
     "loadingContainers": "A carregar contentores...",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "O contentor tem de estar em execução para aceder à consola",
     "verificationCodePrompt": "Introduza o código de verificação",
     "totpVerificationFailed": "A verificação TOTP falhou. Por favor, tente novamente.",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "Falha ao efetuar o login. Tente novamente.",
     "connectedTo": "Ligado a {{containerName}}",
     "disconnected": "Desligado",
     "consoleError": "Erro da consola",
@@ -101,15 +101,15 @@
     "consoleTab": "Consola",
     "startContainerToAccess": "Inicie o contentor para aceder à consola",
     "noHostSelected": "Nenhum anfitrião selecionado",
-    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
-    "failedToDownloadLogs": "Failed to download logs: {{error}}"
+    "failedToFetchLogs": "Falha ao obter os registos: {{error}}",
+    "failedToDownloadLogs": "Falha ao descarregar os registos: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
     "feature_docker": "Docker",
-    "feature_docker_desc": "See containers, read logs and watch stats on any host running Docker."
+    "feature_docker_desc": "Visualize contentores, leia registos e acompanhe as estatísticas em qualquer host que execute o Docker."
   },
   "terminal": {
     "retry": "Repetir",
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "Utilize o Docker",
+      "description": "Abra o gestor do Docker e as consolas de contentores nos hosts com o Docker ativado."
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Ativar Docker",
-        "description": "Manage containers on this host."
+        "description": "Gerir os contentores neste host."
       },
       "containerRuntime": {
         "label": "Runtime de Contentores",
@@ -137,7 +137,7 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "É necessário um servidor remoto. Ligue um servidor remoto nas Definições para utilizar este tipo de ligação."
   },
   "hosts": {
     "docsLink": "Ver documentação",

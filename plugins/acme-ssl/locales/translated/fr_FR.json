@@ -54,5 +54,8 @@
     "request": "Demandez votre certificat dès maintenant",
     "requesting": "Demande de certificat en cours...",
     "issued": "Certificat délivré et installé"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

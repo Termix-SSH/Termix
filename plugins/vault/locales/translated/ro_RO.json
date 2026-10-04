@@ -65,5 +65,8 @@
         "label": "Profilul semnatarului din seif"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

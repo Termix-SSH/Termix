@@ -5,7 +5,7 @@
   "permissions": {
     "manage": {
       "title": "管理 SSO 提供商",
-      "description": "添加、修改和移除可供用户登录的 SSO 提供商。"
+      "description": "添加、更改和删除用户可用于登录的 SSO 提供商。"
     }
   },
   "providers": {
@@ -17,29 +17,35 @@
     "deleteConfirm": "删除此提供商？关联用户将无法登录。",
     "name": "显示名称",
     "namePlaceholder": "我的 SSO 提供商",
-    "nameRequired": "必须填写显示名称",
+    "nameRequired": "必须填写显示名称。",
     "type": "提供商类型",
     "enabled": "已启用",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "保存提供商",
     "saving": "保存中...",
     "saved": "已保存",
     "saveFailed": "保存失败",
     "deleted": "已删除",
     "deleteFailed": "删除失败",
-    "loadFailed": "加载 SSO 提供商失败",
+    "loadFailed": "加载 SSO 提供程序失败",
     "cancel": "取消",
     "copy": "复制",
     "copied": "已复制",
     "redirectUri": "重定向 URI",
-    "redirectUriDesc": "在身份提供商处将此 URL 登记为重定向或回调 URL。",
-    "legacyCallback": "保留旧版重定向 URI",
-    "legacyCallbackDesc": "此提供商在 Termix 2.9 之前配置，仍使用可正常工作的旧重定向 URI。如需迁移，请先在身份提供商处添加 {{uri}}，再关闭此选项。",
-    "authorizationUrl": "授权 URL：{{url}}"
+    "redirectUriDesc": "将此 URL 注册为身份提供商中的重定向或回调 URL。",
+    "legacyCallback": "保留旧的重定向 URI",
+    "legacyCallbackDesc": "此身份提供程序是在 Termix 2.9 版本之前设置的，目前仍使用旧的重定向 URI，该 URI 仍然有效。要迁移到新的重定向 URI，请先在身份提供程序中添加 {{uri}} ，然后再将其关闭。",
+    "authorizationUrl": "授权网址： {{url}}"
   },
   "fields": {
     "clientId": "客户端 ID",
     "clientSecret": "客户端密钥",
-    "secretKeep": "已保存机密值，留空可保留现有值。",
+    "secretKeep": "一个秘密被保守。留空即可保密。",
     "issuerUrl": "颁发者 URL",
     "authUrl": "授权 URL",
     "tokenUrl": "令牌 URL",
@@ -58,11 +64,11 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "自动使用 SSO 登录",
-      "description": "将访客直接跳转到第一个 SSO 提供商，而不显示登录表单。OIDC_SILENT_LOGIN_DEFAULT 环境变量会覆盖此设置。"
+      "label": "使用 SSO 自动登录",
+      "description": "将访客直接引导至第一个单点登录 (SSO) 提供商，而不是显示登录表单。环境变量 OIDC_SILENT_LOGIN_DEFAULT 会覆盖此设置。"
     }
   },
   "plugin": {
-    "name": "单点登录"
+    "name": "Single sign-on"
   }
 }

@@ -207,5 +207,19 @@
     "remove": "일정을 삭제합니다",
     "loadFailed": "점검 상태를 새로 고칠 수 없습니다. 점검 상태가 로드될 때까지 변경 사항이 적용되지 않습니다.",
     "loading": "유지보수 상태 로딩 중…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

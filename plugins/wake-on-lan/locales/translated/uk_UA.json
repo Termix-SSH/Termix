@@ -1,25 +1,25 @@
 {
   "hostAction": {
-    "title": "Wake",
-    "sent": "Wake-on-LAN packet sent",
-    "failed": "Failed to send Wake-on-LAN packet"
+    "title": "Вейк",
+    "sent": "Надіслано пакет Wake-on-LAN",
+    "failed": "Не вдалося надіслати пакет Wake-on-LAN"
   },
   "permissions": {
     "send": {
-      "title": "Send Wake-on-LAN packets",
-      "description": "Wake a host by sending a magic packet to its MAC address."
+      "title": "Надсилання пакетів Wake-on-LAN",
+      "description": "Розбудити хост, надіславши магічний пакет на його MAC-адресу."
     }
   },
   "settings": {
     "host": {
       "macAddress": {
-        "label": "MAC address",
-        "description": "The host's network MAC address, used to send Wake-on-LAN packets.",
+        "label": "MAC-адреса",
+        "description": "Мережева MAC-адреса хоста, що використовується для надсилання пакетів Wake-on-LAN.",
         "placeholder": "AA:BB:CC:DD:EE:FF"
       },
       "broadcastAddress": {
-        "label": "Broadcast address",
-        "description": "The subnet broadcast address to send the packet to. Leave blank for 255.255.255.255.",
+        "label": "Адреса розсилки",
+        "description": "Широкомовна адреса підмережі, на яку потрібно надіслати пакет. Залиште поле порожнім для 255.255.255.255.",
         "placeholder": "192.168.1.255"
       }
     }

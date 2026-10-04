@@ -56,5 +56,8 @@
     "speed": "Toistonopeus",
     "play": "Toista tallenne",
     "pause": "Keskeytä tallennus"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

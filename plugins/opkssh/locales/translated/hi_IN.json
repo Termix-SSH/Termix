@@ -18,15 +18,18 @@
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+      "label": "रीडायरेक्ट यूआरआई",
+      "description": "इस URL को अपने OPKSSH कॉन्फ़िगरेशन में प्रत्येक पहचान प्रदाता के साथ एक अनुमत रीडायरेक्ट URI के रूप में पंजीकृत करें।"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+      "label": "पुराने रीडायरेक्ट यूआरआई का उपयोग करें",
+      "description": "पहले 2.9 से पहले इस्तेमाल होने वाली रीडायरेक्ट यूआरआई /host/opkssh-callback भेजते रहें। जब आपके आइडेंटिटी प्रोवाइडर नई यूआरआई की अनुमति दे दें, तो इसे बंद कर दें।"
     }
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
+  },
+  "plugin": {
+    "name": "OPKSSH"
   }
 }

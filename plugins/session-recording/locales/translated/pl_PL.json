@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "Zobacz nagrania sesji",
+      "description": "Oglądaj i odtwarzaj własne nagrania sesji."
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "Retencja (dni)",
+        "description": "Jak długo przechowywane jest nagranie sesji, zanim zostanie automatycznie usunięte."
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "Włącz nagrywanie sesji",
+        "description": "Nagraj dane wyjściowe terminala dla tego hosta, aby móc je później odtworzyć lub pobrać."
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "Nagranie"
   },
   "sessionLogs": {
     "title": "Logi sesji",
@@ -47,14 +47,17 @@
     "filterByHost": "Filtruj według hosta...",
     "back": "Wstecz",
     "empty": "(pusty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "noResults": "Brak wyników dla „{{query}}”",
+    "hostFallback": "Gospodarz {{id}}",
+    "sessionFallback": "Sesja {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "Oś czasu nagrywania",
+    "speed": "Prędkość odtwarzania",
+    "play": "Odtwórz nagranie",
+    "pause": "Wstrzymaj nagrywanie"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

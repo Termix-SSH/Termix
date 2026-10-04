@@ -1,15 +1,15 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "Etapa CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
+    "label": "Etapa CA",
+    "description": "Faça login através do seu fornecedor de identidade e permita que a sua Autoridade Certificadora (CA) Step emita um certificado SSH de curta duração para este host. O URL da CA, a impressão digital da raiz e o provisionador OIDC são definidos por um administrador na secção CA Step das Definições de Administração.",
     "docs": "Ver docs"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "title": "Passo: Autenticação CA necessária",
+    "description": "Para continuar, complete a autenticação no seu browser. O certificado permanecerá válido enquanto a sua Autoridade Certificadora (CA) o permitir.",
     "openBrowser": "Abrir navegador para autenticar",
     "waiting": "A aguardar autenticação no navegador...",
     "authenticating": "A processar autenticação..."
@@ -20,29 +20,32 @@
   },
   "settings": {
     "caUrl": {
-      "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "label": "URL CA",
+      "description": "O URL https da sua CA Smallstep. Deixe o URL da AC, a impressão digital e o provisionador em branco para desativar a AC da Step.",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "Impressão digital de raiz (SHA-256)",
+      "description": "A impressão digital do certificado raiz, conforme mostrado pela etapa ca bootstrap."
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "nome do provisionador OIDC",
+      "description": "O nome do provisionador OIDC da CA. Em seguida, escolha \"CA de Passo\" como tipo de autenticação do host."
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "Hosts CA privados permitidos",
+      "description": "Para hosts privados, o fluxo de certificados da AC (Autoridade Certificadora) pode contactar: a própria AC e, se for interna, o seu fornecedor de identidade. Separe-os com vírgulas ou com novas linhas."
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "URI de redireccionamento",
+      "description": "Registe este URL como um URI de redireccionamento permitido junto do fornecedor de identidade por trás do provisionador OIDC."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "Utilize o URI de redirecionamento antigo",
+      "description": "Continue a enviar /host/step-ca-callback, o URI de redireccionamento utilizado antes da versão 2.9. Desative-o assim que o seu fornecedor de identidade permitir o novo."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

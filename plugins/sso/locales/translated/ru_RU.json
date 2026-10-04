@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "Вход с помощью единого входа (SSO)",
   "loginWithProvider": "Войти через {{name}}",
   "loading": "Загрузка...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "Управление поставщиками SSO",
+      "description": "Добавляйте, изменяйте и удаляйте поставщиков единого входа (SSO), с помощью которых пользователи могут входить в систему."
     }
   },
   "providers": {
@@ -16,30 +16,36 @@
     "delete": "Удалить провайдера",
     "deleteConfirm": "Удалить провайдера? Связанные пользователи не смогут войти.",
     "name": "Отображаемое имя",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Мой поставщик SSO",
+    "nameRequired": "Необходимо указать отображаемое имя.",
     "type": "Тип провайдера",
     "enabled": "Включено",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Сохранить провайдера",
     "saving": "Сохранение…",
     "saved": "Сохранено",
     "saveFailed": "Не удалось сохранить",
     "deleted": "Удалено",
     "deleteFailed": "Не удалось удалить",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "Не удалось загрузить поставщиков SSO.",
     "cancel": "Отмена",
     "copy": "Копировать",
     "copied": "Скопировано",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "URI перенаправления",
+    "redirectUriDesc": "Зарегистрируйте этот URL-адрес в качестве URL-адреса перенаправления или обратного вызова в вашем поставщике идентификации.",
+    "legacyCallback": "Сохраните старый URI перенаправления.",
+    "legacyCallbackDesc": "Этот провайдер был настроен до Termix 2.9 и до сих пор использует старый URI перенаправления, который продолжает работать. Чтобы перейти на новый, сначала добавьте {{uri}} в свой провайдер идентификации, а затем отключите эту функцию.",
+    "authorizationUrl": "URL авторизации: {{url}}"
   },
   "fields": {
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "Секрет сохранен. Оставьте это поле пустым, чтобы сохранить его.",
     "issuerUrl": "URL издателя",
     "authUrl": "URL авторизации",
     "tokenUrl": "URL токена",
@@ -58,8 +64,11 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "Автоматический вход через SSO.",
+      "description": "Вместо отображения формы входа, посетители будут направляться непосредственно к первому поставщику единого входа (SSO). Это определяется переменной среды OIDC_SILENT_LOGIN_DEFAULT."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

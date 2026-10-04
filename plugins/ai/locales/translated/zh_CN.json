@@ -2,28 +2,28 @@
   "permissions": {
     "use": {
       "title": "使用助手",
-      "description": "打开助手并向其提问。"
+      "description": "打开助手并向它提问。"
     },
     "manage_providers": {
-      "title": "管理服务提供商",
-      "description": "添加、编辑和移除 AI 服务提供商及其 API 密钥。"
+      "title": "管理供应商",
+      "description": "添加、编辑和删除人工智能提供商及其 API 密钥。"
     },
     "apply_proposals": {
-      "title": "应用建议",
-      "description": "允许助手执行其建议的更改。"
+      "title": "提交提案",
+      "description": "让助手执行它建议的更改。"
     },
     "services.use": {
-      "title": "在其他功能中使用 AI",
-      "description": "其他功能可以代表你调用助手。"
+      "title": "利用其他功能中的人工智能",
+      "description": "其他功能可能会代表您呼叫语音助手。"
     },
     "secrets.share": {
-      "title": "共享 API 密钥",
-      "description": "其他功能可以使用已保存的 AI API 密钥，但无法查看其内容。"
+      "title": "分享 API 密钥",
+      "description": "其他功能可能在看不到密钥的情况下使用已存储的 AI API 密钥。"
     }
   },
   "settings": {
-    "assistantUnavailable": "此服务器已关闭 AI 助手。",
-    "providersNeedOptIn": "请先在上方启用 AI 助手，再添加服务提供商。",
+    "assistantUnavailable": "此服务器上的AI助手已关闭。",
+    "providersNeedOptIn": "开启上方的AI助手，即可添加服务提供商。",
     "admin": {
       "globallyEnabled": {
         "label": "AI 助手",
@@ -31,13 +31,13 @@
       },
       "privateEndpoints": {
         "label": "允许的私有 AI 主机",
-        "description": "允许用户将服务提供商指向的内网主机，例如自托管的 Ollama。每行填写一台主机。"
+        "description": "用户可向服务提供商指向的私有网络上的主机，例如自托管的 Ollama。每行填写一个主机。"
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "启用 AI 助手",
-        "description": "允许 AI 助手在此主机的终端中提供帮助。默认关闭，且你的账户也必须启用 AI。"
+        "label": "启用人工智能助手",
+        "description": "允许 AI 助手在此主机的终端上提供帮助。默认情况下处于关闭状态，但仍需在您的帐户中启用 AI 功能。"
       }
     }
   },
@@ -50,24 +50,24 @@
     "running": "运行中",
     "approve": "批准",
     "reject": "拒绝",
-    "inputPlaceholder": "询问服务器相关问题，或描述你想进行的更改",
+    "inputPlaceholder": "询问服务器相关情况，或描述要提出的变更建议",
     "selectProvider": "选择服务提供商",
-    "providerSettings": "服务提供商设置",
-    "addProvider": "添加服务提供商",
+    "providerSettings": "提供商设置",
+    "addProvider": "添加提供商",
     "editProvider": "编辑提供商",
-    "removeProvider": "移除服务提供商",
+    "removeProvider": "移除提供者",
     "providerType": "提供商",
     "providerLabel": "名称",
     "providerLabelPlaceholder": "例如：本地 Ollama",
     "baseUrl": "服务器地址",
     "apiKey": "API 密钥",
     "defaultModel": "默认模型",
-    "defaultModelPlaceholder": "例如 llama3.1 或 claude-opus-5",
+    "defaultModelPlaceholder": "例如：llama3.1 或 claude-opus-5",
     "labelRequired": "给此提供商起个名字",
-    "providerSaveFailed": "无法保存服务提供商",
-    "providerUpdated": "服务提供商已更新",
-    "providerDeleteFailed": "无法移除服务提供商",
-    "privateEndpointHint": "使用内网地址前，需要管理员先允许该主机。",
+    "providerSaveFailed": "无法保存提供商",
+    "providerUpdated": "提供商已更新",
+    "providerDeleteFailed": "无法移除提供商",
+    "privateEndpointHint": "您私有网络上的地址需要管理员先允许主机访问。",
     "providerOllama": "Ollama",
     "providerAnthropic": "Anthropic",
     "providerOpenai": "OpenAI",
@@ -77,28 +77,28 @@
     "toolResult": "结果",
     "statusApplied": "已应用",
     "statusRejected": "已拒绝",
-    "proposalApplied": "更改已应用",
+    "proposalApplied": "变更已生效",
     "proposalApplyFailed": "无法应用更改",
     "proposalRejectFailed": "无法拒绝更改",
     "enableTitle": "启用 AI 助手",
-    "enableDescription": "允许助手读取你的配置并提出更改建议，由你批准后执行。",
+    "enableDescription": "让助手读取您的设置并提出更改建议，供您批准。",
     "readOnlyCommands": "允许只读诊断命令",
-    "readOnlyCommandsDescription": "助手可以执行 df、uptime 等少量安全命令，无需每次询问。任何会修改服务器的操作都会先提交建议。",
+    "readOnlyCommandsDescription": "助手可能会在不每次都询问的情况下运行一些安全命令，例如 `df` 和 `uptime`。任何会更改服务器的操作都会优先被提出。",
     "modelDetectFailed": "无法联系到提供商，所以这里提供的是通用列表。您可以输入任何模型名称。",
     "modelCustom": "请输入模型名称",
     "modelRefresh": "刷新列表",
     "modelPlaceholder": "选择或输入模型",
-    "attachHint": "输入 @ 引用主机、代码片段或自动化。更改会先提交给你批准。",
-    "runCommandTitle": "执行命令",
-    "assistant": "AI 助手",
-    "terminalPanelEmpty": "向助手询问此主机的相关问题。任何会改变状态的操作都需要先获得你的批准。",
-    "terminalPanelPlaceholder": "询问此主机的相关问题……",
-    "noProvidersConfigured": "尚未配置 AI 服务提供商，请在 AI 助手标签页中添加。",
-    "runsInOpenTerminal": "在你已打开的终端会话中执行。",
+    "attachHint": "输入 @ 符号可引用主机、代码片段或自动化流程。系统会提出更改建议，供您批准。",
+    "runCommandTitle": "运行命令",
+    "assistant": "人工智能助手",
+    "terminalPanelEmpty": "向助理询问有关此房东的信息。任何状态变更都需要您先批准。",
+    "terminalPanelPlaceholder": "询问一下这位房东的情况……",
+    "noProvidersConfigured": "尚未配置任何 AI 提供商。请在 AI 助手选项卡中添加。",
+    "runsInOpenTerminal": "在打开的终端会话中运行。",
     "runInTerminal": "运行",
     "terminalContextPrefill": "以下是我的终端输出：\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "允许其他功能使用你的 AI 服务提供商 API 密钥发起请求。密钥不会被复制，你可以随时撤销授权。"
+      "shareApiKey": "允许其他功能使用您的 AI 提供商 API 密钥发出各自的请求。该密钥绝不会被复制，您可以随时撤销此授权。"
     }
   },
   "nav": {
@@ -106,7 +106,7 @@
   },
   "onboarding": {
     "aiTitle": "AI 助手",
-    "aiIntro": "Termix 提供可选的 AI 助手，你可以稍后在设置中更改。",
+    "aiIntro": "Termix 可以包含一个可选的 AI 助手。您可以稍后在设置中更改此选项。",
     "aiSkipTitle": "禁用",
     "aiSkipDesc": "Termix 正常工作，AI 助手将保持隐藏状态。",
     "aiEnableTitle": "启用",
@@ -193,6 +193,6 @@
     "shortcuts": "Enter 发送或排队 · Shift+Enter 换行 · Esc 中断并暂停队列"
   },
   "plugin": {
-    "name": "AI 助手"
+    "name": "AI Assistant"
   }
 }

@@ -23,9 +23,9 @@
     "start": "啟動",
     "stop": "停止位元",
     "status": "狀態",
-    "actions": "Actions",
-    "cardView": "Card view",
-    "listView": "List view",
+    "actions": "行動",
+    "cardView": "卡片視圖",
+    "listView": "清單視圖",
     "confirmRemoveContainer": "確定要移除容器 '{{name}}' 嗎？此動作無法復原。",
     "runningContainerWarning": "警告：此容器正在執行中。移除時會先將其停止。",
     "loadingContainers": "正在載入容器...",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "容器必須在執行中才能存取主控台",
     "verificationCodePrompt": "請輸入驗證碼",
     "totpVerificationFailed": "TOTP 驗證失敗，請再試一次。",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "登入失敗，請重試。",
     "connectedTo": "已連線至 {{containerName}}",
     "disconnected": "已中斷連線",
     "consoleError": "主控台錯誤",
@@ -101,15 +101,15 @@
     "consoleTab": "主控台",
     "startContainerToAccess": "啟動容器以存取主控台",
     "noHostSelected": "未選擇主機",
-    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
-    "failedToDownloadLogs": "Failed to download logs: {{error}}"
+    "failedToFetchLogs": "取得日誌失敗： {{error}}",
+    "failedToDownloadLogs": "日誌下載失敗： {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
     "feature_docker": "Docker",
-    "feature_docker_desc": "See containers, read logs and watch stats on any host running Docker."
+    "feature_docker_desc": "查看執行 Docker 的任何主機上的容器、讀取日誌和查看統計資料。"
   },
   "terminal": {
     "retry": "重試",
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "使用 Docker",
+      "description": "在已啟用 Docker 的主機上開啟 Docker 管理員和容器控制台。"
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "啟用 Docker",
-        "description": "Manage containers on this host."
+        "description": "管理此主機上的容器。"
       },
       "containerRuntime": {
         "label": "容器執行環境",
@@ -137,7 +137,7 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
   },
   "hosts": {
     "docsLink": "檢視文件",

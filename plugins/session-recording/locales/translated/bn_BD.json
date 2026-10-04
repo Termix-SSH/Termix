@@ -1,60 +1,63 @@
 {
   "nav": {
-    "sessionLogs": "Session Logs"
+    "sessionLogs": "সেশন লগ"
   },
   "hosts": {
-    "enableSessionRecording": "Session Recording",
-    "enableSessionRecordingDesc": "Record terminal session output for later review"
+    "enableSessionRecording": "সেশন রেকর্ডিং",
+    "enableSessionRecordingDesc": "পরবর্তী পর্যালোচনার জন্য টার্মিনাল সেশনের আউটপুট রেকর্ড করুন।"
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "সেশন রেকর্ডিং দেখুন",
+      "description": "আপনার নিজের সেশন রেকর্ডিংগুলো দেখুন এবং প্লেব্যাক করুন।"
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "ধারণক্ষমতা (দিন)",
+        "description": "একটি সেশন রেকর্ডিং স্বয়ংক্রিয়ভাবে মুছে যাওয়ার আগে কতক্ষণ সংরক্ষিত থাকে।"
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "সেশন রেকর্ডিং সক্ষম করুন",
+        "description": "এই হোস্টের জন্য টার্মিনাল আউটপুট রেকর্ড করুন, যাতে আপনি পরে এটি প্লেব্যাক বা ডাউনলোড করতে পারেন।"
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "রেকর্ডিং"
   },
   "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host...",
-    "back": "Back",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "title": "সেশন লগ",
+    "noLogs": "এখনো কোনো সেশন লগ নেই",
+    "noLogsDesc": "রেকর্ডিং শুরু করতে কোনো হোস্টে সেশন লগিং চালু করুন।",
+    "duration": "সময়কাল",
+    "viewLog": "লগ দেখুন",
+    "downloadLog": "ডাউনলোড করুন",
+    "downloadAsText": "টেক্সট হিসেবে ডাউনলোড করুন",
+    "deleteLog": "মুছে ফেলুন",
+    "confirmDelete": "এই সেশন লগটি মুছে ফেলবেন?",
+    "confirmDeleteDesc": "এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।",
+    "copyContent": "অনুলিপি",
+    "copied": "অনুলিপি করা হয়েছে!",
+    "loadError": "সেশন লগ লোড করতে ব্যর্থ হয়েছে",
+    "deleteError": "সেশন লগ মুছে ফেলতে ব্যর্থ হয়েছে",
+    "filterByHost": "হোস্ট দ্বারা ফিল্টার করুন...",
+    "back": "ফিরে যান",
+    "empty": "(খালি)",
+    "noResults": "\"{{query}} \" এর জন্য কোন ফলাফল পাওয়া যায়নি",
+    "hostFallback": "হোস্ট {{id}}",
+    "sessionFallback": "সেশন {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "রেকর্ডিং টাইমলাইন",
+    "speed": "প্লেব্যাক গতি",
+    "play": "রেকর্ডিং চালান",
+    "pause": "রেকর্ডিং থামান"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

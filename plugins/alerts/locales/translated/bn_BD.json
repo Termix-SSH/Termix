@@ -1,172 +1,175 @@
 {
   "nav": {
-    "alerts": "Alerts"
+    "alerts": "সতর্কতা"
   },
   "permissions": {
     "use": {
-      "title": "Use alerts",
-      "description": "Get alerts in the inbox and send them to your own channels."
+      "title": "সতর্কতা ব্যবহার করুন",
+      "description": "ইনবক্সে অ্যালার্ট পান এবং সেগুলো আপনার নিজের চ্যানেলগুলোতে পাঠান।"
     }
   },
   "onboarding": {
-    "feature": "Alerts",
-    "featureDesc": "Every alert in one inbox, sent on to Discord, ntfy, email or a webhook if you want."
+    "feature": "সতর্কতা",
+    "featureDesc": "সব অ্যালার্ট একটি ইনবক্সেই থাকবে, যা আপনি চাইলে ডিসকর্ড, এনটিএফওয়াই, ইমেল বা ওয়েবহুকে পাঠাতে পারবেন।"
   },
   "settings": {
     "group": {
-      "general": "General",
-      "email": "Email"
+      "general": "সাধারণ",
+      "email": "ইমেল"
     },
     "admin": {
       "announcements": {
-        "label": "Termix announcements",
-        "description": "Show news from the Termix team, like security notices and releases, in everyone's inbox."
+        "label": "টারমিক্স ঘোষণা",
+        "description": "টারমিক্স টিমের পক্ষ থেকে নিরাপত্তা বিজ্ঞপ্তি এবং নতুন রিলিজের মতো খবরগুলো সবার ইনবক্সে দেখান।"
       },
       "retentionDays": {
-        "label": "Keep alerts for (days)",
-        "description": "Older alerts are removed from every inbox."
+        "label": "(দিন) পর্যন্ত সতর্কতা চালু রাখুন",
+        "description": "প্রতিটি ইনবক্স থেকে পুরোনো অ্যালার্টগুলো মুছে ফেলা হয়।"
       },
       "smtpHost": {
-        "label": "SMTP server",
-        "description": "Needed for email channels. Leave empty to turn email off.",
+        "label": "SMTP সার্ভার",
+        "description": "ইমেল চ্যানেলের জন্য প্রয়োজন। ইমেল বন্ধ করতে খালি রাখুন।",
         "placeholder": "smtp.example.com"
       },
       "smtpPort": {
-        "label": "SMTP port",
-        "description": "Usually 587 with STARTTLS or 465 with TLS."
+        "label": "SMTP পোর্ট",
+        "description": "সাধারণত STARTTLS সহ 587 অথবা TLS সহ 465।"
       },
       "smtpSecure": {
-        "label": "Use TLS from the start",
-        "description": "Turn on for port 465. Leave off for 587, which upgrades to TLS on its own."
+        "label": "শুরু থেকেই TLS ব্যবহার করুন",
+        "description": "পোর্ট ৪৬৫-এর জন্য চালু করুন। ৫৮৭-এর জন্য বন্ধ রাখুন, যেটি নিজে থেকেই TLS-এ আপগ্রেড হয়ে যায়।"
       },
       "smtpUser": {
-        "label": "SMTP username",
-        "description": "Leave empty if the server does not need a login."
+        "label": "SMTP ব্যবহারকারীর নাম",
+        "description": "সার্ভারে লগইন করার প্রয়োজন না হলে এই স্থানটি খালি রাখুন।"
       },
       "smtpPassword": {
-        "label": "SMTP password",
-        "description": "Stored encrypted."
+        "label": "SMTP পাসওয়ার্ড",
+        "description": "এনক্রিপ্ট করে সংরক্ষণ করা হয়েছে।"
       },
       "smtpFrom": {
-        "label": "From address",
-        "description": "The sender alerts come from.",
-        "placeholder": "Termix <alerts@example.com>"
+        "label": "ঠিকানা থেকে",
+        "description": "প্রেরকের কাছ থেকে সতর্কতাগুলো আসে।",
+        "placeholder": "টারমিক্স <alerts@example.com>"
       }
     },
     "user": {
       "popups": {
-        "label": "Alert popups",
-        "description": "Which new alerts pop up while you use Termix. They always land in the inbox.",
-        "all": "All alerts",
-        "warning": "Warnings and critical",
-        "critical": "Critical only",
-        "off": "None"
+        "label": "সতর্কতা পপআপ",
+        "description": "আপনি Termix ব্যবহার করার সময় কোন নতুন অ্যালার্টগুলো আসে? সেগুলো সবসময় ইনবক্সে আসে।",
+        "all": "সমস্ত সতর্কতা",
+        "warning": "সতর্কতা এবং সমালোচনামূলক",
+        "critical": "শুধুমাত্র সমালোচনামূলক",
+        "off": "কোনোটিই না"
       }
     }
   },
   "sections": {
-    "inbox": "Inbox",
-    "channels": "Channels",
-    "rules": "Delivery rules"
+    "inbox": "ইনবক্স",
+    "channels": "চ্যানেল",
+    "rules": "ডেলিভারি নিয়মাবলী"
   },
   "severity": {
-    "info": "Info",
-    "success": "Success",
-    "warning": "Warning",
-    "critical": "Critical"
+    "info": "তথ্য",
+    "success": "সাফল্য",
+    "warning": "সতর্কতা",
+    "critical": "সমালোচনামূলক"
   },
   "inbox": {
-    "sourceTermix": "Termix",
-    "openLink": "Open",
-    "view": "View",
-    "unread": "Unread",
-    "deliveryFailed_one": "{{count}} channel failed",
-    "deliveryFailed_other": "{{count}} channels failed",
-    "markRead": "Mark as read",
-    "markUnread": "Mark as unread",
-    "markAllRead": "Mark all as read",
-    "delete": "Delete",
-    "clearRead": "Delete read alerts",
-    "cleared_one": "Deleted {{count}} alert",
-    "cleared_other": "Deleted {{count}} alerts",
-    "filterAll": "All",
-    "filterUnread": "Unread",
-    "anySeverity": "Any severity",
-    "anySource": "Any source",
-    "openAll": "Open in a tab",
-    "empty": "No alerts yet.",
-    "emptyUnread": "You are all caught up.",
-    "loadMore": "Load more"
+    "sourceTermix": "টার্মিক্স",
+    "openLink": "খোলা",
+    "view": "দেখুন",
+    "unread": "অপঠিত",
+    "deliveryFailed_one": "{{count}} চ্যানেল ব্যর্থ হয়েছে",
+    "deliveryFailed_other": "{{count}} চ্যানেল ব্যর্থ হয়েছে",
+    "markRead": "পঠিত হিসেবে চিহ্নিত করুন",
+    "markUnread": "অপঠিত হিসাবে চিহ্নিত করুন",
+    "markAllRead": "সবগুলো পঠিত হিসেবে চিহ্নিত করুন।",
+    "delete": "মুছে ফেলুন",
+    "clearRead": "পঠিত সতর্কতাগুলি মুছুন",
+    "cleared_one": "{{count}} সতর্কতা মুছে ফেলা হয়েছে",
+    "cleared_other": "মুছে ফেলা {{count}} সতর্কতা",
+    "filterAll": "সব",
+    "filterUnread": "অপঠিত",
+    "anySeverity": "যেকোনো তীব্রতা",
+    "anySource": "যেকোনো উৎস",
+    "openAll": "একটি ট্যাবে খুলুন",
+    "empty": "এখনো কোনো সতর্কতা আসেনি।",
+    "emptyUnread": "আপনি সবকিছু জেনে গেছেন।",
+    "loadMore": "আরও লোড করুন"
   },
   "channels": {
-    "intro": "Channels are where alerts can go outside Termix. Delivery rules pick which alerts use them.",
-    "add": "Add channel",
-    "edit": "Edit channel",
-    "test": "Send a test",
-    "testSent": "Test alert sent",
-    "testFailed": "Test failed: {{error}}",
-    "deleteConfirm": "Delete the channel \"{{name}}\"?",
-    "deleted": "Channel deleted",
-    "empty": "No channels yet.",
-    "enabled": "Enabled",
-    "needsSave": "This channel needs to be opened and saved again before it can send.",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "type": "Type",
+    "intro": "চ্যানেল হলো এমন জায়গা যেখানে অ্যালার্টগুলো টারমিক্সের বাইরে যেতে পারে। ডেলিভারি রুলগুলো নির্ধারণ করে কোন অ্যালার্টগুলো সেখানে ব্যবহৃত হবে।",
+    "add": "চ্যানেল যোগ করুন",
+    "edit": "চ্যানেল সম্পাদনা করুন",
+    "test": "একটি পরীক্ষা পাঠান",
+    "testSent": "পরীক্ষার সতর্কতা পাঠানো হয়েছে",
+    "testFailed": "পরীক্ষা ব্যর্থ হয়েছে: {{error}}",
+    "deleteConfirm": "\"{{name}} \" চ্যানেলটি মুছে ফেলবেন?",
+    "deleted": "চ্যানেল মুছে ফেলা হয়েছে",
+    "empty": "এখনো কোনো চ্যানেল নেই।",
+    "enabled": "সক্ষম করা হয়েছে",
+    "needsSave": "পাঠানোর আগে এই চ্যানেলটি আবার খুলতে ও সংরক্ষণ করতে হবে।",
+    "name": "নাম",
+    "nameRequired": "নাম আবশ্যক",
+    "type": "প্রকার",
     "types": {
-      "webhook": "Webhook",
-      "ntfy": "ntfy",
-      "discord": "Discord",
-      "email": "Email"
+      "webhook": "ওয়েবহুক",
+      "ntfy": "এনটিএফওয়াই",
+      "discord": "ডিসকর্ড",
+      "email": "ইমেল"
     },
-    "emailUnavailable": "Email needs an SMTP server, which an admin sets up in the Alerts settings.",
-    "webhookUrl": "URL",
-    "webhookHint": "Gets a JSON body for every alert.",
-    "method": "Method",
-    "headers": "Headers",
-    "headersHint": "One per line, like Name: value.",
-    "ntfyServer": "Server URL",
-    "ntfyTopic": "Topic",
-    "ntfyToken": "Access token (optional)",
-    "discordUrl": "Discord webhook URL",
-    "discordHint": "From the channel's settings in Discord, under Integrations.",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "emailTo": "Send to",
-    "emailHint": "Separate more than one address with commas.",
-    "privateNetwork": "Allow a private network address",
-    "privateNetworkHint": "Only works for hosts an admin allows in the private endpoint list."
+    "emailUnavailable": "ইমেইলের জন্য একটি SMTP সার্ভার প্রয়োজন, যা অ্যাডমিন অ্যালার্ট সেটিংসে সেট আপ করেন।",
+    "webhookUrl": "ইউআরএল",
+    "webhookHint": "প্রতিটি অ্যালার্টের জন্য একটি JSON বডি পাওয়া যায়।",
+    "method": "পদ্ধতি",
+    "headers": "হেডার",
+    "headersHint": "প্রতি লাইনে একটি করে, যেমন নাম: মান।",
+    "ntfyServer": "সার্ভার ইউআরএল",
+    "ntfyTopic": "বিষয়",
+    "ntfyToken": "প্রবেশ টোকেন (ঐচ্ছিক)",
+    "discordUrl": "ডিসকর্ড ওয়েবহুক ইউআরএল",
+    "discordHint": "ডিসকর্ডে চ্যানেলের সেটিংস থেকে, ইন্টিগ্রেশনস-এর অধীনে।",
+    "discordUsername": "প্রদর্শনের নাম (ঐচ্ছিক)",
+    "discordAvatar": "অবতার ইউআরএল (ঐচ্ছিক)",
+    "emailTo": "পাঠান",
+    "emailHint": "একাধিক ঠিকানা কমা দিয়ে আলাদা করুন।",
+    "privateNetwork": "একটি ব্যক্তিগত নেটওয়ার্ক ঠিকানা অনুমোদন করুন",
+    "privateNetworkHint": "এটি শুধুমাত্র সেইসব হোস্টের ক্ষেত্রেই কাজ করে, যেগুলোকে অ্যাডমিন তার প্রাইভেট এন্ডপয়েন্ট তালিকায় অনুমোদন দেয়।"
   },
   "rules": {
-    "intro": "A delivery rule sends matching alerts to your channels. Alerts always stay in the inbox too.",
-    "add": "Add rule",
-    "edit": "Edit rule",
-    "empty": "No rules yet, so alerts only show up in the inbox.",
-    "needChannel": "Add a channel first.",
-    "enabled": "Enabled",
-    "name": "Name",
-    "nameRequired": "Name is required",
-    "match": "Alerts to send",
-    "matchHint": "* for everything, automations.* for everything from automations, or one exact kind.",
-    "minSeverity": "At least",
-    "channels": "Send to",
-    "channelRequired": "Pick at least one channel",
-    "deleteConfirm": "Delete the rule \"{{name}}\"?",
-    "everything": "Everything",
-    "summary": "{{match}}, {{severity}} or higher, to {{channels}}"
+    "intro": "একটি ডেলিভারি রুল আপনার চ্যানেলগুলিতে প্রাসঙ্গিক অ্যালার্ট পাঠায়। অ্যালার্টগুলো সবসময় ইনবক্সেও থেকে যায়।",
+    "add": "নিয়ম যোগ করুন",
+    "edit": "নিয়ম সম্পাদনা করুন",
+    "empty": "এখনো কোনো নিয়ম তৈরি হয়নি, তাই অ্যালার্টগুলো শুধু ইনবক্সেই দেখা যায়।",
+    "needChannel": "প্রথমে একটি চ্যানেল যোগ করুন।",
+    "enabled": "সক্ষম করা হয়েছে",
+    "name": "নাম",
+    "nameRequired": "নাম আবশ্যক",
+    "match": "পাঠানোর জন্য সতর্কতা",
+    "matchHint": "সবকিছুর জন্য, অটোমেশন। অটোমেশন থেকে প্রাপ্ত সবকিছুর জন্য, অথবা ঠিক এক ধরনের।",
+    "minSeverity": "অন্তত",
+    "channels": "পাঠান",
+    "channelRequired": "অন্তত একটি চ্যানেল বেছে নিন",
+    "deleteConfirm": "\"{{name}} \" নিয়মটি মুছে ফেলুন?",
+    "everything": "সবকিছু",
+    "summary": "{{match}}, {{severity}} বা তার বেশি, থেকে {{channels}} পর্যন্ত"
   },
   "actions": {
-    "cancel": "Cancel",
-    "save": "Save",
-    "saving": "Saving...",
-    "delete": "Delete"
+    "cancel": "বাতিল করুন",
+    "save": "সংরক্ষণ করুন",
+    "saving": "সঞ্চয়...",
+    "delete": "মুছে ফেলুন"
   },
   "widget": {
-    "name": "Alert Feed",
-    "description": "Your latest alerts, with a quick way to mark them read",
-    "maxItems": "Max items",
-    "showRead": "Show read alerts",
-    "allClear": "All clear",
-    "loading": "Loading..."
+    "name": "সতর্কতা ফিড",
+    "description": "আপনার সর্বশেষ অ্যালার্টগুলো, এবং সেগুলোকে পঠিত হিসেবে চিহ্নিত করার একটি দ্রুত উপায়।",
+    "maxItems": "সর্বোচ্চ আইটেম",
+    "showRead": "পঠিত সতর্কতা দেখান",
+    "allClear": "সব পরিষ্কার",
+    "loading": "লোড হচ্ছে..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

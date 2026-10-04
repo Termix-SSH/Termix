@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage ACME certificates",
-      "description": "See the certificate status and request a new certificate now."
+      "title": "จัดการใบรับรอง ACME",
+      "description": "ตรวจสอบสถานะใบรับรองและขอใบรับรองใหม่ได้เลยตอนนี้"
     }
   },
   "settings": {
     "autoRenew": {
-      "label": "Renew automatically",
-      "description": "Check twice a day and get a new certificate when there is none, it does not cover the domain, or it expires within 30 days."
+      "label": "ต่ออายุอัตโนมัติ",
+      "description": "ตรวจสอบวันละสองครั้ง และขอใบรับรองใหม่เมื่อไม่มีใบรับรอง หากใบรับรองไม่ครอบคลุมโดเมน หรือหากใบรับรองหมดอายุภายใน 30 วัน"
     },
     "domain": {
-      "label": "Domain",
-      "description": "The public domain name for the certificate.",
-      "placeholder": "termix.example.com"
+      "label": "โดเมน",
+      "description": "ชื่อโดเมนสาธารณะสำหรับใบรับรอง",
+      "placeholder": "เทอร์มิกซ์.ตัวอย่าง.com"
     },
     "email": {
-      "label": "Email",
-      "description": "Contact email for the ACME account and expiry notices.",
+      "label": "อีเมล",
+      "description": "อีเมลสำหรับติดต่อเพื่อรับข้อมูลเกี่ยวกับบัญชี ACME และประกาศแจ้งเตือนวันหมดอายุ",
       "placeholder": "admin@example.com"
     },
     "provider": {
-      "label": "Certificate authority",
-      "description": "Where to get the certificate. Use staging to test without hitting Let's Encrypt rate limits.",
-      "letsencrypt": "Let's Encrypt",
-      "letsencryptStaging": "Let's Encrypt (staging)",
-      "custom": "Custom ACME directory"
+      "label": "หน่วยงานออกใบรับรอง",
+      "description": "จะขอรับใบรับรองได้จากที่ไหน ใช้ระบบทดสอบ (staging) เพื่อทดสอบโดยไม่ให้เกินขีดจำกัดการใช้งานของ Let's Encrypt",
+      "letsencrypt": "เลทส์ เอนคริปท์",
+      "letsencryptStaging": "Let's Encrypt (รุ่นทดสอบ)",
+      "custom": "ไดเร็กทอรี ACME แบบกำหนดเอง"
     },
     "directoryUrl": {
-      "label": "ACME directory URL",
-      "description": "Only for a custom certificate authority. Must be an https URL."
+      "label": "URL ของไดเร็กทอรี ACME",
+      "description": "ใช้ได้เฉพาะกับหน่วยงานออกใบรับรองที่กำหนดเองเท่านั้น ต้องเป็น URL ที่ใช้ HTTPS"
     },
     "challengeType": {
-      "label": "Challenge type",
-      "description": "How to prove you own the domain.",
-      "http": "HTTP - needs port 80 reachable from the internet",
-      "cloudflare": "DNS (Cloudflare) - needs a Cloudflare API token"
+      "label": "ประเภทความท้าทาย",
+      "description": "วิธีพิสูจน์ว่าคุณเป็นเจ้าของโดเมน",
+      "http": "HTTP - ต้องมีพอร์ต 80 ที่สามารถเข้าถึงได้จากอินเทอร์เน็ต",
+      "cloudflare": "DNS (Cloudflare) - ต้องใช้โทเค็น API ของ Cloudflare"
     },
     "cloudflareToken": {
-      "label": "Cloudflare API token",
-      "description": "Scoped token with Zone:DNS:Edit permission for your domain."
+      "label": "โทเค็น API ของ Cloudflare",
+      "description": "โทเค็นแบบจำกัดขอบเขตพร้อมสิทธิ์ Zone:DNS:Edit สำหรับโดเมนของคุณ"
     }
   },
   "status": {
-    "title": "Certificate status",
-    "none": "No certificate",
-    "names": "Covers {{names}}",
-    "issuer": "Issued by {{issuer}}",
-    "expires": "Expires {{date}}",
-    "lastIssued": "Last issued {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "missing": "Set the domain, email and the fields your challenge type needs, then save, before requesting a certificate.",
-    "request": "Request certificate now",
-    "requesting": "Requesting certificate...",
-    "issued": "Certificate issued and installed"
+    "title": "สถานะใบรับรอง",
+    "none": "ไม่มีใบรับรอง",
+    "names": "ปก {{names}}",
+    "issuer": "ออกโดย {{issuer}}",
+    "expires": "หมดอายุ {{date}}",
+    "lastIssued": "ออกครั้งล่าสุด {{date}}",
+    "lastError": "ความพยายามครั้งล่าสุดล้มเหลว: {{error}}",
+    "missing": "ตั้งค่าโดเมน อีเมล และข้อมูลที่จำเป็นสำหรับประเภทการตรวจสอบสิทธิ์ของคุณ จากนั้นบันทึกก่อนที่จะขอใบรับรอง",
+    "request": "ขอใบรับรองตอนนี้",
+    "requesting": "ขอใบรับรอง...",
+    "issued": "ออกและติดตั้งใบรับรองแล้ว"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

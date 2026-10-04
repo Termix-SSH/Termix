@@ -1,58 +1,61 @@
 {
   "permissions": {
     "manage": {
-      "title": "Manage usage statistics",
-      "description": "See what usage statistics are sent, send them now and reset the instance ID."
+      "title": "Gerir estatísticas de uso",
+      "description": "Veja quais as estatísticas de utilização que foram enviadas, envie-as agora e redefina o ID da instância."
     }
   },
   "settings": {
     "enabled": {
-      "label": "Share anonymous usage statistics",
-      "description": "Sends a small anonymous summary once a day to help improve Termix. It never includes usernames, hostnames, IP addresses or credentials."
+      "label": "Partilhar estatísticas de uso anónimas",
+      "description": "Envia um pequeno resumo anónimo uma vez por dia para ajudar a melhorar o Termix. Nunca inclui nomes de utilizador, nomes de host, endereços IP ou credenciais."
     },
     "includePlatform": {
-      "label": "Include platform info",
-      "description": "The operating system, CPU architecture, Node.js version, database type and how Termix is installed (Docker, desktop app or server)."
+      "label": "Incluir informações da plataforma",
+      "description": "O sistema operativo, a arquitetura do CPU, a versão do Node. js, o tipo de base de dados e como o Termix está instalado (Docker, aplicação desktop ou servidor)."
     },
     "includeFeatureUsage": {
-      "label": "Include feature usage",
-      "description": "How many times each kind of tab was opened and how many SSH logins happened since the last report. Users can turn off their own part in their profile."
+      "label": "Incluir utilização do recurso",
+      "description": "Quantas vezes foi aberto cada tipo de separador e quantos logins SSH ocorreram desde o último relatório. Os utilizadores podem desativar esta funcionalidade nos seus perfis."
     },
     "includePlugins": {
-      "label": "Include installed features",
-      "description": "Which built-in features are installed and running."
+      "label": "Incluir recursos instalados",
+      "description": "Que recursos integrados estão instalados e em execução?"
     },
     "instanceId": {
-      "label": "Instance ID"
+      "label": "ID da instância"
     },
     "shareFeatureUsage": {
-      "label": "Include my feature usage",
-      "description": "Counts which kinds of tabs you open in the anonymous usage statistics. Nothing about you or your hosts is sent."
+      "label": "Incluir o meu uso do recurso",
+      "description": "Regista os tipos de separadores que abre nas estatísticas de utilização anónimas. Nenhuma informação sobre si ou os seus servidores é enviada."
     }
   },
   "status": {
     "title": "Estado",
-    "on": "Sharing usage statistics once a day",
-    "off": "Not sharing usage statistics",
-    "lockedOn": "Turned on by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "lockedOff": "Turned off by the ENABLE_TELEMETRY environment variable. Change it there.",
-    "instanceId": "Instance ID: {{id}}",
-    "noInstanceId": "No instance ID yet",
-    "lastSent": "Last sent {{date}}",
-    "neverSent": "Not sent yet",
-    "nextSend": "Next report due {{date}}",
-    "lastError": "Last attempt failed: {{error}}",
-    "preview": "Preview report",
-    "sendNow": "Send now",
-    "sending": "Sending...",
-    "sent": "Usage statistics sent",
-    "notSent": "Usage statistics are turned off, nothing was sent",
-    "resetId": "Reset instance ID",
-    "resetIdConfirm": "Reset the instance ID? Future reports will look like a new install.",
-    "resetIdDone": "Instance ID reset",
-    "previewTitle": "Next report",
-    "previewDescription": "This is exactly what would be sent right now.",
+    "on": "Partilhar estatísticas de utilização uma vez por dia.",
+    "off": "Não partilhar estatísticas de utilização",
+    "lockedOn": "Ativado pela variável de ambiente ENABLE_TELEMETRY. Altere-a aí.",
+    "lockedOff": "Desativado pela variável de ambiente ENABLE_TELEMETRY. Altere-a aí.",
+    "instanceId": "ID da instância: {{id}}",
+    "noInstanceId": "Ainda não há ID de instância.",
+    "lastSent": "Última mensagem enviada {{date}}",
+    "neverSent": "Ainda não foi enviado",
+    "nextSend": "Próximo relatório a ser entregue {{date}}",
+    "lastError": "Última tentativa falhada: {{error}}",
+    "preview": "Relatório de pré-visualização",
+    "sendNow": "Enviar agora",
+    "sending": "Enviando...",
+    "sent": "Estatísticas de utilização enviadas",
+    "notSent": "As estatísticas de utilização estão desativadas, nada foi enviado.",
+    "resetId": "Repor ID da instância",
+    "resetIdConfirm": "Repor o ID da instância? Os relatórios futuros serão apresentados como uma nova instalação.",
+    "resetIdDone": "Redefinição do ID da instância",
+    "previewTitle": "Próximo relatório",
+    "previewDescription": "É exatamente isso que seria enviado agora.",
     "close": "Fechar",
-    "loadFailed": "Could not load the usage statistics status"
+    "loadFailed": "Não foi possível carregar o estado das estatísticas de utilização."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

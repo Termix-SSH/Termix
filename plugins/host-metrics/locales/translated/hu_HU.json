@@ -308,5 +308,8 @@
         "label": "Megfigyelt útvonalak"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

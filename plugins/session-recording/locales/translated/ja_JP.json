@@ -56,5 +56,8 @@
     "speed": "再生速度",
     "play": "録音を再生する",
     "pause": "録画を一時停止"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

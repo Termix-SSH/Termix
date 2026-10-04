@@ -347,11 +347,8 @@ export class MetricsPoller {
     const settings = await this.settingsFor(host.id);
     if (!settings.metricsEnabled) return;
 
-    let authenticated = false;
     try {
-      const metrics = await collectMetrics(this.deps, host, settings, () => {
-        authenticated = true;
-      });
+      const metrics = await collectMetrics(this.deps, host, settings);
       this.metrics.set(host.id, { data: metrics, timestamp: Date.now() });
       this.ctx.hosts.status.reportLogin(host.id, { ok: true });
       this.setCollectionState(host, "collecting");
@@ -367,14 +364,6 @@ export class MetricsPoller {
       const hostKeyChanged = isHostKeyVerificationError(error);
       const message = error instanceof Error ? error.message : "";
       const isAuthError = /authentication|permission denied/i.test(message);
-
-      // A timeout or a dropped connection says nothing about the login.
-      if (!authenticated && (isAuthError || hostKeyChanged)) {
-        this.ctx.hosts.status.reportLogin(host.id, {
-          ok: false,
-          hostKeyChanged,
-        });
-      }
       this.setCollectionState(
         host,
         hostKeyChanged

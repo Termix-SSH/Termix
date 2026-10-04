@@ -27,7 +27,6 @@ describe("auth failure tracking", () => {
 describe("initial metrics admission", () => {
   it("needs a viewer and a host core does not see as offline", () => {
     expect(canStartInitialMetrics("online", true)).toBe(true);
-    expect(canStartInitialMetrics("reachable", true)).toBe(true);
     expect(canStartInitialMetrics("offline", true)).toBe(false);
     expect(canStartInitialMetrics("online", false)).toBe(false);
     // Status checks off: core has no status, so the sample is tried.

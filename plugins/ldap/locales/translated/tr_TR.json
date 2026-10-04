@@ -1,5 +1,5 @@
 {
-  "loginWithLdap": "Sign in with LDAP",
+  "loginWithLdap": "LDAP ile giriş yap",
   "loginWithProvider": "{{name}} ile giriş yap",
   "loading": "Yükleniyor...",
   "requiredField": "Bu alan zorunludur",
@@ -8,37 +8,44 @@
   "signIn": "Oturum Aç",
   "permissions": {
     "manage": {
-      "title": "Manage LDAP directories",
-      "description": "Add, change and remove the LDAP directories people can sign in with."
+      "title": "LDAP dizinlerini yönetin",
+      "description": "Kullanıcıların oturum açabileceği LDAP dizinlerini ekleyin, değiştirin ve kaldırın."
     }
   },
   "providers": {
     "docsLink": "Belgelere bak",
-    "none": "No LDAP directories configured.",
-    "add": "Add Directory",
-    "edit": "Edit Directory",
-    "delete": "Delete Directory",
-    "deleteConfirm": "Delete this directory? Users who sign in with it will not be able to log in.",
+    "none": "Hiçbir LDAP dizini yapılandırılmamış.",
+    "add": "Dizin Ekle",
+    "edit": "Dizin Düzenle",
+    "delete": "Dizini Sil",
+    "deleteConfirm": "Bu dizini silmek ister misiniz? Bu dizinle giriş yapan kullanıcılar artık giriş yapamayacaklar.",
     "name": "Görünen Ad",
-    "namePlaceholder": "Company directory",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "Şirket dizini",
+    "nameRequired": "Görünen ad gereklidir.",
     "enabled": "Etkin",
-    "save": "Save Directory",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
+    "save": "Kaydet",
     "saving": "Kaydediliyor...",
     "saved": "Kaydedildi",
     "saveFailed": "Kaydedilemedi",
     "deleted": "Silindi",
     "deleteFailed": "Silinemedi",
-    "loadFailed": "Failed to load LDAP directories",
+    "loadFailed": "LDAP dizinleri yüklenemedi.",
     "cancel": "İptal"
   },
   "fields": {
     "host": "LDAP Sunucusu",
     "port": "Port",
     "useTls": "TLS Kullan (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Bind Parolası",
-    "secretKeep": "A password is saved. Leave this empty to keep it.",
+    "secretKeep": "Parola kaydedildi. Parolayı saklamak için bu alanı boş bırakın.",
     "userSearchBase": "Kullanıcı Arama Tabanı",
     "userSearchFilter": "Kullanıcı Arama Süzgeci",
     "usernameAttr": "Kullanıcı Adı Özniteliği",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Grup Arama Tabanı",
     "adminGroup": "Yönetici Grubu",
     "allowedUsers": "İzin Verilen Kullanıcılar"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

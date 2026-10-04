@@ -502,7 +502,7 @@ export function SidebarTree({
 
   function handleDeleteFolder(folder: HostFolder) {
     const folderPath = folder.path ?? folder.name;
-    const { total } = folderHostCount(folder);
+    const total = folderHostCount(folder);
     setConfirmDialog({
       message: t("hosts.deleteFolderConfirm", {
         name: folder.name,

@@ -1,70 +1,70 @@
 {
   "nav": {
-    "homepage": "Homepage"
+    "homepage": "Hjemmeside"
   },
   "dashboard": {
-    "serviceLinks": "Service Links",
-    "homepagePreview": "Homepage Preview"
+    "serviceLinks": "Tjenestelenker",
+    "homepagePreview": "Forhåndsvisning av hjemmeside"
   },
   "dashboardTab": {
-    "serviceLinksTitle": "Service Links",
-    "serviceLinksEmpty": "No service links yet",
+    "serviceLinksTitle": "Tjenestelenker",
+    "serviceLinksEmpty": "Ingen tjenestelenker ennå",
     "serviceLinksAdd": "Legg til",
-    "serviceLinksLabelPlaceholder": "My Service",
+    "serviceLinksLabelPlaceholder": "Min tjeneste",
     "serviceLinksUrlPlaceholder": "http://192.168.1.10:8080",
-    "serviceLinksInvalidUrl": "Enter a valid web address",
-    "serviceLinksAddFailed": "Failed to add service link"
+    "serviceLinksInvalidUrl": "Skriv inn en gyldig nettadresse",
+    "serviceLinksAddFailed": "Kunne ikke legge til tjenestelenke"
   },
   "homepage": {
-    "title": "Homepage",
+    "title": "Hjemmeside",
     "addWidget": "Legg til widget",
-    "noWidgetsInCategory": "No widgets in this category",
-    "editWidget": "Edit Widget",
+    "noWidgetsInCategory": "Ingen widgeter i denne kategorien",
+    "editWidget": "Rediger widget",
     "zoomIn": "Zoom inn",
     "zoomOut": "Zoom ut",
-    "resetView": "Reset View",
-    "lockLayout": "Lock Layout",
-    "unlockLayout": "Unlock Layout",
-    "noWidgets": "Right-click or click + to add your first widget",
-    "openFullView": "Open Full View",
-    "previewTitle": "Homepage Preview",
+    "resetView": "Tilbakestill visning",
+    "lockLayout": "Låseoppsett",
+    "unlockLayout": "Lås opp oppsett",
+    "noWidgets": "Høyreklikk eller klikk på + for å legge til din første widget",
+    "openFullView": "Åpne full visning",
+    "previewTitle": "Forhåndsvisning av hjemmeside",
     "cancel": "Avbryt",
     "save": "Lagre",
-    "title_label": "Title",
-    "widgetTitlePlaceholder": "Widget title (optional)",
-    "url": "URL",
-    "imageUrl": "Custom Image URL",
-    "imageUrlHint": "Leave blank to use the site favicon automatically",
-    "showImage": "Show Image",
+    "title_label": "Tittel",
+    "widgetTitlePlaceholder": "Widgettittel (valgfritt)",
+    "url": "URL-adresse",
+    "imageUrl": "Tilpasset bilde-URL",
+    "imageUrlHint": "La feltet stå tomt for å bruke nettstedets favicon automatisk",
+    "showImage": "Vis bilde",
     "description": "Beskrivelse",
-    "color": "Color",
-    "timezone": "Timezone",
-    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
-    "showSeconds": "Show seconds",
-    "format12h": "12-hour",
-    "content": "Content",
-    "backgroundColor": "Background Color",
+    "color": "Farge",
+    "timezone": "Tidssone",
+    "invalidTimezone": "Ugyldig tidssone. Bruk et IANA-navn, for eksempel America/New_York.",
+    "showSeconds": "Vis sekunder",
+    "format12h": "12-timers",
+    "content": "Innhold",
+    "backgroundColor": "Bakgrunnsfarge",
     "links": "Lenker",
-    "addLink": "Add Link",
-    "linkLabel": "Label",
+    "addLink": "Legg til lenke",
+    "linkLabel": "Merkelapp",
     "categoryLinks": "Lenker",
     "categoryInfo": "Info",
     "categorySystem": "System",
-    "copyLink": "Copy Link",
-    "linkCopied": "Link copied!",
-    "location": "Location",
-    "temperatureUnit": "Temperature Unit",
-    "showForecast": "Show 3-day forecast",
-    "scrolling": "Allow Scrolling",
-    "feedUrl": "Feed URL",
-    "maxItems": "Max Items",
-    "showDescription": "Show Description",
-    "widgetRssName": "RSS Feed",
-    "rssNoFeedUrl": "Configure a feed URL in widget settings",
-    "rssLoadError": "Could not load feed",
-    "rssNoItems": "No items",
+    "copyLink": "Kopier lenke",
+    "linkCopied": "Lenken er kopiert!",
+    "location": "Sted",
+    "temperatureUnit": "Temperaturenhet",
+    "showForecast": "Vis 3-dagers værmelding",
+    "scrolling": "Tillat rulling",
+    "feedUrl": "Nettadresse for feeden",
+    "maxItems": "Maksimalt antall varer",
+    "showDescription": "Vis beskrivelse",
+    "widgetRssName": "RSS-feed",
+    "rssNoFeedUrl": "Konfigurer en feed-URL i widget-innstillingene",
+    "rssLoadError": "Kunne ikke laste inn feeden",
+    "rssNoItems": "Ingen varer",
     "noHostSelected": "Ingen vert valgt",
-    "displayedMetrics": "Displayed Metrics",
+    "displayedMetrics": "Viste målinger",
     "metricCpu": "CPU",
     "metricMemory": "Minne",
     "metricDisk": "Disk",
@@ -72,119 +72,254 @@
     "metricSystem": "System",
     "metricNetwork": "Nettverk",
     "metricProcesses": "Prosesser",
-    "categoryMonitoring": "Monitoring",
-    "noPingUrls": "No URLs configured",
-    "pingLabel": "Label",
-    "addPingUrl": "Add URL",
-    "showLatency": "Show Latency",
-    "refreshInterval": "Refresh Interval",
+    "categoryMonitoring": "Overvåking",
+    "noPingUrls": "Ingen nettadresser konfigurert",
+    "pingLabel": "Merkelapp",
+    "addPingUrl": "Legg til nettadresse",
+    "showLatency": "Vis latens",
+    "refreshInterval": "Oppdateringsintervall",
     "seconds": "sekunder",
-    "filterActivityTypes": "Filter Types",
-    "filterTypesHint": "Leave empty to show all",
-    "showTimestamp": "Show Timestamp",
-    "uptimeUnavailable": "Uptime unavailable",
+    "filterActivityTypes": "Filtertyper",
+    "filterTypesHint": "La stå tomt for å vise alle",
+    "showTimestamp": "Vis tidsstempel",
+    "uptimeUnavailable": "Oppetid utilgjengelig",
     "uptimeLabel": "Oppetid",
     "overviewVersion": "Versjon",
-    "overviewUpdateLabel": "Update",
-    "overviewUpdateAvailable": "Update available",
+    "overviewUpdateLabel": "Oppdatering",
+    "overviewUpdateAvailable": "Oppdatering tilgjengelig",
     "overviewDatabase": "Database",
     "overviewUptime": "Oppetid",
-    "noHosts": "No hosts configured",
+    "noHosts": "Ingen verter konfigurert",
     "hostGridHosts": "Verter",
-    "hostGridAllHint": "Leave empty to show all hosts",
-    "columns": "Columns",
-    "showIp": "Show IP Address",
-    "layout": "Layout",
-    "showStatus": "Show Status",
-    "noActivity": "No activity",
-    "widgetPingStatusName": "Ping Status",
+    "hostGridAllHint": "La stå tomt for å vise alle verter",
+    "columns": "Kolonner",
+    "showIp": "Vis IP-adresse",
+    "layout": "Oppsett",
+    "showStatus": "Vis status",
+    "noActivity": "Ingen aktivitet",
+    "widgetPingStatusName": "Ping-status",
     "widgetRecentActivityName": "Nylig aktivitet",
-    "sshTerminalNoHost": "No host configured",
+    "sshTerminalNoHost": "Ingen vert konfigurert",
     "sshTerminalConnect": "Koble til",
-    "sshTerminalAutoConnect": "Auto-connect on load",
-    "connectionTypes": "Connection Types",
+    "sshTerminalAutoConnect": "Automatisk tilkobling ved lasting",
+    "connectionTypes": "Tilkoblingstyper",
     "calMon": "Mo",
-    "calTue": "Tu",
-    "calWed": "We",
-    "calThu": "Th",
+    "calTue": "Ti",
+    "calWed": "Vi",
+    "calThu": "To",
     "calFri": "Fr",
-    "calSat": "Sa",
-    "calSun": "Su",
-    "startOnMonday": "Start week on Monday",
-    "countdownNoDate": "No target date set",
-    "countdownPast": "Event has passed",
-    "countdownDays": "days",
-    "countdownHours": "hrs",
+    "calSat": "Lø",
+    "calSun": "Søn",
+    "startOnMonday": "Start uken på mandag",
+    "countdownNoDate": "Ingen måldato angitt",
+    "countdownPast": "Arrangementet har gått",
+    "countdownDays": "dager",
+    "countdownHours": "timer",
     "countdownMinutes": "min",
-    "countdownSeconds": "sec",
-    "countdownLabel": "Label",
-    "countdownLabelPlaceholder": "e.g. Launch Day",
-    "countdownShowDays": "Show Days",
-    "countdownShowHours": "Show Hours",
-    "targetDate": "Target Date",
-    "searchEngine": "Search Engine",
-    "customSearchUrl": "Custom Search URL",
-    "searchPlaceholder": "Search...",
-    "searchGo": "Go",
-    "searchPlaceholderLabel": "Placeholder Text",
-    "searchPlaceholderHint": "Text shown inside the search input",
-    "openInNewTab": "Open in New Tab",
-    "searchQueryPlaceholder": "Enter query...",
-    "noSearchShortcuts": "No shortcuts configured",
-    "addSearchShortcut": "Add Shortcut",
+    "countdownSeconds": "sek",
+    "countdownLabel": "Merkelapp",
+    "countdownLabelPlaceholder": "f.eks. lanseringsdag",
+    "countdownShowDays": "Vis dager",
+    "countdownShowHours": "Åpningstider",
+    "targetDate": "Måldato",
+    "searchEngine": "Søkemotor",
+    "customSearchUrl": "Tilpasset søke-URL",
+    "searchPlaceholder": "Søk...",
+    "searchGo": "Gå",
+    "searchPlaceholderLabel": "Plassholdertekst",
+    "searchPlaceholderHint": "Tekst vist i søkefeltet",
+    "openInNewTab": "Åpne i ny fane",
+    "searchQueryPlaceholder": "Skriv inn spørring...",
+    "noSearchShortcuts": "Ingen snarveier konfigurert",
+    "addSearchShortcut": "Legg til snarvei",
     "fontSize": "Skriftstørrelse",
-    "textAlign": "Text Align",
-    "fontWeight": "Font Weight",
-    "clearColor": "Clear Color",
-    "imageFit": "Image Fit",
-    "imageLinkUrl": "Link URL",
-    "noImage": "No image URL set",
-    "altText": "Alt Text",
-    "altTextPlaceholder": "Describe the image",
-    "renderMarkdown": "Render Markdown",
-    "displayMode": "Display Mode",
-    "displayField": "Display Field",
-    "jsonPath": "JSON Path",
-    "customApiLabel": "Label",
-    "customApiLabelPlaceholder": "e.g. Temperature",
-    "customApiUnit": "Unit",
-    "customApiNoUrl": "No API URL configured",
-    "customApiError": "Failed to fetch",
-    "customApiNotArray": "Response is not an array",
-    "addService": "Add Service",
-    "showLabels": "Show Labels",
-    "iconSize": "Icon Size",
-    "noDashboardLinks": "No dashboard links configured",
-    "noLimit": "No limit",
-    "sectionHeading": "Section Heading",
-    "addSection": "Add Section",
-    "compactMode": "Compact Mode",
-    "selectHosts": "Select Hosts",
+    "textAlign": "Tekstjustering",
+    "fontWeight": "Skriftvekt",
+    "clearColor": "Klar farge",
+    "imageFit": "Bildetilpasning",
+    "imageLinkUrl": "Lenke-URL",
+    "noImage": "Ingen bilde-URL angitt",
+    "altText": "Alternativ tekst",
+    "altTextPlaceholder": "Beskriv bildet",
+    "renderMarkdown": "Gjengivelsesmarkering",
+    "displayMode": "Visningsmodus",
+    "displayField": "Visningsfelt",
+    "jsonPath": "JSON-sti",
+    "customApiLabel": "Merkelapp",
+    "customApiLabelPlaceholder": "f.eks. Temperatur",
+    "customApiUnit": "Enhet",
+    "customApiNoUrl": "Ingen API-URL konfigurert",
+    "customApiError": "Kunne ikke hente",
+    "customApiNotArray": "Responsen er ikke en matrise",
+    "addService": "Legg til tjeneste",
+    "showLabels": "Vis etiketter",
+    "iconSize": "Ikonstørrelse",
+    "noDashboardLinks": "Ingen dashbordlenker konfigurert",
+    "noLimit": "Ingen grense",
+    "sectionHeading": "Seksjonsoverskrift",
+    "addSection": "Legg til seksjon",
+    "compactMode": "Kompakt modus",
+    "selectHosts": "Velg verter",
     "listLayout": "Liste",
-    "gridLayout": "Grid",
-    "configureUrl": "Set a URL in the widget settings",
-    "embeddedContent": "Embedded content",
-    "noBookmarks": "No bookmarks",
-    "noSections": "No sections set up",
-    "noServices": "No services set up",
-    "configureLocation": "Set a location in the widget settings",
-    "bannerTextPlaceholder": "Banner text",
-    "serviceNamePlaceholder": "My service"
+    "gridLayout": "Rutenett",
+    "configureUrl": "Angi en URL i widgetinnstillingene",
+    "embeddedContent": "Innebygd innhold",
+    "noBookmarks": "Ingen bokmerker",
+    "noSections": "Ingen seksjoner er satt opp",
+    "noServices": "Ingen tjenester konfigurert",
+    "configureLocation": "Angi en plassering i widgetinnstillingene",
+    "bannerTextPlaceholder": "Bannertekst",
+    "serviceNamePlaceholder": "Min tjeneste",
+    "emptyNote": "Empty note...",
+    "weatherLoadFailed": "Could not load weather for \"{{location}}\"",
+    "feelsLike": "Feels like {{temperature}}",
+    "timezonePlaceholder": "America/New_York (leave blank for local)",
+    "notesPlaceholder": "Write your notes here...",
+    "locationPlaceholder": "New York, London, Tokyo...",
+    "widgets": {
+      "bookmark_list": {
+        "name": "Bookmarks",
+        "description": "A list of quick links"
+      },
+      "calendar": {
+        "name": "Calendar",
+        "description": "A month calendar with today highlighted"
+      },
+      "clock": {
+        "name": "Clock",
+        "description": "A live clock with configurable timezone"
+      },
+      "countdown": {
+        "name": "Countdown",
+        "description": "Counts down to a target date and time"
+      },
+      "custom_api": {
+        "name": "Custom API",
+        "description": "Fetch and display data from any JSON API"
+      },
+      "dashboard_links": {
+        "name": "Dashboard Links",
+        "description": "Shows your saved dashboard service links"
+      },
+      "folder": {
+        "name": "Folder",
+        "description": "A background card for grouping widgets visually"
+      },
+      "host_grid": {
+        "name": "Host Grid",
+        "description": "Live status overview grid for all your SSH hosts"
+      },
+      "host_status": {
+        "name": "Host Status",
+        "description": "Shows live status and metrics for an SSH host"
+      },
+      "iframe_embed": {
+        "name": "iFrame Embed",
+        "description": "Embed any URL in an iframe"
+      },
+      "image_widget": {
+        "name": "Image",
+        "description": "Display any image from a URL"
+      },
+      "link_tree": {
+        "name": "Link Tree",
+        "description": "Grouped links organized into labeled sections"
+      },
+      "markdown_notes": {
+        "name": "Markdown Notes",
+        "description": "Notes with optional Markdown rendering and inline editing"
+      },
+      "notes": {
+        "name": "Notes",
+        "description": "A text notes widget"
+      },
+      "ping_status": {
+        "name": "Ping Status",
+        "description": "Check if URLs or services are reachable"
+      },
+      "quick_connect": {
+        "name": "Quick Connect",
+        "description": "Launch terminal, files, docker, tunnels, and more for your hosts"
+      },
+      "recent_activity": {
+        "name": "Recent Activity",
+        "description": "Shows recent terminal, Docker, file, and tunnel activity"
+      },
+      "rss_feed": {
+        "name": "RSS Feed",
+        "description": "Display items from an RSS or Atom feed"
+      },
+      "search_bar": {
+        "name": "Search Bar",
+        "description": "Quick search with Google, DuckDuckGo, Bing, or a custom engine"
+      },
+      "search_links": {
+        "name": "Search Shortcuts",
+        "description": "Quick buttons to search different engines"
+      },
+      "service_grid": {
+        "name": "Service Grid",
+        "description": "A grid of service tiles with icons and links"
+      },
+      "service_link": {
+        "name": "Service Link",
+        "description": "A clickable tile linking to a service URL"
+      },
+      "ssh_terminal": {
+        "name": "SSH Terminal",
+        "description": "An inline SSH terminal connected to a configured host"
+      },
+      "system_overview": {
+        "name": "System Overview",
+        "description": "Termix version, database health, and uptime at a glance"
+      },
+      "termix_uptime": {
+        "name": "Termix Uptime",
+        "description": "Shows how long the Termix server has been running"
+      },
+      "text_banner": {
+        "name": "Text Banner",
+        "description": "A styled text label for sections and headings"
+      },
+      "weather": {
+        "name": "Weather",
+        "description": "Live weather for any location"
+      },
+      "docker_widget": {
+        "name": "Docker Manager",
+        "description": "Embedded Docker container manager for a configured host"
+      },
+      "file_manager_widget": {
+        "name": "File Manager",
+        "description": "Embedded SFTP file manager for a configured host"
+      },
+      "tunnel_widget": {
+        "name": "Tunnel Manager",
+        "description": "Embedded SSH tunnel manager for a configured host"
+      },
+      "metrics_chart": {
+        "name": "Metrics Chart",
+        "description": "Historical CPU, memory, disk, or network chart for a host"
+      }
+    }
   },
   "permissions": {
     "use": {
-      "title": "Use the homepage",
-      "description": "View and edit the homepage canvas and dashboard service links."
+      "title": "Bruk hjemmesiden",
+      "description": "Vis og rediger lenkene til startsidens lerret og dashbordtjenesten."
     }
   },
   "settings": {
     "privateEndpoints": {
-      "label": "Allowed private hosts",
-      "description": "Exact private or loopback hostnames/IPs for Ping Status and Custom API widgets. Separate entries with commas or newlines; omit schemes, ports and paths. Empty blocks private destinations."
+      "label": "Tillatte private verter",
+      "description": "Nøyaktige private eller loopback-vertsnavn/IP-adresser for Ping-status og tilpassede API-widgeter. Skill oppføringer med komma eller linjeskift; utelat skjemaer, porter og stier. Tøm blokkering av private destinasjoner."
     },
     "privateCertificateAuthority": {
-      "label": "Private certificate authority (PEM)",
-      "description": "Optional trusted CA bundle for allowlisted hosts. Certificate verification remains enabled. Leave empty to use the system trust store."
+      "label": "Privat sertifikatmyndighet (PEM)",
+      "description": "Valgfri pakke med klarert CA for verter på tillatelseslisten. Sertifikatverifisering forblir aktivert. La stå tomt for å bruke systemets klareringslager."
     }
+  },
+  "plugin": {
+    "name": "Homepage"
   }
 }

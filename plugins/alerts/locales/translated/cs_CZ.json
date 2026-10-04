@@ -168,5 +168,8 @@
     "showRead": "Zobrazit upozornění na přečtení",
     "allClear": "Všechno čisté",
     "loading": "Načítání..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

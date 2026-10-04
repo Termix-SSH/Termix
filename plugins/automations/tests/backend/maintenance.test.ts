@@ -89,7 +89,7 @@ describe("host maintenance", () => {
     await service.tick();
     expect(server.mock.notifications).toHaveLength(0);
     server.mock.hostStatuses.set(1, {
-      status: "reachable",
+      status: "online",
       lastChecked: "2026-01-01T13:21Z",
     });
     await service.tick();

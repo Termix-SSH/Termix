@@ -25,9 +25,9 @@
     "tab": "Tab"
   },
   "terminal": {
-    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
-    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
-    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "autoTmuxEnableFailed": "啟用自動 Tmux 失敗",
+    "autoTmuxEnabled": "對 {{host}}啟用自動 Tmux。它從下一個連接開始生效。",
+    "clipboardHttpWarning": "無法讀取剪貼簿內容。部分瀏覽器限制在 HTTPS 協定之外存取剪貼簿－請嘗試使用 Ctrl+V 貼上，或透過 HTTPS 協定存取 Termix。",
     "closeTab": "關閉",
     "connecting": "連線中...",
     "connectionLost": "連線中斷",
@@ -44,18 +44,18 @@
     "reconnect": "重新連線",
     "reconnected": "已成功重新連線",
     "reconnecting": "重新連線中... ({{attempt}}/{{max}})",
-    "autoReconnecting": "Connection lost, reconnecting...",
-    "searchCaseSensitive": "Match Case",
-    "searchClose": "Close (Escape)",
-    "searchNext": "Next Match (Enter)",
-    "searchNoResults": "No results",
-    "searchPlaceholder": "Find",
-    "searchPrevious": "Previous Match (Shift+Enter)",
-    "searchRegex": "Use Regular Expression",
-    "searchResultCount": "{{index}} of {{count}}",
-    "searchWholeWord": "Match Whole Word",
-    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
-    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "autoReconnecting": "連線遺失，正在重新連線…",
+    "searchCaseSensitive": "火柴盒",
+    "searchClose": "關閉（退出）",
+    "searchNext": "下一場比賽（輸入）",
+    "searchNoResults": "沒有結果",
+    "searchPlaceholder": "尋找",
+    "searchPrevious": "最後一場比賽（Shift+Enter）",
+    "searchRegex": "使用正規表示式",
+    "searchResultCount": "{{index}} 的 {{count}}",
+    "searchWholeWord": "整詞匹配",
+    "sessionExpiredNotice": "您之前在 {{host}} 上的會話已在 {{minutes}} 分鐘後斷開連接並過期；shell 及其中運行的所有內容均已丟失。請在此主機上啟用 Auto-Tmux 以保持會話連線。",
+    "sessionExpiredNoticeNoMinutes": "您先前在 {{host}} 上的會話已過期，且已斷線；shell 及其中執行的所有內容均已遺失。請在此主機上啟用 Auto-Tmux 以保持會話有效。",
     "sessionTakenOver": "工作階段已在另一個分頁中開啟。正在重新連線…",
     "tmuxAttached": "已附加的用戶端",
     "tmuxAttachedCount": "{{count}} 個已附加",
@@ -81,35 +81,35 @@
     "clipboardWriteFailed": "複製到剪貼簿失敗。請確認頁面是透過 HTTPS 或 localhost 提供。",
     "connected": "已連線",
     "totpCodeLabel": "驗證碼",
-    "duplicateTab": "Duplicate tab",
-    "imageChooseFile": "Choose an image file",
-    "imageUploaded": "Image uploaded: {{path}}",
-    "imageClipboardUnavailable": "This browser cannot read images from the clipboard",
-    "imageClipboardEmpty": "No image found in the clipboard",
-    "localShell": "Local terminal shell",
-    "autocompleteHintComplete": "Tab or Enter to complete",
-    "autocompleteHintNavigate": "↑↓ to navigate",
-    "autocompleteHintClose": "Esc to close"
+    "duplicateTab": "重複標籤頁",
+    "imageChooseFile": "選擇圖像文件",
+    "imageUploaded": "上傳圖片： {{path}}",
+    "imageClipboardUnavailable": "此瀏覽器無法讀取剪貼簿中的圖像",
+    "imageClipboardEmpty": "剪貼簿中未找到影像",
+    "localShell": "本地端 shell",
+    "autocompleteHintComplete": "按 Tab 鍵或 Enter 鍵完成",
+    "autocompleteHintNavigate": "向上向下導航",
+    "autocompleteHintClose": "按 Esc 鍵關閉"
   },
   "terminalToolbar": {
-    "detachTmux": "Detach tmux",
-    "detachTmuxDescription": "Detach tmux session",
-    "dismissError": "Dismiss image error",
-    "hideToolbar": "Hide toolbar",
-    "image": "Image actions (images only)",
-    "imageActionFailed": "Image action failed",
-    "layout": "Toolbar display mode",
-    "layoutExpanded": "Expanded with metrics",
-    "layoutIcon": "Icon only",
-    "layoutLabeled": "Icons and labels",
-    "moveToolbar": "Move toolbar",
-    "moveToolbarHint": "Drag to reposition the toolbar",
-    "paste": "Paste image",
-    "pasteImage": "Paste image from clipboard (images only)",
+    "detachTmux": "分離 tmux",
+    "detachTmuxDescription": "分離 tmux 會話",
+    "dismissError": "忽略圖像錯誤",
+    "hideToolbar": "隱藏工具列",
+    "image": "圖片操作（僅限圖片）",
+    "imageActionFailed": "圖片操作失敗",
+    "layout": "工具列顯示模式",
+    "layoutExpanded": "擴展了指標",
+    "layoutIcon": "僅圖示",
+    "layoutLabeled": "圖標和標籤",
+    "moveToolbar": "移動工具列",
+    "moveToolbarHint": "拖曳即可重新定位工具列",
+    "paste": "貼上圖片",
+    "pasteImage": "從剪貼簿貼上圖片（僅限圖片）",
     "retry": "重試",
     "showToolbar": "展開工具列",
-    "upload": "Upload image",
-    "uploadImage": "Upload an image to the host",
+    "upload": "上傳圖片",
+    "uploadImage": "將圖片上傳到主機",
     "uploadingImage": "上傳中..."
   },
   "history": {
@@ -119,153 +119,153 @@
     "clearAll": "全部清除",
     "noHistoryEntries": "無歷史記錄項目",
     "trackingDisabled": "歷史記錄追蹤已停用",
-    "trackingDisabledHint": "Turn on Command History in this host's SSH Terminal tab.",
-    "commandCount_one": "{{count}} command",
-    "commandCount_other": "{{count}} commands"
+    "trackingDisabledHint": "在該主機的 SSH 終端機標籤中啟用命令歷史記錄。",
+    "commandCount_one": "{{count}} 指令",
+    "commandCount_other": "{{count}} 指令"
   },
   "touchInput": {
-    "enabled": "Enable Touch Input",
-    "enabledDesc": "Allow one-finger touch scrolling in terminals",
-    "momentumEnabled": "Enable Momentum",
-    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "enabled": "啟用觸控輸入",
+    "enabledDesc": "允許終端單指觸摸滾動",
+    "momentumEnabled": "啟用動能",
+    "momentumEnabledDesc": "滑動後繼續短暫滾動。",
     "advanced": "進階",
     "resetDefaults": "重設為預設值",
-    "dragThreshold": "Drag threshold",
-    "maxWheelDelta": "Maximum wheel delta",
-    "momentumSampleWindow": "Momentum sample window",
-    "releaseGracePeriod": "Release grace period",
-    "minimumVelocity": "Minimum velocity",
-    "maximumVelocity": "Maximum velocity",
-    "maximumDuration": "Maximum duration",
-    "maximumTravel": "Maximum travel",
-    "decayTime": "Decay time",
-    "pixelsPerTick": "Pixels per tick",
-    "maximumFrameInterval": "Maximum frame interval",
-    "maximumTicksPerFrame": "Maximum ticks per frame"
+    "dragThreshold": "阻力閾值",
+    "maxWheelDelta": "最大車輪增量",
+    "momentumSampleWindow": "動量樣本窗口",
+    "releaseGracePeriod": "發布寬限期",
+    "minimumVelocity": "最低速度",
+    "maximumVelocity": "最大速度",
+    "maximumDuration": "最長持續時間",
+    "maximumTravel": "最大行程",
+    "decayTime": "衰減時間",
+    "pixelsPerTick": "每刻像素數",
+    "maximumFrameInterval": "最大訊框間隔",
+    "maximumTicksPerFrame": "每格最大幀數"
   },
   "imageStorage": {
-    "instanceId": "Terminal session instance ID",
-    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
-    "selectedModeUnavailable": "Unavailable",
+    "instanceId": "終端機會話實例 ID",
+    "instanceIdDesc": "用於測試可見性的已連接終端選項卡的實例 ID。",
+    "selectedModeUnavailable": "不可用",
     "test": "測試",
-    "testing": "Testing...",
-    "testFailed": "Failed to test image storage",
-    "testConnected": "Terminal session is connected.",
-    "testNotConnected": "No connected terminal session with this instance ID.",
-    "testSelectedMode": "An upload would use: {{mode}}",
-    "testLocalVisible": "The local directory is visible from the connected host.",
-    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+    "testing": "測試中…",
+    "testFailed": "影像儲存測試失敗",
+    "testConnected": "終端會話已連線。",
+    "testNotConnected": "沒有與此實例 ID 連線的終端會話。",
+    "testSelectedMode": "上傳時請使用： {{mode}}",
+    "testLocalVisible": "本機目錄對連接的主機可見。",
+    "testLocalNotVisible": "從連線的主機上看不到本機目錄。"
   },
   "settings": {
     "admin": {
       "group": {
-        "touch": "Touch Input",
-        "images": "Image Storage",
+        "touch": "觸摸輸入",
+        "images": "影像儲存",
         "sessions": "工作階段",
-        "newHosts": "New Hosts"
+        "newHosts": "新主持人"
       },
       "sessionTimeoutMinutes": {
-        "label": "Terminal Session Persistence",
-        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1, max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+        "label": "終端會話持久性",
+        "description": "斷開連線的終端機在伺服器上保持活動狀態的時間，最短 1 分鐘，最長 1440 分鐘。對於必須保持活動狀態超過此時間的會話，請在主機上啟用自動終端機重複使用 (Auto-Tmux)。"
       },
       "commandHistoryEnabled": {
         "label": "指令歷程",
         "description": "允許記錄指令歷史記錄。停用時，無論各主機設定如何，都不會儲存歷史記錄。"
       },
       "commandHistoryForNewHosts": {
-        "label": "Command history for new hosts",
-        "description": "Whether new hosts start with command history on."
+        "label": "新主機的命令歷史記錄",
+        "description": "是否開啟新主機的命令歷史記錄功能。"
       },
       "imageStorageMode": {
-        "label": "Storage Mode",
-        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "label": "儲存模式",
+        "description": "終端鏡像貼上和上傳位置已設定。自動選擇連接、本機和遠端（SFTP）鏡像的功能已修復。",
         "auto": "自動",
         "local": "本機",
-        "remoteSftp": "Remote (SFTP)"
+        "remoteSftp": "遠端（SFTP）"
       },
       "imageLocalDir": {
-        "label": "Local directory",
-        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+        "label": "本地目錄",
+        "description": "Termix 後端本機模式寫入映像的絕對路徑。儲存後不再顯示。空路徑使用 TERMIX_IMAGE_DIR。"
       },
       "imageHostPath": {
-        "label": "Host path",
-        "description": "The host-side view of the local directory that terminal agents receive."
+        "label": "主機路徑",
+        "description": "終端代理接收到的本機目錄的主機端視圖。"
       },
       "imageTtlMs": {
-        "label": "TTL (ms)",
-        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+        "label": "TTL（毫秒）",
+        "description": "上傳的圖片保留時間，以毫秒為單位。空圖片使用 TERMIX_IMAGE_TTL_MS，即一小時。"
       },
       "imageMaxCount": {
-        "label": "Max image count",
-        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+        "label": "最大影像數量",
+        "description": "一次保留大部分影像。空集合使用 TERMIX_MAX_IMAGE_COUNT 或 100。"
       },
       "imageMaxBytes": {
-        "label": "Max storage bytes",
-        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+        "label": "最大儲存位元組",
+        "description": "一次儲存最多位元組的圖像。空影像使用 TERMIX_MAX_IMAGE_STORAGE_BYTES 或 5 GiB。"
       },
       "sessionPersistence": {
-        "label": "Keep sessions after disconnect",
-        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+        "label": "斷開連線後仍保持會話",
+        "description": "在上述時間內，保持伺服器上斷開連線的終端機處於活動狀態，以便重新開啟其標籤頁時可以從上次中斷的地方繼續操作。"
       },
       "newHostAutoTmux": {
-        "label": "Auto-Tmux",
-        "description": "Run new hosts' terminals inside tmux so sessions survive disconnects (needs tmux on the host)"
+        "label": "自動 Tmux",
+        "description": "在 tmux 中執行新主機的終端，以便在斷開連線後會話仍然存在（主機上需要安裝 tmux）。"
       },
       "newHostTheme": {
-        "label": "Theme for new hosts",
-        "description": "The terminal theme a new host starts with."
+        "label": "新主持人主題",
+        "description": "新主機啟動時所使用的終端主題。"
       },
       "newHostFontFamily": {
-        "label": "Font for new hosts",
-        "description": "The terminal font a new host starts with."
+        "label": "新主機字體",
+        "description": "新主機啟動時所使用的終端字體。"
       },
       "newHostFontSize": {
-        "label": "Font size for new hosts",
-        "description": "The terminal font size a new host starts with, in pixels."
+        "label": "新主機字體大小",
+        "description": "新主機啟動時所使用的終端字體大小，以像素為單位。"
       },
       "newHostCursorStyle": {
-        "label": "Cursor style for new hosts"
+        "label": "新主機的遊標樣式"
       },
       "newHostCursorBlink": {
-        "label": "Blinking cursor for new hosts"
+        "label": "新主機閃爍遊標"
       }
     },
     "host": {
       "enableTerminalToolbar": {
-        "label": "Enable Terminal Toolbar",
-        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+        "label": "啟用終端機工具列",
+        "description": "在目前終端上顯示一個快速存取工具列，用於存取該主機的工具和即時統計資訊。"
       },
       "terminalToolbarPosition": {
-        "label": "Toolbar Position",
-        "description": "Where the toolbar sits in the terminal. You can still drag it from there.",
-        "bottom": "Bottom center",
-        "bottomLeft": "Bottom left",
-        "bottomRight": "Bottom right",
-        "top": "Top center",
-        "topLeft": "Top left",
-        "topRight": "Top right"
+        "label": "工具列位置",
+        "description": "工具列位於終端機中的位置。您仍然可以從那裡拖曳它。",
+        "bottom": "底部中心",
+        "bottomLeft": "左下角",
+        "bottomRight": "右下角",
+        "top": "頂部中心",
+        "topLeft": "左上",
+        "topRight": "右上角"
       },
       "terminalToolbarStartState": {
-        "label": "Toolbar Start State",
-        "description": "Whether the toolbar opens expanded or minimized when the terminal connects",
-        "expanded": "Expanded",
-        "collapsed": "Minimized"
+        "label": "工具列起始狀態",
+        "description": "終端連接時工具列是以展開形式還是最小化形式打開",
+        "expanded": "擴充",
+        "collapsed": "最小化"
       },
       "terminalToolbarDisplay": {
-        "label": "Toolbar Display Mode",
-        "description": "How toolbar buttons are shown. Last used keeps whatever you picked in the toolbar.",
-        "remember": "Last used",
-        "icon": "Icon only",
-        "labeled": "Icons and labels",
-        "expanded": "Expanded with stats"
+        "label": "工具列顯示模式",
+        "description": "工具列按鈕的顯示方式。 「上次使用」選項會保留您在工具列中選擇的內容。",
+        "remember": "上次使用",
+        "icon": "僅圖示",
+        "labeled": "圖標和標籤",
+        "expanded": "補充統計數據"
       },
       "terminalToolbarShowStatus": {
-        "label": "Show Live Stats",
-        "description": "Show live host stats above the toolbar buttons in expanded mode"
+        "label": "顯示即時統計數據",
+        "description": "在展開模式下，工具列按鈕上方顯示即時主持人統計訊息"
       },
       "terminalToolbarFade": {
-        "label": "Fade When Idle",
-        "description": "Fade the toolbar out until you hover over it"
+        "label": "空閒時淡出",
+        "description": "將工具列淡出，直到滑鼠懸停在其上方。"
       },
       "enableCommandHistory": {
         "label": "指令歷程",
@@ -273,148 +273,148 @@
       },
       "enableTerminal": {
         "label": "啟用終端機",
-        "description": "Offer an SSH terminal for this host."
+        "description": "為該主機提供 SSH 終端。"
       },
       "inheritAppearance": {
-        "label": "Use user defaults"
+        "label": "使用用戶預設設定"
       },
       "theme": {
         "label": "主題"
       },
       "cursorBlink": {
-        "label": "Blinking cursor"
+        "label": "閃爍的遊標"
       },
       "cursorStyle": {
-        "label": "Cursor style"
+        "label": "遊標樣式"
       },
       "fontSize": {
-        "label": "Font size"
+        "label": "字體大小"
       },
       "fontFamily": {
-        "label": "Font"
+        "label": "字體"
       },
       "scrollback": {
-        "label": "Scrollback"
+        "label": "返回"
       },
       "letterSpacing": {
-        "label": "Letter spacing"
+        "label": "字母間距"
       },
       "lineHeight": {
-        "label": "Line height"
+        "label": "行高"
       },
       "bellStyle": {
-        "label": "Bell"
+        "label": "鐘"
       },
       "minimumContrastRatio": {
-        "label": "Minimum contrast ratio"
+        "label": "最小對比度"
       },
       "backgroundImage": {
-        "label": "Background image"
+        "label": "背景圖片"
       },
       "backgroundImageOpacity": {
-        "label": "Background image opacity"
+        "label": "背景圖像不透明度"
       },
       "customThemeColors": {
-        "label": "Custom theme colors"
+        "label": "自訂主題顏色"
       },
       "rightClickSelectsWord": {
-        "label": "Right click selects word"
+        "label": "右鍵單擊選擇單字"
       },
       "macOptionIsMeta": {
-        "label": "Option is Meta"
+        "label": "選項是 Meta"
       },
       "fastScrollModifier": {
-        "label": "Fast scroll key"
+        "label": "快速滾動鍵"
       },
       "fastScrollSensitivity": {
-        "label": "Fast scroll speed"
+        "label": "快速滾動速度"
       },
       "backspaceMode": {
-        "label": "Backspace"
+        "label": "退格鍵"
       },
       "autoMosh": {
-        "label": "Auto mosh"
+        "label": "自動衝撞"
       },
       "moshCommand": {
-        "label": "Mosh command"
+        "label": "Mosh 指令"
       },
       "autoTmux": {
-        "label": "Auto tmux"
+        "label": "自動 tmux"
       },
       "useSSHTitle": {
-        "label": "Use the SSH title"
+        "label": "使用 SSH 標題"
       },
       "syntaxHighlighting": {
-        "label": "Syntax highlighting"
+        "label": "語法高亮"
       },
       "syntaxHighlightingOptions": {
-        "label": "Syntax highlighting categories"
+        "label": "語法高亮類別"
       },
       "linkClickBehavior": {
-        "label": "Link click"
+        "label": "點擊連結"
       },
       "localEcho": {
-        "label": "Local echo"
+        "label": "本地迴聲"
       },
       "passwordPromptAutoFill": {
-        "label": "Offer to fill password prompts"
+        "label": "主動提供密碼提示訊息"
       },
       "sudoPasswordAutoFill": {
-        "label": "Fill sudo prompts"
+        "label": "填寫 sudo 提示符"
       },
       "autoReconnect": {
-        "label": "Reconnect automatically"
+        "label": "自動重新連接"
       }
     },
     "user": {
       "commandAutocomplete": {
         "label": "指令自動完成",
-        "description": "Show autocomplete while typing if you press tab"
+        "description": "輸入時按 Tab 鍵可顯示自動完成功能。"
       },
       "localEcho": {
-        "label": "Local Echo",
-        "description": "Reduce perceived input latency using safe local keystroke prediction"
+        "label": "本地迴聲",
+        "description": "利用安全的本地按鍵預測來降低感知輸入延遲"
       },
       "linkClickBehavior": {
         "label": "終端機連結點選",
         "description": "在終端機中點選連結時的預設行為"
       },
       "customThemes": {
-        "label": "Saved themes"
+        "label": "已儲存的主題"
       }
     }
   },
   "palette": {
-    "localTerminal": "Local Terminal"
+    "localTerminal": "本地端"
   },
   "permissions": {
     "sessions": {
-      "title": "Use live terminal sessions",
-      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+      "title": "使用即時終端會話",
+      "description": "允許其他功能（例如會話共享和錄製）存取您的即時終端會話。"
     },
     "history": {
-      "title": "Read command history",
-      "description": "Lets other features, such as the AI assistant, read your command history."
+      "title": "讀取命令歷史記錄",
+      "description": "允許其他功能（例如 AI 助理）讀取您的命令歷史記錄。"
     }
   },
   "hosts": {
     "tabTerminal": "終端機",
     "addHost": "新增主機",
-    "applyGlobalThemeTooltip": "Apply this theme",
+    "applyGlobalThemeTooltip": "應用此主題",
     "backgroundImageDesc": "選用的終端機背景圖片 URL",
     "backgroundImageLabel": "背景圖片 URL",
     "backgroundImageOpacityLabel": "背景圖片不透明度",
     "backspaceMode": "退格鍵模式",
-    "backspaceModeControlH": "Control-H (BS)",
+    "backspaceModeControlH": "Control-H（BS）",
     "backspaceModeLabel": "退格鍵模式",
-    "backspaceModeNormal": "Normal (DEL)",
+    "backspaceModeNormal": "正常（DEL）",
     "behaviorAndAdvanced": "行為與進階",
     "bellStyle": "鈴聲樣式",
-    "bellStyleBoth": "Both",
+    "bellStyleBoth": "兩個都",
     "bellStyleLabel": "鈴聲樣式",
     "bellStyleNone": "沒有",
-    "bellStyleSound": "Sound",
-    "bellStyleVisual": "Visual",
+    "bellStyleSound": "聲音",
+    "bellStyleVisual": "視覺的",
     "colorTheme": "色彩主題",
     "cursorBlink": "游標閃爍",
     "cursorBlinking": "游標閃爍",
@@ -448,12 +448,12 @@
     "customThemeSelection": "選取範圍",
     "customThemeWhite": "白色",
     "customThemeYellow": "黃色",
-    "deleteGlobalThemeTooltip": "Delete this theme",
+    "deleteGlobalThemeTooltip": "刪除此主題",
     "docsLink": "檢視文件",
     "enableAutoMosh": "啟用自動 Mosh",
     "enableAutoMoshDesc": "如果可用，優先使用 Mosh 而非 SSH",
     "enableAutoTmux": "啟用自動 Tmux",
-    "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
+    "enableAutoTmuxDesc": "透過在 tmux 中執行（tmux 必須安裝在主機上），可以在斷開連線和瀏覽器重新啟動後保持 shell 及其中執行的所有內容處於活動狀態。",
     "fastScrollModifier": "快速捲動修飾鍵",
     "fastScrollModifierAlt": "Alt",
     "fastScrollModifierCtrl": "Ctrl",
@@ -462,9 +462,9 @@
     "fastScrollSensitivity": "快速捲動靈敏度",
     "fastScrollSensitivityLabel": "快速捲動靈敏度",
     "fontFamily": "字型系列",
-    "fontFamilyCustomHint": "Pick a bundled font, or choose Custom and type the exact name of a font already installed on your system (e.g. MesloLGS NF, Noto Sans Mono). Termix cannot install fonts for you, install it on your OS first.",
-    "fontFamilyCustomOption": "Custom...",
-    "fontFamilyCustomPlaceholder": "Exact font name, e.g. MesloLGS NF",
+    "fontFamilyCustomHint": "您可以選擇內建字體，或選擇「自訂」並輸入系統中已安裝字體的確切名稱（例如 MesloLGS NF、Noto Sans Mono）。 Termix 無法自動安裝字體，請先在您的作業系統上安裝字體。",
+    "fontFamilyCustomOption": "風俗...",
+    "fontFamilyCustomPlaceholder": "確切的字體名稱，例如 MesloLGS NF",
     "fontFamilyLabel": "字型系列",
     "fontSize": "字型大小",
     "fontSizeLabel": "字型大小",
@@ -478,29 +478,29 @@
     "linkClickBehaviorDirect": "直接開啟",
     "linkClickBehaviorLabel": "連結點擊行為",
     "loadingHost": "正在載入主機...",
-    "localEchoAuto": "Automatic",
-    "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
-    "localEchoLabel": "Local Echo",
+    "localEchoAuto": "自動的",
+    "localEchoDesc": "在連線速度較慢的情況下，本地預測可安全列印的按鍵操作。密碼提示和控制輸入永遠不會被回顯。",
+    "localEchoLabel": "本地迴聲",
     "localEchoOff": "關閉",
-    "localEchoOn": "Always on",
-    "macOptionIsMetaLabel": "Option Key Sends Meta",
-    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
+    "localEchoOn": "始終開啟",
+    "macOptionIsMetaLabel": "選項鍵發送元數據",
+    "macOptionIsMetaShortDesc": "停用在 macOS 上使用 Option/Alt 鍵輸入特殊字元（例如 @ 或 |）而不是傳送 Meta 訊息的功能。",
     "moshCommand": "MOSH 指令",
     "moshCommandLabel": "Mosh 命令",
-    "noSavedThemes": "No saved themes yet",
+    "noSavedThemes": "尚未儲存任何主題",
     "none": "無",
-    "passwordPromptAutoFillDesc": "Offer to fill in the saved password when the terminal asks for one. Turn off to never auto-fill any password on this host.",
-    "passwordPromptAutoFillLabel": "Offer Password Auto-fill",
-    "autoReconnectLabel": "Auto Reconnect",
-    "autoReconnectDesc": "Reconnect on its own when the SSH connection drops, like after a network blip or sleep. Keeps the scrollback.",
+    "passwordPromptAutoFillDesc": "當終端機要求輸入密碼時，提示輸入已儲存的密碼。關閉此選項可使此主機上的任何密碼永不自動填入。",
+    "passwordPromptAutoFillLabel": "提供密碼自動填入功能",
+    "autoReconnectLabel": "自動重新連接",
+    "autoReconnectDesc": "當 SSH 連線中斷時（例如網路中斷或睡眠後），會自動重新連線。保留滾動條。",
     "rightClickSelectsWord": "按右鍵選取單字",
     "rightClickSelectsWordLabel": "右鍵選取單字",
     "rightClickSelectsWordShortDesc": "右鍵點擊時選取游標下的單字",
-    "saveAsGlobalTheme": "Save as Global Theme",
-    "saveGlobalThemeError": "Failed to save theme",
-    "saveGlobalThemeNamePrompt": "Enter a name for this theme",
-    "saveGlobalThemeSuccess": "Theme saved",
-    "savedThemesLabel": "Saved Themes",
+    "saveAsGlobalTheme": "另存為全域主題",
+    "saveGlobalThemeError": "主題保存失敗",
+    "saveGlobalThemeNamePrompt": "請為此主題輸入名稱",
+    "saveGlobalThemeSuccess": "主題已儲存",
+    "savedThemesLabel": "已儲存的主題",
     "scrollbackBufferLabel": "回滾緩衝區",
     "scrollbackMaxLines": "歷史記錄保留的最大行數",
     "sudoPasswordAutoFill": "Sudo 密碼自動填寫",
@@ -533,11 +533,11 @@
     "proxmoxLastSyncStatus": {
       "success": "成功"
     },
-    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
-    "proxmoxStatsUrlCopied": "Proxmox Stats URL copied to clipboard",
+    "proxmoxResultSkippedNoIp": "{{count}} 已跳過（找不到 IP 位址）",
+    "proxmoxStatsUrlCopied": "Proxmox 統計資料 URL 已複製到剪貼簿",
     "rdpUrlCopied": "RDP URL 已複製",
     "vncUrlCopied": "VNC URL 已複製",
-    "filterAuthStepca": "Step CA",
+    "filterAuthStepca": "步驟 CA",
     "guac": {
       "noCredential": "無憑證（下方直接輸入憑證）",
       "authTypeDirect": "直接",
@@ -556,18 +556,18 @@
       "updateHostBtn": "更新主機",
       "addHostBtn": "新增主機"
     },
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "保險庫"
   },
   "nav": {
     "history": "歷史記錄",
-    "localTerminal": "Local Terminal",
+    "localTerminal": "本地端",
     "sshTools": "SSH 工具",
     "terminal": "終端機",
-    "macros": "Macros"
+    "macros": "宏"
   },
   "sshTools": {
     "broadcastInputPlaceholder": "在此輸入以廣播按鍵輸入...",
-    "copyOnSelect": "Copy selected text automatically",
+    "copyOnSelect": "自動複製選取文本",
     "enableRightClickCopyPaste": "啟用右鍵複製/貼上",
     "fillPassword": "填入密碼",
     "fillPasswordMissing": "選取的 {{count}} 個終端機沒有已儲存的密碼",
@@ -583,123 +583,126 @@
     "stopRecording": "停止錄製"
   },
   "keybindings": {
-    "copy": "Copy selection",
+    "copy": "複製選擇",
     "paste": "貼上",
-    "sendControlCode": "Send Ctrl+letter signal",
-    "sendText": "Send text",
-    "controlCodeLabel": "Letter",
-    "textLabel": "Text to send",
-    "appendEnterLabel": "Press Enter after sending",
-    "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers.",
-    "textRequired": "Enter the text to send",
-    "controlCodeRequired": "Enter a single letter for the control code",
+    "sendControlCode": "發送 Ctrl+字母訊號",
+    "sendText": "傳簡訊",
+    "controlCodeLabel": "信",
+    "textLabel": "發送的文字",
+    "appendEnterLabel": "發送後按回車鍵",
+    "clipboardPermissionNote": "某些瀏覽器在首次使用時可能會提示授予剪貼簿權限。",
+    "textRequired": "請輸入要發送的文字",
+    "controlCodeRequired": "請輸入單一字母作為控制碼",
     "builtIn": {
-      "copyCtrlC": "Copy selection (Ctrl+C, only when text is selected)",
-      "copyCtrlShiftC": "Copy selection (Ctrl+Shift+C)",
-      "copyCmdC": "Copy selection (Cmd+C)",
-      "pasteCtrlShiftV": "Paste from clipboard (Ctrl+Shift+V)",
-      "ctrlW": "Send Ctrl+W to shell (blocked from closing browser tab)",
-      "ctrlT": "Send Ctrl+T to shell (blocked from opening browser tab)",
-      "ctrlN": "Send Ctrl+N to shell (blocked from opening browser window)",
-      "ctrlQ": "Send Ctrl+Q to shell (blocked from quitting browser)"
+      "copyCtrlC": "複製所選內容（Ctrl+C，僅在選取文字時可用）",
+      "copyCtrlShiftC": "複製所選內容（Ctrl+Shift+C）",
+      "copyCmdC": "複製選定內容（Cmd+C）",
+      "pasteCtrlShiftV": "從剪貼簿貼上（Ctrl+Shift+V）",
+      "ctrlW": "向 shell 發送 Ctrl+W（阻止關閉瀏覽器標籤頁）",
+      "ctrlT": "向 shell 發送 Ctrl+T（阻止開啟瀏覽器標籤頁）",
+      "ctrlN": "向 shell 發送 Ctrl+N（阻止開啟瀏覽器視窗）",
+      "ctrlQ": "向 shell 發送 Ctrl+Q（阻止退出瀏覽器）"
     }
   },
   "macros": {
-    "title": "Macros",
-    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "title": "宏",
+    "description": "在終端機中執行已儲存的一系列命令，並對伺服器傳回的內容做出反應。",
     "target": "目標",
-    "noTerminal": "No terminal open",
-    "empty": "No macros yet",
-    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
-    "create": "New macro",
-    "back": "Back to macros",
+    "noTerminal": "沒有終端機打開",
+    "empty": "暫無宏",
+    "emptyHint": "建立一個巨集來自動化終端流程，例如登入、重新啟動服務或回答提示。",
+    "create": "新宏",
+    "back": "回傳宏",
     "name": "名稱",
-    "namePlaceholder": "Restart web server",
-    "nameRequired": "Give the macro a name before saving",
+    "namePlaceholder": "重啟Web伺服器",
+    "nameRequired": "儲存之前，請先為巨集命名。",
     "descriptionLabel": "說明",
-    "descriptionPlaceholder": "What this macro does (optional)",
+    "descriptionPlaceholder": "此巨集的功能（選用）",
     "unsaved": "未儲存的變更",
     "save": "儲存",
-    "saved": "Macro saved",
-    "saveFailed": "Could not save the macro",
+    "saved": "巨集已儲存",
+    "saveFailed": "無法保存巨集",
     "delete": "刪除",
-    "deleteTitle": "Delete this macro?",
-    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
-    "deleted": "Macro deleted",
+    "deleteTitle": "刪除這個巨集？",
+    "deleteBody": "“{{name}}”將永久刪除。此操作無法撤銷。",
+    "deleted": "巨集已刪除",
     "cancel": "取消",
     "run": "執行",
     "stop": "停止位元",
-    "running": "Running...",
-    "completed": "Macro finished",
-    "failed": "Macro failed",
-    "loadFailed": "Could not load macros",
-    "needTerminal": "Open and connect a terminal first",
-    "noSteps": "This macro has no steps yet. Add one below.",
-    "addStep": "Add step",
-    "stepNumber": "Step {{number}}",
-    "removeStep": "Remove step",
-    "confirmRunTitle": "Run this macro?",
-    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
-    "confirmRunAction": "Run macro",
+    "running": "跑步...",
+    "completed": "巨集已完成",
+    "failed": "巨集失敗",
+    "loadFailed": "無法載入巨集。",
+    "needTerminal": "首先打開並連接終端。",
+    "noSteps": "此巨集目前尚無步驟。請在下方新增步驟。",
+    "addStep": "新增步驟",
+    "stepNumber": "步驟 {{number}}",
+    "removeStep": "移除步驟",
+    "confirmRunTitle": "運行這個巨集？",
+    "confirmRunBody": "\"{{name}}\" 將向 {{host}} 傳送指令。",
+    "confirmRunAction": "運行巨集",
     "stepTypes": {
       "send": {
-        "label": "Send command",
-        "help": "Types text into the terminal, the same as if you typed it."
+        "label": "發送命令",
+        "help": "在終端機中輸入文本，就像你手動輸入一樣。"
       },
       "wait": {
-        "label": "Wait for output",
-        "help": "Pauses until the server prints the text you name, like a password prompt."
+        "label": "等待輸出",
+        "help": "暫停，直到伺服器列印您指定的文本，例如密碼提示。"
       },
       "delay": {
-        "label": "Pause",
-        "help": "Waits a fixed amount of time before the next step."
+        "label": "暫停",
+        "help": "等待一段固定時間後再執行下一步操作。"
       },
       "if": {
-        "label": "If output contains",
-        "help": "Checks everything the server has printed so far, then runs one of two branches."
+        "label": "如果輸出包含",
+        "help": "檢查伺服器目前為止列印的所有內容，然後執行兩個分支中的一個。"
       },
       "repeat": {
-        "label": "Repeat",
-        "help": "Runs the steps inside it a set number of times."
+        "label": "重複",
+        "help": "將其中的步驟執行設定的次數。"
       }
     },
     "send": {
-      "text": "Command or text",
+      "text": "命令或文字",
       "textPlaceholder": "systemctl restart nginx",
-      "pressEnter": "Press Enter after sending",
-      "pressEnterHelp": "Turn this off to type text without submitting it."
+      "pressEnter": "發送後按回車鍵",
+      "pressEnterHelp": "關閉此功能即可輸入文字而不提交。"
     },
     "wait": {
-      "pattern": "Wait until the output contains",
+      "pattern": "等待輸出包含",
       "patternPlaceholder": "密碼:",
-      "timeout": "Give up after",
-      "onTimeout": "If it never appears",
-      "stop": "Stop the macro",
-      "continue": "Keep going anyway"
+      "timeout": "放棄",
+      "onTimeout": "如果它從未出現",
+      "stop": "停止宏",
+      "continue": "無論如何，繼續前進。"
     },
     "delay": {
-      "duration": "Wait for"
+      "duration": "等待"
     },
     "ifStep": {
-      "pattern": "If the output contains",
-      "patternPlaceholder": "Active: active (running)",
-      "then": "Then do this",
-      "else": "Otherwise do this",
-      "emptyBranch": "No steps"
+      "pattern": "如果輸出包含",
+      "patternPlaceholder": "活躍：正在運行",
+      "then": "然後這樣做",
+      "else": "否則就這樣做",
+      "emptyBranch": "沒有步驟"
     },
     "repeat": {
-      "count": "Number of times",
-      "times": "times"
+      "count": "次數",
+      "times": "時代"
     },
     "match": {
-      "useRegex": "Match with a regular expression",
-      "useRegexHelp": "Leave this off to match the text exactly as written.",
-      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+      "useRegex": "使用正規表示式進行匹配",
+      "useRegexHelp": "請刪除此行以完全按照原文填寫。",
+      "invalidRegex": "這不是有效的正規表示式，它將被匹配為純文字。"
     },
     "seconds": "秒",
     "secondsShort": "{{count}}s"
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "需要遠端伺服器。請在「設定」中連接遠端伺服器以使用此連線類型。"
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

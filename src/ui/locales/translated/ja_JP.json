@@ -116,11 +116,12 @@
     "updateLinkLabel": "アップデートが利用可能です。GitHubのリリースノートをご覧ください。"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "閉じる",
     "minimize": "最小化",
     "online": "オンライン",
     "offline": "オフライン",
-    "signInFailed": "サインインに失敗しました",
     "unknown": "不明",
     "continue": "続行",
     "maintenance": "メンテナンス",
@@ -187,7 +188,11 @@
     "remove": "削除",
     "add": "追加",
     "update": "更新",
-    "noResults": "検索結果が見つかりませんでした"
+    "noResults": "検索結果が見つかりませんでした",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "ステップ {{current}} / {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "トンネル",
     "serverStats": "ホストメトリクス",
     "status": {
-      "available": "利用可能",
-      "reachable": "利用可能ですが、ログインに失敗しました",
+      "online": "Online",
       "offline": "オフライン",
-      "monitoringDisabled": "監視が無効になっています",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "状態"
     },
     "folderRenamed": "フォルダ「{{oldName}}」を「{{newName}}」に正常にリネームしました",
@@ -477,7 +482,7 @@
     "sameHost": "このホスト（直接トンネル）",
     "statusChecksLabel": "ステータスチェック",
     "enableStatusChecks": "ステータスチェックを有効にする",
-    "enableStatusChecksDesc": "定期的にこのホストに ping を送信して可用性を確認します",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "グローバル間隔を使用する",
     "useGlobalIntervalDesc": "サーバー全体のステータスチェック間隔で上書きします",
     "checkIntervalS": "チェック間隔 (秒)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "お客様のアカウントには、現在ご利用いただけない二段階認証が設定されています。リセットするには、管理者にお問い合わせください。",
     "secondFactorNoUI": "この2つ目の要素は、この画面には表示できません。管理者にお問い合わせください。",
     "serverAuthentication": "サーバーへのサインイン",
-    "minChars": "最小 {{min}} 文字"
+    "minChars": "最小 {{min}} 文字",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "SSHホストキーを確認",
@@ -1119,7 +1125,13 @@
     "language": "言語",
     "keyPassword": "キーパスワード",
     "pastePrivateKey": "秘密鍵をここに貼り付け...",
-    "enterPassword": "パスワードを入力"
+    "enterPassword": "パスワードを入力",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "{{issuer}} によって発行されました",
     "sslNames": "カバー {{names}}",
     "sslManualTitle": "証明書をアップロードしてください",
-    "updateExternalAutoProvisionFailed": "自動作成設定の更新に失敗しました"
+    "updateExternalAutoProvisionFailed": "自動作成設定の更新に失敗しました",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

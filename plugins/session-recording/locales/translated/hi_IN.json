@@ -8,26 +8,26 @@
   },
   "permissions": {
     "view": {
-      "title": "View session recordings",
-      "description": "See and play back your own session recordings."
+      "title": "सेशन की रिकॉर्डिंग देखें",
+      "description": "अपने सेशन की रिकॉर्डिंग देखें और उन्हें दोबारा चलाएं।"
     }
   },
   "settings": {
     "admin": {
       "retentionDays": {
-        "label": "Retention (days)",
-        "description": "How long a session recording is kept before it is deleted automatically."
+        "label": "प्रतिधारण अवधि (दिनों में)",
+        "description": "सेशन रिकॉर्डिंग को स्वचालित रूप से डिलीट होने से पहले कितने समय तक रखा जाता है।"
       }
     },
     "host": {
       "enable": {
-        "label": "Enable session recording",
-        "description": "Record terminal output for this host so you can play it back or download it later."
+        "label": "सेशन रिकॉर्डिंग चालू करें",
+        "description": "इस होस्ट के टर्मिनल आउटपुट को रिकॉर्ड करें ताकि आप इसे बाद में प्लेबैक कर सकें या डाउनलोड कर सकें।"
       }
     }
   },
   "terminalStatus": {
-    "recording": "Recording"
+    "recording": "रिकॉर्डिंग"
   },
   "sessionLogs": {
     "title": "सेशन लॉग्स",
@@ -36,7 +36,7 @@
     "duration": "अवधि",
     "viewLog": "लॉग देखें",
     "downloadLog": "डाउनलोड करें",
-    "downloadAsText": "Download as text",
+    "downloadAsText": "टेक्स्ट के रूप में डाउनलोड करें",
     "deleteLog": "हटाएं",
     "confirmDelete": "क्या इस सेशन लॉग को हटाएं?",
     "confirmDeleteDesc": "यह क्रिया वापस नहीं ली जा सकती।",
@@ -46,15 +46,18 @@
     "deleteError": "सेशन लॉग हटाने में विफल",
     "filterByHost": "होस्ट द्वारा फ़िल्टर करें...",
     "back": "वापस",
-    "empty": "(empty)",
-    "noResults": "No results for \"{{query}}\"",
-    "hostFallback": "Host {{id}}",
-    "sessionFallback": "Session {{id}}"
+    "empty": "(खाली)",
+    "noResults": "\"{{query}} \" के लिए कोई परिणाम नहीं मिले",
+    "hostFallback": "मेज़बान {{id}}",
+    "sessionFallback": "सत्र {{id}}"
   },
   "player": {
-    "timeline": "Recording timeline",
-    "speed": "Playback speed",
-    "play": "Play recording",
-    "pause": "Pause recording"
+    "timeline": "रिकॉर्डिंग समयरेखा",
+    "speed": "प्लेबैक गति",
+    "play": "रिकॉर्डिंग चलाएं",
+    "pause": "रिकॉर्डिंग रोकें"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

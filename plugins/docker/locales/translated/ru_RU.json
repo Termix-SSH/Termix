@@ -23,9 +23,9 @@
     "start": "Запустить",
     "stop": "Остановить",
     "status": "Статус",
-    "actions": "Actions",
-    "cardView": "Card view",
-    "listView": "List view",
+    "actions": "Действия",
+    "cardView": "Карточный вид",
+    "listView": "Список",
     "confirmRemoveContainer": "Вы уверены, что хотите удалить контейнер «{{name}}»? Это действие нельзя отменить.",
     "runningContainerWarning": "Предупреждение: этот контейнер в настоящее время работает. При удалении он будет сначала остановлен.",
     "loadingContainers": "Загрузка контейнеров...",
@@ -78,7 +78,7 @@
     "containerMustBeRunning": "Для доступа к консоли контейнер должен быть запущен",
     "verificationCodePrompt": "Введите код подтверждения",
     "totpVerificationFailed": "Ошибка проверки TOTP. Попробуйте еще раз.",
-    "browserSignInFailed": "Sign-in failed. Please try again.",
+    "browserSignInFailed": "Вход в систему не удался. Пожалуйста, попробуйте еще раз.",
     "connectedTo": "Подключено к {{containerName}}",
     "disconnected": "Отключено",
     "consoleError": "Ошибка консоли",
@@ -101,15 +101,15 @@
     "consoleTab": "Консоль",
     "startContainerToAccess": "Запустите контейнер, чтобы получить доступ к консоли",
     "noHostSelected": "Хост не выбран",
-    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
-    "failedToDownloadLogs": "Failed to download logs: {{error}}"
+    "failedToFetchLogs": "Не удалось получить логи: {{error}}",
+    "failedToDownloadLogs": "Не удалось загрузить логи: {{error}}"
   },
   "nav": {
     "docker": "Docker"
   },
   "onboarding": {
     "feature_docker": "Docker",
-    "feature_docker_desc": "See containers, read logs and watch stats on any host running Docker."
+    "feature_docker_desc": "Просматривайте контейнеры, читайте журналы и отслеживайте статистику на любом хосте, где запущен Docker."
   },
   "terminal": {
     "retry": "Повторить",
@@ -118,15 +118,15 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Docker",
-      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+      "title": "Используйте Docker",
+      "description": "Откройте Docker Manager и консоли контейнеров на хостах с включенным Docker."
     }
   },
   "settings": {
     "host": {
       "enable": {
         "label": "Включить Docker",
-        "description": "Manage containers on this host."
+        "description": "Управляйте контейнерами на этом хосте."
       },
       "containerRuntime": {
         "label": "Среда выполнения контейнеров",
@@ -137,7 +137,7 @@
     }
   },
   "errors": {
-    "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
+    "remoteServerRequired": "Требуется удаленный сервер. Для использования этого типа подключения подключите удаленный сервер в настройках."
   },
   "hosts": {
     "docsLink": "Документация",

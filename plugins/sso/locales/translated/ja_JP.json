@@ -20,6 +20,12 @@
     "nameRequired": "表示名は必須です",
     "type": "プロバイダータイプ",
     "enabled": "有効",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "保存",
     "saving": "保存中...",
     "saved": "保存しました",
@@ -61,5 +67,8 @@
       "label": "SSOで自動的にサインイン",
       "description": "ログインフォームを表示せずに、訪問者を最初のSSOプロバイダーに直接誘導します。この設定は、環境変数OIDC_SILENT_LOGIN_DEFAULTで上書きされます。"
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

@@ -231,5 +231,8 @@
   "targetTerminals": "Влизане",
   "targetTerminalsHint": "по избор, в противен случай активният раздел",
   "selectAll": "Всички",
-  "selectNone": "Няма"
+  "selectNone": "Няма",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

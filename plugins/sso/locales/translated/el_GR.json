@@ -20,6 +20,12 @@
     "nameRequired": "Απαιτείται εμφανιζόμενο όνομα",
     "type": "Τύπος παρόχου",
     "enabled": "Ενεργοποιημένο",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Αποθήκευση παρόχου",
     "saving": "Οικονομία...",
     "saved": "Αποθηκεύτηκε",
@@ -61,5 +67,8 @@
       "label": "Αυτόματη σύνδεση με SSO",
       "description": "Στέλνει τους επισκέπτες απευθείας στον πρώτο πάροχο SSO αντί να εμφανίζει τη φόρμα σύνδεσης. Η μεταβλητή περιβάλλοντος OIDC_SILENT_LOGIN_DEFAULT παρακάμπτει αυτό."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

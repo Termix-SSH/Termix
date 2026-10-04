@@ -231,5 +231,8 @@
   "targetTerminals": "Zaběhnout",
   "targetTerminalsHint": "volitelné, jinak aktivní záložka",
   "selectAll": "Vše",
-  "selectNone": "Žádný"
+  "selectNone": "Žádný",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

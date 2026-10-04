@@ -49,7 +49,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // The server keys statuses by sync id; its own ids mean nothing here.
   remoteCoreApiMock.get.mockResolvedValue({
-    data: { "sync-2": { status: "reachable" }, "sync-9": { status: "x" } },
+    data: { "sync-2": { status: "offline" }, "sync-9": { status: "x" } },
   });
 });
 
@@ -65,7 +65,7 @@ describe("status check origin routing", () => {
 
     await expect(getAllServerStatuses()).resolves.toEqual({
       1: { status: "online" },
-      2: { status: "reachable" },
+      2: { status: "offline" },
     });
 
     expect(sshHostApiMock.get).toHaveBeenCalledWith("/status", {
@@ -90,6 +90,19 @@ describe("status check origin routing", () => {
       params: { hostIds: "" },
       __silentRetry: true,
     });
+  });
+
+  it("skips the tick when the host list cannot be read", async () => {
+    sshHostApiMock.get.mockImplementation(async (path: string) => {
+      if (path === "/db/host") throw new Error("down");
+      return { data: {} };
+    });
+
+    await expect(getAllServerStatuses()).rejects.toThrow("down");
+    expect(sshHostApiMock.get).not.toHaveBeenCalledWith(
+      "/status",
+      expect.anything(),
+    );
   });
 });
 

@@ -1,11 +1,11 @@
 {
-  "loginWithSso": "Sign in with SSO",
+  "loginWithSso": "Entrar com SSO",
   "loginWithProvider": "Iniciar sessão com {{name}}",
   "loading": "A carregar...",
   "permissions": {
     "manage": {
-      "title": "Manage SSO providers",
-      "description": "Add, change and remove the SSO providers people can sign in with."
+      "title": "Gerir fornecedores de SSO",
+      "description": "Adicione, altere e remova os fornecedores de SSO que os utilizadores podem utilizar para iniciar sessão."
     }
   },
   "providers": {
@@ -16,30 +16,36 @@
     "delete": "Eliminar Provedor",
     "deleteConfirm": "Eliminar este provedor? Os utilizadores associados não poderão iniciar sessão.",
     "name": "Nome de exibição",
-    "namePlaceholder": "My SSO provider",
-    "nameRequired": "A display name is required",
+    "namePlaceholder": "O meu provedor de SSO",
+    "nameRequired": "É necessário um nome de utilizador.",
     "type": "Tipo de Provedor",
     "enabled": "Ativado",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Guardar Provedor",
     "saving": "A guardar...",
     "saved": "Guardado",
     "saveFailed": "Falha ao guardar",
     "deleted": "Eliminado",
     "deleteFailed": "Falha ao eliminar",
-    "loadFailed": "Failed to load SSO providers",
+    "loadFailed": "Falha ao carregar os fornecedores de SSO",
     "cancel": "Cancelar",
     "copy": "Copiar",
     "copied": "Copiado",
-    "redirectUri": "Redirect URI",
-    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
-    "legacyCallback": "Keep the old redirect URI",
-    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
-    "authorizationUrl": "Authorization URL: {{url}}"
+    "redirectUri": "URI de redireccionamento",
+    "redirectUriDesc": "Registe este URL como URL de redireccionamento ou de retorno de chamada no seu fornecedor de identidade.",
+    "legacyCallback": "Mantenha o URI de redireccionamento antigo.",
+    "legacyCallbackDesc": "Este fornecedor foi configurado antes do Termix 2.9 e ainda utiliza o URI de redireccionamento antigo, que continua a funcionar. Para migrar para o novo, adicione {{uri}} no seu fornecedor de identidade primeiro e depois desative-o.",
+    "authorizationUrl": "URL de autorização: {{url}}"
   },
   "fields": {
     "clientId": "ID do cliente",
     "clientSecret": "Segredo do cliente",
-    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "secretKeep": "Um segredo foi guardado. Deixe este campo vazio para o manter.",
     "issuerUrl": "URL do emissor",
     "authUrl": "URL de autorização",
     "tokenUrl": "URL do token",
@@ -58,8 +64,11 @@
   },
   "settings": {
     "silentLoginDefault": {
-      "label": "Sign in with SSO automatically",
-      "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
+      "label": "Faça login automaticamente com o SSO.",
+      "description": "Dirija os visitantes diretamente para o primeiro fornecedor de SSO em vez de apresentar o formulário de início de sessão. A variável de ambiente OIDC_SILENT_LOGIN_DEFAULT substitui esta definição."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

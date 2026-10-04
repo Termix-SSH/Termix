@@ -23,7 +23,7 @@
     "provisionLabel": "Skonfiguruj serwer",
     "publishTitle": "Opublikuj klucz publiczny",
     "generate": "Generuj",
-    "generateTooltip": "Generate an Ed25519 key pair. Publishes the public key and downloads the private key to your device.",
+    "generateTooltip": "Wygeneruj parę kluczy Ed25519. Opublikuj klucz publiczny i pobierz klucz prywatny na swoje urządzenie.",
     "saveToVault": "Zapisz w poświadczeniach",
     "keyPlaceholder": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@host",
     "labelPlaceholder": "Etykieta (opcjonalnie)",
@@ -32,7 +32,7 @@
     "keyPublished": "Klucz opublikowany",
     "addKeyFailed": "Nie udało się dodać klucza",
     "generatedSaved": "Wygenerowano parę kluczy i zapisano w sejfie poświadczeń. Klucz prywatny został również pobrany.",
-    "generatedOnly": "Key pair generated. Private key downloaded (shown only once).",
+    "generatedOnly": "Wygenerowano parę kluczy. Pobrano klucz prywatny (wyświetlany tylko raz).",
     "generateFailed": "Nie udało się wygenerować klucza",
     "imported": "Zaimportowano klucz z poświadczenia",
     "importFailed": "Nie udało się zaimportować klucza",
@@ -56,7 +56,7 @@
     "caTrustLabel": "Zaufanie na serwerze (uruchom jako root)",
     "caRotate": "Rotuj",
     "caRotateConfirm": "Wykonać rotację CA? Każdy podpisany przez niego certyfikat przestanie być akceptowany i trzeba go wystawić ponownie.",
-    "caRotated": "CA rotated. Previous certificates revoked.",
+    "caRotated": "Urząd certyfikacji został zmieniony. Poprzednie certyfikaty zostały unieważnione.",
     "caRotateFailed": "Nie udało się wykonać rotacji CA",
     "caDelete": "Usuń CA",
     "caDeleteConfirm": "Usunąć CA?",
@@ -68,8 +68,8 @@
     "certIssued": "Wystawiono i pobrano certyfikat",
     "certIssueFailed": "Nie udało się wystawić certyfikatu",
     "docsLink": "Zobacz dokumentację",
-    "principalsLabel": "SSH principals",
-    "principalsPlaceholder": "SSH principal(s), e.g. root"
+    "principalsLabel": "Zasady SSH",
+    "principalsPlaceholder": "Podmiot(y) zarządzający SSH, np. root"
   },
   "nav": {
     "termixId": "ID"
@@ -79,8 +79,8 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Termix ID",
-      "description": "Claim a public handle, publish SSH keys and run a certificate authority."
+      "title": "Użyj identyfikatora Termix",
+      "description": "Złóż wniosek o publiczny uchwyt, opublikuj klucze SSH i uruchom urząd certyfikacji."
     }
   }
 }

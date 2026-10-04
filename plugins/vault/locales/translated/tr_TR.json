@@ -4,7 +4,7 @@
     "selectProfile": "Bir Vault profili seçin...",
     "hint": "Ayarlar paylaşılan profilden gelir; bağlandığınızda OIDC ile Vault'ta oturum açarsınız. Hiçbir gizli bilgi saklanmaz.",
     "docs": "Belgelere bak",
-    "sharedProfile": "{{name}} (shared)"
+    "sharedProfile": "{{name}} (paylaşılan)"
   },
   "profiles": {
     "new": "Yeni profil",
@@ -33,7 +33,7 @@
     "delete": "Sil"
   },
   "hosts": {
-    "filterAuthVault": "Vault"
+    "filterAuthVault": "Kasa"
   },
   "dialog": {
     "title": "Vault Oturum Açması Gerekli",
@@ -43,27 +43,30 @@
   },
   "permissions": {
     "use": {
-      "title": "Use Vault SSH signing",
-      "description": "Create Vault signer profiles and connect to hosts that use Vault."
+      "title": "Vault SSH imzalama özelliğini kullanın.",
+      "description": "Vault imzalayıcı profilleri oluşturun ve Vault kullanan sunuculara bağlanın."
     },
     "share": {
-      "title": "Share Vault profiles",
-      "description": "Mark a Vault signer profile as shared so every user can pick it."
+      "title": "Share Vault profillerini paylaşın",
+      "description": "Bir Vault imzalayıcı profilini paylaşımlı olarak işaretleyin, böylece her kullanıcı onu seçebilir."
     }
   },
   "settings": {
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Add this URL to allowed_redirect_uris in each Vault OIDC role that Termix signs in with."
+      "label": "Yönlendirme URI'si",
+      "description": "Termix'in oturum açtığı her Vault OIDC rolündeki allowed_redirect_uris alanına bu URL'yi ekleyin."
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /vault/oidc/callback, the redirect URI used before 2.9. Turn this off once your Vault roles allow the new one."
+      "label": "Eski yönlendirme URI'sini kullanın.",
+      "description": "2.9 öncesinde kullanılan yönlendirme URI'si olan /vault/oidc/callback'i göndermeye devam edin. Vault rolleriniz yeni URI'ye izin verdiğinde bunu kapatın."
     },
     "host": {
       "profileId": {
-        "label": "Vault signer profile"
+        "label": "Kasa imzalayıcı profili"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

@@ -1,120 +1,120 @@
 {
   "permissions": {
     "use": {
-      "title": "Use the assistant",
-      "description": "Open the assistant and ask it things."
+      "title": "Använd assistenten",
+      "description": "Öppna assistenten och fråga den saker."
     },
     "manage_providers": {
-      "title": "Manage providers",
-      "description": "Add, edit and remove the AI providers and their API keys."
+      "title": "Hantera leverantörer",
+      "description": "Lägg till, redigera och ta bort AI-leverantörerna och deras API-nycklar."
     },
     "apply_proposals": {
-      "title": "Apply proposals",
-      "description": "Let the assistant carry out the changes it suggests."
+      "title": "Tillämpa förslag",
+      "description": "Låt assistenten utföra de ändringar den föreslår."
     },
     "services.use": {
-      "title": "Use AI from other features",
-      "description": "Other features may call the assistant on your behalf."
+      "title": "Använd AI från andra funktioner",
+      "description": "Andra funktioner kan ringa assistenten åt dig."
     },
     "secrets.share": {
-      "title": "Share the API key",
-      "description": "Other features may use the stored AI API key without seeing it."
+      "title": "Dela API-nyckeln",
+      "description": "Andra funktioner kan använda den lagrade AI API-nyckeln utan att se den."
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server.",
-    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "assistantUnavailable": "AI-assistenten är avstängd på den här servern.",
+    "providersNeedOptIn": "Aktivera AI-assistenten ovan för att lägga till leverantörer.",
     "admin": {
       "globallyEnabled": {
-        "label": "AI assistant",
-        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+        "label": "AI-assistent",
+        "description": "Låt användare aktivera AI-assistenten. Medan detta är avstängt är assistenten dold och blockerad för alla."
       },
       "privateEndpoints": {
-        "label": "Allowed private AI hosts",
-        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+        "label": "Tillåtna privata AI-värdar",
+        "description": "Värdar på ditt privata nätverk som användare kan hänvisa en leverantör till, till exempel en självhostad Ollama. Lägg en värd på varje rad."
       }
     },
     "host": {
       "enableAiAssistant": {
-        "label": "Enable AI Assistant",
-        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+        "label": "Aktivera AI-assistenten",
+        "description": "Tillåt AI-assistenten att hjälpa till i den här värdens terminal. Av som standard och kräver fortfarande att AI är aktiverat för ditt konto."
       }
     }
   },
   "ai": {
-    "title": "Assistant",
-    "send": "Send",
-    "stop": "Stop",
-    "save": "Save",
-    "cancel": "Cancel",
-    "running": "running",
-    "approve": "Approve",
-    "reject": "Reject",
-    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
-    "selectProvider": "Select a provider",
-    "providerSettings": "Provider settings",
-    "addProvider": "Add provider",
-    "editProvider": "Edit provider",
-    "removeProvider": "Remove provider",
-    "providerType": "Provider",
-    "providerLabel": "Name",
-    "providerLabelPlaceholder": "For example: Local Ollama",
-    "baseUrl": "Server address",
-    "apiKey": "API key",
-    "defaultModel": "Default model",
-    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
-    "labelRequired": "Give this provider a name",
-    "providerSaveFailed": "Could not save the provider",
-    "providerUpdated": "Provider updated",
-    "providerDeleteFailed": "Could not remove the provider",
-    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "title": "Assistent",
+    "send": "Skicka",
+    "stop": "Stopp",
+    "save": "Spara",
+    "cancel": "Avboka",
+    "running": "spring",
+    "approve": "Godkänna",
+    "reject": "Avvisa",
+    "inputPlaceholder": "Fråga om era servrar, eller beskriv en förändring att föreslå",
+    "selectProvider": "Välj en leverantör",
+    "providerSettings": "Leverantörsinställningar",
+    "addProvider": "Lägg till leverantör",
+    "editProvider": "Redigera leverantör",
+    "removeProvider": "Ta bort leverantör",
+    "providerType": "Leverantör",
+    "providerLabel": "Namn",
+    "providerLabelPlaceholder": "Till exempel: Lokal Ollama",
+    "baseUrl": "Serveradress",
+    "apiKey": "API-nyckel",
+    "defaultModel": "Standardmodell",
+    "defaultModelPlaceholder": "Till exempel: llama3.1 eller claude-opus-5",
+    "labelRequired": "Ge den här leverantören ett namn",
+    "providerSaveFailed": "Kunde inte spara leverantören",
+    "providerUpdated": "Leverantören uppdaterad",
+    "providerDeleteFailed": "Kunde inte ta bort leverantören",
+    "privateEndpointHint": "Adresser i ditt privata nätverk behöver en administratör som först tillåter värden.",
     "providerOllama": "Ollama",
-    "providerAnthropic": "Anthropic",
-    "providerOpenai": "OpenAI",
+    "providerAnthropic": "Antropisk",
+    "providerOpenai": "Öppen AI",
     "providerGemini": "Google Gemini",
-    "providerOpenaiCompatible": "OpenAI compatible",
+    "providerOpenaiCompatible": "OpenAI-kompatibel",
     "toolArguments": "Input",
-    "toolResult": "Result",
-    "statusApplied": "Applied",
-    "statusRejected": "Rejected",
-    "proposalApplied": "Change applied",
-    "proposalApplyFailed": "Could not apply the change",
-    "proposalRejectFailed": "Could not reject the change",
-    "enableTitle": "Enable the AI assistant",
-    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
-    "readOnlyCommands": "Allow read-only diagnostic commands",
-    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
-    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
-    "modelCustom": "Enter a model name",
-    "modelRefresh": "Refresh list",
-    "modelPlaceholder": "Choose or type a model",
-    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
-    "runCommandTitle": "Run command",
-    "assistant": "AI Assistant",
-    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
-    "terminalPanelPlaceholder": "Ask about this host...",
-    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
-    "runsInOpenTerminal": "Runs in your open terminal session.",
-    "runInTerminal": "Run",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "toolResult": "Resultat",
+    "statusApplied": "Tillämpad",
+    "statusRejected": "Avvisad",
+    "proposalApplied": "Ändring tillämpad",
+    "proposalApplyFailed": "Kunde inte tillämpa ändringen",
+    "proposalRejectFailed": "Kunde inte avvisa ändringen",
+    "enableTitle": "Aktivera AI-assistenten",
+    "enableDescription": "Låt assistenten läsa dina inställningar och föreslå ändringar som du kan godkänna.",
+    "readOnlyCommands": "Tillåt skrivskyddade diagnostikkommandon",
+    "readOnlyCommandsDescription": "Assistenten kan köra en kort lista med säkra kommandon som df och uptime utan att fråga varje gång. Allt som ändrar en server föreslås alltid först.",
+    "modelDetectFailed": "Kunde inte nå leverantören, så detta är en allmän lista. Du kan skriva in vilket modellnamn som helst.",
+    "modelCustom": "Ange ett modellnamn",
+    "modelRefresh": "Uppdatera listan",
+    "modelPlaceholder": "Välj eller skriv en modell",
+    "attachHint": "Skriv @ för att referera till en värd, ett kodavsnitt eller en automatisering. Ändringar föreslås för dig att godkänna.",
+    "runCommandTitle": "Kör kommando",
+    "assistant": "AI-assistent",
+    "terminalPanelEmpty": "Fråga assistenten om den här värden. Allt som ändras kräver ditt godkännande först.",
+    "terminalPanelPlaceholder": "Fråga om den här värden...",
+    "noProvidersConfigured": "Ingen AI-leverantör är konfigurerad ännu. Lägg till en på fliken AI-assistent.",
+    "runsInOpenTerminal": "Körs i din öppna terminalsession.",
+    "runInTerminal": "Sikt",
+    "terminalContextPrefill": "Här är min terminalutgång:\n\n{{output}}\n\n",
     "secrets": {
-      "shareApiKey": "Let other features use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+      "shareApiKey": "Låt andra funktioner använda din AI-leverantörs API-nyckel för sina egna förfrågningar. Nyckeln kopieras aldrig och du kan återkalla den när som helst."
     }
   },
   "nav": {
     "ai": "AI"
   },
   "onboarding": {
-    "aiTitle": "AI assistant",
-    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
-    "aiSkipTitle": "Leave it off",
-    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
-    "aiEnableTitle": "Turn it on",
-    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
-    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+    "aiTitle": "AI-assistent",
+    "aiIntro": "Termix kan inkludera en valfri AI-assistent. Du kan ändra detta senare i dina inställningar.",
+    "aiSkipTitle": "Lämna den av",
+    "aiSkipDesc": "Termix fungerar som den gör nu. Assistenten förblir dold.",
+    "aiEnableTitle": "Slå på den",
+    "aiEnableDesc": "Lägger till en assistent som läser din installation och föreslår ändringar som du godkänner. Kräver en leverantör som du tillhandahåller, till exempel en lokal Ollama.",
+    "aiNote": "Ingenting skickas någonstans förrän du lägger till en leverantör och skickar ett meddelande."
   },
   "hosts": {
-    "docsLink": "View docs"
+    "docsLink": "Visa dokument"
   },
   "agents": {
     "title": "AI Agent",
@@ -191,5 +191,8 @@
     "reconnecting": "Reconnecting and restoring messages…",
     "unavailable": "Session is no longer accessible. Check your permissions or sign in again.",
     "shortcuts": "Enter sends or queues · Shift+Enter adds a line · Esc interrupts and pauses the queue"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

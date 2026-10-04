@@ -1,48 +1,51 @@
 {
   "hosts": {
-    "filterAuthStepca": "Step CA"
+    "filterAuthStepca": "ขั้นตอน CA"
   },
   "editor": {
-    "label": "Step CA",
-    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA section of Admin Settings.",
-    "docs": "View docs"
+    "label": "ขั้นตอน CA",
+    "description": "ลงชื่อเข้าใช้ผ่านผู้ให้บริการยืนยันตัวตนของคุณ และให้ Step CA ออกใบรับรอง SSH ที่มีอายุสั้นสำหรับโฮสต์นี้ URL ของ CA, ลายนิ้วมือรูท และตัวจัดเตรียม OIDC จะถูกตั้งค่าโดยผู้ดูแลระบบในส่วน Step CA ของการตั้งค่าผู้ดูแลระบบ",
+    "docs": "ดูเอกสาร"
   },
   "dialog": {
-    "title": "Step CA Authentication Required",
-    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
-    "openBrowser": "Open Browser to Authenticate",
-    "waiting": "Waiting for authentication in browser...",
-    "authenticating": "Processing authentication..."
+    "title": "ต้องมีการตรวจสอบสิทธิ์ CA ในขั้นตอนนี้",
+    "description": "โปรดยืนยันตัวตนในเบราว์เซอร์ของคุณเพื่อดำเนินการต่อ ใบรับรองจะยังคงใช้งานได้ตราบเท่าที่หน่วยงานออกใบรับรอง (CA) ของคุณอนุญาต",
+    "openBrowser": "เปิดเบราว์เซอร์เพื่อยืนยันตัวตน",
+    "waiting": "กำลังรอการยืนยันตัวตนในเบราว์เซอร์...",
+    "authenticating": "กำลังตรวจสอบสิทธิ์..."
   },
   "errors": {
-    "authFailed": "Authentication failed. Please check your credentials and try again.",
-    "timeout": "Authentication timed out. Please try again."
+    "authFailed": "การตรวจสอบสิทธิ์ล้มเหลว โปรดตรวจสอบข้อมูลประจำตัวของคุณและลองอีกครั้ง",
+    "timeout": "การตรวจสอบสิทธิ์หมดเวลา โปรดลองอีกครั้ง"
   },
   "settings": {
     "caUrl": {
-      "label": "CA URL",
-      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "label": "แคลิฟอร์เนีย URL",
+      "description": "URL https ของ CA smallstep ของคุณ เว้นว่าง URL ของ CA, ลายนิ้วมือ และ provisioner ไว้เพื่อปิดใช้งาน Step CA",
       "placeholder": "https://ca.internal:9000"
     },
     "fingerprint": {
-      "label": "Root fingerprint (SHA-256)",
-      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+      "label": "ลายนิ้วมือราก (SHA-256)",
+      "description": "ลายนิ้วมือของใบรับรองราก ดังที่แสดงโดยขั้นตอน ca bootstrap"
     },
     "provisioner": {
-      "label": "OIDC provisioner name",
-      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+      "label": "ชื่อผู้จัดเตรียม OIDC",
+      "description": "ชื่อของตัวจัดเตรียม OIDC ของ CA จากนั้นเลือก \"Step CA\" เป็นประเภทการตรวจสอบสิทธิ์ของโฮสต์"
     },
     "privateEndpoints": {
-      "label": "Allowed private Step CA hosts",
-      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+      "label": "อนุญาตให้โฮสต์ Step CA ส่วนตัว",
+      "description": "สำหรับโฮสต์ส่วนตัว กระบวนการขอใบรับรอง Step CA อาจติดต่อกับ: CA เอง และหากเป็นโฮสต์ภายใน ก็อาจติดต่อกับผู้ให้บริการยืนยันตัวตนของคุณด้วย คั่นด้วยเครื่องหมายจุลภาคหรือขึ้นบรรทัดใหม่"
     },
     "redirectUri": {
-      "label": "Redirect URI",
-      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+      "label": "URI การเปลี่ยนเส้นทาง",
+      "description": "ลงทะเบียน URL นี้เป็น URI ที่อนุญาตให้เปลี่ยนเส้นทางได้กับผู้ให้บริการข้อมูลประจำตัวที่อยู่เบื้องหลังตัวจัดเตรียม OIDC"
     },
     "legacyCallback": {
-      "label": "Use the old redirect URI",
-      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+      "label": "ใช้ URI การเปลี่ยนเส้นทางแบบเดิม",
+      "description": "ส่ง /host/step-ca-callback ต่อไป ซึ่งเป็น URI สำหรับการเปลี่ยนเส้นทางที่ใช้ก่อนเวอร์ชัน 2.9 ปิดใช้งานเมื่อผู้ให้บริการยืนยันตัวตนของคุณอนุญาตให้ใช้ URI ใหม่แล้ว"
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }
