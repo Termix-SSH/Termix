@@ -5,11 +5,15 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
+  FakeSwitch,
   Input,
+  PasswordInput,
   Select2,
-  Switch,
+  SettingRow,
+  Textarea,
   copyToClipboard,
 } from "@termix/plugin-sdk/ui";
 import { usePluginApi, useTranslation } from "@termix/plugin-sdk/frontend";
@@ -71,11 +75,6 @@ function errorMessage(error: unknown, fallback: string): string {
   return err.response?.data?.error || err.message || fallback;
 }
 
-const labelClass =
-  "text-[10px] font-semibold text-muted-foreground uppercase tracking-widest";
-const areaClass =
-  "w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono";
-
 function Field({
   label,
   required,
@@ -88,14 +87,25 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label className={labelClass}>
+    <div className="flex flex-col gap-1.5 min-w-0">
+      <label className="text-xs font-semibold">
         {label}
         {required && <span className="text-accent-brand ml-1">*</span>}
       </label>
+      {children}
       {hint && (
-        <span className="text-[10px] text-muted-foreground">{hint}</span>
+        <p className="text-[10px] text-muted-foreground leading-snug">{hint}</p>
       )}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+        {title}
+      </span>
       {children}
     </div>
   );
@@ -104,14 +114,14 @@ function Field({
 function RedirectUri({ uri }: { uri: string }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-1">
-      <code className="flex-1 min-w-0 truncate text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-1">
+    <div className="flex items-center gap-1 min-w-0 border border-border bg-muted/30">
+      <code className="flex-1 min-w-0 truncate text-[11px] font-mono text-muted-foreground px-2 py-1.5">
         {uri}
       </code>
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+        className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-foreground"
         title={t("providers.copy")}
         onClick={async () => {
           await copyToClipboard(uri);
@@ -204,237 +214,216 @@ function ProviderDialog({
     ? (provider?.redirectUri ?? newRedirectUri)
     : newRedirectUri;
 
+  const text = (
+    key: keyof Fields,
+    label: string,
+    placeholder: string,
+    options: { required?: boolean; hint?: string } = {},
+  ) => (
+    <Field label={label} required={options.required} hint={options.hint}>
+      <Input
+        value={fields[key]}
+        onChange={(e) => set(key)(e.target.value)}
+        placeholder={placeholder}
+      />
+    </Field>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="flex flex-col gap-0 p-0 overflow-hidden w-[calc(100vw-2rem)] sm:max-w-xl max-h-[calc(100dvh-2rem)]">
+        <DialogHeader className="px-4 pt-4 pb-3 pr-10 border-b border-border shrink-0">
+          <DialogTitle className="text-lg font-bold">
             {isEdit ? t("providers.edit") : t("providers.add")}
           </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {t("providers.dialogDesc")}{" "}
+            <a
+              href={
+                simplified
+                  ? "https://docs.termix.site/features/authentication/github-google"
+                  : "https://docs.termix.site/features/authentication/oidc"
+              }
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-brand hover:underline"
+            >
+              {t("providers.docsLink")}
+            </a>
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-3 pt-2">
-          <Field label={t("providers.name")} required>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("providers.namePlaceholder")}
-              className="text-xs"
-            />
-          </Field>
 
-          {!isEdit && (
-            <Field label={t("providers.type")}>
-              <Select2
-                value={type}
-                onChange={(e) => setType(e.target.value as SsoProviderType)}
-                className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-6">
+          <Section title={t("providers.sectionGeneral")}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label={t("providers.name")} required>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("providers.namePlaceholder")}
+                />
+              </Field>
+              <Field label={t("providers.type")}>
+                <Select2
+                  value={type}
+                  disabled={isEdit}
+                  onChange={(e) => setType(e.target.value as SsoProviderType)}
+                  className="w-full"
+                >
+                  {(Object.keys(TYPE_LABELS) as SsoProviderType[]).map(
+                    (value) => (
+                      <option key={value} value={value}>
+                        {TYPE_LABELS[value]}
+                      </option>
+                    ),
+                  )}
+                </Select2>
+              </Field>
+            </div>
+            <div className="border border-border px-3">
+              <SettingRow
+                label={t("providers.enabled")}
+                description={t("providers.enabledDesc")}
               >
-                {(Object.keys(TYPE_LABELS) as SsoProviderType[]).map(
-                  (value) => (
-                    <option key={value} value={value}>
-                      {TYPE_LABELS[value]}
-                    </option>
-                  ),
-                )}
-              </Select2>
-            </Field>
-          )}
+                <FakeSwitch checked={enabled} onChange={setEnabled} />
+              </SettingRow>
+            </div>
+          </Section>
 
-          <div className="flex items-center justify-between">
-            <label className={labelClass}>{t("providers.enabled")}</label>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
-          </div>
-
-          <div className="flex flex-col gap-1 border-t border-border pt-3">
-            <label className={labelClass}>{t("providers.redirectUri")}</label>
-            <span className="text-[10px] text-muted-foreground">
-              {t("providers.redirectUriDesc")}
-            </span>
-            <RedirectUri uri={redirectUri} />
+          <Section title={t("providers.redirectUri")}>
+            <div className="flex flex-col gap-1.5">
+              <RedirectUri uri={redirectUri} />
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                {t("providers.redirectUriDesc")}
+              </p>
+            </div>
             {isEdit && provider.legacyCallback && (
-              <div className="flex items-start justify-between gap-3 pt-1">
-                <span className="text-[10px] text-muted-foreground">
-                  {t("providers.legacyCallbackDesc", {
+              <div className="border border-border px-3">
+                <SettingRow
+                  label={t("providers.legacyCallback")}
+                  description={t("providers.legacyCallbackDesc", {
                     uri: newRedirectUri,
                   })}
-                </span>
-                <Switch
-                  checked={legacyCallback}
-                  onCheckedChange={setLegacyCallback}
-                  aria-label={t("providers.legacyCallback")}
-                />
+                >
+                  <FakeSwitch
+                    checked={legacyCallback}
+                    onChange={setLegacyCallback}
+                  />
+                </SettingRow>
               </div>
             )}
-          </div>
+          </Section>
 
-          <div className="flex flex-col gap-3 border-t border-border pt-3">
-            <span className="text-[10px] text-muted-foreground">
-              <a
-                href={
-                  simplified
-                    ? "https://docs.termix.site/features/authentication/github-google"
-                    : "https://docs.termix.site/features/authentication/oidc"
-                }
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent-brand hover:underline"
+          <Section title={t("providers.sectionCredentials")}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {text("client_id", t("fields.clientId"), "your-client-id", {
+                required: true,
+              })}
+              <Field
+                label={t("fields.clientSecret")}
+                required={!provider?.hasClientSecret}
+                hint={secretHint}
               >
-                {t("providers.docsLink")}
-              </a>
-            </span>
-            <Field label={t("fields.clientId")} required>
-              <Input
-                value={fields.client_id}
-                onChange={(e) => set("client_id")(e.target.value)}
-                placeholder="your-client-id"
-                className="text-xs"
-              />
-            </Field>
-            <Field
-              label={t("fields.clientSecret")}
-              required={!provider?.hasClientSecret}
-              hint={secretHint}
-            >
-              <Input
-                type="password"
-                value={fields.client_secret}
-                onChange={(e) => set("client_secret")(e.target.value)}
-                placeholder="your-client-secret"
-                className="text-xs"
-              />
-            </Field>
+                <PasswordInput
+                  value={fields.client_secret}
+                  onChange={(e) => set("client_secret")(e.target.value)}
+                  placeholder="your-client-secret"
+                />
+              </Field>
+            </div>
             {simplified ? (
-              <span className="text-[10px] text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground break-all">
                 {t("providers.authorizationUrl", {
                   url: AUTHORIZATION_URLS[type as "github" | "google"],
                 })}
-              </span>
+              </p>
             ) : (
               <>
-                <Field label={t("fields.issuerUrl")} required>
-                  <Input
-                    value={fields.issuer_url}
-                    onChange={(e) => set("issuer_url")(e.target.value)}
-                    placeholder="https://provider"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field label={t("fields.authUrl")} required>
-                  <Input
-                    value={fields.authorization_url}
-                    onChange={(e) => set("authorization_url")(e.target.value)}
-                    placeholder="https://provider/oauth2/auth"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field label={t("fields.tokenUrl")} required>
-                  <Input
-                    value={fields.token_url}
-                    onChange={(e) => set("token_url")(e.target.value)}
-                    placeholder="https://provider/oauth2/token"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field label={t("fields.userIdentifier")} required>
-                  <Input
-                    value={fields.identifier_path}
-                    onChange={(e) => set("identifier_path")(e.target.value)}
-                    placeholder="sub"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field label={t("fields.displayName")} required>
-                  <Input
-                    value={fields.name_path}
-                    onChange={(e) => set("name_path")(e.target.value)}
-                    placeholder="name"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field label={t("fields.scopes")} required>
-                  <Input
-                    value={fields.scopes}
-                    onChange={(e) => set("scopes")(e.target.value)}
-                    placeholder="openid email profile"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field label={t("fields.userinfoUrl")}>
-                  <Input
-                    value={fields.userinfo_url}
-                    onChange={(e) => set("userinfo_url")(e.target.value)}
-                    placeholder="https://provider/oauth2/userinfo"
-                    className="text-xs"
-                  />
-                </Field>
-                <Field
-                  label={t("fields.groupClaim")}
-                  hint={t("fields.groupClaimDesc")}
-                >
-                  <Input
-                    value={fields.group_claim}
-                    onChange={(e) => set("group_claim")(e.target.value)}
-                    placeholder="groups"
-                    className="text-xs"
-                  />
-                </Field>
+                {text("issuer_url", t("fields.issuerUrl"), "https://provider", {
+                  required: true,
+                })}
+                {text(
+                  "authorization_url",
+                  t("fields.authUrl"),
+                  "https://provider/oauth2/auth",
+                  { required: true },
+                )}
+                {text(
+                  "token_url",
+                  t("fields.tokenUrl"),
+                  "https://provider/oauth2/token",
+                  { required: true },
+                )}
+                {text(
+                  "userinfo_url",
+                  t("fields.userinfoUrl"),
+                  "https://provider/oauth2/userinfo",
+                )}
               </>
             )}
+          </Section>
+
+          {!simplified && (
+            <Section title={t("providers.sectionClaims")}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {text("identifier_path", t("fields.userIdentifier"), "sub", {
+                  required: true,
+                })}
+                {text("name_path", t("fields.displayName"), "name", {
+                  required: true,
+                })}
+              </div>
+              {text("scopes", t("fields.scopes"), "openid email profile", {
+                required: true,
+              })}
+              {text("group_claim", t("fields.groupClaim"), "groups", {
+                hint: t("fields.groupClaimDesc"),
+              })}
+            </Section>
+          )}
+
+          <Section title={t("providers.sectionAccess")}>
             <Field
               label={t("fields.allowedUsers")}
               hint={t("fields.allowedUsersDesc")}
             >
-              <textarea
+              <Textarea
                 value={fields.allowed_users}
                 onChange={(e) => set("allowed_users")(e.target.value)}
                 placeholder={"user@example.com\nanother@example.com"}
                 rows={3}
-                className={areaClass}
+                className="font-mono resize-y"
               />
             </Field>
-            <Field
-              label={t("fields.adminGroup")}
-              hint={t("fields.adminGroupDesc")}
-            >
-              <Input
-                value={fields.admin_group}
-                onChange={(e) => set("admin_group")(e.target.value)}
-                placeholder="admin"
-                className="text-xs"
-              />
-            </Field>
+            {text("admin_group", t("fields.adminGroup"), "admin", {
+              hint: t("fields.adminGroupDesc"),
+            })}
             <Field label={t("fields.caCert")} hint={t("fields.caCertDesc")}>
-              <textarea
+              <Textarea
                 value={fields.ca_cert}
                 onChange={(e) => set("ca_cert")(e.target.value)}
                 placeholder={
                   "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
                 }
                 rows={4}
-                className={areaClass}
+                className="font-mono resize-y"
               />
             </Field>
-          </div>
+          </Section>
+        </div>
 
-          <div className="flex gap-2 justify-end pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => onOpenChange(false)}
-            >
-              {t("providers.cancel")}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-              onClick={save}
-              disabled={saving}
-            >
-              {saving ? t("providers.saving") : t("providers.save")}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {t("providers.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={save}
+            disabled={saving}
+          >
+            {saving ? t("providers.saving") : t("providers.save")}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -493,7 +482,7 @@ export function ProvidersSetting() {
   if (providers === null) return null;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 py-3 border-b border-border last:border-0">
       <span className="text-[10px] text-muted-foreground">
         <a
           href="https://docs.termix.site/features/authentication/sso-providers"
@@ -505,7 +494,7 @@ export function ProvidersSetting() {
         </a>
       </span>
       {providers.length === 0 ? (
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {t("providers.none")}
         </span>
       ) : (
@@ -513,26 +502,25 @@ export function ProvidersSetting() {
           {providers.map((provider) => (
             <div
               key={provider.id}
-              className="flex flex-col gap-1.5 p-2 border border-border bg-background"
+              className="flex flex-col gap-2 p-3 border border-border bg-background"
             >
               <div className="flex items-center gap-2">
                 <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                  <span className="text-xs font-medium truncate">
+                  <span className="text-sm font-medium truncate">
                     {provider.name}
                   </span>
-                  <span className="text-[9px] px-1 py-0.5 bg-muted text-muted-foreground font-mono uppercase">
+                  <span className="text-[9px] px-1 py-0.5 bg-muted text-muted-foreground font-mono uppercase shrink-0">
                     {TYPE_LABELS[provider.type] ?? provider.type}
                   </span>
                 </div>
-                <Switch
+                <FakeSwitch
                   checked={provider.enabled}
-                  onCheckedChange={() => void toggleEnabled(provider)}
-                  aria-label={t("providers.enabled")}
+                  onChange={() => void toggleEnabled(provider)}
                 />
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     setEditing(provider);
                     setDialogOpen(true);
@@ -544,7 +532,7 @@ export function ProvidersSetting() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   onClick={() => void remove(provider)}
                   title={t("providers.delete")}
                 >

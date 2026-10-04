@@ -207,5 +207,19 @@
     "remove": "Supprimer le planning",
     "loadFailed": "Impossible d'actualiser l'état de maintenance. Les modifications sont désactivées jusqu'à ce que le chargement soit possible.",
     "loading": "État de la maintenance en cours de chargement…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

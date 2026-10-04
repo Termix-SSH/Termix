@@ -207,5 +207,19 @@
     "remove": "スケジュールを削除",
     "loadFailed": "メンテナンス状況を更新できませんでした。読み込みが完了するまで、変更は無効になっています。",
     "loading": "メンテナンスステータスをロード中…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

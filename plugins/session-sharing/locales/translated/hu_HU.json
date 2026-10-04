@@ -182,5 +182,8 @@
     "sharedBy": "Megosztotta: {{username}}",
     "join": "Csatlakozik",
     "sharedSessionLabel": "{{hostName}} (megosztva)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

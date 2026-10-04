@@ -168,5 +168,8 @@
     "showRead": "পঠিত সতর্কতা দেখান",
     "allClear": "সব পরিষ্কার",
     "loading": "লোড হচ্ছে..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

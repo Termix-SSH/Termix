@@ -15,23 +15,12 @@ import { HostItem, statusCheckEnabled } from "../HostItem/HostItem";
 import { isFolder, folderHasMatch, collectAllHosts } from "../visible-rows";
 import { FolderActions } from "./FolderActions";
 
-export function folderHostCount(folder: HostFolder): {
-  total: number;
-  online: number;
-} {
-  let total = 0,
-    online = 0;
+export function folderHostCount(folder: HostFolder): number {
+  let total = 0;
   for (const child of folder.children) {
-    if (isFolder(child)) {
-      const c = folderHostCount(child);
-      total += c.total;
-      online += c.online;
-    } else {
-      total++;
-      if (child.online) online++;
-    }
+    total += isFolder(child) ? folderHostCount(child) : 1;
   }
-  return { total, online };
+  return total;
 }
 
 export function FolderItem({
@@ -140,13 +129,11 @@ export function FolderItem({
   onReorderHoverChange?: (edge: "before" | "after" | null) => void;
 }) {
   const { t } = useTranslation();
-  const { getStatus, initialLoadComplete } = useServerStatus();
-  const { total } = folderHostCount(folder);
-  const online = initialLoadComplete
-    ? collectAllHosts(folder.children).filter(
-        (h) => statusCheckEnabled(h) && getStatus(Number(h.id)) === "online",
-      ).length
-    : folderHostCount(folder).online;
+  const { getStatus } = useServerStatus();
+  const total = folderHostCount(folder);
+  const online = collectAllHosts(folder.children).filter(
+    (h) => statusCheckEnabled(h) && getStatus(Number(h.id)) === "online",
+  ).length;
   const [dragOver, setDragOver] = useState(false);
   const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
 

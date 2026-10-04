@@ -20,6 +20,12 @@
     "nameRequired": "Потрібне відображуване ім'я",
     "type": "Тип постачальника",
     "enabled": "Увімкнено",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Зберегти постачальника",
     "saving": "Збереження...",
     "saved": "Збережено",
@@ -61,5 +67,8 @@
       "label": "Автоматичний вхід за допомогою єдиного входу",
       "description": "Надсилати відвідувачів безпосередньо до першого постачальника SSO замість відображення форми входу. Змінна середовища OIDC_SILENT_LOGIN_DEFAULT замінює це."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

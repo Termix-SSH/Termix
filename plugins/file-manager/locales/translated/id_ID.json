@@ -323,7 +323,7 @@
     "sideBySide": "Berdampingan",
     "inline": "Sejajar",
     "fileComparison": "Perbandingan File: {{file1}} vs {{file2}}",
-    "fileTooLarge": "Ukuran file terlalu besar: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "Koneksi SSH gagal. Harap periksa koneksi Anda ke {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Gagal memuat file: {{error}}",
     "connecting": "Menghubungkan...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Gunakan tata letak yang nyaman.",
     "cannotLoadPdf": "Tidak dapat memuat PDF",
     "pdfLoadError": "Terjadi kesalahan saat memuat file PDF ini.",
-    "loadingPdf": "Sedang memuat PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Sedang memuat halaman...",
     "cancel": "Membatalkan",
     "copiedItems_one": "Item {{count}} disalin",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Browser Anda tidak dapat memutar format video ini.",
     "downloadToPlay": "Unduh untuk memainkannya di tempat lain",
     "cannotPreviewType": "Tidak dapat melihat pratinjau tipe file ini.",
-    "cannotPreviewTypeHint": "Jenis file ini tidak memiliki pratinjau. Unduh untuk membukanya di aplikasi lain."
+    "cannotPreviewTypeHint": "Jenis file ini tidak memiliki pratinjau. Unduh untuk membukanya di aplikasi lain.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Sumber → server: {{throughput}}",
     "metricsHopDestSftpWrite": "Server → tujuan (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Server → tujuan (lokal): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

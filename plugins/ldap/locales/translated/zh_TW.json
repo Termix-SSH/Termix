@@ -23,6 +23,12 @@
     "namePlaceholder": "公司名錄",
     "nameRequired": "必須填寫顯示名稱。",
     "enabled": "已啟用",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "儲存目錄",
     "saving": "儲存中…",
     "saved": "已儲存",
@@ -36,6 +42,7 @@
     "host": "LDAP 主機",
     "port": "連接埠",
     "useTls": "使用 TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "綁定 DN",
     "bindPassword": "綁定密碼",
     "secretKeep": "密碼已儲存。留空則不保存。",
@@ -46,5 +53,8 @@
     "groupSearchBase": "群組搜尋基底",
     "adminGroup": "管理員群組",
     "allowedUsers": "允許的使用者"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

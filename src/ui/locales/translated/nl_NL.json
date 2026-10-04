@@ -116,11 +116,12 @@
     "updateLinkLabel": "Update beschikbaar. Bekijk de release-opmerkingen op GitHub."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Dichtbij",
     "minimize": "Minimaliseren",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Aanmelden mislukt",
     "unknown": "Onbekend",
     "continue": "Doorgaan",
     "maintenance": "Onderhoud",
@@ -187,7 +188,11 @@
     "remove": "Verwijderen",
     "add": "Toevoegen",
     "update": "Update",
-    "noResults": "Geen resultaten gevonden"
+    "noResults": "Geen resultaten gevonden",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Stap {{current}} van {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Hoststatistieken",
     "status": {
-      "available": "Beschikbaar",
-      "reachable": "Omhoog, maar de laatste aanmelding mislukte.",
+      "online": "Online",
       "offline": "Offline",
-      "monitoringDisabled": "Monitoring uitgeschakeld",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Map \"{{oldName}}\" is succesvol hernoemd naar \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "Deze host (directe tunnel)",
     "statusChecksLabel": "Statuscontroles",
     "enableStatusChecks": "Statuscontroles inschakelen",
-    "enableStatusChecksDesc": "Controleer periodiek de beschikbaarheid van deze host.",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Gebruik globaal interval",
     "useGlobalIntervalDesc": "Overschrijf dit met het serverbrede statuscontrole-interval.",
     "checkIntervalS": "Controle-interval (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Uw account maakt gebruik van een tweede authenticatiemethode die momenteel niet beschikbaar is. Neem contact op met een beheerder om deze opnieuw in te stellen.",
     "secondFactorNoUI": "Deze tweede factor kan niet op dit scherm worden weergegeven. Neem contact op met een beheerder.",
     "serverAuthentication": "Server aanmelden",
-    "minChars": "min. {{min}} tekens"
+    "minChars": "min. {{min}} tekens",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Verifieer de SSH-hostsleutel",
@@ -1119,7 +1125,13 @@
     "language": "Taal",
     "keyPassword": "sleutel wachtwoord",
     "pastePrivateKey": "Plak hier uw privésleutel...",
-    "enterPassword": "Voer uw wachtwoord in"
+    "enterPassword": "Voer uw wachtwoord in",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Uitgegeven door {{issuer}}",
     "sslNames": "Omslagen {{names}}",
     "sslManualTitle": "Een certificaat uploaden",
-    "updateExternalAutoProvisionFailed": "Het bijwerken van de instelling voor automatisch aanmaken is mislukt."
+    "updateExternalAutoProvisionFailed": "Het bijwerken van de instelling voor automatisch aanmaken is mislukt.",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

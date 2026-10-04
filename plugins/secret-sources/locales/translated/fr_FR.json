@@ -23,5 +23,8 @@
         "description": "Hôtes privés ou de bouclage auxquels une source secrète peut accéder, un par ligne. Un serveur 1Password Connect auto-hébergé nécessite généralement sa propre adresse indiquée ici."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

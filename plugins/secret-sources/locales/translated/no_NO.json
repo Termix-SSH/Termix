@@ -23,5 +23,8 @@
         "description": "Private verter eller loopback-verter en hemmelig kilde kan nå, én per linje. En selvhostet 1Password Connect-server trenger vanligvis sin egen adresse oppført her."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

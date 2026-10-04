@@ -168,5 +168,8 @@
     "showRead": "Okuma uyarılarını göster",
     "allClear": "Her şey normal",
     "loading": "Yükleniyor..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

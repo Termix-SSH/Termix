@@ -231,5 +231,8 @@
   "targetTerminals": "Entrada",
   "targetTerminalsHint": "opcional, si no, la pestanya activa",
   "selectAll": "Tot",
-  "selectNone": "Cap"
+  "selectNone": "Cap",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

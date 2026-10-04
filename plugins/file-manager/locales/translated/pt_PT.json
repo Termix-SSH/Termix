@@ -323,7 +323,7 @@
     "sideBySide": "Lado a lado",
     "inline": "Em linha",
     "fileComparison": "Comparação de ficheiros: {{file1}} vs {{file2}}",
-    "fileTooLarge": "Ficheiro demasiado grande: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "Falha na ligação SSH. Verifique a sua ligação a {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Falha ao carregar ficheiro: {{error}}",
     "connecting": "A ligar...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Utilize um layout confortável",
     "cannotLoadPdf": "Não é possível carregar o PDF",
     "pdfLoadError": "Ocorreu um erro ao carregar este ficheiro PDF.",
-    "loadingPdf": "A carregar PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "A carregar página...",
     "cancel": "Cancelar",
     "copiedItems_one": "Item copiado {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "O seu navegador não consegue reproduzir este formato de vídeo.",
     "downloadToPlay": "Faça o download para jogar noutro local.",
     "cannotPreviewType": "Não é possível visualizar este tipo de ficheiro.",
-    "cannotPreviewTypeHint": "Este tipo de ficheiro não possui pré-visualização. Faça o download para abri-lo noutra aplicação."
+    "cannotPreviewTypeHint": "Este tipo de ficheiro não possui pré-visualização. Faça o download para abri-lo noutra aplicação.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Origem → servidor: {{throughput}}",
     "metricsHopDestSftpWrite": "Servidor → destino (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Servidor → destino (local): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

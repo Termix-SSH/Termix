@@ -56,5 +56,8 @@
     "speed": "Lejátszási sebesség",
     "play": "Felvétel lejátszása",
     "pause": "Felvétel szüneteltetése"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

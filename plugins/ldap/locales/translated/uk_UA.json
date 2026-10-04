@@ -23,6 +23,12 @@
     "namePlaceholder": "Довідник компаній",
     "nameRequired": "Потрібне відображуване ім'я",
     "enabled": "Увімкнено",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Зберегти каталог",
     "saving": "Збереження...",
     "saved": "Збережено",
@@ -36,6 +42,7 @@
     "host": "Хост LDAP",
     "port": "Порт",
     "useTls": "Використовувати TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Прив'язане DN",
     "bindPassword": "Прив’язати пароль",
     "secretKeep": "Пароль збережено. Залиште це поле порожнім, щоб зберегти його.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "База групового пошуку",
     "adminGroup": "Група адміністраторів",
     "allowedUsers": "Дозволені користувачі"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

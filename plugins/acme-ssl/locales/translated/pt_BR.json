@@ -54,5 +54,8 @@
     "request": "Solicite o certificado agora",
     "requesting": "Solicitar certificado...",
     "issued": "Certificado emitido e instalado."
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

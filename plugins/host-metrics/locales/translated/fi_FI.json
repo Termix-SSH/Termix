@@ -308,5 +308,8 @@
         "label": "Valvotut polut"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

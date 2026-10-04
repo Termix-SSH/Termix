@@ -44,5 +44,8 @@
       "label": "Použít starý identifikátor URI pro přesměrování",
       "description": "Pokračujte v odesílání /host/step-ca-callback, což je URI pro přesměrování používané před verzí 2.9. Jakmile váš poskytovatel identity nový URI povolí, vypněte ho."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

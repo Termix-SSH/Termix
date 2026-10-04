@@ -116,11 +116,12 @@
     "updateLinkLabel": "Uppdatering tillgänglig. Öppna versionsinformationen på GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Nära",
     "minimize": "Minimera",
     "online": "Online",
     "offline": "Off-line",
-    "signInFailed": "Inloggningen misslyckades",
     "unknown": "Okänd",
     "continue": "Fortsätta",
     "maintenance": "Underhåll",
@@ -187,7 +188,11 @@
     "remove": "Ta bort",
     "add": "Tillägga",
     "update": "Uppdatera",
-    "noResults": "Inga resultat hittades"
+    "noResults": "Inga resultat hittades",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Steg {{current}} av {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Värdstatistik",
     "status": {
-      "available": "Tillgänglig",
-      "reachable": "Uppe, men den senaste inloggningen misslyckades",
+      "online": "Online",
       "offline": "Off-line",
-      "monitoringDisabled": "Övervakning inaktiverad",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Mappen \"{{oldName}}\" har bytt namn till \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "Denna värd (direkt tunnel)",
     "statusChecksLabel": "Statuskontroller",
     "enableStatusChecks": "Aktivera statuskontroller",
-    "enableStatusChecksDesc": "Pinga den här värden regelbundet för att verifiera tillgänglighet",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Använd globalt intervall",
     "useGlobalIntervalDesc": "Åsidosätt med det serveromfattande statuskontrollintervallet",
     "checkIntervalS": "Kontrollintervall (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Ditt konto använder en andra faktor som inte är tillgänglig just nu. Kontakta en administratör för att återställa den.",
     "secondFactorNoUI": "Den här andra faktorn kan inte visas på den här skärmen. Kontakta en administratör.",
     "serverAuthentication": "Serverinloggning",
-    "minChars": "min. {{min}} tecken"
+    "minChars": "min. {{min}} tecken",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Verifiera SSH-värdnyckel",
@@ -1119,7 +1125,13 @@
     "language": "Språk",
     "keyPassword": "nyckellösenord",
     "pastePrivateKey": "Klistra in din privata nyckel här...",
-    "enterPassword": "Ange ditt lösenord"
+    "enterPassword": "Ange ditt lösenord",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Instrumentpanel",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Utfärdad av {{issuer}}",
     "sslNames": "Omslag {{names}}",
     "sslManualTitle": "Ladda upp ett certifikat",
-    "updateExternalAutoProvisionFailed": "Misslyckades med att uppdatera inställningen för automatiskt skapande"
+    "updateExternalAutoProvisionFailed": "Misslyckades med att uppdatera inställningen för automatiskt skapande",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Este necesar un server la distanță. Conectați un server la distanță în Setări pentru a utiliza acest tip de conexiune."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

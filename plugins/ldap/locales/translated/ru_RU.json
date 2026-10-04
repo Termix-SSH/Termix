@@ -23,6 +23,12 @@
     "namePlaceholder": "Справочник компаний",
     "nameRequired": "Необходимо указать отображаемое имя.",
     "enabled": "Включено",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Сохранить каталог",
     "saving": "Сохранение…",
     "saved": "Сохранено",
@@ -36,6 +42,7 @@
     "host": "LDAP-сервер",
     "port": "Порт",
     "useTls": "Использовать TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Пароль привязки",
     "secretKeep": "Пароль сохранен. Оставьте это поле пустым, чтобы сохранить его.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "База поиска групп",
     "adminGroup": "Группа администраторов",
     "allowedUsers": "Разрешенные пользователи"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

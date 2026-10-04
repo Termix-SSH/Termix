@@ -308,5 +308,8 @@
         "label": "Контролируемые пути"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

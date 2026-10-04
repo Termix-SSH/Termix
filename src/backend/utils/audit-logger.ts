@@ -20,7 +20,9 @@ export async function getAuditUsername(userId: string): Promise<string> {
 }
 
 export interface AuditLogParams {
-  userId: string;
+  // Null when no user acted (a plugin starting up, background work): the
+  // column references users.id, so anything else would be refused.
+  userId: string | null;
   username: string;
   action: string;
   resourceType: string;

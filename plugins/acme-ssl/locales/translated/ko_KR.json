@@ -54,5 +54,8 @@
     "request": "지금 인증서를 요청하세요",
     "requesting": "인증서 요청 중...",
     "issued": "인증서가 발급 및 설치되었습니다."
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

@@ -308,5 +308,8 @@
         "label": "Контрольовані шляхи"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

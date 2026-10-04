@@ -168,5 +168,8 @@
     "showRead": "Wys leeswaarskuwings",
     "allClear": "Alles duidelik",
     "loading": "Laai tans..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

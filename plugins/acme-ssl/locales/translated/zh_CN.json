@@ -54,5 +54,8 @@
     "request": "立即申请证书",
     "requesting": "正在请求证书...",
     "issued": "证书已颁发并安装"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

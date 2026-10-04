@@ -20,6 +20,12 @@
     "nameRequired": "A display name is required",
     "type": "Provider Type",
     "enabled": "Enabled",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Save Provider",
     "saving": "Saving...",
     "saved": "Saved",
@@ -61,5 +67,8 @@
       "label": "Sign in with SSO automatically",
       "description": "Send visitors straight to the first SSO provider instead of showing the login form. The OIDC_SILENT_LOGIN_DEFAULT environment variable overrides this."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

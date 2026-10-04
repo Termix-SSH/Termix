@@ -46,7 +46,10 @@ import { invokeAction } from "@/shell/action-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { usePluginComponent } from "./component-registry";
-import { useOptionalHostStatusEntry } from "@/lib/ServerStatusContext";
+import {
+  getLiveHostStatus,
+  useOptionalHostStatusEntry,
+} from "@/lib/ServerStatusContext";
 
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
@@ -370,12 +373,7 @@ export const pluginHostBridge: PluginHostBridge = {
   usePluginComponent: (id) => usePluginComponent(id),
 
   useHostStatus: (hostId) => {
-    const entry = useOptionalHostStatusEntry(hostId);
-    if (!entry) return null;
-    return {
-      status: entry.status === "degraded" ? "unknown" : entry.status,
-      ...(entry.reason ? { reason: entry.reason } : {}),
-    };
+    return useOptionalHostStatusEntry(hostId);
   },
 
   useHostActions: () => useHostActions() as unknown as HostActionContribution[],
@@ -429,9 +427,13 @@ export const pluginHostBridge: PluginHostBridge = {
       void setCookie(name, value, 365);
     },
     listHosts: async (pluginId) =>
-      (await getSSHHosts({ includeStatus: false })).map((host) =>
-        toPluginHostRecord(host, pluginId ?? null),
-      ),
+      (await getSSHHosts()).map((host) => {
+        const status = getLiveHostStatus(host.id);
+        return toPluginHostRecord(
+          { ...host, status, online: status === "online" },
+          pluginId ?? null,
+        );
+      }),
     notifyHostsChanged: () => {
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
     },

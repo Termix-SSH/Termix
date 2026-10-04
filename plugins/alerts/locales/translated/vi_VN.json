@@ -168,5 +168,8 @@
     "showRead": "Hiển thị thông báo đã đọc",
     "allClear": "Tất cả ổn",
     "loading": "Đang tải..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

@@ -840,19 +840,24 @@ export interface PluginHosts {
   status: PluginHostStatusApi;
 }
 
-/** online: a login worked. reachable: the port answers. offline: it does not. */
+/**
+ * online: the port answers, a session is open or a login worked. offline: the
+ * port does not answer. "reachable" is no longer sent and stays only so older
+ * plugins still type check.
+ */
 export type PluginHostStatus = "online" | "reachable" | "offline";
 
 export interface PluginHostStatusEntry {
   status: PluginHostStatus;
   lastChecked: string;
+  /** @deprecated No longer sent. */
   reason?: "host_key_changed";
 }
 
 /**
  * Core checks every host with status checks on by opening a TCP connection to
- * it. A plugin that logs in to hosts tells core how that went, which is what
- * turns "reachable" into "online".
+ * it. A plugin that logs in to hosts can report a working login, which marks
+ * the host online right away.
  */
 export interface PluginHostStatusApi {
   /**
@@ -862,7 +867,10 @@ export interface PluginHostStatusApi {
   get: (hostId: number) => Promise<PluginHostStatusEntry | null>;
   /** Checks the host now unless core checked it recently. */
   check: (hostId: number) => Promise<PluginHostStatusEntry | null>;
-  /** Reports a login attempt. Not audited: pollers call it every sample. */
+  /**
+   * Reports a login attempt. Only a working login changes the status; a
+   * failed one is ignored. Not audited: pollers call it every sample.
+   */
   reportLogin: (
     hostId: number,
     outcome: { ok: boolean; hostKeyChanged?: boolean },

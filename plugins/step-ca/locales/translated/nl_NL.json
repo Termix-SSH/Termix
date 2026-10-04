@@ -44,5 +44,8 @@
       "label": "Gebruik de oude omleidings-URI",
       "description": "Blijf /host/step-ca-callback verzenden, de omleidings-URI die vóór versie 2.9 werd gebruikt. Schakel dit uit zodra uw identiteitsprovider de nieuwe URI toestaat."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

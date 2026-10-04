@@ -182,5 +182,8 @@
     "sharedBy": "تمت المشاركة بواسطة {{username}}",
     "join": "ينضم",
     "sharedSessionLabel": "{{hostName}} (مشترك)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

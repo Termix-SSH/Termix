@@ -207,5 +207,19 @@
     "remove": "Уклони распоред",
     "loadFailed": "Није могуће освежити статус одржавања. Промене су онемогућене док се не учита.",
     "loading": "Учитавање статуса одржавања…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

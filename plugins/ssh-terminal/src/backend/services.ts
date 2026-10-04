@@ -65,9 +65,17 @@ export interface TerminalHistoryV1 {
   list: (hostId: number, limit?: number) => Promise<CommandHistoryEntry[]>;
 }
 
+export interface TmuxSessionInfo {
+  name: string;
+  created: number;
+  lastActivity: number;
+  windows: number;
+  attachedClients: number;
+}
+
 export interface TmuxDetection {
   available: boolean;
-  sessions: string[];
+  sessions: TmuxSessionInfo[];
 }
 
 /**

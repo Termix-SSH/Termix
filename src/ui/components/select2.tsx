@@ -188,7 +188,7 @@ function Select2({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search..."
+            placeholder={t("common.search")}
             className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             autoFocus
           />

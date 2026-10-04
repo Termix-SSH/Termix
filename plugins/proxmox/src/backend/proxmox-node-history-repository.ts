@@ -40,7 +40,7 @@ export function createProxmoxNodeHistoryRepository(
     async create(input: ProxmoxNodeHistoryCreateInput): Promise<void> {
       const drizzle = await client();
       await drizzle.insert(table).values(input);
-      await db.persist();
+      await db.persist({ lazy: true });
     },
 
     async listRange(
@@ -73,7 +73,7 @@ export function createProxmoxNodeHistoryRepository(
       await drizzle
         .delete(table)
         .where(and(eq(table.hostId, hostId), lt(table.ts, cutoff)));
-      await db.persist();
+      await db.persist({ lazy: true });
     },
   };
 }

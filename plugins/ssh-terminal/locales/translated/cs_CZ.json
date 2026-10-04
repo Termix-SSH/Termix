@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Je vyžadován vzdálený server. Pro použití tohoto typu připojení se připojte ke vzdálenému serveru v Nastavení."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

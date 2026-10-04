@@ -207,5 +207,19 @@
     "remove": "Κατάργηση χρονοδιαγράμματος",
     "loadFailed": "Δεν ήταν δυνατή η ανανέωση της κατάστασης συντήρησης. Οι αλλαγές είναι απενεργοποιημένες μέχρι να είναι δυνατή η φόρτωσή τους.",
     "loading": "Φόρτωση κατάστασης συντήρησης…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

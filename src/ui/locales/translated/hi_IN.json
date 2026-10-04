@@ -116,11 +116,12 @@
     "updateLinkLabel": "अपडेट उपलब्ध है। GitHub पर रिलीज़ नोट्स देखें।"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "बंद करें",
     "minimize": "न्यूनतम करें",
     "online": "ऑनलाइन",
     "offline": "ऑफ़लाइन",
-    "signInFailed": "भाग लेना विफल हुआ",
     "unknown": "अज्ञात",
     "continue": "जारी रखें",
     "maintenance": "रखरखाव",
@@ -187,7 +188,11 @@
     "remove": "हटाएं",
     "add": "जोड़ें",
     "update": "अपडेट करें",
-    "noResults": "कोई परिणाम नहीं मिला"
+    "noResults": "कोई परिणाम नहीं मिला",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "चरण {{current}} का {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "टनल",
     "serverStats": "होस्ट मेट्रिक्स",
     "status": {
-      "available": "उपलब्ध",
-      "reachable": "ऊपर तो आ गया, लेकिन आखिरी बार साइन इन करने में विफल रहा।",
+      "online": "Online",
       "offline": "ऑफलाइन",
-      "monitoringDisabled": "निगरानी अक्षम है",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "स्थिति"
     },
     "folderRenamed": "फ़ोल्डर \"{{oldName}}\" का नाम बदलकर \"{{newName}}\" सफलतापूर्वक किया गया",
@@ -477,7 +482,7 @@
     "sameHost": "यह होस्ट (डायरेक्ट टनल)",
     "statusChecksLabel": "स्थिति जाँच",
     "enableStatusChecks": "स्थिति जाँच सक्षम करें",
-    "enableStatusChecksDesc": "उपलब्धता सत्यापित करने के लिए समय-समय पर इस होस्ट को पिंग करें",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "वैश्विक अंतराल का उपयोग करें",
     "useGlobalIntervalDesc": "सर्वर-व्यापी स्थिति जाँच अंतराल से ओवरराइड करें",
     "checkIntervalS": "जाँच अंतराल (सेकंड)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "आपके खाते में एक दूसरा फैक्टर फैक्टर इस्तेमाल होता है जो अभी उपलब्ध नहीं है। इसे रीसेट करने के लिए एडमिन से संपर्क करें।",
     "secondFactorNoUI": "यह दूसरा कारक इस स्क्रीन पर नहीं दिखाया जा सकता। कृपया व्यवस्थापक से संपर्क करें।",
     "serverAuthentication": "सर्वर साइन-इन",
-    "minChars": "न्यूनतम {{min}} अक्षर"
+    "minChars": "न्यूनतम {{min}} अक्षर",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "SSH होस्ट कुंजी सत्यापित करें",
@@ -1119,7 +1125,13 @@
     "language": "भाषा",
     "keyPassword": "कुंजी पासवर्ड",
     "pastePrivateKey": "अपनी निजी कुंजी यहाँ चिपकाएँ...",
-    "enterPassword": "अपना पासवर्ड दर्ज करें"
+    "enterPassword": "अपना पासवर्ड दर्ज करें",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "डैशबोर्ड",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "{{issuer}} द्वारा जारी किया गया",
     "sslNames": "कवर {{names}}",
     "sslManualTitle": "प्रमाणपत्र अपलोड करें",
-    "updateExternalAutoProvisionFailed": "ऑटो-क्रिएट सेटिंग को अपडेट करने में विफलता"
+    "updateExternalAutoProvisionFailed": "ऑटो-क्रिएट सेटिंग को अपडेट करने में विफलता",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

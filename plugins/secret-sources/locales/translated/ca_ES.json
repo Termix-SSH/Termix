@@ -23,5 +23,8 @@
         "description": "Amfitrions privats o de bucle que una font secreta pot assolir, un per línia. Un servidor 1Password Connect autoallotjat normalment necessita la seva pròpia adreça llistada aquí."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

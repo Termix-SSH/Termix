@@ -91,6 +91,18 @@ vi.mock("../../hosts/connect/connect-host.js", () => ({
     return { client, jumpClient: null, dispose: vi.fn(() => client.end()) };
   },
 }));
+vi.mock("../../hosts/host-resolver.js", () => ({
+  resolveHostById: async (hostId: number, userId: string) => ({
+    id: hostId,
+    userId,
+    ip: "10.0.0.5",
+    port: 22,
+    username: "root",
+    authType: "password",
+    password: "stored-secret",
+  }),
+  resolveHostBySyncId: async () => null,
+}));
 vi.mock("../../hosts/status/host-status-service.js", () => ({
   hostStatusService: {
     reportLogin: (hostId: number, outcome: unknown) =>
@@ -208,24 +220,19 @@ describe("ctx.ssh", () => {
     expect(h.logins).toEqual([{ hostId: 7, outcome: { ok: true } }]);
   });
 
-  it("reports an auth or host key failure, but not a timeout", async () => {
+  it("never reports a failed login to the status", async () => {
     h.granted = new Set(["ssh:connect", "credentials:use"]);
     const ssh = createPluginSsh({
       manifest: manifest(["ssh:connect", "credentials:use"]),
       bag: new DisposableBag("fixture"),
       audit: vi.fn(async () => {}),
     });
-    h.connectError = new Error("Timed out while waiting for handshake");
-    await expect(ssh.connect(7)).rejects.toThrow();
     h.connectError = new Error("All configured authentication methods failed");
     await expect(ssh.connect(7)).rejects.toThrow();
     h.connectError = new Error("Host key changed");
     await expect(ssh.connect(8)).rejects.toThrow();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(h.logins).toEqual([
-      { hostId: 7, outcome: { ok: false, hostKeyChanged: false } },
-      { hostId: 8, outcome: { ok: false, hostKeyChanged: true } },
-    ]);
+    expect(h.logins).toEqual([]);
   });
 
   it("never believes a host object's own userId", async () => {
@@ -251,6 +258,50 @@ describe("ctx.ssh", () => {
     await ssh.connect(forged);
     expect(h.connects[0].options).toMatchObject({ userId: "caller" });
     expect(h.connects[0].target).toMatchObject({ userId: "caller" });
+  });
+
+  it("connects a copied redacted host with its stored login", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const ssh = createPluginSsh({
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    const host = (await ssh.resolveHost(5))!;
+    expect((host as Record<string, unknown>).password).toBeUndefined();
+    expect(JSON.stringify(host)).not.toContain("stored-secret");
+    for (const symbol of Object.getOwnPropertySymbols(host)) {
+      expect(JSON.stringify((host as never)[symbol])).not.toContain(
+        "stored-secret",
+      );
+    }
+
+    await ssh.connect({ ...host, port: host.port || 22 });
+    expect(h.connects[0].target).toMatchObject({ password: "stored-secret" });
+
+    await ssh.connect({ ...host, password: "typed", authType: "password" });
+    expect(h.connects[1].target).toMatchObject({ password: "typed" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.logins.map((login) => login.hostId)).toEqual([5, 5]);
+  });
+
+  it("does not honor another plugin's resolved host", async () => {
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    const deps = {
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      audit: vi.fn(async () => {}),
+    };
+    const first = createPluginSsh({
+      ...deps,
+      bag: new DisposableBag("fixture"),
+    });
+    const second = createPluginSsh({
+      ...deps,
+      bag: new DisposableBag("fixture"),
+    });
+    const host = (await first.resolveHost(5))!;
+    await second.connect({ ...host });
+    expect(h.connects[0].target).not.toHaveProperty("password");
   });
 
   it("passes a given stream through to the pipeline, gated like any connect", async () => {

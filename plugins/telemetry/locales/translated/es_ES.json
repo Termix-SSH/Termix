@@ -54,5 +54,8 @@
     "previewDescription": "Esto es exactamente lo que se enviaría ahora mismo.",
     "close": "Cerrar",
     "loadFailed": "No se pudo cargar el estado de las estadísticas de uso."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

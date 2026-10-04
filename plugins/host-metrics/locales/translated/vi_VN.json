@@ -308,5 +308,8 @@
         "label": "Các tuyến đường được giám sát"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "Veure documents"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

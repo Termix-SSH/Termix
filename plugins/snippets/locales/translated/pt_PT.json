@@ -231,5 +231,8 @@
   "targetTerminals": "Correr em",
   "targetTerminalsHint": "Opcional, caso contrário, o separador ativo.",
   "selectAll": "Todas",
-  "selectNone": "Nenhuma"
+  "selectNone": "Nenhuma",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

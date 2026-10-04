@@ -308,5 +308,8 @@
         "label": "İzlenen yollar"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

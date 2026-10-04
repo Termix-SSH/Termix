@@ -54,5 +54,8 @@
     "previewDescription": "Det här är precis vad som skulle skickas just nu.",
     "close": "Nära",
     "loadFailed": "Kunde inte ladda användningsstatistikens status"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

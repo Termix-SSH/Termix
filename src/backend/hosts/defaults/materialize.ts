@@ -30,6 +30,7 @@ import {
 import { hostSettingsPlugins } from "../../database/routes/host-plugin-settings.js";
 import { notifySettingChange } from "../../plugins/settings.js";
 import { databaseLogger } from "../../utils/logger.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import {
   buildCatalog,
   catalogNamespaces,
@@ -342,83 +343,85 @@ async function afterHostsChanged(
  * Classifies and rewrites a set of hosts. Returns the hosts whose values or
  * overrides changed; with `dryRun` nothing is written.
  */
-export async function materializeHosts(
-  target: HostDefaultsTarget,
-  options: MaterializeOptions = {},
-): Promise<MaterializeResult> {
-  const repository = createCurrentHostDefaultsRepository();
-  const rows = (await repository.listHosts(target)).filter(
-    // A desktop's read-only copy of a shared host follows its owner's server.
-    (row) => !row.sharedSource,
-  );
-  if (rows.length === 0) return { changedHostIds: [] };
-
-  const { catalog } = currentCatalog();
-  const userIds = [...new Set(rows.map((row) => row.userId))];
-  const [index, placement, pluginRows] = await Promise.all([
-    loadDefaultsIndex(userIds),
-    loadPlacement(userIds),
-    loadPluginRows(rows.map((row) => row.id)),
-  ]);
-  const withOverlay = applyOverlay(index, options.overlay);
-
-  const changed: Array<{ row: HostRow; plan: HostPlan }> = [];
-  for (const row of rows) {
-    const levels = levelsForHost(
-      withOverlay,
-      row.userId,
-      effectiveFolderPath(row.id, placement),
+export const materializeHosts = DatabaseSaveTrigger.batched(
+  async (
+    target: HostDefaultsTarget,
+    options: MaterializeOptions = {},
+  ): Promise<MaterializeResult> => {
+    const repository = createCurrentHostDefaultsRepository();
+    const rows = (await repository.listHosts(target)).filter(
+      // A desktop's read-only copy of a shared host follows its owner's server.
+      (row) => !row.sharedSource,
     );
-    const plan = planHost(row, levels, catalog, pluginRows.get(row.id), {
-      keys: options.keys,
-    });
-    const valuesChanged =
-      Object.keys(plan.columns).some((key) => key !== "defaultOverrides") ||
-      plan.pluginWrites.length > 0;
-    if (options.dryRun) {
-      if (valuesChanged) changed.push({ row, plan });
-      continue;
+    if (rows.length === 0) return { changedHostIds: [] };
+
+    const { catalog } = currentCatalog();
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const [index, placement, pluginRows] = await Promise.all([
+      loadDefaultsIndex(userIds),
+      loadPlacement(userIds),
+      loadPluginRows(rows.map((row) => row.id)),
+    ]);
+    const withOverlay = applyOverlay(index, options.overlay);
+
+    const changed: Array<{ row: HostRow; plan: HostPlan }> = [];
+    for (const row of rows) {
+      const levels = levelsForHost(
+        withOverlay,
+        row.userId,
+        effectiveFolderPath(row.id, placement),
+      );
+      const plan = planHost(row, levels, catalog, pluginRows.get(row.id), {
+        keys: options.keys,
+      });
+      const valuesChanged =
+        Object.keys(plan.columns).some((key) => key !== "defaultOverrides") ||
+        plan.pluginWrites.length > 0;
+      if (options.dryRun) {
+        if (valuesChanged) changed.push({ row, plan });
+        continue;
+      }
+      if (valuesChanged || plan.overridesChanged) changed.push({ row, plan });
     }
-    if (valuesChanged || plan.overridesChanged) changed.push({ row, plan });
-  }
 
-  if (options.dryRun) {
-    return { changedHostIds: changed.map(({ row }) => row.id) };
-  }
+    if (options.dryRun) {
+      return { changedHostIds: changed.map(({ row }) => row.id) };
+    }
 
-  await repository.updateHosts(
-    changed.map(({ row, plan }) => ({
-      id: row.id,
-      values: plan.columns as Partial<HostRow>,
-    })),
-  );
-  const settings = createCurrentPluginSettingsRepository();
-  for (const { plan } of changed) {
-    for (const write of plan.pluginWrites) {
-      if (write.value === undefined) {
-        await settings.delete(
-          write.pluginId,
-          "host",
-          String(write.hostId),
-          write.key,
-        );
-      } else {
-        await settings.set(
-          write.pluginId,
-          "host",
-          String(write.hostId),
-          write.key,
-          JSON.stringify(write.value),
-        );
+    await repository.updateHosts(
+      changed.map(({ row, plan }) => ({
+        id: row.id,
+        values: plan.columns as Partial<HostRow>,
+      })),
+    );
+    const settings = createCurrentPluginSettingsRepository();
+    for (const { plan } of changed) {
+      for (const write of plan.pluginWrites) {
+        if (write.value === undefined) {
+          await settings.delete(
+            write.pluginId,
+            "host",
+            String(write.hostId),
+            write.key,
+          );
+        } else {
+          await settings.set(
+            write.pluginId,
+            "host",
+            String(write.hostId),
+            write.key,
+            JSON.stringify(write.value),
+          );
+        }
       }
     }
-  }
 
-  const valueChanges = changed.filter(
-    ({ plan }) =>
-      plan.pluginWrites.length > 0 ||
-      Object.keys(plan.columns).some((key) => key !== "defaultOverrides"),
-  );
-  await afterHostsChanged(valueChanges);
-  return { changedHostIds: valueChanges.map(({ row }) => row.id) };
-}
+    const valueChanges = changed.filter(
+      ({ plan }) =>
+        plan.pluginWrites.length > 0 ||
+        Object.keys(plan.columns).some((key) => key !== "defaultOverrides"),
+    );
+    await afterHostsChanged(valueChanges);
+    return { changedHostIds: valueChanges.map(({ row }) => row.id) };
+  },
+);

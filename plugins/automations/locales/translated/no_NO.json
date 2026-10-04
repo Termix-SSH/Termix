@@ -207,5 +207,19 @@
     "remove": "Fjern tidsplan",
     "loadFailed": "Kunne ikke oppdatere vedlikeholdsstatusen. Endringer er deaktivert inntil den kan lastes inn.",
     "loading": "Laster inn vedlikeholdsstatus…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

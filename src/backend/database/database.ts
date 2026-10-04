@@ -1,7 +1,7 @@
 import { getErrorMessage } from "../utils/error-message.js";
 import { sshOptionsForWrite } from "../hosts/ssh-options.js";
 import {
-  applyDefaultsAfterHostWrite,
+  applyDefaultsAfterHostWrites,
   applyHostDefaultsToWrite,
 } from "../hosts/defaults/index.js";
 import { recompute } from "../hosts/defaults/recompute.js";
@@ -687,6 +687,11 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     });
 
     const exportDb = new Database(tempPath);
+    // A scratch file: without these every row is its own synced commit, and
+    // plugin rows may point at hosts the export leaves out.
+    exportDb.pragma("journal_mode = OFF");
+    exportDb.pragma("synchronous = OFF");
+    exportDb.pragma("foreign_keys = OFF");
 
     try {
       exportDb.exec(`
@@ -990,9 +995,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userId,
         filename,
       });
+    });
 
+    // "close" also fires when the client aborts mid download, which "end"
+    // does not, so the decrypted export never stays behind on disk.
+    fileStream.on("close", () => {
       fs.unlink(tempPath, (err) => {
-        if (err) {
+        if (err && err.code !== "ENOENT") {
           apiLogger.warn("Failed to clean up export file", {
             operation: "export_cleanup_failed",
             path: tempPath,
@@ -1001,6 +1010,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         }
       });
     });
+    res.on("close", () => fileStream.destroy());
 
     fileStream.pipe(res);
   } catch (error) {
@@ -1048,7 +1058,7 @@ app.post(
   "/database/import",
   authenticateJWT,
   upload.single("file"),
-  async (req, res) => {
+  DatabaseSaveTrigger.batched(async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
@@ -1150,6 +1160,7 @@ app.post(
             const importedHosts = importDb
               .prepare("SELECT * FROM ssh_data")
               .all();
+            const importedHostIds: number[] = [];
             for (const host of importedHosts) {
               try {
                 const hostRepository = createCurrentHostRepository();
@@ -1224,7 +1235,7 @@ app.post(
                   Number(created.id),
                   importedHostPluginSettings(importDb, host),
                 );
-                await applyDefaultsAfterHostWrite(Number(created.id));
+                importedHostIds.push(Number(created.id));
                 await importHostProtocolLogins(
                   importDb,
                   host,
@@ -1238,6 +1249,7 @@ app.post(
                 );
               }
             }
+            await applyDefaultsAfterHostWrites(importedHostIds);
           } catch {
             apiLogger.info("ssh_data table not found in import file, skipping");
           }
@@ -1402,7 +1414,7 @@ app.post(
         details: getErrorMessage(error),
       });
     }
-  },
+  }),
 );
 
 /**

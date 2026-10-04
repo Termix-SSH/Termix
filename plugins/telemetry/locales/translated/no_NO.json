@@ -54,5 +54,8 @@
     "previewDescription": "Dette er akkurat det som ville bli sendt akkurat nå.",
     "close": "Lukk",
     "loadFailed": "Kunne ikke laste inn statusen for bruksstatistikken"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

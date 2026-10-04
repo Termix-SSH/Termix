@@ -116,11 +116,12 @@
     "updateLinkLabel": "Oppdatering tilgjengelig. Åpne utgivelsesnotatene på GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Lukke",
     "minimize": "Minimer",
     "online": "På nett",
     "offline": "Frakoblet",
-    "signInFailed": "Pålogging mislyktes",
     "unknown": "Ukjent",
     "continue": "Fortsette",
     "maintenance": "Vedlikehold",
@@ -187,7 +188,11 @@
     "remove": "Fjerne",
     "add": "Legge til",
     "update": "Oppdatering",
-    "noResults": "Ingen resultater funnet"
+    "noResults": "Ingen resultater funnet",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Trinn {{current}} av {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Vertsmålinger",
     "status": {
-      "available": "Tilgjengelig",
-      "reachable": "Oppe, men siste pålogging mislyktes",
+      "online": "Online",
       "offline": "Frakoblet",
-      "monitoringDisabled": "Overvåking deaktivert",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Mappen «{{oldName}}» har fått nytt navn til «{{newName}}»",
@@ -477,7 +482,7 @@
     "sameHost": "Denne verten (direkte tunnel)",
     "statusChecksLabel": "Statuskontroller",
     "enableStatusChecks": "Aktiver statuskontroller",
-    "enableStatusChecksDesc": "Ping denne verten med jevne mellomrom for å bekrefte tilgjengelighet",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Bruk globalt intervall",
     "useGlobalIntervalDesc": "Overstyr med det serveromfattende statuskontrollintervallet",
     "checkIntervalS": "Kontrollintervall (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Kontoen din bruker en annen faktor som ikke er tilgjengelig akkurat nå. Kontakt en administrator for å tilbakestille den.",
     "secondFactorNoUI": "Denne andre faktoren kan ikke vises på denne skjermen. Kontakt en administrator.",
     "serverAuthentication": "Serverpålogging",
-    "minChars": "min. {{min}} tegn"
+    "minChars": "min. {{min}} tegn",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Bekreft SSH-vertsnøkkel",
@@ -1119,7 +1125,13 @@
     "language": "Språk",
     "keyPassword": "nøkkelpassord",
     "pastePrivateKey": "Lim inn din private nøkkel her...",
-    "enterPassword": "Skriv inn passordet ditt"
+    "enterPassword": "Skriv inn passordet ditt",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashbord",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Utstedt av {{issuer}}",
     "sslNames": "Omslag {{names}}",
     "sslManualTitle": "Last opp et sertifikat",
-    "updateExternalAutoProvisionFailed": "Kunne ikke oppdatere innstillingen for automatisk oppretting"
+    "updateExternalAutoProvisionFailed": "Kunne ikke oppdatere innstillingen for automatisk oppretting",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

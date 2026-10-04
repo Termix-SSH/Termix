@@ -20,6 +20,12 @@
     "nameRequired": "Este obligatoriu un nume afișat",
     "type": "Tipul furnizorului",
     "enabled": "Activat",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Salvați furnizorul",
     "saving": "Economisire...",
     "saved": "Salvat",
@@ -61,5 +67,8 @@
       "label": "Conectați-vă automat cu SSO",
       "description": "Trimiteți vizitatorii direct către primul furnizor SSO în loc să afișați formularul de conectare. Variabila de mediu OIDC_SILENT_LOGIN_DEFAULT are prioritate față de această opțiune."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

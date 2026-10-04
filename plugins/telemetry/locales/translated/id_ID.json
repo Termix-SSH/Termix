@@ -54,5 +54,8 @@
     "previewDescription": "Inilah yang akan dikirimkan sekarang juga.",
     "close": "Tutup",
     "loadFailed": "Tidak dapat memuat status statistik penggunaan."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

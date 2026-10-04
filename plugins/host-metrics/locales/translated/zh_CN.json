@@ -308,5 +308,8 @@
         "label": "监控路径"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

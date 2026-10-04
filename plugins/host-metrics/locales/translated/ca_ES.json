@@ -308,5 +308,8 @@
         "label": "Camins monitoritzats"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

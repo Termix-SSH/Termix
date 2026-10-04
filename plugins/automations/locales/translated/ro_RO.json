@@ -207,5 +207,19 @@
     "remove": "Eliminați programul",
     "loadFailed": "Nu s-a putut actualiza starea de întreținere. Modificările sunt dezactivate până când pot fi încărcate.",
     "loading": "Se încarcă starea de întreținere…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

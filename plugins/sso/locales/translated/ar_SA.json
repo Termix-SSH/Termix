@@ -20,6 +20,12 @@
     "nameRequired": "اسم العرض مطلوب",
     "type": "نوع المزود",
     "enabled": "مُمكّن",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "حفظ المزود",
     "saving": "جارٍ الحفظ...",
     "saved": "محفوظ",
@@ -61,5 +67,8 @@
       "label": "تسجيل الدخول باستخدام تسجيل الدخول الموحد (SSO) تلقائيًا",
       "description": "قم بتوجيه الزوار مباشرةً إلى أول مزود خدمة تسجيل دخول موحد (SSO) بدلاً من عرض نموذج تسجيل الدخول. يُمكن تجاوز هذا الإعداد باستخدام متغير البيئة OIDC_SILENT_LOGIN_DEFAULT."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

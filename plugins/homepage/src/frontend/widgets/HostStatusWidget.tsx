@@ -52,23 +52,20 @@ function HostStatusWidget({
     );
   }
 
-  const online = statusInfo?.status === "online";
-  const reachable = statusInfo?.status === "reachable";
+  const status = statusInfo?.status;
+  const online = status === "online";
+  const known = online || status === "offline";
 
-  const onlineColor = !statusInfo
+  const onlineColor = !known
     ? "#6b7280"
     : online
       ? getAccentColor()
-      : reachable
-        ? "#fbbf24"
-        : "#ef4444";
-  const onlineLabel = !statusInfo
+      : "#ef4444";
+  const onlineLabel = !known
     ? t("common.unknown")
     : online
       ? t("common.online")
-      : reachable
-        ? t("common.signInFailed")
-        : t("common.offline");
+      : t("common.offline");
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">

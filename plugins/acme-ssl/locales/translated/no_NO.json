@@ -54,5 +54,8 @@
     "request": "Be om sertifikat nå",
     "requesting": "Ber om sertifikat...",
     "issued": "Sertifikat utstedt og installert"
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

@@ -23,5 +23,8 @@
         "description": "Host privat atau loopback yang dapat dijangkau oleh sumber rahasia, satu per baris. Server 1Password Connect yang dihosting sendiri biasanya memerlukan alamatnya sendiri yang tercantum di sini."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

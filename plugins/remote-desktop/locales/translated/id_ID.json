@@ -212,7 +212,28 @@
       "backspaceKey": "Tombol Backspace",
       "colorDepth": "Kedalaman Warna",
       "resizeMethod": "Metode Pengubahan Ukuran",
-      "driveNamePlaceholder": "Termix Drive"
+      "driveNamePlaceholder": "Termix Drive",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Desktop Jarak Jauh",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Diperlukan server jarak jauh. Hubungkan server jarak jauh di Pengaturan untuk menggunakan jenis koneksi ini."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

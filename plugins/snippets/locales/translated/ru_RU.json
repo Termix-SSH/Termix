@@ -231,5 +231,8 @@
   "targetTerminals": "Забег",
   "targetTerminalsHint": "необязателен, в противном случае активная вкладка.",
   "selectAll": "Все",
-  "selectNone": "Ни одного"
+  "selectNone": "Ни одного",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

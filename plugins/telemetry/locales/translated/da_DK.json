@@ -54,5 +54,8 @@
     "previewDescription": "Det er præcis, hvad der ville blive sendt lige nu.",
     "close": "Tæt",
     "loadFailed": "Kunne ikke indlæse status for brugsstatistik"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

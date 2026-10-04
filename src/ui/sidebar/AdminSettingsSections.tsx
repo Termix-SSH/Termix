@@ -5,6 +5,7 @@ import { Input } from "@/components/input";
 import { SettingRow } from "@/components/section-card";
 import { Database, Lock, RefreshCw, Server, Settings } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
+import { AdminHostTags } from "./AdminHostTags";
 import type { TlsStatus } from "@/api/tls-api";
 
 type GeneralSettingsSectionProps = {
@@ -349,6 +350,9 @@ export function AdminHostDefaultsSection({
         >
           {t("hostDefaults.editServerDefaults")}
         </Button>
+        <div className="border-t border-border pt-3">
+          <AdminHostTags />
+        </div>
       </div>
     </AccordionSection>
   );

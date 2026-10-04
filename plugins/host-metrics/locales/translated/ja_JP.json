@@ -308,5 +308,8 @@
         "label": "監視対象経路"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

@@ -111,7 +111,7 @@ async function auditRefusal(
     const { logAudit } = await import("../utils/audit-logger.js");
     await logAudit({
       // Attribution comes from the runtime, never from the plugin.
-      userId: getActor() ?? "system",
+      userId: getActor() ?? null,
       username: `plugin:${pluginId}`,
       action: `plugin_${action}`,
       resourceType: "plugin",

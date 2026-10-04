@@ -207,5 +207,19 @@
     "remove": "Elimina la programació",
     "loadFailed": "No s'ha pogut actualitzar l'estat del manteniment. Els canvis estan desactivats fins que es pugui carregar.",
     "loading": "S'està carregant l'estat del manteniment…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

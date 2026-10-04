@@ -23,6 +23,12 @@
     "namePlaceholder": "कंपनी निर्देशिका",
     "nameRequired": "एक डिस्प्ले नाम आवश्यक है",
     "enabled": "सक्षम",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "निर्देशिका सहेजें",
     "saving": "सहेजा जा रहा है...",
     "saved": "सहेजा गया",
@@ -36,6 +42,7 @@
     "host": "LDAP होस्ट",
     "port": "पोर्ट",
     "useTls": "TLS (LDAPS) का उपयोग करें",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Bind पासवर्ड",
     "secretKeep": "पासवर्ड सेव हो गया है। इसे सेव रखने के लिए इसे खाली छोड़ दें।",
@@ -46,5 +53,8 @@
     "groupSearchBase": "समूह खोज आधार",
     "adminGroup": "व्यवस्थापक समूह",
     "allowedUsers": "अनुमत उपयोगकर्ता"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

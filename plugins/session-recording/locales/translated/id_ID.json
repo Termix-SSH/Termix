@@ -56,5 +56,8 @@
     "speed": "Kecepatan pemutaran",
     "play": "Putar rekaman",
     "pause": "Jeda perekaman"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

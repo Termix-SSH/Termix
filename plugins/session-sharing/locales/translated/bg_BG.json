@@ -182,5 +182,8 @@
     "sharedBy": "Споделено от {{username}}",
     "join": "Присъединете се",
     "sharedSessionLabel": "{{hostName}} (споделено)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

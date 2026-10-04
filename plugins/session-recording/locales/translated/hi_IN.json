@@ -56,5 +56,8 @@
     "speed": "प्लेबैक गति",
     "play": "रिकॉर्डिंग चलाएं",
     "pause": "रिकॉर्डिंग रोकें"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

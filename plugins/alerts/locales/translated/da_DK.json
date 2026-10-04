@@ -168,5 +168,8 @@
     "showRead": "Vis læseadvarsler",
     "allClear": "Alt klart",
     "loading": "Indlæser..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

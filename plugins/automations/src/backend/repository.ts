@@ -528,7 +528,7 @@ export async function createAutomationRepository(
           .set({ lastRunAt: run[0].startedAt, lastRunStatus: input.status })
           .where(eq(automations.id, run[0].automationId));
       }
-      await db.persist();
+      await db.persist({ lazy: true });
     },
 
     async listRuns(
@@ -630,7 +630,7 @@ export async function createAutomationRepository(
         .where(lt(runs.startedAt, cutoff));
       if (old.length === 0) return 0;
       await drizzle.delete(runs).where(lt(runs.startedAt, cutoff));
-      await db.persist();
+      await db.persist({ lazy: true });
       return old.length;
     },
 

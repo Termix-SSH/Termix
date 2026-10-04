@@ -58,9 +58,13 @@ describe("SFTP download stream", () => {
     const data = Buffer.alloc(1024 * 1024 + 123);
     for (let i = 0; i < data.length; i++) data[i] = (i * 13 + (i >>> 8)) % 256;
     const remote = source(data);
-    expect(
-      await contents(createDownloadStream(remote.sftp, "/file", data.length)),
-    ).toEqual(data);
+    const received = await contents(
+      createDownloadStream(remote.sftp, "/file", data.length),
+    );
+    // toEqual walks a 1 MB buffer byte by byte, slow enough to time out
+    // when every plugin suite runs at once.
+    expect(received.length).toBe(data.length);
+    expect(received.equals(data)).toBe(true);
     expect(remote.peak()).toBe(8);
     expect(remote.closedWithPending).toEqual([0]);
   });

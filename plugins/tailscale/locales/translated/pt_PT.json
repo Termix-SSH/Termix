@@ -82,5 +82,8 @@
         "usernameLabel": "Nome de utilizador"
       }
     }
+  },
+  "plugin": {
+    "name": "Tailscale"
   }
 }

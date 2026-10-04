@@ -23,6 +23,12 @@
     "namePlaceholder": "Directori d'empreses",
     "nameRequired": "Cal un nom de visualització",
     "enabled": "Activat",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Desa el directori",
     "saving": "Desant...",
     "saved": "Desat",
@@ -36,6 +42,7 @@
     "host": "Amfitrió LDAP",
     "port": "Port",
     "useTls": "Utilitza TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Vinculació de nom de domini",
     "bindPassword": "Contrasenya de vinculació",
     "secretKeep": "S'ha desat una contrasenya. Deixeu-ho en blanc per conservar-la.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Base de cerca de grups",
     "adminGroup": "Grup d'administradors",
     "allowedUsers": "Usuaris permesos"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

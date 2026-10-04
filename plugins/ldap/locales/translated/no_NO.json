@@ -23,6 +23,12 @@
     "namePlaceholder": "Firmakatalog",
     "nameRequired": "Et visningsnavn er obligatorisk",
     "enabled": "Aktivert",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Lagre katalog",
     "saving": "Lagrer...",
     "saved": "Lagret",
@@ -36,6 +42,7 @@
     "host": "LDAP-vert",
     "port": "Havn",
     "useTls": "Bruk TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Bind DN",
     "bindPassword": "Bind passord",
     "secretKeep": "Et passord er lagret. La dette feltet stå tomt for å beholde det.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Gruppesøkbase",
     "adminGroup": "Admingruppe",
     "allowedUsers": "Tillatte brukere"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

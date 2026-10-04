@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "নথি দেখুন"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

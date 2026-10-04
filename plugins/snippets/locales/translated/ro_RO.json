@@ -231,5 +231,8 @@
   "targetTerminals": "Rulare în",
   "targetTerminalsHint": "opțional, altfel fila activă",
   "selectAll": "Toate",
-  "selectNone": "Nici unul"
+  "selectNone": "Nici unul",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

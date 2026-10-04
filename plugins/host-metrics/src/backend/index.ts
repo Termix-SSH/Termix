@@ -22,6 +22,8 @@ export interface MetricsViewersV1 {
   unregister: (hostId: number, viewerSessionId: string) => void;
 }
 
+const RETIME_DEBOUNCE_MS = 1000;
+
 export async function activate(ctx: PluginContext) {
   const log = createLogger(ctx.log);
   const repository = await createHostMetricsRepository(ctx.db);
@@ -73,7 +75,19 @@ export async function activate(ctx: PluginContext) {
     const { hostId } = payload as { hostId?: number };
     if (hostId) poller.hostKeyAccepted(hostId);
   });
-  ctx.settings.onChange("metricsInterval", () => void poller.retimeAll());
+  // An import writes this once per host, and each write restarted every
+  // polled host. One retime after the writes settle covers them all.
+  let retime: ReturnType<typeof setTimeout> | null = null;
+  ctx.settings.onChange("metricsInterval", () => {
+    if (retime) clearTimeout(retime);
+    retime = setTimeout(() => {
+      retime = null;
+      void poller.retimeAll();
+    }, RETIME_DEBOUNCE_MS);
+  });
+  ctx.disposables.add(() => {
+    if (retime) clearTimeout(retime);
+  });
 
   ctx.services.provide<MetricsViewersV1>("host-metrics.viewers", {
     register: async (hostId) => {

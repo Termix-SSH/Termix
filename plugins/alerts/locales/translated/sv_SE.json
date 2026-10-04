@@ -168,5 +168,8 @@
     "showRead": "Visa läsaviseringar",
     "allClear": "Faran över",
     "loading": "Belastning..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

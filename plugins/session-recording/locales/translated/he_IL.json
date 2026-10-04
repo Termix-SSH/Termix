@@ -56,5 +56,8 @@
     "speed": "מהירות השמעה",
     "play": "הפעלת הקלטה",
     "pause": "השהיית ההקלטה"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

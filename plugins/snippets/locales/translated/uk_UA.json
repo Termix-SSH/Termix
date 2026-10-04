@@ -231,5 +231,8 @@
   "targetTerminals": "Оббіг",
   "targetTerminalsHint": "необов'язково, інакше активна вкладка",
   "selectAll": "Усі",
-  "selectNone": "Жоден"
+  "selectNone": "Жоден",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

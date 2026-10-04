@@ -207,5 +207,19 @@
     "remove": "إزالة الجدول الزمني",
     "loadFailed": "تعذر تحديث حالة الصيانة. التغييرات معطلة حتى يتم تحميلها.",
     "loading": "جارٍ تحميل حالة الصيانة…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

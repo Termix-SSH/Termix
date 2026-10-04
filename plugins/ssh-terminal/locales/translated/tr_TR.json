@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Uzak sunucu gereklidir. Bu bağlantı türünü kullanmak için Ayarlar'dan bir uzak sunucu bağlayın."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

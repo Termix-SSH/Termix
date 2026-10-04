@@ -23,6 +23,12 @@
     "namePlaceholder": "รายชื่อบริษัท",
     "nameRequired": "จำเป็นต้องระบุชื่อที่แสดง",
     "enabled": "เปิดใช้งาน",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "บันทึกไดเร็กทอรี",
     "saving": "ประหยัด...",
     "saved": "บันทึกแล้ว",
@@ -36,6 +42,7 @@
     "host": "โฮสต์ LDAP",
     "port": "ท่าเรือ",
     "useTls": "ใช้ TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "ผูก DN",
     "bindPassword": "รหัสผ่านผูกมัด",
     "secretKeep": "รหัสผ่านถูกบันทึกไว้แล้ว หากต้องการบันทึกรหัสผ่าน ให้เว้นช่องนี้ว่างไว้",
@@ -46,5 +53,8 @@
     "groupSearchBase": "ฐานการค้นหากลุ่ม",
     "adminGroup": "กลุ่มผู้ดูแลระบบ",
     "allowedUsers": "ผู้ใช้ที่ได้รับอนุญาต"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

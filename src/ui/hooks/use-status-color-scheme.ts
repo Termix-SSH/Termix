@@ -48,14 +48,13 @@ export function useStatusColorScheme(): StatusColorScheme {
 
 /** Returns Tailwind class names for a status dot/stripe. */
 export function getStatusClasses(
-  status: boolean | "online" | "reachable" | "offline" | "degraded",
+  status: boolean | "online" | "offline" | "unknown",
   scheme: StatusColorScheme,
   variant: "dot" | "stripe" | "badge",
   loading = false,
 ): string {
   const online = status === true || status === "online";
-  const reachable = status === "reachable";
-  if (loading) {
+  if (loading || status === "unknown") {
     if (scheme === "status") {
       if (variant === "dot") return "bg-yellow-400 animate-pulse";
       if (variant === "stripe") return "bg-yellow-400/40 animate-pulse";
@@ -64,11 +63,6 @@ export function getStatusClasses(
     if (variant === "dot") return "bg-muted-foreground/40 animate-pulse";
     if (variant === "stripe") return "bg-muted-foreground/20 animate-pulse";
     return "border-border/50 text-muted-foreground/50 bg-muted/20 animate-pulse";
-  }
-  if (reachable) {
-    if (variant === "dot") return "bg-amber-400";
-    if (variant === "stripe") return "bg-amber-400/50";
-    return "border-amber-400/40 text-amber-400 bg-amber-400/10";
   }
   if (scheme === "status") {
     if (variant === "dot") return online ? "bg-emerald-500" : "bg-red-500";

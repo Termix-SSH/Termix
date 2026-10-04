@@ -82,5 +82,8 @@
         "usernameLabel": "Потребителско име"
       }
     }
+  },
+  "plugin": {
+    "name": "Tailscale"
   }
 }

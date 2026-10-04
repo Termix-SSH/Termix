@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "عرض المستندات"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

@@ -44,5 +44,8 @@
       "label": "Folosește vechiul URI de redirecționare",
       "description": "Continuă să trimiți /host/step-ca-callback, URI-ul de redirecționare folosit înainte de versiunea 2.9. Dezactivează această opțiune odată ce furnizorul de identitate îl permite pe cel nou."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

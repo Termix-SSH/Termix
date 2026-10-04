@@ -28,5 +28,8 @@
   },
   "hosts": {
     "filterAuthOpkssh": "OPKSSH"
+  },
+  "plugin": {
+    "name": "OPKSSH"
   }
 }

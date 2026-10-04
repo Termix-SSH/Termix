@@ -182,5 +182,8 @@
     "sharedBy": "由 {{username}} 分享",
     "join": "加入",
     "sharedSessionLabel": "{{hostName}} （共享）"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

@@ -168,5 +168,8 @@
     "showRead": "Vis lesevarsler",
     "allClear": "Alt klart",
     "loading": "Laster..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

@@ -65,5 +65,8 @@
         "label": "Perfil de assinatura do Vault"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

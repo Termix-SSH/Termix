@@ -304,7 +304,7 @@ export async function createAlertsRepository(
         dedupeKey: item.dedupeKey ?? null,
         createdAt,
       });
-      await db.persist();
+      await db.persist({ lazy: true });
       return toItem({
         id,
         ...item,
@@ -322,7 +322,7 @@ export async function createAlertsRepository(
         .update(items)
         .set({ deliveries: JSON.stringify(results) })
         .where(eq(items.id, id));
-      await db.persist();
+      await db.persist({ lazy: true });
     },
 
     async hasUnreadWithKey(userId: string, key: string): Promise<boolean> {

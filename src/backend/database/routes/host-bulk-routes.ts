@@ -4,7 +4,7 @@ import {
 } from "./host-import-order.js";
 import { sshOptionsForWrite } from "../../hosts/ssh-options.js";
 import {
-  applyDefaultsAfterHostWrite,
+  applyDefaultsAfterHostWrites,
   applyHostDefaultsToWrite,
 } from "../../hosts/defaults/index.js";
 import {
@@ -22,6 +22,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
@@ -183,8 +184,6 @@ export function registerHostBulkRoutes(
    *   patch:
    *     summary: Bulk update partial fields on multiple SSH hosts
    *     tags: [SSH]
-   *     security:
-   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -239,7 +238,7 @@ export function registerHostBulkRoutes(
     authenticateJWT,
     requireEditPermission,
     requireDataAccess,
-    async (req: Request, res: Response) => {
+    DatabaseSaveTrigger.batched(async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostIds, updates } = req.body;
 
@@ -368,7 +367,7 @@ export function registerHostBulkRoutes(
         sshLogger.error("Failed to bulk update hosts:", error);
         return res.status(500).json({ error: "Failed to bulk update hosts" });
       }
-    },
+    }),
   );
 
   /**
@@ -457,7 +456,7 @@ export function registerHostBulkRoutes(
     requireCreatePermission,
     requireEditPermission,
     requireDataAccess,
-    async (req: Request, res: Response) => {
+    DatabaseSaveTrigger.batched(async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
         hosts: hostsToImport,
@@ -577,6 +576,7 @@ export function registerHostBulkRoutes(
       }
 
       const knownAuthTypes = listKnownAuthTypes();
+      const writtenHostIds: number[] = [];
       for (const { host: hostData, index: i, exportId } of orderedHosts) {
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
@@ -812,12 +812,14 @@ export function registerHostBulkRoutes(
             savedHostId,
             hostData as Record<string, unknown>,
           );
-          await applyDefaultsAfterHostWrite(savedHostId);
+          writtenHostIds.push(savedHostId);
         } catch (error) {
           results.failed++;
           results.errors.push(`Host ${i + 1}: ${getErrorMessage(error)}`);
         }
       }
+
+      await applyDefaultsAfterHostWrites(writtenHostIds);
 
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
@@ -827,7 +829,7 @@ export function registerHostBulkRoutes(
         failed: results.failed,
         errors: results.errors,
       });
-    },
+    }),
   );
 
   /**
@@ -864,7 +866,7 @@ export function registerHostBulkRoutes(
     requireCreatePermission,
     requireEditPermission,
     requireDataAccess,
-    async (req: Request, res: Response) => {
+    DatabaseSaveTrigger.batched(async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { content, overwrite } = req.body;
 
@@ -936,6 +938,7 @@ export function registerHostBulkRoutes(
         }
       }
 
+      const writtenHostIds: number[] = [];
       for (let i = 0; i < hostsToImport.length; i++) {
         const hostData = normalizeImportedHost(
           hostsToImport[i] as Record<string, unknown>,
@@ -1003,7 +1006,7 @@ export function registerHostBulkRoutes(
               existing.id,
               sshDataObj,
             );
-            await applyDefaultsAfterHostWrite(existing.id);
+            writtenHostIds.push(existing.id);
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
@@ -1011,7 +1014,7 @@ export function registerHostBulkRoutes(
               userId,
               sshDataObj,
             );
-            await applyDefaultsAfterHostWrite(saved.id);
+            writtenHostIds.push(saved.id);
             results.success++;
           }
         } catch (error) {
@@ -1022,6 +1025,8 @@ export function registerHostBulkRoutes(
         }
       }
 
+      await applyDefaultsAfterHostWrites(writtenHostIds);
+
       res.json({
         message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
         success: results.success,
@@ -1030,7 +1035,7 @@ export function registerHostBulkRoutes(
         failed: results.failed,
         errors: results.errors,
       });
-    },
+    }),
   );
 }
 

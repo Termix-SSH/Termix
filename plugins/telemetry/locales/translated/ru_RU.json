@@ -54,5 +54,8 @@
     "previewDescription": "Именно это сейчас и отправили бы.",
     "close": "Закрыть",
     "loadFailed": "Не удалось загрузить статистику использования."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

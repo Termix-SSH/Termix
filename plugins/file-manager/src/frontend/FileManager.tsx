@@ -1416,10 +1416,13 @@ function FileManagerContent({
       const { downloadSSHFileStream } =
         await import("./api/ssh-file-operations-api");
 
-      toast.loading(<DownloadProgressToast fileName={file.name} loaded={0} />, {
-        id: toastId,
-        duration: Infinity,
-      });
+      toast.loading(
+        <DownloadProgressToast t={t} fileName={file.name} loaded={0} />,
+        {
+          id: toastId,
+          duration: Infinity,
+        },
+      );
 
       await downloadSSHFileStream(
         sshSessionId,
@@ -1438,6 +1441,7 @@ function FileManagerContent({
 
           toast.loading(
             <DownloadProgressToast
+              t={t}
               fileName={file.name}
               loaded={loaded}
               total={total}

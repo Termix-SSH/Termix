@@ -56,5 +56,8 @@
     "speed": "Rychlost přehrávání",
     "play": "Přehrát nahrávku",
     "pause": "Pozastavit nahrávání"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

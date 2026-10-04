@@ -44,5 +44,8 @@
       "label": "Use the old redirect URI",
       "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

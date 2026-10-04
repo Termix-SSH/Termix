@@ -323,7 +323,7 @@
     "sideBySide": "Song song",
     "inline": "Trong dòng",
     "fileComparison": "So sánh tệp: {{file1}} vs {{file2}}",
-    "fileTooLarge": "Tệp quá lớn: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "Kết nối SSH thất bại. Vui lòng kiểm tra kết nối tới {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Không thể tải tệp: {{error}}",
     "connecting": "Đang kết nối...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Sử dụng bố cục thoải mái",
     "cannotLoadPdf": "Không thể tải PDF",
     "pdfLoadError": "Đã xảy ra lỗi khi tải tệp PDF này.",
-    "loadingPdf": "Đang tải PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Đang tải trang...",
     "cancel": "Hủy",
     "copiedItems_one": "Đã sao chép mục {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Trình duyệt của bạn không thể phát định dạng video này.",
     "downloadToPlay": "Tải xuống để chơi ở nơi khác",
     "cannotPreviewType": "Không thể xem trước loại tệp này",
-    "cannotPreviewTypeHint": "Loại tệp này không có bản xem trước. Hãy tải xuống để mở bằng ứng dụng khác."
+    "cannotPreviewTypeHint": "Loại tệp này không có bản xem trước. Hãy tải xuống để mở bằng ứng dụng khác.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Nguồn → máy chủ: {{throughput}}",
     "metricsHopDestSftpWrite": "Máy chủ → đích (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Máy chủ → đích (cục bộ): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

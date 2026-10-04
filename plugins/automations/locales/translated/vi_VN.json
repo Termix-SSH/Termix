@@ -207,5 +207,19 @@
     "remove": "Xóa lịch trình",
     "loadFailed": "Không thể cập nhật trạng thái bảo trì. Các thay đổi bị vô hiệu hóa cho đến khi có thể tải lại.",
     "loading": "Đang tải trạng thái bảo trì…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

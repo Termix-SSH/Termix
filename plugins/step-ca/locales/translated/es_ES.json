@@ -44,5 +44,8 @@
       "label": "Utilice la URI de redireccionamiento antigua",
       "description": "Sigue enviando /host/step-ca-callback, la URI de redireccionamiento que se usaba antes de la versión 2.9. Desactívala una vez que tu proveedor de identidad permita la nueva."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

@@ -323,7 +323,7 @@
     "sideBySide": "并排",
     "inline": "内联",
     "fileComparison": "文件比较: {{file1}} 对比 {{file2}}",
-    "fileTooLarge": "文件过大: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH 连接失败。请检查您到 {{name}} ({{ip}}:{{port}}) 的连接",
     "loadFileFailed": "加载文件失败: {{error}}",
     "connecting": "连接中...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "采用舒适的布局",
     "cannotLoadPdf": "无法加载 PDF",
     "pdfLoadError": "加载此 PDF 文件时出错。",
-    "loadingPdf": "正在加载 PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "正在加载页面...",
     "cancel": "取消",
     "copiedItems_one": "已复制 {{count}} 项目",
@@ -383,7 +383,16 @@
     "videoUnsupported": "您的浏览器无法播放此视频格式。",
     "downloadToPlay": "下载后即可在其他地方播放",
     "cannotPreviewType": "无法预览此文件类型",
-    "cannotPreviewTypeHint": "此文件类型没有预览。请下载后在其他应用程序中打开。"
+    "cannotPreviewTypeHint": "此文件类型没有预览。请下载后在其他应用程序中打开。",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "源 → 服务器：{{throughput}}",
     "metricsHopDestSftpWrite": "服务器 → 目标 (SFTP)：{{throughput}}",
     "metricsHopDestLocalWrite": "服务器 → 目标 (本地)：{{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

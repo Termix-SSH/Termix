@@ -212,7 +212,28 @@
       "backspaceKey": "Klawisz Backspace",
       "colorDepth": "Głębia koloru",
       "resizeMethod": "Metoda zmiany rozmiaru",
-      "driveNamePlaceholder": "Napęd Termix"
+      "driveNamePlaceholder": "Napęd Termix",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Pulpit zdalny",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Wymagany jest serwer zdalny. Połącz się z serwerem zdalnym w Ustawieniach, aby korzystać z tego typu połączenia."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

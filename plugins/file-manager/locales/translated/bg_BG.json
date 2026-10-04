@@ -323,7 +323,7 @@
     "sideBySide": "Рамо до рамо",
     "inline": "Вграден",
     "fileComparison": "Сравнение на файлове: {{file1}} срещу {{file2}}",
-    "fileTooLarge": "Файлът е твърде голям: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH връзката не бе успешна. Моля, проверете връзката си с {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Неуспешно зареждане на файл: {{error}}",
     "connecting": "Свързване...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Използвайте удобно оформление",
     "cannotLoadPdf": "Не може да се зареди PDF файл",
     "pdfLoadError": "Възникна грешка при зареждането на този PDF файл.",
-    "loadingPdf": "Зареждане на PDF файл...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Зареждане на страницата...",
     "cancel": "Отказ",
     "copiedItems_one": "Копиран елемент {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Вашият браузър не може да възпроизведе този видео формат.",
     "downloadToPlay": "Изтеглете, за да го играете другаде",
     "cannotPreviewType": "Не може да се прегледа този тип файл",
-    "cannotPreviewTypeHint": "Този тип файл няма предварителен преглед. Изтеглете го, за да го отворите в друго приложение."
+    "cannotPreviewTypeHint": "Този тип файл няма предварителен преглед. Изтеглете го, за да го отворите в друго приложение.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Източник → сървър: {{throughput}}",
     "metricsHopDestSftpWrite": "Сървър → дестинация (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Сървър → дестинация (локална): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

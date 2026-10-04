@@ -65,5 +65,8 @@
         "label": "Perfil de assinatura do cofre"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

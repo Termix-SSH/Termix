@@ -182,5 +182,8 @@
     "sharedBy": "Được chia sẻ bởi {{username}}",
     "join": "Tham gia",
     "sharedSessionLabel": "{{hostName}} (được chia sẻ)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

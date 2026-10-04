@@ -207,5 +207,19 @@
     "remove": "Schema verwijderen",
     "loadFailed": "De onderhoudsstatus kon niet worden vernieuwd. Wijzigingen zijn uitgeschakeld totdat de status kan worden geladen.",
     "loading": "Onderhoudsstatus laden…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

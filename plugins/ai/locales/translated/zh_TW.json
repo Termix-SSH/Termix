@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "檢視文件"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

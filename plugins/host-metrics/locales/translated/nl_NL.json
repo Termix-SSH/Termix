@@ -308,5 +308,8 @@
         "label": "Bewaakte paden"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

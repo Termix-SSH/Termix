@@ -116,11 +116,12 @@
     "updateLinkLabel": "Update verfügbar. Die Versionshinweise finden Sie auf GitHub."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Schließen",
     "minimize": "Minimieren",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Anmeldung fehlgeschlagen",
     "unknown": "Unbekannt",
     "continue": "Weiter",
     "maintenance": "Wartung",
@@ -187,7 +188,11 @@
     "remove": "Entfernen",
     "add": "Hinzufügen",
     "update": "Aktualisieren",
-    "noResults": "Keine Ergebnisse gefunden"
+    "noResults": "Keine Ergebnisse gefunden",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Schritt {{current}} von {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Host-Metriken",
     "status": {
-      "available": "Verfügbar",
-      "reachable": "Oben angekommen, aber die letzte Anmeldung schlug fehl.",
+      "online": "Online",
       "offline": "Offline",
-      "monitoringDisabled": "Überwachung deaktiviert",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Ordner \"{{oldName}}\" erfolgreich in \"{{newName}}\" umbenannt",
@@ -477,7 +482,7 @@
     "sameHost": "Dieser Host (direkter Tunnel)",
     "statusChecksLabel": "Statusprüfungen",
     "enableStatusChecks": "Statusprüfungen aktivieren",
-    "enableStatusChecksDesc": "Diesen Host regelmäßig anpingen, um die Verfügbarkeit zu überprüfen",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Globales Intervall verwenden",
     "useGlobalIntervalDesc": "Mit dem serverweiten Statusprüfungsintervall überschreiben",
     "checkIntervalS": "Prüfintervall (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Ihr Konto verwendet einen zweiten Faktor, der momentan nicht verfügbar ist. Wenden Sie sich an einen Administrator, um ihn zurückzusetzen.",
     "secondFactorNoUI": "Dieser zweite Faktor kann auf diesem Bildschirm nicht angezeigt werden. Wenden Sie sich an einen Administrator.",
     "serverAuthentication": "Serveranmeldung",
-    "minChars": "min. {{min}} Zeichen"
+    "minChars": "min. {{min}} Zeichen",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "SSH-Host-Key überprüfen",
@@ -1119,7 +1125,13 @@
     "language": "Sprache",
     "keyPassword": "Schlüsselpasswort",
     "pastePrivateKey": "Privaten Schlüssel hier einfügen...",
-    "enterPassword": "Passwort eingeben"
+    "enterPassword": "Passwort eingeben",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Herausgegeben von {{issuer}}",
     "sslNames": "Cover {{names}}",
     "sslManualTitle": "Laden Sie ein Zertifikat hoch",
-    "updateExternalAutoProvisionFailed": "Die Aktualisierung der Einstellung für die automatische Erstellung ist fehlgeschlagen."
+    "updateExternalAutoProvisionFailed": "Die Aktualisierung der Einstellung für die automatische Erstellung ist fehlgeschlagen.",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

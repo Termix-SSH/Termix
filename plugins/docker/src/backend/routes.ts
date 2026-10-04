@@ -210,11 +210,13 @@ export function registerRoutes(router: Router, { ctx, sessions, log }: Deps) {
         ),
       );
 
-      const target: PluginSshHost = {
-        ...host,
-        id: numericHostId,
-        port: host.port || 22,
-      };
+      const hasAuthOverride = [
+        userProvidedPassword,
+        userProvidedSshKey,
+        userProvidedKeyPassword,
+      ].some((value) => typeof value === "string" && value.length > 0);
+      // Core associates the redacted host object with its stored credentials.
+      const target: PluginSshHost = hasAuthOverride ? { ...host } : host;
       if (typeof userProvidedPassword === "string" && userProvidedPassword) {
         target.password = userProvidedPassword;
         target.authType = "password";

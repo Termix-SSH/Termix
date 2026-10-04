@@ -207,5 +207,19 @@
     "remove": "সময়সূচী অপসারণ করুন",
     "loadFailed": "রক্ষণাবেক্ষণের অবস্থা রিফ্রেশ করা যায়নি। লোড না হওয়া পর্যন্ত পরিবর্তনগুলি নিষ্ক্রিয় থাকবে।",
     "loading": "রক্ষণাবেক্ষণের অবস্থা লোড হচ্ছে…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

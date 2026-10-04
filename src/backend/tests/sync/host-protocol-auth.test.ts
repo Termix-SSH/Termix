@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   logins: [] as Array<Record<string, unknown>>,
   replaced: null as null | { ownerId: string; hostId: number; logins: unknown },
+  rows: [] as Array<{ protocol: string }>,
+  recipient: new Map<string, Record<string, unknown> | Error>(),
 }));
 
 vi.mock(
@@ -20,6 +22,15 @@ vi.mock(
     return {
       ...actual,
       listProtocolLogins: async () => state.logins,
+      resolveRecipientProtocolLogin: async (
+        _host: unknown,
+        _userId: string,
+        declared: { id: string },
+      ) => {
+        const login = state.recipient.get(declared.id);
+        if (login instanceof Error) throw login;
+        return login;
+      },
       replaceProtocolLogins: async (
         ownerId: string,
         hostId: number,
@@ -30,6 +41,11 @@ vi.mock(
     };
   },
 );
+vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentHostProtocolAuthRepository: () => ({
+    listRowsForHost: async () => state.rows,
+  }),
+}));
 vi.mock("../../database/db/index.js", () => ({
   getDb: () => null,
   getSqlite: () => null,
@@ -37,12 +53,15 @@ vi.mock("../../database/db/index.js", () => ({
 
 import {
   exportProtocolLogins,
+  exportSharedProtocolLogins,
   importProtocolLogins,
 } from "../../sync/host-protocol-auth.js";
 import { setHostProtocolSource } from "../../hosts/protocol-auth/registry.js";
 
 beforeEach(() => {
   state.replaced = null;
+  state.rows = [];
+  state.recipient.clear();
   state.logins = [
     {
       protocol: "spice",
@@ -127,5 +146,54 @@ describe("host protocol logins over sync", () => {
   it("leaves the logins alone for a peer that sends none", async () => {
     await importProtocolLogins(9, "owner", undefined, async () => null);
     expect(state.replaced).toBeNull();
+  });
+});
+
+describe("shared host protocol logins over sync", () => {
+  it("sends what the recipient may use as direct logins", async () => {
+    state.rows = [{ protocol: "spice" }, { protocol: "unknown" }];
+    state.recipient.set("spice", {
+      authType: "credential",
+      username: "alice",
+      password: "pw",
+      fields: { display: "2", ticket: "" },
+    });
+    expect(
+      await exportSharedProtocolLogins({ id: 1, userId: "owner" }, "viewer"),
+    ).toEqual({
+      spice: {
+        authType: "direct",
+        username: "alice",
+        password: "pw",
+        fields: { display: "2" },
+        credentialSyncId: null,
+      },
+    });
+  });
+
+  it("keeps a none login and skips one that fails", async () => {
+    setHostProtocolSource(() => [
+      { id: "spice", credentialFields: [], pluginId: "p", pluginName: "P" },
+      { id: "vnc", credentialFields: [], pluginId: "p", pluginName: "P" },
+    ]);
+    state.rows = [{ protocol: "spice" }, { protocol: "vnc" }];
+    state.recipient.set("spice", {
+      authType: "none",
+      username: "",
+      password: "",
+      fields: {},
+    });
+    state.recipient.set("vnc", new Error("locked"));
+    expect(
+      await exportSharedProtocolLogins({ id: 1, userId: "owner" }, "viewer"),
+    ).toEqual({
+      spice: {
+        authType: "none",
+        username: null,
+        password: null,
+        fields: {},
+        credentialSyncId: null,
+      },
+    });
   });
 });

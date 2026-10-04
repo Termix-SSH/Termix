@@ -231,5 +231,8 @@
   "targetTerminals": "দৌড়ে যান",
   "targetTerminalsHint": "ঐচ্ছিক, অন্যথায় সক্রিয় ট্যাব",
   "selectAll": "সব",
-  "selectNone": "কোনোটিই না"
+  "selectNone": "কোনোটিই না",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

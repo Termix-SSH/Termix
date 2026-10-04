@@ -368,8 +368,12 @@ export function StepBlock({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="connect">connect</SelectItem>
-                <SelectItem value="disconnect">disconnect</SelectItem>
+                <SelectItem value="connect">
+                  {t("ui.sidebar.automations.options.connect")}
+                </SelectItem>
+                <SelectItem value="disconnect">
+                  {t("ui.sidebar.automations.options.disconnect")}
+                </SelectItem>
               </SelectContent>
             </Select>
             <Input

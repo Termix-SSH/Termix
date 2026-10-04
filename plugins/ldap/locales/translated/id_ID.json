@@ -23,6 +23,12 @@
     "namePlaceholder": "Direktori perusahaan",
     "nameRequired": "Nama tampilan wajib diisi.",
     "enabled": "Diaktifkan",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Simpan Direktori",
     "saving": "Penghematan...",
     "saved": "Tersimpan",
@@ -36,6 +42,7 @@
     "host": "Host LDAP",
     "port": "Pelabuhan",
     "useTls": "Gunakan TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Ikat DN",
     "bindPassword": "Kata Sandi Terikat",
     "secretKeep": "Kata sandi telah tersimpan. Biarkan kosong untuk menyimpannya.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "Basis Pencarian Grup",
     "adminGroup": "Grup Admin",
     "allowedUsers": "Pengguna yang Diizinkan"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

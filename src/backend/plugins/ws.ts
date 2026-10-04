@@ -382,7 +382,7 @@ function auditPublicSocket(pluginId: string, path: string): void {
   void import("../utils/audit-logger.js")
     .then(({ logAudit }) =>
       logAudit({
-        userId: "system",
+        userId: null,
         username: `plugin:${pluginId}`,
         action: "plugin_ws_public_route",
         resourceType: "plugin",

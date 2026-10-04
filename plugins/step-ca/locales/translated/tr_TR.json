@@ -44,5 +44,8 @@
       "label": "Eski yönlendirme URI'sini kullanın.",
       "description": "2.9 öncesinde kullanılan yönlendirme URI'si olan /host/step-ca-callback'i göndermeye devam edin. Kimlik sağlayıcınız yenisine izin verdiğinde bunu kapatın."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

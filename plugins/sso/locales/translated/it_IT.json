@@ -20,6 +20,12 @@
     "nameRequired": "È richiesto un nome visualizzato",
     "type": "Tipo provider",
     "enabled": "Abilitato",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "Salva provider",
     "saving": "Salvando...",
     "saved": "Salvato",
@@ -61,5 +67,8 @@
       "label": "Accedi automaticamente con SSO",
       "description": "Indirizza i visitatori direttamente al primo provider SSO anziché mostrare il modulo di accesso. La variabile d'ambiente OIDC_SILENT_LOGIN_DEFAULT sovrascrive questa impostazione."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

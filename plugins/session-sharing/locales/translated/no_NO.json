@@ -182,5 +182,8 @@
     "sharedBy": "Delt av {{username}}",
     "join": "Bli med",
     "sharedSessionLabel": "{{hostName}} (delt)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

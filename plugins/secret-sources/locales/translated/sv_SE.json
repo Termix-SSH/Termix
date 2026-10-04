@@ -23,5 +23,8 @@
         "description": "Privata eller loopback-värdar som en hemlig källa kan nå, en per rad. En självhostad 1Password Connect-server behöver vanligtvis sin egen adress listad här."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

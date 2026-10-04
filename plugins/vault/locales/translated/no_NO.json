@@ -65,5 +65,8 @@
         "label": "Profil for arkivsigner"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

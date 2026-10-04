@@ -23,5 +23,8 @@
         "description": "Yksityiset tai loopback-isännät, joihin salainen lähde voi tavoittaa, yksi riviä kohden. Itse isännöity 1Password Connect -palvelin tarvitsee yleensä oman osoitteensa, joka luetellaan tässä."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

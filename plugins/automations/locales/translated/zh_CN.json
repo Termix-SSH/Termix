@@ -207,5 +207,19 @@
     "remove": "移除日程",
     "loadFailed": "无法刷新维护状态。更改功能已禁用，待状态加载完毕后方可启用。",
     "loading": "正在加载维护状态…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

@@ -323,7 +323,7 @@
     "sideBySide": "Sida vid sida",
     "inline": "Inline",
     "fileComparison": "Filjämförelse: {{file1}} vs {{file2}}",
-    "fileTooLarge": "Filen är för stor: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH-anslutningen misslyckades. Kontrollera din anslutning till {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Misslyckades med att ladda filen: {{error}}",
     "connecting": "Ansluter...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Använd bekväm layout",
     "cannotLoadPdf": "Kan inte ladda PDF-filen",
     "pdfLoadError": "Det uppstod ett fel när PDF-filen laddades.",
-    "loadingPdf": "Laddar PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Laddar sida...",
     "cancel": "Avboka",
     "copiedItems_one": "Kopierade {{count}} objekt",
@@ -383,7 +383,16 @@
     "videoUnsupported": "Din webbläsare kan inte spela upp det här videoformatet.",
     "downloadToPlay": "Ladda ner för att spela det någon annanstans",
     "cannotPreviewType": "Det går inte att förhandsgranska den här filtypen",
-    "cannotPreviewTypeHint": "Den här filtypen har ingen förhandsgranskning. Ladda ner den för att öppna den i en annan app."
+    "cannotPreviewTypeHint": "Den här filtypen har ingen förhandsgranskning. Ladda ner den för att öppna den i en annan app.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Källa → server: {{throughput}}",
     "metricsHopDestSftpWrite": "Server → destination (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Server → destination (lokal): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

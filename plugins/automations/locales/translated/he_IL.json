@@ -207,5 +207,19 @@
     "remove": "הסר את לוח הזמנים",
     "loadFailed": "לא ניתן היה לרענן את סטטוס התחזוקה. השינויים מושבתים עד שניתן יהיה לטעון אותו.",
     "loading": "טוען סטטוס תחזוקה…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

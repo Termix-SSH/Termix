@@ -182,5 +182,8 @@
     "sharedBy": "{{username}} द्वारा साझा किया गया",
     "join": "जोड़ना",
     "sharedSessionLabel": "{{hostName}} (साझा)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

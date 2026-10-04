@@ -20,6 +20,12 @@
     "nameRequired": "표시 이름은 필수입니다.",
     "type": "제공자 유형",
     "enabled": "사용",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "제공자 저장",
     "saving": "저장 중...",
     "saved": "저장됨",
@@ -61,5 +67,8 @@
       "label": "SSO로 자동 로그인",
       "description": "방문자를 로그인 양식을 표시하는 대신 첫 번째 SSO 제공업체로 바로 보냅니다. OIDC_SILENT_LOGIN_DEFAULT 환경 변수는 이 설정을 재정의합니다."
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

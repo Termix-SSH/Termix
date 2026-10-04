@@ -341,13 +341,7 @@ export async function startConnect(
           return;
         }
 
-        const { hostKeyChanged, authFailed } = classifyConnectError(
-          message,
-          logs,
-        );
-        if (hostKeyChanged || authFailed) {
-          ctx.hosts.status.reportLogin(hostId, { ok: false, hostKeyChanged });
-        }
+        const { authFailed } = classifyConnectError(message, logs);
         log.error("Docker SSH connection failed", {
           hostId,
           userId,

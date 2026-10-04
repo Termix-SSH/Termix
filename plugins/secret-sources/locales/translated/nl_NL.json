@@ -23,5 +23,8 @@
         "description": "Privé- of loopback-hosts die een geheime bron kunnen bereiken, één per regel. Een zelfgehoste 1Password Connect-server heeft meestal een eigen adres nodig dat hier vermeld moet worden."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

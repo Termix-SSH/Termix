@@ -65,5 +65,8 @@
         "label": "Profil podepisujícího v trezoru"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

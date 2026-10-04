@@ -116,11 +116,12 @@
     "updateLinkLabel": "Päivitys saatavilla. Avaa julkaisutiedot GitHubissa."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Lähellä",
     "minimize": "Minimoida",
     "online": "Verkossa",
     "offline": "Offline-tilassa",
-    "signInFailed": "Kirjautuminen epäonnistui",
     "unknown": "Tuntematon",
     "continue": "Jatkaa",
     "maintenance": "Huolto",
@@ -187,7 +188,11 @@
     "remove": "Poistaa",
     "add": "Lisätä",
     "update": "Päivittää",
-    "noResults": "Ei tuloksia"
+    "noResults": "Ei tuloksia",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Vaihe {{current}} / {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunneli",
     "serverStats": "Isännän mittarit",
     "status": {
-      "available": "Saatavilla",
-      "reachable": "Ylös, mutta viimeisin kirjautuminen epäonnistui",
+      "online": "Online",
       "offline": "Offline-tilassa",
-      "monitoringDisabled": "Valvonta poistettu käytöstä",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Kansio \"{{oldName}}\" nimettiin uudelleen onnistuneesti muotoon \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "Tämä isäntä (suora tunneli)",
     "statusChecksLabel": "Tilatarkastukset",
     "enableStatusChecks": "Ota käyttöön tilan tarkistukset",
-    "enableStatusChecksDesc": "Lähetä tälle isännälle säännöllisesti ping-viesti saatavuuden varmistamiseksi.",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Käytä globaalia väliä",
     "useGlobalIntervalDesc": "Ohita palvelimen laajuisella tilan tarkistusvälillä",
     "checkIntervalS": "Tarkistusväli (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Tilisi käyttää toista vahvistustekijää, joka ei ole tällä hetkellä käytettävissä. Ota yhteyttä ylläpitäjään sen palauttamiseksi.",
     "secondFactorNoUI": "Tätä toista tekijää ei voida näyttää tällä näytöllä. Ota yhteyttä ylläpitäjään.",
     "serverAuthentication": "Palvelimelle kirjautuminen",
-    "minChars": "vähintään {{min}} merkkiä"
+    "minChars": "vähintään {{min}} merkkiä",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Vahvista SSH-isäntäavain",
@@ -1119,7 +1125,13 @@
     "language": "Kieli",
     "keyPassword": "avainsalasana",
     "pastePrivateKey": "Liitä yksityinen avaimesi tähän...",
-    "enterPassword": "Anna salasanasi"
+    "enterPassword": "Anna salasanasi",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Kojelauta",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Myöntäjä {{issuer}}",
     "sslNames": "Kannet {{names}}",
     "sslManualTitle": "Lähetä sertifikaatti",
-    "updateExternalAutoProvisionFailed": "Automaattisen luomisen asetuksen päivittäminen epäonnistui"
+    "updateExternalAutoProvisionFailed": "Automaattisen luomisen asetuksen päivittäminen epäonnistui",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

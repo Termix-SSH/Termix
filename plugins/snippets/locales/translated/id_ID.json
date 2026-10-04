@@ -231,5 +231,8 @@
   "targetTerminals": "Berlari masuk",
   "targetTerminalsHint": "opsional, jika tidak, tab aktif",
   "selectAll": "Semua",
-  "selectNone": "Tidak ada"
+  "selectNone": "Tidak ada",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

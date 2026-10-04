@@ -56,5 +56,8 @@
     "speed": "Tốc độ phát lại",
     "play": "Phát bản ghi âm",
     "pause": "Tạm dừng ghi âm"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

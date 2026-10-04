@@ -182,5 +182,8 @@
     "sharedBy": "Κοινοποίηση από {{username}}",
     "join": "Ενώνω",
     "sharedSessionLabel": "{{hostName}} (κοινόχρηστο)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

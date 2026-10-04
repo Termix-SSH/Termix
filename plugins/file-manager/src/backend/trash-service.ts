@@ -70,6 +70,8 @@ async function exists(sftp: SFTPWrapper, target: string) {
 }
 
 async function ensureDirectory(sftp: SFTPWrapper, target: string) {
+  // Usually there already: one round trip instead of one per segment.
+  if (await exists(sftp, target)) return;
   const normalized = target.replace(/\\/g, "/");
   const root = normalized.startsWith("/") ? "/" : "";
   const parts = normalized.split("/").filter(Boolean);
@@ -95,13 +97,32 @@ async function removeTree(sftp: SFTPWrapper, target: string): Promise<void> {
   await rmdir(sftp, target);
 }
 
-async function trashPaths(sftp: SFTPWrapper) {
+type TrashDirs = { root: string; files: string; info: string };
+
+// The trash folders of a channel do not move while it is open, and finding
+// them costs several round trips, which made every delete slow on a remote
+// host (#1390).
+const trashDirsByChannel = new WeakMap<SFTPWrapper, Promise<TrashDirs>>();
+
+function trashPaths(sftp: SFTPWrapper): Promise<TrashDirs> {
+  let dirs = trashDirsByChannel.get(sftp);
+  if (!dirs) {
+    dirs = findTrashPaths(sftp);
+    trashDirsByChannel.set(sftp, dirs);
+    dirs.catch(() => trashDirsByChannel.delete(sftp));
+  }
+  return dirs;
+}
+
+async function findTrashPaths(sftp: SFTPWrapper): Promise<TrashDirs> {
   const home = await call<string>((done) => sftp.realpath(".", done));
   const root = path.posix.join(home.replace(/\\/g, "/"), TRASH_DIR);
   const files = path.posix.join(root, "files");
   const info = path.posix.join(root, "info");
-  await ensureDirectory(sftp, files);
-  await ensureDirectory(sftp, info);
+  await Promise.all([
+    ensureDirectory(sftp, files),
+    ensureDirectory(sftp, info),
+  ]);
   return { root, files, info };
 }
 
@@ -124,7 +145,7 @@ function publicItem(item: StoredTrashItem): TrashItem {
 
 async function readStoredItem(
   sftp: SFTPWrapper,
-  dirs: { root: string; files: string; info: string },
+  dirs: TrashDirs,
   id: string,
 ): Promise<StoredTrashItem> {
   if (!ID_PATTERN.test(id)) throw new Error("Invalid trash item id");

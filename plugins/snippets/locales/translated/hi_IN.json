@@ -231,5 +231,8 @@
   "targetTerminals": "झगड़ा",
   "targetTerminalsHint": "वैकल्पिक, अन्यथा सक्रिय टैब",
   "selectAll": "सभी",
-  "selectNone": "कोई नहीं"
+  "selectNone": "कोई नहीं",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

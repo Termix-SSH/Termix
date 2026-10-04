@@ -116,11 +116,12 @@
     "updateLinkLabel": "Actualització disponible. Obriu les notes de la versió a GitHub."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Tanca",
     "minimize": "Minimitzar",
     "online": "En línia",
     "offline": "Fora de línia",
-    "signInFailed": "No s'ha pogut iniciar la sessió",
     "unknown": "Desconegut",
     "continue": "Continua",
     "maintenance": "Manteniment",
@@ -187,7 +188,11 @@
     "remove": "Elimina",
     "add": "Afegeix",
     "update": "Actualització",
-    "noResults": "No s'han trobat resultats"
+    "noResults": "No s'han trobat resultats",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Pas {{current}} de {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Túnel",
     "serverStats": "Mètriques de l'amfitrió",
     "status": {
-      "available": "Disponible",
-      "reachable": "Activat, però l'últim inici de sessió ha fallat",
+      "online": "Online",
       "offline": "Fora de línia",
-      "monitoringDisabled": "Monitorització desactivada",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Estat"
     },
     "folderRenamed": "La carpeta \"{{oldName}}\" s'ha canviat de nom a \"{{newName}}\" correctament",
@@ -477,7 +482,7 @@
     "sameHost": "Aquest host (túnel directe)",
     "statusChecksLabel": "Comprovacions d'estat",
     "enableStatusChecks": "Activa les comprovacions d'estat",
-    "enableStatusChecksDesc": "Fes ping periòdicament a aquest host per verificar la disponibilitat",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Utilitza l'interval global",
     "useGlobalIntervalDesc": "Substitueix amb l'interval de comprovació d'estat de tot el servidor",
     "checkIntervalS": "Interval (s) de comprovació",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "El teu compte utilitza un segon factor que no està disponible ara mateix. Contacta amb un administrador per restablir-lo.",
     "secondFactorNoUI": "Aquest segon factor no es pot mostrar en aquesta pantalla. Contacta amb un administrador.",
     "serverAuthentication": "Inici de sessió al servidor",
-    "minChars": "mínim {{min}} caràcters"
+    "minChars": "mínim {{min}} caràcters",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Verifica la clau d'amfitrió SSH",
@@ -1119,7 +1125,13 @@
     "language": "Llengua",
     "keyPassword": "contrasenya clau",
     "pastePrivateKey": "Enganxa la teva clau privada aquí...",
-    "enterPassword": "Introdueix la teva contrasenya"
+    "enterPassword": "Introdueix la teva contrasenya",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Tauler de control",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Publicat per {{issuer}}",
     "sslNames": "Cobertes {{names}}",
     "sslManualTitle": "Puja un certificat",
-    "updateExternalAutoProvisionFailed": "No s'ha pogut actualitzar la configuració de creació automàtica"
+    "updateExternalAutoProvisionFailed": "No s'ha pogut actualitzar la configuració de creació automàtica",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

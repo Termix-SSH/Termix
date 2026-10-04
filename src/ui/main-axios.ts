@@ -63,13 +63,12 @@ import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { getDeviceId } from "@/lib/device-id";
 
 export type ServerStatus = {
-  status: "online" | "reachable" | "offline";
+  status: "online" | "offline";
   lastChecked: string;
-  reason?: "host_key_changed";
 };
 
 export type SSHHostWithStatus = SSHHost & {
-  status: "online" | "reachable" | "offline" | "unknown";
+  status: "online" | "offline" | "unknown";
 };
 
 export interface AuthResponse {

@@ -168,5 +168,8 @@
     "showRead": "Näytä lukuilmoitukset",
     "allClear": "Kaikki selvää",
     "loading": "Ladataan..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

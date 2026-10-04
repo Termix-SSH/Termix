@@ -212,7 +212,28 @@
       "backspaceKey": "Клавиша Backspace",
       "colorDepth": "Глубина цвета",
       "resizeMethod": "Метод изменения размера",
-      "driveNamePlaceholder": "Термикс Драйв"
+      "driveNamePlaceholder": "Термикс Драйв",
+      "options": {
+        "any": "Any",
+        "auto": "Auto",
+        "nlaExtended": "NLA Extended",
+        "color8": "8-bit",
+        "color16": "16-bit",
+        "color24": "24-bit",
+        "color32": "32-bit",
+        "displayUpdate": "Display Update",
+        "reconnect": "Reconnect",
+        "preserve": "Preserve",
+        "unix": "Unix (LF)",
+        "windows": "Windows (CRLF)",
+        "local": "Local",
+        "remote": "Remote",
+        "failsafe": "failsafe",
+        "blackOnWhite": "Black on White",
+        "whiteOnBlack": "White on Black",
+        "grayOnBlack": "Gray on Black",
+        "greenOnBlack": "Green on Black"
+      }
     },
     "remoteDesktop": "Удаленный рабочий стол",
     "tabRdp": "RDP",
@@ -346,5 +367,8 @@
   },
   "errors": {
     "remoteServerRequired": "Требуется удаленный сервер. Для использования этого типа подключения подключите удаленный сервер в настройках."
+  },
+  "plugin": {
+    "name": "Remote Desktop"
   }
 }

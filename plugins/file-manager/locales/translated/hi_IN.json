@@ -323,7 +323,7 @@
     "sideBySide": "साथ-साथ",
     "inline": "इनलाइन",
     "fileComparison": "फ़ाइल तुलना: {{file1}} बनाम {{file2}}",
-    "fileTooLarge": "फ़ाइल बहुत बड़ी है: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH कनेक्शन विफल। कृपया {{name}} ({{ip}}:{{port}}) से अपना कनेक्शन जाँचें।",
     "loadFileFailed": "फ़ाइल लोड करने में विफल: {{error}}",
     "connecting": "कनेक्ट हो रहा है...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "सुविधाजनक लेआउट का उपयोग करें",
     "cannotLoadPdf": "PDF लोड नहीं कर सकता",
     "pdfLoadError": "इस PDF फ़ाइल को लोड करने में त्रुटि हुई।",
-    "loadingPdf": "PDF लोड हो रहा है...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "पृष्ठ लोड हो रहा है...",
     "cancel": "रद्द करें",
     "copiedItems_one": "आइटम कॉपी किया गया {{count}}",
@@ -383,7 +383,16 @@
     "videoUnsupported": "आपका ब्राउज़र इस वीडियो प्रारूप को नहीं चला सकता।",
     "downloadToPlay": "इसे कहीं और खेलने के लिए डाउनलोड करें",
     "cannotPreviewType": "इस फ़ाइल प्रकार का पूर्वावलोकन नहीं किया जा सकता है",
-    "cannotPreviewTypeHint": "इस फ़ाइल प्रकार का कोई पूर्वावलोकन नहीं है। इसे डाउनलोड करके किसी अन्य ऐप में खोलें।"
+    "cannotPreviewTypeHint": "इस फ़ाइल प्रकार का कोई पूर्वावलोकन नहीं है। इसे डाउनलोड करके किसी अन्य ऐप में खोलें।",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "एसएफटीपी",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "स्रोत → सर्वर: {{throughput}}",
     "metricsHopDestSftpWrite": "सर्वर → गंतव्य (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "सर्वर → गंतव्य (स्थानीय): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

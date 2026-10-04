@@ -76,3 +76,47 @@ describe("host key recovery", () => {
     expect(accepted).toEqual([]);
   });
 });
+
+describe("a host missing from the database", () => {
+  function answeringSocket(action: "accept" | "reject") {
+    const socket = new EventEmitter() as EventEmitter & {
+      send: (data: string) => void;
+    };
+    socket.send = () =>
+      socket.emit(
+        "message",
+        Buffer.from(
+          JSON.stringify({
+            type: "host_key_verification_response",
+            data: { action },
+          }),
+        ),
+      );
+    return socket as unknown as WebSocket;
+  }
+
+  async function verifyMissingHost(ws: WebSocket | null) {
+    const verifier = await SSHHostKeyVerifier.createHostVerifier(
+      hostId,
+      "127.0.0.1",
+      22,
+      ws,
+      "user",
+      false,
+      null,
+    );
+    return new Promise<boolean>((resolve) =>
+      verifier(Buffer.from("any-key"), resolve),
+    );
+  }
+
+  it("refuses the key when nobody can be asked", async () => {
+    expect(await verifyMissingHost(null)).toBe(false);
+  });
+
+  it("asks the user and saves nothing", async () => {
+    expect(await verifyMissingHost(answeringSocket("accept"))).toBe(true);
+    expect(await verifyMissingHost(answeringSocket("reject"))).toBe(false);
+    expect(updateHostKey).not.toHaveBeenCalled();
+  });
+});

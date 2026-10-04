@@ -23,5 +23,8 @@
         "description": "Hosts privados o de bucle invertido a los que puede acceder una fuente secreta, uno por línea. Un servidor 1Password Connect autohospedado generalmente necesita su propia dirección IP que aparezca aquí."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

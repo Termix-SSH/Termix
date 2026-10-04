@@ -116,11 +116,12 @@
     "updateLinkLabel": "Opdatering tilgængelig. Åbn udgivelsesnoterne på GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Tæt",
     "minimize": "Minimer",
     "online": "Online",
     "offline": "Offline",
-    "signInFailed": "Log ind mislykkedes",
     "unknown": "Ukendt",
     "continue": "Fortsætte",
     "maintenance": "Opretholdelse",
@@ -187,7 +188,11 @@
     "remove": "Fjerne",
     "add": "Tilføje",
     "update": "Opdatering",
-    "noResults": "Ingen resultater fundet"
+    "noResults": "Ingen resultater fundet",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Trin {{current}} af {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tunnel",
     "serverStats": "Værtsmålinger",
     "status": {
-      "available": "Tilgængelig",
-      "reachable": "Oppe, men den sidste login mislykkedes",
+      "online": "Online",
       "offline": "Offline",
-      "monitoringDisabled": "Overvågning deaktiveret",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Mappen \"{{oldName}}\" er omdøbt til \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "Denne vært (direkte tunnel)",
     "statusChecksLabel": "Statuskontroller",
     "enableStatusChecks": "Aktivér statuskontroller",
-    "enableStatusChecksDesc": "Ping denne vært regelmæssigt for at bekræfte tilgængelighed",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Brug globalt interval",
     "useGlobalIntervalDesc": "Tilsidesæt med det serveromfattende statuskontrolinterval",
     "checkIntervalS": "Kontrolinterval (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Din konto bruger en anden faktor, der ikke er tilgængelig lige nu. Kontakt en administrator for at nulstille den.",
     "secondFactorNoUI": "Denne anden faktor kan ikke vises på denne skærm. Kontakt en administrator.",
     "serverAuthentication": "Serverlogin",
-    "minChars": "min. {{min}} tegn"
+    "minChars": "min. {{min}} tegn",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Bekræft SSH-værtsnøgle",
@@ -1119,7 +1125,13 @@
     "language": "Sprog",
     "keyPassword": "nøgleadgangskode",
     "pastePrivateKey": "Indsæt din private nøgle her...",
-    "enterPassword": "Indtast din adgangskode"
+    "enterPassword": "Indtast din adgangskode",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Udstedt af {{issuer}}",
     "sslNames": "Dækker {{names}}",
     "sslManualTitle": "Upload et certifikat",
-    "updateExternalAutoProvisionFailed": "Kunne ikke opdatere indstillingen for automatisk oprettelse"
+    "updateExternalAutoProvisionFailed": "Kunne ikke opdatere indstillingen for automatisk oprettelse",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

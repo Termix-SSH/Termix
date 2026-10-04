@@ -116,11 +116,12 @@
     "updateLinkLabel": "Güncelleme mevcut. GitHub'daki sürüm notlarını açın."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Kapat",
     "minimize": "Simge Durumuna Küçült",
     "online": "Çevrimiçi",
     "offline": "Çevrimdışı",
-    "signInFailed": "Giriş başarısız",
     "unknown": "Bilinmeyen",
     "continue": "Devam",
     "maintenance": "Bakım",
@@ -187,7 +188,11 @@
     "remove": "Kaldır",
     "add": "Ekle",
     "update": "Güncelle",
-    "noResults": "Hiçbir sonuç bulunamadı."
+    "noResults": "Hiçbir sonuç bulunamadı.",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Adım {{current}} , {{total}}'in",
@@ -352,10 +357,10 @@
     "tunnel": "Tünel",
     "serverStats": "Sunucu Metrikleri",
     "status": {
-      "available": "Mevcut",
-      "reachable": "Yukarı çıktı, ancak son giriş başarısız oldu.",
+      "online": "Online",
       "offline": "Çevrimdışı",
-      "monitoringDisabled": "İzleme devre dışı bırakıldı",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Durum"
     },
     "folderRenamed": "\"{{oldName}}\" klasörü başarıyla \"{{newName}}\" olarak yeniden adlandırıldı.",
@@ -477,7 +482,7 @@
     "sameHost": "Bu ana bilgisayar (doğrudan tünel)",
     "statusChecksLabel": "Durum Denetimleri",
     "enableStatusChecks": "Durum Denetimlerini Etkinleştir",
-    "enableStatusChecksDesc": "Kullanılabilirliği doğrulamak için bu sunucuya düzenli olarak ping at",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Genel Aralığı Kullan",
     "useGlobalIntervalDesc": "Sunucu geneli durum denetim aralığını geçersiz kıl",
     "checkIntervalS": "Denetim Aralığı (sn)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Hesabınızda şu anda kullanılamayan ikinci bir faktör kimlik doğrulama yöntemi kullanılıyor. Sıfırlamak için bir yöneticiyle iletişime geçin.",
     "secondFactorNoUI": "Bu ikinci faktör bu ekranda gösterilemiyor. Lütfen bir yöneticiyle iletişime geçin.",
     "serverAuthentication": "Sunucuya giriş yap",
-    "minChars": "min. {{min}} karakter"
+    "minChars": "min. {{min}} karakter",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "SSH Sunucu Anahtarını Doğrula",
@@ -1119,7 +1125,13 @@
     "language": "Dil",
     "keyPassword": "anahtar parolası",
     "pastePrivateKey": "Özel anahtarınızı buraya yapıştırın...",
-    "enterPassword": "Parolanızı girin"
+    "enterPassword": "Parolanızı girin",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Gösterge Paneli",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "{{issuer}} tarafından yayınlandı",
     "sslNames": "Kapaklar {{names}}",
     "sslManualTitle": "Sertifika yükleyin",
-    "updateExternalAutoProvisionFailed": "Otomatik oluşturma ayarı güncellenemedi."
+    "updateExternalAutoProvisionFailed": "Otomatik oluşturma ayarı güncellenemedi.",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

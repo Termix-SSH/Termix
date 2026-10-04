@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   list: vi.fn(),
   applyPluginSettings: vi.fn(),
+  applyDefaults: vi.fn(async () => {}),
 }));
 vi.mock("../../../database/routes/host-plugin-settings.js", () => ({
   applyPluginHostImportSettings: mocks.applyPluginSettings,
@@ -14,6 +15,7 @@ vi.mock("../../../database/routes/host-plugin-settings.js", () => ({
 vi.mock("../../../hosts/defaults/index.js", () => ({
   applyHostDefaultsToWrite: async () => ({ core: [] }),
   applyDefaultsAfterHostWrite: async () => {},
+  applyDefaultsAfterHostWrites: mocks.applyDefaults,
 }));
 vi.mock("../../../hosts/defaults/overrides.js", () => ({
   changeHostOverrides: async () => {},
@@ -141,6 +143,9 @@ it.each([20, "20"])(
     ]);
     expect(mocks.create.mock.calls[1][1]).not.toHaveProperty("exportId");
     expect(mocks.create.mock.calls[1][1]).not.toHaveProperty("id");
+    // One defaults pass for the whole import, not one per host.
+    expect(mocks.applyDefaults).toHaveBeenCalledTimes(1);
+    expect(mocks.applyDefaults).toHaveBeenCalledWith([501, 502]);
   },
 );
 

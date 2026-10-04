@@ -20,6 +20,12 @@
     "nameRequired": "एक डिस्प्ले नाम आवश्यक है",
     "type": "प्रदाता प्रकार",
     "enabled": "सक्षम",
+    "enabledDesc": "Show a sign in button for this provider on the login screen.",
+    "dialogDesc": "Connect an identity provider so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionCredentials": "Client",
+    "sectionClaims": "Claims",
+    "sectionAccess": "Access",
     "save": "प्रदाता सहेजें",
     "saving": "सहेजा जा रहा है...",
     "saved": "सहेजा गया",
@@ -61,5 +67,8 @@
       "label": "एसएसओ के साथ स्वचालित रूप से साइन इन करें",
       "description": "लॉगिन फ़ॉर्म दिखाने के बजाय आगंतुकों को सीधे पहले एसएसओ प्रदाता पर भेजें। OIDC_SILENT_LOGIN_DEFAULT पर्यावरण चर इसे ओवरराइड करता है।"
     }
+  },
+  "plugin": {
+    "name": "Single sign-on"
   }
 }

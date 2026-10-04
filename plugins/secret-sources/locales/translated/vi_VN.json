@@ -23,5 +23,8 @@
         "description": "Các máy chủ riêng tư hoặc máy chủ vòng lặp mà nguồn bí mật có thể truy cập được, mỗi dòng một máy chủ. Máy chủ 1Password Connect tự lưu trữ thường cần có địa chỉ riêng được liệt kê ở đây."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

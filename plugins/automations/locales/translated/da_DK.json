@@ -207,5 +207,19 @@
     "remove": "Fjern tidsplan",
     "loadFailed": "Vedligeholdelsesstatus kunne ikke opdateres. Ændringer er deaktiveret, indtil den kan indlæses.",
     "loading": "Indlæser vedligeholdelsesstatus…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

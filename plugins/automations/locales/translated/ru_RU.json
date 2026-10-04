@@ -207,5 +207,19 @@
     "remove": "Удалить расписание",
     "loadFailed": "Не удалось обновить статус технического обслуживания. Изменения отключены до тех пор, пока не будет загружена соответствующая информация.",
     "loading": "Статус технического обслуживания загрузки…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

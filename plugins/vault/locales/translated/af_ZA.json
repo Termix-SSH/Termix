@@ -65,5 +65,8 @@
         "label": "Kluisondertekenaarprofiel"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

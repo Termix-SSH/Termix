@@ -56,5 +56,8 @@
     "speed": "Viteză de redare",
     "play": "Redă înregistrarea",
     "pause": "Întrerupe înregistrarea"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

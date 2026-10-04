@@ -11,7 +11,7 @@ import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { parseKeyForStorage } from "../../hosts/stored-ssh-key.js";
 import {
   pickResolvedPassword,
   pickResolvedUsername,
@@ -53,6 +53,7 @@ import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
 import { registerHostDefaultsRoutes } from "./host-defaults-routes.js";
+import { registerHostTagRoutes } from "./host-tag-routes.js";
 import { registerHostStatusRoutes } from "./host-status-routes.js";
 import {
   applyHostEnrollmentDefaults,
@@ -135,6 +136,12 @@ const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
+
+registerHostTagRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("admin.settings.manage"),
+);
 
 registerHostStatusRoutes(router, {
   authenticateJWT,
@@ -351,7 +358,7 @@ router.post(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        const keyValidation = parseSSHKey(
+        const keyValidation = parseKeyForStorage(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
         );
@@ -493,8 +500,6 @@ router.post(
  *     description: Creates a host owned by the user assigned to the API key. The user's encrypted data must be unlocked by an active sign-in.
  *     tags:
  *       - Host Enrollment
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -935,7 +940,7 @@ router.put(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        const keyValidation = parseSSHKey(
+        const keyValidation = parseKeyForStorage(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
         );

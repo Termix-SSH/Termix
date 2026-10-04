@@ -7,7 +7,7 @@ import express, { type Request, type Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { parseKeyForStorage } from "../../hosts/stored-ssh-key.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { registerCredentialBulkRoutes } from "./credential-bulk-routes.js";
@@ -165,7 +165,7 @@ router.post(
 
       let keyInfo = null;
       if (authType === "key" && plainKey) {
-        keyInfo = parseSSHKey(plainKey, plainKeyPassword);
+        keyInfo = parseKeyForStorage(plainKey, plainKeyPassword);
         if (!keyInfo.success) {
           authLogger.warn("SSH key parsing failed", {
             operation: "credential_create",
@@ -192,7 +192,11 @@ router.post(
         password: plainPassword,
         key: plainKey,
         privateKey: keyInfo?.privateKey || plainKey,
-        publicKey: keyInfo?.publicKey || null,
+        publicKey:
+          keyInfo?.publicKey ||
+          (keyInfo?.reference && typeof req.body?.publicKey === "string"
+            ? req.body.publicKey.trim() || null
+            : null),
         keyPassword: plainKeyPassword,
         keyType: keyType || null,
         detectedKeyType: keyInfo?.keyType || null,
@@ -502,7 +506,7 @@ router.post(
 
       let keyInfo = null;
       if (authType === "key" && plainKey) {
-        keyInfo = parseSSHKey(plainKey, plainKeyPassword);
+        keyInfo = parseKeyForStorage(plainKey, plainKeyPassword);
         if (!keyInfo.success) {
           return res.status(400).json({
             error: keyInfo.error
@@ -524,7 +528,11 @@ router.post(
         password: authType === "password" ? plainPassword : null,
         key: authType === "key" ? plainKey : null,
         privateKey: authType === "key" ? keyInfo?.privateKey || plainKey : null,
-        publicKey: authType === "key" ? keyInfo?.publicKey || null : null,
+        publicKey:
+          authType === "key"
+            ? keyInfo?.publicKey ||
+              (keyInfo?.reference ? source.publicKey || null : null)
+            : null,
         keyPassword: authType === "key" ? plainKeyPassword : null,
         keyType: source.keyType,
         detectedKeyType: authType === "key" ? keyInfo?.keyType || null : null,
@@ -688,8 +696,14 @@ router.put(
       if (updateData.key !== undefined) {
         updateFields.key = updateData.key || null;
 
-        if (updateData.key && existingCredential.authType === "key") {
-          const keyInfo = parseSSHKey(updateData.key, updateData.keyPassword);
+        if (
+          updateData.key &&
+          (updateData.authType ?? existingCredential.authType) === "key"
+        ) {
+          const keyInfo = parseKeyForStorage(
+            updateData.key,
+            updateData.keyPassword,
+          );
           if (!keyInfo.success) {
             authLogger.warn("SSH key parsing failed during update", {
               operation: "credential_update",
@@ -704,8 +718,10 @@ router.put(
             });
           }
           updateFields.privateKey = keyInfo.privateKey;
-          updateFields.publicKey = keyInfo.publicKey;
-          updateFields.detectedKeyType = keyInfo.keyType;
+          updateFields.publicKey = keyInfo.reference
+            ? updateData.publicKey?.trim() || null
+            : keyInfo.publicKey;
+          updateFields.detectedKeyType = keyInfo.keyType || null;
         }
       }
       if (updateData.keyPassword !== undefined) {

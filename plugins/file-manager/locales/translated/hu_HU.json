@@ -323,7 +323,7 @@
     "sideBySide": "Egymás mellett",
     "inline": "Beágyazott",
     "fileComparison": "Fájl-összehasonlítás: {{file1}} vs {{file2}}",
-    "fileTooLarge": "A fájl túl nagy: {{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH kapcsolat sikertelen. Kérjük, ellenőrizze a kapcsolatot a következővel: {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Nem sikerült betölteni a fájlt: {{error}}",
     "connecting": "Kapcsolódás...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "Használjon kényelmes elrendezést",
     "cannotLoadPdf": "Nem tudom betölteni a PDF-et",
     "pdfLoadError": "Hiba történt a PDF fájl betöltésekor.",
-    "loadingPdf": "PDF betöltése...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "Oldal betöltése...",
     "cancel": "Mégsem",
     "copiedItems_one": "Másolt {{count}} elem",
@@ -383,7 +383,16 @@
     "videoUnsupported": "A böngésződ nem tudja lejátszani ezt a videóformátumot.",
     "downloadToPlay": "Töltsd le, hogy máshol is lejátszhasd",
     "cannotPreviewType": "Ez a fájltípus nem tekinthető meg előnézetben",
-    "cannotPreviewTypeHint": "Ennek a fájltípusnak nincs előnézete. Töltse le, hogy egy másik alkalmazásban megnyissa."
+    "cannotPreviewTypeHint": "Ennek a fájltípusnak nincs előnézete. Töltse le, hogy egy másik alkalmazásban megnyissa.",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "Forrás → szerver: {{throughput}}",
     "metricsHopDestSftpWrite": "Szerver → cél (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "Szerver → cél (helyi): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

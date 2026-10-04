@@ -44,5 +44,8 @@
       "label": "Bruk den gamle omdirigerings-URI-en",
       "description": "Fortsett å sende /host/step-ca-callback, omdirigerings-URI-en som ble brukt før 2.9. Slå av dette når identitetsleverandøren din tillater den nye."
     }
+  },
+  "plugin": {
+    "name": "Step CA"
   }
 }

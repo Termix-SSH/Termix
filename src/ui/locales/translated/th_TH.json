@@ -116,11 +116,12 @@
     "updateLinkLabel": "มีการอัปเดตแล้ว โปรดดูรายละเอียดการเปลี่ยนแปลงได้ที่ GitHub"
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "ปิด",
     "minimize": "ลดขนาด",
     "online": "ออนไลน์",
     "offline": "ออฟไลน์",
-    "signInFailed": "การเข้าสู่ระบบล้มเหลว",
     "unknown": "ไม่ทราบ",
     "continue": "ดำเนินการต่อ",
     "maintenance": "การซ่อมบำรุง",
@@ -187,7 +188,11 @@
     "remove": "ลบ",
     "add": "เพิ่ม",
     "update": "อัปเดต",
-    "noResults": "ไม่พบผลลัพธ์"
+    "noResults": "ไม่พบผลลัพธ์",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "ขั้นตอน {{current}} ของ {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "อุโมงค์",
     "serverStats": "เมตริกโฮสต์",
     "status": {
-      "available": "มีอยู่",
-      "reachable": "ใช้งานได้ แต่การเข้าสู่ระบบครั้งสุดท้ายล้มเหลว",
+      "online": "Online",
       "offline": "ออฟไลน์",
-      "monitoringDisabled": "ปิดใช้งานการตรวจสอบ",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "สถานะ"
     },
     "folderRenamed": "เปลี่ยนชื่อโฟลเดอร์ \"{{oldName}}\" เป็น \"{{newName}}\" สำเร็จแล้ว",
@@ -477,7 +482,7 @@
     "sameHost": "โฮสต์นี้ (อุโมงค์ตรง)",
     "statusChecksLabel": "การตรวจสอบสถานะ",
     "enableStatusChecks": "เปิดใช้งานการตรวจสอบสถานะ",
-    "enableStatusChecksDesc": "ตรวจสอบความพร้อมใช้งานของโฮสต์นี้เป็นระยะโดยการ ping ไปยังโฮสต์นี้",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "ใช้ช่วงเวลาทั่วโลก",
     "useGlobalIntervalDesc": "แทนที่ด้วยช่วงเวลาตรวจสอบสถานะทั่วทั้งเซิร์ฟเวอร์",
     "checkIntervalS": "ช่วงเวลาตรวจสอบ",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "บัญชีของคุณใช้การยืนยันตัวตนสองขั้นตอน ซึ่งขณะนี้ไม่สามารถใช้งานได้ โปรดติดต่อผู้ดูแลระบบเพื่อรีเซ็ต",
     "secondFactorNoUI": "ปัจจัยที่สองนี้ไม่สามารถแสดงบนหน้าจอนี้ได้ โปรดติดต่อผู้ดูแลระบบ",
     "serverAuthentication": "การเข้าสู่ระบบเซิร์ฟเวอร์",
-    "minChars": "อย่างน้อย {{min}} ตัวอักษร"
+    "minChars": "อย่างน้อย {{min}} ตัวอักษร",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "ตรวจสอบคีย์โฮสต์ SSH",
@@ -1119,7 +1125,13 @@
     "language": "ภาษา",
     "keyPassword": "รหัสผ่านสำคัญ",
     "pastePrivateKey": "วางรหัสส่วนตัวของคุณที่นี่...",
-    "enterPassword": "ป้อนรหัสผ่านของคุณ"
+    "enterPassword": "ป้อนรหัสผ่านของคุณ",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "แดชบอร์ด",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "ออกโดย {{issuer}}",
     "sslNames": "ปก {{names}}",
     "sslManualTitle": "อัปโหลดใบรับรอง",
-    "updateExternalAutoProvisionFailed": "ไม่สามารถอัปเดตการตั้งค่าการสร้างอัตโนมัติได้"
+    "updateExternalAutoProvisionFailed": "ไม่สามารถอัปเดตการตั้งค่าการสร้างอัตโนมัติได้",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

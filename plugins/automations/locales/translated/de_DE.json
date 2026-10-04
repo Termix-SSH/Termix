@@ -207,5 +207,19 @@
     "remove": "Zeitplan entfernen",
     "loadFailed": "Der Wartungsstatus konnte nicht aktualisiert werden. Änderungen sind deaktiviert, bis die Daten geladen werden können.",
     "loading": "Lade Wartungsstatus…"
+  },
+  "ui": {
+    "sidebar": {
+      "automations": {
+        "options": {
+          "connect": "connect",
+          "disconnect": "disconnect",
+          "offline": "offline",
+          "online": "online",
+          "failing": "failing",
+          "recovered": "recovered"
+        }
+      }
+    }
   }
 }

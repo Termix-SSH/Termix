@@ -323,7 +323,7 @@
     "sideBySide": "並排",
     "inline": "內嵌",
     "fileComparison": "檔案比對：{{file1}} vs {{file2}}",
-    "fileTooLarge": "檔案過大：{{error}}",
+    "fileTooLarge": "File is too large (> 10MB) and cannot be opened as text for security reasons.",
     "sshConnectionFailed": "SSH 連線失敗。請檢查與 {{name}} ({{ip}}:{{port}}) 的連線",
     "loadFileFailed": "載入檔案失敗：{{error}}",
     "connecting": "連線中...",
@@ -365,7 +365,7 @@
     "comfortableLayout": "採用舒適的佈局",
     "cannotLoadPdf": "無法載入 PDF",
     "pdfLoadError": "載入此 PDF 檔案時發生錯誤。",
-    "loadingPdf": "正在載入 PDF...",
+    "loadingPdf": "Loading PDF viewer...",
     "loadingPage": "正在載入頁面...",
     "cancel": "取消",
     "copiedItems_one": "已複製 {{count}} 項目",
@@ -383,7 +383,16 @@
     "videoUnsupported": "您的瀏覽器無法播放此影片格式。",
     "downloadToPlay": "下載後即可在其他地方播放",
     "cannotPreviewType": "無法預覽此文件類型",
-    "cannotPreviewTypeHint": "此文件類型沒有預覽。請下載後在其他應用程式中開啟。"
+    "cannotPreviewTypeHint": "此文件類型沒有預覽。請下載後在其他應用程式中開啟。",
+    "loadingFile": "Loading file...",
+    "loadingImage": "Loading image...",
+    "loadingEditor": "Loading editor...",
+    "loadingPreview": "Loading preview...",
+    "loadingAudio": "Loading audio player...",
+    "emptyPreview": "Nothing to preview yet...",
+    "revert": "Revert",
+    "openAsText": "Open as Text",
+    "confirmOpenAsText": "Do you want to continue opening this file as text? This may slow down your browser."
   },
   "sftpTransfer": {
     "title": "SFTP",
@@ -539,5 +548,8 @@
     "metricsHopSourceRead": "來源主機 → 伺服器: {{throughput}}",
     "metricsHopDestSftpWrite": "伺服器 → 目標主機 (SFTP): {{throughput}}",
     "metricsHopDestLocalWrite": "伺服器 → 目標主機 (本機): {{throughput}}"
+  },
+  "plugin": {
+    "name": "File Manager"
   }
 }

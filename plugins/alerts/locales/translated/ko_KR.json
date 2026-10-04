@@ -168,5 +168,8 @@
     "showRead": "읽음 알림 표시",
     "allClear": "모두 정상",
     "loading": "로딩 중..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

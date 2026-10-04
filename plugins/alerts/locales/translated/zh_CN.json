@@ -168,5 +168,8 @@
     "showRead": "显示已读提醒",
     "allClear": "一切正常",
     "loading": "加载中..."
+  },
+  "plugin": {
+    "name": "Alerts"
   }
 }

@@ -116,11 +116,12 @@
     "updateLinkLabel": "Opdatering beskikbaar. Maak die vrystellingsnotas op GitHub oop."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "Maak toe",
     "minimize": "Minimaliseer",
     "online": "Aanlyn",
     "offline": "Vanlyn",
-    "signInFailed": "Aanmelding het misluk",
     "unknown": "Onbekend",
     "continue": "Gaan voort",
     "maintenance": "Onderhoud",
@@ -187,7 +188,11 @@
     "remove": "Verwyder",
     "add": "Voeg by",
     "update": "Opdatering",
-    "noResults": "Geen resultate gevind nie"
+    "noResults": "Geen resultate gevind nie",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "Stap {{current}} van {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "Tonnel",
     "serverStats": "Gasheermetrieke",
     "status": {
-      "available": "Beskikbaar",
-      "reachable": "Aan, maar die laaste aanmelding het misluk",
+      "online": "Online",
       "offline": "Vanlyn",
-      "monitoringDisabled": "Monitering gedeaktiveer",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "Status"
     },
     "folderRenamed": "Lêer \"{{oldName}}\" is suksesvol hernoem na \"{{newName}}\"",
@@ -477,7 +482,7 @@
     "sameHost": "Hierdie gasheer (direkte tonnel)",
     "statusChecksLabel": "Statuskontroles",
     "enableStatusChecks": "Aktiveer statuskontroles",
-    "enableStatusChecksDesc": "Ping hierdie gasheer gereeld om beskikbaarheid te verifieer",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "Gebruik globale interval",
     "useGlobalIntervalDesc": "Oorskryf met die bedienerwye statuskontrole-interval",
     "checkIntervalS": "Kontrole-interval (s)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "Jou rekening gebruik 'n tweede faktor wat tans nie beskikbaar is nie. Kontak 'n administrateur om dit terug te stel.",
     "secondFactorNoUI": "Hierdie tweede faktor kan nie op hierdie skerm gewys word nie. Kontak 'n administrateur.",
     "serverAuthentication": "Bediener-aanmelding",
-    "minChars": "min. {{min}} karakters"
+    "minChars": "min. {{min}} karakters",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "Verifieer SSH-gasheersleutel",
@@ -1119,7 +1125,13 @@
     "language": "Taal",
     "keyPassword": "sleutelwagwoord",
     "pastePrivateKey": "Plak jou privaat sleutel hier...",
-    "enterPassword": "Voer jou wagwoord in"
+    "enterPassword": "Voer jou wagwoord in",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "Uitgereik deur {{issuer}}",
     "sslNames": "Omslae {{names}}",
     "sslManualTitle": "Laai 'n sertifikaat op",
-    "updateExternalAutoProvisionFailed": "Kon nie die outomatiese skep-instelling opdateer nie"
+    "updateExternalAutoProvisionFailed": "Kon nie die outomatiese skep-instelling opdateer nie",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

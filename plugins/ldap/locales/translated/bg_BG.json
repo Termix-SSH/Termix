@@ -23,6 +23,12 @@
     "namePlaceholder": "Фирмен указател",
     "nameRequired": "Изисква се показвано име",
     "enabled": "Активирано",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "Запазване на директорията",
     "saving": "Запазване...",
     "saved": "Запазено",
@@ -36,6 +42,7 @@
     "host": "LDAP хост",
     "port": "Порт",
     "useTls": "Използвайте TLS (LDAPS)",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "Обвързване DN",
     "bindPassword": "Свързване на парола",
     "secretKeep": "Паролата е запазена. Оставете това празно, за да я запазите.",
@@ -46,5 +53,8 @@
     "groupSearchBase": "База за групово търсене",
     "adminGroup": "Административна група",
     "allowedUsers": "Разрешени потребители"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

@@ -231,5 +231,8 @@
   "targetTerminals": "走る",
   "targetTerminalsHint": "オプション、それ以外の場合はアクティブなタブ",
   "selectAll": "すべて選択",
-  "selectNone": "すべて解除"
+  "selectNone": "すべて解除",
+  "plugin": {
+    "name": "Snippets"
+  }
 }

@@ -23,5 +23,8 @@
         "description": "Soukromé nebo zpětně loopbackové hostitele, na které může tajný zdroj dosáhnout, jeden na řádek. Samostatně hostovaný server 1Password Connect zde obvykle potřebuje uvedenou vlastní adresu."
       }
     }
+  },
+  "plugin": {
+    "name": "Secret Sources"
   }
 }

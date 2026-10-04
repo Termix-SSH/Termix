@@ -82,5 +82,8 @@
         "usernameLabel": "Felhasználónév"
       }
     }
+  },
+  "plugin": {
+    "name": "Tailscale"
   }
 }

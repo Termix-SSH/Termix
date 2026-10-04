@@ -76,7 +76,7 @@ export interface PluginHostRecord {
   quickConnectSavable?: boolean;
   /** Assigned when a host is opened in a tab; tells duplicate tabs apart. */
   instanceId?: string;
-  /** Core's status: "online" once a login worked. */
+  /** Core's status: "online" when the host answers. */
   status?: "online" | "reachable" | "offline" | "unknown";
   online?: boolean;
   /** Someone else owns this host and shared it with the user. */
@@ -1134,11 +1134,13 @@ export interface ActivityTargetInfo {
 }
 
 /**
- * Core's status for a host, the one behind the host list's dot. online: a
- * login worked. reachable: the port answers. unknown: not checked yet.
+ * Core's status for a host, the one behind the host list's dot. online: the
+ * port answers. offline: it does not. unknown: not checked yet. "reachable"
+ * is no longer sent and stays only so older plugins still type check.
  */
 export interface HostStatusInfo {
   status: "online" | "reachable" | "offline" | "unknown";
+  /** @deprecated No longer sent. */
   reason?: "host_key_changed";
 }
 

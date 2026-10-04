@@ -116,11 +116,12 @@
     "updateLinkLabel": "업데이트가 있습니다. GitHub에서 릴리스 노트를 확인하세요."
   },
   "common": {
+    "scrollTabsLeft": "Scroll tabs left",
+    "scrollTabsRight": "Scroll tabs right",
     "close": "닫기",
     "minimize": "최소화",
     "online": "온라인",
     "offline": "오프라인",
-    "signInFailed": "로그인 실패",
     "unknown": "알 수 없음",
     "continue": "계속",
     "maintenance": "유지 관리",
@@ -187,7 +188,11 @@
     "remove": "제거",
     "add": "추가",
     "update": "업데이트",
-    "noResults": "검색 결과가 없습니다."
+    "noResults": "검색 결과가 없습니다.",
+    "sidebar": "Sidebar",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar",
+    "search": "Search..."
   },
   "onboarding": {
     "stepCounter": "{{current}} 단계 {{total}}",
@@ -352,10 +357,10 @@
     "tunnel": "터널",
     "serverStats": "호스트 메트릭",
     "status": {
-      "available": "사용 가능",
-      "reachable": "올라갔지만 마지막 로그인 시도가 실패했습니다.",
+      "online": "Online",
       "offline": "오프라인",
-      "monitoringDisabled": "모니터링이 비활성화되었습니다.",
+      "checking": "Checking",
+      "monitoringDisabled": "Status checks off",
       "label": "상태"
     },
     "folderRenamed": "폴더 \"{{oldName}}\"이(가) \"{{newName}}\"(으)로 성공적으로 이름이 변경되었습니다.",
@@ -477,7 +482,7 @@
     "sameHost": "이 호스트 (직접 터널)",
     "statusChecksLabel": "상태 확인",
     "enableStatusChecks": "상태 확인 활성화",
-    "enableStatusChecksDesc": "주기적으로 이 호스트에 ping을 보내 가용성을 확인합니다.",
+    "enableStatusChecksDesc": "Check host reachability. Active sessions skip extra probes. SSH probes without an active session may trigger aggressive Fail2Ban rules; disable status checks on those hosts.",
     "useGlobalInterval": "전역 간격 사용",
     "useGlobalIntervalDesc": "서버 전체 상태 확인 간격으로 재정의합니다.",
     "checkIntervalS": "확인 간격(초)",
@@ -1058,7 +1063,8 @@
     "secondFactorUnavailable": "현재 사용 중인 2단계 인증 방식이 비활성화되어 있습니다. 관리자에게 문의하여 재설정하세요.",
     "secondFactorNoUI": "두 번째 요소는 이 화면에 표시할 수 없습니다. 관리자에게 문의하십시오.",
     "serverAuthentication": "서버 로그인",
-    "minChars": "최소 {{min}} 문자"
+    "minChars": "최소 {{min}} 문자",
+    "retrySecondFactorUI": "Reload verification methods"
   },
   "hostKey": {
     "verifyNewHost": "SSH 호스트 키 확인",
@@ -1119,7 +1125,13 @@
     "language": "언어",
     "keyPassword": "키 비밀번호",
     "pastePrivateKey": "여기에 개인 키를 붙여넣으세요...",
-    "enterPassword": "비밀번호를 입력하세요"
+    "enterPassword": "비밀번호를 입력하세요",
+    "apiKeyName": "e.g., CI Pipeline",
+    "credentialName": "e.g. Production SSH Key",
+    "optionalDetails": "Optional details...",
+    "sshUsername": "e.g. root or deploy",
+    "hostAddress": "10.0.0.1 or example.com",
+    "hostName": "e.g. Web Server Production"
   },
   "dashboard": {
     "title": "대시보드",
@@ -1501,7 +1513,10 @@
     "sslIssuer": "{{issuer}}에서 발행함",
     "sslNames": "{{names}}을 덮습니다.",
     "sslManualTitle": "인증서를 업로드하세요",
-    "updateExternalAutoProvisionFailed": "자동 생성 설정을 업데이트하는 데 실패했습니다."
+    "updateExternalAutoProvisionFailed": "자동 생성 설정을 업데이트하는 데 실패했습니다.",
+    "hostTags": "Predefined host tags",
+    "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
+    "hostTagsError": "Could not load or save host tag suggestions."
   },
   "newUi": {
     "sidebar": {

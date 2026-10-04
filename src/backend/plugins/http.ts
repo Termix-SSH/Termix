@@ -351,7 +351,7 @@ async function writePublicRouteAudit(
   try {
     const { logAudit } = await import("../utils/audit-logger.js");
     await logAudit({
-      userId: "system",
+      userId: null,
       username: `plugin:${manifest.id}`,
       action: "plugin_http_public_routes",
       resourceType: "plugin",

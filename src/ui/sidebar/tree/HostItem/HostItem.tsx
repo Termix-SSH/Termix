@@ -59,11 +59,7 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import {
-  useHostStatus,
-  useHostStatusReason,
-  useServerStatusMeta,
-} from "@/lib/ServerStatusContext";
+import { useHostStatus } from "@/lib/ServerStatusContext";
 import {
   Tooltip,
   TooltipContent,
@@ -101,16 +97,16 @@ export function statusCheckEnabled(host: Host): boolean {
 
 export function buildStatusTooltip(
   host: Host,
-  status: "online" | "reachable" | "offline",
+  status: "online" | "offline" | "unknown",
   t: (key: string) => string = (k) => k,
 ): string {
+  if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
   const statusLabel =
     status === "online"
-      ? t("hosts.status.available")
-      : status === "reachable"
-        ? t("hosts.status.reachable")
-        : t("hosts.status.offline");
-  if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
+      ? t("hosts.status.online")
+      : status === "offline"
+        ? t("hosts.status.offline")
+        : t("hosts.status.checking");
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
   for (const protocol of enabledHostProtocols(host)) {
@@ -283,22 +279,11 @@ export function HostItem({
   const pluginMenuItems = hostMenuItemsFor(useHostContextMenuItems(), host);
   const splitTargets = useSplitTargets();
   const statusScheme = useStatusColorScheme();
-  const { initialLoadComplete } = useServerStatusMeta();
   const statusCheckOn = statusCheckEnabled(host);
-  const statusLoading = !initialLoadComplete && statusCheckOn;
-  // Per-host subscription — status polls only re-render rows that flipped.
-  const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
-  const statusReason = useHostStatusReason(Number(host.id), statusCheckOn);
+  // Per-host subscription, so a poll only re-renders rows that flipped.
   const availability =
-    liveStatus === "online" ||
-    liveStatus === "reachable" ||
-    liveStatus === "offline"
-      ? liveStatus
-      : host.status === "reachable"
-        ? "reachable"
-        : host.online
-          ? "online"
-          : "offline";
+    useHostStatus(Number(host.id), statusCheckOn) ?? "offline";
+  const statusLoading = availability === "unknown";
   const isOnline = availability === "online";
   const previousAvailability = useRef(availability);
   const [statusLocking, setStatusLocking] = useState(false);
@@ -1096,7 +1081,10 @@ export function HostItem({
         className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-[3.5px]"}`}
       >
         {/* Name row */}
-        <div data-drag-label className="flex items-center gap-1.5 min-w-0">
+        <div
+          data-drag-label
+          className={`flex items-center gap-1.5 min-w-0 ${isCompact ? "min-h-[19px]" : ""}`}
+        >
           {onToggleExpand && (
             <button
               type="button"
@@ -1133,9 +1121,7 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {statusReason === "host_key_changed"
-                  ? `${t("hostKey.keyChangedWarning")}: ${t("hostKey.keyChangedDescription")}`
-                  : buildStatusTooltip(host, availability, t)}
+                {buildStatusTooltip(host, availability, t)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -1190,6 +1176,23 @@ export function HostItem({
               {host.ip}
             </span>
           )}
+          {isCompact && !selectionMode && (
+            <div
+              data-testid="host-inline-actions"
+              className={`flex items-center gap-[2px] min-w-0 max-w-[60%] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 ${alwaysShowTray || actionsOnly || trayOpenState || hoverTrayOpen ? "" : "hidden"}`}
+            >
+              {connectionButtons}
+              <div
+                className={
+                  alwaysShowTray || trayOpenState || hoverTrayOpen
+                    ? "flex items-center gap-[2px]"
+                    : "hidden"
+                }
+              >
+                {managementButtons}
+              </div>
+            </div>
+          )}
           {!selectionMode && (shouldUseClickTray || actionsOnly) && (
             <button
               title={
@@ -1239,7 +1242,8 @@ export function HostItem({
         )}
 
         {/* Connection buttons: permanent in "always"/"actionsOnly" modes, or shown once the chevron opens the tray in click mode */}
-        {!selectionMode &&
+        {!isCompact &&
+          !selectionMode &&
           (alwaysShowTray ||
             actionsOnly ||
             (shouldUseClickTray && isTrayOpen)) && (
@@ -1251,61 +1255,63 @@ export function HostItem({
           )}
 
         {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
-        <div className={trayVisibilityClass}>
-          {tokens.showResourceRow &&
-            isOnline &&
-            ((host.cpu != null && host.cpu > 0) ||
-              (host.ram != null && host.ram > 0)) && (
-              <div className="flex items-center gap-[10.5px] pt-[5.25px]">
-                {host.cpu != null && host.cpu > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
-                    <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
-                      <div
-                        className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
-                        style={{ width: `${host.cpu}%` }}
-                      />
+        {!isCompact && (
+          <div className={trayVisibilityClass}>
+            {tokens.showResourceRow &&
+              isOnline &&
+              ((host.cpu != null && host.cpu > 0) ||
+                (host.ram != null && host.ram > 0)) && (
+                <div className="flex items-center gap-[10.5px] pt-[5.25px]">
+                  {host.cpu != null && host.cpu > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
+                      <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
+                        <div
+                          className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                          style={{ width: `${host.cpu}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] tabular-nums text-muted-foreground/50">
+                        {host.cpu}%
+                      </span>
                     </div>
-                    <span className="text-[9px] tabular-nums text-muted-foreground/50">
-                      {host.cpu}%
-                    </span>
-                  </div>
-                )}
-                {host.ram != null && host.ram > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/40" />
-                    <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
-                      <div
-                        className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
-                        style={{ width: `${host.ram}%` }}
-                      />
+                  )}
+                  {host.ram != null && host.ram > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/40" />
+                      <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
+                        <div
+                          className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                          style={{ width: `${host.ram}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] tabular-nums text-muted-foreground/50">
+                        {host.ram}%
+                      </span>
                     </div>
-                    <span className="text-[9px] tabular-nums text-muted-foreground/50">
-                      {host.ram}%
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-          <div
-            className={`flex flex-col gap-0.5 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "" : "pt-1.5"}`}
-          >
-            {/* Connection buttons — only shown here when not already shown above */}
-            {!alwaysShowTray && !actionsOnly && !shouldUseClickTray && (
-              <div className="flex items-center flex-wrap gap-[1.75px]">
-                {connectionButtons}
-              </div>
-            )}
-
-            {/* Management buttons row */}
             <div
-              className={`flex items-center gap-[1.75px] border-t border-border/30 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-[5.25px]" : "pt-[3.5px] mt-[1.75px]"}`}
+              className={`flex flex-col gap-0.5 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "" : "pt-1.5"}`}
             >
-              {managementButtons}
+              {/* Connection buttons, only shown here when not already shown above */}
+              {!alwaysShowTray && !actionsOnly && !shouldUseClickTray && (
+                <div className="flex items-center flex-wrap gap-[1.75px]">
+                  {connectionButtons}
+                </div>
+              )}
+
+              {/* Management buttons row */}
+              <div
+                className={`flex items-center gap-[1.75px] border-t border-border/30 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-[5.25px]" : "pt-[3.5px] mt-[1.75px]"}`}
+              >
+                {managementButtons}
+              </div>
             </div>
           </div>
-        </div>
+        )}
         {authOverrideProtocol && (
           <HostAuthOverrideModal
             open

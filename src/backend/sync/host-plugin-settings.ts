@@ -15,6 +15,7 @@ import { databaseLogger } from "../utils/logger.js";
 import type { DefaultOverrides } from "../../types/host-defaults.js";
 import {
   hostSettingsPlugins,
+  withHostPluginSettings,
   type HostPluginSettings,
 } from "../database/routes/host-plugin-settings.js";
 
@@ -23,19 +24,45 @@ export interface PluginHostSettingsSync {
   importValue?: (key: string, value: unknown) => unknown | Promise<unknown>;
 }
 
-/** What a host carries to the other side of a sync pair. */
+/** Who a shared host's copy is for, and at what share level. */
+export interface SharedHostViewer {
+  userId: string;
+  permissionLevel: string;
+}
+
+/**
+ * What a host carries to the other side of a sync pair. With a viewer, only
+ * what that user sees of a host shared with them, as the host routes show it.
+ */
 export async function exportHostPluginSettings(
   hostId: number,
+  viewer?: SharedHostViewer,
 ): Promise<HostPluginSettings> {
+  const visible = viewer
+    ? (((
+        await withHostPluginSettings(
+          {
+            id: hostId,
+            isShared: true,
+            permissionLevel: viewer.permissionLevel,
+          },
+          viewer.userId,
+        )
+      ).pluginSettings as HostPluginSettings | undefined) ?? {})
+    : null;
   const result: HostPluginSettings = {};
   for (const manifest of hostSettingsPlugins()) {
     const fields = declaredFields(manifest, "host").filter(
-      (field) => field.type !== "secret",
+      (field) =>
+        field.type !== "secret" &&
+        (!visible || field.key in (visible[manifest.id] ?? {})),
     );
     if (fields.length === 0) continue;
-    const values = await getAllSettings(manifest, "host", hostId, {
-      redactSecrets: true,
-    });
+    const values = visible
+      ? visible[manifest.id]
+      : await getAllSettings(manifest, "host", hostId, {
+          redactSecrets: true,
+        });
     const hook = consume<PluginHostSettingsSync>(
       `${manifest.id}.hostSettingsSync`,
     );

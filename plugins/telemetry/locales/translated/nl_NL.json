@@ -54,5 +54,8 @@
     "previewDescription": "Dit is precies wat er nu verzonden zou worden.",
     "close": "Dichtbij",
     "loadFailed": "De status van de gebruiksstatistieken kon niet worden geladen."
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

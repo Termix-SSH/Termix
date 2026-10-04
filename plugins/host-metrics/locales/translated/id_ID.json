@@ -308,5 +308,8 @@
         "label": "Jalur yang dipantau"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

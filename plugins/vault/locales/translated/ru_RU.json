@@ -65,5 +65,8 @@
         "label": "Профиль подписанта хранилища"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

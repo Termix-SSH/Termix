@@ -54,5 +54,8 @@
     "previewDescription": "这正是现在会发送的内容。",
     "close": "关闭",
     "loadFailed": "无法加载使用情况统计状态"
+  },
+  "plugin": {
+    "name": "Usage Statistics"
   }
 }

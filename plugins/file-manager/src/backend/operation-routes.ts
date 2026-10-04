@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
+import type { SFTPWrapper } from "ssh2";
 import {
   execChannel,
   execWithSudo,
@@ -24,6 +25,8 @@ type FileOperationRoutesDeps = {
 
 const TRASH_RETENTION_DAYS_KEY = "trashRetentionDays";
 
+const TRASH_PURGE_INTERVAL_MS = 60 * 60 * 1000;
+
 export function registerFileOperationRoutes(
   app: Express,
   { ctx, sshSessions, verifySessionOwnership }: FileOperationRoutesDeps,
@@ -37,6 +40,22 @@ export function registerFileOperationRoutes(
     } catch {
       return 7;
     }
+  };
+
+  // Deleting used to purge expired trash first, reading every trash entry
+  // before answering. Do it after the response, at most hourly per session.
+  const lastPurge = new WeakMap<SSHSession, number>();
+  const purgeExpiredTrash = (session: SSHSession, sftp: SFTPWrapper) => {
+    const now = Date.now();
+    if (now - (lastPurge.get(session) ?? 0) < TRASH_PURGE_INTERVAL_MS) return;
+    lastPurge.set(session, now);
+    void getTrashRetentionDays()
+      .then((days) => listTrash(sftp, days))
+      .catch((error) =>
+        ctx.log.warn(
+          `Could not purge expired trash: ${(error as Error).message}`,
+        ),
+      );
   };
 
   async function ownedSession(
@@ -494,9 +513,8 @@ export function registerFileOperationRoutes(
     if (!permanent) {
       try {
         const sftp = await getSessionSftp(sshConn);
-        const retentionDays = await getTrashRetentionDays();
-        await listTrash(sftp, retentionDays);
         const item = await moveToTrash(sftp, itemPath);
+        purgeExpiredTrash(sshConn, sftp);
         ctx.log.info(
           `Item moved to trash: ${sessionId} (${itemPath}, trashId=${item.id})`,
         );

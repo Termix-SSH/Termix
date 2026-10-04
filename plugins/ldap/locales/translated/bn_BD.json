@@ -23,6 +23,12 @@
     "namePlaceholder": "কোম্পানির ডিরেক্টরি",
     "nameRequired": "একটি প্রদর্শনের নাম প্রয়োজন",
     "enabled": "সক্ষম করা হয়েছে",
+    "enabledDesc": "Let users sign in with this directory.",
+    "dialogDesc": "Connect an LDAP or Active Directory server so users can sign in with it.",
+    "sectionGeneral": "General",
+    "sectionConnection": "Connection",
+    "sectionUsers": "User Lookup",
+    "sectionAccess": "Access",
     "save": "ডিরেক্টরি সংরক্ষণ করুন",
     "saving": "সঞ্চয়...",
     "saved": "সংরক্ষিত",
@@ -36,6 +42,7 @@
     "host": "এলডিএপি হোস্ট",
     "port": "বন্দর",
     "useTls": "TLS (LDAPS) ব্যবহার করুন",
+    "useTlsDesc": "Connect over an encrypted LDAPS connection.",
     "bindDn": "ডিএনকে আবদ্ধ করুন",
     "bindPassword": "পাসওয়ার্ড সংযুক্ত করুন",
     "secretKeep": "একটি পাসওয়ার্ড সংরক্ষিত হয়েছে। এটি রাখতে চাইলে এই স্থানটি খালি রাখুন।",
@@ -46,5 +53,8 @@
     "groupSearchBase": "গ্রুপ অনুসন্ধান ভিত্তি",
     "adminGroup": "অ্যাডমিন গ্রুপ",
     "allowedUsers": "অনুমোদিত ব্যবহারকারী"
+  },
+  "plugin": {
+    "name": "LDAP"
   }
 }

@@ -1,7 +1,7 @@
 import { AxiosError } from "axios";
-import { getAllServerStatuses, handleApiError, sshHostApi } from "@/main-axios";
+import { handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
-import type { ServerStatus, SSHHostWithStatus } from "@/main-axios";
+import type { SSHHostWithStatus } from "@/main-axios";
 import {
   getCachedSSHHosts,
   invalidateHostsAndStatusCaches,
@@ -10,42 +10,16 @@ import {
 // SSH HOST MANAGEMENT
 // ============================================================================
 
-export type GetSSHHostsOptions = {
-  /** When false, skip the status service call (host config only). Default true. */
-  includeStatus?: boolean;
-};
-
 async function loadSSHHostsFromApi(): Promise<SSHHost[]> {
   const hostsResponse = await sshHostApi.get("/db/host");
   return Array.isArray(hostsResponse.data) ? hostsResponse.data : [];
 }
 
-export async function getSSHHosts(
-  options: GetSSHHostsOptions = {},
-): Promise<SSHHostWithStatus[]> {
-  const includeStatus = options.includeStatus !== false;
-
+/** Host config only. Live status comes from ServerStatusContext. */
+export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
     const hosts = await getCachedSSHHosts(loadSSHHostsFromApi);
-
-    if (!includeStatus) {
-      return hosts.map((host) => ({
-        ...host,
-        status: "unknown",
-      }));
-    }
-
-    let statuses: Record<number, ServerStatus> = {};
-    try {
-      statuses = (await getAllServerStatuses()) || {};
-    } catch {
-      // Status fetch failure should not prevent host list from loading
-    }
-
-    return hosts.map((host) => ({
-      ...host,
-      status: statuses[host.id]?.status || "unknown",
-    }));
+    return hosts.map((host) => ({ ...host, status: "unknown" }));
   } catch (error) {
     throw handleApiError(error, "fetch SSH hosts");
   }

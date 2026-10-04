@@ -56,5 +56,8 @@
     "speed": "Брзина репродукције",
     "play": "Пусти снимак",
     "pause": "Паузирај снимање"
+  },
+  "plugin": {
+    "name": "Session Recording"
   }
 }

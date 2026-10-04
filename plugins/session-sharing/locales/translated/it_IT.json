@@ -182,5 +182,8 @@
     "sharedBy": "Condiviso da {{username}}",
     "join": "Giuntura",
     "sharedSessionLabel": "{{hostName}} (condiviso)"
+  },
+  "plugin": {
+    "name": "Session Sharing"
   }
 }

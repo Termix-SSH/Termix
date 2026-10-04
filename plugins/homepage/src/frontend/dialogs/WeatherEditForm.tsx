@@ -17,7 +17,7 @@ export function WeatherEditForm({
         <Input
           value={config.location}
           onChange={(e) => onChange({ ...config, location: e.target.value })}
-          placeholder="New York, London, Tokyo..."
+          placeholder={t("homepage.locationPlaceholder")}
           className="h-8 text-sm"
         />
       </div>

@@ -66,25 +66,37 @@ export function listUserOwnedTables(): UserOwnedTable[] {
 
 type Row = Record<string, unknown>;
 
+async function readOwnedRows(
+  owned: UserOwnedTable,
+  userId: string,
+): Promise<Row[]> {
+  try {
+    return await selectRows<Row>(
+      sql`SELECT ${sql.join(
+        owned.columns.map((column) => sql.identifier(column)),
+        sql`, `,
+      )} FROM ${sql.identifier(owned.table)} WHERE ${sql.identifier(
+        owned.userColumn,
+      )} = ${userId}`,
+    );
+  } catch {
+    // The plugin's migration has not created the table yet.
+    return [];
+  }
+}
+
+const yieldToEventLoop = () =>
+  new Promise<void>((resolve) => setImmediate(resolve));
+
 /** The user's rows in every user-owned plugin table, keyed by table. */
 export async function readUserPluginRows(
   userId: string,
 ): Promise<Record<string, Row[]>> {
   const result: Record<string, Row[]> = {};
   for (const owned of listUserOwnedTables()) {
-    try {
-      const rows = await selectRows<Row>(
-        sql`SELECT ${sql.join(
-          owned.columns.map((column) => sql.identifier(column)),
-          sql`, `,
-        )} FROM ${sql.identifier(owned.table)} WHERE ${sql.identifier(
-          owned.userColumn,
-        )} = ${userId}`,
-      );
-      if (rows.length > 0) result[owned.table] = rows;
-    } catch {
-      // The plugin's migration has not created the table yet.
-    }
+    const rows = await readOwnedRows(owned, userId);
+    if (rows.length > 0) result[owned.table] = rows;
+    await yieldToEventLoop();
   }
   return result;
 }
@@ -95,18 +107,25 @@ interface SqliteLike {
     run(...params: unknown[]): unknown;
     all(...params: unknown[]): unknown[];
   };
+  transaction?(fn: (rows: Row[]) => void): (rows: Row[]) => unknown;
 }
 
-/** Writes the user's plugin rows into a SQLite export file. */
+const INSERT_CHUNK = 2000;
+
+/**
+ * Writes the user's plugin rows into a SQLite export file. One table at a
+ * time, in chunked transactions with a yield between them: history tables
+ * (command history, health checks) can hold many thousands of rows, and the
+ * export runs on the thread that serves every other request.
+ */
 export async function writeUserPluginTables(
   exportDb: SqliteLike,
   userId: string,
 ): Promise<number> {
-  const rowsByTable = await readUserPluginRows(userId);
   let written = 0;
   for (const owned of listUserOwnedTables()) {
-    const rows = rowsByTable[owned.table];
-    if (!rows?.length) continue;
+    const rows = await readOwnedRows(owned, userId);
+    if (!rows.length) continue;
     for (const statement of createTableSql(
       "sqlite",
       owned.pluginId,
@@ -119,9 +138,19 @@ export async function writeUserPluginTables(
         .map((column) => `"${column}"`)
         .join(", ")}) VALUES (${owned.columns.map(() => "?").join(", ")})`,
     );
-    for (const row of rows) {
-      insert.run(...owned.columns.map((column) => toSqlite(row[column])));
-      written++;
+    const writeChunk = (chunk: Row[]) => {
+      for (const row of chunk) {
+        insert.run(...owned.columns.map((column) => toSqlite(row[column])));
+      }
+    };
+    const runChunk = exportDb.transaction
+      ? exportDb.transaction(writeChunk)
+      : writeChunk;
+    for (let start = 0; start < rows.length; start += INSERT_CHUNK) {
+      const chunk = rows.slice(start, start + INSERT_CHUNK);
+      runChunk(chunk);
+      written += chunk.length;
+      await yieldToEventLoop();
     }
   }
   return written;

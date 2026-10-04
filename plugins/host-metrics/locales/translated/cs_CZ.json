@@ -308,5 +308,8 @@
         "label": "Sledované cesty"
       }
     }
+  },
+  "plugin": {
+    "name": "Host Metrics"
   }
 }

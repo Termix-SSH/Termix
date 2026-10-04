@@ -115,5 +115,8 @@
   },
   "hosts": {
     "docsLink": "Xem tài liệu"
+  },
+  "plugin": {
+    "name": "AI Assistant"
   }
 }

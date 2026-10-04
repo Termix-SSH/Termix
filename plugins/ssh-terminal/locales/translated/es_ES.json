@@ -701,5 +701,8 @@
   },
   "errors": {
     "remoteServerRequired": "Se requiere un servidor remoto. Conecte un servidor remoto en Configuración para usar este tipo de conexión."
+  },
+  "plugin": {
+    "name": "SSH Terminal"
   }
 }

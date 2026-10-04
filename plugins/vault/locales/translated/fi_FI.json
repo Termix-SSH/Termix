@@ -65,5 +65,8 @@
         "label": "Varaston allekirjoittajan profiili"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

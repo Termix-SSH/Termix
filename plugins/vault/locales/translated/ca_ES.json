@@ -65,5 +65,8 @@
         "label": "Perfil del signant de la caixa forta"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }

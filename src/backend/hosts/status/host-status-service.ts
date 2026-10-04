@@ -2,16 +2,16 @@
  * The host list's status dot.
  *
  * Every host with status checks on gets a TCP connection to its port on a
- * timer. A port that answers is "online", one that does not is "offline".
- * "reachable" is the warning in between: the port answers but the last login
- * failed (a session, a ctx.ssh connection or a plugin's
- * ctx.hosts.status.reportLogin said so). It clears on the next working login,
- * when the host is edited, or when a changed host key is accepted. Probing
- * never logs in: on RADIUS or Duo backed devices a login fires a real 2FA
- * push, every interval.
+ * timer. A port that answers is "online", one that does not (twice in a row)
+ * is "offline". An open session or a working login also counts as online.
+ * Probing never logs in to the host itself: on RADIUS or Duo backed devices a
+ * login fires a real 2FA push, every interval. A host behind jump hosts is
+ * probed through a chain, which does log in to the hops, so hosts that share
+ * a hop list share one chain (jump-probe-pool.ts).
  *
  * Polling is demand driven. A user asking for statuses starts polling their
- * own hosts; nothing is probed for a user who never opened the app.
+ * own hosts; nothing is probed for a user who never opened the app. The first
+ * request waits briefly for those first checks so it is not empty.
  */
 
 import { pluginEvents, TOPICS } from "../../plugins/events.js";
@@ -22,23 +22,21 @@ import {
   getCurrentSettingValue,
 } from "../../database/repositories/factory.js";
 import type { HostStatusTargetRow } from "../../database/repositories/host-resolution-repository.js";
-import {
-  statusAfterAuthentication,
-  statusAfterReachabilityCheck,
-  type HostStatus,
-} from "./host-status.js";
+import type { HostStatus } from "./host-status.js";
 import { ConcurrentLimiter } from "./limiter.js";
-import { tcpPing, tcpPingThroughJumpHost } from "./tcp-ping.js";
+import { tcpPing } from "./tcp-ping.js";
+import { JumpProbePool } from "./jump-probe-pool.js";
 
 export const GLOBAL_STATUS_INTERVAL_KEY = "global_status_check_interval";
-export const DEFAULT_STATUS_INTERVAL = 60;
+export const DEFAULT_STATUS_INTERVAL = 30;
+/** How long the first request for a user waits for the first checks. */
+const FIRST_CHECK_WAIT_MS = 6_000;
 /** A status younger than this is fresh enough for check(). */
 const FRESH_MS = 30_000;
 
 export interface HostStatusEntry {
   status: HostStatus;
   lastChecked: string;
-  reason?: "host_key_changed";
 }
 
 export interface HostStatusPayload {
@@ -48,7 +46,6 @@ export interface HostStatusPayload {
   previous: HostStatus | null;
   /** Anything but offline, the shape automations' trigger already reads. */
   online: boolean;
-  reason?: "host_key_changed";
 }
 
 export interface StatusTarget {
@@ -78,8 +75,11 @@ export interface HostStatusDeps {
     target: StatusTarget,
     port: number,
   ) => Promise<boolean>;
+  hasActiveSession?: (hostId: number) => boolean;
   globalInterval: () => number;
   emit: (payload: HostStatusPayload) => void;
+  /** Pause before a failed ping is tried again. */
+  retryDelayMs?: number;
 }
 
 function parseJumpHosts(raw: string | null): Array<{ hostId: number }> {
@@ -110,6 +110,11 @@ export function toStatusTarget(row: HostStatusTargetRow): StatusTarget {
   };
 }
 
+const jumpProbes = new JumpProbePool(async (jumpHosts, userId) => {
+  const { createJumpHostChain } = await import("../jump-host-chain.js");
+  return createJumpHostChain(jumpHosts, userId);
+});
+
 const defaultDeps: HostStatusDeps = {
   loadTargets: async (filter) =>
     (
@@ -126,17 +131,10 @@ const defaultDeps: HostStatusDeps = {
       );
     return [...new Set(entries.map((entry) => entry.hostId))];
   },
+  hasActiveSession: (hostId) => hostSessionStatus.hasActiveSession(hostId),
   ping: (host, port) => tcpPing(host, port, 5000),
-  pingThroughJumpHosts: async (target, port) => {
-    const { createJumpHostChain } = await import("../jump-host-chain.js");
-    const client = await createJumpHostChain(
-      target.jumpHosts,
-      target.userId,
-    ).catch(() => null);
-    return client
-      ? tcpPingThroughJumpHost(client, target.ip, port, 5000)
-      : false;
-  },
+  pingThroughJumpHosts: (target, port) =>
+    jumpProbes.ping(target.jumpHosts, target.userId, target.ip, port, 5000),
   globalInterval: () => {
     const value = Number(getCurrentSettingValue(GLOBAL_STATUS_INTERVAL_KEY));
     return Number.isInteger(value) && value >= 5
@@ -156,7 +154,6 @@ export class HostStatusService {
   private readonly store = new Map<number, HostStatusEntry>();
   private readonly owners = new Map<number, string>();
   private readonly inFlight = new Map<number, Promise<void>>();
-  private readonly loginFailed = new Set<number>();
   private readonly startedUsers = new Set<string>();
   private readonly portResolvers = new Map<string, Set<PortResolver>>();
   private readonly limiter = new ConcurrentLimiter(20);
@@ -173,18 +170,11 @@ export class HostStatusService {
       }),
       pluginEvents.on(TOPICS.hostUpdated, (payload) => {
         const { hostId } = payload as { hostId?: number };
-        if (!hostId) return;
-        // An edit may have fixed the login, so the next attempt decides.
-        this.loginFailed.delete(hostId);
-        void this.reload(hostId);
+        if (hostId) void this.reload(hostId);
       }),
       pluginEvents.on(TOPICS.hostDeleted, (payload) => {
         const { hostId } = payload as { hostId?: number };
         if (hostId) this.forget(hostId);
-      }),
-      pluginEvents.on(TOPICS.hostKeyUpdated, (payload) => {
-        const { hostId } = payload as { hostId?: number };
-        if (hostId) this.clearHostKeyReason(hostId);
       }),
     ];
   }
@@ -210,11 +200,13 @@ export class HostStatusService {
     userId: string,
     requestedHostIds: Set<number> | null,
   ): Promise<Map<number, HostStatusEntry>> {
+    const started: Promise<void>[] = [];
     if (requestedHostIds !== null) {
-      await this.reconcile(userId, requestedHostIds);
+      await this.reconcile(userId, requestedHostIds, started);
     } else if (!this.startedUsers.has(userId)) {
-      await this.startUser(userId);
+      await this.startUser(userId, started);
     }
+    if (started.length > 0) await this.waitFor(started);
     return this.store;
   }
 
@@ -247,20 +239,12 @@ export class HostStatusService {
     return this.store.get(hostId) ?? null;
   }
 
-  reportLogin(
-    hostId: number,
-    outcome: { ok: boolean; hostKeyChanged?: boolean },
-  ): void {
-    if (outcome.ok) {
-      this.loginFailed.delete(hostId);
-      this.set(hostId, { status: statusAfterAuthentication(true) });
-      return;
-    }
-    this.loginFailed.add(hostId);
-    this.set(hostId, {
-      status: statusAfterAuthentication(false, this.store.get(hostId)?.status),
-      ...(outcome.hostKeyChanged ? { reason: "host_key_changed" } : {}),
-    });
+  /**
+   * A working login proves the host is up. A failed one says nothing about
+   * reachability (a wrong password, another user's login), so it is ignored.
+   */
+  reportLogin(hostId: number, outcome: { ok: boolean }): void {
+    if (outcome.ok) this.set(hostId, { status: "online" });
   }
 
   registerPort(connectionType: string, resolve: PortResolver): () => void {
@@ -276,13 +260,33 @@ export class HostStatusService {
     };
   }
 
-  private async startUser(userId: string): Promise<void> {
+  private async waitFor(started: Promise<void>[]): Promise<void> {
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      Promise.allSettled(started),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, FIRST_CHECK_WAIT_MS);
+        timer.unref?.();
+      }),
+    ]);
+    if (timer) clearTimeout(timer);
+  }
+
+  private track(started: Promise<void>[], target: StatusTarget): void {
+    const probe = this.startPolling(target);
+    if (probe) started.push(probe);
+  }
+
+  private async startUser(
+    userId: string,
+    started: Promise<void>[],
+  ): Promise<void> {
     this.startedUsers.add(userId);
     const targets = await this.deps.loadTargets({ userId });
     for (const target of targets) {
-      if (!this.polled.has(target.id)) this.startPolling(target);
+      if (!this.polled.has(target.id)) this.track(started, target);
     }
-    await this.startShared(userId, null);
+    await this.startShared(userId, null, started);
   }
 
   /**
@@ -292,6 +296,7 @@ export class HostStatusService {
   private async startShared(
     userId: string,
     allowed: Set<number> | null,
+    started: Promise<void>[],
   ): Promise<void> {
     if (!this.deps.loadSharedHostIds) return;
     try {
@@ -302,7 +307,7 @@ export class HostStatusService {
       if (shared.length === 0) return;
       const targets = await this.deps.loadTargets({ hostIds: shared });
       for (const target of targets) {
-        if (!this.polled.has(target.id)) this.startPolling(target);
+        if (!this.polled.has(target.id)) this.track(started, target);
       }
     } catch (error) {
       sshLogger.warn("Could not start status checks for shared hosts", {
@@ -313,7 +318,11 @@ export class HostStatusService {
     }
   }
 
-  private async reconcile(userId: string, allowed: Set<number>): Promise<void> {
+  private async reconcile(
+    userId: string,
+    allowed: Set<number>,
+    started: Promise<void>[],
+  ): Promise<void> {
     const targets = await this.deps.loadTargets({ userId });
     for (const target of targets) {
       if (!allowed.has(target.id)) {
@@ -321,9 +330,9 @@ export class HostStatusService {
         this.store.delete(target.id);
         continue;
       }
-      if (!this.polled.has(target.id)) this.startPolling(target);
+      if (!this.polled.has(target.id)) this.track(started, target);
     }
-    await this.startShared(userId, allowed);
+    await this.startShared(userId, allowed, started);
   }
 
   private async reload(hostId: number): Promise<void> {
@@ -349,16 +358,6 @@ export class HostStatusService {
     this.stopPolling(hostId);
     this.store.delete(hostId);
     this.owners.delete(hostId);
-    this.loginFailed.delete(hostId);
-  }
-
-  private clearHostKeyReason(hostId: number): void {
-    const current = this.store.get(hostId);
-    if (current?.reason !== "host_key_changed") return;
-    this.loginFailed.delete(hostId);
-    this.set(hostId, {
-      status: current.status === "offline" ? "offline" : "online",
-    });
   }
 
   private intervalMs(target: StatusTarget): number {
@@ -371,21 +370,26 @@ export class HostStatusService {
     );
   }
 
-  private startPolling(target: StatusTarget, probeNow = true): void {
+  /** Returns the first probe when one was started. */
+  private startPolling(
+    target: StatusTarget,
+    probeNow = true,
+  ): Promise<void> | undefined {
     this.stopPolling(target.id);
     this.owners.set(target.id, target.userId);
     if (!target.statusCheckEnabled) {
       this.store.delete(target.id);
-      return;
+      return undefined;
     }
     const polled: Polled = { target };
     this.polled.set(target.id, polled);
-    if (probeNow) void this.probe(target);
+    const first = probeNow ? this.probe(target) : undefined;
     polled.timer = setInterval(() => {
       const latest = this.polled.get(target.id);
       if (latest) void this.probe(latest.target);
     }, this.intervalMs(target));
     polled.timer.unref?.();
+    return first;
   }
 
   private stopPolling(hostId: number): void {
@@ -425,29 +429,28 @@ export class HostStatusService {
     return target.port;
   }
 
+  private async pingOnce(target: StatusTarget): Promise<boolean> {
+    try {
+      if (this.deps.hasActiveSession?.(target.id)) return true;
+      const port = await this.portFor(target);
+      return target.jumpHosts.length > 0
+        ? await this.deps.pingThroughJumpHosts(target, port)
+        : await this.deps.ping(target.ip, port);
+    } catch {
+      return false;
+    }
+  }
+
   private async probeNow(target: StatusTarget): Promise<void> {
     this.owners.set(target.id, target.userId);
-    let reachable = false;
-    try {
-      const port = await this.portFor(target);
-      reachable =
-        target.jumpHosts.length > 0
-          ? await this.deps.pingThroughJumpHosts(target, port)
-          : await this.deps.ping(target.ip, port);
-    } catch {
-      reachable = false;
+    let reachable = await this.pingOnce(target);
+    if (!reachable) {
+      // One lost packet should not flip the dot.
+      const delay = this.deps.retryDelayMs ?? 1000;
+      if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+      reachable = await this.pingOnce(target);
     }
-
-    const current = this.store.get(target.id);
-    this.set(target.id, {
-      status: statusAfterReachabilityCheck(
-        reachable,
-        this.loginFailed.has(target.id),
-      ),
-      ...(reachable && current?.reason === "host_key_changed"
-        ? { reason: "host_key_changed" as const }
-        : {}),
-    });
+    this.set(target.id, { status: reachable ? "online" : "offline" });
   }
 
   private set(hostId: number, entry: Omit<HostStatusEntry, "lastChecked">) {
@@ -480,8 +483,7 @@ export class HostStatusService {
       ownerUserId,
       status: entry.status,
       previous,
-      online: entry.status !== "offline",
-      ...(entry.reason ? { reason: entry.reason } : {}),
+      online: entry.status === "online",
     });
   }
 }

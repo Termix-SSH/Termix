@@ -54,5 +54,8 @@
     "request": "Ajukan sertifikat sekarang",
     "requesting": "Meminta sertifikat...",
     "issued": "Sertifikat telah diterbitkan dan dipasang."
+  },
+  "plugin": {
+    "name": "ACME Certificates"
   }
 }

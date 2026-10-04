@@ -65,5 +65,8 @@
         "label": "Hồ sơ người ký Vault"
       }
     }
+  },
+  "plugin": {
+    "name": "HashiCorp Vault"
   }
 }
