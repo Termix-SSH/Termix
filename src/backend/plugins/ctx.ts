@@ -156,7 +156,7 @@ async function writeAudit(
     const { logAudit } = await import("../utils/audit-logger.js");
     await logAudit({
       // Attribution comes from the runtime, never from the plugin.
-      userId: getActor() ?? "system",
+      userId: getActor() ?? null,
       username: `plugin:${manifest.id}`,
       action: `plugin_${options.action}`,
       resourceType: "plugin",
@@ -965,12 +965,12 @@ export function createPluginContext(
       record: async (entry) => {
         try {
           const { logAudit } = await import("../utils/audit-logger.js");
-          const actor = getActor() ?? "system";
+          const actor = getActor();
           const meta = requestMeta(entry.request);
           await logAudit({
             ...meta,
-            userId: actor,
-            username: actor,
+            userId: actor ?? null,
+            username: actor ?? "system",
             action: entry.action,
             resourceType: entry.resourceType ?? "plugin",
             resourceId: entry.resourceId ?? pluginId,

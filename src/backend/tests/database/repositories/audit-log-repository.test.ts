@@ -77,6 +77,34 @@ describe("AuditLogRepository", () => {
     ]);
   });
 
+  it("stores entries with no acting user, and refuses ids that are not users", async () => {
+    const repo = await createRepository();
+
+    await repo.create({
+      userId: null,
+      username: "plugin:example",
+      action: "plugin_http_public_routes",
+      resourceType: "plugin",
+      success: true,
+    });
+    await expect(
+      repo.create({
+        userId: "system",
+        username: "system",
+        action: "cleanup",
+        resourceType: "plugin",
+        success: true,
+      }),
+    ).rejects.toThrow();
+
+    const page = await repo.listPage({ filters: {}, limit: 10, offset: 0 });
+    expect(page.logs).toHaveLength(1);
+    expect(page.logs[0]).toMatchObject({
+      userId: null,
+      username: "plugin:example",
+    });
+  });
+
   it("deletes logs by user id and only runs write hook for deleted rows", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

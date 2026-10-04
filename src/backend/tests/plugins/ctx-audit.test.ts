@@ -73,7 +73,8 @@ describe("ctx.audit.record", () => {
     const ctx = contextFor("audit-fixture");
     await ctx.audit.record({ action: "cleanup", success: false });
     expect(auditEntries[0]).toMatchObject({
-      userId: "system",
+      userId: null,
+      username: "system",
       resourceType: "plugin",
       resourceId: "audit-fixture",
       resourceName: "Audit Fixture",
