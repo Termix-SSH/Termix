@@ -46,7 +46,7 @@ export function registerHostStatusRoutes(
    * /host/status:
    *   get:
    *     summary: Get host statuses
-   *     description: Returns the online, reachable or offline status of every host the user can see. Starts status checks for the user's own hosts on first call.
+   *     description: Returns the online or offline status of every host the user can see. Starts status checks for the user's own hosts on first call and waits briefly for their first results.
    *     tags:
    *       - SSH
    *     parameters:

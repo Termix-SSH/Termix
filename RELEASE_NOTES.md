@@ -17,6 +17,8 @@ https://youtu.be/lngaePO96tM
 - Added a reload button when a sign-in verification method fails to load
 - Admins can now merge a duplicate SSO account made by 2.9.0 back into the original account
 - Hosts behind the same jump hosts now share one connection for status checks
+- Simplified host status to just online or offline, removing the "last login failed" state
+- Host status now updates every 15 seconds without a page refresh, and status checks run every 30 seconds by default
 - Completed the Simplified Chinese translation
 - Documented cookie and API key sign-in in the API docs
 
@@ -43,7 +45,12 @@ https://youtu.be/lngaePO96tM
 - Too many database writes from session activity
 - Host editor tabs being hidden when they did not fit
 - SSH host keys being accepted without a check when the host was missing from the database
-- The "last login failed" host status showing in English or mistranslated in several languages
+- Host status only updating after a full page refresh
+- Every host showing offline right after signing in
+- Host status flipping between online and offline on refresh or after one dropped packet
+- Hosts showing "last login failed" when they connected fine
+- Hosts behind a jump host staying offline after the jump connection dropped
+- Host status being wiped in the desktop app when the host list failed to load
 - Tunnels, remote desktop logins and other host settings missing from shared hosts in the desktop app
 - SSO and LDAP provider dialogs overflowing the screen and using mismatched toggles
 - Plugin audit log entries failing to save when no user was signed in

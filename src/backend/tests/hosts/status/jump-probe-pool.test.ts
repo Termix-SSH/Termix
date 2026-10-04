@@ -67,6 +67,29 @@ describe("JumpProbePool", () => {
     pool.closeAll();
   });
 
+  it("drops a chain whose hop stops answering", async () => {
+    vi.useFakeTimers();
+    const stale = Object.assign(new EventEmitter(), {
+      end: vi.fn(),
+      forwardOut: vi.fn(),
+    });
+    const fresh = fakeClient();
+    const open = vi
+      .fn()
+      .mockResolvedValueOnce(stale)
+      .mockResolvedValueOnce(fresh);
+    const pool = new JumpProbePool(open);
+
+    const first = pool.ping([{ hostId: 1 }], "u1", "a", 22, 1000);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await first).toBe(false);
+    expect(stale.end).toHaveBeenCalled();
+
+    expect(await pool.ping([{ hostId: 1 }], "u1", "a", 22)).toBe(true);
+    expect(open).toHaveBeenCalledTimes(2);
+    pool.closeAll();
+  });
+
   it("retries a chain that failed to open", async () => {
     const open = vi
       .fn()

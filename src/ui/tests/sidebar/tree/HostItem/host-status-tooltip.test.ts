@@ -27,24 +27,24 @@ function makeHost(overrides: Partial<Host> = {}): Host {
 // not the key paths the translator falls back to when a resource is missing.
 const t = (key: string): string =>
   ({
-    "hosts.status.available": "Available",
-    "hosts.status.reachable": "Reachable, not authenticated",
+    "hosts.status.online": "Online",
+    "hosts.status.checking": "Checking",
     "hosts.status.offline": "Offline",
     "hosts.status.monitoringDisabled": "Monitoring disabled",
   })[key] ?? key;
 
 describe("buildStatusTooltip", () => {
-  it("returns the translated 'Available' label for online status", () => {
+  it("returns the translated 'Online' label for online status", () => {
     const host = makeHost();
     const tooltip = buildStatusTooltip(host, "online", t);
-    expect(tooltip).toContain("Available");
+    expect(tooltip).toContain("Online");
     expect(tooltip).not.toContain("hosts.status.");
   });
 
-  it("returns the translated 'Reachable, not authenticated' label for reachable status", () => {
+  it("returns 'Checking' before the host has been checked", () => {
     const host = makeHost();
-    const tooltip = buildStatusTooltip(host, "reachable", t);
-    expect(tooltip).toContain("Reachable, not authenticated");
+    const tooltip = buildStatusTooltip(host, "unknown", t);
+    expect(tooltip).toContain("Checking");
     expect(tooltip).not.toContain("hosts.status.");
   });
 
@@ -78,13 +78,13 @@ describe("buildStatusTooltip", () => {
     dispose();
     expect(tooltip).toContain("SSH");
     expect(tooltip).toContain("Demo Desktop");
-    expect(tooltip).toContain("Available");
+    expect(tooltip).toContain("Online");
   });
 
   it("returns just the status label when no protocols are enabled", () => {
     const host = makeHost({ enableSsh: false });
     const tooltip = buildStatusTooltip(host, "online", t);
-    expect(tooltip).toBe("Available");
+    expect(tooltip).toBe("Online");
   });
 
   it("does not render key paths when a translator is supplied", () => {

@@ -1,7 +1,6 @@
+import type { PluginHostStatus } from "@termix/plugin-sdk/backend";
 import type { CpuSamples } from "./widgets/cpu-collector.js";
 import { createNetworkSamples } from "./widgets/network-collector.js";
-
-export type HostStatus = "online" | "reachable" | "offline";
 
 export class RequestQueue {
   private queues = new Map<number, Array<() => Promise<unknown>>>();
@@ -418,7 +417,7 @@ export class HostPollCache<THost extends { id: number } = { id: number }> {
  * host answers. A host core does not check (status checks off) is tried.
  */
 export function canStartInitialMetrics(
-  status: HostStatus | null | undefined,
+  status: PluginHostStatus | null | undefined,
   hasViewers: boolean,
 ): boolean {
   return hasViewers && status !== "offline";

@@ -1,5 +1,5 @@
 import type { Client } from "ssh2";
-import { tcpPingThroughJumpHost } from "./tcp-ping.js";
+import { tcpPingThroughJumpHostResult } from "./tcp-ping.js";
 
 type OpenChain = (
   jumpHosts: Array<{ hostId: number }>,
@@ -44,7 +44,19 @@ export class JumpProbePool {
       return false;
     }
     this.touch(key, entry, client);
-    return tcpPingThroughJumpHost(client, host, port, timeoutMs, true);
+    const result = await tcpPingThroughJumpHostResult(
+      client,
+      host,
+      port,
+      timeoutMs,
+      true,
+    );
+    if (result === "timeout") {
+      // The hop never answered, so the next ping opens a fresh chain.
+      this.drop(key, entry);
+      client.end();
+    }
+    return result === "ok";
   }
 
   closeAll(): void {

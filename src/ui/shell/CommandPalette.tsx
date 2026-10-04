@@ -44,6 +44,7 @@ import {
 } from "./palette-registry";
 import { activityTarget } from "@/lib/activity-types";
 import { shell } from "@/plugin-host/shell-bridge";
+import { getLiveHostStatus } from "@/lib/ServerStatusContext";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -501,7 +502,7 @@ export function CommandPalette({
                             <Server
                               className={cn(
                                 "size-4",
-                                host.online
+                                getLiveHostStatus(Number(host.id)) === "online"
                                   ? "text-accent-brand"
                                   : "text-muted-foreground",
                               )}
@@ -517,7 +518,8 @@ export function CommandPalette({
                                   {t("hosts.sharing.sharedBadge")}
                                 </span>
                               )}
-                              {host.online && (
+                              {getLiveHostStatus(Number(host.id)) ===
+                                "online" && (
                                 <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
                               )}
                             </div>

@@ -73,7 +73,7 @@ const AVAILABLE_COLORS = [
   { value: "#6b7280", label: "Gray" },
 ];
 
-type HostStatus = "online" | "reachable" | "offline" | "unknown";
+type HostStatus = "online" | "offline" | "unknown";
 
 interface HostWithStatus extends PluginHostRecord {
   status?: HostStatus;
@@ -184,8 +184,6 @@ function renderNodeSvg(
     statusColor = useRealColors
       ? "rgb(16,185,129)"
       : resolveCssVar("--accent-brand", "rgb(16,185,129)");
-  } else if (status === "reachable") {
-    statusColor = "rgb(251,191,36)";
   } else if (isOffline) {
     statusColor = useRealColors ? "rgb(239,68,68)" : "rgba(16,185,129,0.2)";
   } else {

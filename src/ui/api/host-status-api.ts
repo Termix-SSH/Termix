@@ -61,6 +61,7 @@ function isTransientStatusError(error: unknown): boolean {
   );
 }
 
+/** Throws when the statuses could not be read, so callers keep what they had. */
 export async function getAllServerStatuses(): Promise<
   Record<number, ServerStatus>
 > {
@@ -71,31 +72,24 @@ export async function getAllServerStatuses(): Promise<
     let remoteHostsBySyncId: Map<string, number> | null = null;
 
     if (isElectron()) {
-      try {
-        const response = await sshHostApi.get<SSHHost[]>("/db/host");
-        const defaultOrigin = await resolveConnectionOrigin({
-          connectionOrigin: null,
-        });
-        const hosts = response.data || [];
-        localHostIds = hosts
+      // A host-list failure throws here: sending no ids would stop every check.
+      const response = await sshHostApi.get<SSHHost[]>("/db/host");
+      const defaultOrigin = await resolveConnectionOrigin({
+        connectionOrigin: null,
+      });
+      const hosts = response.data || [];
+      localHostIds = hosts
+        .filter((host) => (host.connectionOrigin ?? defaultOrigin) === "local")
+        .map((host) => host.id);
+      remoteHostsBySyncId = new Map(
+        hosts
           .filter(
-            (host) => (host.connectionOrigin ?? defaultOrigin) === "local",
+            (host) =>
+              (host.connectionOrigin ?? defaultOrigin) === "remote" &&
+              !!host.syncId,
           )
-          .map((host) => host.id);
-        remoteHostsBySyncId = new Map(
-          hosts
-            .filter(
-              (host) =>
-                (host.connectionOrigin ?? defaultOrigin) === "remote" &&
-                !!host.syncId,
-            )
-            .map((host) => [host.syncId as string, host.id]),
-        );
-      } catch {
-        // A host-list failure must not start local probes for hosts whose
-        // configured origin may be remote.
-        localHostIds = [];
-      }
+          .map((host) => [host.syncId as string, host.id]),
+      );
     }
 
     for (let i = 0; i < STATUS_RETRY_SCHEDULE.length; i++) {
@@ -128,10 +122,7 @@ export async function getAllServerStatuses(): Promise<
       }
     }
 
-    if (lastError) {
-      handleApiError(lastError, "fetch server statuses");
-      return {};
-    }
+    if (lastError) handleApiError(lastError, "fetch server statuses");
 
     if (remoteHostsBySyncId?.size && (await getLinkedSession())) {
       try {

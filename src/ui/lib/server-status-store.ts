@@ -1,9 +1,8 @@
-export type StatusValue = "online" | "reachable" | "offline" | "degraded";
+export type StatusValue = "online" | "offline" | "unknown";
 
 export interface ServerStatusEntry {
-  status: StatusValue;
+  status: "online" | "offline";
   lastChecked: string;
-  reason?: "host_key_changed";
 }
 
 type Listener = () => void;
@@ -14,44 +13,26 @@ type Listener = () => void;
  */
 export class ServerStatusStore {
   private statuses = new Map<number, ServerStatusEntry>();
-  private enabledHostIds = new Set<number>();
   private initialLoadComplete = false;
-  private isLoading = false;
   private readonly hostListeners = new Map<number, Set<Listener>>();
   private readonly allListeners = new Set<Listener>();
   private readonly metaListeners = new Set<Listener>();
 
+  /** "unknown" until the host has been checked. */
   getStatus(hostId: number): StatusValue {
-    if (!this.enabledHostIds.has(hostId)) {
-      return "offline";
-    }
-    return this.statuses.get(hostId)?.status || "degraded";
+    return this.statuses.get(hostId)?.status ?? "unknown";
   }
 
   getStatuses(): Map<number, ServerStatusEntry> {
     return this.statuses;
   }
 
-  getEnabledHostIds(): Set<number> {
-    return this.enabledHostIds;
-  }
-
   getInitialLoadComplete(): boolean {
     return this.initialLoadComplete;
   }
 
-  getIsLoading(): boolean {
-    return this.isLoading;
-  }
-
-  /** Snapshot string for a host — used as useSyncExternalStore getSnapshot. */
-  getHostSnapshot(hostId: number): string {
-    const status = this.getStatus(hostId);
-    return `${status}:${this.statuses.get(hostId)?.reason ?? ""}`;
-  }
-
   getMetaSnapshot(): string {
-    return `${this.initialLoadComplete ? 1 : 0}:${this.isLoading ? 1 : 0}:${this.enabledHostIds.size}`;
+    return this.initialLoadComplete ? "1" : "0";
   }
 
   subscribeHost(hostId: number, listener: Listener): () => void {
@@ -83,28 +64,6 @@ export class ServerStatusStore {
     };
   }
 
-  setEnabledHostIds(next: Set<number>): void {
-    if (setsEqual(this.enabledHostIds, next)) return;
-    const prev = this.enabledHostIds;
-    this.enabledHostIds = next;
-    this.emitMeta();
-    // Hosts that entered/left the enabled set need a status re-read.
-    for (const id of next) {
-      if (!prev.has(id)) this.emitHost(id);
-    }
-    for (const id of prev) {
-      if (!next.has(id)) this.emitHost(id);
-    }
-    this.emitAll();
-  }
-
-  setLoading(loading: boolean): void {
-    if (this.isLoading === loading) return;
-    this.isLoading = loading;
-    this.emitMeta();
-    this.emitAll();
-  }
-
   setInitialLoadComplete(complete: boolean): void {
     if (this.initialLoadComplete === complete) return;
     this.initialLoadComplete = complete;
@@ -120,50 +79,24 @@ export class ServerStatusStore {
     const changedIds: number[] = [];
 
     for (const [id, entry] of next) {
-      const prev = this.statuses.get(id);
-      if (
-        !prev ||
-        prev.status !== entry.status ||
-        prev.reason !== entry.reason
-      ) {
-        changedIds.push(id);
-      }
+      if (this.statuses.get(id)?.status !== entry.status) changedIds.push(id);
     }
     for (const id of this.statuses.keys()) {
-      if (!next.has(id)) {
-        changedIds.push(id);
-      }
-    }
-
-    if (changedIds.length === 0) {
-      // Still refresh lastChecked silently without notifying.
-      this.statuses = next;
-      return;
+      if (!next.has(id)) changedIds.push(id);
     }
 
     this.statuses = next;
+    if (changedIds.length === 0) return;
     for (const id of changedIds) {
       this.emitHost(id);
     }
     this.emitAll();
   }
 
-  markDegraded(enabledIds: Iterable<number>): void {
-    const next = new Map(this.statuses);
-    let changed = false;
-    const now = new Date().toISOString();
-    for (const id of enabledIds) {
-      const existing = next.get(id);
-      if (existing?.status === "degraded") continue;
-      changed = true;
-      next.set(id, {
-        status: "degraded",
-        lastChecked: existing?.lastChecked || now,
-      });
-    }
-    if (changed) {
-      this.applyStatuses(next);
-    }
+  /** Forgets everything, on sign out. */
+  clear(): void {
+    this.applyStatuses(new Map());
+    this.setInitialLoadComplete(false);
   }
 
   private emitHost(hostId: number): void {
@@ -179,12 +112,4 @@ export class ServerStatusStore {
   private emitMeta(): void {
     for (const listener of this.metaListeners) listener();
   }
-}
-
-function setsEqual(a: Set<number>, b: Set<number>): boolean {
-  if (a.size !== b.size) return false;
-  for (const id of a) {
-    if (!b.has(id)) return false;
-  }
-  return true;
 }
