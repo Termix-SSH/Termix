@@ -81,6 +81,7 @@
     "sharp": "^0.35.4",
     "socks": "^2.8.10",
     "ssh2": "^1.17.0",
+    "sshpk": "^1.18.0",
     "tar": "^7.5.22",
     "undici": "^8.10.2",
     "ws": "^8.21.3"
@@ -125,6 +126,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/ssh2": "^1.15.6",
+    "@types/sshpk": "^1.17.5",
     "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.1",
     "@uiw/react-codemirror": "^4.25.11",
