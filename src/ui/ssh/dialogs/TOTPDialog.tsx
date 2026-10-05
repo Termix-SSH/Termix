@@ -37,6 +37,7 @@ export function TOTPDialog({
 
   if (!isOpen) return null;
 
+  const isPassword = mode === "password";
   const isPush = mode === "push";
   const isMenu = mode === "menu";
   const isTotp = !isPush && !isMenu && mode !== "password";
@@ -55,16 +56,17 @@ export function TOTPDialog({
     const input = e.currentTarget.elements.namedItem(
       "totpCode",
     ) as HTMLInputElement;
-    if (input?.value.trim()) {
-      onSubmit(input.value.trim());
-    }
+    const value = isPassword ? input?.value : input?.value.trim();
+    if (value) onSubmit(value);
   };
 
   const title = isPush
     ? t("terminal.mfaPushRequired")
-    : isMenu
-      ? t("terminal.mfaPromptRequired")
-      : t("terminal.totpRequired");
+    : isPassword
+      ? t("common.password")
+      : isMenu
+        ? t("terminal.mfaPromptRequired")
+        : t("terminal.totpRequired");
 
   const label = prompt || (isTotp ? t("terminal.totpCodeLabel") : undefined);
 
@@ -109,7 +111,17 @@ export function TOTPDialog({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
-            {isPush ? null : isMenu ? (
+            {isPush ? null : isPassword ? (
+              <Input
+                id="totpCode"
+                name="totpCode"
+                type="password"
+                autoComplete="current-password"
+                autoFocus
+                placeholder={t("placeholders.enterPassword")}
+                className="rounded-none bg-muted/50 border-border text-sm"
+              />
+            ) : isMenu ? (
               <Input
                 id="totpCode"
                 name="totpCode"
@@ -157,7 +169,9 @@ export function TOTPDialog({
               >
                 {isPush
                   ? t("terminal.mfaSendRequest")
-                  : t("terminal.totpVerify")}
+                  : isPassword
+                    ? t("common.connect")
+                    : t("terminal.totpVerify")}
               </Button>
             </div>
           </form>
