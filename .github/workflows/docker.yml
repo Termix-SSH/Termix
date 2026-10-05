@@ -100,7 +100,7 @@ jobs:
         with:
           registry: ghcr.io
           username: lukegus
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.TERMIX_PAT }}
 
       - name: Login to Docker Hub (prod and beta only)
         if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}

@@ -35,7 +35,7 @@ jobs:
       - name: Resolve newest dev branch and compute beta version
         id: dev
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
           if DEV_BRANCH=$(printf '%s\n' "$REFS" | node scripts/latest-dev-branch.cjs 2>/dev/null); then
@@ -106,7 +106,7 @@ jobs:
       - name: Resolve previous beta commit
         id: prev
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           SHA="${{ needs.prep.outputs.sha }}"
           PREV_SHA=$(gh release view beta --repo ${{ github.repository }} --json targetCommitish -q .targetCommitish 2>/dev/null || true)
@@ -161,7 +161,7 @@ jobs:
 
       - name: Create or update rolling beta release
         env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GH_TOKEN: ${{ secrets.TERMIX_PAT }}
         run: |
           TAG="beta"
           TITLE="Beta (rolling) - ${{ needs.prep.outputs.beta_version }}"
