@@ -1,5 +1,5 @@
 /**
- * @termix/plugin-sdk/ui: the shell's components, for plugins.
+ * @termix-ssh/plugin-sdk/ui: the shell's components, for plugins.
  *
  * Everything exported here is public API. A plugin builds its UI from these
  * so it looks like the rest of the app and picks up theme changes, and it
@@ -244,7 +244,7 @@ export { remoteServerUrl as linkedServerUrl } from "@/plugin-host/desktop";
 
 // Dashboard reads. The calls a plugin makes on the user's behalf (recent
 // activity, sudo autofill, open tabs, keybindings) are typed in
-// @termix/plugin-sdk/frontend instead.
+// @termix-ssh/plugin-sdk/frontend instead.
 export {
   getRecentActivity,
   getUptime,

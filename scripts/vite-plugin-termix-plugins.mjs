@@ -75,8 +75,8 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
     if (SHARED_VENDOR_MODULES.includes(specifier)) {
       return vendorFacade(repoRoot, specifier);
     }
-    if (specifier === "@termix/plugin-sdk/ui") return sourceFacade(sdkUiEntry);
-    if (specifier === "@termix/plugin-sdk/frontend") {
+    if (specifier === "@termix-ssh/plugin-sdk/ui") return sourceFacade(sdkUiEntry);
+    if (specifier === "@termix-ssh/plugin-sdk/frontend") {
       return sourceFacade(sdkFrontendEntry);
     }
     throw new Error(`termix-plugin-host: ${specifier} is not a shared module`);

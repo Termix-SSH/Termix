@@ -14,7 +14,7 @@
 import type {
   SyncEntityRegistration,
   SyncRow,
-} from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
 
 /** Core-only extras a plugin registration cannot set. */
 export interface CoreSyncEntityOptions {

@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { useTranslation, type TermixApp } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  type TermixApp,
+} from "@termix-ssh/plugin-sdk/frontend";
 import {
   renderWithApp,
   type RenderedPluginApp,
-} from "@termix/plugin-sdk/testing";
+} from "@termix-ssh/plugin-sdk/testing";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { resetActionRegistry } from "@/shell/action-registry";
 import { resetPluginStore } from "@/plugin-host/plugin-store";

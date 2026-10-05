@@ -5,7 +5,7 @@
  * real runtime does. createFakeContext stays for tests that only need a
  * context-shaped object and do not care about the gates.
  *
- * The vitest config these run under comes from @termix/plugin-sdk/vitest-preset.
+ * The vitest config these run under comes from @termix-ssh/plugin-sdk/vitest-preset.
  */
 
 import {
@@ -2080,7 +2080,7 @@ export async function createTestDb(
  * so a test sees exactly what the shell would: which rail items, tabs, host
  * actions and cards it registered, and each of those rendered with the SDK
  * hooks working. It is implemented by the Termix host, which is where the
- * registries live; the vitest preset points "@termix/plugin-host/testing" at
+ * registries live; the vitest preset points "@termix-ssh/plugin-host/testing" at
  * core's implementation.
  */
 export interface RenderWithAppOptions {
@@ -2205,7 +2205,7 @@ interface PluginTestHost {
   ) => Promise<RenderedPluginApp>;
 }
 
-const TEST_HOST = "@termix/plugin-host/testing";
+const TEST_HOST = "@termix-ssh/plugin-host/testing";
 
 export async function renderWithApp(
   plugin: FrontendPluginModule,

@@ -18,7 +18,7 @@ import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { getPluginRouter, isPluginInstalled } from "../../plugins/http.js";
 import { getRequestBasePath } from "../../utils/request-origin.js";
-import type { PluginLegacyRedirect } from "@termix/plugin-sdk/manifest";
+import type { PluginLegacyRedirect } from "@termix-ssh/plugin-sdk/manifest";
 
 const router = express.Router();
 

@@ -12,7 +12,7 @@
  *   - Electron pointed at a remote Termix server, for hosts whose connection
  *     origin resolves there.
  *
- * A7 re-exports both through @termix/plugin-sdk/frontend. They live here for
+ * A7 re-exports both through @termix-ssh/plugin-sdk/frontend. They live here for
  * now because plugin frontends are still bundled with the shell.
  */
 

@@ -32,7 +32,7 @@ import {
 import type {
   PluginManifest,
   PluginSettingsField,
-} from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/manifest";
 
 const router = express.Router();
 

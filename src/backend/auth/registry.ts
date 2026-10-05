@@ -9,7 +9,7 @@
 import type {
   PluginLoginMethod,
   PluginSecondFactor,
-} from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
 
 export type LoginMethod = PluginLoginMethod & { pluginId: string };
 export type SecondFactor = PluginSecondFactor & { pluginId: string };

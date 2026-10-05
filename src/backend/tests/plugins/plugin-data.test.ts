@@ -17,7 +17,7 @@ import {
   text,
   timestamp,
   varchar,
-} from "@termix/plugin-sdk/db";
+} from "@termix-ssh/plugin-sdk/db";
 import { createTableSql, dropTableSql } from "../../plugins/table-builder.js";
 import {
   adoptLegacyTableSql,

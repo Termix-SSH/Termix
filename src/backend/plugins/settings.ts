@@ -14,12 +14,12 @@
 import type {
   PluginManifest,
   PluginSettingsField,
-} from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/manifest";
 import {
   coerceSettingValue,
   isRedactedSecret,
   validateSettingValue,
-} from "@termix/plugin-sdk/settings";
+} from "@termix-ssh/plugin-sdk/settings";
 import {
   createCurrentHostRepository,
   createCurrentPluginSettingsRepository,

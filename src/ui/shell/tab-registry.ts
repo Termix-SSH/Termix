@@ -1,6 +1,6 @@
 import type { ConfirmOptions } from "@/components/surface/surface-scope";
 import type { ComponentType, Ref } from "react";
-import type { HostDraft } from "@termix/plugin-sdk/frontend";
+import type { HostDraft } from "@termix-ssh/plugin-sdk/frontend";
 import type { Host, Tab } from "@/types/ui-types";
 import { createRegistry } from "@/lib/registry";
 import { viewOwner } from "@/plugin-host/view-ownership";

@@ -4,7 +4,7 @@
  * alert reaches nobody.
  */
 
-import type { PluginNotifyHub } from "@termix/plugin-sdk/backend";
+import type { PluginNotifyHub } from "@termix-ssh/plugin-sdk/backend";
 import { hasCapability } from "./permissions.js";
 
 interface HubRegistration {

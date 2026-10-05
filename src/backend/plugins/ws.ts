@@ -25,7 +25,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import type {
   PluginWebSocketHandler,
   PluginWebSocketOptions,
-} from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
 import { pluginLogger } from "../utils/logger.js";
 import { recordConflict } from "./conflicts.js";
 import { extractWebSocketToken } from "../utils/ws-auth.js";

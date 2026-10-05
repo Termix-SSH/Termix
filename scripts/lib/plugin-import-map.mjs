@@ -32,8 +32,8 @@ export const SHARED_VENDOR_MODULES = SHARED_VENDORS.map(
 
 /** SDK entries that are implemented by, or hold state shared with, core. */
 export const SHARED_SDK_MODULES = [
-  "@termix/plugin-sdk/frontend",
-  "@termix/plugin-sdk/ui",
+  "@termix-ssh/plugin-sdk/frontend",
+  "@termix-ssh/plugin-sdk/ui",
 ];
 
 export function sharedModules() {

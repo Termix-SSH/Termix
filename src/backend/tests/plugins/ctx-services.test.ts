@@ -13,7 +13,7 @@ import {
   clearServiceRegistry,
   getRegistration,
 } from "../../plugins/service-registry.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
 function contextFor(pluginId: string, names?: string[]) {
   const manifest = {

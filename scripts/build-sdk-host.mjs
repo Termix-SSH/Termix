@@ -1,10 +1,10 @@
 /**
  * Builds the two pieces of the plugin SDK that come from core:
  *
- *   dist/host/ui.js            @termix/plugin-sdk/ui, the shell's UI kit
+ *   dist/host/ui.js            @termix-ssh/plugin-sdk/ui, the shell's UI kit
  *   dist/host/testing-host.js  what renderWithApp() renders plugins into
  *
- * Inside Termix the page's import map points @termix/plugin-sdk/ui at the
+ * Inside Termix the page's import map points @termix-ssh/plugin-sdk/ui at the
  * shell's own copy, so ui.js is never loaded there. It exists so a plugin in
  * its own repo can typecheck and run its tests without a Termix checkout.
  *
@@ -32,7 +32,7 @@ const EXTERNALS = [
   "i18next",
   "react-i18next",
   "sonner",
-  "@termix/plugin-sdk/frontend",
+  "@termix-ssh/plugin-sdk/frontend",
   "@testing-library/react",
 ];
 
@@ -78,7 +78,7 @@ await esbuild.build({
   },
 });
 
-// Types for @termix/plugin-sdk/ui: the declarations tsc emits for sdk-ui.ts
+// Types for @termix-ssh/plugin-sdk/ui: the declarations tsc emits for sdk-ui.ts
 // and everything it reaches, with core's "@/" paths made relative.
 const typesDir = path.join(outDir, "types");
 const tsc = spawnSync(
@@ -93,7 +93,7 @@ const tsc = spawnSync(
   { cwd: root, stdio: "inherit" },
 );
 if (tsc.status !== 0) process.exit(tsc.status ?? 1);
-// tsc follows @termix/plugin-sdk/frontend into the SDK's source; plugins get
+// tsc follows @termix-ssh/plugin-sdk/frontend into the SDK's source; plugins get
 // those types from the package itself.
 fs.rmSync(path.join(typesDir, "packages"), { recursive: true, force: true });
 

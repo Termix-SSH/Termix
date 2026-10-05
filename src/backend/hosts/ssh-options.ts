@@ -6,7 +6,7 @@
  * terminal's, so they are core's and have a column of their own.
  */
 
-import type { HostSshOptions } from "@termix/plugin-sdk/backend";
+import type { HostSshOptions } from "@termix-ssh/plugin-sdk/backend";
 
 export type { HostSshOptions };
 

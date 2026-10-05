@@ -23,9 +23,9 @@
 import type {
   PluginCredentials,
   PluginSshKeyCredential,
-} from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
 import ssh2 from "ssh2";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability, capabilityRefused } from "./permissions.js";
 import { getActor } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";

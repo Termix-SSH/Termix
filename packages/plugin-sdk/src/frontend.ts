@@ -213,7 +213,7 @@ export interface ShellApi {
   /**
    * Asks a yes or no question over the main area, for code that runs outside
    * a panel or tab (a keybinding, a toolbar action). Inside one, prefer
-   * useConfirm from @termix/plugin-sdk/ui, which asks over that surface.
+   * useConfirm from @termix-ssh/plugin-sdk/ui, which asks over that surface.
    */
   confirm?: (options: ConfirmRequest) => Promise<boolean>;
 }
@@ -897,7 +897,7 @@ export interface TermixApp extends TermixAppInfo {
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
   /**
    * Offers a component to other plugins and to core by id, rendered where
-   * they choose with `PluginComponent` from @termix/plugin-sdk/ui or
+   * they choose with `PluginComponent` from @termix-ssh/plugin-sdk/ui or
    * `usePluginComponent`. The id should start with a name the plugin owns
    * ("terminal.view"). The props are the owner's contract; document them.
    */
@@ -941,7 +941,7 @@ export interface TermixApp extends TermixAppInfo {
   tabs: TabsApi;
   /**
    * Asks a yes or no question over the main area. For code that runs outside
-   * a panel or tab; inside one, useConfirm from @termix/plugin-sdk/ui asks
+   * a panel or tab; inside one, useConfirm from @termix-ssh/plugin-sdk/ui asks
    * over that surface instead.
    */
   confirm: (options: ConfirmRequest) => Promise<boolean>;
@@ -1190,7 +1190,7 @@ let host: PluginHostBridge | null = null;
 export function __setPluginHost(bridge: PluginHostBridge | null): void {
   if (host && bridge !== host) {
     throw new Error(
-      "@termix/plugin-sdk/frontend: the plugin host is already set",
+      "@termix-ssh/plugin-sdk/frontend: the plugin host is already set",
     );
   }
   host = bridge;
@@ -1209,7 +1209,7 @@ function requireHost(): PluginHostBridge {
   if (!host && fallback) return fallback;
   if (!host) {
     throw new Error(
-      "@termix/plugin-sdk/frontend: no plugin host. Hooks only work inside Termix or renderWithApp().",
+      "@termix-ssh/plugin-sdk/frontend: no plugin host. Hooks only work inside Termix or renderWithApp().",
     );
   }
   return host;

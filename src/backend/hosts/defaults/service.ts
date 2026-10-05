@@ -6,7 +6,7 @@
 import {
   coerceSettingValue,
   validateSettingValue,
-} from "@termix/plugin-sdk/settings";
+} from "@termix-ssh/plugin-sdk/settings";
 import { createCurrentHostDefaultsRepository } from "../../database/repositories/factory.js";
 import type { HostDefaultsScope } from "../../database/repositories/host-defaults-repository.js";
 import { validateSettingsSave } from "../../plugins/settings.js";

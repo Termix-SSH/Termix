@@ -1,1 +1,1 @@
-export type * from "@termix/plugin-sdk/desktop";
+export type * from "@termix-ssh/plugin-sdk/desktop";

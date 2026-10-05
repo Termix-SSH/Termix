@@ -15,7 +15,7 @@ import {
   DEFAULT_FRONTEND_ENTRY,
   DEFAULT_LOCALES_DIR,
   type PluginManifest,
-} from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/manifest";
 import type { LoadedPlugin } from "./loader.js";
 
 type AssetPlugin = Pick<LoadedPlugin, "id" | "dir" | "manifest"> &

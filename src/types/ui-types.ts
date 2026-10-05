@@ -6,7 +6,7 @@ import type {
 } from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 import type { DefaultOverrides } from "./host-defaults.js";
-import type { QuickConnectLogin } from "@termix/plugin-sdk/frontend";
+import type { QuickConnectLogin } from "@termix-ssh/plugin-sdk/frontend";
 
 export type Host = {
   id: string;

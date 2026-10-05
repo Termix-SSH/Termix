@@ -18,7 +18,8 @@ vi.mock("../../utils/logger.js", () => {
   return { pluginLogger: log, sshLogger: log, logger: log, authLogger: log };
 });
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -110,7 +111,7 @@ const { DisposableBag } = await import("../../plugins/disposables.js");
 const { registerSshAuthProvider, resetSshAuthRegistryForTests } =
   await import("../../hosts/connect/auth-provider-registry.js");
 const { PluginCapabilityError, PluginSshInteractionError } =
-  await import("@termix/plugin-sdk/backend");
+  await import("@termix-ssh/plugin-sdk/backend");
 
 const ALL = ["ssh:connect", "credentials:use", "credentials:read"];
 

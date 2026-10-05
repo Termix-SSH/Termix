@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable react-hooks/exhaustive-deps */
-import type { TabHandle } from "@termix/plugin-sdk/frontend";
+import type { TabHandle } from "@termix-ssh/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent } from "@/components/sheet";

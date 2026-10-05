@@ -90,8 +90,8 @@ import {
 import { useSshAuthEditors } from "@/plugin-host/auth-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { SshAuthProviderFields } from "./SshAuthProviderFields";
-import type { PluginSettingsField } from "@termix/plugin-sdk/manifest";
-import type { HostDraft } from "@termix/plugin-sdk/frontend";
+import type { PluginSettingsField } from "@termix-ssh/plugin-sdk/manifest";
+import type { HostDraft } from "@termix-ssh/plugin-sdk/frontend";
 import { PluginComponent } from "@/plugin-host/component-registry";
 import {
   toCredentialOption,

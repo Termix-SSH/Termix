@@ -95,8 +95,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@termix/plugin-sdk/frontend": sdkFrontendEntry,
-      "@termix/plugin-sdk/ui": sdkUiEntry,
+      "@termix-ssh/plugin-sdk/frontend": sdkFrontendEntry,
+      "@termix-ssh/plugin-sdk/ui": sdkUiEntry,
       "@/types": path.resolve(__dirname, "./src/types"),
       "@": path.resolve(__dirname, "./src/ui"),
     },

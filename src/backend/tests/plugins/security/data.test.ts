@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectOwnedIndexes,
   findUnownedTableWrites,
-} from "@termix/plugin-sdk/ddl";
+} from "@termix-ssh/plugin-sdk/ddl";
 
 const state = vi.hoisted(() => ({
   db: null as unknown,

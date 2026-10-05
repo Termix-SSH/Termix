@@ -24,8 +24,8 @@ import express, {
 import type {
   PluginMiddleware,
   PluginRouterOptions,
-} from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { pluginLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { runAsActor } from "./actor.js";

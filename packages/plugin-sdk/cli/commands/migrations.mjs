@@ -37,7 +37,7 @@ async function loadDefinitions(cwd) {
 
   // Emitted inside the plugin rather than in the system temp dir: the SDK
   // stays external to the bundle, so the output has to sit somewhere node can
-  // resolve @termix/plugin-sdk from.
+  // resolve @termix-ssh/plugin-sdk from.
   const outdir = fs.mkdtempSync(path.join(cwd, ".termix-tables-"));
   const outfile = path.join(outdir, "tables.mjs");
 

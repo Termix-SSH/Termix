@@ -1,4 +1,4 @@
-import { isFieldActive } from "@termix/plugin-sdk/settings";
+import { isFieldActive } from "@termix-ssh/plugin-sdk/settings";
 import type { PluginSettingsField } from "@/api/plugins-api";
 
 /**

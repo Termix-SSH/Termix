@@ -20,7 +20,7 @@ import * as tar from "tar";
 import { pluginLogger } from "../utils/logger.js";
 import { isTermixCompatible, parseManifest } from "./manifest.js";
 import { getLocalVersion } from "../utils/app-version.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   getBundledPluginsDir,
   getPluginBackendEntry,
@@ -39,7 +39,7 @@ import {
 import { resolveRequirements } from "./service-registry.js";
 import { resolveSecretRequirements } from "./secret-registry.js";
 import { recordConflict } from "./conflicts.js";
-import { tablePrefix } from "@termix/plugin-sdk/db";
+import { tablePrefix } from "@termix-ssh/plugin-sdk/db";
 
 export type PluginState =
   | "loaded"

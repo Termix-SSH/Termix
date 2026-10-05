@@ -4,7 +4,7 @@
  * for the wire like the host's own and a credential named by its syncId.
  */
 
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import type { HostProtocolLogin } from "../database/repositories/host-protocol-auth-repository.js";
 import { createCurrentHostProtocolAuthRepository } from "../database/repositories/factory.js";
 import {

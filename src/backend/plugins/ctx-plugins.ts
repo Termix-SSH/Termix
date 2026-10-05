@@ -3,8 +3,8 @@
  * plugins:read. Ids and versions only, nothing operational.
  */
 
-import type { PluginPlugins } from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginPlugins } from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
 
 export function createPluginPlugins(manifest: PluginManifest): PluginPlugins {

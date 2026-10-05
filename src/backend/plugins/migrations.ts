@@ -18,12 +18,12 @@ import path from "node:path";
 import { sql } from "drizzle-orm";
 import { pluginLogger } from "../utils/logger.js";
 import type { DatabaseDialect } from "../database/db/dialect.js";
-import { LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
+import { LEGACY_TABLE_OWNERS } from "@termix-ssh/plugin-sdk/db";
 import {
   collectOwnedIndexes,
   findUnownedTableWrites,
   splitStatements,
-} from "@termix/plugin-sdk/ddl";
+} from "@termix-ssh/plugin-sdk/ddl";
 
 // The splitter is shared with createTestDb in the SDK, so tests apply a
 // migration exactly the way this runner does.

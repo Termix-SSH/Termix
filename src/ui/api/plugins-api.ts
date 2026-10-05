@@ -84,7 +84,7 @@ export interface PluginContributions {
 export {
   isRedactedSecret,
   type RedactedSecret,
-} from "@termix/plugin-sdk/settings";
+} from "@termix-ssh/plugin-sdk/settings";
 
 export type PluginSettingsValues = Record<string, unknown>;
 

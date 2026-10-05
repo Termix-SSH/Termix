@@ -22,7 +22,8 @@ vi.mock("../../utils/logger.js", () => {
   return { pluginLogger: log, sshLogger: log, logger: log, authLogger: log };
 });
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -142,7 +143,8 @@ const { classifyKeyboardInteractive } =
   await import("../../hosts/connect/keyboard-interactive.js");
 const { getLoginMethod, getSecondFactor } =
   await import("../../auth/registry.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 function manifest(capabilities: string[], auth: Record<string, string[]> = {}) {
   return {
@@ -647,7 +649,7 @@ describe("ctx.auth", () => {
   it("refuses enrolment when core policy forbids second factors", async () => {
     h.granted = new Set(["auth:provide"]);
     h.factors = [];
-    const { LoginMethodError } = await import("@termix/plugin-sdk/backend");
+    const { LoginMethodError } = await import("@termix-ssh/plugin-sdk/backend");
     h.policyError = new LoginMethodError("password login is off", 409);
     const auth = createPluginAuth({
       manifest: manifest(["auth:provide"], { secondFactors: ["pin"] }),

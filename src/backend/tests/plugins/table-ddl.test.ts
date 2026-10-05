@@ -15,8 +15,8 @@ import {
   prefixedTableName,
   tablePrefix,
   adoptLegacyTable,
-} from "@termix/plugin-sdk/db";
-import { splitStatements } from "@termix/plugin-sdk/ddl";
+} from "@termix-ssh/plugin-sdk/db";
+import { splitStatements } from "@termix-ssh/plugin-sdk/ddl";
 import {
   adoptTableSql,
   createTableSql,

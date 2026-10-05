@@ -7,7 +7,7 @@
  * holds up the rest of the batch.
  */
 
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import { getEntity } from "../../plugins/sync-registry.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { syncLogger } from "../../utils/logger.js";

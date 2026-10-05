@@ -12,14 +12,14 @@
 
 ## Overview
 
-`@termix/plugin-sdk` is what every [Termix](https://github.com/Termix-SSH/Termix) plugin builds against, including the ones that ship with Termix. It has the types for a plugin's backend and frontend, table definitions, the manifest schema, test helpers, and the `termix-plugin` CLI. The easiest way to start is the [Termix Plugin Template](https://github.com/Termix-SSH/Termix-Plugin-Template).
+`@termix-ssh/plugin-sdk` is what every [Termix](https://github.com/Termix-SSH/Termix) plugin builds against, including the ones that ship with Termix. It has the types for a plugin's backend and frontend, table definitions, the manifest schema, test helpers, and the `termix-plugin` CLI. The easiest way to start is the [Termix Plugin Template](https://github.com/Termix-SSH/Termix-Plugin-Template).
 
 <br />
 
 ## What's Inside
 
 - **Backend:** the types for `activate(ctx)`, database and table helpers, host commands and SSH certificates
-- **Frontend:** the types for `activate(app)`, plus `@termix/plugin-sdk/ui`, the components and theme Termix serves to plugins
+- **Frontend:** the types for `activate(app)`, plus `@termix-ssh/plugin-sdk/ui`, the components and theme Termix serves to plugins
 - **Manifest:** the manifest schema, the capability catalog and settings types
 - **Testing:** `createMockCtx()`, `createTestDb()`, `renderWithApp()` and a Vitest preset
 - **CLI:** `termix-plugin`, which builds, tests, validates, packs and signs a plugin and writes its migrations
@@ -29,7 +29,7 @@
 ## Installation
 
 ```bash
-npm install --save-dev @termix/plugin-sdk
+npm install --save-dev @termix-ssh/plugin-sdk
 ```
 
 <br />

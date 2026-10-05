@@ -14,8 +14,8 @@
  */
 
 export const BACKEND_EXTERNALS = [
-  "@termix/plugin-sdk",
-  "@termix/plugin-sdk/*",
+  "@termix-ssh/plugin-sdk",
+  "@termix-ssh/plugin-sdk/*",
   "express",
   "ssh2",
   "ws",
@@ -41,6 +41,6 @@ export const FRONTEND_EXTERNALS = [
   "i18next",
   "react-i18next",
   "sonner",
-  "@termix/plugin-sdk/frontend",
-  "@termix/plugin-sdk/ui",
+  "@termix-ssh/plugin-sdk/frontend",
+  "@termix-ssh/plugin-sdk/ui",
 ];

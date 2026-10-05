@@ -11,8 +11,8 @@ import { sql } from "drizzle-orm";
 import { pluginLogger } from "../utils/logger.js";
 import { resolveDatabaseDialect } from "../database/db/dialect.js";
 import type { DatabaseDialect } from "../database/db/dialect.js";
-import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
-import { prefixedTableName, tablePrefix } from "@termix/plugin-sdk/db";
+import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
+import { prefixedTableName, tablePrefix } from "@termix-ssh/plugin-sdk/db";
 import { buildTable } from "./table-builder.js";
 import {
   applyPluginMigrations,

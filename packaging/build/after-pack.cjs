@@ -14,7 +14,7 @@ function copyPluginSdk(resourcesDir, sdkDir = path.join(repoRoot, "packages", "p
     resourcesDir,
     "app.asar.unpacked",
     "node_modules",
-    "@termix",
+    "@termix-ssh",
     "plugin-sdk",
   );
   const dist = path.join(sdkDir, "dist");

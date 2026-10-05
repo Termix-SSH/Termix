@@ -3,7 +3,7 @@ import type {
   Disposer,
   PluginManifest,
   TermixApp,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import {
   PLUGIN_SETTINGS_CHANGED_EVENT,
   type PluginContributions,

@@ -15,7 +15,7 @@ import {
   refUser,
   text,
   varchar,
-} from "@termix/plugin-sdk/db";
+} from "@termix-ssh/plugin-sdk/db";
 
 let sqlite: Database.Database;
 

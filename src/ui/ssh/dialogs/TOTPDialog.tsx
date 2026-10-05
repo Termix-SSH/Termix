@@ -7,7 +7,7 @@ import {
 } from "@/components/surface/prompt-styles";
 import { Shield, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { MFAPromptMode } from "@termix/plugin-sdk/frontend";
+import type { MFAPromptMode } from "@termix-ssh/plugin-sdk/frontend";
 
 export type { MFAPromptMode };
 

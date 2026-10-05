@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -40,7 +41,8 @@ vi.mock("../../plugins/index.js", () => ({
 }));
 
 const { createPluginPlugins } = await import("../../plugins/ctx-plugins.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 const manifest = (capabilities: string[]) =>
   ({ id: "reader", capabilities }) as unknown as PluginManifest;

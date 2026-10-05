@@ -1,5 +1,5 @@
 /**
- * The Termix side of @termix/plugin-sdk/testing's renderWithApp.
+ * The Termix side of @termix-ssh/plugin-sdk/testing's renderWithApp.
  *
  * Activates a plugin against the real registries, the real app object and
  * the real SDK bridge, then renders whatever it registered with Testing
@@ -12,13 +12,13 @@ import { render } from "@testing-library/react";
 import type {
   HostActionContribution,
   PluginManifest,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import type {
   FrontendPluginModule,
   RenderWithAppOptions,
   RenderedPluginApp,
   ShellCall,
-} from "@termix/plugin-sdk/testing";
+} from "@termix-ssh/plugin-sdk/testing";
 import i18n from "@/i18n/i18n";
 import type { PluginSummary } from "@/api/plugins-api";
 import { ThemeProvider } from "@/components/theme-provider";

@@ -5,18 +5,18 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: "@termix/plugin-sdk/frontend",
+        find: "@termix-ssh/plugin-sdk/frontend",
         replacement: path.resolve(
           __dirname,
           "./packages/plugin-sdk/src/frontend.ts",
         ),
       },
       {
-        find: "@termix/plugin-sdk/ui",
+        find: "@termix-ssh/plugin-sdk/ui",
         replacement: path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts"),
       },
       {
-        find: "@termix/plugin-host/testing",
+        find: "@termix-ssh/plugin-host/testing",
         replacement: path.resolve(
           __dirname,
           "./src/ui/plugin-host/testing-host.tsx",

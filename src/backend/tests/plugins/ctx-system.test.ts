@@ -9,7 +9,8 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -56,7 +57,8 @@ vi.mock("../../tls/acme-challenges.js", () => ({
 
 const { createPluginSystem } = await import("../../plugins/ctx-system.js");
 const { DisposableBag } = await import("../../plugins/disposables.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 let audits: Array<{ action: string; success: boolean }>;
 

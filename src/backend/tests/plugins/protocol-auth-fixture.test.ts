@@ -9,7 +9,7 @@
 import crypto from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { TestSqliteDatabase } from "../database/repositories/test-support.js";
 import type { DatabaseContext } from "../../database/repositories/database-context.js";
 

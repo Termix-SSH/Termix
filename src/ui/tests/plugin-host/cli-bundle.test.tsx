@@ -17,7 +17,7 @@ import {
   renderWithApp,
   type FrontendPluginModule,
   type RenderedPluginApp,
-} from "@termix/plugin-sdk/testing";
+} from "@termix-ssh/plugin-sdk/testing";
 import { resetPanels } from "@/shell/panel-registry";
 import { resetPluginStore } from "@/plugin-host/plugin-store";
 
@@ -48,7 +48,7 @@ afterAll(async () => {
 describe("a CLI-built plugin bundle", () => {
   it("leaves React and the SDK out of the bundle", () => {
     expect(bundle).toMatch(/from\s*"react"/);
-    expect(bundle).toMatch(/from\s*"@termix\/plugin-sdk\/frontend"/);
+    expect(bundle).toMatch(/from\s*"@termix-ssh\/plugin-sdk\/frontend"/);
     expect(bundle).not.toMatch(/react\.production|react\.development/);
   });
 

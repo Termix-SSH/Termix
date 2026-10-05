@@ -5,7 +5,7 @@
  * the owner's; this swaps it for the viewer's at read time.
  */
 
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { createCurrentHostDefaultsRepository } from "../../database/repositories/factory.js";
 import type { HostRow } from "../../database/repositories/host-defaults-repository.js";
 import {

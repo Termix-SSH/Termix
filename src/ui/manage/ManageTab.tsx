@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { KeyRound, LibraryBig, Plus, Server, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { HostDraft } from "@termix/plugin-sdk/frontend";
+import type { HostDraft } from "@termix-ssh/plugin-sdk/frontend";
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { FakeSwitch } from "@/components/section-card";

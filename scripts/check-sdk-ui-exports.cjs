@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @termix/plugin-sdk/ui is public API, implemented by
+ * @termix-ssh/plugin-sdk/ui is public API, implemented by
  * src/ui/plugin-host/sdk-ui.ts. Adding to it is a contract change and
  * removing from it is a breaking one, so neither should happen by accident.
  *
@@ -354,7 +354,7 @@ function main() {
     const before = new Set(saved.split("\n"));
     const after = new Set(current.split("\n"));
     console.error(
-      "@termix/plugin-sdk/ui changed shape. If that is deliberate, run: node scripts/check-sdk-ui-exports.cjs --update-snapshot",
+      "@termix-ssh/plugin-sdk/ui changed shape. If that is deliberate, run: node scripts/check-sdk-ui-exports.cjs --update-snapshot",
     );
     for (const line of saved.split("\n")) {
       if (line && !after.has(line)) console.error(`  - ${line.slice(0, 200)}`);
@@ -373,13 +373,13 @@ function main() {
   if (added.length === 0 && removed.length === 0) return;
   if (added.length > 0) {
     console.error(
-      "@termix/plugin-sdk/ui exports names that are not on the allowlist in scripts/check-sdk-ui-exports.cjs:",
+      "@termix-ssh/plugin-sdk/ui exports names that are not on the allowlist in scripts/check-sdk-ui-exports.cjs:",
     );
     for (const name of added) console.error(`  + ${name}`);
   }
   if (removed.length > 0) {
     console.error(
-      "@termix/plugin-sdk/ui no longer exports these allowlisted names (a breaking change for plugins):",
+      "@termix-ssh/plugin-sdk/ui no longer exports these allowlisted names (a breaking change for plugins):",
     );
     for (const name of removed) console.error(`  - ${name}`);
   }

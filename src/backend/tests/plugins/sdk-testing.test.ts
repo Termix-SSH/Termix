@@ -16,9 +16,9 @@ import {
   id,
   refUser,
   text,
-} from "@termix/plugin-sdk/db";
-import { adoptTableSql } from "@termix/plugin-sdk/ddl";
-import { createMockCtx, createTestDb } from "@termix/plugin-sdk/testing";
+} from "@termix-ssh/plugin-sdk/db";
+import { adoptTableSql } from "@termix-ssh/plugin-sdk/ddl";
+import { createMockCtx, createTestDb } from "@termix-ssh/plugin-sdk/testing";
 
 let root: string;
 let pluginDir: string;

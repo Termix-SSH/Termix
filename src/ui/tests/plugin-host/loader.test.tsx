@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Puzzle } from "lucide-react";
-import type { FrontendModule, TermixApp } from "@termix/plugin-sdk/frontend";
+import type {
+  FrontendModule,
+  TermixApp,
+} from "@termix-ssh/plugin-sdk/frontend";
 import type { PluginSummary } from "@/api/plugins-api";
 import {
   configurePluginLoader,

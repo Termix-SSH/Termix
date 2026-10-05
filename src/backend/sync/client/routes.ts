@@ -9,7 +9,7 @@ import express, {
   type Response,
 } from "express";
 import { and, eq, isNotNull } from "drizzle-orm";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { syncLogger } from "../../utils/logger.js";

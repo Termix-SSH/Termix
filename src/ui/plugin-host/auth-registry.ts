@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import type {
   LoginMethodUIProps,
   SecondFactorUIProps,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import { createRegistry } from "@/lib/registry";
 
 /**

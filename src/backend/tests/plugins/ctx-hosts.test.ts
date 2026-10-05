@@ -36,7 +36,8 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -204,7 +205,8 @@ vi.mock("../../hosts/delete-host.js", () => ({
 }));
 
 const { createPluginHosts } = await import("../../plugins/ctx-hosts.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 function manifest(capabilities: string[]) {
   return {

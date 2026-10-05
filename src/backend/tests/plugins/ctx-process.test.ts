@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ granted: new Set<string>() }));
 
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -23,7 +24,8 @@ vi.mock("../../plugins/permissions.js", async () => {
 
 const { createPluginProcess } = await import("../../plugins/ctx-process.js");
 const { DisposableBag } = await import("../../plugins/disposables.js");
-const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+const { PluginCapabilityError } =
+  await import("@termix-ssh/plugin-sdk/backend");
 
 const DECLARED = ["process:spawn", "network:outbound"];
 

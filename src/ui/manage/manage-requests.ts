@@ -1,4 +1,4 @@
-import type { HostDraft } from "@termix/plugin-sdk/frontend";
+import type { HostDraft } from "@termix-ssh/plugin-sdk/frontend";
 import type { HostDefaultsLevel } from "@/types/host-defaults";
 
 export type ManageMode = "hosts" | "credentials" | "defaults";

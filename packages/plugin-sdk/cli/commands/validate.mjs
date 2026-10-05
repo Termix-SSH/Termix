@@ -68,14 +68,14 @@ function validatePackage(cwd, raw) {
   }
 
   const sdkRange =
-    pkg.peerDependencies?.["@termix/plugin-sdk"] ??
-    pkg.dependencies?.["@termix/plugin-sdk"] ??
-    pkg.devDependencies?.["@termix/plugin-sdk"];
+    pkg.peerDependencies?.["@termix-ssh/plugin-sdk"] ??
+    pkg.dependencies?.["@termix-ssh/plugin-sdk"] ??
+    pkg.devDependencies?.["@termix-ssh/plugin-sdk"];
   if (!sdkRange) {
-    problems.push("package.json does not depend on @termix/plugin-sdk");
+    problems.push("package.json does not depend on @termix-ssh/plugin-sdk");
   } else if (sdkRange === "*" || sdkRange === "latest") {
     problems.push(
-      `@termix/plugin-sdk is "${sdkRange}"; pin a range such as "^1.0.0"`,
+      `@termix-ssh/plugin-sdk is "${sdkRange}"; pin a range such as "^1.0.0"`,
     );
   }
   return problems;

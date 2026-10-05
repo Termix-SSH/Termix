@@ -1,6 +1,6 @@
-import type { PluginVerifiedIdentity } from "@termix/plugin-sdk/backend";
+import type { PluginVerifiedIdentity } from "@termix-ssh/plugin-sdk/backend";
 
-export { LoginMethodError } from "@termix/plugin-sdk/backend";
+export { LoginMethodError } from "@termix-ssh/plugin-sdk/backend";
 
 /** The logout claims a login carried, stored as sessions.external_session_ref. */
 export interface ExternalSessionRef {

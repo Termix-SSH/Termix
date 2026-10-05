@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { PluginLoader, prefixesOverlap } from "../../../plugins/loader.js";
 import { parseManifest } from "../../../plugins/manifest.js";
-import { RESERVED_PLUGIN_IDS } from "@termix/plugin-sdk/manifest";
+import { RESERVED_PLUGIN_IDS } from "@termix-ssh/plugin-sdk/manifest";
 import { createFixturePlugin } from "../fixture-plugin.js";
 
 vi.mock("../../../database/repositories/factory.js", () => ({

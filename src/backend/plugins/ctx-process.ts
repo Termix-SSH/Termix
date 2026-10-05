@@ -16,8 +16,8 @@ import type {
   PluginBinarySpec,
   PluginProcess,
   PluginProcessHandle,
-} from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
 import { getPluginDataDir } from "./paths.js";
 import type { DisposableBag } from "./disposables.js";

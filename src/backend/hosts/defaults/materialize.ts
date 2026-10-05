@@ -12,7 +12,7 @@
  * host's own.
  */
 
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   createCurrentHostDefaultsRepository,
   createCurrentPluginSettingsRepository,

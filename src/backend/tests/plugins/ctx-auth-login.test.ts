@@ -5,7 +5,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   createAuthState,
   fakeAuthManager,
@@ -53,7 +53,8 @@ vi.mock("../../utils/trusted-proxy-auth.js", () => ({
   isTrustedProxyAuthEnabled: () => h.trustedProxy,
 }));
 vi.mock("../../plugins/permissions.js", async () => {
-  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  const { PluginCapabilityError } =
+    await import("@termix-ssh/plugin-sdk/backend");
   return {
     assertCapability: async (
       pluginId: string,
@@ -170,10 +171,9 @@ function setup() {
           request.ip ?? "unknown",
           "4:bob",
         );
-        throw new (await import("@termix/plugin-sdk/backend")).LoginMethodError(
-          "Invalid username or password",
-          401,
-        );
+        throw new (
+          await import("@termix-ssh/plugin-sdk/backend")
+        ).LoginMethodError("Invalid username or password", 401);
       }
       return {
         kind: "external",

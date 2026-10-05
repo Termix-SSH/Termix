@@ -115,7 +115,7 @@ COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
 # Plugins pinned in docker/bundled-plugins.json, resolved as dist/plugins by
 # getBundledPluginsDir().
 COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
-# Target of node_modules/@termix/plugin-sdk, which core and the plugins import.
+# Target of node_modules/@termix-ssh/plugin-sdk, which core and the plugins import.
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/dist ./packages/plugin-sdk/dist
 # Pre-baked OPKSSH binary. The opkssh plugin uses it when its checksum

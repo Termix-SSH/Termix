@@ -15,7 +15,7 @@ import {
   type PluginHostRecord,
   type SettingsScope,
   type SettingsState,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTheme } from "@/components/theme-provider";
 import { createPluginApi, pluginApiFor } from "@/lib/plugin-transport";

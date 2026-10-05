@@ -28,7 +28,7 @@ describe("afterPack plugin SDK copy", () => {
     fs.mkdirSync(path.join(sdk, "src"));
     fs.writeFileSync(
       path.join(sdk, "package.json"),
-      '{"name":"@termix/plugin-sdk"}',
+      '{"name":"@termix-ssh/plugin-sdk"}',
     );
     fs.writeFileSync(path.join(sdk, "dist", "settings.js"), "export {};");
     fs.writeFileSync(path.join(sdk, "src", "settings.ts"), "");
@@ -41,7 +41,7 @@ describe("afterPack plugin SDK copy", () => {
         resources,
         "app.asar.unpacked",
         "node_modules",
-        "@termix",
+        "@termix-ssh",
         "plugin-sdk",
       ),
     );

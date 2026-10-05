@@ -119,7 +119,7 @@ import {
   requireSecretResolver,
   resetSecretResolverRegistryForTests,
 } from "../../hosts/connect/secret-resolver-registry.js";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import ssh2 from "ssh2";
 import { setHostProtocolSource } from "../../hosts/protocol-auth/registry.js";
 

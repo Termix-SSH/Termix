@@ -6,8 +6,8 @@
  */
 
 import { and, eq } from "drizzle-orm";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import {
   hosts,
   sshCredentials,

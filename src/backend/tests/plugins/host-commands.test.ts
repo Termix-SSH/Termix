@@ -6,7 +6,7 @@ import {
   isValidPackageName,
   buildSudoCommand,
   parseUpgradable,
-} from "@termix/plugin-sdk/host-commands";
+} from "@termix-ssh/plugin-sdk/host-commands";
 
 describe("parsePlatformProbe", () => {
   it("prefers dnf over yum when both are present", () => {

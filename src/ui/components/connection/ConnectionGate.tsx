@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import type React from "react";
-import { useConnectionRetry } from "@termix/plugin-sdk/frontend";
+import { useConnectionRetry } from "@termix-ssh/plugin-sdk/frontend";
 import {
   ConnectionLogProvider,
   useConnectionLog,

@@ -37,7 +37,7 @@ vi.mock("../../../hosts/host-key-verifier.js", () => ({
     createHostVerifier: mocks.createHostVerifier,
   },
 }));
-vi.mock("@termix/plugin-sdk/ssh-certs", () => ({
+vi.mock("@termix-ssh/plugin-sdk/ssh-certs", () => ({
   applyCertificateAuth: mocks.applyCertificateAuth,
 }));
 vi.mock("../../../hosts/terminal-auth-helpers.js", () => ({

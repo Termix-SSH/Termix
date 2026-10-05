@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   DEFAULT_BACKEND_ENTRY,
   type PluginManifest,
-} from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/manifest";
 
 /**
  * Where user-installed plugins live. Resolved per call rather than captured at

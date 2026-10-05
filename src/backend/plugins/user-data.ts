@@ -7,9 +7,9 @@
  */
 
 import { sql } from "drizzle-orm";
-import { columnName, createTableSql } from "@termix/plugin-sdk/ddl";
-import { prefixedTableName } from "@termix/plugin-sdk/db";
-import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
+import { columnName, createTableSql } from "@termix-ssh/plugin-sdk/ddl";
+import { prefixedTableName } from "@termix-ssh/plugin-sdk/db";
+import type { PluginTableDefinition } from "@termix-ssh/plugin-sdk/db";
 import {
   runStatement,
   selectRows,

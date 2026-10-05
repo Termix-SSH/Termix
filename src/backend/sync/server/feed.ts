@@ -9,7 +9,7 @@
  */
 
 import type { Response } from "express";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import { listEntities } from "../../plugins/sync-registry.js";
 import { syncLogger } from "../../utils/logger.js";
 import { registerCoreSyncEntities } from "../entities.js";

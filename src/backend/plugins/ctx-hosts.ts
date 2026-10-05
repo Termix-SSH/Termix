@@ -20,9 +20,9 @@ import type {
   PluginShareableUser,
   PluginShareableRole,
   PluginHostJumpHost,
-} from "@termix/plugin-sdk/backend";
-import { PLUGIN_HOST_INPUT_KEYS } from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+} from "@termix-ssh/plugin-sdk/backend";
+import { PLUGIN_HOST_INPUT_KEYS } from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
 import { assertCapability, capabilityRefused } from "./permissions.js";
 import { hostSessionStatus } from "../hosts/host-session-status.js";
 import { getActor } from "./actor.js";

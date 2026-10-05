@@ -8,7 +8,7 @@
 
 import crypto from "crypto";
 import { and, eq, getTableColumns, type SQL } from "drizzle-orm";
-import type { SyncRow } from "@termix/plugin-sdk/backend";
+import type { SyncRow } from "@termix-ssh/plugin-sdk/backend";
 import { createCurrentRepositoryContext } from "../database/repositories/factory.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { SystemCrypto } from "../utils/system-crypto.js";

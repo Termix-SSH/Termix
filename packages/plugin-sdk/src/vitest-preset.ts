@@ -3,7 +3,7 @@
  *
  * A plugin's vitest.config.ts is one line:
  *
- *   import { pluginVitestConfig } from "@termix/plugin-sdk/vitest-preset";
+ *   import { pluginVitestConfig } from "@termix-ssh/plugin-sdk/vitest-preset";
  *   export default pluginVitestConfig(import.meta.url);
  *
  * Two projects: tests/backend runs in node, tests/frontend in jsdom.
@@ -56,21 +56,21 @@ export function pluginVitestConfig(
   const alias: Record<string, string> = {
     ...(repoRoot
       ? {
-          "@termix/plugin-sdk/frontend": path.join(
+          "@termix-ssh/plugin-sdk/frontend": path.join(
             repoRoot,
             "packages",
             "plugin-sdk",
             "src",
             "frontend.ts",
           ),
-          "@termix/plugin-sdk/ui": path.join(
+          "@termix-ssh/plugin-sdk/ui": path.join(
             repoRoot,
             "src",
             "ui",
             "plugin-host",
             "sdk-ui.ts",
           ),
-          "@termix/plugin-host/testing": path.join(
+          "@termix-ssh/plugin-host/testing": path.join(
             repoRoot,
             "src",
             "ui",
@@ -85,7 +85,7 @@ export function pluginVitestConfig(
       : {
           // Outside a Termix checkout: the UI kit resolves through the
           // package, and the test host is the copy the SDK ships.
-          "@termix/plugin-host/testing": fileURLToPath(
+          "@termix-ssh/plugin-host/testing": fileURLToPath(
             new URL("./host/testing-host.js", import.meta.url),
           ),
         }),
@@ -119,8 +119,8 @@ export function pluginVitestConfig(
             setupFiles: [setupFile],
             // Run the SDK through Vite rather than plain Node, so its import
             // of the test host sees the alias above and the plugin and the
-            // host share one copy of @termix/plugin-sdk/frontend.
-            server: { deps: { inline: [/@termix\/plugin-sdk/] } },
+            // host share one copy of @termix-ssh/plugin-sdk/frontend.
+            server: { deps: { inline: [/@termix-ssh\/plugin-sdk/] } },
             include: ["tests/frontend/**/*.test.{ts,tsx}"],
           },
         },

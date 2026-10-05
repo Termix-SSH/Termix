@@ -2,7 +2,7 @@ import type { ResourceKey } from "i18next";
 import type {
   FrontendModule,
   PluginManifest,
-} from "@termix/plugin-sdk/frontend";
+} from "@termix-ssh/plugin-sdk/frontend";
 import i18n, { setPluginLocaleResolver } from "@/i18n/i18n";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { getBackendUrl } from "@/main-axios";

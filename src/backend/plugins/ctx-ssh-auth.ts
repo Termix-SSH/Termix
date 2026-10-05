@@ -12,9 +12,9 @@ import type {
   PluginSsh,
   PluginSshConnectOptions,
   PluginSshHost,
-} from "@termix/plugin-sdk/backend";
-import type { PluginManifest } from "@termix/plugin-sdk/manifest";
-import { PluginSshInteractionError } from "@termix/plugin-sdk/backend";
+} from "@termix-ssh/plugin-sdk/backend";
+import type { PluginManifest } from "@termix-ssh/plugin-sdk/manifest";
+import { PluginSshInteractionError } from "@termix-ssh/plugin-sdk/backend";
 import {
   assertCapability,
   capabilityRefused,

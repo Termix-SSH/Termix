@@ -10,7 +10,7 @@
 import fs from "fs";
 import path from "path";
 import semver from "semver";
-import type { PluginDesktopMode } from "@termix/plugin-sdk/manifest";
+import type { PluginDesktopMode } from "@termix-ssh/plugin-sdk/manifest";
 import { syncLogger } from "../../utils/logger.js";
 import { sendCoreAlert } from "../../notify/core-notify.js";
 import {
