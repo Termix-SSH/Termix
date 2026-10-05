@@ -16,16 +16,6 @@
 
 <br />
 
-## What's Inside
-
-- **Backend:** the types for `activate(ctx)`, database and table helpers, host commands and SSH certificates
-- **Frontend:** the types for `activate(app)`, plus `@termix-ssh/plugin-sdk/ui`, the components and theme Termix serves to plugins
-- **Manifest:** the manifest schema, the capability catalog and settings types
-- **Testing:** `createMockCtx()`, `createTestDb()`, `renderWithApp()` and a Vitest preset
-- **CLI:** `termix-plugin`, which builds, tests, validates, packs and signs a plugin and writes its migrations
-
-<br />
-
 ## Installation
 
 ```bash

@@ -1,0 +1,72 @@
+name: Publish SDK
+
+# Publishes packages/plugin-sdk to npm as @termix-ssh/plugin-sdk with trusted
+# publishing, so there is no npm token. The version is whatever
+# packages/plugin-sdk/package.json says; bump it before running this.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Publish mode"
+        required: true
+        default: Publish
+        type: choice
+        options:
+          - Publish
+          - Dry run
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @termix-ssh/plugin-sdk
+    # Trusted publishing only works on GitHub-hosted runners.
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Update npm
+        run: npm install -g npm@^11.19.0
+
+      - run: npm ci
+
+      - name: Check the version is new
+        run: |
+          VERSION=$(node -p "require('./packages/plugin-sdk/package.json').version")
+          if npm view "@termix-ssh/plugin-sdk@$VERSION" version >/dev/null 2>&1; then
+            echo "@termix-ssh/plugin-sdk@$VERSION is already on npm. Bump packages/plugin-sdk/package.json first."
+            if [ "${{ inputs.mode }}" = "Publish" ]; then
+              exit 1
+            fi
+          fi
+          echo "Publishing @termix-ssh/plugin-sdk@$VERSION"
+
+      - run: npm run build:sdk
+
+      # The SDK's ui and test host are built from core, so check core too.
+      - run: npm run lint
+
+      - run: npm run type-check
+
+      - run: npm run test
+
+      - name: Publish
+        run: |
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
+            npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public --dry-run
+          else
+            npm publish --workspace @termix-ssh/plugin-sdk --provenance --access public
+          fi
