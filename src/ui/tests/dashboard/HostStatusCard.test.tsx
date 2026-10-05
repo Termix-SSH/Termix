@@ -27,16 +27,17 @@ describe("HostStatusCard", () => {
 
     const name = screen.getByText(host.name);
     const ip = screen.getByText(host.ip);
-    const identity = name.parentElement?.parentElement;
-    const row = identity?.parentElement?.parentElement;
-    const metrics = row?.lastElementChild;
+    const row = name.closest("[role=button]");
+    const badge = screen.getByText("hosts.status.offline");
 
     expect(name.className).toContain("truncate");
     expect(name.getAttribute("title")).toBe(host.name);
     expect(ip.className).toContain("truncate");
     expect(ip.getAttribute("title")).toBe(host.ip);
-    expect(identity?.className).toContain("min-w-0");
-    expect(metrics?.className).toContain("shrink-0");
+    expect(row?.firstElementChild?.nextElementSibling?.className).toContain(
+      "min-w-0",
+    );
+    expect(badge.className).toContain("shrink-0");
   });
 });
 

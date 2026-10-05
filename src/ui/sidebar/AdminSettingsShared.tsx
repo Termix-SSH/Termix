@@ -1,5 +1,6 @@
 import type React from "react";
 import { ChevronDown } from "lucide-react";
+import { useSettingsEmbedded } from "@/settings/settings-embed";
 
 export function AdminToggle({
   on,
@@ -36,6 +37,15 @@ export function AccordionSection({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const embedded = useSettingsEmbedded();
+  if (embedded) {
+    if (!open) return null;
+    return (
+      <div className="flex flex-col border border-border bg-card px-3 pb-3">
+        {children}
+      </div>
+    );
+  }
   return (
     <div className="border border-border bg-card overflow-hidden shrink-0">
       <button

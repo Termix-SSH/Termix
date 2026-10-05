@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { AdminUserManagePanel } from "../../sidebar/AdminUserManagePanel";
+import { SurfaceScope } from "@/components/surface/surface-scope";
 import type { AdminUser } from "../../sidebar/AdminManagementSections";
 
 const api = vi.hoisted(() => ({
@@ -60,14 +61,16 @@ function renderPanel(
   callbacks: Partial<Record<string, () => void>> = {},
 ) {
   return render(
-    <AdminUserManagePanel
-      user={user}
-      roles={[]}
-      onBack={callbacks.onBack ?? vi.fn()}
-      onOpenHostTab={callbacks.onOpenHostTab as never}
-      onUserDeleted={callbacks.onUserDeleted ?? vi.fn()}
-      onSecondFactorsReset={callbacks.onSecondFactorsReset ?? vi.fn()}
-    />,
+    <SurfaceScope>
+      <AdminUserManagePanel
+        user={user}
+        roles={[]}
+        onBack={callbacks.onBack ?? vi.fn()}
+        onOpenHostTab={callbacks.onOpenHostTab as never}
+        onUserDeleted={callbacks.onUserDeleted ?? vi.fn()}
+        onSecondFactorsReset={callbacks.onSecondFactorsReset ?? vi.fn()}
+      />
+    </SurfaceScope>,
   );
 }
 
@@ -193,7 +196,7 @@ describe("AdminUserManagePanel", () => {
 
     await userEvent.click(screen.getByText("admin.manageTabDanger"));
     await userEvent.click(screen.getByText("admin.deleteUser"));
-    await userEvent.click(screen.getByText("common.confirm"));
+    await userEvent.click(screen.getByText("common.delete"));
 
     await waitFor(() => {
       expect(api.deleteUser).toHaveBeenCalledWith("bob");

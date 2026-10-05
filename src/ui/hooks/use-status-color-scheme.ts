@@ -56,9 +56,9 @@ export function getStatusClasses(
   const online = status === true || status === "online";
   if (loading || status === "unknown") {
     if (scheme === "status") {
-      if (variant === "dot") return "bg-yellow-400 animate-pulse";
-      if (variant === "stripe") return "bg-yellow-400/40 animate-pulse";
-      return "border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse";
+      if (variant === "dot") return "bg-warning animate-pulse";
+      if (variant === "stripe") return "bg-warning/40 animate-pulse";
+      return "border-warning/40 text-warning bg-warning/10 animate-pulse";
     }
     if (variant === "dot") return "bg-muted-foreground/40 animate-pulse";
     if (variant === "stripe") return "bg-muted-foreground/20 animate-pulse";

@@ -157,7 +157,7 @@ function HostPluginSection({
       icon={<PluginIcon name={plugin.icon} className="size-3.5" />}
     >
       {!running && (
-        <div className="my-3 border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500">
+        <div className="my-3 border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
           {t("settings.featureUnavailable", { name: plugin.name })}
         </div>
       )}

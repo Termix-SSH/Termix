@@ -18,7 +18,7 @@
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
-    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/check-test-locations.cjs",
+    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/generate-settings-search-index.cjs --check && node scripts/check-test-locations.cjs",
     "lint:fix": "eslint --fix .",
     "type-check": "npm run build:sdk && tsc -b --force",
     "test": "vitest run",

@@ -2,9 +2,9 @@
 import {
   LayoutDashboard,
   LayoutPanelLeft,
+  LibraryBig,
   Server,
   Settings,
-  User,
 } from "lucide-react";
 import { lazy, memo, Suspense } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,12 +17,19 @@ import {
   type TabTypeDef,
 } from "./tab-registry";
 import { getPanel, type PanelDef } from "./panel-registry";
+import type { SettingsTabProps } from "@/settings/SettingsTab";
 import {
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
 } from "@/lib/adaptive-resource-budget";
 
-// Heavy tab surfaces — keep out of the AppShell critical path.
+// Heavy tab surfaces, kept out of the AppShell critical path.
+const ManageTab = lazy(() =>
+  import("@/manage/ManageTab").then((m) => ({ default: m.ManageTab })),
+);
+const SettingsTab = lazy(() =>
+  import("@/settings/SettingsTab").then((m) => ({ default: m.SettingsTab })),
+);
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
@@ -91,9 +98,9 @@ export function tabIcon(type: TabType) {
     case "dashboard":
       return <LayoutDashboard className="size-3.5" />;
     case "host-manager":
-      return <Server className="size-3.5" />;
+      return <LibraryBig className="size-3.5" />;
+    case "settings":
     case "user-profile":
-      return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
     case "split-screen":
@@ -202,6 +209,8 @@ function noop() {}
 
 export interface TabRenderContext {
   shell: TabShellCallbacks;
+  /** What the Settings tab needs from the shell. */
+  settings?: Omit<SettingsTabProps, "section">;
   /** The terminal a panel shown as a tab sends commands to. */
   panelTargetTab?: Tab;
   isVisible?: boolean;
@@ -225,6 +234,22 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
       return null;
 
     case "host-manager":
+      return withTabSuspense(<ManageTab />);
+
+    case "settings":
+      return context.settings
+        ? withTabSuspense(
+            <SettingsTab
+              {...context.settings}
+              section={
+                typeof tab.data?.section === "string"
+                  ? tab.data.section
+                  : undefined
+              }
+            />,
+          )
+        : null;
+
     case "user-profile":
     case "admin-settings":
       return null;

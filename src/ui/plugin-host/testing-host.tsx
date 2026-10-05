@@ -22,6 +22,7 @@ import type {
 import i18n from "@/i18n/i18n";
 import type { PluginSummary } from "@/api/plugins-api";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SurfaceScope } from "@/components/surface/surface-scope";
 import { setPermissionsForTesting } from "@/hooks/use-permissions";
 import {
   getTabType,
@@ -98,7 +99,7 @@ function recordingShell(calls: ShellCall[]): TabShellCallbacks {
 function wrap(element: ReactElement): HTMLElement {
   return render(
     <ThemeProvider defaultTheme="dark" storageKey="termix-test-theme">
-      {element}
+      <SurfaceScope className="h-full">{element}</SurfaceScope>
     </ThemeProvider>,
   ).container;
 }

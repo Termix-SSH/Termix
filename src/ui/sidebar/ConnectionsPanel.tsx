@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import { getTabType, isPersistentTabType } from "@/shell/tab-registry";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -298,6 +299,7 @@ export function ConnectionsPanel({
   onReorderTabs?: (tabs: Tab[]) => void;
 }) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [now, setNow] = useState(Date.now());
 
   const [persistMinutes, setPersistMinutes] = useState(30);
@@ -597,6 +599,13 @@ export function ConnectionsPanel({
                   onReopenTab(record, liveSession?.sessionId ?? null);
                 }}
                 onClose={async () => {
+                  const ok = await confirm({
+                    title: t("connections.forgetConfirm", {
+                      name: host?.name ?? record.label,
+                    }),
+                    confirmLabel: t("connections.forget"),
+                  });
+                  if (!ok) return;
                   await deleteOpenTab(record.id).catch(() => {});
                   onForgetBackground(record.id);
                 }}

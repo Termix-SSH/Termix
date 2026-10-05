@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
+import { PanePrompt } from "@/components/surface/surface-scope";
+import {
+  PROMPT_BUTTON,
+  PROMPT_PRIMARY_BUTTON,
+} from "@/components/surface/prompt-styles";
 import { Shield, Copy, ExternalLink, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -50,91 +54,76 @@ export function BrowserSignInDialog({
   };
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200 overflow-y-auto">
-      <div
-        className="absolute inset-0 bg-canvas"
-        style={{ backgroundColor: backgroundColor || undefined }}
-      />
-      <div className="bg-card border border-border w-full max-w-md mx-4 my-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="size-4 text-accent-brand" />
-            <h3 className="text-xs font-bold uppercase tracking-widest">
-              {t("sshAuth.browserSignInRequired", { provider: label })}
-            </h3>
-          </div>
-        </div>
-        <div className="p-4 flex flex-col gap-4">
-          {code && code !== "N/A" && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("sshAuth.browserSignInCode")}
-              </p>
-              <div className="border border-border bg-muted/10 p-4 text-center">
-                <div className="text-2xl font-mono font-bold tracking-wider text-accent-brand">
-                  {code}
-                </div>
-              </div>
-            </div>
-          )}
-
+    <PanePrompt
+      open
+      layer="connection"
+      backgroundColor={backgroundColor}
+      icon={<Shield className="size-4" />}
+      title={t("sshAuth.browserSignInRequired", { provider: label })}
+      className="max-w-md"
+    >
+      <div className="flex flex-col gap-3">
+        {code && code !== "N/A" && (
           <div className="flex flex-col gap-1.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("sshAuth.browserSignInUrl")}
+              {t("sshAuth.browserSignInCode")}
             </p>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={url}
-                readOnly
-                className="rounded-none bg-muted/50 border-border text-xs font-mono flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopyUrl}
-                className="rounded-none border-border shrink-0"
-                title={t("common.copy")}
-              >
-                {copied ? (
-                  <Check className="size-4 text-accent-brand" />
-                ) : (
-                  <Copy className="size-4" />
-                )}
-              </Button>
+            <div className="border border-border bg-muted/10 p-4 text-center">
+              <div className="text-2xl font-mono font-bold tracking-wider text-accent-brand">
+                {code}
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="flex flex-wrap justify-end gap-2 pt-1">
-            <Button
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("sshAuth.browserSignInUrl")}
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={url}
+              readOnly
+              className="rounded-none bg-muted/50 border-border text-xs font-mono flex-1"
+            />
+            <button
               type="button"
-              variant="ghost"
-              onClick={onCancel}
-              className="rounded-none text-[10px] font-bold uppercase tracking-widest sm:mr-auto"
+              onClick={handleCopyUrl}
+              className={`${PROMPT_BUTTON} h-9 w-9 shrink-0 px-0`}
+              title={t("common.copy")}
+              aria-label={t("common.copy")}
             >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onContinue}
-              className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-            >
-              {t("sshAuth.browserSignInContinue")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onOpenUrl}
-              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5"
-            >
-              <ExternalLink className="size-3.5" />
-              {t("sshAuth.browserSignInOpen")}
-            </Button>
+              {copied ? (
+                <Check className="size-4 text-accent-brand" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+            </button>
           </div>
         </div>
+
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className={`${PROMPT_BUTTON} sm:mr-auto`}
+          >
+            {t("common.cancel")}
+          </button>
+          <button type="button" onClick={onContinue} className={PROMPT_BUTTON}>
+            {t("sshAuth.browserSignInContinue")}
+          </button>
+          <button
+            type="button"
+            onClick={onOpenUrl}
+            className={PROMPT_PRIMARY_BUTTON}
+          >
+            <ExternalLink className="size-3.5" />
+            {t("sshAuth.browserSignInOpen")}
+          </button>
+        </div>
       </div>
-    </div>
+    </PanePrompt>
   );
 }

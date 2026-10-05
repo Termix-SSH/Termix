@@ -210,6 +210,21 @@ export interface ShellApi {
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown. */
   closeRailView: (id: string) => void;
+  /**
+   * Asks a yes or no question over the main area, for code that runs outside
+   * a panel or tab (a keybinding, a toolbar action). Inside one, prefer
+   * useConfirm from @termix/plugin-sdk/ui, which asks over that surface.
+   */
+  confirm?: (options: ConfirmRequest) => Promise<boolean>;
+}
+
+export interface ConfirmRequest {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  /** Red confirm button. Defaults to true. */
+  destructive?: boolean;
 }
 
 export interface TabsApi extends Pick<
@@ -260,6 +275,11 @@ export interface RailItemContribution {
   /** Desktop app only. */
   electronOnly?: boolean;
   separatorAfter?: boolean;
+  /**
+   * Which band of the rail it sits in: things you keep (objects), things you
+   * do (tools) or the instance itself (system). Default "tools".
+   */
+  group?: "objects" | "tools" | "system";
   /** Hidden without being unregistered, e.g. while a feature is switched off. */
   hidden?: boolean;
   /**
@@ -293,8 +313,11 @@ export interface PanelProps {
   /** Whether the panel is the one currently shown. */
   active: boolean;
   shell: ShellApi;
-  /** Tells the shell the panel is editing, which widens the sidebar. */
-  setEditing: (editing: boolean) => void;
+  /**
+   * Tells the shell the panel is editing, which widens the sidebar. "wide"
+   * widens it further for tables. InlineView does this on its own.
+   */
+  setEditing: (editing: boolean | "wide") => void;
   /** Type of the focused tab, if any. */
   activeTabType?: string;
   /** Where the panel is rendered. */
@@ -323,6 +346,8 @@ export interface TabHandle {
   /** Repaint only. The shell calls it every time the tab becomes active. */
   refresh?: () => void;
   notifyResize?: () => void;
+  /** Asked before the tab closes; resolve false to keep it open. */
+  confirmClose?: () => boolean | Promise<boolean>;
   [key: string]: unknown;
 }
 
@@ -629,6 +654,11 @@ export interface DashboardCardContribution {
   defaultHeight?: number;
   /** Which column a preset places this card in by default. Defaults to "main". */
   defaultPanel?: "main" | "side";
+  /**
+   * "framed" draws a titled header over the card, "bare" lets it run edge to
+   * edge, for a strip of numbers. Defaults to "framed".
+   */
+  frame?: "framed" | "bare";
   component: ComponentType<DashboardCardProps>;
 }
 
@@ -909,6 +939,12 @@ export interface TermixApp extends TermixAppInfo {
     options?: { origin?: unknown },
   ) => Promise<PluginWsTarget | null>;
   tabs: TabsApi;
+  /**
+   * Asks a yes or no question over the main area. For code that runs outside
+   * a panel or tab; inside one, useConfirm from @termix/plugin-sdk/ui asks
+   * over that surface instead.
+   */
+  confirm: (options: ConfirmRequest) => Promise<boolean>;
   /** The desktop app, when the frontend runs in it. */
   desktop: DesktopApi;
   /**
@@ -1331,6 +1367,31 @@ export function usePluginUiPreferences<
 } {
   const bridge = requireHost();
   return bridge.usePluginUiPreferences(bridge.usePluginId()) as never;
+}
+
+/**
+ * Grid or list and row density for one of this plugin's views, kept in its
+ * Appearance area as `<prefix>viewMode` and `<prefix>density`. Declare those
+ * keys in contributes.uiPresets so each preset level can pick a default.
+ */
+export function usePluginPanelView(prefix = ""): {
+  view: "grid" | "list";
+  density: "comfortable" | "compact";
+  compact: boolean;
+  setView: (view: "grid" | "list") => void;
+  setDensity: (density: "comfortable" | "compact") => void;
+} {
+  const { values, set } = usePluginUiPreferences();
+  const view = values[`${prefix}viewMode`] === "list" ? "list" : "grid";
+  const density =
+    values[`${prefix}density`] === "compact" ? "compact" : "comfortable";
+  return {
+    view,
+    density,
+    compact: density === "compact",
+    setView: (next) => set(`${prefix}viewMode`, next),
+    setDensity: (next) => set(`${prefix}density`, next),
+  };
 }
 
 export function useTabs(): TabsApi {

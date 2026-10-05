@@ -194,7 +194,6 @@ export {
   ManagerSearch,
   type ManagerCardError,
 } from "@/components/manager-card";
-export { useConfirmation } from "@/hooks/use-confirmation";
 export { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 // Homepage widget pieces, for plugins that register a widget.
 export { WidgetTitle } from "@/lib/widget-title";
@@ -276,3 +275,66 @@ export { getDeviceId } from "@/lib/device-id";
 
 // A host that is never saved, for connecting to an address straight away.
 export { createQuickConnectHost } from "@/sidebar/quick-connect-host";
+
+// The panel kit every tab and sidebar panel is built from.
+export {
+  BackButton,
+  Facts,
+  GroupHeading,
+  PANEL,
+  PanelSearch,
+  PanelShell,
+  Segmented,
+  ViewToggle,
+  type PanelDensity,
+  type PanelViewMode,
+} from "@/components/panel-layout";
+export {
+  DataView,
+  type DataColumn,
+  type GridColumns,
+} from "@/components/data-view";
+export { TabStrip, type TabStripItem } from "@/components/tab-strip";
+export { CardMasonry } from "@/components/card-masonry";
+export { Meter, UsagePair } from "@/components/meter";
+export { usageBarColor, usageColor } from "@/lib/usage-color";
+export {
+  Field,
+  FieldPair,
+  NumberField,
+  Repeater,
+  SecretField,
+  SelectField,
+  SwitchRow,
+  TagInput,
+  TextAreaField,
+  TextField,
+} from "@/components/form-fields";
+
+// Views and questions drawn over the panel, tab or pane that asked, instead
+// of modals over the whole app.
+export {
+  InlineView,
+  PanePrompt,
+  SurfaceScope,
+  useConfirm,
+  useSurfaceKind,
+  type ConfirmOptions,
+  type EditingWidth,
+  type SurfaceKind,
+} from "@/components/surface/surface-scope";
+export {
+  PROMPT_BUTTON,
+  PROMPT_DESTRUCTIVE_BUTTON,
+  PROMPT_PRIMARY_BUTTON,
+} from "@/components/surface/prompt-styles";
+
+// One connection lifecycle: connecting, failed with retry and a log, dropped,
+// or unavailable.
+export {
+  ConnectionGate,
+  useConnectionGate,
+  type ConnectionGateController,
+  type ConnectionGateProps,
+} from "@/components/connection/ConnectionGate";
+export { type ConnectionUnavailable } from "@/components/connection/ConnectionScreen";

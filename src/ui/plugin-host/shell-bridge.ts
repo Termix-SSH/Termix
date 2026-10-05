@@ -116,6 +116,14 @@ export const shell: TabShellCallbacks = {
   openHostEditor: (...args) => callbacks?.openHostEditor?.(...args),
   saveQuickConnect: (...args) =>
     callbacks?.saveQuickConnect?.(...args) ?? Promise.resolve(),
+  confirm: (options) =>
+    callbacks?.confirm
+      ? callbacks.confirm(options)
+      : Promise.resolve(
+          window.confirm(
+            [options.title, options.description].filter(Boolean).join(" "),
+          ),
+        ),
 };
 
 export const tabsApi = {

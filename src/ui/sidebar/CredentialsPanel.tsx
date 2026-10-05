@@ -13,7 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { HostManager } from "@/sidebar/HostManager";
+import { CredentialList } from "@/sidebar/CredentialList";
+import { requestManage } from "@/manage/manage-requests";
 import { useCredentialSidebarPreferences } from "@/sidebar/credential-tree/hooks/useCredentialSidebarPreferences";
 import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import { CustomizeCredentialsSidebarPanel } from "@/sidebar/CustomizeCredentialsSidebarPanel";
@@ -30,8 +31,7 @@ import {
 import type { CredentialSortKey } from "@/types/credential-sidebar-preferences";
 
 export function CredentialsPanel({
-  onEditingChange,
-  active = true,
+  active: _active = true,
 }: {
   onEditingChange?: (editing: boolean) => void;
   active?: boolean;
@@ -41,7 +41,6 @@ export function CredentialsPanel({
   const { preferences: sidebarPrefs, update: updateSidebarPrefs } =
     useCredentialSidebarPreferences();
   const [search, setSearch] = useState("");
-  const [managerEditing, setManagerEditing] = useState(false);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
 
@@ -94,14 +93,9 @@ export function CredentialsPanel({
     }));
   }
 
-  function handleEditingChange(editing: boolean) {
-    setManagerEditing(editing);
-    onEditingChange?.(editing);
-  }
-
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      {!managerEditing && (
+      {
         <div className="flex flex-col px-2 py-1.5 shrink-0 border-b border-border/60 gap-1.5">
           <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60 rounded-sm">
             <Search className="size-3 text-muted-foreground/60 shrink-0" />
@@ -297,9 +291,7 @@ export function CredentialsPanel({
             <div className="flex items-center border border-accent-brand/30 ml-auto shrink-0">
               <button
                 onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent("host-manager:add-credential"),
-                  )
+                  requestManage({ kind: "credential", credentialId: null })
                 }
                 title={t("credentials.addCredential")}
                 className="flex items-center justify-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 transition-colors"
@@ -312,21 +304,18 @@ export function CredentialsPanel({
             </div>
           </div>
         </div>
-      )}
+      }
 
       <div className="flex flex-col flex-1 min-h-0">
-        <HostManager
-          hideListHeader
-          externalSearch={managerEditing ? undefined : search}
-          externalSort={sortKey}
-          externalArrangeLocked={arrangeLocked}
-          externalFilter={filterState}
+        <CredentialList
+          search={search}
+          sort={sortKey}
+          arrangeLocked={arrangeLocked}
+          filter={filterState}
           density={sidebarPrefs.display.density}
           trayTrigger={sidebarPrefs.display.trayTrigger}
           showTags={sidebarPrefs.display.showTags}
           onTagsChange={setAllTags}
-          onEditingChange={handleEditingChange}
-          active={active}
         />
       </div>
 

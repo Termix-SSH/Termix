@@ -155,11 +155,7 @@ describe("FeatureSettingsSection", () => {
     const save = screen.getByText("common.save").closest("button")!;
     expect(save.disabled).toBe(true);
 
-    fireEvent.click(
-      screen
-        .getAllByRole("button")
-        .find((b) => b !== save && b.textContent === "")!,
-    );
+    fireEvent.click(screen.getByRole("switch"));
     fireEvent.click(save);
 
     await waitFor(() =>

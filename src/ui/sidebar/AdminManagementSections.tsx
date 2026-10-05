@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -112,6 +113,7 @@ export function AdminUsersSection({
   onPageChange,
 }: UsersSectionProps) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const hasPrev = page > 0;
   const hasNext = page + 1 < pageCount;
@@ -249,6 +251,13 @@ export function AdminUsersSection({
                   className="size-6 text-muted-foreground hover:text-destructive"
                   disabled={user.isAdmin}
                   onClick={async () => {
+                    const ok = await confirm({
+                      title: t("admin.deleteUserConfirm", {
+                        username: user.username,
+                      }),
+                      description: t("manage.cannotBeUndone"),
+                    });
+                    if (!ok) return;
                     try {
                       await deleteUser(user.username);
                       setUsers((prev) => prev.filter((u) => u.id !== user.id));
@@ -321,6 +330,7 @@ export function AdminSessionsSection({
   loadSessions,
 }: SessionsSectionProps) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
 
   return (
     <AccordionSection
@@ -375,6 +385,13 @@ export function AdminSessionsSection({
                 size="sm"
                 className="text-[10px] text-muted-foreground hover:text-destructive h-6 px-1.5"
                 onClick={async () => {
+                  const ok = await confirm({
+                    title: t("admin.revokeAllSessionsConfirm", {
+                      username: session.username ?? "",
+                    }),
+                    confirmLabel: t("admin.revokeAll"),
+                  });
+                  if (!ok) return;
                   try {
                     await revokeAllUserSessions(session.userId);
                     setSessions((prev) =>
@@ -393,6 +410,11 @@ export function AdminSessionsSection({
                 size="icon"
                 className="size-6 text-muted-foreground hover:text-destructive"
                 onClick={async () => {
+                  const ok = await confirm({
+                    title: t("admin.revokeSessionConfirm"),
+                    confirmLabel: t("admin.revokeSession"),
+                  });
+                  if (!ok) return;
                   try {
                     await revokeSession(session.id);
                     setSessions((prev) =>
@@ -447,6 +469,7 @@ export function AdminRolesSection({
   createRoleLoading,
 }: RolesSectionProps) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [catalog, setCatalog] = useState<PermissionCatalogEntry[]>([]);
   const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
   const [editingPermissions, setEditingPermissions] = useState<Set<string>>(
@@ -652,6 +675,12 @@ export function AdminRolesSection({
                       size="icon"
                       className="size-6 text-muted-foreground hover:text-destructive"
                       onClick={async () => {
+                        const ok = await confirm({
+                          title: t("admin.deleteRoleConfirm", {
+                            name: role.displayName,
+                          }),
+                        });
+                        if (!ok) return;
                         await deleteRole(role.id);
                         setRoles((prev) =>
                           prev.filter((r) => r.id !== role.id),

@@ -96,7 +96,7 @@ export function FeatureSettingsSection({
   );
 }
 
-function FeatureSettingsForm({
+export function FeatureSettingsForm({
   plugin,
   scope,
   fields,
@@ -208,7 +208,7 @@ function FeatureSettingsForm({
   return (
     <div className="flex flex-col gap-2 pt-2">
       {!running && (
-        <div className="border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500">
+        <div className="border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
           {t("settings.featureUnavailable", {
             name: t(pluginKey(plugin.id, "plugin.name"), {
               defaultValue: plugin.name,

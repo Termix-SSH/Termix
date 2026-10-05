@@ -6,7 +6,7 @@ import {
   screen,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { TabStrip } from "@/sidebar/HostManagerTabs";
+import { TabStrip } from "@/components/tab-strip";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),

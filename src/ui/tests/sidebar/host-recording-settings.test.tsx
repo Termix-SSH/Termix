@@ -88,7 +88,7 @@ describe.each([
           setValue={setValue}
         />,
       );
-      fireEvent.click(screen.getByRole("button"));
+      fireEvent.click(screen.getByRole("switch"));
       expect(setValue).toHaveBeenCalledWith(manifest.id, key, !saved);
       // These are the values HostEditor writes through each plugin's host settings API.
       expect(form.pluginSettings).toEqual(pluginSettings);

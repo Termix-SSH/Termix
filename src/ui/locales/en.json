@@ -3,7 +3,10 @@
     "retryingIn": "Retrying in {{seconds}}s ({{attempt}}/{{max}})",
     "retryingNow": "Retrying... ({{attempt}}/{{max}})",
     "disconnected": "Unable to connect",
-    "reconnect": "Reconnect"
+    "reconnect": "Reconnect",
+    "failed": "Could not connect",
+    "failedRetrying": "Connection failed, trying again",
+    "retryNow": "Retry now"
   },
   "credentials": {
     "folders": "Folders",
@@ -314,7 +317,21 @@
     "openSidebar": "Open sidebar",
     "confirmCloseHost": "Close {{host}}?",
     "enterFullscreen": "Enter fullscreen (Ctrl+Shift+F)",
-    "exitFullscreen": "Exit fullscreen (Ctrl+Shift+F)"
+    "exitFullscreen": "Exit fullscreen (Ctrl+Shift+F)",
+    "group": {
+      "objects": "Yours",
+      "tools": "Tools",
+      "system": "System"
+    },
+    "searchEverything": "Search hosts, tabs and actions",
+    "search": "Search",
+    "hiddenCount": "{{count}} hidden",
+    "showInRail": "Show in sidebar",
+    "hideFromRail": "Hide from sidebar",
+    "openSettings": "Open settings",
+    "settings": "Settings",
+    "manage": "Manage",
+    "mobileNavigation": "Navigation"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -975,7 +992,9 @@
     "expiresIn": "Expires in {{duration}}",
     "search": "Search connections...",
     "noSearchResults": "No connections match your search",
-    "rename": "Rename session"
+    "rename": "Rename session",
+    "forgetConfirm": "End the background session for {{name}}?",
+    "forget": "End session"
   },
   "sshAuth": {
     "totpRequired": "Two-Factor Authentication Required",
@@ -1064,7 +1083,13 @@
     "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin.",
     "serverAuthentication": "Server sign-in",
     "minChars": "min. {{min}} characters",
-    "retrySecondFactorUI": "Reload verification methods"
+    "retrySecondFactorUI": "Reload verification methods",
+    "localDesktopSignedOut": "Local desktop signed out",
+    "localDesktopUnavailable": "Local desktop session unavailable",
+    "localDesktopSignedOutDesc": "You signed out of the local desktop session. Continue locally to use this device's built-in Termix server again.",
+    "localDesktopUnavailableDesc": "Termix could not start a local desktop session. Retry it instead of registering a new account.",
+    "continueLocalDesktop": "Continue with local desktop",
+    "retryLocalDesktop": "Retry local desktop session"
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",
@@ -1205,7 +1230,19 @@
     "clear": "Clear",
     "viewServerDetails": "View server details",
     "dragToResizeColumns": "Drag to resize columns",
-    "hostsAvailable": "Hosts Available"
+    "hostsAvailable": "Hosts Available",
+    "removeSection": "Remove section",
+    "addSection": "Add a section",
+    "allSectionsShown": "Everything is already on the dashboard.",
+    "fromPlugins": "From plugins",
+    "dropHere": "Drop a section here",
+    "dragToReorder": "Drag sections to reorder them",
+    "clearActivityConfirm": "Clear your recent activity?",
+    "resetConfirm": "Reset the dashboard to its default layout?",
+    "onlineCount_one": "{{count}} online",
+    "onlineCount_other": "{{count}} online",
+    "hostCount_one": "{{count}} host",
+    "hostCount_other": "{{count}} hosts"
   },
   "admin": {
     "sectionGeneral": "General",
@@ -1515,7 +1552,13 @@
     "updateExternalAutoProvisionFailed": "Failed to update the auto-create setting",
     "hostTags": "Predefined host tags",
     "hostTagsDesc": "Tags every user sees as suggestions in the host editor. Press Space or Enter to add one. Removing a tag here does not remove it from hosts.",
-    "hostTagsError": "Could not load or save host tag suggestions."
+    "hostTagsError": "Could not load or save host tag suggestions.",
+    "revokeAllSessionsConfirm": "Sign {{username}} out everywhere?",
+    "revokeSessionConfirm": "Sign out this session?",
+    "revokeSession": "Sign out",
+    "deleteRoleConfirm": "Delete the {{name}} role?",
+    "revokeKeyConfirm": "Revoke the API key {{name}}?",
+    "revokeKey": "Revoke"
   },
   "newUi": {
     "sidebar": {
@@ -1582,7 +1625,9 @@
         "actionOpenCommandPalette": "Open quick search",
         "actionReconnectSession": "Reconnect current session",
         "unavailableAction": "{{type}} (not available)",
-        "actionRequiredError": "Pick an action first"
+        "actionRequiredError": "Pick an action first",
+        "deleteConfirm": "Delete this keybinding?",
+        "resetAllConfirm": "Reset every keybinding to its default?"
       },
       "userProfile": {
         "donateTitle": "Keep Termix alive",
@@ -1917,7 +1962,33 @@
     "pluginSettingsInvalid": "Some settings could not be saved. Check the highlighted fields.",
     "pluginSettingsSaveFailed": "Failed to save settings",
     "pluginSettingsLoadFailed": "Failed to load settings",
-    "featureUnavailable": "{{name}} is unavailable right now. These settings are saved but will not take effect."
+    "featureUnavailable": "{{name}} is unavailable right now. These settings are saved but will not take effect.",
+    "account": "Account",
+    "security": "Security",
+    "apiKeys": "API keys",
+    "data": "Data and sync",
+    "interface": "Interface",
+    "appearance": "Appearance",
+    "keybindings": "Keybindings",
+    "adminGeneral": "General",
+    "adminUsers": "Users",
+    "adminSessions": "Sessions",
+    "adminRoles": "Roles",
+    "adminHostDefaults": "Host defaults",
+    "adminBranding": "Branding",
+    "adminDatabase": "Database",
+    "adminSsl": "SSL",
+    "adminApiKeys": "API keys",
+    "adminAuditLog": "Audit log",
+    "bandYou": "Your account",
+    "bandApp": "This app",
+    "bandPlugins": "Plugins",
+    "bandInstance": "This server",
+    "searchPlaceholder": "Search settings",
+    "noResults": "No settings match.",
+    "pages": "Pages",
+    "instanceSettings": "Server settings",
+    "nothingHere": "Nothing to set here."
   },
   "managerCard": {
     "refresh": "Refresh",
@@ -2091,5 +2162,54 @@
     "resetCore": "Connection and SSH to defaults",
     "resetDone_one": "{{count}} host now follows its defaults.",
     "resetDone_other": "{{count}} hosts now follow their defaults."
+  },
+  "panel": {
+    "clearSearch": "Clear search",
+    "gridView": "Grid",
+    "listView": "List",
+    "compactRows": "Compact rows",
+    "comfortableRows": "Comfortable rows"
+  },
+  "fields": {
+    "secretSaved": "Saved. Type to replace it."
+  },
+  "sharing": {
+    "revokeConfirm": "Remove access for {{name}}?",
+    "revoke": "Remove access"
+  },
+  "manage": {
+    "sections": "Sections",
+    "sectionNeedsAttention": "Something here needs attention",
+    "needsAttention_one": "One thing needs attention.",
+    "needsAttention_other": "{{count}} things need attention.",
+    "bandHost": "Host",
+    "bandFeatures": "Protocols and features",
+    "bandCredential": "Credential",
+    "sshConnection": "SSH connection",
+    "errorAddressRequired": "An address is required.",
+    "errorPortRange": "Use a port between 1 and 65535.",
+    "defaults": "Defaults",
+    "searchHosts": "Search hosts",
+    "searchCredentials": "Search credentials",
+    "searchDefaults": "Search defaults",
+    "addCredential": "Add credential",
+    "nothingMatches": "Nothing matches",
+    "nothingYet": "Nothing here yet",
+    "emptyHostsHint": "Add a host and it shows up here, in whatever folder you give it.",
+    "emptyCredentialsHint": "Credentials you save can be reused by any host.",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "cannotBeUndone": "This cannot be undone.",
+    "hostCount_one": "{{count}} host",
+    "hostCount_other": "{{count}} hosts",
+    "credentialCount_one": "{{count}} credential",
+    "credentialCount_other": "{{count}} credentials",
+    "newHost": "New host",
+    "newCredential": "New credential",
+    "advanced": "Advanced",
+    "pickHost": "Pick a host to edit",
+    "pickCredential": "Pick a credential to edit",
+    "pickDefaults": "Pick a level of defaults to edit",
+    "pickHint": "Everything about a connection lives here, grouped so you can find it."
   }
 }

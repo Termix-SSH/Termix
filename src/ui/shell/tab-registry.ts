@@ -1,3 +1,4 @@
+import type { ConfirmOptions } from "@/components/surface/surface-scope";
 import type { ComponentType, Ref } from "react";
 import type { HostDraft } from "@termix/plugin-sdk/frontend";
 import type { Host, Tab } from "@/types/ui-types";
@@ -34,6 +35,8 @@ export interface TabShellCallbacks {
   openHostEditor?: (draft?: HostDraft) => void;
   /** Saves a quick-connect tab's host. Core terminal only. */
   saveQuickConnect?: (tab: Tab, host: Host) => Promise<void>;
+  /** Asks a yes or no question over the main area. */
+  confirm?: (options: ConfirmOptions) => Promise<boolean>;
 }
 
 export interface TabRenderProps {

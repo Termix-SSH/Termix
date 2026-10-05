@@ -69,7 +69,7 @@ describe("host sharing settings on reopening the editor", () => {
     );
 
     // The toggle starts from the server value, including false despite its true default.
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("switch"));
     expect(setValue).toHaveBeenCalledWith(
       "session-sharing",
       "allowSessionSharing",

@@ -14,6 +14,7 @@ import { getSSHFolders, isElectron } from "@/main-axios";
 import { connectionOriginAppliesTo } from "./HostEditorData";
 import { useSyncStatus } from "@/hooks/use-sync-status";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
+import type { HostFormErrors } from "@/manage/host-validation";
 import { Select2 } from "@/components/select2";
 import { useHostProtocols } from "./host-protocols";
 import {
@@ -35,6 +36,7 @@ export function HostEditorGeneralTab({
   hosts,
   host,
   simpleMode = false,
+  errors = {},
 }: {
   form: HostEditorForm;
   setField: HostEditorSetField;
@@ -44,6 +46,7 @@ export function HostEditorGeneralTab({
   host: Host | null;
   /** Hides organizational/advanced fields; their values still save unchanged. */
   simpleMode?: boolean;
+  errors?: HostFormErrors;
 }) {
   const { t } = useTranslation();
   const syncLinked = !!useSyncStatus()?.linked;
@@ -210,8 +213,14 @@ export function HostEditorGeneralTab({
               <Input
                 placeholder={t("placeholders.hostAddress")}
                 value={form.ip}
+                aria-invalid={!!errors.ip}
                 onChange={(e) => setField("ip", e.target.value)}
               />
+              {errors.ip && (
+                <span className="text-[10px] text-destructive">
+                  {t(errors.ip)}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

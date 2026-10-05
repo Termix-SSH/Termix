@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
-import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
@@ -200,7 +199,6 @@ export function HostsPanel({
   onEditHost,
   hostTree,
   loading,
-  onEditingChange,
   active = true,
 }: {
   onOpenTab: (
@@ -215,6 +213,7 @@ export function HostsPanel({
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
+  /** Unused since editing moved to the Manage tab. */
   onEditingChange?: (editing: boolean) => void;
   active?: boolean;
 }) {
@@ -238,7 +237,6 @@ export function HostsPanel({
   const hostProtocols = useHostProtocols();
   const sshAuthProviders = useSshAuthProviders();
   const [hostSearch, setHostSearch] = useState("");
-  const [managerEditing, setManagerEditing] = useState(false);
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -345,11 +343,6 @@ export function HostsPanel({
     };
   }, []);
 
-  function handleEditingChange(editing: boolean) {
-    setManagerEditing(editing);
-    onEditingChange?.(editing);
-  }
-
   function toggleSelectionMode() {
     setSelectionMode((v) => !v);
   }
@@ -422,7 +415,7 @@ export function HostsPanel({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-      {!managerEditing && (
+      {
         <div className="flex flex-col px-2 py-1.5 shrink-0 border-b border-border/60 gap-1.5">
           <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60 rounded-none">
             <Search className="size-3 text-muted-foreground/60 shrink-0" />
@@ -1023,7 +1016,7 @@ export function HostsPanel({
             </div>
           </div>
         </div>
-      )}
+      }
       <CustomizeSidebarPanel
         open={customizePanelOpen}
         onOpenChange={setCustomizePanelOpen}
@@ -1031,7 +1024,7 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      {active && !managerEditing && (
+      {active && (
         <div className="flex flex-col flex-1 min-h-0">
           <SidebarTree
             children={
@@ -1068,12 +1061,6 @@ export function HostsPanel({
           />
         </div>
       )}
-
-      <div
-        className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}
-      >
-        <HostManager onEditingChange={handleEditingChange} active={active} />
-      </div>
 
       <HostShareModal
         open={shareModalHost !== null}

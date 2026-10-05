@@ -48,6 +48,7 @@ import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
 import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
 import { useBranding } from "@/contexts/BrandingContext";
+import { BrandPanel, CompactBrand } from "./auth-bits";
 import {
   changeAppLanguage,
   normalizeLanguageCode,
@@ -1228,39 +1229,26 @@ export function Auth({ onLogin }: AuthProps) {
     return (
       <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
         <div className="flex flex-1 overflow-hidden">
-          <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-              }}
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-              <span className="text-4xl font-bold tracking-[0.3em] font-mono">
-                TERMIX
-              </span>
-              <div className="w-8 h-px bg-accent-brand" />
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-                {t("auth.tagline")}
-              </span>
-            </div>
-          </div>
+          <BrandPanel
+            logo={branding.logo}
+            appName={branding.appName}
+            tagline={branding.tagline || t("auth.tagline")}
+          />
 
           <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
-            <div className="w-full max-w-sm flex flex-col gap-6">
+            <div className="w-full max-w-[380px] flex flex-col gap-6 border border-border bg-card p-5">
+              <CompactBrand logo={branding.logo} appName={branding.appName} />
               <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
                   <h1 className="text-xl font-bold">
                     {desktopManualLogoutActive
-                      ? "Local desktop signed out"
-                      : "Local desktop session unavailable"}
+                      ? t("auth.localDesktopSignedOut")
+                      : t("auth.localDesktopUnavailable")}
                   </h1>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {desktopManualLogoutActive
-                      ? "You signed out of the local desktop session. Continue locally to use this device's embedded Termix server again."
-                      : "Termix could not create a local desktop session. Retry the embedded local session instead of registering a new account."}
+                      ? t("auth.localDesktopSignedOutDesc")
+                      : t("auth.localDesktopUnavailableDesc")}
                   </p>
                 </div>
                 <Button
@@ -1270,8 +1258,8 @@ export function Auth({ onLogin }: AuthProps) {
                   onClick={continueLocalDesktopSession}
                 >
                   {desktopManualLogoutActive
-                    ? "Continue with local desktop"
-                    : "Retry local desktop session"}
+                    ? t("auth.continueLocalDesktop")
+                    : t("auth.retryLocalDesktop")}
                 </Button>
                 <Separator />
                 <LanguageRow
@@ -1308,37 +1296,16 @@ export function Auth({ onLogin }: AuthProps) {
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
-        {/* Left decorative panel */}
-        <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-            {branding.logo && (
-              <img
-                src={branding.logo}
-                alt=""
-                className="w-16 h-16 object-contain mb-1"
-              />
-            )}
-            <span className="text-4xl font-bold tracking-[0.3em] font-mono uppercase">
-              {branding.appName}
-            </span>
-            <div className="w-8 h-px bg-accent-brand" />
-            <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-              {branding.tagline || t("auth.tagline")}
-            </span>
-          </div>
-        </div>
+        <BrandPanel
+          logo={branding.logo}
+          appName={branding.appName}
+          tagline={branding.tagline || t("auth.tagline")}
+        />
 
         {/* Right panel */}
         <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
-          <div className="w-full max-w-sm flex flex-col gap-6">
+          <div className="w-full max-w-[380px] flex flex-col gap-6 border border-border bg-card p-5">
+            <CompactBrand logo={branding.logo} appName={branding.appName} />
             {/* TOTP view */}
             {view === "second-factor" && (
               <div className="flex flex-col gap-5">

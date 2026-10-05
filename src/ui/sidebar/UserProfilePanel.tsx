@@ -1,3 +1,4 @@
+import { InlineView, useConfirm } from "@/components/surface/surface-scope";
 import { useState, useRef, useEffect } from "react";
 import { AuthEnrollmentSections } from "./AuthEnrollmentSections";
 import { useTranslation } from "react-i18next";
@@ -27,14 +28,6 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { VersionBadge } from "@/components/version-badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/dialog";
-import {
   AlertCircle,
   ChevronDown,
   Copy,
@@ -56,8 +49,8 @@ import {
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import { NavigationVisibilityToggles } from "./NavigationVisibilityToggles";
 import { InterfacePresetSettings } from "./InterfacePresetSettings";
+import { useSettingsEmbedded } from "@/settings/settings-embed";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
-import { KeybindingsDialog } from "./KeybindingsDialog";
 import {
   ACCENT_PRESET_COLORS,
   applyAccentColor,
@@ -157,7 +150,19 @@ export function AccordionSection({
   hidden?: boolean;
   children: React.ReactNode;
 }) {
+  const embedded = useSettingsEmbedded();
   if (hidden) return null;
+  if (embedded) {
+    if (!open) return null;
+    return (
+      <div
+        id={`${id}-content`}
+        className="flex flex-col border border-border bg-card px-3 pb-3"
+      >
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="border border-border bg-card overflow-hidden">
@@ -253,88 +258,14 @@ export function NewApiKeyDialog({
   };
 
   return (
-    <Dialog
+    <InlineView
       open={open}
       onOpenChange={(nextOpen) => {
         if (nextOpen || !createdToken) onOpenChange(nextOpen);
       }}
-    >
-      <DialogContent className="sm:max-w-md rounded-none border-border bg-card p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
-          <div className="flex items-center gap-2.5">
-            <div className="size-8 border border-border bg-muted flex items-center justify-center shrink-0">
-              <Network className="size-3.5 text-accent-brand" />
-            </div>
-            <div>
-              <DialogTitle className="text-base font-bold leading-none">
-                {t("newUi.sidebar.userProfile.createApiKeyTitle")}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                {t("newUi.sidebar.userProfile.createApiKeyDescription")}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        {createdToken ? (
-          <div className="flex flex-col gap-3 px-5 py-4">
-            <span className="text-xs font-semibold text-accent-brand">
-              {t("newUi.sidebar.userProfile.apiKeyCreatedWarning")}
-            </span>
-            <div className="flex items-center gap-2 border border-border bg-muted/30 px-2 py-2">
-              <code className="min-w-0 flex-1 break-all text-xs text-accent-brand">
-                {createdToken}
-              </code>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                aria-label={t("newUi.sidebar.userProfile.copyApiKey")}
-                onClick={() => {
-                  copyToClipboard(createdToken);
-                  toast.info(t("newUi.sidebar.userProfile.copiedToClipboard"));
-                }}
-              >
-                <Copy className="size-3.5" />
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4 px-5 py-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {t("newUi.sidebar.userProfile.apiKeyNameLabel")}
-              </label>
-              <Input
-                autoFocus
-                placeholder={t(
-                  "newUi.sidebar.userProfile.apiKeyNamePlaceholder",
-                )}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                className="rounded-none bg-muted/50 border-border text-sm h-9"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {t("newUi.sidebar.userProfile.expiryDateLabel")}{" "}
-                <span className="text-muted-foreground/50 normal-case font-medium">
-                  ({t("newUi.sidebar.userProfile.optional")})
-                </span>
-              </label>
-              <Input
-                type="date"
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                className="rounded-none bg-muted/50 border-border text-sm h-9"
-              />
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="px-5 py-3 border-t border-border bg-muted/20">
+      title={t("newUi.sidebar.userProfile.createApiKeyTitle")}
+      footer={
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {createdToken ? (
             <Button
               variant="outline"
@@ -363,9 +294,68 @@ export function NewApiKeyDialog({
               </Button>
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <p className="text-xs text-muted-foreground">
+        {t("newUi.sidebar.userProfile.createApiKeyDescription")}
+      </p>
+      {createdToken ? (
+        <div className="flex flex-col gap-3 px-5 py-4">
+          <span className="text-xs font-semibold text-accent-brand">
+            {t("newUi.sidebar.userProfile.apiKeyCreatedWarning")}
+          </span>
+          <div className="flex items-center gap-2 border border-border bg-muted/30 px-2 py-2">
+            <code className="min-w-0 flex-1 break-all text-xs text-accent-brand">
+              {createdToken}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0"
+              aria-label={t("newUi.sidebar.userProfile.copyApiKey")}
+              onClick={() => {
+                copyToClipboard(createdToken);
+                toast.info(t("newUi.sidebar.userProfile.copiedToClipboard"));
+              }}
+            >
+              <Copy className="size-3.5" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4 px-5 py-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {t("newUi.sidebar.userProfile.apiKeyNameLabel")}
+            </label>
+            <Input
+              autoFocus
+              placeholder={t("newUi.sidebar.userProfile.apiKeyNamePlaceholder")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              className="rounded-none bg-muted/50 border-border text-sm h-9"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {t("newUi.sidebar.userProfile.expiryDateLabel")}{" "}
+              <span className="text-muted-foreground/50 normal-case font-medium">
+                ({t("newUi.sidebar.userProfile.optional")})
+              </span>
+            </label>
+            <Input
+              type="date"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value)}
+              className="rounded-none bg-muted/50 border-border text-sm h-9"
+            />
+          </div>
+        </div>
+      )}
+    </InlineView>
   );
 }
 
@@ -485,7 +475,13 @@ export function UserProfilePanel({
   onLogout,
   userPrefs,
   onPrefsChange,
+  section,
+  onOpenSettingsPage,
 }: {
+  /** Shows just this section, flat, as a Settings page. */
+  section?: string;
+  /** Moves the Settings tab to another page. */
+  onOpenSettingsPage?: (id: string) => void;
   username?: string;
   onLogout?: () => void;
   userPrefs?: {
@@ -509,6 +505,7 @@ export function UserProfilePanel({
   }) => void;
 }) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const themeLabel: Record<ThemeId, string> = {
     system: t("newUi.sidebar.userProfile.themeSystem"),
     light: t("newUi.sidebar.userProfile.themeLight"),
@@ -603,7 +600,6 @@ export function UserProfilePanel({
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
   });
-  const [keybindingsDialogOpen, setKeybindingsDialogOpen] = useState(false);
   // Sidebar display customization (density, tags, tray trigger, status
   // colors) now lives in the dedicated Customize Sidebar panel opened from
   // the Hosts toolbar, not here -- resetToDefaults still needs write access.
@@ -1182,9 +1178,18 @@ export function UserProfilePanel({
   }
 
   const canChangePasword = !isExternal || isDualAuth;
+  const isOpen = (id: string) =>
+    section ? section === id : openSections.has(id as UserProfileSection);
+  const shows = (id: string) => !section || section === id;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 p-3">
+    <div
+      className={
+        section
+          ? "flex w-full flex-col gap-2"
+          : "mx-auto flex w-full max-w-5xl flex-col gap-2 p-3"
+      }
+    >
       <NewApiKeyDialog
         open={newKeyOpen}
         onOpenChange={setNewKeyOpen}
@@ -1193,30 +1198,32 @@ export function UserProfilePanel({
       />
 
       {/* Donate banner */}
-      <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-          {t("newUi.sidebar.userProfile.donateTitle")}
+      {shows("account") && (
+        <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-brand">
+            {t("newUi.sidebar.userProfile.donateTitle")}
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            {t("newUi.sidebar.userProfile.donateDescription")}
+          </p>
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            {t("newUi.sidebar.userProfile.donateMilestones")}
+          </p>
+          <a
+            href="https://donate.termix.site/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-accent-brand text-white px-2 py-1 hover:opacity-90 transition-opacity"
+          >
+            {t("newUi.sidebar.userProfile.donateButton")}
+          </a>
         </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
-          {t("newUi.sidebar.userProfile.donateDescription")}
-        </p>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
-          {t("newUi.sidebar.userProfile.donateMilestones")}
-        </p>
-        <a
-          href="https://donate.termix.site/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-accent-brand text-white px-2 py-1 hover:opacity-90 transition-opacity"
-        >
-          {t("newUi.sidebar.userProfile.donateButton")}
-        </a>
-      </div>
+      )}
 
       {/* Storage mode toggle — only meaningful once a remote server is
           connected; with no sync there's nowhere for "cloud" to sync to,
           so this stays forced to local storage and hidden. */}
-      {(!isElectron() || isLinked) && (
+      {(!isElectron() || isLinked) && shows("data") && (
         <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("newUi.sidebar.userProfile.storageModeSwitch")}
@@ -1261,7 +1268,7 @@ export function UserProfilePanel({
         id="account"
         label={t("newUi.sidebar.userProfile.sectionAccount")}
         icon={<User className="size-3.5" />}
-        open={openSections.has("account")}
+        open={isOpen("account")}
         onToggle={() => toggle("account")}
       >
         <div className="flex flex-col gap-0 pt-2">
@@ -1447,7 +1454,7 @@ export function UserProfilePanel({
         id="interface"
         label={t("newUi.sidebar.userProfile.sectionInterface")}
         icon={<LayoutTemplate size={13} />}
-        open={openSections.has("interface")}
+        open={isOpen("interface")}
         onToggle={() => toggle("interface")}
       >
         <div className="flex flex-col gap-4 pt-3">
@@ -1464,7 +1471,7 @@ export function UserProfilePanel({
         id="appearance"
         label={t("newUi.sidebar.userProfile.sectionAppearance")}
         icon={<Palette className="size-3.5" />}
-        open={openSections.has("appearance")}
+        open={isOpen("appearance")}
         onToggle={() => toggle("appearance")}
       >
         <div className="flex flex-col gap-4 pt-3">
@@ -1641,7 +1648,7 @@ export function UserProfilePanel({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setKeybindingsDialogOpen(true)}
+                onClick={() => onOpenSettingsPage?.("keybindings")}
               >
                 {t("newUi.sidebar.userProfile.manageShortcuts")}
               </Button>
@@ -1812,7 +1819,7 @@ export function UserProfilePanel({
         id="security"
         label={t("newUi.sidebar.userProfile.sectionSecurity")}
         icon={<Shield className="size-3.5" />}
-        open={openSections.has("security")}
+        open={isOpen("security")}
         onToggle={() => toggle("security")}
       >
         <div className="flex flex-col gap-4 pt-3">
@@ -1833,7 +1840,7 @@ export function UserProfilePanel({
         id="api-keys"
         label={t("newUi.sidebar.userProfile.sectionApiKeys")}
         icon={<Network className="size-3.5" />}
-        open={openSections.has("api-keys")}
+        open={isOpen("api-keys")}
         onToggle={() => toggle("api-keys")}
       >
         <div className="flex flex-col gap-2 pt-3">
@@ -1896,6 +1903,13 @@ export function UserProfilePanel({
                       size="icon"
                       className="size-6 text-muted-foreground hover:text-destructive"
                       onClick={async () => {
+                        const ok = await confirm({
+                          title: t("admin.revokeKeyConfirm", {
+                            name: key.name,
+                          }),
+                          confirmLabel: t("admin.revokeKey"),
+                        });
+                        if (!ok) return;
                         try {
                           await deleteApiKey(key.id);
                           setApiKeys((prev) =>
@@ -1938,7 +1952,7 @@ export function UserProfilePanel({
         id="data"
         label={t("newUi.sidebar.userProfile.sectionData")}
         icon={<Database className="size-3.5" />}
-        open={openSections.has("data")}
+        open={isOpen("data")}
         onToggle={() => toggle("data")}
       >
         <div className="flex flex-col gap-3 pt-3">
@@ -2013,78 +2027,69 @@ export function UserProfilePanel({
           key={plugin.id}
           plugin={plugin}
           scope="user"
-          open={openSections.has(featureSectionId(plugin.id))}
+          open={isOpen(featureSectionId(plugin.id))}
           onToggle={() => toggle(featureSectionId(plugin.id))}
         />
       ))}
 
       {/* Delete account dialog */}
-      <Dialog
+
+      <InlineView
         open={showDeleteConfirm}
         onOpenChange={(open) => {
           setShowDeleteConfirm(open);
           if (!open) setDeletePassword("");
         }}
+        title={t("newUi.sidebar.userProfile.deleteAccount")}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-destructive">
-              {t("newUi.sidebar.userProfile.deleteAccount")}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              {t("newUi.sidebar.userProfile.deleteAccountPermanent")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 mt-1">
-            <div className="flex items-start gap-2.5 border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-              <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-              <span className="text-xs text-destructive">
-                {t("newUi.sidebar.userProfile.deleteAccountWarning")}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {t("newUi.sidebar.userProfile.confirmPasswordLabel")}
-              </label>
-              <Input
-                type="password"
-                placeholder={t(
-                  "newUi.sidebar.userProfile.confirmPasswordDeletePlaceholder",
-                )}
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleDeleteAccount()}
-              />
-            </div>
+        <p className="text-xs text-muted-foreground">
+          {t("newUi.sidebar.userProfile.deleteAccountPermanent")}
+        </p>
+        <div className="flex flex-col gap-3 mt-1">
+          <div className="flex items-start gap-2.5 border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+            <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+            <span className="text-xs text-destructive">
+              {t("newUi.sidebar.userProfile.deleteAccountWarning")}
+            </span>
           </div>
-          <div className="flex items-center justify-end gap-2 mt-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                setDeletePassword("");
-              }}
-            >
-              {t("newUi.sidebar.userProfile.cancel")}
-            </Button>
-            <Button
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={handleDeleteAccount}
-              disabled={deleteLoading || !deletePassword.trim()}
-            >
-              <Trash2 className="size-3.5" />
-              {deleteLoading
-                ? t("newUi.sidebar.userProfile.deleting")
-                : t("newUi.sidebar.userProfile.deleteAccount")}
-            </Button>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {t("newUi.sidebar.userProfile.confirmPasswordLabel")}
+            </label>
+            <Input
+              type="password"
+              placeholder={t(
+                "newUi.sidebar.userProfile.confirmPasswordDeletePlaceholder",
+              )}
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleDeleteAccount()}
+            />
           </div>
-        </DialogContent>
-      </Dialog>
-      <KeybindingsDialog
-        open={keybindingsDialogOpen}
-        onOpenChange={setKeybindingsDialogOpen}
-      />
+        </div>
+        <div className="flex items-center justify-end gap-2 mt-2">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setShowDeleteConfirm(false);
+              setDeletePassword("");
+            }}
+          >
+            {t("newUi.sidebar.userProfile.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={handleDeleteAccount}
+            disabled={deleteLoading || !deletePassword.trim()}
+          >
+            <Trash2 className="size-3.5" />
+            {deleteLoading
+              ? t("newUi.sidebar.userProfile.deleting")
+              : t("newUi.sidebar.userProfile.deleteAccount")}
+          </Button>
+        </div>
+      </InlineView>
     </div>
   );
 }

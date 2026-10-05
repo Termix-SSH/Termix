@@ -1,18 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOptionalConnectionLog } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import { Button } from "@/components/button.tsx";
 import { cn } from "@/lib/utils.ts";
-import {
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Info,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 interface ConnectionLogPanelProps {
@@ -23,8 +15,23 @@ interface ConnectionLogPanelProps {
   className?: string;
 }
 
-const COLLAPSED_HEIGHT = "h-[140px]";
-const EXPANDED_HEIGHT = "h-[45%] min-h-[240px]";
+const COLLAPSED_HEIGHT = "h-[136px]";
+const EXPANDED_HEIGHT = "h-[46%] min-h-[220px]";
+
+/** A dot per line, so the log reads as one column of text. */
+const DOT: Record<string, string> = {
+  info: "bg-muted-foreground/50",
+  success: "bg-accent-brand",
+  warning: "bg-warning",
+  error: "bg-destructive",
+};
+
+const TEXT: Record<string, string> = {
+  info: "text-foreground-secondary",
+  success: "text-foreground",
+  warning: "text-warning",
+  error: "text-destructive",
+};
 
 export function ConnectionLogPanel({
   isConnecting,
@@ -39,6 +46,7 @@ export function ConnectionLogPanel({
     connectionLog ?? {};
   const lastLogRef = useRef<HTMLDivElement>(null);
   const [manuallyCollapsed, setManuallyCollapsed] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (hasConnectionError && setIsExpanded) {
@@ -56,7 +64,7 @@ export function ConnectionLogPanel({
 
   useEffect(() => {
     if (lastLogRef.current) {
-      lastLogRef.current.scrollIntoView({ block: "end" });
+      lastLogRef.current.scrollIntoView?.({ block: "end" });
     }
   }, [logs]);
 
@@ -88,113 +96,101 @@ export function ConnectionLogPanel({
       .join("\n");
 
     const ok = await copyToClipboard(logsText);
-    if (ok) toast.success(t("sshAuth.connectionLogCopied"));
-    else toast.error(t("sshAuth.connectionLogCopyFailed"));
-  };
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "info":
-        return <Info className="h-4 w-4 text-blue-500 shrink-0" />;
-      case "success":
-        return <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />;
-      case "warning":
-        return <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />;
-      case "error":
-        return <XCircle className="h-4 w-4 text-red-500 shrink-0" />;
-      default:
-        return <Info className="h-4 w-4 shrink-0" />;
-    }
-  };
-
-  const getTextColor = (type: string) => {
-    switch (type) {
-      case "info":
-        return "text-blue-400";
-      case "success":
-        return "text-green-400";
-      case "warning":
-        return "text-yellow-400";
-      case "error":
-        return "text-red-400";
-      default:
-        return "text-muted-foreground";
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+      toast.success(t("sshAuth.connectionLogCopied"));
+    } else {
+      toast.error(t("sshAuth.connectionLogCopyFailed"));
     }
   };
 
   return (
     <div
       className={cn(
-        "relative z-10 shrink-0 flex flex-col bg-bg-base",
+        "relative z-10 flex shrink-0 flex-col bg-surface-dim/60",
         position === "bottom"
           ? "border-t border-border"
           : "border-b border-border",
         expanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
-        "transition-[height] duration-150",
+        "transition-[height] duration-200",
         className,
       )}
     >
-      <div className="flex items-center justify-between px-3 py-1.5 shrink-0 border-b border-border/60">
-        <Button
-          variant="ghost"
-          size="sm"
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/60 px-2 pr-1.5">
+        <button
+          type="button"
           onClick={handleToggle}
-          className="flex items-center gap-2 -ml-2"
+          aria-expanded={expanded}
+          className="flex min-w-0 items-center gap-1.5 px-1.5 py-1 text-foreground-secondary transition-colors hover:text-foreground"
         >
           {expanded ? (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="size-3.5 shrink-0" />
           ) : (
-            <ChevronUp className="h-4 w-4" />
+            <ChevronUp className="size-3.5 shrink-0" />
           )}
-          <span className="text-sm font-medium">
-            {t("sshAuth.connectionLogTitle")} ({logs.length})
+          <span className="text-[10px] font-semibold uppercase tracking-widest">
+            {t("sshAuth.connectionLogTitle")}
           </span>
-        </Button>
+        </button>
+
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {logs.length}
+        </span>
+
         {logs.length > 0 && (
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={copyLogsToClipboard}
             title={t("sshAuth.connectionLogCopy")}
+            className="ml-auto text-muted-foreground"
           >
-            <Copy className="h-4 w-4" />
+            {copied ? (
+              <Check className="size-3.5 text-accent-brand" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
           </Button>
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden thin-scrollbar">
-        <div className="px-3 py-2">
-          {logs.length === 0 ? (
-            <div className="py-4 text-center text-sm text-muted-foreground">
-              {isConnecting
-                ? t("sshAuth.connectionLogWaiting")
-                : t("sshAuth.connectionLogEmpty")}
-            </div>
-          ) : (
-            <div className="space-y-1 font-mono text-xs">
-              {logs.map((log, index) => (
-                <div
-                  key={log.id}
-                  ref={index === logs.length - 1 ? lastLogRef : null}
-                  className="flex items-start gap-2"
+      <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        {logs.length === 0 ? (
+          <p className="px-3 py-4 text-xs text-muted-foreground">
+            {isConnecting
+              ? t("sshAuth.connectionLogWaiting")
+              : t("sshAuth.connectionLogEmpty")}
+          </p>
+        ) : (
+          <div className="px-2 py-1.5 font-mono text-[11px] leading-[1.7]">
+            {logs.map((log, index) => (
+              <div
+                key={log.id}
+                ref={index === logs.length - 1 ? lastLogRef : null}
+                className="flex items-baseline gap-2 px-1 hover:bg-foreground/[0.03]"
+              >
+                <span className="shrink-0 tabular-nums text-muted-foreground/70">
+                  {log.timestamp.toLocaleTimeString([], { hour12: false })}
+                </span>
+                <span
+                  className={cn(
+                    "size-1.5 shrink-0 translate-y-[-1px] rounded-full",
+                    DOT[log.type] ?? DOT.info,
+                  )}
+                />
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 whitespace-pre-wrap break-all",
+                    TEXT[log.type] ?? TEXT.info,
+                  )}
                 >
-                  <span className="shrink-0 text-muted-foreground">
-                    {log.timestamp.toLocaleTimeString()}
-                  </span>
-                  {getIcon(log.type)}
-                  <span
-                    className={cn(
-                      "flex-1 min-w-0 break-all whitespace-pre-wrap",
-                      getTextColor(log.type),
-                    )}
-                  >
-                    {log.message}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                  {log.message}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

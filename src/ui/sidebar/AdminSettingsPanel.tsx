@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useBranding } from "@/contexts/BrandingContext";
@@ -102,11 +103,15 @@ const USERS_PAGE_SIZE = 25;
 export function AdminSettingsPanel({
   onEditingChange,
   onOpenHostTab,
+  section,
 }: {
   onEditingChange?: (editing: boolean) => void;
   onOpenHostTab?: (host: Host) => void;
+  /** Shows just this section, flat, as a Settings page. */
+  section?: AdminSection;
 } = {}) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [openSections, setOpenSections] = useState<
     Set<AdminSection | FeatureSectionId>
   >(() => new Set(["general"]));
@@ -567,6 +572,13 @@ export function AdminSettingsPanel({
 
   async function handleDeleteEditUser() {
     if (!editUserTarget) return;
+    const ok = await confirm({
+      title: t("admin.deleteUserConfirm", {
+        username: editUserTarget.username,
+      }),
+      description: t("manage.cannotBeUndone"),
+    });
+    if (!ok) return;
     setEditUserLoading(true);
     try {
       await deleteUser(editUserTarget.username);
@@ -734,6 +746,9 @@ export function AdminSettingsPanel({
     }
   }
 
+  const isOpen = (id: AdminSection | FeatureSectionId) =>
+    section ? section === id : openSections.has(id);
+
   if (manageUser) {
     return (
       <AdminUserManagePanel
@@ -758,9 +773,15 @@ export function AdminSettingsPanel({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 p-3 flex-1 min-h-0 overflow-y-auto">
+    <div
+      className={
+        section
+          ? "flex w-full flex-col gap-2"
+          : "mx-auto flex w-full max-w-5xl flex-col gap-2 p-3 flex-1 min-h-0 overflow-y-auto"
+      }
+    >
       <AdminGeneralSettingsSection
-        open={openSections.has("general")}
+        open={isOpen("general")}
         onToggle={() => toggle("general")}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
         onSaveNotificationPrivateEndpoints={
@@ -790,7 +811,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminUsersSection
-        open={openSections.has("users")}
+        open={isOpen("users")}
         onToggle={() => toggle("users")}
         users={users}
         setUsers={setUsers}
@@ -812,7 +833,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminSessionsSection
-        open={openSections.has("sessions")}
+        open={isOpen("sessions")}
         onToggle={() => toggle("sessions")}
         sessions={sessions}
         setSessions={setSessions}
@@ -820,7 +841,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminRolesSection
-        open={openSections.has("roles")}
+        open={isOpen("roles")}
         onToggle={() => toggle("roles")}
         roles={roles}
         setRoles={setRoles}
@@ -837,12 +858,12 @@ export function AdminSettingsPanel({
       />
 
       <AdminHostDefaultsSection
-        open={openSections.has("host-defaults")}
+        open={isOpen("host-defaults")}
         onToggle={() => toggle("host-defaults")}
       />
 
       <AdminBrandingSection
-        open={openSections.has("branding")}
+        open={isOpen("branding")}
         onToggle={() => toggle("branding")}
         settings={brandingSettings}
         setSettings={setBrandingSettings}
@@ -852,7 +873,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminDatabaseSection
-        open={openSections.has("database")}
+        open={isOpen("database")}
         onToggle={() => toggle("database")}
         importFile={importFile}
         setImportFile={setImportFile}
@@ -863,7 +884,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminSSLSection
-        open={openSections.has("ssl")}
+        open={isOpen("ssl")}
         onToggle={() => toggle("ssl")}
         status={tlsStatus}
         manualCertDraft={manualCertDraft}
@@ -875,7 +896,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminApiKeysSection
-        open={openSections.has("api-keys")}
+        open={isOpen("api-keys")}
         onToggle={() => toggle("api-keys")}
         apiKeys={apiKeys}
         setApiKeys={setApiKeys}
@@ -896,7 +917,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminAuditLogSection
-        open={openSections.has("audit-log")}
+        open={isOpen("audit-log")}
         onToggle={() => toggle("audit-log")}
         users={users}
       />
@@ -906,7 +927,7 @@ export function AdminSettingsPanel({
           key={plugin.id}
           plugin={plugin}
           scope="admin"
-          open={openSections.has(featureSectionId(plugin.id))}
+          open={isOpen(featureSectionId(plugin.id))}
           onToggle={() => toggle(featureSectionId(plugin.id))}
         />
       ))}

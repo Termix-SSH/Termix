@@ -117,7 +117,7 @@ export function SettingsFieldRow({
             {label(field.labelKey)}
           </span>
           {error && (
-            <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
+            <span className="text-[10px] font-bold text-warning border border-warning/40 px-1 shrink-0">
               {t("common.error")}
             </span>
           )}

@@ -9,7 +9,16 @@ vi.mock("@/api/open-tabs-api", async (importOriginal) => ({
 }));
 vi.mock("@/main-axios", () => ({ saveUserPreferences: vi.fn() }));
 
-const { KeybindingsDialog } = await import("../../sidebar/KeybindingsDialog");
+const { KeybindingsSettings } = await import("@/settings/KeybindingsSettings");
+const { SurfaceScope } = await import("@/components/surface/surface-scope");
+
+function renderSettings() {
+  return render(
+    <SurfaceScope>
+      <KeybindingsSettings />
+    </SurfaceScope>,
+  );
+}
 const {
   registerKeybindingAction,
   registerKeybindingDefault,
@@ -31,7 +40,7 @@ const combo = {
   meta: false,
 };
 
-describe("KeybindingsDialog", () => {
+describe("KeybindingsSettings", () => {
   it("lists registered defaults and keeps a binding whose plugin is off", async () => {
     registerKeybindingDefault({
       id: "default-x",
@@ -49,7 +58,7 @@ describe("KeybindingsDialog", () => {
         updatedAt: "",
       },
     ]);
-    render(<KeybindingsDialog open onOpenChange={() => {}} />);
+    renderSettings();
     expect(await screen.findByText("sample:builtInX")).toBeTruthy();
     expect(
       await screen.findByText("newUi.sidebar.keybindings.unavailableAction"),
@@ -64,7 +73,7 @@ describe("KeybindingsDialog", () => {
       scope: "session",
       editor: () => <span>sample editor</span>,
     });
-    render(<KeybindingsDialog open onOpenChange={() => {}} />);
+    renderSettings();
     fireEvent.click(
       await screen.findByText("newUi.sidebar.keybindings.addBinding"),
     );

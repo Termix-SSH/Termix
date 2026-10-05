@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -52,6 +53,7 @@ export function AdminApiKeysSection({
   newKeyLoading,
 }: AdminApiKeysSectionProps) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
 
   return (
     <AccordionSection
@@ -244,6 +246,11 @@ export function AdminApiKeysSection({
               size="icon"
               className="size-6 text-muted-foreground hover:text-destructive shrink-0"
               onClick={async () => {
+                const ok = await confirm({
+                  title: t("admin.revokeKeyConfirm", { name: key.name }),
+                  confirmLabel: t("admin.revokeKey"),
+                });
+                if (!ok) return;
                 try {
                   await deleteApiKey(key.id);
                   setApiKeys((prev) => prev.filter((k) => k.id !== key.id));

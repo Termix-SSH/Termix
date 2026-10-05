@@ -22,6 +22,7 @@ import { listPanes, mapTabIds } from "./split/split-tree";
 const CORE_UNSAVED = new Set([
   "dashboard",
   "host-manager",
+  "settings",
   "user-profile",
   "admin-settings",
   "split-screen",

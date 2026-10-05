@@ -23,3 +23,5 @@ drizzle/
 
 # Helm templates contain Go template syntax, not plain YAML
 charts/*/templates/
+
+src/ui/settings/settings-search-index.ts

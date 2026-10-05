@@ -52,7 +52,7 @@ export function ManagerCardShell({
     >
       {error ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
-          <AlertTriangle className="size-6 text-yellow-500" />
+          <AlertTriangle className="size-6 text-warning" />
           <span className="text-xs text-muted-foreground">{error.message}</span>
           {error.code === "SUDO_REQUIRED" && (
             <span className="text-[10px] text-muted-foreground">

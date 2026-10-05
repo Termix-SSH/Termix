@@ -1,3 +1,4 @@
+import { InlineView } from "@/components/surface/surface-scope";
 import { getErrorMessage } from "../lib/error-message.js";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,13 +8,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Checkbox } from "@/components/checkbox";
 import { Input } from "@/components/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
 import { exportAllSSHHosts, type SSHHostWithStatus } from "@/main-axios";
 import { isFolder } from "@/sidebar/SidebarTree";
 import {
@@ -220,126 +214,13 @@ export function HostExportDialog({
   const canExport = !loading && count > 0;
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="flex flex-col w-[95vw] sm:max-w-6xl max-h-[85dvh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>{t("hosts.export.title")}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 min-w-0 overflow-y-auto md:overflow-visible">
-          {/* Scope + host picker */}
-          <div className="flex flex-col gap-2 md:w-56 shrink-0 min-h-0">
-            <div className="text-xs text-muted-foreground">
-              {t("hosts.export.scope")}
-            </div>
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                variant={scope === "all" ? "default" : "outline"}
-                onClick={() => setScope("all")}
-              >
-                {t("hosts.export.scopeAll")}
-              </Button>
-              <Button
-                size="sm"
-                variant={scope === "selected" ? "default" : "outline"}
-                onClick={() => setScope("selected")}
-              >
-                {t("hosts.export.scopeSelected")}
-              </Button>
-            </div>
-            <div className="relative">
-              <Search className="size-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-7 h-8 text-xs"
-                placeholder={t("hosts.export.searchHosts")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                disabled={scope === "all"}
-              />
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto max-h-64 flex flex-col gap-1 pr-1">
-              {visibleHosts.map((host) => {
-                const key = hostKey(host as unknown as Record<string, unknown>);
-                return (
-                  <label
-                    key={String(host.id)}
-                    className="flex items-center gap-2 text-xs cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={scope === "all" || selectedKeys.has(key)}
-                      disabled={scope === "all"}
-                      onCheckedChange={() => toggleHost(key)}
-                    />
-                    <span className="truncate">{host.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Field groups */}
-          <div className="flex flex-col gap-2 md:w-48 shrink-0 md:overflow-y-auto">
-            <div className="text-xs text-muted-foreground">
-              {t("hosts.export.include")}
-            </div>
-            <label className="flex items-center gap-2 text-xs opacity-60">
-              <Checkbox checked disabled />
-              <span>{t("hosts.export.groupConnection")}</span>
-            </label>
-            <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <Checkbox
-                checked={withCredentials}
-                onCheckedChange={(v) => setWithCredentials(v === true)}
-              />
-              <span>{t("hosts.export.groupCredentials")}</span>
-            </label>
-            {GROUPS.filter((g) => g.key !== "connection").map((group) => (
-              <label
-                key={group.key}
-                className="flex items-center gap-2 text-xs cursor-pointer"
-              >
-                <Checkbox
-                  checked={groups.has(group.key)}
-                  onCheckedChange={() => toggleGroup(group.key)}
-                />
-                <span>{t(`hosts.export.${group.label}`)}</span>
-              </label>
-            ))}
-          </div>
-
-          {/* Preview */}
-          <div className="flex flex-col gap-2 flex-1 min-w-0 min-h-0">
-            <div className="text-xs text-muted-foreground">
-              {t("hosts.export.preview")}
-            </div>
-            <pre className="flex-1 w-full min-w-0 overflow-auto max-h-64 md:max-h-none rounded-sm bg-muted border border-border p-2 text-[11px] leading-relaxed whitespace-pre">
-              {preview}
-            </pre>
-          </div>
-        </div>
-
-        <div className="shrink-0 text-xs text-muted-foreground">
-          {count === 0 ? (
-            t("hosts.export.noneSelected")
-          ) : (
-            <span className="flex flex-wrap gap-x-3">
-              <span>
-                {t("hosts.export.summary", {
-                  selected: count,
-                  total: exportableHosts.length,
-                })}
-              </span>
-              <span>
-                {withCredentials
-                  ? t("hosts.export.credentialsIncluded")
-                  : t("hosts.export.credentialsExcluded")}
-              </span>
-            </span>
-          )}
-        </div>
-
-        <DialogFooter className="shrink-0">
+    <InlineView
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      title={t("hosts.export.title")}
+      width="wide"
+      footer={
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             {t("hosts.export.cancel")}
           </Button>
@@ -352,8 +233,121 @@ export function HostExportDialog({
             <Download className="size-3.5 mr-2" />
             {t("hosts.export.confirm")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 min-w-0 overflow-y-auto md:overflow-visible">
+        {/* Scope + host picker */}
+        <div className="flex flex-col gap-2 md:w-56 shrink-0 min-h-0">
+          <div className="text-xs text-muted-foreground">
+            {t("hosts.export.scope")}
+          </div>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={scope === "all" ? "default" : "outline"}
+              onClick={() => setScope("all")}
+            >
+              {t("hosts.export.scopeAll")}
+            </Button>
+            <Button
+              size="sm"
+              variant={scope === "selected" ? "default" : "outline"}
+              onClick={() => setScope("selected")}
+            >
+              {t("hosts.export.scopeSelected")}
+            </Button>
+          </div>
+          <div className="relative">
+            <Search className="size-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-7 h-8 text-xs"
+              placeholder={t("hosts.export.searchHosts")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              disabled={scope === "all"}
+            />
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto max-h-64 flex flex-col gap-1 pr-1">
+            {visibleHosts.map((host) => {
+              const key = hostKey(host as unknown as Record<string, unknown>);
+              return (
+                <label
+                  key={String(host.id)}
+                  className="flex items-center gap-2 text-xs cursor-pointer"
+                >
+                  <Checkbox
+                    checked={scope === "all" || selectedKeys.has(key)}
+                    disabled={scope === "all"}
+                    onCheckedChange={() => toggleHost(key)}
+                  />
+                  <span className="truncate">{host.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Field groups */}
+        <div className="flex flex-col gap-2 md:w-48 shrink-0 md:overflow-y-auto">
+          <div className="text-xs text-muted-foreground">
+            {t("hosts.export.include")}
+          </div>
+          <label className="flex items-center gap-2 text-xs opacity-60">
+            <Checkbox checked disabled />
+            <span>{t("hosts.export.groupConnection")}</span>
+          </label>
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox
+              checked={withCredentials}
+              onCheckedChange={(v) => setWithCredentials(v === true)}
+            />
+            <span>{t("hosts.export.groupCredentials")}</span>
+          </label>
+          {GROUPS.filter((g) => g.key !== "connection").map((group) => (
+            <label
+              key={group.key}
+              className="flex items-center gap-2 text-xs cursor-pointer"
+            >
+              <Checkbox
+                checked={groups.has(group.key)}
+                onCheckedChange={() => toggleGroup(group.key)}
+              />
+              <span>{t(`hosts.export.${group.label}`)}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Preview */}
+        <div className="flex flex-col gap-2 flex-1 min-w-0 min-h-0">
+          <div className="text-xs text-muted-foreground">
+            {t("hosts.export.preview")}
+          </div>
+          <pre className="flex-1 w-full min-w-0 overflow-auto max-h-64 md:max-h-none rounded-sm bg-muted border border-border p-2 text-[11px] leading-relaxed whitespace-pre">
+            {preview}
+          </pre>
+        </div>
+      </div>
+
+      <div className="shrink-0 text-xs text-muted-foreground">
+        {count === 0 ? (
+          t("hosts.export.noneSelected")
+        ) : (
+          <span className="flex flex-wrap gap-x-3">
+            <span>
+              {t("hosts.export.summary", {
+                selected: count,
+                total: exportableHosts.length,
+              })}
+            </span>
+            <span>
+              {withCredentials
+                ? t("hosts.export.credentialsIncluded")
+                : t("hosts.export.credentialsExcluded")}
+            </span>
+          </span>
+        )}
+      </div>
+    </InlineView>
   );
 }

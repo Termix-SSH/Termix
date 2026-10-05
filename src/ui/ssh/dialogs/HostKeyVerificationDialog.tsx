@@ -1,5 +1,10 @@
-import React, { useState } from "react";
-import { Button } from "@/components/button.tsx";
+import { useState } from "react";
+import { PanePrompt } from "@/components/surface/surface-scope";
+import {
+  PROMPT_BUTTON,
+  PROMPT_DESTRUCTIVE_BUTTON,
+  PROMPT_PRIMARY_BUTTON,
+} from "@/components/surface/prompt-styles";
 import { Shield, AlertTriangle, Copy, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -18,6 +23,47 @@ interface HostKeyVerificationDialogProps {
   onAccept: () => void;
   onReject: () => void;
   backgroundColor?: string;
+}
+
+const formatFingerprint = (fp: string) => fp.match(/.{1,2}/g)?.join(":") || fp;
+
+function FingerprintRow({
+  label,
+  value,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 bg-muted/50 border border-border p-3 font-mono text-xs break-all">
+          {formatFingerprint(value)}
+        </div>
+        <button
+          type="button"
+          onClick={onCopy}
+          title={t("common.copy")}
+          aria-label={t("common.copy")}
+          className={`${PROMPT_BUTTON} size-8 shrink-0 px-0`}
+        >
+          {copied ? (
+            <Check className="size-4 text-accent-brand" />
+          ) : (
+            <Copy className="size-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function HostKeyVerificationDialog({
@@ -50,168 +96,101 @@ export function HostKeyVerificationDialog({
     }
   };
 
-  const formatFingerprint = (fp: string) =>
-    fp.match(/.{1,2}/g)?.join(":") || fp;
+  const changed = scenario === "changed";
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
-      <div
-        className="absolute inset-0 bg-canvas rounded-md"
-        style={{ backgroundColor: backgroundColor || undefined }}
-      />
-      <div className="bg-card border border-border w-full max-w-lg mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            {scenario === "new" ? (
-              <Shield className="size-4 text-accent-brand" />
-            ) : (
-              <AlertTriangle className="size-4 text-destructive" />
-            )}
-            <h3 className="text-xs font-bold uppercase tracking-widest">
-              {scenario === "new"
-                ? t("hostKey.verifyNewHost")
-                : t("hostKey.keyChangedWarning")}
-            </h3>
-          </div>
-          <p className="text-[10px] font-mono font-bold tracking-tight text-muted-foreground mt-1">
-            {hostname || ip}:{port}
-          </p>
-        </div>
-
-        <div className="p-4 flex flex-col gap-4">
-          {scenario === "new" ? (
-            <>
-              <div className="flex items-start gap-3 p-3 border border-border bg-muted/10">
-                <Shield className="size-4 text-accent-brand shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest">
-                    {t("hostKey.firstConnectionTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("hostKey.firstConnectionDescription")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("hostKey.fingerprint")} ({algorithm.toUpperCase()})
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-muted/50 border border-border p-3 font-mono text-xs break-all">
-                    {formatFingerprint(fingerprint)}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => copyFingerprint(fingerprint)}
-                    className="rounded-none shrink-0"
-                  >
-                    {copiedFingerprint ? (
-                      <Check className="size-4 text-accent-brand" />
-                    ) : (
-                      <Copy className="size-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-[10px] text-muted-foreground">
-                {t("hostKey.verifyInstructions")}
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="flex items-start gap-3 p-3 border border-destructive/20 bg-destructive/10">
-                <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">
-                    {t("hostKey.securityWarning")}
-                  </p>
-                  <p className="text-xs text-destructive/80 mt-1">
-                    {t("hostKey.keyChangedDescription")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hostKey.previousKey")}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-muted/50 border border-border p-3 font-mono text-xs break-all">
-                      {formatFingerprint(oldFingerprint || "")}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        copyFingerprint(oldFingerprint || "", true)
-                      }
-                      className="rounded-none shrink-0"
-                    >
-                      {copiedOldFingerprint ? (
-                        <Check className="size-4 text-accent-brand" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hostKey.newFingerprint")}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-muted/50 border border-border p-3 font-mono text-xs break-all">
-                      {formatFingerprint(fingerprint)}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => copyFingerprint(fingerprint)}
-                      className="rounded-none shrink-0"
-                    >
-                      {copiedFingerprint ? (
-                        <Check className="size-4 text-accent-brand" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-border flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onReject}
-            className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-          >
+    <PanePrompt
+      open
+      layer="connection"
+      backgroundColor={backgroundColor}
+      tone={changed ? "destructive" : "default"}
+      icon={
+        changed ? (
+          <AlertTriangle className="size-4" />
+        ) : (
+          <Shield className="size-4" />
+        )
+      }
+      title={
+        changed ? t("hostKey.keyChangedWarning") : t("hostKey.verifyNewHost")
+      }
+      description={
+        <span className="font-mono">
+          {hostname || ip}:{port}
+        </span>
+      }
+      className="max-w-lg"
+      actions={
+        <>
+          <button type="button" onClick={onReject} className={PROMPT_BUTTON}>
             {t("common.cancel")}
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
             onClick={onAccept}
-            variant="outline"
             className={
-              scenario === "changed"
-                ? "border-destructive/40 text-destructive hover:bg-destructive/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
-                : "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
+              changed ? PROMPT_DESTRUCTIVE_BUTTON : PROMPT_PRIMARY_BUTTON
             }
           >
-            {scenario === "new"
-              ? t("hostKey.acceptAndContinue")
-              : t("hostKey.acceptNewKey")}
-          </Button>
-        </div>
+            {changed
+              ? t("hostKey.acceptNewKey")
+              : t("hostKey.acceptAndContinue")}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        {changed ? (
+          <>
+            <div className="flex items-start gap-3 p-3 border border-destructive/20 bg-destructive/10">
+              <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">
+                  {t("hostKey.securityWarning")}
+                </p>
+                <p className="text-xs text-destructive/80 mt-1">
+                  {t("hostKey.keyChangedDescription")}
+                </p>
+              </div>
+            </div>
+            <FingerprintRow
+              label={t("hostKey.previousKey")}
+              value={oldFingerprint || ""}
+              copied={copiedOldFingerprint}
+              onCopy={() => copyFingerprint(oldFingerprint || "", true)}
+            />
+            <FingerprintRow
+              label={t("hostKey.newFingerprint")}
+              value={fingerprint}
+              copied={copiedFingerprint}
+              onCopy={() => copyFingerprint(fingerprint)}
+            />
+          </>
+        ) : (
+          <>
+            <div className="flex items-start gap-3 p-3 border border-border bg-muted/10">
+              <Shield className="size-4 text-accent-brand shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest">
+                  {t("hostKey.firstConnectionTitle")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("hostKey.firstConnectionDescription")}
+                </p>
+              </div>
+            </div>
+            <FingerprintRow
+              label={`${t("hostKey.fingerprint")} (${algorithm.toUpperCase()})`}
+              value={fingerprint}
+              copied={copiedFingerprint}
+              onCopy={() => copyFingerprint(fingerprint)}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              {t("hostKey.verifyInstructions")}
+            </p>
+          </>
+        )}
       </div>
-    </div>
+    </PanePrompt>
   );
 }

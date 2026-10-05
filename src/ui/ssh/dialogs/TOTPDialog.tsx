@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
+import { PanePrompt } from "@/components/surface/surface-scope";
+import {
+  PROMPT_BUTTON,
+  PROMPT_PRIMARY_BUTTON,
+} from "@/components/surface/prompt-styles";
 import { Shield, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { MFAPromptMode } from "@termix/plugin-sdk/frontend";
@@ -16,6 +20,9 @@ interface TOTPDialogProps {
   onCancel: () => void;
   backgroundColor?: string;
 }
+
+const CODE_INPUT =
+  "rounded-none bg-muted/50 border-border text-center text-sm tracking-widest";
 
 export function TOTPDialog({
   isOpen,
@@ -68,99 +75,73 @@ export function TOTPDialog({
 
   const label = prompt || (isTotp ? t("sshAuth.totpCodeLabel") : undefined);
 
+  const cancel = (
+    <button type="button" onClick={onCancel} className={PROMPT_BUTTON}>
+      {t("common.cancel")}
+    </button>
+  );
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
-      <div
-        className="absolute inset-0 bg-canvas rounded-md"
-        style={{ backgroundColor: backgroundColor || undefined }}
-      />
-      <div className="bg-card border border-border w-full max-w-sm mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="size-4 text-accent-brand" />
-            <h3 className="text-xs font-bold uppercase tracking-widest">
-              {title}
-            </h3>
-          </div>
-          {label && (
-            <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground mt-1">
-              {label}
+    <PanePrompt
+      open
+      layer="connection"
+      backgroundColor={backgroundColor}
+      icon={<Shield className="size-4" />}
+      title={title}
+      description={label}
+    >
+      {showWaiting ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3 py-1">
+            <Loader2 className="size-4 animate-spin text-accent-brand shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              {t("sshAuth.mfaWaitingApproval")}
             </p>
-          )}
-        </div>
-        {showWaiting ? (
-          <div className="p-4 flex flex-col gap-4">
-            <div className="flex items-center gap-3 py-2">
-              <Loader2 className="size-4 animate-spin text-accent-brand shrink-0" />
-              <p className="text-xs text-muted-foreground">
-                {t("sshAuth.mfaWaitingApproval")}
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onCancel}
-                className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-              >
-                {t("common.cancel")}
-              </Button>
-            </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
-            {isPush ? null : isMenu ? (
-              <Input
-                id="totpCode"
-                name="totpCode"
-                type="text"
-                autoFocus
-                placeholder={t("sshAuth.mfaMenuPlaceholder")}
-                className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
-              />
-            ) : allowsPushKeyword ? (
-              <Input
-                id="totpCode"
-                name="totpCode"
-                type="text"
-                autoFocus
-                placeholder={t("sshAuth.mfaCodeOrPushPlaceholder")}
-                className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
-              />
-            ) : (
-              <Input
-                id="totpCode"
-                name="totpCode"
-                type="text"
-                autoFocus
-                // Some Secure Auth codes can be longer than 6 digits, so allow up to 8 digits here.
-                maxLength={8}
-                pattern="[0-9]*"
-                inputMode="numeric"
-                placeholder="000000"
-                className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
-              />
-            )}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onCancel}
-                className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                variant="outline"
-                className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
-              >
-                {isPush ? t("sshAuth.mfaSendRequest") : t("sshAuth.totpVerify")}
-              </Button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <div className="flex justify-end gap-2">{cancel}</div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {isPush ? null : isMenu ? (
+            <Input
+              id="totpCode"
+              name="totpCode"
+              type="text"
+              autoFocus
+              placeholder={t("sshAuth.mfaMenuPlaceholder")}
+              className={CODE_INPUT}
+            />
+          ) : allowsPushKeyword ? (
+            <Input
+              id="totpCode"
+              name="totpCode"
+              type="text"
+              autoFocus
+              placeholder={t("sshAuth.mfaCodeOrPushPlaceholder")}
+              className={CODE_INPUT}
+            />
+          ) : (
+            <Input
+              id="totpCode"
+              name="totpCode"
+              type="text"
+              autoFocus
+              // Some Secure Auth codes can be longer than 6 digits, so allow up to 8 digits here.
+              maxLength={8}
+              pattern="[0-9]*"
+              inputMode="numeric"
+              placeholder="000000"
+              className={CODE_INPUT}
+            />
+          )}
+          <div className="flex justify-end gap-2">
+            {cancel}
+            <button type="submit" className={PROMPT_PRIMARY_BUTTON}>
+              {isPush ? t("sshAuth.mfaSendRequest") : t("sshAuth.totpVerify")}
+            </button>
+          </div>
+        </form>
+      )}
+    </PanePrompt>
   );
 }

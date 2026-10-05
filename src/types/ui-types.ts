@@ -146,6 +146,7 @@ export type HostFolder = {
 type KnownTabType =
   | "dashboard"
   | "host-manager"
+  | "settings"
   | "user-profile"
   | "admin-settings"
   | "split-screen";
@@ -189,6 +190,8 @@ export type Tab = {
     refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
     focus?: () => void;
+    /** Asked before the tab closes; resolve false to keep it open. */
+    confirmClose?: () => boolean | Promise<boolean>;
   } | null>;
 };
 

@@ -1267,7 +1267,7 @@ export function HostItem({
                       <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
                       <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                         <div
-                          className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                          className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-warning" : "bg-accent-brand"}`}
                           style={{ width: `${host.cpu}%` }}
                         />
                       </div>
@@ -1281,7 +1281,7 @@ export function HostItem({
                       <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/40" />
                       <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                         <div
-                          className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                          className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-warning" : "bg-accent-brand/60"}`}
                           style={{ width: `${host.ram}%` }}
                         />
                       </div>

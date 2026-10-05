@@ -13,6 +13,7 @@ AlertDialogPortal (value): ({ ...props }: AlertDialogPortalProps) => Element
 AlertDialogTitle (value): ({ className, ...props }: AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>) => Element
 AlertDialogTrigger (value): ({ ...props }: AlertDialogTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 AlertTitle (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+BackButton (value): ({ onClick, label, className, }: { onClick: () => void; label?: string; className?: string; }) => Element
 Badge (value): ({ className, variant, asChild, ...props }: ClassAttributes<HTMLSpanElement> & HTMLAttributes<HTMLSpanElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; secondary: string; destructive: string; outline: string; }; }> & ClassProp) => string> & { asChild?: boolean; }) => Element
 BarSeries (value): ({ items, max, className, colorClassName, }: BarSeriesProps) => Element
 BarSeriesItem (type): BarSeriesItem
@@ -27,17 +28,25 @@ CardDescription (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttribu
 CardFooter (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 CardGridCanvas (value): ({ slots, columns, editMode, renderCard, cardCatalog, onChange, cardLabel, className, }: CardGridCanvasProps) => Element
 CardHeader (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
+CardMasonry (value): ({ columns, stack, className, children, }: { columns: number; stack?: boolean; className?: string; children: ReactNode; }) => Element
 CardTitle (value): ({ className, ...props }: DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>) => Element
 Checkbox (value): ({ className, ...props }: CheckboxProps & RefAttributes<HTMLButtonElement>) => Element
 ColumnCountStepper (value): ({ columns, onChange, }: { columns: number; onChange: (columns: number) => void; }) => Element
 ComponentSlot (value): ({ slotId, props, when, }: { slotId: string; props?: Record<string, unknown>; when?: Record<string, unknown>; }) => Element
+ConfirmOptions (type): ConfirmOptions
+ConnectionGate (value): (props: ConnectionGateProps) => Element
+ConnectionGateController (type): ConnectionGateController
+ConnectionGateProps (type): ConnectionGateProps
 ConnectionLogPanel (value): ({ isConnecting, isConnected, hasConnectionError, position, className, }: ConnectionLogPanelProps) => Element
 ConnectionLogProvider (value): ({ children, }: { children: ReactNode; }) => Element
 ConnectionOrigin (type): ConnectionOrigin
-ConnectionScreen (value): ({ status, message, backgroundColor, attempt, maxAttempts, nextRetryInMs, onManualRetry, retryLabel, disconnectedMessage, extraActions, logPosition, emptyState, className, }: ConnectionScreenProps) => Element
+ConnectionScreen (value): ({ status, message, detail, errorMessage, errorDetail, unavailable, backgroundColor, attempt, maxAttempts, nextRetryInMs, onManualRetry, retryLabel, disconnectedMessage, extraActions, logPosition, emptyState, className, }: ConnectionScreenProps) => Element
 ConnectionStage (type): ConnectionStage
 ConnectionStatus (type): ConnectionStatus
+ConnectionUnavailable (type): ConnectionUnavailable
 CustomKeybinding (type): CustomKeybinding
+DataColumn (type): DataColumn<T>
+DataView (value): <T>({ items, view, density, getKey, renderCard, columns, listColumns, onRowClick, isRowActive, empty, className, }: { items: T[]; view: PanelViewMode; density?: PanelDensity; getKey: (item: T) => string; renderCard: (item: T) => ReactNode; columns: GridColumns; listColumns: DataColumn<T>[]; onRowClick?: (item: T) => void; isRowActive?: (item: T) => boolean; empty: ReactNode; className?: string; }) => Element
 Dialog (value): ({ ...props }: DialogProps) => Element
 DialogClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
 DialogContent (value): ({ className, children, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { showCloseButton?: boolean; }) => Element
@@ -63,20 +72,27 @@ DropdownMenuSub (value): ({ ...props }: DropdownMenuSubProps) => Element
 DropdownMenuSubContent (value): ({ className, sideOffset, alignOffset, ...props }: DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>) => Element
 DropdownMenuSubTrigger (value): ({ className, inset, children, ...props }: DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }) => Element
 DropdownMenuTrigger (value): ({ ...props }: DropdownMenuTriggerProps & RefAttributes<HTMLButtonElement>) => Element
+EditingWidth (type): EditingWidth
 EmptyState (value): ({ icon: Icon, title, hint, action, className, }: { icon?: LucideIcon; title: string; hint?: string; action?: ReactNode; className?: string; }) => Element
 FOLDER_COLORS (value): string[]
+Facts (value): ({ className, children, }: { className?: string; children: ReactNode; }) => Element
 FakeSwitch (value): ({ defaultChecked, disabled, checked, onChange, }: { defaultChecked?: boolean; disabled?: boolean; checked?: boolean; onChange?: (v: boolean) => void; }) => Element
+Field (value): ({ label, hint, error, aside, htmlFor, className, children, }: { label: string; hint?: ReactNode; error?: string; aside?: ReactNode; htmlFor?: string; className?: string; children: ReactNode; }) => Element
+FieldPair (value): ({ children }: { children: ReactNode; }) => Element
 FullScreenAppPhase (type): FullScreenAppPhase
 FullScreenAppWrapper (value): FC<FullScreenAppWrapperProps>
 GridCardCatalogEntry (type): GridCardCatalogEntry
 GridColSpan (type): GridColSpan
+GridColumns (type): GridColumns
 GridLayout (type): GridLayout
 GridSlot (type): GridSlot
+GroupHeading (value): ({ title, count, action, className, }: { title: string; count?: number; action?: ReactNode; className?: string; }) => Element
 HostDefaultBadge (value): ({ settingKey }: { settingKey: string; }) => Element
 HostDefaultField (value): ({ settingKey, children, }: { settingKey: string; children: ReactNode; }) => Element
 HostFeatureFields (value): ({ form, updateForm, }: HostFeatureFieldsProps) => Element
 HostFeatureFieldsProps (type): HostFeatureFieldsProps
 HostKeyVerificationDialog (value): ({ isOpen, scenario, ip, port, hostname, fingerprint, oldFingerprint, algorithm, onAccept, onReject, backgroundColor, }: HostKeyVerificationDialogProps) => Element
+InlineView (value): ({ open, onOpenChange, title, icon, status, actions, toolbar, footer, width, onBeforeClose, scroll, bare, className, children, }: { open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; icon?: ReactNode; status?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; footer?: ReactNode; width?: EditingWidth; onBeforeClose?: () => boolean | Promise<boolean>; scroll?: boolean; bare?: boolean; className?: string; children: ReactNode; }) => ReactPortal
 Input (value): ({ className, type, ...props }: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => Element
 Kbd (value): ForwardRefExoticComponent<KbdProps & RefAttributes<HTMLElement>>
 KbdKey (value): { ({ className, ...props }: HTMLAttributes<HTMLSpanElement>): Element; displayName: string; }
@@ -93,8 +109,19 @@ MFAPromptMode (type): MFAPromptMode
 ManagerCardError (type): ManagerCardError
 ManagerCardShell (value): ({ title, icon, loading, error, onRefresh, empty, emptyMessage, children, headerExtra, }: { title: string; icon: ReactNode; loading: boolean; error: ManagerCardError; onRefresh: () => void; empty?: boolean; emptyMessage?: string; children: ReactNode; headerExtra?: ReactNode; }) => Element
 ManagerSearch (value): ({ value, onChange, placeholder, count, extra, }: { value: string; onChange: (value: string) => void; placeholder?: string; count?: number; extra?: ReactNode; }) => Element
+Meter (value): ({ percent, className, }: { percent: number; className?: string; }) => Element
 MetricCard (value): ({ title, icon, action, children, bodyClassName, scroll, scrollMax, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; bodyClassName?: string; scroll?: boolean; scrollMax?: number; }) => Element
 MiniStat (value): ({ caption, value, valueClassName, className, }: { caption: ReactNode; value: ReactNode; valueClassName?: string; className?: string; }) => Element
+NumberField (value): ({ label, value, onChange, placeholder, hint, error, min, max, disabled, className, }: { label: string; value: number; onChange: (value: number) => void; placeholder?: string; hint?: ReactNode; error?: string; min?: number; max?: number; disabled?: boolean; className?: string; }) => Element
+PANEL (value): { readonly body: "p-2.5"; readonly gap: "gap-2"; readonly band: "px-3 py-2"; readonly cardHead: "px-3 py-2.5"; readonly header: "h-12.5"; }
+PROMPT_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-border px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+PROMPT_DESTRUCTIVE_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 bg-destructive px-3 text-xs font-medium text-white transition-colors hover:bg-destructive/90 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+PROMPT_PRIMARY_BUTTON (value): "inline-flex h-7 items-center justify-center gap-1.5 border border-accent-brand/40 px-3 text-xs font-medium text-accent-brand transition-colors hover:bg-accent-brand/10 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+PanePrompt (value): ({ open, title, titleId, description, icon, tone, actions, onCancel, role, labelledBy, layer, backgroundColor, className, children, }: { open: boolean; title: ReactNode; titleId?: string; description?: ReactNode; icon?: ReactNode; tone?: "default" | "destructive"; actions?: ReactNode; onCancel?: () => void; role?: "dialog" | "alertdialog"; labelledBy?: string; layer?: "connection" | "pane"; backgroundColor?: string; className?: string; children?: ReactNode; }) => Element
+PanelDensity (type): PanelDensity
+PanelSearch (value): ({ value, onChange, placeholder, fill, autoFocus, className, }: { value: string; onChange: (next: string) => void; placeholder?: string; fill?: boolean; autoFocus?: boolean; className?: string; }) => Element
+PanelShell (value): ({ chrome, icon, title, status, leading, actions, toolbar, tabs, footer, scroll, className, children, }: { chrome?: boolean; icon?: ReactNode; title?: ReactNode; status?: ReactNode; leading?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; tabs?: ReactNode; footer?: ReactNode; scroll?: boolean; className?: string; children: ReactNode; }) => Element
+PanelViewMode (type): PanelViewMode
 PassphraseDialog (value): ({ isOpen, onSubmit, onCancel, hostInfo, backgroundColor, }: PassphraseDialogProps) => Element
 PasswordInput (value): ForwardRefExoticComponent<PasswordInputProps & RefAttributes<HTMLInputElement>>
 PluginComponent (value): ({ id, fallback, ...props }: { [prop: string]: unknown; id: string; fallback?: ReactNode; }) => ReactNode
@@ -106,14 +133,18 @@ PopoverTrigger (value): ({ ...props }: PopoverTriggerProps & RefAttributes<HTMLB
 RadialGauge (value): ({ value, label, caption, size, strokeWidth, className, colorClassName, }: RadialGaugeProps) => Element
 RadialGaugeProps (type): RadialGaugeProps
 RecentActivityItem (type): RecentActivityItem
+Repeater (value): <T>({ label, items, onChange, makeItem, empty, addLabel, hint, renderItem, }: { label: string; items: T[]; onChange: (items: T[]) => void; makeItem: () => T; empty: string; addLabel: string; hint?: ReactNode; renderItem: (item: T, update: (next: T) => void, index: number) => ReactNode; }) => Element
 RobustClipboardProvider (value): typeof RobustClipboardProvider
 SSHAuthDialog (value): ({ isOpen, reason, onSubmit, onCancel, hostInfo, backgroundColor, }: SSHAuthDialogProps) => Element
 ScrollArea (value): ({ className, children, ...props }: ScrollAreaProps & RefAttributes<HTMLDivElement>) => Element
 ScrollBar (value): ({ className, orientation, ...props }: ScrollAreaScrollbarProps & RefAttributes<HTMLDivElement>) => Element
-SectionCard (value): ({ title, icon, action, children, className, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; }) => Element
+SecretField (value): ({ label, value, onChange, placeholder, hint, error, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; }) => Element
+SectionCard (value): ({ title, icon, action, children, className, rowId, }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode; className?: string; rowId?: string; }) => Element
+Segmented (value): <T extends string>({ value, onChange, options, className, }: { value: T; onChange: (next: T) => void; options: readonly { value: NoInfer<T>; label: string; icon?: ReactNode; count?: number; title?: string; }[]; className?: string; }) => Element
 Select (value): ({ ...props }: SelectSharedProps & { value?: string; defaultValue?: string; onValueChange?(value: string): void; }) => Element
 Select2 (value): ({ className, children, value, defaultValue, onChange, disabled, placeholder, align, contentClassName, name, id, required, "aria-label": ariaLabel, ...props }: Select2Props) => Element
 SelectContent (value): ({ className, children, position, ...props }: SelectContentProps & RefAttributes<HTMLDivElement>) => Element
+SelectField (value): <T extends string>({ label, value, onChange, options, hint, error, disabled, className, placeholder, }: { label: string; value: T; onChange: (value: T) => void; options: readonly { value: T; label: string; }[]; hint?: ReactNode; error?: string; disabled?: boolean; className?: string; placeholder?: string; }) => Element
 SelectGroup (value): ({ ...props }: SelectGroupProps & RefAttributes<HTMLDivElement>) => Element
 SelectItem (value): ({ className, children, ...props }: SelectItemProps & RefAttributes<HTMLDivElement>) => Element
 SelectLabel (value): ({ className, ...props }: SelectLabelProps & RefAttributes<HTMLDivElement>) => Element
@@ -123,7 +154,7 @@ SelectSeparator (value): ({ className, ...props }: SelectSeparatorProps & RefAtt
 SelectTrigger (value): ({ className, size, children, ...props }: SelectTriggerProps & RefAttributes<HTMLButtonElement> & { size?: "default" | "sm"; }) => Element
 SelectValue (value): ({ ...props }: SelectValueProps & RefAttributes<HTMLSpanElement>) => Element
 Separator (value): ({ className, orientation, decorative, ...props }: SeparatorProps & RefAttributes<HTMLDivElement>) => Element
-SettingRow (value): ({ label, badge, description, defaultKey, children, }: { label: string; badge?: string; description?: ReactNode; defaultKey?: string; children: ReactNode; }) => Element
+SettingRow (value): ({ label, badge, description, defaultKey, rowId, children, }: { label: string; badge?: string; description?: ReactNode; defaultKey?: string; rowId?: string; children: ReactNode; }) => Element
 Sheet (value): ({ ...props }: DialogProps) => Element
 SheetClose (value): ({ ...props }: DialogCloseProps & RefAttributes<HTMLButtonElement>) => Element
 SheetContent (value): ({ className, children, side, showCloseButton, ...props }: DialogContentProps & RefAttributes<HTMLDivElement> & { side?: "top" | "right" | "bottom" | "left"; showCloseButton?: boolean; }) => Element
@@ -137,8 +168,16 @@ Slider (value): ({ className, defaultValue, value, min, max, ...props }: SliderP
 Sparkline (value): ({ data, domain, className, colorClassName, showLastDot, height, }: SparklineProps) => Element
 SparklineProps (type): SparklineProps
 StatRow (value): ({ label, value, mono, className, }: { label: ReactNode; value: ReactNode; mono?: boolean; className?: string; }) => Element
+SurfaceKind (type): SurfaceKind
+SurfaceScope (value): ({ kind, onEditingChange, className, children, }: { kind?: SurfaceKind; onEditingChange?: (editing: EditingWidth) => void; className?: string; children: ReactNode; }) => Element
 Switch (value): ({ className, ...props }: SwitchProps & RefAttributes<HTMLButtonElement>) => Element
+SwitchRow (value): ({ label, description, badge, checked, onChange, disabled, defaultKey, rowId, }: { label: string; description?: ReactNode; badge?: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; defaultKey?: string; rowId?: string; }) => Element
 TOTPDialog (value): ({ isOpen, prompt, mode, waiting, onSubmit, onCancel, backgroundColor, }: TOTPDialogProps) => Element
+TabStrip (value): ({ tabs, activeTab, onTabChange, isActive, variant, trailing, className, }: { tabs: TabStripItem[]; activeTab: string; onTabChange: (id: string) => void; isActive?: (id: string) => boolean; variant?: "secondary" | "primary"; trailing?: ReactNode; className?: string; }) => Element
+TabStripItem (type): TabStripItem
+TagInput (value): ({ tags, input, placeholder, onTagsChange, onInputChange, }: { tags: string[]; input: string; placeholder: string; onTagsChange: (tags: string[]) => void; onInputChange: (value: string) => void; }) => Element
+TextAreaField (value): ({ label, value, onChange, placeholder, rows, hint, error, aside, mono, disabled, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; rows?: number; hint?: ReactNode; error?: string; aside?: ReactNode; mono?: boolean; disabled?: boolean; className?: string; }) => Element
+TextField (value): ({ label, value, onChange, placeholder, hint, error, aside, disabled, mono, className, }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: ReactNode; error?: string; aside?: ReactNode; disabled?: boolean; mono?: boolean; className?: string; }) => Element
 Textarea (value): ForwardRefExoticComponent<TextareaProps & RefAttributes<HTMLTextAreaElement>>
 TextareaProps (type): TextareaProps
 Tooltip (value): ({ ...props }: TooltipProps) => Element
@@ -146,7 +185,9 @@ TooltipContent (value): ({ className, sideOffset, children, ...props }: TooltipC
 TooltipProvider (value): ({ delayDuration, ...props }: TooltipProviderProps) => Element
 TooltipTrigger (value): ({ ...props }: TooltipTriggerProps & RefAttributes<HTMLButtonElement>) => Element
 UptimeInfo (type): UptimeInfo
+UsagePair (value): ({ label, percent, detail, }: { label?: string; percent: number; detail?: string; }) => Element
 VersionInfo (type): VersionInfo
+ViewToggle (value): ({ view, onView, density, onDensity, }: { view: PanelViewMode; onView: (next: PanelViewMode) => void; density?: PanelDensity; onDensity?: (next: PanelDensity) => void; }) => Element
 WebSocketConnectionTarget (type): WebSocketConnectionTarget
 WidgetTitle (value): ({ title, icon, fallback }: WidgetTitleProps) => Element
 buildOriginWsUrl (value): ({ origin, localPort, localPath, remotePath, includeJwt, }: { origin: ConnectionOrigin; localPort: number; localPath: string; remotePath: string; includeJwt?: boolean; }) => Promise<WebSocketConnectionTarget>
@@ -177,12 +218,16 @@ resolveRemoteHostId (value): (syncId: string) => Promise<number>
 runAdaptiveBackgroundTask (value): (kind: AdaptiveTaskKind, action: string, task: () => Promise<unknown>, options?: AdaptiveTaskOptions) => boolean
 runAdaptivePolling (value): (poll: () => AdaptivePollResult | Promise<AdaptivePollResult>, policy: AdaptivePollingPolicy, options?: { enabled?: () => boolean; visible?: () => boolean; runImmediately?: boolean; random?: () => number; intervalMultiplier?: () => number; onError?: (error: unknown) => void; }) => () => void
 runVisibleInterval (value): (tick: () => void, intervalMs: number) => () => void
+usageBarColor (value): (percent: number) => string
+usageColor (value): (percent: number) => string
 useAdaptivePolling (value): (poll: () => AdaptivePollResult | Promise<AdaptivePollResult>, policy: AdaptivePollingPolicy, enabled?: boolean, options?: { runImmediately?: boolean; onError?: (error: unknown) => void; }) => void
 useAppTheme (value): () => ThemeProviderState
-useConfirmation (value): () => { isOpen: boolean; options: ConfirmationOptions; confirm: (opts: ConfirmationOptions, callback: () => void) => void; handleConfirm: () => void; handleCancel: () => void; confirmWithToast: (opts: string | ConfirmationOptions, callback?: () => void, variantOrConfirmLabel?: string, cancelLabel?: string, toastOptions?: ToastConfirmOptions) => Promise<boolean>; }
+useConfirm (value): () => (options: ConfirmOptions) => Promise<boolean>
+useConnectionGate (value): () => ConnectionGateController
 useConnectionLog (value): () => ConnectionLogContextType
 useIsDefaultsEditor (value): () => boolean
 useIsMobile (value): () => boolean
 useOptionalConnectionLog (value): () => ConnectionLogContextType
+useSurfaceKind (value): () => SurfaceKind
 useTabs (value): () => TabContextType
 useTabsSafe (value): () => TabContextType

@@ -5,8 +5,8 @@ import {
   type FolderAccessRule,
 } from "@/api/rbac-api";
 import { useTranslation } from "react-i18next";
+import { InlineView, useConfirm } from "@/components/surface/surface-scope";
 import {
-  ArrowLeft,
   Check,
   ListChecks,
   Search,
@@ -70,6 +70,7 @@ export function HostShareModal({
   folder?: string | null;
 }) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const isFolderShare = !host && !!folder;
   const [targetTab, setTargetTab] = useState<"user" | "role">("user");
   const [search, setSearch] = useState("");
@@ -278,23 +279,20 @@ export function HostShareModal({
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div className="absolute inset-0 z-20 flex flex-col bg-sidebar">
-      {/* Header */}
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-border text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-      >
-        <ArrowLeft className="size-3.5 shrink-0" />
-        <span className="truncate">
-          {isFolderShare
-            ? t("hosts.shareFolderTitle", { name: folder ?? "" })
-            : t("hosts.shareHostTitle", { name: host?.name ?? "" })}
-        </span>
-      </button>
-
+    <InlineView
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      icon={<Share2 className="size-4" />}
+      title={
+        isFolderShare
+          ? t("hosts.shareFolderTitle", { name: folder ?? "" })
+          : t("hosts.shareHostTitle", { name: host?.name ?? "" })
+      }
+      bare
+    >
       {sharingLoadError && (
         <div className="flex items-start gap-2 px-3 py-2 shrink-0 border-b border-destructive/30 bg-destructive/5 text-xs text-destructive">
           <Shield className="size-3.5 shrink-0 mt-0.5" />
@@ -544,8 +542,19 @@ export function HostShareModal({
                 type="button"
                 className="text-[10px] text-muted-foreground hover:text-destructive"
                 title={t("hosts.sharing.folderRuleRemove")}
-                onClick={() => {
-                  void revokeFolderAccess(rule.id).then(refreshFolderRules);
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: t("sharing.revokeConfirm", {
+                      name:
+                        rule.username ??
+                        rule.roleDisplayName ??
+                        rule.roleName ??
+                        "",
+                    }),
+                    confirmLabel: t("sharing.revoke"),
+                  });
+                  if (ok)
+                    void revokeFolderAccess(rule.id).then(refreshFolderRules);
                 }}
               >
                 <X className="size-3.5" />
@@ -626,6 +635,17 @@ export function HostShareModal({
                         size="sm"
                         className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
                         onClick={async () => {
+                          const ok = await confirm({
+                            title: t("sharing.revokeConfirm", {
+                              name:
+                                record.username ??
+                                record.roleDisplayName ??
+                                record.roleName ??
+                                "",
+                            }),
+                            confirmLabel: t("sharing.revoke"),
+                          });
+                          if (!ok) return;
                           try {
                             await revokeHostAccess(
                               Number(host!.id),
@@ -676,6 +696,6 @@ export function HostShareModal({
           </div>
         </div>
       )}
-    </div>
+    </InlineView>
   );
 }

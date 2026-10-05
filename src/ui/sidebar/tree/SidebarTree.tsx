@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/surface/surface-scope";
 import { useHostSpeedSearch } from "./hooks/useHostSpeedSearch";
 import {
   useCallback,
@@ -179,10 +180,15 @@ export function SidebarTree({
   useEffect(() => {
     if (!selectionMode) setSelectedHostIds(new Set());
   }, [selectionMode, setSelectedHostIds]);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    message: string;
-    onConfirm: () => Promise<void> | void;
-  } | null>(null);
+  const confirm = useConfirm();
+  const setConfirmDialog = (
+    request: { message: string; onConfirm: () => Promise<void> | void } | null,
+  ) => {
+    if (!request) return;
+    void confirm({ title: request.message }).then((ok) => {
+      if (ok) void request.onConfirm();
+    });
+  };
   const { draggedHostIds, setDraggedHostIds, rootDragOver, setRootDragOver } =
     useSidebarDragState();
   const [folderDialog, setFolderDialog] = useState<{
@@ -1433,32 +1439,6 @@ export function SidebarTree({
             >
               {t("hosts.cancelSelection")}
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm dialog */}
-      {confirmDialog && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
-            <p className="text-sm text-foreground">{confirmDialog.message}</p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmDialog(null)}
-                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                {t("hosts.cancelBtn")}
-              </button>
-              <button
-                onClick={() => {
-                  confirmDialog.onConfirm();
-                  setConfirmDialog(null);
-                }}
-                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
-              >
-                {t("hosts.deleteConfirmBtn")}
-              </button>
-            </div>
           </div>
         </div>
       )}

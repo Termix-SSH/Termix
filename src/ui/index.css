@@ -88,6 +88,14 @@
   --sidebar-accent-foreground: oklch(0.2115 0.0042 128.68);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --warning: oklch(0.795 0.162 86.05);
+  --terminal-bg: #ffffff;
+  --surface-dim: oklch(0.945 0 0);
+  --bg-base: var(--background);
+  --border-base: var(--border);
+  --foreground-secondary: var(--muted-foreground);
+  --canvas: var(--background);
+  --overlay: oklch(0 0 0 / 50%);
 }
 
 .dark {
@@ -124,6 +132,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.556 0 0);
+  --warning: oklch(0.852 0.156 91.94);
+  --terminal-bg: #0c0d0b;
 }
 
 /* ── Dracula ────────────────────────────────────────────────── */
@@ -162,6 +172,8 @@
   --sidebar-accent-foreground: #f8f8f2;
   --sidebar-border: rgba(168, 179, 217, 0.18);
   --sidebar-ring: #8be9fd;
+  --warning: #f1fa8c;
+  --terminal-bg: #282a36;
 }
 
 /* ── Catppuccin Mocha ───────────────────────────────────────── */
@@ -200,6 +212,8 @@
   --sidebar-accent-foreground: #cdd6f4;
   --sidebar-border: rgba(186, 194, 222, 0.18);
   --sidebar-ring: #89b4fa;
+  --warning: #f9e2af;
+  --terminal-bg: #1e1e2e;
 }
 
 /* ── Nord ───────────────────────────────────────────────────── */
@@ -238,6 +252,8 @@
   --sidebar-accent-foreground: #eceff4;
   --sidebar-border: rgba(180, 192, 212, 0.18);
   --sidebar-ring: #88c0d0;
+  --warning: #ebcb8b;
+  --terminal-bg: #2e3440;
 }
 
 /* ── Solarized Dark ─────────────────────────────────────────── */
@@ -276,6 +292,8 @@
   --sidebar-accent-foreground: #d5dddd;
   --sidebar-border: rgba(159, 179, 179, 0.2);
   --sidebar-ring: #268bd2;
+  --warning: #b58900;
+  --terminal-bg: #002b36;
 }
 
 /* ── Tokyo Night ────────────────────────────────────────────── */
@@ -315,6 +333,8 @@
   --sidebar-accent-foreground: #c0caf5;
   --sidebar-border: rgba(139, 147, 189, 0.2);
   --sidebar-ring: #7aa2f7;
+  --warning: #e0af68;
+  --terminal-bg: #1a1b26;
 }
 
 /* ── One Dark ───────────────────────────────────────────────── */
@@ -353,6 +373,8 @@
   --sidebar-accent-foreground: #abb2bf;
   --sidebar-border: rgba(154, 163, 178, 0.18);
   --sidebar-ring: #61afef;
+  --warning: #e5c07b;
+  --terminal-bg: #282c34;
 }
 
 /* ── Gruvbox Dark ───────────────────────────────────────────── */
@@ -392,6 +414,8 @@
   --sidebar-accent-foreground: #ebdbb2;
   --sidebar-border: rgba(196, 181, 157, 0.18);
   --sidebar-ring: #fabd2f;
+  --warning: #fabd2f;
+  --terminal-bg: #282828;
 }
 
 @layer base {
@@ -783,4 +807,11 @@ html.fs-xl {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* A settings search result, marked briefly after the page opens. */
+.settings-search-hit {
+  outline: 1px solid var(--accent-brand);
+  outline-offset: 2px;
+  transition: outline-color 1.2s ease;
 }

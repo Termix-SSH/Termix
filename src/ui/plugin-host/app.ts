@@ -159,6 +159,7 @@ export function createPluginApp(
           mobilePrimary: item.mobilePrimary,
           electronOnly: item.electronOnly,
           separatorAfter: item.separatorAfter ?? true,
+          group: item.group,
           hidden: item.hidden,
           after: item.after,
           order: item.order,
@@ -392,6 +393,7 @@ export function createPluginApp(
           titleKey: key(card.titleKey),
           defaultHeight: card.defaultHeight,
           defaultPanel: card.defaultPanel,
+          frame: card.frame,
           component: scoped(
             card.component as unknown as ComponentType<DashboardCardRenderProps>,
           ),
@@ -545,6 +547,8 @@ export function createPluginApp(
       onChange: (listener) => track(tabsApi.onChange(listener)),
       onReady: (listener) => track(tabsApi.onReady(listener)),
     },
+
+    confirm: (options) => shell.confirm!(options),
 
     desktop: {
       available: isElectron(),

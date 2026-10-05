@@ -1,30 +1,30 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
-import { ComponentSlot } from "@/shell/ActionSlot";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import { Button } from "@/components/button";
-import { Card } from "@/components/card";
-import { Separator } from "@/components/separator";
 import { Skeleton } from "@/components/skeleton";
+import { Kbd } from "@/components/kbd";
+import {
+  Facts,
+  GroupHeading,
+  PanelShell,
+  Segmented,
+} from "@/components/panel-layout";
+import { useConfirm } from "@/components/surface/surface-scope";
 import {
   Activity,
+  Check,
   Database,
-  ExternalLink,
-  GripHorizontal,
   GripVertical,
-  KeyRound,
-  LayoutDashboard,
+  LayoutGrid,
+  Pencil,
   Plus,
+  RotateCcw,
   Server,
-  Settings,
-  Trash2,
-  User,
+  X,
   Zap,
 } from "lucide-react";
-import { Kbd } from "@/components/kbd";
-import { VersionBadge } from "@/components/version-badge";
 import { DASHBOARD_CARDS } from "@/lib/theme";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
@@ -46,24 +46,23 @@ import {
   useRegisteredDashboardCards,
 } from "./dashboard-cards-registry";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
-import { activityTarget } from "@/lib/activity-types";
 import { shell } from "@/plugin-host/shell-bridge";
-import {
-  defaultConnectAction,
-  hostActionsFor,
-  listHostActions,
-} from "@/sidebar/host-contributions";
-import {
-  useStatusColorScheme,
-  getStatusClasses,
-} from "@/hooks/use-status-color-scheme";
 import {
   useServerStatus,
   useServerStatusMeta,
 } from "@/lib/ServerStatusContext";
 import { withLiveHostStatus } from "@/sidebar/live-host-status";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
-import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
+import {
+  CountersStrip,
+  HostStatusList,
+  QuickActions,
+  RecentActivityList,
+  StatsStrip,
+  type VersionStatus,
+} from "./dashboard-core-cards";
+
+export { HostStatusList as HostStatusCard } from "./dashboard-core-cards";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,55 +76,51 @@ type CardSlot = {
   height: number | null;
 };
 
-type DragState = {
-  key: string;
-  id: DashboardCardId;
-  sourcePanel: PanelId;
-  sourceOrder: number;
-} | null;
-
 // ─── Default layout ───────────────────────────────────────────────────────────
 
 const DEFAULT_SLOTS: CardSlot[] = [
-  { key: "stats_bar_0", id: "stats_bar", panel: "main", order: 0, height: 96 },
+  { key: "stats_bar_0", id: "stats_bar", panel: "main", order: 0, height: 76 },
   {
     key: "counters_bar_0",
     id: "counters_bar",
     panel: "main",
     order: 1,
-    height: 48,
-  },
-  {
-    key: "quick_actions_0",
-    id: "quick_actions",
-    panel: "main",
-    order: 2,
-    height: 160,
+    height: 52,
   },
   {
     key: "host_status_0",
     id: "host_status",
     panel: "main",
-    order: 3,
+    order: 2,
     height: null,
+  },
+  {
+    key: "quick_actions_0",
+    id: "quick_actions",
+    panel: "side",
+    order: 0,
+    height: 180,
   },
   {
     key: "recent_activity_0",
     id: "recent_activity",
     panel: "side",
-    order: 0,
+    order: 1,
     height: null,
   },
 ];
 
-/** Cards core draws itself; any other id belongs to a plugin. */
-const CORE_CARD_IDS = new Set<string>([
-  "stats_bar",
-  "counters_bar",
-  "quick_actions",
-  "host_status",
-  "recent_activity",
-]);
+/** Cards core draws itself, how they are framed and what marks them. */
+const CORE_CARD_META: Record<
+  string,
+  { icon: React.ElementType; frame: "framed" | "bare" }
+> = {
+  stats_bar: { icon: Activity, frame: "bare" },
+  counters_bar: { icon: Database, frame: "bare" },
+  quick_actions: { icon: Zap, frame: "framed" },
+  host_status: { icon: Server, frame: "framed" },
+  recent_activity: { icon: Activity, frame: "framed" },
+};
 
 /**
  * A plugin's card, or a placeholder that keeps the slot while its plugin is
@@ -151,842 +146,185 @@ export function PluginCardSlot({
   const card = getRegisteredDashboardCard(id);
   if (!card) {
     return (
-      <Card className="flex h-full w-full overflow-hidden py-0">
+      <div className="flex h-full w-full overflow-hidden">
         <PluginViewPlaceholder kind="card" viewId={id} compact />
-      </Card>
+      </div>
     );
   }
   const Component = card.component;
   return <Component isVisible={isVisible} shell={cardShell} />;
 }
 
-// ─── Card components ──────────────────────────────────────────────────────────
-
-function StatsBarCard({
-  hosts,
-  uptimeFormatted,
-  versionText,
-  versionStatus,
-  releaseUrl,
-  dbHealth,
-}: {
-  hosts: Host[];
-  uptimeFormatted: string;
-  versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
-  releaseUrl: string;
-  dbHealth: "healthy" | "error";
-}) {
-  const { t } = useTranslation();
-  const online = hosts.filter((h) => h.status === "online").length;
-  return (
-    <Card className="grid grid-cols-4 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex flex-col justify-center px-4 py-2 gap-1">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboard.version")}
-        </span>
-        <span className="text-xl font-bold text-accent-brand leading-none">
-          {versionText || "—"}
-        </span>
-        <VersionBadge
-          status={versionStatus}
-          releaseUrl={releaseUrl}
-          className="w-fit"
-        />
-      </div>
-      <div className="flex flex-col justify-center px-4 py-2 gap-1">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboard.uptime")}
-        </span>
-        <span className="text-xl font-bold leading-none">
-          {uptimeFormatted || "—"}
-        </span>
-      </div>
-      <div className="flex flex-col justify-center px-4 py-2 gap-1">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboard.database")}
-        </span>
-        <span
-          className={`text-xl font-bold leading-none ${dbHealth === "healthy" ? "text-accent-brand" : "text-red-400"}`}
-        >
-          {dbHealth === "healthy"
-            ? t("dashboard.healthy")
-            : t("dashboard.error")}
-        </span>
-      </div>
-      <div className="flex flex-col justify-center px-4 py-2 gap-1">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.hostsAvailable")}
-        </span>
-        <div className="flex items-baseline gap-1">
-          <span className="text-xl font-bold leading-none">{online}</span>
-          <span className="text-base text-muted-foreground leading-none">
-            /{hosts.length}
-          </span>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function CountersBarCard({
-  hosts,
-  credentialCount,
-  onOpenSingletonTab,
-}: {
-  hosts: Host[];
-  credentialCount: number;
-  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Card className="grid grid-flow-col auto-cols-fr divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
-      <button
-        onClick={() => onOpenSingletonTab("host-manager")}
-        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
-      >
-        <Server className="size-3.5 text-muted-foreground shrink-0" />
-        <span className="text-base font-bold">{hosts.length}</span>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboard.totalHosts")}
-        </span>
-      </button>
-      <button
-        onClick={() =>
-          onOpenSingletonTab("host-manager", "host-manager:show-credentials")
-        }
-        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
-      >
-        <KeyRound className="size-3.5 text-muted-foreground shrink-0" />
-        <span className="text-base font-bold">{credentialCount}</span>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboard.totalCredentials")}
-        </span>
-      </button>
-      <ComponentSlot slotId="dashboard.counters" />
-    </Card>
-  );
-}
-
-function QuickActionsCard({
-  onOpenSingletonTab,
-  hosts,
-  onOpenTab,
-  isAdmin,
-}: {
-  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
-  hosts: Host[];
-  onOpenTab: (host: Host, type: TabType) => void;
-  isAdmin: boolean;
-}) {
-  const { t } = useTranslation();
-  const pinnedHosts = hosts.filter((h) => h.pin);
-  const getConnectionEndpoint = (host: Host) => {
-    const protocol = host.enableSsh ? undefined : enabledHostProtocols(host)[0];
-    const port = host.enableSsh
-      ? host.sshPort
-      : protocol
-        ? protocolPort(host.pluginSettings, protocol)
-        : host.port;
-    return `${host.ip}:${port ?? host.port}`;
-  };
-  const renderConnectionIcon = (host: Host) => {
-    const Icon = defaultConnectAction(listHostActions(), host)?.icon ?? Server;
-    return <Icon className="size-3 text-accent-brand" />;
-  };
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
-        <Zap className="size-3.5 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboard.quickActions")}
-        </span>
-      </div>
-      <div className="flex flex-1 min-h-0">
-        <div className="flex flex-col flex-1 border-r border-border">
-          <button
-            onClick={() =>
-              onOpenSingletonTab("host-manager", "host-manager:add-host")
-            }
-            className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
-          >
-            <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-              <Plus className="size-3 text-accent-brand" />
-            </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">
-                {t("dashboard.addHost")}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {t("dashboardTab.registerNewServer")}
-              </span>
-            </div>
-          </button>
-          <button
-            onClick={() =>
-              onOpenSingletonTab("host-manager", "host-manager:add-credential")
-            }
-            className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
-          >
-            <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-              <KeyRound className="size-3 text-accent-brand" />
-            </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">
-                {t("dashboard.addCredential")}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {t("dashboardTab.storeSshKeysOrPasswords")}
-              </span>
-            </div>
-          </button>
-        </div>
-        <div className="flex flex-col flex-1">
-          {pinnedHosts.length > 0 ? (
-            <div className="flex flex-col flex-1 overflow-y-auto thin-scrollbar">
-              {pinnedHosts.slice(0, 4).map((host) => (
-                <button
-                  key={host.id}
-                  onClick={() => {
-                    const type = getDefaultConnectionTab(host);
-                    if (type) onOpenTab(host, type);
-                  }}
-                  className="group/btn flex items-center gap-2.5 px-4 py-2 hover:bg-muted transition-colors cursor-pointer border-b border-border last:border-b-0"
-                >
-                  <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-                    {renderConnectionIcon(host)}
-                  </div>
-                  <div className="flex flex-col items-start text-left min-w-0">
-                    <span className="text-xs font-semibold truncate w-full">
-                      {host.name || host.ip}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground truncate w-full">
-                      {getConnectionEndpoint(host)}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <>
-              {isAdmin && (
-                <button
-                  onClick={() => onOpenSingletonTab("admin-settings")}
-                  className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
-                >
-                  <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-                    <Settings className="size-3 text-accent-brand" />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-xs font-semibold">
-                      {t("dashboard.adminSettings")}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {t("dashboardTab.manageUsersAndRoles")}
-                    </span>
-                  </div>
-                </button>
-              )}
-              <button
-                onClick={() => onOpenSingletonTab("user-profile")}
-                className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
-              >
-                <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-                  <User className="size-3 text-accent-brand" />
-                </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-xs font-semibold">
-                    {t("dashboard.userProfile")}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("dashboardTab.manageYourAccount")}
-                  </span>
-                </div>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-export function HostStatusCard({
-  hosts,
-  onOpenTab,
-  statusLoading,
-}: {
-  hosts: Host[];
-  onOpenTab: (host: Host, type: TabType) => void;
-  statusLoading?: boolean;
-}) {
-  const { t } = useTranslation();
-  const statusScheme = useStatusColorScheme();
-  const online = hosts.filter((h) => h.status === "online").length;
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <Database className="size-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            {t("dashboardTab.hostStatus")}
-          </span>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length} {t("hosts.status.online")}
-        </span>
-      </div>
-      <div className="flex flex-col overflow-auto flex-1">
-        {hosts.length === 0 && (
-          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-8">
-            {t("dashboardTab.noHostsConfigured")}
-          </div>
-        )}
-        {hosts.map((host, i) => {
-          const availability = host.status ?? "offline";
-          return (
-            <div
-              key={i}
-              onClick={() => {
-                // An overview action (a metrics view) wins over connecting.
-                const actions = hostActionsFor(listHostActions(), host);
-                const target =
-                  actions.find((action) => action.overview)?.tabType ??
-                  defaultConnectAction(actions, host)?.tabType;
-                if (target) onOpenTab(host, target);
-              }}
-              className="flex min-w-0 items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(availability, statusScheme, "dot", statusLoading)}`}
-                />
-                <div className="flex min-w-0 flex-col">
-                  <div className="flex min-w-0 items-center gap-1">
-                    <span
-                      className="truncate text-xs font-semibold"
-                      title={host.name}
-                    >
-                      {host.name}
-                    </span>
-                    <ExternalLink className="size-2.5 text-muted-foreground/0 group-hover/row:text-muted-foreground/60 transition-colors shrink-0" />
-                  </div>
-                  <span
-                    className="truncate text-[10px] text-muted-foreground font-mono"
-                    title={host.ip}
-                  >
-                    {host.ip}
-                  </span>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                {/* Plugins add live details to a host row here. */}
-                <ComponentSlot
-                  slotId="dashboard.hostRow"
-                  props={{
-                    hostId: Number(host.id),
-                    online: availability === "online",
-                  }}
-                />
-                <span
-                  className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(availability, statusScheme, "badge", statusLoading)}`}
-                >
-                  {statusLoading || availability === "unknown"
-                    ? t("dashboardTab.checking")
-                    : availability === "online"
-                      ? t("hosts.status.online")
-                      : t("hosts.status.offline")}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
 function isStatusCheckEnabled(host: Host): boolean {
   return host.statusCheckEnabled !== false;
 }
 
-function RecentActivityCard({
-  activity,
-  hosts,
-  onOpenTab,
-  onClear,
-  statusLoading,
-}: {
-  activity: RecentActivityItem[];
-  hosts: Host[];
-  onOpenTab: (host: Host, type: TabType) => void;
-  onClear: () => void;
-  statusLoading?: boolean;
-}) {
-  const { t } = useTranslation();
-  const statusScheme = useStatusColorScheme();
-  const typeIcon = (type: string): React.ReactNode => {
-    const Icon = activityTarget(type)?.icon ?? Server;
-    return <Icon className="size-2.5" />;
-  };
-  const typeLabel = (type: string): string => {
-    const labelKey = activityTarget(type)?.labelKey;
-    return labelKey ? t(labelKey) : type.replace("_", " ");
-  };
-  function formatTime(ts: string) {
-    const diffMs = Date.now() - new Date(ts).getTime();
-    if (diffMs < 0) return t("dashboard.justNow");
-    const diff = Math.floor(diffMs / 1000);
-    if (diff < 60) return t("dashboard.justNow");
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    return `${Math.floor(diff / 86400)}d`;
-  }
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <Activity className="size-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            {t("dashboard.recentActivity")}
-          </span>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs text-accent-brand h-auto py-0.5 px-2"
-          onClick={onClear}
-        >
-          {t("dashboardTab.clear")}
-        </Button>
-      </div>
-      <div className="flex flex-col overflow-auto flex-1">
-        {activity.length === 0 && (
-          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-8">
-            {t("dashboard.noRecentActivity")}
-          </div>
-        )}
-        {activity.map((item) => {
-          const host = hosts.find((h) => h.id === String(item.hostId));
-          return (
-            <div
-              key={item.id}
-              onClick={() => {
-                const target = activityTarget(item.type);
-                if (host && target) onOpenTab(host, target.tab);
-              }}
-              className="flex items-center justify-between gap-3 px-4 py-2 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.status ?? false, statusScheme, "dot", statusLoading)}`}
-                />
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-xs font-semibold truncate">
-                    {item.hostName}
-                  </span>
-                  <div className="flex items-center gap-1 min-w-0 text-muted-foreground">
-                    {typeIcon(item.type)}
-                    <span className="text-[10px] truncate">
-                      {typeLabel(item.type)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <span className="text-[10px] text-muted-foreground shrink-0">
-                {formatTime(item.timestamp)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
+// ─── Sections ─────────────────────────────────────────────────────────────────
+
+interface CardMeta {
+  label: string;
+  icon: React.ElementType;
+  frame: "framed" | "bare";
+  action?: React.ReactNode;
 }
 
-// ─── CardItem ─────────────────────────────────────────────────────────────────
-
-function CardItem({
+/** One section of a column, separated from the next by a hairline. */
+function Section({
   slot,
+  meta,
   editMode,
-  isDragging,
+  last,
+  dragging,
   onDragStart,
   onDrop,
-  onDragOver,
   onRemove,
   onHeightChange,
-  onOpenSingletonTab,
-  onOpenTab,
-  hosts,
-  uptimeFormatted,
-  versionText,
-  versionStatus,
-  releaseUrl,
-  dbHealth,
-  credentialCount,
-  activity,
-  onClearActivity,
-  isAdmin,
-  statusLoading,
-  isVisible = true,
+  children,
 }: {
   slot: CardSlot;
+  meta: CardMeta;
   editMode: boolean;
-  isDragging: boolean;
+  last: boolean;
+  dragging: boolean;
   onDragStart: () => void;
   onDrop: () => void;
-  onDragOver: (e: React.DragEvent) => void;
   onRemove: () => void;
   onHeightChange: (key: string, h: number) => void;
-  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
-  onOpenTab: (host: Host, type: TabType) => void;
-  hosts: Host[];
-  uptimeFormatted: string;
-  versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
-  releaseUrl: string;
-  dbHealth: "healthy" | "error";
-  credentialCount: number;
-  activity: RecentActivityItem[];
-  onClearActivity: () => void;
-  isAdmin: boolean;
-  statusLoading?: boolean;
-  isVisible?: boolean;
+  children: React.ReactNode;
 }) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
+  // The last section always fills the column, so resizing one never leaves
+  // dead space underneath.
+  const flex = last || slot.height === null;
+  const Icon = meta.icon;
 
-  const onResizeMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const startY = e.clientY;
-      const startH = cardRef.current?.getBoundingClientRect().height ?? 100;
-      const onMove = (ev: MouseEvent) => {
-        onHeightChange(slot.key, Math.max(50, startH + (ev.clientY - startY)));
-      };
-      const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    },
-    [slot.key, onHeightChange],
-  );
-
-  const isFlex = slot.height === null;
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startH = ref.current?.getBoundingClientRect().height ?? 100;
+    const onMove = (ev: MouseEvent) =>
+      onHeightChange(slot.key, Math.max(48, startH + (ev.clientY - startY)));
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   return (
     <div
-      ref={cardRef}
-      className={`relative flex flex-col transition-opacity select-none ${isDragging ? "opacity-40" : "opacity-100"} ${isFlex ? "flex-1 min-h-0" : "shrink-0"}`}
-      style={!isFlex ? { height: slot.height } : undefined}
+      ref={ref}
       draggable={editMode}
       onDragStart={onDragStart}
-      onDrop={onDrop}
-      onDragOver={onDragOver}
+      onDragOver={(e) => editMode && e.preventDefault()}
+      onDrop={(e) => {
+        if (!editMode) return;
+        e.stopPropagation();
+        onDrop();
+      }}
+      style={{ height: flex ? undefined : (slot.height ?? undefined) }}
+      className={`relative flex shrink-0 flex-col border-b border-border last:border-b-0 ${
+        flex ? "min-h-48 flex-1" : ""
+      } ${dragging ? "opacity-40" : ""} ${editMode ? "cursor-grab select-none" : ""}`}
     >
-      {editMode && (
-        <div className="absolute inset-0 z-10 pointer-events-none border-2 border-dashed border-accent-brand/30" />
-      )}
-      {editMode && (
-        <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
-          <div className="size-6 bg-card border border-border flex items-center justify-center cursor-grab active:cursor-grabbing pointer-events-auto">
-            <GripVertical className="size-3 text-muted-foreground" />
-          </div>
-          <button
-            onClick={onRemove}
-            className="size-6 bg-card border border-border flex items-center justify-center hover:bg-destructive/10 hover:border-destructive/40 transition-colors pointer-events-auto"
-          >
-            <Trash2 className="size-3 text-muted-foreground" />
-          </button>
+      {(meta.frame === "framed" || editMode) && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
+          {editMode && (
+            <GripVertical className="size-3 shrink-0 text-muted-foreground/50" />
+          )}
+          <Icon className="size-3 shrink-0 text-muted-foreground" />
+          <span className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {meta.label}
+          </span>
+          <span className="ml-auto flex shrink-0 items-center gap-1">
+            {!editMode && meta.action}
+            {editMode && (
+              <button
+                type="button"
+                onClick={onRemove}
+                title={t("dashboardTab.removeSection")}
+                aria-label={t("dashboardTab.removeSection")}
+                className="text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </span>
         </div>
       )}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {slot.id === "stats_bar" && (
-          <StatsBarCard
-            hosts={hosts}
-            uptimeFormatted={uptimeFormatted}
-            versionText={versionText}
-            versionStatus={versionStatus}
-            releaseUrl={releaseUrl}
-            dbHealth={dbHealth}
-          />
-        )}
-        {slot.id === "counters_bar" && (
-          <CountersBarCard
-            hosts={hosts}
-            credentialCount={credentialCount}
-            onOpenSingletonTab={onOpenSingletonTab}
-          />
-        )}
-        {slot.id === "quick_actions" && (
-          <QuickActionsCard
-            onOpenSingletonTab={onOpenSingletonTab}
-            hosts={hosts}
-            onOpenTab={onOpenTab}
-            isAdmin={isAdmin}
-          />
-        )}
-        {slot.id === "host_status" && (
-          <HostStatusCard
-            hosts={hosts}
-            onOpenTab={onOpenTab}
-            statusLoading={statusLoading}
-          />
-        )}
-        {slot.id === "recent_activity" && (
-          <RecentActivityCard
-            activity={activity}
-            hosts={hosts}
-            onOpenTab={onOpenTab}
-            onClear={onClearActivity}
-            statusLoading={statusLoading}
-          />
-        )}
-        {!CORE_CARD_IDS.has(slot.id) && (
-          <PluginCardSlot
-            id={slot.id}
-            isVisible={isVisible}
-            onOpenSingletonTab={onOpenSingletonTab}
-          />
-        )}
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto thin-scrollbar">
+        {children}
       </div>
-      {editMode && !isFlex && (
+      {!last && (
         <div
+          draggable={false}
+          onDragStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onMouseDown={onResizeMouseDown}
-          className="absolute bottom-0 left-0 right-0 h-2 z-20 flex items-center justify-center cursor-row-resize group/resize"
           title={t("cardGrid.dragToResize")}
-        >
-          <div className="w-12 h-0.5 bg-border group-hover/resize:bg-accent-brand/60 transition-colors rounded-full" />
-        </div>
+          className="absolute inset-x-0 bottom-0 z-10 h-1.5 cursor-ns-resize transition-colors hover:bg-accent-brand/40"
+        />
       )}
     </div>
   );
 }
 
-// ─── DropZone ─────────────────────────────────────────────────────────────────
-
-function DropZone({
-  panel,
-  order,
-  onDrop,
-  onDragOver,
-  active,
-}: {
-  panel: PanelId;
-  order: number;
-  onDrop: (panel: PanelId, order: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  active: boolean;
-}) {
-  const [over, setOver] = useState(false);
-  if (!active) return null;
-  return (
-    <div
-      className={`shrink-0 transition-all duration-150 ${over ? "h-10 border-2 border-dashed border-accent-brand/60 bg-accent-brand/5" : "h-2"}`}
-      onDragOver={(e) => {
-        onDragOver(e);
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={() => {
-        setOver(false);
-        onDrop(panel, order);
-      }}
-    />
-  );
-}
-
-// ─── AddCardTray ──────────────────────────────────────────────────────────────
-
-function AddCardTray({
-  activeIds,
+/** Everything that could go on the dashboard but is not on it. */
+function AddTray({
+  available,
+  labels,
   onAdd,
-  cardLabels,
 }: {
-  activeIds: string[];
+  available: { id: string; plugin: boolean }[];
+  labels: Record<string, string>;
   onAdd: (id: string) => void;
-  cardLabels: Record<string, string>;
 }) {
   const { t } = useTranslation();
-  const registeredCards = useRegisteredDashboardCards();
-  const available = [
-    ...DASHBOARD_CARDS.map((card) => ({ id: card.id as string })),
-    ...registeredCards.map((card) => ({ id: card.id })),
-  ].filter((c) => !activeIds.includes(c.id));
-  if (available.length === 0) return null;
-  return (
-    <div className="flex items-center gap-2 px-1 py-2 flex-wrap shrink-0">
-      <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold shrink-0">
-        {t("dashboardTab.add")}
-      </span>
-      {available.map((card) => (
+  const builtin = available.filter((c) => !c.plugin);
+  const fromPlugins = available.filter((c) => c.plugin);
+  const row = (cards: typeof available) => (
+    <div className="flex flex-wrap gap-1.5">
+      {cards.map((card) => (
         <button
           key={card.id}
+          type="button"
           onClick={() => onAdd(card.id)}
-          className="flex items-center gap-1.5 px-2.5 py-1 border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent-brand/60 hover:bg-accent-brand/5 transition-colors"
+          className="flex h-7 items-center gap-1.5 border border-border px-2 text-[11px] text-muted-foreground transition-colors hover:border-accent-brand hover:text-accent-brand focus-visible:ring-1 focus-visible:ring-ring"
         >
-          <Plus className="size-3 text-accent-brand" />
-          {cardLabels[card.id]}
+          <Plus className="size-3" />
+          {labels[card.id] ?? card.id}
         </button>
       ))}
     </div>
   );
-}
-
-// ─── PanelColumn ─────────────────────────────────────────────────────────────
-
-type PanelColumnProps = {
-  panel: PanelId;
-  slots: CardSlot[];
-  editMode: boolean;
-  dragState: DragState;
-  onDragStart: (slot: CardSlot) => void;
-  onDrop: (targetPanel: PanelId, targetOrder: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onRemove: (key: string) => void;
-  onAdd: (id: DashboardCardId, panel: PanelId) => void;
-  onHeightChange: (key: string, h: number) => void;
-  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
-  onOpenTab: (host: Host, type: TabType) => void;
-  hosts: Host[];
-  uptimeFormatted: string;
-  versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
-  releaseUrl: string;
-  dbHealth: "healthy" | "error";
-  credentialCount: number;
-  activity: RecentActivityItem[];
-  onClearActivity: () => void;
-  cardLabels: Record<DashboardCardId, string>;
-  isAdmin: boolean;
-  statusLoading: boolean;
-  isVisible?: boolean;
-};
-
-function PanelColumn({
-  panel,
-  slots,
-  editMode,
-  dragState,
-  onDragStart,
-  onDrop,
-  onDragOver,
-  onRemove,
-  onAdd,
-  onHeightChange,
-  onOpenSingletonTab,
-  onOpenTab,
-  hosts,
-  uptimeFormatted,
-  versionText,
-  versionStatus,
-  releaseUrl,
-  dbHealth,
-  credentialCount,
-  activity,
-  onClearActivity,
-  cardLabels,
-  isAdmin,
-  statusLoading,
-  isVisible = true,
-}: PanelColumnProps) {
-  const { t } = useTranslation();
-  const sorted = [...slots].sort((a, b) => a.order - b.order);
-  const allIds = slots.map((s) => s.id);
-
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <DropZone
-        panel={panel}
-        order={-1}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        active={!!dragState}
+    <div className="shrink-0 border-t border-border bg-surface/40 p-2.5">
+      <GroupHeading
+        title={t("dashboardTab.addSection")}
+        count={available.length}
       />
-      {sorted.map((slot, idx) => (
-        <div
-          key={slot.key}
-          className={`flex flex-col min-h-0 ${slot.height === null ? "flex-1" : "shrink-0"}`}
-        >
-          {idx > 0 && (
-            <div className={editMode ? "" : "h-4 shrink-0"}>
-              <DropZone
-                panel={panel}
-                order={slot.order - 0.5}
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                active={!!dragState}
-              />
-            </div>
+      {available.length === 0 ? (
+        <p className="pt-2 text-xs text-muted-foreground">
+          {t("dashboardTab.allSectionsShown")}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2 pt-2">
+          {builtin.length > 0 && row(builtin)}
+          {fromPlugins.length > 0 && (
+            <>
+              <span className="text-[11px] text-muted-foreground/70">
+                {t("dashboardTab.fromPlugins")}
+              </span>
+              {row(fromPlugins)}
+            </>
           )}
-          <CardItem
-            slot={slot}
-            editMode={editMode}
-            isDragging={dragState?.key === slot.key}
-            onDragStart={() => onDragStart(slot)}
-            onDrop={() => onDrop(slot.panel, slot.order)}
-            onDragOver={onDragOver}
-            onRemove={() => onRemove(slot.key)}
-            onHeightChange={onHeightChange}
-            onOpenSingletonTab={onOpenSingletonTab}
-            onOpenTab={onOpenTab}
-            hosts={hosts}
-            uptimeFormatted={uptimeFormatted}
-            versionText={versionText}
-            versionStatus={versionStatus}
-            releaseUrl={releaseUrl}
-            dbHealth={dbHealth}
-            credentialCount={credentialCount}
-            activity={activity}
-            onClearActivity={onClearActivity}
-            isAdmin={isAdmin}
-            statusLoading={statusLoading}
-            isVisible={isVisible}
-          />
-        </div>
-      ))}
-      <DropZone
-        panel={panel}
-        order={sorted.length}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        active={!!dragState}
-      />
-      {editMode && (
-        <AddCardTray
-          activeIds={allIds}
-          onAdd={(id) => onAdd(id, panel)}
-          cardLabels={cardLabels}
-        />
-      )}
-      {sorted.length === 0 && !editMode && (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground/20 text-xs border border-dashed border-border/30">
-          {t("dashboardTab.empty")}
         </div>
       )}
-    </div>
-  );
-}
-
-function ColumnDivider({
-  onMouseDown,
-}: {
-  onMouseDown: (e: React.MouseEvent) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div
-      onMouseDown={onMouseDown}
-      className="w-3 shrink-0 flex items-center justify-center cursor-col-resize group/divider self-stretch z-10"
-      title={t("dashboardTab.dragToResizeColumns")}
-    >
-      <div className="w-px h-full bg-border group-hover/divider:bg-accent-brand/50 transition-colors" />
-      <div className="absolute size-4 flex items-center justify-center opacity-0 group-hover/divider:opacity-100 transition-opacity">
-        <GripHorizontal className="size-3 text-accent-brand" />
-      </div>
     </div>
   );
 }
@@ -1005,6 +343,7 @@ export function DashboardTab({
 }) {
   const registeredCards = useRegisteredDashboardCards();
   const { t, i18n } = useTranslation();
+  const confirm = useConfirm();
   const { initialLoadComplete } = useServerStatusMeta();
   const statusLoading = !initialLoadComplete;
 
@@ -1021,8 +360,8 @@ export function DashboardTab({
     return DEFAULT_SLOTS;
   });
 
-  // Picking an interface preset rewrites the stored layout from the settings
-  // panel, so pick it up without waiting for a remount.
+  // Picking an interface preset rewrites the stored layout from settings, so
+  // pick it up without waiting for a remount.
   useEffect(() => {
     const handler = () => {
       try {
@@ -1040,8 +379,7 @@ export function DashboardTab({
     return () => window.removeEventListener("dashboardSlotsChanged", handler);
   }, []);
 
-  // A plugin's own view next to the dashboard, e.g. the homepage plugin's
-  // canvas preview. Only one is offered today; "dashboard" always exists.
+  // A plugin's own view next to the dashboard, e.g. the homepage canvas.
   const secondaryViews = useActionSlot("dashboard.secondaryView");
   const secondaryView = secondaryViews[0];
   const { settled: pluginsSettled } = usePluginStore();
@@ -1053,10 +391,9 @@ export function DashboardTab({
       return "dashboard";
     }
   });
-  // Until plugins settle, a plugin view saved from last session hasn't had a
-  // chance to register yet, so its absence doesn't mean it's really gone.
+  // Until plugins settle, a plugin view saved last session has not had a
+  // chance to register, so its absence does not mean it is gone.
   const viewPending = !pluginsSettled && dashboardView !== "dashboard";
-  // Falls back to the dashboard when the view a plugin contributed is off.
   const isDashboardView =
     dashboardView === "dashboard" ||
     (!viewPending && !secondaryView) ||
@@ -1071,7 +408,7 @@ export function DashboardTab({
   }, [dashboardView]);
 
   const [editMode, setEditMode] = useState(false);
-  const [dragState, setDragState] = useState<DragState>(null);
+  const [dragKey, setDragKey] = useState<string | null>(null);
 
   const [mainWidthPct, setMainWidthPct] = useState(() => {
     try {
@@ -1110,9 +447,8 @@ export function DashboardTab({
   const [isAdmin, setIsAdmin] = useState(false);
   const [uptimeFormatted, setUptimeFormatted] = useState("");
   const [versionText, setVersionText] = useState("");
-  const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update" | "beta" | "unknown"
-  >("up_to_date");
+  const [versionStatus, setVersionStatus] =
+    useState<VersionStatus>("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
@@ -1189,6 +525,11 @@ export function DashboardTab({
   }, [isVisible]);
 
   const handleClearActivity = async () => {
+    const ok = await confirm({
+      title: t("dashboardTab.clearActivityConfirm"),
+      confirmLabel: t("dashboardTab.clear"),
+    });
+    if (!ok) return;
     try {
       await resetRecentActivity();
       setActivity([]);
@@ -1201,9 +542,9 @@ export function DashboardTab({
     weekday: "long",
     month: "long",
     day: "numeric",
-    year: "numeric",
   });
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const isMobile = useIsMobile();
 
   const mainSlots = slots
     .filter((s) => s.panel === "main")
@@ -1211,9 +552,9 @@ export function DashboardTab({
   const sideSlots = slots
     .filter((s) => s.panel === "side")
     .sort((a, b) => a.order - b.order);
-  const hasSide = sideSlots.length > 0;
+  const showSide = sideSlots.length > 0 || editMode;
 
-  const cardLabels: Record<string, string> = {
+  const labels: Record<string, string> = {
     stats_bar: t("dashboard.serverOverview"),
     counters_bar: t("dashboard.serverStats"),
     quick_actions: t("dashboard.quickActions"),
@@ -1224,6 +565,90 @@ export function DashboardTab({
     ),
   };
 
+  const metaFor = (id: string): CardMeta => {
+    const core = CORE_CARD_META[id];
+    if (core)
+      return {
+        label: labels[id] ?? id,
+        icon: core.icon,
+        frame: core.frame,
+        action:
+          id === "recent_activity" && activity.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => void handleClearActivity()}
+              className="text-[10px] font-medium text-accent-brand hover:underline"
+            >
+              {t("dashboardTab.clear")}
+            </button>
+          ) : undefined,
+      };
+    const registered = getRegisteredDashboardCard(id);
+    return {
+      label: labels[id] ?? id,
+      icon: LayoutGrid,
+      frame: registered?.frame ?? "bare",
+    };
+  };
+
+  const renderCard = (id: string) => {
+    switch (id) {
+      case "stats_bar":
+        return (
+          <StatsStrip
+            hosts={hosts}
+            uptimeFormatted={uptimeFormatted}
+            versionText={versionText}
+            versionStatus={versionStatus}
+            releaseUrl={releaseUrl}
+            dbHealth={dbHealth}
+          />
+        );
+      case "counters_bar":
+        return (
+          <CountersStrip
+            hosts={hosts}
+            credentialCount={credentialCount}
+            onOpenSingletonTab={onOpenSingletonTab}
+          />
+        );
+      case "quick_actions":
+        return (
+          <QuickActions
+            onOpenSingletonTab={onOpenSingletonTab}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
+            isAdmin={isAdmin}
+          />
+        );
+      case "host_status":
+        return (
+          <HostStatusList
+            hosts={statusCheckHosts}
+            onOpenTab={onOpenTab}
+            statusLoading={statusLoading}
+          />
+        );
+      case "recent_activity":
+        return (
+          <RecentActivityList
+            activity={activity}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
+            statusLoading={statusLoading}
+          />
+        );
+      default:
+        return (
+          <PluginCardSlot
+            id={id}
+            isVisible={isVisible}
+            onOpenSingletonTab={onOpenSingletonTab}
+          />
+        );
+    }
+  };
+
   const onColumnDividerMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -1231,7 +656,6 @@ export function DashboardTab({
       const startPct = mainWidthPct;
       const totalW = bodyRef.current?.getBoundingClientRect().width ?? 0;
       if (!totalW) return;
-      // One update per frame, not per mousemove.
       let frame = 0;
       let clientX = startX;
       const onMove = (ev: MouseEvent) => {
@@ -1257,63 +681,58 @@ export function DashboardTab({
     [mainWidthPct],
   );
 
-  const handleDragStart = (slot: CardSlot) =>
-    setDragState({
-      key: slot.key,
-      id: slot.id,
-      sourcePanel: slot.panel,
-      sourceOrder: slot.order,
-    });
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-  const handleDrop = (targetPanel: PanelId, targetOrder: number) => {
-    if (!dragState) return;
+  const drop = (panel: PanelId, order: number) => {
+    if (!dragKey) return;
     setSlots((prev) => {
-      const without = prev.filter((s) => s.key !== dragState.key);
-      const panelSlots = without
-        .filter((s) => s.panel === targetPanel)
+      const moving = prev.find((s) => s.key === dragKey);
+      if (!moving) return prev;
+      const rest = prev.filter((s) => s.key !== dragKey);
+      const target = rest
+        .filter((s) => s.panel === panel)
         .sort((a, b) => a.order - b.order);
-      const others = without.filter((s) => s.panel !== targetPanel);
-      const insertIdx = panelSlots.findIndex((s) => s.order > targetOrder);
-      const insertAt = insertIdx === -1 ? panelSlots.length : insertIdx;
-      const newPanelSlots = [
-        ...panelSlots.slice(0, insertAt),
-        {
-          key: dragState.key,
-          id: dragState.id,
-          panel: targetPanel,
-          order: 0,
-          height: prev.find((s) => s.key === dragState.key)?.height ?? null,
-        },
-        ...panelSlots.slice(insertAt),
+      const others = rest.filter((s) => s.panel !== panel);
+      const at = target.findIndex((s) => s.order > order);
+      const index = at === -1 ? target.length : at;
+      const next = [
+        ...target.slice(0, index),
+        { ...moving, panel },
+        ...target.slice(index),
       ].map((s, i) => ({ ...s, order: i }));
-      return [...others, ...newPanelSlots];
+      return [...others, ...next];
     });
-    setDragState(null);
+    setDragKey(null);
   };
-  const handleRemove = (key: string) =>
-    setSlots((prev) => prev.filter((s) => s.key !== key));
-  const handleAdd = (id: DashboardCardId, panel: PanelId) => {
+
+  const handleAdd = (id: DashboardCardId) => {
+    const registered = getRegisteredDashboardCard(id);
+    const panel: PanelId = registered?.defaultPanel ?? "main";
     setSlots((prev) => {
       const panelSlots = prev.filter((s) => s.panel === panel);
-      const maxOrder =
+      const order =
         panelSlots.length > 0
           ? Math.max(...panelSlots.map((s) => s.order)) + 1
           : 0;
-      const defaultHeight: number | null =
-        getRegisteredDashboardCard(id)?.defaultHeight ??
+      const height: number | null =
+        registered?.defaultHeight ??
         (id === "host_status" || id === "recent_activity" ? null : 150);
-      const key = `${id}_${Date.now()}`;
       return [
         ...prev,
-        { key, id, panel, order: maxOrder, height: defaultHeight },
+        { key: `${id}_${Date.now()}`, id, panel, order, height },
       ];
     });
   };
+
   const handleHeightChange = (key: string, h: number) =>
     setSlots((prev) =>
       prev.map((s) => (s.key === key ? { ...s, height: h } : s)),
     );
-  const handleReset = () => {
+
+  const handleReset = async () => {
+    const ok = await confirm({
+      title: t("dashboardTab.resetConfirm"),
+      confirmLabel: t("dashboard.reset"),
+    });
+    if (!ok) return;
     setSlots(DEFAULT_SLOTS);
     setMainWidthPct(68);
     setEditMode(false);
@@ -1325,391 +744,212 @@ export function DashboardTab({
     }
   };
 
-  const columnProps = {
-    hosts,
-    uptimeFormatted,
-    versionText,
-    versionStatus,
-    releaseUrl,
-    dbHealth,
-    credentialCount,
-    activity,
-    onClearActivity: handleClearActivity,
-    onOpenSingletonTab,
-    onOpenTab,
-    cardLabels,
-    isAdmin,
-    statusLoading,
-    isVisible,
-  };
+  const placed = new Set(slots.map((s) => s.id as string));
+  const available = [
+    ...DASHBOARD_CARDS.map((card) => ({
+      id: card.id as string,
+      plugin: false,
+    })),
+    ...registeredCards.map((card) => ({ id: card.id, plugin: true })),
+  ].filter((card) => !placed.has(card.id));
 
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    const allSlots = [...mainSlots, ...sideSlots];
-    return (
-      <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-3 flex flex-col gap-3">
-          <Card className="flex-row items-center justify-between px-4 py-3 shrink-0 gap-0">
-            <div>
-              <h1 className="text-base font-bold leading-tight">
-                {t("dashboard.title")}
-              </h1>
-              <p className="text-xs text-muted-foreground">{todayLabel}</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <a
-                  href="https://github.com/Termix-SSH/Termix"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("dashboard.github")}
-                </a>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <a
-                  href="https://github.com/Termix-SSH/Support"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("dashboard.support")}
-                </a>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <a
-                  href="https://discord.com/invite/jVQGdvHDrf"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("dashboard.discord")}
-                </a>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <a
-                  href="https://docs.termix.site/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("dashboard.docs")}
-                </a>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <a
-                  href="https://donate.termix.site/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("dashboard.donate")}
-                </a>
-              </Button>
-            </div>
-          </Card>
-          {allSlots.map((slot) => (
-            <div
-              key={slot.id}
-              className={`shrink-0 ${slot.id === "host_status" || slot.id === "recent_activity" ? "max-h-72 flex flex-col overflow-hidden" : ""}`}
-            >
-              {slot.id === "stats_bar" && (
-                <StatsBarCard
-                  hosts={hosts}
-                  uptimeFormatted={uptimeFormatted}
-                  versionText={versionText}
-                  versionStatus={versionStatus}
-                  releaseUrl={releaseUrl}
-                  dbHealth={dbHealth}
-                />
-              )}
-              {slot.id === "counters_bar" && (
-                <CountersBarCard
-                  hosts={hosts}
-                  credentialCount={credentialCount}
-                  onOpenSingletonTab={onOpenSingletonTab}
-                />
-              )}
-              {slot.id === "quick_actions" && (
-                <QuickActionsCard
-                  onOpenSingletonTab={onOpenSingletonTab}
-                  hosts={hosts}
-                  onOpenTab={onOpenTab}
-                  isAdmin={isAdmin}
-                />
-              )}
-              {slot.id === "host_status" && (
-                <HostStatusCard
-                  hosts={statusCheckHosts}
-                  onOpenTab={onOpenTab}
-                  statusLoading={statusLoading}
-                />
-              )}
-              {slot.id === "recent_activity" && (
-                <RecentActivityCard
-                  activity={activity}
-                  hosts={hosts}
-                  onOpenTab={onOpenTab}
-                  onClear={handleClearActivity}
-                  statusLoading={statusLoading}
-                />
-              )}
-              {!CORE_CARD_IDS.has(slot.id) && (
-                <PluginCardSlot
-                  id={slot.id}
-                  isVisible={isVisible}
-                  onOpenSingletonTab={onOpenSingletonTab}
-                />
-              )}
-            </div>
-          ))}
+  const column = (panel: PanelId, columnSlots: CardSlot[], width: string) => (
+    <div
+      style={{ width }}
+      className={`flex min-w-0 flex-col ${
+        isMobile ? "shrink-0" : "min-h-0 overflow-y-auto thin-scrollbar"
+      } ${panel === "side" ? "bg-surface-dim/40" : ""}`}
+      onDragOver={(e) => editMode && e.preventDefault()}
+      onDrop={() => editMode && drop(panel, columnSlots.length)}
+    >
+      {columnSlots.length === 0 && editMode && (
+        <div className="m-2.5 flex flex-1 items-center justify-center border border-dashed border-border p-6 text-xs text-muted-foreground">
+          {t("dashboardTab.dropHere")}
         </div>
-      </div>
+      )}
+      {columnSlots.map((slot, i) => (
+        <Section
+          key={slot.key}
+          slot={slot}
+          meta={metaFor(slot.id)}
+          editMode={editMode}
+          last={isMobile ? false : i === columnSlots.length - 1}
+          dragging={dragKey === slot.key}
+          onDragStart={() => setDragKey(slot.key)}
+          onDrop={() => drop(panel, slot.order - 0.5)}
+          onRemove={() =>
+            setSlots((prev) => prev.filter((s) => s.key !== slot.key))
+          }
+          onHeightChange={handleHeightChange}
+        >
+          {renderCard(slot.id)}
+        </Section>
+      ))}
+    </div>
+  );
+
+  const online = hosts.filter((h) => h.status === "online").length;
+  const links = [
+    {
+      href: "https://github.com/Termix-SSH/Termix",
+      label: t("dashboard.github"),
+    },
+    {
+      href: "https://github.com/Termix-SSH/Support",
+      label: t("dashboard.support"),
+    },
+    {
+      href: "https://discord.com/invite/jVQGdvHDrf",
+      label: t("dashboard.discord"),
+    },
+    { href: "https://docs.termix.site/", label: t("dashboard.docs") },
+    { href: "https://donate.termix.site/", label: t("dashboard.donate") },
+  ];
+
+  const title =
+    secondaryView && !viewPending ? (
+      <Segmented
+        value={isDashboardView ? "dashboard" : secondaryView.actionId}
+        onChange={setDashboardView}
+        options={[
+          { value: "dashboard", label: t("dashboard.title") },
+          { value: secondaryView.actionId, label: t(secondaryView.titleKey) },
+        ]}
+      />
+    ) : (
+      t("dashboard.title")
     );
-  }
 
   return (
-    <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
-      <Card className="flex-row items-center justify-between px-5 py-3 shrink-0 mx-5 mt-5 gap-0">
-        <div className="flex items-center gap-3">
-          {viewPending ? (
-            <Skeleton className="h-7 w-40" />
-          ) : (
-            <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
-              <button
-                onClick={() => setDashboardView("dashboard")}
-                className={`px-3 py-1 text-sm font-medium transition-colors ${isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+    <PanelShell
+      icon={<LayoutGrid className="size-4" />}
+      title={title}
+      status={isDashboardView ? todayLabel : undefined}
+      scroll={false}
+      actions={
+        <>
+          <span className="hidden items-center gap-0.5 xl:flex">
+            {links.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
               >
-                {t("dashboard.title")}
-              </button>
-              {secondaryView && (
-                <button
-                  onClick={() => setDashboardView(secondaryView.actionId)}
-                  className={`px-3 py-1 text-sm font-medium transition-colors ${!isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {t(secondaryView.titleKey)}
-                </button>
-              )}
-            </div>
-          )}
-          {isDashboardView && !viewPending && (
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              {todayLabel}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="hidden sm:flex items-center gap-2 mr-2 bg-muted/50 px-2.5 py-1 rounded-none border border-border">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              {t("dashboardTab.commandPalette")}
-            </span>
-            <div className="flex items-center gap-1">
-              <Kbd className="h-5 px-1.5 bg-background text-[10px]">Shift</Kbd>
-              <span className="text-[10px] text-muted-foreground">+</span>
-              <Kbd className="h-5 px-1.5 bg-background text-[10px]">Shift</Kbd>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground"
-            asChild
-          >
-            <a
-              href="https://github.com/Termix-SSH/Termix"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("dashboard.github")}
-            </a>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground"
-            asChild
-          >
-            <a
-              href="https://github.com/Termix-SSH/Support"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("dashboard.support")}
-            </a>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground"
-            asChild
-          >
-            <a
-              href="https://discord.com/invite/jVQGdvHDrf"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("dashboard.discord")}
-            </a>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground"
-            asChild
-          >
-            <a
-              href="https://docs.termix.site/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("dashboard.docs")}
-            </a>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground"
-            asChild
-          >
-            <a
-              href="https://donate.termix.site/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("dashboard.donate")}
-            </a>
-          </Button>
+                {link.label}
+              </a>
+            ))}
+          </span>
           {isDashboardView && (
-            <>
-              <Separator orientation="vertical" className="mx-1 h-5" />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title={
+                editMode
+                  ? t("dashboardTab.done")
+                  : t("dashboard.customizeLayout")
+              }
+              aria-label={
+                editMode
+                  ? t("dashboardTab.done")
+                  : t("dashboard.customizeLayout")
+              }
+              className={editMode ? "text-accent-brand" : ""}
+              onClick={() => setEditMode((v) => !v)}
+            >
               {editMode ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground"
-                    onClick={handleReset}
-                  >
-                    {t("dashboard.reset")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white"
-                    onClick={() => setEditMode(false)}
-                  >
-                    {t("dashboardTab.done")}
-                  </Button>
-                </>
+                <Check className="size-4" />
               ) : (
+                <Pencil className="size-4" />
+              )}
+            </Button>
+          )}
+        </>
+      }
+      toolbar={
+        isDashboardView && !viewPending ? (
+          <>
+            {editMode ? (
+              <>
+                <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                  {t("dashboardTab.dragToReorder")}
+                </span>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => setEditMode(true)}
-                  title={t("dashboard.customizeLayout")}
+                  size="xs"
+                  className="gap-1"
+                  onClick={() => void handleReset()}
                 >
-                  <LayoutDashboard className="size-4 text-accent-brand" />
+                  <RotateCcw className="size-3" />
+                  {t("dashboard.reset")}
                 </Button>
-              )}
-            </>
-          )}
-        </div>
-      </Card>
-
+              </>
+            ) : (
+              <span className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:flex">
+                {t("dashboardTab.commandPalette")}
+                <Kbd className="h-4">⇧⇧</Kbd>
+              </span>
+            )}
+            <Facts className="ml-auto text-[11px] text-muted-foreground">
+              <span>{t("dashboardTab.onlineCount", { count: online })}</span>
+              <span>
+                {t("dashboardTab.hostCount", { count: hosts.length })}
+              </span>
+            </Facts>
+          </>
+        ) : undefined
+      }
+    >
       {viewPending ? (
-        <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col p-5 gap-3">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full flex-1" />
+        <div className="flex flex-1 flex-col gap-2 p-2.5">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="w-full flex-1" />
         </div>
       ) : !isDashboardView && secondaryView?.component ? (
-        <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <secondaryView.component onOpenSingletonTab={onOpenSingletonTab} />
         </div>
       ) : (
-        <>
-          {editMode && (
-            <div className="mx-5 mt-4 px-4 py-2 border border-dashed border-accent-brand/40 bg-accent-brand/5 shrink-0 flex items-center gap-2">
-              <LayoutDashboard className="size-3.5 text-accent-brand shrink-0" />
-              <span className="text-xs text-accent-brand font-semibold">
-                {t("dashboardTab.editModeInstructions")}
-              </span>
-            </div>
-          )}
-
+        <div className="flex min-h-0 flex-1 flex-col">
           <div
             ref={bodyRef}
-            className="flex flex-row flex-1 min-h-0 px-5 pb-5 pt-4 overflow-hidden"
+            className={`flex min-h-0 flex-1 ${isMobile ? "flex-col overflow-y-auto" : ""}`}
           >
-            <div
-              className="flex flex-col min-h-0"
-              style={{
-                width: hasSide || editMode ? `${mainWidthPct}%` : "100%",
-              }}
-            >
-              <PanelColumn
-                panel="main"
-                slots={mainSlots}
-                editMode={editMode}
-                dragState={dragState}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onRemove={handleRemove}
-                onAdd={handleAdd}
-                onHeightChange={handleHeightChange}
-                {...columnProps}
-              />
-            </div>
-
-            {(hasSide || editMode) &&
-              (editMode ? (
-                <ColumnDivider onMouseDown={onColumnDividerMouseDown} />
-              ) : (
-                <div className="w-4 shrink-0" />
-              ))}
-
-            {(hasSide || editMode) && (
-              <div className="flex flex-col min-h-0 flex-1">
-                <PanelColumn
-                  panel="side"
-                  slots={sideSlots}
-                  editMode={editMode}
-                  dragState={dragState}
-                  onDragStart={handleDragStart}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onRemove={handleRemove}
-                  onAdd={handleAdd}
-                  onHeightChange={handleHeightChange}
-                  {...columnProps}
+            {column(
+              "main",
+              mainSlots,
+              isMobile || !showSide ? "100%" : `${mainWidthPct}%`,
+            )}
+            {showSide && (
+              <>
+                <div
+                  onMouseDown={isMobile ? undefined : onColumnDividerMouseDown}
+                  title={t("dashboardTab.dragToResizeColumns")}
+                  className={`shrink-0 bg-border transition-colors ${
+                    isMobile
+                      ? "h-px w-full"
+                      : "w-px cursor-col-resize hover:bg-accent-brand"
+                  }`}
                 />
-              </div>
+                {column(
+                  "side",
+                  sideSlots,
+                  isMobile ? "100%" : `${100 - mainWidthPct}%`,
+                )}
+              </>
             )}
           </div>
-        </>
+          {editMode && (
+            <AddTray
+              available={available}
+              labels={labels}
+              onAdd={(id) => handleAdd(id as DashboardCardId)}
+            />
+          )}
+        </div>
       )}
-    </div>
+    </PanelShell>
   );
 }

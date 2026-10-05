@@ -372,7 +372,7 @@ function certState(
 const CERT_STATUS_STYLES: Record<ReturnType<typeof certState>, string> = {
   none: "text-muted-foreground",
   valid: "text-green-500",
-  expiring: "text-yellow-500",
+  expiring: "text-warning",
   expired: "text-destructive",
 };
 
@@ -470,7 +470,7 @@ export function AdminSSLSection({
         </div>
 
         {cert && !cert.selfSigned && !status?.renewal && (
-          <div className="p-2 border border-yellow-500/40 bg-yellow-500/10 text-[10px] text-yellow-600 dark:text-yellow-400">
+          <div className="p-2 border border-warning/40 bg-warning/10 text-[10px] text-warning">
             {t("admin.sslNotRenewed", { date: expiry })}
           </div>
         )}

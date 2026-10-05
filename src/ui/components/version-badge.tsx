@@ -18,7 +18,7 @@ export function VersionBadge({
     status === "beta"
       ? "bg-blue-500/20 text-blue-400"
       : status === "requires_update"
-        ? "bg-yellow-500/20 text-yellow-400"
+        ? "bg-warning/20 text-warning"
         : "bg-accent-brand/20 text-accent-brand"
   }${className ? ` ${className}` : ""}`;
 

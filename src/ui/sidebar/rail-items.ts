@@ -3,8 +3,8 @@ import {
   KeyRound,
   Plug,
   Server,
+  LibraryBig,
   Settings,
-  User,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -21,7 +21,7 @@ import { getTabType } from "@/shell/tab-registry";
  *
  * This used to be duplicated in four places -- AppRail's button array, the
  * visibility toggles in UserProfilePanel, AppShell's sidebar title map, and
- * MobileBottomBar's own primary/more lists -- which drifted: half the sidebar
+ * the mobile bar's own primary/more lists -- which drifted: half the sidebar
  * titles were hardcoded English, the alerts entry had no visibility toggle,
  * and the mobile bar ignored hidden tabs entirely. Everything now derives from
  * here, so adding a destination is a single edit.
@@ -38,6 +38,8 @@ export interface RailItemDef {
   alwaysVisible?: boolean;
   /** Renders a separator after this item in the rail. */
   separatorAfter?: boolean;
+  /** The rail band it sits in. Defaults to "tools". */
+  group?: RailGroup;
   /** Shown on the mobile bottom bar's primary row rather than its More menu. */
   mobilePrimary?: boolean;
   /**
@@ -72,13 +74,24 @@ export interface RailItemDef {
   useBadge?: () => number | null | undefined;
 }
 
+/** Things you keep, things you do, and the instance itself. */
+export type RailGroup = "objects" | "tools" | "system";
+export const RAIL_GROUP_ORDER: RailGroup[] = ["objects", "tools", "system"];
+
 export const RAIL_ITEMS: RailItemDef[] = [
-  { id: "hosts", icon: Server, labelKey: "nav.hosts", mobilePrimary: true },
+  {
+    id: "hosts",
+    icon: Server,
+    labelKey: "nav.hosts",
+    mobilePrimary: true,
+    group: "objects",
+  },
   {
     id: "credentials",
     icon: KeyRound,
     labelKey: "nav.credentials",
     separatorAfter: true,
+    group: "objects",
   },
   {
     id: "connections",
@@ -86,6 +99,7 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.connections",
     separatorAfter: true,
     rightDockable: true,
+    group: "tools",
   },
   {
     id: "quick-connect",
@@ -93,6 +107,7 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.quickConnect",
     separatorAfter: true,
     mobilePrimary: true,
+    group: "tools",
   },
   {
     id: "sync",
@@ -100,9 +115,20 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.sync",
     electronOnly: true,
     placement: "footer",
+    group: "system",
     useBadge: useSyncAttentionCount,
   },
 ];
+
+/** Main rail items split into their bands, in band order, empty bands left out. */
+export function groupRailItems(
+  items: RailItemDef[],
+): { group: RailGroup; items: RailItemDef[] }[] {
+  return RAIL_GROUP_ORDER.map((group) => ({
+    group,
+    items: items.filter((item) => (item.group ?? "tools") === group),
+  })).filter((band) => band.items.length > 0);
+}
 
 /**
  * Rail items registered by plugins at runtime. Reactive, because a plugin can
@@ -203,13 +229,10 @@ export function useRailItems(): RailItemDef[] {
   );
 }
 
-/**
- * Destinations that live outside the rail's hideable list but still need a
- * title and a mobile entry.
- */
+/** Places outside the rail that still need a title, like the Settings tab. */
 export const RAIL_UTILITY_ITEMS: RailItemDef[] = [
-  { id: "user-profile", icon: User, labelKey: "nav.userProfile" },
-  { id: "admin-settings", icon: Settings, labelKey: "nav.admin" },
+  { id: "settings", icon: Settings, labelKey: "nav.settings" },
+  { id: "host-manager", icon: LibraryBig, labelKey: "nav.manage" },
 ];
 
 /** Ids that may be opened in the right dock. */

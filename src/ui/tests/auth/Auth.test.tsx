@@ -114,9 +114,9 @@ describe("Auth local desktop flow", () => {
     renderAuth();
 
     await waitFor(() => {
-      expect(screen.getByText("Local desktop signed out")).toBeTruthy();
+      expect(screen.getByText("auth.localDesktopSignedOut")).toBeTruthy();
     });
-    expect(screen.getByText("Continue with local desktop")).toBeTruthy();
+    expect(screen.getByText("auth.continueLocalDesktop")).toBeTruthy();
     expect(screen.queryByText("common.register")).toBeNull();
     expect(screen.queryByLabelText("common.username")).toBeNull();
     expect(screen.queryByText("auth.forgotPassword")).toBeNull();
@@ -134,11 +134,9 @@ describe("Auth local desktop flow", () => {
     renderAuth();
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Local desktop session unavailable"),
-      ).toBeTruthy();
+      expect(screen.getByText("auth.localDesktopUnavailable")).toBeTruthy();
     });
-    expect(screen.getByText("Retry local desktop session")).toBeTruthy();
+    expect(screen.getByText("auth.retryLocalDesktop")).toBeTruthy();
     expect(screen.queryByText("common.register")).toBeNull();
     expect(screen.queryByLabelText("common.username")).toBeNull();
     expect(mainAxios.requestDesktopAutoSession).toHaveBeenCalled();

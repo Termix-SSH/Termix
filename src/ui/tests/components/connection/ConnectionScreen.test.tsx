@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -25,16 +25,16 @@ describe("ConnectionScreen", () => {
   });
 
   it("renders the disconnected state without a provider", () => {
-    expect(() =>
-      render(
-        <ConnectionScreen
-          status="disconnected"
-          message="remoteDesktop.hostNotFound"
-        />,
-      ),
-    ).not.toThrow();
+    render(
+      <ConnectionScreen
+        status="disconnected"
+        message="common.loading"
+        disconnectedMessage="terminal.connectionLost"
+      />,
+    );
 
-    expect(screen.getByText("remoteDesktop.hostNotFound")).toBeTruthy();
+    expect(screen.getByText("terminal.connectionLost")).toBeTruthy();
+    expect(screen.queryByText("common.loading")).toBeNull();
     expect(screen.getByRole("status").getAttribute("data-status")).toBe(
       "disconnected",
     );
@@ -48,5 +48,67 @@ describe("ConnectionScreen", () => {
     );
 
     expect(screen.getByText(/sshAuth\.connectionLogTitle/)).toBeTruthy();
+  });
+
+  it("offers retry and the reason once a connect fails", () => {
+    const retry = vi.fn();
+    render(
+      <ConnectionScreen
+        status="error"
+        message="common.loading"
+        errorDetail="Authentication failed"
+        onManualRetry={retry}
+      />,
+    );
+
+    expect(screen.getByText("connection.failed")).toBeTruthy();
+    expect(screen.getByText("Authentication failed")).toBeTruthy();
+    fireEvent.click(screen.getByText("connection.reconnect"));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the user skip the wait while it retries on its own", () => {
+    const retry = vi.fn();
+    render(
+      <ConnectionScreen
+        status="error"
+        attempt={2}
+        maxAttempts={8}
+        nextRetryInMs={4000}
+        onManualRetry={retry}
+      />,
+    );
+
+    expect(screen.getByText("connection.failedRetrying")).toBeTruthy();
+    expect(screen.getByText("connection.retryingIn")).toBeTruthy();
+    fireEvent.click(screen.getByText("connection.retryNow"));
+    expect(retry).toHaveBeenCalled();
+  });
+
+  it("shows an unavailable state with its hint, action and retry", () => {
+    render(
+      <ConnectionScreen
+        status="connected"
+        unavailable={{
+          title: "docker.notEnabled",
+          hint: "docker.notEnabledHint",
+          action: <button>open editor</button>,
+        }}
+        onManualRetry={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("status").getAttribute("data-status")).toBe(
+      "unavailable",
+    );
+    expect(screen.getByText("docker.notEnabled")).toBeTruthy();
+    expect(screen.getByText("docker.notEnabledHint")).toBeTruthy();
+    expect(screen.getByText("open editor")).toBeTruthy();
+    expect(screen.getByText("connection.reconnect")).toBeTruthy();
+  });
+
+  it("renders nothing once connected", () => {
+    const { container } = render(<ConnectionScreen status="connected" />);
+    expect(container.innerHTML).toBe("");
   });
 });
