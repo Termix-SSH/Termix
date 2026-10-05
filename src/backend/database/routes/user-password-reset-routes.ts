@@ -173,7 +173,7 @@ export function registerUserPasswordResetRoutes(
         });
       }
 
-      if (user.isOidc) {
+      if (user.isExternal) {
         return res.json({
           message:
             "If the user exists, a password reset code has been generated. Check docker logs for the code.",

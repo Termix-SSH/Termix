@@ -83,9 +83,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   externalBrowserLogin: (authUrl, callbackPort) =>
     ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
-  // 2.8 name, read by older server login pages. Remove in 26.10.0.
-  oidcSystemBrowserAuth: (authUrl, callbackPort) =>
-    ipcRenderer.invoke("external-browser-login", authUrl, callbackPort),
 
   openExternalEditor: (fileData) =>
     ipcRenderer.invoke("open-external-editor", fileData),

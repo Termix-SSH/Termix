@@ -33,10 +33,28 @@ describe("share_ssh_auth backfill", () => {
     fs.rmSync(dataDir, { recursive: true, force: true });
   });
 
-  /** A 2.6.0 database: hosts and shares exist, the column does not. */
+  /**
+   * Hosts and shares exist, the column does not. The plugins table is there
+   * because 26.10.0 only opens a database 2.9 has already upgraded.
+   */
   function writePreUpgradeDatabase(): void {
     const seed = new Database(":memory:");
     seed.exec(`
+      CREATE TABLE plugins (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        version TEXT NOT NULL,
+        tier TEXT NOT NULL DEFAULT 'available',
+        source TEXT NOT NULL DEFAULT 'community',
+        registry_id TEXT,
+        state TEXT NOT NULL DEFAULT 'disabled',
+        last_error TEXT,
+        installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        auto_update INTEGER NOT NULL DEFAULT 0,
+        manifest_json TEXT NOT NULL
+      );
+
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,

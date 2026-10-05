@@ -710,9 +710,6 @@ export function registerHostBulkRoutes(
             sudoPassword: hostData.sudoPassword || null,
             jumpHosts: jumpHosts ? JSON.stringify(jumpHosts) : null,
             ...importedStatusCheck(hostData as Record<string, unknown>),
-            terminalConfig: hostData.terminalConfig
-              ? JSON.stringify(hostData.terminalConfig)
-              : null,
             // A 2.8 export carries these inside terminalConfig.
             sshOptions:
               sshOptionsForWrite({
@@ -975,7 +972,6 @@ export function registerHostBulkRoutes(
               : null,
             statusCheckEnabled: true,
             statusCheckInterval: null,
-            terminalConfig: null,
             sshOptions: null,
             forceKeyboardInteractive: "false",
             notes: null,

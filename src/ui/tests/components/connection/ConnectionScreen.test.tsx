@@ -47,6 +47,6 @@ describe("ConnectionScreen", () => {
       </ConnectionLogProvider>,
     );
 
-    expect(screen.getByText(/terminal\.connectionLogTitle/)).toBeTruthy();
+    expect(screen.getByText(/sshAuth\.connectionLogTitle/)).toBeTruthy();
   });
 });

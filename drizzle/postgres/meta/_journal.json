@@ -463,6 +463,20 @@
       "when": 1790742086298,
       "tag": "0065_regular_joystick",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1791209295939,
+      "tag": "0066_retire_2_8_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1791209310758,
+      "tag": "0067_external_session_ref",
+      "breakpoints": true
     }
   ]
 }

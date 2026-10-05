@@ -106,37 +106,11 @@ export async function resolveHostById(
       host.jumpHosts = [];
     }
   }
-  if (typeof host.terminalConfig === "string" && host.terminalConfig) {
-    try {
-      host.terminalConfig = JSON.parse(host.terminalConfig as string);
-    } catch {
-      host.terminalConfig = undefined;
-    }
-  }
-  if (
-    host.terminalConfig &&
-    typeof host.terminalConfig === "object" &&
-    !Array.isArray(host.terminalConfig)
-  ) {
-    // 2.8 editors kept the sudo password inside terminal_config. It is only
-    // ever handed out as sudoPassword, and only to the owner.
-    const { sudoPassword: legacySudo, ...rest } = host.terminalConfig as Record<
-      string,
-      unknown
-    >;
-    if (ownerEquivalent && !host.sudoPassword && legacySudo) {
-      host.sudoPassword = legacySudo;
-    }
-    host.terminalConfig = rest;
-  }
   // Stored as the text "true"/"false"; the string "false" is truthy and would
   // make the password provider skip password auth.
   host.forceKeyboardInteractive =
     String(host.forceKeyboardInteractive) === "true";
-  // A row the boot copy has not reached yet still has them in terminal_config.
-  host.sshOptions = parseSshOptions(
-    host.sshOptions != null ? host.sshOptions : host.terminalConfig,
-  );
+  host.sshOptions = parseSshOptions(host.sshOptions);
   if (typeof host.socks5ProxyChain === "string" && host.socks5ProxyChain) {
     try {
       host.socks5ProxyChain = JSON.parse(host.socks5ProxyChain as string);
@@ -157,25 +131,8 @@ export async function resolveHostById(
     sharedAuthResolution = await resolveRecipientSshAuth(host, hostId, userId);
     if (!sharedAuthResolution) return null;
   } else {
-    let effectiveCredentialId = host.credentialId as number | null | undefined;
-    if (
-      !effectiveCredentialId &&
-      host.authType === "credential" &&
-      host.folder
-    ) {
-      try {
-        effectiveCredentialId = await repository.findFolderCredentialId(
-          ownerId,
-          host.folder as string,
-        );
-      } catch (e) {
-        sshLogger.warn("Failed to resolve folder credential for host", {
-          operation: "host_resolver_folder_credential",
-          hostId,
-          error: getErrorMessage(e, "Unknown"),
-        });
-      }
-    }
+    const effectiveCredentialId = host.credentialId as
+      number | null | undefined;
 
     if (effectiveCredentialId) {
       try {

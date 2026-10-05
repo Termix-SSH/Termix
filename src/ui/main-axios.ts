@@ -77,8 +77,6 @@ export interface AuthResponse {
   username?: string;
   userId?: string;
   is_external?: boolean;
-  /** 2.8 name for is_external. */
-  is_oidc?: boolean;
   totp_enabled?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
@@ -96,8 +94,6 @@ export interface UserInfo {
   is_admin: boolean;
   /** Signs in through an external login such as SSO or LDAP. */
   is_external?: boolean;
-  /** 2.8 name for is_external. */
-  is_oidc: boolean;
   is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
@@ -960,8 +956,7 @@ export async function loginUser(
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
       rememberMe: response.data.rememberMe,
-      is_external: response.data.is_external ?? response.data.is_oidc,
-      is_oidc: response.data.is_oidc,
+      is_external: response.data.is_external,
       totp_enabled: response.data.totp_enabled,
       token: response.data.token,
     };

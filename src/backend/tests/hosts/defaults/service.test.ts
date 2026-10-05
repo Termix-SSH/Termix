@@ -1,12 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 
-vi.mock("../../../database/repositories/factory.js", () => ({}));
+const rows = vi.hoisted(() => ({
+  owned: [] as Array<Record<string, unknown>>,
+}));
+
+vi.mock("../../../database/repositories/factory.js", () => ({
+  createCurrentHostDefaultsRepository: () => ({
+    listOwnedBy: async () => rows.owned,
+  }),
+}));
 vi.mock("../../../database/routes/host-plugin-settings.js", () => ({
   hostSettingsPlugins: () => [],
 }));
 
-const { validateLevelChange } =
+const { folderCredentialIds, validateLevelChange } =
   await import("../../../hosts/defaults/service.js");
 const { buildCatalog } = await import("../../../hosts/defaults/catalog.js");
 
@@ -111,5 +119,41 @@ describe("validateLevelChange", () => {
       catalog,
     );
     expect(change.errors["core.jumpHosts"]).toBeDefined();
+  });
+});
+
+describe("folderCredentialIds", () => {
+  it("reads each folder's credential from its auth default", async () => {
+    rows.owned = [
+      {
+        level: "folder",
+        folderId: 4,
+        namespace: "core",
+        key: "auth",
+        value: JSON.stringify({ authType: "credential", credentialId: 7 }),
+      },
+      {
+        level: "folder",
+        folderId: 5,
+        namespace: "core",
+        key: "auth",
+        value: JSON.stringify({ authType: "none" }),
+      },
+      {
+        level: "user",
+        folderId: null,
+        namespace: "core",
+        key: "auth",
+        value: JSON.stringify({ authType: "credential", credentialId: 9 }),
+      },
+      {
+        level: "folder",
+        folderId: 6,
+        namespace: "fx",
+        key: "auth",
+        value: JSON.stringify({ authType: "credential", credentialId: 2 }),
+      },
+    ];
+    expect([...(await folderCredentialIds("u1"))]).toEqual([[4, 7]]);
   });
 });

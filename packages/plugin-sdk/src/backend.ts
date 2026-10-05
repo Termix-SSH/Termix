@@ -373,7 +373,7 @@ export interface PluginHttp {
   /**
    * The public base URL a request came in on: origin plus the install's base
    * path, no trailing slash. Honours forwarded headers from a trusted proxy,
-   * BASE_PATH and OIDC_FORCE_HTTPS. For building absolute callback URLs.
+   * BASE_PATH and EXTERNAL_FORCE_HTTPS. For building absolute callback URLs.
    */
   baseUrl: (req: unknown) => string;
 }
@@ -1368,10 +1368,9 @@ export type PluginVerifiedIdentity =
         sid?: string | null;
       };
       /**
-       * The values a 2.8 install kept on the user row (`oidc_identifier`,
-       * `sso_provider_id`). Only for a plugin that took over a 2.8 login
-       * method: core finds pre-2.9 accounts by `identifier` and keeps writing
-       * both for new users so a downgrade still works.
+       * The identifier a 2.8 install kept for the user. Only for a plugin
+       * that took over a 2.8 login method: core also checks `identifier`
+       * against `allowedUsers`. `providerRowId` is no longer read.
        */
       legacy?: { identifier: string; providerRowId?: number | null };
       /**

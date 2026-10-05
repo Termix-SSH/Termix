@@ -428,6 +428,20 @@
       "when": 1790742085632,
       "tag": "0060_fine_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "6",
+      "when": 1791209294736,
+      "tag": "0061_retire_2_8_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "6",
+      "when": 1791209309626,
+      "tag": "0062_external_session_ref",
+      "breakpoints": true
     }
   ]
 }

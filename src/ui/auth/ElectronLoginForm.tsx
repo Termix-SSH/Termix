@@ -138,7 +138,7 @@ export function ElectronLoginForm({
           if (!electronAPI?.externalBrowserLogin) {
             sendResultToIframe({
               success: false,
-              error: t("errors.failedOidcLogin"),
+              error: t("errors.failedExternalLogin"),
             });
             return;
           }
@@ -162,7 +162,7 @@ export function ElectronLoginForm({
           }
           sendResultToIframe({
             success: false,
-            error: result.error || t("errors.failedOidcLogin"),
+            error: result.error || t("errors.failedExternalLogin"),
           });
         }
       } catch (err) {
@@ -172,7 +172,7 @@ export function ElectronLoginForm({
           typeof event.data.providerId === "number"
             ? event.data.providerId
             : undefined;
-        const error = getErrorMessage(err, t("errors.failedOidcLogin"));
+        const error = getErrorMessage(err, t("errors.failedExternalLogin"));
         iframeRef.current?.contentWindow?.postMessage(
           {
             type: "OIDC_SYSTEM_BROWSER_AUTH_RESULT",

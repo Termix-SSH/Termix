@@ -123,7 +123,6 @@ export function registerUserAdminRoutes(
           username: u.username,
           is_admin: u.isAdmin,
           is_external: isExternalAccount(u),
-          is_oidc: u.isOidc,
           password_hash: u.passwordHash ? "set" : null,
           // Management-only details stay admin-eyes-only; regular users hit
           // this route to pick sharing targets.
@@ -470,15 +469,6 @@ export function registerUserAdminRoutes(
         username,
         passwordHash: password_hash,
         isAdmin: false,
-        isOidc: false,
-        clientId: "",
-        clientSecret: "",
-        issuerUrl: "",
-        authorizationUrl: "",
-        tokenUrl: "",
-        identifierPath: "",
-        namePath: "",
-        scopes: "openid email profile",
       });
 
       try {
@@ -631,7 +621,7 @@ export function registerUserAdminRoutes(
       if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
       }
-      if (targetUser.isOidc && !targetUser.passwordHash) {
+      if (targetUser.isExternal && !targetUser.passwordHash) {
         return res.status(400).json({
           error: "This user authenticates through an external provider",
         });

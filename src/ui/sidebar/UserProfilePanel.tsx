@@ -537,7 +537,7 @@ export function UserProfilePanel({
     "up_to_date" | "requires_update" | "beta" | "unknown"
   >("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
-  const [isOidc, setIsOidc] = useState(false);
+  const [isExternal, setIsExternal] = useState(false);
   const [isDualAuth, setIsDualAuth] = useState(false);
 
   // Delete account
@@ -647,7 +647,7 @@ export function UserProfilePanel({
     getUserInfo()
       .then((info) => {
         setUserId(info.userId);
-        setIsOidc(info.is_external ?? info.is_oidc ?? false);
+        setIsExternal(info.is_external ?? false);
         setIsDualAuth(info.is_dual_auth ?? false);
         const linked = info.linked ?? null;
         setLinkedAccount(linked);
@@ -661,8 +661,8 @@ export function UserProfilePanel({
         );
         if (info.is_dual_auth) {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodDual"));
-        } else if (info.is_external ?? info.is_oidc) {
-          setAuthMethod(t("newUi.sidebar.userProfile.authMethodOidc"));
+        } else if (info.is_external) {
+          setAuthMethod(t("newUi.sidebar.userProfile.authMethodExternal"));
         } else {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
         }
@@ -1181,7 +1181,7 @@ export function UserProfilePanel({
     }
   }
 
-  const canChangePasword = !isOidc || isDualAuth;
+  const canChangePasword = !isExternal || isDualAuth;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 p-3">

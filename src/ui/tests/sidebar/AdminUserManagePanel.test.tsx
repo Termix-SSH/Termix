@@ -48,7 +48,7 @@ function makeUser(overrides: Partial<AdminUser> = {}): AdminUser {
     id: "u2",
     username: "bob",
     isAdmin: false,
-    isOidc: false,
+    isExternal: false,
     passwordHash: "hash",
     dataUnlocked: true,
     ...overrides,

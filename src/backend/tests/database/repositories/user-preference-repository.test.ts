@@ -34,19 +34,19 @@ describe("UserPreferenceRepository", () => {
       reopenTabsOnLogin: true,
       theme: "dark",
       storageMode: "local",
-      commandAutocomplete: true,
+      commandPaletteEnabled: true,
     });
     expect(created).toMatchObject({
       userId: "user-1",
       reopenTabsOnLogin: true,
       theme: "dark",
       storageMode: "local",
-      commandAutocomplete: true,
+      commandPaletteEnabled: true,
     });
 
     const updated = await repo.upsert("user-1", {
       theme: "light",
-      commandAutocomplete: false,
+      commandPaletteEnabled: false,
       updatedAt: "2026-06-27T00:00:00.000Z",
     });
     expect(updated).toMatchObject({
@@ -54,7 +54,7 @@ describe("UserPreferenceRepository", () => {
       reopenTabsOnLogin: true,
       theme: "light",
       storageMode: "local",
-      commandAutocomplete: false,
+      commandPaletteEnabled: false,
     });
   });
 

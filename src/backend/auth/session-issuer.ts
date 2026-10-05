@@ -17,6 +17,7 @@ import {
   createCurrentUserAuthRepository,
 } from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
+import type { ExternalSessionRef } from "./types.js";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -64,9 +65,7 @@ export interface IssueSessionOptions {
   rememberMe: boolean;
   /** Username the rate limiter counted attempts under, to clear them. */
   rateLimitUsername?: string;
-  ssoProviderId?: number | null;
-  oidcSub?: string | null;
-  oidcSid?: string | null;
+  externalSession?: ExternalSessionRef | null;
   /** SSO logins keep desktop and mobile apps signed in for 30 days. */
   longLivedForApps?: boolean;
 }
@@ -93,9 +92,7 @@ export async function issueSession(
     rememberMe: options.rememberMe,
     deviceType: deviceInfo.type,
     deviceInfo: deviceInfo.deviceInfo,
-    oidcSub: options.oidcSub ?? null,
-    oidcSid: options.oidcSid ?? null,
-    ssoProviderId: options.ssoProviderId ?? null,
+    externalSession: options.externalSession ?? null,
   });
 
   if (options.rateLimitUsername) {
@@ -141,8 +138,6 @@ export async function issueSession(
       username: user.username,
       userId: user.id,
       is_external: isExternalAccount(user),
-      // 2.8 name, kept until 26.10.0.
-      is_oidc: !!user.isOidc,
       // Any second factor; the name is what 2.8 clients read.
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
         user.id,

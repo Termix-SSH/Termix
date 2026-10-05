@@ -1,10 +1,10 @@
 /**
  * Whether a user signs in through an external login (SSO, LDAP or any login
- * plugin) rather than only a password. Read from the is_oidc column, which
- * keeps its 2.8 name until 26.10.0 replaces it with user_external_identities.
+ * plugin) rather than only a password: they have a user_external_identities
+ * row. UserRepository fills isExternal.
  */
 export function isExternalAccount(user: {
-  isOidc?: boolean | number | null;
+  isExternal?: boolean | null;
 }): boolean {
-  return !!user.isOidc;
+  return !!user.isExternal;
 }

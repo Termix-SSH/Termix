@@ -630,15 +630,15 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isOidcUser = !!user.isOidc;
+    const isExternalUser = !!user.isExternal;
 
     if (!DataCrypto.getUserDataKey(userId)) {
-      if (isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateExternalUser(
+      if (isExternalUser) {
+        const externalUnlocked = await authManager.authenticateExternalUser(
           userId,
           deviceInfo.type,
         );
-        if (!oidcUnlocked) {
+        if (!externalUnlocked) {
           return res.status(403).json({
             error: "Failed to unlock user data with SSO credentials",
           });
@@ -699,17 +699,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           id TEXT PRIMARY KEY,
           username TEXT NOT NULL,
           password_hash TEXT NOT NULL,
-          is_admin INTEGER NOT NULL DEFAULT 0,
-          is_oidc INTEGER NOT NULL DEFAULT 0,
-          oidc_identifier TEXT,
-          client_id TEXT,
-          client_secret TEXT,
-          issuer_url TEXT,
-          authorization_url TEXT,
-          token_url TEXT,
-          identifier_path TEXT,
-          name_path TEXT,
-          scopes TEXT DEFAULT 'openid email profile'
+          is_admin INTEGER NOT NULL DEFAULT 0
         );
 
         CREATE TABLE settings (
@@ -740,9 +730,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           jump_hosts TEXT,
           status_check_enabled INTEGER NOT NULL DEFAULT 1,
           status_check_interval INTEGER,
-          terminal_config TEXT,
           ssh_options TEXT,
-          quick_actions TEXT,
           notes TEXT,
           use_socks5 INTEGER,
           socks5_host TEXT,
@@ -805,31 +793,21 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
       const userRecord = user;
       const insertUser = exportDb.prepare(`
-        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, username, password_hash, is_admin)
+        VALUES (?, ?, ?, ?)
       `);
       insertUser.run(
         userRecord.id,
         userRecord.username,
         "[EXPORTED_USER_NO_PASSWORD]",
         userRecord.isAdmin ? 1 : 0,
-        userRecord.isOidc ? 1 : 0,
-        userRecord.oidcIdentifier || null,
-        userRecord.clientId || null,
-        userRecord.clientSecret || null,
-        userRecord.issuerUrl || null,
-        userRecord.authorizationUrl || null,
-        userRecord.tokenUrl || null,
-        userRecord.identifierPath || null,
-        userRecord.namePath || null,
-        userRecord.scopes || null,
       );
 
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, terminal_config, ssh_options, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, credential_id, override_credential_username, jump_hosts, status_check_enabled, status_check_interval, ssh_options, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -856,9 +834,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.jumpHosts || null,
           decrypted.statusCheckEnabled === false ? 0 : 1,
           decrypted.statusCheckInterval ?? null,
-          decrypted.terminalConfig || null,
           decrypted.sshOptions || null,
-          decrypted.quickActions || null,
           decrypted.notes || null,
           decrypted.useSocks5 ? 1 : 0,
           decrypted.socks5Host || null,
@@ -1074,15 +1050,15 @@ app.post(
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isOidcUser = !!userRecord.isOidc;
+      const isExternalUser = !!userRecord.isExternal;
 
       if (!DataCrypto.getUserDataKey(userId)) {
-        if (isOidcUser) {
-          const oidcUnlocked = await authManager.authenticateExternalUser(
+        if (isExternalUser) {
+          const externalUnlocked = await authManager.authenticateExternalUser(
             userId,
             deviceInfo.type,
           );
-          if (!oidcUnlocked) {
+          if (!externalUnlocked) {
             return res.status(403).json({
               error: "Failed to unlock user data with SSO credentials",
             });
@@ -1198,7 +1174,6 @@ app.post(
                   ),
                   jumpHosts: host.jump_hosts,
                   ...legacyStatusCheck(host),
-                  terminalConfig: host.terminal_config,
                   // Exports from before 2.9.0 carry these in terminal_config.
                   sshOptions:
                     host.ssh_options ??
@@ -1206,7 +1181,6 @@ app.post(
                       terminalConfig: host.terminal_config,
                     }) ??
                     null,
-                  quickActions: host.quick_actions,
                   notes: host.notes,
                   useSocks5: Boolean(host.use_socks5),
                   socks5Host: host.socks5_host,

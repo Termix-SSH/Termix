@@ -50,8 +50,7 @@ function optionalString(value: unknown): string | null | undefined {
 
 /**
  * The SSH options in a value (a JSON string or an object), typed and with
- * anything else dropped. A terminal_config value works too, which is how the
- * 2.8 keys are read.
+ * anything else dropped. A 2.8 client's terminalConfig works too.
  */
 export function parseSshOptions(value: unknown): HostSshOptions {
   const source = asObject(value);

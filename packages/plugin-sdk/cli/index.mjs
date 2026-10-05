@@ -18,7 +18,11 @@ const COMMANDS = {
   build,
   patch: async ({ cwd }) => applyPatches(cwd, readManifest(cwd).id),
   validate,
-  test,
+  // The tests exercise patched dependencies, so patch first like build does.
+  test: async (options) => {
+    applyPatches(options.cwd, readManifest(options.cwd).id);
+    return test(options);
+  },
   pack,
   sign,
   verify,
@@ -36,7 +40,7 @@ if (!command || command === "--help" || command === "-h") {
       "  build      Bundle the plugin into dist/",
       "  patch      Apply the plugin's dependency patches (build does this too)",
       "  validate   Check manifest.json and the files it names",
-      "  test       Run the plugin's vitest suite",
+      "  test       Apply the patches, then run the plugin's vitest suite",
       "  pack       Write <id>-<version>.tmxplug of the built plugin [--out dir]",
       "  sign       Sign a .tmxplug with TERMIX_PLUGIN_SIGNING_KEY <file>",
       "  verify     Check a .tmxplug's .sig <file> --key <base64>[,...]",

@@ -59,3 +59,18 @@ describe("plugin CLI before the SDK is built", () => {
     expect(result.stderr).not.toContain("ERR_MODULE_NOT_FOUND");
   });
 });
+
+describe("termix-plugin test", () => {
+  it("applies the plugin's patches before running vitest", () => {
+    const { cli, plugin, run } = fixture();
+    fs.mkdirSync(path.join(plugin, "patches"));
+    fs.writeFileSync(
+      path.join(plugin, "patches", "mark.cjs"),
+      'require("node:fs").writeFileSync("patched.txt", "yes");',
+    );
+    run(cli, "test");
+    expect(fs.readFileSync(path.join(plugin, "patched.txt"), "utf8")).toBe(
+      "yes",
+    );
+  });
+});

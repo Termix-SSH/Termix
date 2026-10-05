@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, like, sql } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, like, sql } from "drizzle-orm";
 import { pluginSettings, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import {
@@ -8,10 +8,21 @@ import {
 } from "./mutation-result.js";
 import { insertReturning, updateReturning } from "./returning.js";
 
-export type UserRecord = typeof users.$inferSelect;
+/** isExternal: the user has at least one external sign-in identity. */
+export type UserRecord = typeof users.$inferSelect & { isExternal: boolean };
 export type NewUserRecord = typeof users.$inferInsert;
 export type UserUpdate = Partial<Omit<NewUserRecord, "id">>;
 export type NewFirstLocalUserRecord = Omit<NewUserRecord, "isAdmin">;
+
+// Qualified by hand: drizzle prints a column in a subquery without its table,
+// which would bind users.id to the identity row's own id.
+const userColumns = {
+  ...getTableColumns(users),
+  isExternal:
+    sql<boolean>`EXISTS (SELECT 1 FROM ${sql.identifier("user_external_identities")} WHERE ${sql.identifier("user_external_identities")}.${sql.identifier("user_id")} = ${sql.identifier("users")}.${sql.identifier("id")})`.mapWith(
+      (value: unknown) => value === true || Number(value) === 1,
+    ),
+};
 
 export class UserRepository {
   constructor(
@@ -20,7 +31,7 @@ export class UserRepository {
   ) {}
 
   async listAll(): Promise<UserRecord[]> {
-    return this.context.drizzle.select().from(users);
+    return this.context.drizzle.select(userColumns).from(users);
   }
 
   /**
@@ -42,7 +53,7 @@ export class UserRepository {
 
     const [rows, totalResult] = await Promise.all([
       this.context.drizzle
-        .select()
+        .select(userColumns)
         .from(users)
         .where(where)
         // Case-insensitive: a plain sort puts every capitalised name ahead of
@@ -61,7 +72,7 @@ export class UserRepository {
 
   async findById(id: string): Promise<UserRecord | null> {
     const rows = await this.context.drizzle
-      .select()
+      .select(userColumns)
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
@@ -71,21 +82,9 @@ export class UserRepository {
 
   async findByUsername(username: string): Promise<UserRecord | null> {
     const rows = await this.context.drizzle
-      .select()
+      .select(userColumns)
       .from(users)
       .where(eq(users.username, username))
-      .limit(1);
-
-    return rows[0] ?? null;
-  }
-
-  async findByExternalIdentifier(
-    oidcIdentifier: string,
-  ): Promise<UserRecord | null> {
-    const rows = await this.context.drizzle
-      .select()
-      .from(users)
-      .where(eq(users.oidcIdentifier, oidcIdentifier))
       .limit(1);
 
     return rows[0] ?? null;
@@ -98,7 +97,7 @@ export class UserRepository {
     }
 
     return this.context.drizzle
-      .select()
+      .select(userColumns)
       .from(users)
       .where(inArray(users.id, uniqueIds));
   }
@@ -106,7 +105,9 @@ export class UserRepository {
   async create(user: NewUserRecord): Promise<UserRecord> {
     const rows = await insertReturning(this.context, users, user);
     await this.afterWrite();
-    return rows[0];
+    return (
+      (await this.findById(rows[0].id)) ?? { ...rows[0], isExternal: false }
+    );
   }
 
   async createFirstLocalUser(
@@ -118,7 +119,7 @@ export class UserRepository {
     }));
 
     await this.afterWrite();
-    return result;
+    return { ...result, user: { ...result.user, isExternal: false } };
   }
 
   async createFirstSsoUser(
@@ -130,7 +131,7 @@ export class UserRepository {
     }));
 
     await this.afterWrite();
-    return result;
+    return { ...result, user: { ...result.user, isExternal: true } };
   }
 
   /**
@@ -146,7 +147,7 @@ export class UserRepository {
    */
   private async createCheckingIfFirst(
     build: (isFirstUser: boolean) => NewUserRecord,
-  ): Promise<{ user: UserRecord; isFirstUser: boolean }> {
+  ): Promise<{ user: typeof users.$inferSelect; isFirstUser: boolean }> {
     if (this.context.dialect === "sqlite") {
       /* eslint-disable no-restricted-syntax -- sqlite-only branch: the dialect
          is checked directly above, and better-sqlite3 rejects an async
@@ -195,7 +196,7 @@ export class UserRepository {
     );
 
     await this.afterWrite();
-    return rows[0] ?? null;
+    return rows[0] ? this.findById(rows[0].id) : null;
   }
 
   async delete(id: string): Promise<boolean> {

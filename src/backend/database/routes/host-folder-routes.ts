@@ -12,7 +12,10 @@ import {
 } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 import { recompute } from "../../hosts/defaults/recompute.js";
-import { setFolderCredentialDefault } from "../../hosts/defaults/service.js";
+import {
+  folderCredentialIds,
+  setFolderCredentialDefault,
+} from "../../hosts/defaults/service.js";
 
 type HostFolderRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -143,10 +146,17 @@ export function registerHostFolderRoutes(
       }
 
       try {
-        const folders =
-          await createCurrentHostFolderRepository().listFolders(userId);
+        const [folders, credentials] = await Promise.all([
+          createCurrentHostFolderRepository().listFolders(userId),
+          folderCredentialIds(userId),
+        ]);
 
-        res.json(folders);
+        res.json(
+          folders.map((folder) => ({
+            ...folder,
+            credentialId: credentials.get(folder.id) ?? null,
+          })),
+        );
       } catch (err) {
         sshLogger.error("Failed to fetch folders", err, {
           operation: "fetch_folders",
@@ -238,7 +248,6 @@ export function registerHostFolderRoutes(
             name,
             color,
             icon,
-            normalizedCredentialId,
           );
         if (typeof localOnly === "boolean") {
           await createCurrentHostFolderRepository().setLocalOnly(

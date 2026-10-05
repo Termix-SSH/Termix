@@ -55,6 +55,7 @@ import {
   isNativeAppRequest,
   syncSharedCredentialsForUserRoles,
 } from "../../auth/session-issuer.js";
+import { EXTERNAL_AUTO_PROVISION_KEY } from "../../auth/provisioning.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -184,15 +185,6 @@ router.post("/create", async (req, res) => {
       id,
       username,
       passwordHash: password_hash,
-      isOidc: false,
-      clientId: "",
-      clientSecret: "",
-      issuerUrl: "",
-      authorizationUrl: "",
-      tokenUrl: "",
-      identifierPath: "",
-      namePath: "",
-      scopes: "openid email profile",
     });
 
     try {
@@ -361,7 +353,7 @@ router.post("/proxy-login", async (req, res) => {
       return res.status(403).json({ error: "Proxy user must already exist" });
     }
     if (
-      userRecord.isOidc ||
+      userRecord.isExternal ||
       (await createCurrentUserAuthRepository().hasSecondFactor(userRecord.id))
     ) {
       return res.status(409).json({
@@ -600,8 +592,7 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     }
 
     const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
-    const isDualAuth =
-      hasPassword && isExternalAccount(user) && !!user.oidcIdentifier;
+    const isDualAuth = hasPassword && isExternalAccount(user);
 
     const showDonationModal = shouldShowDonationModal(
       user.registeredAt,
@@ -613,8 +604,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       username: user.username,
       is_admin: !!user.isAdmin,
       is_external: isExternalAccount(user),
-      // 2.8 name, kept until 26.10.0.
-      is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
       // Any second factor; the name is what 2.8 clients read.
       totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
@@ -944,7 +933,7 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
  * /users/external-auto-provision:
  *   get:
  *     summary: Get the external account auto-create setting
- *     description: Whether a new account is created the first time someone signs in through an external login (SSO, LDAP or any login plugin). The 2.8 path /users/oidc-auto-provision is accepted too.
+ *     description: Whether a new account is created the first time someone signs in through an external login (SSO, LDAP or any login plugin).
  *     tags:
  *       - Users
  *     responses:
@@ -955,7 +944,7 @@ const getExternalAutoProvision: RequestHandler = async (_req, res) => {
   try {
     res.json({
       enabled: await createCurrentSettingsRepository().getBoolean(
-        "oidc_auto_provision",
+        EXTERNAL_AUTO_PROVISION_KEY,
         false,
       ),
     });
@@ -972,7 +961,7 @@ const getExternalAutoProvision: RequestHandler = async (_req, res) => {
  * /users/external-auto-provision:
  *   patch:
  *     summary: Set the external account auto-create setting
- *     description: Enables or disables creating an account on first external sign-in. The 2.8 path /users/oidc-auto-provision is accepted too.
+ *     description: Enables or disables creating an account on first external sign-in.
  *     tags:
  *       - Users
  *     requestBody:
@@ -1006,7 +995,7 @@ const setExternalAutoProvision: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Invalid value for enabled" });
     }
     await createCurrentSettingsRepository().set(
-      "oidc_auto_provision",
+      EXTERNAL_AUTO_PROVISION_KEY,
       enabled ? "true" : "false",
     );
     res.json({ enabled });
@@ -1022,9 +1011,6 @@ router.patch(
   authenticateJWT,
   setExternalAutoProvision,
 );
-// 2.8 paths, kept until 26.10.0.
-router.get("/oidc-auto-provision", getExternalAutoProvision);
-router.patch("/oidc-auto-provision", authenticateJWT, setExternalAutoProvision);
 
 /**
  * @openapi
@@ -1317,7 +1303,7 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (userRecord.isOidc) {
+    if (userRecord.isExternal) {
       return res.status(403).json({
         error:
           "Cannot delete external authentication accounts through this endpoint",

@@ -314,40 +314,9 @@ function sanitizePluginArea(input: unknown): Record<string, unknown> {
   return out;
 }
 
-/**
- * Areas that moved into a plugin: before `version` they were stored under
- * core's name. Version 1 had docker and host metrics, version 2 the terminal
- * and the file manager.
- */
-const MOVED_PLUGIN_AREAS: Array<{
-  before: number;
-  legacy: string;
-  area: UiPluginAreaKey;
-}> = [
-  { before: 2, legacy: "docker", area: "plugin:docker" }, // plugin-id-ok: 2.8 key
-  { before: 2, legacy: "hostMetrics", area: "plugin:host-metrics" },
-  { before: 3, legacy: "terminal", area: "plugin:ssh-terminal" },
-  { before: 3, legacy: "fileManager", area: "plugin:file-manager" },
-];
-
-export function sanitizeUiOverrides(
-  input: unknown,
-  version = UI_PREFERENCES_VERSION,
-): UiOverrides {
+export function sanitizeUiOverrides(input: unknown): UiOverrides {
   const out: Record<string, Record<string, unknown>> = {};
   if (!input || typeof input !== "object") return out as UiOverrides;
-
-  const moves = MOVED_PLUGIN_AREAS.filter((move) => version < move.before);
-  if (moves.length > 0) {
-    const upgraded = { ...(input as Record<string, unknown>) };
-    for (const { legacy, area } of moves) {
-      if (legacy in upgraded) {
-        upgraded[area] = upgraded[legacy];
-        delete upgraded[legacy];
-      }
-    }
-    input = upgraded;
-  }
 
   const specsByArea = AREA_SPECS as unknown as Record<
     string,
@@ -424,10 +393,7 @@ export function sanitizeUiPreferences(input: unknown): UiPreferences {
     preset: PRESET_VALUES.includes(obj.preset as UiPreset)
       ? (obj.preset as UiPreset)
       : defaults.preset,
-    overrides: sanitizeUiOverrides(
-      obj.overrides,
-      typeof obj.version === "number" ? obj.version : 1,
-    ),
+    overrides: sanitizeUiOverrides(obj.overrides),
     onboarding: sanitizeOnboarding(obj.onboarding),
   };
 }

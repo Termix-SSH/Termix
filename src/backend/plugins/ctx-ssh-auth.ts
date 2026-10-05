@@ -601,12 +601,13 @@ export function toCoreIdentity(
     returnTo: identity.returnTo,
     rememberMe: identity.rememberMe,
     legacyIdentifier: identity.legacy?.identifier,
-    ssoProviderId:
-      identity.logoutClaims?.providerId ??
-      identity.legacy?.providerRowId ??
-      null,
-    oidcSub: identity.logoutClaims?.sub ?? null,
-    oidcSid: identity.logoutClaims?.sid ?? null,
+    externalSession: identity.logoutClaims
+      ? {
+          providerId: identity.logoutClaims.providerId ?? null,
+          sub: identity.logoutClaims.sub ?? null,
+          sid: identity.logoutClaims.sid ?? null,
+        }
+      : null,
     roleSync: identity.roles
       ? {
           desired: [...identity.roles.desired],
@@ -864,7 +865,7 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       const { AuthManager } = await import("../utils/auth-manager.js");
       const revoked =
         await AuthManager.getInstance().revokeSessionsByExternalSession({
-          ssoProviderId: match.providerId ?? null,
+          providerId: match.providerId ?? null,
           sub: match.sub ?? null,
           sid: match.sid ?? null,
         });

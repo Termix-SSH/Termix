@@ -175,7 +175,7 @@ describe("PRESETS.balanced", () => {
 });
 
 describe("plugin areas", () => {
-  it("moves version 1 docker and host metrics overrides to their plugins", () => {
+  it("drops 2.8 area names, even from an old version", () => {
     const upgraded = sanitizeUiPreferences({
       version: 1,
       preset: "balanced",
@@ -184,10 +184,7 @@ describe("plugin areas", () => {
         hostMetrics: { columns: 2 },
       },
     });
-    expect(upgraded.overrides).toEqual({
-      "plugin:docker": { containerLayout: "table" },
-      "plugin:host-metrics": { columns: 2 },
-    });
+    expect(upgraded.overrides).toEqual({});
   });
 
   it("resolves a plugin area from its presets and the user's overrides", () => {
@@ -220,24 +217,12 @@ describe("plugin areas", () => {
 });
 
 describe("areas that moved into plugins", () => {
-  it("maps version 2 terminal and file manager overrides to their plugins", () => {
+  it("drops the old names", () => {
     expect(
-      sanitizeUiOverrides(
-        {
-          terminal: { toolbarDensity: "expanded" },
-          fileManager: { viewMode: "list" },
-        },
-        2,
-      ),
-    ).toEqual({
-      "plugin:ssh-terminal": { toolbarDensity: "expanded" },
-      "plugin:file-manager": { viewMode: "list" },
-    });
-  });
-
-  it("drops the old names from a current payload", () => {
-    expect(
-      sanitizeUiOverrides({ terminal: { toolbarDensity: "icon" } }),
+      sanitizeUiOverrides({
+        terminal: { toolbarDensity: "icon" },
+        fileManager: { viewMode: "list" },
+      }),
     ).toEqual({});
   });
 });

@@ -5,9 +5,6 @@ export interface FakeUser {
   username: string;
   passwordHash: string;
   isAdmin: boolean;
-  isOidc: boolean;
-  oidcIdentifier?: string | null;
-  ssoProviderId?: number | null;
 }
 
 /** In-memory stand-ins for the repositories the login pipeline touches. */
@@ -37,18 +34,28 @@ export function createAuthState() {
 
 export type AuthState = ReturnType<typeof createAuthState>;
 
+/** The user as UserRepository returns it, with isExternal filled in. */
+function withIdentities(state: AuthState, user: FakeUser | undefined) {
+  if (!user) return null;
+  return {
+    ...user,
+    isExternal: state.identities.some((row) => row.userId === user.id),
+  };
+}
+
 export function fakeFactory(state: AuthState) {
   return {
     createCurrentUserRepository: () => ({
-      findById: async (id: string) => state.users.get(id) ?? null,
+      findById: async (id: string) =>
+        withIdentities(state, state.users.get(id)),
       findByUsername: async (username: string) =>
-        [...state.users.values()].find((u) => u.username === username) ?? null,
-      findByExternalIdentifier: async (identifier: string) =>
-        [...state.users.values()].find(
-          (u) => u.oidcIdentifier === identifier,
-        ) ?? null,
+        withIdentities(
+          state,
+          [...state.users.values()].find((u) => u.username === username),
+        ),
       countAll: async () => state.users.size,
-      listAll: async () => [...state.users.values()],
+      listAll: async () =>
+        [...state.users.values()].map((u) => withIdentities(state, u)),
       createFirstSsoUser: async (user: FakeUser) => {
         const isFirstUser = state.users.size === 0;
         const created = {

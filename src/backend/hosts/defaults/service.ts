@@ -258,6 +258,35 @@ export async function resolveForEditor(input: {
   return resolveAll(catalog, levels, input.hostId ?? null);
 }
 
+/** Each folder's credential, from its auth default, keyed by folder id. */
+export async function folderCredentialIds(
+  userId: string,
+): Promise<Map<number, number>> {
+  const result = new Map<number, number>();
+  const rows = await createCurrentHostDefaultsRepository().listOwnedBy(userId);
+  for (const row of rows) {
+    if (
+      row.level !== "folder" ||
+      row.folderId == null ||
+      row.namespace !== CORE_NAMESPACE ||
+      row.key !== "auth"
+    ) {
+      continue;
+    }
+    const auth = decodeDefaultValue(row.value) as {
+      authType?: string;
+      credentialId?: unknown;
+    } | null;
+    if (
+      auth?.authType === "credential" &&
+      typeof auth.credentialId === "number"
+    ) {
+      result.set(row.folderId, auth.credentialId);
+    }
+  }
+  return result;
+}
+
 /**
  * A folder's credential is its auth default: hosts in the folder that follow
  * their defaults sign in with it. Null clears it.

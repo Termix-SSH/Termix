@@ -1,8 +1,7 @@
 /**
  * The OPKSSH config move. A 2.8 install's config must reach the opkssh
- * plugin's folder, the old file must stay for a downgrade, and the install
- * must keep the redirect URI its identity providers know. Running it twice
- * must not overwrite anything.
+ * plugin's folder and the old file must stay for a downgrade. Running it
+ * twice must not overwrite anything.
  */
 
 import fs from "node:fs/promises";
@@ -56,33 +55,22 @@ afterEach(async () => {
 });
 
 describe("runOpksshConfigMigration", () => {
-  it("copies the config, keeps the old one and the old redirect URI, once", async () => {
+  it("copies the config and keeps the old one, once", async () => {
     await fs.mkdir(path.dirname(legacy()), { recursive: true });
     await fs.writeFile(legacy(), "providers:\n  - alias: google\n");
 
-    expect(await runOpksshConfigMigration(dataDir)).toEqual({
-      copied: true,
-      legacyCallback: true,
-    });
+    expect(await runOpksshConfigMigration(dataDir)).toEqual({ copied: true });
     expect(await fs.readFile(target(), "utf8")).toContain("alias: google");
     expect(await fs.readFile(legacy(), "utf8")).toContain("alias: google");
-    expect(state.settings.get("legacyCallback")).toBe("true");
+    expect(state.settings.has("legacyCallback")).toBe(false);
 
     await fs.writeFile(target(), "providers:\n  - alias: edited\n");
-    state.settings.set("legacyCallback", "false");
-    expect(await runOpksshConfigMigration(dataDir)).toEqual({
-      copied: false,
-      legacyCallback: false,
-    });
+    expect(await runOpksshConfigMigration(dataDir)).toEqual({ copied: false });
     expect(await fs.readFile(target(), "utf8")).toContain("alias: edited");
-    expect(state.settings.get("legacyCallback")).toBe("false");
   });
 
   it("does nothing on an install that never set up OPKSSH", async () => {
-    expect(await runOpksshConfigMigration(dataDir)).toEqual({
-      copied: false,
-      legacyCallback: false,
-    });
+    expect(await runOpksshConfigMigration(dataDir)).toEqual({ copied: false });
     expect(state.settings.size).toBe(0);
   });
 

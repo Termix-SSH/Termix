@@ -58,7 +58,7 @@ export function registerUserExternalAccountRoutes(
    * /users/link-external-to-password:
    *   post:
    *     summary: Merge an external account into a password account
-   *     description: Moves an external-only account's sign-in identities onto a password account and deletes the external-only account (admin only). A 2.8 SSO account whose only sign-in is the matching legacy OIDC link is accepted as the target too, to merge a duplicate made by 2.9.0. The 2.8 path /users/link-oidc-to-password and its oidcUserId field are accepted too.
+   *     description: Moves an external-only account's sign-in identities onto a password account and deletes the external-only account (admin only). A 2.8 SSO account whose only sign-in is the matching legacy OIDC link is accepted as the target too, to merge a duplicate made by 2.9.0.
    *     tags:
    *       - Users
    *     requestBody:
@@ -86,7 +86,7 @@ export function registerUserExternalAccountRoutes(
    */
   const link = async (req: Request, res: Response) => {
     const adminUserId = (req as AuthenticatedRequest).userId;
-    const externalUserId = req.body?.externalUserId ?? req.body?.oidcUserId;
+    const externalUserId = req.body?.externalUserId;
     const targetUsername = req.body?.targetUsername;
 
     if (
@@ -143,11 +143,6 @@ export function registerUserExternalAccountRoutes(
         adminUserId,
       });
 
-      await userRepository.update(targetUser.id, {
-        isOidc: true,
-        oidcIdentifier:
-          externalUser.oidcIdentifier ?? targetUser.oidcIdentifier,
-      });
       await identities.moveIdentities(externalUserId, targetUser.id);
 
       await authManager.revokeAllUserSessions(externalUserId);
@@ -201,7 +196,7 @@ export function registerUserExternalAccountRoutes(
    * /users/unlink-external-from-password:
    *   post:
    *     summary: Remove external sign-in from a password account
-   *     description: Removes every external sign-in identity from an account that also has a password (admin only). The 2.8 path /users/unlink-oidc-from-password is accepted too.
+   *     description: Removes every external sign-in identity from an account that also has a password (admin only).
    *     tags:
    *       - Users
    *     requestBody:
@@ -261,10 +256,6 @@ export function registerUserExternalAccountRoutes(
         });
       }
 
-      await userRepository.update(targetUser.id, {
-        isOidc: false,
-        oidcIdentifier: null,
-      });
       await createCurrentUserAuthRepository().unlinkIdentitiesForUser(
         targetUser.id,
       );
@@ -307,7 +298,4 @@ export function registerUserExternalAccountRoutes(
 
   router.post("/link-external-to-password", authenticateJWT, link);
   router.post("/unlink-external-from-password", authenticateJWT, unlink);
-  // 2.8 paths, kept until 26.10.0.
-  router.post("/link-oidc-to-password", authenticateJWT, link);
-  router.post("/unlink-oidc-from-password", authenticateJWT, unlink);
 }

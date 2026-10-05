@@ -60,7 +60,7 @@ export function BrowserSignInDialog({
           <div className="flex items-center gap-2">
             <Shield className="size-4 text-accent-brand" />
             <h3 className="text-xs font-bold uppercase tracking-widest">
-              {t("terminal.browserSignInRequired", { provider: label })}
+              {t("sshAuth.browserSignInRequired", { provider: label })}
             </h3>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function BrowserSignInDialog({
           {code && code !== "N/A" && (
             <div className="flex flex-col gap-1.5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("terminal.browserSignInCode")}
+                {t("sshAuth.browserSignInCode")}
               </p>
               <div className="border border-border bg-muted/10 p-4 text-center">
                 <div className="text-2xl font-mono font-bold tracking-wider text-accent-brand">
@@ -80,7 +80,7 @@ export function BrowserSignInDialog({
 
           <div className="flex flex-col gap-1.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("terminal.browserSignInUrl")}
+              {t("sshAuth.browserSignInUrl")}
             </p>
             <div className="flex gap-2">
               <Input
@@ -121,7 +121,7 @@ export function BrowserSignInDialog({
               onClick={onContinue}
               className="rounded-none text-[10px] font-bold uppercase tracking-widest"
             >
-              {t("terminal.browserSignInContinue")}
+              {t("sshAuth.browserSignInContinue")}
             </Button>
             <Button
               type="button"
@@ -130,7 +130,7 @@ export function BrowserSignInDialog({
               className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5"
             >
               <ExternalLink className="size-3.5" />
-              {t("terminal.browserSignInOpen")}
+              {t("sshAuth.browserSignInOpen")}
             </Button>
           </div>
         </div>

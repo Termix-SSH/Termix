@@ -276,11 +276,6 @@ export interface PluginSettingsField {
   /** Registered component id. Required when type is "custom". */
   component?: string;
   /**
-   * Deprecated and ignored: host defaults cover every host field now. Still
-   * accepted so an older manifest loads. Removed in 26.10.0.
-   */
-  defaultFrom?: string;
-  /**
    * Host scope only: whether the field can have a host default (server,
    * user or folder) that hosts follow until they set their own. On by
    * default for every field except secrets and json fields with
@@ -644,7 +639,6 @@ const ALLOWED_SETTINGS_FIELD = [
   "group",
   "component",
   "hidden",
-  "defaultFrom",
   "defaultable",
   "defaultLevels",
   "personal",
@@ -1614,9 +1608,6 @@ function validateSettings(settings: unknown, errors: string[]): void {
     host.fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
       const fieldAt = `${at}.fields[${index}]`;
-      if ("defaultFrom" in raw && typeof raw.defaultFrom !== "string") {
-        errors.push(`${fieldAt}.defaultFrom must be a string`);
-      }
       for (const flag of ["defaultable", "personal"]) {
         if (flag in raw && typeof raw[flag] !== "boolean") {
           errors.push(`${fieldAt}.${flag} must be a boolean`);
@@ -1670,7 +1661,6 @@ function validateSettings(settings: unknown, errors: string[]): void {
     fields.forEach((raw, index) => {
       if (!isPlainObject(raw)) return;
       for (const key of [
-        "defaultFrom",
         "defaultable",
         "defaultLevels",
         "personal",

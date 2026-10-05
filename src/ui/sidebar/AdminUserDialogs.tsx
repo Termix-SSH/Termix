@@ -199,10 +199,10 @@ export function AdminEditUserDialog({
                   {t("admin.editUserAuthType")}
                 </span>
                 <span className="text-sm font-semibold">
-                  {editUserTarget.isOidc && editUserTarget.passwordHash
+                  {editUserTarget.isExternal && editUserTarget.passwordHash
                     ? t("admin.authTypeDual")
-                    : editUserTarget.isOidc
-                      ? t("admin.authTypeOidc")
+                    : editUserTarget.isExternal
+                      ? t("admin.authTypeExternal")
                       : t("admin.authTypeLocal")}
                 </span>
               </div>
@@ -469,7 +469,11 @@ export function AdminUnlinkAccountDialog({
 type LinkAccountDialogProps = {
   open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
-  linkAccountTarget: { id: string; username: string; isOidc: boolean } | null;
+  linkAccountTarget: {
+    id: string;
+    username: string;
+    isExternal: boolean;
+  } | null;
   setUsers: Dispatch<SetStateAction<AdminUser[]>>;
   users: AdminUser[];
 };
@@ -489,7 +493,7 @@ export function AdminLinkAccountDialog({
     if (open) setOtherUsername("");
   }, [open, linkAccountTarget]);
 
-  const isOidcInitiator = linkAccountTarget?.isOidc ?? true;
+  const isExternalInitiator = linkAccountTarget?.isExternal ?? true;
 
   const handleSubmit = async () => {
     const trimmed = otherUsername.trim();
@@ -497,15 +501,15 @@ export function AdminLinkAccountDialog({
 
     setSubmitting(true);
     try {
-      if (isOidcInitiator) {
+      if (isExternalInitiator) {
         await linkExternalToPasswordAccount(linkAccountTarget.id, trimmed);
         setUsers((prev) => prev.filter((u) => u.id !== linkAccountTarget.id));
       } else {
         const oidcUser = users.find(
-          (u) => u.username === trimmed && u.isOidc && !u.passwordHash,
+          (u) => u.username === trimmed && u.isExternal && !u.passwordHash,
         );
         if (!oidcUser) {
-          toast.error(t("admin.linkAccountOidcNotFound"));
+          toast.error(t("admin.linkAccountExternalNotFound"));
           return;
         }
         await linkExternalToPasswordAccount(
@@ -532,7 +536,7 @@ export function AdminLinkAccountDialog({
             {t("admin.linkAccountTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            {isOidcInitiator
+            {isExternalInitiator
               ? t("admin.linkAccountDesc", {
                   username: linkAccountTarget?.username,
                 })
@@ -555,18 +559,18 @@ export function AdminLinkAccountDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {isOidcInitiator
+              {isExternalInitiator
                 ? t("admin.linkAccountTargetUsername")
-                : t("admin.linkAccountOidcUsername")}{" "}
+                : t("admin.linkAccountExternalUsername")}{" "}
               <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={otherUsername}
               onChange={(e) => setOtherUsername(e.target.value)}
               placeholder={
-                isOidcInitiator
+                isExternalInitiator
                   ? t("admin.linkAccountTargetPlaceholder")
-                  : t("admin.linkAccountOidcPlaceholder")
+                  : t("admin.linkAccountExternalPlaceholder")
               }
               autoFocus
               disabled={submitting}

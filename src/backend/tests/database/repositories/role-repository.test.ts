@@ -18,8 +18,8 @@ describe("RoleRepository", () => {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     await adapter.exec(`
-      INSERT INTO users (id, username, password_hash, is_admin, is_oidc)
-      VALUES ('admin', 'admin', 'hash', 1, 0), ('user-1', 'user', 'hash', 0, 0);
+      INSERT INTO users (id, username, password_hash, is_admin)
+      VALUES ('admin', 'admin', 'hash', 1), ('user-1', 'user', 'hash', 0);
     `);
 
     return new RoleRepository(context, onWrite);

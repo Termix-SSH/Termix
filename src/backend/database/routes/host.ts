@@ -98,7 +98,7 @@ import {
   listHostProtocols,
 } from "../../hosts/protocol-auth/registry.js";
 import {
-  mergeStoredTerminalFields,
+  mergeStoredSshOptions,
   parseTerminalConfig,
 } from "./host-terminal-fields.js";
 
@@ -316,11 +316,6 @@ router.post(
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
-      terminalConfig: terminalConfig
-        ? typeof terminalConfig === "string"
-          ? terminalConfig
-          : JSON.stringify(terminalConfig)
-        : null,
       sshOptions: sshOptionsForWrite({ sshOptions, terminalConfig }) ?? null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       notes: notes || null,
@@ -889,11 +884,6 @@ router.put(
       jumpHosts: Array.isArray(jumpHosts) ? JSON.stringify(jumpHosts) : null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
-      terminalConfig: terminalConfig
-        ? typeof terminalConfig === "string"
-          ? terminalConfig
-          : JSON.stringify(terminalConfig)
-        : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       notes: notes || null,
       useSocks5: useSocks5 ? 1 : 0,
@@ -1081,7 +1071,7 @@ router.put(
         }
       }
 
-      const terminalFieldsError = await mergeStoredTerminalFields(
+      const terminalFieldsError = await mergeStoredSshOptions(
         sshDataObj,
         hostData,
         Number(hostId),
@@ -1661,11 +1651,7 @@ router.get(
       }
 
       const resolved = (await resolveHostCredentials(host, userId)) || host;
-      let value = resolved[field];
-
-      if (!value && field === "sudoPassword") {
-        value = hostTerminalExport(resolved).sudoPassword || null;
-      }
+      const value = resolved[field];
 
       if (!value) {
         return res.status(404).json({ error: "No password set" });
@@ -1775,10 +1761,7 @@ router.get(
             credentialId: resolvedHost.credentialId || null,
             overrideCredentialUsername:
               !!resolvedHost.overrideCredentialUsername,
-            sudoPassword:
-              resolvedHost.sudoPassword ||
-              hostTerminalExport(resolvedHost).sudoPassword ||
-              null,
+            sudoPassword: resolvedHost.sudoPassword || null,
             jumpHosts: resolvedHost.jumpHosts
               ? JSON.parse(resolvedHost.jumpHosts as string)
               : null,
@@ -1911,9 +1894,7 @@ router.get(
                 !!resolvedHost.overrideCredentialUsername,
               sudoPassword: shareMode
                 ? null
-                : resolvedHost.sudoPassword ||
-                  hostTerminalExport(resolvedHost).sudoPassword ||
-                  null,
+                : resolvedHost.sudoPassword || null,
               jumpHosts: resolvedHost.jumpHosts
                 ? JSON.parse(resolvedHost.jumpHosts as string)
                 : null,

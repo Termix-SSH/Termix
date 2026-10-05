@@ -474,7 +474,7 @@ describe("ctx.hosts", () => {
         password: "secret",
         key: "PRIVATE",
         autostartPassword: "x",
-        terminalConfig: '{"keepaliveInterval":5,"fontSize":14}',
+        sshOptions: '{"keepaliveInterval":5}',
         enableDocker: true,
         jumpHosts: "[]",
       },

@@ -182,7 +182,7 @@ export function HostEditor({
   };
 
   const [saving, setSaving] = useState(false);
-  const [isOidcUser, setIsOidcUser] = useState(false);
+  const [isExternalUser, setIsExternalUser] = useState(false);
   const [showSecretSources, setShowSecretSources] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
   const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
@@ -192,7 +192,7 @@ export function HostEditor({
     useState<CredentialOption | null>(null);
   useEffect(() => {
     getUserInfo()
-      .then((info) => setIsOidcUser(info.is_external ?? info.is_oidc))
+      .then((info) => setIsExternalUser(info.is_external))
       .catch(() => {});
   }, []);
 
@@ -908,9 +908,9 @@ export function HostEditor({
                           }}
                           onChange={(e) => setField("username", e.target.value)}
                         />
-                        {isOidcUser && (
+                        {isExternalUser && (
                           <p className="text-[10px] text-muted-foreground/60">
-                            {t("hosts.oidcUsernameHint")}
+                            {t("hosts.externalUsernameHint")}
                           </p>
                         )}
                         {activeAuthEditor?.hintKey && (

@@ -151,7 +151,7 @@ export function AdminSettingsPanel({
   const [linkAccountTarget, setLinkAccountTarget] = useState<{
     id: string;
     username: string;
-    isOidc: boolean;
+    isExternal: boolean;
   } | null>(null);
 
   // Unlink account dialog
@@ -242,7 +242,7 @@ export function AdminSettingsPanel({
             id: user.userId,
             username: user.username,
             isAdmin: user.is_admin,
-            isOidc: user.is_external ?? user.is_oidc,
+            isExternal: user.is_external ?? false,
             passwordHash: user.password_hash,
             dataUnlocked: user.data_unlocked,
             secondFactorEnabled: user.second_factor_enabled,
@@ -954,7 +954,7 @@ export function AdminSettingsPanel({
           setUsers((prev) =>
             prev.map((u) =>
               u.id === userId
-                ? { ...u, isOidc: false, passwordHash: undefined }
+                ? { ...u, isExternal: false, passwordHash: undefined }
                 : u,
             ),
           )

@@ -112,7 +112,10 @@ export function getRequestOrigin(req: Request | IncomingMessage): string {
 function getRequestOriginWithForceHTTPS(
   req: Request | IncomingMessage,
 ): string {
-  if (process.env.OIDC_FORCE_HTTPS === "true") {
+  // OIDC_FORCE_HTTPS is the 2.9 name, still read for one release.
+  const forceHttps =
+    process.env.EXTERNAL_FORCE_HTTPS ?? process.env.OIDC_FORCE_HTTPS;
+  if (forceHttps === "true") {
     const origin = getRequestOrigin(req);
     return origin.replace(/^http:/, "https:");
   }

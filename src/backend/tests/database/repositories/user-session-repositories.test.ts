@@ -56,7 +56,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "admin",
       passwordHash: "hash",
       isAdmin: true,
-      isOidc: false,
     });
 
     expect(await repo.users.countAdmins()).toBe(1);
@@ -69,13 +68,15 @@ describe("UserRepository and SessionRepository", () => {
     ).toEqual(["user-1"]);
     expect(await repo.users.listByIds([])).toEqual([]);
 
-    const updated = await repo.users.update("user-1", {
-      oidcIdentifier: "oidc:admin",
-    });
-    expect(updated?.oidcIdentifier).toBe("oidc:admin");
-    expect((await repo.users.findByExternalIdentifier("oidc:admin"))?.id).toBe(
-      "user-1",
-    );
+    const updated = await repo.users.update("user-1", { isAdmin: false });
+    expect(updated).toMatchObject({ isAdmin: false, isExternal: false });
+
+    await adapter!.exec(`
+      INSERT INTO user_external_identities (user_id, provider_id, subject)
+      VALUES ('user-1', '3', 'sub-1');
+    `);
+    expect((await repo.users.findById("user-1"))?.isExternal).toBe(true);
+    expect((await repo.users.listAll())[0].isExternal).toBe(true);
 
     expect(await repo.users.delete("user-1")).toBe(true);
     expect(await repo.users.findById("user-1")).toBeNull();
@@ -88,13 +89,11 @@ describe("UserRepository and SessionRepository", () => {
       id: "user-1",
       username: "first",
       passwordHash: "hash",
-      isOidc: false,
     });
     const second = await repo.users.createFirstLocalUser({
       id: "user-2",
       username: "second",
       passwordHash: "hash",
-      isOidc: false,
     });
 
     expect(first.isFirstUser).toBe(true);
@@ -112,27 +111,18 @@ describe("UserRepository and SessionRepository", () => {
       username: "first",
       passwordHash: "",
       isAdmin: false,
-      isOidc: true,
-      oidcIdentifier: "ldap:provider:first",
-      ssoProviderId: 1,
     });
     const providerAdmin = await repo.users.createFirstSsoUser({
       id: "user-2",
       username: "provider-admin",
       passwordHash: "",
       isAdmin: true,
-      isOidc: true,
-      oidcIdentifier: "ldap:provider:admin",
-      ssoProviderId: 1,
     });
     const regular = await repo.users.createFirstSsoUser({
       id: "user-3",
       username: "regular",
       passwordHash: "",
       isAdmin: false,
-      isOidc: true,
-      oidcIdentifier: "ldap:provider:regular",
-      ssoProviderId: 1,
     });
 
     expect(first.isFirstUser).toBe(true);
@@ -157,7 +147,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "admin",
       passwordHash: "hash",
       isAdmin: true,
-      isOidc: false,
     });
     await repo.users.update("user-1", { isAdmin: false });
     await repo.users.delete("user-1");
@@ -172,7 +161,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "user",
       passwordHash: "hash",
       isAdmin: false,
-      isOidc: false,
     });
 
     await repo.sessions.create({
@@ -208,7 +196,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "user",
       passwordHash: "hash",
       isAdmin: false,
-      isOidc: false,
     });
     await repo.sessions.create({
       id: "session-1",
@@ -250,7 +237,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "user",
       passwordHash: "hash",
       isAdmin: false,
-      isOidc: false,
     });
     await repo.sessions.create({
       id: "session-1",
@@ -281,7 +267,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "user",
       passwordHash: "hash",
       isAdmin: false,
-      isOidc: false,
     });
 
     for (const id of ["keep", "drop-1", "drop-2"]) {
@@ -308,7 +293,6 @@ describe("UserRepository and SessionRepository", () => {
       username: "user",
       passwordHash: "hash",
       isAdmin: false,
-      isOidc: false,
     });
 
     await repo.sessions.create({

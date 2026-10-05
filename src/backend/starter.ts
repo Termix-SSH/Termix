@@ -58,15 +58,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     id,
     username: "local",
     passwordHash: "",
-    isOidc: false,
-    clientId: "",
-    clientSecret: "",
-    issuerUrl: "",
-    authorizationUrl: "",
-    tokenUrl: "",
-    identifierPath: "",
-    namePath: "",
-    scopes: "openid email profile",
   });
 
   try {
@@ -191,7 +182,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         createCurrentUserAuthRepository().listUserIdsWithSecondFactors(),
       ]);
       const conflictingUser = users.some(
-        (user) => user.isOidc || secondFactorUsers.has(user.id),
+        (user) => user.isExternal || secondFactorUsers.has(user.id),
       );
       if (process.env.OIDC_CLIENT_ID || conflictingUser) {
         throw new Error(

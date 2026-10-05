@@ -33,7 +33,7 @@ export type AdminUser = {
   id: string;
   username: string;
   isAdmin: boolean;
-  isOidc: boolean;
+  isExternal: boolean;
   passwordHash?: string;
   dataUnlocked?: boolean;
   secondFactorEnabled?: boolean;
@@ -74,7 +74,7 @@ type UsersSectionProps = {
   setEditUserTarget: Dispatch<SetStateAction<AdminUser | null>>;
   setEditUserOpen: Dispatch<SetStateAction<boolean>>;
   setLinkAccountTarget: Dispatch<
-    SetStateAction<{ id: string; username: string; isOidc: boolean } | null>
+    SetStateAction<{ id: string; username: string; isExternal: boolean } | null>
   >;
   setLinkAccountOpen: Dispatch<SetStateAction<boolean>>;
   setUnlinkAccountTarget: Dispatch<
@@ -158,10 +158,10 @@ export function AdminUsersSection({
         </div>
         {users.map((user) => {
           const authLabel =
-            user.isOidc && user.passwordHash
+            user.isExternal && user.passwordHash
               ? t("admin.authTypeDual")
-              : user.isOidc
-                ? t("admin.authTypeOidc")
+              : user.isExternal
+                ? t("admin.authTypeExternal")
                 : t("admin.authTypeLocal");
           return (
             <div
@@ -209,7 +209,7 @@ export function AdminUsersSection({
                 >
                   <Pencil className="size-3" />
                 </Button>
-                {user.isOidc && user.passwordHash ? (
+                {user.isExternal && user.passwordHash ? (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -235,7 +235,7 @@ export function AdminUsersSection({
                       setLinkAccountTarget({
                         id: user.id,
                         username: user.username,
-                        isOidc: user.isOidc,
+                        isExternal: user.isExternal,
                       });
                       setLinkAccountOpen(true);
                     }}

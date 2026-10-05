@@ -96,9 +96,8 @@ it.each([false, true])(
       overwrite ? 19 : 71,
       expect.objectContaining({ pluginSettings: host.pluginSettings }),
     );
-    expect(JSON.parse(saved.terminalConfig)).toEqual({
-      macOptionIsMeta: false,
-    });
+    // The 2.8 terminalConfig reaches the plugin, never a host column.
+    expect(saved).not.toHaveProperty("terminalConfig");
   },
 );
 

@@ -24,6 +24,16 @@ import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
 import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
 import { connectRemoteDatabase } from "./connect.js";
 import { runRemoteMigrations } from "./migrate.js";
+import { assertNotPre29Database } from "./upgrade-guard.js";
+import {
+  LEGACY_USERNAME_PLACEHOLDER_UPDATES,
+  legacySudoMoves,
+  RETIRED_COLUMNS,
+  RETIRED_SETTINGS,
+  REMOTE_RETIRED_COLUMNS,
+  type LegacySudoRow,
+} from "./retired-columns.js";
+import { sql, type SQL } from "drizzle-orm";
 import type { PortableDatabase } from "../repositories/database-context.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
@@ -217,22 +227,21 @@ async function initializeCompleteDatabase(): Promise<void> {
 
   db = drizzle(sqlite, { schema });
 
+  await assertNotPre29Database(
+    (name) =>
+      !!sqlite
+        .prepare(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        )
+        .get(name),
+  );
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0,
-        oidc_identifier TEXT,
-        client_id TEXT,
-        client_secret TEXT,
-        issuer_url TEXT,
-        authorization_url TEXT,
-        token_url TEXT,
-        identifier_path TEXT,
-        name_path TEXT,
-        scopes TEXT DEFAULT 'openid email profile',
         registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         donation_modal_dismissed INTEGER NOT NULL DEFAULT 0
     );
@@ -308,7 +317,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         force_keyboard_interactive TEXT,
         status_check_enabled INTEGER NOT NULL DEFAULT 1,
         status_check_interval INTEGER,
-        terminal_config TEXT,
         notes TEXT,
         use_socks5 INTEGER,
         socks5_host TEXT,
@@ -357,12 +365,10 @@ async function initializeCompleteDatabase(): Promise<void> {
         name TEXT NOT NULL,
         color TEXT,
         icon TEXT,
-        credential_id INTEGER,
         sort_order INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE SET NULL
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS recent_activity (
@@ -672,6 +678,14 @@ async function initializeCompleteDatabase(): Promise<void> {
     });
   }
 
+  // 2.9.1 added this fix, so a 2.9.0 install has not run it yet. It reads the
+  // column migrateSchema drops.
+  if (columnNames("users").includes("oidc_identifier")) {
+    const { runSsoLegacyIdentityMigration } =
+      await import("../../upgrade/sso-legacy-identity-migration.js");
+    await runSsoLegacyIdentityMigration();
+  }
+
   migrateSchema();
   vacuumIfFreelistBloated();
 
@@ -782,6 +796,135 @@ const relaxPluginGrantGrantedBy = () => {
   }
 };
 
+const columnNames = (table: string): string[] =>
+  (
+    sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+      name: string;
+    }>
+  ).map((col) => col.name);
+
+/**
+ * ssh_folders.credential_id became the folder's auth default. It carries a
+ * foreign key, which ALTER TABLE DROP COLUMN refuses, so the table is rebuilt.
+ */
+const dropFolderCredentialColumn = () => {
+  const columns = columnNames("ssh_folders");
+  if (!columns.includes("credential_id")) return;
+
+  const kept = [
+    "id",
+    "user_id",
+    "name",
+    "color",
+    "icon",
+    "sort_order",
+    "sync_id",
+    "local_only",
+    "created_at",
+    "updated_at",
+  ].filter((name) => columns.includes(name));
+  const list = kept.map((name) => `"${name}"`).join(", ");
+
+  sqlite.exec("PRAGMA foreign_keys = OFF");
+  try {
+    sqlite.exec(`
+      BEGIN;
+      CREATE TABLE ssh_folders_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          color TEXT,
+          icon TEXT,
+          sort_order INTEGER,
+          sync_id TEXT,
+          local_only INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      );
+      INSERT INTO ssh_folders_new (${list}) SELECT ${list} FROM ssh_folders;
+      DROP TABLE ssh_folders;
+      ALTER TABLE ssh_folders_new RENAME TO ssh_folders;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_folders_sync_id ON ssh_folders(sync_id);
+      COMMIT;
+    `);
+  } catch (error) {
+    if (sqlite.inTransaction) sqlite.exec("ROLLBACK");
+    databaseLogger.warn("Failed to drop ssh_folders.credential_id", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  } finally {
+    sqlite.exec("PRAGMA foreign_keys = ON");
+  }
+};
+
+const moveLegacySudoPasswords = () => {
+  if (!columnNames("ssh_data").includes("terminal_config")) return;
+  try {
+    const rows = sqlite
+      .prepare(
+        "SELECT id, terminal_config, sudo_password FROM ssh_data WHERE terminal_config LIKE '%sudoPassword%'",
+      )
+      .all() as LegacySudoRow[];
+    const update = sqlite.prepare(
+      "UPDATE ssh_data SET sudo_password = ? WHERE id = ?",
+    );
+    for (const move of legacySudoMoves(rows)) {
+      update.run(move.sudoPassword, move.id);
+    }
+  } catch (error) {
+    databaseLogger.warn("Failed to move legacy sudo passwords", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
+};
+
+const dropRetiredColumns = () => {
+  moveLegacySudoPasswords();
+  for (const [table, retired] of Object.entries(RETIRED_COLUMNS)) {
+    const columns = new Set(columnNames(table));
+    for (const column of retired) {
+      if (!columns.has(column)) continue;
+      try {
+        sqlite.exec(`ALTER TABLE ${table} DROP COLUMN "${column}"`);
+      } catch (error) {
+        databaseLogger.warn(`Failed to drop ${table}.${column}`, {
+          operation: "schema_migration",
+          error: getErrorMessage(error),
+        });
+      }
+    }
+  }
+  dropFolderCredentialColumn();
+
+  // 2.8 spelled $external.username as $oidc.preferred_username.
+  for (const statement of LEGACY_USERNAME_PLACEHOLDER_UPDATES) {
+    try {
+      sqlite.exec(statement);
+    } catch (error) {
+      databaseLogger.warn("Failed to rename a legacy username placeholder", {
+        operation: "schema_migration",
+        error: getErrorMessage(error),
+      });
+    }
+  }
+
+  try {
+    sqlite
+      .prepare(
+        `DELETE FROM settings WHERE key IN (${RETIRED_SETTINGS.map(() => "?").join(", ")})`,
+      )
+      .run(...RETIRED_SETTINGS);
+  } catch (error) {
+    databaseLogger.warn("Failed to delete retired settings", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
+};
+
 const migrateSchema = () => {
   repairSnippetsNoteColumn(sqlite);
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
@@ -789,7 +932,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
   addColumnIfNotExists("user_preferences", "language", "TEXT");
   addColumnIfNotExists("user_preferences", "storage_mode", "TEXT");
-  addColumnIfNotExists("user_preferences", "command_autocomplete", "INTEGER");
   addColumnIfNotExists("user_preferences", "command_palette_enabled", "INTEGER");
   addColumnIfNotExists("user_preferences", "show_host_tags", "INTEGER");
   addColumnIfNotExists("user_preferences", "host_tray_on_click", "INTEGER");
@@ -805,30 +947,14 @@ const migrateSchema = () => {
     "INTEGER",
   );
   addColumnIfNotExists("user_preferences", "folders_collapsed", "INTEGER");
-  addColumnIfNotExists("user_preferences", "confirm_snippet_execution", "INTEGER");
   addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
   addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
   addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
   addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
-  addColumnIfNotExists("user_preferences", "custom_themes", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_keybindings", "TEXT");
-  addColumnIfNotExists("user_preferences", "terminal_defaults", "TEXT");
-  addColumnIfNotExists("user_preferences", "terminal_macros", "TEXT");
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
-
-  addColumnIfNotExists("users", "is_oidc", "INTEGER NOT NULL DEFAULT 0");
-  addColumnIfNotExists("users", "oidc_identifier", "TEXT");
-  addColumnIfNotExists("users", "client_id", "TEXT");
-  addColumnIfNotExists("users", "client_secret", "TEXT");
-  addColumnIfNotExists("users", "issuer_url", "TEXT");
-  addColumnIfNotExists("users", "authorization_url", "TEXT");
-  addColumnIfNotExists("users", "token_url", "TEXT");
-
-  addColumnIfNotExists("users", "identifier_path", "TEXT");
-  addColumnIfNotExists("users", "name_path", "TEXT");
-  addColumnIfNotExists("users", "scopes", "TEXT");
 
   const hadRegisteredAtColumn = (() => {
     try {
@@ -878,9 +1004,7 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
 
-  addColumnIfNotExists("sessions", "oidc_sub", "TEXT");
-  addColumnIfNotExists("sessions", "oidc_sid", "TEXT");
-  addColumnIfNotExists("sessions", "sso_provider_id", "INTEGER");
+  addColumnIfNotExists("sessions", "external_session_ref", "TEXT");
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");
   addColumnIfNotExists("ssh_data", "folder", "TEXT");
@@ -926,8 +1050,6 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 1",
   );
   addColumnIfNotExists("ssh_data", "status_check_interval", "INTEGER");
-  addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
-  addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
   addColumnIfNotExists("ssh_data", "domain", "TEXT");
@@ -1146,19 +1268,6 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT credential_id FROM ssh_folders LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec("ALTER TABLE ssh_folders ADD COLUMN credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL");
-    } catch (alterError) {
-      databaseLogger.warn("Failed to add credential_id column to ssh_folders", {
-        operation: "schema_migration",
-        error: alterError,
-      });
-    }
-  }
-
-  try {
     sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
   } catch {
     try {
@@ -1177,7 +1286,6 @@ const migrateSchema = () => {
     { column: "override_credential_username", sql: "ALTER TABLE ssh_data ADD COLUMN override_credential_username INTEGER" },
     { column: "share_ssh_auth", sql: "ALTER TABLE ssh_data ADD COLUMN share_ssh_auth INTEGER NOT NULL DEFAULT 0" },
     { column: "jump_hosts", sql: "ALTER TABLE ssh_data ADD COLUMN jump_hosts TEXT" },
-    { column: "quick_actions", sql: "ALTER TABLE ssh_data ADD COLUMN quick_actions TEXT" },
     { column: "socks5_proxy_chain", sql: "ALTER TABLE ssh_data ADD COLUMN socks5_proxy_chain TEXT" },
     { column: "host_key_fingerprint", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_fingerprint TEXT" },
     { column: "host_key_type", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_type TEXT" },
@@ -1459,76 +1567,6 @@ const migrateSchema = () => {
     });
   }
 
-  addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
-
-  try {
-    const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{
-      cid: number;
-      name: string;
-      type: string;
-      notnull: number;
-      dflt_value: string | null;
-      pk: number;
-    }>;
-    const legacyNotNullColumns = new Set([
-      "client_id",
-      "client_secret",
-      "issuer_url",
-      "authorization_url",
-      "token_url",
-      "identifier_path",
-      "name_path",
-      "scopes",
-    ]);
-    const hasStaleNotNull = usersTableInfo.some(
-      (col) => legacyNotNullColumns.has(col.name) && col.notnull === 1,
-    );
-
-    if (hasStaleNotNull) {
-      const tempTableName = "users_temp_migration";
-      const columnDefs = usersTableInfo
-        .map((col) => {
-          const parts = [`"${col.name}"`, col.type || "TEXT"];
-          if (col.pk === 1) parts.push("PRIMARY KEY");
-          if (col.notnull === 1 && !legacyNotNullColumns.has(col.name)) {
-            parts.push("NOT NULL");
-          }
-          if (col.dflt_value !== null) {
-            parts.push(`DEFAULT ${col.dflt_value}`);
-          }
-          return parts.join(" ");
-        })
-        .join(",\n          ");
-      const allColumns = usersTableInfo.map((col) => `"${col.name}"`).join(", ");
-
-      sqlite.exec(`PRAGMA foreign_keys = OFF`);
-      sqlite.exec(`
-        CREATE TABLE ${tempTableName} (
-          ${columnDefs}
-        );
-
-        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM users;
-
-        DROP TABLE users;
-
-        ALTER TABLE ${tempTableName} RENAME TO users;
-      `);
-      sqlite.exec(`PRAGMA foreign_keys = ON`);
-
-      databaseLogger.info(
-        "Successfully migrated users table to remove legacy OIDC NOT NULL constraints",
-        {
-          operation: "schema_migration_users_oidc_nullable",
-        },
-      );
-    }
-  } catch (migrationError) {
-    databaseLogger.warn("Failed to migrate users table legacy OIDC columns", {
-      operation: "schema_migration",
-      error: migrationError,
-    });
-  }
-
   // --- alerts begin ---
   // alert_rules, alert_rule_channels and alert_firings were only ever created
   // here, never declared in schema.ts, so they never existed on Postgres or
@@ -1686,6 +1724,8 @@ const migrateSchema = () => {
   // they referenced, which defeats the point of keeping them.
   migrateAuditRetention(sqlite);
 
+  dropRetiredColumns();
+
   // Runs last so every table and column added above already exists.
   createPerformanceIndexes(sqlite);
 
@@ -1832,6 +1872,94 @@ async function initializeDatabase(): Promise<void> {
  * synchronously, which better-sqlite3 allows and no remote driver does, so the
  * table is loaded once here before anything asks for it.
  */
+function resultRows<T>(result: unknown): T[] {
+  // node-postgres returns { rows }, mysql2 returns [rows, fields].
+  if (Array.isArray(result)) return result[0] as T[];
+  return ((result as { rows?: unknown[] }).rows ?? []) as T[];
+}
+
+async function moveRemoteLegacySudoPasswords(remote: {
+  execute: (query: SQL) => Promise<unknown>;
+}): Promise<void> {
+  let rows: LegacySudoRow[];
+  try {
+    rows = resultRows<LegacySudoRow>(
+      await remote.execute(
+        sql`SELECT id, terminal_config, sudo_password FROM ssh_data WHERE terminal_config LIKE '%sudoPassword%'`,
+      ),
+    );
+  } catch {
+    // A database created after the column left never had it.
+    return;
+  }
+  for (const move of legacySudoMoves(rows)) {
+    await remote.execute(
+      sql`UPDATE ssh_data SET sudo_password = ${move.sudoPassword} WHERE id = ${move.id}`,
+    );
+  }
+}
+
+/**
+ * The columns 2.9.0 left in place without a drizzle migration, so drizzle no
+ * longer knows them. Dropped by hand, only where they still exist.
+ */
+async function dropRemoteRetired(
+  dialect: Exclude<DatabaseDialect, "sqlite">,
+  remote: { execute: (query: SQL) => Promise<unknown> },
+): Promise<void> {
+  const tables = Object.keys(REMOTE_RETIRED_COLUMNS);
+  const schema =
+    dialect === "postgres" ? sql`current_schema()` : sql`DATABASE()`;
+  let present: Array<{ table_name: string; column_name: string }> = [];
+  try {
+    present = resultRows(
+      await remote.execute(
+        sql`SELECT table_name AS table_name, column_name AS column_name FROM information_schema.columns WHERE table_schema = ${schema} AND table_name IN (${sql.join(
+          tables.map((table) => sql`${table}`),
+          sql`, `,
+        )})`,
+      ),
+    );
+  } catch (error) {
+    databaseLogger.warn("Could not list retired columns", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+    return;
+  }
+  const existing = new Set(
+    present.map((row) => `${row.table_name}.${row.column_name}`),
+  );
+  for (const [table, columns] of Object.entries(REMOTE_RETIRED_COLUMNS)) {
+    for (const column of columns) {
+      if (!existing.has(`${table}.${column}`)) continue;
+      try {
+        await remote.execute(
+          sql`ALTER TABLE ${sql.identifier(table)} DROP COLUMN ${sql.identifier(column)}`,
+        );
+      } catch (error) {
+        databaseLogger.warn(`Failed to drop ${table}.${column}`, {
+          operation: "schema_migration",
+          error: getErrorMessage(error),
+        });
+      }
+    }
+  }
+  try {
+    await remote.execute(
+      sql`DELETE FROM settings WHERE ${sql.identifier("key")} IN (${sql.join(
+        RETIRED_SETTINGS.map((key) => sql`${key}`),
+        sql`, `,
+      )})`,
+    );
+  } catch (error) {
+    databaseLogger.warn("Failed to delete retired settings", {
+      operation: "schema_migration",
+      error: getErrorMessage(error),
+    });
+  }
+}
+
 async function initializeRemoteDatabase(
   dialect: Exclude<DatabaseDialect, "sqlite">,
 ): Promise<void> {
@@ -1841,7 +1969,26 @@ async function initializeRemoteDatabase(
   });
 
   db = await connectRemoteDatabase(dialect);
+  const remote = db as unknown as { execute: (query: SQL) => Promise<unknown> };
+  await assertNotPre29Database(async (name) => {
+    try {
+      await remote.execute(sql`SELECT 1 FROM ${sql.identifier(name)} WHERE 1 = 0`);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  await moveRemoteLegacySudoPasswords(remote);
+  try {
+    await remote.execute(sql`SELECT oidc_identifier FROM users WHERE 1 = 0`);
+    const { runSsoLegacyIdentityMigration } =
+      await import("../../upgrade/sso-legacy-identity-migration.js");
+    await runSsoLegacyIdentityMigration();
+  } catch {
+    // The column is gone: the move ran before it was dropped.
+  }
   await runRemoteMigrations(dialect, db);
+  await dropRemoteRetired(dialect, remote);
 
   // Imported here rather than at the top: factory.ts imports getDb from this
   // module, and a static import would close the cycle at module-load time.

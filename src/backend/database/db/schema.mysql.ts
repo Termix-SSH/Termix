@@ -26,19 +26,6 @@ export const users = mysqlTable("users", {
   username: text("username").notNull(),
   passwordHash: text("password_hash").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
-
-  isOidc: boolean("is_oidc").notNull().default(false),
-  oidcIdentifier: text("oidc_identifier"),
-  ssoProviderId: int("sso_provider_id"),
-  clientId: text("client_id"),
-  clientSecret: text("client_secret"),
-  issuerUrl: text("issuer_url"),
-  authorizationUrl: text("authorization_url"),
-  tokenUrl: text("token_url"),
-  identifierPath: text("identifier_path"),
-  namePath: text("name_path"),
-  scopes: text().default("openid email profile"),
-
   registeredAt: text("registered_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   donationModalDismissed: boolean("donation_modal_dismissed")
     .notNull()
@@ -60,9 +47,8 @@ export const sessions = mysqlTable(
     jwtToken: text("jwt_token").notNull(),
     deviceType: text("device_type").notNull(),
     deviceInfo: text("device_info").notNull(),
-    oidcSub: text("oidc_sub"),
-    oidcSid: text("oidc_sid"),
-    ssoProviderId: int("sso_provider_id"),
+    // JSON of the identity provider's logout claims, for back-channel logout.
+    externalSessionRef: text("external_session_ref"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
@@ -196,11 +182,9 @@ export const hosts = mysqlTable(
       .notNull()
       .default(true),
     statusCheckInterval: int("status_check_interval"),
-    terminalConfig: text("terminal_config"),
     // SSH connection options core's connect pipeline reads (keepalive,
     // legacy algorithms, agent, environment). JSON.
     sshOptions: text("ssh_options"),
-    quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: boolean("enable_ssh").notNull().default(true),
 
@@ -377,9 +361,6 @@ export const sshFolders = mysqlTable(
     name: text("name").notNull(),
     color: text("color"),
     icon: text("icon"),
-    credentialId: int("credential_id").references(() => sshCredentials.id, {
-      onDelete: "set null",
-    }),
     // Manual drag-to-reorder position among sibling folders. Null falls back
     // to name sort, same convention as hosts.sortOrder.
     sortOrder: int("sort_order"),
@@ -712,7 +693,6 @@ export const userPreferences = mysqlTable("user_preferences", {
   accentColor: text("accent_color"),
   language: text("language"),
   storageMode: text("storage_mode"),
-  commandAutocomplete: boolean("command_autocomplete"),
   commandPaletteEnabled: boolean("command_palette_enabled"),
   showHostTags: boolean("show_host_tags"),
   hostTrayOnClick: boolean("host_tray_on_click"),
@@ -720,16 +700,12 @@ export const userPreferences = mysqlTable("user_preferences", {
   expandAppRailOnHover: boolean("expand_app_rail_on_hover"),
   showPinAppRailButton: boolean("show_pin_app_rail_button"),
   foldersCollapsed: boolean("folders_collapsed"),
-  confirmSnippetExecution: boolean("confirm_snippet_execution"),
   disableUpdateCheck: boolean("disable_update_check"),
   confirmTabClose: boolean("confirm_tab_close"),
   hiddenRailTabs: text("hidden_rail_tabs"),
   compactHostView: boolean("compact_host_view"),
   statusColorScheme: text("status_color_scheme"),
-  customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
-  terminalDefaults: text("terminal_defaults"),
-  terminalMacros: text("terminal_macros"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),

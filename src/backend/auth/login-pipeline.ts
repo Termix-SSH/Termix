@@ -175,7 +175,7 @@ async function unlockUser(
 ): Promise<void> {
   const authManager = AuthManager.getInstance();
 
-  if (identity.kind === "external" || user.isOidc) {
+  if (identity.kind === "external" || user.isExternal) {
     try {
       await authManager.authenticateExternalUser(user.id, deviceType);
     } catch (error) {
@@ -280,11 +280,7 @@ export async function runLogin(
     );
   }
 
-  const ssoClaims = {
-    ssoProviderId: identity.ssoProviderId ?? null,
-    oidcSub: identity.oidcSub ?? null,
-    oidcSid: identity.oidcSid ?? null,
-  };
+  const ssoClaims = { externalSession: identity.externalSession ?? null };
 
   if (
     factors.required.length > 0 &&
@@ -499,9 +495,7 @@ export async function verifySecondFactorAndRespond(
   const session = await issueSession(req, user, {
     methodId: pending?.methodId ?? "password",
     rememberMe,
-    ssoProviderId: pending?.ssoProviderId ?? null,
-    oidcSub: pending?.oidcSub ?? null,
-    oidcSid: pending?.oidcSid ?? null,
+    externalSession: pending?.externalSession ?? null,
   });
 
   consumePendingLogin(lookup.token);

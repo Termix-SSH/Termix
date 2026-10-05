@@ -420,7 +420,7 @@ export function Auth({ onLogin }: AuthProps) {
         );
         return;
       }
-      toast.error(event.data.error || t("errors.failedOidcLogin"));
+      toast.error(event.data.error || t("errors.failedExternalLogin"));
     };
 
     window.addEventListener("message", handleExternalBrowserResult);
@@ -604,7 +604,7 @@ export function Auth({ onLogin }: AuthProps) {
         toast.error(t("messages.userNotAllowed"));
       else if (error === "second_factor_unavailable")
         toast.error(t("auth.secondFactorUnavailable"));
-      else toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
+      else toast.error(`${t("errors.externalAuthFailed")}: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
@@ -1047,7 +1047,7 @@ export function Auth({ onLogin }: AuthProps) {
           throw new Error(t("errors.invalidAuthUrl"));
         window.location.replace(authUrl);
       } catch (err: unknown) {
-        showLoginError(err, "errors.failedOidcLogin");
+        showLoginError(err, "errors.failedExternalLogin");
         setLoading(false);
       }
     },
@@ -1133,7 +1133,7 @@ export function Auth({ onLogin }: AuthProps) {
     }
 
     if (urlTriggered) {
-      toast.info(t("errors.silentSigninOidcUnavailable"));
+      toast.info(t("errors.silentSigninExternalUnavailable"));
     }
   }, [startRedirect, authMethodsLoaded, externalMethods, t]);
 

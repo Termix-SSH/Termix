@@ -450,9 +450,9 @@ export function AdminUserManagePanel({
             {/* Password reset */}
             <div className="flex flex-col gap-2">
               {sectionHeading(t("admin.resetPasswordTitle"))}
-              {user.isOidc && !user.passwordHash ? (
+              {user.isExternal && !user.passwordHash ? (
                 <span className="text-xs text-muted-foreground">
-                  {t("admin.resetPasswordOidcOnly")}
+                  {t("admin.resetPasswordExternalOnly")}
                 </span>
               ) : (
                 <div className="flex items-center gap-2">

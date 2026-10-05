@@ -199,7 +199,7 @@ beforeEach(() => {
 });
 
 describe("a plugin's external identity", () => {
-  it("carries the 2.8 identifier, role map and logout claims into core", async () => {
+  it("carries the role map and logout claims into core", async () => {
     setup();
     const identity = await getLoginMethod("corp-sso")!.callback!(
       fakeRequest() as never,
@@ -211,7 +211,6 @@ describe("a plugin's external identity", () => {
     expect(result.kind).toBe("session");
 
     const [user] = [...h.state.users.values()];
-    expect(user).toMatchObject({ oidcIdentifier: "sub-1", ssoProviderId: 3 });
     expect(h.state.identities).toContainEqual(
       expect.objectContaining({ providerId: "3", subject: "sub-1" }),
     );
@@ -219,9 +218,7 @@ describe("a plugin's external identity", () => {
     expect(h.manager.generateJWTToken).toHaveBeenCalledWith(
       user.id,
       expect.objectContaining({
-        ssoProviderId: 3,
-        oidcSub: "sub-1",
-        oidcSid: "sid-1",
+        externalSession: { providerId: 3, sub: "sub-1", sid: "sid-1" },
       }),
     );
   });
@@ -237,29 +234,6 @@ describe("a plugin's external identity", () => {
     } as never);
     expect(mapped).not.toHaveProperty("unlockError", "spoofed");
     expect(mapped.rateLimitUsername).toBeUndefined();
-  });
-
-  it("finds a 2.8 user by the old identifier and links the identity", async () => {
-    h.state.users.set("u-1", {
-      id: "u-1",
-      username: "Alice",
-      passwordHash: "",
-      isAdmin: false,
-      isOidc: true,
-      oidcIdentifier: "sub-1",
-    });
-    setup();
-    const identity = await getLoginMethod("corp-sso")!.callback!(
-      fakeRequest() as never,
-    );
-    await runLogin(fakeRequest() as never, identity, {
-      methodId: "corp-sso",
-      rememberMe: false,
-    });
-    expect(h.state.users.size).toBe(1);
-    expect(h.state.identities).toContainEqual(
-      expect.objectContaining({ userId: "u-1", providerId: "3" }),
-    );
   });
 });
 
@@ -306,7 +280,7 @@ describe("the other ctx.auth helpers", () => {
     const { auth } = setup();
     expect(await auth.revokeSessions({ providerId: 3, sid: "sid-1" })).toBe(1);
     expect(h.manager.revokeSessionsByExternalSession).toHaveBeenCalledWith({
-      ssoProviderId: 3,
+      providerId: 3,
       sub: null,
       sid: "sid-1",
     });
@@ -402,8 +376,13 @@ describe("form methods and the external second factor setting", () => {
       username: "Bob",
       passwordHash: "",
       isAdmin: false,
-      isOidc: true,
-      oidcIdentifier: "ldap:4:bob",
+    });
+    h.state.identities.push({
+      id: 1,
+      userId: "u-bob",
+      providerId: "ldap:4",
+      subject: "bob",
+      email: null,
     });
     h.state.factors.push({
       userId: "u-bob",

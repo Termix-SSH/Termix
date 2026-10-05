@@ -61,12 +61,12 @@ export function TOTPDialog({
   };
 
   const title = isPush
-    ? t("terminal.mfaPushRequired")
+    ? t("sshAuth.mfaPushRequired")
     : isMenu
-      ? t("terminal.mfaPromptRequired")
-      : t("terminal.totpRequired");
+      ? t("sshAuth.mfaPromptRequired")
+      : t("sshAuth.totpRequired");
 
-  const label = prompt || (isTotp ? t("terminal.totpCodeLabel") : undefined);
+  const label = prompt || (isTotp ? t("sshAuth.totpCodeLabel") : undefined);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
@@ -93,7 +93,7 @@ export function TOTPDialog({
             <div className="flex items-center gap-3 py-2">
               <Loader2 className="size-4 animate-spin text-accent-brand shrink-0" />
               <p className="text-xs text-muted-foreground">
-                {t("terminal.mfaWaitingApproval")}
+                {t("sshAuth.mfaWaitingApproval")}
               </p>
             </div>
             <div className="flex justify-end gap-2">
@@ -115,7 +115,7 @@ export function TOTPDialog({
                 name="totpCode"
                 type="text"
                 autoFocus
-                placeholder={t("terminal.mfaMenuPlaceholder")}
+                placeholder={t("sshAuth.mfaMenuPlaceholder")}
                 className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
               />
             ) : allowsPushKeyword ? (
@@ -124,7 +124,7 @@ export function TOTPDialog({
                 name="totpCode"
                 type="text"
                 autoFocus
-                placeholder={t("terminal.mfaCodeOrPushPlaceholder")}
+                placeholder={t("sshAuth.mfaCodeOrPushPlaceholder")}
                 className="rounded-none bg-muted/50 border-border text-center text-sm tracking-widest"
               />
             ) : (
@@ -155,9 +155,7 @@ export function TOTPDialog({
                 variant="outline"
                 className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
               >
-                {isPush
-                  ? t("terminal.mfaSendRequest")
-                  : t("terminal.totpVerify")}
+                {isPush ? t("sshAuth.mfaSendRequest") : t("sshAuth.totpVerify")}
               </Button>
             </div>
           </form>

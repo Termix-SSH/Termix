@@ -113,8 +113,8 @@ describe("generated schemas", () => {
       expect(auditFks).toHaveLength(1);
       expect(auditFks[0].onDelete).toBe("set null");
 
-      const folderFks = read(schema.sshFolders).foreignKeys;
-      expect(folderFks.map((fk) => fk.onDelete).sort()).toEqual([
+      const hostFks = read(schema.hosts).foreignKeys;
+      expect([...new Set(hostFks.map((fk) => fk.onDelete))].sort()).toEqual([
         "cascade",
         "set null",
       ]);

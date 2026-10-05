@@ -88,8 +88,8 @@ export function ConnectionLogPanel({
       .join("\n");
 
     const ok = await copyToClipboard(logsText);
-    if (ok) toast.success(t("terminal.connectionLogCopied"));
-    else toast.error(t("terminal.connectionLogCopyFailed"));
+    if (ok) toast.success(t("sshAuth.connectionLogCopied"));
+    else toast.error(t("sshAuth.connectionLogCopyFailed"));
   };
 
   const getIcon = (type: string) => {
@@ -147,7 +147,7 @@ export function ConnectionLogPanel({
             <ChevronUp className="h-4 w-4" />
           )}
           <span className="text-sm font-medium">
-            {t("terminal.connectionLogTitle")} ({logs.length})
+            {t("sshAuth.connectionLogTitle")} ({logs.length})
           </span>
         </Button>
         {logs.length > 0 && (
@@ -155,7 +155,7 @@ export function ConnectionLogPanel({
             variant="ghost"
             size="icon-sm"
             onClick={copyLogsToClipboard}
-            title={t("terminal.connectionLogCopy")}
+            title={t("sshAuth.connectionLogCopy")}
           >
             <Copy className="h-4 w-4" />
           </Button>
@@ -167,8 +167,8 @@ export function ConnectionLogPanel({
           {logs.length === 0 ? (
             <div className="py-4 text-center text-sm text-muted-foreground">
               {isConnecting
-                ? t("terminal.connectionLogWaiting")
-                : t("terminal.connectionLogEmpty")}
+                ? t("sshAuth.connectionLogWaiting")
+                : t("sshAuth.connectionLogEmpty")}
             </div>
           ) : (
             <div className="space-y-1 font-mono text-xs">

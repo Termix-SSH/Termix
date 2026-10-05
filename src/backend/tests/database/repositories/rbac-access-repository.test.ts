@@ -19,11 +19,11 @@ describe("RbacAccessRepository", () => {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     await adapter.exec(`
-      INSERT INTO users (id, username, password_hash, is_admin, is_oidc)
+      INSERT INTO users (id, username, password_hash, is_admin)
       VALUES
-        ('admin', 'admin', 'hash', 1, 0),
-        ('user-1', 'alice', 'hash', 0, 0),
-        ('owner-1', 'owner', 'hash', 0, 0);
+        ('admin', 'admin', 'hash', 1),
+        ('user-1', 'alice', 'hash', 0),
+        ('owner-1', 'owner', 'hash', 0);
       INSERT INTO roles (id, name, display_name, is_system)
       VALUES (7, 'ops', 'Operations', 0);
       INSERT INTO ssh_credentials (id, user_id, name, username, auth_type) VALUES

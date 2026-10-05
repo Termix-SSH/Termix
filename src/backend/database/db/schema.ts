@@ -14,19 +14,6 @@ export const users = sqliteTable("users", {
   username: text("username").notNull(),
   passwordHash: text("password_hash").notNull(),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
-
-  isOidc: integer("is_oidc", { mode: "boolean" }).notNull().default(false),
-  oidcIdentifier: text("oidc_identifier"),
-  ssoProviderId: integer("sso_provider_id"),
-  clientId: text("client_id"),
-  clientSecret: text("client_secret"),
-  issuerUrl: text("issuer_url"),
-  authorizationUrl: text("authorization_url"),
-  tokenUrl: text("token_url"),
-  identifierPath: text("identifier_path"),
-  namePath: text("name_path"),
-  scopes: text().default("openid email profile"),
-
   registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   donationModalDismissed: integer("donation_modal_dismissed", {
     mode: "boolean",
@@ -50,9 +37,8 @@ export const sessions = sqliteTable(
     jwtToken: text("jwt_token").notNull(),
     deviceType: text("device_type").notNull(),
     deviceInfo: text("device_info").notNull(),
-    oidcSub: text("oidc_sub"),
-    oidcSid: text("oidc_sid"),
-    ssoProviderId: integer("sso_provider_id"),
+    // JSON of the identity provider's logout claims, for back-channel logout.
+    externalSessionRef: text("external_session_ref"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -188,11 +174,9 @@ export const hosts = sqliteTable(
       .notNull()
       .default(true),
     statusCheckInterval: integer("status_check_interval"),
-    terminalConfig: text("terminal_config"),
     // SSH connection options core's connect pipeline reads (keepalive,
     // legacy algorithms, agent, environment). JSON.
     sshOptions: text("ssh_options"),
-    quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
 
@@ -369,9 +353,6 @@ export const sshFolders = sqliteTable(
     name: text("name").notNull(),
     color: text("color"),
     icon: text("icon"),
-    credentialId: integer("credential_id").references(() => sshCredentials.id, {
-      onDelete: "set null",
-    }),
     // Manual drag-to-reorder position among sibling folders. Null falls back
     // to name sort, same convention as hosts.sortOrder.
     sortOrder: integer("sort_order"),
@@ -704,7 +685,6 @@ export const userPreferences = sqliteTable("user_preferences", {
   accentColor: text("accent_color"),
   language: text("language"),
   storageMode: text("storage_mode"),
-  commandAutocomplete: integer("command_autocomplete", { mode: "boolean" }),
   commandPaletteEnabled: integer("command_palette_enabled", { mode: "boolean" }),
   showHostTags: integer("show_host_tags", { mode: "boolean" }),
   hostTrayOnClick: integer("host_tray_on_click", { mode: "boolean" }),
@@ -716,16 +696,12 @@ export const userPreferences = sqliteTable("user_preferences", {
     mode: "boolean",
   }),
   foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
-  confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
   confirmTabClose: integer("confirm_tab_close", { mode: "boolean" }),
   hiddenRailTabs: text("hidden_rail_tabs"),
   compactHostView: integer("compact_host_view", { mode: "boolean" }),
   statusColorScheme: text("status_color_scheme"),
-  customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
-  terminalDefaults: text("terminal_defaults"),
-  terminalMacros: text("terminal_macros"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

@@ -284,7 +284,7 @@ describe("stripSensitiveFields", () => {
     expect(result.hasKey).toBe(false);
   });
 
-  it("detects sudo password stored only in nested terminalConfig", () => {
+  it("strips a sudo password nested in terminalConfig", () => {
     const result = stripSensitiveFields({
       name: "web",
       terminalConfig: {
@@ -292,7 +292,7 @@ describe("stripSensitiveFields", () => {
         sudoPassword: "nested-only-sudo",
       },
     });
-    expect(result.hasSudoPassword).toBe(true);
+    expect(result.hasSudoPassword).toBe(false);
     expect(
       (result.terminalConfig as Record<string, unknown>).sudoPassword,
     ).toBeUndefined();
@@ -481,25 +481,6 @@ describe("transformHostResponse terminal fields", () => {
     });
     expect(host.sshOptions).toEqual({ keepaliveInterval: 20 });
     expect(host.terminalConfig).toEqual({ keepaliveInterval: 20 });
-  });
-
-  it("reads the options out of terminal_config before the boot copy", () => {
-    const host = row({
-      sshOptions: null,
-      terminalConfig: JSON.stringify({ agentForwarding: true }),
-    });
-    expect(host.sshOptions).toEqual({ agentForwarding: true });
-  });
-
-  it("surfaces a 2.8 sudo password for the sanitizers to strip", () => {
-    const host = row({
-      sudoPassword: null,
-      terminalConfig: JSON.stringify({ sudoPassword: "legacy" }),
-    });
-    const stripped = stripSensitiveFields(host);
-    expect(stripped.hasSudoPassword).toBe(true);
-    expect(stripped).not.toHaveProperty("sudoPassword");
-    expect(JSON.stringify(stripped)).not.toContain("legacy");
   });
 
   it("hides the owner's agent socket from a shared recipient", () => {

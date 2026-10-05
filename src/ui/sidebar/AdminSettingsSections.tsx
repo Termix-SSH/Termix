@@ -116,8 +116,8 @@ export function AdminGeneralSettingsSection({
           </p>
         )}
         <SettingRow
-          label={t("admin.oidcAutoProvision")}
-          description={t("admin.oidcAutoProvisionDesc")}
+          label={t("admin.externalAutoProvision")}
+          description={t("admin.externalAutoProvisionDesc")}
         >
           <AdminToggle
             on={externalAutoProvision}

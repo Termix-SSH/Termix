@@ -69,8 +69,11 @@ export async function verifyPasswordLogin(request: {
     throw new LoginMethodError("Invalid username or password", 401);
   }
 
-  if (user.isOidc && (!user.passwordHash || user.passwordHash.trim() === "")) {
-    authLogger.warn("OIDC-only user attempted traditional login", {
+  if (
+    user.isExternal &&
+    (!user.passwordHash || user.passwordHash.trim() === "")
+  ) {
+    authLogger.warn("External-only user attempted password login", {
       operation: "user_login",
       username,
       userId: user.id,

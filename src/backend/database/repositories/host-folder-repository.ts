@@ -112,7 +112,6 @@ export class HostFolderRepository {
     name: string,
     color: string | null | undefined,
     icon: string | null | undefined,
-    credentialId?: number | null,
     now = new Date().toISOString(),
   ): Promise<{ folder: HostFolderRecord; created: boolean }> {
     const existing = await this.findFolder(userId, name);
@@ -123,8 +122,6 @@ export class HostFolderRepository {
         {
           color,
           icon,
-          credentialId:
-            credentialId === undefined ? existing.credentialId : credentialId,
           updatedAt: now,
         },
         and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)),
@@ -140,7 +137,6 @@ export class HostFolderRepository {
       name,
       color,
       icon,
-      credentialId: credentialId ?? null,
       createdAt: now,
       updatedAt: now,
     });
