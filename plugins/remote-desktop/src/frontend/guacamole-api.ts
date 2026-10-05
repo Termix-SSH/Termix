@@ -210,7 +210,7 @@ export async function getGuacamoleTokenFromHost(
     // server is configured at all.
     const useRemote = isElectron() && origin === "remote";
     const remoteHostId = useRemote ? await resolveRemoteHostId(syncId) : null;
-    if (useRemote && syncId && remoteHostId === null) {
+    if (useRemote && remoteHostId == null) {
       throw new Error("The synced host does not exist on the remote server");
     }
     const targetHostId = remoteHostId ?? hostId;
@@ -258,7 +258,7 @@ export async function getGuacdStatus(
     const remoteHostId = useRemote
       ? await resolveRemoteHostId(options.syncId)
       : null;
-    if (useRemote && options.syncId && remoteHostId === null) {
+    if (useRemote && remoteHostId == null) {
       throw new Error("The synced host does not exist on the remote server");
     }
     params.set("hostId", String(remoteHostId ?? options.hostId));

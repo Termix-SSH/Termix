@@ -59,7 +59,14 @@ describe("guacamole API origin", () => {
     // The embedded backend has no guacd, so asking it reports "disconnected"
     // even when the connected server can serve the session.
     const status = await getGuacdStatus("remote");
-    const token = await getGuacamoleTokenFromHost(9, "remote", "vnc");
+    resolveRemoteHostIdMock.mockResolvedValue(41);
+    const token = await getGuacamoleTokenFromHost(
+      9,
+      "remote",
+      "vnc",
+      undefined,
+      "sync-9",
+    );
 
     expect(status.guacd.status).toBe("connected");
     expect(token.token).toBe("remote-token");
@@ -140,7 +147,8 @@ describe("guacamole API origin", () => {
   it("uses the remote server for an explicitly remote origin", async () => {
     isElectronMock.mockReturnValue(true);
 
-    await getGuacamoleTokenFromHost(9, "remote", "rdp");
+    resolveRemoteHostIdMock.mockResolvedValue(41);
+    await getGuacamoleTokenFromHost(9, "remote", "rdp", undefined, "sync-9");
 
     expect(remoteApiMock.post).toHaveBeenCalledOnce();
     expect(authApiMock.post).not.toHaveBeenCalled();
@@ -214,4 +222,22 @@ describe("saved host status routing", () => {
     ).rejects.toThrow("does not exist");
     expect(remoteApiMock.get).not.toHaveBeenCalled();
   });
+});
+
+describe("missing remote host identity", () => {
+  it.each([undefined, null, ""])(
+    "refuses a local ID without a sync ID (%s)",
+    async (syncId) => {
+      isElectronMock.mockReturnValue(true);
+      resolveRemoteHostIdMock.mockResolvedValue(null);
+      await expect(
+        getGuacamoleTokenFromHost(9, "remote", "rdp", undefined, syncId),
+      ).rejects.toThrow("does not exist");
+      await expect(
+        getGuacdStatus("remote", { hostId: 9, syncId }),
+      ).rejects.toThrow("does not exist");
+      expect(remoteApiMock.post).not.toHaveBeenCalled();
+      expect(remoteApiMock.get).not.toHaveBeenCalled();
+    },
+  );
 });
