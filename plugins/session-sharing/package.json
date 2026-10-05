@@ -25,7 +25,7 @@
     "@types/react-dom": "^19.2.4",
     "better-sqlite3": "^13.0.3",
     "jsdom": "^30.0.1",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.3"
   },
   "peerDependencies": {
     "@termix/plugin-sdk": "^1.0.0",
