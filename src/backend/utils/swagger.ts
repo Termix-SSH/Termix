@@ -8,42 +8,6 @@ type SwaggerJSDocOptions = Parameters<typeof swaggerJSDoc>[0];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// dist/backend/backend/utils -> the repository.
-const REPO_ROOT = path.join(__dirname, "..", "..", "..", "..");
-
-/**
- * A tag per plugin, named and described by its manifest, so the reference
- * groups a plugin's routes without core naming any plugin.
- */
-async function pluginTags(): Promise<{ name: string; description: string }[]> {
-  const pluginsDir = path.join(REPO_ROOT, "plugins");
-  const tags: { name: string; description: string }[] = [];
-  let entries: string[] = [];
-  try {
-    entries = await fs.readdir(pluginsDir);
-  } catch {
-    return tags;
-  }
-  for (const entry of entries.sort()) {
-    try {
-      const manifest = JSON.parse(
-        await fs.readFile(
-          path.join(pluginsDir, entry, "manifest.json"),
-          "utf8",
-        ),
-      ) as { name?: string; description?: string };
-      if (manifest.name) {
-        tags.push({
-          name: manifest.name,
-          description: manifest.description ?? "",
-        });
-      }
-    } catch {
-      // Not a plugin folder.
-    }
-  }
-  return tags;
-}
 
 const swaggerOptions: SwaggerJSDocOptions = {
   definition: {
@@ -170,11 +134,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
     path.join(__dirname, "..", "services", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "hosts", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "hosts", "**", "*.js").replace(/\\/g, "/"),
-    // Plugin routes document themselves. Read from source, because a plugin's
-    // bundle drops comments.
-    path
-      .join(REPO_ROOT, "plugins", "*", "src", "backend", "**", "*.ts")
-      .replace(/\\/g, "/"),
   ],
 };
 
@@ -184,8 +143,6 @@ async function generateOpenAPISpec() {
       operation: "openapi_generate_start",
     });
 
-    const definition = swaggerOptions.definition as { tags?: unknown[] };
-    definition.tags = [...(definition.tags ?? []), ...(await pluginTags())];
     const swaggerSpec = await swaggerJSDoc(swaggerOptions);
 
     const outputPath = path.join(

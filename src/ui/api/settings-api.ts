@@ -43,9 +43,6 @@ export async function updateSessionTimeout(
   }
 }
 
-// Tailscale settings/device API wrappers moved to
-// plugins/tailscale/src/frontend/tailscale-api.ts.
-
 // ============================================================================
 // BRANDING SETTINGS
 // ============================================================================

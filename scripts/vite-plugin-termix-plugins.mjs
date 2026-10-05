@@ -4,10 +4,8 @@
  * - Every shared module (React, i18next and the SDK) becomes an entry chunk,
  *   reached through a stable shim at dist/shared/<name>.js.
  * - index.html gets an import map pointing those bare specifiers at the shims,
- *   so a plugin bundle's `import "react"` lands on the shell's React.
- * - In `vite dev`, src/ui/plugin-host/workspace-plugins.ts is replaced with
- *   import.meta.glob calls, so the monorepo's plugins load through Vite with
- *   HMR, and the map points at dev-server module URLs instead.
+ *   so a plugin bundle's `import "react"` lands on the shell's React. In
+ *   `vite dev` the map points at dev-server module URLs instead.
  */
 
 import fs from "node:fs";
@@ -72,9 +70,6 @@ function sourceFacade(file) {
 export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
   let command = "build";
   let shared = [];
-  const workspaceModule = path
-    .join(repoRoot, "src", "ui", "plugin-host", "workspace-plugins.ts")
-    .replaceAll("\\", "/");
 
   const facadeSource = (specifier) => {
     if (SHARED_VENDOR_MODULES.includes(specifier)) {
@@ -118,26 +113,6 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
     load(id) {
       if (id.startsWith(VIRTUAL_PREFIX)) {
         return facadeSource(id.slice(VIRTUAL_PREFIX.length));
-      }
-      if (
-        command === "serve" &&
-        id.replaceAll("\\", "/").split("?")[0] === workspaceModule
-      ) {
-        return [
-          'const frontends = import.meta.glob("/plugins/*/src/frontend/index.{tsx,ts}");',
-          'const locales = import.meta.glob("/plugins/*/locales/**/*.json", { import: "default" });',
-          "export const workspaceFrontends = {};",
-          "export const workspaceLocales = {};",
-          "for (const [file, load] of Object.entries(frontends)) {",
-          '  workspaceFrontends[file.split("/")[2]] = load;',
-          "}",
-          "for (const [file, load] of Object.entries(locales)) {",
-          '  const parts = file.split("/");',
-          "  const id = parts[2];",
-          '  const name = parts[parts.length - 1].replace(/\\.json$/, "");',
-          "  (workspaceLocales[id] ??= {})[name] = load;",
-          "}",
-        ].join("\n");
       }
       return null;
     },

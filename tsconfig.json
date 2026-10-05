@@ -6,9 +6,6 @@
     },
     {
       "path": "./tsconfig.node.json"
-    },
-    {
-      "path": "./tsconfig.plugins.json"
     }
   ],
   "compilerOptions": {

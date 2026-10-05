@@ -2,8 +2,7 @@
   "name": "termix",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "plugins/*"
+    "packages/*"
   ],
   "version": "26.10.0",
   "description": "Self-hosted SSH and remote desktop management.",
@@ -16,10 +15,10 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs && node scripts/apply-plugin-patches.cjs",
+    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-ssh2-agent.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
-    "lint": "node scripts/generate-dialect-schema.cjs --check && npm run plugin:validate-manifest && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/check-plugin-locales.cjs && node scripts/check-plugin-uses.cjs && node scripts/check-test-locations.cjs",
+    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint . && node scripts/check-importmap-csp.cjs && node scripts/check-core-plugin-ids.cjs && node scripts/check-sdk-ui-exports.cjs && node scripts/check-test-locations.cjs",
     "lint:fix": "eslint --fix .",
     "type-check": "npm run build:sdk && tsc -b --force",
     "test": "vitest run",
@@ -48,11 +47,8 @@
     "schema:generate": "node scripts/generate-dialect-schema.cjs",
     "schema:check": "node scripts/generate-dialect-schema.cjs --check",
     "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts",
-    "plugin:validate-manifest": "node scripts/validate-plugin-manifest.cjs",
     "build:sdk": "npm run build --workspace @termix/plugin-sdk && node scripts/build-sdk-host.mjs",
-    "build:plugins": "node scripts/build-plugins.cjs",
-    "test:plugins": "node scripts/run-plugin-tests.cjs",
-    "test:all": "npm run test && npm run test:plugins"
+    "build:plugins": "node scripts/build-plugins.cjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.13",

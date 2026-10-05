@@ -74,7 +74,7 @@ jobs:
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
 
-          git add src/ui/locales/translated plugins/*/locales/translated
+          git add src/ui/locales/translated
           if git diff --cached --quiet; then
             echo "No translation changes to commit."
             exit 0

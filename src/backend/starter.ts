@@ -226,21 +226,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     const { primeKnownPermissions } =
       await import("./utils/known-permissions.js");
     await primeKnownPermissions();
-    // Terminal, docker, host-metrics, file-manager and tmux monitoring are
-    // deliberately absent: the ssh-terminal, docker, host-metrics,
-    // file-manager and tmux-monitor plugins start their own servers, so
-    // disabling any of them stops its WS/HTTP server. See
-    // plugins/ssh-terminal, plugins/docker, plugins/host-metrics,
-    // plugins/file-manager and plugins/tmux-monitor.
-    // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
-    // Network Topology, Workspaces, Web Endpoint, Tunnels, Serial, Homepage)
-    // is absent for the same reason: each one serves its routes under
-    // /plugin-api/<id>/ (or a WS route under /plugin-ws/<id>/) through ctx on
-    // activate, so disabling it answers 503 instead of leaving a dead import
-    // here. The dashboard's own uptime and recent-activity routes are core
-    // and are mounted on the main server in database.ts.
-    // Automations' scheduler and tunnel autostart also start from their own
-    // activate() rather than here.
+    // Plugins serve their routes under /plugin-api/<id>/ and /plugin-ws/<id>/
+    // through ctx on activate, and start their own schedulers there, so
+    // disabling one answers 503 instead of leaving a dead import here. The
+    // dashboard's own uptime and recent-activity routes are core and are
+    // mounted on the main server in database.ts.
 
     // Initialize log level from database settings
     const { getCurrentSettingValue } =

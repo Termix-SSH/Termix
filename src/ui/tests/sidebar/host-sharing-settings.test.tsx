@@ -4,13 +4,32 @@ import type { PluginSummary } from "@/api/plugins-api";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { createHostEditorForm } from "@/sidebar/HostEditorData";
 import { HostPluginSections } from "@/settings/HostPluginSections";
-import manifest from "../../../../plugins/session-sharing/manifest.json";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 afterEach(cleanup);
+
+const manifest = {
+  id: "session-sharing",
+  name: "Session Sharing",
+  contributes: {
+    settings: {
+      host: {
+        editorGroup: "ssh",
+        fields: [
+          {
+            key: "allowSessionSharing",
+            type: "boolean",
+            labelKey: "settings.host.allowSessionSharing.label",
+            default: true,
+          },
+        ],
+      },
+    },
+  },
+};
 
 describe("host sharing settings on reopening the editor", () => {
   it.each([false, true])("retains the saved sharing value %s", (saved) => {

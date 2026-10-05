@@ -52,12 +52,8 @@ async function resolveProjectId() {
   return { id: match.id, targetLanguageIds: match.targetLanguageIds || [] };
 }
 
-// Core is /en.json and each plugin is /plugins/<id>/locales/en.json.
 function isSourceFile(file) {
-  return (
-    file.path === `/${SOURCE_FILE}` ||
-    /^\/plugins\/[^/]+\/locales\/en\.json$/.test(file.path || "")
-  );
+  return file.path === `/${SOURCE_FILE}`;
 }
 
 async function resolveFileIds(projectId) {

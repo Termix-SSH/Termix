@@ -2,7 +2,6 @@
  * Reads docker/bundled-plugins.json: which plugins ship in the image and
  * where each comes from.
  *
- *   { "id": "x", "source": "workspace" }                    built from plugins/x
  *   { "id": "x", "source": "tmxplug", "url": "...", "sha256": "..." }
  *   { "id": "x", "source": "tmxplug", "path": "...", "sha256": "..." }
  *
@@ -17,7 +16,7 @@ const path = require("node:path");
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 
-function parseBundledPlugins(raw, workspaceIds) {
+function parseBundledPlugins(raw) {
   const problems = [];
   const list = raw && Array.isArray(raw.plugins) ? raw.plugins : null;
   if (!list) {
@@ -41,15 +40,7 @@ function parseBundledPlugins(raw, workspaceIds) {
     }
     seen.add(entry.id);
 
-    if (entry.source === "workspace") {
-      if (!workspaceIds.includes(entry.id)) {
-        problems.push(
-          `${entry.id} is a workspace plugin but plugins/${entry.id} does not exist`,
-        );
-        continue;
-      }
-      plugins.push({ id: entry.id, source: "workspace" });
-    } else if (entry.source === "tmxplug") {
+    if (entry.source === "tmxplug") {
       const hasUrl =
         typeof entry.url === "string" && entry.url.startsWith("https://");
       const hasPath = typeof entry.path === "string" && entry.path.length > 0;
@@ -61,12 +52,6 @@ function parseBundledPlugins(raw, workspaceIds) {
       }
       if (typeof entry.sha256 !== "string" || !SHA256.test(entry.sha256)) {
         problems.push(`${entry.id} needs a lowercase hex sha256`);
-        continue;
-      }
-      if (workspaceIds.includes(entry.id)) {
-        problems.push(
-          `${entry.id} comes from a .tmxplug, so delete plugins/${entry.id}`,
-        );
         continue;
       }
       plugins.push({
@@ -81,33 +66,13 @@ function parseBundledPlugins(raw, workspaceIds) {
     }
   }
 
-  for (const id of workspaceIds) {
-    if (!seen.has(id)) {
-      problems.push(
-        `plugins/${id} is not listed in docker/bundled-plugins.json`,
-      );
-    }
-  }
-
   return { plugins, problems };
 }
 
 function loadBundledPlugins(root) {
   const configPath = path.join(root, "docker", "bundled-plugins.json");
-  const pluginsDir = path.join(root, "plugins");
-  const workspaceIds = fs.existsSync(pluginsDir)
-    ? fs
-        .readdirSync(pluginsDir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .filter((entry) =>
-          fs.existsSync(path.join(pluginsDir, entry.name, "manifest.json")),
-        )
-        .map((entry) => entry.name)
-        .sort()
-    : [];
-
   const raw = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  const { plugins, problems } = parseBundledPlugins(raw, workspaceIds);
+  const { plugins, problems } = parseBundledPlugins(raw);
   if (problems.length > 0) {
     throw new Error(`docker/bundled-plugins.json:\n  ${problems.join("\n  ")}`);
   }

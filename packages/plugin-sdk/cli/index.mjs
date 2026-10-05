@@ -2,7 +2,7 @@
 /**
  * termix-plugin: build, validate, test, pack and sign a Termix plugin.
  *
- * Run from a plugin directory (npm run build inside plugins/<id>/ does).
+ * Run from a plugin directory (a plugin repo's npm run build does).
  */
 
 import process from "node:process";

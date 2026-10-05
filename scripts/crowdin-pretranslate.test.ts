@@ -7,17 +7,13 @@ const { isSourceFile } = require("./crowdin-pretranslate.cjs") as {
 };
 
 describe("isSourceFile", () => {
-  it("matches the core and plugin source files", () => {
+  it("matches the core source file", () => {
     expect(isSourceFile({ path: "/en.json" })).toBe(true);
-    expect(isSourceFile({ path: "/plugins/acme-ssl/locales/en.json" })).toBe(
-      true,
-    );
   });
 
   it("skips anything else", () => {
     expect(isSourceFile({ path: "/src/ui/locales/en.json" })).toBe(false);
-    expect(isSourceFile({ path: "/plugins/a/b/locales/en.json" })).toBe(false);
-    expect(isSourceFile({ path: "/plugins/acme-ssl/locales/de.json" })).toBe(
+    expect(isSourceFile({ path: "/plugins/acme-ssl/locales/en.json" })).toBe(
       false,
     );
     expect(isSourceFile({})).toBe(false);

@@ -30,7 +30,7 @@ const notes = adoptLegacyTable(
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "termix-sdk-testing-"));
-  // The directory name is the plugin id, as it is in plugins/.
+  // The directory name is the plugin id.
   pluginDir = path.join(root, "fleets");
   fs.mkdirSync(path.join(pluginDir, "migrations", "sqlite"), {
     recursive: true,

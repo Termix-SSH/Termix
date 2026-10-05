@@ -76,15 +76,6 @@
     "packages/plugin-sdk": {
       "entry": ["src/*.ts", "src/testing/*.ts", "cli/**/*.mjs"],
       "project": ["src/**/*.ts", "cli/**/*.mjs"]
-    },
-    "plugins/*": {
-      "entry": [
-        "src/backend/index.ts",
-        "src/frontend/index.{ts,tsx}",
-        "tests/**/*.{ts,tsx}",
-        "vitest.config.ts"
-      ],
-      "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"]
     }
   }
 }

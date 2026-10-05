@@ -1,5 +1,4 @@
 import Database from "better-sqlite3";
-import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { repairSnippetsNoteColumn } from "../../upgrade/snippets-schema-migration.js";
 
@@ -26,12 +25,8 @@ describe("snippet note column upgrade", () => {
       );
       repairSnippetsNoteColumn(sqlite);
       if (table === "snippets") {
-        sqlite.exec(
-          readFileSync(
-            "plugins/snippets/migrations/sqlite/0001_adopt_snippets_tables.sql",
-            "utf8",
-          ),
-        );
+        // What the plugin migration does to the legacy table.
+        sqlite.exec(`ALTER TABLE "snippets" RENAME TO "p_snippets_snippets"`);
       }
       expect(
         sqlite

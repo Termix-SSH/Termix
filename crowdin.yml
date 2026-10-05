@@ -7,5 +7,3 @@ files:
   - source: /src/ui/locales/en.json
     dest: /en.json
     translation: /src/ui/locales/translated/%locale_with_underscore%.json
-  - source: /plugins/*/locales/en.json
-    translation: /%original_path%/translated/%locale_with_underscore%.json

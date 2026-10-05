@@ -39,70 +39,46 @@ const sha256 = (buffer: Buffer) =>
   crypto.createHash("sha256").update(buffer).digest("hex");
 
 describe("parseBundledPlugins", () => {
-  it("accepts workspace and tmxplug entries", () => {
-    const { plugins, problems } = parseBundledPlugins(
-      {
-        plugins: [
-          { id: "one", source: "workspace" },
-          {
-            id: "two",
-            source: "tmxplug",
-            url: "https://x/two.tmxplug",
-            sha256: SHA,
-          },
-          {
-            id: "three",
-            source: "tmxplug",
-            path: "vendor/three.tmxplug",
-            sha256: SHA,
-          },
-        ],
-      },
-      ["one"],
-    );
+  it("accepts tmxplug entries", () => {
+    const { plugins, problems } = parseBundledPlugins({
+      plugins: [
+        {
+          id: "two",
+          source: "tmxplug",
+          url: "https://x/two.tmxplug",
+          sha256: SHA,
+        },
+        {
+          id: "three",
+          source: "tmxplug",
+          path: "vendor/three.tmxplug",
+          sha256: SHA,
+        },
+      ],
+    });
     expect(problems).toEqual([]);
-    expect(plugins.map((p: { id: string }) => p.id)).toEqual([
-      "one",
-      "two",
-      "three",
-    ]);
-  });
-
-  it("reports a plugins folder nobody listed", () => {
-    const { problems } = parseBundledPlugins(
-      { plugins: [{ id: "one", source: "workspace" }] },
-      ["one", "stray"],
-    );
-    expect(problems).toEqual([
-      "plugins/stray is not listed in docker/bundled-plugins.json",
-    ]);
+    expect(plugins.map((p: { id: string }) => p.id)).toEqual(["two", "three"]);
   });
 
   it("reports bad entries", () => {
-    const { problems } = parseBundledPlugins(
-      {
-        plugins: [
-          { id: "gone", source: "workspace" },
-          { id: "nohash", source: "tmxplug", url: "https://x" },
-          { id: "plain", source: "tmxplug", url: "http://x", sha256: SHA },
-          { id: "still-here", source: "tmxplug", path: "a", sha256: SHA },
-          { id: "gone", source: "workspace" },
-          { id: "odd", source: "npm" },
-        ],
-      },
-      ["still-here"],
-    );
+    const { problems } = parseBundledPlugins({
+      plugins: [
+        { id: "nohash", source: "tmxplug", url: "https://x" },
+        { id: "plain", source: "tmxplug", url: "http://x", sha256: SHA },
+        { id: "ok", source: "tmxplug", path: "a", sha256: SHA },
+        { id: "ok", source: "tmxplug", path: "a", sha256: SHA },
+        { id: "odd", source: "workspace" },
+      ],
+    });
     expect(problems).toEqual([
-      "gone is a workspace plugin but plugins/gone does not exist",
       "nohash needs a lowercase hex sha256",
       "plain needs exactly one of an https url or a path",
-      "still-here comes from a .tmxplug, so delete plugins/still-here",
-      "gone is listed twice",
-      'odd has an unknown source "npm"',
+      "ok is listed twice",
+      'odd has an unknown source "workspace"',
     ]);
   });
 
-  it("matches the plugins folder in this repo", () => {
+  it("reads the list in this repo", () => {
     const root = path.resolve(__dirname, "..");
     expect(() => loadBundledPlugins(root)).not.toThrow();
   });

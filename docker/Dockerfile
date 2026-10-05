@@ -1,12 +1,3 @@
-# Stage 0: every plugin's package.json and manifest.json and nothing else.
-# npm ci needs each workspace package.json in place or it silently skips it,
-# and a glob COPY flattens paths, so the tree is trimmed here instead. The
-# deps layer below stays cached until one of these files changes.
-FROM node:26-slim AS workspace-manifests
-WORKDIR /src
-COPY plugins ./plugins
-RUN find plugins -mindepth 2 -maxdepth 2 ! -name package.json ! -name manifest.json -exec rm -rf {} +
-
 # Stage 1: Install dependencies
 # The builders only produce JS, so they run on the build machine's own arch
 # once instead of under QEMU per target. Rolldown hangs under arm64 emulation.
@@ -17,7 +8,6 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 
 COPY package*.json ./
 COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
-COPY --from=workspace-manifests /src/plugins ./plugins
 COPY .npmrc ./
 COPY vendor ./vendor
 
@@ -80,15 +70,9 @@ COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY .npmrc ./
 COPY vendor ./vendor
 
-COPY scripts/patch-ssh2-agent.cjs scripts/install-native-plugin-deps.cjs ./scripts/
-# Plugin manifests only, for their nativeDependencies. Outside plugins/ so npm
-# ci does not treat them as workspaces: everything else a plugin uses is
-# already inside its bundle.
-COPY --from=workspace-manifests /src/plugins ./plugin-manifests
+COPY scripts/patch-ssh2-agent.cjs ./scripts/
 
 RUN npm ci --omit=dev --ignore-scripts && \
-    node scripts/install-native-plugin-deps.cjs plugin-manifests && \
-    rm -rf plugin-manifests && \
     node scripts/patch-ssh2-agent.cjs && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
@@ -128,7 +112,7 @@ COPY --chown=node:node --from=frontend-builder /app/dist /app/html
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
-# Bundled first-party plugins, resolved as dist/plugins by
+# Plugins pinned in docker/bundled-plugins.json, resolved as dist/plugins by
 # getBundledPluginsDir().
 COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
 # Target of node_modules/@termix/plugin-sdk, which core and the plugins import.

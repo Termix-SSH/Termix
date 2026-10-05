@@ -15,7 +15,6 @@ import {
   setFrontendState,
   setPluginSummaries,
 } from "./plugin-store";
-import { workspaceFrontends, workspaceLocales } from "./workspace-plugins";
 import { syncHostFeatureTabs } from "@/settings/host-feature-tabs";
 
 /**
@@ -75,16 +74,12 @@ const defaultDeps: PluginLoaderDeps = {
   fetchPlugins: getPlugins,
 
   async importFrontend(summary) {
-    const workspace = workspaceFrontends[summary.id];
-    if (workspace) return (await workspace()) as FrontendModule;
     return (await import(
       /* @vite-ignore */ absolute(assetUrl(summary, "frontend.js"))
     )) as FrontendModule;
   },
 
   async loadLocale(summary, file) {
-    const workspace = workspaceLocales[summary.id]?.[file];
-    if (workspace) return (await workspace()) as ResourceKey;
     const hasFile = summary.locales?.includes(file);
     if (!hasFile) return null;
     const path = file === "en" ? "en.json" : `translated/${file}.json`;

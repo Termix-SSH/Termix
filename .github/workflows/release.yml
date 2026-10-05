@@ -110,15 +110,8 @@ jobs:
           npm run format
           npm run lint
 
-      # The plugin boot tests load the built bundles.
-      - name: Build plugins
-        run: npm run build:plugins
-
       - name: Run unit tests
         run: npm run test
-
-      - name: Run plugin tests
-        run: npm run test:plugins
 
       - name: Sync version
         run: node scripts/sync-version.cjs --version "${{ needs.prep.outputs.version }}"
@@ -217,7 +210,7 @@ jobs:
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
 
-          git add src/ui/locales/translated plugins/*/locales/translated
+          git add src/ui/locales/translated
           if git diff --cached --quiet; then
             echo "No translation changes to commit."
             exit 0
