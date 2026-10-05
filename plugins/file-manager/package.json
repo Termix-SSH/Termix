@@ -22,7 +22,7 @@
     "busboy": "^1.6.0",
     "jszip": "^3.10.2",
     "lucide-react": "^1.33.0",
-    "motion": "^13.1.1",
+    "motion": "^13.5.0",
     "pdfjs-dist": "5.4.296",
     "react-h5-audio-player": "^3.10.2",
     "react-icons": "^5.7.0",

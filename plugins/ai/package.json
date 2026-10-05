@@ -10,7 +10,7 @@
     "validate": "termix-plugin validate"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
+    "@anthropic-ai/sdk": "^0.131.0",
     "lucide-react": "^1.33.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
