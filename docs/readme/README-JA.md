@@ -215,7 +215,7 @@ Proxmox のインスタンスからそのままホストを取り込めます。
 <td width="50%" valign="top">
 
 **コマンドラインツール:**
-シェルやスクリプトから使える `termix` CLI です。ターミナルを開き、ホスト 1 台またはフリート全体でコマンドを実行し、SFTP でファイルを移動し、ホストやスニペット、認証情報を管理できます。`npm install -g @termix-cli/cli` で入れるか、単体のバイナリを使ってください。詳しくは [CLI ドキュメント](https://docs.termix.site/cli)をご覧ください。
+シェルやスクリプトから使える `termix` CLI です。ターミナルを開き、ホスト 1 台またはフリート全体でコマンドを実行し、SFTP でファイルを移動し、ホストやスニペット、認証情報を管理できます。`npm install -g @termix-ssh/cli` で入れるか、単体のバイナリを使ってください。詳しくは [CLI ドキュメント](https://docs.termix.site/cli)をご覧ください。
 
 </td>
 </tr>
@@ -350,7 +350,7 @@ networks:
 Termix には CLI もあるので、ターミナルからサーバーを管理したり、自分のスクリプトに組み込んだりできます。
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

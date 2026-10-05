@@ -215,7 +215,7 @@ Speichere eine Reihe von Tabs samt Aufteilung und öffne alles mit einem Klick w
 <td width="50%" valign="top">
 
 **Kommandozeile:**
-Ein `termix`-CLI für deine Shell und deine Skripte. Terminals öffnen, einen Befehl auf einem Host oder einer ganzen Flotte ausführen, Dateien per SFTP verschieben und Hosts, Snippets und Zugangsdaten verwalten. Installiere es mit `npm install -g @termix-cli/cli` oder nimm eine eigenständige Binärdatei. Siehe die [CLI-Dokumentation](https://docs.termix.site/cli).
+Ein `termix`-CLI für deine Shell und deine Skripte. Terminals öffnen, einen Befehl auf einem Host oder einer ganzen Flotte ausführen, Dateien per SFTP verschieben und Hosts, Snippets und Zugangsdaten verwalten. Installiere es mit `npm install -g @termix-ssh/cli` oder nimm eine eigenständige Binärdatei. Siehe die [CLI-Dokumentation](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -350,7 +350,7 @@ networks:
 Termix hat auch ein CLI, damit du deine Server vom Terminal aus verwalten und Termix in eigenen Skripten nutzen kannst.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

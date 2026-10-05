@@ -215,7 +215,7 @@ Enregistrez un ensemble d'onglets avec leur disposition en écran divisé et rou
 <td width="50%" valign="top">
 
 **Ligne de commande:**
-Un CLI `termix` pour votre shell et vos scripts. Ouvrez des terminaux, lancez une commande sur un hôte ou une flotte entière, déplacez des fichiers en SFTP et gérez hôtes, extraits et identifiants. Installez-le avec `npm install -g @termix-cli/cli` ou récupérez un binaire autonome. Voir la [documentation du CLI](https://docs.termix.site/cli).
+Un CLI `termix` pour votre shell et vos scripts. Ouvrez des terminaux, lancez une commande sur un hôte ou une flotte entière, déplacez des fichiers en SFTP et gérez hôtes, extraits et identifiants. Installez-le avec `npm install -g @termix-ssh/cli` ou récupérez un binaire autonome. Voir la [documentation du CLI](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -348,7 +348,7 @@ networks:
 Termix propose aussi un CLI, pour gérer vos serveurs depuis un terminal et utiliser Termix dans vos propres scripts.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

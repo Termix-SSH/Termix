@@ -229,7 +229,7 @@ CPU, मेमोरी और डिस्क जैसी होस्ट म�
 <td width="50%" valign="top">
 
 **कमांड लाइन:**
-आपके शेल और स्क्रिप्ट के लिए `termix` CLI। टर्मिनल खोलें, किसी एक होस्ट या पूरे फ़्लीट पर कमांड चलाएँ, SFTP से फ़ाइलें भेजें, और होस्ट, स्निपेट व क्रेडेंशियल संभालें। `npm install -g @termix-cli/cli` से इंस्टॉल करें या अलग बाइनरी लें। [CLI दस्तावेज़](https://docs.termix.site/cli) देखें।
+आपके शेल और स्क्रिप्ट के लिए `termix` CLI। टर्मिनल खोलें, किसी एक होस्ट या पूरे फ़्लीट पर कमांड चलाएँ, SFTP से फ़ाइलें भेजें, और होस्ट, स्निपेट व क्रेडेंशियल संभालें। `npm install -g @termix-ssh/cli` से इंस्टॉल करें या अलग बाइनरी लें। [CLI दस्तावेज़](https://docs.termix.site/cli) देखें।
 
 </td>
 </tr>
@@ -355,7 +355,7 @@ networks:
 Termix में CLI भी है, ताकि आप टर्मिनल से अपने सर्वर संभाल सकें और Termix को अपनी स्क्रिप्ट में इस्तेमाल कर सकें।
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

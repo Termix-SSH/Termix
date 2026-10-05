@@ -215,7 +215,7 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 <td width="50%" valign="top">
 
 **命令行工具:**
-`termix` 命令行工具，可用于你的终端和脚本。打开终端、在单台主机或整个机群上执行命令、通过 SFTP 传输文件，以及管理主机、代码片段和凭据。用 `npm install -g @termix-cli/cli` 安装，或者直接下载独立的可执行文件。详见 [CLI 文档](https://docs.termix.site/cli)。
+`termix` 命令行工具，可用于你的终端和脚本。打开终端、在单台主机或整个机群上执行命令、通过 SFTP 传输文件，以及管理主机、代码片段和凭据。用 `npm install -g @termix-ssh/cli` 安装，或者直接下载独立的可执行文件。详见 [CLI 文档](https://docs.termix.site/cli)。
 
 </td>
 </tr>
@@ -349,7 +349,7 @@ networks:
 Termix 还提供命令行工具，让你可以在终端里管理服务器，也可以把 Termix 用在自己的脚本中。
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

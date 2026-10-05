@@ -215,7 +215,7 @@ Save a set of tabs with their split layout and reopen the whole thing in one cli
 <td width="50%" valign="top">
 
 **Command Line Interface:**
-A `termix` CLI for your shell and your scripts. Open terminals, run a command on one host or a whole fleet, move files over SFTP, and manage hosts, snippets, and credentials. Install with `npm install -g @termix-cli/cli` or grab a standalone binary. See the [CLI docs](https://docs.termix.site/cli).
+A `termix` CLI for your shell and your scripts. Open terminals, run a command on one host or a whole fleet, move files over SFTP, and manage hosts, snippets, and credentials. Install with `npm install -g @termix-ssh/cli` or grab a standalone binary. See the [CLI docs](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -350,7 +350,7 @@ networks:
 Termix also has a CLI, so you can manage your servers from a terminal and use Termix in your own scripts.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

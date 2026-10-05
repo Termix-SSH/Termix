@@ -215,7 +215,7 @@ Salva um conjunto de abas com a divisão da tela e reabre tudo com um clique. O 
 <td width="50%" valign="top">
 
 **Linha de comando:**
-Um CLI `termix` para o teu shell e os teus scripts. Abre terminais, roda um comando num host ou numa frota inteira, move arquivos por SFTP e gerencia hosts, trechos e credenciais. Instala com `npm install -g @termix-cli/cli` ou pega um binário independente. Vê a [documentação do CLI](https://docs.termix.site/cli).
+Um CLI `termix` para o teu shell e os teus scripts. Abre terminais, roda um comando num host ou numa frota inteira, move arquivos por SFTP e gerencia hosts, trechos e credenciais. Instala com `npm install -g @termix-ssh/cli` ou pega um binário independente. Vê a [documentação do CLI](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -346,7 +346,7 @@ networks:
 O Termix também tem um CLI, para gerenciares os teus servidores pelo terminal e usares o Termix nos teus próprios scripts.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

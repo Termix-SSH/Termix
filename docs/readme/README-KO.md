@@ -215,7 +215,7 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 <td width="50%" valign="top">
 
 **명령줄 도구:**
-셸과 스크립트에서 쓰는 `termix` CLI입니다. 터미널을 열고, 호스트 하나나 플릿 전체에서 명령을 실행하고, SFTP로 파일을 옮기고, 호스트와 스니펫, 자격 증명을 관리할 수 있습니다. `npm install -g @termix-cli/cli`로 설치하거나 단독 실행 파일을 받으면 됩니다. [CLI 문서](https://docs.termix.site/cli)를 참고하세요.
+셸과 스크립트에서 쓰는 `termix` CLI입니다. 터미널을 열고, 호스트 하나나 플릿 전체에서 명령을 실행하고, SFTP로 파일을 옮기고, 호스트와 스니펫, 자격 증명을 관리할 수 있습니다. `npm install -g @termix-ssh/cli`로 설치하거나 단독 실행 파일을 받으면 됩니다. [CLI 문서](https://docs.termix.site/cli)를 참고하세요.
 
 </td>
 </tr>
@@ -348,7 +348,7 @@ networks:
 Termix에는 CLI도 있어서 터미널에서 서버를 관리하거나 Termix를 자기 스크립트에 넣어 쓸 수 있습니다.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

@@ -215,7 +215,7 @@ Salva un insieme di schede con la loro disposizione divisa e riapri tutto con un
 <td width="50%" valign="top">
 
 **Riga di comando:**
-Una CLI `termix` per la tua shell e i tuoi script. Apri terminali, esegui un comando su un host o su un'intera flotta, sposta file via SFTP e gestisci host, frammenti e credenziali. Installala con `npm install -g @termix-cli/cli` oppure prendi un binario autonomo. Vedi la [documentazione della CLI](https://docs.termix.site/cli).
+Una CLI `termix` per la tua shell e i tuoi script. Apri terminali, esegui un comando su un host o su un'intera flotta, sposta file via SFTP e gestisci host, frammenti e credenziali. Installala con `npm install -g @termix-ssh/cli` oppure prendi un binario autonomo. Vedi la [documentazione della CLI](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -350,7 +350,7 @@ networks:
 Termix ha anche una CLI, così puoi gestire i tuoi server dal terminale e usare Termix nei tuoi script.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

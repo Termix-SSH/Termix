@@ -215,7 +215,7 @@ Guarda un conjunto de pestañas con su distribución dividida y reábrelo entero
 <td width="50%" valign="top">
 
 **Línea de comandos:**
-Un CLI `termix` para tu shell y tus scripts. Abre terminales, ejecuta un comando en un host o en una flota entera, mueve archivos por SFTP y gestiona hosts, fragmentos y credenciales. Instálalo con `npm install -g @termix-cli/cli` o coge un binario independiente. Consulta la [documentación del CLI](https://docs.termix.site/cli).
+Un CLI `termix` para tu shell y tus scripts. Abre terminales, ejecuta un comando en un host o en una flota entera, mueve archivos por SFTP y gestiona hosts, fragmentos y credenciales. Instálalo con `npm install -g @termix-ssh/cli` o coge un binario independiente. Consulta la [documentación del CLI](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -350,7 +350,7 @@ networks:
 Termix también tiene un CLI, para que gestiones tus servidores desde un terminal y uses Termix en tus propios scripts.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

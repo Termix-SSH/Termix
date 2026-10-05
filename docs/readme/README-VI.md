@@ -215,7 +215,7 @@ Lưu một bộ thẻ cùng cách chia màn hình rồi mở lại toàn bộ ch
 <td width="50%" valign="top">
 
 **Dòng lệnh:**
-Công cụ `termix` cho shell và các script của bạn. Mở terminal, chạy một lệnh trên một máy chủ hoặc cả một nhóm, chuyển tệp qua SFTP, và quản lý máy chủ, đoạn lệnh và thông tin đăng nhập. Cài bằng `npm install -g @termix-cli/cli` hoặc tải bản chạy độc lập. Xem [tài liệu CLI](https://docs.termix.site/cli).
+Công cụ `termix` cho shell và các script của bạn. Mở terminal, chạy một lệnh trên một máy chủ hoặc cả một nhóm, chuyển tệp qua SFTP, và quản lý máy chủ, đoạn lệnh và thông tin đăng nhập. Cài bằng `npm install -g @termix-ssh/cli` hoặc tải bản chạy độc lập. Xem [tài liệu CLI](https://docs.termix.site/cli).
 
 </td>
 </tr>
@@ -346,7 +346,7 @@ networks:
 Termix cũng có CLI, để bạn quản lý máy chủ từ terminal và dùng Termix trong script của mình.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```

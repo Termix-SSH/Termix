@@ -215,7 +215,7 @@ Bir sekme grubunu bölünmüş düzeniyle birlikte kaydedin ve hepsini tek tıkl
 <td width="50%" valign="top">
 
 **Komut satırı arayüzü:**
-Kabuğunuz ve betikleriniz için bir `termix` CLI'ı. Terminal açın, tek bir sunucuda veya tüm filoda komut çalıştırın, SFTP ile dosya taşıyın ve sunucuları, parçacıkları ve kimlik bilgilerini yönetin. `npm install -g @termix-cli/cli` ile kurun ya da bağımsız bir çalıştırılabilir dosya edinin. [CLI belgelerine](https://docs.termix.site/cli) bakın.
+Kabuğunuz ve betikleriniz için bir `termix` CLI'ı. Terminal açın, tek bir sunucuda veya tüm filoda komut çalıştırın, SFTP ile dosya taşıyın ve sunucuları, parçacıkları ve kimlik bilgilerini yönetin. `npm install -g @termix-ssh/cli` ile kurun ya da bağımsız bir çalıştırılabilir dosya edinin. [CLI belgelerine](https://docs.termix.site/cli) bakın.
 
 </td>
 </tr>
@@ -346,7 +346,7 @@ networks:
 Termix'in bir CLI'ı da var; sunucularınızı terminalden yönetebilir ve Termix'i kendi betiklerinizde kullanabilirsiniz.
 
 ```bash
-npm install -g @termix-cli/cli
+npm install -g @termix-ssh/cli
 termix login --url https://termix.example.com
 termix ssh 1
 ```
